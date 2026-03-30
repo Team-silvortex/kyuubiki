@@ -17,6 +17,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_truss_2d", params, on_progress)
   end
 
+  @spec solve_plane_triangle_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_plane_triangle_2d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_plane_triangle_2d", params, on_progress)
+  end
+
   @spec request(String.t(), map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def request(method, params, on_progress \\ fn _progress -> :ok end)
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) do

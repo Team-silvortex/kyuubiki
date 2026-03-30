@@ -4,8 +4,10 @@ import { useEffect, useState, useTransition, type PointerEvent as ReactPointerEv
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
 import { exportStudyModel, generatePrattTruss, type ParametricTrussConfig } from "@/lib/modeler";
+import { SAMPLE_LIBRARY } from "@/lib/sample-library";
 import {
   createAxialBarJob,
+  createPlaneTriangle2dJob,
   createTruss2dJob,
   fetchHealth,
   fetchJobHistory,
@@ -15,6 +17,8 @@ import {
   type HealthPayload,
   type JobEnvelope,
   type JobState,
+  type PlaneTriangle2dJobInput,
+  type PlaneTriangle2dResult,
   type Truss2dJobInput,
   type Truss2dResult,
 } from "@/lib/api";
@@ -22,7 +26,7 @@ import {
 type Language = "en" | "zh";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "plane_triangle_2d";
 
 type AxialFormState = {
   length: number;
@@ -90,6 +94,19 @@ const defaultParametric: ParametricTrussConfig = {
   loadY: -1200,
 };
 
+const defaultPlane: PlaneTriangle2dJobInput = {
+  nodes: [
+    { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
+    { id: "n1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
+    { id: "n2", x: 1, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -800 },
+    { id: "n3", x: 0, y: 1, fix_x: true, fix_y: false, load_x: 0, load_y: -800 },
+  ],
+  elements: [
+    { id: "p0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33 },
+    { id: "p1", node_i: 0, node_j: 2, node_k: 3, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33 },
+  ],
+};
+
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
 const copy = {
@@ -99,7 +116,7 @@ const copy = {
     subtitle: "A formal front-end workbench for modeling, orchestration, and solver review.",
     rail: { study: "Study", model: "Model", library: "History", system: "System" },
     sections: { study: "Study Setup", model: "Model Studio", library: "Job History", system: "System" },
-    kinds: { axial_bar_1d: "1D axial bar", truss_2d: "2D truss" },
+    kinds: { axial_bar_1d: "1D axial bar", truss_2d: "2D truss", plane_triangle_2d: "2D plane triangle" },
     importModel: "Import model",
     importHint: "Load a JSON model for 1D or 2D studies.",
     axialSample: "Open 1D sample",
@@ -182,7 +199,11 @@ const copy = {
     historyLoaded: "Loaded a persisted study from history.",
     modelDownloaded: "Model JSON downloaded.",
     generatedModel: "Generated a parametric truss model.",
-    objectTree: "Object Tree",
+    planeElements: "Plane elements",
+    thickness: "Thickness",
+    poisson: "Poisson ratio",
+    sampleLibrary: "Sample Library",
+  objectTree: "Object Tree",
     properties: "Properties",
     addNode: "Add Node",
     deleteNode: "Delete Node",
@@ -212,7 +233,7 @@ const copy = {
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
     rail: { study: "研究", model: "建模", library: "历史", system: "系统" },
     sections: { study: "研究设置", model: "建模工作室", library: "任务历史", system: "系统" },
-    kinds: { axial_bar_1d: "一维轴向杆", truss_2d: "二维桁架" },
+    kinds: { axial_bar_1d: "一维轴向杆", truss_2d: "二维桁架", plane_triangle_2d: "二维三角形单元" },
     importModel: "导入模型",
     importHint: "导入 1D 或 2D 研究 JSON 模型。",
     axialSample: "打开 1D 样例",
@@ -295,6 +316,10 @@ const copy = {
     historyLoaded: "已从历史记录加载持久化任务。",
     modelDownloaded: "模型 JSON 已下载。",
     generatedModel: "已生成参数化桁架模型。",
+    planeElements: "平面单元",
+    thickness: "厚度",
+    poisson: "泊松比",
+    sampleLibrary: "样板库",
     objectTree: "对象树",
     properties: "属性",
     addNode: "新增节点",
@@ -390,6 +415,10 @@ function isAxialResult(value: unknown): value is AxialBarResult {
 
 function isTrussResult(value: unknown): value is Truss2dResult {
   return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && !("tip_displacement" in value);
+}
+
+function isPlaneTriangleResult(value: unknown): value is PlaneTriangle2dResult {
+  return typeof value === "object" && value !== null && "elements" in value && "nodes" in value && "input" in value && Array.isArray((value as PlaneTriangle2dResult).elements) && (value as PlaneTriangle2dResult).elements.some((element) => "node_k" in element);
 }
 
 function buildDisplayTrussNodes(model: Truss2dJobInput, result: Truss2dResult | null): DisplayTrussNode[] {
@@ -519,9 +548,10 @@ export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
   const [trussModel, setTrussModel] = useState<Truss2dJobInput>(defaultTruss);
+  const [planeModel, setPlaneModel] = useState<PlaneTriangle2dJobInput>(defaultPlane);
   const [parametric, setParametric] = useState<ParametricTrussConfig>(defaultParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
-  const [result, setResult] = useState<AxialBarResult | Truss2dResult | null>(null);
+  const [result, setResult] = useState<AxialBarResult | Truss2dResult | PlaneTriangle2dResult | null>(null);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
   const [health, setHealth] = useState<HealthPayload | null>(null);
@@ -585,7 +615,9 @@ export function Workbench() {
         const created =
           studyKind === "axial_bar_1d"
             ? await createAxialBarJob(toAxialInput(axialForm))
-            : await createTruss2dJob(trussModel);
+            : studyKind === "truss_2d"
+              ? await createTruss2dJob(trussModel)
+              : await createPlaneTriangle2dJob(planeModel);
 
         setJob(created.job);
         await refreshJobHistory();
@@ -601,7 +633,9 @@ export function Workbench() {
       const payload =
         kind === "axial_bar_1d"
           ? await fetchJobStatus<AxialBarResult>(jobId)
-          : await fetchJobStatus<Truss2dResult>(jobId);
+          : kind === "truss_2d"
+            ? await fetchJobStatus<Truss2dResult>(jobId)
+            : await fetchJobStatus<PlaneTriangle2dResult>(jobId);
 
       setJob(payload.job);
 
@@ -623,7 +657,7 @@ export function Workbench() {
   const openHistoryJob = (jobId: string) => {
     startTransition(async () => {
       try {
-        const payload = await fetchJobStatus<AxialBarResult | Truss2dResult>(jobId);
+        const payload = await fetchJobStatus<AxialBarResult | Truss2dResult | PlaneTriangle2dResult>(jobId);
         setJob(payload.job);
 
         if (payload.result) {
@@ -644,6 +678,12 @@ export function Workbench() {
           if (isTrussResult(payload.result)) {
             setStudyKind("truss_2d");
             setTrussModel(payload.result.input);
+            setSidebarSection("study");
+          }
+
+          if (isPlaneTriangleResult(payload.result)) {
+            setStudyKind("plane_triangle_2d");
+            setPlaneModel(payload.result.input);
             setSidebarSection("study");
           }
         }
@@ -671,6 +711,10 @@ export function Workbench() {
           ...current,
           youngsModulusGpa: imported.youngsModulusGpa,
         }));
+      } else if (imported.kind === "plane_triangle_2d") {
+        setStudyKind("plane_triangle_2d");
+        setPlaneModel(imported.model);
+        setActiveMaterial(imported.material);
       } else {
         setStudyKind("axial_bar_1d");
         setAxialForm({
@@ -686,6 +730,39 @@ export function Workbench() {
     } catch (error) {
       setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
     }
+  };
+
+  const openSample = (href: string) => {
+    startTransition(async () => {
+      try {
+        const response = await fetch(href, { cache: "no-store" });
+        const text = await response.text();
+        const imported = parsePlaygroundModel(text);
+        setLoadedModelName(imported.name);
+
+        if (imported.kind === "plane_triangle_2d") {
+          setStudyKind("plane_triangle_2d");
+          setPlaneModel(imported.model);
+        } else if (imported.kind === "truss_2d") {
+          setStudyKind("truss_2d");
+          setTrussModel(imported.model);
+        } else {
+          setStudyKind("axial_bar_1d");
+          setAxialForm({
+            length: imported.length,
+            area: imported.area,
+            elements: imported.elements,
+            tipForce: imported.tipForce,
+            material: imported.material,
+            youngsModulusGpa: imported.youngsModulusGpa,
+          });
+        }
+
+        setMessage(`${t.importedModel}: ${imported.name}`);
+      } catch (error) {
+        setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
+      }
+    });
   };
 
   const handleAxialFieldChange = (key: keyof AxialFormState, value: number | string) => {
@@ -735,9 +812,15 @@ export function Workbench() {
     const contents = exportStudyModel(studyKind, {
       name: loadedModelName,
       material: activeMaterial,
-      youngsModulusGpa: studyKind === "axial_bar_1d" ? axialForm.youngsModulusGpa : parametric.youngsModulusGpa,
+      youngsModulusGpa:
+        studyKind === "axial_bar_1d"
+          ? axialForm.youngsModulusGpa
+          : studyKind === "truss_2d"
+            ? parametric.youngsModulusGpa
+            : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
       axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
       truss: studyKind === "truss_2d" ? trussModel : undefined,
+      plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
     });
 
     downloadTextFile(`${loadedModelName || "kyuubiki-model"}.json`, contents);
@@ -752,8 +835,11 @@ export function Workbench() {
   ];
 
   const isAxial = studyKind === "axial_bar_1d";
+  const isTruss = studyKind === "truss_2d";
+  const isPlane = studyKind === "plane_triangle_2d";
   const axialResult = isAxial && isAxialResult(result) ? result : null;
-  const trussResult = !isAxial && isTrussResult(result) ? result : null;
+  const trussResult = isTruss && isTrussResult(result) ? result : null;
+  const planeResult = isPlane && isPlaneTriangleResult(result) ? result : null;
   const axialNodes = axialResult?.nodes ?? [];
   const axialElements = axialResult?.elements ?? [];
   const axialLength = axialResult?.input.length ?? axialForm.length;
@@ -761,6 +847,9 @@ export function Workbench() {
   const displayTrussNodes = buildDisplayTrussNodes(trussModel, trussResult);
   const displayTrussElements = buildDisplayTrussElements(trussModel, trussResult);
   const trussBounds = getTrussBounds(displayTrussNodes);
+  const planeNodes = planeResult?.nodes ?? planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
+  const planeElements = planeResult?.elements ?? planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
+  const planeBounds = getTrussBounds(planeNodes);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
 
@@ -940,6 +1029,7 @@ export function Workbench() {
                   <select value={studyKind} onChange={(event) => setStudyKind(event.target.value as StudyKind)}>
                     <option value="axial_bar_1d">{t.kinds.axial_bar_1d}</option>
                     <option value="truss_2d">{t.kinds.truss_2d}</option>
+                    <option value="plane_triangle_2d">{t.kinds.plane_triangle_2d}</option>
                   </select>
                 </label>
               </div>
@@ -954,14 +1044,16 @@ export function Workbench() {
                 </div>
                 <div>
                   <span>{t.mesh}</span>
-                  <strong>{isAxial ? axialForm.elements : trussModel.elements.length}</strong>
+                  <strong>{isAxial ? axialForm.elements : isTruss ? trussModel.elements.length : planeModel.elements.length}</strong>
                 </div>
                 <div>
                   <span>{t.load}</span>
                   <strong>
                     {isAxial
                       ? `${fixed(axialForm.tipForce, 0)} N`
-                      : `${fixed(trussModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`}
+                      : isTruss
+                        ? `${fixed(trussModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`
+                        : `${fixed(planeModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`}
                   </strong>
                 </div>
                 <div>
@@ -1041,7 +1133,7 @@ export function Workbench() {
                     />
                   </label>
                 </div>
-              ) : (
+              ) : isTruss ? (
                 <div className="sidebar-list">
                   <div>
                     <span>{t.nodes}</span>
@@ -1054,6 +1146,25 @@ export function Workbench() {
                   <div>
                     <span>{t.material}</span>
                     <strong>{localMaterialLabel(activeMaterial, language)}</strong>
+                  </div>
+                  <div>
+                    <span>{t.sourceModel}</span>
+                    <strong>{loadedModelName}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div className="sidebar-list">
+                  <div>
+                    <span>{t.nodes}</span>
+                    <strong>{planeModel.nodes.length}</strong>
+                  </div>
+                  <div>
+                    <span>{t.planeElements}</span>
+                    <strong>{planeModel.elements.length}</strong>
+                  </div>
+                  <div>
+                    <span>{t.thickness}</span>
+                    <strong>{fixed(planeModel.elements[0]?.thickness, 3)}</strong>
                   </div>
                   <div>
                     <span>{t.sourceModel}</span>
@@ -1251,7 +1362,7 @@ export function Workbench() {
           <div className="sidebar-stack">
             <section className="sidebar-card">
               <div className="card-head">
-                <h2>{t.sections.library}</h2>
+                <h2>{t.sampleLibrary}</h2>
                 <button className="link-button" onClick={() => void refreshJobHistory()} type="button">
                   {t.refresh}
                 </button>
@@ -1266,12 +1377,15 @@ export function Workbench() {
                   onChange={(event) => importModel(event.target.files?.[0])}
                 />
               </label>
-              <a className="sample-link" href="/models/axial-steel-bar.json" target="_blank" rel="noreferrer">
-                {t.axialSample}
-              </a>
-              <a className="sample-link" href="/models/braced-truss-2d.json" target="_blank" rel="noreferrer">
-                {t.trussSample}
-              </a>
+              <div className="history-list">
+                {SAMPLE_LIBRARY.map((sample) => (
+                  <button key={sample.id} className="history-item" onClick={() => openSample(sample.href)} type="button">
+                    <strong>{sample.name}</strong>
+                    <span>{t.kinds[sample.kind]}</span>
+                    <small>{sample.summary}</small>
+                  </button>
+                ))}
+              </div>
             </section>
 
             <section className="sidebar-card">
@@ -1390,7 +1504,7 @@ export function Workbench() {
                 </>
               ) : null}
             </svg>
-          ) : (
+          ) : isTruss ? (
             <svg
               viewBox="0 0 980 460"
               className="viewport-svg"
@@ -1473,6 +1587,50 @@ export function Workbench() {
                 );
               })}
             </svg>
+          ) : (
+            <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="2d plane triangle response">
+              <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
+              <text x="48" y="58" className="svg-title">
+                {t.kinds.plane_triangle_2d}
+              </text>
+              {planeElements.map((element) => {
+                const i = toSvgPoint(planeNodes[element.node_i], planeBounds);
+                const j = toSvgPoint(planeNodes[element.node_j], planeBounds);
+                const k = toSvgPoint(planeNodes[element.node_k], planeBounds);
+                return (
+                  <polygon
+                    key={`plane-${element.id}`}
+                    points={`${i.x},${i.y} ${j.x},${j.y} ${k.x},${k.y}`}
+                    className="plane-triangle"
+                  />
+                );
+              })}
+              {planeResult
+                ? planeElements.map((element) => {
+                    const i = toSvgPoint({ x: planeNodes[element.node_i].x + planeNodes[element.node_i].ux * 5000, y: planeNodes[element.node_i].y + planeNodes[element.node_i].uy * 5000 }, planeBounds);
+                    const j = toSvgPoint({ x: planeNodes[element.node_j].x + planeNodes[element.node_j].ux * 5000, y: planeNodes[element.node_j].y + planeNodes[element.node_j].uy * 5000 }, planeBounds);
+                    const k = toSvgPoint({ x: planeNodes[element.node_k].x + planeNodes[element.node_k].ux * 5000, y: planeNodes[element.node_k].y + planeNodes[element.node_k].uy * 5000 }, planeBounds);
+                    return (
+                      <polygon
+                        key={`plane-def-${element.id}`}
+                        points={`${i.x},${i.y} ${j.x},${j.y} ${k.x},${k.y}`}
+                        className="plane-triangle plane-triangle--deformed"
+                      />
+                    );
+                  })
+                : null}
+              {planeNodes.map((node) => {
+                const point = toSvgPoint(node, planeBounds);
+                return (
+                  <g key={node.id}>
+                    <circle cx={point.x} cy={point.y} r={6} className="node-base" />
+                    <text x={point.x + 10} y={point.y - 10} className="node-label">
+                      {node.id}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
           )}
         </section>
 
@@ -1508,7 +1666,7 @@ export function Workbench() {
               )}
             </div>
             <div className="console-card">
-              <h3>{isAxial ? t.axialElements : t.trussElements}</h3>
+              <h3>{isAxial ? t.axialElements : isTruss ? t.trussElements : t.planeElements}</h3>
               <div className="table-scroll">
                 <table>
                   <thead>
@@ -1520,19 +1678,21 @@ export function Workbench() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(isAxial ? axialElements : displayTrussElements).map((element) => (
+                    {(isAxial ? axialElements : isTruss ? displayTrussElements : planeElements).map((element) => (
                       <tr key={element.index}>
                         <td>{element.index}</td>
                         <td>
                           {"x1" in element
                             ? `${fixed(element.x1, 2)} - ${fixed(element.x2, 2)}`
-                            : `${element.node_i} - ${element.node_j}`}
+                            : "node_k" in element
+                              ? `${element.node_i} - ${element.node_j} - ${element.node_k}`
+                              : `${element.node_i} - ${element.node_j}`}
                         </td>
-                        <td>{scientific(element.stress)}</td>
-                        <td>{scientific(element.axial_force)}</td>
+                        <td>{scientific("von_mises" in element ? element.von_mises : element.stress)}</td>
+                        <td>{scientific("axial_force" in element ? element.axial_force : undefined)}</td>
                       </tr>
                     ))}
-                    {(isAxial ? axialElements.length : displayTrussElements.length) === 0 ? (
+                    {(isAxial ? axialElements.length : isTruss ? displayTrussElements.length : planeElements.length) === 0 ? (
                       <tr>
                         <td colSpan={4}>--</td>
                       </tr>
@@ -1682,7 +1842,7 @@ export function Workbench() {
               </div>
               <div>
                 <span>{t.nodes}</span>
-                <strong>{isAxial ? axialNodes.length : displayTrussNodes.length}</strong>
+                <strong>{isAxial ? axialNodes.length : isTruss ? displayTrussNodes.length : planeNodes.length}</strong>
               </div>
             </div>
           </section>
@@ -1691,11 +1851,11 @@ export function Workbench() {
             <div className="metric-grid">
               <div>
                 <span>{t.tipDisp}</span>
-                <strong>{isAxial ? scientific(axialResult?.tip_displacement) : scientific(trussResult?.max_displacement)}</strong>
+                <strong>{isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : scientific(planeResult?.max_displacement)}</strong>
               </div>
               <div>
                 <span>{t.maxStress}</span>
-                <strong>{scientific(isAxial ? axialResult?.max_stress : trussResult?.max_stress)}</strong>
+                <strong>{scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : planeResult?.max_stress)}</strong>
               </div>
               <div>
                 <span>{t.reaction}</span>

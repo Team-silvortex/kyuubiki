@@ -440,6 +440,18 @@ html[data-theme="graphite"] .guide {
   stroke: url(#beamGradientTruss);
 }
 
+.plane-triangle {
+  fill: rgba(36, 95, 125, 0.16);
+  stroke: var(--accent-cool);
+  stroke-width: 2;
+}
+
+.plane-triangle--deformed {
+  fill: rgba(199, 100, 37, 0.14);
+  stroke: var(--accent);
+  stroke-dasharray: 8 6;
+}
+
 .node-base {
   fill: var(--accent-cool);
   transition: fill 120ms ease, r 120ms ease;

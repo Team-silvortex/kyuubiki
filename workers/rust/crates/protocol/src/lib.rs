@@ -136,6 +136,8 @@ pub enum RpcMethod {
     SolveBar1d,
     #[serde(rename = "solve_truss_2d")]
     SolveTruss2d,
+    #[serde(rename = "solve_plane_triangle_2d")]
+    SolvePlaneTriangle2d,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -266,11 +268,75 @@ pub struct SolveTruss2dResult {
     pub max_stress: f64,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlaneNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlaneTriangleElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub thickness: f64,
+    pub youngs_modulus: f64,
+    pub poisson_ratio: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolvePlaneTriangle2dRequest {
+    pub nodes: Vec<PlaneNodeInput>,
+    pub elements: Vec<PlaneTriangleElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlaneNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub ux: f64,
+    pub uy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlaneTriangleElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub area: f64,
+    pub strain_x: f64,
+    pub strain_y: f64,
+    pub gamma_xy: f64,
+    pub stress_x: f64,
+    pub stress_y: f64,
+    pub tau_xy: f64,
+    pub von_mises: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolvePlaneTriangle2dResult {
+    pub input: SolvePlaneTriangle2dRequest,
+    pub nodes: Vec<PlaneNodeResult>,
+    pub elements: Vec<PlaneTriangleElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-        SolveBarRequest,
+        SolveBarRequest, SolvePlaneTriangle2dRequest,
     };
 
     #[test]
@@ -318,6 +384,26 @@ mod tests {
         assert_eq!(decoded.id, "rpc-1");
         let params: SolveBarRequest = serde_json::from_value(decoded.params).expect("params");
         assert_eq!(params.elements, 3);
+    }
+
+    #[test]
+    fn serializes_plane_triangle_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: 1,
+            id: "rpc-plane".to_string(),
+            method: RpcMethod::SolvePlaneTriangle2d,
+            params: serde_json::to_value(SolvePlaneTriangle2dRequest {
+                nodes: vec![],
+                elements: vec![],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolvePlaneTriangle2d);
+        assert_eq!(decoded.id, "rpc-plane");
     }
 
     #[test]

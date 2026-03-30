@@ -11,6 +11,10 @@ const nextConfig = {
         destination: "http://127.0.0.1:4000/api/v1/fem/truss-2d/jobs",
       },
       {
+        source: "/api/v1/fem/plane-triangle-2d/jobs",
+        destination: "http://127.0.0.1:4000/api/v1/fem/plane-triangle-2d/jobs",
+      },
+      {
         source: "/api/v1/jobs/:path*",
         destination: "http://127.0.0.1:4000/api/v1/jobs/:path*",
       },

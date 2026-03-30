@@ -3,9 +3,9 @@ use std::net::{TcpListener, TcpStream};
 
 use kyuubiki_protocol::{
     Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolveTruss2dRequest,
+    SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
 };
-use kyuubiki_solver::{MockSolver, solve_bar_1d, solve_truss_2d};
+use kyuubiki_solver::{MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d};
 
 fn main() {
     match Command::from_env() {
@@ -252,6 +252,37 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                 ),
             }
         }
+        RpcMethod::SolvePlaneTriangle2d => {
+            let params =
+                match serde_json::from_value::<SolvePlaneTriangle2dRequest>(request.params.clone())
+                {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            match solve_plane_triangle_2d(&params) {
+                Ok(result) => {
+                    let progress_frames =
+                        build_progress_frames("2d plane triangle", &request.id, params.nodes.len());
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("plane result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => AgentReply::Stream(
+                    Vec::new(),
+                    RpcResponse::error(request.id, "solve_failed", error),
+                ),
+            }
+        }
     }
 }
 
@@ -369,7 +400,10 @@ mod tests {
     use super::{
         AgentConfig, AgentReply, Command, WorkerConfig, format_event, handle_request_bytes,
     };
-    use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcMethod, RpcRequest, SolveBarRequest};
+    use kyuubiki_protocol::{
+        JobStatus, PlaneNodeInput, PlaneTriangleElementInput, ProgressEvent, RpcMethod, RpcRequest,
+        SolveBarRequest, SolvePlaneTriangle2dRequest,
+    };
 
     #[test]
     fn formats_events_for_machine_consumption() {
@@ -442,5 +476,68 @@ mod tests {
             serde_json::from_value(final_response.result.expect("solver result"))
                 .expect("bar result");
         assert!((result.tip_displacement - 4.761904761904762e-7).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn handles_plane_triangle_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: 1,
+            id: "rpc-plane".to_string(),
+            method: RpcMethod::SolvePlaneTriangle2d,
+            params: serde_json::to_value(SolvePlaneTriangle2dRequest {
+                nodes: vec![
+                    PlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                    PlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: false,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                    PlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        fix_x: false,
+                        fix_y: false,
+                        load_x: 0.0,
+                        load_y: -1000.0,
+                    },
+                ],
+                elements: vec![PlaneTriangleElementInput {
+                    id: "p0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolvePlaneTriangle2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("plane result");
+        assert_eq!(result.nodes.len(), 3);
+        assert_eq!(result.elements.len(), 1);
     }
 }

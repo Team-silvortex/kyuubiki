@@ -1,4 +1,10 @@
-import type { AxialBarJobInput, Truss2dJobInput, TrussElementInput, TrussNodeInput } from "@/lib/api";
+import type {
+  AxialBarJobInput,
+  PlaneTriangle2dJobInput,
+  Truss2dJobInput,
+  TrussElementInput,
+  TrussNodeInput,
+} from "@/lib/api";
 
 export type ParametricTrussConfig = {
   bays: number;
@@ -70,15 +76,32 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
 }
 
 export function exportStudyModel(
-  kind: "axial_bar_1d" | "truss_2d",
+  kind: "axial_bar_1d" | "truss_2d" | "plane_triangle_2d",
   payload: {
     name: string;
     material: string;
     youngsModulusGpa: number;
     axial?: AxialBarJobInput;
     truss?: Truss2dJobInput;
+    plane?: PlaneTriangle2dJobInput;
   },
 ): string {
+  if (kind === "plane_triangle_2d" && payload.plane) {
+    return JSON.stringify(
+      {
+        kind,
+        model_schema_version: MODEL_SCHEMA_VERSION,
+        name: payload.name,
+        material: payload.material,
+        youngs_modulus_gpa: payload.youngsModulusGpa,
+        nodes: payload.plane.nodes,
+        elements: payload.plane.elements,
+      },
+      null,
+      2,
+    );
+  }
+
   if (kind === "truss_2d" && payload.truss) {
     return JSON.stringify(
       {

@@ -1,0 +1,17 @@
+{
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "plane_triangle_2d",
+  "name": "cantilever-plate-2d",
+  "material": "Steel",
+  "youngs_modulus_gpa": 210,
+  "nodes": [
+    { "id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0 },
+    { "id": "n1", "x": 1.0, "y": 0.0, "fix_x": false, "fix_y": false, "load_x": 0.0, "load_y": 0.0 },
+    { "id": "n2", "x": 1.0, "y": 0.6, "fix_x": false, "fix_y": false, "load_x": 0.0, "load_y": -1500.0 },
+    { "id": "n3", "x": 0.0, "y": 0.6, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0 }
+  ],
+  "elements": [
+    { "id": "p0", "node_i": 0, "node_j": 1, "node_k": 2, "thickness": 0.02, "youngs_modulus": 210000000000.0, "poisson_ratio": 0.3 },
+    { "id": "p1", "node_i": 0, "node_j": 2, "node_k": 3, "thickness": 0.02, "youngs_modulus": 210000000000.0, "poisson_ratio": 0.3 }
+  ]
+}

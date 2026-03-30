@@ -29,6 +29,31 @@ export type Truss2dJobInput = {
   elements: TrussElementInput[];
 };
 
+export type PlaneNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  load_x: number;
+  load_y: number;
+};
+
+export type PlaneTriangleElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  thickness: number;
+  youngs_modulus: number;
+  poisson_ratio: number;
+};
+
+export type PlaneTriangle2dJobInput = {
+  nodes: PlaneNodeInput[];
+  elements: PlaneTriangleElementInput[];
+};
+
 export type JobState = {
   job_id: string;
   status: string;
@@ -83,6 +108,28 @@ export type Truss2dResult = {
   input: Truss2dJobInput;
 };
 
+export type PlaneTriangle2dResult = {
+  max_displacement: number;
+  max_stress: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; ux: number; uy: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    area: number;
+    strain_x: number;
+    strain_y: number;
+    gamma_xy: number;
+    stress_x: number;
+    stress_y: number;
+    tau_xy: number;
+    von_mises: number;
+  }>;
+  input: PlaneTriangle2dJobInput;
+};
+
 export type JobEnvelope<TResult = unknown> = {
   job: JobState;
   result?: TResult;
@@ -122,6 +169,16 @@ export function createAxialBarJob(input: AxialBarJobInput): Promise<JobEnvelope<
 
 export function createTruss2dJob(input: Truss2dJobInput): Promise<JobEnvelope<Truss2dResult>> {
   return requestJson<JobEnvelope<Truss2dResult>>("/api/v1/fem/truss-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createPlaneTriangle2dJob(
+  input: PlaneTriangle2dJobInput,
+): Promise<JobEnvelope<PlaneTriangle2dResult>> {
+  return requestJson<JobEnvelope<PlaneTriangle2dResult>>("/api/v1/fem/plane-triangle-2d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

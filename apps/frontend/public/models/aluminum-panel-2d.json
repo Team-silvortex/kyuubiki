@@ -1,0 +1,17 @@
+{
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "plane_triangle_2d",
+  "name": "aluminum-panel-2d",
+  "material": "Aluminum",
+  "youngs_modulus_gpa": 70,
+  "nodes": [
+    { "id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0 },
+    { "id": "n1", "x": 1.2, "y": 0.0, "fix_x": false, "fix_y": true, "load_x": 0.0, "load_y": 0.0 },
+    { "id": "n2", "x": 1.2, "y": 0.8, "fix_x": false, "fix_y": false, "load_x": 300.0, "load_y": -900.0 },
+    { "id": "n3", "x": 0.0, "y": 0.8, "fix_x": true, "fix_y": false, "load_x": 300.0, "load_y": -900.0 }
+  ],
+  "elements": [
+    { "id": "p0", "node_i": 0, "node_j": 1, "node_k": 2, "thickness": 0.015, "youngs_modulus": 70000000000.0, "poisson_ratio": 0.33 },
+    { "id": "p1", "node_i": 0, "node_j": 2, "node_k": 3, "thickness": 0.015, "youngs_modulus": 70000000000.0, "poisson_ratio": 0.33 }
+  ]
+}

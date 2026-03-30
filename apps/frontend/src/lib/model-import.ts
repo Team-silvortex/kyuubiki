@@ -1,4 +1,4 @@
-import type { Truss2dJobInput } from "@/lib/api";
+import type { PlaneTriangle2dJobInput, Truss2dJobInput } from "@/lib/api";
 
 export type ImportedAxialBarModel = {
   kind: "axial_bar_1d";
@@ -19,7 +19,18 @@ export type ImportedTruss2dModel = {
   model: Truss2dJobInput;
 };
 
-export type ImportedModel = ImportedAxialBarModel | ImportedTruss2dModel;
+export type ImportedPlaneTriangle2dModel = {
+  kind: "plane_triangle_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: PlaneTriangle2dJobInput;
+};
+
+export type ImportedModel =
+  | ImportedAxialBarModel
+  | ImportedTruss2dModel
+  | ImportedPlaneTriangle2dModel;
 
 const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 
@@ -141,6 +152,59 @@ function parseTruss2dV1(raw: Record<string, unknown>): ImportedTruss2dModel {
   };
 }
 
+function parsePlaneNode(raw: unknown, index: number): PlaneTriangle2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+  };
+}
+
+function parsePlaneElement(
+  raw: unknown,
+  index: number,
+): PlaneTriangle2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`),
+    thickness: requiredNumber(element.thickness, `elements[${index}].thickness`),
+    youngs_modulus: requiredNumber(
+      element.youngs_modulus,
+      `elements[${index}].youngs_modulus`,
+    ),
+    poisson_ratio: numberOrZero(element.poisson_ratio),
+  };
+}
+
+function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTriangle2dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parsePlaneNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parsePlaneElement) : [];
+
+  if (nodes.length < 3) {
+    throw new Error("nodes must contain at least three entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "plane_triangle_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-plane",
+    material: normalizeMaterial(raw.material),
+    youngsModulusGpa: requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa"),
+    model: { nodes, elements },
+  };
+}
+
 export function parsePlaygroundModel(text: string): ImportedModel {
   const raw = JSON.parse(text) as Record<string, unknown>;
   assertSupportedVersion(raw);
@@ -151,6 +215,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
       : Array.isArray(raw.nodes) || Array.isArray(raw.elements)
         ? "truss_2d"
         : "axial_bar_1d";
+
+  if (kind === "plane_triangle_2d") {
+    return parsePlaneTriangle2dV1(raw);
+  }
 
   if (kind === "truss_2d") {
     return parseTruss2dV1(raw);
