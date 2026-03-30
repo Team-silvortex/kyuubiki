@@ -6,6 +6,8 @@ import { parsePlaygroundModel } from "../src/model-import.mjs";
 test("parses a JSON model and normalizes it into playground form fields", () => {
   const imported = parsePlaygroundModel(`
     {
+      "model_schema_version": "kyuubiki.model/v1",
+      "kind": "axial_bar_1d",
       "name": "steel-demo",
       "length": 1.25,
       "area": 0.015,
@@ -17,6 +19,7 @@ test("parses a JSON model and normalizes it into playground form fields", () => 
   `);
 
   assert.deepEqual(imported, {
+    kind: "axial_bar_1d",
     name: "steel-demo",
     length: 1.25,
     area: 0.015,
@@ -40,4 +43,22 @@ test("accepts custom modulus values even when no material preset is known", () =
 
   assert.equal(imported.material, "custom");
   assert.equal(imported.youngsModulusGpa, 88.5);
+});
+
+test("rejects unsupported schema versions", () => {
+  assert.throws(
+    () =>
+      parsePlaygroundModel(`
+        {
+          "model_schema_version": "kyuubiki.model/v2",
+          "kind": "axial_bar_1d",
+          "length": 0.8,
+          "area": 0.006,
+          "elements": 2,
+          "tip_force": 800,
+          "youngs_modulus_gpa": 88.5
+        }
+      `),
+    /unsupported model_schema_version/,
+  );
 });

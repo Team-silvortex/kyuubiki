@@ -13,9 +13,8 @@ defmodule KyuubikiWeb.Playground do
     with {:ok, normalized} <- normalize_params(params),
          {:ok, job} <- create_job(),
          {:ok, _job} <- Store.assign_worker(job.job_id, @worker_id),
-         {:ok, _job} <-
-           Store.apply_progress(%{job_id: job.job_id, stage: "solving", progress: 0.35}),
-         {:ok, result} <- AgentClient.solve(normalized),
+         {:ok, result} <-
+           AgentClient.solve_bar_1d(normalized, &apply_agent_progress(job.job_id, &1)),
          {:ok, final_job} <-
            Store.apply_progress(%{job_id: job.job_id, stage: "completed", progress: 1.0}) do
       {:ok, %{"job" => serialize_job(final_job), "result" => result}}
@@ -63,6 +62,17 @@ defmodule KyuubikiWeb.Playground do
 
   defp random_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+  end
+
+  defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
+    attrs =
+      progress
+      |> Map.take(["stage", "progress", "residual", "iteration", "peak_memory", "message"])
+      |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
+      |> Map.put(:job_id, job_id)
+
+    _ = Store.apply_progress(attrs)
+    :ok
   end
 
   defp fetch_number(params, [key | rest]) do

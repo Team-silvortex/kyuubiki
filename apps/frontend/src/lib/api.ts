@@ -6,35 +6,90 @@ export type AxialBarJobInput = {
   youngs_modulus_gpa: number;
 };
 
-export type AxialBarJobPayload = {
-  job: {
-    job_id: string;
-    status: string;
-    worker_id: string;
-    progress: number;
+export type TrussNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  load_x: number;
+  load_y: number;
+};
+
+export type TrussElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+};
+
+export type Truss2dJobInput = {
+  nodes: TrussNodeInput[];
+  elements: TrussElementInput[];
+};
+
+export type JobState = {
+  job_id: string;
+  status: string;
+  worker_id: string | null;
+  progress: number;
+  residual?: number | null;
+  iteration?: number | null;
+  has_result?: boolean;
+  project_id?: string;
+  simulation_case_id?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AxialBarResult = {
+  tip_displacement: number;
+  reaction_force: number;
+  max_displacement: number;
+  max_stress: number;
+  nodes: Array<{ index: number; x: number; displacement: number }>;
+  elements: Array<{
+    index: number;
+    x1: number;
+    x2: number;
+    strain: number;
+    stress: number;
+    axial_force: number;
+  }>;
+  input: {
+    length: number;
+    area: number;
+    elements: number;
+    tip_force: number;
+    youngs_modulus: number;
   };
-  result: {
-    tip_displacement: number;
-    reaction_force: number;
-    max_displacement: number;
-    max_stress: number;
-    nodes: Array<{ index: number; x: number; displacement: number }>;
-    elements: Array<{
-      index: number;
-      x1: number;
-      x2: number;
-      strain: number;
-      stress: number;
-      axial_force: number;
-    }>;
-    input: {
-      length: number;
-      area: number;
-      elements: number;
-      tip_force: number;
-      youngs_modulus: number;
-    };
-  };
+};
+
+export type Truss2dResult = {
+  max_displacement: number;
+  max_stress: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; ux: number; uy: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    strain: number;
+    stress: number;
+    axial_force: number;
+  }>;
+  input: Truss2dJobInput;
+};
+
+export type JobEnvelope<TResult = unknown> = {
+  job: JobState;
+  result?: TResult;
+};
+
+export type JobHistoryPayload = {
+  jobs: JobState[];
 };
 
 export type HealthPayload = {
@@ -46,37 +101,50 @@ export type HealthPayload = {
   };
 };
 
-export async function runAxialBarJob(
-  input: AxialBarJobInput
-): Promise<AxialBarJobPayload> {
-  const response = await fetch("/api/v1/fem/axial-bar/jobs", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
-
-  const payload = (await response.json()) as AxialBarJobPayload & { error?: string };
+async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
+  const payload = (await response.json()) as T & { error?: string };
 
   if (!response.ok) {
-    throw new Error(payload.error ?? "analysis failed");
+    throw new Error(payload.error ?? "request failed");
   }
 
   return payload;
 }
 
-export async function fetchHealth(): Promise<HealthPayload> {
-  const response = await fetch("/api/health", {
+export function createAxialBarJob(input: AxialBarJobInput): Promise<JobEnvelope<AxialBarResult>> {
+  return requestJson<JobEnvelope<AxialBarResult>>("/api/v1/fem/axial-bar/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createTruss2dJob(input: Truss2dJobInput): Promise<JobEnvelope<Truss2dResult>> {
+  return requestJson<JobEnvelope<Truss2dResult>>("/api/v1/fem/truss-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
+  return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
     method: "GET",
     cache: "no-store",
   });
+}
 
-  const payload = (await response.json()) as HealthPayload & { error?: string };
+export function fetchJobHistory(): Promise<JobHistoryPayload> {
+  return requestJson<JobHistoryPayload>("/api/v1/jobs", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
 
-  if (!response.ok) {
-    throw new Error(payload.error ?? "backend unavailable");
-  }
-
-  return payload;
+export function fetchHealth(): Promise<HealthPayload> {
+  return requestJson<HealthPayload>("/api/health", {
+    method: "GET",
+    cache: "no-store",
+  });
 }

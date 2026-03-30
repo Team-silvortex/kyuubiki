@@ -1,0 +1,17 @@
+{
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "truss_2d",
+  "name": "braced-truss-2d",
+  "material": "Aluminum",
+  "youngs_modulus_gpa": 70,
+  "nodes": [
+    { "id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0 },
+    { "id": "n1", "x": 1.0, "y": 0.0, "fix_x": false, "fix_y": true, "load_x": 0.0, "load_y": 0.0 },
+    { "id": "n2", "x": 0.5, "y": 0.8, "fix_x": false, "fix_y": false, "load_x": 0.0, "load_y": -1000.0 }
+  ],
+  "elements": [
+    { "id": "e0", "node_i": 0, "node_j": 2, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e2", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 70000000000.0 }
+  ]
+}

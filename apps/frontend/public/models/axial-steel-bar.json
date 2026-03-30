@@ -1,4 +1,6 @@
 {
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "axial_bar_1d",
   "name": "axial-steel-bar",
   "length": 1.2,
   "area": 0.012,

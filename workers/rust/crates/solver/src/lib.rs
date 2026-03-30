@@ -1,5 +1,6 @@
 use kyuubiki_protocol::{
     ElementResult, Job, JobStatus, NodeResult, ProgressEvent, SolveBarRequest, SolveBarResult,
+    SolveTruss2dRequest, SolveTruss2dResult, TrussElementResult, TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -119,6 +120,159 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
     })
 }
 
+pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResult, String> {
+    validate_truss_request(request)?;
+
+    let dof_count = request.nodes.len() * 2;
+    let mut global_stiffness = zero_matrix(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 2] = node.load_x;
+        force_vector[index * 2 + 1] = node.load_y;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = (dx * dx + dy * dy).sqrt();
+        let c = dx / length;
+        let s = dy / length;
+        let k = element.youngs_modulus * element.area / length;
+
+        let local = [
+            [c * c, c * s, -c * c, -c * s],
+            [c * s, s * s, -c * s, -s * s],
+            [-c * c, -c * s, c * c, c * s],
+            [-c * s, -s * s, c * s, s * s],
+        ];
+
+        let map = [
+            element.node_i * 2,
+            element.node_i * 2 + 1,
+            element.node_j * 2,
+            element.node_j * 2 + 1,
+        ];
+
+        for row in 0..4 {
+            for column in 0..4 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    k * local[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 2);
+            }
+            if node.fix_y {
+                dofs.push(index * 2 + 1);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let free = (0..dof_count)
+        .filter(|dof| !constrained.contains(dof))
+        .collect::<Vec<_>>();
+
+    let reduced_stiffness = free
+        .iter()
+        .map(|&row| {
+            free.iter()
+                .map(|&column| global_stiffness[row][column])
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let reduced_force = free
+        .iter()
+        .map(|&row| force_vector[row])
+        .collect::<Vec<_>>();
+    let reduced_displacements = solve_linear_system(reduced_stiffness, reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| TrussNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            ux: displacements[index * 2],
+            uy: displacements[index * 2 + 1],
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let length = (dx * dx + dy * dy).sqrt();
+            let c = dx / length;
+            let s = dy / length;
+
+            let ux_i = displacements[element.node_i * 2];
+            let uy_i = displacements[element.node_i * 2 + 1];
+            let ux_j = displacements[element.node_j * 2];
+            let uy_j = displacements[element.node_j * 2 + 1];
+            let axial_extension = (ux_j - ux_i) * c + (uy_j - uy_i) * s;
+            let strain = axial_extension / length;
+            let stress = element.youngs_modulus * strain;
+
+            TrussElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                strain,
+                stress,
+                axial_force: stress * element.area,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveTruss2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_stress,
+    })
+}
+
 fn validate_request(request: &SolveBarRequest) -> Result<(), String> {
     if !(request.length.is_finite() && request.length > 0.0) {
         return Err("length must be a positive finite number".to_string());
@@ -138,6 +292,36 @@ fn validate_request(request: &SolveBarRequest) -> Result<(), String> {
 
     if !request.tip_force.is_finite() {
         return Err("tip_force must be a finite number".to_string());
+    }
+
+    Ok(())
+}
+
+fn validate_truss_request(request: &SolveTruss2dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("truss must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("truss must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
+        return Err("truss must include at least one support".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("truss element references an out-of-range node".to_string());
+        }
+
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("truss element area must be positive".to_string());
+        }
+
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("truss element youngs_modulus must be positive".to_string());
+        }
     }
 
     Ok(())
@@ -205,8 +389,10 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 
 #[cfg(test)]
 mod tests {
-    use super::{MockSolver, solve_bar_1d};
-    use kyuubiki_protocol::{Job, JobStatus, SolveBarRequest};
+    use super::{MockSolver, solve_bar_1d, solve_truss_2d};
+    use kyuubiki_protocol::{
+        Job, JobStatus, SolveBarRequest, SolveTruss2dRequest, TrussElementInput, TrussNodeInput,
+    };
 
     #[test]
     fn emits_solving_events_and_completion() {
@@ -251,5 +437,69 @@ mod tests {
         .expect_err("invalid request should fail");
 
         assert!(error.contains("length"));
+    }
+
+    #[test]
+    fn solves_a_small_two_dimensional_truss() {
+        let result = solve_truss_2d(&SolveTruss2dRequest {
+            nodes: vec![
+                TrussNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                TrussNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_x: false,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                TrussNodeInput {
+                    id: "n2".to_string(),
+                    x: 0.5,
+                    y: 0.75,
+                    fix_x: false,
+                    fix_y: false,
+                    load_x: 0.0,
+                    load_y: -1000.0,
+                },
+            ],
+            elements: vec![
+                TrussElementInput {
+                    id: "e0".to_string(),
+                    node_i: 0,
+                    node_j: 2,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                TrussElementInput {
+                    id: "e1".to_string(),
+                    node_i: 1,
+                    node_j: 2,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                TrussElementInput {
+                    id: "e2".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+            ],
+        })
+        .expect("2d truss should solve");
+
+        assert_eq!(result.nodes.len(), 3);
+        assert_eq!(result.elements.len(), 3);
+        assert!(result.max_displacement > 0.0);
+        assert!(result.max_stress > 0.0);
     }
 }

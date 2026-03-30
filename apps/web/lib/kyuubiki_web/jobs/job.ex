@@ -77,10 +77,45 @@ defmodule KyuubikiWeb.Jobs.Job do
       job
       | status: event.stage,
         progress: event.progress,
-        residual: event.residual,
-        iteration: event.iteration,
+        residual: event.residual || job.residual,
+        iteration: event.iteration || job.iteration,
         updated_at: event.emitted_at || DateTime.utc_now(:second)
     }
+  end
+
+  @spec to_persisted_map(t()) :: map()
+  def to_persisted_map(%__MODULE__{} = job) do
+    %{
+      "job_id" => job.job_id,
+      "project_id" => job.project_id,
+      "simulation_case_id" => job.simulation_case_id,
+      "worker_id" => job.worker_id,
+      "status" => Atom.to_string(job.status),
+      "progress" => job.progress,
+      "residual" => job.residual,
+      "iteration" => job.iteration,
+      "created_at" => format_datetime(job.created_at),
+      "updated_at" => format_datetime(job.updated_at)
+    }
+  end
+
+  @spec from_persisted_map(map()) :: {:ok, t()} | {:error, term()}
+  def from_persisted_map(attrs) when is_map(attrs) do
+    with {:ok, created_at} <- parse_datetime(Map.get(attrs, "created_at")),
+         {:ok, updated_at} <- parse_datetime(Map.get(attrs, "updated_at")) do
+      new(%{
+        job_id: Map.get(attrs, "job_id"),
+        project_id: Map.get(attrs, "project_id"),
+        simulation_case_id: Map.get(attrs, "simulation_case_id"),
+        worker_id: Map.get(attrs, "worker_id"),
+        status: Map.get(attrs, "status"),
+        progress: Map.get(attrs, "progress"),
+        residual: Map.get(attrs, "residual"),
+        iteration: Map.get(attrs, "iteration"),
+        created_at: created_at,
+        updated_at: updated_at
+      })
+    end
   end
 
   defp fetch_required_string(attrs, key) do
@@ -141,5 +176,17 @@ defmodule KyuubikiWeb.Jobs.Job do
     end
   rescue
     ArgumentError -> {:error, {:invalid_progress, key}}
+  end
+
+  defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)
+  defp format_datetime(_value), do: nil
+
+  defp parse_datetime(nil), do: {:ok, DateTime.utc_now(:second)}
+
+  defp parse_datetime(value) when is_binary(value) do
+    case DateTime.from_iso8601(value) do
+      {:ok, datetime, _offset} -> {:ok, datetime}
+      _ -> {:error, :invalid_datetime}
+    end
   end
 end

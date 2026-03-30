@@ -7,7 +7,8 @@ defmodule KyuubikiWeb.Application do
   def start(_type, _args) do
     children =
       [
-        {KyuubikiWeb.Jobs.Store, []}
+        {KyuubikiWeb.Jobs.Store, []},
+        {KyuubikiWeb.AnalysisResultStore, []}
       ] ++ maybe_http_server()
 
     Supervisor.start_link(children, strategy: :one_for_one, name: KyuubikiWeb.Supervisor)

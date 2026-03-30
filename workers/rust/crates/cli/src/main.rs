@@ -1,8 +1,11 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 
-use kyuubiki_protocol::{Job, ProgressEvent, RpcRequest, RpcResponse};
-use kyuubiki_solver::{MockSolver, solve_bar_1d};
+use kyuubiki_protocol::{
+    Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
+    SolveBarRequest, SolveTruss2dRequest,
+};
+use kyuubiki_solver::{MockSolver, solve_bar_1d, solve_truss_2d};
 
 fn main() {
     match Command::from_env() {
@@ -137,51 +140,203 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
 }
 
 fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
-    let reader_stream = stream
-        .try_clone()
-        .map_err(|error| format!("failed to clone stream: {error}"))?;
-    let mut reader = BufReader::new(reader_stream);
-    let mut line = String::new();
-
     loop {
-        line.clear();
-        let bytes = reader
-            .read_line(&mut line)
-            .map_err(|error| format!("failed to read request: {error}"))?;
+        let payload = match read_frame(&mut stream) {
+            Ok(payload) => payload,
+            Err(FrameReadError::ConnectionClosed) => break,
+            Err(FrameReadError::Io(error)) => {
+                return Err(format!("failed to read request frame: {error}"));
+            }
+        };
 
-        if bytes == 0 {
-            break;
+        let response = handle_request_bytes(&payload);
+        match response {
+            AgentReply::Stream(progress_frames, final_response) => {
+                for progress_frame in progress_frames {
+                    let encoded = serde_json::to_vec(&progress_frame)
+                        .map_err(|error| format!("failed to serialize progress frame: {error}"))?;
+                    write_frame(&mut stream, &encoded)
+                        .map_err(|error| format!("failed to write progress frame: {error}"))?;
+                }
+
+                let encoded = serde_json::to_vec(&final_response)
+                    .map_err(|error| format!("failed to serialize response: {error}"))?;
+                write_frame(&mut stream, &encoded)
+                    .map_err(|error| format!("failed to write response frame: {error}"))?;
+            }
         }
-
-        let response = handle_request_line(line.trim_end());
-        let encoded = serde_json::to_string(&response)
-            .map_err(|error| format!("failed to serialize response: {error}"))?;
-        stream
-            .write_all(encoded.as_bytes())
-            .and_then(|_| stream.write_all(b"\n"))
-            .map_err(|error| format!("failed to write response: {error}"))?;
     }
 
     Ok(())
 }
 
-fn handle_request_line(line: &str) -> RpcResponse {
-    let request = match serde_json::from_str::<RpcRequest>(line) {
+fn handle_request_bytes(payload: &[u8]) -> AgentReply {
+    let request = match serde_json::from_slice::<RpcRequest>(payload) {
         Ok(request) => request,
-        Err(error) => return RpcResponse::error("invalid_json", error.to_string()),
+        Err(error) => {
+            return AgentReply::Stream(
+                Vec::new(),
+                RpcResponse::error("unknown", "invalid_json", error.to_string()),
+            );
+        }
     };
 
-    if request.method != "solve_bar_1d" {
-        return RpcResponse::error(
-            "invalid_method",
-            format!("unsupported method: {}", request.method),
+    if request.rpc_version != 1 {
+        return AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::error(
+                request.id,
+                "invalid_version",
+                format!("unsupported rpc version: {}", request.rpc_version),
+            ),
         );
     }
 
-    match solve_bar_1d(&request.params) {
-        Ok(result) => RpcResponse::success(result),
-        Err(error) => RpcResponse::error("solve_failed", error),
+    match request.method {
+        RpcMethod::SolveBar1d => {
+            let params = match serde_json::from_value::<SolveBarRequest>(request.params.clone()) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            match solve_bar_1d(&params) {
+                Ok(result) => {
+                    let progress_frames =
+                        build_progress_frames("axial bar", &request.id, params.elements + 1);
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("bar result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => AgentReply::Stream(
+                    Vec::new(),
+                    RpcResponse::error(request.id, "solve_failed", error),
+                ),
+            }
+        }
+        RpcMethod::SolveTruss2d => {
+            let params = match serde_json::from_value::<SolveTruss2dRequest>(request.params.clone())
+            {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            match solve_truss_2d(&params) {
+                Ok(result) => {
+                    let progress_frames =
+                        build_progress_frames("2d truss", &request.id, params.nodes.len());
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("truss result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => AgentReply::Stream(
+                    Vec::new(),
+                    RpcResponse::error(request.id, "solve_failed", error),
+                ),
+            }
+        }
     }
+}
+
+fn build_progress_frames(
+    model_name: &str,
+    request_id: &str,
+    node_count: usize,
+) -> Vec<RpcProgress> {
+    let steps = [
+        (
+            JobStatus::Preprocessing,
+            0.1_f32,
+            Some("normalizing study inputs".to_string()),
+        ),
+        (
+            JobStatus::Partitioning,
+            0.25_f32,
+            Some(format!("partitioning {model_name} topology")),
+        ),
+        (
+            JobStatus::Solving,
+            0.7_f32,
+            Some(format!("solving structural system with {node_count} nodes")),
+        ),
+        (
+            JobStatus::Postprocessing,
+            0.92_f32,
+            Some("collecting nodal and elemental responses".to_string()),
+        ),
+    ];
+
+    steps
+        .into_iter()
+        .enumerate()
+        .map(|(index, (stage, progress, message))| {
+            let mut event = ProgressEvent::new("solver-session", stage, progress);
+            event.iteration = Some((index + 1) as u64);
+            event.residual = Some(1.0 / ((index + 2) as f64));
+            event.peak_memory = Some(512 + (index as u64) * 128);
+            event.message = message;
+
+            RpcProgress::new(request_id.to_string(), event)
+        })
+        .collect()
+}
+
+fn read_frame(stream: &mut TcpStream) -> Result<Vec<u8>, FrameReadError> {
+    let mut header = [0_u8; 4];
+
+    match stream.read_exact(&mut header) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => {
+            return Err(FrameReadError::ConnectionClosed);
+        }
+        Err(error) => return Err(FrameReadError::Io(error)),
+    }
+
+    let frame_length = u32::from_be_bytes(header) as usize;
+    let mut payload = vec![0_u8; frame_length];
+    stream
+        .read_exact(&mut payload)
+        .map_err(FrameReadError::Io)?;
+
+    Ok(payload)
+}
+
+fn write_frame(stream: &mut TcpStream, payload: &[u8]) -> std::io::Result<()> {
+    let frame_length = u32::try_from(payload.len()).map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "payload too large for 4-byte frame length",
+        )
+    })?;
+
+    stream.write_all(&frame_length.to_be_bytes())?;
+    stream.write_all(payload)
+}
+
+enum FrameReadError {
+    ConnectionClosed,
+    Io(std::io::Error),
+}
+
+enum AgentReply {
+    Stream(Vec<RpcProgress>, RpcResponse),
 }
 
 fn format_event(event: &ProgressEvent) -> String {
@@ -211,8 +366,10 @@ fn optional_string(value: Option<&str>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{AgentConfig, Command, WorkerConfig, format_event, handle_request_line};
-    use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcRequest, SolveBarRequest};
+    use super::{
+        AgentConfig, AgentReply, Command, WorkerConfig, format_event, handle_request_bytes,
+    };
+    use kyuubiki_protocol::{JobStatus, ProgressEvent, RpcMethod, RpcRequest, SolveBarRequest};
 
     #[test]
     fn formats_events_for_machine_consumption() {
@@ -257,25 +414,33 @@ mod tests {
     #[test]
     fn handles_solver_rpc_requests() {
         let request = RpcRequest {
-            method: "solve_bar_1d".to_string(),
-            params: SolveBarRequest {
+            rpc_version: 1,
+            id: "rpc-1".to_string(),
+            method: RpcMethod::SolveBar1d,
+            params: serde_json::to_value(SolveBarRequest {
                 length: 1.0,
                 area: 0.01,
                 youngs_modulus: 210.0e9,
                 elements: 1,
                 tip_force: 1000.0,
-            },
+            })
+            .expect("params"),
         };
 
-        let response = handle_request_line(
-            &serde_json::to_string(&request).expect("request should serialize"),
-        );
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
 
-        assert!(response.ok);
-        assert!(response.error.is_none());
-        assert!(
-            (response.result.expect("solver result").tip_displacement - 4.761904761904762e-7).abs()
-                < 1.0e-12
-        );
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert_eq!(progress_frames[0].event, "progress");
+        assert_eq!(progress_frames[2].progress.stage, JobStatus::Solving);
+        assert!(final_response.ok);
+        assert!(final_response.error.is_none());
+        assert_eq!(final_response.id, "rpc-1");
+        let result: kyuubiki_protocol::SolveBarResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("bar result");
+        assert!((result.tip_displacement - 4.761904761904762e-7).abs() < 1.0e-12);
     }
 }

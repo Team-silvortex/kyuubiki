@@ -3,7 +3,7 @@ defmodule KyuubikiWeb.Router do
 
   use Plug.Router
 
-  alias KyuubikiWeb.Playground
+  alias KyuubikiWeb.Analysis
 
   plug(Plug.Logger)
   plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
@@ -31,7 +31,31 @@ defmodule KyuubikiWeb.Router do
   end
 
   post "/api/v1/fem/axial-bar/jobs" do
-    case Playground.run(conn.body_params) do
+    case Analysis.submit_axial_bar(conn.body_params) do
+      {:ok, payload} ->
+        respond_json(conn, 202, payload)
+
+      {:error, reason} ->
+        respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  post "/api/v1/fem/truss-2d/jobs" do
+    case Analysis.submit_truss_2d(conn.body_params) do
+      {:ok, payload} ->
+        respond_json(conn, 202, payload)
+
+      {:error, reason} ->
+        respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/jobs" do
+    respond_json(conn, 200, Analysis.list_jobs())
+  end
+
+  get "/api/v1/jobs/:job_id" do
+    case Analysis.fetch_job(job_id) do
       {:ok, payload} ->
         respond_json(conn, 200, payload)
 
@@ -41,8 +65,8 @@ defmodule KyuubikiWeb.Router do
   end
 
   post "/api/playground/run" do
-    case Playground.run(conn.body_params) do
-      {:ok, payload} -> respond_json(conn, 200, payload)
+    case Analysis.submit_axial_bar(conn.body_params) do
+      {:ok, payload} -> respond_json(conn, 202, payload)
       {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
     end
   end

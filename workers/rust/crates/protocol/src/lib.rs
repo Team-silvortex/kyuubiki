@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum JobStatus {
     Queued,
     Preprocessing,
@@ -128,9 +130,20 @@ pub struct SolveBarResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RpcMethod {
+    #[serde(rename = "solve_bar_1d")]
+    SolveBar1d,
+    #[serde(rename = "solve_truss_2d")]
+    SolveTruss2d,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RpcRequest {
-    pub method: String,
-    pub params: SolveBarRequest,
+    pub rpc_version: u8,
+    pub id: String,
+    pub method: RpcMethod,
+    pub params: Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -140,23 +153,52 @@ pub struct RpcError {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RpcProgress {
+    pub rpc_version: u8,
+    pub id: String,
+    pub event: String,
+    pub progress: ProgressEvent,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RpcResponse {
+    pub rpc_version: u8,
+    pub id: String,
     pub ok: bool,
-    pub result: Option<SolveBarResult>,
+    pub result: Option<Value>,
     pub error: Option<RpcError>,
 }
 
-impl RpcResponse {
-    pub fn success(result: SolveBarResult) -> Self {
+impl RpcProgress {
+    pub fn new(id: impl Into<String>, progress: ProgressEvent) -> Self {
         Self {
+            rpc_version: 1,
+            id: id.into(),
+            event: "progress".to_string(),
+            progress,
+        }
+    }
+}
+
+impl RpcResponse {
+    pub fn success(id: impl Into<String>, result: Value) -> Self {
+        Self {
+            rpc_version: 1,
+            id: id.into(),
             ok: true,
             result: Some(result),
             error: None,
         }
     }
 
-    pub fn error(code: impl Into<String>, message: impl Into<String>) -> Self {
+    pub fn error(
+        id: impl Into<String>,
+        code: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
         Self {
+            rpc_version: 1,
+            id: id.into(),
             ok: false,
             result: None,
             error: Some(RpcError {
@@ -167,9 +209,69 @@ impl RpcResponse {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrussNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrussElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTruss2dRequest {
+    pub nodes: Vec<TrussNodeInput>,
+    pub elements: Vec<TrussElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrussNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub ux: f64,
+    pub uy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrussElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub strain: f64,
+    pub stress: f64,
+    pub axial_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTruss2dResult {
+    pub input: SolveTruss2dRequest,
+    pub nodes: Vec<TrussNodeResult>,
+    pub elements: Vec<TrussElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Job, JobStatus, ProgressEvent, RpcRequest, RpcResponse, SolveBarRequest};
+    use super::{
+        Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
+        SolveBarRequest,
+    };
 
     #[test]
     fn applies_progress_to_job() {
@@ -195,32 +297,55 @@ mod tests {
     #[test]
     fn serializes_rpc_round_trip() {
         let request = RpcRequest {
-            method: "solve_bar_1d".to_string(),
-            params: SolveBarRequest {
+            rpc_version: 1,
+            id: "rpc-1".to_string(),
+            method: RpcMethod::SolveBar1d,
+            params: serde_json::to_value(SolveBarRequest {
                 length: 1.0,
                 area: 0.01,
                 youngs_modulus: 210.0e9,
                 elements: 3,
                 tip_force: 1000.0,
-            },
+            })
+            .expect("request params should serialize"),
         };
 
         let json = serde_json::to_string(&request).expect("request should serialize");
         let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
 
-        assert_eq!(decoded.method, "solve_bar_1d");
-        assert_eq!(decoded.params.elements, 3);
+        assert_eq!(decoded.method, RpcMethod::SolveBar1d);
+        assert_eq!(decoded.rpc_version, 1);
+        assert_eq!(decoded.id, "rpc-1");
+        let params: SolveBarRequest = serde_json::from_value(decoded.params).expect("params");
+        assert_eq!(params.elements, 3);
     }
 
     #[test]
     fn builds_error_responses() {
-        let response = RpcResponse::error("invalid_request", "unsupported method");
+        let response = RpcResponse::error("rpc-1", "invalid_request", "unsupported method");
 
         assert!(!response.ok);
         assert!(response.result.is_none());
+        assert_eq!(response.rpc_version, 1);
+        assert_eq!(response.id, "rpc-1");
         assert_eq!(
             response.error.expect("error payload").code,
             "invalid_request"
         );
+    }
+
+    #[test]
+    fn serializes_progress_frames() {
+        let progress = RpcProgress::new(
+            "rpc-1",
+            ProgressEvent::new("job-1", JobStatus::Solving, 0.5),
+        );
+
+        let json = serde_json::to_string(&progress).expect("progress should serialize");
+        let decoded: RpcProgress = serde_json::from_str(&json).expect("progress should decode");
+
+        assert_eq!(decoded.id, "rpc-1");
+        assert_eq!(decoded.event, "progress");
+        assert_eq!(decoded.progress.job_id, "job-1");
     }
 }
