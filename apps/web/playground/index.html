@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>kyuubiki FEM Playground</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Browser FEM Playground</p>
+        <h1>Small axial-bar FEM, right in the browser.</h1>
+        <p class="lede">
+          This playground solves a 1D tensile bar with linear finite elements and
+          visualizes displacement and stress instantly in the page.
+        </p>
+      </section>
+
+      <section class="panel layout">
+        <form class="controls" data-fem-form>
+          <div class="field">
+            <label for="length">Bar length (m)</label>
+            <input id="length" name="length" type="number" min="0.1" step="0.1" value="1" />
+          </div>
+          <div class="field">
+            <label for="area">Area (m²)</label>
+            <input id="area" name="area" type="number" min="0.0001" step="0.0001" value="0.01" />
+          </div>
+          <div class="field">
+            <label for="youngsModulus">Young's modulus (Pa)</label>
+            <input
+              id="youngsModulus"
+              name="youngsModulus"
+              type="number"
+              min="1000"
+              step="1000000"
+              value="210000000000"
+            />
+          </div>
+          <div class="field">
+            <label for="elements">Elements</label>
+            <input id="elements" name="elements" type="number" min="1" max="24" step="1" value="6" />
+          </div>
+          <div class="field">
+            <label for="tipForce">Tip force (N)</label>
+            <input id="tipForce" name="tipForce" type="number" step="100" value="1500" />
+          </div>
+          <button type="submit" class="run-button">Recompute</button>
+          <p class="error" data-error hidden></p>
+        </form>
+
+        <div class="visuals">
+          <div class="stat-grid">
+            <article class="stat-card">
+              <span class="stat-label">Tip displacement</span>
+              <strong class="stat-value" data-tip-displacement></strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Max stress</span>
+              <strong class="stat-value" data-max-stress></strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Reaction</span>
+              <strong class="stat-value" data-reaction-force></strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Nodes</span>
+              <strong class="stat-value" data-node-count></strong>
+            </article>
+          </div>
+
+          <div class="chart-card">
+            <svg viewBox="0 0 760 240" class="chart" data-bar-svg aria-label="FEM bar chart"></svg>
+          </div>
+
+          <div class="table-card">
+            <div class="table-header">
+              <h2>Element results</h2>
+              <span>strain, stress, axial force</span>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Span (m)</th>
+                  <th>Strain</th>
+                  <th>Stress (Pa)</th>
+                  <th>Force (N)</th>
+                </tr>
+              </thead>
+              <tbody data-element-table></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./src/app.mjs"></script>
+  </body>
+  </html>

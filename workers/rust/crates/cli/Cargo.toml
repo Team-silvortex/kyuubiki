@@ -1,0 +1,9 @@
+[package]
+name = "kyuubiki-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+kyuubiki-protocol = { path = "../protocol" }
+kyuubiki-solver = { path = "../solver" }

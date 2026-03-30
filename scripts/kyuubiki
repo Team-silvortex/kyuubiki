@@ -1,0 +1,137 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+WEB_DIR="$ROOT_DIR/apps/web"
+RUST_DIR="$ROOT_DIR/workers/rust"
+
+usage() {
+  cat <<'EOF'
+Unified entrypoint for local kyuubiki development.
+
+Usage:
+  ./scripts/kyuubiki <command> [args...]
+
+Commands:
+  help              Show this help
+  test              Run all tests
+  verify            Run formatting checks and tests
+  web-test          Run Elixir tests
+  rust-test         Run Rust tests
+  playground-test   Run browser FEM tests
+  format            Format Elixir and Rust code
+  worker [args...]  Run the Rust mock worker CLI
+  smoke             Run the Elixir -> Rust integration smoke test
+  playground        Serve the browser FEM playground locally
+
+Examples:
+  ./scripts/kyuubiki smoke
+  ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
+  ./scripts/kyuubiki playground
+EOF
+}
+
+require_dir() {
+  local dir="$1"
+  if [[ ! -d "$dir" ]]; then
+    echo "missing directory: $dir" >&2
+    exit 1
+  fi
+}
+
+run_worker() {
+  require_dir "$RUST_DIR"
+  (
+    cd "$RUST_DIR"
+    cargo run -p kyuubiki-cli -- "$@"
+  )
+}
+
+run_smoke() {
+  require_dir "$WEB_DIR"
+  (
+    cd "$WEB_DIR"
+    mix run -e "
+      alias KyuubikiWeb.Jobs.Store
+      alias KyuubikiWeb.Workers.MockWorkerAdapter
+
+      {:ok, job} =
+        Store.create(%{
+          job_id: \"job-smoke\",
+          project_id: \"project-smoke\",
+          simulation_case_id: \"case-smoke\"
+        })
+
+      IO.puts(\"running smoke flow for #{job.job_id}\")
+      IO.inspect(MockWorkerAdapter.run_job(job), label: \"worker_result\")
+      IO.inspect(Store.get(job.job_id), label: \"final_job\")
+    "
+  )
+}
+
+run_playground_tests() {
+  (
+    cd "$ROOT_DIR"
+    node --test apps/web/playground/test/fem.test.mjs
+  )
+}
+
+run_playground() {
+  local port="${1:-8000}"
+  (
+    cd "$WEB_DIR/playground"
+    echo "serving browser playground at http://127.0.0.1:${port}"
+    python3 -m http.server "$port"
+  )
+}
+
+command="${1:-help}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+case "$command" in
+  help)
+    usage
+    ;;
+  test)
+    make -C "$ROOT_DIR" test
+    ;;
+  verify)
+    make -C "$ROOT_DIR" verify
+    ;;
+  web-test)
+    (
+      cd "$WEB_DIR"
+      mix test "$@"
+    )
+    ;;
+  rust-test)
+    (
+      cd "$RUST_DIR"
+      cargo test "$@"
+    )
+    ;;
+  playground-test)
+    run_playground_tests
+    ;;
+  format)
+    make -C "$ROOT_DIR" format
+    ;;
+  worker)
+    run_worker "$@"
+    ;;
+  smoke)
+    run_smoke
+    ;;
+  playground)
+    run_playground "${1:-8000}"
+    ;;
+  *)
+    echo "unknown command: $command" >&2
+    echo >&2
+    usage >&2
+    exit 1
+    ;;
+esac

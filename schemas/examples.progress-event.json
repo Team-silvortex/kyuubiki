@@ -1,0 +1,10 @@
+{
+  "job_id": "29b8e8bb-f8f6-456c-9e16-b6c0a6f24939",
+  "stage": "solving",
+  "progress": 0.42,
+  "residual": 0.000012,
+  "iteration": 120,
+  "peak_memory": 1024,
+  "message": "CG iteration converging",
+  "emitted_at": "2026-03-29T12:01:30Z"
+}
