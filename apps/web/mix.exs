@@ -7,7 +7,7 @@ defmodule KyuubikiWeb.MixProject do
       version: "0.1.0",
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
-      deps: [],
+      deps: deps(),
       aliases: aliases()
     ]
   end
@@ -29,6 +29,14 @@ defmodule KyuubikiWeb.MixProject do
     [
       setup: ["compile"],
       ci: ["format --check-formatted", "test"]
+    ]
+  end
+
+  defp deps do
+    [
+      {:jason, "~> 1.4"},
+      {:plug, "~> 1.19"},
+      {:plug_cowboy, "~> 2.8"}
     ]
   end
 end

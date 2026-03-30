@@ -1,0 +1,9 @@
+{
+  "name": "axial-steel-bar",
+  "length": 1.2,
+  "area": 0.012,
+  "elements": 6,
+  "tip_force": 1800,
+  "material": "Steel",
+  "youngs_modulus_gpa": 210
+}

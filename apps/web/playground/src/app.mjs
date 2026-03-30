@@ -1,4 +1,4 @@
-import { solveBar1D } from "./fem.mjs";
+import { parsePlaygroundModel } from "./model-import.mjs";
 
 function formatScientific(value, fractionDigits = 3) {
   return Number(value).toExponential(fractionDigits);
@@ -14,19 +14,23 @@ function collectInput(form) {
   return {
     length: Number(data.get("length")),
     area: Number(data.get("area")),
-    youngsModulus: Number(data.get("youngsModulus")),
+    youngs_modulus_gpa: Number(data.get("youngsModulusGpa")),
     elements: Number(data.get("elements")),
-    tipForce: Number(data.get("tipForce")),
+    tip_force: Number(data.get("tipForce")),
   };
 }
 
-function renderSummary(result) {
+function renderSummary(payload) {
+  const { job, result } = payload;
+
   document.querySelector("[data-tip-displacement]").textContent = formatScientific(
-    result.nodes.at(-1).displacement
+    result.tip_displacement
   );
   document.querySelector("[data-max-stress]").textContent = formatScientific(result.maxStress);
   document.querySelector("[data-reaction-force]").textContent = formatFixed(result.reactionForce, 2);
   document.querySelector("[data-node-count]").textContent = String(result.nodes.length);
+  document.querySelector("[data-job-id]").textContent = job.job_id;
+  document.querySelector("[data-job-status]").textContent = job.status;
 }
 
 function renderSvg(result) {
@@ -108,27 +112,110 @@ function renderTable(result) {
 
 function render(result) {
   renderSummary(result);
-  renderSvg(result);
-  renderTable(result);
+  renderSvg(result.result);
+  renderTable(result.result);
+}
+
+function normalizePayload(payload) {
+  return {
+    job: payload.job,
+    result: {
+      ...payload.result,
+      reactionForce: payload.result.reaction_force,
+      maxDisplacement: payload.result.max_displacement,
+      maxStress: payload.result.max_stress,
+    },
+  };
+}
+
+async function runAnalysis(form) {
+  const response = await fetch("/api/playground/run", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(collectInput(form)),
+  });
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload.error || "analysis failed");
+  }
+
+  return normalizePayload(payload);
+}
+
+function bindMaterialPreset(form) {
+  const materialSelect = form.querySelector("[data-material]");
+  const modulusInput = form.querySelector("[data-youngs-modulus]");
+
+  materialSelect.addEventListener("change", () => {
+    const preset = materialSelect.value;
+
+    if (preset !== "custom") {
+      modulusInput.value = preset;
+    }
+  });
+}
+
+function applyImportedModel(form, imported) {
+  form.querySelector("#length").value = String(imported.length);
+  form.querySelector("#area").value = String(imported.area);
+  form.querySelector("#elements").value = String(imported.elements);
+  form.querySelector("#tipForce").value = String(imported.tipForce);
+  form.querySelector("[data-material]").value = imported.material;
+  form.querySelector("[data-youngs-modulus]").value = String(imported.youngsModulusGpa);
+  document.querySelector("[data-model-name]").textContent = imported.name;
+}
+
+function bindModelImport(form, errorBox) {
+  const input = form.querySelector("[data-model-file]");
+
+  input.addEventListener("change", async () => {
+    const [file] = input.files;
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const imported = parsePlaygroundModel(await file.text());
+      applyImportedModel(form, imported);
+      errorBox.textContent = "";
+      errorBox.hidden = true;
+    } catch (error) {
+      errorBox.textContent = `import failed: ${error.message}`;
+      errorBox.hidden = false;
+    }
+  });
 }
 
 function boot() {
   const form = document.querySelector("[data-fem-form]");
   const errorBox = document.querySelector("[data-error]");
+  const runButton = document.querySelector("[data-run-button]");
 
-  const update = () => {
+  bindMaterialPreset(form);
+  bindModelImport(form, errorBox);
+
+  const update = async () => {
     try {
-      const result = solveBar1D(collectInput(form));
+      runButton.disabled = true;
+      runButton.textContent = "Running...";
+      const result = await runAnalysis(form);
       errorBox.textContent = "";
       errorBox.hidden = true;
       render(result);
     } catch (error) {
       errorBox.textContent = error.message;
       errorBox.hidden = false;
+    } finally {
+      runButton.disabled = false;
+      runButton.textContent = "Run Through Orchestration";
     }
   };
 
-  form.addEventListener("input", update);
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     update();

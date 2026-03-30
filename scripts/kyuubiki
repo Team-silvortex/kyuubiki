@@ -4,7 +4,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$ROOT_DIR/apps/web"
+FRONTEND_DIR="$ROOT_DIR/apps/frontend"
 RUST_DIR="$ROOT_DIR/workers/rust"
+RUN_DIR="$ROOT_DIR/tmp/run"
+ORCHESTRATOR_LOG="$RUN_DIR/orchestrator.log"
+FRONTEND_LOG="$RUN_DIR/frontend.log"
+AGENT_LOG="$RUN_DIR/agent.log"
+ORCHESTRATOR_SCREEN="kyuubiki_orchestrator"
+FRONTEND_SCREEN="kyuubiki_frontend"
+AGENT_SCREEN="kyuubiki_agent"
 
 usage() {
   cat <<'EOF'
@@ -15,20 +23,31 @@ Usage:
 
 Commands:
   help              Show this help
+  start             Start the orchestrator API, frontend, and solver agent in the background
+  status            Show whether local services are running
+  stop              Stop the orchestrator API, frontend, and solver agent services
+  restart           Restart the orchestrator API, frontend, and solver agent services
   test              Run all tests
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
   rust-test         Run Rust tests
   playground-test   Run browser FEM tests
+  agent             Run the Rust FEM TCP agent
+  frontend          Run the Next.js workbench UI
   format            Format Elixir and Rust code
   worker [args...]  Run the Rust mock worker CLI
   smoke             Run the Elixir -> Rust integration smoke test
-  playground        Serve the browser FEM playground locally
+  playground        Run the API-only orchestrator locally (legacy alias)
+  orchestrator      Run the API-only orchestrator locally
 
 Examples:
   ./scripts/kyuubiki smoke
+  ./scripts/kyuubiki agent -- --port 5001
   ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
-  ./scripts/kyuubiki playground
+  ./scripts/kyuubiki start
+  ./scripts/kyuubiki orchestrator
+  ./scripts/kyuubiki frontend
+  ./scripts/kyuubiki restart
 EOF
 }
 
@@ -37,6 +56,65 @@ require_dir() {
   if [[ ! -d "$dir" ]]; then
     echo "missing directory: $dir" >&2
     exit 1
+  fi
+}
+
+ensure_run_dir() {
+  mkdir -p "$RUN_DIR"
+}
+
+require_screen() {
+  if ! command -v screen >/dev/null 2>&1; then
+    echo "screen is required for background start/restart" >&2
+    exit 1
+  fi
+}
+
+port_in_use() {
+  local port="$1"
+  lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1
+}
+
+pid_on_port() {
+  local port="$1"
+  lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1 || true
+}
+
+stop_port() {
+  local port="$1"
+  local pid
+  pid="$(pid_on_port "$port")"
+
+  if [[ -n "${pid:-}" ]]; then
+    kill "$pid"
+    echo "stopped process $pid on port $port"
+  else
+    echo "no listening process on port $port"
+  fi
+}
+
+show_status() {
+  local orchestrator_pid frontend_pid agent_pid
+  orchestrator_pid="$(pid_on_port 4000)"
+  frontend_pid="$(pid_on_port 3000)"
+  agent_pid="$(pid_on_port 5001)"
+
+  if [[ -n "${orchestrator_pid:-}" ]]; then
+    echo "orchestrator: running on http://127.0.0.1:4000 (pid $orchestrator_pid)"
+  else
+    echo "orchestrator: stopped"
+  fi
+
+  if [[ -n "${frontend_pid:-}" ]]; then
+    echo "frontend: running on http://127.0.0.1:3000 (pid $frontend_pid)"
+  else
+    echo "frontend: stopped"
+  fi
+
+  if [[ -n "${agent_pid:-}" ]]; then
+    echo "agent: running on tcp://127.0.0.1:5001 (pid $agent_pid)"
+  else
+    echo "agent: stopped"
   fi
 }
 
@@ -77,13 +155,118 @@ run_playground_tests() {
   )
 }
 
-run_playground() {
-  local port="${1:-8000}"
+run_orchestrator() {
+  local port="${1:-4000}"
+
+  if port_in_use "$port"; then
+    echo "orchestrator already running at http://127.0.0.1:${port}"
+    return 0
+  fi
+
   (
-    cd "$WEB_DIR/playground"
-    echo "serving browser playground at http://127.0.0.1:${port}"
-    python3 -m http.server "$port"
+    cd "$WEB_DIR"
+    echo "serving orchestrator API at http://127.0.0.1:${port}"
+    PORT="$port" mix run --no-halt
   )
+}
+
+run_agent() {
+  local port="${1:-5001}"
+
+  if port_in_use "$port"; then
+    echo "Rust FEM agent already running at tcp://127.0.0.1:${port}"
+    return 0
+  fi
+
+  (
+    cd "$RUST_DIR"
+    echo "serving Rust FEM agent at tcp://127.0.0.1:${port}"
+    cargo run -p kyuubiki-cli -- agent --port "$port"
+  )
+}
+
+run_frontend() {
+  local port="${1:-3000}"
+
+  if port_in_use "$port"; then
+    echo "Next.js workbench already running at http://127.0.0.1:${port}"
+    return 0
+  fi
+
+  (
+    cd "$FRONTEND_DIR"
+    echo "serving Next.js workbench at http://127.0.0.1:${port}"
+    npm run dev
+  )
+}
+
+start_orchestrator_background() {
+  local port="${1:-4000}"
+  ensure_run_dir
+  require_screen
+
+  if port_in_use "$port"; then
+    echo "orchestrator already running at http://127.0.0.1:${port}"
+    return 0
+  fi
+
+  screen -S "$ORCHESTRATOR_SCREEN" -X quit >/dev/null 2>&1 || true
+  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && PORT=\"$port\" KYUUBIKI_AGENT_HOST=127.0.0.1 KYUUBIKI_AGENT_PORT=5001 mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
+
+  echo "started orchestrator API at http://127.0.0.1:${port}"
+  echo "log: $ORCHESTRATOR_LOG"
+}
+
+start_agent_background() {
+  local port="${1:-5001}"
+  ensure_run_dir
+  require_screen
+
+  if port_in_use "$port"; then
+    echo "Rust FEM agent already running at tcp://127.0.0.1:${port}"
+    return 0
+  fi
+
+  screen -S "$AGENT_SCREEN" -X quit >/dev/null 2>&1 || true
+  screen -dmS "$AGENT_SCREEN" zsh -lc "cd \"$RUST_DIR\" && cargo run -p kyuubiki-cli -- agent --port \"$port\" >> \"$AGENT_LOG\" 2>&1"
+
+  echo "started Rust FEM agent at tcp://127.0.0.1:${port}"
+  echo "log: $AGENT_LOG"
+}
+
+start_frontend_background() {
+  local port="${1:-3000}"
+  ensure_run_dir
+  require_screen
+
+  if port_in_use "$port"; then
+    echo "Next.js workbench already running at http://127.0.0.1:${port}"
+    return 0
+  fi
+
+  screen -S "$FRONTEND_SCREEN" -X quit >/dev/null 2>&1 || true
+  screen -dmS "$FRONTEND_SCREEN" zsh -lc "cd \"$FRONTEND_DIR\" && npm run dev >> \"$FRONTEND_LOG\" 2>&1"
+
+  echo "started Next.js workbench at http://127.0.0.1:${port}"
+  echo "log: $FRONTEND_LOG"
+}
+
+stop_services() {
+  stop_port 5001
+  stop_port 3000
+  stop_port 4000
+}
+
+start_services() {
+  start_agent_background 5001
+  start_orchestrator_background 4000
+  start_frontend_background 3000
+}
+
+restart_services() {
+  stop_services
+  start_services
+  echo "restart complete"
 }
 
 command="${1:-help}"
@@ -94,6 +277,18 @@ fi
 case "$command" in
   help)
     usage
+    ;;
+  start)
+    start_services
+    ;;
+  status)
+    show_status
+    ;;
+  stop)
+    stop_services
+    ;;
+  restart)
+    restart_services
     ;;
   test)
     make -C "$ROOT_DIR" test
@@ -116,6 +311,12 @@ case "$command" in
   playground-test)
     run_playground_tests
     ;;
+  orchestrator)
+    run_orchestrator "${1:-4000}"
+    ;;
+  agent)
+    run_agent "${1:-5001}"
+    ;;
   format)
     make -C "$ROOT_DIR" format
     ;;
@@ -126,7 +327,10 @@ case "$command" in
     run_smoke
     ;;
   playground)
-    run_playground "${1:-8000}"
+    run_orchestrator "${1:-4000}"
+    ;;
+  frontend)
+    run_frontend "${1:-3000}"
     ;;
   *)
     echo "unknown command: $command" >&2

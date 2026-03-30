@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum JobStatus {
     Queued,
     Preprocessing,
@@ -25,7 +27,7 @@ impl JobStatus {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Job {
     pub job_id: String,
     pub project_id: String,
@@ -63,7 +65,7 @@ impl Job {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ProgressEvent {
     pub job_id: String,
     pub stage: JobStatus,
@@ -88,9 +90,86 @@ impl ProgressEvent {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBarRequest {
+    pub length: f64,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub elements: usize,
+    pub tip_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeResult {
+    pub index: usize,
+    pub x: f64,
+    pub displacement: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElementResult {
+    pub index: usize,
+    pub x1: f64,
+    pub x2: f64,
+    pub strain: f64,
+    pub stress: f64,
+    pub axial_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBarResult {
+    pub input: SolveBarRequest,
+    pub nodes: Vec<NodeResult>,
+    pub elements: Vec<ElementResult>,
+    pub tip_displacement: f64,
+    pub reaction_force: f64,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RpcRequest {
+    pub method: String,
+    pub params: SolveBarRequest,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RpcError {
+    pub code: String,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RpcResponse {
+    pub ok: bool,
+    pub result: Option<SolveBarResult>,
+    pub error: Option<RpcError>,
+}
+
+impl RpcResponse {
+    pub fn success(result: SolveBarResult) -> Self {
+        Self {
+            ok: true,
+            result: Some(result),
+            error: None,
+        }
+    }
+
+    pub fn error(code: impl Into<String>, message: impl Into<String>) -> Self {
+        Self {
+            ok: false,
+            result: None,
+            error: Some(RpcError {
+                code: code.into(),
+                message: message.into(),
+            }),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Job, JobStatus, ProgressEvent};
+    use super::{Job, JobStatus, ProgressEvent, RpcRequest, RpcResponse, SolveBarRequest};
 
     #[test]
     fn applies_progress_to_job() {
@@ -111,5 +190,37 @@ mod tests {
     fn exposes_lowercase_status_names() {
         assert_eq!(JobStatus::Solving.as_str(), "solving");
         assert_eq!(JobStatus::Completed.as_str(), "completed");
+    }
+
+    #[test]
+    fn serializes_rpc_round_trip() {
+        let request = RpcRequest {
+            method: "solve_bar_1d".to_string(),
+            params: SolveBarRequest {
+                length: 1.0,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                elements: 3,
+                tip_force: 1000.0,
+            },
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, "solve_bar_1d");
+        assert_eq!(decoded.params.elements, 3);
+    }
+
+    #[test]
+    fn builds_error_responses() {
+        let response = RpcResponse::error("invalid_request", "unsupported method");
+
+        assert!(!response.ok);
+        assert!(response.result.is_none());
+        assert_eq!(
+            response.error.expect("error payload").code,
+            "invalid_request"
+        );
     }
 }

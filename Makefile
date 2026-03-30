@@ -1,11 +1,15 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker playground
+.PHONY: help tree start status stop restart test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend
 
 help:
 	@echo "Available targets:"
 	@echo "  make tree        Print the repository scaffold"
+	@echo "  make start       Start the orchestrator API, frontend, and solver agent"
+	@echo "  make status      Show local service status"
+	@echo "  make stop        Stop the orchestrator API, frontend, and solver agent"
+	@echo "  make restart     Restart the orchestrator API, frontend, and solver agent"
 	@echo "  make test        Run all project tests"
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
@@ -13,13 +17,28 @@ help:
 	@echo "  make format      Format all code"
 	@echo "  make smoke       Run the Elixir -> Rust smoke flow"
 	@echo "  make worker      Run the Rust mock worker CLI"
-	@echo "  make playground  Serve the browser FEM playground"
+	@echo "  make agent       Run the Rust FEM TCP agent"
+	@echo "  make orchestrator Run the Elixir orchestrator API"
+	@echo "  make playground  Legacy alias for the orchestrator API"
+	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
 	@echo "  zsh ./scripts/kyuubiki help    Show the unified local entrypoint"
 
 tree:
 	@find . -maxdepth 3 -type d | sort
+
+start:
+	@$(ENTRYPOINT) start
+
+status:
+	@$(ENTRYPOINT) status
+
+stop:
+	@$(ENTRYPOINT) stop
+
+restart:
+	@$(ENTRYPOINT) restart
 
 test: test-web test-rust test-playground
 
@@ -57,5 +76,14 @@ smoke:
 worker:
 	@$(ENTRYPOINT) worker $(ARGS)
 
+agent:
+	@$(ENTRYPOINT) agent $(PORT)
+
+orchestrator:
+	@$(ENTRYPOINT) orchestrator $(PORT)
+
 playground:
 	@$(ENTRYPOINT) playground $(PORT)
+
+frontend:
+	@$(ENTRYPOINT) frontend

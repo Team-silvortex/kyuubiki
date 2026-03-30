@@ -98,7 +98,31 @@ body {
   font-weight: 700;
 }
 
+.field-help {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(20, 48, 66, 0.68);
+}
+
+.field--inline {
+  gap: 4px;
+}
+
+.field--inline strong {
+  font-size: 0.95rem;
+}
+
 .field input {
+  width: 100%;
+  border: 1px solid rgba(20, 48, 66, 0.12);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.field select {
   width: 100%;
   border: 1px solid rgba(20, 48, 66, 0.12);
   border-radius: 14px;
@@ -132,7 +156,7 @@ body {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -155,6 +179,12 @@ body {
   display: block;
   margin-top: 8px;
   font-size: 1.35rem;
+}
+
+.stat-value--small {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  word-break: break-all;
 }
 
 .chart-card,
