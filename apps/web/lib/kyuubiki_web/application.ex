@@ -5,13 +5,24 @@ defmodule KyuubikiWeb.Application do
 
   @impl true
   def start(_type, _args) do
-    children =
-      [
-        {KyuubikiWeb.Jobs.Store, []},
-        {KyuubikiWeb.AnalysisResultStore, []}
-      ] ++ maybe_http_server()
+    children = storage_children() ++ maybe_http_server()
 
     Supervisor.start_link(children, strategy: :one_for_one, name: KyuubikiWeb.Supervisor)
+  end
+
+  defp storage_children do
+    if KyuubikiWeb.Storage.postgres?() do
+      [
+        KyuubikiWeb.Repo,
+        {KyuubikiWeb.Storage.SchemaSetup, []}
+      ]
+    else
+      [
+        {KyuubikiWeb.Jobs.MemoryBackend, []},
+        {KyuubikiWeb.AnalysisResultMemoryBackend, []},
+        {KyuubikiWeb.Library.MemoryBackend, []}
+      ]
+    end
   end
 
   defp maybe_http_server do

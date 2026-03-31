@@ -25,6 +25,8 @@ help:
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
 	@echo "  zsh ./scripts/kyuubiki help    Show the unified local entrypoint"
+	@echo "  KYUUBIKI_STORAGE_BACKEND=postgres DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev make start"
+	@echo "  cp .env.example .env.local && make restart"
 
 tree:
 	@find . -maxdepth 3 -type d | sort

@@ -7,12 +7,23 @@ WEB_DIR="$ROOT_DIR/apps/web"
 FRONTEND_DIR="$ROOT_DIR/apps/frontend"
 RUST_DIR="$ROOT_DIR/workers/rust"
 RUN_DIR="$ROOT_DIR/tmp/run"
+ENV_FILE="$ROOT_DIR/.env.local"
 ORCHESTRATOR_LOG="$RUN_DIR/orchestrator.log"
 FRONTEND_LOG="$RUN_DIR/frontend.log"
 AGENT_LOG="$RUN_DIR/agent.log"
 ORCHESTRATOR_SCREEN="kyuubiki_orchestrator"
 FRONTEND_SCREEN="kyuubiki_frontend"
 AGENT_SCREEN="kyuubiki_agent"
+
+load_env_file() {
+  if [[ -f "$ENV_FILE" ]]; then
+    set -a
+    source "$ENV_FILE"
+    set +a
+  fi
+}
+
+load_env_file
 
 usage() {
   cat <<'EOF'
@@ -46,6 +57,8 @@ Examples:
   ./scripts/kyuubiki agent -- --port 5001
   ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
   ./scripts/kyuubiki start
+  KYUUBIKI_STORAGE_BACKEND=postgres DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev ./scripts/kyuubiki start
+  cp .env.example .env.local && ./scripts/kyuubiki restart
   ./scripts/kyuubiki orchestrator
   ./scripts/kyuubiki frontend
   ./scripts/kyuubiki benchmark -- --repeat 20 --format json

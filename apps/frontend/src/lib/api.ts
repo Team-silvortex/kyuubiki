@@ -183,6 +183,68 @@ export type JobHistoryPayload = {
   jobs: JobState[];
 };
 
+export type ModelVersionRecord = {
+  version_id: string;
+  project_id: string;
+  model_id: string;
+  name: string;
+  version_number: number;
+  kind: string;
+  material?: string | null;
+  model_schema_version: string;
+  payload: Record<string, unknown>;
+  inserted_at: string;
+  updated_at: string;
+};
+
+export type ModelRecord = {
+  model_id: string;
+  project_id: string;
+  name: string;
+  kind: string;
+  material?: string | null;
+  model_schema_version: string;
+  payload: Record<string, unknown>;
+  latest_version_id?: string | null;
+  latest_version_number?: number | null;
+  inserted_at: string;
+  updated_at: string;
+  versions?: ModelVersionRecord[];
+};
+
+export type ProjectRecord = {
+  project_id: string;
+  name: string;
+  description?: string | null;
+  inserted_at: string;
+  updated_at: string;
+  models?: ModelRecord[];
+};
+
+export type ProjectListPayload = {
+  projects: ProjectRecord[];
+};
+
+export type ProjectEnvelope = {
+  project: ProjectRecord;
+};
+
+export type ModelEnvelope = {
+  model: ModelRecord;
+};
+
+export type ModelListPayload = {
+  models: ModelRecord[];
+};
+
+export type ModelVersionEnvelope = {
+  version: ModelVersionRecord;
+};
+
+export type ModelVersionListPayload = {
+  versions: ModelVersionRecord[];
+};
+
 export type HealthPayload = {
   service: string;
   status: string;
@@ -256,4 +318,121 @@ export function fetchHealth(): Promise<HealthPayload> {
     method: "GET",
     cache: "no-store",
   });
+}
+
+export function fetchProjects(): Promise<ProjectListPayload> {
+  return requestJson<ProjectListPayload>("/api/v1/projects", { method: "GET", cache: "no-store" });
+}
+
+export function createProject(input: { name: string; description?: string }): Promise<ProjectEnvelope> {
+  return requestJson<ProjectEnvelope>("/api/v1/projects", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateProject(projectId: string, input: { name?: string; description?: string }): Promise<ProjectEnvelope> {
+  return requestJson<ProjectEnvelope>(`/api/v1/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteProject(projectId: string): Promise<ProjectEnvelope> {
+  return requestJson<ProjectEnvelope>(`/api/v1/projects/${projectId}`, { method: "DELETE" });
+}
+
+export function fetchModel(modelId: string): Promise<ModelEnvelope> {
+  return requestJson<ModelEnvelope>(`/api/v1/models/${modelId}`, { method: "GET", cache: "no-store" });
+}
+
+export function createModel(
+  projectId: string,
+  input: {
+    name: string;
+    kind: string;
+    material?: string;
+    model_schema_version?: string;
+    payload: Record<string, unknown>;
+  },
+): Promise<ModelEnvelope> {
+  return requestJson<ModelEnvelope>(`/api/v1/projects/${projectId}/models`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateModel(
+  modelId: string,
+  input: Partial<{
+    name: string;
+    kind: string;
+    material: string;
+    model_schema_version: string;
+    payload: Record<string, unknown>;
+  }>,
+): Promise<ModelEnvelope> {
+  return requestJson<ModelEnvelope>(`/api/v1/models/${modelId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteModel(modelId: string): Promise<ModelEnvelope> {
+  return requestJson<ModelEnvelope>(`/api/v1/models/${modelId}`, { method: "DELETE" });
+}
+
+export function fetchModelVersions(modelId: string): Promise<ModelVersionListPayload> {
+  return requestJson<ModelVersionListPayload>(`/api/v1/models/${modelId}/versions`, {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchModelVersion(versionId: string): Promise<ModelVersionEnvelope> {
+  return requestJson<ModelVersionEnvelope>(`/api/v1/model-versions/${versionId}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function createModelVersion(
+  modelId: string,
+  input: Partial<{
+    name: string;
+    kind: string;
+    material: string;
+    model_schema_version: string;
+  }> & { payload: Record<string, unknown> },
+): Promise<ModelVersionEnvelope> {
+  return requestJson<ModelVersionEnvelope>(`/api/v1/models/${modelId}/versions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateModelVersion(
+  versionId: string,
+  input: Partial<{
+    name: string;
+    kind: string;
+    material: string;
+    model_schema_version: string;
+    payload: Record<string, unknown>;
+  }>,
+): Promise<ModelVersionEnvelope> {
+  return requestJson<ModelVersionEnvelope>(`/api/v1/model-versions/${versionId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteModelVersion(versionId: string): Promise<ModelVersionEnvelope> {
+  return requestJson<ModelVersionEnvelope>(`/api/v1/model-versions/${versionId}`, { method: "DELETE" });
 }

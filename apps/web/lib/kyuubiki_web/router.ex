@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Router do
   use Plug.Router
 
   alias KyuubikiWeb.Analysis
+  alias KyuubikiWeb.Library
 
   plug(Plug.Logger)
   plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
@@ -81,6 +82,112 @@ defmodule KyuubikiWeb.Router do
 
       {:error, reason} ->
         respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/projects" do
+    {:ok, projects} = Library.list_projects()
+    respond_json(conn, 200, %{"projects" => projects})
+  end
+
+  post "/api/v1/projects" do
+    case Library.create_project(conn.body_params) do
+      {:ok, project} -> respond_json(conn, 201, %{"project" => project})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/projects/:project_id" do
+    case Library.get_project(project_id) do
+      {:ok, project} -> respond_json(conn, 200, %{"project" => project})
+      :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
+    end
+  end
+
+  patch "/api/v1/projects/:project_id" do
+    case Library.update_project(project_id, conn.body_params) do
+      {:ok, project} -> respond_json(conn, 200, %{"project" => project})
+      :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  delete "/api/v1/projects/:project_id" do
+    case Library.delete_project(project_id) do
+      {:ok, project} -> respond_json(conn, 200, %{"project" => project})
+      :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
+    end
+  end
+
+  get "/api/v1/projects/:project_id/models" do
+    case Library.list_models(project_id) do
+      {:ok, models} -> respond_json(conn, 200, %{"models" => models})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  post "/api/v1/projects/:project_id/models" do
+    case Library.create_model(project_id, conn.body_params) do
+      {:ok, model} -> respond_json(conn, 201, %{"model" => model})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/models/:model_id" do
+    case Library.get_model(model_id) do
+      {:ok, model} -> respond_json(conn, 200, %{"model" => model})
+      :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
+    end
+  end
+
+  patch "/api/v1/models/:model_id" do
+    case Library.update_model(model_id, conn.body_params) do
+      {:ok, model} -> respond_json(conn, 200, %{"model" => model})
+      :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  delete "/api/v1/models/:model_id" do
+    case Library.delete_model(model_id) do
+      {:ok, model} -> respond_json(conn, 200, %{"model" => model})
+      :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
+    end
+  end
+
+  get "/api/v1/models/:model_id/versions" do
+    case Library.list_versions(model_id) do
+      {:ok, versions} -> respond_json(conn, 200, %{"versions" => versions})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  post "/api/v1/models/:model_id/versions" do
+    case Library.create_version(model_id, conn.body_params) do
+      {:ok, version} -> respond_json(conn, 201, %{"version" => version})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/model-versions/:version_id" do
+    case Library.get_version(version_id) do
+      {:ok, version} -> respond_json(conn, 200, %{"version" => version})
+      :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
+    end
+  end
+
+  patch "/api/v1/model-versions/:version_id" do
+    case Library.update_version(version_id, conn.body_params) do
+      {:ok, version} -> respond_json(conn, 200, %{"version" => version})
+      :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  delete "/api/v1/model-versions/:version_id" do
+    case Library.delete_version(version_id) do
+      {:ok, version} -> respond_json(conn, 200, %{"version" => version})
+      :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
     end
   end
 

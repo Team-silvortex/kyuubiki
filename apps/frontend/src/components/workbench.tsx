@@ -11,27 +11,50 @@ import {
 } from "react";
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
-import { exportStudyModel, generatePrattTruss, type ParametricTrussConfig } from "@/lib/modeler";
+import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/project-format";
+import {
+  buildStudyModelPayload,
+  exportProjectBundle,
+  exportStudyModel,
+  generatePrattTruss,
+  type ParametricTrussConfig,
+} from "@/lib/modeler";
 import { SAMPLE_LIBRARY } from "@/lib/sample-library";
 import {
   createAxialBarJob,
   createPlaneTriangle2dJob,
+  createModel,
+  createModelVersion,
+  createProject,
   createTruss2dJob,
   createTruss3dJob,
+  deleteModel,
+  deleteModelVersion,
+  deleteProject,
+  fetchModel,
+  fetchModelVersion,
+  fetchModelVersions,
   fetchHealth,
   fetchJobHistory,
   fetchJobStatus,
+  fetchProjects,
   type AxialBarJobInput,
   type AxialBarResult,
   type HealthPayload,
   type JobEnvelope,
   type JobState,
+  type ModelRecord,
+  type ModelVersionRecord,
   type PlaneTriangle2dJobInput,
   type PlaneTriangle2dResult,
+  type ProjectRecord,
   type Truss2dJobInput,
   type Truss2dResult,
   type Truss3dJobInput,
   type Truss3dResult,
+  updateModel,
+  updateModelVersion,
+  updateProject,
 } from "@/lib/api";
 
 type Language = "en" | "zh";
@@ -286,6 +309,47 @@ const copy = {
     historyEmpty: "No jobs yet.",
     openJob: "Open",
     refresh: "Refresh",
+    projectLibrary: "Project Library",
+    projectNameField: "Project name",
+    projectDescriptionField: "Description",
+    createProject: "Create project",
+    updateProject: "Rename project",
+    deleteProject: "Delete project",
+    exportProject: "Export project",
+    exportProjectJson: "Project JSON",
+    exportProjectZip: "Project ZIP",
+    importProject: "Import project",
+    importProjectHint: "Load a .kyuubiki.json or .kyuubiki archive into the project library.",
+    projectEmpty: "No projects yet.",
+    savedModels: "Saved Models",
+    versions: "Versions",
+    save: "Save",
+    saveAs: "Save As",
+    deleteSavedModel: "Delete model",
+    renameVersion: "Rename version",
+    deleteVersion: "Delete version",
+    exportData: "Export Data",
+    exportJson: "JSON",
+    exportCsv: "CSV",
+    noSavedModels: "No saved models in this project yet.",
+    noVersions: "No saved versions yet.",
+    defaultProject: "Workspace",
+    projectCreated: "Project created.",
+    projectUpdated: "Project updated.",
+    projectDeleted: "Project deleted.",
+    projectRequired: "Create or select a project before saving models.",
+    projectExported: "Project bundle exported.",
+    projectImported: "Project bundle imported.",
+    modelSaved: "Saved a new model version.",
+    modelCreated: "Saved a new model.",
+    modelDeletedStored: "Deleted the saved model.",
+    versionLoaded: "Loaded a saved version into the workbench.",
+    persistedModelLoaded: "Loaded a saved model from the library.",
+    versionRenamed: "Version renamed.",
+    versionDeleted: "Version deleted.",
+    resultJsonDownloaded: "Analysis result JSON downloaded.",
+    resultCsvDownloaded: "Analysis result CSV downloaded.",
+    noResultToExport: "Run a study first before exporting analysis data.",
     modelTools: "Editing Tools",
     dragHint: "Drag truss nodes directly in the viewport to reshape geometry.",
     parametric: "Parametric Generator",
@@ -463,6 +527,47 @@ const copy = {
     historyEmpty: "暂时还没有任务。",
     openJob: "打开",
     refresh: "刷新",
+    projectLibrary: "项目库",
+    projectNameField: "项目名",
+    projectDescriptionField: "描述",
+    createProject: "新建项目",
+    updateProject: "更新项目",
+    deleteProject: "删除项目",
+    exportProject: "导出项目",
+    exportProjectJson: "项目 JSON",
+    exportProjectZip: "项目 ZIP",
+    importProject: "导入项目",
+    importProjectHint: "导入 .kyuubiki.json 或 .kyuubiki 项目包到项目库。",
+    projectEmpty: "还没有项目。",
+    savedModels: "已保存模型",
+    versions: "版本",
+    save: "保存",
+    saveAs: "另存为",
+    deleteSavedModel: "删除模型",
+    renameVersion: "重命名版本",
+    deleteVersion: "删除版本",
+    exportData: "导出数据",
+    exportJson: "JSON",
+    exportCsv: "CSV",
+    noSavedModels: "这个项目里还没有保存的模型。",
+    noVersions: "还没有版本记录。",
+    defaultProject: "工作区",
+    projectCreated: "项目已创建。",
+    projectUpdated: "项目已更新。",
+    projectDeleted: "项目已删除。",
+    projectRequired: "保存模型前请先创建或选择一个项目。",
+    projectExported: "项目包已导出。",
+    projectImported: "项目包已导入。",
+    modelSaved: "已保存新模型版本。",
+    modelCreated: "已保存新模型。",
+    modelDeletedStored: "已删除保存的模型。",
+    versionLoaded: "已将保存版本加载到工作台。",
+    persistedModelLoaded: "已从库中加载保存模型。",
+    versionRenamed: "版本已重命名。",
+    versionDeleted: "版本已删除。",
+    resultJsonDownloaded: "分析结果 JSON 已下载。",
+    resultCsvDownloaded: "分析结果 CSV 已下载。",
+    noResultToExport: "请先运行一次分析再导出结果数据。",
     modelTools: "编辑工具",
     dragHint: "直接在视图区拖拽桁架节点来修改几何。",
     parametric: "参数化生成",
@@ -557,6 +662,150 @@ function safeStorageGet(): { theme?: Theme; language?: Language } {
   } catch {
     return {};
   }
+}
+
+function serializeCurrentModel(
+  studyKind: StudyKind,
+  loadedModelName: string,
+  activeMaterial: string,
+  axialForm: AxialFormState,
+  trussModel: Truss2dJobInput,
+  truss3dModel: Truss3dJobInput,
+  planeModel: PlaneTriangle2dJobInput,
+  parametric: ParametricTrussConfig,
+): Record<string, unknown> {
+  return buildStudyModelPayload(studyKind, {
+    name: loadedModelName,
+    material: activeMaterial,
+    youngsModulusGpa:
+      studyKind === "axial_bar_1d"
+        ? axialForm.youngsModulusGpa
+        : studyKind === "truss_2d"
+          ? parametric.youngsModulusGpa
+          : studyKind === "truss_3d"
+            ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
+            : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
+    axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
+    truss: studyKind === "truss_2d" ? trussModel : undefined,
+    truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
+    plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
+  });
+}
+
+function toCsvRow(values: Array<string | number | boolean | null | undefined>) {
+  return values
+    .map((value) => {
+      const text = value === null || value === undefined ? "" : String(value);
+      if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+        return `"${text.replaceAll("\"", "\"\"")}"`;
+      }
+      return text;
+    })
+    .join(",");
+}
+
+function serializeResultCsv(
+  studyKind: StudyKind,
+  job: JobEnvelope["job"] | null,
+  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null,
+) {
+  if (!result) return "";
+
+  const lines: string[] = [];
+  lines.push("meta");
+  lines.push(toCsvRow(["study_kind", studyKind]));
+  lines.push(toCsvRow(["job_id", job?.job_id]));
+  lines.push(toCsvRow(["status", job?.status]));
+  lines.push(toCsvRow(["worker_id", job?.worker_id]));
+  lines.push("");
+
+  if (isAxialResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "x", "displacement"]));
+    result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.x, node.displacement])));
+    lines.push("");
+    lines.push("elements");
+    lines.push(toCsvRow(["index", "x1", "x2", "strain", "stress", "axial_force"]));
+    result.elements.forEach((element) =>
+      lines.push(toCsvRow([element.index, element.x1, element.x2, element.strain, element.stress, element.axial_force])),
+    );
+    return lines.join("\n");
+  }
+
+  if (isTruss3dResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "z", "ux", "uy", "uz"]));
+    result.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.z, node.ux, node.uy, node.uz])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(toCsvRow(["index", "id", "node_i", "node_j", "length", "strain", "stress", "axial_force"]));
+    result.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.strain, element.stress, element.axial_force]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isTrussResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy"]));
+    result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy])));
+    lines.push("");
+    lines.push("elements");
+    lines.push(toCsvRow(["index", "id", "node_i", "node_j", "length", "strain", "stress", "axial_force"]));
+    result.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.strain, element.stress, element.axial_force]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  lines.push("nodes");
+  lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy"]));
+  result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy])));
+  lines.push("");
+  lines.push("elements");
+  lines.push(
+    toCsvRow([
+      "index",
+      "id",
+      "node_i",
+      "node_j",
+      "node_k",
+      "area",
+      "strain_x",
+      "strain_y",
+      "gamma_xy",
+      "stress_x",
+      "stress_y",
+      "tau_xy",
+      "von_mises",
+    ]),
+  );
+  result.elements.forEach((element) =>
+    lines.push(
+      toCsvRow([
+        element.index,
+        element.id,
+        element.node_i,
+        element.node_j,
+        element.node_k,
+        element.area,
+        element.strain_x,
+        element.strain_y,
+        element.gamma_xy,
+        element.stress_x,
+        element.stress_y,
+        element.tau_xy,
+        element.von_mises,
+      ]),
+    ),
+  );
+  return lines.join("\n");
 }
 
 function toAxialInput(form: AxialFormState): AxialBarJobInput {
@@ -843,6 +1092,10 @@ function round(value: number): number {
 
 function downloadTextFile(filename: string, contents: string) {
   const blob = new Blob([contents], { type: "application/json;charset=utf-8" });
+  downloadBlobFile(filename, blob);
+}
+
+function downloadBlobFile(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -1020,6 +1273,13 @@ export function Workbench() {
   const [result, setResult] = useState<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>(null);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
+  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
+  const [modelVersions, setModelVersions] = useState<ModelVersionRecord[]>([]);
+  const [projectNameDraft, setProjectNameDraft] = useState<string>(copy.en.defaultProject);
+  const [projectDescriptionDraft, setProjectDescriptionDraft] = useState<string>("");
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [loadedModelName, setLoadedModelName] = useState<string>(copy.en.defaultModel);
   const [message, setMessage] = useState<string>(copy.en.initialLoaded);
@@ -1056,7 +1316,29 @@ export function Workbench() {
   useEffect(() => {
     void refreshHealth();
     void refreshJobHistory();
+    void refreshProjects(true);
   }, []);
+
+  useEffect(() => {
+    const selectedProject = projects.find((project) => project.project_id === selectedProjectId) ?? null;
+
+    if (selectedProject) {
+      setProjectNameDraft(selectedProject.name);
+      setProjectDescriptionDraft(selectedProject.description ?? "");
+    } else if (projects.length === 0) {
+      setProjectNameDraft(t.defaultProject);
+      setProjectDescriptionDraft("");
+    }
+  }, [projects, selectedProjectId, t.defaultProject]);
+
+  useEffect(() => {
+    if (!selectedModelId) {
+      setModelVersions([]);
+      return;
+    }
+
+    void refreshVersions(selectedModelId);
+  }, [selectedModelId]);
 
   async function refreshHealth() {
     try {
@@ -1072,6 +1354,49 @@ export function Workbench() {
       setJobHistory(payload.jobs);
     } catch {
       setJobHistory([]);
+    }
+  }
+
+  async function refreshProjects(bootstrap = false) {
+    try {
+      const payload = await fetchProjects();
+      let nextProjects = payload.projects;
+
+      if (bootstrap && nextProjects.length === 0) {
+        const created = await createProject({ name: copy.en.defaultProject, description: "Local workspace" });
+        nextProjects = [created.project];
+      }
+
+      setProjects(nextProjects);
+
+      const nextProjectId =
+        selectedProjectId && nextProjects.some((project) => project.project_id === selectedProjectId)
+          ? selectedProjectId
+          : nextProjects[0]?.project_id ?? null;
+
+      setSelectedProjectId(nextProjectId);
+
+      const nextModelId =
+        selectedModelId &&
+        nextProjects.some((project) => (project.models ?? []).some((model) => model.model_id === selectedModelId))
+          ? selectedModelId
+          : (nextProjects.find((project) => project.project_id === nextProjectId)?.models ?? [])[0]?.model_id ?? null;
+
+      setSelectedModelId(nextModelId);
+      if (!nextModelId) {
+        setSelectedVersionId(null);
+      }
+    } catch {
+      setProjects([]);
+    }
+  }
+
+  async function refreshVersions(modelId: string) {
+    try {
+      const payload = await fetchModelVersions(modelId);
+      setModelVersions(payload.versions);
+    } catch {
+      setModelVersions([]);
     }
   }
 
@@ -1194,6 +1519,9 @@ export function Workbench() {
       const imported = parsePlaygroundModel(await file.text());
       recordHistory(t.importAction);
       setLoadedModelName(imported.name);
+      setSelectedModelId(null);
+      setSelectedVersionId(null);
+      setModelVersions([]);
       setMessage(`${t.importedModel}: ${imported.name}`);
 
       if (imported.kind === "truss_2d") {
@@ -1237,6 +1565,9 @@ export function Workbench() {
         const imported = parsePlaygroundModel(text);
         recordHistory(t.sampleAction);
         setLoadedModelName(imported.name);
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        setModelVersions([]);
 
         if (imported.kind === "plane_triangle_2d") {
           setStudyKind("plane_triangle_2d");
@@ -1307,6 +1638,9 @@ export function Workbench() {
     setTrussModel(nextModel);
     setSelectedNode(null);
     setSelectedElement(null);
+    setSelectedModelId(null);
+    setSelectedVersionId(null);
+    setModelVersions([]);
     setMemberDraftNodes([]);
     setLoadedModelName("parametric-pratt-truss");
     setMessage(t.generatedModel);
@@ -1314,25 +1648,403 @@ export function Workbench() {
   };
 
   const downloadModel = () => {
-    const contents = exportStudyModel(studyKind, {
-      name: loadedModelName,
-      material: activeMaterial,
-      youngsModulusGpa:
-        studyKind === "axial_bar_1d"
-          ? axialForm.youngsModulusGpa
-          : studyKind === "truss_2d"
-            ? parametric.youngsModulusGpa
-            : studyKind === "truss_3d"
-              ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
-            : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
-      axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
-      truss: studyKind === "truss_2d" ? trussModel : undefined,
-      truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
-      plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
-    });
+    const contents = JSON.stringify(
+      serializeCurrentModel(
+        studyKind,
+        loadedModelName,
+        activeMaterial,
+        axialForm,
+        trussModel,
+        truss3dModel,
+        planeModel,
+        parametric,
+      ),
+      null,
+      2,
+    );
 
     downloadTextFile(`${loadedModelName || "kyuubiki-model"}.json`, contents);
     setMessage(t.modelDownloaded);
+  };
+
+  const downloadResultJson = () => {
+    if (!result) {
+      setMessage(t.noResultToExport);
+      return;
+    }
+
+    const payload = {
+      exported_at: new Date().toISOString(),
+      study_kind: studyKind,
+      model_name: loadedModelName,
+      job,
+      result,
+    };
+
+    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-result.json`, JSON.stringify(payload, null, 2));
+    setMessage(t.resultJsonDownloaded);
+  };
+
+  const downloadResultCsv = () => {
+    if (!result) {
+      setMessage(t.noResultToExport);
+      return;
+    }
+
+    const csv = serializeResultCsv(studyKind, job, result);
+    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-result.csv`, csv);
+    setMessage(t.resultCsvDownloaded);
+  };
+
+  const buildProjectBundleJson = async () => {
+    if (!selectedProject) {
+      throw new Error(t.projectRequired);
+    }
+
+    const modelDetails = await Promise.all(
+      selectedProjectModels.map(async (model) => {
+        const modelEnvelope = await fetchModel(model.model_id);
+        const versionsEnvelope = await fetchModelVersions(model.model_id);
+        return {
+          model: modelEnvelope.model,
+          versions: versionsEnvelope.versions,
+        };
+      }),
+    );
+
+    return exportProjectBundle({
+      project: selectedProject,
+      models: modelDetails.map((entry) => entry.model),
+      modelVersions: modelDetails.flatMap((entry) => entry.versions),
+      activeModelId: selectedModelId,
+      activeVersionId: selectedVersionId,
+      workspaceSnapshot: serializeCurrentModel(
+        studyKind,
+        loadedModelName,
+        activeMaterial,
+        axialForm,
+        trussModel,
+        truss3dModel,
+        planeModel,
+        parametric,
+      ),
+      jobs: jobHistory,
+    });
+  };
+
+  const downloadProjectBundleJson = async () => {
+    try {
+      const bundle = await buildProjectBundleJson();
+      downloadTextFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki.json`, bundle);
+      setMessage(t.projectExported);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
+  };
+
+  const downloadProjectBundleZip = async () => {
+    try {
+      const bundle = await buildProjectBundleJson();
+      const blob = await exportProjectBundleZip(bundle);
+      downloadBlobFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki`, blob);
+      setMessage(t.projectExported);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
+  };
+
+  const importProjectBundle = async (file: File | undefined) => {
+    if (!file) return;
+
+    try {
+      const bundle = await parseProjectBundleFile(file);
+      const createdProject = await createProject({
+        name: bundle.project.name,
+        description: bundle.project.description ?? "",
+      });
+
+      const modelIdMap = new Map<string, string>();
+
+      for (const bundledModel of bundle.models) {
+        const bundledVersions = bundle.model_versions
+          .filter((version) => version.model_id === bundledModel.model_id)
+          .sort((left, right) => left.version_number - right.version_number);
+
+        const baseVersion = bundledVersions[0];
+        const createdModel = await createModel(createdProject.project.project_id, {
+          name: baseVersion?.name || bundledModel.name,
+          kind: bundledModel.kind,
+          material: bundledModel.material ?? undefined,
+          model_schema_version: bundledModel.model_schema_version,
+          payload: (baseVersion?.payload ?? bundledModel.payload) as Record<string, unknown>,
+        });
+
+        const newModelId = createdModel.model.model_id;
+        modelIdMap.set(bundledModel.model_id, newModelId);
+
+        const initialVersionId = createdModel.model.versions?.[0]?.version_id;
+        if (initialVersionId && baseVersion?.name) {
+          await updateModelVersion(initialVersionId, { name: baseVersion.name });
+        }
+
+        for (const extraVersion of bundledVersions.slice(1)) {
+          await createModelVersion(newModelId, {
+            name: extraVersion.name,
+            kind: extraVersion.kind,
+            material: extraVersion.material ?? undefined,
+            model_schema_version: extraVersion.model_schema_version,
+            payload: extraVersion.payload,
+          });
+        }
+      }
+
+      await refreshProjects();
+
+      const importedActiveModelId =
+        (bundle.active_model_id && modelIdMap.get(bundle.active_model_id)) ||
+        [...modelIdMap.values()][0] ||
+        null;
+
+      setSelectedProjectId(createdProject.project.project_id);
+      setSelectedModelId(importedActiveModelId);
+
+      if (bundle.workspace_snapshot) {
+        recordHistory(t.importAction);
+        applyPersistedPayload(bundle.workspace_snapshot, bundle.project.name);
+      }
+
+      if (importedActiveModelId) {
+        await refreshVersions(importedActiveModelId);
+      } else {
+        setModelVersions([]);
+      }
+
+      setMessage(t.projectImported);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.importFailed);
+    }
+  };
+
+  const applyPersistedPayload = (payload: Record<string, unknown>, fallbackName?: string) => {
+    const imported = parsePlaygroundModel(JSON.stringify(payload));
+
+    if (imported.kind === "plane_triangle_2d") {
+      setStudyKind("plane_triangle_2d");
+      setPlaneModel(imported.model);
+    } else if (imported.kind === "truss_3d") {
+      setStudyKind("truss_3d");
+      setTruss3dModel(imported.model);
+    } else if (imported.kind === "truss_2d") {
+      setStudyKind("truss_2d");
+      setTrussModel(imported.model);
+    } else {
+      setStudyKind("axial_bar_1d");
+      setAxialForm({
+        length: imported.length,
+        area: imported.area,
+        elements: imported.elements,
+        tipForce: imported.tipForce,
+        material: imported.material,
+        youngsModulusGpa: imported.youngsModulusGpa,
+      });
+    }
+
+    setLoadedModelName(fallbackName ?? imported.name);
+    setActiveMaterial(imported.material);
+    resetActiveResult(setResult, setJob);
+  };
+
+  const createProjectRecord = () => {
+    startTransition(async () => {
+      try {
+        const payload = await createProject({
+          name: projectNameDraft || t.defaultProject,
+          description: projectDescriptionDraft,
+        });
+        setSelectedProjectId(payload.project.project_id);
+        await refreshProjects();
+        setMessage(t.projectCreated);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const updateProjectRecord = () => {
+    if (!selectedProjectId) return;
+
+    startTransition(async () => {
+      try {
+        await updateProject(selectedProjectId, {
+          name: projectNameDraft || t.defaultProject,
+          description: projectDescriptionDraft,
+        });
+        await refreshProjects();
+        setMessage(t.projectUpdated);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const deleteProjectRecord = () => {
+    if (!selectedProjectId) return;
+    if (typeof window !== "undefined" && !window.confirm(projectNameDraft)) return;
+
+    startTransition(async () => {
+      try {
+        await deleteProject(selectedProjectId);
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        await refreshProjects();
+        setMessage(t.projectDeleted);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const saveModelVersion = (saveAs: boolean) => {
+    if (!selectedProjectId) {
+      setMessage(t.projectRequired);
+      return;
+    }
+
+    const payload = serializeCurrentModel(
+      studyKind,
+      loadedModelName,
+      activeMaterial,
+      axialForm,
+      trussModel,
+      truss3dModel,
+      planeModel,
+      parametric,
+    );
+
+    startTransition(async () => {
+      try {
+        if (!selectedModelId || saveAs) {
+          const created = await createModel(selectedProjectId, {
+            name: loadedModelName,
+            kind: studyKind,
+            material: activeMaterial,
+            model_schema_version: String(payload.model_schema_version ?? "kyuubiki.model/v1"),
+            payload,
+          });
+          setSelectedModelId(created.model.model_id);
+          setSelectedVersionId(created.model.latest_version_id ?? null);
+          await refreshProjects();
+          await refreshVersions(created.model.model_id);
+          setMessage(t.modelCreated);
+          return;
+        }
+
+        await updateModel(selectedModelId, {
+          name: loadedModelName,
+          kind: studyKind,
+          material: activeMaterial,
+          model_schema_version: String(payload.model_schema_version ?? "kyuubiki.model/v1"),
+          payload,
+        });
+
+        const version = await createModelVersion(selectedModelId, {
+          name: loadedModelName,
+          kind: studyKind,
+          material: activeMaterial,
+          model_schema_version: String(payload.model_schema_version ?? "kyuubiki.model/v1"),
+          payload,
+        });
+
+        setSelectedVersionId(version.version.version_id);
+        await refreshProjects();
+        await refreshVersions(selectedModelId);
+        setMessage(t.modelSaved);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const openSavedModel = (model: ModelRecord) => {
+    startTransition(async () => {
+      try {
+        const payload = await fetchModel(model.model_id);
+        recordHistory(t.historyAction);
+        applyPersistedPayload(payload.model.payload, payload.model.name);
+        setSelectedProjectId(payload.model.project_id);
+        setSelectedModelId(payload.model.model_id);
+        setSelectedVersionId(payload.model.latest_version_id ?? null);
+        await refreshVersions(payload.model.model_id);
+        setMessage(t.persistedModelLoaded);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const openSavedVersion = (version: ModelVersionRecord) => {
+    startTransition(async () => {
+      try {
+        const payload = await fetchModelVersion(version.version_id);
+        recordHistory(t.historyAction);
+        applyPersistedPayload(payload.version.payload, payload.version.name);
+        setSelectedModelId(payload.version.model_id);
+        setSelectedProjectId(payload.version.project_id);
+        setSelectedVersionId(payload.version.version_id);
+        setMessage(t.versionLoaded);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const renameSelectedVersion = () => {
+    if (!selectedVersionId) return;
+
+    startTransition(async () => {
+      try {
+        await updateModelVersion(selectedVersionId, { name: loadedModelName });
+        await refreshVersions(selectedModelId ?? "");
+        setMessage(t.versionRenamed);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const deleteSelectedVersion = () => {
+    if (!selectedVersionId) return;
+
+    startTransition(async () => {
+      try {
+        await deleteModelVersion(selectedVersionId);
+        setSelectedVersionId(null);
+        if (selectedModelId) {
+          await refreshVersions(selectedModelId);
+        }
+        await refreshProjects();
+        setMessage(t.versionDeleted);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const deleteSavedModelRecord = () => {
+    if (!selectedModelId) return;
+
+    startTransition(async () => {
+      try {
+        await deleteModel(selectedModelId);
+        setSelectedModelId(null);
+        setSelectedVersionId(null);
+        setModelVersions([]);
+        await refreshProjects();
+        setMessage(t.modelDeletedStored);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
   };
 
   const railItems: Array<{ key: SidebarSection; label: string; symbol: string }> = [
@@ -1341,6 +2053,9 @@ export function Workbench() {
     { key: "library", label: t.rail.library, symbol: "H" },
     { key: "system", label: t.rail.system, symbol: "Y" },
   ];
+
+  const selectedProject = projects.find((project) => project.project_id === selectedProjectId) ?? null;
+  const selectedProjectModels = selectedProject?.models ?? [];
 
   const isAxial = studyKind === "axial_bar_1d";
   const isTruss = studyKind === "truss_2d";
@@ -2089,7 +2804,14 @@ export function Workbench() {
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.sampleLibrary}</h2>
-                <button className="link-button" onClick={() => void refreshJobHistory()} type="button">
+                <button
+                  className="link-button"
+                  onClick={() => {
+                    void refreshJobHistory();
+                    void refreshProjects();
+                  }}
+                  type="button"
+                >
                   {t.refresh}
                 </button>
               </div>
@@ -2109,6 +2831,145 @@ export function Workbench() {
                     <strong>{sample.name}</strong>
                     <span>{t.kinds[sample.kind]}</span>
                     <small>{sample.summary}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="sidebar-card">
+              <div className="card-head">
+                <h2>{t.projectLibrary}</h2>
+                <span>{projects.length}</span>
+              </div>
+              <div className="form-grid compact">
+                <label>
+                  <span>{t.projectNameField}</span>
+                  <input value={projectNameDraft} onChange={(event) => setProjectNameDraft(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t.projectDescriptionField}</span>
+                  <input value={projectDescriptionDraft} onChange={(event) => setProjectDescriptionDraft(event.target.value)} />
+                </label>
+                <label>
+                  <span>{t.projectLibrary}</span>
+                  <select
+                    value={selectedProjectId ?? ""}
+                    onChange={(event) => {
+                      setSelectedProjectId(event.target.value || null);
+                      setSelectedModelId(null);
+                    }}
+                  >
+                    <option value="">{t.none}</option>
+                    {projects.map((project) => (
+                      <option key={project.project_id} value={project.project_id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" onClick={createProjectRecord} type="button">
+                  {t.createProject}
+                </button>
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={updateProjectRecord} type="button">
+                  {t.updateProject}
+                </button>
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={deleteProjectRecord} type="button">
+                  {t.deleteProject}
+                </button>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={() => void downloadProjectBundleJson()} type="button">
+                  {t.exportProjectJson}
+                </button>
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={() => void downloadProjectBundleZip()} type="button">
+                  {t.exportProjectZip}
+                </button>
+              </div>
+              <label className="import-box">
+                <span>{t.importProject}</span>
+                <small>{t.importProjectHint}</small>
+                <input
+                  type="file"
+                  accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
+                  onChange={(event) => void importProjectBundle(event.target.files?.[0])}
+                />
+              </label>
+              {projects.length === 0 ? <p className="card-copy">{t.projectEmpty}</p> : null}
+            </section>
+
+            <section className="sidebar-card">
+              <div className="card-head">
+                <h2>{t.savedModels}</h2>
+                <span>{selectedProjectModels.length}</span>
+              </div>
+              <div className="form-grid compact">
+                <label>
+                  <span>{t.modelName}</span>
+                  <input value={loadedModelName} onChange={(event) => setLoadedModelName(event.target.value)} />
+                </label>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" onClick={() => saveModelVersion(false)} type="button">
+                  {t.save}
+                </button>
+                <button className="ghost-button" onClick={() => saveModelVersion(true)} type="button">
+                  {t.saveAs}
+                </button>
+                <button className="ghost-button" disabled={!selectedModelId} onClick={deleteSavedModelRecord} type="button">
+                  {t.deleteSavedModel}
+                </button>
+              </div>
+              <div className="history-list">
+                {selectedProjectModels.length === 0 ? <p className="card-copy">{t.noSavedModels}</p> : null}
+                {selectedProjectModels.map((model) => (
+                  <button
+                    key={model.model_id}
+                    className={`history-item${selectedModelId === model.model_id ? " history-item--active" : ""}`}
+                    onClick={() => openSavedModel(model)}
+                    type="button"
+                  >
+                    <strong>{model.name}</strong>
+                    <span>{t.kinds[model.kind as keyof typeof t.kinds] ?? model.kind}</span>
+                    <small>
+                      {t.updatedAt}: {formatTime(model.updated_at, language)}
+                    </small>
+                    <small>
+                      v{model.latest_version_number ?? 1}
+                    </small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="sidebar-card">
+              <div className="card-head">
+                <h2>{t.versions}</h2>
+                <span>{modelVersions.length}</span>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" disabled={!selectedVersionId} onClick={renameSelectedVersion} type="button">
+                  {t.renameVersion}
+                </button>
+                <button className="ghost-button" disabled={!selectedVersionId} onClick={deleteSelectedVersion} type="button">
+                  {t.deleteVersion}
+                </button>
+              </div>
+              <div className="history-list">
+                {modelVersions.length === 0 ? <p className="card-copy">{t.noVersions}</p> : null}
+                {modelVersions.map((version) => (
+                  <button
+                    key={version.version_id}
+                    className={`history-item${selectedVersionId === version.version_id ? " history-item--active" : ""}`}
+                    onClick={() => openSavedVersion(version)}
+                    type="button"
+                  >
+                    <strong>{version.name}</strong>
+                    <span>v{version.version_number}</span>
+                    <small>
+                      {t.updatedAt}: {formatTime(version.updated_at, language)}
+                    </small>
                   </button>
                 ))}
               </div>
@@ -2710,6 +3571,14 @@ export function Workbench() {
           </section>
           <section className="info-card">
             <h3>{t.report}</h3>
+            <div className="button-row">
+              <button className="ghost-button" onClick={downloadResultJson} type="button">
+                {t.exportData} {t.exportJson}
+              </button>
+              <button className="ghost-button" onClick={downloadResultCsv} type="button">
+                {t.exportData} {t.exportCsv}
+              </button>
+            </div>
             <div className="metric-grid">
               <div>
                 <span>{t.tipDisp}</span>

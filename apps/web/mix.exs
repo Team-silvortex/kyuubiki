@@ -14,7 +14,7 @@ defmodule KyuubikiWeb.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :ecto_sql],
       mod: {KyuubikiWeb.Application, []}
     ]
   end
@@ -35,6 +35,8 @@ defmodule KyuubikiWeb.MixProject do
   defp deps do
     [
       {:jason, "~> 1.4"},
+      {:ecto_sql, "~> 3.13"},
+      {:postgrex, "~> 0.20"},
       {:plug, "~> 1.19"},
       {:plug_cowboy, "~> 2.8"}
     ]

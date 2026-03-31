@@ -32,6 +32,23 @@ A change is not done until all of the following are true:
 - `make test`
 - `make verify`
 
+## PostgreSQL Mode
+
+The Elixir orchestrator can run against PostgreSQL for durable job/result
+storage.
+
+Example:
+
+```bash
+cd /Users/Shared/chroot/dev/kyuubiki
+KYUUBIKI_STORAGE_BACKEND=postgres \
+DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
+zsh ./scripts/kyuubiki start
+```
+
+If those environment variables are not set, local development falls back to the
+lightweight memory/json backend so tests and quick UI iteration keep working.
+
 ## Test Placement
 
 - Elixir unit and integration tests go under `apps/web/test`

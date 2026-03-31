@@ -1,6 +1,10 @@
 import type {
   AxialBarJobInput,
+  JobState,
+  ModelRecord,
+  ModelVersionRecord,
   PlaneTriangle2dJobInput,
+  ProjectRecord,
   Truss2dJobInput,
   Truss3dJobInput,
   TrussElementInput,
@@ -16,7 +20,8 @@ export type ParametricTrussConfig = {
   loadY: number;
 };
 
-const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
+export const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
+export const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v1";
 
 export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInput {
   const bays = Math.max(2, Math.round(config.bays));
@@ -155,6 +160,47 @@ export function exportStudyModel(
   }
 
   return JSON.stringify({}, null, 2);
+}
+
+export function buildStudyModelPayload(
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d",
+  payload: {
+    name: string;
+    material: string;
+    youngsModulusGpa: number;
+    axial?: AxialBarJobInput;
+    truss?: Truss2dJobInput;
+    truss3d?: Truss3dJobInput;
+    plane?: PlaneTriangle2dJobInput;
+  },
+): Record<string, unknown> {
+  return JSON.parse(exportStudyModel(kind, payload)) as Record<string, unknown>;
+}
+
+export function exportProjectBundle(payload: {
+  project: ProjectRecord;
+  models: ModelRecord[];
+  modelVersions: ModelVersionRecord[];
+  activeModelId?: string | null;
+  activeVersionId?: string | null;
+  workspaceSnapshot?: Record<string, unknown> | null;
+  jobs?: JobState[];
+}): string {
+  return JSON.stringify(
+    {
+      project_schema_version: PROJECT_SCHEMA_VERSION,
+      exported_at: new Date().toISOString(),
+      project: payload.project,
+      models: payload.models,
+      model_versions: payload.modelVersions,
+      active_model_id: payload.activeModelId ?? null,
+      active_version_id: payload.activeVersionId ?? null,
+      workspace_snapshot: payload.workspaceSnapshot ?? null,
+      jobs: payload.jobs ?? [],
+    },
+    null,
+    2,
+  );
 }
 
 function member(

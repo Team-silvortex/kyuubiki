@@ -34,6 +34,32 @@ This is intentionally a host-native launcher rather than a container-first one.
 Right now the project is optimizing for local iteration, local IPC evolution,
 and mixed-platform development more than environment isolation.
 
+## PostgreSQL Persistence
+
+The orchestrator now supports a PostgreSQL-backed persistence path for jobs and
+analysis results.
+
+- Default local fallback: in-memory + JSON files
+- PostgreSQL mode: set `KYUUBIKI_STORAGE_BACKEND=postgres`
+- Connection string: set `DATABASE_URL`
+
+Example:
+
+```bash
+cd /Users/Shared/chroot/dev/kyuubiki
+KYUUBIKI_STORAGE_BACKEND=postgres \
+DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
+zsh ./scripts/kyuubiki start
+```
+
+In PostgreSQL mode, the Elixir app will ensure these tables exist on boot:
+
+- `kyuubiki_jobs`
+- `kyuubiki_analysis_results`
+
+The current test suite still uses the lightweight memory backend because this
+machine does not yet have a local PostgreSQL service configured.
+
 ## Containerization Fit
 
 Containerization is useful here, but not as the default local development mode

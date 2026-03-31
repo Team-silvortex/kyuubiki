@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/project.schema.json",
+  "title": "Kyuubiki Project Bundle",
+  "description": "Portable JSON project package for persisted project, model, and version data.",
+  "type": "object",
+  "required": ["project_schema_version", "project", "models", "model_versions"],
+  "properties": {
+    "project_schema_version": {
+      "type": "string",
+      "const": "kyuubiki.project/v1"
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "project": {
+      "$ref": "#/$defs/projectRecordV1"
+    },
+    "models": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/modelRecordV1"
+      }
+    },
+    "model_versions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/modelVersionRecordV1"
+      }
+    },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "active_model_id": {
+      "type": ["string", "null"]
+    },
+    "active_version_id": {
+      "type": ["string", "null"]
+    },
+    "workspace_snapshot": {
+      "type": ["object", "null"],
+      "oneOf": [
+        { "$ref": "model.schema.json#/$defs/axialBarModelV1" },
+        { "$ref": "model.schema.json#/$defs/truss2dModelV1" },
+        { "$ref": "model.schema.json#/$defs/truss3dModelV1" },
+        { "$ref": "model.schema.json#/$defs/planeTriangle2dModelV1" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "projectRecordV1": {
+      "type": "object",
+      "required": ["project_id", "name", "inserted_at", "updated_at"],
+      "properties": {
+        "project_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": ["string", "null"] },
+        "inserted_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "modelRecordV1": {
+      "type": "object",
+      "required": [
+        "model_id",
+        "project_id",
+        "name",
+        "kind",
+        "model_schema_version",
+        "payload",
+        "inserted_at",
+        "updated_at"
+      ],
+      "properties": {
+        "model_id": { "type": "string", "minLength": 1 },
+        "project_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "material": { "type": ["string", "null"] },
+        "model_schema_version": { "type": "string", "const": "kyuubiki.model/v1" },
+        "payload": {
+          "oneOf": [
+            { "$ref": "model.schema.json#/$defs/axialBarModelV1" },
+            { "$ref": "model.schema.json#/$defs/truss2dModelV1" },
+            { "$ref": "model.schema.json#/$defs/truss3dModelV1" },
+            { "$ref": "model.schema.json#/$defs/planeTriangle2dModelV1" }
+          ]
+        },
+        "latest_version_id": { "type": ["string", "null"] },
+        "latest_version_number": { "type": ["integer", "null"] },
+        "inserted_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "modelVersionRecordV1": {
+      "type": "object",
+      "required": [
+        "version_id",
+        "project_id",
+        "model_id",
+        "version_number",
+        "kind",
+        "model_schema_version",
+        "payload",
+        "inserted_at",
+        "updated_at"
+      ],
+      "properties": {
+        "version_id": { "type": "string", "minLength": 1 },
+        "project_id": { "type": "string", "minLength": 1 },
+        "model_id": { "type": "string", "minLength": 1 },
+        "name": { "type": ["string", "null"] },
+        "version_number": { "type": "integer", "minimum": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "material": { "type": ["string", "null"] },
+        "model_schema_version": { "type": "string", "const": "kyuubiki.model/v1" },
+        "payload": {
+          "oneOf": [
+            { "$ref": "model.schema.json#/$defs/axialBarModelV1" },
+            { "$ref": "model.schema.json#/$defs/truss2dModelV1" },
+            { "$ref": "model.schema.json#/$defs/truss3dModelV1" },
+            { "$ref": "model.schema.json#/$defs/planeTriangle2dModelV1" }
+          ]
+        },
+        "inserted_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

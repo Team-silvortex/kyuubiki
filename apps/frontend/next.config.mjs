@@ -27,6 +27,22 @@ const nextConfig = {
         destination: "http://127.0.0.1:4000/api/v1/jobs",
       },
       {
+        source: "/api/v1/projects/:path*",
+        destination: "http://127.0.0.1:4000/api/v1/projects/:path*",
+      },
+      {
+        source: "/api/v1/projects",
+        destination: "http://127.0.0.1:4000/api/v1/projects",
+      },
+      {
+        source: "/api/v1/models/:path*",
+        destination: "http://127.0.0.1:4000/api/v1/models/:path*",
+      },
+      {
+        source: "/api/v1/model-versions/:path*",
+        destination: "http://127.0.0.1:4000/api/v1/model-versions/:path*",
+      },
+      {
         source: "/api/playground/run",
         destination: "http://127.0.0.1:4000/api/playground/run",
       },
