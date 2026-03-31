@@ -432,6 +432,11 @@ html[data-theme="graphite"] .guide {
   stroke: var(--accent-cool);
 }
 
+.bar--selected {
+  stroke: var(--accent);
+  stroke-width: 10;
+}
+
 .bar--deformed {
   stroke: url(#beamGradient);
 }
@@ -459,6 +464,16 @@ html[data-theme="graphite"] .guide {
 
 .node-base--active {
   fill: var(--accent);
+}
+
+.node-base--warning {
+  fill: #d9483b;
+}
+
+.node-hotspot-ring {
+  fill: none;
+  stroke: rgba(217, 72, 59, 0.35);
+  stroke-width: 4;
 }
 
 .node-base--draft {
@@ -500,6 +515,85 @@ html[data-theme="graphite"] .guide {
 
 .table-row--active {
   background: var(--accent-soft);
+}
+
+.table-row--warning {
+  background: rgba(217, 72, 59, 0.1);
+}
+
+.issue-badge {
+  display: inline-grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(217, 72, 59, 0.14);
+  color: #b3392f;
+  font-weight: 700;
+}
+
+.diagnostic-list {
+  display: grid;
+  gap: 10px;
+}
+
+.diagnostic-item {
+  border: 1px solid rgba(217, 72, 59, 0.16);
+  border-radius: 14px;
+  background: rgba(217, 72, 59, 0.08);
+  padding: 12px;
+}
+
+.diagnostic-item strong {
+  display: block;
+  line-height: 1.5;
+}
+
+.diagnostic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stability-badge {
+  display: grid;
+  gap: 4px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+}
+
+.stability-badge strong {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stability-badge span {
+  font-size: 1.8rem;
+  font-weight: 800;
+}
+
+.stability-badge small {
+  color: var(--muted);
+}
+
+.stability-badge--good {
+  border-color: rgba(44, 132, 90, 0.2);
+  background: rgba(44, 132, 90, 0.08);
+}
+
+.stability-badge--watch {
+  border-color: rgba(199, 100, 37, 0.2);
+  background: rgba(199, 100, 37, 0.08);
+}
+
+.stability-badge--risk {
+  border-color: rgba(217, 72, 59, 0.2);
+  background: rgba(217, 72, 59, 0.08);
 }
 
 .small-table {

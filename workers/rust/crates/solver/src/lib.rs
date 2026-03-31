@@ -266,6 +266,8 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
         .map(|element| element.stress.abs())
         .fold(0.0_f64, f64::max);
 
+    validate_small_displacement_truss(request, max_displacement)?;
+
     Ok(SolveTruss2dResult {
         input: request.clone(),
         nodes,
@@ -273,6 +275,29 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
         max_displacement,
         max_stress,
     })
+}
+
+fn validate_small_displacement_truss(
+    request: &SolveTruss2dRequest,
+    max_displacement: f64,
+) -> Result<(), String> {
+    let bounds = get_planar_bounds(
+        &request
+            .nodes
+            .iter()
+            .map(|node| (node.x, node.y))
+            .collect::<Vec<_>>(),
+    );
+    let characteristic_length = bounds.0.max(bounds.1).max(1.0e-9);
+
+    if max_displacement > characteristic_length * 0.25 {
+        return Err(
+            "truss response exceeds the small-deformation limit; check supports or connectivity"
+                .to_string(),
+        );
+    }
+
+    Ok(())
 }
 
 pub fn solve_plane_triangle_2d(
@@ -597,6 +622,15 @@ fn signed_triangle_area(
         - (node_k.x - node_i.x) * (node_j.y - node_i.y))
 }
 
+fn get_planar_bounds(points: &[(f64, f64)]) -> (f64, f64) {
+    let min_x = points.iter().map(|point| point.0).fold(0.0_f64, f64::min);
+    let max_x = points.iter().map(|point| point.0).fold(1.0_f64, f64::max);
+    let min_y = points.iter().map(|point| point.1).fold(0.0_f64, f64::min);
+    let max_y = points.iter().map(|point| point.1).fold(1.0_f64, f64::max);
+
+    (max_x - min_x, max_y - min_y)
+}
+
 fn transpose_3x6(input: &[[f64; 6]; 3]) -> [[f64; 3]; 6] {
     let mut output = [[0.0; 3]; 6];
 
@@ -832,6 +866,67 @@ mod tests {
         assert_eq!(result.elements.len(), 3);
         assert!(result.max_displacement > 0.0);
         assert!(result.max_stress > 0.0);
+    }
+
+    #[test]
+    fn rejects_truss_responses_that_blow_past_small_displacement_limits() {
+        let error = solve_truss_2d(&SolveTruss2dRequest {
+            nodes: vec![
+                TrussNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                TrussNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_x: false,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                TrussNodeInput {
+                    id: "n2".to_string(),
+                    x: 0.5,
+                    y: 0.75,
+                    fix_x: false,
+                    fix_y: false,
+                    load_x: 0.0,
+                    load_y: -1000.0,
+                },
+            ],
+            elements: vec![
+                TrussElementInput {
+                    id: "e0".to_string(),
+                    node_i: 0,
+                    node_j: 2,
+                    area: 1.0e-12,
+                    youngs_modulus: 70.0e9,
+                },
+                TrussElementInput {
+                    id: "e1".to_string(),
+                    node_i: 1,
+                    node_j: 2,
+                    area: 1.0e-12,
+                    youngs_modulus: 70.0e9,
+                },
+                TrussElementInput {
+                    id: "e2".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 1.0e-12,
+                    youngs_modulus: 70.0e9,
+                },
+            ],
+        })
+        .expect_err("overly soft truss should be rejected");
+
+        assert!(error.contains("small-deformation"));
     }
 
     #[test]

@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start status stop restart test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend
+.PHONY: help tree start status stop restart test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
 
 help:
 	@echo "Available targets:"
@@ -21,6 +21,7 @@ help:
 	@echo "  make orchestrator Run the Elixir orchestrator API"
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
+	@echo "  make benchmark   Run the Rust solver benchmark suite"
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
 	@echo "  zsh ./scripts/kyuubiki help    Show the unified local entrypoint"
@@ -87,3 +88,6 @@ playground:
 
 frontend:
 	@$(ENTRYPOINT) frontend
+
+benchmark:
+	@$(ENTRYPOINT) benchmark $(ARGS)

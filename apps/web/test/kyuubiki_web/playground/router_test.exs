@@ -335,6 +335,62 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert payload["transport"]["solver_agent_tcp"] == 5001
   end
 
+  test "surfaces solver failure messages through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => false,
+          "error" => %{
+            "code" => "solver_failed",
+            "message" =>
+              "truss response exceeds the small-deformation limit; check supports or connectivity"
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/truss-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "fix_x" => false,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0
+            }
+          ],
+          "elements" => []
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "failed"
+    assert result_payload["job"]["message"] =~ "small-deformation limit"
+  end
+
   test "lists persisted jobs in reverse chronological order" do
     {:ok, _job_1} =
       Store.create(%{
@@ -414,7 +470,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     payload = Jason.decode!(conn.resp_body)
 
-    if payload["job"]["status"] == "completed" do
+    if payload["job"]["status"] in ["completed", "failed"] do
       payload
     else
       Process.sleep(10)

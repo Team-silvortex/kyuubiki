@@ -58,6 +58,7 @@ export type JobState = {
   job_id: string;
   status: string;
   worker_id: string | null;
+  message?: string | null;
   progress: number;
   residual?: number | null;
   iteration?: number | null;

@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useState, useTransition, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useState,
+  useTransition,
+  type Dispatch,
+  type PointerEvent as ReactPointerEvent,
+  type SetStateAction,
+} from "react";
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
 import { exportStudyModel, generatePrattTruss, type ParametricTrussConfig } from "@/lib/modeler";
@@ -62,6 +69,22 @@ type DisplayTrussElement = {
 };
 
 type SelectionKind = "node" | "element";
+
+type TrussSuggestion =
+  | { id: string; kind: "fix_support"; axis: "x" | "y"; nodeIndex: number; label: string }
+  | { id: string; kind: "connect_nearest"; nodeIndex: number; label: string };
+
+type TrussDiagnostics = {
+  blockingMessages: string[];
+  nodeIssues: Record<number, string[]>;
+  suggestions: TrussSuggestion[];
+};
+
+type StabilitySummary = {
+  score: number;
+  tone: "good" | "watch" | "risk";
+  hotspotNodes: number[];
+};
 
 const defaultAxial: AxialFormState = {
   length: 1.2,
@@ -130,6 +153,7 @@ const copy = {
     report: "Report",
     metrics: "Solver Metrics",
     messages: "Messages",
+    failureReason: "Failure reason",
     overview: "Overview",
     controls: "Controls",
     settings: "Settings",
@@ -203,15 +227,31 @@ const copy = {
     thickness: "Thickness",
     poisson: "Poisson ratio",
     sampleLibrary: "Sample Library",
-  objectTree: "Object Tree",
+    objectTree: "Object Tree",
     properties: "Properties",
+    diagnostics: "Diagnostics",
+    diagnosticsClear: "No blocking issues detected.",
+    suggestedFixes: "Suggested fixes",
+    stabilityScore: "Stability score",
+    hotspotNodes: "Hotspot nodes",
+    stabilityGood: "Stable",
+    stabilityWatch: "Watch",
+    stabilityRisk: "At risk",
+    translatedSmallDeformation:
+      "The structure is behaving too softly for a small-deformation solve. Add supports or reinforce the weak span.",
+    translatedConnectivity:
+      "The truss likely has a weak or disconnected region. Check supports, member links, and isolated nodes.",
     addNode: "Add Node",
+    addBranchNode: "Branch Node",
     deleteNode: "Delete Node",
     addMember: "Add Member",
+    toggleMember: "Toggle Link",
     deleteMember: "Delete Member",
     selectTwoNodes: "Select two nodes to create a member.",
     memberCreated: "Member created.",
+    memberRemoved: "Member removed.",
     nodeCreated: "Node created.",
+    branchCreated: "Node created and linked.",
     nodeDeleted: "Node deleted.",
     memberDeleted: "Member deleted.",
     selectionHint: "Use the object tree or viewport to pick nodes and members.",
@@ -226,6 +266,23 @@ const copy = {
     nodeI: "Node I",
     nodeJ: "Node J",
     none: "None",
+    precheckPrefix: "Precheck failed",
+    unstableSupport: "Add at least two restrained degrees of freedom to stabilize the truss.",
+    isolatedNode: "Every node should connect to at least one member before solving.",
+    underconnected: "This truss is under-connected for a stable 2D solve.",
+    freeRigidBody: "Prevent rigid-body motion by constraining both translation directions across the model.",
+    supportXMissing: "Add at least one X restraint to prevent sideways drift.",
+    supportYMissing: "Add at least one Y restraint to prevent vertical drift.",
+    fixCurrentNodeXAction: "Fix current node in X",
+    fixCurrentNodeYAction: "Fix current node in Y",
+    fixNodeXAction: "Fix flagged node in X",
+    fixNodeYAction: "Fix flagged node in Y",
+    connectCurrentNodeAction: "Connect current node to nearest node",
+    connectNodeAction: "Connect flagged node to nearest node",
+    suggestionAppliedSupportX: "Added an X restraint to the suggested node.",
+    suggestionAppliedSupportY: "Added a Y restraint to the suggested node.",
+    suggestionAppliedLink: "Connected the node to its nearest available neighbor.",
+    suggestionNoLinkTarget: "No valid nearby node was available for an automatic link.",
   },
   zh: {
     brand: "Kyuubiki",
@@ -247,6 +304,7 @@ const copy = {
     report: "报告",
     metrics: "求解指标",
     messages: "消息",
+    failureReason: "失败原因",
     overview: "概览",
     controls: "控制",
     settings: "设置",
@@ -322,13 +380,27 @@ const copy = {
     sampleLibrary: "样板库",
     objectTree: "对象树",
     properties: "属性",
+    diagnostics: "诊断",
+    diagnosticsClear: "当前没有阻塞性的预检查问题。",
+    suggestedFixes: "建议修复",
+    stabilityScore: "稳定性评分",
+    hotspotNodes: "危险热区节点",
+    stabilityGood: "稳定",
+    stabilityWatch: "需关注",
+    stabilityRisk: "高风险",
+    translatedSmallDeformation: "这个结构看起来过软，已经超出小变形求解范围。请补约束或增强薄弱跨段。",
+    translatedConnectivity: "桁架里可能有连接偏弱或断开的区域。请检查约束、杆件连接和孤立节点。",
     addNode: "新增节点",
+    addBranchNode: "分支节点",
     deleteNode: "删除节点",
     addMember: "新增杆件",
+    toggleMember: "切换连接",
     deleteMember: "删除杆件",
     selectTwoNodes: "请选择两个节点来创建杆件。",
     memberCreated: "杆件已创建。",
+    memberRemoved: "杆件已断开。",
     nodeCreated: "节点已创建。",
+    branchCreated: "节点已创建并连接。",
     nodeDeleted: "节点已删除。",
     memberDeleted: "杆件已删除。",
     selectionHint: "可以通过对象树或视图区选择节点和杆件。",
@@ -343,6 +415,23 @@ const copy = {
     nodeI: "起点节点",
     nodeJ: "终点节点",
     none: "无",
+    precheckPrefix: "预检查失败",
+    unstableSupport: "请至少提供两个受限自由度来稳定桁架。",
+    isolatedNode: "每个节点在求解前都应该至少连接一根杆件。",
+    underconnected: "这个桁架连接数量偏少，可能无法稳定求解。",
+    freeRigidBody: "请通过约束两个平移方向来避免整体刚体运动。",
+    supportXMissing: "至少增加一个 X 方向约束，避免侧向漂移。",
+    supportYMissing: "至少增加一个 Y 方向约束，避免竖向漂移。",
+    fixCurrentNodeXAction: "固定当前节点 X",
+    fixCurrentNodeYAction: "固定当前节点 Y",
+    fixNodeXAction: "固定问题节点 X",
+    fixNodeYAction: "固定问题节点 Y",
+    connectCurrentNodeAction: "将当前节点连接到最近节点",
+    connectNodeAction: "将问题节点连接到最近节点",
+    suggestionAppliedSupportX: "已为建议节点补上 X 约束。",
+    suggestionAppliedSupportY: "已为建议节点补上 Y 约束。",
+    suggestionAppliedLink: "已将该节点连接到最近的可用邻点。",
+    suggestionNoLinkTarget: "附近没有可自动连接的有效节点。",
   },
 } as const;
 
@@ -372,6 +461,45 @@ function scientific(value: number | null | undefined, digits = 3): string {
 
 function fixed(value: number | null | undefined, digits = 2): string {
   return typeof value === "number" ? value.toFixed(digits) : "--";
+}
+
+function humanizeSolverFailure(message: string | null | undefined, languageCopy: (typeof copy)[Language]) {
+  if (!message) return null;
+
+  if (message.includes("small-deformation limit")) {
+    return `${languageCopy.translatedSmallDeformation} ${languageCopy.translatedConnectivity}`;
+  }
+
+  if (message.includes("supports or connectivity")) {
+    return languageCopy.translatedConnectivity;
+  }
+
+  return message;
+}
+
+function formatJobMessage(job: JobEnvelope["job"] | null, fallback: string, languageCopy: (typeof copy)[Language]) {
+  if (!job) return fallback;
+  if (job.status === "failed" && job.message) {
+    return `${job.job_id} failed: ${humanizeSolverFailure(job.message, languageCopy) ?? job.message}`;
+  }
+  return `${job.job_id} ${job.status}`;
+}
+
+function summarizeTrussStability(model: Truss2dJobInput, diagnostics: TrussDiagnostics): StabilitySummary {
+  const nodeIssueEntries = Object.entries(diagnostics.nodeIssues);
+  const issueCount = diagnostics.blockingMessages.length + nodeIssueEntries.reduce((sum, [, issues]) => sum + issues.length, 0);
+  const supportCount = model.nodes.reduce((sum, node) => sum + (node.fix_x ? 1 : 0) + (node.fix_y ? 1 : 0), 0);
+  const structuralScore = Math.max(0, 100 - issueCount * 14 - Math.max(0, model.nodes.length - model.elements.length - 1) * 8);
+  const supportBoost = Math.min(12, supportCount * 3);
+  const score = Math.max(0, Math.min(100, structuralScore + supportBoost));
+  const hotspotNodes = nodeIssueEntries
+    .sort((left, right) => right[1].length - left[1].length)
+    .slice(0, 3)
+    .map(([nodeIndex]) => Number(nodeIndex));
+
+  if (score >= 80) return { score, tone: "good", hotspotNodes };
+  if (score >= 55) return { score, tone: "watch", hotspotNodes };
+  return { score, tone: "risk", hotspotNodes };
 }
 
 function localMaterialLabel(value: string, language: Language): string {
@@ -544,6 +672,157 @@ function downloadTextFile(filename: string, contents: string) {
   URL.revokeObjectURL(url);
 }
 
+function resetActiveResult(
+  setResult: Dispatch<SetStateAction<AxialBarResult | Truss2dResult | PlaneTriangle2dResult | null>>,
+  setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>,
+) {
+  setResult(null);
+  setJob(null);
+}
+
+function pushNodeIssue(nodeIssues: Record<number, string[]>, nodeIndex: number, issue: string) {
+  const issues = nodeIssues[nodeIndex] ?? [];
+  if (!issues.includes(issue)) {
+    nodeIssues[nodeIndex] = [...issues, issue];
+  }
+}
+
+function findNearestConnectableNode(model: Truss2dJobInput, nodeIndex: number): number | null {
+  const origin = model.nodes[nodeIndex];
+  if (!origin) return null;
+
+  let bestIndex: number | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const [candidateIndex, candidate] of model.nodes.entries()) {
+    if (candidateIndex === nodeIndex) continue;
+
+    const alreadyLinked = model.elements.some(
+      (element) =>
+        (element.node_i === nodeIndex && element.node_j === candidateIndex) ||
+        (element.node_i === candidateIndex && element.node_j === nodeIndex),
+    );
+
+    if (alreadyLinked) continue;
+
+    const distance = Math.hypot(candidate.x - origin.x, candidate.y - origin.y);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestIndex = candidateIndex;
+    }
+  }
+
+  return bestIndex;
+}
+
+function analyzeTrussModel(
+  model: Truss2dJobInput,
+  languageCopy: (typeof copy)[Language],
+  selectedNode: number | null,
+): TrussDiagnostics {
+  const nodeCount = model.nodes.length;
+  const elementCount = model.elements.length;
+  const fixedXCount = model.nodes.filter((node) => node.fix_x).length;
+  const fixedYCount = model.nodes.filter((node) => node.fix_y).length;
+  const constrainedDofs = model.nodes.reduce(
+    (count, node) => count + (node.fix_x ? 1 : 0) + (node.fix_y ? 1 : 0),
+    0,
+  );
+  const blockingMessages: string[] = [];
+  const nodeIssues: Record<number, string[]> = {};
+  const suggestions: TrussSuggestion[] = [];
+  const suggestionIds = new Set<string>();
+  const connectionCounts = new Array(nodeCount).fill(0);
+  const supportTarget = selectedNode ?? 0;
+
+  const addSuggestion = (suggestion: TrussSuggestion) => {
+    if (!suggestionIds.has(suggestion.id)) {
+      suggestionIds.add(suggestion.id);
+      suggestions.push(suggestion);
+    }
+  };
+
+  if (constrainedDofs < 2) {
+    blockingMessages.push(languageCopy.unstableSupport);
+    if (nodeCount > 0) {
+      pushNodeIssue(nodeIssues, supportTarget, languageCopy.unstableSupport);
+    }
+  }
+
+  if (fixedXCount === 0) {
+    blockingMessages.push(languageCopy.supportXMissing);
+    if (nodeCount > 0) {
+      pushNodeIssue(nodeIssues, supportTarget, languageCopy.supportXMissing);
+      addSuggestion({
+        id: `fix-x-${supportTarget}`,
+        kind: "fix_support",
+        axis: "x",
+        nodeIndex: supportTarget,
+        label: selectedNode !== null ? languageCopy.fixCurrentNodeXAction : languageCopy.fixNodeXAction,
+      });
+    }
+  }
+
+  if (fixedYCount === 0) {
+    blockingMessages.push(languageCopy.supportYMissing);
+    if (nodeCount > 0) {
+      pushNodeIssue(nodeIssues, supportTarget, languageCopy.supportYMissing);
+      addSuggestion({
+        id: `fix-y-${supportTarget}`,
+        kind: "fix_support",
+        axis: "y",
+        nodeIndex: supportTarget,
+        label: selectedNode !== null ? languageCopy.fixCurrentNodeYAction : languageCopy.fixNodeYAction,
+      });
+    }
+  }
+
+  if (fixedXCount === 0 || fixedYCount === 0) {
+    blockingMessages.push(languageCopy.freeRigidBody);
+  }
+
+  if (elementCount < nodeCount - 1) {
+    blockingMessages.push(languageCopy.underconnected);
+    if (nodeCount > 0) {
+      pushNodeIssue(nodeIssues, selectedNode ?? 0, languageCopy.underconnected);
+    }
+  }
+
+  for (const element of model.elements) {
+    if (element.node_i < nodeCount) connectionCounts[element.node_i] += 1;
+    if (element.node_j < nodeCount) connectionCounts[element.node_j] += 1;
+  }
+
+  const isolatedNodes = connectionCounts.flatMap((count, index) => (count === 0 ? [index] : []));
+  for (const nodeIndex of isolatedNodes) {
+    pushNodeIssue(nodeIssues, nodeIndex, languageCopy.isolatedNode);
+  }
+
+  if (isolatedNodes.length > 0) {
+    blockingMessages.push(languageCopy.isolatedNode);
+  }
+
+  const connectTarget =
+    (selectedNode !== null && (isolatedNodes.includes(selectedNode) || connectionCounts[selectedNode] < 2)
+      ? selectedNode
+      : isolatedNodes[0] ?? selectedNode) ?? null;
+
+  if (connectTarget !== null && nodeCount > 1) {
+    addSuggestion({
+      id: `connect-${connectTarget}`,
+      kind: "connect_nearest",
+      nodeIndex: connectTarget,
+      label: selectedNode !== null ? languageCopy.connectCurrentNodeAction : languageCopy.connectNodeAction,
+    });
+  }
+
+  return {
+    blockingMessages: [...new Set(blockingMessages)],
+    nodeIssues,
+    suggestions,
+  };
+}
+
 export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
@@ -607,6 +886,15 @@ export function Workbench() {
   }
 
   const runAnalysis = () => {
+    if (studyKind === "truss_2d") {
+      const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
+      if (precheckErrors.length > 0) {
+        setMessage(`${t.precheckPrefix}: ${precheckErrors[0]}`);
+        resetActiveResult(setResult, setJob);
+        return;
+      }
+    }
+
     setMessage(t.dispatching);
     setResult(null);
 
@@ -643,7 +931,7 @@ export function Workbench() {
         setResult(payload.result);
       }
 
-      setMessage(`${jobId} ${payload.job.status}`);
+      setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, t));
 
       if (payload.job.status === "completed" || payload.job.status === "failed") {
         await refreshJobHistory();
@@ -688,7 +976,7 @@ export function Workbench() {
           }
         }
 
-        setMessage(t.historyLoaded);
+        setMessage(payload.job.status === "failed" ? formatJobMessage(payload.job, t.historyLoaded, t) : t.historyLoaded);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
@@ -840,6 +1128,8 @@ export function Workbench() {
   const axialResult = isAxial && isAxialResult(result) ? result : null;
   const trussResult = isTruss && isTrussResult(result) ? result : null;
   const planeResult = isPlane && isPlaneTriangleResult(result) ? result : null;
+  const trussDiagnostics = isTruss ? analyzeTrussModel(trussModel, t, selectedNode) : null;
+  const trussStability = isTruss && trussDiagnostics ? summarizeTrussStability(trussModel, trussDiagnostics) : null;
   const axialNodes = axialResult?.nodes ?? [];
   const axialElements = axialResult?.elements ?? [];
   const axialLength = axialResult?.input.length ?? axialForm.length;
@@ -852,9 +1142,56 @@ export function Workbench() {
   const planeBounds = getTrussBounds(planeNodes);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
+  const selectedNodeIssues =
+    selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
+  const translatedFailureReason = humanizeSolverFailure(job?.message, t);
+
+  const applyTrussSuggestion = (suggestion: TrussSuggestion) => {
+    resetActiveResult(setResult, setJob);
+    setStudyKind("truss_2d");
+    setSidebarSection("model");
+    setSelectedElement(null);
+    setSelectedNode(suggestion.nodeIndex);
+    setMemberDraftNodes([]);
+
+    if (suggestion.kind === "fix_support") {
+      setTrussModel((current) => ({
+        ...current,
+        nodes: current.nodes.map((node, index) =>
+          index === suggestion.nodeIndex
+            ? { ...node, [suggestion.axis === "x" ? "fix_x" : "fix_y"]: true }
+            : node,
+        ),
+      }));
+      setMessage(suggestion.axis === "x" ? t.suggestionAppliedSupportX : t.suggestionAppliedSupportY);
+      return;
+    }
+
+    let connected = false;
+    setTrussModel((current) => {
+      const nearestIndex = findNearestConnectableNode(current, suggestion.nodeIndex);
+      if (nearestIndex === null) return current;
+      connected = true;
+      return {
+        ...current,
+        elements: [
+          ...current.elements,
+          {
+            id: `e${current.elements.length}`,
+            node_i: suggestion.nodeIndex,
+            node_j: nearestIndex,
+            area: parametric.area,
+            youngs_modulus: parametric.youngsModulusGpa * 1.0e9,
+          },
+        ],
+      };
+    });
+    setMessage(connected ? t.suggestionAppliedLink : t.suggestionNoLinkTarget);
+  };
 
   const updateSelectedNode = (key: keyof Truss2dJobInput["nodes"][number], value: number | boolean) => {
     if (selectedNode === null) return;
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
       nodes: current.nodes.map((node, index) =>
@@ -868,6 +1205,7 @@ export function Workbench() {
     value: number,
   ) => {
     if (selectedElement === null) return;
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
       elements: current.elements.map((element, index) =>
@@ -876,29 +1214,50 @@ export function Workbench() {
     }));
   };
 
-  const addNode = () => {
+  const addNode = (connectToSelected: boolean) => {
     setStudyKind("truss_2d");
     setSidebarSection("model");
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => {
+      const anchorIndex = connectToSelected ? selectedNode : null;
+      const anchor =
+        anchorIndex !== null ? current.nodes[anchorIndex] : current.nodes[current.nodes.length - 1];
       const id = `n${current.nodes.length}`;
       const nextNode = {
         id,
-        x: round((current.nodes[current.nodes.length - 1]?.x ?? 0) + 1),
-        y: round(current.nodes[current.nodes.length - 1]?.y ?? 0.5),
+        x: round((anchor?.x ?? 0) + 1),
+        y: round((anchor?.y ?? 0) + (anchorIndex !== null ? 0.4 : 0.5)),
         fix_x: false,
         fix_y: false,
         load_x: 0,
         load_y: 0,
       };
-      return { ...current, nodes: [...current.nodes, nextNode] };
+      const nodes = [...current.nodes, nextNode];
+      const elements =
+        anchorIndex !== null
+          ? [
+              ...current.elements,
+              {
+                id: `e${current.elements.length}`,
+                node_i: anchorIndex,
+                node_j: nodes.length - 1,
+                area: parametric.area,
+                youngs_modulus: parametric.youngsModulusGpa * 1.0e9,
+              },
+            ]
+          : current.elements;
+
+      return { ...current, nodes, elements };
     });
     setSelectedNode(trussModel.nodes.length);
-    setSelectedElement(null);
-    setMessage(t.nodeCreated);
+    setSelectedElement(connectToSelected && selectedNode !== null ? trussModel.elements.length : null);
+    setMemberDraftNodes([]);
+    setMessage(connectToSelected && selectedNode !== null ? t.branchCreated : t.nodeCreated);
   };
 
   const deleteSelectedNode = () => {
     if (selectedNode === null) return;
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => {
       const nodes = current.nodes.filter((_, index) => index !== selectedNode);
       const elements = current.elements
@@ -928,7 +1287,7 @@ export function Workbench() {
     });
   };
 
-  const addMemberFromDraft = () => {
+  const toggleMemberFromDraft = () => {
     if (memberDraftNodes.length !== 2) {
       setMessage(t.selectTwoNodes);
       return;
@@ -937,14 +1296,26 @@ export function Workbench() {
     const [nodeI, nodeJ] = memberDraftNodes;
     if (nodeI === nodeJ) return;
 
+    let removedExisting = false;
+    let nextSelectedElement: number | null = null;
+
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => {
-      const exists = current.elements.some(
+      const existingIndex = current.elements.findIndex(
         (element) =>
           (element.node_i === nodeI && element.node_j === nodeJ) ||
           (element.node_i === nodeJ && element.node_j === nodeI),
       );
 
-      if (exists) return current;
+      if (existingIndex >= 0) {
+        removedExisting = true;
+        return {
+          ...current,
+          elements: current.elements
+            .filter((_, index) => index !== existingIndex)
+            .map((element, index) => ({ ...element, id: `e${index}` })),
+        };
+      }
 
       const next = {
         id: `e${current.elements.length}`,
@@ -954,16 +1325,18 @@ export function Workbench() {
         youngs_modulus: parametric.youngsModulusGpa * 1.0e9,
       };
 
+      nextSelectedElement = current.elements.length;
       return { ...current, elements: [...current.elements, next] };
     });
 
-    setSelectedElement(trussModel.elements.length);
+    setSelectedElement(removedExisting ? null : nextSelectedElement);
     setMemberDraftNodes([]);
-    setMessage(t.memberCreated);
+    setMessage(removedExisting ? t.memberRemoved : t.memberCreated);
   };
 
   const deleteSelectedElement = () => {
     if (selectedElement === null) return;
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
       elements: current.elements
@@ -979,6 +1352,7 @@ export function Workbench() {
     const rect = event.currentTarget.getBoundingClientRect();
     const position = fromSvgPoint(event.clientX, event.clientY, rect, trussBounds);
 
+    resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
       nodes: current.nodes.map((node, index) =>
@@ -1188,16 +1562,19 @@ export function Workbench() {
               </div>
               <p className="card-copy">{t.modelStudioHint}</p>
               <div className="button-row">
-                <button className="ghost-button" onClick={addNode} type="button">
+                <button className="ghost-button" onClick={() => addNode(false)} type="button">
                   {t.addNode}
+                </button>
+                <button className="ghost-button" disabled={selectedNode === null} onClick={() => addNode(true)} type="button">
+                  {t.addBranchNode}
                 </button>
                 <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedNode} type="button">
                   {t.deleteNode}
                 </button>
               </div>
               <div className="button-row">
-                <button className="ghost-button" onClick={addMemberFromDraft} type="button">
-                  {t.addMember}
+                <button className="ghost-button" onClick={toggleMemberFromDraft} type="button">
+                  {t.toggleMember}
                 </button>
                 <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
                   {t.deleteMember}
@@ -1309,18 +1686,31 @@ export function Workbench() {
                       <th>ID</th>
                       <th>X</th>
                       <th>Y</th>
+                      <th>{t.diagnostics}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {trussModel.nodes.map((node, index) => (
                       <tr
                         key={node.id}
-                        className={selectedNode === index ? "table-row--active" : ""}
+                        className={[
+                          selectedNode === index ? "table-row--active" : "",
+                          (trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? "table-row--warning" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
                         onClick={() => toggleDraftNode(index)}
                       >
                         <td>{node.id}</td>
                         <td>{fixed(node.x, 2)}</td>
                         <td>{fixed(node.y, 2)}</td>
+                        <td>
+                          {(trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? (
+                            <span className="issue-badge">{(trussDiagnostics?.nodeIssues[index] ?? []).length}</span>
+                          ) : (
+                            "--"
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1536,7 +1926,15 @@ export function Workbench() {
                     y1={start.y}
                     x2={end.x}
                     y2={end.y}
-                    className="bar bar--base"
+                    className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}`}
+                    onPointerDown={(event) => {
+                      if (sidebarSection === "model") {
+                        event.stopPropagation();
+                        setSelectedElement(element.index);
+                        setSelectedNode(null);
+                        setMemberDraftNodes([]);
+                      }
+                    }}
                   />
                 );
               })}
@@ -1567,11 +1965,14 @@ export function Workbench() {
 
                 return (
                   <g key={node.id}>
+                    {(trussStability?.hotspotNodes ?? []).includes(index) ? (
+                      <circle cx={point.x} cy={point.y} r={sidebarSection === "model" ? 16 : 12} className="node-hotspot-ring" />
+                    ) : null}
                     <circle
                       cx={point.x}
                       cy={point.y}
                       r={sidebarSection === "model" ? 10 : 7}
-                      className={`node-base${selectedNode === index ? " node-base--active" : ""}${memberDraftNodes.includes(index) ? " node-base--draft" : ""}`}
+                      className={`node-base${selectedNode === index ? " node-base--active" : ""}${memberDraftNodes.includes(index) ? " node-base--draft" : ""}${(trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? " node-base--warning" : ""}`}
                       onPointerDown={() => {
                         if (sidebarSection === "model") {
                           setDraggingNode(index);
@@ -1659,6 +2060,10 @@ export function Workbench() {
                   <div>
                     <span>{t.loadCase}</span>
                     <strong>{fixed(selectedNodeData?.load_y, 0)} N</strong>
+                  </div>
+                  <div>
+                    <span>{t.diagnostics}</span>
+                    <strong>{selectedNodeIssues.length > 0 ? selectedNodeIssues.length : "--"}</strong>
                   </div>
                 </div>
               ) : (
@@ -1817,6 +2222,56 @@ export function Workbench() {
               )}
             </section>
           ) : null}
+          {sidebarSection === "model" && isTruss ? (
+            <section className="info-card">
+              <h3>{t.diagnostics}</h3>
+              {trussDiagnostics && trussDiagnostics.blockingMessages.length > 0 ? (
+                <div className="diagnostic-list">
+                  {trussStability ? (
+                    <div className={`stability-badge stability-badge--${trussStability.tone}`}>
+                      <strong>{t.stabilityScore}</strong>
+                      <span>{trussStability.score}/100</span>
+                      <small>
+                        {trussStability.tone === "good"
+                          ? t.stabilityGood
+                          : trussStability.tone === "watch"
+                            ? t.stabilityWatch
+                            : t.stabilityRisk}
+                      </small>
+                    </div>
+                  ) : null}
+                  {trussDiagnostics.blockingMessages.map((issue) => (
+                    <div key={issue} className="diagnostic-item">
+                      <strong>{issue}</strong>
+                    </div>
+                  ))}
+                  {trussStability && trussStability.hotspotNodes.length > 0 ? (
+                    <div className="diagnostic-item">
+                      <strong>
+                        {t.hotspotNodes}:{" "}
+                        {trussStability.hotspotNodes.map((nodeIndex) => trussModel.nodes[nodeIndex]?.id ?? nodeIndex).join(", ")}
+                      </strong>
+                    </div>
+                  ) : null}
+                  {trussDiagnostics.suggestions.length > 0 ? <p className="card-copy">{t.suggestedFixes}</p> : null}
+                  <div className="diagnostic-actions">
+                    {trussDiagnostics.suggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.id}
+                        className="ghost-button"
+                        onClick={() => applyTrussSuggestion(suggestion)}
+                        type="button"
+                      >
+                        {suggestion.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="card-copy">{t.diagnosticsClear}</p>
+              )}
+            </section>
+          ) : null}
           <section className="info-card">
             <h3>{t.metrics}</h3>
             <div className="metric-grid">
@@ -1872,6 +2327,10 @@ export function Workbench() {
               <div>
                 <span>{t.hasResult}</span>
                 <strong>{job?.has_result ? t.yes : t.no}</strong>
+              </div>
+              <div>
+                <span>{t.failureReason}</span>
+                <strong>{translatedFailureReason ?? job?.message ?? "--"}</strong>
               </div>
             </div>
           </section>

@@ -34,6 +34,7 @@ Commands:
   playground-test   Run browser FEM tests
   agent             Run the Rust FEM TCP agent
   frontend          Run the Next.js workbench UI
+  benchmark         Run the Rust solver benchmark suite
   format            Format Elixir and Rust code
   worker [args...]  Run the Rust mock worker CLI
   smoke             Run the Elixir -> Rust integration smoke test
@@ -47,6 +48,7 @@ Examples:
   ./scripts/kyuubiki start
   ./scripts/kyuubiki orchestrator
   ./scripts/kyuubiki frontend
+  ./scripts/kyuubiki benchmark -- --repeat 20 --format json
   ./scripts/kyuubiki restart
 EOF
 }
@@ -200,6 +202,14 @@ run_frontend() {
   )
 }
 
+run_benchmark() {
+  require_dir "$RUST_DIR"
+  (
+    cd "$RUST_DIR"
+    cargo run -p kyuubiki-benchmark -- "$@"
+  )
+}
+
 start_orchestrator_background() {
   local port="${1:-4000}"
   ensure_run_dir
@@ -331,6 +341,9 @@ case "$command" in
     ;;
   frontend)
     run_frontend "${1:-3000}"
+    ;;
+  benchmark)
+    run_benchmark "$@"
     ;;
   *)
     echo "unknown command: $command" >&2

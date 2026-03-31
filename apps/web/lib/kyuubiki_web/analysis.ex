@@ -127,6 +127,7 @@ defmodule KyuubikiWeb.Analysis do
       "project_id" => job.project_id,
       "simulation_case_id" => job.simulation_case_id,
       "worker_id" => job.worker_id,
+      "message" => job.message,
       "status" => Atom.to_string(job.status),
       "progress" => job.progress,
       "residual" => job.residual,
