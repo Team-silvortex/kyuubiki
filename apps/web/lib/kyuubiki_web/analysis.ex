@@ -5,12 +5,14 @@ defmodule KyuubikiWeb.Analysis do
 
   alias KyuubikiWeb.AnalysisResultStore
   alias KyuubikiWeb.Jobs.Store
+  alias KyuubikiWeb.Library
   alias KyuubikiWeb.Playground.AgentClient
 
   @spec submit_axial_bar(map()) :: {:ok, map()} | {:error, term()}
   def submit_axial_bar(params) when is_map(params) do
     with {:ok, normalized} <- normalize_axial_bar(params),
-         {:ok, job} <- create_job() do
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
       start_background_job(job.job_id, "solve_bar_1d", normalized)
       {:ok, serialize_payload(job)}
     end
@@ -19,7 +21,8 @@ defmodule KyuubikiWeb.Analysis do
   @spec submit_truss_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_truss_2d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_truss_2d(params),
-         {:ok, job} <- create_job() do
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
       start_background_job(job.job_id, "solve_truss_2d", normalized)
       {:ok, serialize_payload(job)}
     end
@@ -28,7 +31,8 @@ defmodule KyuubikiWeb.Analysis do
   @spec submit_truss_3d(map()) :: {:ok, map()} | {:error, term()}
   def submit_truss_3d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_truss_3d(params),
-         {:ok, job} <- create_job() do
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
       start_background_job(job.job_id, "solve_truss_3d", normalized)
       {:ok, serialize_payload(job)}
     end
@@ -37,7 +41,8 @@ defmodule KyuubikiWeb.Analysis do
   @spec submit_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_triangle_2d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_plane_triangle_2d(params),
-         {:ok, job} <- create_job() do
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
       start_background_job(job.job_id, "solve_plane_triangle_2d", normalized)
       {:ok, serialize_payload(job)}
     end
@@ -108,12 +113,40 @@ defmodule KyuubikiWeb.Analysis do
     :ok
   end
 
-  defp create_job do
+  defp create_job(attrs) do
     Store.create(%{
       job_id: random_id(),
-      project_id: random_id(),
-      simulation_case_id: random_id()
+      project_id: Map.get(attrs, :project_id, random_id()),
+      model_version_id: Map.get(attrs, :model_version_id),
+      simulation_case_id: Map.get(attrs, :simulation_case_id, random_id())
     })
+  end
+
+  defp derive_job_context(params) when is_map(params) do
+    project_id = fetch_optional_string(params, ["project_id", :project_id])
+    model_version_id = fetch_optional_string(params, ["model_version_id", :model_version_id])
+
+    cond do
+      is_binary(model_version_id) and model_version_id != "" ->
+        case Library.get_version(model_version_id) do
+          {:ok, version} ->
+            {:ok,
+             %{
+               project_id: version["project_id"],
+               model_version_id: version["version_id"],
+               simulation_case_id: version["version_id"]
+             }}
+
+          :error ->
+            {:error, {:model_version_not_found, model_version_id}}
+        end
+
+      is_binary(project_id) and project_id != "" ->
+        {:ok, %{project_id: project_id}}
+
+      true ->
+        {:ok, %{}}
+    end
   end
 
   defp serialize_payload(job) do
@@ -124,6 +157,7 @@ defmodule KyuubikiWeb.Analysis do
     %{
       "job_id" => job.job_id,
       "project_id" => job.project_id,
+      "model_version_id" => job.model_version_id,
       "simulation_case_id" => job.simulation_case_id,
       "worker_id" => job.worker_id,
       "message" => job.message,
@@ -206,6 +240,24 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp fetch_number(_params, []), do: {:error, :missing_parameter}
+
+  defp fetch_optional_string(params, [key | rest]) do
+    case Map.fetch(params, key) do
+      {:ok, value} when is_binary(value) ->
+        trimmed = String.trim(value)
+
+        if byte_size(trimmed) > 0 do
+          trimmed
+        else
+          fetch_optional_string(params, rest)
+        end
+
+      _ ->
+        fetch_optional_string(params, rest)
+    end
+  end
+
+  defp fetch_optional_string(_params, []), do: nil
 
   defp cast_number(value) when is_integer(value), do: {:ok, value * 1.0}
   defp cast_number(value) when is_float(value), do: {:ok, value}

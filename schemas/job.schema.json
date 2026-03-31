@@ -23,6 +23,12 @@
       "type": "string",
       "format": "uuid"
     },
+    "model_version_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "simulation_case_id": {
       "type": "string",
       "format": "uuid"

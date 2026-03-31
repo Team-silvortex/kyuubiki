@@ -4,6 +4,8 @@ export type AxialBarJobInput = {
   elements: number;
   tip_force: number;
   youngs_modulus_gpa: number;
+  project_id?: string;
+  model_version_id?: string;
 };
 
 export type TrussNodeInput = {
@@ -27,6 +29,8 @@ export type TrussElementInput = {
 export type Truss2dJobInput = {
   nodes: TrussNodeInput[];
   elements: TrussElementInput[];
+  project_id?: string;
+  model_version_id?: string;
 };
 
 export type Truss3dNodeInput = {
@@ -53,6 +57,8 @@ export type Truss3dElementInput = {
 export type Truss3dJobInput = {
   nodes: Truss3dNodeInput[];
   elements: Truss3dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
 };
 
 export type PlaneNodeInput = {
@@ -78,12 +84,15 @@ export type PlaneTriangleElementInput = {
 export type PlaneTriangle2dJobInput = {
   nodes: PlaneNodeInput[];
   elements: PlaneTriangleElementInput[];
+  project_id?: string;
+  model_version_id?: string;
 };
 
 export type JobState = {
   job_id: string;
   status: string;
   worker_id: string | null;
+  model_version_id?: string | null;
   message?: string | null;
   progress: number;
   residual?: number | null;

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useDeferredValue,
   useEffect,
   useRef,
   useState,
@@ -9,6 +10,10 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from "react";
+import { VirtualList } from "@/components/virtual-list";
+import { WorkbenchConsole } from "@/components/workbench-console";
+import { WorkbenchInspector } from "@/components/workbench-inspector";
+import { WorkbenchViewport } from "@/components/workbench-viewport";
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
 import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/project-format";
@@ -17,6 +22,8 @@ import {
   exportProjectBundle,
   exportStudyModel,
   generatePrattTruss,
+  generateRectangularPanelMesh,
+  type ParametricPanelConfig,
   type ParametricTrussConfig,
 } from "@/lib/modeler";
 import { SAMPLE_LIBRARY } from "@/lib/sample-library";
@@ -143,6 +150,7 @@ type WorkbenchSnapshot = {
   truss3dModel: Truss3dJobInput;
   planeModel: PlaneTriangle2dJobInput;
   parametric: ParametricTrussConfig;
+  panelParametric: ParametricPanelConfig;
   activeMaterial: string;
   loadedModelName: string;
   sidebarSection: SidebarSection;
@@ -184,6 +192,17 @@ const defaultParametric: ParametricTrussConfig = {
   height: 3,
   area: 0.01,
   youngsModulusGpa: 70,
+  loadY: -1200,
+};
+
+const defaultPanelParametric: ParametricPanelConfig = {
+  width: 3.2,
+  height: 1.8,
+  divisionsX: 4,
+  divisionsY: 3,
+  thickness: 0.02,
+  youngsModulusGpa: 70,
+  poissonRatio: 0.33,
   loadY: -1200,
 };
 
@@ -353,17 +372,22 @@ const copy = {
     noResultToExport: "Run a study first before exporting analysis data.",
     modelTools: "Editing Tools",
     dragHint: "Drag truss nodes directly in the viewport to reshape geometry.",
+    planeHint: "Select plane nodes and triangles to edit supports, loads, and material thickness.",
     parametric: "Parametric Generator",
+    panelGenerator: "Panel Generator",
     generate: "Generate",
+    generatePanel: "Generate Panel",
     download: "Download JSON",
     saveForSolver: "Use current model",
     bays: "Bays",
     height: "Height (m)",
+    divisionsX: "Divisions X",
+    divisionsY: "Divisions Y",
     nodeTable: "Nodes",
     dragNode: "Selected node",
     noNodeSelected: "No node selected",
     loadCase: "Load case",
-    modelStudioHint: "Modeling is currently enabled for 2D truss studies. 3D studies can already be imported, solved, and reviewed.",
+    modelStudioHint: "2D truss and 2D plane studies can be edited directly here. 3D studies can already be imported, solved, and reviewed.",
     sourceModel: "Source model",
     createdAt: "Created",
     updatedAt: "Updated",
@@ -377,6 +401,7 @@ const copy = {
     planeElements: "Plane elements",
     thickness: "Thickness",
     poisson: "Poisson ratio",
+    poissonRatio: "Poisson ratio",
     sampleLibrary: "Sample Library",
     objectTree: "Object Tree",
     properties: "Properties",
@@ -419,6 +444,7 @@ const copy = {
     loadY: "Load Y",
     nodeI: "Node I",
     nodeJ: "Node J",
+    nodeK: "Node K",
     none: "None",
     precheckPrefix: "Precheck failed",
     unstableSupport: "Add at least two restrained degrees of freedom to stabilize the truss.",
@@ -437,6 +463,8 @@ const copy = {
     suggestionAppliedSupportY: "Added a Y restraint to the suggested node.",
     suggestionAppliedLink: "Connected the node to its nearest available neighbor.",
     suggestionNoLinkTarget: "No valid nearby node was available for an automatic link.",
+    panelGenerated: "Generated a rectangular plane mesh.",
+    planeThickness: "Thickness",
   },
   zh: {
     brand: "Kyuubiki",
@@ -571,17 +599,22 @@ const copy = {
     noResultToExport: "请先运行一次分析再导出结果数据。",
     modelTools: "编辑工具",
     dragHint: "直接在视图区拖拽桁架节点来修改几何。",
+    planeHint: "选择平面节点和三角形单元，直接修改约束、载荷和厚度材料。",
     parametric: "参数化生成",
+    panelGenerator: "面板生成器",
     generate: "生成模型",
+    generatePanel: "生成面板",
     download: "下载 JSON",
     saveForSolver: "使用当前模型",
     bays: "跨数",
     height: "高度 (m)",
+    divisionsX: "X 分段",
+    divisionsY: "Y 分段",
     nodeTable: "节点列表",
     dragNode: "当前节点",
     noNodeSelected: "未选择节点",
     loadCase: "载荷工况",
-    modelStudioHint: "当前建模页先支持二维桁架。三维研究已经支持导入、求解和结果回看。",
+    modelStudioHint: "当前建模页支持二维桁架和二维平面单元。三维研究已经支持导入、求解和结果回看。",
     sourceModel: "来源模型",
     createdAt: "创建时间",
     updatedAt: "更新时间",
@@ -595,6 +628,7 @@ const copy = {
     planeElements: "平面单元",
     thickness: "厚度",
     poisson: "泊松比",
+    poissonRatio: "泊松比",
     sampleLibrary: "样板库",
     objectTree: "对象树",
     properties: "属性",
@@ -634,6 +668,7 @@ const copy = {
     loadY: "载荷 Y",
     nodeI: "起点节点",
     nodeJ: "终点节点",
+    nodeK: "第三节点",
     none: "无",
     precheckPrefix: "预检查失败",
     unstableSupport: "请至少提供两个受限自由度来稳定桁架。",
@@ -652,6 +687,8 @@ const copy = {
     suggestionAppliedSupportY: "已为建议节点补上 Y 约束。",
     suggestionAppliedLink: "已将该节点连接到最近的可用邻点。",
     suggestionNoLinkTarget: "附近没有可自动连接的有效节点。",
+    panelGenerated: "已生成矩形平面网格。",
+    planeThickness: "厚度",
   },
 } as const;
 
@@ -1263,6 +1300,47 @@ function analyzeTrussModel(
   };
 }
 
+function planeStressFill(value: number, maxValue: number): string {
+  const normalized = maxValue > 0 ? Math.max(0, Math.min(1, value / maxValue)) : 0;
+  const hue = 205 - normalized * 180;
+  const lightness = 72 - normalized * 22;
+  return `hsla(${hue}, 72%, ${lightness}%, 0.72)`;
+}
+
+function renderSupportGlyph(
+  point: { x: number; y: number },
+  constraints: { fix_x: boolean; fix_y: boolean },
+  key: string,
+) {
+  if (!constraints.fix_x && !constraints.fix_y) return null;
+
+  return (
+    <g key={key} className="support-glyph">
+      {constraints.fix_y ? <line x1={point.x - 12} y1={point.y + 14} x2={point.x + 12} y2={point.y + 14} /> : null}
+      {constraints.fix_x ? <line x1={point.x - 14} y1={point.y - 12} x2={point.x - 14} y2={point.y + 12} /> : null}
+    </g>
+  );
+}
+
+function renderLoadGlyph(
+  point: { x: number; y: number },
+  load: { load_x: number; load_y: number },
+  key: string,
+) {
+  if (Math.abs(load.load_x) < 1.0e-9 && Math.abs(load.load_y) < 1.0e-9) return null;
+
+  const scale = 0.01;
+  const x2 = point.x + load.load_x * scale;
+  const y2 = point.y - load.load_y * scale;
+
+  return (
+    <g key={key} className="load-glyph">
+      <line x1={point.x} y1={point.y} x2={x2} y2={y2} />
+      <circle cx={x2} cy={y2} r={3.5} />
+    </g>
+  );
+}
+
 export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
@@ -1270,6 +1348,7 @@ export function Workbench() {
   const [truss3dModel, setTruss3dModel] = useState<Truss3dJobInput>(defaultTruss3d);
   const [planeModel, setPlaneModel] = useState<PlaneTriangle2dJobInput>(defaultPlane);
   const [parametric, setParametric] = useState<ParametricTrussConfig>(defaultParametric);
+  const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
   const [result, setResult] = useState<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>(null);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
@@ -1295,6 +1374,8 @@ export function Workbench() {
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
   const [isPending, startTransition] = useTransition();
   const dragHistoryCapturedRef = useRef(false);
+  const dragFrameRef = useRef<number | null>(null);
+  const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const t = copy[language];
 
   useEffect(() => {
@@ -1313,6 +1394,14 @@ export function Workbench() {
       window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ theme, language }));
     }
   }, [theme, language]);
+
+  useEffect(() => {
+    return () => {
+      if (dragFrameRef.current !== null) {
+        window.cancelAnimationFrame(dragFrameRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     void refreshHealth();
@@ -1416,14 +1505,19 @@ export function Workbench() {
 
     startTransition(async () => {
       try {
+        const jobContext = {
+          ...(selectedProjectId ? { project_id: selectedProjectId } : {}),
+          ...(selectedVersionId ? { model_version_id: selectedVersionId } : {}),
+        };
+
         const created =
           studyKind === "axial_bar_1d"
-            ? await createAxialBarJob(toAxialInput(axialForm))
+            ? await createAxialBarJob({ ...toAxialInput(axialForm), ...jobContext })
             : studyKind === "truss_2d"
-              ? await createTruss2dJob(trussModel)
+              ? await createTruss2dJob({ ...trussModel, ...jobContext })
               : studyKind === "truss_3d"
-                ? await createTruss3dJob(truss3dModel)
-              : await createPlaneTriangle2dJob(planeModel);
+                ? await createTruss3dJob({ ...truss3dModel, ...jobContext })
+              : await createPlaneTriangle2dJob({ ...planeModel, ...jobContext });
 
         setJob(created.job);
         await refreshJobHistory();
@@ -1632,6 +1726,11 @@ export function Workbench() {
     setParametric((current) => ({ ...current, [key]: value }));
   };
 
+  const handlePanelParametricChange = (key: keyof ParametricPanelConfig, value: number) => {
+    recordHistory(t.editParametric);
+    setPanelParametric((current) => ({ ...current, [key]: value }));
+  };
+
   const generateModel = () => {
     recordHistory(t.generateAction);
     const nextModel = generatePrattTruss(parametric);
@@ -1646,6 +1745,23 @@ export function Workbench() {
     setLoadedModelName("parametric-pratt-truss");
     setMessage(t.generatedModel);
     setSidebarSection("model");
+  };
+
+  const generatePanelModel = () => {
+    recordHistory(t.generateAction);
+    const nextModel = generateRectangularPanelMesh(panelParametric);
+    setStudyKind("plane_triangle_2d");
+    setPlaneModel(nextModel);
+    setSelectedNode(null);
+    setSelectedElement(null);
+    setSelectedModelId(null);
+    setSelectedVersionId(null);
+    setModelVersions([]);
+    setMemberDraftNodes([]);
+    setLoadedModelName("parametric-panel-mesh");
+    setMessage(t.panelGenerated);
+    setSidebarSection("model");
+    resetActiveResult(setResult, setJob);
   };
 
   const downloadModel = () => {
@@ -2083,6 +2199,9 @@ export function Workbench() {
 
   const selectedProject = projects.find((project) => project.project_id === selectedProjectId) ?? null;
   const selectedProjectModels = selectedProject?.models ?? [];
+  const deferredProjectModels = useDeferredValue(selectedProjectModels);
+  const deferredModelVersions = useDeferredValue(modelVersions);
+  const deferredJobHistory = useDeferredValue(jobHistory);
 
   const isAxial = studyKind === "axial_bar_1d";
   const isTruss = studyKind === "truss_2d";
@@ -2106,14 +2225,26 @@ export function Workbench() {
   const truss3dProjectedBounds = getTrussBounds(
     displayTruss3dNodes.map((node) => ({ x: node.x - node.y * 0.55, y: node.z + node.y * 0.35 })),
   );
-  const planeNodes = planeResult?.nodes ?? planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
+  const planeNodes =
+    planeResult?.nodes.map((node, index) => ({
+      ...planeModel.nodes[index],
+      ...node,
+      fix_x: planeModel.nodes[index]?.fix_x ?? false,
+      fix_y: planeModel.nodes[index]?.fix_y ?? false,
+      load_x: planeModel.nodes[index]?.load_x ?? 0,
+      load_y: planeModel.nodes[index]?.load_y ?? 0,
+    })) ??
+    planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
   const planeElements = planeResult?.elements ?? planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
   const planeBounds = getTrussBounds(planeNodes);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
+  const selectedPlaneNodeData = selectedNode !== null ? planeNodes[selectedNode] : null;
+  const selectedPlaneElementData = selectedElement !== null ? planeElements[selectedElement] : null;
   const selectedNodeIssues =
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
   const translatedFailureReason = humanizeSolverFailure(job?.message, t);
+  const planeMaxVonMises = Math.max(...planeElements.map((element) => element.von_mises ?? 0), 0);
 
   const buildSnapshot = (): WorkbenchSnapshot => ({
     studyKind,
@@ -2122,6 +2253,7 @@ export function Workbench() {
     truss3dModel,
     planeModel,
     parametric,
+    panelParametric,
     activeMaterial,
     loadedModelName,
     sidebarSection,
@@ -2137,6 +2269,7 @@ export function Workbench() {
     setTruss3dModel(snapshot.truss3dModel);
     setPlaneModel(snapshot.planeModel);
     setParametric(snapshot.parametric);
+    setPanelParametric(snapshot.panelParametric);
     setActiveMaterial(snapshot.activeMaterial);
     setLoadedModelName(snapshot.loadedModelName);
     setSidebarSection(snapshot.sidebarSection);
@@ -2236,6 +2369,36 @@ export function Workbench() {
     recordHistory(t.editMemberAction);
     resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
+      ...current,
+      elements: current.elements.map((element, index) =>
+        index === selectedElement ? { ...element, [key]: value } : element,
+      ),
+    }));
+  };
+
+  const updateSelectedPlaneNode = (
+    key: keyof PlaneTriangle2dJobInput["nodes"][number],
+    value: number | boolean,
+  ) => {
+    if (selectedNode === null) return;
+    recordHistory(t.editNodeAction);
+    resetActiveResult(setResult, setJob);
+    setPlaneModel((current) => ({
+      ...current,
+      nodes: current.nodes.map((node, index) =>
+        index === selectedNode ? { ...node, [key]: value } : node,
+      ),
+    }));
+  };
+
+  const updateSelectedPlaneElement = (
+    key: keyof PlaneTriangle2dJobInput["elements"][number],
+    value: number,
+  ) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setPlaneModel((current) => ({
       ...current,
       elements: current.elements.map((element, index) =>
         index === selectedElement ? { ...element, [key]: value } : element,
@@ -2388,19 +2551,35 @@ export function Workbench() {
     }
     const rect = event.currentTarget.getBoundingClientRect();
     const position = fromSvgPoint(event.clientX, event.clientY, rect, trussBounds);
+    pendingDragPointRef.current = position;
 
-    resetActiveResult(setResult, setJob);
-    setTrussModel((current) => ({
-      ...current,
-      nodes: current.nodes.map((node, index) =>
-        index === draggingNode ? { ...node, x: position.x, y: position.y } : node,
-      ),
-    }));
+    if (dragFrameRef.current !== null) {
+      return;
+    }
+
+    dragFrameRef.current = window.requestAnimationFrame(() => {
+      dragFrameRef.current = null;
+      const nextPoint = pendingDragPointRef.current;
+      if (!nextPoint) return;
+
+      resetActiveResult(setResult, setJob);
+      setTrussModel((current) => ({
+        ...current,
+        nodes: current.nodes.map((node, index) =>
+          index === draggingNode ? { ...node, x: nextPoint.x, y: nextPoint.y } : node,
+        ),
+      }));
+    });
   };
 
   const stopDraggingNode = () => {
     setDraggingNode(null);
     dragHistoryCapturedRef.current = false;
+    pendingDragPointRef.current = null;
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
   };
 
   return (
@@ -2630,26 +2809,30 @@ export function Workbench() {
                 <h2>{t.sections.model}</h2>
                 <span>{t.dragToEdit}</span>
               </div>
-              <p className="card-copy">{t.modelStudioHint}</p>
-              <div className="button-row">
-                <button className="ghost-button" onClick={() => addNode(false)} type="button">
-                  {t.addNode}
-                </button>
-                <button className="ghost-button" disabled={selectedNode === null} onClick={() => addNode(true)} type="button">
-                  {t.addBranchNode}
-                </button>
-                <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedNode} type="button">
-                  {t.deleteNode}
-                </button>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" onClick={toggleMemberFromDraft} type="button">
-                  {t.toggleMember}
-                </button>
-                <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
-                  {t.deleteMember}
-                </button>
-              </div>
+              <p className="card-copy">{isPlane ? t.planeHint : t.modelStudioHint}</p>
+              {isTruss ? (
+                <>
+                  <div className="button-row">
+                    <button className="ghost-button" onClick={() => addNode(false)} type="button">
+                      {t.addNode}
+                    </button>
+                    <button className="ghost-button" disabled={selectedNode === null} onClick={() => addNode(true)} type="button">
+                      {t.addBranchNode}
+                    </button>
+                    <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedNode} type="button">
+                      {t.deleteNode}
+                    </button>
+                  </div>
+                  <div className="button-row">
+                    <button className="ghost-button" onClick={toggleMemberFromDraft} type="button">
+                      {t.toggleMember}
+                    </button>
+                    <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
+                      {t.deleteMember}
+                    </button>
+                  </div>
+                </>
+              ) : null}
               <div className="button-row">
                 <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
                   {t.undo}
@@ -2665,9 +2848,9 @@ export function Workbench() {
                 <button
                   className="ghost-button"
                   onClick={() => {
-                    setStudyKind("truss_2d");
+                    setStudyKind(isPlane ? "plane_triangle_2d" : "truss_2d");
                     setSidebarSection("study");
-                    setMessage(t.dragHint);
+                    setMessage(isPlane ? t.planeHint : t.dragHint);
                   }}
                   type="button"
                 >
@@ -2679,84 +2862,123 @@ export function Workbench() {
 
             <section className="sidebar-card">
               <div className="card-head">
-                <h2>{t.parametric}</h2>
+                <h2>{isPlane ? t.panelGenerator : t.parametric}</h2>
                 <span>{t.modelTools}</span>
               </div>
               <div className="form-grid compact">
-                <label>
-                  <span>{t.bays}</span>
-                  <input
-                    type="number"
-                    min={2}
-                    max={10}
-                    step={1}
-                    value={parametric.bays}
-                    onChange={(event) => handleParametricChange("bays", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.length}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    step={0.5}
-                    value={parametric.span}
-                    onChange={(event) => handleParametricChange("span", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.height}</span>
-                  <input
-                    type="number"
-                    min={0.2}
-                    step={0.1}
-                    value={parametric.height}
-                    onChange={(event) => handleParametricChange("height", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.area}</span>
-                  <input
-                    type="number"
-                    min={0.0001}
-                    step={0.0001}
-                    value={parametric.area}
-                    onChange={(event) => handleParametricChange("area", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.modulus}</span>
-                  <input
-                    type="number"
-                    min={0.1}
-                    step={0.1}
-                    value={parametric.youngsModulusGpa}
-                    onChange={(event) =>
-                      handleParametricChange("youngsModulusGpa", Number(event.target.value))
-                    }
-                  />
-                </label>
-                <label>
-                  <span>{t.loadCase}</span>
-                  <input
-                    type="number"
-                    step={100}
-                    value={parametric.loadY}
-                    onChange={(event) => handleParametricChange("loadY", Number(event.target.value))}
-                  />
-                </label>
+                {isPlane ? (
+                  <>
+                    <label>
+                      <span>{t.length}</span>
+                      <input type="number" min={0.2} step={0.1} value={panelParametric.width} onChange={(event) => handlePanelParametricChange("width", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.height}</span>
+                      <input type="number" min={0.2} step={0.1} value={panelParametric.height} onChange={(event) => handlePanelParametricChange("height", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.divisionsX}</span>
+                      <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsX} onChange={(event) => handlePanelParametricChange("divisionsX", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.divisionsY}</span>
+                      <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsY} onChange={(event) => handlePanelParametricChange("divisionsY", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.planeThickness}</span>
+                      <input type="number" min={0.001} step={0.001} value={panelParametric.thickness} onChange={(event) => handlePanelParametricChange("thickness", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.modulus}</span>
+                      <input type="number" min={0.1} step={0.1} value={panelParametric.youngsModulusGpa} onChange={(event) => handlePanelParametricChange("youngsModulusGpa", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.poissonRatio}</span>
+                      <input type="number" min={0.01} max={0.49} step={0.01} value={panelParametric.poissonRatio} onChange={(event) => handlePanelParametricChange("poissonRatio", Number(event.target.value))} />
+                    </label>
+                    <label>
+                      <span>{t.loadCase}</span>
+                      <input type="number" step={100} value={panelParametric.loadY} onChange={(event) => handlePanelParametricChange("loadY", Number(event.target.value))} />
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label>
+                      <span>{t.bays}</span>
+                      <input
+                        type="number"
+                        min={2}
+                        max={10}
+                        step={1}
+                        value={parametric.bays}
+                        onChange={(event) => handleParametricChange("bays", Number(event.target.value))}
+                      />
+                    </label>
+                    <label>
+                      <span>{t.length}</span>
+                      <input
+                        type="number"
+                        min={1}
+                        step={0.5}
+                        value={parametric.span}
+                        onChange={(event) => handleParametricChange("span", Number(event.target.value))}
+                      />
+                    </label>
+                    <label>
+                      <span>{t.height}</span>
+                      <input
+                        type="number"
+                        min={0.2}
+                        step={0.1}
+                        value={parametric.height}
+                        onChange={(event) => handleParametricChange("height", Number(event.target.value))}
+                      />
+                    </label>
+                    <label>
+                      <span>{t.area}</span>
+                      <input
+                        type="number"
+                        min={0.0001}
+                        step={0.0001}
+                        value={parametric.area}
+                        onChange={(event) => handleParametricChange("area", Number(event.target.value))}
+                      />
+                    </label>
+                    <label>
+                      <span>{t.modulus}</span>
+                      <input
+                        type="number"
+                        min={0.1}
+                        step={0.1}
+                        value={parametric.youngsModulusGpa}
+                        onChange={(event) =>
+                          handleParametricChange("youngsModulusGpa", Number(event.target.value))
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>{t.loadCase}</span>
+                      <input
+                        type="number"
+                        step={100}
+                        value={parametric.loadY}
+                        onChange={(event) => handleParametricChange("loadY", Number(event.target.value))}
+                      />
+                    </label>
+                  </>
+                )}
               </div>
-              <button className="solve-button" onClick={generateModel} type="button">
-                {t.generate}
+              <button className="solve-button" onClick={isPlane ? generatePanelModel : generateModel} type="button">
+                {isPlane ? t.generatePanel : t.generate}
               </button>
             </section>
 
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.objectTree}</h2>
-                <span>{memberDraftNodes.length}/2</span>
+                <span>{isTruss ? `${memberDraftNodes.length}/2` : planeModel.elements.length}</span>
               </div>
-              <p className="card-copy">{t.dragHint}</p>
+              <p className="card-copy">{isPlane ? t.planeHint : t.dragHint}</p>
               <div className="table-scroll small-table">
                 <table>
                   <thead>
@@ -2764,29 +2986,36 @@ export function Workbench() {
                       <th>ID</th>
                       <th>X</th>
                       <th>Y</th>
-                      <th>{t.diagnostics}</th>
+                      <th>{isTruss ? t.diagnostics : t.loadCase}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {trussModel.nodes.map((node, index) => (
+                    {(isPlane ? planeModel.nodes : trussModel.nodes).map((node, index) => (
                       <tr
                         key={node.id}
                         className={[
                           selectedNode === index ? "table-row--active" : "",
-                          (trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? "table-row--warning" : "",
+                          isTruss && (trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? "table-row--warning" : "",
                         ]
                           .filter(Boolean)
                           .join(" ")}
-                        onClick={() => toggleDraftNode(index)}
+                        onClick={() => {
+                          if (isPlane) {
+                            setSelectedNode(index);
+                            setSelectedElement(null);
+                          } else {
+                            toggleDraftNode(index);
+                          }
+                        }}
                       >
                         <td>{node.id}</td>
                         <td>{fixed(node.x, 2)}</td>
                         <td>{fixed(node.y, 2)}</td>
                         <td>
-                          {(trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? (
+                          {isTruss && (trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? (
                             <span className="issue-badge">{(trussDiagnostics?.nodeIssues[index] ?? []).length}</span>
                           ) : (
-                            "--"
+                            fixed(node.load_y, 0)
                           )}
                         </td>
                       </tr>
@@ -2800,23 +3029,23 @@ export function Workbench() {
                     <tr>
                       <th>ID</th>
                       <th>{t.nodeI}</th>
-                      <th>{t.nodeJ}</th>
+                      <th>{isPlane ? t.nodeK : t.nodeJ}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {displayTrussElements.map((element, index) => (
+                    {(isPlane ? planeElements : displayTrussElements).map((element, index) => (
                       <tr
                         key={element.id}
                         className={selectedElement === index ? "table-row--active" : ""}
                         onClick={() => {
                           setSelectedElement(index);
                           setSelectedNode(null);
-                          setMemberDraftNodes([]);
+                          if (isTruss) setMemberDraftNodes([]);
                         }}
                       >
                         <td>{element.id}</td>
                         <td>{element.node_i}</td>
-                        <td>{element.node_j}</td>
+                        <td>{"node_k" in element ? element.node_k : element.node_j}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2852,15 +3081,20 @@ export function Workbench() {
                   onChange={(event) => importModel(event.target.files?.[0])}
                 />
               </label>
-              <div className="history-list">
-                {SAMPLE_LIBRARY.map((sample) => (
-                  <button key={sample.id} className="history-item" onClick={() => openSample(sample.href)} type="button">
+              <VirtualList
+                className="history-list"
+                items={SAMPLE_LIBRARY}
+                itemHeight={102}
+                maxHeight={328}
+                itemKey={(sample) => sample.id}
+                renderItem={(sample) => (
+                  <button className="history-item" onClick={() => openSample(sample.href)} type="button">
                     <strong>{sample.name}</strong>
                     <span>{t.kinds[sample.kind]}</span>
                     <small>{sample.summary}</small>
                   </button>
-                ))}
-              </div>
+                )}
+              />
             </section>
 
             <section className="sidebar-card">
@@ -2948,11 +3182,15 @@ export function Workbench() {
                   {t.deleteSavedModel}
                 </button>
               </div>
-              <div className="history-list">
-                {selectedProjectModels.length === 0 ? <p className="card-copy">{t.noSavedModels}</p> : null}
-                {selectedProjectModels.map((model) => (
+              <VirtualList
+                className="history-list"
+                items={deferredProjectModels}
+                itemHeight={112}
+                maxHeight={344}
+                emptyState={<p className="card-copy">{t.noSavedModels}</p>}
+                itemKey={(model) => model.model_id}
+                renderItem={(model) => (
                   <button
-                    key={model.model_id}
                     className={`history-item${selectedModelId === model.model_id ? " history-item--active" : ""}`}
                     onClick={() => openSavedModel(model)}
                     type="button"
@@ -2966,8 +3204,8 @@ export function Workbench() {
                       v{model.latest_version_number ?? 1}
                     </small>
                   </button>
-                ))}
-              </div>
+                )}
+              />
             </section>
 
             <section className="sidebar-card">
@@ -2983,11 +3221,15 @@ export function Workbench() {
                   {t.deleteVersion}
                 </button>
               </div>
-              <div className="history-list">
-                {modelVersions.length === 0 ? <p className="card-copy">{t.noVersions}</p> : null}
-                {modelVersions.map((version) => (
+              <VirtualList
+                className="history-list"
+                items={deferredModelVersions}
+                itemHeight={100}
+                maxHeight={320}
+                emptyState={<p className="card-copy">{t.noVersions}</p>}
+                itemKey={(version) => version.version_id}
+                renderItem={(version) => (
                   <button
-                    key={version.version_id}
                     className={`history-item${selectedVersionId === version.version_id ? " history-item--active" : ""}`}
                     onClick={() => openSavedVersion(version)}
                     type="button"
@@ -2998,8 +3240,8 @@ export function Workbench() {
                       {t.updatedAt}: {formatTime(version.updated_at, language)}
                     </small>
                   </button>
-                ))}
-              </div>
+                )}
+              />
             </section>
 
             <section className="sidebar-card">
@@ -3007,11 +3249,15 @@ export function Workbench() {
                 <h2>{t.sections.library}</h2>
                 <span>{jobHistory.length}</span>
               </div>
-              <div className="history-list">
-                {jobHistory.length === 0 ? <p className="card-copy">{t.historyEmpty}</p> : null}
-                {jobHistory.map((historyJob) => (
+              <VirtualList
+                className="history-list"
+                items={deferredJobHistory}
+                itemHeight={112}
+                maxHeight={360}
+                emptyState={<p className="card-copy">{t.historyEmpty}</p>}
+                itemKey={(historyJob) => historyJob.job_id}
+                renderItem={(historyJob) => (
                   <button
-                    key={historyJob.job_id}
                     className={`history-item${job?.job_id === historyJob.job_id ? " history-item--active" : ""}`}
                     onClick={() => openHistoryJob(historyJob.job_id)}
                     type="button"
@@ -3025,8 +3271,8 @@ export function Workbench() {
                       {t.hasResult}: {historyJob.has_result ? t.yes : t.no}
                     </small>
                   </button>
-                ))}
-              </div>
+                )}
+              />
             </section>
           </div>
         ) : null}
@@ -3086,559 +3332,132 @@ export function Workbench() {
             <h2>{sidebarSection === "model" ? t.sections.model : t.viewport}</h2>
             <span>{job?.status ?? "idle"}</span>
           </div>
-          {isAxial ? (
-            <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="Axial bar response">
-              <defs>
-                <linearGradient id="beamGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="var(--accent-cool)" />
-                  <stop offset="100%" stopColor="var(--accent)" />
-                </linearGradient>
-              </defs>
-              <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
-              <text x="48" y="58" className="svg-title">
-                {t.kinds.axial_bar_1d}
-              </text>
-              <line x1="80" y1="160" x2="880" y2="160" className="guide" />
-              <line x1="80" y1="360" x2="880" y2="360" className="guide guide--soft" />
-              {axialNodes.length > 0 ? (
-                <>
-                  <polyline
-                    points={axialNodes.map((node) => `${80 + (node.x / axialLength) * 800},160`).join(" ")}
-                    className="bar bar--base"
-                  />
-                  <polyline
-                    points={axialNodes
-                      .map(
-                        (node) =>
-                          `${80 + (node.x / axialLength) * 800 + node.displacement * axialScale},360`,
-                      )
-                      .join(" ")}
-                    className="bar bar--deformed"
-                  />
-                </>
-              ) : null}
-            </svg>
-          ) : isTruss ? (
-            <svg
-              viewBox="0 0 980 460"
-              className="viewport-svg"
-              aria-label="2d truss response"
-              onPointerLeave={stopDraggingNode}
-              onPointerMove={handleTrussPointerMove}
-              onPointerUp={stopDraggingNode}
-            >
-              <defs>
-                <linearGradient id="beamGradientTruss" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="var(--accent-cool)" />
-                  <stop offset="100%" stopColor="var(--accent)" />
-                </linearGradient>
-              </defs>
-              <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
-              <text x="48" y="58" className="svg-title">
-                {sidebarSection === "model" ? t.sections.model : t.kinds.truss_2d}
-              </text>
-              {displayTrussElements.map((element) => {
-                const i = displayTrussNodes[element.node_i];
-                const j = displayTrussNodes[element.node_j];
-                const start = toSvgPoint(i, trussBounds);
-                const end = toSvgPoint(j, trussBounds);
-
-                return (
-                  <line
-                    key={`base-${element.id}`}
-                    x1={start.x}
-                    y1={start.y}
-                    x2={end.x}
-                    y2={end.y}
-                    className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}`}
-                    onPointerDown={(event) => {
-                      if (sidebarSection === "model") {
-                        event.stopPropagation();
-                        setSelectedElement(element.index);
-                        setSelectedNode(null);
-                        setMemberDraftNodes([]);
-                      }
-                    }}
-                  />
-                );
-              })}
-
-              {trussResult
-                ? displayTrussElements.map((element) => {
-                    const i = displayTrussNodes[element.node_i];
-                    const j = displayTrussNodes[element.node_j];
-                    const start = toSvgPoint({ x: i.x + i.ux * 10000, y: i.y + i.uy * 10000 }, trussBounds);
-                    const end = toSvgPoint({ x: j.x + j.ux * 10000, y: j.y + j.uy * 10000 }, trussBounds);
-
-                    return (
-                      <line
-                        key={`def-${element.id}`}
-                        x1={start.x}
-                        y1={start.y}
-                        x2={end.x}
-                        y2={end.y}
-                        className="bar bar--deformed-truss"
-                      />
-                    );
-                  })
-                : null}
-
-              {displayTrussNodes.map((node, index) => {
-                const point = toSvgPoint(node, trussBounds);
-                const deformed = toSvgPoint({ x: node.x + node.ux * 10000, y: node.y + node.uy * 10000 }, trussBounds);
-
-                return (
-                  <g key={node.id}>
-                    {(trussStability?.hotspotNodes ?? []).includes(index) ? (
-                      <circle cx={point.x} cy={point.y} r={sidebarSection === "model" ? 16 : 12} className="node-hotspot-ring" />
-                    ) : null}
-                    <circle
-                      cx={point.x}
-                      cy={point.y}
-                      r={sidebarSection === "model" ? 10 : 7}
-                      className={`node-base${selectedNode === index ? " node-base--active" : ""}${memberDraftNodes.includes(index) ? " node-base--draft" : ""}${(trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? " node-base--warning" : ""}`}
-                      onPointerDown={() => {
-                        if (sidebarSection === "model") {
-                          dragHistoryCapturedRef.current = false;
-                          setDraggingNode(index);
-                          toggleDraftNode(index);
-                        }
-                      }}
-                    />
-                    <text x={point.x + 12} y={point.y - 10} className="node-label">
-                      {node.id}
-                    </text>
-                    {trussResult ? <circle cx={deformed.x} cy={deformed.y} r={5} className="node-deformed" /> : null}
-                  </g>
-                );
-              })}
-            </svg>
-          ) : isTruss3d ? (
-            <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="3d truss response">
-              <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
-              <text x="48" y="58" className="svg-title">
-                {t.kinds.truss_3d}
-              </text>
-              {displayTruss3dElements.map((element) => {
-                const i = displayTruss3dNodes[element.node_i];
-                const j = displayTruss3dNodes[element.node_j];
-                const start = projectTruss3dPoint(i, truss3dProjectedBounds);
-                const end = projectTruss3dPoint(j, truss3dProjectedBounds);
-
-                return (
-                  <line
-                    key={`space-${element.id}`}
-                    x1={start.x}
-                    y1={start.y}
-                    x2={end.x}
-                    y2={end.y}
-                    className="bar bar--base"
-                  />
-                );
-              })}
-              {displayTruss3dNodes.map((node) => {
-                const point = projectTruss3dPoint(node, truss3dProjectedBounds);
-                return (
-                  <g key={node.id}>
-                    <circle cx={point.x} cy={point.y} r={7} className="node-base" />
-                    <text x={point.x + 10} y={point.y - 10} className="node-label">
-                      {node.id}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          ) : (
-            <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="2d plane triangle response">
-              <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
-              <text x="48" y="58" className="svg-title">
-                {t.kinds.plane_triangle_2d}
-              </text>
-              {planeElements.map((element) => {
-                const i = toSvgPoint(planeNodes[element.node_i], planeBounds);
-                const j = toSvgPoint(planeNodes[element.node_j], planeBounds);
-                const k = toSvgPoint(planeNodes[element.node_k], planeBounds);
-                return (
-                  <polygon
-                    key={`plane-${element.id}`}
-                    points={`${i.x},${i.y} ${j.x},${j.y} ${k.x},${k.y}`}
-                    className="plane-triangle"
-                  />
-                );
-              })}
-              {planeResult
-                ? planeElements.map((element) => {
-                    const i = toSvgPoint({ x: planeNodes[element.node_i].x + planeNodes[element.node_i].ux * 5000, y: planeNodes[element.node_i].y + planeNodes[element.node_i].uy * 5000 }, planeBounds);
-                    const j = toSvgPoint({ x: planeNodes[element.node_j].x + planeNodes[element.node_j].ux * 5000, y: planeNodes[element.node_j].y + planeNodes[element.node_j].uy * 5000 }, planeBounds);
-                    const k = toSvgPoint({ x: planeNodes[element.node_k].x + planeNodes[element.node_k].ux * 5000, y: planeNodes[element.node_k].y + planeNodes[element.node_k].uy * 5000 }, planeBounds);
-                    return (
-                      <polygon
-                        key={`plane-def-${element.id}`}
-                        points={`${i.x},${i.y} ${j.x},${j.y} ${k.x},${k.y}`}
-                        className="plane-triangle plane-triangle--deformed"
-                      />
-                    );
-                  })
-                : null}
-              {planeNodes.map((node) => {
-                const point = toSvgPoint(node, planeBounds);
-                return (
-                  <g key={node.id}>
-                    <circle cx={point.x} cy={point.y} r={6} className="node-base" />
-                    <text x={point.x + 10} y={point.y - 10} className="node-label">
-                      {node.id}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          )}
+          <WorkbenchViewport
+            studyKind={studyKind}
+            sidebarSection={sidebarSection}
+            title={t.sections.model}
+            axialTitle={t.kinds.axial_bar_1d}
+            trussTitle={t.kinds.truss_2d}
+            truss3dTitle={t.kinds.truss_3d}
+            planeTitle={t.kinds.plane_triangle_2d}
+            axialNodes={axialNodes}
+            axialLength={axialLength}
+            axialScale={axialScale}
+            displayTrussNodes={displayTrussNodes}
+            displayTrussElements={displayTrussElements}
+            trussBounds={trussBounds}
+            trussResult={Boolean(trussResult)}
+            trussHotspotNodes={trussStability?.hotspotNodes ?? []}
+            trussNodeIssues={trussDiagnostics?.nodeIssues ?? {}}
+            selectedNode={selectedNode}
+            selectedElement={selectedElement}
+            memberDraftNodes={memberDraftNodes}
+            onTrussPointerMove={handleTrussPointerMove}
+            onStopDraggingNode={stopDraggingNode}
+            onSelectTrussElement={(index) => {
+              setSelectedElement(index);
+              setSelectedNode(null);
+              setMemberDraftNodes([]);
+            }}
+            onStartTrussNodeDrag={(index) => {
+              dragHistoryCapturedRef.current = false;
+              setDraggingNode(index);
+              toggleDraftNode(index);
+            }}
+            displayTruss3dNodes={displayTruss3dNodes}
+            displayTruss3dElements={displayTruss3dElements}
+            truss3dProjectedBounds={truss3dProjectedBounds}
+            planeNodes={planeNodes}
+            planeElements={planeElements}
+            planeBounds={planeBounds}
+            planeResult={Boolean(planeResult)}
+            planeMaxVonMises={planeMaxVonMises}
+            selectedPlaneNodeId={selectedPlaneNodeData?.id ?? null}
+            onSelectPlaneElement={(index) => {
+              setSelectedElement(index);
+              setSelectedNode(null);
+            }}
+            onSelectPlaneNode={(index) => {
+              setSelectedNode(index);
+              setSelectedElement(null);
+            }}
+          />
         </section>
 
-        <section className="panel console-panel">
-          <div className="panel-head">
-            <h2>{sidebarSection === "model" ? t.nodeTable : t.report}</h2>
-            <span>{message}</span>
-          </div>
-          <div className="console-grid">
-            <div className="console-card">
-              <h3>{sidebarSection === "model" ? t.dragNode : t.messages}</h3>
-              {sidebarSection === "model" ? (
-                <div className="metric-grid">
-                  <div>
-                    <span>ID</span>
-                    <strong>{selectedNodeData?.id ?? t.noNodeSelected}</strong>
-                  </div>
-                  <div>
-                    <span>X</span>
-                    <strong>{fixed(selectedNodeData?.x)}</strong>
-                  </div>
-                  <div>
-                    <span>Y</span>
-                    <strong>{fixed(selectedNodeData?.y)}</strong>
-                  </div>
-                  <div>
-                    <span>{t.loadCase}</span>
-                    <strong>{fixed(selectedNodeData?.load_y, 0)} N</strong>
-                  </div>
-                  <div>
-                    <span>{t.diagnostics}</span>
-                    <strong>{selectedNodeIssues.length > 0 ? selectedNodeIssues.length : "--"}</strong>
-                  </div>
-                </div>
-              ) : (
-                <p>{message}</p>
-              )}
-            </div>
-            <div className="console-card">
-              <h3>{isAxial ? t.axialElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : t.planeElements}</h3>
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>{t.span}</th>
-                      <th>{t.stress}</th>
-                      <th>{t.axialForce}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(isAxial ? axialElements : isTruss ? displayTrussElements : isTruss3d ? displayTruss3dElements : planeElements).map((element) => (
-                      <tr key={element.index}>
-                        <td>{element.index}</td>
-                        <td>
-                          {"x1" in element
-                            ? `${fixed(element.x1, 2)} - ${fixed(element.x2, 2)}`
-                            : "node_k" in element
-                              ? `${element.node_i} - ${element.node_j} - ${element.node_k}`
-                              : `${element.node_i} - ${element.node_j}`}
-                        </td>
-                        <td>{scientific("von_mises" in element ? element.von_mises : element.stress)}</td>
-                        <td>{scientific("axial_force" in element ? element.axial_force : undefined)}</td>
-                      </tr>
-                    ))}
-                    {(isAxial ? axialElements.length : isTruss ? displayTrussElements.length : isTruss3d ? displayTruss3dElements.length : planeElements.length) === 0 ? (
-                      <tr>
-                        <td colSpan={4}>--</td>
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </section>
+        <WorkbenchConsole
+          sidebarSection={sidebarSection}
+          title={sidebarSection === "model" ? t.nodeTable : t.report}
+          subtitle={message}
+          modelMessageTitle={t.dragNode}
+          reportMessageTitle={t.messages}
+          message={message}
+          dragNodeLabel={t.dragNode}
+          noNodeSelectedLabel={t.noNodeSelected}
+          loadCaseLabel={t.loadCase}
+          diagnosticsLabel={t.diagnostics}
+          selectedNodeId={isPlane ? selectedPlaneNodeData?.id ?? null : selectedNodeData?.id ?? null}
+          selectedNodeX={isPlane ? selectedPlaneNodeData?.x : selectedNodeData?.x}
+          selectedNodeY={isPlane ? selectedPlaneNodeData?.y : selectedNodeData?.y}
+          selectedNodeLoadY={isPlane ? selectedPlaneNodeData?.load_y : selectedNodeData?.load_y}
+          selectedNodeIssueCount={isPlane ? null : selectedNodeIssues.length > 0 ? selectedNodeIssues.length : null}
+          elementTitle={isAxial ? t.axialElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : t.planeElements}
+          spanLabel={t.span}
+          stressLabel={t.stress}
+          axialForceLabel={t.axialForce}
+          elements={(isAxial ? axialElements : isTruss ? displayTrussElements : isTruss3d ? displayTruss3dElements : planeElements) as Array<{
+            index: number;
+            x1?: number;
+            x2?: number;
+            node_i?: number;
+            node_j?: number;
+            node_k?: number;
+            stress?: number;
+            axial_force?: number;
+            von_mises?: number;
+          }>}
+        />
       </main>
 
-      <aside className="workspace-inspector panel">
-        <div className="panel-head">
-          <h2>{t.overview}</h2>
-          <span>{isPending ? t.busy : t.ready}</span>
-        </div>
-        <div className="inspector-stack">
-          {sidebarSection === "model" ? (
-            <section className="info-card">
-              <h3>{t.properties}</h3>
-              {selectedNodeData ? (
-                <div className="form-grid compact">
-                  <label>
-                    <span>{t.dragNode}</span>
-                    <input value={selectedNodeData.id} readOnly />
-                  </label>
-                  <label>
-                    <span>{t.nodeX}</span>
-                    <input
-                      type="number"
-                      step={0.1}
-                      value={selectedNodeData.x}
-                      onChange={(event) => updateSelectedNode("x", Number(event.target.value))}
-                    />
-                  </label>
-                  <label>
-                    <span>{t.nodeY}</span>
-                    <input
-                      type="number"
-                      step={0.1}
-                      value={selectedNodeData.y}
-                      onChange={(event) => updateSelectedNode("y", Number(event.target.value))}
-                    />
-                  </label>
-                  <label>
-                    <span>{t.loadX}</span>
-                    <input
-                      type="number"
-                      step={100}
-                      value={selectedNodeData.load_x}
-                      onChange={(event) => updateSelectedNode("load_x", Number(event.target.value))}
-                    />
-                  </label>
-                  <label>
-                    <span>{t.loadY}</span>
-                    <input
-                      type="number"
-                      step={100}
-                      value={selectedNodeData.load_y}
-                      onChange={(event) => updateSelectedNode("load_y", Number(event.target.value))}
-                    />
-                  </label>
-                  <label className="toggle-row">
-                    <span>{t.fixX}</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedNodeData.fix_x}
-                      onChange={(event) => updateSelectedNode("fix_x", event.target.checked)}
-                    />
-                  </label>
-                  <label className="toggle-row">
-                    <span>{t.fixY}</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedNodeData.fix_y}
-                      onChange={(event) => updateSelectedNode("fix_y", event.target.checked)}
-                    />
-                  </label>
-                </div>
-              ) : selectedElementData ? (
-                <div className="form-grid compact">
-                  <label>
-                    <span>{t.memberSelection}</span>
-                    <input value={selectedElementData.id} readOnly />
-                  </label>
-                  <label>
-                    <span>{t.nodeI}</span>
-                    <input value={selectedElementData.node_i} readOnly />
-                  </label>
-                  <label>
-                    <span>{t.nodeJ}</span>
-                    <input value={selectedElementData.node_j} readOnly />
-                  </label>
-                  <label>
-                    <span>{t.area}</span>
-                    <input
-                      type="number"
-                      step={0.0001}
-                      value={selectedElementData ? trussModel.elements[selectedElementData.index]?.area ?? 0 : 0}
-                      onChange={(event) => updateSelectedElement("area", Number(event.target.value))}
-                    />
-                  </label>
-                  <label>
-                    <span>{t.modulus}</span>
-                    <input
-                      type="number"
-                      step={0.1}
-                      value={
-                        selectedElementData
-                          ? round((trussModel.elements[selectedElementData.index]?.youngs_modulus ?? 0) / 1.0e9)
-                          : 0
-                      }
-                      onChange={(event) =>
-                        updateSelectedElement("youngs_modulus", Number(event.target.value) * 1.0e9)
-                      }
-                    />
-                  </label>
-                </div>
-              ) : (
-                <p className="card-copy">{t.selectionHint}</p>
-              )}
-            </section>
-          ) : null}
-          {sidebarSection === "model" && isTruss ? (
-            <section className="info-card">
-              <h3>{t.diagnostics}</h3>
-              {trussDiagnostics && trussDiagnostics.blockingMessages.length > 0 ? (
-                <div className="diagnostic-list">
-                  {trussStability ? (
-                    <div className={`stability-badge stability-badge--${trussStability.tone}`}>
-                      <strong>{t.stabilityScore}</strong>
-                      <span>{trussStability.score}/100</span>
-                      <small>
-                        {trussStability.tone === "good"
-                          ? t.stabilityGood
-                          : trussStability.tone === "watch"
-                            ? t.stabilityWatch
-                            : t.stabilityRisk}
-                      </small>
-                    </div>
-                  ) : null}
-                  {trussDiagnostics.blockingMessages.map((issue) => (
-                    <div key={issue} className="diagnostic-item">
-                      <strong>{issue}</strong>
-                    </div>
-                  ))}
-                  {trussStability && trussStability.hotspotNodes.length > 0 ? (
-                    <div className="diagnostic-item">
-                      <strong>
-                        {t.hotspotNodes}:{" "}
-                        {trussStability.hotspotNodes.map((nodeIndex) => trussModel.nodes[nodeIndex]?.id ?? nodeIndex).join(", ")}
-                      </strong>
-                    </div>
-                  ) : null}
-                  {trussDiagnostics.suggestions.length > 0 ? <p className="card-copy">{t.suggestedFixes}</p> : null}
-                  <div className="diagnostic-actions">
-                    {trussDiagnostics.suggestions.map((suggestion) => (
-                      <button
-                        key={suggestion.id}
-                        className="ghost-button"
-                        onClick={() => applyTrussSuggestion(suggestion)}
-                        type="button"
-                      >
-                        {suggestion.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <p className="card-copy">{t.diagnosticsClear}</p>
-              )}
-            </section>
-          ) : null}
-          <section className="info-card">
-            <h3>{t.historyPanel}</h3>
-            <div className="button-row">
-              <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
-                {t.undo}
-              </button>
-              <button className="ghost-button" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
-                {t.redo}
-              </button>
-            </div>
-            {undoStack.length === 0 && redoStack.length === 0 ? (
-              <p className="card-copy">{t.noOperations}</p>
-            ) : (
-              <div className="history-list">
-                {undoStack
-                  .slice(-4)
-                  .reverse()
-                  .map((entry, index) => (
-                    <div key={`undo-${index}-${entry.label}`} className="history-item">
-                      <strong>{entry.label}</strong>
-                      <small>{t.undo}</small>
-                    </div>
-                  ))}
-                {redoStack
-                  .slice(-2)
-                  .reverse()
-                  .map((entry, index) => (
-                    <div key={`redo-${index}-${entry.label}`} className="history-item">
-                      <strong>{entry.label}</strong>
-                      <small>{t.redo}</small>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </section>
-          <section className="info-card">
-            <h3>{t.metrics}</h3>
-            <div className="metric-grid">
-              <div>
-                <span>{t.status}</span>
-                <strong>{job?.status ?? "--"}</strong>
-              </div>
-              <div>
-                <span>{t.worker}</span>
-                <strong>{job?.worker_id ?? "--"}</strong>
-              </div>
-              <div>
-                <span>{t.progress}</span>
-                <strong>{typeof job?.progress === "number" ? `${Math.round(job.progress * 100)}%` : "--"}</strong>
-              </div>
-              <div>
-                <span>{t.iteration}</span>
-                <strong>{job?.iteration ?? "--"}</strong>
-              </div>
-              <div>
-                <span>{t.residual}</span>
-                <strong>{scientific(job?.residual)}</strong>
-              </div>
-              <div>
-                <span>{t.nodes}</span>
-                <strong>{isAxial ? axialNodes.length : isTruss ? displayTrussNodes.length : isTruss3d ? displayTruss3dNodes.length : planeNodes.length}</strong>
-              </div>
-            </div>
-          </section>
-          <section className="info-card">
-            <h3>{t.report}</h3>
-            <div className="button-row">
-              <button className="ghost-button" onClick={downloadResultJson} type="button">
-                {t.exportData} {t.exportJson}
-              </button>
-              <button className="ghost-button" onClick={downloadResultCsv} type="button">
-                {t.exportData} {t.exportCsv}
-              </button>
-            </div>
-            <div className="metric-grid">
-              <div>
-                <span>{t.tipDisp}</span>
-                <strong>{isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : scientific(planeResult?.max_displacement)}</strong>
-              </div>
-              <div>
-                <span>{t.maxStress}</span>
-                <strong>{scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : planeResult?.max_stress)}</strong>
-              </div>
-              <div>
-                <span>{t.reaction}</span>
-                <strong>{isAxial ? scientific(axialResult?.reaction_force) : "--"}</strong>
-              </div>
-              <div>
-                <span>{t.createdAt}</span>
-                <strong>{formatTime(job?.created_at, language)}</strong>
-              </div>
-              <div>
-                <span>{t.updatedAt}</span>
-                <strong>{formatTime(job?.updated_at, language)}</strong>
-              </div>
-              <div>
-                <span>{t.hasResult}</span>
-                <strong>{job?.has_result ? t.yes : t.no}</strong>
-              </div>
-              <div>
-                <span>{t.failureReason}</span>
-                <strong>{translatedFailureReason ?? job?.message ?? "--"}</strong>
-              </div>
-            </div>
-          </section>
-        </div>
-      </aside>
+      <WorkbenchInspector
+        t={t}
+        sidebarSection={sidebarSection}
+        studyKind={studyKind}
+        isPending={isPending}
+        selectedNodeData={selectedNodeData ? { ...selectedNodeData } : null}
+        selectedElementData={selectedElementData ? { ...selectedElementData } : null}
+        selectedPlaneNodeData={selectedPlaneNodeData ? { ...selectedPlaneNodeData } : null}
+        selectedPlaneElementData={selectedPlaneElementData ? { ...selectedPlaneElementData } : null}
+        trussElementArea={selectedElementData ? trussModel.elements[selectedElementData.index]?.area ?? 0 : 0}
+        trussElementModulusGpa={selectedElementData ? round((trussModel.elements[selectedElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
+        planeElementThickness={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.thickness ?? 0 : 0}
+        planeElementModulusGpa={selectedPlaneElementData ? round((planeModel.elements[selectedPlaneElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
+        planeElementPoissonRatio={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.poisson_ratio ?? 0.33 : 0.33}
+        onUpdateSelectedNode={updateSelectedNode}
+        onUpdateSelectedElement={updateSelectedElement}
+        onUpdateSelectedPlaneNode={updateSelectedPlaneNode}
+        onUpdateSelectedPlaneElement={updateSelectedPlaneElement}
+        trussDiagnostics={trussDiagnostics}
+        trussStability={trussStability}
+        hotspotNodeLabels={(trussStability?.hotspotNodes ?? []).map((nodeIndex) => trussModel.nodes[nodeIndex]?.id ?? nodeIndex).join(", ")}
+        onApplyTrussSuggestion={(id) => {
+          const suggestion = trussDiagnostics?.suggestions.find((entry) => entry.id === id);
+          if (suggestion) applyTrussSuggestion(suggestion);
+        }}
+        undoStack={undoStack}
+        redoStack={redoStack}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        job={job}
+        nodeCount={isAxial ? axialNodes.length : isTruss ? displayTrussNodes.length : isTruss3d ? displayTruss3dNodes.length : planeNodes.length}
+        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : scientific(planeResult?.max_displacement)}
+        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : planeResult?.max_stress)}
+        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : "--"}
+        createdAtValue={formatTime(job?.created_at, language)}
+        updatedAtValue={formatTime(job?.updated_at, language)}
+        failureReasonValue={translatedFailureReason ?? job?.message ?? "--"}
+        onDownloadJson={downloadResultJson}
+        onDownloadCsv={downloadResultCsv}
+      />
     </div>
   );
 }

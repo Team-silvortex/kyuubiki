@@ -232,6 +232,85 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert length(result_payload["result"]["elements"]) == 1
   end
 
+  test "binds a submitted job to the selected model version" do
+    {:ok, project} = Library.create_project(%{"name" => "Version-bound study"})
+
+    {:ok, model} =
+      Library.create_model(project["project_id"], %{
+        "name" => "Saved roof",
+        "kind" => "truss_2d",
+        "model_schema_version" => "kyuubiki.model/v1",
+        "payload" => %{
+          "kind" => "truss_2d",
+          "model_schema_version" => "kyuubiki.model/v1",
+          "name" => "Saved roof",
+          "material" => "Steel",
+          "youngs_modulus_gpa" => 210,
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    {:ok, version} =
+      Library.create_version(model["model_id"], %{
+        "name" => "Frozen solve input",
+        "kind" => "truss_2d",
+        "model_schema_version" => "kyuubiki.model/v1",
+        "payload" => %{
+          "kind" => "truss_2d",
+          "model_schema_version" => "kyuubiki.model/v1",
+          "name" => "Saved roof",
+          "material" => "Steel",
+          "youngs_modulus_gpa" => 210,
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [],
+            "elements" => [],
+            "max_displacement" => 0.0,
+            "max_stress" => 0.0,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/truss-2d/jobs",
+        Jason.encode!(%{
+          "project_id" => "ignored-project-id",
+          "model_version_id" => version["version_id"],
+          "nodes" => [],
+          "elements" => []
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["project_id"] == project["project_id"]
+    assert payload["job"]["model_version_id"] == version["version_id"]
+    assert payload["job"]["simulation_case_id"] == version["version_id"]
+  end
+
   test "runs a two dimensional truss job through the orchestration API" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([

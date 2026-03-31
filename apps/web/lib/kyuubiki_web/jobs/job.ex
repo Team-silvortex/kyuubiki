@@ -18,6 +18,7 @@ defmodule KyuubikiWeb.Jobs.Job do
   defstruct [
     :job_id,
     :project_id,
+    :model_version_id,
     :simulation_case_id,
     :worker_id,
     :message,
@@ -34,6 +35,7 @@ defmodule KyuubikiWeb.Jobs.Job do
   @type t :: %__MODULE__{
           job_id: String.t(),
           project_id: String.t(),
+          model_version_id: String.t() | nil,
           simulation_case_id: String.t(),
           worker_id: String.t() | nil,
           message: String.t() | nil,
@@ -61,6 +63,7 @@ defmodule KyuubikiWeb.Jobs.Job do
        %__MODULE__{
          job_id: job_id,
          project_id: project_id,
+         model_version_id: fetch_optional_string(attrs, :model_version_id),
          simulation_case_id: simulation_case_id,
          worker_id: fetch_optional_string(attrs, :worker_id),
          message: fetch_optional_string(attrs, :message),
@@ -92,6 +95,7 @@ defmodule KyuubikiWeb.Jobs.Job do
     %{
       "job_id" => job.job_id,
       "project_id" => job.project_id,
+      "model_version_id" => job.model_version_id,
       "simulation_case_id" => job.simulation_case_id,
       "worker_id" => job.worker_id,
       "message" => job.message,
@@ -111,6 +115,7 @@ defmodule KyuubikiWeb.Jobs.Job do
       new(%{
         job_id: Map.get(attrs, "job_id"),
         project_id: Map.get(attrs, "project_id"),
+        model_version_id: Map.get(attrs, "model_version_id"),
         simulation_case_id: Map.get(attrs, "simulation_case_id"),
         worker_id: Map.get(attrs, "worker_id"),
         message: Map.get(attrs, "message"),

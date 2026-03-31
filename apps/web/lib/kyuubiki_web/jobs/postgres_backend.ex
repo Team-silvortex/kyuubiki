@@ -93,6 +93,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     %{
       job_id: Map.fetch!(attrs, "job_id"),
       project_id: Map.fetch!(attrs, "project_id"),
+      model_version_id: Map.get(attrs, "model_version_id"),
       simulation_case_id: Map.fetch!(attrs, "simulation_case_id"),
       worker_id: Map.get(attrs, "worker_id"),
       message: Map.get(attrs, "message"),
@@ -114,6 +115,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     Job.from_persisted_map(%{
       "job_id" => record.job_id,
       "project_id" => record.project_id,
+      "model_version_id" => record.model_version_id,
       "simulation_case_id" => record.simulation_case_id,
       "worker_id" => record.worker_id,
       "message" => record.message,
