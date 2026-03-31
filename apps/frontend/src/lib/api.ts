@@ -29,6 +29,32 @@ export type Truss2dJobInput = {
   elements: TrussElementInput[];
 };
 
+export type Truss3dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_z: boolean;
+  load_x: number;
+  load_y: number;
+  load_z: number;
+};
+
+export type Truss3dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+};
+
+export type Truss3dJobInput = {
+  nodes: Truss3dNodeInput[];
+  elements: Truss3dElementInput[];
+};
+
 export type PlaneNodeInput = {
   id: string;
   x: number;
@@ -109,6 +135,23 @@ export type Truss2dResult = {
   input: Truss2dJobInput;
 };
 
+export type Truss3dResult = {
+  max_displacement: number;
+  max_stress: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; z: number; ux: number; uy: number; uz: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    strain: number;
+    stress: number;
+    axial_force: number;
+  }>;
+  input: Truss3dJobInput;
+};
+
 export type PlaneTriangle2dResult = {
   max_displacement: number;
   max_stress: number;
@@ -170,6 +213,14 @@ export function createAxialBarJob(input: AxialBarJobInput): Promise<JobEnvelope<
 
 export function createTruss2dJob(input: Truss2dJobInput): Promise<JobEnvelope<Truss2dResult>> {
   return requestJson<JobEnvelope<Truss2dResult>>("/api/v1/fem/truss-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createTruss3dJob(input: Truss3dJobInput): Promise<JobEnvelope<Truss3dResult>> {
+  return requestJson<JobEnvelope<Truss3dResult>>("/api/v1/fem/truss-3d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

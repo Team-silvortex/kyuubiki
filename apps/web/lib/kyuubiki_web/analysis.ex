@@ -27,6 +27,15 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec submit_truss_3d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_truss_3d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_truss_3d(params),
+         {:ok, job} <- create_job() do
+      start_background_job(job.job_id, "solve_truss_3d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
   @spec submit_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_triangle_2d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_plane_triangle_2d(params),
@@ -78,6 +87,7 @@ defmodule KyuubikiWeb.Analysis do
         case method do
           "solve_bar_1d" -> &AgentClient.solve_bar_1d/2
           "solve_truss_2d" -> &AgentClient.solve_truss_2d/2
+          "solve_truss_3d" -> &AgentClient.solve_truss_3d/2
           "solve_plane_triangle_2d" -> &AgentClient.solve_plane_triangle_2d/2
         end
 
@@ -170,6 +180,18 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp normalize_truss_2d(_params), do: {:error, :invalid_truss_model}
+
+  defp normalize_truss_3d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_truss_3d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_truss_3d(_params), do: {:error, :invalid_truss_3d_model}
 
   defp normalize_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
        when is_list(nodes) and is_list(elements) do

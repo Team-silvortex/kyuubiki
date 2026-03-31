@@ -136,6 +136,8 @@ pub enum RpcMethod {
     SolveBar1d,
     #[serde(rename = "solve_truss_2d")]
     SolveTruss2d,
+    #[serde(rename = "solve_truss_3d")]
+    SolveTruss3d,
     #[serde(rename = "solve_plane_triangle_2d")]
     SolvePlaneTriangle2d,
 }
@@ -269,6 +271,68 @@ pub struct SolveTruss2dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Truss3dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_z: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub load_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Truss3dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTruss3dRequest {
+    pub nodes: Vec<Truss3dNodeInput>,
+    pub elements: Vec<Truss3dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Truss3dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub uz: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Truss3dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub strain: f64,
+    pub stress: f64,
+    pub axial_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTruss3dResult {
+    pub input: SolveTruss3dRequest,
+    pub nodes: Vec<Truss3dNodeResult>,
+    pub elements: Vec<Truss3dElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaneNodeInput {
     pub id: String,
     pub x: f64,
@@ -336,7 +400,7 @@ pub struct SolvePlaneTriangle2dResult {
 mod tests {
     use super::{
         Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-        SolveBarRequest, SolvePlaneTriangle2dRequest,
+        SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
     };
 
     #[test]
@@ -404,6 +468,26 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolvePlaneTriangle2d);
         assert_eq!(decoded.id, "rpc-plane");
+    }
+
+    #[test]
+    fn serializes_truss_3d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: 1,
+            id: "rpc-truss-3d".to_string(),
+            method: RpcMethod::SolveTruss3d,
+            params: serde_json::to_value(SolveTruss3dRequest {
+                nodes: vec![],
+                elements: vec![],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveTruss3d);
+        assert_eq!(decoded.id, "rpc-truss-3d");
     }
 
     #[test]

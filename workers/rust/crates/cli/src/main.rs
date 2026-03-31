@@ -3,9 +3,11 @@ use std::net::{TcpListener, TcpStream};
 
 use kyuubiki_protocol::{
     Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
+    SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
-use kyuubiki_solver::{MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d};
+use kyuubiki_solver::{
+    MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
+};
 
 fn main() {
     match Command::from_env() {
@@ -252,6 +254,36 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                 ),
             }
         }
+        RpcMethod::SolveTruss3d => {
+            let params = match serde_json::from_value::<SolveTruss3dRequest>(request.params.clone())
+            {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            match solve_truss_3d(&params) {
+                Ok(result) => {
+                    let progress_frames =
+                        build_progress_frames("3d truss", &request.id, params.nodes.len());
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("3d truss result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => AgentReply::Stream(
+                    Vec::new(),
+                    RpcResponse::error(request.id, "solve_failed", error),
+                ),
+            }
+        }
         RpcMethod::SolvePlaneTriangle2d => {
             let params =
                 match serde_json::from_value::<SolvePlaneTriangle2dRequest>(request.params.clone())
@@ -402,7 +434,8 @@ mod tests {
     };
     use kyuubiki_protocol::{
         JobStatus, PlaneNodeInput, PlaneTriangleElementInput, ProgressEvent, RpcMethod, RpcRequest,
-        SolveBarRequest, SolvePlaneTriangle2dRequest,
+        SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest, Truss3dElementInput,
+        Truss3dNodeInput,
     };
 
     #[test]
@@ -539,5 +572,124 @@ mod tests {
                 .expect("plane result");
         assert_eq!(result.nodes.len(), 3);
         assert_eq!(result.elements.len(), 1);
+    }
+
+    #[test]
+    fn handles_truss_3d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: 1,
+            id: "rpc-truss-3d".to_string(),
+            method: RpcMethod::SolveTruss3d,
+            params: serde_json::to_value(SolveTruss3dRequest {
+                nodes: vec![
+                    Truss3dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                    },
+                    Truss3dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                    },
+                    Truss3dNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                    },
+                    Truss3dNodeInput {
+                        id: "n3".to_string(),
+                        x: 0.2,
+                        y: 0.2,
+                        z: 1.0,
+                        fix_x: false,
+                        fix_y: false,
+                        fix_z: false,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: -1000.0,
+                    },
+                ],
+                elements: vec![
+                    Truss3dElementInput {
+                        id: "e0".to_string(),
+                        node_i: 0,
+                        node_j: 3,
+                        area: 0.01,
+                        youngs_modulus: 70.0e9,
+                    },
+                    Truss3dElementInput {
+                        id: "e1".to_string(),
+                        node_i: 1,
+                        node_j: 3,
+                        area: 0.01,
+                        youngs_modulus: 70.0e9,
+                    },
+                    Truss3dElementInput {
+                        id: "e2".to_string(),
+                        node_i: 2,
+                        node_j: 3,
+                        area: 0.01,
+                        youngs_modulus: 70.0e9,
+                    },
+                    Truss3dElementInput {
+                        id: "e3".to_string(),
+                        node_i: 0,
+                        node_j: 1,
+                        area: 0.01,
+                        youngs_modulus: 70.0e9,
+                    },
+                    Truss3dElementInput {
+                        id: "e4".to_string(),
+                        node_i: 1,
+                        node_j: 2,
+                        area: 0.01,
+                        youngs_modulus: 70.0e9,
+                    },
+                    Truss3dElementInput {
+                        id: "e5".to_string(),
+                        node_i: 2,
+                        node_j: 0,
+                        area: 0.01,
+                        youngs_modulus: 70.0e9,
+                    },
+                ],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveTruss3dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("3d truss result");
+        assert_eq!(result.nodes.len(), 4);
+        assert_eq!(result.elements.len(), 6);
     }
 }

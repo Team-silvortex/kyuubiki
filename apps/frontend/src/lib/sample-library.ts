@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "truss_2d" | "plane_triangle_2d";
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
   href: string;
   summary: string;
 };
@@ -27,6 +27,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "plane_triangle_2d",
     href: "/models/cantilever-plate-2d.json",
     summary: "Two CST triangles representing a small cantilever plate patch.",
+  },
+  {
+    id: "space-frame-pyramid-3d",
+    name: "Space Frame Pyramid",
+    kind: "truss_3d",
+    href: "/models/space-frame-pyramid-3d.json",
+    summary: "Compact 3D truss pyramid for first-pass spatial stiffness checks.",
   },
   {
     id: "window-frame-truss-2d",

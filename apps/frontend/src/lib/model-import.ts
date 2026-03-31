@@ -1,4 +1,4 @@
-import type { PlaneTriangle2dJobInput, Truss2dJobInput } from "@/lib/api";
+import type { PlaneTriangle2dJobInput, Truss2dJobInput, Truss3dJobInput } from "@/lib/api";
 
 export type ImportedAxialBarModel = {
   kind: "axial_bar_1d";
@@ -27,10 +27,19 @@ export type ImportedPlaneTriangle2dModel = {
   model: PlaneTriangle2dJobInput;
 };
 
+export type ImportedTruss3dModel = {
+  kind: "truss_3d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: Truss3dJobInput;
+};
+
 export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedTruss2dModel
-  | ImportedPlaneTriangle2dModel;
+  | ImportedPlaneTriangle2dModel
+  | ImportedTruss3dModel;
 
 const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 
@@ -205,6 +214,54 @@ function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTria
   };
 }
 
+function parseTruss3dNode(raw: unknown, index: number): Truss3dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    z: numberOrZero(node.z),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    fix_z: Boolean(node.fix_z),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+    load_z: numberOrZero(node.load_z),
+  };
+}
+
+function parseTruss3dElement(raw: unknown, index: number): Truss3dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+  };
+}
+
+function parseTruss3dV1(raw: Record<string, unknown>): ImportedTruss3dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseTruss3dNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseTruss3dElement) : [];
+
+  if (nodes.length < 3) {
+    throw new Error("nodes must contain at least three entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "truss_3d",
+    name: typeof raw.name === "string" ? raw.name : "imported-truss-3d",
+    material: normalizeMaterial(raw.material),
+    youngsModulusGpa: requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa"),
+    model: { nodes, elements },
+  };
+}
+
 export function parsePlaygroundModel(text: string): ImportedModel {
   const raw = JSON.parse(text) as Record<string, unknown>;
   assertSupportedVersion(raw);
@@ -218,6 +275,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "plane_triangle_2d") {
     return parsePlaneTriangle2dV1(raw);
+  }
+
+  if (kind === "truss_3d") {
+    return parseTruss3dV1(raw);
   }
 
   if (kind === "truss_2d") {

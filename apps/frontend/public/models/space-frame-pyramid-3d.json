@@ -1,0 +1,21 @@
+{
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "truss_3d",
+  "name": "space-frame-pyramid-3d",
+  "material": "Aluminum",
+  "youngs_modulus_gpa": 70,
+  "nodes": [
+    { "id": "b0", "x": 0.0, "y": 0.0, "z": 0.0, "fix_x": true, "fix_y": true, "fix_z": true, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0 },
+    { "id": "b1", "x": 1.2, "y": 0.0, "z": 0.0, "fix_x": true, "fix_y": true, "fix_z": true, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0 },
+    { "id": "b2", "x": 0.0, "y": 1.2, "z": 0.0, "fix_x": true, "fix_y": true, "fix_z": true, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0 },
+    { "id": "top", "x": 0.35, "y": 0.35, "z": 1.0, "fix_x": false, "fix_y": false, "fix_z": false, "load_x": 0.0, "load_y": 0.0, "load_z": -1600.0 }
+  ],
+  "elements": [
+    { "id": "e0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e2", "node_i": 2, "node_j": 0, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e3", "node_i": 0, "node_j": 3, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e4", "node_i": 1, "node_j": 3, "area": 0.01, "youngs_modulus": 70000000000.0 },
+    { "id": "e5", "node_i": 2, "node_j": 3, "area": 0.01, "youngs_modulus": 70000000000.0 }
+  ]
+}

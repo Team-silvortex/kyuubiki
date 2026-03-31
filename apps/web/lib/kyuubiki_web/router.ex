@@ -50,6 +50,16 @@ defmodule KyuubikiWeb.Router do
     end
   end
 
+  post "/api/v1/fem/truss-3d/jobs" do
+    case Analysis.submit_truss_3d(conn.body_params) do
+      {:ok, payload} ->
+        respond_json(conn, 202, payload)
+
+      {:error, reason} ->
+        respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
   post "/api/v1/fem/plane-triangle-2d/jobs" do
     case Analysis.submit_plane_triangle_2d(conn.body_params) do
       {:ok, payload} ->

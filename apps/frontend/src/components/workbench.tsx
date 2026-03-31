@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useRef,
   useState,
   useTransition,
   type Dispatch,
@@ -16,6 +17,7 @@ import {
   createAxialBarJob,
   createPlaneTriangle2dJob,
   createTruss2dJob,
+  createTruss3dJob,
   fetchHealth,
   fetchJobHistory,
   fetchJobStatus,
@@ -28,12 +30,14 @@ import {
   type PlaneTriangle2dResult,
   type Truss2dJobInput,
   type Truss2dResult,
+  type Truss3dJobInput,
+  type Truss3dResult,
 } from "@/lib/api";
 
 type Language = "en" | "zh";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d" | "plane_triangle_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
 
 type AxialFormState = {
   length: number;
@@ -68,6 +72,28 @@ type DisplayTrussElement = {
   axial_force: number;
 };
 
+type DisplayTruss3dNode = {
+  index: number;
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  ux: number;
+  uy: number;
+  uz: number;
+};
+
+type DisplayTruss3dElement = {
+  index: number;
+  id: string;
+  node_i: number;
+  node_j: number;
+  length: number;
+  strain: number;
+  stress: number;
+  axial_force: number;
+};
+
 type SelectionKind = "node" | "element";
 
 type TrussSuggestion =
@@ -84,6 +110,26 @@ type StabilitySummary = {
   score: number;
   tone: "good" | "watch" | "risk";
   hotspotNodes: number[];
+};
+
+type WorkbenchSnapshot = {
+  studyKind: StudyKind;
+  axialForm: AxialFormState;
+  trussModel: Truss2dJobInput;
+  truss3dModel: Truss3dJobInput;
+  planeModel: PlaneTriangle2dJobInput;
+  parametric: ParametricTrussConfig;
+  activeMaterial: string;
+  loadedModelName: string;
+  sidebarSection: SidebarSection;
+  selectedNode: number | null;
+  selectedElement: number | null;
+  memberDraftNodes: number[];
+};
+
+type HistoryEntry = {
+  label: string;
+  snapshot: WorkbenchSnapshot;
 };
 
 const defaultAxial: AxialFormState = {
@@ -130,6 +176,23 @@ const defaultPlane: PlaneTriangle2dJobInput = {
   ],
 };
 
+const defaultTruss3d: Truss3dJobInput = {
+  nodes: [
+    { id: "b0", x: 0, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
+    { id: "b1", x: 1.2, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
+    { id: "b2", x: 0.1, y: 1.0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
+    { id: "top", x: 0.35, y: 0.3, z: 1.0, fix_x: false, fix_y: false, fix_z: false, load_x: 0, load_y: 0, load_z: -1500 },
+  ],
+  elements: [
+    { id: "e0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e2", node_i: 2, node_j: 0, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e3", node_i: 0, node_j: 3, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e4", node_i: 1, node_j: 3, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e5", node_i: 2, node_j: 3, area: 0.01, youngs_modulus: 70e9 },
+  ],
+};
+
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
 const copy = {
@@ -139,7 +202,7 @@ const copy = {
     subtitle: "A formal front-end workbench for modeling, orchestration, and solver review.",
     rail: { study: "Study", model: "Model", library: "History", system: "System" },
     sections: { study: "Study Setup", model: "Model Studio", library: "Job History", system: "System" },
-    kinds: { axial_bar_1d: "1D axial bar", truss_2d: "2D truss", plane_triangle_2d: "2D plane triangle" },
+    kinds: { axial_bar_1d: "1D axial bar", truss_2d: "2D truss", truss_3d: "3D space truss", plane_triangle_2d: "2D plane triangle" },
     importModel: "Import model",
     importHint: "Load a JSON model for 1D or 2D studies.",
     axialSample: "Open 1D sample",
@@ -154,6 +217,28 @@ const copy = {
     metrics: "Solver Metrics",
     messages: "Messages",
     failureReason: "Failure reason",
+    historyPanel: "Operation History",
+    undo: "Undo",
+    redo: "Redo",
+    noOperations: "No reversible operations yet.",
+    undoApplied: "Rolled back the last change.",
+    redoApplied: "Re-applied the last rolled-back change.",
+    changeStudyType: "Changed study type",
+    editAxialField: "Edited axial study input",
+    editMaterial: "Changed material preset",
+    editParametric: "Edited parametric generator",
+    importAction: "Imported model file",
+    sampleAction: "Loaded sample model",
+    historyAction: "Opened historical job",
+    generateAction: "Generated parametric truss",
+    applySuggestionAction: "Applied diagnostic fix",
+    addNodeAction: "Added node",
+    deleteNodeAction: "Deleted node",
+    toggleMemberAction: "Changed member connectivity",
+    deleteMemberAction: "Deleted member",
+    dragNodeAction: "Dragged node",
+    editNodeAction: "Edited node properties",
+    editMemberAction: "Edited member properties",
     overview: "Overview",
     controls: "Controls",
     settings: "Settings",
@@ -185,6 +270,7 @@ const copy = {
     nodes: "Nodes",
     axialElements: "Element results",
     trussElements: "Truss members",
+    spatialTrussElements: "Space-truss members",
     span: "Span",
     stress: "Stress (Pa)",
     axialForce: "Axial force (N)",
@@ -212,7 +298,7 @@ const copy = {
     dragNode: "Selected node",
     noNodeSelected: "No node selected",
     loadCase: "Load case",
-    modelStudioHint: "Modeling is currently enabled for 2D truss studies.",
+    modelStudioHint: "Modeling is currently enabled for 2D truss studies. 3D studies can already be imported, solved, and reviewed.",
     sourceModel: "Source model",
     createdAt: "Created",
     updatedAt: "Updated",
@@ -241,6 +327,9 @@ const copy = {
       "The structure is behaving too softly for a small-deformation solve. Add supports or reinforce the weak span.",
     translatedConnectivity:
       "The truss likely has a weak or disconnected region. Check supports, member links, and isolated nodes.",
+    translatedSingular:
+      "The stiffness matrix is singular. The model is still acting like a mechanism, so it needs more restraints or diagonal bracing.",
+    mechanismRisk: "This topology still looks mechanism-prone. Add more triangulation or extra supports before solving.",
     addNode: "Add Node",
     addBranchNode: "Branch Node",
     deleteNode: "Delete Node",
@@ -290,7 +379,7 @@ const copy = {
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
     rail: { study: "研究", model: "建模", library: "历史", system: "系统" },
     sections: { study: "研究设置", model: "建模工作室", library: "任务历史", system: "系统" },
-    kinds: { axial_bar_1d: "一维轴向杆", truss_2d: "二维桁架", plane_triangle_2d: "二维三角形单元" },
+    kinds: { axial_bar_1d: "一维轴向杆", truss_2d: "二维桁架", truss_3d: "三维空间桁架", plane_triangle_2d: "二维三角形单元" },
     importModel: "导入模型",
     importHint: "导入 1D 或 2D 研究 JSON 模型。",
     axialSample: "打开 1D 样例",
@@ -305,6 +394,28 @@ const copy = {
     metrics: "求解指标",
     messages: "消息",
     failureReason: "失败原因",
+    historyPanel: "操作历史",
+    undo: "撤销",
+    redo: "重做",
+    noOperations: "当前还没有可回滚的操作。",
+    undoApplied: "已回滚上一个改动。",
+    redoApplied: "已恢复刚才回滚的改动。",
+    changeStudyType: "切换研究类型",
+    editAxialField: "修改轴向研究参数",
+    editMaterial: "切换材料预设",
+    editParametric: "修改参数化生成器",
+    importAction: "导入模型文件",
+    sampleAction: "加载样板模型",
+    historyAction: "打开历史任务",
+    generateAction: "生成参数化桁架",
+    applySuggestionAction: "应用诊断修复",
+    addNodeAction: "新增节点",
+    deleteNodeAction: "删除节点",
+    toggleMemberAction: "修改杆件连接",
+    deleteMemberAction: "删除杆件",
+    dragNodeAction: "拖拽节点",
+    editNodeAction: "编辑节点属性",
+    editMemberAction: "编辑杆件属性",
     overview: "概览",
     controls: "控制",
     settings: "设置",
@@ -336,6 +447,7 @@ const copy = {
     nodes: "节点",
     axialElements: "单元结果",
     trussElements: "桁架杆件",
+    spatialTrussElements: "空间桁架杆件",
     span: "区间",
     stress: "应力 (Pa)",
     axialForce: "轴力 (N)",
@@ -363,7 +475,7 @@ const copy = {
     dragNode: "当前节点",
     noNodeSelected: "未选择节点",
     loadCase: "载荷工况",
-    modelStudioHint: "当前建模页先支持二维桁架。",
+    modelStudioHint: "当前建模页先支持二维桁架。三维研究已经支持导入、求解和结果回看。",
     sourceModel: "来源模型",
     createdAt: "创建时间",
     updatedAt: "更新时间",
@@ -390,6 +502,8 @@ const copy = {
     stabilityRisk: "高风险",
     translatedSmallDeformation: "这个结构看起来过软，已经超出小变形求解范围。请补约束或增强薄弱跨段。",
     translatedConnectivity: "桁架里可能有连接偏弱或断开的区域。请检查约束、杆件连接和孤立节点。",
+    translatedSingular: "刚度矩阵是奇异的。说明模型仍然像机构一样可动，需要更多约束或对角支撑。",
+    mechanismRisk: "这个拓扑仍然很像机构。建议先增加三角化斜撑或额外支座再求解。",
     addNode: "新增节点",
     addBranchNode: "分支节点",
     deleteNode: "删除节点",
@@ -470,6 +584,10 @@ function humanizeSolverFailure(message: string | null | undefined, languageCopy:
     return `${languageCopy.translatedSmallDeformation} ${languageCopy.translatedConnectivity}`;
   }
 
+  if (message.includes("system is singular")) {
+    return `${languageCopy.translatedSingular} ${languageCopy.translatedConnectivity}`;
+  }
+
   if (message.includes("supports or connectivity")) {
     return languageCopy.translatedConnectivity;
   }
@@ -500,6 +618,67 @@ function summarizeTrussStability(model: Truss2dJobInput, diagnostics: TrussDiagn
   if (score >= 80) return { score, tone: "good", hotspotNodes };
   if (score >= 55) return { score, tone: "watch", hotspotNodes };
   return { score, tone: "risk", hotspotNodes };
+}
+
+function isTruss3dResult(value: unknown): value is Truss3dResult {
+  return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && Array.isArray((value as Truss3dResult).nodes) && (value as Truss3dResult).nodes.some((node) => "z" in node);
+}
+
+function buildDisplayTruss3dNodes(model: Truss3dJobInput, result: Truss3dResult | null): DisplayTruss3dNode[] {
+  if (result) {
+    return result.nodes.map((node, index) => ({
+      index,
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      z: node.z,
+      ux: node.ux,
+      uy: node.uy,
+      uz: node.uz,
+    }));
+  }
+
+  return model.nodes.map((node, index) => ({
+    index,
+    id: node.id,
+    x: node.x,
+    y: node.y,
+    z: node.z,
+    ux: 0,
+    uy: 0,
+    uz: 0,
+  }));
+}
+
+function buildDisplayTruss3dElements(model: Truss3dJobInput, result: Truss3dResult | null): DisplayTruss3dElement[] {
+  if (result) {
+    return result.elements.map((element) => ({ ...element }));
+  }
+
+  return model.elements.map((element, index) => {
+    const nodeI = model.nodes[element.node_i];
+    const nodeJ = model.nodes[element.node_j];
+    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
+    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
+    const dz = (nodeJ?.z ?? 0) - (nodeI?.z ?? 0);
+
+    return {
+      index,
+      id: element.id,
+      node_i: element.node_i,
+      node_j: element.node_j,
+      length: Math.sqrt(dx * dx + dy * dy + dz * dz),
+      strain: 0,
+      stress: 0,
+      axial_force: 0,
+    };
+  });
+}
+
+function projectTruss3dPoint(node: { x: number; y: number; z: number }, bounds: ReturnType<typeof getTrussBounds>) {
+  const isoX = node.x - node.y * 0.55;
+  const isoY = node.z + node.y * 0.35;
+  return toSvgPoint({ x: isoX, y: isoY }, bounds);
 }
 
 function localMaterialLabel(value: string, language: Language): string {
@@ -542,7 +721,7 @@ function isAxialResult(value: unknown): value is AxialBarResult {
 }
 
 function isTrussResult(value: unknown): value is Truss2dResult {
-  return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && !("tip_displacement" in value);
+  return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && !("tip_displacement" in value) && Array.isArray((value as Truss2dResult).nodes) && !(value as Truss2dResult).nodes.some((node) => "z" in node);
 }
 
 function isPlaneTriangleResult(value: unknown): value is PlaneTriangle2dResult {
@@ -673,7 +852,7 @@ function downloadTextFile(filename: string, contents: string) {
 }
 
 function resetActiveResult(
-  setResult: Dispatch<SetStateAction<AxialBarResult | Truss2dResult | PlaneTriangle2dResult | null>>,
+  setResult: Dispatch<SetStateAction<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>>,
   setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>,
 ) {
   setResult(null);
@@ -788,6 +967,13 @@ function analyzeTrussModel(
     }
   }
 
+  if (elementCount + constrainedDofs < nodeCount * 2) {
+    blockingMessages.push(languageCopy.mechanismRisk);
+    if (nodeCount > 0) {
+      pushNodeIssue(nodeIssues, selectedNode ?? 0, languageCopy.mechanismRisk);
+    }
+  }
+
   for (const element of model.elements) {
     if (element.node_i < nodeCount) connectionCounts[element.node_i] += 1;
     if (element.node_j < nodeCount) connectionCounts[element.node_j] += 1;
@@ -827,10 +1013,11 @@ export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
   const [trussModel, setTrussModel] = useState<Truss2dJobInput>(defaultTruss);
+  const [truss3dModel, setTruss3dModel] = useState<Truss3dJobInput>(defaultTruss3d);
   const [planeModel, setPlaneModel] = useState<PlaneTriangle2dJobInput>(defaultPlane);
   const [parametric, setParametric] = useState<ParametricTrussConfig>(defaultParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
-  const [result, setResult] = useState<AxialBarResult | Truss2dResult | PlaneTriangle2dResult | null>(null);
+  const [result, setResult] = useState<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>(null);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
   const [health, setHealth] = useState<HealthPayload | null>(null);
@@ -843,7 +1030,10 @@ export function Workbench() {
   const [selectedNode, setSelectedNode] = useState<number | null>(null);
   const [selectedElement, setSelectedElement] = useState<number | null>(null);
   const [memberDraftNodes, setMemberDraftNodes] = useState<number[]>([]);
+  const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
+  const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
   const [isPending, startTransition] = useTransition();
+  const dragHistoryCapturedRef = useRef(false);
   const t = copy[language];
 
   useEffect(() => {
@@ -905,6 +1095,8 @@ export function Workbench() {
             ? await createAxialBarJob(toAxialInput(axialForm))
             : studyKind === "truss_2d"
               ? await createTruss2dJob(trussModel)
+              : studyKind === "truss_3d"
+                ? await createTruss3dJob(truss3dModel)
               : await createPlaneTriangle2dJob(planeModel);
 
         setJob(created.job);
@@ -923,6 +1115,8 @@ export function Workbench() {
           ? await fetchJobStatus<AxialBarResult>(jobId)
           : kind === "truss_2d"
             ? await fetchJobStatus<Truss2dResult>(jobId)
+            : kind === "truss_3d"
+              ? await fetchJobStatus<Truss3dResult>(jobId)
             : await fetchJobStatus<PlaneTriangle2dResult>(jobId);
 
       setJob(payload.job);
@@ -945,13 +1139,14 @@ export function Workbench() {
   const openHistoryJob = (jobId: string) => {
     startTransition(async () => {
       try {
-        const payload = await fetchJobStatus<AxialBarResult | Truss2dResult | PlaneTriangle2dResult>(jobId);
+        const payload = await fetchJobStatus<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult>(jobId);
         setJob(payload.job);
 
         if (payload.result) {
           setResult(payload.result);
 
           if (isAxialResult(payload.result)) {
+            recordHistory(t.historyAction);
             setStudyKind("axial_bar_1d");
             setAxialForm({
               length: payload.result.input.length,
@@ -964,12 +1159,21 @@ export function Workbench() {
           }
 
           if (isTrussResult(payload.result)) {
+            recordHistory(t.historyAction);
             setStudyKind("truss_2d");
             setTrussModel(payload.result.input);
             setSidebarSection("study");
           }
 
+          if (isTruss3dResult(payload.result)) {
+            recordHistory(t.historyAction);
+            setStudyKind("truss_3d");
+            setTruss3dModel(payload.result.input);
+            setSidebarSection("study");
+          }
+
           if (isPlaneTriangleResult(payload.result)) {
+            recordHistory(t.historyAction);
             setStudyKind("plane_triangle_2d");
             setPlaneModel(payload.result.input);
             setSidebarSection("study");
@@ -988,6 +1192,7 @@ export function Workbench() {
 
     try {
       const imported = parsePlaygroundModel(await file.text());
+      recordHistory(t.importAction);
       setLoadedModelName(imported.name);
       setMessage(`${t.importedModel}: ${imported.name}`);
 
@@ -999,6 +1204,10 @@ export function Workbench() {
           ...current,
           youngsModulusGpa: imported.youngsModulusGpa,
         }));
+      } else if (imported.kind === "truss_3d") {
+        setStudyKind("truss_3d");
+        setTruss3dModel(imported.model);
+        setActiveMaterial(imported.material);
       } else if (imported.kind === "plane_triangle_2d") {
         setStudyKind("plane_triangle_2d");
         setPlaneModel(imported.model);
@@ -1026,11 +1235,15 @@ export function Workbench() {
         const response = await fetch(href, { cache: "no-store" });
         const text = await response.text();
         const imported = parsePlaygroundModel(text);
+        recordHistory(t.sampleAction);
         setLoadedModelName(imported.name);
 
         if (imported.kind === "plane_triangle_2d") {
           setStudyKind("plane_triangle_2d");
           setPlaneModel(imported.model);
+        } else if (imported.kind === "truss_3d") {
+          setStudyKind("truss_3d");
+          setTruss3dModel(imported.model);
         } else if (imported.kind === "truss_2d") {
           setStudyKind("truss_2d");
           setTrussModel(imported.model);
@@ -1054,10 +1267,12 @@ export function Workbench() {
   };
 
   const handleAxialFieldChange = (key: keyof AxialFormState, value: number | string) => {
+    recordHistory(t.editAxialField);
     setAxialForm((current) => ({ ...current, [key]: value }));
   };
 
   const handleMaterialChange = (value: string) => {
+    recordHistory(t.editMaterial);
     const preset = MATERIAL_PRESETS.find((item) => item.value === value);
     setActiveMaterial(value);
     setAxialForm((current) => ({
@@ -1081,10 +1296,12 @@ export function Workbench() {
   };
 
   const handleParametricChange = (key: keyof ParametricTrussConfig, value: number) => {
+    recordHistory(t.editParametric);
     setParametric((current) => ({ ...current, [key]: value }));
   };
 
   const generateModel = () => {
+    recordHistory(t.generateAction);
     const nextModel = generatePrattTruss(parametric);
     setStudyKind("truss_2d");
     setTrussModel(nextModel);
@@ -1105,9 +1322,12 @@ export function Workbench() {
           ? axialForm.youngsModulusGpa
           : studyKind === "truss_2d"
             ? parametric.youngsModulusGpa
+            : studyKind === "truss_3d"
+              ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
       axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
       truss: studyKind === "truss_2d" ? trussModel : undefined,
+      truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
       plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
     });
 
@@ -1124,9 +1344,11 @@ export function Workbench() {
 
   const isAxial = studyKind === "axial_bar_1d";
   const isTruss = studyKind === "truss_2d";
+  const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d";
   const axialResult = isAxial && isAxialResult(result) ? result : null;
   const trussResult = isTruss && isTrussResult(result) ? result : null;
+  const truss3dResult = isTruss3d && isTruss3dResult(result) ? result : null;
   const planeResult = isPlane && isPlaneTriangleResult(result) ? result : null;
   const trussDiagnostics = isTruss ? analyzeTrussModel(trussModel, t, selectedNode) : null;
   const trussStability = isTruss && trussDiagnostics ? summarizeTrussStability(trussModel, trussDiagnostics) : null;
@@ -1137,6 +1359,11 @@ export function Workbench() {
   const displayTrussNodes = buildDisplayTrussNodes(trussModel, trussResult);
   const displayTrussElements = buildDisplayTrussElements(trussModel, trussResult);
   const trussBounds = getTrussBounds(displayTrussNodes);
+  const displayTruss3dNodes = buildDisplayTruss3dNodes(truss3dModel, truss3dResult);
+  const displayTruss3dElements = buildDisplayTruss3dElements(truss3dModel, truss3dResult);
+  const truss3dProjectedBounds = getTrussBounds(
+    displayTruss3dNodes.map((node) => ({ x: node.x - node.y * 0.55, y: node.z + node.y * 0.35 })),
+  );
   const planeNodes = planeResult?.nodes ?? planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
   const planeElements = planeResult?.elements ?? planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
   const planeBounds = getTrussBounds(planeNodes);
@@ -1146,7 +1373,65 @@ export function Workbench() {
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
   const translatedFailureReason = humanizeSolverFailure(job?.message, t);
 
+  const buildSnapshot = (): WorkbenchSnapshot => ({
+    studyKind,
+    axialForm,
+    trussModel,
+    truss3dModel,
+    planeModel,
+    parametric,
+    activeMaterial,
+    loadedModelName,
+    sidebarSection,
+    selectedNode,
+    selectedElement,
+    memberDraftNodes,
+  });
+
+  const restoreSnapshot = (snapshot: WorkbenchSnapshot) => {
+    setStudyKind(snapshot.studyKind);
+    setAxialForm(snapshot.axialForm);
+    setTrussModel(snapshot.trussModel);
+    setTruss3dModel(snapshot.truss3dModel);
+    setPlaneModel(snapshot.planeModel);
+    setParametric(snapshot.parametric);
+    setActiveMaterial(snapshot.activeMaterial);
+    setLoadedModelName(snapshot.loadedModelName);
+    setSidebarSection(snapshot.sidebarSection);
+    setSelectedNode(snapshot.selectedNode);
+    setSelectedElement(snapshot.selectedElement);
+    setMemberDraftNodes(snapshot.memberDraftNodes);
+    resetActiveResult(setResult, setJob);
+  };
+
+  const recordHistory = (label: string) => {
+    const snapshot = buildSnapshot();
+    setUndoStack((current) => [...current.slice(-39), { label, snapshot }]);
+    setRedoStack([]);
+  };
+
+  const handleUndo = () => {
+    const entry = undoStack.at(-1);
+    if (!entry) return;
+    const currentSnapshot = buildSnapshot();
+    setUndoStack((current) => current.slice(0, -1));
+    setRedoStack((current) => [...current.slice(-39), { label: entry.label, snapshot: currentSnapshot }]);
+    restoreSnapshot(entry.snapshot);
+    setMessage(t.undoApplied);
+  };
+
+  const handleRedo = () => {
+    const entry = redoStack.at(-1);
+    if (!entry) return;
+    const currentSnapshot = buildSnapshot();
+    setRedoStack((current) => current.slice(0, -1));
+    setUndoStack((current) => [...current.slice(-39), { label: entry.label, snapshot: currentSnapshot }]);
+    restoreSnapshot(entry.snapshot);
+    setMessage(t.redoApplied);
+  };
+
   const applyTrussSuggestion = (suggestion: TrussSuggestion) => {
+    recordHistory(t.applySuggestionAction);
     resetActiveResult(setResult, setJob);
     setStudyKind("truss_2d");
     setSidebarSection("model");
@@ -1191,6 +1476,7 @@ export function Workbench() {
 
   const updateSelectedNode = (key: keyof Truss2dJobInput["nodes"][number], value: number | boolean) => {
     if (selectedNode === null) return;
+    recordHistory(t.editNodeAction);
     resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
@@ -1205,6 +1491,7 @@ export function Workbench() {
     value: number,
   ) => {
     if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
     resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
@@ -1215,6 +1502,7 @@ export function Workbench() {
   };
 
   const addNode = (connectToSelected: boolean) => {
+    recordHistory(t.addNodeAction);
     setStudyKind("truss_2d");
     setSidebarSection("model");
     resetActiveResult(setResult, setJob);
@@ -1257,6 +1545,7 @@ export function Workbench() {
 
   const deleteSelectedNode = () => {
     if (selectedNode === null) return;
+    recordHistory(t.deleteNodeAction);
     resetActiveResult(setResult, setJob);
     setTrussModel((current) => {
       const nodes = current.nodes.filter((_, index) => index !== selectedNode);
@@ -1292,6 +1581,7 @@ export function Workbench() {
       setMessage(t.selectTwoNodes);
       return;
     }
+    recordHistory(t.toggleMemberAction);
 
     const [nodeI, nodeJ] = memberDraftNodes;
     if (nodeI === nodeJ) return;
@@ -1336,6 +1626,7 @@ export function Workbench() {
 
   const deleteSelectedElement = () => {
     if (selectedElement === null) return;
+    recordHistory(t.deleteMemberAction);
     resetActiveResult(setResult, setJob);
     setTrussModel((current) => ({
       ...current,
@@ -1349,6 +1640,10 @@ export function Workbench() {
 
   const handleTrussPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (draggingNode === null || studyKind !== "truss_2d") return;
+    if (!dragHistoryCapturedRef.current) {
+      recordHistory(t.dragNodeAction);
+      dragHistoryCapturedRef.current = true;
+    }
     const rect = event.currentTarget.getBoundingClientRect();
     const position = fromSvgPoint(event.clientX, event.clientY, rect, trussBounds);
 
@@ -1359,6 +1654,11 @@ export function Workbench() {
         index === draggingNode ? { ...node, x: position.x, y: position.y } : node,
       ),
     }));
+  };
+
+  const stopDraggingNode = () => {
+    setDraggingNode(null);
+    dragHistoryCapturedRef.current = false;
   };
 
   return (
@@ -1400,9 +1700,16 @@ export function Workbench() {
               <div className="form-grid compact">
                 <label>
                   <span>Study Type</span>
-                  <select value={studyKind} onChange={(event) => setStudyKind(event.target.value as StudyKind)}>
+                  <select
+                    value={studyKind}
+                    onChange={(event) => {
+                      recordHistory(t.changeStudyType);
+                      setStudyKind(event.target.value as StudyKind);
+                    }}
+                  >
                     <option value="axial_bar_1d">{t.kinds.axial_bar_1d}</option>
                     <option value="truss_2d">{t.kinds.truss_2d}</option>
+                    <option value="truss_3d">{t.kinds.truss_3d}</option>
                     <option value="plane_triangle_2d">{t.kinds.plane_triangle_2d}</option>
                   </select>
                 </label>
@@ -1418,7 +1725,7 @@ export function Workbench() {
                 </div>
                 <div>
                   <span>{t.mesh}</span>
-                  <strong>{isAxial ? axialForm.elements : isTruss ? trussModel.elements.length : planeModel.elements.length}</strong>
+                  <strong>{isAxial ? axialForm.elements : isTruss ? trussModel.elements.length : isTruss3d ? truss3dModel.elements.length : planeModel.elements.length}</strong>
                 </div>
                 <div>
                   <span>{t.load}</span>
@@ -1427,12 +1734,14 @@ export function Workbench() {
                       ? `${fixed(axialForm.tipForce, 0)} N`
                       : isTruss
                         ? `${fixed(trussModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`
+                        : isTruss3d
+                          ? `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`
                         : `${fixed(planeModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`}
                   </strong>
                 </div>
                 <div>
                   <span>{t.support}</span>
-                  <strong>{isAxial ? "Node 0" : "Pinned base"}</strong>
+                  <strong>{isAxial ? "Node 0" : isTruss3d ? "Fixed tripod" : "Pinned base"}</strong>
                 </div>
               </div>
             </section>
@@ -1526,6 +1835,25 @@ export function Workbench() {
                     <strong>{loadedModelName}</strong>
                   </div>
                 </div>
+              ) : isTruss3d ? (
+                <div className="sidebar-list">
+                  <div>
+                    <span>{t.nodes}</span>
+                    <strong>{truss3dModel.nodes.length}</strong>
+                  </div>
+                  <div>
+                    <span>{t.spatialTrussElements}</span>
+                    <strong>{truss3dModel.elements.length}</strong>
+                  </div>
+                  <div>
+                    <span>{t.load}</span>
+                    <strong>{fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N</strong>
+                  </div>
+                  <div>
+                    <span>{t.sourceModel}</span>
+                    <strong>{loadedModelName}</strong>
+                  </div>
+                </div>
               ) : (
                 <div className="sidebar-list">
                   <div>
@@ -1578,6 +1906,14 @@ export function Workbench() {
                 </button>
                 <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
                   {t.deleteMember}
+                </button>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
+                  {t.undo}
+                </button>
+                <button className="ghost-button" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
+                  {t.redo}
                 </button>
               </div>
               <div className="button-row">
@@ -1899,9 +2235,9 @@ export function Workbench() {
               viewBox="0 0 980 460"
               className="viewport-svg"
               aria-label="2d truss response"
-              onPointerLeave={() => setDraggingNode(null)}
+              onPointerLeave={stopDraggingNode}
               onPointerMove={handleTrussPointerMove}
-              onPointerUp={() => setDraggingNode(null)}
+              onPointerUp={stopDraggingNode}
             >
               <defs>
                 <linearGradient id="beamGradientTruss" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -1975,6 +2311,7 @@ export function Workbench() {
                       className={`node-base${selectedNode === index ? " node-base--active" : ""}${memberDraftNodes.includes(index) ? " node-base--draft" : ""}${(trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? " node-base--warning" : ""}`}
                       onPointerDown={() => {
                         if (sidebarSection === "model") {
+                          dragHistoryCapturedRef.current = false;
                           setDraggingNode(index);
                           toggleDraftNode(index);
                         }
@@ -1984,6 +2321,41 @@ export function Workbench() {
                       {node.id}
                     </text>
                     {trussResult ? <circle cx={deformed.x} cy={deformed.y} r={5} className="node-deformed" /> : null}
+                  </g>
+                );
+              })}
+            </svg>
+          ) : isTruss3d ? (
+            <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="3d truss response">
+              <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
+              <text x="48" y="58" className="svg-title">
+                {t.kinds.truss_3d}
+              </text>
+              {displayTruss3dElements.map((element) => {
+                const i = displayTruss3dNodes[element.node_i];
+                const j = displayTruss3dNodes[element.node_j];
+                const start = projectTruss3dPoint(i, truss3dProjectedBounds);
+                const end = projectTruss3dPoint(j, truss3dProjectedBounds);
+
+                return (
+                  <line
+                    key={`space-${element.id}`}
+                    x1={start.x}
+                    y1={start.y}
+                    x2={end.x}
+                    y2={end.y}
+                    className="bar bar--base"
+                  />
+                );
+              })}
+              {displayTruss3dNodes.map((node) => {
+                const point = projectTruss3dPoint(node, truss3dProjectedBounds);
+                return (
+                  <g key={node.id}>
+                    <circle cx={point.x} cy={point.y} r={7} className="node-base" />
+                    <text x={point.x + 10} y={point.y - 10} className="node-label">
+                      {node.id}
+                    </text>
                   </g>
                 );
               })}
@@ -2071,7 +2443,7 @@ export function Workbench() {
               )}
             </div>
             <div className="console-card">
-              <h3>{isAxial ? t.axialElements : isTruss ? t.trussElements : t.planeElements}</h3>
+              <h3>{isAxial ? t.axialElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : t.planeElements}</h3>
               <div className="table-scroll">
                 <table>
                   <thead>
@@ -2083,7 +2455,7 @@ export function Workbench() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(isAxial ? axialElements : isTruss ? displayTrussElements : planeElements).map((element) => (
+                    {(isAxial ? axialElements : isTruss ? displayTrussElements : isTruss3d ? displayTruss3dElements : planeElements).map((element) => (
                       <tr key={element.index}>
                         <td>{element.index}</td>
                         <td>
@@ -2097,7 +2469,7 @@ export function Workbench() {
                         <td>{scientific("axial_force" in element ? element.axial_force : undefined)}</td>
                       </tr>
                     ))}
-                    {(isAxial ? axialElements.length : isTruss ? displayTrussElements.length : planeElements.length) === 0 ? (
+                    {(isAxial ? axialElements.length : isTruss ? displayTrussElements.length : isTruss3d ? displayTruss3dElements.length : planeElements.length) === 0 ? (
                       <tr>
                         <td colSpan={4}>--</td>
                       </tr>
@@ -2273,6 +2645,41 @@ export function Workbench() {
             </section>
           ) : null}
           <section className="info-card">
+            <h3>{t.historyPanel}</h3>
+            <div className="button-row">
+              <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
+                {t.undo}
+              </button>
+              <button className="ghost-button" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
+                {t.redo}
+              </button>
+            </div>
+            {undoStack.length === 0 && redoStack.length === 0 ? (
+              <p className="card-copy">{t.noOperations}</p>
+            ) : (
+              <div className="history-list">
+                {undoStack
+                  .slice(-4)
+                  .reverse()
+                  .map((entry, index) => (
+                    <div key={`undo-${index}-${entry.label}`} className="history-item">
+                      <strong>{entry.label}</strong>
+                      <small>{t.undo}</small>
+                    </div>
+                  ))}
+                {redoStack
+                  .slice(-2)
+                  .reverse()
+                  .map((entry, index) => (
+                    <div key={`redo-${index}-${entry.label}`} className="history-item">
+                      <strong>{entry.label}</strong>
+                      <small>{t.redo}</small>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </section>
+          <section className="info-card">
             <h3>{t.metrics}</h3>
             <div className="metric-grid">
               <div>
@@ -2297,7 +2704,7 @@ export function Workbench() {
               </div>
               <div>
                 <span>{t.nodes}</span>
-                <strong>{isAxial ? axialNodes.length : isTruss ? displayTrussNodes.length : planeNodes.length}</strong>
+                <strong>{isAxial ? axialNodes.length : isTruss ? displayTrussNodes.length : isTruss3d ? displayTruss3dNodes.length : planeNodes.length}</strong>
               </div>
             </div>
           </section>
@@ -2306,11 +2713,11 @@ export function Workbench() {
             <div className="metric-grid">
               <div>
                 <span>{t.tipDisp}</span>
-                <strong>{isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : scientific(planeResult?.max_displacement)}</strong>
+                <strong>{isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : scientific(planeResult?.max_displacement)}</strong>
               </div>
               <div>
                 <span>{t.maxStress}</span>
-                <strong>{scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : planeResult?.max_stress)}</strong>
+                <strong>{scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : planeResult?.max_stress)}</strong>
               </div>
               <div>
                 <span>{t.reaction}</span>

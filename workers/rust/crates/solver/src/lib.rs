@@ -1,7 +1,8 @@
 use kyuubiki_protocol::{
     ElementResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneTriangleElementResult,
     ProgressEvent, SolveBarRequest, SolveBarResult, SolvePlaneTriangle2dRequest,
-    SolvePlaneTriangle2dResult, SolveTruss2dRequest, SolveTruss2dResult, TrussElementResult,
+    SolvePlaneTriangle2dResult, SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest,
+    SolveTruss3dResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
     TrussNodeResult,
 };
 
@@ -269,6 +270,189 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
     validate_small_displacement_truss(request, max_displacement)?;
 
     Ok(SolveTruss2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_stress,
+    })
+}
+
+pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResult, String> {
+    validate_truss_3d_request(request)?;
+
+    let dof_count = request.nodes.len() * 3;
+    let mut global_stiffness = zero_matrix(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 3] = node.load_x;
+        force_vector[index * 3 + 1] = node.load_y;
+        force_vector[index * 3 + 2] = node.load_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        let l = dx / length;
+        let m = dy / length;
+        let n = dz / length;
+        let k = element.youngs_modulus * element.area / length;
+
+        let local = [
+            [l * l, l * m, l * n, -l * l, -l * m, -l * n],
+            [l * m, m * m, m * n, -l * m, -m * m, -m * n],
+            [l * n, m * n, n * n, -l * n, -m * n, -n * n],
+            [-l * l, -l * m, -l * n, l * l, l * m, l * n],
+            [-l * m, -m * m, -m * n, l * m, m * m, m * n],
+            [-l * n, -m * n, -n * n, l * n, m * n, n * n],
+        ];
+
+        let map = [
+            element.node_i * 3,
+            element.node_i * 3 + 1,
+            element.node_i * 3 + 2,
+            element.node_j * 3,
+            element.node_j * 3 + 1,
+            element.node_j * 3 + 2,
+        ];
+
+        for row in 0..6 {
+            for column in 0..6 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    k * local[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 3);
+            }
+            if node.fix_y {
+                dofs.push(index * 3 + 1);
+            }
+            if node.fix_z {
+                dofs.push(index * 3 + 2);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let free = (0..dof_count)
+        .filter(|dof| !constrained.contains(dof))
+        .collect::<Vec<_>>();
+
+    let reduced_stiffness = free
+        .iter()
+        .map(|&row| {
+            free.iter()
+                .map(|&column| global_stiffness[row][column])
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    let reduced_force = free
+        .iter()
+        .map(|&row| force_vector[row])
+        .collect::<Vec<_>>();
+    let reduced_displacements = solve_linear_system(reduced_stiffness, reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| Truss3dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            z: node.z,
+            ux: displacements[index * 3],
+            uy: displacements[index * 3 + 1],
+            uz: displacements[index * 3 + 2],
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let dz = node_j.z - node_i.z;
+            let length = (dx * dx + dy * dy + dz * dz).sqrt();
+            let l = dx / length;
+            let m = dy / length;
+            let n = dz / length;
+
+            let ux_i = displacements[element.node_i * 3];
+            let uy_i = displacements[element.node_i * 3 + 1];
+            let uz_i = displacements[element.node_i * 3 + 2];
+            let ux_j = displacements[element.node_j * 3];
+            let uy_j = displacements[element.node_j * 3 + 1];
+            let uz_j = displacements[element.node_j * 3 + 2];
+            let axial_extension = (ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n;
+            let strain = axial_extension / length;
+            let stress = element.youngs_modulus * strain;
+
+            Truss3dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                strain,
+                stress,
+                axial_force: stress * element.area,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
+
+    let characteristic_length = get_spatial_bounds(
+        &request
+            .nodes
+            .iter()
+            .map(|node| (node.x, node.y, node.z))
+            .collect::<Vec<_>>(),
+    );
+    if max_displacement > characteristic_length * 0.25 {
+        return Err(
+            "3d truss response exceeds the small-deformation limit; check supports or connectivity"
+                .to_string(),
+        );
+    }
+
+    Ok(SolveTruss3dResult {
         input: request.clone(),
         nodes,
         elements,
@@ -554,6 +738,46 @@ fn validate_plane_request(request: &SolvePlaneTriangle2dRequest) -> Result<(), S
     Ok(())
 }
 
+fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String> {
+    if request.nodes.len() < 3 {
+        return Err("3d truss must define at least three nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("3d truss must define at least one element".to_string());
+    }
+
+    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
+        sum + usize::from(node.fix_x) + usize::from(node.fix_y) + usize::from(node.fix_z)
+    });
+    if constrained_dofs < 6 {
+        return Err("3d truss must restrain at least six degrees of freedom".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("3d truss element references an out-of-range node".to_string());
+        }
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("3d truss element area must be positive".to_string());
+        }
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("3d truss element youngs_modulus must be positive".to_string());
+        }
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = ((node_j.x - node_i.x).powi(2)
+            + (node_j.y - node_i.y).powi(2)
+            + (node_j.z - node_i.z).powi(2))
+        .sqrt();
+        if length <= 1.0e-12 {
+            return Err("3d truss element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn triangle_element_data(
     request: &SolvePlaneTriangle2dRequest,
     element: &kyuubiki_protocol::PlaneTriangleElementInput,
@@ -629,6 +853,17 @@ fn get_planar_bounds(points: &[(f64, f64)]) -> (f64, f64) {
     let max_y = points.iter().map(|point| point.1).fold(1.0_f64, f64::max);
 
     (max_x - min_x, max_y - min_y)
+}
+
+fn get_spatial_bounds(points: &[(f64, f64, f64)]) -> f64 {
+    let min_x = points.iter().map(|point| point.0).fold(0.0_f64, f64::min);
+    let max_x = points.iter().map(|point| point.0).fold(1.0_f64, f64::max);
+    let min_y = points.iter().map(|point| point.1).fold(0.0_f64, f64::min);
+    let max_y = points.iter().map(|point| point.1).fold(1.0_f64, f64::max);
+    let min_z = points.iter().map(|point| point.2).fold(0.0_f64, f64::min);
+    let max_z = points.iter().map(|point| point.2).fold(1.0_f64, f64::max);
+
+    (max_x - min_x).max(max_y - min_y).max(max_z - min_z)
 }
 
 fn transpose_3x6(input: &[[f64; 6]; 3]) -> [[f64; 3]; 6] {
@@ -753,10 +988,13 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 
 #[cfg(test)]
 mod tests {
-    use super::{MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d};
+    use super::{
+        MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
+    };
     use kyuubiki_protocol::{
         Job, JobStatus, PlaneNodeInput, PlaneTriangleElementInput, SolveBarRequest,
-        SolvePlaneTriangle2dRequest, SolveTruss2dRequest, TrussElementInput, TrussNodeInput,
+        SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest, Truss3dElementInput,
+        Truss3dNodeInput, TrussElementInput, TrussNodeInput,
     };
 
     #[test]
@@ -996,6 +1234,113 @@ mod tests {
 
         assert_eq!(result.nodes.len(), 4);
         assert_eq!(result.elements.len(), 2);
+        assert!(result.max_displacement > 0.0);
+        assert!(result.max_stress > 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_three_dimensional_truss() {
+        let request = SolveTruss3dRequest {
+            nodes: vec![
+                Truss3dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                },
+                Truss3dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                },
+                Truss3dNodeInput {
+                    id: "n2".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                },
+                Truss3dNodeInput {
+                    id: "n3".to_string(),
+                    x: 0.2,
+                    y: 0.2,
+                    z: 1.0,
+                    fix_x: false,
+                    fix_y: false,
+                    fix_z: false,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: -1000.0,
+                },
+            ],
+            elements: vec![
+                Truss3dElementInput {
+                    id: "e0".to_string(),
+                    node_i: 0,
+                    node_j: 3,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                Truss3dElementInput {
+                    id: "e1".to_string(),
+                    node_i: 1,
+                    node_j: 3,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                Truss3dElementInput {
+                    id: "e2".to_string(),
+                    node_i: 2,
+                    node_j: 3,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                Truss3dElementInput {
+                    id: "e3".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                Truss3dElementInput {
+                    id: "e4".to_string(),
+                    node_i: 1,
+                    node_j: 2,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+                Truss3dElementInput {
+                    id: "e5".to_string(),
+                    node_i: 2,
+                    node_j: 0,
+                    area: 0.01,
+                    youngs_modulus: 70.0e9,
+                },
+            ],
+        };
+
+        let result = solve_truss_3d(&request).expect("3d truss should solve");
+
+        assert_eq!(result.nodes.len(), 4);
+        assert_eq!(result.elements.len(), 6);
         assert!(result.max_displacement > 0.0);
         assert!(result.max_stress > 0.0);
     }
