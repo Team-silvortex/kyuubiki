@@ -7,7 +7,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.AnalysisResultStore
-  alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Router
   alias KyuubikiWeb.TestSupport.FakePlaygroundAgent
 
@@ -18,10 +18,11 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     AnalysisResultStore.reset()
     Library.reset()
 
-    original_config = Application.get_env(:kyuubiki_web, AgentClient, [])
+    original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
 
     on_exit(fn ->
-      Application.put_env(:kyuubiki_web, AgentClient, original_config)
+      Application.put_env(:kyuubiki_web, AgentPool, original_config)
+      AgentPool.reload()
     end)
 
     :ok
@@ -194,7 +195,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     conn =
       :post
@@ -221,7 +227,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     result_payload = wait_for_job(job_id)
 
     assert result_payload["job"]["status"] == "completed"
-    assert result_payload["job"]["worker_id"] == "rust-agent-rpc"
+    assert result_payload["job"]["worker_id"] == "rust-agent-rpc@agent-a"
     assert result_payload["result"]["max_displacement"] > 0
     assert length(result_payload["result"]["elements"]) == 1
   end
@@ -267,7 +273,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     conn =
       :post
@@ -380,7 +391,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     conn =
       :post
@@ -520,7 +536,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     conn =
       :post
@@ -631,7 +652,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     conn =
       :post

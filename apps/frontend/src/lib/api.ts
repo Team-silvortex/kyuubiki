@@ -179,6 +179,13 @@ export type JobEnvelope<TResult = unknown> = {
   result?: TResult;
 };
 
+export type JobResultRecord<TResult = unknown> = {
+  job_id: string;
+  status?: string;
+  worker_id?: string | null;
+  result: TResult;
+};
+
 export type JobHistoryPayload = {
   jobs: JobState[];
 };

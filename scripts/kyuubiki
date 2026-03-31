@@ -13,7 +13,7 @@ FRONTEND_LOG="$RUN_DIR/frontend.log"
 AGENT_LOG="$RUN_DIR/agent.log"
 ORCHESTRATOR_SCREEN="kyuubiki_orchestrator"
 FRONTEND_SCREEN="kyuubiki_frontend"
-AGENT_SCREEN="kyuubiki_agent"
+AGENT_SCREEN_PREFIX="kyuubiki_agent"
 
 load_env_file() {
   if [[ -f "$ENV_FILE" ]]; then
@@ -24,6 +24,10 @@ load_env_file() {
 }
 
 load_env_file
+
+agent_endpoints_value() {
+  echo "${KYUUBIKI_AGENT_ENDPOINTS:-127.0.0.1:5001,127.0.0.1:5002}"
+}
 
 usage() {
   cat <<'EOF'
@@ -109,10 +113,11 @@ stop_port() {
 }
 
 show_status() {
-  local orchestrator_pid frontend_pid agent_pid
+  local orchestrator_pid frontend_pid
   orchestrator_pid="$(pid_on_port 4000)"
   frontend_pid="$(pid_on_port 3000)"
-  agent_pid="$(pid_on_port 5001)"
+  local agent_ports agent_port agent_pid agent_port_spec
+  agent_ports=("${(@s:,:)$(agent_endpoints_value)}")
 
   if [[ -n "${orchestrator_pid:-}" ]]; then
     echo "orchestrator: running on http://127.0.0.1:4000 (pid $orchestrator_pid)"
@@ -126,11 +131,15 @@ show_status() {
     echo "frontend: stopped"
   fi
 
-  if [[ -n "${agent_pid:-}" ]]; then
-    echo "agent: running on tcp://127.0.0.1:5001 (pid $agent_pid)"
-  else
-    echo "agent: stopped"
-  fi
+  for agent_port_spec in "${agent_ports[@]}"; do
+    agent_port="${agent_port_spec##*:}"
+    agent_pid="$(pid_on_port "$agent_port")"
+    if [[ -n "${agent_pid:-}" ]]; then
+      echo "agent[$agent_port]: running on tcp://127.0.0.1:${agent_port} (pid $agent_pid)"
+    else
+      echo "agent[$agent_port]: stopped"
+    fi
+  done
 }
 
 run_worker() {
@@ -234,7 +243,7 @@ start_orchestrator_background() {
   fi
 
   screen -S "$ORCHESTRATOR_SCREEN" -X quit >/dev/null 2>&1 || true
-  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && PORT=\"$port\" KYUUBIKI_AGENT_HOST=127.0.0.1 KYUUBIKI_AGENT_PORT=5001 mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
+  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && PORT=\"$port\" KYUUBIKI_AGENT_ENDPOINTS=\"$(agent_endpoints_value)\" mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
 
   echo "started orchestrator API at http://127.0.0.1:${port}"
   echo "log: $ORCHESTRATOR_LOG"
@@ -242,6 +251,8 @@ start_orchestrator_background() {
 
 start_agent_background() {
   local port="${1:-5001}"
+  local log_file="$RUN_DIR/agent-${port}.log"
+  local screen_name="${AGENT_SCREEN_PREFIX}_${port}"
   ensure_run_dir
   require_screen
 
@@ -250,11 +261,21 @@ start_agent_background() {
     return 0
   fi
 
-  screen -S "$AGENT_SCREEN" -X quit >/dev/null 2>&1 || true
-  screen -dmS "$AGENT_SCREEN" zsh -lc "cd \"$RUST_DIR\" && cargo run -p kyuubiki-cli -- agent --port \"$port\" >> \"$AGENT_LOG\" 2>&1"
+  screen -S "$screen_name" -X quit >/dev/null 2>&1 || true
+  screen -dmS "$screen_name" zsh -lc "cd \"$RUST_DIR\" && cargo run -p kyuubiki-cli -- agent --port \"$port\" >> \"$log_file\" 2>&1"
 
   echo "started Rust FEM agent at tcp://127.0.0.1:${port}"
-  echo "log: $AGENT_LOG"
+  echo "log: $log_file"
+}
+
+start_agents_background() {
+  local agent_ports=("${(@s:,:)$(agent_endpoints_value)}")
+  local agent_port_spec agent_port
+
+  for agent_port_spec in "${agent_ports[@]}"; do
+    agent_port="${agent_port_spec##*:}"
+    start_agent_background "$agent_port"
+  done
 }
 
 start_frontend_background() {
@@ -275,13 +296,18 @@ start_frontend_background() {
 }
 
 stop_services() {
-  stop_port 5001
+  local agent_ports=("${(@s:,:)$(agent_endpoints_value)}")
+  local agent_port_spec
+
+  for agent_port_spec in "${agent_ports[@]}"; do
+    stop_port "${agent_port_spec##*:}"
+  done
   stop_port 3000
   stop_port 4000
 }
 
 start_services() {
-  start_agent_background 5001
+  start_agents_background
   start_orchestrator_background 4000
   start_frontend_background 3000
 }

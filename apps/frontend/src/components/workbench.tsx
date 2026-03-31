@@ -42,6 +42,7 @@ import {
   type AxialBarResult,
   type HealthPayload,
   type JobEnvelope,
+  type JobResultRecord,
   type JobState,
   type ModelRecord,
   type ModelVersionRecord,
@@ -1712,6 +1713,31 @@ export function Workbench() {
       }),
     );
 
+    const resultCandidates: Array<JobResultRecord | null> = await Promise.all(
+      jobHistory
+        .filter((historyJob) => historyJob.has_result)
+        .map(async (historyJob) => {
+          try {
+            const payload = await fetchJobStatus(historyJob.job_id);
+
+            if (!payload.result) {
+              return null;
+            }
+
+            return {
+              job_id: historyJob.job_id,
+              status: payload.job.status,
+              worker_id: payload.job.worker_id,
+              result: payload.result,
+            };
+          } catch {
+            return null;
+          }
+        }),
+    );
+
+    const results = resultCandidates.filter((entry): entry is JobResultRecord => entry !== null);
+
     return exportProjectBundle({
       project: selectedProject,
       models: modelDetails.map((entry) => entry.model),
@@ -1729,6 +1755,7 @@ export function Workbench() {
         parametric,
       ),
       jobs: jobHistory,
+      results,
     });
   };
 

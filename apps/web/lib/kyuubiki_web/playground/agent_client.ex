@@ -3,8 +3,8 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   TCP client for the Rust FEM agent RPC process.
   """
 
-  @default_host "127.0.0.1"
-  @default_port 5001
+  alias KyuubikiWeb.Playground.AgentPool
+
   @rpc_version 1
 
   @spec solve_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
@@ -30,16 +30,52 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   @spec request(String.t(), map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def request(method, params, on_progress \\ fn _progress -> :ok end)
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) do
-    request_id = request_id()
+    with {:ok, result, _endpoint} <- request_with_agent(method, params, on_progress) do
+      {:ok, result}
+    end
+  end
 
-    request = %{
+  @spec request_with_agent(String.t(), map(), (map() -> any())) ::
+          {:ok, map(), AgentPool.endpoint()} | {:error, term()}
+  def request_with_agent(method, params, on_progress \\ fn _progress -> :ok end)
+      when is_binary(method) and is_map(params) and is_function(on_progress, 1) do
+    request_id = request_id()
+    request = build_request(request_id, method, params)
+    endpoints = AgentPool.checkout_endpoints()
+
+    attempt_request(endpoints, request_id, request, on_progress, [])
+  end
+
+  defp build_request(request_id, method, params) do
+    %{
       "rpc_version" => @rpc_version,
       "id" => request_id,
       "method" => method,
       "params" => params
     }
+  end
 
-    with {:ok, socket} <- connect(),
+  defp attempt_request([], _request_id, _request, _on_progress, failures) do
+    {:error, {:all_agents_failed, Enum.reverse(failures)}}
+  end
+
+  defp attempt_request([endpoint | rest], request_id, request, on_progress, failures) do
+    case request_once(endpoint, request_id, request, on_progress) do
+      {:ok, result} ->
+        {:ok, result, endpoint}
+
+      {:error, {:rpc_error, _code, _message} = reason} ->
+        {:error, reason}
+
+      {:error, reason} ->
+        attempt_request(rest, request_id, request, on_progress, [
+          %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
+        ])
+    end
+  end
+
+  defp request_once(endpoint, request_id, request, on_progress) do
+    with {:ok, socket} <- connect(endpoint),
          :ok <- send_request(socket, request),
          {:ok, response_payload} <- recv_response(socket, request_id, on_progress),
          :ok <- :gen_tcp.close(socket) do
@@ -49,8 +85,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     end
   end
 
-  defp connect do
-    :gen_tcp.connect(String.to_charlist(host()), port(), [:binary, packet: 4, active: false])
+  defp connect(endpoint) do
+    :gen_tcp.connect(String.to_charlist(endpoint.host), endpoint.port, [
+      :binary,
+      packet: 4,
+      active: false
+    ])
   end
 
   defp send_request(socket, request) do
@@ -106,20 +146,10 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     end
   end
 
+  @spec worker_id(AgentPool.endpoint()) :: String.t()
+  def worker_id(endpoint), do: "rust-agent-rpc@#{endpoint.id}"
+
   defp request_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
-  end
-
-  defp host do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get_lazy(:host, fn -> System.get_env("KYUUBIKI_AGENT_HOST", @default_host) end)
-  end
-
-  defp port do
-    Application.get_env(:kyuubiki_web, __MODULE__, [])
-    |> Keyword.get_lazy(:port, fn ->
-      System.get_env("KYUUBIKI_AGENT_PORT", Integer.to_string(@default_port))
-      |> String.to_integer()
-    end)
   end
 end

@@ -35,6 +35,12 @@
         "type": "object"
       }
     },
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/jobResultRecordV1"
+      }
+    },
     "active_model_id": {
       "type": ["string", "null"]
     },
@@ -134,6 +140,17 @@
         "updated_at": { "type": "string", "format": "date-time" }
       },
       "additionalProperties": false
+    },
+    "jobResultRecordV1": {
+      "type": "object",
+      "required": ["job_id", "result"],
+      "properties": {
+        "job_id": { "type": "string", "minLength": 1 },
+        "status": { "type": "string" },
+        "worker_id": { "type": ["string", "null"] },
+        "result": { "type": "object" }
+      },
+      "additionalProperties": true
     }
   }
 }

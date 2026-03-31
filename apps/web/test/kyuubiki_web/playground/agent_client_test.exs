@@ -2,13 +2,15 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
   use ExUnit.Case, async: false
 
   alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.TestSupport.FakePlaygroundAgent
 
   setup do
-    original_config = Application.get_env(:kyuubiki_web, AgentClient, [])
+    original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
 
     on_exit(fn ->
-      Application.put_env(:kyuubiki_web, AgentClient, original_config)
+      Application.put_env(:kyuubiki_web, AgentPool, original_config)
+      AgentPool.reload()
     end)
 
     :ok
@@ -50,7 +52,12 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "test-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     assert {:ok, result} =
              AgentClient.solve_bar_1d(
@@ -82,7 +89,12 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "test-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     assert {:error, {:rpc_error, "solve_failed", message}} =
              AgentClient.solve_bar_1d(%{
@@ -151,7 +163,12 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
       ])
 
     port = await_fake_agent_port()
-    Application.put_env(:kyuubiki_web, AgentClient, host: "127.0.0.1", port: port)
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "test-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
 
     assert {:ok, result} =
              AgentClient.solve_bar_1d(%{
@@ -173,5 +190,52 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     after
       1_000 -> flunk("timed out waiting for fake agent port")
     end
+  end
+
+  test "fails over to the next configured agent when the first endpoint is unavailable" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => true,
+          "result" => %{
+            "tip_displacement" => 1.0,
+            "reaction_force" => -1.0,
+            "max_displacement" => 1.0,
+            "max_stress" => 1.0,
+            "nodes" => [],
+            "elements" => [],
+            "input" => %{
+              "length" => 1.0,
+              "area" => 1.0,
+              "youngs_modulus" => 1.0,
+              "elements" => 1,
+              "tip_force" => 1.0
+            }
+          }
+        }
+      ])
+
+    good_port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "offline", host: "127.0.0.1", port: 59_999},
+        %{id: "online", host: "127.0.0.1", port: good_port}
+      ]
+    )
+
+    AgentPool.reload()
+
+    assert {:ok, result, endpoint} =
+             AgentClient.request_with_agent("solve_bar_1d", %{
+               length: 1.0,
+               area: 1.0,
+               youngs_modulus: 1.0,
+               elements: 1,
+               tip_force: 1.0
+             })
+
+    assert endpoint.id == "online"
+    assert result["max_stress"] == 1.0
   end
 end

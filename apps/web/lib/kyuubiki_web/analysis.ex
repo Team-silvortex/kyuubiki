@@ -7,8 +7,6 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Playground.AgentClient
 
-  @worker_id "rust-agent-rpc"
-
   @spec submit_axial_bar(map()) :: {:ok, map()} | {:error, term()}
   def submit_axial_bar(params) when is_map(params) do
     with {:ok, normalized} <- normalize_axial_bar(params),
@@ -81,18 +79,9 @@ defmodule KyuubikiWeb.Analysis do
 
   defp start_background_job(job_id, method, params) do
     Task.start(fn ->
-      {:ok, _job} = Store.assign_worker(job_id, @worker_id)
-
-      solver_call =
-        case method do
-          "solve_bar_1d" -> &AgentClient.solve_bar_1d/2
-          "solve_truss_2d" -> &AgentClient.solve_truss_2d/2
-          "solve_truss_3d" -> &AgentClient.solve_truss_3d/2
-          "solve_plane_triangle_2d" -> &AgentClient.solve_plane_triangle_2d/2
-        end
-
-      case solver_call.(params, &apply_agent_progress(job_id, &1)) do
-        {:ok, result} ->
+      case AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1)) do
+        {:ok, result, endpoint} ->
+          {:ok, _job} = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
           :ok = AnalysisResultStore.put(job_id, result)
           _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
 

@@ -21,13 +21,17 @@ defmodule KyuubikiWeb.Router do
   end
 
   get "/api/health" do
+    agent_endpoints = KyuubikiWeb.Playground.AgentPool.endpoints()
+
     respond_json(conn, 200, %{
       "service" => "kyuubiki-orchestrator",
       "status" => "ok",
       "transport" => %{
         "http" => 4000,
-        "solver_agent_tcp" => 5001
-      }
+        "solver_agent_tcp" => (List.first(agent_endpoints) || %{})[:port] || 5001,
+        "solver_agents" => agent_endpoints
+      },
+      "solver_agents" => agent_endpoints
     })
   end
 

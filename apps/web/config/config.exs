@@ -16,9 +16,28 @@ database_url =
     "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev"
   )
 
+agent_endpoints =
+  System.get_env("KYUUBIKI_AGENT_ENDPOINTS", "127.0.0.1:5001")
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.trim/1)
+  |> Enum.reject(&(&1 == ""))
+  |> Enum.map(fn endpoint ->
+    case String.split(endpoint, "@", parts: 2) do
+      [id, address] ->
+        [host, port] = String.split(address, ":", parts: 2)
+        %{id: id, host: host, port: String.to_integer(port)}
+
+      [address] ->
+        [host, port] = String.split(address, ":", parts: 2)
+        %{id: "#{host}:#{port}", host: host, port: String.to_integer(port)}
+    end
+  end)
+
 config :kyuubiki_web,
   storage_backend: storage_backend,
   ecto_repos: [KyuubikiWeb.Repo]
+
+config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool, endpoints: agent_endpoints
 
 config :kyuubiki_web, KyuubikiWeb.Repo,
   url: database_url,

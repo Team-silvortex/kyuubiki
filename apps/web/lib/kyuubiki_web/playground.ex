@@ -6,15 +6,17 @@ defmodule KyuubikiWeb.Playground do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Playground.AgentClient
 
-  @worker_id "rust-agent-rpc"
-
   @spec run(map()) :: {:ok, map()} | {:error, term()}
   def run(params) when is_map(params) do
     with {:ok, normalized} <- normalize_params(params),
          {:ok, job} <- create_job(),
-         {:ok, _job} <- Store.assign_worker(job.job_id, @worker_id),
-         {:ok, result} <-
-           AgentClient.solve_bar_1d(normalized, &apply_agent_progress(job.job_id, &1)),
+         {:ok, result, endpoint} <-
+           AgentClient.request_with_agent(
+             "solve_bar_1d",
+             normalized,
+             &apply_agent_progress(job.job_id, &1)
+           ),
+         {:ok, _job} <- Store.assign_worker(job.job_id, AgentClient.worker_id(endpoint)),
          {:ok, final_job} <-
            Store.apply_progress(%{job_id: job.job_id, stage: "completed", progress: 1.0}) do
       {:ok, %{"job" => serialize_job(final_job), "result" => result}}

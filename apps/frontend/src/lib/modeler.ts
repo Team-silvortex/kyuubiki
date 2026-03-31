@@ -1,5 +1,6 @@
 import type {
   AxialBarJobInput,
+  JobResultRecord,
   JobState,
   ModelRecord,
   ModelVersionRecord,
@@ -185,6 +186,7 @@ export function exportProjectBundle(payload: {
   activeVersionId?: string | null;
   workspaceSnapshot?: Record<string, unknown> | null;
   jobs?: JobState[];
+  results?: JobResultRecord[];
 }): string {
   return JSON.stringify(
     {
@@ -197,6 +199,7 @@ export function exportProjectBundle(payload: {
       active_version_id: payload.activeVersionId ?? null,
       workspace_snapshot: payload.workspaceSnapshot ?? null,
       jobs: payload.jobs ?? [],
+      results: payload.results ?? [],
     },
     null,
     2,
