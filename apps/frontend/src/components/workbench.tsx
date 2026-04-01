@@ -73,6 +73,7 @@ type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
 type StudyPanelTab = "summary" | "controls";
 type ModelPanelTab = "tools" | "tree";
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
+type ImmersiveToolTab = "node" | "props";
 
 type AxialFormState = {
   length: number;
@@ -309,6 +310,23 @@ const copy = {
     immersiveLibrary: "Library",
     immersiveTools: "Tools",
     immersiveHelp: "3D Help",
+    immersiveViewTools: "View tools",
+    immersiveNodeOps: "Node ops",
+    immersiveMemberOps: "Member ops",
+    immersiveQuickProps: "Quick properties",
+    immersiveNodeSelection: "Selected nodes",
+    immersiveNoNodeSelection: "Select a 3D node to edit its coordinates, supports, and loads.",
+    immersiveTransform: "Transform",
+    immersiveLoads: "Batch loads",
+    immersiveUtilities: "Utilities",
+    frameSelection: "Frame selection",
+    duplicateNodes: "Duplicate",
+    mirrorX: "Mirror X",
+    mirrorY: "Mirror Y",
+    mirrorZ: "Mirror Z",
+    applyLoads: "Apply loads",
+    clearLoads: "Clear loads",
+    nudgeStep: "Nudge step",
     immersiveDrawer: "Immersive drawer",
     close: "Close",
     immersiveSamples: "Samples",
@@ -320,7 +338,8 @@ const copy = {
     languages: { en: "English", zh: "中文" },
     shortcutLegendTitle: "3D controls",
     shortcutLegendRows: [
-      "Drag orbit · Shift+Drag pan · Wheel zoom",
+      "Drag pan · Alt+Drag orbit · Wheel zoom",
+      "Shift+Wheel pans sideways",
       "1/2/3/4 views · P projection",
       "G grid · L labels · N nodes",
       "F focus · R reset · WASD/Arrows pan",
@@ -503,6 +522,9 @@ const copy = {
     fixCurrentNodeYAction: "Fix current node in Y",
     fixNodeXAction: "Fix flagged node in X",
     fixNodeYAction: "Fix flagged node in Y",
+    releaseX: "Release X",
+    releaseY: "Release Y",
+    releaseZ: "Release Z",
     connectCurrentNodeAction: "Connect current node to nearest node",
     connectNodeAction: "Connect flagged node to nearest node",
     suggestionAppliedSupportX: "Added an X restraint to the suggested node.",
@@ -511,7 +533,7 @@ const copy = {
     suggestionNoLinkTarget: "No valid nearby node was available for an automatic link.",
     panelGenerated: "Generated a rectangular plane mesh.",
     planeThickness: "Thickness",
-    orbitHint: "Drag to orbit, Shift+drag to pan, scroll to zoom.",
+    orbitHint: "Drag to pan, Alt+drag to orbit, scroll to zoom.",
     spaceNodeCreated: "3D node created.",
     spaceBranchCreated: "3D node created and linked.",
     spaceNodeDeleted: "3D node deleted.",
@@ -585,6 +607,23 @@ const copy = {
     immersiveLibrary: "库",
     immersiveTools: "工具",
     immersiveHelp: "3D 帮助",
+    immersiveViewTools: "视图工具",
+    immersiveNodeOps: "节点操作",
+    immersiveMemberOps: "杆件操作",
+    immersiveQuickProps: "快速属性",
+    immersiveNodeSelection: "选中节点",
+    immersiveNoNodeSelection: "先选中一个三维节点，再编辑它的坐标、约束和载荷。",
+    immersiveTransform: "变换",
+    immersiveLoads: "批量载荷",
+    immersiveUtilities: "实用工具",
+    frameSelection: "聚焦选中",
+    duplicateNodes: "复制节点",
+    mirrorX: "按 X 镜像",
+    mirrorY: "按 Y 镜像",
+    mirrorZ: "按 Z 镜像",
+    applyLoads: "应用载荷",
+    clearLoads: "清空载荷",
+    nudgeStep: "步进",
     immersiveDrawer: "沉浸抽屉",
     close: "关闭",
     immersiveSamples: "样板",
@@ -596,7 +635,8 @@ const copy = {
     languages: { en: "English", zh: "中文" },
     shortcutLegendTitle: "三维控制",
     shortcutLegendRows: [
-      "拖拽旋转 · Shift+拖拽平移 · 滚轮缩放",
+      "拖拽平移 · Alt+拖拽旋转 · 滚轮缩放",
+      "Shift+滚轮可左右平移",
       "1/2/3/4 视角 · P 投影",
       "G 网格 · L 标签 · N 节点",
       "F 聚焦 · R 重置 · WASD/方向键平移",
@@ -776,6 +816,9 @@ const copy = {
     fixCurrentNodeYAction: "固定当前节点 Y",
     fixNodeXAction: "固定问题节点 X",
     fixNodeYAction: "固定问题节点 Y",
+    releaseX: "释放 X",
+    releaseY: "释放 Y",
+    releaseZ: "释放 Z",
     connectCurrentNodeAction: "将当前节点连接到最近节点",
     connectNodeAction: "将问题节点连接到最近节点",
     suggestionAppliedSupportX: "已为建议节点补上 X 约束。",
@@ -784,7 +827,7 @@ const copy = {
     suggestionNoLinkTarget: "附近没有可自动连接的有效节点。",
     panelGenerated: "已生成矩形平面网格。",
     planeThickness: "厚度",
-    orbitHint: "拖拽旋转，按住 Shift 拖拽平移，滚轮缩放。",
+    orbitHint: "拖拽平移，按住 Alt 拖拽旋转，滚轮缩放。",
     spaceNodeCreated: "三维节点已创建。",
     spaceBranchCreated: "三维节点已创建并连接。",
     spaceNodeDeleted: "三维节点已删除。",
@@ -1484,6 +1527,7 @@ export function Workbench() {
   const [immersiveViewport, setImmersiveViewport] = useState(false);
   const [immersiveToolDrawerOpen, setImmersiveToolDrawerOpen] = useState(false);
   const [immersiveHelpDrawerOpen, setImmersiveHelpDrawerOpen] = useState(false);
+  const [immersiveToolTab, setImmersiveToolTab] = useState<ImmersiveToolTab>("node");
   const [truss3dProjectionMode, setTruss3dProjectionMode] = useState<"ortho" | "persp">("ortho");
   const [truss3dShowGrid, setTruss3dShowGrid] = useState(true);
   const [truss3dShowLabels, setTruss3dShowLabels] = useState(true);
@@ -1492,6 +1536,10 @@ export function Workbench() {
   const [truss3dViewPreset, setTruss3dViewPreset] = useState<"iso" | "front" | "right" | "top">("iso");
   const [truss3dFocusRequestVersion, setTruss3dFocusRequestVersion] = useState(0);
   const [truss3dResetRequestVersion, setTruss3dResetRequestVersion] = useState(0);
+  const [truss3dNudgeStep, setTruss3dNudgeStep] = useState(0.25);
+  const [truss3dBatchLoadX, setTruss3dBatchLoadX] = useState(0);
+  const [truss3dBatchLoadY, setTruss3dBatchLoadY] = useState(0);
+  const [truss3dBatchLoadZ, setTruss3dBatchLoadZ] = useState(0);
   const [sidebarSection, setSidebarSection] = useState<SidebarSection>("study");
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
@@ -1550,6 +1598,21 @@ export function Workbench() {
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
+
+  useEffect(() => {
+    if (studyKind === "truss_3d") return;
+
+    setImmersiveToolDrawerOpen(false);
+    setImmersiveHelpDrawerOpen(false);
+
+    if (immersiveViewport) {
+      setImmersiveViewport(false);
+    }
+
+    if (document.fullscreenElement === viewportPanelRef.current) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+  }, [studyKind, immersiveViewport]);
 
   useEffect(() => {
     if (!immersiveViewport || !immersiveGuardrails) {
@@ -2574,6 +2637,134 @@ export function Workbench() {
         index === selectedNode ? { ...node, [key]: value } : node,
       ),
     }));
+  };
+
+  const updateSelectedTruss3dNodes = (
+    key: keyof Truss3dJobInput["nodes"][number],
+    value: number | boolean,
+  ) => {
+    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
+    if (targetIndices.length === 0) return;
+    recordHistory(t.editNodeAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      nodes: current.nodes.map((node, index) =>
+        targetIndices.includes(index) ? { ...node, [key]: value } : node,
+      ),
+    }));
+  };
+
+  const nudgeSelectedTruss3dNodes = (axis: "x" | "y" | "z", delta: number) => {
+    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
+    if (targetIndices.length === 0) return;
+    recordHistory(t.editNodeAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      nodes: current.nodes.map((node, index) =>
+        targetIndices.includes(index) ? { ...node, [axis]: round(node[axis] + delta) } : node,
+      ),
+    }));
+  };
+
+  const applySelectedTruss3dLoads = (mode: "apply" | "clear") => {
+    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
+    if (targetIndices.length === 0) return;
+    recordHistory(t.editNodeAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      nodes: current.nodes.map((node, index) =>
+        targetIndices.includes(index)
+          ? {
+              ...node,
+              load_x: mode === "clear" ? 0 : truss3dBatchLoadX,
+              load_y: mode === "clear" ? 0 : truss3dBatchLoadY,
+              load_z: mode === "clear" ? 0 : truss3dBatchLoadZ,
+            }
+          : node,
+      ),
+    }));
+  };
+
+  const cloneSelectedTruss3dNodes = (mirrorAxis: "x" | "y" | "z" | null = null) => {
+    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
+    if (targetIndices.length === 0) return;
+    recordHistory(t.addNodeAction);
+    resetActiveResult(setResult, setJob);
+
+    let nextSelection: number[] = [];
+
+    setTruss3dModel((current) => {
+      const sourceNodes = targetIndices
+        .map((index) => ({ index, node: current.nodes[index] }))
+        .filter((entry) => Boolean(entry.node));
+      if (sourceNodes.length === 0) return current;
+
+      const center = sourceNodes.reduce(
+        (acc, entry) => ({
+          x: acc.x + entry.node.x,
+          y: acc.y + entry.node.y,
+          z: acc.z + entry.node.z,
+        }),
+        { x: 0, y: 0, z: 0 },
+      );
+      const pivot = {
+        x: center.x / sourceNodes.length,
+        y: center.y / sourceNodes.length,
+        z: center.z / sourceNodes.length,
+      };
+
+      const indexMap = new Map<number, number>();
+      const duplicatedNodes = sourceNodes.map((entry, offset) => {
+        const nextIndex = current.nodes.length + offset;
+        indexMap.set(entry.index, nextIndex);
+        const baseNode = { ...entry.node, id: `n${nextIndex}` };
+
+        if (mirrorAxis) {
+          return {
+            ...baseNode,
+            [mirrorAxis]: round(pivot[mirrorAxis] - (entry.node[mirrorAxis] - pivot[mirrorAxis])),
+          };
+        }
+
+        return {
+          ...baseNode,
+          x: round(entry.node.x + 0.4),
+          y: round(entry.node.y + 0.2),
+          z: round(entry.node.z + 0.4),
+        };
+      });
+
+      const duplicatedElements = current.elements.flatMap((element, offset) => {
+        const mappedI = indexMap.get(element.node_i);
+        const mappedJ = indexMap.get(element.node_j);
+        if (mappedI === undefined || mappedJ === undefined) return [];
+        return [
+          {
+            ...element,
+            id: `e${current.elements.length + offset}`,
+            node_i: mappedI,
+            node_j: mappedJ,
+          },
+        ];
+      });
+
+      nextSelection = duplicatedNodes.map((_, offset) => current.nodes.length + offset);
+      return {
+        ...current,
+        nodes: [...current.nodes, ...duplicatedNodes],
+        elements: [...current.elements, ...duplicatedElements].map((element, index) => ({ ...element, id: `e${index}` })),
+      };
+    });
+
+    if (nextSelection.length > 0) {
+      setSelectedTruss3dNodes(nextSelection);
+      setSelectedNode(nextSelection[0] ?? null);
+      setMemberDraftNodes([]);
+      setSelectedElement(null);
+    }
   };
 
   const updateSelectedTruss3dElement = (
@@ -3906,7 +4097,7 @@ export function Workbench() {
                   </button>
                 </div>
               ) : null}
-              {isTruss3d ? (
+              {isTruss3d && !immersiveViewport ? (
                 <div className="immersive-switches">
                   <button
                     className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
@@ -3932,74 +4123,254 @@ export function Workbench() {
               <span>{job?.status ?? "idle"}</span>
             </div>
           </div>
-          {isTruss3d && (immersiveToolDrawerOpen || (showShortcutHints && immersiveHelpDrawerOpen)) ? (
+          <div className={`canvas-layout${isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen)) ? " canvas-layout--split" : ""}`}>
+          {isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen)) ? (
             <div className="viewport-dock">
-              {immersiveToolDrawerOpen ? (
+              {immersiveViewport && immersiveToolDrawerOpen ? (
                 <section className="viewport-dock__card">
                   <div className="card-head">
                     <h2>{t.immersiveTools}</h2>
                     <span>{t.kinds.truss_3d}</span>
                   </div>
-                  <div className="viewport-dock__grid">
-                    {(["iso", "front", "right", "top"] as const).map((preset) => (
-                      <button
-                        key={preset}
-                        className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dViewPreset(preset)}
-                        type="button"
-                      >
-                        {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
-                      </button>
-                    ))}
-                    <button
-                      className={`ghost-button ghost-button--compact${selectedNode !== null ? " ghost-button--active" : ""}`}
-                      onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
-                      type="button"
-                    >
-                      FOCUS
+                  <div className="panel-tabs viewport-dock__tabs">
+                    <button className={`panel-tab${immersiveToolTab === "node" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("node")} type="button">
+                      {t.immersiveNodeOps}
                     </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
-                      onClick={() => setTruss3dProjectionMode((current) => (current === "ortho" ? "persp" : "ortho"))}
-                      type="button"
-                    >
-                      {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
+                    <button className={`panel-tab${immersiveToolTab === "props" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("props")} type="button">
+                      {t.immersiveQuickProps}
                     </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${truss3dShowGrid ? " ghost-button--active" : ""}`}
-                      onClick={() => setTruss3dShowGrid((current) => !current)}
-                      type="button"
-                    >
-                      GRID
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${truss3dShowLabels ? " ghost-button--active" : ""}`}
-                      onClick={() => setTruss3dShowLabels((current) => !current)}
-                      type="button"
-                    >
-                      LABEL
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${truss3dShowNodes ? " ghost-button--active" : ""}`}
-                      onClick={() => setTruss3dShowNodes((current) => !current)}
-                      type="button"
-                    >
-                      NODE
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
-                      onClick={() => setTruss3dBoxSelectMode((current) => !current)}
-                      type="button"
-                    >
-                      BOX
-                    </button>
-                    <button
-                      className="ghost-button ghost-button--compact"
-                      onClick={() => setTruss3dResetRequestVersion((current) => current + 1)}
-                      type="button"
-                    >
-                      RESET
-                    </button>
+                  </div>
+                  <div className="viewport-dock__stack">
+                    {immersiveViewport && immersiveToolTab === "node" ? (
+                        <div>
+                          <div className="card-subhead">
+                            <strong>{t.immersiveNodeOps}</strong>
+                            <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.nodes}` : selectedTruss3dNodeData?.id ?? t.none}</span>
+                          </div>
+                          <div className="button-row">
+                            <button className="ghost-button ghost-button--compact" onClick={() => addTruss3dNode(false)} type="button">
+                              {t.addNode}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null} onClick={() => addTruss3dNode(true)} type="button">
+                              {t.addBranchNode}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null} onClick={deleteSelectedTruss3dNode} type="button">
+                              {t.deleteNode}
+                            </button>
+                          </div>
+                          <div className="button-row">
+                            <button className={`ghost-button ghost-button--compact${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={toggleTruss3dLinkMode} type="button">
+                              {truss3dLinkMode ? t.linkModeActive : t.linkMode}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" onClick={toggleTruss3dMemberFromDraft} type="button">
+                              {t.toggleMember}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={selectedElement === null} onClick={deleteSelectedTruss3dElement} type="button">
+                              {t.deleteMember}
+                            </button>
+                          </div>
+                          <div className="button-row">
+                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes(null)} type="button">
+                              {t.duplicateNodes}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("x")} type="button">
+                              {t.mirrorX}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("y")} type="button">
+                              {t.mirrorY}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("z")} type="button">
+                              {t.mirrorZ}
+                            </button>
+                          </div>
+                          <div className="button-row">
+                            <button className="ghost-button ghost-button--compact" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
+                              {t.undo}
+                            </button>
+                            <button className="ghost-button ghost-button--compact" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
+                              {t.redo}
+                            </button>
+                          </div>
+                          <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.selectionHint}</p>
+                        </div>
+                    ) : null}
+                    {immersiveViewport && immersiveToolTab === "props" ? (
+                        <div>
+                          <div className="card-subhead">
+                            <strong>{t.immersiveQuickProps}</strong>
+                            <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.immersiveNodeSelection}` : selectedTruss3dNodeData?.id ?? t.none}</span>
+                          </div>
+                          {selectedTruss3dNodeData ? (
+                            <>
+                              <div className="form-grid compact">
+                                <label>
+                                  <span>{t.nodeX}</span>
+                                  <input
+                                    type="number"
+                                    step={0.1}
+                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.x ?? selectedTruss3dNodeData.x}
+                                    onChange={(event) => updateSelectedTruss3dNode("x", Number(event.target.value))}
+                                  />
+                                </label>
+                                <label>
+                                  <span>{t.nodeY}</span>
+                                  <input
+                                    type="number"
+                                    step={0.1}
+                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.y ?? selectedTruss3dNodeData.y}
+                                    onChange={(event) => updateSelectedTruss3dNode("y", Number(event.target.value))}
+                                  />
+                                </label>
+                                <label>
+                                  <span>{t.nodeZ}</span>
+                                  <input
+                                    type="number"
+                                    step={0.1}
+                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.z ?? selectedTruss3dNodeData.z}
+                                    onChange={(event) => updateSelectedTruss3dNode("z", Number(event.target.value))}
+                                  />
+                                </label>
+                                <label>
+                                  <span>{t.loadX}</span>
+                                  <input
+                                    type="number"
+                                    step={100}
+                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.load_x ?? 0}
+                                    onChange={(event) => updateSelectedTruss3dNode("load_x", Number(event.target.value))}
+                                  />
+                                </label>
+                                <label>
+                                  <span>{t.loadY}</span>
+                                  <input
+                                    type="number"
+                                    step={100}
+                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.load_y ?? 0}
+                                    onChange={(event) => updateSelectedTruss3dNode("load_y", Number(event.target.value))}
+                                  />
+                                </label>
+                                <label>
+                                  <span>{t.loadZ}</span>
+                                  <input
+                                    type="number"
+                                    step={100}
+                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.load_z ?? 0}
+                                    onChange={(event) => updateSelectedTruss3dNode("load_z", Number(event.target.value))}
+                                  />
+                                </label>
+                              </div>
+                              <div className="button-row">
+                                <button
+                                  className={`ghost-button ghost-button--compact${truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_x ? " ghost-button--active" : ""}`}
+                                  onClick={() => updateSelectedTruss3dNode("fix_x", !(truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_x ?? false))}
+                                  type="button"
+                                >
+                                  {t.fixX}
+                                </button>
+                                <button
+                                  className={`ghost-button ghost-button--compact${truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_y ? " ghost-button--active" : ""}`}
+                                  onClick={() => updateSelectedTruss3dNode("fix_y", !(truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_y ?? false))}
+                                  type="button"
+                                >
+                                  {t.fixY}
+                                </button>
+                                <button
+                                  className={`ghost-button ghost-button--compact${truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_z ? " ghost-button--active" : ""}`}
+                                  onClick={() => updateSelectedTruss3dNode("fix_z", !(truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_z ?? false))}
+                                  type="button"
+                                >
+                                  {t.fixZ}
+                                </button>
+                              </div>
+                              <div className="card-subhead">
+                                <strong>{t.immersiveTransform}</strong>
+                                <span>{t.nudgeStep}: {fixed(truss3dNudgeStep, 2)}</span>
+                              </div>
+                              <div className="button-row">
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", -truss3dNudgeStep)} type="button">X-</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", truss3dNudgeStep)} type="button">X+</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", -truss3dNudgeStep)} type="button">Y-</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", truss3dNudgeStep)} type="button">Y+</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", -truss3dNudgeStep)} type="button">Z-</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", truss3dNudgeStep)} type="button">Z+</button>
+                              </div>
+                              <label className="inline-field">
+                                <span>{t.nudgeStep}</span>
+                                <input type="number" min={0.01} step={0.05} value={truss3dNudgeStep} onChange={(event) => setTruss3dNudgeStep(Math.max(0.01, Number(event.target.value) || 0.01))} />
+                              </label>
+                            </>
+                          ) : selectedTruss3dNodes.length > 1 ? (
+                            <>
+                              <div className="button-row">
+                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_x", true)} type="button">
+                                  {t.fixX}
+                                </button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_y", true)} type="button">
+                                  {t.fixY}
+                                </button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_z", true)} type="button">
+                                  {t.fixZ}
+                                </button>
+                              </div>
+                              <div className="button-row">
+                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_x", false)} type="button">
+                                  {t.releaseX}
+                                </button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_y", false)} type="button">
+                                  {t.releaseY}
+                                </button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_z", false)} type="button">
+                                  {t.releaseZ}
+                                </button>
+                              </div>
+                              <div className="card-subhead">
+                                <strong>{t.immersiveTransform}</strong>
+                                <span>{t.nudgeStep}: {fixed(truss3dNudgeStep, 2)}</span>
+                              </div>
+                              <div className="button-row">
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", -truss3dNudgeStep)} type="button">X-</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", truss3dNudgeStep)} type="button">X+</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", -truss3dNudgeStep)} type="button">Y-</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", truss3dNudgeStep)} type="button">Y+</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", -truss3dNudgeStep)} type="button">Z-</button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", truss3dNudgeStep)} type="button">Z+</button>
+                              </div>
+                              <label className="inline-field">
+                                <span>{t.nudgeStep}</span>
+                                <input type="number" min={0.01} step={0.05} value={truss3dNudgeStep} onChange={(event) => setTruss3dNudgeStep(Math.max(0.01, Number(event.target.value) || 0.01))} />
+                              </label>
+                              <div className="card-subhead">
+                                <strong>{t.immersiveLoads}</strong>
+                                <span>{selectedTruss3dNodes.length} {t.nodes}</span>
+                              </div>
+                              <div className="form-grid compact">
+                                <label>
+                                  <span>{t.loadX}</span>
+                                  <input type="number" step={100} value={truss3dBatchLoadX} onChange={(event) => setTruss3dBatchLoadX(Number(event.target.value))} />
+                                </label>
+                                <label>
+                                  <span>{t.loadY}</span>
+                                  <input type="number" step={100} value={truss3dBatchLoadY} onChange={(event) => setTruss3dBatchLoadY(Number(event.target.value))} />
+                                </label>
+                                <label>
+                                  <span>{t.loadZ}</span>
+                                  <input type="number" step={100} value={truss3dBatchLoadZ} onChange={(event) => setTruss3dBatchLoadZ(Number(event.target.value))} />
+                                </label>
+                              </div>
+                              <div className="button-row">
+                                <button className="ghost-button ghost-button--compact" onClick={() => applySelectedTruss3dLoads("apply")} type="button">
+                                  {t.applyLoads}
+                                </button>
+                                <button className="ghost-button ghost-button--compact" onClick={() => applySelectedTruss3dLoads("clear")} type="button">
+                                  {t.clearLoads}
+                                </button>
+                              </div>
+                              <p className="card-copy">{t.selectionHint}</p>
+                            </>
+                          ) : (
+                            <p className="card-copy">{t.immersiveNoNodeSelection}</p>
+                          )}
+                        </div>
+                    ) : null}
                   </div>
                 </section>
               ) : null}
@@ -4018,6 +4389,77 @@ export function Workbench() {
                   </div>
                 </section>
               ) : null}
+            </div>
+          ) : null}
+          <div className={`canvas-stage${isTruss3d ? " canvas-stage--space" : ""}`}>
+          {isTruss3d && immersiveToolDrawerOpen ? (
+            <div className="viewport-toolbar-strip" role="toolbar" aria-label={t.immersiveViewTools}>
+              {(["iso", "front", "right", "top"] as const).map((preset) => (
+                <button
+                  key={preset}
+                  className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
+                  onClick={() => setTruss3dViewPreset(preset)}
+                  type="button"
+                >
+                  {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
+                </button>
+              ))}
+              <button
+                className={`ghost-button ghost-button--compact${selectedNode !== null || selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
+                type="button"
+              >
+                FOCUS
+              </button>
+              <button
+                className={`ghost-button ghost-button--compact${selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
+                type="button"
+              >
+                {t.frameSelection}
+              </button>
+              <button
+                className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dProjectionMode((current) => (current === "ortho" ? "persp" : "ortho"))}
+                type="button"
+              >
+                {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
+              </button>
+              <button
+                className={`ghost-button ghost-button--compact${truss3dShowGrid ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dShowGrid((current) => !current)}
+                type="button"
+              >
+                GRID
+              </button>
+              <button
+                className={`ghost-button ghost-button--compact${truss3dShowLabels ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dShowLabels((current) => !current)}
+                type="button"
+              >
+                LABEL
+              </button>
+              <button
+                className={`ghost-button ghost-button--compact${truss3dShowNodes ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dShowNodes((current) => !current)}
+                type="button"
+              >
+                NODE
+              </button>
+              <button
+                className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
+                onClick={() => setTruss3dBoxSelectMode((current) => !current)}
+                type="button"
+              >
+                BOX
+              </button>
+              <button
+                className="ghost-button ghost-button--compact"
+                onClick={() => setTruss3dResetRequestVersion((current) => current + 1)}
+                type="button"
+              >
+                RESET
+              </button>
             </div>
           ) : null}
           <WorkbenchViewport
@@ -4111,6 +4553,8 @@ export function Workbench() {
             onShowNodesChange={setTruss3dShowNodes}
             onBoxSelectModeChange={setTruss3dBoxSelectMode}
           />
+          </div>
+          </div>
           {immersiveViewport && sidebarSection === "library" ? (
             <div className="immersive-drawer">
               <section className="immersive-drawer__card">

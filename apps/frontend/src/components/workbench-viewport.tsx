@@ -427,6 +427,7 @@ function WorkbenchViewportInner({
   const dragNode3dRef = useRef<number | null>(null);
   const dragAxisRef = useRef<"x" | "y" | "z" | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  const selectionAppendRef = useRef(false);
   const [hoveredTruss3dNode, setHoveredTruss3dNode] = useState<number | null>(null);
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -442,16 +443,30 @@ function WorkbenchViewportInner({
 
   const handle3dPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (boxSelectMode) {
+      event.currentTarget.setPointerCapture(event.pointerId);
       const point = pointerToViewport(event);
+      selectionAppendRef.current = event.shiftKey || event.metaKey || event.ctrlKey;
       selectionStartRef.current = point;
       setSelectionRect({ x: point.x, y: point.y, width: 0, height: 0 });
       return;
     }
-    dragModeRef.current = event.shiftKey ? "pan" : "orbit";
+    dragModeRef.current = event.altKey ? "orbit" : "pan";
     pointerRef.current = { x: event.clientX, y: event.clientY };
   };
 
   const handle3dPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (selectionStartRef.current) {
+      const start = selectionStartRef.current;
+      const current = pointerToViewport(event);
+      setSelectionRect({
+        x: Math.min(start.x, current.x),
+        y: Math.min(start.y, current.y),
+        width: Math.abs(current.x - start.x),
+        height: Math.abs(current.y - start.y),
+      });
+      return;
+    }
+
     if (!pointerRef.current) return;
     const dx = event.clientX - pointerRef.current.x;
     const dy = event.clientY - pointerRef.current.y;
@@ -503,19 +518,6 @@ function WorkbenchViewportInner({
       });
       return;
     }
-
-    if (selectionStartRef.current) {
-      const start = selectionStartRef.current;
-      const current = pointerToViewport(event);
-      setSelectionRect({
-        x: Math.min(start.x, current.x),
-        y: Math.min(start.y, current.y),
-        width: Math.abs(current.x - start.x),
-        height: Math.abs(current.y - start.y),
-      });
-      return;
-    }
-
     if (!dragModeRef.current) return;
 
     setCamera((current) =>
@@ -529,7 +531,7 @@ function WorkbenchViewportInner({
     );
   };
 
-  const stop3dPointer = () => {
+  const stop3dPointer = (event?: ReactPointerEvent<SVGSVGElement>) => {
     dragModeRef.current = null;
     if (dragNode3dRef.current !== null) {
       onEndTruss3dNodeDrag();
@@ -546,17 +548,28 @@ function WorkbenchViewportInner({
         const point = projectTruss3dPoint(node, projected3d, camera, projectionMode);
         return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY ? [index] : [];
       });
-      onSelectTruss3dNodes(selectedIndices, false);
+      onSelectTruss3dNodes(selectedIndices, selectionAppendRef.current);
+    }
+    if (event && event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
     dragNode3dRef.current = null;
     dragAxisRef.current = null;
     pointerRef.current = null;
     selectionStartRef.current = null;
+    selectionAppendRef.current = false;
     setSelectionRect(null);
   };
 
   const handle3dWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
     event.preventDefault();
+    if (event.shiftKey) {
+      setCamera((current) => ({
+        ...current,
+        panX: current.panX - event.deltaY * 0.45,
+      }));
+      return;
+    }
     const direction = event.deltaY > 0 ? 0.92 : 1.08;
     setCamera((current) => ({
       ...current,
@@ -565,13 +578,42 @@ function WorkbenchViewportInner({
   };
 
   const focusSelected3dNode = () => {
-    if (!selected3dNodeData) return;
-    const point = projectTruss3dPoint(selected3dNodeData, projected3d, { ...camera, panX: 0, panY: 0 }, projectionMode);
-    setCamera((current) => ({
-      ...current,
-      panX: current.panX + (490 - point.x),
-      panY: current.panY + (248 - point.y),
-    }));
+    const selectedNodes =
+      selectedTruss3dNodeIndices.length > 0
+        ? selectedTruss3dNodeIndices.map((index) => displayTruss3dNodes[index]).filter(Boolean)
+        : selected3dNodeData
+          ? [selected3dNodeData]
+          : displayTruss3dNodes;
+
+    if (selectedNodes.length === 0) return;
+
+    const center = selectedNodes.reduce(
+      (acc, node) => ({
+        x: acc.x + node.x,
+        y: acc.y + node.y,
+        z: acc.z + node.z,
+      }),
+      { x: 0, y: 0, z: 0 },
+    );
+
+    const target = {
+      x: center.x / selectedNodes.length,
+      y: center.y / selectedNodes.length,
+      z: center.z / selectedNodes.length,
+    };
+
+    setCamera((current) => {
+      const bounds = buildProjectedBounds(displayTruss3dNodes, current);
+      const point = projectTruss3dPoint(target, bounds, { ...current, panX: 0, panY: 0 }, projectionMode);
+      const nextPanX = current.panX + (490 - point.x);
+      const nextPanY = current.panY + (230 - point.y);
+
+      return {
+        ...current,
+        panX: Number.isFinite(nextPanX) ? nextPanX : current.panX,
+        panY: Number.isFinite(nextPanY) ? nextPanY : current.panY,
+      };
+    });
   };
 
   const resetCamera = () => {
@@ -654,7 +696,7 @@ function WorkbenchViewportInner({
     return (
       <svg
         viewBox="0 0 980 460"
-        className="viewport-svg"
+        className={`viewport-svg${boxSelectMode ? " viewport-svg--box-select" : ""}`}
         aria-label="2d truss response"
         onPointerLeave={onStopDraggingNode}
         onPointerMove={onTrussPointerMove}
@@ -859,12 +901,12 @@ function WorkbenchViewportInner({
                     r={isSelected ? 9 : 7}
                     className={`node-base${isSelected ? " node-base--active" : ""}${memberDraftNodes.includes(index) ? " node-base--draft" : ""}${truss3dLinkMode && hoveredTruss3dNode === index ? " node-base--warning" : ""}`}
                     onPointerDown={(event) => {
+                      if (boxSelectMode) {
+                        return;
+                      }
                       event.stopPropagation();
                       onSelectTruss3dNode(index);
                       if (truss3dLinkMode) {
-                        return;
-                      }
-                      if (boxSelectMode) {
                         return;
                       }
                       if (isModelMode && event.button === 0) {

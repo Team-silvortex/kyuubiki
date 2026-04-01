@@ -531,8 +531,33 @@ html[data-theme="graphite"] .immersive-switches {
   height: 18px;
 }
 
+.inline-field {
+  display: grid;
+  grid-template-columns: auto minmax(90px, 120px);
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.inline-field span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.inline-field input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 50%),
+    var(--panel-strong);
+  color: var(--ink);
+}
+
 html[data-theme="graphite"] .form-grid input,
-html[data-theme="graphite"] .form-grid select {
+html[data-theme="graphite"] .form-grid select,
+html[data-theme="graphite"] .inline-field input {
   background: rgba(19, 26, 31, 0.88);
 }
 
@@ -578,6 +603,28 @@ html[data-theme="graphite"] .form-grid select {
 
 .canvas-panel {
   position: relative;
+}
+
+.canvas-layout {
+  min-width: 0;
+}
+
+.canvas-layout--split {
+  display: grid;
+  grid-template-columns: minmax(240px, 296px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px 14px;
+}
+
+.canvas-stage {
+  min-width: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.canvas-stage--space .viewport-svg {
+  min-width: 1120px;
 }
 
 .canvas-panel--immersive:fullscreen {
@@ -636,7 +683,13 @@ html[data-theme="graphite"] .immersive-drawer__card {
 .viewport-dock {
   display: grid;
   gap: 10px;
-  padding: 12px 14px 0;
+  grid-template-columns: 1fr;
+  align-items: start;
+  max-height: min(72vh, 920px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  position: sticky;
+  top: 12px;
 }
 
 .viewport-dock__card {
@@ -644,6 +697,31 @@ html[data-theme="graphite"] .immersive-drawer__card {
   border-radius: 16px;
   background: var(--panel-soft);
   padding: 12px;
+  min-height: 0;
+}
+
+.viewport-dock__stack {
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+}
+
+.viewport-dock__tabs {
+  margin-top: 10px;
+}
+
+.viewport-toolbar-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 10px;
+  margin-bottom: 6px;
+  scrollbar-width: thin;
+}
+
+.viewport-toolbar-strip .ghost-button {
+  flex: 0 0 auto;
 }
 
 .viewport-dock__grid {
@@ -653,14 +731,48 @@ html[data-theme="graphite"] .immersive-drawer__card {
   margin-top: 10px;
 }
 
+.card-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-subhead strong {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card-subhead span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .viewport-dock__card--help .card-copy {
   margin-top: 0;
+}
+
+.viewport-dock__card--help {
+  min-width: 0;
 }
 
 .viewport-help-list {
   display: grid;
   gap: 6px;
   margin-top: 10px;
+}
+
+@media (max-width: 980px) {
+  .canvas-layout--split {
+    grid-template-columns: 1fr;
+  }
+
+  .viewport-dock {
+    max-height: 34vh;
+    position: static;
+  }
 }
 
 .immersive-drawer__section h3 {
@@ -748,6 +860,10 @@ html[data-theme="graphite"] .viewport-toolbar-panel {
   stroke: rgba(19, 115, 154, 0.5);
   stroke-width: 1.5;
   stroke-dasharray: 8 6;
+}
+
+.viewport-svg--box-select {
+  cursor: crosshair;
 }
 
 .gizmo-line {
