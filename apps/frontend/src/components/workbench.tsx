@@ -307,6 +307,8 @@ const copy = {
     immersiveStudy: "Study",
     immersiveModel: "Model",
     immersiveLibrary: "Library",
+    immersiveTools: "Tools",
+    immersiveHelp: "3D Help",
     immersiveDrawer: "Immersive drawer",
     close: "Close",
     immersiveSamples: "Samples",
@@ -581,6 +583,8 @@ const copy = {
     immersiveStudy: "研究",
     immersiveModel: "建模",
     immersiveLibrary: "库",
+    immersiveTools: "工具",
+    immersiveHelp: "3D 帮助",
     immersiveDrawer: "沉浸抽屉",
     close: "关闭",
     immersiveSamples: "样板",
@@ -1478,6 +1482,16 @@ export function Workbench() {
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
   const [immersiveViewport, setImmersiveViewport] = useState(false);
+  const [immersiveToolDrawerOpen, setImmersiveToolDrawerOpen] = useState(false);
+  const [immersiveHelpDrawerOpen, setImmersiveHelpDrawerOpen] = useState(false);
+  const [truss3dProjectionMode, setTruss3dProjectionMode] = useState<"ortho" | "persp">("ortho");
+  const [truss3dShowGrid, setTruss3dShowGrid] = useState(true);
+  const [truss3dShowLabels, setTruss3dShowLabels] = useState(true);
+  const [truss3dShowNodes, setTruss3dShowNodes] = useState(true);
+  const [truss3dBoxSelectMode, setTruss3dBoxSelectMode] = useState(false);
+  const [truss3dViewPreset, setTruss3dViewPreset] = useState<"iso" | "front" | "right" | "top">("iso");
+  const [truss3dFocusRequestVersion, setTruss3dFocusRequestVersion] = useState(0);
+  const [truss3dResetRequestVersion, setTruss3dResetRequestVersion] = useState(0);
   const [sidebarSection, setSidebarSection] = useState<SidebarSection>("study");
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
@@ -3876,6 +3890,38 @@ export function Workbench() {
                   >
                     {t.immersiveLibrary}
                   </button>
+                  <button
+                    className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
+                    onClick={() => setImmersiveToolDrawerOpen((current) => !current)}
+                    type="button"
+                  >
+                    {t.immersiveTools}
+                  </button>
+                  <button
+                    className={`ghost-button ghost-button--compact${immersiveHelpDrawerOpen ? " ghost-button--active" : ""}`}
+                    onClick={() => setImmersiveHelpDrawerOpen((current) => !current)}
+                    type="button"
+                  >
+                    {t.immersiveHelp}
+                  </button>
+                </div>
+              ) : null}
+              {isTruss3d ? (
+                <div className="immersive-switches">
+                  <button
+                    className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
+                    onClick={() => setImmersiveToolDrawerOpen((current) => !current)}
+                    type="button"
+                  >
+                    {t.immersiveTools}
+                  </button>
+                  <button
+                    className={`ghost-button ghost-button--compact${immersiveHelpDrawerOpen ? " ghost-button--active" : ""}`}
+                    onClick={() => setImmersiveHelpDrawerOpen((current) => !current)}
+                    type="button"
+                  >
+                    {t.immersiveHelp}
+                  </button>
                 </div>
               ) : null}
               {isTruss3d ? (
@@ -3886,6 +3932,94 @@ export function Workbench() {
               <span>{job?.status ?? "idle"}</span>
             </div>
           </div>
+          {isTruss3d && (immersiveToolDrawerOpen || (showShortcutHints && immersiveHelpDrawerOpen)) ? (
+            <div className="viewport-dock">
+              {immersiveToolDrawerOpen ? (
+                <section className="viewport-dock__card">
+                  <div className="card-head">
+                    <h2>{t.immersiveTools}</h2>
+                    <span>{t.kinds.truss_3d}</span>
+                  </div>
+                  <div className="viewport-dock__grid">
+                    {(["iso", "front", "right", "top"] as const).map((preset) => (
+                      <button
+                        key={preset}
+                        className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dViewPreset(preset)}
+                        type="button"
+                      >
+                        {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
+                      </button>
+                    ))}
+                    <button
+                      className={`ghost-button ghost-button--compact${selectedNode !== null ? " ghost-button--active" : ""}`}
+                      onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
+                      type="button"
+                    >
+                      FOCUS
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
+                      onClick={() => setTruss3dProjectionMode((current) => (current === "ortho" ? "persp" : "ortho"))}
+                      type="button"
+                    >
+                      {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${truss3dShowGrid ? " ghost-button--active" : ""}`}
+                      onClick={() => setTruss3dShowGrid((current) => !current)}
+                      type="button"
+                    >
+                      GRID
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${truss3dShowLabels ? " ghost-button--active" : ""}`}
+                      onClick={() => setTruss3dShowLabels((current) => !current)}
+                      type="button"
+                    >
+                      LABEL
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${truss3dShowNodes ? " ghost-button--active" : ""}`}
+                      onClick={() => setTruss3dShowNodes((current) => !current)}
+                      type="button"
+                    >
+                      NODE
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
+                      onClick={() => setTruss3dBoxSelectMode((current) => !current)}
+                      type="button"
+                    >
+                      BOX
+                    </button>
+                    <button
+                      className="ghost-button ghost-button--compact"
+                      onClick={() => setTruss3dResetRequestVersion((current) => current + 1)}
+                      type="button"
+                    >
+                      RESET
+                    </button>
+                  </div>
+                </section>
+              ) : null}
+              {showShortcutHints && immersiveHelpDrawerOpen ? (
+                <section className="viewport-dock__card viewport-dock__card--help">
+                  <div className="card-head">
+                    <h2>{t.immersiveHelp}</h2>
+                    <span>{t.kinds.truss_3d}</span>
+                  </div>
+                  <div className="viewport-help-list">
+                    {t.shortcutLegendRows.map((row) => (
+                      <p key={row} className="card-copy">
+                        {row}
+                      </p>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+          ) : null}
           <WorkbenchViewport
             studyKind={studyKind}
             sidebarSection={sidebarSection}
@@ -3958,11 +4092,24 @@ export function Workbench() {
             workspaceBadge={isTruss3d ? t.spaceStudio : t.sections.model}
             truss3dLinkMode={truss3dLinkMode}
             immersiveViewport={immersiveViewport}
+            projectionMode={truss3dProjectionMode}
+            showGrid={truss3dShowGrid}
+            showLabels={truss3dShowLabels}
+            showNodes={truss3dShowNodes}
+            boxSelectMode={truss3dBoxSelectMode}
+            activeViewPreset={truss3dViewPreset}
+            focusRequestVersion={truss3dFocusRequestVersion}
+            resetRequestVersion={truss3dResetRequestVersion}
             selectedTruss3dNodeIndices={selectedTruss3dNodes}
             onSelectTruss3dNodes={handleTruss3dNodesBoxSelect}
             showShortcutHints={showShortcutHints}
             shortcutLegendTitle={t.shortcutLegendTitle}
             shortcutLegendRows={[...t.shortcutLegendRows]}
+            onProjectionModeChange={setTruss3dProjectionMode}
+            onShowGridChange={setTruss3dShowGrid}
+            onShowLabelsChange={setTruss3dShowLabels}
+            onShowNodesChange={setTruss3dShowNodes}
+            onBoxSelectModeChange={setTruss3dBoxSelectMode}
           />
           {immersiveViewport && sidebarSection === "library" ? (
             <div className="immersive-drawer">

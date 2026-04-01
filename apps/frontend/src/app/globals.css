@@ -633,6 +633,36 @@ html[data-theme="graphite"] .immersive-drawer__card {
   gap: 8px;
 }
 
+.viewport-dock {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 0;
+}
+
+.viewport-dock__card {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-soft);
+  padding: 12px;
+}
+
+.viewport-dock__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.viewport-dock__card--help .card-copy {
+  margin-top: 0;
+}
+
+.viewport-help-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .immersive-drawer__section h3 {
   margin: 0 0 8px;
   font-size: 0.84rem;
