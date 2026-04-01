@@ -839,6 +839,82 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert is_binary(Enum.at(jobs, 1)["created_at"])
   end
 
+  test "supports CRUD and export for persisted jobs and results" do
+    {:ok, _job} =
+      Store.create(%{
+        job_id: "job-admin",
+        project_id: "project-admin",
+        simulation_case_id: "case-admin",
+        message: "queued"
+      })
+
+    :ok =
+      AnalysisResultStore.put("job-admin", %{
+        "kind" => "truss_2d",
+        "max_displacement" => 2.0e-6
+      })
+
+    update_job_conn =
+      :patch
+      |> conn("/api/v1/jobs/job-admin", Jason.encode!(%{"message" => "reviewed"}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert update_job_conn.status == 200
+    assert Jason.decode!(update_job_conn.resp_body)["job"]["message"] == "reviewed"
+
+    list_results_conn =
+      :get
+      |> conn("/api/v1/results")
+      |> Router.call(@opts)
+
+    assert list_results_conn.status == 200
+    assert [%{"job_id" => "job-admin"}] = Jason.decode!(list_results_conn.resp_body)["results"]
+
+    update_result_conn =
+      :patch
+      |> conn("/api/v1/results/job-admin", Jason.encode!(%{"result" => %{"kind" => "truss_2d", "max_displacement" => 4.0e-6}}))
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert update_result_conn.status == 200
+    assert Jason.decode!(update_result_conn.resp_body)["result"]["max_displacement"] == 4.0e-6
+
+    export_conn =
+      :get
+      |> conn("/api/v1/export/database")
+      |> Router.call(@opts)
+
+    assert export_conn.status == 200
+    export_payload = Jason.decode!(export_conn.resp_body)
+    assert [%{"job_id" => "job-admin"}] = export_payload["jobs"]
+    assert [%{"job_id" => "job-admin"}] = export_payload["results"]
+    assert is_list(export_payload["projects"])
+    assert is_list(export_payload["models"])
+    assert is_list(export_payload["model_versions"])
+
+    delete_result_conn =
+      :delete
+      |> conn("/api/v1/results/job-admin")
+      |> Router.call(@opts)
+
+    assert delete_result_conn.status == 200
+
+    delete_job_conn =
+      :delete
+      |> conn("/api/v1/jobs/job-admin")
+      |> Router.call(@opts)
+
+    assert delete_job_conn.status == 200
+
+    missing_job_conn =
+      :get
+      |> conn("/api/v1/jobs/job-admin")
+      |> Router.call(@opts)
+
+    assert missing_job_conn.status == 422
+  end
+
   defp await_fake_agent_port do
     receive do
       {:fake_agent_ready, port} -> port

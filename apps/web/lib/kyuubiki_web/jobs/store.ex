@@ -9,6 +9,8 @@ defmodule KyuubikiWeb.Jobs.Store do
   def create(attrs), do: backend().create(attrs)
   def get(job_id), do: backend().get(job_id)
   def list, do: backend().list()
+  def update_metadata(job_id, attrs), do: backend().update_metadata(job_id, attrs)
+  def delete(job_id), do: backend().delete(job_id)
   def reset, do: backend().reset()
   def apply_progress(attrs), do: backend().apply_progress(attrs)
   def assign_worker(job_id, worker_id), do: backend().assign_worker(job_id, worker_id)

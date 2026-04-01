@@ -283,6 +283,31 @@ export type HealthPayload = {
   };
 };
 
+export type DatabaseExportPayload = {
+  exported_at: string;
+  projects: ProjectRecord[];
+  models: ModelRecord[];
+  model_versions: ModelVersionRecord[];
+  jobs: JobState[];
+  results: Array<{
+    job_id: string;
+    result: Record<string, unknown>;
+    inserted_at?: string;
+    updated_at?: string;
+  }>;
+};
+
+export type ResultRecord = {
+  job_id: string;
+  result: Record<string, unknown>;
+  inserted_at?: string;
+  updated_at?: string;
+};
+
+export type ResultListPayload = {
+  results: ResultRecord[];
+};
+
 function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
   return new Map((materials ?? []).map((material) => [material.id, material]));
 }
@@ -407,11 +432,67 @@ export function fetchJobHistory(): Promise<JobHistoryPayload> {
   });
 }
 
+export function updateJobRecord(
+  jobId: string,
+  input: Partial<{
+    project_id: string;
+    model_version_id: string;
+    simulation_case_id: string;
+    message: string;
+  }>,
+): Promise<JobEnvelope> {
+  return requestJson<JobEnvelope>(`/api/v1/jobs/${jobId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteJobRecord(jobId: string): Promise<{ job: JobState; deleted: boolean }> {
+  return requestJson<{ job: JobState; deleted: boolean }>(`/api/v1/jobs/${jobId}`, {
+    method: "DELETE",
+  });
+}
+
 export function fetchHealth(): Promise<HealthPayload> {
   return requestJson<HealthPayload>("/api/health", {
     method: "GET",
     cache: "no-store",
   });
+}
+
+export function fetchDatabaseExport(): Promise<DatabaseExportPayload> {
+  return requestJson<DatabaseExportPayload>("/api/v1/export/database", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchResults(): Promise<ResultListPayload> {
+  return requestJson<ResultListPayload>("/api/v1/results", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function updateResultRecord(
+  jobId: string,
+  result: Record<string, unknown>,
+): Promise<{ job_id: string; result: Record<string, unknown> }> {
+  return requestJson<{ job_id: string; result: Record<string, unknown> }>(`/api/v1/results/${jobId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ result }),
+  });
+}
+
+export function deleteResultRecord(
+  jobId: string,
+): Promise<{ job_id: string; result: Record<string, unknown>; deleted: boolean }> {
+  return requestJson<{ job_id: string; result: Record<string, unknown>; deleted: boolean }>(
+    `/api/v1/results/${jobId}`,
+    { method: "DELETE" },
+  );
 }
 
 export function fetchProjects(): Promise<ProjectListPayload> {

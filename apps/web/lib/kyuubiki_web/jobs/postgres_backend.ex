@@ -43,6 +43,40 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
     end)
   end
 
+  def update_metadata(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
+    case Repo.get(JobRecord, job_id) do
+      %JobRecord{} = record ->
+        changes =
+          attrs
+          |> Map.take(["project_id", "model_version_id", "simulation_case_id", "message"])
+          |> Enum.into(%{}, fn {key, value} -> {String.to_existing_atom(key), value} end)
+          |> Map.put(:updated_at, DateTime.utc_now(:second))
+
+        updated =
+          record
+          |> Ecto.Changeset.change(changes)
+          |> Repo.update!()
+
+        repo_record_to_job(updated)
+
+      nil ->
+        {:error, {:job_not_found, job_id}}
+    end
+  end
+
+  def delete(job_id) when is_binary(job_id) do
+    case Repo.get(JobRecord, job_id) do
+      %JobRecord{} = record ->
+        with {:ok, job} <- repo_record_to_job(record) do
+          Repo.delete!(record)
+          {:ok, job}
+        end
+
+      nil ->
+        {:error, {:job_not_found, job_id}}
+    end
+  end
+
   def reset do
     Repo.delete_all(JobRecord)
     :ok

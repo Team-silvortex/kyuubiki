@@ -34,6 +34,34 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
     end
   end
 
+  def list do
+    ResultRecord
+    |> Repo.all()
+    |> Enum.sort_by(& &1.job_id)
+    |> Enum.map(fn record ->
+      %{
+        "job_id" => record.job_id,
+        "result" => record.payload,
+        "inserted_at" => DateTime.to_iso8601(record.inserted_at),
+        "updated_at" => DateTime.to_iso8601(record.updated_at)
+      }
+    end)
+  end
+
+  def update(job_id, result) when is_binary(job_id) and is_map(result), do: put(job_id, result)
+
+  def delete(job_id) when is_binary(job_id) do
+    case Repo.get(ResultRecord, job_id) do
+      %ResultRecord{} = record ->
+        payload = record.payload
+        Repo.delete!(record)
+        {:ok, payload}
+
+      nil ->
+        {:error, {:result_not_found, job_id}}
+    end
+  end
+
   def reset do
     Repo.delete_all(ResultRecord)
     :ok

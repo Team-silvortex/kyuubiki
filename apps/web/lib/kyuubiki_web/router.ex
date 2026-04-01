@@ -89,6 +89,59 @@ defmodule KyuubikiWeb.Router do
     end
   end
 
+  patch "/api/v1/jobs/:job_id" do
+    case Analysis.update_job(job_id, conn.body_params) do
+      {:ok, payload} -> respond_json(conn, 200, payload)
+      {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  delete "/api/v1/jobs/:job_id" do
+    case Analysis.delete_job(job_id) do
+      {:ok, payload} -> respond_json(conn, 200, payload)
+      {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/results" do
+    respond_json(conn, 200, Analysis.list_results())
+  end
+
+  get "/api/v1/results/:job_id" do
+    case Analysis.fetch_result(job_id) do
+      {:ok, payload} -> respond_json(conn, 200, payload)
+      {:error, {:result_not_found, _}} -> respond_json(conn, 404, %{"error" => "result_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  patch "/api/v1/results/:job_id" do
+    case Map.get(conn.body_params, "result") do
+      result when is_map(result) ->
+        case Analysis.update_result(job_id, result) do
+          {:ok, payload} -> respond_json(conn, 200, payload)
+          {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        end
+
+      _ ->
+        respond_json(conn, 422, %{"error" => "missing_result_payload"})
+    end
+  end
+
+  delete "/api/v1/results/:job_id" do
+    case Analysis.delete_result(job_id) do
+      {:ok, payload} -> respond_json(conn, 200, payload)
+      {:error, {:result_not_found, _}} -> respond_json(conn, 404, %{"error" => "result_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  get "/api/v1/export/database" do
+    respond_json(conn, 200, Analysis.export_database())
+  end
+
   get "/api/v1/projects" do
     {:ok, projects} = Library.list_projects()
     respond_json(conn, 200, %{"projects" => projects})

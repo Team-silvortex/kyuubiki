@@ -82,6 +82,68 @@ defmodule KyuubikiWeb.Analysis do
     %{"jobs" => jobs}
   end
 
+  def update_job(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
+    case Store.update_metadata(job_id, attrs) do
+      {:ok, job} -> {:ok, serialize_payload(job)}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def delete_job(job_id) when is_binary(job_id) do
+    _ = AnalysisResultStore.delete(job_id)
+
+    case Store.delete(job_id) do
+      {:ok, job} -> {:ok, %{"job" => serialize_job(job), "deleted" => true}}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def list_results do
+    %{"results" => AnalysisResultStore.list()}
+  end
+
+  def fetch_result(job_id) when is_binary(job_id) do
+    case AnalysisResultStore.get(job_id) do
+      {:ok, result} -> {:ok, %{"job_id" => job_id, "result" => result}}
+      :error -> {:error, {:result_not_found, job_id}}
+    end
+  end
+
+  def update_result(job_id, result) when is_binary(job_id) and is_map(result) do
+    :ok = AnalysisResultStore.update(job_id, result)
+    fetch_result(job_id)
+  end
+
+  def delete_result(job_id) when is_binary(job_id) do
+    case AnalysisResultStore.delete(job_id) do
+      {:ok, result} -> {:ok, %{"job_id" => job_id, "result" => result, "deleted" => true}}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def export_database do
+    {:ok, projects} = Library.list_projects()
+    models = Enum.flat_map(projects, &Map.get(&1, "models", []))
+
+    model_versions =
+      models
+      |> Enum.flat_map(fn model ->
+        case Library.list_versions(model["model_id"]) do
+          {:ok, versions} -> versions
+          _ -> []
+        end
+      end)
+
+    %{
+      "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
+      "projects" => projects,
+      "models" => models,
+      "model_versions" => model_versions,
+      "jobs" => list_jobs()["jobs"],
+      "results" => list_results()["results"]
+    }
+  end
+
   defp start_background_job(job_id, method, params) do
     Task.start(fn ->
       case AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1)) do

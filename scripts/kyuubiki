@@ -42,6 +42,9 @@ Commands:
   status            Show whether local services are running
   stop              Stop the orchestrator API, frontend, and solver agent services
   restart           Restart the orchestrator API, frontend, and solver agent services
+  export-db         Export the orchestrator database snapshot as JSON
+  install           Run the cross-platform installer/bootstrap utility
+  doctor            Run the cross-platform environment doctor
   test              Run all tests
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
@@ -67,6 +70,9 @@ Examples:
   ./scripts/kyuubiki frontend
   ./scripts/kyuubiki benchmark -- --repeat 20 --format json
   ./scripts/kyuubiki restart
+  ./scripts/kyuubiki export-db > kyuubiki-database.json
+  ./scripts/kyuubiki doctor
+  ./scripts/kyuubiki install bootstrap
 EOF
 }
 
@@ -232,6 +238,25 @@ run_benchmark() {
   )
 }
 
+run_export_db() {
+  local url="${1:-http://127.0.0.1:4000/api/v1/export/database}"
+
+  if ! port_in_use 4000; then
+    echo "orchestrator is not running at http://127.0.0.1:4000" >&2
+    exit 1
+  fi
+
+  curl -fsS "$url"
+}
+
+run_installer() {
+  require_dir "$RUST_DIR"
+  (
+    cd "$RUST_DIR"
+    cargo run -p kyuubiki-installer -- "$@"
+  )
+}
+
 start_orchestrator_background() {
   local port="${1:-4000}"
   ensure_run_dir
@@ -338,6 +363,15 @@ case "$command" in
     ;;
   restart)
     restart_services
+    ;;
+  export-db)
+    run_export_db "$@"
+    ;;
+  install)
+    run_installer "$@"
+    ;;
+  doctor)
+    run_installer doctor "$@"
     ;;
   test)
     make -C "$ROOT_DIR" test

@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start status stop restart test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
+.PHONY: help tree start status stop restart export-db install doctor test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
 
 help:
 	@echo "Available targets:"
@@ -10,6 +10,9 @@ help:
 	@echo "  make status      Show local service status"
 	@echo "  make stop        Stop the orchestrator API, frontend, and solver agent"
 	@echo "  make restart     Restart the orchestrator API, frontend, and solver agent"
+	@echo "  make export-db   Export the current database snapshot as JSON"
+	@echo "  make install     Run the cross-platform installer/bootstrap utility"
+	@echo "  make doctor      Check local prerequisites for this platform"
 	@echo "  make test        Run all project tests"
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
@@ -42,6 +45,15 @@ stop:
 
 restart:
 	@$(ENTRYPOINT) restart
+
+export-db:
+	@$(ENTRYPOINT) export-db
+
+install:
+	@$(ENTRYPOINT) install $(ARGS)
+
+doctor:
+	@$(ENTRYPOINT) doctor
 
 test: test-web test-rust test-playground
 

@@ -83,7 +83,8 @@ body::before {
 a,
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -537,7 +538,8 @@ html[data-theme="graphite"] .immersive-switches {
 }
 
 .form-grid input,
-.form-grid select {
+.form-grid select,
+.form-grid textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -584,8 +586,16 @@ html[data-theme="graphite"] .immersive-switches {
 
 html[data-theme="graphite"] .form-grid input,
 html[data-theme="graphite"] .form-grid select,
+html[data-theme="graphite"] .form-grid textarea,
 html[data-theme="graphite"] .inline-field input {
   background: rgba(19, 26, 31, 0.88);
+}
+
+.json-editor {
+  min-height: 220px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
 }
 
 .solve-button {

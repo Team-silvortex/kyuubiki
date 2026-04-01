@@ -27,6 +27,7 @@ type DisplayTrussElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  material_id?: string;
 };
 
 type DisplayTruss3dNode = {
@@ -49,6 +50,7 @@ type DisplayTruss3dElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  material_id?: string;
 };
 
 type PlaneNode = {
@@ -71,6 +73,7 @@ type PlaneElement = {
   node_j: number;
   node_k: number;
   von_mises?: number;
+  material_id?: string;
 };
 
 type Bounds = {
@@ -96,6 +99,7 @@ type WorkbenchViewportProps = {
   displayTrussNodes: DisplayTrussNode[];
   displayTrussElements: DisplayTrussElement[];
   trussElementColors: string[];
+  hiddenTrussMaterialIds: string[];
   trussBounds: Bounds;
   trussResult: boolean;
   trussHotspotNodes: number[];
@@ -110,9 +114,11 @@ type WorkbenchViewportProps = {
   displayTruss3dNodes: DisplayTruss3dNode[];
   displayTruss3dElements: DisplayTruss3dElement[];
   truss3dElementColors: string[];
+  hiddenTruss3dMaterialIds: string[];
   planeNodes: PlaneNode[];
   planeElements: PlaneElement[];
   planeElementColors: string[];
+  hiddenPlaneMaterialIds: string[];
   planeBounds: Bounds;
   planeResult: boolean;
   planeMaxVonMises: number;
@@ -368,6 +374,7 @@ function WorkbenchViewportInner({
   displayTrussNodes,
   displayTrussElements,
   trussElementColors,
+  hiddenTrussMaterialIds,
   trussBounds,
   trussResult,
   trussHotspotNodes,
@@ -382,9 +389,11 @@ function WorkbenchViewportInner({
   displayTruss3dNodes,
   displayTruss3dElements,
   truss3dElementColors,
+  hiddenTruss3dMaterialIds,
   planeNodes,
   planeElements,
   planeElementColors,
+  hiddenPlaneMaterialIds,
   planeBounds,
   planeResult,
   planeMaxVonMises,
@@ -723,6 +732,7 @@ function WorkbenchViewportInner({
         </text>
         <g clipPath="url(#viewportClipTruss)">
           {displayTrussElements.map((element) => {
+            if (element.material_id && hiddenTrussMaterialIds.includes(element.material_id)) return null;
             const start = toSvgPoint(displayTrussNodes[element.node_i], trussBounds);
             const end = toSvgPoint(displayTrussNodes[element.node_j], trussBounds);
             if (!lineInsideViewport(start, end)) return null;
@@ -748,6 +758,7 @@ function WorkbenchViewportInner({
 
           {trussResult
             ? displayTrussElements.flatMap((element, index) => {
+                if (element.material_id && hiddenTrussMaterialIds.includes(element.material_id)) return [];
                 if (index % trussDeformedStep !== 0) return [];
                 const start = toSvgPoint(
                   {
@@ -868,6 +879,7 @@ function WorkbenchViewportInner({
           <text x="68" y="324" className="node-label">Z</text>
           <text x="108" y="350" className="node-label">Y</text>
           {displayTruss3dElements.map((element) => {
+            if (element.material_id && hiddenTruss3dMaterialIds.includes(element.material_id)) return null;
             const start = projectTruss3dPoint(displayTruss3dNodes[element.node_i], projected3d, camera, projectionMode);
             const end = projectTruss3dPoint(displayTruss3dNodes[element.node_j], projected3d, camera, projectionMode);
             if (!lineInsideViewport(start, end)) return null;
@@ -1013,6 +1025,7 @@ function WorkbenchViewportInner({
       </text>
       <g clipPath="url(#viewportClipPlane)">
         {planeElements.map((element) => {
+          if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return null;
           const points = [
             toSvgPoint(planeNodes[element.node_i], planeBounds),
             toSvgPoint(planeNodes[element.node_j], planeBounds),
@@ -1033,6 +1046,7 @@ function WorkbenchViewportInner({
         })}
         {planeResult
           ? planeElements.flatMap((element, index) => {
+              if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return [];
               if (index % planeDeformedStep !== 0) return [];
               const points = [
                 toSvgPoint(

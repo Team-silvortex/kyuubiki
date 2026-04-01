@@ -39,6 +39,42 @@ defmodule KyuubikiWeb.Jobs.MemoryBackend do
     end)
   end
 
+  def update_metadata(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
+    Agent.get_and_update(__MODULE__, fn jobs ->
+      case Map.fetch(jobs, job_id) do
+        {:ok, %Job{} = job} ->
+          updated_job = %Job{
+            job
+            | project_id: Map.get(attrs, "project_id", job.project_id),
+              model_version_id: Map.get(attrs, "model_version_id", job.model_version_id),
+              simulation_case_id: Map.get(attrs, "simulation_case_id", job.simulation_case_id),
+              message: Map.get(attrs, "message", job.message),
+              updated_at: DateTime.utc_now(:second)
+          }
+
+          updated_jobs = Map.put(jobs, job_id, updated_job)
+          persist_jobs(updated_jobs)
+          {{:ok, updated_job}, updated_jobs}
+
+        :error ->
+          {{:error, {:job_not_found, job_id}}, jobs}
+      end
+    end)
+  end
+
+  def delete(job_id) when is_binary(job_id) do
+    Agent.get_and_update(__MODULE__, fn jobs ->
+      case Map.pop(jobs, job_id) do
+        {nil, current} ->
+          {{:error, {:job_not_found, job_id}}, current}
+
+        {job, current} ->
+          persist_jobs(current)
+          {{:ok, job}, current}
+      end
+    end)
+  end
+
   def reset do
     Agent.update(__MODULE__, fn _ ->
       persist_jobs(%{})

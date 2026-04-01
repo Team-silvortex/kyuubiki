@@ -15,6 +15,7 @@ import { WorkbenchConsole } from "@/components/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench-inspector";
 import { WorkbenchObjectTree } from "@/components/workbench-object-tree";
 import { WorkbenchViewport } from "@/components/workbench-viewport";
+import { createCustomMaterial, parseMaterialLibrary } from "@/lib/material-library";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
 import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/project-format";
@@ -36,9 +37,12 @@ import {
   createProject,
   createTruss2dJob,
   createTruss3dJob,
+  deleteJobRecord,
   deleteModel,
   deleteModelVersion,
   deleteProject,
+  deleteResultRecord,
+  fetchDatabaseExport,
   fetchModel,
   fetchModelVersion,
   fetchModelVersions,
@@ -46,6 +50,7 @@ import {
   fetchJobHistory,
   fetchJobStatus,
   fetchProjects,
+  fetchResults,
   type AxialBarJobInput,
   type AxialBarResult,
   type HealthPayload,
@@ -58,6 +63,7 @@ import {
   type PlaneTriangle2dJobInput,
   type PlaneTriangle2dResult,
   type ProjectRecord,
+  type ResultRecord,
   resolvePlaneTriangle2dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
@@ -65,9 +71,11 @@ import {
   type Truss2dResult,
   type Truss3dJobInput,
   type Truss3dResult,
+  updateJobRecord,
   updateModel,
   updateModelVersion,
   updateProject,
+  updateResultRecord,
 } from "@/lib/api";
 
 type Language = "en" | "zh";
@@ -78,6 +86,7 @@ type StudyPanelTab = "summary" | "controls";
 type ModelPanelTab = "tools" | "tree";
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 type ImmersiveToolTab = "node" | "props";
+type SystemDataTab = "jobs" | "results";
 
 type AxialFormState = {
   length: number;
@@ -300,6 +309,7 @@ const copy = {
     controls: "Controls",
     settings: "Settings",
     backend: "Backend",
+    dataAdmin: "Data Admin",
     orchestrator: "Elixir orchestrator",
     solverAgent: "Rust solver agent",
     ui: "Next.js UI",
@@ -314,6 +324,23 @@ const copy = {
     immersiveModeEnabled: "Immersive viewport enabled.",
     immersiveModeDisabled: "Immersive viewport closed.",
     browserLimitsNote: "Browser extensions cannot be fully disabled from the page, but the viewport can reduce selection and copy interactions.",
+    adminJobs: "Jobs",
+    adminResults: "Results",
+    selectRecord: "Select a record to inspect or edit.",
+    adminMessage: "Message",
+    adminProjectId: "Project ID",
+    adminModelVersionId: "Model version",
+    adminCaseId: "Simulation case",
+    saveRecord: "Save record",
+    deleteRecord: "Delete record",
+    exportRecord: "Export record",
+    resultPayload: "Result JSON",
+    resultSaved: "Result record updated.",
+    resultDeleted: "Result record deleted.",
+    jobSaved: "Job record updated.",
+    jobDeleted: "Job record deleted.",
+    invalidJson: "Invalid JSON payload.",
+    databaseRecordCount: "Records",
     immersiveStudy: "Study",
     immersiveModel: "Model",
     immersiveLibrary: "Library",
@@ -421,6 +448,7 @@ const copy = {
     projectDeleted: "Project deleted.",
     projectRequired: "Create or select a project before saving models.",
     projectExported: "Project bundle exported.",
+    databaseExported: "Database snapshot exported.",
     projectImported: "Project bundle imported.",
     modelSaved: "Saved a new model version.",
     modelCreated: "Saved a new model.",
@@ -597,6 +625,7 @@ const copy = {
     controls: "控制",
     settings: "设置",
     backend: "后端",
+    dataAdmin: "数据管理",
     orchestrator: "Elixir 编排器",
     solverAgent: "Rust 求解代理",
     ui: "Next.js 界面",
@@ -611,6 +640,23 @@ const copy = {
     immersiveModeEnabled: "已进入沉浸式视图区。",
     immersiveModeDisabled: "已退出沉浸式视图区。",
     browserLimitsNote: "网页无法彻底关闭浏览器插件，但可以显著减少选择文本和复制类交互。",
+    adminJobs: "任务",
+    adminResults: "结果",
+    selectRecord: "选择一条记录后即可查看或编辑。",
+    adminMessage: "消息",
+    adminProjectId: "项目 ID",
+    adminModelVersionId: "模型版本",
+    adminCaseId: "仿真工况",
+    saveRecord: "保存记录",
+    deleteRecord: "删除记录",
+    exportRecord: "导出记录",
+    resultPayload: "结果 JSON",
+    resultSaved: "结果记录已更新。",
+    resultDeleted: "结果记录已删除。",
+    jobSaved: "任务记录已更新。",
+    jobDeleted: "任务记录已删除。",
+    invalidJson: "JSON 内容无效。",
+    databaseRecordCount: "记录数",
     immersiveStudy: "研究",
     immersiveModel: "建模",
     immersiveLibrary: "库",
@@ -718,6 +764,7 @@ const copy = {
     projectDeleted: "项目已删除。",
     projectRequired: "保存模型前请先创建或选择一个项目。",
     projectExported: "项目包已导出。",
+    databaseExported: "数据库快照已导出。",
     projectImported: "项目包已导入。",
     modelSaved: "已保存新模型版本。",
     modelCreated: "已保存新模型。",
@@ -1602,6 +1649,7 @@ export function Workbench() {
   const [result, setResult] = useState<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>(null);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
+  const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
@@ -1632,10 +1680,17 @@ export function Workbench() {
   const [truss3dBatchLoadX, setTruss3dBatchLoadX] = useState(0);
   const [truss3dBatchLoadY, setTruss3dBatchLoadY] = useState(0);
   const [truss3dBatchLoadZ, setTruss3dBatchLoadZ] = useState(0);
+  const [hiddenMaterials, setHiddenMaterials] = useState<Record<StudyKind, string[]>>({
+    axial_bar_1d: [],
+    truss_2d: [],
+    truss_3d: [],
+    plane_triangle_2d: [],
+  });
   const [sidebarSection, setSidebarSection] = useState<SidebarSection>("study");
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
   const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("samples");
+  const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
   const [truss3dLinkMode, setTruss3dLinkMode] = useState(false);
   const [selectedTruss3dNodes, setSelectedTruss3dNodes] = useState<number[]>([]);
@@ -1644,6 +1699,13 @@ export function Workbench() {
   const [memberDraftNodes, setMemberDraftNodes] = useState<number[]>([]);
   const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
+  const [selectedAdminJobId, setSelectedAdminJobId] = useState<string | null>(null);
+  const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
+  const [adminJobMessage, setAdminJobMessage] = useState("");
+  const [adminJobProjectId, setAdminJobProjectId] = useState("");
+  const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
+  const [adminJobCaseId, setAdminJobCaseId] = useState("");
+  const [adminResultDraft, setAdminResultDraft] = useState("{}");
   const [isPending, startTransition] = useTransition();
   const dragHistoryCapturedRef = useRef(false);
   const drag3dHistoryCapturedRef = useRef(false);
@@ -1747,8 +1809,22 @@ export function Workbench() {
   useEffect(() => {
     void refreshHealth();
     void refreshJobHistory();
+    void refreshResults();
     void refreshProjects(true);
   }, []);
+
+  useEffect(() => {
+    const current = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
+    setAdminJobMessage(current?.message ?? "");
+    setAdminJobProjectId(current?.project_id ?? "");
+    setAdminJobModelVersionId(current?.model_version_id ?? "");
+    setAdminJobCaseId(current?.simulation_case_id ?? "");
+  }, [jobHistory, selectedAdminJobId]);
+
+  useEffect(() => {
+    const current = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
+    setAdminResultDraft(JSON.stringify(current?.result ?? {}, null, 2));
+  }, [resultRecords, selectedAdminResultJobId]);
 
   useEffect(() => {
     const selectedProject = projects.find((project) => project.project_id === selectedProjectId) ?? null;
@@ -1783,8 +1859,25 @@ export function Workbench() {
     try {
       const payload = await fetchJobHistory();
       setJobHistory(payload.jobs);
+      setSelectedAdminJobId((current) =>
+        current && payload.jobs.some((entry) => entry.job_id === current) ? current : payload.jobs[0]?.job_id ?? null,
+      );
     } catch {
       setJobHistory([]);
+      setSelectedAdminJobId(null);
+    }
+  }
+
+  async function refreshResults() {
+    try {
+      const payload = await fetchResults();
+      setResultRecords(payload.results);
+      setSelectedAdminResultJobId((current) =>
+        current && payload.results.some((entry) => entry.job_id === current) ? current : payload.results[0]?.job_id ?? null,
+      );
+    } catch {
+      setResultRecords([]);
+      setSelectedAdminResultJobId(null);
     }
   }
 
@@ -2237,6 +2330,92 @@ export function Workbench() {
     }
   };
 
+  const downloadDatabaseSnapshot = async () => {
+    try {
+      const snapshot = await fetchDatabaseExport();
+      const timestamp = snapshot.exported_at.replaceAll(":", "-");
+      downloadTextFile(`kyuubiki-database-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
+      setMessage(t.databaseExported);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
+  };
+
+  const saveAdminJobRecord = () => {
+    if (!selectedAdminJobId) return;
+
+    startTransition(async () => {
+      try {
+        await updateJobRecord(selectedAdminJobId, {
+          message: adminJobMessage,
+          project_id: adminJobProjectId || undefined,
+          model_version_id: adminJobModelVersionId || undefined,
+          simulation_case_id: adminJobCaseId || undefined,
+        });
+        await refreshJobHistory();
+        setMessage(t.jobSaved);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const deleteAdminJobRecord = () => {
+    if (!selectedAdminJobId) return;
+
+    startTransition(async () => {
+      try {
+        await deleteJobRecord(selectedAdminJobId);
+        await refreshJobHistory();
+        await refreshResults();
+        setMessage(t.jobDeleted);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const saveAdminResultRecord = () => {
+    if (!selectedAdminResultJobId) return;
+
+    startTransition(async () => {
+      try {
+        const parsed = JSON.parse(adminResultDraft) as Record<string, unknown>;
+        await updateResultRecord(selectedAdminResultJobId, parsed);
+        await refreshResults();
+        setMessage(t.resultSaved);
+      } catch (error) {
+        setMessage(error instanceof SyntaxError ? t.invalidJson : error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const deleteAdminResultRecord = () => {
+    if (!selectedAdminResultJobId) return;
+
+    startTransition(async () => {
+      try {
+        await deleteResultRecord(selectedAdminResultJobId);
+        await refreshResults();
+        setMessage(t.resultDeleted);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const exportAdminResultRecord = () => {
+    if (!selectedAdminResultJobId) return;
+
+    try {
+      const parsed = JSON.parse(adminResultDraft);
+      downloadTextFile(`${selectedAdminResultJobId}-result.json`, JSON.stringify(parsed, null, 2));
+      setMessage(t.resultJsonDownloaded);
+    } catch {
+      setMessage(t.invalidJson);
+    }
+  };
+
   const importProjectBundle = async (file: File | undefined) => {
     if (!file) return;
 
@@ -2543,6 +2722,9 @@ export function Workbench() {
   const deferredProjectModels = useDeferredValue(selectedProjectModels);
   const deferredModelVersions = useDeferredValue(modelVersions);
   const deferredJobHistory = useDeferredValue(jobHistory);
+  const deferredResultRecords = useDeferredValue(resultRecords);
+  const selectedAdminJob = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
+  const selectedAdminResult = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
 
   const isAxial = studyKind === "axial_bar_1d";
   const isTruss = studyKind === "truss_2d";
@@ -2573,7 +2755,12 @@ export function Workbench() {
       load_y: planeModel.nodes[index]?.load_y ?? 0,
     })) ??
     planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
-  const planeElements = planeResult?.elements ?? planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
+  const planeElements =
+    planeResult?.elements.map((element) => ({
+      ...element,
+      material_id: planeModel.elements[element.index]?.material_id,
+    })) ??
+    planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
   const planeBounds = getTrussBounds(planeNodes);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
@@ -2593,6 +2780,7 @@ export function Workbench() {
         : studyKind === "plane_triangle_2d"
           ? planeModel.materials ?? []
           : [];
+  const hiddenMaterialIds = hiddenMaterials[studyKind] ?? [];
   const materialColorMap = new Map(currentMaterials.map((material, index) => [material.id, materialColorByIndex(index)]));
   const materialOptions = currentMaterials.map((material) => ({
     id: material.id,
@@ -3032,6 +3220,36 @@ export function Workbench() {
     }));
   };
 
+  const addCustomMaterialToCurrentModel = () => {
+    if (studyKind === "axial_bar_1d") return;
+    recordHistory(t.editMaterial);
+    resetActiveResult(setResult, setJob);
+
+    if (studyKind === "truss_2d") {
+      setTrussModel((current) => ({
+        ...current,
+        materials: [...(current.materials ?? []), createCustomMaterial((current.materials?.length ?? 0) + 1)],
+      }));
+      return;
+    }
+
+    if (studyKind === "truss_3d") {
+      setTruss3dModel((current) => ({
+        ...current,
+        materials: [...(current.materials ?? []), createCustomMaterial((current.materials?.length ?? 0) + 1)],
+      }));
+      return;
+    }
+
+    setPlaneModel((current) => ({
+      ...current,
+      materials: [
+        ...(current.materials ?? []),
+        createCustomMaterial((current.materials?.length ?? 0) + 1),
+      ],
+    }));
+  };
+
   const applyMaterialToCurrentModel = (materialId: string, mode: "selected" | "all") => {
     if (studyKind === "axial_bar_1d") return;
     recordHistory(t.editMemberAction);
@@ -3094,6 +3312,58 @@ export function Workbench() {
         ),
       };
     });
+  };
+
+  const toggleMaterialVisibility = (materialId: string) => {
+    setHiddenMaterials((current) => {
+      const hidden = current[studyKind];
+      const nextHidden = hidden.includes(materialId)
+        ? hidden.filter((entry) => entry !== materialId)
+        : [...hidden, materialId];
+      return { ...current, [studyKind]: nextHidden };
+    });
+  };
+
+  const importMaterials = async (file: File | undefined) => {
+    if (!file || studyKind === "axial_bar_1d") return;
+
+    try {
+      const imported = parseMaterialLibrary(await file.text(), file.name);
+      recordHistory(t.editMaterial);
+      resetActiveResult(setResult, setJob);
+
+      const mergeMaterials = (current: ModelMaterial[] | undefined) => {
+        const existing = current ?? [];
+        const existingIds = new Set(existing.map((material) => material.id));
+        const next = [...existing];
+
+        imported.forEach((material, index) => {
+          const baseId = material.id || `mat-import-${index + 1}`;
+          let nextId = baseId;
+          let suffix = 2;
+          while (existingIds.has(nextId)) {
+            nextId = `${baseId}-${suffix}`;
+            suffix += 1;
+          }
+          existingIds.add(nextId);
+          next.push({ ...material, id: nextId });
+        });
+
+        return next;
+      };
+
+      if (studyKind === "truss_2d") {
+        setTrussModel((current) => ({ ...current, materials: mergeMaterials(current.materials) }));
+      } else if (studyKind === "truss_3d") {
+        setTruss3dModel((current) => ({ ...current, materials: mergeMaterials(current.materials) }));
+      } else {
+        setPlaneModel((current) => ({ ...current, materials: mergeMaterials(current.materials) }));
+      }
+
+      setMessage(language === "zh" ? "外部材料库已导入。" : "Imported external material library.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
   };
 
   const updateCurrentMaterial = (
@@ -3958,7 +4228,19 @@ export function Workbench() {
                 <button className="ghost-button" onClick={addMaterialToCurrentModel} type="button">
                   {language === "zh" ? "添加材料" : "Add material"}
                 </button>
+                <button className="ghost-button" onClick={addCustomMaterialToCurrentModel} type="button">
+                  {language === "zh" ? "新建自定义" : "New custom"}
+                </button>
               </div>
+              <label className="import-box">
+                <span>{language === "zh" ? "导入材料库" : "Import materials"}</span>
+                <small>{language === "zh" ? "支持 JSON / CSV 材料文件。" : "Accepts JSON / CSV material libraries."}</small>
+                <input
+                  type="file"
+                  accept=".json,.csv,text/csv,application/json"
+                  onChange={(event) => void importMaterials(event.target.files?.[0])}
+                />
+              </label>
               <div className="material-library">
                 {currentMaterials.map((material) => (
                   <div key={material.id} className="material-chip-card">
@@ -4004,6 +4286,17 @@ export function Workbench() {
                           />
                         </label>
                       ) : null}
+                    </div>
+                    <div className="button-row">
+                      <button
+                        className={`ghost-button ghost-button--compact${hiddenMaterialIds.includes(material.id) ? "" : " ghost-button--active"}`}
+                        onClick={() => toggleMaterialVisibility(material.id)}
+                        type="button"
+                      >
+                        {hiddenMaterialIds.includes(material.id)
+                          ? language === "zh" ? "显示" : "Show"
+                          : language === "zh" ? "隐藏" : "Hide"}
+                      </button>
                     </div>
                     <div className="button-row">
                       <button
@@ -4549,6 +4842,11 @@ export function Workbench() {
                 </label>
               </div>
               <p className="card-copy">{t.browserLimitsNote}</p>
+              <div className="button-row">
+                <button className="ghost-button" onClick={() => void downloadDatabaseSnapshot()} type="button">
+                  {language === "zh" ? "导出数据库快照" : "Export database snapshot"}
+                </button>
+              </div>
             </section>
             <section className="sidebar-card">
               <div className="card-head">
@@ -4569,6 +4867,135 @@ export function Workbench() {
                   <strong>{health?.transport?.solver_agent_tcp ?? 5001}</strong>
                 </div>
               </div>
+            </section>
+            <section className="sidebar-card">
+              <div className="card-head">
+                <h2>{t.dataAdmin}</h2>
+                <span>
+                  {t.databaseRecordCount}: {jobHistory.length + resultRecords.length}
+                </span>
+              </div>
+              <div className="panel-tabs">
+                <button
+                  className={`panel-tab${systemDataTab === "jobs" ? " panel-tab--active" : ""}`}
+                  onClick={() => setSystemDataTab("jobs")}
+                  type="button"
+                >
+                  {t.adminJobs}
+                </button>
+                <button
+                  className={`panel-tab${systemDataTab === "results" ? " panel-tab--active" : ""}`}
+                  onClick={() => setSystemDataTab("results")}
+                  type="button"
+                >
+                  {t.adminResults}
+                </button>
+              </div>
+              {systemDataTab === "jobs" ? (
+                <>
+                  <VirtualList
+                    className="history-list"
+                    items={deferredJobHistory}
+                    itemHeight={94}
+                    maxHeight={220}
+                    emptyState={<p className="card-copy">{t.historyEmpty}</p>}
+                    itemKey={(historyJob) => historyJob.job_id}
+                    renderItem={(historyJob) => (
+                      <button
+                        className={`history-item${selectedAdminJobId === historyJob.job_id ? " history-item--active" : ""}`}
+                        onClick={() => setSelectedAdminJobId(historyJob.job_id)}
+                        type="button"
+                      >
+                        <strong>{historyJob.job_id.slice(0, 8)}</strong>
+                        <span>{historyJob.status}</span>
+                        <small>{historyJob.project_id}</small>
+                      </button>
+                    )}
+                  />
+                  {selectedAdminJob ? (
+                    <>
+                      <div className="form-grid compact">
+                        <label>
+                          <span>{t.adminMessage}</span>
+                          <input value={adminJobMessage} onChange={(event) => setAdminJobMessage(event.target.value)} />
+                        </label>
+                        <label>
+                          <span>{t.adminProjectId}</span>
+                          <input value={adminJobProjectId} onChange={(event) => setAdminJobProjectId(event.target.value)} />
+                        </label>
+                        <label>
+                          <span>{t.adminModelVersionId}</span>
+                          <input value={adminJobModelVersionId} onChange={(event) => setAdminJobModelVersionId(event.target.value)} />
+                        </label>
+                        <label>
+                          <span>{t.adminCaseId}</span>
+                          <input value={adminJobCaseId} onChange={(event) => setAdminJobCaseId(event.target.value)} />
+                        </label>
+                      </div>
+                      <div className="button-row">
+                        <button className="ghost-button" onClick={saveAdminJobRecord} type="button">
+                          {t.saveRecord}
+                        </button>
+                        <button className="ghost-button" onClick={deleteAdminJobRecord} type="button">
+                          {t.deleteRecord}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="card-copy">{t.selectRecord}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <VirtualList
+                    className="history-list"
+                    items={deferredResultRecords}
+                    itemHeight={88}
+                    maxHeight={220}
+                    emptyState={<p className="card-copy">{t.historyEmpty}</p>}
+                    itemKey={(entry) => entry.job_id}
+                    renderItem={(entry) => (
+                      <button
+                        className={`history-item${selectedAdminResultJobId === entry.job_id ? " history-item--active" : ""}`}
+                        onClick={() => setSelectedAdminResultJobId(entry.job_id)}
+                        type="button"
+                      >
+                        <strong>{entry.job_id.slice(0, 8)}</strong>
+                        <span>{entry.updated_at ? formatTime(entry.updated_at, language) : t.hasResult}</span>
+                        <small>{Object.keys(entry.result).join(", ").slice(0, 64) || t.resultPayload}</small>
+                      </button>
+                    )}
+                  />
+                  {selectedAdminResult ? (
+                    <>
+                      <div className="form-grid compact">
+                        <label>
+                          <span>{t.resultPayload}</span>
+                          <textarea
+                            className="json-editor"
+                            value={adminResultDraft}
+                            onChange={(event) => setAdminResultDraft(event.target.value)}
+                            rows={10}
+                          />
+                        </label>
+                      </div>
+                      <div className="button-row">
+                        <button className="ghost-button" onClick={saveAdminResultRecord} type="button">
+                          {t.saveRecord}
+                        </button>
+                        <button className="ghost-button" onClick={exportAdminResultRecord} type="button">
+                          {t.exportRecord}
+                        </button>
+                        <button className="ghost-button" onClick={deleteAdminResultRecord} type="button">
+                          {t.deleteRecord}
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="card-copy">{t.selectRecord}</p>
+                  )}
+                </>
+              )}
             </section>
           </div>
         ) : null}
@@ -4997,6 +5424,7 @@ export function Workbench() {
             displayTrussNodes={displayTrussNodes}
             displayTrussElements={displayTrussElements}
             trussElementColors={trussElementColors}
+            hiddenTrussMaterialIds={isTruss ? hiddenMaterialIds : []}
             trussBounds={trussBounds}
             trussResult={Boolean(trussResult)}
             trussHotspotNodes={trussStability?.hotspotNodes ?? []}
@@ -5019,9 +5447,11 @@ export function Workbench() {
             displayTruss3dNodes={displayTruss3dNodes}
             displayTruss3dElements={displayTruss3dElements}
             truss3dElementColors={truss3dElementColors}
+            hiddenTruss3dMaterialIds={isTruss3d ? hiddenMaterialIds : []}
             planeNodes={planeNodes}
             planeElements={planeElements}
             planeElementColors={planeElementColors}
+            hiddenPlaneMaterialIds={isPlane ? hiddenMaterialIds : []}
             planeBounds={planeBounds}
             planeResult={Boolean(planeResult)}
             planeMaxVonMises={planeMaxVonMises}

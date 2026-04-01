@@ -8,6 +8,28 @@ Kyuubiki is a browser-first FEM workbench with a split architecture:
 
 The current stack is already runnable on macOS and uses `PostgreSQL` for persisted jobs, projects, models, and model versions.
 
+## Cross-platform Bootstrap
+
+Kyuubiki now includes a repo-local cross-platform installer utility built in Rust.
+
+It does not try to silently mutate host-level package managers. Instead it helps with:
+
+- environment checks
+- repo-local directory preparation
+- `.env.local` initialization
+- launch manifest export for future packaging/deployment work
+
+Use:
+
+```bash
+make doctor
+make install ARGS="bootstrap"
+```
+
+Installer source:
+
+- [installer main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/installer/src/main.rs)
+
 ## Current Architecture
 
 ```text
@@ -29,6 +51,8 @@ PostgreSQL
 - Parametric model generation
 - Direct node drag editing for 2D truss
 - Project / model / version CRUD
+- Job / result CRUD
+- Database snapshot export
 - Undo / redo for frontend modeling actions
 - Persistent job history
 - Benchmark runner for solver cases
@@ -105,6 +129,8 @@ The Next.js workbench currently supports:
 - saved model CRUD
 - model version management
 - result export as JSON / CSV
+- database snapshot export as JSON
+- system-side job/result record management
 - project export as `.kyuubiki.json` and `.kyuubiki`
 - project import from both formats
 
@@ -123,6 +149,9 @@ The Elixir app currently serves:
 - project CRUD
 - model CRUD
 - model version CRUD
+- job CRUD
+- result CRUD
+- full database export
 - round-robin dispatch across multiple Rust RPC agents with failover for unavailable endpoints
 
 Main API router:
@@ -178,6 +207,12 @@ Restart services:
 
 ```bash
 make restart
+```
+
+Export the current database snapshot:
+
+```bash
+make export-db > kyuubiki-database.json
 ```
 
 Main local endpoints:

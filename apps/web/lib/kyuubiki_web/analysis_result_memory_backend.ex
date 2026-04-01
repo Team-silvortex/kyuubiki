@@ -26,6 +26,29 @@ defmodule KyuubikiWeb.AnalysisResultMemoryBackend do
     end)
   end
 
+  def list do
+    Agent.get(__MODULE__, fn results ->
+      results
+      |> Enum.map(fn {job_id, payload} -> %{"job_id" => job_id, "result" => payload} end)
+      |> Enum.sort_by(& &1["job_id"])
+    end)
+  end
+
+  def update(job_id, result) when is_binary(job_id) and is_map(result), do: put(job_id, result)
+
+  def delete(job_id) when is_binary(job_id) do
+    Agent.get_and_update(__MODULE__, fn results ->
+      case Map.pop(results, job_id) do
+        {nil, current} ->
+          {{:error, {:result_not_found, job_id}}, current}
+
+        {result, current} ->
+          Persistence.write_json!(Persistence.results_path(), current)
+          {{:ok, result}, current}
+      end
+    end)
+  end
+
   def reset do
     Agent.update(__MODULE__, fn _ ->
       Persistence.write_json!(Persistence.results_path(), %{})

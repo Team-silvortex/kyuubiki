@@ -8,6 +8,9 @@ defmodule KyuubikiWeb.AnalysisResultStore do
 
   def put(job_id, result), do: backend().put(job_id, result)
   def get(job_id), do: backend().get(job_id)
+  def list, do: backend().list()
+  def update(job_id, result), do: backend().update(job_id, result)
+  def delete(job_id), do: backend().delete(job_id)
   def reset, do: backend().reset()
 
   defp backend do
