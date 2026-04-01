@@ -164,17 +164,25 @@ type WorkbenchInspectorProps = {
   selectedPlaneElementData: PlaneElementSelection | null;
   trussElementArea: number;
   trussElementModulusGpa: number;
+  trussElementMaterialId: string;
   truss3dElementArea: number;
   truss3dElementModulusGpa: number;
+  truss3dElementMaterialId: string;
   planeElementThickness: number;
   planeElementModulusGpa: number;
   planeElementPoissonRatio: number;
+  planeElementMaterialId: string;
+  materialOptions: Array<{ id: string; label: string }>;
+  materialLabel: string;
   onUpdateSelectedNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y", value: number | boolean) => void;
   onUpdateSelectedElement: (field: "area" | "youngs_modulus", value: number) => void;
+  onAssignSelectedElementMaterial: (materialId: string) => void;
   onUpdateSelectedTruss3dNode: (field: "x" | "y" | "z" | "load_x" | "load_y" | "load_z" | "fix_x" | "fix_y" | "fix_z", value: number | boolean) => void;
   onUpdateSelectedTruss3dElement: (field: "area" | "youngs_modulus", value: number) => void;
+  onAssignSelectedTruss3dElementMaterial: (materialId: string) => void;
   onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y", value: number | boolean) => void;
   onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio", value: number) => void;
+  onAssignSelectedPlaneElementMaterial: (materialId: string) => void;
   trussDiagnostics: TrussDiagnostics | null;
   trussStability: StabilitySummary | null;
   hotspotNodeLabels: string;
@@ -210,17 +218,25 @@ function WorkbenchInspectorInner({
   selectedPlaneElementData,
   trussElementArea,
   trussElementModulusGpa,
+  trussElementMaterialId,
   truss3dElementArea,
   truss3dElementModulusGpa,
+  truss3dElementMaterialId,
   planeElementThickness,
   planeElementModulusGpa,
   planeElementPoissonRatio,
+  planeElementMaterialId,
+  materialOptions,
+  materialLabel,
   onUpdateSelectedNode,
   onUpdateSelectedElement,
+  onAssignSelectedElementMaterial,
   onUpdateSelectedTruss3dNode,
   onUpdateSelectedTruss3dElement,
+  onAssignSelectedTruss3dElementMaterial,
   onUpdateSelectedPlaneNode,
   onUpdateSelectedPlaneElement,
+  onAssignSelectedPlaneElementMaterial,
   trussDiagnostics,
   trussStability,
   hotspotNodeLabels,
@@ -280,6 +296,14 @@ function WorkbenchInspectorInner({
                 <label><span>{t.memberSelection}</span><input value={selectedElementData.id} readOnly /></label>
                 <label><span>{t.nodeI}</span><input value={selectedElementData.node_i} readOnly /></label>
                 <label><span>{t.nodeJ}</span><input value={selectedElementData.node_j} readOnly /></label>
+                <label>
+                  <span>{materialLabel}</span>
+                  <select value={trussElementMaterialId} onChange={(event) => onAssignSelectedElementMaterial(event.target.value)}>
+                    {materialOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
                 <label><span>{t.area}</span><input type="number" step={0.0001} value={trussElementArea} onChange={(event) => onUpdateSelectedElement("area", Number(event.target.value))} /></label>
                 <label><span>{t.modulus}</span><input type="number" step={0.1} value={trussElementModulusGpa} onChange={(event) => onUpdateSelectedElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
               </div>
@@ -301,6 +325,14 @@ function WorkbenchInspectorInner({
                 <label><span>{t.memberSelection}</span><input value={selectedTruss3dElementData.id} readOnly /></label>
                 <label><span>{t.nodeI}</span><input value={selectedTruss3dElementData.node_i} readOnly /></label>
                 <label><span>{t.nodeJ}</span><input value={selectedTruss3dElementData.node_j} readOnly /></label>
+                <label>
+                  <span>{materialLabel}</span>
+                  <select value={truss3dElementMaterialId} onChange={(event) => onAssignSelectedTruss3dElementMaterial(event.target.value)}>
+                    {materialOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
                 <label><span>{t.area}</span><input type="number" step={0.0001} value={truss3dElementArea} onChange={(event) => onUpdateSelectedTruss3dElement("area", Number(event.target.value))} /></label>
                 <label><span>{t.modulus}</span><input type="number" step={0.1} value={truss3dElementModulusGpa} onChange={(event) => onUpdateSelectedTruss3dElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
               </div>
@@ -320,6 +352,14 @@ function WorkbenchInspectorInner({
                 <label><span>{t.nodeI}</span><input value={selectedPlaneElementData.node_i} readOnly /></label>
                 <label><span>{t.nodeJ}</span><input value={selectedPlaneElementData.node_j} readOnly /></label>
                 <label><span>{t.nodeK}</span><input value={selectedPlaneElementData.node_k} readOnly /></label>
+                <label>
+                  <span>{materialLabel}</span>
+                  <select value={planeElementMaterialId} onChange={(event) => onAssignSelectedPlaneElementMaterial(event.target.value)}>
+                    {materialOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
                 <label><span>{t.planeThickness}</span><input type="number" step={0.001} value={planeElementThickness} onChange={(event) => onUpdateSelectedPlaneElement("thickness", Number(event.target.value))} /></label>
                 <label><span>{t.modulus}</span><input type="number" step={0.1} value={planeElementModulusGpa} onChange={(event) => onUpdateSelectedPlaneElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
                 <label><span>{t.poissonRatio}</span><input type="number" step={0.01} min={0.01} max={0.49} value={planeElementPoissonRatio} onChange={(event) => onUpdateSelectedPlaneElement("poisson_ratio", Number(event.target.value))} /></label>

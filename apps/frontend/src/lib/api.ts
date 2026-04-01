@@ -24,11 +24,20 @@ export type TrussElementInput = {
   node_j: number;
   area: number;
   youngs_modulus: number;
+  material_id?: string;
+};
+
+export type ModelMaterial = {
+  id: string;
+  name: string;
+  youngs_modulus: number;
+  poisson_ratio?: number | null;
 };
 
 export type Truss2dJobInput = {
   nodes: TrussNodeInput[];
   elements: TrussElementInput[];
+  materials?: ModelMaterial[];
   project_id?: string;
   model_version_id?: string;
 };
@@ -52,11 +61,13 @@ export type Truss3dElementInput = {
   node_j: number;
   area: number;
   youngs_modulus: number;
+  material_id?: string;
 };
 
 export type Truss3dJobInput = {
   nodes: Truss3dNodeInput[];
   elements: Truss3dElementInput[];
+  materials?: ModelMaterial[];
   project_id?: string;
   model_version_id?: string;
 };
@@ -79,11 +90,13 @@ export type PlaneTriangleElementInput = {
   thickness: number;
   youngs_modulus: number;
   poisson_ratio: number;
+  material_id?: string;
 };
 
 export type PlaneTriangle2dJobInput = {
   nodes: PlaneNodeInput[];
   elements: PlaneTriangleElementInput[];
+  materials?: ModelMaterial[];
   project_id?: string;
   model_version_id?: string;
 };
@@ -269,6 +282,71 @@ export type HealthPayload = {
     solver_agent_tcp: number;
   };
 };
+
+function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
+  return new Map((materials ?? []).map((material) => [material.id, material]));
+}
+
+export function resolveTruss2dJobInput(
+  input: Truss2dJobInput,
+): Omit<Truss2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveTruss3dJobInput(
+  input: Truss3dJobInput,
+): Omit<Truss3dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolvePlaneTriangle2dJobInput(
+  input: PlaneTriangle2dJobInput,
+): Omit<PlaneTriangle2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+        poisson_ratio:
+          material?.poisson_ratio === null || material?.poisson_ratio === undefined
+            ? element.poisson_ratio
+            : material.poisson_ratio,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);

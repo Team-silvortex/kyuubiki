@@ -2,6 +2,7 @@ import type {
   AxialBarJobInput,
   JobResultRecord,
   JobState,
+  ModelMaterial,
   ModelRecord,
   ModelVersionRecord,
   PlaneTriangle2dJobInput,
@@ -166,6 +167,7 @@ export function exportStudyModel(
     name: string;
     material: string;
     youngsModulusGpa: number;
+    materials?: ModelMaterial[];
     axial?: AxialBarJobInput;
     truss?: Truss2dJobInput;
     truss3d?: Truss3dJobInput;
@@ -180,6 +182,7 @@ export function exportStudyModel(
         name: payload.name,
         material: payload.material,
         youngs_modulus_gpa: payload.youngsModulusGpa,
+        materials: payload.plane.materials ?? payload.materials,
         nodes: payload.plane.nodes,
         elements: payload.plane.elements,
       },
@@ -196,6 +199,7 @@ export function exportStudyModel(
         name: payload.name,
         material: payload.material,
         youngs_modulus_gpa: payload.youngsModulusGpa,
+        materials: payload.truss.materials ?? payload.materials,
         nodes: payload.truss.nodes,
         elements: payload.truss.elements,
       },
@@ -212,6 +216,7 @@ export function exportStudyModel(
         name: payload.name,
         material: payload.material,
         youngs_modulus_gpa: payload.youngsModulusGpa,
+        materials: payload.truss3d.materials ?? payload.materials,
         nodes: payload.truss3d.nodes,
         elements: payload.truss3d.elements,
       },
@@ -247,6 +252,7 @@ export function buildStudyModelPayload(
     name: string;
     material: string;
     youngsModulusGpa: number;
+    materials?: ModelMaterial[];
     axial?: AxialBarJobInput;
     truss?: Truss2dJobInput;
     truss3d?: Truss3dJobInput;

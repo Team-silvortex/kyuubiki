@@ -95,6 +95,7 @@ type WorkbenchViewportProps = {
   axialScale: number;
   displayTrussNodes: DisplayTrussNode[];
   displayTrussElements: DisplayTrussElement[];
+  trussElementColors: string[];
   trussBounds: Bounds;
   trussResult: boolean;
   trussHotspotNodes: number[];
@@ -108,8 +109,10 @@ type WorkbenchViewportProps = {
   onStartTrussNodeDrag: (index: number) => void;
   displayTruss3dNodes: DisplayTruss3dNode[];
   displayTruss3dElements: DisplayTruss3dElement[];
+  truss3dElementColors: string[];
   planeNodes: PlaneNode[];
   planeElements: PlaneElement[];
+  planeElementColors: string[];
   planeBounds: Bounds;
   planeResult: boolean;
   planeMaxVonMises: number;
@@ -364,6 +367,7 @@ function WorkbenchViewportInner({
   axialScale,
   displayTrussNodes,
   displayTrussElements,
+  trussElementColors,
   trussBounds,
   trussResult,
   trussHotspotNodes,
@@ -377,8 +381,10 @@ function WorkbenchViewportInner({
   onStartTrussNodeDrag,
   displayTruss3dNodes,
   displayTruss3dElements,
+  truss3dElementColors,
   planeNodes,
   planeElements,
+  planeElementColors,
   planeBounds,
   planeResult,
   planeMaxVonMises,
@@ -729,6 +735,7 @@ function WorkbenchViewportInner({
                 x2={end.x}
                 y2={end.y}
                 className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}`}
+                style={{ stroke: trussElementColors[element.index] }}
                 onPointerDown={(event) => {
                   if (isModelMode) {
                     event.stopPropagation();
@@ -872,6 +879,7 @@ function WorkbenchViewportInner({
                 x2={end.x}
                 y2={end.y}
                 className={`bar bar--base${selectedTruss3dElement === element.index ? " bar--selected" : ""}`}
+                style={{ stroke: truss3dElementColors[element.index] }}
                 onPointerDown={(event) => {
                   event.stopPropagation();
                   onSelectTruss3dElement(element.index);
@@ -1016,7 +1024,7 @@ function WorkbenchViewportInner({
               key={`plane-${element.id}`}
               points={points.map((point) => `${point.x},${point.y}`).join(" ")}
               className={`plane-triangle${selectedElement === element.index ? " plane-triangle--active" : ""}`}
-              style={{ fill: planeStressFill(element.von_mises ?? 0, planeMaxVonMises) }}
+              style={{ fill: planeResult ? planeStressFill(element.von_mises ?? 0, planeMaxVonMises) : planeElementColors[element.index] }}
               onPointerDown={() => {
                 if (isModelMode) onSelectPlaneElement(element.index);
               }}

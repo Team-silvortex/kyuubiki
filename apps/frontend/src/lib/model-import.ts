@@ -1,4 +1,5 @@
-import type { PlaneTriangle2dJobInput, Truss2dJobInput, Truss3dJobInput } from "@/lib/api";
+import type { ModelMaterial, PlaneTriangle2dJobInput, Truss2dJobInput, Truss3dJobInput } from "@/lib/api";
+import { createMaterialDefinition } from "@/lib/materials";
 
 export type ImportedAxialBarModel = {
   kind: "axial_bar_1d";
@@ -92,6 +93,47 @@ function normalizeMaterial(value: unknown): string {
   return MATERIAL_MAP.get(materialKey) ?? "custom";
 }
 
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function parseMaterials(
+  raw: Record<string, unknown>,
+  fallbackMaterial: string,
+  fallbackYoungsModulusGpa: number,
+  fallbackPoissonRatio?: number,
+): ModelMaterial[] {
+  if (!Array.isArray(raw.materials) || raw.materials.length === 0) {
+    return [
+      createMaterialDefinition(fallbackMaterial, 1, {
+        id: "mat-1",
+        youngs_modulus: fallbackYoungsModulusGpa * 1.0e9,
+        poisson_ratio: fallbackPoissonRatio ?? null,
+      }),
+    ];
+  }
+
+  return raw.materials.map((entry, index) => {
+    const material = (entry ?? {}) as Record<string, unknown>;
+    return createMaterialDefinition(
+      fallbackMaterial,
+      index + 1,
+      {
+        id: requiredString(material.id, `materials[${index}].id`),
+        name: optionalString(material.name) ?? createMaterialDefinition(fallbackMaterial, index + 1).name,
+        youngs_modulus: requiredNumber(
+          material.youngs_modulus,
+          `materials[${index}].youngs_modulus`,
+        ),
+        poisson_ratio:
+          material.poisson_ratio === undefined || material.poisson_ratio === null
+            ? fallbackPoissonRatio ?? null
+            : Number(material.poisson_ratio),
+      },
+    );
+  });
+}
+
 function assertSupportedVersion(raw: Record<string, unknown>) {
   const version = raw.model_schema_version;
   if (version === undefined) return;
@@ -137,12 +179,22 @@ function parseTrussElement(raw: unknown, index: number): Truss2dJobInput["elemen
       element.youngs_modulus,
       `elements[${index}].youngs_modulus`,
     ),
+    material_id: optionalString(element.material_id),
   };
 }
 
 function parseTruss2dV1(raw: Record<string, unknown>): ImportedTruss2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
   const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseTrussNode) : [];
-  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseTrussElement) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseTrussElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
 
   if (nodes.length < 2) {
     throw new Error("nodes must contain at least two entries");
@@ -155,9 +207,9 @@ function parseTruss2dV1(raw: Record<string, unknown>): ImportedTruss2dModel {
   return {
     kind: "truss_2d",
     name: typeof raw.name === "string" ? raw.name : "imported-truss",
-    material: normalizeMaterial(raw.material),
-    youngsModulusGpa: requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa"),
-    model: { nodes, elements },
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
   };
 }
 
@@ -190,12 +242,29 @@ function parsePlaneElement(
       `elements[${index}].youngs_modulus`,
     ),
     poisson_ratio: numberOrZero(element.poisson_ratio),
+    material_id: optionalString(element.material_id),
   };
 }
 
 function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTriangle2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(
+    raw,
+    material,
+    youngsModulusGpa,
+    Array.isArray(raw.elements) && raw.elements.length > 0
+      ? numberOrZero(((raw.elements[0] ?? {}) as Record<string, unknown>).poisson_ratio)
+      : 0.33,
+  );
   const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parsePlaneNode) : [];
-  const elements = Array.isArray(raw.elements) ? raw.elements.map(parsePlaneElement) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parsePlaneElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
 
   if (nodes.length < 3) {
     throw new Error("nodes must contain at least three entries");
@@ -208,9 +277,9 @@ function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTria
   return {
     kind: "plane_triangle_2d",
     name: typeof raw.name === "string" ? raw.name : "imported-plane",
-    material: normalizeMaterial(raw.material),
-    youngsModulusGpa: requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa"),
-    model: { nodes, elements },
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
   };
 }
 
@@ -238,12 +307,22 @@ function parseTruss3dElement(raw: unknown, index: number): Truss3dJobInput["elem
     node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
     area: requiredNumber(element.area, `elements[${index}].area`),
     youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    material_id: optionalString(element.material_id),
   };
 }
 
 function parseTruss3dV1(raw: Record<string, unknown>): ImportedTruss3dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
   const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseTruss3dNode) : [];
-  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseTruss3dElement) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseTruss3dElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
 
   if (nodes.length < 3) {
     throw new Error("nodes must contain at least three entries");
@@ -256,9 +335,9 @@ function parseTruss3dV1(raw: Record<string, unknown>): ImportedTruss3dModel {
   return {
     kind: "truss_3d",
     name: typeof raw.name === "string" ? raw.name : "imported-truss-3d",
-    material: normalizeMaterial(raw.material),
-    youngsModulusGpa: requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa"),
-    model: { nodes, elements },
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
   };
 }
 

@@ -15,7 +15,7 @@ import { WorkbenchConsole } from "@/components/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench-inspector";
 import { WorkbenchObjectTree } from "@/components/workbench-object-tree";
 import { WorkbenchViewport } from "@/components/workbench-viewport";
-import { MATERIAL_PRESETS } from "@/lib/materials";
+import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
 import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/project-format";
 import {
@@ -52,11 +52,15 @@ import {
   type JobEnvelope,
   type JobResultRecord,
   type JobState,
+  type ModelMaterial,
   type ModelRecord,
   type ModelVersionRecord,
   type PlaneTriangle2dJobInput,
   type PlaneTriangle2dResult,
   type ProjectRecord,
+  resolvePlaneTriangle2dJobInput,
+  resolveTruss2dJobInput,
+  resolveTruss3dJobInput,
   type Truss2dJobInput,
   type Truss2dResult,
   type Truss3dJobInput,
@@ -106,6 +110,7 @@ type DisplayTrussElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  material_id?: string;
 };
 
 type DisplayTruss3dNode = {
@@ -128,6 +133,7 @@ type DisplayTruss3dElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  material_id?: string;
 };
 
 type SelectionKind = "node" | "element";
@@ -179,15 +185,16 @@ const defaultAxial: AxialFormState = {
 };
 
 const defaultTruss: Truss2dJobInput = {
+  materials: [createMaterialDefinition("70", 1, { id: "mat-1" })],
   nodes: [
     { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
     { id: "n1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
     { id: "n2", x: 0.5, y: 0.8, fix_x: false, fix_y: false, load_x: 0, load_y: -1000 },
   ],
   elements: [
-    { id: "e0", node_i: 0, node_j: 2, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e2", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e0", node_i: 0, node_j: 2, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e2", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
   ],
 };
 
@@ -212,6 +219,7 @@ const defaultPanelParametric: ParametricPanelConfig = {
 };
 
 const defaultPlane: PlaneTriangle2dJobInput = {
+  materials: [createMaterialDefinition("70", 1, { id: "mat-1", poisson_ratio: 0.33 })],
   nodes: [
     { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
     { id: "n1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
@@ -219,12 +227,13 @@ const defaultPlane: PlaneTriangle2dJobInput = {
     { id: "n3", x: 0, y: 1, fix_x: true, fix_y: false, load_x: 0, load_y: -800 },
   ],
   elements: [
-    { id: "p0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33 },
-    { id: "p1", node_i: 0, node_j: 2, node_k: 3, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33 },
+    { id: "p0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, material_id: "mat-1" },
+    { id: "p1", node_i: 0, node_j: 2, node_k: 3, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, material_id: "mat-1" },
   ],
 };
 
 const defaultTruss3d: Truss3dJobInput = {
+  materials: [createMaterialDefinition("70", 1, { id: "mat-1" })],
   nodes: [
     { id: "b0", x: 0, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
     { id: "b1", x: 1.2, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
@@ -232,12 +241,12 @@ const defaultTruss3d: Truss3dJobInput = {
     { id: "top", x: 0.35, y: 0.3, z: 1.0, fix_x: false, fix_y: false, fix_z: false, load_x: 0, load_y: 0, load_z: -1500 },
   ],
   elements: [
-    { id: "e0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e2", node_i: 2, node_j: 0, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e3", node_i: 0, node_j: 3, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e4", node_i: 1, node_j: 3, area: 0.01, youngs_modulus: 70e9 },
-    { id: "e5", node_i: 2, node_j: 3, area: 0.01, youngs_modulus: 70e9 },
+    { id: "e0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e2", node_i: 2, node_j: 0, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e3", node_i: 0, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e4", node_i: 1, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
+    { id: "e5", node_i: 2, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
   ],
 };
 
@@ -880,11 +889,75 @@ function serializeCurrentModel(
           : studyKind === "truss_3d"
             ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
+    materials:
+      studyKind === "truss_2d"
+        ? trussModel.materials
+        : studyKind === "truss_3d"
+          ? truss3dModel.materials
+          : studyKind === "plane_triangle_2d"
+            ? planeModel.materials
+            : undefined,
     axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
     truss: studyKind === "truss_2d" ? trussModel : undefined,
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
     plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
   });
+}
+
+function nextMaterialId(materials: ModelMaterial[] | undefined) {
+  return `mat-${(materials?.length ?? 0) + 1}`;
+}
+
+function ensureTrussModelMaterials(model: Truss2dJobInput, fallbackValue = "70"): Truss2dJobInput {
+  const materials =
+    model.materials && model.materials.length > 0
+      ? model.materials
+      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1" })];
+  const defaultMaterialId = materials[0]?.id;
+
+  return {
+    ...model,
+    materials,
+    elements: model.elements.map((element) => ({
+      ...element,
+      material_id: element.material_id ?? defaultMaterialId,
+    })),
+  };
+}
+
+function ensureTruss3dModelMaterials(model: Truss3dJobInput, fallbackValue = "70"): Truss3dJobInput {
+  const materials =
+    model.materials && model.materials.length > 0
+      ? model.materials
+      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1" })];
+  const defaultMaterialId = materials[0]?.id;
+
+  return {
+    ...model,
+    materials,
+    elements: model.elements.map((element) => ({
+      ...element,
+      material_id: element.material_id ?? defaultMaterialId,
+    })),
+  };
+}
+
+function ensurePlaneModelMaterials(model: PlaneTriangle2dJobInput, fallbackValue = "70"): PlaneTriangle2dJobInput {
+  const fallbackPoisson = model.elements[0]?.poisson_ratio ?? 0.33;
+  const materials =
+    model.materials && model.materials.length > 0
+      ? model.materials
+      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1", poisson_ratio: fallbackPoisson })];
+  const defaultMaterialId = materials[0]?.id;
+
+  return {
+    ...model,
+    materials,
+    elements: model.elements.map((element) => ({
+      ...element,
+      material_id: element.material_id ?? defaultMaterialId,
+    })),
+  };
 }
 
 function toCsvRow(values: Array<string | number | boolean | null | undefined>) {
@@ -1096,7 +1169,10 @@ function buildDisplayTruss3dNodes(model: Truss3dJobInput, result: Truss3dResult 
 
 function buildDisplayTruss3dElements(model: Truss3dJobInput, result: Truss3dResult | null): DisplayTruss3dElement[] {
   if (result) {
-    return result.elements.map((element) => ({ ...element }));
+    return result.elements.map((element) => ({
+      ...element,
+      material_id: model.elements[element.index]?.material_id,
+    }));
   }
 
   return model.elements.map((element, index) => {
@@ -1115,6 +1191,7 @@ function buildDisplayTruss3dElements(model: Truss3dJobInput, result: Truss3dResu
       strain: 0,
       stress: 0,
       axial_force: 0,
+      material_id: element.material_id,
     };
   });
 }
@@ -1146,6 +1223,19 @@ function localMaterialLabel(value: string, language: Language): string {
   } as const;
 
   return labels[language][value as keyof (typeof labels)[Language]] ?? labels[language].custom;
+}
+
+const MATERIAL_COLOR_STOPS = [
+  "#1677a3",
+  "#ff8a3d",
+  "#4a9c61",
+  "#915fe2",
+  "#c7547a",
+  "#8a6f3b",
+];
+
+function materialColorByIndex(index: number) {
+  return MATERIAL_COLOR_STOPS[index % MATERIAL_COLOR_STOPS.length];
 }
 
 function formatTime(value: string | undefined, language: Language): string {
@@ -1213,6 +1303,7 @@ function buildDisplayTrussElements(model: Truss2dJobInput, result: Truss2dResult
       strain: element.strain,
       stress: element.stress,
       axial_force: element.axial_force,
+      material_id: model.elements[element.index]?.material_id,
     }));
   }
 
@@ -1231,6 +1322,7 @@ function buildDisplayTrussElements(model: Truss2dJobInput, result: Truss2dResult
       strain: 0,
       stress: 0,
       axial_force: 0,
+      material_id: element.material_id,
     };
   });
 }
@@ -1763,10 +1855,10 @@ export function Workbench() {
           studyKind === "axial_bar_1d"
             ? await createAxialBarJob({ ...toAxialInput(axialForm), ...jobContext })
             : studyKind === "truss_2d"
-              ? await createTruss2dJob({ ...trussModel, ...jobContext })
+              ? await createTruss2dJob(resolveTruss2dJobInput({ ...trussModel, ...jobContext }))
               : studyKind === "truss_3d"
-                ? await createTruss3dJob({ ...truss3dModel, ...jobContext })
-              : await createPlaneTriangle2dJob({ ...planeModel, ...jobContext });
+                ? await createTruss3dJob(resolveTruss3dJobInput({ ...truss3dModel, ...jobContext }))
+              : await createPlaneTriangle2dJob(resolvePlaneTriangle2dJobInput({ ...planeModel, ...jobContext }));
 
         setJob(created.job);
         await refreshJobHistory();
@@ -1830,21 +1922,21 @@ export function Workbench() {
           if (isTrussResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("truss_2d");
-            setTrussModel(payload.result.input);
+            setTrussModel(ensureTrussModelMaterials(payload.result.input, activeMaterial));
             setSidebarSection("study");
           }
 
           if (isTruss3dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("truss_3d");
-            setTruss3dModel(payload.result.input);
+            setTruss3dModel(ensureTruss3dModelMaterials(payload.result.input, activeMaterial));
             setSidebarSection("study");
           }
 
           if (isPlaneTriangleResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("plane_triangle_2d");
-            setPlaneModel(payload.result.input);
+            setPlaneModel(ensurePlaneModelMaterials(payload.result.input, activeMaterial));
             setSidebarSection("study");
           }
         }
@@ -1870,7 +1962,7 @@ export function Workbench() {
 
       if (imported.kind === "truss_2d") {
         setStudyKind("truss_2d");
-        setTrussModel(imported.model);
+        setTrussModel(ensureTrussModelMaterials(imported.model, imported.material));
         setActiveMaterial(imported.material);
         setParametric((current) => ({
           ...current,
@@ -1878,11 +1970,11 @@ export function Workbench() {
         }));
       } else if (imported.kind === "truss_3d") {
         setStudyKind("truss_3d");
-        setTruss3dModel(imported.model);
+        setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
         setActiveMaterial(imported.material);
       } else if (imported.kind === "plane_triangle_2d") {
         setStudyKind("plane_triangle_2d");
-        setPlaneModel(imported.model);
+        setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
         setActiveMaterial(imported.material);
       } else {
         setStudyKind("axial_bar_1d");
@@ -1915,13 +2007,13 @@ export function Workbench() {
 
         if (imported.kind === "plane_triangle_2d") {
           setStudyKind("plane_triangle_2d");
-          setPlaneModel(imported.model);
+          setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
         } else if (imported.kind === "truss_3d") {
           setStudyKind("truss_3d");
-          setTruss3dModel(imported.model);
+          setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
         } else if (imported.kind === "truss_2d") {
           setStudyKind("truss_2d");
-          setTrussModel(imported.model);
+          setTrussModel(ensureTrussModelMaterials(imported.model, imported.material));
         } else {
           setStudyKind("axial_bar_1d");
           setAxialForm({
@@ -1982,7 +2074,7 @@ export function Workbench() {
 
   const generateModel = () => {
     recordHistory(t.generateAction);
-    const nextModel = generatePrattTruss(parametric);
+    const nextModel = ensureTrussModelMaterials(generatePrattTruss(parametric), activeMaterial);
     setStudyKind("truss_2d");
     setTrussModel(nextModel);
     setSelectedNode(null);
@@ -1998,7 +2090,7 @@ export function Workbench() {
 
   const generatePanelModel = () => {
     recordHistory(t.generateAction);
-    const nextModel = generateRectangularPanelMesh(panelParametric);
+    const nextModel = ensurePlaneModelMaterials(generateRectangularPanelMesh(panelParametric), activeMaterial);
     setStudyKind("plane_triangle_2d");
     setPlaneModel(nextModel);
     setSelectedNode(null);
@@ -2222,13 +2314,13 @@ export function Workbench() {
 
     if (imported.kind === "plane_triangle_2d") {
       setStudyKind("plane_triangle_2d");
-      setPlaneModel(imported.model);
+      setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
     } else if (imported.kind === "truss_3d") {
       setStudyKind("truss_3d");
-      setTruss3dModel(imported.model);
+      setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
     } else if (imported.kind === "truss_2d") {
       setStudyKind("truss_2d");
-      setTrussModel(imported.model);
+      setTrussModel(ensureTrussModelMaterials(imported.model, imported.material));
     } else {
       setStudyKind("axial_bar_1d");
       setAxialForm({
@@ -2493,6 +2585,22 @@ export function Workbench() {
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
   const translatedFailureReason = humanizeSolverFailure(job?.message, t);
   const planeMaxVonMises = Math.max(...planeElements.map((element) => element.von_mises ?? 0), 0);
+  const currentMaterials =
+    studyKind === "truss_2d"
+      ? trussModel.materials ?? []
+      : studyKind === "truss_3d"
+        ? truss3dModel.materials ?? []
+        : studyKind === "plane_triangle_2d"
+          ? planeModel.materials ?? []
+          : [];
+  const materialColorMap = new Map(currentMaterials.map((material, index) => [material.id, materialColorByIndex(index)]));
+  const materialOptions = currentMaterials.map((material) => ({
+    id: material.id,
+    label: `${material.name} (${round(material.youngs_modulus / 1.0e9)} GPa)`,
+  }));
+  const trussElementColors = displayTrussElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
+  const truss3dElementColors = displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
+  const planeElementColors = planeModel.elements.map((element) => materialColorMap.get(element.material_id ?? "") ?? planeStressFill(0, 1));
 
   const buildSnapshot = (): WorkbenchSnapshot => ({
     studyKind,
@@ -2580,6 +2688,7 @@ export function Workbench() {
       const nearestIndex = findNearestConnectableNode(current, suggestion.nodeIndex);
       if (nearestIndex === null) return current;
       connected = true;
+      const material = current.materials?.[0];
       return {
         ...current,
         elements: [
@@ -2589,7 +2698,8 @@ export function Workbench() {
             node_i: suggestion.nodeIndex,
             node_j: nearestIndex,
             area: parametric.area,
-            youngs_modulus: parametric.youngsModulusGpa * 1.0e9,
+            youngs_modulus: material?.youngs_modulus ?? parametric.youngsModulusGpa * 1.0e9,
+            material_id: material?.id,
           },
         ],
       };
@@ -2622,6 +2732,27 @@ export function Workbench() {
         index === selectedElement ? { ...element, [key]: value } : element,
       ),
     }));
+  };
+
+  const assignSelectedElementMaterial = (materialId: string) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setTrussModel((current) => {
+      const material = current.materials?.find((entry) => entry.id === materialId);
+      return {
+        ...current,
+        elements: current.elements.map((element, index) =>
+          index === selectedElement
+            ? {
+                ...element,
+                material_id: materialId,
+                youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+              }
+            : element,
+        ),
+      };
+    });
   };
 
   const updateSelectedTruss3dNode = (
@@ -2782,6 +2913,27 @@ export function Workbench() {
     }));
   };
 
+  const assignSelectedTruss3dElementMaterial = (materialId: string) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => {
+      const material = current.materials?.find((entry) => entry.id === materialId);
+      return {
+        ...current,
+        elements: current.elements.map((element, index) =>
+          index === selectedElement
+            ? {
+                ...element,
+                material_id: materialId,
+                youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+              }
+            : element,
+        ),
+      };
+    });
+  };
+
   const updateSelectedPlaneNode = (
     key: keyof PlaneTriangle2dJobInput["nodes"][number],
     value: number | boolean,
@@ -2812,6 +2964,270 @@ export function Workbench() {
     }));
   };
 
+  const assignSelectedPlaneElementMaterial = (materialId: string) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setPlaneModel((current) => {
+      const material = current.materials?.find((entry) => entry.id === materialId);
+      return {
+        ...current,
+        elements: current.elements.map((element, index) =>
+          index === selectedElement
+            ? {
+                ...element,
+                material_id: materialId,
+                youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+                poisson_ratio:
+                  material?.poisson_ratio === null || material?.poisson_ratio === undefined
+                    ? element.poisson_ratio
+                    : material.poisson_ratio,
+              }
+            : element,
+        ),
+      };
+    });
+  };
+
+  const addMaterialToCurrentModel = () => {
+    if (studyKind === "axial_bar_1d") return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+
+    if (studyKind === "truss_2d") {
+      setTrussModel((current) => ({
+        ...current,
+        materials: [
+          ...(current.materials ?? []),
+          createMaterialDefinition(activeMaterial, (current.materials?.length ?? 0) + 1, {
+            id: nextMaterialId(current.materials),
+          }),
+        ],
+      }));
+      return;
+    }
+
+    if (studyKind === "truss_3d") {
+      setTruss3dModel((current) => ({
+        ...current,
+        materials: [
+          ...(current.materials ?? []),
+          createMaterialDefinition(activeMaterial, (current.materials?.length ?? 0) + 1, {
+            id: nextMaterialId(current.materials),
+          }),
+        ],
+      }));
+      return;
+    }
+
+    setPlaneModel((current) => ({
+      ...current,
+      materials: [
+        ...(current.materials ?? []),
+        createMaterialDefinition(activeMaterial, (current.materials?.length ?? 0) + 1, {
+          id: nextMaterialId(current.materials),
+          poisson_ratio: current.elements[0]?.poisson_ratio ?? 0.33,
+        }),
+      ],
+    }));
+  };
+
+  const applyMaterialToCurrentModel = (materialId: string, mode: "selected" | "all") => {
+    if (studyKind === "axial_bar_1d") return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+
+    if (studyKind === "truss_2d") {
+      setTrussModel((current) => {
+        const material = current.materials?.find((entry) => entry.id === materialId);
+        return {
+          ...current,
+          elements: current.elements.map((element, index) =>
+            mode === "all" || index === selectedElement
+              ? {
+                  ...element,
+                  material_id: materialId,
+                  youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+                }
+              : element,
+          ),
+        };
+      });
+      return;
+    }
+
+    if (studyKind === "truss_3d") {
+      setTruss3dModel((current) => {
+        const material = current.materials?.find((entry) => entry.id === materialId);
+        return {
+          ...current,
+          elements: current.elements.map((element, index) =>
+            mode === "all" || index === selectedElement
+              ? {
+                  ...element,
+                  material_id: materialId,
+                  youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+                }
+              : element,
+          ),
+        };
+      });
+      return;
+    }
+
+    setPlaneModel((current) => {
+      const material = current.materials?.find((entry) => entry.id === materialId);
+      return {
+        ...current,
+        elements: current.elements.map((element, index) =>
+          mode === "all" || index === selectedElement
+            ? {
+                ...element,
+                material_id: materialId,
+                youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+                poisson_ratio:
+                  material?.poisson_ratio === null || material?.poisson_ratio === undefined
+                    ? element.poisson_ratio
+                    : material.poisson_ratio,
+              }
+            : element,
+        ),
+      };
+    });
+  };
+
+  const updateCurrentMaterial = (
+    materialId: string,
+    field: "name" | "youngs_modulus" | "poisson_ratio",
+    value: string | number,
+  ) => {
+    if (studyKind === "axial_bar_1d") return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+
+    const updateMaterialList = (materials: ModelMaterial[] | undefined) =>
+      (materials ?? []).map((material) =>
+        material.id === materialId ? { ...material, [field]: value } : material,
+      );
+
+    if (studyKind === "truss_2d") {
+      setTrussModel((current) => ({
+        ...current,
+        materials: updateMaterialList(current.materials),
+        elements: current.elements.map((element) =>
+          element.material_id === materialId && field === "youngs_modulus"
+            ? { ...element, youngs_modulus: Number(value) }
+            : element,
+        ),
+      }));
+      return;
+    }
+
+    if (studyKind === "truss_3d") {
+      setTruss3dModel((current) => ({
+        ...current,
+        materials: updateMaterialList(current.materials),
+        elements: current.elements.map((element) =>
+          element.material_id === materialId && field === "youngs_modulus"
+            ? { ...element, youngs_modulus: Number(value) }
+            : element,
+        ),
+      }));
+      return;
+    }
+
+    setPlaneModel((current) => ({
+      ...current,
+      materials: updateMaterialList(current.materials),
+      elements: current.elements.map((element) => {
+        if (element.material_id !== materialId) return element;
+        if (field === "youngs_modulus") {
+          return { ...element, youngs_modulus: Number(value) };
+        }
+        if (field === "poisson_ratio") {
+          return { ...element, poisson_ratio: Number(value) };
+        }
+        return element;
+      }),
+    }));
+  };
+
+  const deleteCurrentMaterial = (materialId: string) => {
+    if (studyKind === "axial_bar_1d") return;
+    recordHistory(t.deleteMemberAction);
+    resetActiveResult(setResult, setJob);
+
+    if (studyKind === "truss_2d") {
+      setTrussModel((current) => {
+        const materials = current.materials ?? [];
+        if (materials.length <= 1) return current;
+        const nextMaterials = materials.filter((material) => material.id !== materialId);
+        const fallback = nextMaterials[0];
+        return {
+          ...current,
+          materials: nextMaterials,
+          elements: current.elements.map((element) =>
+            element.material_id === materialId
+              ? {
+                  ...element,
+                  material_id: fallback?.id,
+                  youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
+                }
+              : element,
+          ),
+        };
+      });
+      return;
+    }
+
+    if (studyKind === "truss_3d") {
+      setTruss3dModel((current) => {
+        const materials = current.materials ?? [];
+        if (materials.length <= 1) return current;
+        const nextMaterials = materials.filter((material) => material.id !== materialId);
+        const fallback = nextMaterials[0];
+        return {
+          ...current,
+          materials: nextMaterials,
+          elements: current.elements.map((element) =>
+            element.material_id === materialId
+              ? {
+                  ...element,
+                  material_id: fallback?.id,
+                  youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
+                }
+              : element,
+          ),
+        };
+      });
+      return;
+    }
+
+    setPlaneModel((current) => {
+      const materials = current.materials ?? [];
+      if (materials.length <= 1) return current;
+      const nextMaterials = materials.filter((material) => material.id !== materialId);
+      const fallback = nextMaterials[0];
+      return {
+        ...current,
+        materials: nextMaterials,
+        elements: current.elements.map((element) =>
+          element.material_id === materialId
+            ? {
+                ...element,
+                material_id: fallback?.id,
+                youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
+                poisson_ratio:
+                  fallback?.poisson_ratio === null || fallback?.poisson_ratio === undefined
+                    ? element.poisson_ratio
+                    : fallback.poisson_ratio,
+              }
+            : element,
+        ),
+      };
+    });
+  };
+
   const addNode = (connectToSelected: boolean) => {
     recordHistory(t.addNodeAction);
     setStudyKind("truss_2d");
@@ -2834,16 +3250,20 @@ export function Workbench() {
       const nodes = [...current.nodes, nextNode];
       const elements =
         anchorIndex !== null
-          ? [
-              ...current.elements,
-              {
-                id: `e${current.elements.length}`,
-                node_i: anchorIndex,
-                node_j: nodes.length - 1,
-                area: parametric.area,
-                youngs_modulus: parametric.youngsModulusGpa * 1.0e9,
-              },
-            ]
+          ? (() => {
+              const material = current.materials?.[0];
+              return [
+                ...current.elements,
+                {
+                  id: `e${current.elements.length}`,
+                  node_i: anchorIndex,
+                  node_j: nodes.length - 1,
+                  area: parametric.area,
+                  youngs_modulus: material?.youngs_modulus ?? parametric.youngsModulusGpa * 1.0e9,
+                  material_id: material?.id,
+                },
+              ];
+            })()
           : current.elements;
 
       return { ...current, nodes, elements };
@@ -2879,16 +3299,20 @@ export function Workbench() {
       const nodes = [...current.nodes, nextNode];
       const elements =
         anchorIndex !== null
-          ? [
-              ...current.elements,
-              {
-                id: `e${current.elements.length}`,
-                node_i: anchorIndex,
-                node_j: nodes.length - 1,
-                area: current.elements[0]?.area ?? 0.01,
-                youngs_modulus: current.elements[0]?.youngs_modulus ?? 70e9,
-              },
-            ]
+          ? (() => {
+              const material = current.materials?.[0];
+              return [
+                ...current.elements,
+                {
+                  id: `e${current.elements.length}`,
+                  node_i: anchorIndex,
+                  node_j: nodes.length - 1,
+                  area: current.elements[0]?.area ?? 0.01,
+                  youngs_modulus: material?.youngs_modulus ?? current.elements[0]?.youngs_modulus ?? 70e9,
+                  material_id: material?.id,
+                },
+              ];
+            })()
           : current.elements;
       return { ...current, nodes, elements };
     });
@@ -3017,7 +3441,8 @@ export function Workbench() {
         node_i: firstNode,
         node_j: secondNode,
         area: current.elements[0]?.area ?? 0.01,
-        youngs_modulus: current.elements[0]?.youngs_modulus ?? 70e9,
+        youngs_modulus: current.materials?.[0]?.youngs_modulus ?? current.elements[0]?.youngs_modulus ?? 70e9,
+        material_id: current.materials?.[0]?.id,
       };
 
       nextSelectedElement = current.elements.length;
@@ -3094,7 +3519,8 @@ export function Workbench() {
         node_i: nodeI,
         node_j: nodeJ,
         area: parametric.area,
-        youngs_modulus: parametric.youngsModulusGpa * 1.0e9,
+        youngs_modulus: current.materials?.[0]?.youngs_modulus ?? parametric.youngsModulusGpa * 1.0e9,
+        material_id: current.materials?.[0]?.id,
       };
 
       nextSelectedElement = current.elements.length;
@@ -3512,6 +3938,101 @@ export function Workbench() {
                 </button>
               </div>
               <p className="card-copy">{t.selectionHint}</p>
+            </section>
+            ) : null}
+
+            {modelTab === "tools" && !isAxial ? (
+            <section className="sidebar-card">
+              <div className="card-head">
+                <h2>{language === "zh" ? "材料库" : "Material Library"}</h2>
+                <span>{currentMaterials.length}</span>
+              </div>
+              <div className="button-row">
+                <select value={activeMaterial} onChange={(event) => setActiveMaterial(event.target.value)}>
+                  {MATERIAL_PRESETS.map((preset) => (
+                    <option key={preset.value} value={preset.value}>
+                      {localMaterialLabel(preset.value, language)}
+                    </option>
+                  ))}
+                </select>
+                <button className="ghost-button" onClick={addMaterialToCurrentModel} type="button">
+                  {language === "zh" ? "添加材料" : "Add material"}
+                </button>
+              </div>
+              <div className="material-library">
+                {currentMaterials.map((material) => (
+                  <div key={material.id} className="material-chip-card">
+                    <div className="material-chip-card__head">
+                      <span
+                        className="material-chip-card__swatch"
+                        style={{ background: materialColorMap.get(material.id) ?? "#1677a3" }}
+                      />
+                      <strong>{material.id}</strong>
+                    </div>
+                    <div className="form-grid compact">
+                      <label>
+                        <span>{t.material}</span>
+                        <input
+                          value={material.name}
+                          onChange={(event) => updateCurrentMaterial(material.id, "name", event.target.value)}
+                        />
+                      </label>
+                      <label>
+                        <span>{t.modulus}</span>
+                        <input
+                          type="number"
+                          min={0.1}
+                          step={0.1}
+                          value={round(material.youngs_modulus / 1.0e9)}
+                          onChange={(event) =>
+                            updateCurrentMaterial(material.id, "youngs_modulus", Number(event.target.value) * 1.0e9)
+                          }
+                        />
+                      </label>
+                      {isPlane ? (
+                        <label>
+                          <span>{t.poissonRatio}</span>
+                          <input
+                            type="number"
+                            min={0.01}
+                            max={0.49}
+                            step={0.01}
+                            value={material.poisson_ratio ?? 0.33}
+                            onChange={(event) =>
+                              updateCurrentMaterial(material.id, "poisson_ratio", Number(event.target.value))
+                            }
+                          />
+                        </label>
+                      ) : null}
+                    </div>
+                    <div className="button-row">
+                      <button
+                        className="ghost-button ghost-button--compact"
+                        disabled={selectedElement === null}
+                        onClick={() => applyMaterialToCurrentModel(material.id, "selected")}
+                        type="button"
+                      >
+                        {language === "zh" ? "赋给当前单元" : "Apply to selected"}
+                      </button>
+                      <button
+                        className="ghost-button ghost-button--compact"
+                        onClick={() => applyMaterialToCurrentModel(material.id, "all")}
+                        type="button"
+                      >
+                        {language === "zh" ? "赋给全部单元" : "Apply to all"}
+                      </button>
+                      <button
+                        className="ghost-button ghost-button--compact"
+                        disabled={currentMaterials.length <= 1}
+                        onClick={() => deleteCurrentMaterial(material.id)}
+                        type="button"
+                      >
+                        {language === "zh" ? "删除材料" : "Delete material"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </section>
             ) : null}
 
@@ -4475,6 +4996,7 @@ export function Workbench() {
             axialScale={axialScale}
             displayTrussNodes={displayTrussNodes}
             displayTrussElements={displayTrussElements}
+            trussElementColors={trussElementColors}
             trussBounds={trussBounds}
             trussResult={Boolean(trussResult)}
             trussHotspotNodes={trussStability?.hotspotNodes ?? []}
@@ -4496,8 +5018,10 @@ export function Workbench() {
             }}
             displayTruss3dNodes={displayTruss3dNodes}
             displayTruss3dElements={displayTruss3dElements}
+            truss3dElementColors={truss3dElementColors}
             planeNodes={planeNodes}
             planeElements={planeElements}
+            planeElementColors={planeElementColors}
             planeBounds={planeBounds}
             planeResult={Boolean(planeResult)}
             planeMaxVonMises={planeMaxVonMises}
@@ -4681,17 +5205,25 @@ export function Workbench() {
         selectedPlaneElementData={selectedPlaneElementData ? { ...selectedPlaneElementData } : null}
         trussElementArea={selectedElementData ? trussModel.elements[selectedElementData.index]?.area ?? 0 : 0}
         trussElementModulusGpa={selectedElementData ? round((trussModel.elements[selectedElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
+        trussElementMaterialId={selectedElementData ? trussModel.elements[selectedElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
         truss3dElementArea={selectedTruss3dElementData ? truss3dModel.elements[selectedTruss3dElementData.index]?.area ?? 0 : 0}
         truss3dElementModulusGpa={selectedTruss3dElementData ? round((truss3dModel.elements[selectedTruss3dElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
+        truss3dElementMaterialId={selectedTruss3dElementData ? truss3dModel.elements[selectedTruss3dElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
         planeElementThickness={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.thickness ?? 0 : 0}
         planeElementModulusGpa={selectedPlaneElementData ? round((planeModel.elements[selectedPlaneElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
         planeElementPoissonRatio={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.poisson_ratio ?? 0.33 : 0.33}
+        planeElementMaterialId={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
+        materialOptions={materialOptions}
+        materialLabel={t.material}
         onUpdateSelectedNode={updateSelectedNode}
         onUpdateSelectedElement={updateSelectedElement}
+        onAssignSelectedElementMaterial={assignSelectedElementMaterial}
         onUpdateSelectedTruss3dNode={updateSelectedTruss3dNode}
         onUpdateSelectedTruss3dElement={updateSelectedTruss3dElement}
+        onAssignSelectedTruss3dElementMaterial={assignSelectedTruss3dElementMaterial}
         onUpdateSelectedPlaneNode={updateSelectedPlaneNode}
         onUpdateSelectedPlaneElement={updateSelectedPlaneElement}
+        onAssignSelectedPlaneElementMaterial={assignSelectedPlaneElementMaterial}
         trussDiagnostics={trussDiagnostics}
         trussStability={trussStability}
         hotspotNodeLabels={(trussStability?.hotspotNodes ?? []).map((nodeIndex) => trussModel.nodes[nodeIndex]?.id ?? nodeIndex).join(", ")}
