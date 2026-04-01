@@ -297,6 +297,23 @@ const copy = {
     language: "Language",
     shortcutHints: "Shortcut hints",
     shortcutHintsHelp: "Show the 3D keyboard legend in the viewport.",
+    immersiveGuard: "Immersive guard",
+    immersiveGuardHelp: "In immersive view, block text selection, context menu, and common copy shortcuts.",
+    enterImmersive: "Immersive",
+    exitImmersive: "Exit immersive",
+    immersiveModeEnabled: "Immersive viewport enabled.",
+    immersiveModeDisabled: "Immersive viewport closed.",
+    browserLimitsNote: "Browser extensions cannot be fully disabled from the page, but the viewport can reduce selection and copy interactions.",
+    immersiveStudy: "Study",
+    immersiveModel: "Model",
+    immersiveLibrary: "Library",
+    immersiveDrawer: "Immersive drawer",
+    close: "Close",
+    immersiveSamples: "Samples",
+    immersiveModels: "Saved",
+    immersiveJobs: "Recent jobs",
+    immersiveEmptyModels: "No saved models in this project yet.",
+    immersiveEmptyJobs: "No jobs yet.",
     themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
     languages: { en: "English", zh: "中文" },
     shortcutLegendTitle: "3D controls",
@@ -305,6 +322,8 @@ const copy = {
       "1/2/3/4 views · P projection",
       "G grid · L labels · N nodes",
       "F focus · R reset · WASD/Arrows pan",
+      "Link mode: click two nodes to toggle a member",
+      "BOX selects visible nodes · Immersive button opens fullscreen",
     ],
     length: "Span (m)",
     area: "Area (m²)",
@@ -438,6 +457,12 @@ const copy = {
     mechanismRisk: "This topology still looks mechanism-prone. Add more triangulation or extra supports before solving.",
     addNode: "Add Node",
     addBranchNode: "Branch Node",
+    linkMode: "Link Mode",
+    linkModeActive: "Linking",
+    linkModeIdle: "Pick two nodes in the 3D viewport to link or unlink them.",
+    linkModeEnabled: "3D link mode enabled.",
+    linkModeDisabled: "3D link mode disabled.",
+    linkModeCompleted: "3D link edit applied.",
     deleteNode: "Delete Node",
     addMember: "Add Member",
     toggleMember: "Toggle Link",
@@ -546,6 +571,23 @@ const copy = {
     language: "语言",
     shortcutHints: "快捷键提示",
     shortcutHintsHelp: "在三维视图区显示键盘快捷键速查卡。",
+    immersiveGuard: "沉浸护栏",
+    immersiveGuardHelp: "沉浸模式下拦截文本选择、右键菜单和常见复制快捷键。",
+    enterImmersive: "沉浸模式",
+    exitImmersive: "退出沉浸",
+    immersiveModeEnabled: "已进入沉浸式视图区。",
+    immersiveModeDisabled: "已退出沉浸式视图区。",
+    browserLimitsNote: "网页无法彻底关闭浏览器插件，但可以显著减少选择文本和复制类交互。",
+    immersiveStudy: "研究",
+    immersiveModel: "建模",
+    immersiveLibrary: "库",
+    immersiveDrawer: "沉浸抽屉",
+    close: "关闭",
+    immersiveSamples: "样板",
+    immersiveModels: "已保存",
+    immersiveJobs: "最近任务",
+    immersiveEmptyModels: "当前项目还没有保存模型。",
+    immersiveEmptyJobs: "当前还没有任务记录。",
     themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
     languages: { en: "English", zh: "中文" },
     shortcutLegendTitle: "三维控制",
@@ -554,6 +596,8 @@ const copy = {
       "1/2/3/4 视角 · P 投影",
       "G 网格 · L 标签 · N 节点",
       "F 聚焦 · R 重置 · WASD/方向键平移",
+      "连线模式：依次点击两个节点即可切换杆件",
+      "BOX 框选可见节点 · 沉浸按钮可切全屏",
     ],
     length: "跨度 (m)",
     area: "截面积 (m²)",
@@ -684,6 +728,12 @@ const copy = {
     mechanismRisk: "这个拓扑仍然很像机构。建议先增加三角化斜撑或额外支座再求解。",
     addNode: "新增节点",
     addBranchNode: "分支节点",
+    linkMode: "连线模式",
+    linkModeActive: "连线中",
+    linkModeIdle: "在三维视图区中依次选择两个节点，即可连接或断开。",
+    linkModeEnabled: "已开启三维连线模式。",
+    linkModeDisabled: "已关闭三维连线模式。",
+    linkModeCompleted: "已应用三维连线修改。",
     deleteNode: "删除节点",
     addMember: "新增杆件",
     toggleMember: "切换连接",
@@ -740,11 +790,23 @@ const copy = {
   },
 } as const;
 
-function safeStorageGet(): { theme?: Theme; language?: Language; showShortcutHints?: boolean } {
+function safeStorageGet(): {
+  theme?: Theme;
+  language?: Language;
+  showShortcutHints?: boolean;
+  immersiveGuardrails?: boolean;
+} {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY);
-    return raw ? (JSON.parse(raw) as { theme?: Theme; language?: Language; showShortcutHints?: boolean }) : {};
+    return raw
+      ? (JSON.parse(raw) as {
+          theme?: Theme;
+          language?: Language;
+          showShortcutHints?: boolean;
+          immersiveGuardrails?: boolean;
+        })
+      : {};
   } catch {
     return {};
   }
@@ -1414,11 +1476,15 @@ export function Workbench() {
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<Theme>("linen");
   const [showShortcutHints, setShowShortcutHints] = useState(true);
+  const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
+  const [immersiveViewport, setImmersiveViewport] = useState(false);
   const [sidebarSection, setSidebarSection] = useState<SidebarSection>("study");
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
   const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("samples");
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
+  const [truss3dLinkMode, setTruss3dLinkMode] = useState(false);
+  const [selectedTruss3dNodes, setSelectedTruss3dNodes] = useState<number[]>([]);
   const [selectedNode, setSelectedNode] = useState<number | null>(null);
   const [selectedElement, setSelectedElement] = useState<number | null>(null);
   const [memberDraftNodes, setMemberDraftNodes] = useState<number[]>([]);
@@ -1429,12 +1495,14 @@ export function Workbench() {
   const drag3dHistoryCapturedRef = useRef(false);
   const dragFrameRef = useRef<number | null>(null);
   const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
+  const viewportPanelRef = useRef<HTMLElement | null>(null);
   const t = copy[language];
 
   useEffect(() => {
     const stored = safeStorageGet();
     if (stored.theme) setTheme(stored.theme);
     if (typeof stored.showShortcutHints === "boolean") setShowShortcutHints(stored.showShortcutHints);
+    if (typeof stored.immersiveGuardrails === "boolean") setImmersiveGuardrails(stored.immersiveGuardrails);
     if (stored.language) {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
@@ -1445,9 +1513,12 @@ export function Workbench() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ theme, language, showShortcutHints }));
+      window.localStorage.setItem(
+        SETTINGS_KEY,
+        JSON.stringify({ theme, language, showShortcutHints, immersiveGuardrails }),
+      );
     }
-  }, [theme, language, showShortcutHints]);
+  }, [theme, language, showShortcutHints, immersiveGuardrails]);
 
   useEffect(() => {
     return () => {
@@ -1456,6 +1527,53 @@ export function Workbench() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setImmersiveViewport(document.fullscreenElement === viewportPanelRef.current);
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (!immersiveViewport || !immersiveGuardrails) {
+      document.documentElement.classList.remove("immersive-guardrails");
+      return;
+    }
+
+    const stopEvent = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && ["a", "c", "p", "s", "u", "v", "x"].includes(event.key.toLowerCase())) {
+        stopEvent(event);
+      }
+    };
+
+    document.documentElement.classList.add("immersive-guardrails");
+    document.addEventListener("contextmenu", stopEvent, true);
+    document.addEventListener("copy", stopEvent, true);
+    document.addEventListener("cut", stopEvent, true);
+    document.addEventListener("paste", stopEvent, true);
+    document.addEventListener("selectstart", stopEvent, true);
+    document.addEventListener("dragstart", stopEvent, true);
+    document.addEventListener("keydown", handleKeydown, true);
+
+    return () => {
+      document.documentElement.classList.remove("immersive-guardrails");
+      document.removeEventListener("contextmenu", stopEvent, true);
+      document.removeEventListener("copy", stopEvent, true);
+      document.removeEventListener("cut", stopEvent, true);
+      document.removeEventListener("paste", stopEvent, true);
+      document.removeEventListener("selectstart", stopEvent, true);
+      document.removeEventListener("dragstart", stopEvent, true);
+      document.removeEventListener("keydown", handleKeydown, true);
+    };
+  }, [immersiveViewport, immersiveGuardrails]);
 
   useEffect(() => {
     void refreshHealth();
@@ -2570,6 +2688,7 @@ export function Workbench() {
       return { ...current, nodes, elements };
     });
     setSelectedNode(truss3dModel.nodes.length);
+    setSelectedTruss3dNodes([truss3dModel.nodes.length]);
     setSelectedElement(connectToSelected && selectedNode !== null ? truss3dModel.elements.length : null);
     setMemberDraftNodes([]);
     setMessage(connectToSelected && selectedNode !== null ? t.spaceBranchCreated : t.spaceNodeCreated);
@@ -2592,6 +2711,7 @@ export function Workbench() {
       return { ...current, nodes, elements };
     });
     setSelectedNode(null);
+    setSelectedTruss3dNodes([]);
     setSelectedElement(null);
     setMemberDraftNodes([]);
     setMessage(t.nodeDeleted);
@@ -2628,6 +2748,109 @@ export function Workbench() {
       }
       return [...current, index].slice(-2);
     });
+  };
+
+  const toggleTruss3dLinkMode = () => {
+    setTruss3dLinkMode((current) => {
+      const next = !current;
+      setMemberDraftNodes([]);
+      setMessage(next ? t.linkModeEnabled : t.linkModeDisabled);
+      return next;
+    });
+  };
+
+  const toggleImmersiveViewport = async () => {
+    const target = viewportPanelRef.current;
+    if (!target) return;
+
+    try {
+      if (document.fullscreenElement === target) {
+        await document.exitFullscreen();
+        setMessage(t.immersiveModeDisabled);
+      } else {
+        await target.requestFullscreen();
+        setMessage(t.immersiveModeEnabled);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
+  };
+
+  const completeTruss3dLink = (firstNode: number, secondNode: number) => {
+    if (firstNode === secondNode) {
+      setSelectedNode(firstNode);
+      setSelectedTruss3dNodes([firstNode]);
+      setMemberDraftNodes([firstNode]);
+      return;
+    }
+
+    recordHistory(t.toggleMemberAction);
+
+    let removedExisting = false;
+    let nextSelectedElement: number | null = null;
+
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => {
+      const existingIndex = current.elements.findIndex(
+        (element) =>
+          (element.node_i === firstNode && element.node_j === secondNode) ||
+          (element.node_i === secondNode && element.node_j === firstNode),
+      );
+
+      if (existingIndex >= 0) {
+        removedExisting = true;
+        return {
+          ...current,
+          elements: current.elements
+            .filter((_, index) => index !== existingIndex)
+            .map((element, index) => ({ ...element, id: `e${index}` })),
+        };
+      }
+
+      const next = {
+        id: `e${current.elements.length}`,
+        node_i: firstNode,
+        node_j: secondNode,
+        area: current.elements[0]?.area ?? 0.01,
+        youngs_modulus: current.elements[0]?.youngs_modulus ?? 70e9,
+      };
+
+      nextSelectedElement = current.elements.length;
+      return { ...current, elements: [...current.elements, next] };
+    });
+
+    setSelectedElement(removedExisting ? null : nextSelectedElement);
+    setSelectedNode(secondNode);
+    setSelectedTruss3dNodes([secondNode]);
+    setMemberDraftNodes([secondNode]);
+    setMessage(removedExisting ? t.memberRemoved : t.linkModeCompleted);
+  };
+
+  const handleTruss3dNodePick = (index: number) => {
+    if (!truss3dLinkMode) {
+      setSelectedTruss3dNodes([index]);
+      toggleDraftNode(index);
+      return;
+    }
+
+    setSelectedElement(null);
+    setSelectedNode(index);
+    setSelectedTruss3dNodes([index]);
+
+    if (memberDraftNodes.length === 1) {
+      completeTruss3dLink(memberDraftNodes[0], index);
+      return;
+    }
+
+    setMemberDraftNodes([index]);
+  };
+
+  const handleTruss3dNodesBoxSelect = (indices: number[], append: boolean) => {
+    const nextSelection = append ? Array.from(new Set([...selectedTruss3dNodes, ...indices])) : indices;
+    setSelectedTruss3dNodes(nextSelection);
+    setSelectedElement(null);
+    setMemberDraftNodes([]);
+    setSelectedNode(nextSelection[0] ?? null);
   };
 
   const toggleMemberFromDraft = () => {
@@ -2674,6 +2897,7 @@ export function Workbench() {
     });
 
     setSelectedElement(removedExisting ? null : nextSelectedElement);
+    setSelectedTruss3dNodes([]);
     setMemberDraftNodes([]);
     setMessage(removedExisting ? t.memberRemoved : t.memberCreated);
   };
@@ -2683,45 +2907,8 @@ export function Workbench() {
       setMessage(t.selectTwoNodes);
       return;
     }
-    recordHistory(t.toggleMemberAction);
     const [nodeI, nodeJ] = memberDraftNodes;
-    if (nodeI === nodeJ) return;
-
-    let removedExisting = false;
-    let nextSelectedElement: number | null = null;
-
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) => {
-      const existingIndex = current.elements.findIndex(
-        (element) =>
-          (element.node_i === nodeI && element.node_j === nodeJ) ||
-          (element.node_i === nodeJ && element.node_j === nodeI),
-      );
-
-      if (existingIndex >= 0) {
-        removedExisting = true;
-        return {
-          ...current,
-          elements: current.elements
-            .filter((_, index) => index !== existingIndex)
-            .map((element, index) => ({ ...element, id: `e${index}` })),
-        };
-      }
-
-      const next = {
-        id: `e${current.elements.length}`,
-        node_i: nodeI,
-        node_j: nodeJ,
-        area: current.elements[0]?.area ?? 0.01,
-        youngs_modulus: current.elements[0]?.youngs_modulus ?? 70e9,
-      };
-
-      nextSelectedElement = current.elements.length;
-      return { ...current, elements: [...current.elements, next] };
-    });
-    setSelectedElement(removedExisting ? null : nextSelectedElement);
-    setMemberDraftNodes([]);
-    setMessage(removedExisting ? t.memberRemoved : t.memberCreated);
+    completeTruss3dLink(nodeI, nodeJ);
   };
 
   const deleteSelectedElement = () => {
@@ -2749,6 +2936,7 @@ export function Workbench() {
         .map((element, index) => ({ ...element, id: `e${index}` })),
     }));
     setSelectedElement(null);
+    setSelectedTruss3dNodes([]);
     setMessage(t.spaceMemberDeleted);
   };
 
@@ -3081,6 +3269,9 @@ export function Workbench() {
                     </button>
                   </div>
                   <div className="button-row">
+                    <button className={`ghost-button${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={toggleTruss3dLinkMode} type="button">
+                      {truss3dLinkMode ? t.linkModeActive : t.linkMode}
+                    </button>
                     <button className="ghost-button" onClick={toggleTruss3dMemberFromDraft} type="button">
                       {t.toggleMember}
                     </button>
@@ -3088,6 +3279,7 @@ export function Workbench() {
                       {t.deleteMember}
                     </button>
                   </div>
+                  <p className="card-copy">{t.linkModeIdle}</p>
                 </>
               ) : null}
               <div className="button-row">
@@ -3237,9 +3429,9 @@ export function Workbench() {
               <section className="sidebar-card">
                 <div className="card-head">
                   <h2>{t.objectTree}</h2>
-                  <span>{memberDraftNodes.length}/2</span>
+                  <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.nodes}` : truss3dLinkMode ? t.linkModeActive : `${memberDraftNodes.length}/2`}</span>
                 </div>
-                <p className="card-copy">{t.orbitHint}</p>
+                <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.orbitHint}</p>
                 <div className="table-like">
                   <div className="table-like__head table-like__head--space">
                     <span>ID</span>
@@ -3255,8 +3447,8 @@ export function Workbench() {
                     itemKey={(node) => node.id}
                     renderItem={(node, index) => (
                       <button
-                        className={`table-like__row table-like__row--space${selectedNode === index ? " table-like__row--active" : ""}${memberDraftNodes.includes(index) ? " table-like__row--draft" : ""}`}
-                        onClick={() => toggleDraftNode(index)}
+                        className={`table-like__row table-like__row--space${selectedTruss3dNodes.includes(index) || selectedNode === index ? " table-like__row--active" : ""}${memberDraftNodes.includes(index) ? " table-like__row--draft" : ""}`}
+                        onClick={() => handleTruss3dNodePick(index)}
                         type="button"
                       >
                         <strong>{node.id}</strong>
@@ -3286,6 +3478,7 @@ export function Workbench() {
                         onClick={() => {
                           setSelectedElement(index);
                           setSelectedNode(null);
+                          setSelectedTruss3dNodes([]);
                           setMemberDraftNodes([]);
                         }}
                         type="button"
@@ -3617,7 +3810,19 @@ export function Workbench() {
                     onChange={(event) => setShowShortcutHints(event.target.checked)}
                   />
                 </label>
+                <label className="toggle-row">
+                  <div>
+                    <span>{t.immersiveGuard}</span>
+                    <small className="field-hint">{t.immersiveGuardHelp}</small>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={immersiveGuardrails}
+                    onChange={(event) => setImmersiveGuardrails(event.target.checked)}
+                  />
+                </label>
               </div>
+              <p className="card-copy">{t.browserLimitsNote}</p>
             </section>
             <section className="sidebar-card">
               <div className="card-head">
@@ -3644,10 +3849,42 @@ export function Workbench() {
       </aside>
 
       <main className="workspace-main">
-        <section className="panel canvas-panel">
+        <section ref={viewportPanelRef} className={`panel canvas-panel${immersiveViewport ? " canvas-panel--immersive" : ""}`}>
           <div className="panel-head">
             <h2>{sidebarSection === "model" ? t.sections.model : t.viewport}</h2>
-            <span>{job?.status ?? "idle"}</span>
+            <div className="panel-head__actions">
+              {isTruss3d && immersiveViewport ? (
+                <div className="immersive-switches">
+                  <button
+                    className={`ghost-button ghost-button--compact${sidebarSection === "study" ? " ghost-button--active" : ""}`}
+                    onClick={() => setSidebarSection("study")}
+                    type="button"
+                  >
+                    {t.immersiveStudy}
+                  </button>
+                  <button
+                    className={`ghost-button ghost-button--compact${sidebarSection === "model" ? " ghost-button--active" : ""}`}
+                    onClick={() => setSidebarSection("model")}
+                    type="button"
+                  >
+                    {t.immersiveModel}
+                  </button>
+                  <button
+                    className={`ghost-button ghost-button--compact${sidebarSection === "library" ? " ghost-button--active" : ""}`}
+                    onClick={() => setSidebarSection(sidebarSection === "library" ? "model" : "library")}
+                    type="button"
+                  >
+                    {t.immersiveLibrary}
+                  </button>
+                </div>
+              ) : null}
+              {isTruss3d ? (
+                <button className={`ghost-button ghost-button--compact${immersiveViewport ? " ghost-button--active" : ""}`} onClick={toggleImmersiveViewport} type="button">
+                  {immersiveViewport ? t.exitImmersive : t.enterImmersive}
+                </button>
+              ) : null}
+              <span>{job?.status ?? "idle"}</span>
+            </div>
           </div>
           <WorkbenchViewport
             studyKind={studyKind}
@@ -3700,11 +3937,12 @@ export function Workbench() {
             selectedTruss3dNode={selectedNode}
             selectedTruss3dElement={selectedElement}
             onSelectTruss3dNode={(index) => {
-              toggleDraftNode(index);
+              handleTruss3dNodePick(index);
             }}
             onSelectTruss3dElement={(index) => {
               setSelectedElement(index);
               setSelectedNode(null);
+              setSelectedTruss3dNodes([]);
               setMemberDraftNodes([]);
             }}
             onUpdateTruss3dNodePosition={updateTruss3dNodePosition}
@@ -3718,10 +3956,91 @@ export function Workbench() {
               drag3dHistoryCapturedRef.current = false;
             }}
             workspaceBadge={isTruss3d ? t.spaceStudio : t.sections.model}
+            truss3dLinkMode={truss3dLinkMode}
+            immersiveViewport={immersiveViewport}
+            selectedTruss3dNodeIndices={selectedTruss3dNodes}
+            onSelectTruss3dNodes={handleTruss3dNodesBoxSelect}
             showShortcutHints={showShortcutHints}
             shortcutLegendTitle={t.shortcutLegendTitle}
             shortcutLegendRows={[...t.shortcutLegendRows]}
           />
+          {immersiveViewport && sidebarSection === "library" ? (
+            <div className="immersive-drawer">
+              <section className="immersive-drawer__card">
+                <div className="card-head">
+                  <h2>{t.immersiveDrawer}</h2>
+                  <div className="immersive-drawer__head-actions">
+                    <span>{t.immersiveLibrary}</span>
+                    <button
+                      className="ghost-button ghost-button--compact"
+                      onClick={() => setSidebarSection("model")}
+                      type="button"
+                    >
+                      {t.close}
+                    </button>
+                  </div>
+                </div>
+                <div className="immersive-drawer__grid">
+                  <div className="immersive-drawer__section">
+                    <h3>{t.immersiveSamples}</h3>
+                    <div className="immersive-drawer__list">
+                      {SAMPLE_LIBRARY.slice(0, 4).map((sample) => (
+                        <button
+                          key={sample.href}
+                          className="history-item immersive-drawer__button"
+                          onClick={() => openSample(sample.href)}
+                          type="button"
+                        >
+                          <strong>{sample.name}</strong>
+                          <span>{sample.kind}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="immersive-drawer__section">
+                    <h3>{t.immersiveModels}</h3>
+                    <div className="immersive-drawer__list">
+                      {deferredProjectModels.slice(0, 4).length > 0 ? (
+                        deferredProjectModels.slice(0, 4).map((model) => (
+                          <button
+                            key={model.model_id}
+                            className="history-item immersive-drawer__button"
+                            onClick={() => openSavedModel(model)}
+                            type="button"
+                          >
+                            <strong>{model.name}</strong>
+                            <small>{t.updatedAt}: {formatTime(model.updated_at, language)}</small>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="card-copy">{t.immersiveEmptyModels}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="immersive-drawer__section">
+                    <h3>{t.immersiveJobs}</h3>
+                    <div className="immersive-drawer__list">
+                      {deferredJobHistory.slice(0, 4).length > 0 ? (
+                        deferredJobHistory.slice(0, 4).map((historyJob) => (
+                          <button
+                            key={historyJob.job_id}
+                            className="history-item immersive-drawer__button"
+                            onClick={() => openHistoryJob(historyJob.job_id)}
+                            type="button"
+                          >
+                            <strong>{historyJob.job_id.slice(0, 8)}</strong>
+                            <span>{historyJob.status}</span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="card-copy">{t.immersiveEmptyJobs}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : null}
         </section>
 
         <WorkbenchConsole

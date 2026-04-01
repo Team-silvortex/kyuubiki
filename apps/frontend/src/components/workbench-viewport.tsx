@@ -117,13 +117,17 @@ type WorkbenchViewportProps = {
   onSelectPlaneElement: (index: number) => void;
   onSelectPlaneNode: (index: number) => void;
   selectedTruss3dNode: number | null;
+  selectedTruss3dNodeIndices: number[];
   selectedTruss3dElement: number | null;
   onSelectTruss3dNode: (index: number) => void;
+  onSelectTruss3dNodes: (indices: number[], append: boolean) => void;
   onSelectTruss3dElement: (index: number) => void;
   onUpdateTruss3dNodePosition: (index: number, position: { x: number; y: number; z: number }) => void;
   onBeginTruss3dNodeDrag: () => void;
   onEndTruss3dNodeDrag: () => void;
   workspaceBadge: string;
+  truss3dLinkMode: boolean;
+  immersiveViewport: boolean;
   showShortcutHints: boolean;
   shortcutLegendTitle: string;
   shortcutLegendRows: string[];
@@ -211,6 +215,14 @@ function cameraForPreset(preset: ViewPreset): CameraState {
   }
 
   return { yaw: -0.7, pitch: 0.55, zoom: 1, panX: 0, panY: 0 };
+}
+
+function pointerToViewport(event: ReactPointerEvent<SVGSVGElement>) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * 980,
+    y: ((event.clientY - rect.top) / rect.height) * 460,
+  };
 }
 
 function projectTruss3dPoint(
@@ -361,13 +373,17 @@ function WorkbenchViewportInner({
   onSelectPlaneElement,
   onSelectPlaneNode,
   selectedTruss3dNode,
+  selectedTruss3dNodeIndices,
   selectedTruss3dElement,
   onSelectTruss3dNode,
+  onSelectTruss3dNodes,
   onSelectTruss3dElement,
   onUpdateTruss3dNodePosition,
   onBeginTruss3dNodeDrag,
   onEndTruss3dNodeDrag,
   workspaceBadge,
+  truss3dLinkMode,
+  immersiveViewport,
   showShortcutHints,
   shortcutLegendTitle,
   shortcutLegendRows,
@@ -385,13 +401,29 @@ function WorkbenchViewportInner({
   const [showGrid, setShowGrid] = useState(true);
   const [showLabels, setShowLabels] = useState(true);
   const [showNodes, setShowNodes] = useState(true);
+  const [boxSelectMode, setBoxSelectMode] = useState(false);
+  const [showMoreTools, setShowMoreTools] = useState(false);
   const dragModeRef = useRef<"orbit" | "pan" | null>(null);
   const dragNode3dRef = useRef<number | null>(null);
+  const dragAxisRef = useRef<"x" | "y" | "z" | null>(null);
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  const [hoveredTruss3dNode, setHoveredTruss3dNode] = useState<number | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const selectionStartRef = useRef<{ x: number; y: number } | null>(null);
   const projected3d = buildProjectedBounds(displayTruss3dNodes, camera);
   const selected3dNodeData = selectedTruss3dNode !== null ? displayTruss3dNodes[selectedTruss3dNode] : null;
+  const draftStartNodeIndex = memberDraftNodes[0] ?? null;
+  const draftStartNode =
+    truss3dLinkMode && draftStartNodeIndex !== null ? displayTruss3dNodes[draftStartNodeIndex] ?? null : null;
+  const shortcutLegendHeight = 44 + shortcutLegendRows.length * 18;
 
   const handle3dPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (boxSelectMode) {
+      const point = pointerToViewport(event);
+      selectionStartRef.current = point;
+      setSelectionRect({ x: point.x, y: point.y, width: 0, height: 0 });
+      return;
+    }
     dragModeRef.current = event.shiftKey ? "pan" : "orbit";
     pointerRef.current = { x: event.clientX, y: event.clientY };
   };
@@ -421,6 +453,46 @@ function WorkbenchViewportInner({
       return;
     }
 
+    if (dragAxisRef.current !== null && selectedTruss3dNode !== null) {
+      const target = displayTruss3dNodes[selectedTruss3dNode];
+      if (!target) return;
+      onBeginTruss3dNodeDrag();
+      const axis = dragAxisRef.current;
+      const origin = projectTruss3dPoint(target, projected3d, camera, projection);
+      const axisTarget = projectTruss3dPoint(
+        {
+          ...target,
+          [axis]: target[axis] + 1,
+        },
+        projected3d,
+        camera,
+        projection,
+      );
+      const vectorX = axisTarget.x - origin.x;
+      const vectorY = axisTarget.y - origin.y;
+      const lengthSquared = vectorX * vectorX + vectorY * vectorY;
+      if (lengthSquared <= 1.0e-9) return;
+      const delta = (dx * vectorX + dy * vectorY) / lengthSquared;
+      onUpdateTruss3dNodePosition(selectedTruss3dNode, {
+        x: target.x + (axis === "x" ? delta : 0),
+        y: target.y + (axis === "y" ? delta : 0),
+        z: target.z + (axis === "z" ? delta : 0),
+      });
+      return;
+    }
+
+    if (selectionStartRef.current) {
+      const start = selectionStartRef.current;
+      const current = pointerToViewport(event);
+      setSelectionRect({
+        x: Math.min(start.x, current.x),
+        y: Math.min(start.y, current.y),
+        width: Math.abs(current.x - start.x),
+        height: Math.abs(current.y - start.y),
+      });
+      return;
+    }
+
     if (!dragModeRef.current) return;
 
     setCamera((current) =>
@@ -439,8 +511,25 @@ function WorkbenchViewportInner({
     if (dragNode3dRef.current !== null) {
       onEndTruss3dNodeDrag();
     }
+    if (dragAxisRef.current !== null) {
+      onEndTruss3dNodeDrag();
+    }
+    if (selectionStartRef.current && selectionRect) {
+      const minX = selectionRect.x;
+      const maxX = selectionRect.x + selectionRect.width;
+      const minY = selectionRect.y;
+      const maxY = selectionRect.y + selectionRect.height;
+      const selectedIndices = displayTruss3dNodes.flatMap((node, index) => {
+        const point = projectTruss3dPoint(node, projected3d, camera, projection);
+        return point.x >= minX && point.x <= maxX && point.y >= minY && point.y <= maxY ? [index] : [];
+      });
+      onSelectTruss3dNodes(selectedIndices, false);
+    }
     dragNode3dRef.current = null;
+    dragAxisRef.current = null;
     pointerRef.current = null;
+    selectionStartRef.current = null;
+    setSelectionRect(null);
   };
 
   const handle3dWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
@@ -668,51 +757,91 @@ function WorkbenchViewportInner({
         <text x="48" y="58" className="svg-title">
           {truss3dTitle}
         </text>
-        <text x="790" y="58" className="legend-label">
+        <text x={immersiveViewport ? 660 : 790} y="58" className="legend-label">
           {workspaceBadge}
         </text>
-        <text x="640" y="58" className="legend-label">
+        <text x={immersiveViewport ? 560 : 640} y="58" className="legend-label">
           {projection === "ortho" ? "ORTHO" : "PERSP"}
         </text>
         <g className="viewport-toolbar">
+          {immersiveViewport ? (
+            <g>
+              <rect x="40" y="80" width="296" height="118" rx="18" className="viewport-toolbar-panel" />
+            </g>
+          ) : null}
           {(["iso", "front", "right", "top"] as ViewPreset[]).map((preset, index) => (
-            <g key={preset} transform={`translate(${698 + index * 58} 84)`}>
+            <g key={preset} transform={`translate(${immersiveViewport ? 54 + index * 68 : 698 + index * 58} ${immersiveViewport ? 94 : 84})`}>
               <rect
-                width="52"
-                height="26"
-                rx="10"
+                width={immersiveViewport ? 60 : 52}
+                height={immersiveViewport ? 32 : 26}
+                rx={immersiveViewport ? 12 : 10}
                 className={`viewport-chip${Math.abs(camera.yaw - cameraForPreset(preset).yaw) < 0.02 && Math.abs(camera.pitch - cameraForPreset(preset).pitch) < 0.02 ? " viewport-chip--active" : ""}`}
                 onClick={() => setCamera((current) => ({ ...cameraForPreset(preset), zoom: current.zoom }))}
               />
-              <text x="26" y="17" textAnchor="middle" className="viewport-chip__label">
+              <text x={immersiveViewport ? 30 : 26} y={immersiveViewport ? 20 : 17} textAnchor="middle" className="viewport-chip__label">
                 {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
               </text>
             </g>
           ))}
-          <g transform="translate(698 118)">
-            <rect width="74" height="26" rx="10" className={`viewport-chip${showGrid ? " viewport-chip--active" : ""}`} onClick={() => setShowGrid((current) => !current)} />
-            <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">GRID</text>
+          <g transform={`translate(${immersiveViewport ? 54 : 698} ${immersiveViewport ? 132 : 118})`}>
+            <rect width={immersiveViewport ? 112 : 74} height={immersiveViewport ? 32 : 26} rx={immersiveViewport ? 12 : 10} className={`viewport-chip${selected3dNodeData ? " viewport-chip--active" : ""}`} onClick={focusSelected3dNode} />
+            <text x={immersiveViewport ? 56 : 37} y={immersiveViewport ? 20 : 17} textAnchor="middle" className="viewport-chip__label">{immersiveViewport ? "FOCUS" : "GRID"}</text>
           </g>
-          <g transform="translate(778 118)">
-            <rect width="74" height="26" rx="10" className={`viewport-chip${showLabels ? " viewport-chip--active" : ""}`} onClick={() => setShowLabels((current) => !current)} />
-            <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">LABEL</text>
+          <g transform={`translate(${immersiveViewport ? 174 : 778} ${immersiveViewport ? 132 : 118})`}>
+            <rect
+              width={immersiveViewport ? 128 : 74}
+              height={immersiveViewport ? 32 : 26}
+              rx={immersiveViewport ? 12 : 10}
+              className={`viewport-chip${immersiveViewport ? (showMoreTools ? " viewport-chip--active" : "") : showLabels ? " viewport-chip--active" : ""}`}
+              onClick={() => (immersiveViewport ? setShowMoreTools((current) => !current) : setShowLabels((current) => !current))}
+            />
+            <text x={immersiveViewport ? 64 : 37} y={immersiveViewport ? 20 : 17} textAnchor="middle" className="viewport-chip__label">{immersiveViewport ? "MORE" : "LABEL"}</text>
           </g>
-          <g transform="translate(858 118)">
-            <rect width="74" height="26" rx="10" className={`viewport-chip${showNodes ? " viewport-chip--active" : ""}`} onClick={() => setShowNodes((current) => !current)} />
-            <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">NODE</text>
+          <g transform={`translate(${immersiveViewport ? 234 : 858} ${immersiveViewport ? 132 : 118})`}>
+            {!immersiveViewport ? <rect width={74} height={26} rx={10} className={`viewport-chip${showNodes ? " viewport-chip--active" : ""}`} onClick={() => setShowNodes((current) => !current)} /> : null}
+            {!immersiveViewport ? <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">NODE</text> : null}
           </g>
-          <g transform="translate(698 152)">
-            <rect width="108" height="26" rx="10" className={`viewport-chip${selected3dNodeData ? " viewport-chip--active" : ""}`} onClick={focusSelected3dNode} />
-            <text x="54" y="17" textAnchor="middle" className="viewport-chip__label">FOCUS</text>
+          <g transform={`translate(${immersiveViewport ? 54 : 698} ${immersiveViewport ? 172 : 152})`}>
+            {!immersiveViewport ? <rect width={108} height={26} rx={10} className={`viewport-chip${selected3dNodeData ? " viewport-chip--active" : ""}`} onClick={focusSelected3dNode} /> : null}
+            {!immersiveViewport ? <text x="54" y="17" textAnchor="middle" className="viewport-chip__label">FOCUS</text> : null}
           </g>
-          <g transform="translate(812 152)">
-            <rect width="120" height="26" rx="10" className={`viewport-chip${projection === "persp" ? " viewport-chip--active" : ""}`} onClick={() => setProjection((current) => (current === "ortho" ? "persp" : "ortho"))} />
-            <text x="60" y="17" textAnchor="middle" className="viewport-chip__label">{projection === "ortho" ? "TO PERSP" : "TO ORTHO"}</text>
+          <g transform={`translate(${immersiveViewport ? 174 : 812} ${immersiveViewport ? 172 : 152})`}>
+            <rect width={immersiveViewport ? 128 : 120} height={immersiveViewport ? 32 : 26} rx={immersiveViewport ? 12 : 10} className={`viewport-chip${projection === "persp" ? " viewport-chip--active" : ""}`} onClick={() => setProjection((current) => (current === "ortho" ? "persp" : "ortho"))} />
+            <text x={immersiveViewport ? 64 : 60} y={immersiveViewport ? 20 : 17} textAnchor="middle" className="viewport-chip__label">{projection === "ortho" ? "TO PERSP" : "TO ORTHO"}</text>
           </g>
-          <g transform="translate(698 186)">
-            <rect width="108" height="26" rx="10" className="viewport-chip" onClick={resetCamera} />
-            <text x="54" y="17" textAnchor="middle" className="viewport-chip__label">RESET</text>
+          <g transform={`translate(${immersiveViewport ? 54 : 698} ${immersiveViewport ? 212 : 186})`}>
+            {!immersiveViewport ? <rect width={108} height={26} rx={10} className="viewport-chip" onClick={resetCamera} /> : null}
+            {!immersiveViewport ? <text x="54" y="17" textAnchor="middle" className="viewport-chip__label">RESET</text> : null}
           </g>
+          <g transform={`translate(${immersiveViewport ? 174 : 812} ${immersiveViewport ? 212 : 186})`}>
+            {!immersiveViewport ? <rect width={120} height={26} rx={10} className={`viewport-chip${boxSelectMode ? " viewport-chip--active" : ""}`} onClick={() => setBoxSelectMode((current) => !current)} /> : null}
+            {!immersiveViewport ? <text x="60" y="17" textAnchor="middle" className="viewport-chip__label">BOX</text> : null}
+          </g>
+          {immersiveViewport && showMoreTools ? (
+            <g>
+              <rect x="348" y="80" width="194" height="158" rx="18" className="viewport-toolbar-panel" />
+              <g transform="translate(362 94)">
+                <rect width="74" height="32" rx="12" className={`viewport-chip${showGrid ? " viewport-chip--active" : ""}`} onClick={() => setShowGrid((current) => !current)} />
+                <text x="37" y="20" textAnchor="middle" className="viewport-chip__label">GRID</text>
+              </g>
+              <g transform="translate(448 94)">
+                <rect width="80" height="32" rx="12" className={`viewport-chip${showLabels ? " viewport-chip--active" : ""}`} onClick={() => setShowLabels((current) => !current)} />
+                <text x="40" y="20" textAnchor="middle" className="viewport-chip__label">LABEL</text>
+              </g>
+              <g transform="translate(362 136)">
+                <rect width="74" height="32" rx="12" className={`viewport-chip${showNodes ? " viewport-chip--active" : ""}`} onClick={() => setShowNodes((current) => !current)} />
+                <text x="37" y="20" textAnchor="middle" className="viewport-chip__label">NODE</text>
+              </g>
+              <g transform="translate(448 136)">
+                <rect width="80" height="32" rx="12" className={`viewport-chip${boxSelectMode ? " viewport-chip--active" : ""}`} onClick={() => setBoxSelectMode((current) => !current)} />
+                <text x="40" y="20" textAnchor="middle" className="viewport-chip__label">BOX</text>
+              </g>
+              <g transform="translate(362 178)">
+                <rect width="74" height="32" rx="12" className="viewport-chip" onClick={resetCamera} />
+                <text x="37" y="20" textAnchor="middle" className="viewport-chip__label">RESET</text>
+              </g>
+            </g>
+          ) : null}
         </g>
         <g clipPath="url(#viewportClipTruss3d)">
           {showGrid
@@ -753,25 +882,46 @@ function WorkbenchViewportInner({
               />
             );
           })}
+          {draftStartNode && hoveredTruss3dNode !== null && hoveredTruss3dNode !== draftStartNodeIndex ? (() => {
+            const start = projectTruss3dPoint(draftStartNode, projected3d, camera, projection);
+            const endNode = displayTruss3dNodes[hoveredTruss3dNode];
+            if (!endNode) return null;
+            const end = projectTruss3dPoint(endNode, projected3d, camera, projection);
+            if (!lineInsideViewport(start, end, 42)) return null;
+            return <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} className="bar bar--preview" />;
+          })() : null}
           {displayTruss3dNodes.map((node, index) => {
             const point = projectTruss3dPoint(node, projected3d, camera, projection);
             if (!pointInsideViewport(point, 24)) return null;
             const showLabel = index % truss3dLabelStep === 0;
+            const isSelected = selectedTruss3dNodeIndices.includes(index) || selectedTruss3dNode === index;
             return (
               <g key={node.id}>
                 {showNodes ? (
                   <circle
                     cx={point.x}
                     cy={point.y}
-                    r={selectedTruss3dNode === index ? 9 : 7}
-                    className={`node-base${selectedTruss3dNode === index ? " node-base--active" : ""}`}
+                    r={isSelected ? 9 : 7}
+                    className={`node-base${isSelected ? " node-base--active" : ""}${memberDraftNodes.includes(index) ? " node-base--draft" : ""}${truss3dLinkMode && hoveredTruss3dNode === index ? " node-base--warning" : ""}`}
                     onPointerDown={(event) => {
                       event.stopPropagation();
                       onSelectTruss3dNode(index);
+                      if (truss3dLinkMode) {
+                        return;
+                      }
+                      if (boxSelectMode) {
+                        return;
+                      }
                       if (isModelMode && event.button === 0) {
                         dragNode3dRef.current = index;
                         pointerRef.current = { x: event.clientX, y: event.clientY };
                       }
+                    }}
+                    onPointerEnter={() => {
+                      if (truss3dLinkMode) setHoveredTruss3dNode(index);
+                    }}
+                    onPointerLeave={() => {
+                      if (truss3dLinkMode) setHoveredTruss3dNode((current) => (current === index ? null : current));
                     }}
                   />
                 ) : null}
@@ -783,9 +933,66 @@ function WorkbenchViewportInner({
               </g>
             );
           })}
+          {isModelMode && selected3dNodeData && !truss3dLinkMode
+            ? (["x", "y", "z"] as const).map((axis) => {
+                const origin = projectTruss3dPoint(selected3dNodeData, projected3d, camera, projection);
+                const target = projectTruss3dPoint(
+                  {
+                    ...selected3dNodeData,
+                    [axis]: selected3dNodeData[axis] + 0.8,
+                  },
+                  projected3d,
+                  camera,
+                  projection,
+                );
+                const classes =
+                  axis === "x"
+                    ? "gizmo-line gizmo-line--x"
+                    : axis === "y"
+                      ? "gizmo-line gizmo-line--y"
+                      : "gizmo-line gizmo-line--z";
+
+                return (
+                  <g key={axis}>
+                    <line
+                      x1={origin.x}
+                      y1={origin.y}
+                      x2={target.x}
+                      y2={target.y}
+                      className={classes}
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        dragAxisRef.current = axis;
+                        pointerRef.current = { x: event.clientX, y: event.clientY };
+                      }}
+                    />
+                    <circle
+                      cx={target.x}
+                      cy={target.y}
+                      r={6}
+                      className={`gizmo-handle ${classes}`}
+                      onPointerDown={(event) => {
+                        event.stopPropagation();
+                        dragAxisRef.current = axis;
+                        pointerRef.current = { x: event.clientX, y: event.clientY };
+                      }}
+                    />
+                  </g>
+                );
+              })
+            : null}
+          {selectionRect ? (
+            <rect
+              x={selectionRect.x}
+              y={selectionRect.y}
+              width={selectionRect.width}
+              height={selectionRect.height}
+              className="selection-box"
+            />
+          ) : null}
           {showShortcutHints ? (
             <g transform="translate(62 292)" className="shortcut-legend">
-              <rect width="282" height="126" rx="16" className="shortcut-legend__panel" />
+              <rect width="282" height={shortcutLegendHeight} rx="16" className="shortcut-legend__panel" />
               <text x="16" y="24" className="shortcut-legend__title">
                 {shortcutLegendTitle}
               </text>

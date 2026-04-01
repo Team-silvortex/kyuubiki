@@ -114,6 +114,11 @@ button {
     background 140ms ease;
 }
 
+.ghost-button--compact {
+  padding: 6px 10px;
+  font-size: 0.78rem;
+}
+
 .link-button {
   padding: 0;
   border: 0;
@@ -126,6 +131,14 @@ button {
   transform: translateY(-1px);
   border-color: rgba(19, 115, 154, 0.22);
   box-shadow: 0 12px 28px rgba(20, 37, 50, 0.1);
+}
+
+.ghost-button--active {
+  border-color: rgba(19, 115, 154, 0.3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 48%),
+    rgba(19, 115, 154, 0.14);
+  color: var(--ink);
 }
 
 .ghost-button:focus-visible,
@@ -388,6 +401,26 @@ html[data-theme="graphite"] .panel {
   align-items: baseline;
 }
 
+.panel-head__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.immersive-switches {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(247, 250, 252, 0.82);
+}
+
+html[data-theme="graphite"] .immersive-switches {
+  background: rgba(16, 24, 29, 0.84);
+}
+
 .card-head h2,
 .panel-head h2,
 .info-card h3,
@@ -543,6 +576,78 @@ html[data-theme="graphite"] .form-grid select {
   overflow: hidden;
 }
 
+.canvas-panel {
+  position: relative;
+}
+
+.canvas-panel--immersive:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  margin: 0;
+  background:
+    radial-gradient(circle at top, rgba(19, 115, 154, 0.08), transparent 42%),
+    var(--panel);
+}
+
+.canvas-panel--immersive:fullscreen .panel-head {
+  padding-inline: 22px;
+  padding-block: 18px 14px;
+}
+
+.canvas-panel--immersive:fullscreen .viewport-svg {
+  height: calc(100vh - 78px);
+  max-height: none;
+}
+
+.immersive-drawer {
+  position: absolute;
+  top: 76px;
+  right: 18px;
+  z-index: 3;
+  width: min(420px, calc(100vw - 42px));
+}
+
+.immersive-drawer__card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(247, 250, 252, 0.86);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 26px 60px rgba(20, 37, 50, 0.18);
+}
+
+html[data-theme="graphite"] .immersive-drawer__card {
+  background: rgba(14, 22, 27, 0.88);
+}
+
+.immersive-drawer__grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.immersive-drawer__head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.immersive-drawer__section h3 {
+  margin: 0 0 8px;
+  font-size: 0.84rem;
+}
+
+.immersive-drawer__list {
+  display: grid;
+  gap: 8px;
+}
+
+.immersive-drawer__button {
+  width: 100%;
+  text-align: left;
+}
+
 .panel-head {
   padding: 14px 14px 10px;
   border-bottom: 1px solid var(--line);
@@ -586,6 +691,16 @@ html[data-theme="graphite"] .viewport-frame {
   stroke-width: 1;
 }
 
+.viewport-toolbar-panel {
+  fill: rgba(247, 250, 252, 0.82);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+html[data-theme="graphite"] .viewport-toolbar-panel {
+  fill: rgba(16, 24, 29, 0.86);
+}
+
 .viewport-chip--active {
   fill: rgba(19, 115, 154, 0.14);
   stroke: rgba(19, 115, 154, 0.28);
@@ -596,6 +711,35 @@ html[data-theme="graphite"] .viewport-frame {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.05em;
+}
+
+.selection-box {
+  fill: rgba(19, 115, 154, 0.12);
+  stroke: rgba(19, 115, 154, 0.5);
+  stroke-width: 1.5;
+  stroke-dasharray: 8 6;
+}
+
+.gizmo-line {
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.gizmo-line--x {
+  stroke: #d55a4f;
+}
+
+.gizmo-line--y {
+  stroke: #1d96a8;
+}
+
+.gizmo-line--z {
+  stroke: #d39a2f;
+}
+
+.gizmo-handle {
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 1.5;
 }
 
 .shortcut-legend__panel {
@@ -619,6 +763,12 @@ html[data-theme="graphite"] .shortcut-legend__panel {
   fill: var(--muted);
   font-size: 11px;
   font-weight: 700;
+}
+
+html.immersive-guardrails,
+html.immersive-guardrails * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .guide {
@@ -648,6 +798,13 @@ html[data-theme="graphite"] .guide {
 .bar--selected {
   stroke: var(--accent);
   stroke-width: 10;
+}
+
+.bar--preview {
+  stroke: var(--accent);
+  stroke-width: 5;
+  stroke-dasharray: 9 7;
+  opacity: 0.82;
 }
 
 .bar--deformed {
