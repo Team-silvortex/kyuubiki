@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
@@ -108,7 +108,6 @@ type WorkbenchViewportProps = {
   onStartTrussNodeDrag: (index: number) => void;
   displayTruss3dNodes: DisplayTruss3dNode[];
   displayTruss3dElements: DisplayTruss3dElement[];
-  truss3dProjectedBounds: Bounds;
   planeNodes: PlaneNode[];
   planeElements: PlaneElement[];
   planeBounds: Bounds;
@@ -117,6 +116,17 @@ type WorkbenchViewportProps = {
   selectedPlaneNodeId: string | null;
   onSelectPlaneElement: (index: number) => void;
   onSelectPlaneNode: (index: number) => void;
+  selectedTruss3dNode: number | null;
+  selectedTruss3dElement: number | null;
+  onSelectTruss3dNode: (index: number) => void;
+  onSelectTruss3dElement: (index: number) => void;
+  onUpdateTruss3dNodePosition: (index: number, position: { x: number; y: number; z: number }) => void;
+  onBeginTruss3dNodeDrag: () => void;
+  onEndTruss3dNodeDrag: () => void;
+  workspaceBadge: string;
+  showShortcutHints: boolean;
+  shortcutLegendTitle: string;
+  shortcutLegendRows: string[];
 };
 
 const VIEWPORT_CLIP = { x: 48, y: 76, width: 884, height: 340 };
@@ -133,10 +143,108 @@ function toSvgPoint(node: { x: number; y: number }, bounds: Bounds) {
   };
 }
 
-function projectTruss3dPoint(node: { x: number; y: number; z: number }, bounds: Bounds) {
-  const isoX = node.x - node.y * 0.55;
-  const isoY = node.z + node.y * 0.35;
-  return toSvgPoint({ x: isoX, y: isoY }, bounds);
+type CameraState = {
+  yaw: number;
+  pitch: number;
+  zoom: number;
+  panX: number;
+  panY: number;
+};
+
+type ViewPreset = "iso" | "front" | "right" | "top";
+type ProjectionMode = "ortho" | "persp";
+
+function rotatePoint(node: { x: number; y: number; z: number }, camera: CameraState) {
+  const cy = Math.cos(camera.yaw);
+  const sy = Math.sin(camera.yaw);
+  const cp = Math.cos(camera.pitch);
+  const sp = Math.sin(camera.pitch);
+
+  const x1 = node.x * cy - node.y * sy;
+  const y1 = node.x * sy + node.y * cy;
+  const z1 = node.z;
+
+  return {
+    x: x1,
+    y: y1 * cp - z1 * sp,
+    z: y1 * sp + z1 * cp,
+  };
+}
+
+function buildProjectedBounds(nodes: DisplayTruss3dNode[], camera: CameraState) {
+  const projected = nodes.map((node) => {
+    const rotated = rotatePoint(node, camera);
+    return { x: rotated.x, y: rotated.z };
+  });
+
+  const xs = projected.map((node) => node.x);
+  const ys = projected.map((node) => node.y);
+  const minX = Math.min(...xs, -1);
+  const maxX = Math.max(...xs, 1);
+  const minY = Math.min(...ys, -1);
+  const maxY = Math.max(...ys, 1);
+  const width = Math.max(maxX - minX, 1);
+  const height = Math.max(maxY - minY, 1);
+
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    width,
+    height,
+    projected,
+  };
+}
+
+function cameraForPreset(preset: ViewPreset): CameraState {
+  if (preset === "front") {
+    return { yaw: 0, pitch: 0, zoom: 1, panX: 0, panY: 0 };
+  }
+
+  if (preset === "right") {
+    return { yaw: Math.PI / 2, pitch: 0, zoom: 1, panX: 0, panY: 0 };
+  }
+
+  if (preset === "top") {
+    return { yaw: 0, pitch: -Math.PI / 2, zoom: 1, panX: 0, panY: 0 };
+  }
+
+  return { yaw: -0.7, pitch: 0.55, zoom: 1, panX: 0, panY: 0 };
+}
+
+function projectTruss3dPoint(
+  node: { x: number; y: number; z: number },
+  bounds: Bounds,
+  camera: CameraState,
+  projection: ProjectionMode,
+) {
+  const rotated = rotatePoint(node, camera);
+  const point = toSvgPoint({ x: rotated.x, y: rotated.z }, bounds);
+  const perspectiveScale = projection === "persp" ? Math.max(0.64, Math.min(1.42, 8 / (8 + rotated.y))) : 1;
+  return {
+    x: point.x * camera.zoom * perspectiveScale + camera.panX,
+    y: point.y * camera.zoom * perspectiveScale + camera.panY,
+    depth: rotated.y,
+    scale: perspectiveScale,
+  };
+}
+
+function rotatedDeltaToWorld(deltaX: number, deltaZ: number, camera: CameraState) {
+  const cy = Math.cos(camera.yaw);
+  const sy = Math.sin(camera.yaw);
+  const cp = Math.cos(camera.pitch);
+  const sp = Math.sin(camera.pitch);
+
+  const x1 = deltaX;
+  const yTemp = deltaZ * sp;
+  const z = deltaZ * cp;
+
+  return {
+    x: x1 * cy + yTemp * sy,
+    y: -x1 * sy + yTemp * cy,
+    z,
+  };
 }
 
 function planeStressFill(value: number, maxValue: number): string {
@@ -244,7 +352,6 @@ function WorkbenchViewportInner({
   onStartTrussNodeDrag,
   displayTruss3dNodes,
   displayTruss3dElements,
-  truss3dProjectedBounds,
   planeNodes,
   planeElements,
   planeBounds,
@@ -253,15 +360,135 @@ function WorkbenchViewportInner({
   selectedPlaneNodeId,
   onSelectPlaneElement,
   onSelectPlaneNode,
+  selectedTruss3dNode,
+  selectedTruss3dElement,
+  onSelectTruss3dNode,
+  onSelectTruss3dElement,
+  onUpdateTruss3dNodePosition,
+  onBeginTruss3dNodeDrag,
+  onEndTruss3dNodeDrag,
+  workspaceBadge,
+  showShortcutHints,
+  shortcutLegendTitle,
+  shortcutLegendRows,
 }: WorkbenchViewportProps) {
   const isModelMode = sidebarSection === "model";
-  const trussLabelStep = stepForDensity(displayTrussNodes.length, isModelMode ? 28 : 18);
-  const trussMarkerStep = stepForDensity(displayTrussNodes.length, isModelMode ? 240 : 140);
-  const trussDeformedStep = stepForDensity(displayTrussElements.length, 320);
-  const truss3dLabelStep = stepForDensity(displayTruss3dNodes.length, 20);
-  const planeNodeLabelStep = stepForDensity(planeNodes.length, isModelMode ? 24 : 16);
-  const planeNodeMarkerStep = stepForDensity(planeNodes.length, isModelMode ? 200 : 120);
-  const planeDeformedStep = stepForDensity(planeElements.length, 240);
+  const trussLabelStep = stepForDensity(displayTrussNodes.length, isModelMode ? 22 : 12);
+  const trussMarkerStep = stepForDensity(displayTrussNodes.length, isModelMode ? 160 : 84);
+  const trussDeformedStep = stepForDensity(displayTrussElements.length, 180);
+  const truss3dLabelStep = stepForDensity(displayTruss3dNodes.length, 12);
+  const planeNodeLabelStep = stepForDensity(planeNodes.length, isModelMode ? 18 : 10);
+  const planeNodeMarkerStep = stepForDensity(planeNodes.length, isModelMode ? 128 : 72);
+  const planeDeformedStep = stepForDensity(planeElements.length, 120);
+  const [camera, setCamera] = useState<CameraState>(cameraForPreset("iso"));
+  const [projection, setProjection] = useState<ProjectionMode>("ortho");
+  const [showGrid, setShowGrid] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
+  const [showNodes, setShowNodes] = useState(true);
+  const dragModeRef = useRef<"orbit" | "pan" | null>(null);
+  const dragNode3dRef = useRef<number | null>(null);
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  const projected3d = buildProjectedBounds(displayTruss3dNodes, camera);
+  const selected3dNodeData = selectedTruss3dNode !== null ? displayTruss3dNodes[selectedTruss3dNode] : null;
+
+  const handle3dPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+    dragModeRef.current = event.shiftKey ? "pan" : "orbit";
+    pointerRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handle3dPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
+    if (!pointerRef.current) return;
+    const dx = event.clientX - pointerRef.current.x;
+    const dy = event.clientY - pointerRef.current.y;
+    pointerRef.current = { x: event.clientX, y: event.clientY };
+
+    if (dragNode3dRef.current !== null) {
+      const targetIndex = dragNode3dRef.current;
+      const target = displayTruss3dNodes[targetIndex];
+      if (!target) return;
+      onBeginTruss3dNodeDrag();
+      const usableWidth = 980 - 120 * 2;
+      const usableHeight = 460 - 80 * 2;
+      const factor = projection === "persp" ? Math.max(0.64, Math.min(1.42, 8 / (8 + rotatePoint(target, camera).y))) : 1;
+      const deltaRotatedX = (dx / Math.max(camera.zoom * factor, 0.01)) * (projected3d.width / usableWidth);
+      const deltaRotatedZ = (-dy / Math.max(camera.zoom * factor, 0.01)) * (projected3d.height / usableHeight);
+      const deltaWorld = rotatedDeltaToWorld(deltaRotatedX, deltaRotatedZ, camera);
+      onUpdateTruss3dNodePosition(targetIndex, {
+        x: target.x + deltaWorld.x,
+        y: target.y + deltaWorld.y,
+        z: target.z + deltaWorld.z,
+      });
+      return;
+    }
+
+    if (!dragModeRef.current) return;
+
+    setCamera((current) =>
+      dragModeRef.current === "pan"
+        ? { ...current, panX: current.panX + dx, panY: current.panY + dy }
+        : {
+            ...current,
+            yaw: current.yaw + dx * 0.008,
+            pitch: Math.max(-1.35, Math.min(1.35, current.pitch - dy * 0.008)),
+          },
+    );
+  };
+
+  const stop3dPointer = () => {
+    dragModeRef.current = null;
+    if (dragNode3dRef.current !== null) {
+      onEndTruss3dNodeDrag();
+    }
+    dragNode3dRef.current = null;
+    pointerRef.current = null;
+  };
+
+  const handle3dWheel = (event: ReactWheelEvent<SVGSVGElement>) => {
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? 0.92 : 1.08;
+    setCamera((current) => ({
+      ...current,
+      zoom: Math.max(0.55, Math.min(2.8, current.zoom * direction)),
+    }));
+  };
+
+  const focusSelected3dNode = () => {
+    if (!selected3dNodeData) return;
+    const point = projectTruss3dPoint(selected3dNodeData, projected3d, { ...camera, panX: 0, panY: 0 }, projection);
+    setCamera((current) => ({
+      ...current,
+      panX: current.panX + (490 - point.x),
+      panY: current.panY + (248 - point.y),
+    }));
+  };
+
+  const resetCamera = () => {
+    setCamera((current) => ({ ...cameraForPreset("iso"), zoom: current.zoom }));
+  };
+
+  const handle3dKeyDown = (event: ReactKeyboardEvent<SVGSVGElement>) => {
+    const step = event.shiftKey ? 32 : 18;
+    if (event.key === "1") setCamera((current) => ({ ...cameraForPreset("iso"), zoom: current.zoom }));
+    if (event.key === "2") setCamera((current) => ({ ...cameraForPreset("front"), zoom: current.zoom }));
+    if (event.key === "3") setCamera((current) => ({ ...cameraForPreset("right"), zoom: current.zoom }));
+    if (event.key === "4") setCamera((current) => ({ ...cameraForPreset("top"), zoom: current.zoom }));
+    if (event.key.toLowerCase() === "g") setShowGrid((current) => !current);
+    if (event.key.toLowerCase() === "l") setShowLabels((current) => !current);
+    if (event.key.toLowerCase() === "n") setShowNodes((current) => !current);
+    if (event.key.toLowerCase() === "p") setProjection((current) => (current === "ortho" ? "persp" : "ortho"));
+    if (event.key.toLowerCase() === "f") focusSelected3dNode();
+    if (event.key.toLowerCase() === "r") resetCamera();
+    if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") setCamera((current) => ({ ...current, panX: current.panX + step }));
+    if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") setCamera((current) => ({ ...current, panX: current.panX - step }));
+    if (event.key === "ArrowUp" || event.key.toLowerCase() === "w") setCamera((current) => ({ ...current, panY: current.panY + step }));
+    if (event.key === "ArrowDown" || event.key.toLowerCase() === "s") setCamera((current) => ({ ...current, panY: current.panY - step }));
+  };
+
+  const gridExtent = Math.max(
+    ...displayTruss3dNodes.map((node) => Math.max(Math.abs(node.x), Math.abs(node.y))),
+    2,
+  );
+  const gridStep = gridExtent > 6 ? 2 : 1;
 
   if (studyKind === "axial_bar_1d") {
     return (
@@ -420,7 +647,18 @@ function WorkbenchViewportInner({
 
   if (studyKind === "truss_3d") {
     return (
-      <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="3d truss response">
+      <svg
+        viewBox="0 0 980 460"
+        className="viewport-svg"
+        aria-label="3d truss response"
+        onPointerDown={handle3dPointerDown}
+        onPointerMove={handle3dPointerMove}
+        onPointerUp={stop3dPointer}
+        onPointerLeave={stop3dPointer}
+        onWheel={handle3dWheel}
+        onKeyDown={handle3dKeyDown}
+        tabIndex={0}
+      >
         <defs>
           <clipPath id="viewportClipTruss3d">
             <rect x={VIEWPORT_CLIP.x} y={VIEWPORT_CLIP.y} width={VIEWPORT_CLIP.width} height={VIEWPORT_CLIP.height} rx="22" />
@@ -430,10 +668,75 @@ function WorkbenchViewportInner({
         <text x="48" y="58" className="svg-title">
           {truss3dTitle}
         </text>
+        <text x="790" y="58" className="legend-label">
+          {workspaceBadge}
+        </text>
+        <text x="640" y="58" className="legend-label">
+          {projection === "ortho" ? "ORTHO" : "PERSP"}
+        </text>
+        <g className="viewport-toolbar">
+          {(["iso", "front", "right", "top"] as ViewPreset[]).map((preset, index) => (
+            <g key={preset} transform={`translate(${698 + index * 58} 84)`}>
+              <rect
+                width="52"
+                height="26"
+                rx="10"
+                className={`viewport-chip${Math.abs(camera.yaw - cameraForPreset(preset).yaw) < 0.02 && Math.abs(camera.pitch - cameraForPreset(preset).pitch) < 0.02 ? " viewport-chip--active" : ""}`}
+                onClick={() => setCamera((current) => ({ ...cameraForPreset(preset), zoom: current.zoom }))}
+              />
+              <text x="26" y="17" textAnchor="middle" className="viewport-chip__label">
+                {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
+              </text>
+            </g>
+          ))}
+          <g transform="translate(698 118)">
+            <rect width="74" height="26" rx="10" className={`viewport-chip${showGrid ? " viewport-chip--active" : ""}`} onClick={() => setShowGrid((current) => !current)} />
+            <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">GRID</text>
+          </g>
+          <g transform="translate(778 118)">
+            <rect width="74" height="26" rx="10" className={`viewport-chip${showLabels ? " viewport-chip--active" : ""}`} onClick={() => setShowLabels((current) => !current)} />
+            <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">LABEL</text>
+          </g>
+          <g transform="translate(858 118)">
+            <rect width="74" height="26" rx="10" className={`viewport-chip${showNodes ? " viewport-chip--active" : ""}`} onClick={() => setShowNodes((current) => !current)} />
+            <text x="37" y="17" textAnchor="middle" className="viewport-chip__label">NODE</text>
+          </g>
+          <g transform="translate(698 152)">
+            <rect width="108" height="26" rx="10" className={`viewport-chip${selected3dNodeData ? " viewport-chip--active" : ""}`} onClick={focusSelected3dNode} />
+            <text x="54" y="17" textAnchor="middle" className="viewport-chip__label">FOCUS</text>
+          </g>
+          <g transform="translate(812 152)">
+            <rect width="120" height="26" rx="10" className={`viewport-chip${projection === "persp" ? " viewport-chip--active" : ""}`} onClick={() => setProjection((current) => (current === "ortho" ? "persp" : "ortho"))} />
+            <text x="60" y="17" textAnchor="middle" className="viewport-chip__label">{projection === "ortho" ? "TO PERSP" : "TO ORTHO"}</text>
+          </g>
+          <g transform="translate(698 186)">
+            <rect width="108" height="26" rx="10" className="viewport-chip" onClick={resetCamera} />
+            <text x="54" y="17" textAnchor="middle" className="viewport-chip__label">RESET</text>
+          </g>
+        </g>
         <g clipPath="url(#viewportClipTruss3d)">
+          {showGrid
+            ? Array.from({ length: Math.floor((gridExtent * 2) / gridStep) + 1 }, (_, index) => -gridExtent + index * gridStep).flatMap((value) => {
+                const xLineStart = projectTruss3dPoint({ x: -gridExtent, y: value, z: 0 }, projected3d, camera, projection);
+                const xLineEnd = projectTruss3dPoint({ x: gridExtent, y: value, z: 0 }, projected3d, camera, projection);
+                const yLineStart = projectTruss3dPoint({ x: value, y: -gridExtent, z: 0 }, projected3d, camera, projection);
+                const yLineEnd = projectTruss3dPoint({ x: value, y: gridExtent, z: 0 }, projected3d, camera, projection);
+
+                return [
+                  <line key={`grid-x-${value}`} x1={xLineStart.x} y1={xLineStart.y} x2={xLineEnd.x} y2={xLineEnd.y} className="guide guide--soft" />,
+                  <line key={`grid-y-${value}`} x1={yLineStart.x} y1={yLineStart.y} x2={yLineEnd.x} y2={yLineEnd.y} className="guide guide--soft" />,
+                ];
+              })
+            : null}
+          <line x1="74" y1="386" x2="130" y2="386" className="guide" />
+          <line x1="74" y1="386" x2="74" y2="330" className="guide" />
+          <line x1="74" y1="386" x2="104" y2="356" className="guide guide--soft" />
+          <text x="136" y="390" className="node-label">X</text>
+          <text x="68" y="324" className="node-label">Z</text>
+          <text x="108" y="350" className="node-label">Y</text>
           {displayTruss3dElements.map((element) => {
-            const start = projectTruss3dPoint(displayTruss3dNodes[element.node_i], truss3dProjectedBounds);
-            const end = projectTruss3dPoint(displayTruss3dNodes[element.node_j], truss3dProjectedBounds);
+            const start = projectTruss3dPoint(displayTruss3dNodes[element.node_i], projected3d, camera, projection);
+            const end = projectTruss3dPoint(displayTruss3dNodes[element.node_j], projected3d, camera, projection);
             if (!lineInsideViewport(start, end)) return null;
             return (
               <line
@@ -442,18 +745,37 @@ function WorkbenchViewportInner({
                 y1={start.y}
                 x2={end.x}
                 y2={end.y}
-                className="bar bar--base"
+                className={`bar bar--base${selectedTruss3dElement === element.index ? " bar--selected" : ""}`}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  onSelectTruss3dElement(element.index);
+                }}
               />
             );
           })}
           {displayTruss3dNodes.map((node, index) => {
-            const point = projectTruss3dPoint(node, truss3dProjectedBounds);
+            const point = projectTruss3dPoint(node, projected3d, camera, projection);
             if (!pointInsideViewport(point, 24)) return null;
             const showLabel = index % truss3dLabelStep === 0;
             return (
               <g key={node.id}>
-                <circle cx={point.x} cy={point.y} r={7} className="node-base" />
-                {showLabel ? (
+                {showNodes ? (
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r={selectedTruss3dNode === index ? 9 : 7}
+                    className={`node-base${selectedTruss3dNode === index ? " node-base--active" : ""}`}
+                    onPointerDown={(event) => {
+                      event.stopPropagation();
+                      onSelectTruss3dNode(index);
+                      if (isModelMode && event.button === 0) {
+                        dragNode3dRef.current = index;
+                        pointerRef.current = { x: event.clientX, y: event.clientY };
+                      }
+                    }}
+                  />
+                ) : null}
+                {showLabels && (showLabel || selectedTruss3dNode === index) ? (
                   <text x={point.x + 10} y={point.y - 10} className="node-label">
                     {node.id}
                   </text>
@@ -461,6 +783,19 @@ function WorkbenchViewportInner({
               </g>
             );
           })}
+          {showShortcutHints ? (
+            <g transform="translate(62 292)" className="shortcut-legend">
+              <rect width="282" height="126" rx="16" className="shortcut-legend__panel" />
+              <text x="16" y="24" className="shortcut-legend__title">
+                {shortcutLegendTitle}
+              </text>
+              {shortcutLegendRows.map((row, index) => (
+                <text key={row} x="16" y={50 + index * 18} className="shortcut-legend__row">
+                  {row}
+                </text>
+              ))}
+            </g>
+          ) : null}
         </g>
       </svg>
     );

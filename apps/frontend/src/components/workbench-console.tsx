@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { VirtualList } from "@/components/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
 
@@ -107,38 +108,35 @@ function WorkbenchConsoleInner({
         </div>
         <div className="console-card">
           <h3>{elementTitle}</h3>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>{spanLabel}</th>
-                  <th>{stressLabel}</th>
-                  <th>{axialForceLabel}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {elements.map((element) => (
-                  <tr key={element.index}>
-                    <td>{element.index}</td>
-                    <td>
-                      {"x1" in element && typeof element.x1 === "number"
-                        ? `${fixed(element.x1, 2)} - ${fixed(element.x2, 2)}`
-                        : typeof element.node_k === "number"
-                          ? `${element.node_i} - ${element.node_j} - ${element.node_k}`
-                          : `${element.node_i} - ${element.node_j}`}
-                    </td>
-                    <td>{scientific(typeof element.von_mises === "number" ? element.von_mises : element.stress)}</td>
-                    <td>{scientific(element.axial_force)}</td>
-                  </tr>
-                ))}
-                {elements.length === 0 ? (
-                  <tr>
-                    <td colSpan={4}>--</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
+          <div className="table-like table-like--console">
+            <div className="table-like__head table-like__head--wide">
+              <span>#</span>
+              <span>{spanLabel}</span>
+              <span>{stressLabel}</span>
+              <span>{axialForceLabel}</span>
+            </div>
+            <VirtualList
+              className="table-like__body"
+              items={elements}
+              itemHeight={46}
+              maxHeight={280}
+              emptyState={<p className="card-copy">--</p>}
+              itemKey={(element) => String(element.index)}
+              renderItem={(element) => (
+                <div className="table-like__row table-like__row--wide">
+                  <strong>{element.index}</strong>
+                  <span>
+                    {"x1" in element && typeof element.x1 === "number"
+                      ? `${fixed(element.x1, 2)} - ${fixed(element.x2, 2)}`
+                      : typeof element.node_k === "number"
+                        ? `${element.node_i} - ${element.node_j} - ${element.node_k}`
+                        : `${element.node_i} - ${element.node_j}`}
+                  </span>
+                  <span>{scientific(typeof element.von_mises === "number" ? element.von_mises : element.stress)}</span>
+                  <span>{scientific(element.axial_force)}</span>
+                </div>
+              )}
+            />
           </div>
         </div>
       </div>

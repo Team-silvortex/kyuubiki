@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { VirtualList } from "@/components/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
@@ -37,6 +37,26 @@ type TrussNodeSelection = {
 };
 
 type TrussElementSelection = {
+  id: string;
+  index: number;
+  node_i: number;
+  node_j: number;
+};
+
+type Truss3dNodeSelection = {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  load_x: number;
+  load_y: number;
+  load_z: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_z: boolean;
+};
+
+type Truss3dElementSelection = {
   id: string;
   index: number;
   node_i: number;
@@ -81,10 +101,13 @@ type InspectorLabels = {
   dragNode: string;
   nodeX: string;
   nodeY: string;
+  nodeZ: string;
   loadX: string;
   loadY: string;
+  loadZ: string;
   fixX: string;
   fixY: string;
+  fixZ: string;
   memberSelection: string;
   nodeI: string;
   nodeJ: string;
@@ -135,15 +158,21 @@ type WorkbenchInspectorProps = {
   isPending: boolean;
   selectedNodeData: TrussNodeSelection | null;
   selectedElementData: TrussElementSelection | null;
+  selectedTruss3dNodeData: Truss3dNodeSelection | null;
+  selectedTruss3dElementData: Truss3dElementSelection | null;
   selectedPlaneNodeData: PlaneNodeSelection | null;
   selectedPlaneElementData: PlaneElementSelection | null;
   trussElementArea: number;
   trussElementModulusGpa: number;
+  truss3dElementArea: number;
+  truss3dElementModulusGpa: number;
   planeElementThickness: number;
   planeElementModulusGpa: number;
   planeElementPoissonRatio: number;
   onUpdateSelectedNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y", value: number | boolean) => void;
   onUpdateSelectedElement: (field: "area" | "youngs_modulus", value: number) => void;
+  onUpdateSelectedTruss3dNode: (field: "x" | "y" | "z" | "load_x" | "load_y" | "load_z" | "fix_x" | "fix_y" | "fix_z", value: number | boolean) => void;
+  onUpdateSelectedTruss3dElement: (field: "area" | "youngs_modulus", value: number) => void;
   onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y", value: number | boolean) => void;
   onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio", value: number) => void;
   trussDiagnostics: TrussDiagnostics | null;
@@ -166,6 +195,8 @@ type WorkbenchInspectorProps = {
   onDownloadCsv: () => void;
 };
 
+type InspectorTab = "properties" | "diagnostics" | "history" | "report";
+
 function WorkbenchInspectorInner({
   t,
   sidebarSection,
@@ -173,15 +204,21 @@ function WorkbenchInspectorInner({
   isPending,
   selectedNodeData,
   selectedElementData,
+  selectedTruss3dNodeData,
+  selectedTruss3dElementData,
   selectedPlaneNodeData,
   selectedPlaneElementData,
   trussElementArea,
   trussElementModulusGpa,
+  truss3dElementArea,
+  truss3dElementModulusGpa,
   planeElementThickness,
   planeElementModulusGpa,
   planeElementPoissonRatio,
   onUpdateSelectedNode,
   onUpdateSelectedElement,
+  onUpdateSelectedTruss3dNode,
+  onUpdateSelectedTruss3dElement,
   onUpdateSelectedPlaneNode,
   onUpdateSelectedPlaneElement,
   trussDiagnostics,
@@ -203,7 +240,9 @@ function WorkbenchInspectorInner({
   onDownloadJson,
   onDownloadCsv,
 }: WorkbenchInspectorProps) {
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
   const isTruss = studyKind === "truss_2d";
+  const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d";
   const historyRows = [
     ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
@@ -216,8 +255,14 @@ function WorkbenchInspectorInner({
         <h2>{t.overview}</h2>
         <span>{isPending ? t.busy : t.ready}</span>
       </div>
-      <div className="inspector-stack">
-        {sidebarSection === "model" ? (
+      <div className="inspector-stack panel-scroll-window">
+        <div className="panel-tabs panel-tabs--wide">
+          <button className={`panel-tab${inspectorTab === "properties" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("properties")} type="button">{t.properties}</button>
+          <button className={`panel-tab${inspectorTab === "diagnostics" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("diagnostics")} type="button">{t.diagnostics}</button>
+          <button className={`panel-tab${inspectorTab === "history" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("history")} type="button">{t.historyPanel}</button>
+          <button className={`panel-tab${inspectorTab === "report" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("report")} type="button">{t.report}</button>
+        </div>
+        {sidebarSection === "model" && inspectorTab === "properties" ? (
           <section className="info-card">
             <h3>{t.properties}</h3>
             {isTruss && selectedNodeData ? (
@@ -237,6 +282,27 @@ function WorkbenchInspectorInner({
                 <label><span>{t.nodeJ}</span><input value={selectedElementData.node_j} readOnly /></label>
                 <label><span>{t.area}</span><input type="number" step={0.0001} value={trussElementArea} onChange={(event) => onUpdateSelectedElement("area", Number(event.target.value))} /></label>
                 <label><span>{t.modulus}</span><input type="number" step={0.1} value={trussElementModulusGpa} onChange={(event) => onUpdateSelectedElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
+              </div>
+            ) : isTruss3d && selectedTruss3dNodeData ? (
+              <div className="form-grid compact">
+                <label><span>{t.dragNode}</span><input value={selectedTruss3dNodeData.id} readOnly /></label>
+                <label><span>{t.nodeX}</span><input type="number" step={0.1} value={selectedTruss3dNodeData.x} onChange={(event) => onUpdateSelectedTruss3dNode("x", Number(event.target.value))} /></label>
+                <label><span>{t.nodeY}</span><input type="number" step={0.1} value={selectedTruss3dNodeData.y} onChange={(event) => onUpdateSelectedTruss3dNode("y", Number(event.target.value))} /></label>
+                <label><span>{t.nodeZ}</span><input type="number" step={0.1} value={selectedTruss3dNodeData.z} onChange={(event) => onUpdateSelectedTruss3dNode("z", Number(event.target.value))} /></label>
+                <label><span>{t.loadX}</span><input type="number" step={100} value={selectedTruss3dNodeData.load_x} onChange={(event) => onUpdateSelectedTruss3dNode("load_x", Number(event.target.value))} /></label>
+                <label><span>{t.loadY}</span><input type="number" step={100} value={selectedTruss3dNodeData.load_y} onChange={(event) => onUpdateSelectedTruss3dNode("load_y", Number(event.target.value))} /></label>
+                <label><span>{t.loadZ}</span><input type="number" step={100} value={selectedTruss3dNodeData.load_z} onChange={(event) => onUpdateSelectedTruss3dNode("load_z", Number(event.target.value))} /></label>
+                <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedTruss3dNodeData.fix_x} onChange={(event) => onUpdateSelectedTruss3dNode("fix_x", event.target.checked)} /></label>
+                <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedTruss3dNodeData.fix_y} onChange={(event) => onUpdateSelectedTruss3dNode("fix_y", event.target.checked)} /></label>
+                <label className="toggle-row"><span>{t.fixZ}</span><input type="checkbox" checked={selectedTruss3dNodeData.fix_z} onChange={(event) => onUpdateSelectedTruss3dNode("fix_z", event.target.checked)} /></label>
+              </div>
+            ) : isTruss3d && selectedTruss3dElementData ? (
+              <div className="form-grid compact">
+                <label><span>{t.memberSelection}</span><input value={selectedTruss3dElementData.id} readOnly /></label>
+                <label><span>{t.nodeI}</span><input value={selectedTruss3dElementData.node_i} readOnly /></label>
+                <label><span>{t.nodeJ}</span><input value={selectedTruss3dElementData.node_j} readOnly /></label>
+                <label><span>{t.area}</span><input type="number" step={0.0001} value={truss3dElementArea} onChange={(event) => onUpdateSelectedTruss3dElement("area", Number(event.target.value))} /></label>
+                <label><span>{t.modulus}</span><input type="number" step={0.1} value={truss3dElementModulusGpa} onChange={(event) => onUpdateSelectedTruss3dElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
               </div>
             ) : isPlane && selectedPlaneNodeData ? (
               <div className="form-grid compact">
@@ -264,7 +330,7 @@ function WorkbenchInspectorInner({
           </section>
         ) : null}
 
-        {sidebarSection === "model" && isTruss ? (
+        {sidebarSection === "model" && isTruss && inspectorTab === "diagnostics" ? (
           <section className="info-card">
             <h3>{t.diagnostics}</h3>
             {trussDiagnostics && trussDiagnostics.blockingMessages.length > 0 ? (
@@ -297,6 +363,7 @@ function WorkbenchInspectorInner({
           </section>
         ) : null}
 
+        {inspectorTab === "history" ? (
         <section className="info-card">
           <h3>{t.historyPanel}</h3>
           <div className="button-row">
@@ -321,7 +388,9 @@ function WorkbenchInspectorInner({
             />
           )}
         </section>
+        ) : null}
 
+        {inspectorTab === "report" ? (
         <section className="info-card">
           <h3>{t.metrics}</h3>
           <div className="metric-grid">
@@ -333,7 +402,9 @@ function WorkbenchInspectorInner({
             <div><span>{t.nodes}</span><strong>{nodeCount}</strong></div>
           </div>
         </section>
+        ) : null}
 
+        {inspectorTab === "report" ? (
         <section className="info-card">
           <h3>{t.report}</h3>
           <div className="button-row">
@@ -350,6 +421,7 @@ function WorkbenchInspectorInner({
             <div><span>{t.failureReason}</span><strong>{failureReasonValue}</strong></div>
           </div>
         </section>
+        ) : null}
       </div>
     </aside>
   );

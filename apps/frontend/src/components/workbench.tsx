@@ -13,6 +13,7 @@ import {
 import { VirtualList } from "@/components/virtual-list";
 import { WorkbenchConsole } from "@/components/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench-inspector";
+import { WorkbenchObjectTree } from "@/components/workbench-object-tree";
 import { WorkbenchViewport } from "@/components/workbench-viewport";
 import { MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/model-import";
@@ -69,6 +70,9 @@ type Language = "en" | "zh";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+type StudyPanelTab = "summary" | "controls";
+type ModelPanelTab = "tools" | "tree";
+type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 
 type AxialFormState = {
   length: number;
@@ -291,8 +295,17 @@ const copy = {
     ui: "Next.js UI",
     theme: "Theme",
     language: "Language",
+    shortcutHints: "Shortcut hints",
+    shortcutHintsHelp: "Show the 3D keyboard legend in the viewport.",
     themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
     languages: { en: "English", zh: "中文" },
+    shortcutLegendTitle: "3D controls",
+    shortcutLegendRows: [
+      "Drag orbit · Shift+Drag pan · Wheel zoom",
+      "1/2/3/4 views · P projection",
+      "G grid · L labels · N nodes",
+      "F focus · R reset · WASD/Arrows pan",
+    ],
     length: "Span (m)",
     area: "Area (m²)",
     modulus: "Young's modulus (GPa)",
@@ -375,6 +388,8 @@ const copy = {
     planeHint: "Select plane nodes and triangles to edit supports, loads, and material thickness.",
     parametric: "Parametric Generator",
     panelGenerator: "Panel Generator",
+    spaceStudio: "3D Space Studio",
+    tabs: { summary: "Summary", controls: "Controls", tools: "Tools", tree: "Tree", samples: "Samples", projects: "Projects", models: "Models", jobs: "Jobs" },
     generate: "Generate",
     generatePanel: "Generate Panel",
     download: "Download JSON",
@@ -388,6 +403,7 @@ const copy = {
     noNodeSelected: "No node selected",
     loadCase: "Load case",
     modelStudioHint: "2D truss and 2D plane studies can be edited directly here. 3D studies can already be imported, solved, and reviewed.",
+    spaceStudioHint: "Use orbit, pan, and zoom to navigate the space frame. 3D nodes and members can be selected and edited numerically.",
     sourceModel: "Source model",
     createdAt: "Created",
     updatedAt: "Updated",
@@ -438,10 +454,13 @@ const copy = {
     noElementSelected: "No member selected",
     nodeX: "Node X",
     nodeY: "Node Y",
+    nodeZ: "Node Z",
     fixX: "Fix X",
     fixY: "Fix Y",
+    fixZ: "Fix Z",
     loadX: "Load X",
     loadY: "Load Y",
+    loadZ: "Load Z",
     nodeI: "Node I",
     nodeJ: "Node J",
     nodeK: "Node K",
@@ -465,6 +484,13 @@ const copy = {
     suggestionNoLinkTarget: "No valid nearby node was available for an automatic link.",
     panelGenerated: "Generated a rectangular plane mesh.",
     planeThickness: "Thickness",
+    orbitHint: "Drag to orbit, Shift+drag to pan, scroll to zoom.",
+    spaceNodeCreated: "3D node created.",
+    spaceBranchCreated: "3D node created and linked.",
+    spaceNodeDeleted: "3D node deleted.",
+    spaceMemberDeleted: "3D member deleted.",
+    switchedTo2dStudio: "Switched to the 2D workbench.",
+    switchedTo3dStudio: "Switched to the 3D space studio.",
   },
   zh: {
     brand: "Kyuubiki",
@@ -518,8 +544,17 @@ const copy = {
     ui: "Next.js 界面",
     theme: "主题",
     language: "语言",
+    shortcutHints: "快捷键提示",
+    shortcutHintsHelp: "在三维视图区显示键盘快捷键速查卡。",
     themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
     languages: { en: "English", zh: "中文" },
+    shortcutLegendTitle: "三维控制",
+    shortcutLegendRows: [
+      "拖拽旋转 · Shift+拖拽平移 · 滚轮缩放",
+      "1/2/3/4 视角 · P 投影",
+      "G 网格 · L 标签 · N 节点",
+      "F 聚焦 · R 重置 · WASD/方向键平移",
+    ],
     length: "跨度 (m)",
     area: "截面积 (m²)",
     modulus: "弹性模量 (GPa)",
@@ -602,6 +637,8 @@ const copy = {
     planeHint: "选择平面节点和三角形单元，直接修改约束、载荷和厚度材料。",
     parametric: "参数化生成",
     panelGenerator: "面板生成器",
+    spaceStudio: "三维空间工作室",
+    tabs: { summary: "概览", controls: "控制", tools: "工具", tree: "对象", samples: "样板", projects: "项目", models: "模型", jobs: "任务" },
     generate: "生成模型",
     generatePanel: "生成面板",
     download: "下载 JSON",
@@ -615,6 +652,7 @@ const copy = {
     noNodeSelected: "未选择节点",
     loadCase: "载荷工况",
     modelStudioHint: "当前建模页支持二维桁架和二维平面单元。三维研究已经支持导入、求解和结果回看。",
+    spaceStudioHint: "通过旋转、平移和缩放来查看空间桁架。三维节点和杆件现在也可以选中并做数值编辑。",
     sourceModel: "来源模型",
     createdAt: "创建时间",
     updatedAt: "更新时间",
@@ -662,10 +700,13 @@ const copy = {
     noElementSelected: "未选择杆件",
     nodeX: "节点 X",
     nodeY: "节点 Y",
+    nodeZ: "节点 Z",
     fixX: "固定 X",
     fixY: "固定 Y",
+    fixZ: "固定 Z",
     loadX: "载荷 X",
     loadY: "载荷 Y",
+    loadZ: "载荷 Z",
     nodeI: "起点节点",
     nodeJ: "终点节点",
     nodeK: "第三节点",
@@ -689,14 +730,21 @@ const copy = {
     suggestionNoLinkTarget: "附近没有可自动连接的有效节点。",
     panelGenerated: "已生成矩形平面网格。",
     planeThickness: "厚度",
+    orbitHint: "拖拽旋转，按住 Shift 拖拽平移，滚轮缩放。",
+    spaceNodeCreated: "三维节点已创建。",
+    spaceBranchCreated: "三维节点已创建并连接。",
+    spaceNodeDeleted: "三维节点已删除。",
+    spaceMemberDeleted: "三维杆件已删除。",
+    switchedTo2dStudio: "已切换到二维工作区。",
+    switchedTo3dStudio: "已切换到三维空间工作区。",
   },
 } as const;
 
-function safeStorageGet(): { theme?: Theme; language?: Language } {
+function safeStorageGet(): { theme?: Theme; language?: Language; showShortcutHints?: boolean } {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(SETTINGS_KEY);
-    return raw ? (JSON.parse(raw) as { theme?: Theme; language?: Language }) : {};
+    return raw ? (JSON.parse(raw) as { theme?: Theme; language?: Language; showShortcutHints?: boolean }) : {};
   } catch {
     return {};
   }
@@ -1365,7 +1413,11 @@ export function Workbench() {
   const [message, setMessage] = useState<string>(copy.en.initialLoaded);
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<Theme>("linen");
+  const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [sidebarSection, setSidebarSection] = useState<SidebarSection>("study");
+  const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
+  const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
+  const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("samples");
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
   const [selectedNode, setSelectedNode] = useState<number | null>(null);
   const [selectedElement, setSelectedElement] = useState<number | null>(null);
@@ -1374,6 +1426,7 @@ export function Workbench() {
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
   const [isPending, startTransition] = useTransition();
   const dragHistoryCapturedRef = useRef(false);
+  const drag3dHistoryCapturedRef = useRef(false);
   const dragFrameRef = useRef<number | null>(null);
   const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const t = copy[language];
@@ -1381,6 +1434,7 @@ export function Workbench() {
   useEffect(() => {
     const stored = safeStorageGet();
     if (stored.theme) setTheme(stored.theme);
+    if (typeof stored.showShortcutHints === "boolean") setShowShortcutHints(stored.showShortcutHints);
     if (stored.language) {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
@@ -1391,9 +1445,9 @@ export function Workbench() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ theme, language }));
+      window.localStorage.setItem(SETTINGS_KEY, JSON.stringify({ theme, language, showShortcutHints }));
     }
-  }, [theme, language]);
+  }, [theme, language, showShortcutHints]);
 
   useEffect(() => {
     return () => {
@@ -2222,9 +2276,6 @@ export function Workbench() {
   const trussBounds = getTrussBounds(displayTrussNodes);
   const displayTruss3dNodes = buildDisplayTruss3dNodes(truss3dModel, truss3dResult);
   const displayTruss3dElements = buildDisplayTruss3dElements(truss3dModel, truss3dResult);
-  const truss3dProjectedBounds = getTrussBounds(
-    displayTruss3dNodes.map((node) => ({ x: node.x - node.y * 0.55, y: node.z + node.y * 0.35 })),
-  );
   const planeNodes =
     planeResult?.nodes.map((node, index) => ({
       ...planeModel.nodes[index],
@@ -2239,6 +2290,8 @@ export function Workbench() {
   const planeBounds = getTrussBounds(planeNodes);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
+  const selectedTruss3dNodeData = selectedNode !== null ? displayTruss3dNodes[selectedNode] : null;
+  const selectedTruss3dElementData = selectedElement !== null ? displayTruss3dElements[selectedElement] : null;
   const selectedPlaneNodeData = selectedNode !== null ? planeNodes[selectedNode] : null;
   const selectedPlaneElementData = selectedElement !== null ? planeElements[selectedElement] : null;
   const selectedNodeIssues =
@@ -2376,6 +2429,36 @@ export function Workbench() {
     }));
   };
 
+  const updateSelectedTruss3dNode = (
+    key: keyof Truss3dJobInput["nodes"][number],
+    value: number | boolean,
+  ) => {
+    if (selectedNode === null) return;
+    recordHistory(t.editNodeAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      nodes: current.nodes.map((node, index) =>
+        index === selectedNode ? { ...node, [key]: value } : node,
+      ),
+    }));
+  };
+
+  const updateSelectedTruss3dElement = (
+    key: keyof Truss3dJobInput["elements"][number],
+    value: number,
+  ) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      elements: current.elements.map((element, index) =>
+        index === selectedElement ? { ...element, [key]: value } : element,
+      ),
+    }));
+  };
+
   const updateSelectedPlaneNode = (
     key: keyof PlaneTriangle2dJobInput["nodes"][number],
     value: number | boolean,
@@ -2448,6 +2531,50 @@ export function Workbench() {
     setMessage(connectToSelected && selectedNode !== null ? t.branchCreated : t.nodeCreated);
   };
 
+  const addTruss3dNode = (connectToSelected: boolean) => {
+    recordHistory(t.addNodeAction);
+    setStudyKind("truss_3d");
+    setSidebarSection("model");
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => {
+      const anchorIndex = connectToSelected ? selectedNode : null;
+      const anchor =
+        anchorIndex !== null ? current.nodes[anchorIndex] : current.nodes[current.nodes.length - 1];
+      const id = `n${current.nodes.length}`;
+      const nextNode = {
+        id,
+        x: round((anchor?.x ?? 0) + 0.8),
+        y: round((anchor?.y ?? 0) + (connectToSelected ? 0.35 : 0.6)),
+        z: round((anchor?.z ?? 0) + 0.45),
+        fix_x: false,
+        fix_y: false,
+        fix_z: false,
+        load_x: 0,
+        load_y: 0,
+        load_z: 0,
+      };
+      const nodes = [...current.nodes, nextNode];
+      const elements =
+        anchorIndex !== null
+          ? [
+              ...current.elements,
+              {
+                id: `e${current.elements.length}`,
+                node_i: anchorIndex,
+                node_j: nodes.length - 1,
+                area: current.elements[0]?.area ?? 0.01,
+                youngs_modulus: current.elements[0]?.youngs_modulus ?? 70e9,
+              },
+            ]
+          : current.elements;
+      return { ...current, nodes, elements };
+    });
+    setSelectedNode(truss3dModel.nodes.length);
+    setSelectedElement(connectToSelected && selectedNode !== null ? truss3dModel.elements.length : null);
+    setMemberDraftNodes([]);
+    setMessage(connectToSelected && selectedNode !== null ? t.spaceBranchCreated : t.spaceNodeCreated);
+  };
+
   const deleteSelectedNode = () => {
     if (selectedNode === null) return;
     recordHistory(t.deleteNodeAction);
@@ -2468,6 +2595,28 @@ export function Workbench() {
     setSelectedElement(null);
     setMemberDraftNodes([]);
     setMessage(t.nodeDeleted);
+  };
+
+  const deleteSelectedTruss3dNode = () => {
+    if (selectedNode === null) return;
+    recordHistory(t.deleteNodeAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => {
+      const nodes = current.nodes.filter((_, index) => index !== selectedNode);
+      const elements = current.elements
+        .filter((element) => element.node_i !== selectedNode && element.node_j !== selectedNode)
+        .map((element, index) => ({
+          ...element,
+          id: `e${index}`,
+          node_i: element.node_i > selectedNode ? element.node_i - 1 : element.node_i,
+          node_j: element.node_j > selectedNode ? element.node_j - 1 : element.node_j,
+        }));
+      return { ...current, nodes, elements };
+    });
+    setSelectedNode(null);
+    setSelectedElement(null);
+    setMemberDraftNodes([]);
+    setMessage(t.spaceNodeDeleted);
   };
 
   const toggleDraftNode = (index: number) => {
@@ -2529,6 +2678,52 @@ export function Workbench() {
     setMessage(removedExisting ? t.memberRemoved : t.memberCreated);
   };
 
+  const toggleTruss3dMemberFromDraft = () => {
+    if (memberDraftNodes.length !== 2) {
+      setMessage(t.selectTwoNodes);
+      return;
+    }
+    recordHistory(t.toggleMemberAction);
+    const [nodeI, nodeJ] = memberDraftNodes;
+    if (nodeI === nodeJ) return;
+
+    let removedExisting = false;
+    let nextSelectedElement: number | null = null;
+
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => {
+      const existingIndex = current.elements.findIndex(
+        (element) =>
+          (element.node_i === nodeI && element.node_j === nodeJ) ||
+          (element.node_i === nodeJ && element.node_j === nodeI),
+      );
+
+      if (existingIndex >= 0) {
+        removedExisting = true;
+        return {
+          ...current,
+          elements: current.elements
+            .filter((_, index) => index !== existingIndex)
+            .map((element, index) => ({ ...element, id: `e${index}` })),
+        };
+      }
+
+      const next = {
+        id: `e${current.elements.length}`,
+        node_i: nodeI,
+        node_j: nodeJ,
+        area: current.elements[0]?.area ?? 0.01,
+        youngs_modulus: current.elements[0]?.youngs_modulus ?? 70e9,
+      };
+
+      nextSelectedElement = current.elements.length;
+      return { ...current, elements: [...current.elements, next] };
+    });
+    setSelectedElement(removedExisting ? null : nextSelectedElement);
+    setMemberDraftNodes([]);
+    setMessage(removedExisting ? t.memberRemoved : t.memberCreated);
+  };
+
   const deleteSelectedElement = () => {
     if (selectedElement === null) return;
     recordHistory(t.deleteMemberAction);
@@ -2541,6 +2736,20 @@ export function Workbench() {
     }));
     setSelectedElement(null);
     setMessage(t.memberDeleted);
+  };
+
+  const deleteSelectedTruss3dElement = () => {
+    if (selectedElement === null) return;
+    recordHistory(t.deleteMemberAction);
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      elements: current.elements
+        .filter((_, index) => index !== selectedElement)
+        .map((element, index) => ({ ...element, id: `e${index}` })),
+    }));
+    setSelectedElement(null);
+    setMessage(t.spaceMemberDeleted);
   };
 
   const handleTrussPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
@@ -2582,6 +2791,18 @@ export function Workbench() {
     }
   };
 
+  const updateTruss3dNodePosition = (index: number, position: { x: number; y: number; z: number }) => {
+    resetActiveResult(setResult, setJob);
+    setTruss3dModel((current) => ({
+      ...current,
+      nodes: current.nodes.map((node, nodeIndex) =>
+        nodeIndex === index
+          ? { ...node, x: round(position.x), y: round(position.y), z: round(position.z) }
+          : node,
+      ),
+    }));
+  };
+
   return (
     <div className="workbench-shell">
       <aside className="app-rail panel">
@@ -2612,7 +2833,12 @@ export function Workbench() {
         </div>
 
         {sidebarSection === "study" ? (
-          <div className="sidebar-stack">
+          <div className="sidebar-stack panel-scroll-window">
+            <div className="panel-tabs">
+              <button className={`panel-tab${studyTab === "summary" ? " panel-tab--active" : ""}`} onClick={() => setStudyTab("summary")} type="button">{t.tabs.summary}</button>
+              <button className={`panel-tab${studyTab === "controls" ? " panel-tab--active" : ""}`} onClick={() => setStudyTab("controls")} type="button">{t.tabs.controls}</button>
+            </div>
+            {studyTab === "summary" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.sections.study}</h2>
@@ -2666,7 +2892,9 @@ export function Workbench() {
                 </div>
               </div>
             </section>
+            ) : null}
 
+            {studyTab === "controls" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.controls}</h2>
@@ -2799,17 +3027,23 @@ export function Workbench() {
                 {isPending ? t.running : t.run}
               </button>
             </section>
+            ) : null}
           </div>
         ) : null}
 
         {sidebarSection === "model" ? (
-          <div className="sidebar-stack">
+          <div className={`sidebar-stack panel-scroll-window${isTruss3d ? " sidebar-stack--space" : ""}`}>
+            <div className="panel-tabs">
+              <button className={`panel-tab${modelTab === "tools" ? " panel-tab--active" : ""}`} onClick={() => setModelTab("tools")} type="button">{t.tabs.tools}</button>
+              <button className={`panel-tab${modelTab === "tree" ? " panel-tab--active" : ""}`} onClick={() => setModelTab("tree")} type="button">{t.tabs.tree}</button>
+            </div>
+            {modelTab === "tools" ? (
             <section className="sidebar-card">
               <div className="card-head">
-                <h2>{t.sections.model}</h2>
-                <span>{t.dragToEdit}</span>
+                <h2>{isTruss3d ? t.spaceStudio : t.sections.model}</h2>
+                <span>{isTruss3d ? t.orbitHint : t.dragToEdit}</span>
               </div>
-              <p className="card-copy">{isPlane ? t.planeHint : t.modelStudioHint}</p>
+              <p className="card-copy">{isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : t.modelStudioHint}</p>
               {isTruss ? (
                 <>
                   <div className="button-row">
@@ -2833,6 +3067,29 @@ export function Workbench() {
                   </div>
                 </>
               ) : null}
+              {isTruss3d ? (
+                <>
+                  <div className="button-row">
+                    <button className="ghost-button" onClick={() => addTruss3dNode(false)} type="button">
+                      {t.addNode}
+                    </button>
+                    <button className="ghost-button" disabled={selectedNode === null} onClick={() => addTruss3dNode(true)} type="button">
+                      {t.addBranchNode}
+                    </button>
+                    <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedTruss3dNode} type="button">
+                      {t.deleteNode}
+                    </button>
+                  </div>
+                  <div className="button-row">
+                    <button className="ghost-button" onClick={toggleTruss3dMemberFromDraft} type="button">
+                      {t.toggleMember}
+                    </button>
+                    <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedTruss3dElement} type="button">
+                      {t.deleteMember}
+                    </button>
+                  </div>
+                </>
+              ) : null}
               <div className="button-row">
                 <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
                   {t.undo}
@@ -2848,9 +3105,9 @@ export function Workbench() {
                 <button
                   className="ghost-button"
                   onClick={() => {
-                    setStudyKind(isPlane ? "plane_triangle_2d" : "truss_2d");
+                    setStudyKind(isPlane ? "plane_triangle_2d" : isTruss3d ? "truss_3d" : "truss_2d");
                     setSidebarSection("study");
-                    setMessage(isPlane ? t.planeHint : t.dragHint);
+                    setMessage(isPlane ? t.planeHint : isTruss3d ? t.switchedTo3dStudio : t.switchedTo2dStudio);
                   }}
                   type="button"
                 >
@@ -2859,7 +3116,9 @@ export function Workbench() {
               </div>
               <p className="card-copy">{t.selectionHint}</p>
             </section>
+            ) : null}
 
+            {modelTab === "tools" && !isTruss3d ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{isPlane ? t.panelGenerator : t.parametric}</h2>
@@ -2972,91 +3231,129 @@ export function Workbench() {
                 {isPlane ? t.generatePanel : t.generate}
               </button>
             </section>
+            ) : null}
 
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{t.objectTree}</h2>
-                <span>{isTruss ? `${memberDraftNodes.length}/2` : planeModel.elements.length}</span>
-              </div>
-              <p className="card-copy">{isPlane ? t.planeHint : t.dragHint}</p>
-              <div className="table-scroll small-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>X</th>
-                      <th>Y</th>
-                      <th>{isTruss ? t.diagnostics : t.loadCase}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(isPlane ? planeModel.nodes : trussModel.nodes).map((node, index) => (
-                      <tr
-                        key={node.id}
-                        className={[
-                          selectedNode === index ? "table-row--active" : "",
-                          isTruss && (trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? "table-row--warning" : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
-                        onClick={() => {
-                          if (isPlane) {
-                            setSelectedNode(index);
-                            setSelectedElement(null);
-                          } else {
-                            toggleDraftNode(index);
-                          }
-                        }}
+            {modelTab === "tree" && isTruss3d ? (
+              <section className="sidebar-card">
+                <div className="card-head">
+                  <h2>{t.objectTree}</h2>
+                  <span>{memberDraftNodes.length}/2</span>
+                </div>
+                <p className="card-copy">{t.orbitHint}</p>
+                <div className="table-like">
+                  <div className="table-like__head table-like__head--space">
+                    <span>ID</span>
+                    <span>X</span>
+                    <span>Y</span>
+                    <span>Z</span>
+                  </div>
+                  <VirtualList
+                    className="table-like__body"
+                    items={truss3dModel.nodes}
+                    itemHeight={46}
+                    maxHeight={240}
+                    itemKey={(node) => node.id}
+                    renderItem={(node, index) => (
+                      <button
+                        className={`table-like__row table-like__row--space${selectedNode === index ? " table-like__row--active" : ""}${memberDraftNodes.includes(index) ? " table-like__row--draft" : ""}`}
+                        onClick={() => toggleDraftNode(index)}
+                        type="button"
                       >
-                        <td>{node.id}</td>
-                        <td>{fixed(node.x, 2)}</td>
-                        <td>{fixed(node.y, 2)}</td>
-                        <td>
-                          {isTruss && (trussDiagnostics?.nodeIssues[index] ?? []).length > 0 ? (
-                            <span className="issue-badge">{(trussDiagnostics?.nodeIssues[index] ?? []).length}</span>
-                          ) : (
-                            fixed(node.load_y, 0)
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="table-scroll small-table model-tree-spacer">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>{t.nodeI}</th>
-                      <th>{isPlane ? t.nodeK : t.nodeJ}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(isPlane ? planeElements : displayTrussElements).map((element, index) => (
-                      <tr
-                        key={element.id}
-                        className={selectedElement === index ? "table-row--active" : ""}
+                        <strong>{node.id}</strong>
+                        <span>{fixed(node.x, 2)}</span>
+                        <span>{fixed(node.y, 2)}</span>
+                        <span>{fixed(node.z, 2)}</span>
+                      </button>
+                    )}
+                  />
+                </div>
+                <div className="table-like model-tree-spacer">
+                  <div className="table-like__head">
+                    <span>ID</span>
+                    <span>{t.nodeI}</span>
+                    <span>{t.nodeJ}</span>
+                    <span>{t.area}</span>
+                  </div>
+                  <VirtualList
+                    className="table-like__body"
+                    items={displayTruss3dElements}
+                    itemHeight={44}
+                    maxHeight={240}
+                    itemKey={(element) => element.id}
+                    renderItem={(element, index) => (
+                      <button
+                        className={`table-like__row${selectedElement === index ? " table-like__row--active" : ""}`}
                         onClick={() => {
                           setSelectedElement(index);
                           setSelectedNode(null);
-                          if (isTruss) setMemberDraftNodes([]);
+                          setMemberDraftNodes([]);
                         }}
+                        type="button"
                       >
-                        <td>{element.id}</td>
-                        <td>{element.node_i}</td>
-                        <td>{"node_k" in element ? element.node_k : element.node_j}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
+                        <strong>{element.id}</strong>
+                        <span>{element.node_i}</span>
+                        <span>{element.node_j}</span>
+                        <span>{fixed(truss3dModel.elements[index]?.area, 4)}</span>
+                      </button>
+                    )}
+                  />
+                </div>
+              </section>
+            ) : modelTab === "tree" ? (
+              <WorkbenchObjectTree
+                title={t.objectTree}
+                countLabel={isTruss ? `${memberDraftNodes.length}/2` : String(planeModel.elements.length)}
+                hint={isPlane ? t.planeHint : t.dragHint}
+                diagnosticsLabel={t.diagnostics}
+                loadCaseLabel={t.loadCase}
+                nodeJLabel={t.nodeJ}
+                nodeKLabel={t.nodeK}
+                nodeRows={(isPlane ? planeModel.nodes : trussModel.nodes).map((node) => ({
+                  id: node.id,
+                  x: node.x,
+                  y: node.y,
+                  load_y: node.load_y,
+                }))}
+                elementRows={(isPlane ? planeElements : displayTrussElements).map((element) => ({
+                  id: element.id,
+                  node_i: element.node_i,
+                  node_j: "node_j" in element ? element.node_j : undefined,
+                  node_k: "node_k" in element ? element.node_k : undefined,
+                }))}
+                isPlane={isPlane}
+                isTruss={isTruss}
+                selectedNode={selectedNode}
+                selectedElement={selectedElement}
+                nodeIssueCounts={Object.fromEntries(
+                  Object.entries(trussDiagnostics?.nodeIssues ?? {}).map(([key, issues]) => [Number(key), issues.length]),
+                )}
+                onSelectNode={(index) => {
+                  if (isPlane) {
+                    setSelectedNode(index);
+                    setSelectedElement(null);
+                  } else {
+                    toggleDraftNode(index);
+                  }
+                }}
+                onSelectElement={(index) => {
+                  setSelectedElement(index);
+                  setSelectedNode(null);
+                  if (isTruss) setMemberDraftNodes([]);
+                }}
+              />
+            ) : null}
           </div>
         ) : null}
 
         {sidebarSection === "library" ? (
-          <div className="sidebar-stack">
+          <div className="sidebar-stack panel-scroll-window">
+            <div className="panel-tabs panel-tabs--wide">
+              <button className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{t.tabs.samples}</span></button>
+              <button className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{t.tabs.projects}</span></button>
+              <button className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("models")} type="button"><span className="panel-tab__glyph">M</span><span>{t.tabs.models}</span></button>
+              <button className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{t.tabs.jobs}</span></button>
+            </div>
+            {libraryTab === "samples" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.sampleLibrary}</h2>
@@ -3096,7 +3393,9 @@ export function Workbench() {
                 )}
               />
             </section>
+            ) : null}
 
+            {libraryTab === "projects" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.projectLibrary}</h2>
@@ -3159,7 +3458,9 @@ export function Workbench() {
               </label>
               {projects.length === 0 ? <p className="card-copy">{t.projectEmpty}</p> : null}
             </section>
+            ) : null}
 
+            {libraryTab === "models" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.savedModels}</h2>
@@ -3207,7 +3508,9 @@ export function Workbench() {
                 )}
               />
             </section>
+            ) : null}
 
+            {libraryTab === "models" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.versions}</h2>
@@ -3243,7 +3546,9 @@ export function Workbench() {
                 )}
               />
             </section>
+            ) : null}
 
+            {libraryTab === "jobs" ? (
             <section className="sidebar-card">
               <div className="card-head">
                 <h2>{t.sections.library}</h2>
@@ -3274,6 +3579,7 @@ export function Workbench() {
                 )}
               />
             </section>
+            ) : null}
           </div>
         ) : null}
 
@@ -3299,6 +3605,17 @@ export function Workbench() {
                     <option value="en">{t.languages.en}</option>
                     <option value="zh">{t.languages.zh}</option>
                   </select>
+                </label>
+                <label className="toggle-row">
+                  <div>
+                    <span>{t.shortcutHints}</span>
+                    <small className="field-hint">{t.shortcutHintsHelp}</small>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showShortcutHints}
+                    onChange={(event) => setShowShortcutHints(event.target.checked)}
+                  />
                 </label>
               </div>
             </section>
@@ -3366,7 +3683,6 @@ export function Workbench() {
             }}
             displayTruss3dNodes={displayTruss3dNodes}
             displayTruss3dElements={displayTruss3dElements}
-            truss3dProjectedBounds={truss3dProjectedBounds}
             planeNodes={planeNodes}
             planeElements={planeElements}
             planeBounds={planeBounds}
@@ -3381,6 +3697,30 @@ export function Workbench() {
               setSelectedNode(index);
               setSelectedElement(null);
             }}
+            selectedTruss3dNode={selectedNode}
+            selectedTruss3dElement={selectedElement}
+            onSelectTruss3dNode={(index) => {
+              toggleDraftNode(index);
+            }}
+            onSelectTruss3dElement={(index) => {
+              setSelectedElement(index);
+              setSelectedNode(null);
+              setMemberDraftNodes([]);
+            }}
+            onUpdateTruss3dNodePosition={updateTruss3dNodePosition}
+            onBeginTruss3dNodeDrag={() => {
+              if (!drag3dHistoryCapturedRef.current) {
+                recordHistory(t.dragNodeAction);
+                drag3dHistoryCapturedRef.current = true;
+              }
+            }}
+            onEndTruss3dNodeDrag={() => {
+              drag3dHistoryCapturedRef.current = false;
+            }}
+            workspaceBadge={isTruss3d ? t.spaceStudio : t.sections.model}
+            showShortcutHints={showShortcutHints}
+            shortcutLegendTitle={t.shortcutLegendTitle}
+            shortcutLegendRows={[...t.shortcutLegendRows]}
           />
         </section>
 
@@ -3425,15 +3765,21 @@ export function Workbench() {
         isPending={isPending}
         selectedNodeData={selectedNodeData ? { ...selectedNodeData } : null}
         selectedElementData={selectedElementData ? { ...selectedElementData } : null}
+        selectedTruss3dNodeData={selectedTruss3dNodeData ? { ...selectedTruss3dNodeData, ...truss3dModel.nodes[selectedTruss3dNodeData.index] } : null}
+        selectedTruss3dElementData={selectedTruss3dElementData ? { ...selectedTruss3dElementData } : null}
         selectedPlaneNodeData={selectedPlaneNodeData ? { ...selectedPlaneNodeData } : null}
         selectedPlaneElementData={selectedPlaneElementData ? { ...selectedPlaneElementData } : null}
         trussElementArea={selectedElementData ? trussModel.elements[selectedElementData.index]?.area ?? 0 : 0}
         trussElementModulusGpa={selectedElementData ? round((trussModel.elements[selectedElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
+        truss3dElementArea={selectedTruss3dElementData ? truss3dModel.elements[selectedTruss3dElementData.index]?.area ?? 0 : 0}
+        truss3dElementModulusGpa={selectedTruss3dElementData ? round((truss3dModel.elements[selectedTruss3dElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
         planeElementThickness={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.thickness ?? 0 : 0}
         planeElementModulusGpa={selectedPlaneElementData ? round((planeModel.elements[selectedPlaneElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
         planeElementPoissonRatio={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.poisson_ratio ?? 0.33 : 0.33}
         onUpdateSelectedNode={updateSelectedNode}
         onUpdateSelectedElement={updateSelectedElement}
+        onUpdateSelectedTruss3dNode={updateSelectedTruss3dNode}
+        onUpdateSelectedTruss3dElement={updateSelectedTruss3dElement}
         onUpdateSelectedPlaneNode={updateSelectedPlaneNode}
         onUpdateSelectedPlaneElement={updateSelectedPlaneElement}
         trussDiagnostics={trussDiagnostics}
