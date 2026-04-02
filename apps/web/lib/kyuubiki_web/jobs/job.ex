@@ -52,7 +52,7 @@ defmodule KyuubikiWeb.Jobs.Job do
 
   @spec new(map()) :: {:ok, t()} | {:error, term()}
   def new(attrs) when is_map(attrs) do
-    now = DateTime.utc_now(:second)
+    now = DateTime.utc_now()
 
     with {:ok, job_id} <- fetch_required_string(attrs, :job_id),
          {:ok, project_id} <- fetch_required_string(attrs, :project_id),
@@ -86,7 +86,7 @@ defmodule KyuubikiWeb.Jobs.Job do
         message: event.message || job.message,
         residual: event.residual || job.residual,
         iteration: event.iteration || job.iteration,
-        updated_at: event.emitted_at || DateTime.utc_now(:second)
+        updated_at: event.emitted_at || DateTime.utc_now()
     }
   end
 
@@ -192,7 +192,7 @@ defmodule KyuubikiWeb.Jobs.Job do
   defp format_datetime(%DateTime{} = value), do: DateTime.to_iso8601(value)
   defp format_datetime(_value), do: nil
 
-  defp parse_datetime(nil), do: {:ok, DateTime.utc_now(:second)}
+  defp parse_datetime(nil), do: {:ok, DateTime.utc_now()}
 
   defp parse_datetime(value) when is_binary(value) do
     case DateTime.from_iso8601(value) do

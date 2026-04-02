@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kyuubiki Installer</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Kyuubiki Desktop Setup</p>
+          <h1>Kyuubiki Installer</h1>
+          <p class="lede">
+            Visual installer for local SQLite workflows, cloud PostgreSQL deployment, and release staging.
+          </p>
+          <div class="hero-actions">
+            <button class="primary" data-action="doctor">Run doctor</button>
+            <button data-action="bootstrap">Bootstrap workspace</button>
+            <button data-action="service-status">Check services</button>
+          </div>
+        </div>
+
+        <div class="hero-visual" aria-hidden="true">
+          <div class="hero-orbit hero-orbit--large"></div>
+          <div class="hero-orbit hero-orbit--medium"></div>
+          <div class="hero-orbit hero-orbit--small"></div>
+          <div class="hero-node hero-node--core"></div>
+          <div class="hero-node hero-node--a"></div>
+          <div class="hero-node hero-node--b"></div>
+          <div class="hero-node hero-node--c"></div>
+          <div class="hero-chip hero-chip--sqlite">SQLite local</div>
+          <div class="hero-chip hero-chip--postgres">PostgreSQL cloud</div>
+          <div class="hero-chip hero-chip--agents">Rust agents x2</div>
+        </div>
+
+        <div class="hero-meta">
+          <div class="meta-card">
+            <span>Platform</span>
+            <strong id="platform-label">platform</strong>
+          </div>
+          <div class="meta-card">
+            <span>Workspace</span>
+            <strong id="workspace-label">workspace</strong>
+          </div>
+          <div class="meta-card">
+            <span>Current mode</span>
+            <strong id="current-mode-label">sqlite</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="completion-banner" id="completion-banner" hidden>
+        <strong>Setup flow updated.</strong>
+        <span id="completion-message">Ready for the next step.</span>
+      </section>
+
+      <section class="workspace">
+        <aside class="sidebar">
+          <button class="sidebar-tab" data-tab="wizard">Wizard</button>
+          <button class="sidebar-tab active" data-tab="setup">Setup</button>
+          <button class="sidebar-tab" data-tab="services">Services</button>
+          <button class="sidebar-tab" data-tab="release">Release</button>
+          <button class="sidebar-tab" data-tab="output">Output</button>
+        </aside>
+
+        <div class="content">
+          <section class="panel" data-panel="wizard">
+            <div class="section-header">
+              <div>
+                <p class="section-eyebrow">Guided flow</p>
+                <h2>Desktop install wizard</h2>
+              </div>
+            </div>
+
+            <div class="wizard-grid">
+              <article class="wizard-step">
+                <span class="wizard-index">1</span>
+                <div>
+                  <h3>Choose a profile</h3>
+                  <p>Start with local SQLite for workstation use, or cloud PostgreSQL for distributed deployment.</p>
+                </div>
+                <div class="action-row">
+                  <button class="primary" data-action="use-local-mode">Pick local</button>
+                  <button data-action="use-cloud-mode">Pick cloud</button>
+                </div>
+              </article>
+              <article class="wizard-step">
+                <span class="wizard-index">2</span>
+                <div>
+                  <h3>Write environment</h3>
+                  <p>Save the active profile to `.env.local` and validate the configuration immediately.</p>
+                </div>
+                <div class="action-row">
+                  <button class="primary" data-action="write-env">Write env</button>
+                  <button data-action="validate-env">Validate env</button>
+                </div>
+              </article>
+              <article class="wizard-step">
+                <span class="wizard-index">3</span>
+                <div>
+                  <h3>Prepare workspace</h3>
+                  <p>Create runtime folders, initialize the workspace, and check prerequisites in one pass.</p>
+                </div>
+                <div class="action-row">
+                  <button class="primary" data-action="bootstrap">Bootstrap</button>
+                  <button data-action="doctor">Run doctor</button>
+                </div>
+              </article>
+              <article class="wizard-step">
+                <span class="wizard-index">4</span>
+                <div>
+                  <h3>Run services</h3>
+                  <p>Bring up the frontend, orchestrator, and Rust agents with the active database profile.</p>
+                </div>
+                <div class="action-row">
+                  <button class="primary" data-action="wizard-start-active">Start active profile</button>
+                  <button data-action="service-status">Check status</button>
+                </div>
+              </article>
+              <article class="wizard-step">
+                <span class="wizard-index">5</span>
+                <div>
+                  <h3>Build deliverables</h3>
+                  <p>Stage the portable Kyuubiki release layout and compile the installer desktop app.</p>
+                </div>
+                <label class="field">
+                  <span>Installer build mode</span>
+                  <select id="build-mode">
+                    <option value="debug-check">Debug check</option>
+                    <option value="release-no-bundle">Release no-bundle</option>
+                    <option value="release-bundle">Release bundle</option>
+                  </select>
+                </label>
+                <div class="action-row">
+                  <button class="primary" data-action="stage-release">Stage release</button>
+                  <button data-action="build-installer">Build installer app</button>
+                </div>
+              </article>
+            </div>
+
+            <div class="completion-shell">
+              <article class="completion-card">
+                <p class="section-eyebrow">Welcome</p>
+                <h3>Fast path</h3>
+                <ol class="completion-list">
+                  <li>Pick `SQLite workstation` for single-machine iteration.</li>
+                  <li>Write the environment and validate it immediately.</li>
+                  <li>Bootstrap once, then start the active profile.</li>
+                </ol>
+              </article>
+              <article class="completion-card completion-card--accent">
+                <p class="section-eyebrow">Completion</p>
+                <h3>After setup</h3>
+                <p id="completion-guide">
+                  When the stack is healthy, use Services to inspect logs, then stage a release or build the installer bundle.
+                </p>
+              </article>
+            </div>
+          </section>
+
+          <section class="panel panel-visible" data-panel="setup">
+            <div class="section-header">
+              <div>
+                <p class="section-eyebrow">Database profile</p>
+                <h2>Choose your deployment mode</h2>
+              </div>
+            </div>
+
+            <div class="mode-grid">
+              <article class="mode-card mode-card--active" data-mode-card="sqlite">
+                <div class="mode-header">
+                  <div>
+                    <p class="mode-badge">Local first</p>
+                    <h3>SQLite workstation</h3>
+                  </div>
+                  <button class="primary" data-action="use-local-mode">Use local mode</button>
+                </div>
+                <p>Embedded database with minimal host burden. Best for single-machine work and fast setup.</p>
+                <ul class="mode-points">
+                  <li>No separate database service</li>
+                  <li>Best default for local design iteration</li>
+                  <li>Writes to a repo-local `.sqlite3` file</li>
+                </ul>
+              </article>
+
+              <article class="mode-card" data-mode-card="postgres">
+                <div class="mode-header">
+                  <div>
+                    <p class="mode-badge">Cloud ready</p>
+                    <h3>PostgreSQL deployment</h3>
+                  </div>
+                  <button class="primary" data-action="use-cloud-mode">Use cloud mode</button>
+                </div>
+                <p>Recommended for multi-node workers, cloud services, and shared environments.</p>
+                <ul class="mode-points">
+                  <li>Distributed orchestration friendly</li>
+                  <li>Stable for shared projects and history</li>
+                  <li>Requires `DATABASE_URL`</li>
+                </ul>
+              </article>
+            </div>
+
+            <div class="form-shell">
+              <div class="panel-header">
+                <h2>Environment</h2>
+                <button class="primary" data-action="validate-env">Validate</button>
+              </div>
+
+              <div class="field-grid">
+                <label class="field">
+                  <span>Storage mode</span>
+                  <select id="storage-mode">
+                    <option value="sqlite">Local SQLite</option>
+                    <option value="postgres">Cloud PostgreSQL</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Agent endpoints</span>
+                  <input id="agent-endpoints" type="text" placeholder="127.0.0.1:5001,127.0.0.1:5002" />
+                </label>
+                <label class="field field-span-2">
+                  <span>SQLite path</span>
+                  <input id="sqlite-path" type="text" placeholder="./tmp/data/kyuubiki_dev.sqlite3" />
+                </label>
+                <label class="field field-span-2">
+                  <span>PostgreSQL URL</span>
+                  <input id="database-url" type="text" placeholder="ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev" />
+                </label>
+              </div>
+
+              <div class="action-row">
+                <button data-action="write-env">Write .env.local</button>
+                <button data-action="reload-env">Reload current env</button>
+                <button data-action="prepare-layout">Prepare layout</button>
+                <button data-action="init-env">Init .env.local</button>
+              </div>
+            </div>
+
+            <div class="doctor-shell">
+              <div class="panel-header">
+                <h2>Doctor checks</h2>
+                <button data-action="doctor">Refresh doctor</button>
+              </div>
+              <div class="doctor-grid" id="doctor-grid"></div>
+            </div>
+          </section>
+
+          <section class="panel" data-panel="services">
+            <div class="section-header">
+              <div>
+                <p class="section-eyebrow">Service control</p>
+                <h2>Run the whole stack</h2>
+              </div>
+              <button data-action="service-status">Refresh status</button>
+            </div>
+
+            <div class="service-grid">
+              <article class="service-card">
+                <h3>Local stack</h3>
+                <p>Starts the frontend, orchestrator, and agents with SQLite forced.</p>
+                <div class="action-row">
+                  <button class="primary" data-action="service-start-local">Start local</button>
+                  <button data-action="service-restart-local">Restart local</button>
+                </div>
+              </article>
+              <article class="service-card">
+                <h3>Cloud stack</h3>
+                <p>Starts the same services with PostgreSQL forced for shared or distributed deployment.</p>
+                <div class="action-row">
+                  <button class="primary" data-action="service-start-cloud">Start cloud</button>
+                  <button data-action="service-restart-cloud">Restart cloud</button>
+                </div>
+              </article>
+              <article class="service-card">
+                <h3>Stop services</h3>
+                <p>Stops frontend, orchestrator, and all Rust agents without touching your data.</p>
+                <div class="action-row">
+                  <button data-action="service-stop">Stop all</button>
+                </div>
+              </article>
+            </div>
+
+            <div class="status-shell">
+              <div class="panel-header">
+                <h2>Current service status</h2>
+                <span class="status-pill" id="service-mode-pill">unknown</span>
+              </div>
+              <pre id="service-status"></pre>
+            </div>
+
+            <div class="log-shell">
+              <div class="panel-header">
+                <h2>Runtime logs</h2>
+                <div class="action-row">
+                  <select id="log-service">
+                    <option value="orchestrator">orchestrator</option>
+                    <option value="frontend">frontend</option>
+                    <option value="agent-5001">agent-5001</option>
+                    <option value="agent-5002">agent-5002</option>
+                  </select>
+                  <label class="inline-toggle">
+                    <input id="log-autorefresh" type="checkbox" />
+                    <span>Live tail</span>
+                  </label>
+                  <button data-action="load-log">Load log</button>
+                </div>
+              </div>
+              <pre id="runtime-log"></pre>
+            </div>
+          </section>
+
+          <section class="panel" data-panel="release">
+            <div class="section-header">
+              <div>
+                <p class="section-eyebrow">Portable packaging</p>
+                <h2>Stage a release directory</h2>
+              </div>
+              <button class="primary" data-action="stage-release">Stage release</button>
+            </div>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>Platform</span>
+                <select id="release-platform">
+                  <option value="macos">macOS</option>
+                  <option value="linux">Linux</option>
+                  <option value="windows">Windows</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Target directory</span>
+                <input id="release-target" type="text" placeholder="dist/macos" />
+              </label>
+            </div>
+
+            <div class="action-row">
+              <button data-action="export-launch">Export launch manifest</button>
+              <select id="release-build-mode">
+                <option value="debug-check">Debug check</option>
+                <option value="release-no-bundle">Release no-bundle</option>
+                <option value="release-bundle">Release bundle</option>
+              </select>
+              <button data-action="build-installer">Build installer app</button>
+            </div>
+          </section>
+
+          <section class="panel" data-panel="output">
+            <div class="section-header">
+              <div>
+                <p class="section-eyebrow">Command log</p>
+                <h2>Installer output</h2>
+              </div>
+              <button data-action="clear-output">Clear</button>
+            </div>
+            <pre id="output"></pre>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$ROOT_DIR/apps/web"
 FRONTEND_DIR="$ROOT_DIR/apps/frontend"
+INSTALLER_GUI_DIR="$ROOT_DIR/apps/installer-gui"
 RUST_DIR="$ROOT_DIR/workers/rust"
 RUN_DIR="$ROOT_DIR/tmp/run"
 ENV_FILE="$ROOT_DIR/.env.local"
@@ -39,12 +40,20 @@ Usage:
 Commands:
   help              Show this help
   start             Start the orchestrator API, frontend, and solver agent in the background
+  start-local       Start services with SQLite forced for local development
+  start-cloud       Start services with PostgreSQL forced for cloud/distributed use
   status            Show whether local services are running
   stop              Stop the orchestrator API, frontend, and solver agent services
   restart           Restart the orchestrator API, frontend, and solver agent services
+  restart-local     Restart services with SQLite forced for local development
+  restart-cloud     Restart services with PostgreSQL forced for cloud/distributed use
   export-db         Export the orchestrator database snapshot as JSON
   install           Run the cross-platform installer/bootstrap utility
   doctor            Run the cross-platform environment doctor
+  validate-env      Validate required environment variables from .env.local
+  package           Stage a portable release directory under dist/
+  installer-gui-dev Run the Tauri installer GUI in development mode
+  installer-gui-build Build the Tauri installer GUI bundles
   test              Run all tests
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
@@ -64,6 +73,8 @@ Examples:
   ./scripts/kyuubiki agent -- --port 5001
   ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
   ./scripts/kyuubiki start
+  ./scripts/kyuubiki start-local
+  ./scripts/kyuubiki start-cloud
   KYUUBIKI_STORAGE_BACKEND=postgres DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev ./scripts/kyuubiki start
   cp .env.example .env.local && ./scripts/kyuubiki restart
   ./scripts/kyuubiki orchestrator
@@ -72,8 +83,50 @@ Examples:
   ./scripts/kyuubiki restart
   ./scripts/kyuubiki export-db > kyuubiki-database.json
   ./scripts/kyuubiki doctor
+  ./scripts/kyuubiki validate-env
   ./scripts/kyuubiki install bootstrap
+  ./scripts/kyuubiki package
+  ./scripts/kyuubiki installer-gui-dev
+  ./scripts/kyuubiki installer-gui-build
 EOF
+}
+
+sqlite_database_path_value() {
+  echo "${SQLITE_DATABASE_PATH:-$ROOT_DIR/tmp/data/kyuubiki_dev.sqlite3}"
+}
+
+ensure_cloud_env() {
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "DATABASE_URL is required for cloud/postgres mode" >&2
+    exit 1
+  fi
+}
+
+storage_mode_label() {
+  local mode="${1:-default}"
+
+  case "$mode" in
+    local) echo "sqlite" ;;
+    cloud) echo "postgres" ;;
+    *) echo "${KYUUBIKI_STORAGE_BACKEND:-sqlite}" ;;
+  esac
+}
+
+storage_mode_exports() {
+  local mode="${1:-default}"
+
+  case "$mode" in
+    local)
+      printf 'KYUUBIKI_STORAGE_BACKEND="sqlite" SQLITE_DATABASE_PATH="%s"' "$(sqlite_database_path_value)"
+      ;;
+    cloud)
+      ensure_cloud_env
+      printf 'KYUUBIKI_STORAGE_BACKEND="postgres" DATABASE_URL="%s"' "$DATABASE_URL"
+      ;;
+    *)
+      printf 'KYUUBIKI_STORAGE_BACKEND="%s"' "${KYUUBIKI_STORAGE_BACKEND:-sqlite}"
+      ;;
+  esac
 }
 
 require_dir() {
@@ -187,6 +240,7 @@ run_playground_tests() {
 
 run_orchestrator() {
   local port="${1:-4000}"
+  local mode="${2:-default}"
 
   if port_in_use "$port"; then
     echo "orchestrator already running at http://127.0.0.1:${port}"
@@ -195,8 +249,8 @@ run_orchestrator() {
 
   (
     cd "$WEB_DIR"
-    echo "serving orchestrator API at http://127.0.0.1:${port}"
-    PORT="$port" mix run --no-halt
+    echo "serving orchestrator API at http://127.0.0.1:${port} ($(storage_mode_label "$mode"))"
+    eval "$(storage_mode_exports "$mode")" PORT="$port" mix run --no-halt
   )
 }
 
@@ -257,8 +311,25 @@ run_installer() {
   )
 }
 
+run_installer_gui_dev() {
+  require_dir "$INSTALLER_GUI_DIR"
+  (
+    cd "$INSTALLER_GUI_DIR"
+    npm run tauri:dev
+  )
+}
+
+run_installer_gui_build() {
+  require_dir "$INSTALLER_GUI_DIR"
+  (
+    cd "$INSTALLER_GUI_DIR"
+    npm run tauri:build
+  )
+}
+
 start_orchestrator_background() {
   local port="${1:-4000}"
+  local mode="${2:-default}"
   ensure_run_dir
   require_screen
 
@@ -268,9 +339,9 @@ start_orchestrator_background() {
   fi
 
   screen -S "$ORCHESTRATOR_SCREEN" -X quit >/dev/null 2>&1 || true
-  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && PORT=\"$port\" KYUUBIKI_AGENT_ENDPOINTS=\"$(agent_endpoints_value)\" mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
+  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && $(storage_mode_exports "$mode") KYUUBIKI_AGENT_ENDPOINTS=\"$(agent_endpoints_value)\" PORT=\"$port\" mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
 
-  echo "started orchestrator API at http://127.0.0.1:${port}"
+  echo "started orchestrator API at http://127.0.0.1:${port} ($(storage_mode_label "$mode"))"
   echo "log: $ORCHESTRATOR_LOG"
 }
 
@@ -332,14 +403,16 @@ stop_services() {
 }
 
 start_services() {
+  local mode="${1:-default}"
   start_agents_background
-  start_orchestrator_background 4000
+  start_orchestrator_background 4000 "$mode"
   start_frontend_background 3000
 }
 
 restart_services() {
+  local mode="${1:-default}"
   stop_services
-  start_services
+  start_services "$mode"
   echo "restart complete"
 }
 
@@ -355,6 +428,12 @@ case "$command" in
   start)
     start_services
     ;;
+  start-local)
+    start_services local
+    ;;
+  start-cloud)
+    start_services cloud
+    ;;
   status)
     show_status
     ;;
@@ -364,6 +443,12 @@ case "$command" in
   restart)
     restart_services
     ;;
+  restart-local)
+    restart_services local
+    ;;
+  restart-cloud)
+    restart_services cloud
+    ;;
   export-db)
     run_export_db "$@"
     ;;
@@ -372,6 +457,18 @@ case "$command" in
     ;;
   doctor)
     run_installer doctor "$@"
+    ;;
+  validate-env)
+    run_installer validate-env "$@"
+    ;;
+  package)
+    run_installer stage-release "$@"
+    ;;
+  installer-gui-dev)
+    run_installer_gui_dev
+    ;;
+  installer-gui-build)
+    run_installer_gui_build
     ;;
   test)
     make -C "$ROOT_DIR" test
@@ -396,6 +493,12 @@ case "$command" in
     ;;
   orchestrator)
     run_orchestrator "${1:-4000}"
+    ;;
+  orchestrator-local)
+    run_orchestrator "${1:-4000}" local
+    ;;
+  orchestrator-cloud)
+    run_orchestrator "${1:-4000}" cloud
     ;;
   agent)
     run_agent "${1:-5001}"

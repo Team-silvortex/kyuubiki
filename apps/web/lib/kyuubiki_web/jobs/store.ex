@@ -16,7 +16,7 @@ defmodule KyuubikiWeb.Jobs.Store do
   def assign_worker(job_id, worker_id), do: backend().assign_worker(job_id, worker_id)
 
   defp backend do
-    if Storage.postgres?() do
+    if Storage.sql?() do
       KyuubikiWeb.Jobs.PostgresBackend
     else
       KyuubikiWeb.Jobs.MemoryBackend

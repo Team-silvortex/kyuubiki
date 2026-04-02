@@ -1,0 +1,14 @@
+[package]
+name = "kyuubiki-installer-gui"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+build = "build.rs"
+
+[build-dependencies]
+tauri-build = { version = "2" }
+
+[dependencies]
+kyuubiki-installer = { path = "../../../workers/rust/crates/installer" }
+serde = { version = "1", features = ["derive"] }
+tauri = { version = "2" }

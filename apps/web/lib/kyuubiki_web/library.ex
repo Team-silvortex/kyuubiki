@@ -90,7 +90,7 @@ defmodule KyuubikiWeb.Library do
   end
 
   defp backend do
-    if KyuubikiWeb.Storage.postgres?() do
+    if KyuubikiWeb.Storage.sql?() do
       KyuubikiWeb.Library.PostgresBackend
     else
       KyuubikiWeb.Library.MemoryBackend

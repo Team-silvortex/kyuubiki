@@ -7,13 +7,21 @@ config :logger, :default_formatter,
 storage_backend =
   case System.get_env("KYUUBIKI_STORAGE_BACKEND") do
     "postgres" -> :postgres
-    _ -> :memory
+    "memory" -> :memory
+    "json" -> :memory
+    _ -> :sqlite
   end
 
 database_url =
   System.get_env(
     "DATABASE_URL",
     "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev"
+  )
+
+sqlite_database_path =
+  System.get_env(
+    "SQLITE_DATABASE_PATH",
+    Path.expand("../../../tmp/data/kyuubiki_dev.sqlite3", __DIR__)
   )
 
 agent_endpoints =
@@ -35,11 +43,17 @@ agent_endpoints =
 
 config :kyuubiki_web,
   storage_backend: storage_backend,
-  ecto_repos: [KyuubikiWeb.Repo]
+  ecto_repos: [KyuubikiWeb.PostgresRepo, KyuubikiWeb.SqliteRepo]
 
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool, endpoints: agent_endpoints
 
-config :kyuubiki_web, KyuubikiWeb.Repo,
+config :kyuubiki_web, KyuubikiWeb.PostgresRepo,
   url: database_url,
   pool_size: String.to_integer(System.get_env("POOL_SIZE", "5")),
   show_sensitive_data_on_connection_error: true
+
+config :kyuubiki_web, KyuubikiWeb.SqliteRepo,
+  database: sqlite_database_path,
+  pool_size: 1,
+  journal_mode: :wal,
+  busy_timeout: 5_000

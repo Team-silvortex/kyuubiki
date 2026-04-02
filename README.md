@@ -6,7 +6,7 @@ Kyuubiki is a browser-first FEM workbench with a split architecture:
 - `Elixir` orchestrator API for jobs, persistence, and coordination
 - `Rust` solver agents for the actual FEM data-plane computation
 
-The current stack is already runnable on macOS and uses `PostgreSQL` for persisted jobs, projects, models, and model versions.
+The current stack is already runnable on macOS and now supports both `SQLite` and `PostgreSQL` for persisted jobs, projects, models, and model versions.
 
 ## Cross-platform Bootstrap
 
@@ -15,20 +15,37 @@ Kyuubiki now includes a repo-local cross-platform installer utility built in Rus
 It does not try to silently mutate host-level package managers. Instead it helps with:
 
 - environment checks
+- `.env.local` variable validation
 - repo-local directory preparation
 - `.env.local` initialization
 - launch manifest export for future packaging/deployment work
+- portable release directory scaffolding under `dist/`
 
 Use:
 
 ```bash
 make doctor
+make validate-env
 make install ARGS="bootstrap"
+make package
 ```
 
 Installer source:
 
 - [installer main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/installer/src/main.rs)
+
+Current release scaffold output:
+
+```text
+dist/<platform>/
+  bin/
+  config/
+  data/
+  logs/
+  exports/
+  manifests/
+  scripts/
+```
 
 ## Current Architecture
 
@@ -60,7 +77,12 @@ PostgreSQL
 
 ## Project Storage
 
-Local persistence now uses PostgreSQL through the Elixir orchestrator.
+Kyuubiki now supports two SQL storage modes through the Elixir orchestrator:
+
+- `sqlite`
+  Best default for local single-machine work. Minimal host burden and zero extra service management.
+- `postgres`
+  Recommended for cloud, multi-node, and distributed deployments.
 
 Persisted entities include:
 
@@ -70,14 +92,49 @@ Persisted entities include:
 - models
 - model versions
 
-On this machine the default local setup is:
+Recommended local setup:
+
+```bash
+KYUUBIKI_STORAGE_BACKEND=sqlite
+SQLITE_DATABASE_PATH=/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3
+```
+
+Recommended cloud/distributed setup:
 
 ```bash
 KYUUBIKI_STORAGE_BACKEND=postgres
-DATABASE_URL=ecto://seis@127.0.0.1:5432/kyuubiki_dev
+DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev
 ```
 
 The launcher reads this from [/.env.local](/Users/Shared/chroot/dev/kyuubiki/.env.local).
+
+Convenience commands:
+
+```bash
+make start-local
+make restart-local
+make start-cloud
+make restart-cloud
+```
+
+`start-local` and `restart-local` force SQLite even if `.env.local` currently points at PostgreSQL. `start-cloud` and `restart-cloud` force PostgreSQL and require `DATABASE_URL`.
+
+## Installer GUI
+
+Kyuubiki now includes a Tauri-based installer shell for a more visual cross-platform setup flow.
+
+- GUI app root: [apps/installer-gui](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui)
+- Tauri backend: [src-tauri/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/src/main.rs)
+- Static installer UI: [ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/index.html)
+
+Common commands:
+
+```bash
+make installer-gui-dev
+make installer-gui-build
+```
+
+The GUI wraps the same Rust installer logic used by `kyuubiki-installer`, including doctor, env validation, layout prep, bootstrap, and release staging.
 
 ## Project Format
 

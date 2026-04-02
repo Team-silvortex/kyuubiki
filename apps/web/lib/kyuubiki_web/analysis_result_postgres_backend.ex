@@ -1,42 +1,46 @@
 defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
   @moduledoc false
 
-  alias KyuubikiWeb.Repo
+  alias KyuubikiWeb.Storage
   alias KyuubikiWeb.Storage.ResultRecord
 
   def put(job_id, result) when is_binary(job_id) and is_map(result) do
+    repo = repo()
+
     attrs = %{
       job_id: job_id,
       payload: result,
-      inserted_at: DateTime.utc_now(:second),
-      updated_at: DateTime.utc_now(:second)
+      inserted_at: DateTime.utc_now(),
+      updated_at: DateTime.utc_now()
     }
 
-    case Repo.get(ResultRecord, job_id) do
+    case repo.get(ResultRecord, job_id) do
       %ResultRecord{} = record ->
         record
-        |> Ecto.Changeset.change(%{payload: result, updated_at: DateTime.utc_now(:second)})
-        |> Repo.update!()
+        |> Ecto.Changeset.change(%{payload: result, updated_at: DateTime.utc_now()})
+        |> repo.update!()
 
       nil ->
         %ResultRecord{}
         |> Ecto.Changeset.change(attrs)
-        |> Repo.insert!()
+        |> repo.insert!()
     end
 
     :ok
   end
 
   def get(job_id) when is_binary(job_id) do
-    case Repo.get(ResultRecord, job_id) do
+    case repo().get(ResultRecord, job_id) do
       %ResultRecord{payload: payload} -> {:ok, payload}
       nil -> :error
     end
   end
 
   def list do
+    repo = repo()
+
     ResultRecord
-    |> Repo.all()
+    |> repo.all()
     |> Enum.sort_by(& &1.job_id)
     |> Enum.map(fn record ->
       %{
@@ -51,10 +55,12 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
   def update(job_id, result) when is_binary(job_id) and is_map(result), do: put(job_id, result)
 
   def delete(job_id) when is_binary(job_id) do
-    case Repo.get(ResultRecord, job_id) do
+    repo = repo()
+
+    case repo.get(ResultRecord, job_id) do
       %ResultRecord{} = record ->
         payload = record.payload
-        Repo.delete!(record)
+        repo.delete!(record)
         {:ok, payload}
 
       nil ->
@@ -63,7 +69,11 @@ defmodule KyuubikiWeb.AnalysisResultPostgresBackend do
   end
 
   def reset do
-    Repo.delete_all(ResultRecord)
+    repo().delete_all(ResultRecord)
     :ok
+  end
+
+  defp repo do
+    Storage.repo_module!()
   end
 end

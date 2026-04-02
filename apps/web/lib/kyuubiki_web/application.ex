@@ -11,9 +11,11 @@ defmodule KyuubikiWeb.Application do
   end
 
   defp storage_children do
-    if KyuubikiWeb.Storage.postgres?() do
+    if KyuubikiWeb.Storage.sql?() do
+      ensure_sqlite_directory!()
+
       [
-        KyuubikiWeb.Repo,
+        KyuubikiWeb.Storage.repo_module(),
         {KyuubikiWeb.Storage.SchemaSetup, []}
       ]
     else
@@ -35,5 +37,12 @@ defmodule KyuubikiWeb.Application do
 
   defp port do
     System.get_env("PORT", "4000") |> String.to_integer()
+  end
+
+  defp ensure_sqlite_directory! do
+    if KyuubikiWeb.Storage.sqlite?() do
+      database = Application.fetch_env!(:kyuubiki_web, KyuubikiWeb.SqliteRepo)[:database]
+      database |> Path.dirname() |> File.mkdir_p!()
+    end
   end
 end

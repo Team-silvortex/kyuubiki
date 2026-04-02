@@ -3,14 +3,16 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
 
   import Ecto.Query
 
-  alias KyuubikiWeb.Repo
+  alias KyuubikiWeb.Storage
   alias KyuubikiWeb.Storage.{ModelRecord, ModelVersionRecord, ProjectRecord}
 
   def list_projects do
+    repo = repo()
+
     projects =
       ProjectRecord
       |> order_by([project], desc: project.updated_at)
-      |> Repo.all()
+      |> repo.all()
       |> Enum.map(&serialize_project/1)
       |> Enum.map(fn project ->
         Map.put(project, "models", list_models_for_project(project["project_id"]))
@@ -20,7 +22,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def get_project(project_id) do
-    case Repo.get(ProjectRecord, project_id) do
+    case repo().get(ProjectRecord, project_id) do
       nil ->
         :error
 
@@ -31,6 +33,8 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def create_project(attrs) do
+    repo = repo()
+
     record =
       %ProjectRecord{}
       |> Ecto.Changeset.change(%{
@@ -38,30 +42,34 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
         name: attrs["name"],
         description: attrs["description"]
       })
-      |> Repo.insert!()
+      |> repo.insert!()
 
     {:ok, serialize_project(record)}
   end
 
   def update_project(project_id, attrs) do
-    case Repo.get(ProjectRecord, project_id) do
+    repo = repo()
+
+    case repo.get(ProjectRecord, project_id) do
       nil ->
         :error
 
       record ->
         updated =
           record
-          |> Ecto.Changeset.change(attrs)
-          |> Repo.update!()
+          |> Ecto.Changeset.change(normalize_attrs(attrs))
+          |> repo.update!()
 
         {:ok, serialize_project(updated)}
     end
   end
 
   def delete_project(project_id) do
-    case Repo.get(ProjectRecord, project_id) do
+    repo = repo()
+
+    case repo.get(ProjectRecord, project_id) do
       nil -> :error
-      record -> {:ok, serialize_project(Repo.delete!(record))}
+      record -> {:ok, serialize_project(repo.delete!(record))}
     end
   end
 
@@ -70,7 +78,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def get_model(model_id) do
-    case Repo.get(ModelRecord, model_id) do
+    case repo().get(ModelRecord, model_id) do
       nil ->
         :error
 
@@ -81,7 +89,9 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def create_model(attrs) do
-    case Repo.get(ProjectRecord, attrs["project_id"]) do
+    repo = repo()
+
+    case repo.get(ProjectRecord, attrs["project_id"]) do
       nil ->
         {:error, {:project_not_found, attrs["project_id"]}}
 
@@ -98,7 +108,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
             payload: attrs["payload"],
             latest_version_number: 0
           })
-          |> Repo.insert!()
+          |> repo.insert!()
 
         {:ok, version} =
           create_version(%{
@@ -111,31 +121,35 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
           })
 
         {:ok,
-         Repo.get!(ModelRecord, model.model_id)
+         repo.get!(ModelRecord, model.model_id)
          |> serialize_model()
          |> Map.put("versions", [version])}
     end
   end
 
   def update_model(model_id, attrs) do
-    case Repo.get(ModelRecord, model_id) do
+    repo = repo()
+
+    case repo.get(ModelRecord, model_id) do
       nil ->
         :error
 
       record ->
         updated =
           record
-          |> Ecto.Changeset.change(attrs)
-          |> Repo.update!()
+          |> Ecto.Changeset.change(normalize_attrs(attrs))
+          |> repo.update!()
 
         {:ok, serialize_model(updated)}
     end
   end
 
   def delete_model(model_id) do
-    case Repo.get(ModelRecord, model_id) do
+    repo = repo()
+
+    case repo.get(ModelRecord, model_id) do
       nil -> :error
-      record -> {:ok, serialize_model(Repo.delete!(record))}
+      record -> {:ok, serialize_model(repo.delete!(record))}
     end
   end
 
@@ -144,20 +158,22 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
   end
 
   def get_version(version_id) do
-    case Repo.get(ModelVersionRecord, version_id) do
+    case repo().get(ModelVersionRecord, version_id) do
       nil -> :error
       version -> {:ok, serialize_version(version)}
     end
   end
 
   def create_version(attrs) do
-    case Repo.get(ModelRecord, attrs["model_id"]) do
+    repo = repo()
+
+    case repo.get(ModelRecord, attrs["model_id"]) do
       nil ->
         {:error, {:model_not_found, attrs["model_id"]}}
 
       model ->
         version_number = (model.latest_version_number || 0) + 1
-        timestamp = DateTime.utc_now(:second)
+        timestamp = DateTime.utc_now()
 
         version =
           %ModelVersionRecord{}
@@ -174,7 +190,7 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
             inserted_at: timestamp,
             updated_at: timestamp
           })
-          |> Repo.insert!()
+          |> repo.insert!()
 
         model
         |> Ecto.Changeset.change(%{
@@ -187,54 +203,63 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
           latest_version_number: version.version_number,
           updated_at: timestamp
         })
-        |> Repo.update!()
+        |> repo.update!()
 
         {:ok, serialize_version(version)}
     end
   end
 
   def update_version(version_id, attrs) do
-    case Repo.get(ModelVersionRecord, version_id) do
+    repo = repo()
+
+    case repo.get(ModelVersionRecord, version_id) do
       nil ->
         :error
 
       version ->
         updated =
           version
-          |> Ecto.Changeset.change(attrs)
-          |> Repo.update!()
+          |> Ecto.Changeset.change(normalize_attrs(attrs))
+          |> repo.update!()
 
         {:ok, serialize_version(updated)}
     end
   end
 
   def delete_version(version_id) do
-    case Repo.get(ModelVersionRecord, version_id) do
+    repo = repo()
+
+    case repo.get(ModelVersionRecord, version_id) do
       nil -> :error
-      version -> {:ok, serialize_version(Repo.delete!(version))}
+      version -> {:ok, serialize_version(repo.delete!(version))}
     end
   end
 
   def reset do
-    Repo.delete_all(ModelVersionRecord)
-    Repo.delete_all(ModelRecord)
-    Repo.delete_all(ProjectRecord)
+    repo = repo()
+    repo.delete_all(ModelVersionRecord)
+    repo.delete_all(ModelRecord)
+    repo.delete_all(ProjectRecord)
     :ok
   end
 
   defp list_models_for_project(project_id) do
+    repo = repo()
+
     ModelRecord
     |> where([model], model.project_id == ^project_id)
     |> order_by([model], desc: model.updated_at)
-    |> Repo.all()
+    |> repo.all()
     |> Enum.map(&serialize_model/1)
   end
 
   defp list_versions_for_model(model_id) do
+    repo = repo()
+
     ModelVersionRecord
     |> where([version], version.model_id == ^model_id)
     |> order_by([version], desc: version.version_number)
-    |> Repo.all()
+    |> repo.all()
     |> Enum.map(&serialize_version/1)
   end
 
@@ -282,5 +307,16 @@ defmodule KyuubikiWeb.Library.PostgresBackend do
 
   defp random_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+  end
+
+  defp normalize_attrs(attrs) do
+    Enum.into(attrs, %{}, fn
+      {key, value} when is_binary(key) -> {String.to_existing_atom(key), value}
+      {key, value} -> {key, value}
+    end)
+  end
+
+  defp repo do
+    Storage.repo_module!()
   end
 end

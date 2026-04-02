@@ -4,10 +4,12 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   import Ecto.Query
 
   alias KyuubikiWeb.Jobs.{Job, ProgressEvent}
-  alias KyuubikiWeb.Repo
+  alias KyuubikiWeb.Storage
   alias KyuubikiWeb.Storage.JobRecord
 
   def create(attrs) do
+    repo = repo()
+
     with {:ok, job} <- Job.new(attrs) do
       record_attrs =
         job
@@ -16,7 +18,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
 
       %JobRecord{}
       |> Ecto.Changeset.change(record_attrs)
-      |> Repo.insert()
+      |> repo.insert()
       |> case do
         {:ok, _record} -> {:ok, job}
         {:error, changeset} -> {:error, changeset}
@@ -25,16 +27,18 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def get(job_id) do
-    case Repo.get(JobRecord, job_id) do
+    case repo().get(JobRecord, job_id) do
       %JobRecord{} = record -> repo_record_to_job(record)
       nil -> :error
     end
   end
 
   def list do
+    repo = repo()
+
     JobRecord
     |> order_by([job], desc: job.updated_at)
-    |> Repo.all()
+    |> repo.all()
     |> Enum.flat_map(fn record ->
       case repo_record_to_job(record) do
         {:ok, job} -> [job]
@@ -44,18 +48,20 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def update_metadata(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
-    case Repo.get(JobRecord, job_id) do
+    repo = repo()
+
+    case repo.get(JobRecord, job_id) do
       %JobRecord{} = record ->
         changes =
           attrs
           |> Map.take(["project_id", "model_version_id", "simulation_case_id", "message"])
           |> Enum.into(%{}, fn {key, value} -> {String.to_existing_atom(key), value} end)
-          |> Map.put(:updated_at, DateTime.utc_now(:second))
+          |> Map.put(:updated_at, DateTime.utc_now())
 
         updated =
           record
           |> Ecto.Changeset.change(changes)
-          |> Repo.update!()
+          |> repo.update!()
 
         repo_record_to_job(updated)
 
@@ -65,10 +71,12 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def delete(job_id) when is_binary(job_id) do
-    case Repo.get(JobRecord, job_id) do
+    repo = repo()
+
+    case repo.get(JobRecord, job_id) do
       %JobRecord{} = record ->
         with {:ok, job} <- repo_record_to_job(record) do
-          Repo.delete!(record)
+          repo.delete!(record)
           {:ok, job}
         end
 
@@ -78,13 +86,15 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def reset do
-    Repo.delete_all(JobRecord)
+    repo().delete_all(JobRecord)
     :ok
   end
 
   def apply_progress(attrs) do
+    repo = repo()
+
     with {:ok, event} <- ProgressEvent.new(attrs),
-         %JobRecord{} = record <- Repo.get(JobRecord, event.job_id),
+         %JobRecord{} = record <- repo.get(JobRecord, event.job_id),
          {:ok, job} <- repo_record_to_job(record),
          updated_job <- Job.apply_progress(job, event),
          {:ok, _record} <- update_record(updated_job) do
@@ -96,10 +106,12 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def assign_worker(job_id, worker_id) when is_binary(worker_id) and byte_size(worker_id) > 0 do
-    case Repo.get(JobRecord, job_id) do
+    repo = repo()
+
+    case repo.get(JobRecord, job_id) do
       %JobRecord{} = record ->
         with {:ok, job} <- repo_record_to_job(record) do
-          updated_job = %{job | worker_id: worker_id, updated_at: DateTime.utc_now(:second)}
+          updated_job = %{job | worker_id: worker_id, updated_at: DateTime.utc_now()}
 
           case update_record(updated_job) do
             {:ok, _record} -> {:ok, updated_job}
@@ -113,14 +125,16 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   defp update_record(%Job{} = job) do
+    repo = repo()
+
     JobRecord
-    |> Repo.get!(job.job_id)
+    |> repo.get!(job.job_id)
     |> Ecto.Changeset.change(
       job
       |> Job.to_persisted_map()
       |> persisted_map_to_repo_attrs()
     )
-    |> Repo.update()
+    |> repo.update()
   end
 
   defp persisted_map_to_repo_attrs(attrs) do
@@ -160,5 +174,9 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
       "created_at" => DateTime.to_iso8601(record.created_at),
       "updated_at" => DateTime.to_iso8601(record.updated_at)
     })
+  end
+
+  defp repo do
+    Storage.repo_module!()
   end
 end

@@ -36,6 +36,7 @@ defmodule KyuubikiWeb.MixProject do
     [
       {:jason, "~> 1.4"},
       {:ecto_sql, "~> 3.13"},
+      {:ecto_sqlite3, "~> 0.17"},
       {:postgrex, "~> 0.20"},
       {:plug, "~> 1.19"},
       {:plug_cowboy, "~> 2.8"}

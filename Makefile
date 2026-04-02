@@ -1,18 +1,26 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start status stop restart export-db install doctor test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
+.PHONY: help tree start start-local start-cloud status stop restart restart-local restart-cloud export-db install doctor validate-env package installer-gui-dev installer-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
 
 help:
 	@echo "Available targets:"
 	@echo "  make tree        Print the repository scaffold"
 	@echo "  make start       Start the orchestrator API, frontend, and solver agent"
+	@echo "  make start-local Start services with SQLite forced for local development"
+	@echo "  make start-cloud Start services with PostgreSQL forced for cloud/distributed use"
 	@echo "  make status      Show local service status"
 	@echo "  make stop        Stop the orchestrator API, frontend, and solver agent"
 	@echo "  make restart     Restart the orchestrator API, frontend, and solver agent"
+	@echo "  make restart-local Restart services with SQLite forced for local development"
+	@echo "  make restart-cloud Restart services with PostgreSQL forced for cloud/distributed use"
 	@echo "  make export-db   Export the current database snapshot as JSON"
 	@echo "  make install     Run the cross-platform installer/bootstrap utility"
 	@echo "  make doctor      Check local prerequisites for this platform"
+	@echo "  make validate-env Validate required .env.local configuration"
+	@echo "  make package     Stage a portable release directory under dist/"
+	@echo "  make installer-gui-dev   Run the Tauri installer GUI in development mode"
+	@echo "  make installer-gui-build Build the Tauri installer GUI bundles"
 	@echo "  make test        Run all project tests"
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
@@ -37,6 +45,12 @@ tree:
 start:
 	@$(ENTRYPOINT) start
 
+start-local:
+	@$(ENTRYPOINT) start-local
+
+start-cloud:
+	@$(ENTRYPOINT) start-cloud
+
 status:
 	@$(ENTRYPOINT) status
 
@@ -46,6 +60,12 @@ stop:
 restart:
 	@$(ENTRYPOINT) restart
 
+restart-local:
+	@$(ENTRYPOINT) restart-local
+
+restart-cloud:
+	@$(ENTRYPOINT) restart-cloud
+
 export-db:
 	@$(ENTRYPOINT) export-db
 
@@ -54,6 +74,18 @@ install:
 
 doctor:
 	@$(ENTRYPOINT) doctor
+
+validate-env:
+	@$(ENTRYPOINT) validate-env
+
+package:
+	@$(ENTRYPOINT) package $(ARGS)
+
+installer-gui-dev:
+	@$(ENTRYPOINT) installer-gui-dev
+
+installer-gui-build:
+	@$(ENTRYPOINT) installer-gui-build
 
 test: test-web test-rust test-playground
 

@@ -42,7 +42,7 @@ defmodule KyuubikiWeb.Jobs.ProgressEvent do
          iteration: fetch_optional_integer(attrs, :iteration),
          peak_memory: fetch_optional_integer(attrs, :peak_memory),
          message: fetch_optional_string(attrs, :message),
-         emitted_at: Map.get(attrs, :emitted_at, DateTime.utc_now(:second))
+         emitted_at: Map.get(attrs, :emitted_at, DateTime.utc_now())
        }}
     end
   end

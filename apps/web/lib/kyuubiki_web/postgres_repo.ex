@@ -1,4 +1,4 @@
-defmodule KyuubikiWeb.Repo do
+defmodule KyuubikiWeb.PostgresRepo do
   @moduledoc false
 
   use Ecto.Repo,

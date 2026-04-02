@@ -14,7 +14,7 @@ defmodule KyuubikiWeb.AnalysisResultStore do
   def reset, do: backend().reset()
 
   defp backend do
-    if Storage.postgres?() do
+    if Storage.sql?() do
       KyuubikiWeb.AnalysisResultPostgresBackend
     else
       KyuubikiWeb.AnalysisResultMemoryBackend
