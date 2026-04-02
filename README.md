@@ -1,51 +1,64 @@
-# kyuubiki
+# kyuubiki v0.2
 
-Kyuubiki is a browser-first FEM workbench with a split architecture:
+Kyuubiki is a browser-first FEM workbench with an engine-first split architecture:
 
-- `Next.js` workbench UI for modeling, project management, and results review
-- `Elixir` orchestrator API for jobs, persistence, and coordination
-- `Rust` solver agents for the actual FEM data-plane computation
+- `Next.js` workbench UI for modeling, project management, result review, and immersive 3D editing
+- `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
+- `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 
-The current stack is already runnable on macOS and now supports both `SQLite` and `PostgreSQL` for persisted jobs, projects, models, and model versions.
+`v0.2` is the first version where the stack feels like a real product rather than a prototype. It now supports persistent projects, chunked large-result browsing, immersive 3D editing, dual-database storage, portable project bundles, and a cross-platform installer GUI.
 
-## Cross-platform Bootstrap
+## What v0.2 Can Do
 
-Kyuubiki now includes a repo-local cross-platform installer utility built in Rust.
+### Solvers
 
-It does not try to silently mutate host-level package managers. Instead it helps with:
+- `1D axial bar`
+- `2D truss`
+- `2D plane triangle`
+- `3D space truss`
 
-- environment checks
-- `.env.local` variable validation
-- repo-local directory preparation
-- `.env.local` initialization
-- launch manifest export for future packaging/deployment work
-- portable release directory scaffolding under `dist/`
+### Modeling and workbench
 
-Use:
+- parameterized study setup
+- direct node drag editing in `2D truss`
+- direct node drag editing in `3D truss`
+- link / unlink member editing
+- node duplication and axis mirror tools in `3D`
+- box selection, multi-selection, focus, frame selection, and nudge tools in `3D`
+- immersive 3D workspace mode
+- undo / redo for frontend modeling actions
+- compact tabbed UI with virtualized lists and chunk-aware large-result browsing
 
-```bash
-make doctor
-make validate-env
-make install ARGS="bootstrap"
-make package
-```
+### Materials
 
-Installer source:
+- multi-material support inside a single `2D truss`, `3D truss`, or `2D plane triangle` model
+- material library in the workbench
+- apply material to selected entities
+- apply material to whole model
+- material color visualization in the viewport
+- material legend and hide/show filtering
+- custom material authoring
+- material import from external `JSON` and `CSV`
 
-- [installer main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/installer/src/main.rs)
+### Projects and persistence
 
-Current release scaffold output:
+- project CRUD
+- model CRUD
+- model version CRUD
+- job CRUD
+- result CRUD
+- database snapshot export
+- persistent job history
+- project bundle import/export
 
-```text
-dist/<platform>/
-  bin/
-  config/
-  data/
-  logs/
-  exports/
-  manifests/
-  scripts/
-```
+### Installer and packaging
+
+- Rust installer CLI
+- Tauri installer GUI
+- environment validation
+- local SQLite mode
+- cloud PostgreSQL mode
+- release scaffold generation under `dist/`
 
 ## Current Architecture
 
@@ -53,44 +66,99 @@ dist/<platform>/
 Next.js workbench (3000)
   -> Elixir orchestrator API (4000)
     -> Rust TCP solver agent pool (5001, 5002, ...)
-      -> FEM kernels (1D / 2D / 3D)
+      -> Rust engine + solver kernels
 
-PostgreSQL
-  <- jobs / results / projects / models / model_versions
+SQLite or PostgreSQL
+  <- projects / models / model_versions / jobs / results
 ```
 
-## Current Features
+The direction is engine-first:
 
-- 1D axial bar studies
-- 2D truss studies
-- 2D plane triangle studies
-- 3D space truss studies
-- Parametric model generation
-- Direct node drag editing for 2D truss
-- Project / model / version CRUD
-- Job / result CRUD
-- Database snapshot export
-- Undo / redo for frontend modeling actions
-- Persistent job history
-- Benchmark runner for solver cases
-- Project bundle export and import
+- Rust `engine` owns reusable solving and result-window helpers
+- Phoenix/Plug orchestration owns jobs, storage, and HTTP APIs
+- frontend consumes stable APIs instead of solver internals
 
-## Project Storage
+## Current Capabilities by Layer
 
-Kyuubiki now supports two SQL storage modes through the Elixir orchestrator:
+### Frontend workbench
+
+Main entry points:
+
+- [page.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/app/page.tsx)
+- [workbench.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench.tsx)
+- [workbench-viewport.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench-viewport.tsx)
+
+The workbench currently supports:
+
+- sample library browsing
+- project and model library management
+- model versioning
+- result export as `JSON` and `CSV`
+- database snapshot export as `JSON`
+- `.kyuubiki.json` export/import
+- `.kyuubiki` archive export/import
+- chunked browsing of large result sets
+- immersive 3D workspace with externalized tools/help panels
+- local settings persistence for theme, language, and shortcut hints
+
+### Orchestrator API
+
+Main router:
+
+- [router.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/router.ex)
+
+Core orchestration:
+
+- [analysis.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/analysis.ex)
+- [library.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/library.ex)
+
+The orchestrator currently provides:
+
+- health endpoint
+- FEM job submission
+- job lookup and job history
+- project/model/model-version CRUD
+- result CRUD
+- full database export
+- chunked result APIs for large result windows
+- round-robin dispatch across multiple Rust RPC agents
+- failover when an agent endpoint is unavailable
+
+### Rust engine and agents
+
+Main crates:
+
+- [protocol](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/protocol/src/lib.rs)
+- [engine](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/engine/src/lib.rs)
+- [solver](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/solver/src/lib.rs)
+- [cli](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
+- [benchmark](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/benchmark/src/main.rs)
+
+The Rust side currently provides:
+
+- framed TCP RPC transport
+- progress events
+- multi-agent execution
+- benchmark profiles
+- mixed dense/sparse and specialized solver paths
+- result chunk helpers used by the engine/orchestrator split
+
+## Storage Modes
+
+Kyuubiki supports two SQL-backed storage modes:
 
 - `sqlite`
-  Best default for local single-machine work. Minimal host burden and zero extra service management.
+  Best default for local single-machine work. Minimal host burden.
 - `postgres`
   Recommended for cloud, multi-node, and distributed deployments.
 
 Persisted entities include:
 
-- jobs
-- analysis results
 - projects
 - models
 - model versions
+- jobs
+- results
 
 Recommended local setup:
 
@@ -119,41 +187,22 @@ make restart-cloud
 
 `start-local` and `restart-local` force SQLite even if `.env.local` currently points at PostgreSQL. `start-cloud` and `restart-cloud` force PostgreSQL and require `DATABASE_URL`.
 
-## Installer GUI
-
-Kyuubiki now includes a Tauri-based installer shell for a more visual cross-platform setup flow.
-
-- GUI app root: [apps/installer-gui](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui)
-- Tauri backend: [src-tauri/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/src/main.rs)
-- Static installer UI: [ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/index.html)
-
-Common commands:
-
-```bash
-make installer-gui-dev
-make installer-gui-build
-```
-
-The GUI wraps the same Rust installer logic used by `kyuubiki-installer`, including doctor, env validation, layout prep, bootstrap, and release staging.
-
 ## Project Format
 
-Kyuubiki now has a dedicated JSON-based portable project format.
+Kyuubiki has a portable project format built around JSON schemas.
 
-### 1. Single-file project export
+Main schemas:
+
+- [project.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/project.schema.json)
+- [model.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/model.schema.json)
+- [material-library.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/material-library.schema.json)
+
+### Single-file project export
 
 - extension: `.kyuubiki.json`
 - schema: `kyuubiki.project/v1`
 
-Main schema:
-
-- [project.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/project.schema.json)
-
-Related model schema:
-
-- [model.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/model.schema.json)
-
-### 2. Project archive export
+### Project archive export
 
 - extension: `.kyuubiki`
 - container: `zip`
@@ -174,85 +223,82 @@ workspace/current-model.json
 README.txt
 ```
 
-The root `project.json` remains the canonical manifest so imports stay simple and backward-compatible.
-Detached analysis payloads now live under `results/` inside the zip archive so exported bundles can be reviewed offline.
+The root `project.json` remains the canonical manifest. Detached analysis payloads live under `results/` so exported bundles can be reviewed offline.
 
-## Browser Workbench
+## Installer
 
-The Next.js workbench currently supports:
+### Rust installer CLI
 
-- sample library browsing
-- project CRUD
-- saved model CRUD
-- model version management
-- result export as JSON / CSV
-- database snapshot export as JSON
-- system-side job/result record management
-- project export as `.kyuubiki.json` and `.kyuubiki`
-- project import from both formats
+Kyuubiki includes a repo-local cross-platform installer utility built in Rust.
 
-Main frontend entry points:
+It currently supports:
 
-- [page.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/app/page.tsx)
-- [workbench.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench.tsx)
+- `doctor`
+- `validate-env`
+- `init-env`
+- `prepare-layout`
+- `export-launch`
+- `stage-release`
+- `bootstrap`
 
-## Orchestrator API
-
-The Elixir app currently serves:
-
-- health
-- FEM job submission
-- job lookup
-- project CRUD
-- model CRUD
-- model version CRUD
-- job CRUD
-- result CRUD
-- full database export
-- round-robin dispatch across multiple Rust RPC agents with failover for unavailable endpoints
-
-Main API router:
-
-- [router.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/router.ex)
-
-Persistence and library facade:
-
-- [library.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/library.ex)
-- [schema_setup.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/storage/schema_setup.ex)
-
-## Rust Solver Agent
-
-The Rust side currently provides:
-
-- framed TCP RPC transport
-- progress events
-- 1D axial bar solve
-- 2D truss solve
-- 2D plane triangle solve
-- 3D truss solve
-- benchmark executable
-
-The orchestrator can target multiple local or remote agents through:
+Use:
 
 ```bash
-KYUUBIKI_AGENT_ENDPOINTS=127.0.0.1:5001,127.0.0.1:5002
+make doctor
+make validate-env
+make install ARGS="bootstrap"
+make package
 ```
 
-Main Rust crates:
+Installer source:
 
-- [protocol](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/protocol/src/lib.rs)
-- [engine](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/engine/src/lib.rs)
-- [solver](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/solver/src/lib.rs)
-- [cli](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
-- [benchmark](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/benchmark/src/main.rs)
+- [installer lib.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/installer/src/lib.rs)
+- [installer main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/installer/src/main.rs)
 
-The direction is engine-first:
+Current release scaffold:
 
-- Rust `engine` owns solving and result windowing helpers
-- Phoenix orchestrator owns jobs, storage, and chunked HTTP APIs
-- frontend consumes stable chunk/result APIs instead of solver internals
+```text
+dist/<platform>/
+  bin/
+  config/
+  data/
+  logs/
+  exports/
+  manifests/
+  scripts/
+```
 
-Benchmark profiles:
+### Tauri installer GUI
+
+Kyuubiki also includes a Tauri-based installer shell for a more visual setup flow.
+
+- app root: [apps/installer-gui](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui)
+- Tauri backend: [src-tauri/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/src/main.rs)
+- GUI shell: [ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/index.html)
+
+Common commands:
+
+```bash
+make installer-gui-dev
+make installer-gui-build
+```
+
+The GUI currently wraps:
+
+- local/cloud mode selection
+- environment validation
+- bootstrap flow
+- service control
+- log viewing
+- release scaffold generation
+
+## Benchmarks
+
+Benchmark runner:
+
+- [benchmark main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/benchmark/src/main.rs)
+
+Profiles:
 
 ```bash
 cd /Users/Shared/chroot/dev/kyuubiki/workers/rust
@@ -264,8 +310,8 @@ cargo run -p kyuubiki-benchmark -- --profile v2 --repeat 1
 Current benchmark tiers are aimed at:
 
 - `medium`: small-to-mid validation runs
-- `large`: around the low-thousands node class
-- `v2`: around the 5000-node class target
+- `large`: low-thousands node class
+- `v2`: path toward the next scale target
 
 ## Local Development
 
@@ -274,6 +320,12 @@ Start everything:
 ```bash
 cd /Users/Shared/chroot/dev/kyuubiki
 make start
+```
+
+Start in forced local SQLite mode:
+
+```bash
+make start-local
 ```
 
 Check services:
@@ -294,7 +346,7 @@ Export the current database snapshot:
 make export-db > kyuubiki-database.json
 ```
 
-Main local endpoints:
+Main endpoints:
 
 - workbench: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 - orchestrator: [http://127.0.0.1:4000](http://127.0.0.1:4000)
@@ -302,7 +354,7 @@ Main local endpoints:
 
 ## Verification
 
-Run the full verification suite:
+Run the verification suite:
 
 ```bash
 make verify
@@ -312,13 +364,17 @@ This currently covers:
 
 - Elixir tests
 - Rust tests
+- frontend build/type checks
 - browser FEM tests
 - formatting checks
 
-## Near-term Direction
+## v0.2 Direction
 
-The next natural steps are:
+`v0.2` is about making Kyuubiki feel coherent end-to-end:
 
-- connect jobs to `model_version_id`
-- add richer 3D modeling controls
-- move from polling to streaming job progress
+- engine-oriented separation between UI, orchestration, and solving
+- better large-result handling through chunked APIs
+- stronger immersive 3D editing
+- stronger local-first setup through SQLite and installer UX
+
+The next scale target after `v0.2` is clear: make single-machine `10k`-node workflows practical on an `M2 + 16GB` class machine, starting with `2D truss`.
