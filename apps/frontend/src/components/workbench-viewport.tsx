@@ -153,6 +153,7 @@ type WorkbenchViewportProps = {
   onShowLabelsChange: (value: boolean) => void;
   onShowNodesChange: (value: boolean) => void;
   onBoxSelectModeChange: (value: boolean) => void;
+  viewportPixelWidth?: number;
 };
 
 const VIEWPORT_CLIP = { x: 48, y: 76, width: 884, height: 340 };
@@ -428,7 +429,9 @@ function WorkbenchViewportInner({
   onShowLabelsChange,
   onShowNodesChange,
   onBoxSelectModeChange,
+  viewportPixelWidth,
 }: WorkbenchViewportProps) {
+  const svgStyle = viewportPixelWidth ? { width: `${viewportPixelWidth}px`, minWidth: `${viewportPixelWidth}px` } : undefined;
   const isModelMode = sidebarSection === "model";
   const trussLabelStep = stepForDensity(displayTrussNodes.length, isModelMode ? 22 : 12);
   const trussMarkerStep = stepForDensity(displayTrussNodes.length, isModelMode ? 160 : 84);
@@ -712,6 +715,7 @@ function WorkbenchViewportInner({
       <svg
         viewBox="0 0 980 460"
         className={`viewport-svg${boxSelectMode ? " viewport-svg--box-select" : ""}`}
+        style={svgStyle}
         aria-label="2d truss response"
         onPointerLeave={onStopDraggingNode}
         onPointerMove={onTrussPointerMove}
@@ -834,6 +838,7 @@ function WorkbenchViewportInner({
       <svg
         viewBox="0 0 980 460"
         className="viewport-svg"
+        style={svgStyle}
         aria-label="3d truss response"
         onPointerDown={handle3dPointerDown}
         onPointerMove={handle3dPointerMove}
@@ -1013,7 +1018,7 @@ function WorkbenchViewportInner({
   }
 
   return (
-    <svg viewBox="0 0 980 460" className="viewport-svg" aria-label="2d plane triangle response">
+    <svg viewBox="0 0 980 460" className="viewport-svg" style={svgStyle} aria-label="2d plane triangle response">
       <defs>
         <clipPath id="viewportClipPlane">
           <rect x={VIEWPORT_CLIP.x} y={VIEWPORT_CLIP.y} width={VIEWPORT_CLIP.width} height={VIEWPORT_CLIP.height} rx="22" />

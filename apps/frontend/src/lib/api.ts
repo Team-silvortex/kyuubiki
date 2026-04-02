@@ -308,6 +308,18 @@ export type ResultListPayload = {
   results: ResultRecord[];
 };
 
+export type ResultChunkKind = "nodes" | "elements";
+
+export type ResultChunkPayload<TItem = Record<string, unknown>> = {
+  job_id: string;
+  kind: ResultChunkKind;
+  offset: number;
+  limit: number;
+  returned: number;
+  total: number;
+  items: TItem[];
+};
+
 function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
   return new Map((materials ?? []).map((material) => [material.id, material]));
 }
@@ -470,6 +482,24 @@ export function fetchDatabaseExport(): Promise<DatabaseExportPayload> {
 
 export function fetchResults(): Promise<ResultListPayload> {
   return requestJson<ResultListPayload>("/api/v1/results", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchResultChunk<TItem = Record<string, unknown>>(
+  jobId: string,
+  kind: ResultChunkKind,
+  options: { offset?: number; limit?: number } = {},
+): Promise<ResultChunkPayload<TItem>> {
+  const params = new URLSearchParams();
+
+  if (typeof options.offset === "number") params.set("offset", String(options.offset));
+  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+
+  return requestJson<ResultChunkPayload<TItem>>(`/api/v1/results/${jobId}/chunks/${kind}${suffix}`, {
     method: "GET",
     cache: "no-store",
   });

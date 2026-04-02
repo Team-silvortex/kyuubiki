@@ -435,6 +435,34 @@ html[data-theme="graphite"] .panel {
   gap: 8px;
 }
 
+.viewport-window-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 12px 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel-soft);
+}
+
+.viewport-window-bar__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+}
+
+.viewport-window-bar__meta strong {
+  font-size: 0.9rem;
+}
+
+.viewport-window-bar__meta span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
 .immersive-switches {
   display: inline-flex;
   align-items: center;
@@ -664,6 +692,14 @@ html[data-theme="graphite"] .inline-field input {
   min-width: 1120px;
 }
 
+.canvas-stage--space-fluid {
+  overflow-x: hidden;
+}
+
+.canvas-stage--space-fluid .viewport-svg {
+  min-width: 100%;
+}
+
 .canvas-panel--immersive:fullscreen {
   width: 100vw;
   height: 100vh;
@@ -759,6 +795,12 @@ html[data-theme="graphite"] .immersive-drawer__card {
 
 .viewport-toolbar-strip .ghost-button {
   flex: 0 0 auto;
+}
+
+.viewport-toolbar-strip--dock {
+  margin-top: 10px;
+  margin-bottom: 0;
+  padding-bottom: 2px;
 }
 
 .viewport-dock__grid {

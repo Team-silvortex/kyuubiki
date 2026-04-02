@@ -8,6 +8,7 @@ import {
   useTransition,
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
+  type UIEvent as ReactUIEvent,
   type SetStateAction,
 } from "react";
 import { VirtualList } from "@/components/virtual-list";
@@ -49,6 +50,7 @@ import {
   fetchHealth,
   fetchJobHistory,
   fetchJobStatus,
+  fetchResultChunk,
   fetchProjects,
   fetchResults,
   type AxialBarJobInput,
@@ -183,6 +185,18 @@ type HistoryEntry = {
   label: string;
   snapshot: WorkbenchSnapshot;
 };
+
+type ResultWindowState = {
+  jobId: string;
+  studyKind: Exclude<StudyKind, "axial_bar_1d">;
+  nodes: Record<string, unknown>[];
+  elements: Record<string, unknown>[];
+  totalNodes: number;
+  totalElements: number;
+};
+
+const RESULT_WINDOW_THRESHOLD = 400;
+const RESULT_WINDOW_SIZE = 240;
 
 const defaultAxial: AxialFormState = {
   length: 1.2,
@@ -418,6 +432,11 @@ const copy = {
     historyEmpty: "No jobs yet.",
     openJob: "Open",
     refresh: "Refresh",
+    resultWindow: "Result Window",
+    previousPage: "Previous",
+    nextPage: "Next",
+    pageRange: "Rows",
+    totalElements: "Elements",
     projectLibrary: "Project Library",
     projectNameField: "Project name",
     projectDescriptionField: "Description",
@@ -734,6 +753,11 @@ const copy = {
     historyEmpty: "暂时还没有任务。",
     openJob: "打开",
     refresh: "刷新",
+    resultWindow: "结果窗口",
+    previousPage: "上一页",
+    nextPage: "下一页",
+    pageRange: "区间",
+    totalElements: "单元",
     projectLibrary: "项目库",
     projectNameField: "项目名",
     projectDescriptionField: "描述",
@@ -1188,10 +1212,16 @@ function isTruss3dResult(value: unknown): value is Truss3dResult {
   return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && Array.isArray((value as Truss3dResult).nodes) && (value as Truss3dResult).nodes.some((node) => "z" in node);
 }
 
-function buildDisplayTruss3dNodes(model: Truss3dJobInput, result: Truss3dResult | null): DisplayTruss3dNode[] {
-  if (result) {
-    return result.nodes.map((node, index) => ({
-      index,
+function buildDisplayTruss3dNodes(
+  model: Truss3dJobInput,
+  result: Truss3dResult | null,
+  windowNodes?: Truss3dResult["nodes"],
+): DisplayTruss3dNode[] {
+  const nodes = windowNodes ?? result?.nodes;
+
+  if (nodes) {
+    return nodes.map((node, index) => ({
+      index: typeof node.index === "number" ? node.index : index,
       id: node.id,
       x: node.x,
       y: node.y,
@@ -1214,9 +1244,15 @@ function buildDisplayTruss3dNodes(model: Truss3dJobInput, result: Truss3dResult 
   }));
 }
 
-function buildDisplayTruss3dElements(model: Truss3dJobInput, result: Truss3dResult | null): DisplayTruss3dElement[] {
-  if (result) {
-    return result.elements.map((element) => ({
+function buildDisplayTruss3dElements(
+  model: Truss3dJobInput,
+  result: Truss3dResult | null,
+  windowElements?: Truss3dResult["elements"],
+): DisplayTruss3dElement[] {
+  const elements = windowElements ?? result?.elements;
+
+  if (elements) {
+    return elements.map((element) => ({
       ...element,
       material_id: model.elements[element.index]?.material_id,
     }));
@@ -1309,19 +1345,25 @@ function isPlaneTriangleResult(value: unknown): value is PlaneTriangle2dResult {
   return typeof value === "object" && value !== null && "elements" in value && "nodes" in value && "input" in value && Array.isArray((value as PlaneTriangle2dResult).elements) && (value as PlaneTriangle2dResult).elements.some((element) => "node_k" in element);
 }
 
-function buildDisplayTrussNodes(model: Truss2dJobInput, result: Truss2dResult | null): DisplayTrussNode[] {
-  if (result) {
-    return result.nodes.map((node, index) => ({
-      index,
+function buildDisplayTrussNodes(
+  model: Truss2dJobInput,
+  result: Truss2dResult | null,
+  windowNodes?: Truss2dResult["nodes"],
+): DisplayTrussNode[] {
+  const nodes = windowNodes ?? result?.nodes;
+
+  if (nodes) {
+    return nodes.map((node, index) => ({
+      index: typeof node.index === "number" ? node.index : index,
       id: node.id,
       x: node.x,
       y: node.y,
       ux: node.ux,
       uy: node.uy,
-      fix_x: model.nodes[index]?.fix_x ?? false,
-      fix_y: model.nodes[index]?.fix_y ?? false,
-      load_x: model.nodes[index]?.load_x ?? 0,
-      load_y: model.nodes[index]?.load_y ?? 0,
+      fix_x: model.nodes[node.index]?.fix_x ?? false,
+      fix_y: model.nodes[node.index]?.fix_y ?? false,
+      load_x: model.nodes[node.index]?.load_x ?? 0,
+      load_y: model.nodes[node.index]?.load_y ?? 0,
     }));
   }
 
@@ -1339,9 +1381,15 @@ function buildDisplayTrussNodes(model: Truss2dJobInput, result: Truss2dResult | 
   }));
 }
 
-function buildDisplayTrussElements(model: Truss2dJobInput, result: Truss2dResult | null): DisplayTrussElement[] {
-  if (result) {
-    return result.elements.map((element) => ({
+function buildDisplayTrussElements(
+  model: Truss2dJobInput,
+  result: Truss2dResult | null,
+  windowElements?: Truss2dResult["elements"],
+): DisplayTrussElement[] {
+  const elements = windowElements ?? result?.elements;
+
+  if (elements) {
+    return elements.map((element) => ({
       index: element.index,
       id: element.id,
       node_i: element.node_i,
@@ -1647,6 +1695,8 @@ export function Workbench() {
   const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
   const [result, setResult] = useState<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>(null);
+  const [resultWindow, setResultWindow] = useState<ResultWindowState | null>(null);
+  const [resultWindowOffset, setResultWindowOffset] = useState(0);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
@@ -1712,7 +1762,73 @@ export function Workbench() {
   const dragFrameRef = useRef<number | null>(null);
   const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const viewportPanelRef = useRef<HTMLElement | null>(null);
+  const chunkScrollFrameRef = useRef<number | null>(null);
   const t = copy[language];
+
+  useEffect(() => {
+    setResultWindowOffset(0);
+  }, [job?.job_id, studyKind]);
+
+  useEffect(() => {
+    return () => {
+      if (chunkScrollFrameRef.current !== null) {
+        window.cancelAnimationFrame(chunkScrollFrameRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!job?.job_id || !result || isAxialResult(result)) {
+      setResultWindow(null);
+      return;
+    }
+
+    const totalNodes = Array.isArray(result.nodes) ? result.nodes.length : 0;
+    const totalElements = Array.isArray(result.elements) ? result.elements.length : 0;
+
+    if (totalNodes <= RESULT_WINDOW_THRESHOLD && totalElements <= RESULT_WINDOW_THRESHOLD) {
+      setResultWindow(null);
+      return;
+    }
+
+    const nextStudyKind: Exclude<StudyKind, "axial_bar_1d"> = isTrussResult(result)
+      ? "truss_2d"
+      : isTruss3dResult(result)
+        ? "truss_3d"
+        : "plane_triangle_2d";
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const safeOffset = Math.max(0, resultWindowOffset);
+
+        const [nodesChunk, elementsChunk] = await Promise.all([
+          fetchResultChunk(job.job_id, "nodes", { offset: safeOffset, limit: RESULT_WINDOW_SIZE }),
+          fetchResultChunk(job.job_id, "elements", { offset: safeOffset, limit: RESULT_WINDOW_SIZE }),
+        ]);
+
+        if (cancelled) return;
+
+        setResultWindow({
+          jobId: job.job_id,
+          studyKind: nextStudyKind,
+          nodes: nodesChunk.items,
+          elements: elementsChunk.items,
+          totalNodes: nodesChunk.total,
+          totalElements: elementsChunk.total,
+        });
+      } catch {
+        if (!cancelled) {
+          setResultWindow(null);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [job?.job_id, result, resultWindowOffset]);
 
   useEffect(() => {
     const stored = safeStorageGet();
@@ -1959,6 +2075,28 @@ export function Workbench() {
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
+    });
+  };
+
+  const handleCanvasStageScroll = (event: ReactUIEvent<HTMLDivElement>) => {
+    if (!activeResultWindow) return;
+    if (chunkScrollFrameRef.current !== null) return;
+
+    const target = event.currentTarget;
+
+    chunkScrollFrameRef.current = window.requestAnimationFrame(() => {
+      chunkScrollFrameRef.current = null;
+
+      const maxScrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
+      if (maxScrollLeft <= 0) return;
+
+      const maxOffset = Math.max(0, resultWindowMaxTotal - RESULT_WINDOW_SIZE);
+      if (maxOffset <= 0) return;
+
+      const ratio = target.scrollLeft / maxScrollLeft;
+      const nextOffset = Math.round((ratio * maxOffset) / RESULT_WINDOW_SIZE) * RESULT_WINDOW_SIZE;
+
+      setResultWindowOffset((current) => (current === nextOffset ? current : nextOffset));
     });
   };
 
@@ -2734,29 +2872,51 @@ export function Workbench() {
   const trussResult = isTruss && isTrussResult(result) ? result : null;
   const truss3dResult = isTruss3d && isTruss3dResult(result) ? result : null;
   const planeResult = isPlane && isPlaneTriangleResult(result) ? result : null;
+  const activeResultWindow =
+    resultWindow && job?.job_id === resultWindow.jobId && studyKind === resultWindow.studyKind ? resultWindow : null;
   const trussDiagnostics = isTruss ? analyzeTrussModel(trussModel, t, selectedNode) : null;
   const trussStability = isTruss && trussDiagnostics ? summarizeTrussStability(trussModel, trussDiagnostics) : null;
   const axialNodes = axialResult?.nodes ?? [];
   const axialElements = axialResult?.elements ?? [];
   const axialLength = axialResult?.input.length ?? axialForm.length;
   const axialScale = axialResult?.max_displacement ? 140 / axialResult.max_displacement : 1;
-  const displayTrussNodes = buildDisplayTrussNodes(trussModel, trussResult);
-  const displayTrussElements = buildDisplayTrussElements(trussModel, trussResult);
+  const displayTrussNodes = buildDisplayTrussNodes(
+    trussModel,
+    trussResult,
+    activeResultWindow?.studyKind === "truss_2d" ? (activeResultWindow.nodes as Truss2dResult["nodes"]) : undefined,
+  );
+  const displayTrussElements = buildDisplayTrussElements(
+    trussModel,
+    trussResult,
+    activeResultWindow?.studyKind === "truss_2d" ? (activeResultWindow.elements as Truss2dResult["elements"]) : undefined,
+  );
   const trussBounds = getTrussBounds(displayTrussNodes);
-  const displayTruss3dNodes = buildDisplayTruss3dNodes(truss3dModel, truss3dResult);
-  const displayTruss3dElements = buildDisplayTruss3dElements(truss3dModel, truss3dResult);
+  const displayTruss3dNodes = buildDisplayTruss3dNodes(
+    truss3dModel,
+    truss3dResult,
+    activeResultWindow?.studyKind === "truss_3d" ? (activeResultWindow.nodes as Truss3dResult["nodes"]) : undefined,
+  );
+  const displayTruss3dElements = buildDisplayTruss3dElements(
+    truss3dModel,
+    truss3dResult,
+    activeResultWindow?.studyKind === "truss_3d" ? (activeResultWindow.elements as Truss3dResult["elements"]) : undefined,
+  );
+  const planeWindowNodes =
+    activeResultWindow?.studyKind === "plane_triangle_2d" ? (activeResultWindow.nodes as PlaneTriangle2dResult["nodes"]) : undefined;
+  const planeWindowElements =
+    activeResultWindow?.studyKind === "plane_triangle_2d" ? (activeResultWindow.elements as PlaneTriangle2dResult["elements"]) : undefined;
   const planeNodes =
-    planeResult?.nodes.map((node, index) => ({
-      ...planeModel.nodes[index],
+    (planeWindowNodes ?? planeResult?.nodes)?.map((node, index) => ({
+      ...planeModel.nodes[node.index ?? index],
       ...node,
-      fix_x: planeModel.nodes[index]?.fix_x ?? false,
-      fix_y: planeModel.nodes[index]?.fix_y ?? false,
-      load_x: planeModel.nodes[index]?.load_x ?? 0,
-      load_y: planeModel.nodes[index]?.load_y ?? 0,
+      fix_x: planeModel.nodes[node.index ?? index]?.fix_x ?? false,
+      fix_y: planeModel.nodes[node.index ?? index]?.fix_y ?? false,
+      load_x: planeModel.nodes[node.index ?? index]?.load_x ?? 0,
+      load_y: planeModel.nodes[node.index ?? index]?.load_y ?? 0,
     })) ??
     planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
   const planeElements =
-    planeResult?.elements.map((element) => ({
+    (planeWindowElements ?? planeResult?.elements)?.map((element) => ({
       ...element,
       material_id: planeModel.elements[element.index]?.material_id,
     })) ??
@@ -2789,6 +2949,26 @@ export function Workbench() {
   const trussElementColors = displayTrussElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
   const truss3dElementColors = displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
   const planeElementColors = planeModel.elements.map((element) => materialColorMap.get(element.material_id ?? "") ?? planeStressFill(0, 1));
+  const nodeCount =
+    isAxial
+      ? axialNodes.length
+      : activeResultWindow?.totalNodes ??
+        (isTruss ? trussResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : planeResult?.nodes.length) ??
+        (isTruss ? trussModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : planeModel.nodes.length);
+  const resultWindowMaxTotal = activeResultWindow ? Math.max(activeResultWindow.totalNodes, activeResultWindow.totalElements) : 0;
+  const resultWindowStart = activeResultWindow ? Math.min(resultWindowOffset, Math.max(0, resultWindowMaxTotal - 1)) + 1 : 0;
+  const resultWindowEnd = activeResultWindow ? Math.min(resultWindowOffset + RESULT_WINDOW_SIZE, resultWindowMaxTotal) : 0;
+  const hasViewportDock = isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen));
+  const showViewportToolStrip = isTruss3d && immersiveToolDrawerOpen;
+  const shouldStretchSpaceViewport = isTruss3d && !hasViewportDock && !activeResultWindow;
+  const viewportPixelWidth =
+    activeResultWindow
+      ? Math.min(3200, 980 + Math.ceil(resultWindowMaxTotal / RESULT_WINDOW_SIZE) * 180)
+      : isTruss3d
+        ? hasViewportDock
+          ? 1120
+          : undefined
+        : 980;
 
   const buildSnapshot = (): WorkbenchSnapshot => ({
     studyKind,
@@ -5071,8 +5251,8 @@ export function Workbench() {
               <span>{job?.status ?? "idle"}</span>
             </div>
           </div>
-          <div className={`canvas-layout${isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen)) ? " canvas-layout--split" : ""}`}>
-          {isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen)) ? (
+          <div className={`canvas-layout${hasViewportDock ? " canvas-layout--split" : ""}`}>
+          {hasViewportDock ? (
             <div className="viewport-dock">
               {immersiveViewport && immersiveToolDrawerOpen ? (
                 <section className="viewport-dock__card">
@@ -5080,6 +5260,76 @@ export function Workbench() {
                     <h2>{t.immersiveTools}</h2>
                     <span>{t.kinds.truss_3d}</span>
                   </div>
+                  {showViewportToolStrip ? (
+                    <div className="viewport-toolbar-strip viewport-toolbar-strip--dock" role="toolbar" aria-label={t.immersiveViewTools}>
+                      {(["iso", "front", "right", "top"] as const).map((preset) => (
+                        <button
+                          key={preset}
+                          className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
+                          onClick={() => setTruss3dViewPreset(preset)}
+                          type="button"
+                        >
+                          {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
+                        </button>
+                      ))}
+                      <button
+                        className={`ghost-button ghost-button--compact${selectedNode !== null || selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
+                        type="button"
+                      >
+                        FOCUS
+                      </button>
+                      <button
+                        className={`ghost-button ghost-button--compact${selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
+                        type="button"
+                      >
+                        {t.frameSelection}
+                      </button>
+                      <button
+                        className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dProjectionMode((current) => (current === "ortho" ? "persp" : "ortho"))}
+                        type="button"
+                      >
+                        {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
+                      </button>
+                      <button
+                        className={`ghost-button ghost-button--compact${truss3dShowGrid ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dShowGrid((current) => !current)}
+                        type="button"
+                      >
+                        GRID
+                      </button>
+                      <button
+                        className={`ghost-button ghost-button--compact${truss3dShowLabels ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dShowLabels((current) => !current)}
+                        type="button"
+                      >
+                        LABEL
+                      </button>
+                      <button
+                        className={`ghost-button ghost-button--compact${truss3dShowNodes ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dShowNodes((current) => !current)}
+                        type="button"
+                      >
+                        NODE
+                      </button>
+                      <button
+                        className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
+                        onClick={() => setTruss3dBoxSelectMode((current) => !current)}
+                        type="button"
+                      >
+                        BOX
+                      </button>
+                      <button
+                        className="ghost-button ghost-button--compact"
+                        onClick={() => setTruss3dResetRequestVersion((current) => current + 1)}
+                        type="button"
+                      >
+                        RESET
+                      </button>
+                    </div>
+                  ) : null}
                   <div className="panel-tabs viewport-dock__tabs">
                     <button className={`panel-tab${immersiveToolTab === "node" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("node")} type="button">
                       {t.immersiveNodeOps}
@@ -5339,77 +5589,45 @@ export function Workbench() {
               ) : null}
             </div>
           ) : null}
-          <div className={`canvas-stage${isTruss3d ? " canvas-stage--space" : ""}`}>
-          {isTruss3d && immersiveToolDrawerOpen ? (
-            <div className="viewport-toolbar-strip" role="toolbar" aria-label={t.immersiveViewTools}>
-              {(["iso", "front", "right", "top"] as const).map((preset) => (
+          {activeResultWindow ? (
+            <div className="viewport-window-bar">
+              <div className="viewport-window-bar__meta">
+                <strong>{t.resultWindow}</strong>
+                <span>
+                  {t.pageRange}: {resultWindowStart}-{resultWindowEnd}
+                </span>
+                <span>
+                  {t.nodes}: {activeResultWindow.totalNodes}
+                </span>
+                <span>
+                  {t.totalElements}: {activeResultWindow.totalElements}
+                </span>
+              </div>
+              <div className="button-row">
                 <button
-                  key={preset}
-                  className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
-                  onClick={() => setTruss3dViewPreset(preset)}
+                  className="ghost-button ghost-button--compact"
+                  disabled={resultWindowOffset <= 0}
+                  onClick={() => setResultWindowOffset((current) => Math.max(0, current - RESULT_WINDOW_SIZE))}
                   type="button"
                 >
-                  {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
+                  {t.previousPage}
                 </button>
-              ))}
-              <button
-                className={`ghost-button ghost-button--compact${selectedNode !== null || selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
-                type="button"
-              >
-                FOCUS
-              </button>
-              <button
-                className={`ghost-button ghost-button--compact${selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
-                type="button"
-              >
-                {t.frameSelection}
-              </button>
-              <button
-                className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dProjectionMode((current) => (current === "ortho" ? "persp" : "ortho"))}
-                type="button"
-              >
-                {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
-              </button>
-              <button
-                className={`ghost-button ghost-button--compact${truss3dShowGrid ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dShowGrid((current) => !current)}
-                type="button"
-              >
-                GRID
-              </button>
-              <button
-                className={`ghost-button ghost-button--compact${truss3dShowLabels ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dShowLabels((current) => !current)}
-                type="button"
-              >
-                LABEL
-              </button>
-              <button
-                className={`ghost-button ghost-button--compact${truss3dShowNodes ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dShowNodes((current) => !current)}
-                type="button"
-              >
-                NODE
-              </button>
-              <button
-                className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
-                onClick={() => setTruss3dBoxSelectMode((current) => !current)}
-                type="button"
-              >
-                BOX
-              </button>
-              <button
-                className="ghost-button ghost-button--compact"
-                onClick={() => setTruss3dResetRequestVersion((current) => current + 1)}
-                type="button"
-              >
-                RESET
-              </button>
+                <button
+                  className="ghost-button ghost-button--compact"
+                  disabled={resultWindowOffset + RESULT_WINDOW_SIZE >= resultWindowMaxTotal}
+                  onClick={() =>
+                    setResultWindowOffset((current) =>
+                      Math.min(Math.max(0, resultWindowMaxTotal - RESULT_WINDOW_SIZE), current + RESULT_WINDOW_SIZE),
+                    )
+                  }
+                  type="button"
+                >
+                  {t.nextPage}
+                </button>
+              </div>
             </div>
           ) : null}
+          <div className={`canvas-stage${isTruss3d ? " canvas-stage--space" : ""}${shouldStretchSpaceViewport ? " canvas-stage--space-fluid" : ""}`} onScroll={handleCanvasStageScroll}>
           <WorkbenchViewport
             studyKind={studyKind}
             sidebarSection={sidebarSection}
@@ -5506,6 +5724,7 @@ export function Workbench() {
             onShowLabelsChange={setTruss3dShowLabels}
             onShowNodesChange={setTruss3dShowNodes}
             onBoxSelectModeChange={setTruss3dBoxSelectMode}
+            viewportPixelWidth={viewportPixelWidth}
           />
           </div>
           </div>
@@ -5666,7 +5885,7 @@ export function Workbench() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         job={job}
-        nodeCount={isAxial ? axialNodes.length : isTruss ? displayTrussNodes.length : isTruss3d ? displayTruss3dNodes.length : planeNodes.length}
+        nodeCount={nodeCount}
         tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : scientific(planeResult?.max_displacement)}
         maxStressValue={scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : planeResult?.max_stress)}
         reactionValue={isAxial ? scientific(axialResult?.reaction_force) : "--"}
