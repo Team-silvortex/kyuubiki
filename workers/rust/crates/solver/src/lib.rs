@@ -48,28 +48,11 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
     let node_count = request.elements + 1;
     let element_length = request.length / request.elements as f64;
     let stiffness = request.youngs_modulus * request.area / element_length;
-    let mut global_stiffness = zero_matrix(node_count);
-    let mut force_vector = vec![0.0; node_count];
-    force_vector[node_count - 1] = request.tip_force;
+    let displacement_step = request.tip_force / stiffness;
 
-    for index in 0..request.elements {
-        add_at(&mut global_stiffness, index, index, stiffness);
-        add_at(&mut global_stiffness, index, index + 1, -stiffness);
-        add_at(&mut global_stiffness, index + 1, index, -stiffness);
-        add_at(&mut global_stiffness, index + 1, index + 1, stiffness);
-    }
-
-    let reduced_stiffness = global_stiffness
-        .iter()
-        .skip(1)
-        .map(|row| row.iter().skip(1).copied().collect::<Vec<_>>())
+    let displacements = (0..node_count)
+        .map(|index| displacement_step * index as f64)
         .collect::<Vec<_>>();
-    let reduced_force = force_vector.iter().skip(1).copied().collect::<Vec<_>>();
-    let reduced_displacements = solve_linear_system(reduced_stiffness, reduced_force)?;
-
-    let mut displacements = Vec::with_capacity(node_count);
-    displacements.push(0.0);
-    displacements.extend(reduced_displacements);
 
     let nodes = displacements
         .iter()
@@ -99,11 +82,7 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
         })
         .collect::<Vec<_>>();
 
-    let reaction_force = global_stiffness[0]
-        .iter()
-        .zip(displacements.iter())
-        .map(|(stiffness_ij, displacement)| stiffness_ij * displacement)
-        .sum::<f64>();
+    let reaction_force = -request.tip_force;
 
     let max_displacement = nodes
         .iter()
@@ -1001,7 +980,7 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
     if size == 0 {
         return Ok(Vec::new());
     }
-    if size <= 512 {
+    if size <= 1024 {
         return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
     }
 
@@ -1013,11 +992,12 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
 
     for index in 0..size {
         let diag = matrix.diagonal(index);
-        if diag.abs() < 1.0e-12 {
-            return solve_spd_fallback(matrix, rhs, "system is singular");
-        }
-        diagonal[index] = diag;
-        z[index] = r[index] / diag;
+        diagonal[index] = if diag.abs() < 1.0e-12 {
+            1.0e-12
+        } else {
+            diag
+        };
+        z[index] = r[index] / diagonal[index];
         p[index] = z[index];
     }
 
@@ -1030,17 +1010,29 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
 
     let max_iter = (size.saturating_mul(8)).clamp(256, 40_000);
 
-    for _ in 0..max_iter {
-        let ap = matrix.multiply_vector(&p);
-        let denom = dot(&p, &ap);
+    for iteration in 0..max_iter {
+        let mut ap = matrix.multiply_vector(&p);
+        let mut denom = dot(&p, &ap);
         if !denom.is_finite() || denom.abs() < 1.0e-20 {
-            return solve_spd_fallback(matrix, rhs, "system is singular");
+            p.clone_from(&z);
+            ap = matrix.multiply_vector(&p);
+            denom = dot(&p, &ap);
+            if !denom.is_finite() || denom.abs() < 1.0e-20 {
+                return solve_spd_fallback(matrix, rhs, "system is singular");
+            }
         }
 
         let alpha = rz_old / denom;
         for index in 0..size {
             x[index] += alpha * p[index];
             r[index] -= alpha * ap[index];
+        }
+
+        if iteration % 32 == 31 {
+            let ax = matrix.multiply_vector(&x);
+            for index in 0..size {
+                r[index] = rhs[index] - ax[index];
+            }
         }
 
         let residual_norm = dot(&r, &r).sqrt();
@@ -1056,7 +1048,11 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
         if !rz_new.is_finite() {
             return solve_spd_fallback(matrix, rhs, "iterative solver diverged");
         }
-        let beta = rz_new / rz_old;
+        let beta = if rz_old.abs() < 1.0e-20 {
+            0.0
+        } else {
+            rz_new / rz_old
+        };
         for index in 0..size {
             p[index] = z[index] + beta * p[index];
         }
@@ -1071,7 +1067,7 @@ fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
 }
 
 fn solve_spd_fallback(matrix: &SparseMatrix, rhs: &[f64], reason: &str) -> Result<Vec<f64>, String> {
-    if rhs.len() <= 2048 {
+    if rhs.len() <= 1024 {
         solve_linear_system(sparse_to_dense(matrix), rhs.to_vec())
     } else {
         Err(reason.to_string())

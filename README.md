@@ -245,6 +245,21 @@ Main Rust crates:
 - [cli](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
 - [benchmark](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/benchmark/src/main.rs)
 
+Benchmark profiles:
+
+```bash
+cd /Users/Shared/chroot/dev/kyuubiki/workers/rust
+cargo run -p kyuubiki-benchmark -- --profile medium --repeat 3
+cargo run -p kyuubiki-benchmark -- --profile large --repeat 1
+cargo run -p kyuubiki-benchmark -- --profile v2 --repeat 1
+```
+
+Current benchmark tiers are aimed at:
+
+- `medium`: small-to-mid validation runs
+- `large`: around the low-thousands node class
+- `v2`: around the 5000-node class target
+
 ## Local Development
 
 Start everything:
