@@ -256,54 +256,67 @@ fn generate_pratt_truss(bays: usize, span: f64, height: f64) -> SolveTruss2dRequ
         });
     }
 
-    for index in 0..bays {
+    for index in 0..=bays {
         nodes.push(TrussNodeInput {
             id: format!("t{index}"),
-            x: index as f64 * bay_width + bay_width / 2.0,
+            x: index as f64 * bay_width,
             y: height,
             fix_x: false,
             fix_y: false,
             load_x: 0.0,
-            load_y: if index == bays / 2 { -1500.0 } else { 0.0 },
+            load_y: if index == bays / 2 { -40.0 } else { 0.0 },
         });
     }
 
+    let top_offset = bays + 1;
     for index in 0..bays {
         elements.push(TrussElementInput {
             id: format!("bb{index}"),
             node_i: index,
             node_j: index + 1,
-            area: 0.012,
-            youngs_modulus: 70.0e9,
+            area: 0.03,
+            youngs_modulus: 210.0e9,
         });
 
-        let top = bays + 1 + index;
+        elements.push(TrussElementInput {
+            id: format!("tt{index}"),
+            node_i: top_offset + index,
+            node_j: top_offset + index + 1,
+            area: 0.03,
+            youngs_modulus: 210.0e9,
+        });
+
         elements.push(TrussElementInput {
             id: format!("v{index}"),
-            node_i: index + 1,
-            node_j: top,
-            area: 0.012,
-            youngs_modulus: 70.0e9,
+            node_i: index,
+            node_j: top_offset + index,
+            area: 0.03,
+            youngs_modulus: 210.0e9,
         });
 
-        let diagonal_start = if index % 2 == 0 { index } else { index + 1 };
         elements.push(TrussElementInput {
-            id: format!("d{index}"),
-            node_i: diagonal_start,
-            node_j: top,
-            area: 0.012,
-            youngs_modulus: 70.0e9,
+            id: format!("v{index}_r"),
+            node_i: index + 1,
+            node_j: top_offset + index + 1,
+            area: 0.03,
+            youngs_modulus: 210.0e9,
         });
 
-        if index < bays - 1 {
-            elements.push(TrussElementInput {
-                id: format!("tt{index}"),
-                node_i: top,
-                node_j: top + 1,
-                area: 0.012,
-                youngs_modulus: 70.0e9,
-            });
-        }
+        elements.push(TrussElementInput {
+            id: format!("d{index}_a"),
+            node_i: index,
+            node_j: top_offset + index + 1,
+            area: 0.03,
+            youngs_modulus: 210.0e9,
+        });
+
+        elements.push(TrussElementInput {
+            id: format!("d{index}_b"),
+            node_i: index + 1,
+            node_j: top_offset + index,
+            area: 0.03,
+            youngs_modulus: 210.0e9,
+        });
     }
 
     SolveTruss2dRequest { nodes, elements }
@@ -328,9 +341,9 @@ fn generate_panel_mesh(
                 x: i as f64 * dx,
                 y: j as f64 * dy,
                 fix_x: i == 0,
-                fix_y: i == 0,
-                load_x: if i == nx { 80.0 } else { 0.0 },
-                load_y: if i == nx { -180.0 } else { 0.0 },
+                fix_y: i == 0 || (j == 0 && i == 0),
+                load_x: if i == nx { 15.0 } else { 0.0 },
+                load_y: if i == nx { -40.0 } else { 0.0 },
             });
         }
     }

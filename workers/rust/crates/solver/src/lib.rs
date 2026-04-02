@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use kyuubiki_protocol::{
     ElementResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneTriangleElementResult,
     ProgressEvent, SolveBarRequest, SolveBarResult, SolvePlaneTriangle2dRequest,
@@ -127,7 +129,7 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
     validate_truss_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
-    let mut global_stiffness = zero_matrix(dof_count);
+    let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -187,23 +189,9 @@ pub fn solve_truss_2d(request: &SolveTruss2dRequest) -> Result<SolveTruss2dResul
         })
         .collect::<Vec<_>>();
 
-    let free = (0..dof_count)
-        .filter(|dof| !constrained.contains(dof))
-        .collect::<Vec<_>>();
-
-    let reduced_stiffness = free
-        .iter()
-        .map(|&row| {
-            free.iter()
-                .map(|&column| global_stiffness[row][column])
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let reduced_force = free
-        .iter()
-        .map(|&row| force_vector[row])
-        .collect::<Vec<_>>();
-    let reduced_displacements = solve_linear_system(reduced_stiffness, reduced_force)?;
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
@@ -282,7 +270,7 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
     validate_truss_3d_request(request)?;
 
     let dof_count = request.nodes.len() * 3;
-    let mut global_stiffness = zero_matrix(dof_count);
+    let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -352,23 +340,9 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
         })
         .collect::<Vec<_>>();
 
-    let free = (0..dof_count)
-        .filter(|dof| !constrained.contains(dof))
-        .collect::<Vec<_>>();
-
-    let reduced_stiffness = free
-        .iter()
-        .map(|&row| {
-            free.iter()
-                .map(|&column| global_stiffness[row][column])
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let reduced_force = free
-        .iter()
-        .map(|&row| force_vector[row])
-        .collect::<Vec<_>>();
-    let reduced_displacements = solve_linear_system(reduced_stiffness, reduced_force)?;
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
@@ -490,7 +464,7 @@ pub fn solve_plane_triangle_2d(
     validate_plane_request(request)?;
 
     let dof_count = request.nodes.len() * 2;
-    let mut global_stiffness = zero_matrix(dof_count);
+    let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut force_vector = vec![0.0; dof_count];
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -537,23 +511,9 @@ pub fn solve_plane_triangle_2d(
         })
         .collect::<Vec<_>>();
 
-    let free = (0..dof_count)
-        .filter(|dof| !constrained.contains(dof))
-        .collect::<Vec<_>>();
-
-    let reduced_stiffness = free
-        .iter()
-        .map(|&row| {
-            free.iter()
-                .map(|&column| global_stiffness[row][column])
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let reduced_force = free
-        .iter()
-        .map(|&row| force_vector[row])
-        .collect::<Vec<_>>();
-    let reduced_displacements = solve_linear_system(reduced_stiffness, reduced_force)?;
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
 
     let mut displacements = vec![0.0; dof_count];
     for (index, &dof) in free.iter().enumerate() {
@@ -930,8 +890,203 @@ fn zero_matrix(size: usize) -> Vec<Vec<f64>> {
     vec![vec![0.0; size]; size]
 }
 
-fn add_at(matrix: &mut [Vec<f64>], row: usize, column: usize, value: f64) {
-    matrix[row][column] += value;
+#[derive(Debug, Clone)]
+struct SparseMatrix {
+    rows: Vec<HashMap<usize, f64>>,
+}
+
+impl SparseMatrix {
+    fn new(size: usize) -> Self {
+        Self {
+            rows: vec![HashMap::new(); size],
+        }
+    }
+
+    fn size(&self) -> usize {
+        self.rows.len()
+    }
+
+    fn add_at(&mut self, row: usize, column: usize, value: f64) {
+        if value.abs() <= 1.0e-18 {
+            return;
+        }
+
+        let entry = self.rows[row].entry(column).or_insert(0.0);
+        *entry += value;
+        if entry.abs() <= 1.0e-18 {
+            self.rows[row].remove(&column);
+        }
+    }
+
+    fn diagonal(&self, index: usize) -> f64 {
+        self.rows[index].get(&index).copied().unwrap_or(0.0)
+    }
+
+    fn multiply_vector(&self, vector: &[f64]) -> Vec<f64> {
+        self.rows
+            .iter()
+            .map(|row| row.iter().map(|(column, value)| value * vector[*column]).sum())
+            .collect()
+    }
+}
+
+trait MatrixAssembler {
+    fn add_entry(&mut self, row: usize, column: usize, value: f64);
+}
+
+impl MatrixAssembler for [Vec<f64>] {
+    fn add_entry(&mut self, row: usize, column: usize, value: f64) {
+        self[row][column] += value;
+    }
+}
+
+impl MatrixAssembler for Vec<Vec<f64>> {
+    fn add_entry(&mut self, row: usize, column: usize, value: f64) {
+        self[row][column] += value;
+    }
+}
+
+impl MatrixAssembler for SparseMatrix {
+    fn add_entry(&mut self, row: usize, column: usize, value: f64) {
+        self.add_at(row, column, value);
+    }
+}
+
+fn add_at<M: MatrixAssembler + ?Sized>(matrix: &mut M, row: usize, column: usize, value: f64) {
+    matrix.add_entry(row, column, value);
+}
+
+fn reduce_sparse_system(
+    matrix: &SparseMatrix,
+    force: &[f64],
+    constrained: &[usize],
+) -> (SparseMatrix, Vec<f64>, Vec<usize>) {
+    let size = force.len();
+    let mut is_constrained = vec![false; size];
+    for &dof in constrained {
+        if dof < size {
+            is_constrained[dof] = true;
+        }
+    }
+
+    let free = (0..size)
+        .filter(|index| !is_constrained[*index])
+        .collect::<Vec<_>>();
+    let mut free_map = vec![usize::MAX; size];
+    for (reduced, &global) in free.iter().enumerate() {
+        free_map[global] = reduced;
+    }
+
+    let mut reduced = SparseMatrix::new(free.len());
+    let mut reduced_force = vec![0.0; free.len()];
+
+    for (reduced_row, &global_row) in free.iter().enumerate() {
+        reduced_force[reduced_row] = force[global_row];
+        for (&global_col, &value) in &matrix.rows[global_row] {
+            let reduced_col = free_map[global_col];
+            if reduced_col != usize::MAX {
+                reduced.add_at(reduced_row, reduced_col, value);
+            }
+        }
+    }
+
+    (reduced, reduced_force, free)
+}
+
+fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, String> {
+    let size = rhs.len();
+    if matrix.size() != size {
+        return Err("matrix dimensions do not match vector".to_string());
+    }
+    if size == 0 {
+        return Ok(Vec::new());
+    }
+    if size <= 512 {
+        return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
+    }
+
+    let mut x = vec![0.0; size];
+    let mut r = rhs.to_vec();
+    let mut z = vec![0.0; size];
+    let mut p = vec![0.0; size];
+    let mut diagonal = vec![0.0; size];
+
+    for index in 0..size {
+        let diag = matrix.diagonal(index);
+        if diag.abs() < 1.0e-12 {
+            return solve_spd_fallback(matrix, rhs, "system is singular");
+        }
+        diagonal[index] = diag;
+        z[index] = r[index] / diag;
+        p[index] = z[index];
+    }
+
+    let rhs_norm = dot(rhs, rhs).sqrt().max(1.0);
+    let tolerance = 1.0e-9 * rhs_norm;
+    let mut rz_old = dot(&r, &z);
+    if !rz_old.is_finite() || rz_old.abs() < 1.0e-20 {
+        return Ok(x);
+    }
+
+    let max_iter = (size.saturating_mul(8)).clamp(256, 40_000);
+
+    for _ in 0..max_iter {
+        let ap = matrix.multiply_vector(&p);
+        let denom = dot(&p, &ap);
+        if !denom.is_finite() || denom.abs() < 1.0e-20 {
+            return solve_spd_fallback(matrix, rhs, "system is singular");
+        }
+
+        let alpha = rz_old / denom;
+        for index in 0..size {
+            x[index] += alpha * p[index];
+            r[index] -= alpha * ap[index];
+        }
+
+        let residual_norm = dot(&r, &r).sqrt();
+        if residual_norm <= tolerance {
+            return Ok(x);
+        }
+
+        for index in 0..size {
+            z[index] = r[index] / diagonal[index];
+        }
+
+        let rz_new = dot(&r, &z);
+        if !rz_new.is_finite() {
+            return solve_spd_fallback(matrix, rhs, "iterative solver diverged");
+        }
+        let beta = rz_new / rz_old;
+        for index in 0..size {
+            p[index] = z[index] + beta * p[index];
+        }
+        rz_old = rz_new;
+    }
+
+    solve_spd_fallback(matrix, rhs, "iterative solver did not converge")
+}
+
+fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
+    lhs.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
+}
+
+fn solve_spd_fallback(matrix: &SparseMatrix, rhs: &[f64], reason: &str) -> Result<Vec<f64>, String> {
+    if rhs.len() <= 2048 {
+        solve_linear_system(sparse_to_dense(matrix), rhs.to_vec())
+    } else {
+        Err(reason.to_string())
+    }
+}
+
+fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
+    let size = matrix.size();
+    let mut dense = zero_matrix(size);
+    for (row_index, row) in matrix.rows.iter().enumerate() {
+        for (&column, &value) in row {
+            dense[row_index][column] = value;
+        }
+    }
+    dense
 }
 
 fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f64>, String> {
