@@ -396,6 +396,39 @@ pub struct SolvePlaneTriangle2dResult {
     pub max_stress: f64,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AnalysisResult {
+    Bar1d(SolveBarResult),
+    Truss2d(SolveTruss2dResult),
+    Truss3d(SolveTruss3dResult),
+    PlaneTriangle2d(SolvePlaneTriangle2dResult),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ResultChunkKind {
+    Nodes,
+    Elements,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResultChunkRequest {
+    pub kind: ResultChunkKind,
+    pub offset: usize,
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResultChunkResponse {
+    pub kind: ResultChunkKind,
+    pub offset: usize,
+    pub limit: usize,
+    pub returned: usize,
+    pub total: usize,
+    pub items: Vec<Value>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

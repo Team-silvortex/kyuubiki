@@ -874,6 +874,14 @@ struct SparseMatrix {
     rows: Vec<HashMap<usize, f64>>,
 }
 
+#[derive(Debug, Clone)]
+struct CompressedSparseMatrix {
+    row_offsets: Vec<usize>,
+    columns: Vec<usize>,
+    values: Vec<f64>,
+    diagonal: Vec<f64>,
+}
+
 impl SparseMatrix {
     fn new(size: usize) -> Self {
         Self {
@@ -897,15 +905,61 @@ impl SparseMatrix {
         }
     }
 
+    fn compress(&self) -> CompressedSparseMatrix {
+        let size = self.size();
+        let mut row_offsets = Vec::with_capacity(size + 1);
+        let mut columns = Vec::new();
+        let mut values = Vec::new();
+        let mut diagonal = vec![0.0; size];
+
+        row_offsets.push(0);
+        for (row_index, row) in self.rows.iter().enumerate() {
+            let mut entries = row
+                .iter()
+                .map(|(&column, &value)| (column, value))
+                .collect::<Vec<_>>();
+            entries.sort_by_key(|(column, _)| *column);
+
+            for (column, value) in entries {
+                if column == row_index {
+                    diagonal[row_index] = value;
+                }
+                columns.push(column);
+                values.push(value);
+            }
+            row_offsets.push(columns.len());
+        }
+
+        CompressedSparseMatrix {
+            row_offsets,
+            columns,
+            values,
+            diagonal,
+        }
+    }
+}
+
+impl CompressedSparseMatrix {
+    fn size(&self) -> usize {
+        self.diagonal.len()
+    }
+
     fn diagonal(&self, index: usize) -> f64 {
-        self.rows[index].get(&index).copied().unwrap_or(0.0)
+        self.diagonal[index]
     }
 
     fn multiply_vector(&self, vector: &[f64]) -> Vec<f64> {
-        self.rows
-            .iter()
-            .map(|row| row.iter().map(|(column, value)| value * vector[*column]).sum())
-            .collect()
+        let mut result = vec![0.0; self.size()];
+        for row in 0..self.size() {
+            let start = self.row_offsets[row];
+            let end = self.row_offsets[row + 1];
+            let mut sum = 0.0;
+            for index in start..end {
+                sum += self.values[index] * vector[self.columns[index]];
+            }
+            result[row] = sum;
+        }
+        result
     }
 }
 
@@ -983,6 +1037,16 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
     if size <= 1024 {
         return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
     }
+    let compressed = matrix.compress();
+    solve_spd_compressed(&compressed, rhs, matrix)
+}
+
+fn solve_spd_compressed(
+    matrix: &CompressedSparseMatrix,
+    rhs: &[f64],
+    fallback_source: &SparseMatrix,
+) -> Result<Vec<f64>, String> {
+    let size = rhs.len();
 
     let mut x = vec![0.0; size];
     let mut r = rhs.to_vec();
@@ -1018,7 +1082,7 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
             ap = matrix.multiply_vector(&p);
             denom = dot(&p, &ap);
             if !denom.is_finite() || denom.abs() < 1.0e-20 {
-                return solve_spd_fallback(matrix, rhs, "system is singular");
+                return solve_spd_fallback(fallback_source, rhs, "system is singular");
             }
         }
 
@@ -1046,7 +1110,7 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
 
         let rz_new = dot(&r, &z);
         if !rz_new.is_finite() {
-            return solve_spd_fallback(matrix, rhs, "iterative solver diverged");
+            return solve_spd_fallback(fallback_source, rhs, "iterative solver diverged");
         }
         let beta = if rz_old.abs() < 1.0e-20 {
             0.0
@@ -1059,7 +1123,7 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
         rz_old = rz_new;
     }
 
-    solve_spd_fallback(matrix, rhs, "iterative solver did not converge")
+    solve_spd_fallback(fallback_source, rhs, "iterative solver did not converge")
 }
 
 fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {

@@ -117,6 +117,16 @@ defmodule KyuubikiWeb.Router do
     end
   end
 
+  get "/api/v1/results/:job_id/chunks/:kind" do
+    case Analysis.fetch_result_chunk(job_id, kind, conn.query_params) do
+      {:ok, payload} -> respond_json(conn, 200, payload)
+      {:error, {:result_not_found, _}} -> respond_json(conn, 404, %{"error" => "result_not_found"})
+      {:error, {:unsupported_chunk_kind, _}} -> respond_json(conn, 422, %{"error" => "unsupported_chunk_kind"})
+      {:error, {:invalid_chunk_param, key}} -> respond_json(conn, 422, %{"error" => "invalid_chunk_param", "field" => key})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
   patch "/api/v1/results/:job_id" do
     case Map.get(conn.body_params, "result") do
       result when is_map(result) ->

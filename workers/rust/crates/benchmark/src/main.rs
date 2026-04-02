@@ -1,10 +1,11 @@
 use std::time::Instant;
 
+use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
+    AnalysisResult,
     PlaneNodeInput, PlaneTriangleElementInput, SolveBarRequest, SolvePlaneTriangle2dRequest,
     SolveTruss2dRequest, TrussElementInput, TrussNodeInput,
 };
-use kyuubiki_solver::{solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d};
 use serde::Serialize;
 
 fn main() {
@@ -180,7 +181,7 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
             BenchmarkCase {
                 id: "truss-roof-large",
                 family: "truss_2d",
-                workload: BenchmarkWorkload::Truss2d(generate_pratt_truss(255, 128.0, 18.0)),
+                workload: BenchmarkWorkload::Truss2d(generate_pratt_truss(127, 64.0, 12.0)),
             },
             BenchmarkCase {
                 id: "plane-panel-large",
@@ -232,7 +233,10 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
 
         let outcome = match &case.workload {
             BenchmarkWorkload::AxialBar(request) => {
-                solve_bar_1d(request).map(|result| {
+                solve(EngineSolveRequest::Bar1d(request.clone())).map(|result| {
+                    let AnalysisResult::Bar1d(result) = result else {
+                        unreachable!("bar solve should return bar result")
+                    };
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len().saturating_sub(1);
@@ -241,7 +245,10 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                 })
             }
             BenchmarkWorkload::Truss2d(request) => {
-                solve_truss_2d(request).map(|result| {
+                solve(EngineSolveRequest::Truss2d(request.clone())).map(|result| {
+                    let AnalysisResult::Truss2d(result) = result else {
+                        unreachable!("truss solve should return truss result")
+                    };
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len() * 2;
@@ -250,7 +257,10 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                 })
             }
             BenchmarkWorkload::PlaneTriangle2d(request) => {
-                solve_plane_triangle_2d(request).map(|result| {
+                solve(EngineSolveRequest::PlaneTriangle2d(request.clone())).map(|result| {
+                    let AnalysisResult::PlaneTriangle2d(result) = result else {
+                        unreachable!("plane solve should return plane result")
+                    };
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len() * 2;

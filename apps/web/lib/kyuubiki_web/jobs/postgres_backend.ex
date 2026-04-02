@@ -8,8 +8,6 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   alias KyuubikiWeb.Storage.JobRecord
 
   def create(attrs) do
-    repo = repo()
-
     with {:ok, job} <- Job.new(attrs) do
       record_attrs =
         job
@@ -18,7 +16,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
 
       %JobRecord{}
       |> Ecto.Changeset.change(record_attrs)
-      |> repo.insert()
+      |> repo_insert()
       |> case do
         {:ok, _record} -> {:ok, job}
         {:error, changeset} -> {:error, changeset}
@@ -27,18 +25,18 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def get(job_id) do
-    case repo().get(JobRecord, job_id) do
+    case repo_get(JobRecord, job_id) do
       %JobRecord{} = record -> repo_record_to_job(record)
       nil -> :error
     end
   end
 
   def list do
-    repo = repo()
+    query =
+      JobRecord
+      |> order_by([job], desc: job.updated_at)
 
-    JobRecord
-    |> order_by([job], desc: job.updated_at)
-    |> repo.all()
+    repo_all(query)
     |> Enum.flat_map(fn record ->
       case repo_record_to_job(record) do
         {:ok, job} -> [job]
@@ -48,9 +46,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def update_metadata(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
-    repo = repo()
-
-    case repo.get(JobRecord, job_id) do
+    case repo_get(JobRecord, job_id) do
       %JobRecord{} = record ->
         changes =
           attrs
@@ -61,7 +57,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
         updated =
           record
           |> Ecto.Changeset.change(changes)
-          |> repo.update!()
+          |> repo_update!()
 
         repo_record_to_job(updated)
 
@@ -71,12 +67,10 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def delete(job_id) when is_binary(job_id) do
-    repo = repo()
-
-    case repo.get(JobRecord, job_id) do
+    case repo_get(JobRecord, job_id) do
       %JobRecord{} = record ->
         with {:ok, job} <- repo_record_to_job(record) do
-          repo.delete!(record)
+          repo_delete!(record)
           {:ok, job}
         end
 
@@ -86,15 +80,13 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def reset do
-    repo().delete_all(JobRecord)
+    repo_delete_all(JobRecord)
     :ok
   end
 
   def apply_progress(attrs) do
-    repo = repo()
-
     with {:ok, event} <- ProgressEvent.new(attrs),
-         %JobRecord{} = record <- repo.get(JobRecord, event.job_id),
+         %JobRecord{} = record <- repo_get(JobRecord, event.job_id),
          {:ok, job} <- repo_record_to_job(record),
          updated_job <- Job.apply_progress(job, event),
          {:ok, _record} <- update_record(updated_job) do
@@ -106,9 +98,7 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   def assign_worker(job_id, worker_id) when is_binary(worker_id) and byte_size(worker_id) > 0 do
-    repo = repo()
-
-    case repo.get(JobRecord, job_id) do
+    case repo_get(JobRecord, job_id) do
       %JobRecord{} = record ->
         with {:ok, job} <- repo_record_to_job(record) do
           updated_job = %{job | worker_id: worker_id, updated_at: DateTime.utc_now()}
@@ -125,16 +115,14 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   end
 
   defp update_record(%Job{} = job) do
-    repo = repo()
-
     JobRecord
-    |> repo.get!(job.job_id)
+    |> repo_get!(job.job_id)
     |> Ecto.Changeset.change(
       job
       |> Job.to_persisted_map()
       |> persisted_map_to_repo_attrs()
     )
-    |> repo.update()
+    |> repo_update()
   end
 
   defp persisted_map_to_repo_attrs(attrs) do
@@ -179,4 +167,13 @@ defmodule KyuubikiWeb.Jobs.PostgresBackend do
   defp repo do
     Storage.repo_module!()
   end
+
+  defp repo_get(schema, id), do: apply(repo(), :get, [schema, id])
+  defp repo_get!(schema, id), do: apply(repo(), :get!, [schema, id])
+  defp repo_all(queryable), do: apply(repo(), :all, [queryable])
+  defp repo_insert(changeset), do: apply(repo(), :insert, [changeset])
+  defp repo_update(changeset), do: apply(repo(), :update, [changeset])
+  defp repo_update!(changeset), do: apply(repo(), :update!, [changeset])
+  defp repo_delete!(struct), do: apply(repo(), :delete!, [struct])
+  defp repo_delete_all(queryable), do: apply(repo(), :delete_all, [queryable])
 end

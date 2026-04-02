@@ -241,9 +241,16 @@ KYUUBIKI_AGENT_ENDPOINTS=127.0.0.1:5001,127.0.0.1:5002
 Main Rust crates:
 
 - [protocol](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/protocol/src/lib.rs)
+- [engine](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/engine/src/lib.rs)
 - [solver](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/solver/src/lib.rs)
 - [cli](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
 - [benchmark](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/benchmark/src/main.rs)
+
+The direction is engine-first:
+
+- Rust `engine` owns solving and result windowing helpers
+- Phoenix orchestrator owns jobs, storage, and chunked HTTP APIs
+- frontend consumes stable chunk/result APIs instead of solver internals
 
 Benchmark profiles:
 

@@ -109,6 +109,29 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  def fetch_result_chunk(job_id, kind, params \\ %{})
+      when is_binary(job_id) and is_binary(kind) and is_map(params) do
+    with {:ok, result} <- fetch_raw_result(job_id),
+         {:ok, items} <- fetch_chunk_source(result, kind),
+         {:ok, offset} <- normalize_chunk_integer(params, "offset", 0),
+         {:ok, limit} <- normalize_chunk_integer(params, "limit", 200) do
+      safe_offset = min(offset, length(items))
+      safe_limit = max(limit, 1)
+      chunk = items |> Enum.drop(safe_offset) |> Enum.take(safe_limit)
+
+      {:ok,
+       %{
+         "job_id" => job_id,
+         "kind" => kind,
+         "offset" => safe_offset,
+         "limit" => safe_limit,
+         "returned" => length(chunk),
+         "total" => length(items),
+         "items" => chunk
+       }}
+    end
+  end
+
   def update_result(job_id, result) when is_binary(job_id) and is_map(result) do
     :ok = AnalysisResultStore.update(job_id, result)
     fetch_result(job_id)
@@ -213,6 +236,43 @@ defmodule KyuubikiWeb.Analysis do
 
   defp serialize_payload(job) do
     %{"job" => serialize_job(job) |> Map.put("has_result", false)}
+  end
+
+  defp fetch_raw_result(job_id) do
+    case AnalysisResultStore.get(job_id) do
+      {:ok, result} -> {:ok, result}
+      :error -> {:error, {:result_not_found, job_id}}
+    end
+  end
+
+  defp fetch_chunk_source(result, "nodes") when is_map(result) do
+    case Map.get(result, "nodes") do
+      items when is_list(items) -> {:ok, items}
+      _ -> {:error, {:unsupported_chunk_kind, "nodes"}}
+    end
+  end
+
+  defp fetch_chunk_source(result, "elements") when is_map(result) do
+    case Map.get(result, "elements") do
+      items when is_list(items) -> {:ok, items}
+      _ -> {:error, {:unsupported_chunk_kind, "elements"}}
+    end
+  end
+
+  defp fetch_chunk_source(_result, kind), do: {:error, {:unsupported_chunk_kind, kind}}
+
+  defp normalize_chunk_integer(params, key, default) do
+    case Map.get(params, key, default) do
+      value when is_integer(value) and value >= 0 -> {:ok, value}
+      value when is_binary(value) ->
+        case Integer.parse(value) do
+          {parsed, ""} when parsed >= 0 -> {:ok, parsed}
+          _ -> {:error, {:invalid_chunk_param, key}}
+        end
+
+      _ ->
+        {:error, {:invalid_chunk_param, key}}
+    end
   end
 
   defp serialize_job(job) do

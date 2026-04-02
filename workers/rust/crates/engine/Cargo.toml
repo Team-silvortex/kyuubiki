@@ -1,11 +1,11 @@
 [package]
-name = "kyuubiki-benchmark"
+name = "kyuubiki-engine"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [dependencies]
-kyuubiki-engine = { path = "../engine" }
 kyuubiki-protocol = { path = "../protocol" }
+kyuubiki-solver = { path = "../solver" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

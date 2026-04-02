@@ -417,6 +417,38 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert length(result_payload["result"]["nodes"]) == 3
   end
 
+  test "serves chunked result windows for large payloads" do
+    {:ok, _job} =
+      Store.create(%{
+        job_id: "job-chunked",
+        project_id: "project-chunked",
+        simulation_case_id: "case-chunked"
+      })
+
+    :ok =
+      AnalysisResultStore.put("job-chunked", %{
+        "nodes" => Enum.map(0..9, &%{"index" => &1, "id" => "n#{&1}"}),
+        "elements" => Enum.map(0..4, &%{"index" => &1, "id" => "e#{&1}"}),
+        "max_displacement" => 0.0,
+        "max_stress" => 0.0
+      })
+
+    conn =
+      :get
+      |> conn("/api/v1/results/job-chunked/chunks/nodes?offset=3&limit=4")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["kind"] == "nodes"
+    assert payload["offset"] == 3
+    assert payload["limit"] == 4
+    assert payload["returned"] == 4
+    assert payload["total"] == 10
+    assert Enum.map(payload["items"], & &1["index"]) == [3, 4, 5, 6]
+  end
+
   test "runs a two dimensional plane triangle job through the orchestration API" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([

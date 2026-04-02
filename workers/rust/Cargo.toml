@@ -2,6 +2,7 @@
 members = [
   "crates/benchmark",
   "crates/cli",
+  "crates/engine",
   "crates/installer",
   "crates/protocol",
   "crates/solver",
