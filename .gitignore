@@ -1,28 +1,35 @@
+# OS noise
 .DS_Store
 Thumbs.db
 
+# Environment
 .env
 .env.*
 !.env.example
 
+# Elixir / BEAM build output
 _build/
 deps/
 .elixir_ls/
 .mix/
 cover/
 
+# Frontend / Node build output
 node_modules/
 dist/
 .vite/
 .next/
 
+# Rust build output
 target/
 Cargo.lock
 
+# Runtime state
 tmp/
 *.log
 *.pid
 
+# Solver/runtime artifacts
 uploads/
 storage/
 artifacts/

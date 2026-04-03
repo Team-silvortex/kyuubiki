@@ -15,9 +15,9 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  @spec checkout_endpoints() :: [endpoint()]
-  def checkout_endpoints do
-    GenServer.call(__MODULE__, :checkout_endpoints)
+  @spec checkout_endpoints(String.t() | nil) :: [endpoint()]
+  def checkout_endpoints(method \\ nil) do
+    GenServer.call(__MODULE__, {:checkout_endpoints, method})
   end
 
   @spec endpoints() :: [endpoint()]
@@ -55,8 +55,12 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     {:reply, :ok, %{state | endpoints: endpoints, cursor: 0, deployment: deployment_info_for(endpoints)}}
   end
 
-  def handle_call(:checkout_endpoints, _from, %{endpoints: endpoints, cursor: cursor} = state) do
-    ordered = rotate(endpoints, cursor)
+  def handle_call({:checkout_endpoints, method}, _from, %{endpoints: endpoints, cursor: cursor} = state) do
+    ordered =
+      endpoints
+      |> rotate(cursor)
+      |> route_endpoints(method)
+
     next_cursor = if endpoints == [], do: 0, else: rem(cursor + 1, length(endpoints))
     {:reply, ordered, %{state | cursor: next_cursor}}
   end
@@ -66,6 +70,19 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp rotate(endpoints, cursor) do
     offset = rem(cursor, length(endpoints))
     Enum.drop(endpoints, offset) ++ Enum.take(endpoints, offset)
+  end
+
+  defp route_endpoints(endpoints, nil), do: endpoints
+  defp route_endpoints(endpoints, method) when is_binary(method) do
+    tags = preferred_tags(method)
+
+    {preferred, fallback} =
+      Enum.split_with(endpoints, fn endpoint ->
+        endpoint_tags(endpoint)
+        |> Enum.any?(&(&1 in tags))
+      end)
+
+    sort_by_capacity(preferred) ++ fallback
   end
 
   defp configured_endpoints do
@@ -151,11 +168,13 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   defp normalize_endpoint(%{host: host, port: port} = endpoint)
        when is_binary(host) and is_integer(port) and port > 0 do
-    %{
+    endpoint
+    |> Map.take([:role, :region, :zone, :capacity, :tags])
+    |> Map.merge(%{
       id: Map.get(endpoint, :id, "#{host}:#{port}"),
       host: host,
       port: port
-    }
+    })
   end
 
   defp normalize_endpoint(%{"host" => host, "port" => port} = endpoint)
@@ -163,7 +182,12 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     %{
       id: Map.get(endpoint, "id", "#{host}:#{port}"),
       host: host,
-      port: port
+      port: port,
+      role: Map.get(endpoint, "role"),
+      region: Map.get(endpoint, "region"),
+      zone: Map.get(endpoint, "zone"),
+      capacity: Map.get(endpoint, "capacity"),
+      tags: Map.get(endpoint, "tags")
     }
   end
 
@@ -234,4 +258,26 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp default_endpoint do
     %{id: "#{@default_host}:#{@default_port}", host: @default_host, port: @default_port}
   end
+
+  defp endpoint_tags(endpoint) do
+    endpoint
+    |> Map.get(:tags, [])
+    |> List.wrap()
+    |> Enum.filter(&is_binary/1)
+  end
+
+  defp sort_by_capacity(endpoints) do
+    endpoints
+    |> Enum.with_index()
+    |> Enum.sort_by(fn {endpoint, index} ->
+      {-Map.get(endpoint, :capacity, 1), index}
+    end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp preferred_tags("solve_bar_1d"), do: ["bar"]
+  defp preferred_tags("solve_truss_2d"), do: ["truss"]
+  defp preferred_tags("solve_truss_3d"), do: ["truss", "space"]
+  defp preferred_tags("solve_plane_triangle_2d"), do: ["plane", "mesh"]
+  defp preferred_tags(_method), do: ["general", "cpu"]
 end

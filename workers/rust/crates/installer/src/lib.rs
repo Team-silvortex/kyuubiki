@@ -391,9 +391,10 @@ pub fn validate_env_file() -> Result<String, String> {
             validate_agent_manifest_path(manifest_path)?;
             parse_agent_manifest(Path::new(manifest_path))?
         }
+        "registry" => vec![("runtime-registry".to_string(), 0)],
         _ => {
             return Err(format!(
-                "invalid KYUUBIKI_AGENT_DISCOVERY: {agent_discovery} (expected static or manifest)"
+                "invalid KYUUBIKI_AGENT_DISCOVERY: {agent_discovery} (expected static, manifest, or registry)"
             ))
         }
     };

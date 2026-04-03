@@ -46,7 +46,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) do
     request_id = request_id()
     request = build_request(request_id, method, params)
-    endpoints = AgentPool.checkout_endpoints()
+    endpoints = AgentPool.checkout_endpoints(method)
 
     attempt_request(endpoints, request_id, request, on_progress, [])
   end

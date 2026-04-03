@@ -2,19 +2,28 @@
 
 ## Current State
 
-This repository is scaffolded from the project README. It does not yet contain a
-generated Phoenix application or a compiled Rust workspace.
+This repository is no longer a thin scaffold. It contains:
 
-The default development style is now TDD-first. New behavior should start with a
-test before production code changes.
+- a Next.js workbench
+- an Elixir orchestrator API
+- a Rust engine/solver workspace
+- a Tauri installer GUI
+- local, cloud, and distributed deployment modes
+
+The default development style remains TDD-first. New behavior should start with
+a test before production code changes.
 
 ## Repository Conventions
 
 - Put BEAM application code under `apps/web`
+- Put browser UI code under `apps/frontend`
+- Put installer GUI code under `apps/installer-gui`
 - Keep shared contracts in `schemas`
+- Keep deployment descriptors in `deploy`
 - Keep Rust crates under `workers/rust/crates`
 - Treat result artifacts (`uploads/`, `storage/`, `artifacts/`, `checkpoints/`)
   as runtime output, not source-controlled assets
+- Treat `tmp/` and `dist/` as generated/runtime directories
 - Reach first for `make tdd-web` or `make tdd-rust` instead of editing code
   without a failing test
 
@@ -34,31 +43,37 @@ This is intentionally a host-native launcher rather than a container-first one.
 Right now the project is optimizing for local iteration, local IPC evolution,
 and mixed-platform development more than environment isolation.
 
-## PostgreSQL Persistence
+## Storage Modes
 
-The orchestrator now supports a PostgreSQL-backed persistence path for jobs and
-analysis results.
+The orchestrator supports dual SQL-backed persistence:
 
-- Default local fallback: in-memory + JSON files
-- PostgreSQL mode: set `KYUUBIKI_STORAGE_BACKEND=postgres`
-- Connection string: set `DATABASE_URL`
+- default local mode: `sqlite`
+- shared/cloud/distributed mode: `postgres`
 
 Example:
 
 ```bash
 cd /Users/Shared/chroot/dev/kyuubiki
-KYUUBIKI_STORAGE_BACKEND=postgres \
-DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
-zsh ./scripts/kyuubiki start
+make start-local
 ```
 
-In PostgreSQL mode, the Elixir app will ensure these tables exist on boot:
+For cloud/distributed:
 
-- `kyuubiki_jobs`
-- `kyuubiki_analysis_results`
+```bash
+KYUUBIKI_STORAGE_BACKEND=postgres \
+DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
+make start-cloud
+```
 
-The current test suite still uses the lightweight memory backend because this
-machine does not yet have a local PostgreSQL service configured.
+In distributed mode:
+
+```bash
+KYUUBIKI_DEPLOYMENT_MODE=distributed \
+KYUUBIKI_AGENT_DISCOVERY=registry \
+make start-distributed
+```
+
+The control plane can then accept remote agent registration and heartbeat.
 
 ## Containerization Fit
 
@@ -88,17 +103,9 @@ for worker deployment boundaries.
 3. Refactor with the test suite still green
 4. Run `make verify` before wrapping the change
 
-## Suggested Bring-Up Order
+## Active Development Priorities
 
-1. Create the Phoenix LiveView app in `apps/web`
-2. Add PostgreSQL and Oban integration
-3. Create the Rust workspace and a protocol crate in `workers/rust`
-4. Validate `schemas/*.schema.json` from both runtimes
-5. Add a local end-to-end job flow before attempting distributed execution
-
-## Initial Milestones
-
-- Milestone 1: submit a mock job and stream fake progress through LiveView
-- Milestone 2: replace the mock backend with a local Rust worker process
-- Milestone 3: persist result metadata and render a lightweight mesh preview
-- Milestone 4: add transport abstraction for remote workers
+1. Push the Rust solver path toward stable `10k`-node single-machine targets
+2. Expand distributed orchestration and remote solver deployment flows
+3. Keep the frontend chunk-aware and viewport-driven for larger models
+4. Preserve engine-style decoupling between browser, control plane, and solver

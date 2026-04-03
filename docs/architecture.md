@@ -1,56 +1,75 @@
 # Architecture Overview
 
-This repository starts as a monorepo that keeps the orchestration layer, shared
-contracts, and compute worker close together while allowing each part to evolve
-independently.
+Kyuubiki is now organized as an engine-first monorepo with three deliberately
+separated layers:
 
-## Layout
-
+- `apps/frontend`
+  Browser workbench and visualization layer
 - `apps/web`
-  Phoenix LiveView application boundary. This will own user-facing workflows,
-  job submission, PubSub broadcasts, and orchestration state.
+  Elixir control plane and persistence layer
 - `workers/rust`
-  Rust workspace boundary for compute workers, protocol adapters, and CLI entry
-  points.
-- `schemas`
-  Shared JSON Schemas for cross-process contracts. These act as the source of
-  truth before we add code generation or protobuf bindings.
-- `docs`
-  Architecture notes and onboarding guides.
-- `assets`
-  Frontend-facing static assets and visualization fixtures.
-- `scripts`
-  Lightweight repository scripts that do not belong to either runtime.
+  Rust data plane and runtime tooling
 
-## Runtime Responsibilities
+The goal is to support local workstation runs, cloud control planes, and remote
+solver clusters without forcing those modes to share unnecessary implementation
+details.
 
-### Phoenix LiveView
+## Runtime Layers
 
-- Accepts mesh/material/boundary-condition uploads
-- Persists job definitions and lifecycle state
-- Pushes progress updates into PubSub and LiveView sessions
-- Delegates compute to workers without embedding solver logic inside BEAM
+### Frontend Workbench
 
-### Rust Worker
+- modeling and editing workflows
+- immersive 3D interaction
+- project/material/version management
+- chunk-aware large-result browsing
 
-- Pulls or receives executable job payloads
-- Performs preprocessing, partitioning, solving, and postprocessing
-- Emits throttled progress events and writes result artifacts
-- Supports a local IPC transport first, then distributed TCP transport
+### Orchestrator Control Plane
 
-## Contract Strategy
+- job creation, lifecycle, cancellation, and watchdog handling
+- persistence for projects, models, versions, jobs, and results
+- health, deployment, and remote agent registry endpoints
+- chunked result delivery
+- agent routing and failover
 
-The first shared contracts live in `schemas/`:
+### Rust Data Plane
 
-- `job.schema.json` models the durable job record
-- `progress-event.schema.json` models streamed status updates
+- framed TCP solver agent transport
+- protocol and engine-facing helpers
+- FEM kernels and benchmark workloads
+- installer CLI and deployment utilities
 
-These contracts intentionally stay transport-agnostic so we can map them to
-JSON, MessagePack, or Protobuf later without changing the business meaning.
+## Deployment Modes
 
-## Planned Next Steps
+The repository now explicitly supports:
 
-1. Generate a Phoenix app under `apps/web`
-2. Create a Rust workspace manifest under `workers/rust`
-3. Add a local transport prototype for job dispatch and streamed progress
-4. Back shared schemas with validation tests in both stacks
+- `local`
+  Frontend + orchestrator + local Rust agents
+- `cloud`
+  Frontend + orchestrator + PostgreSQL-backed shared control plane
+- `distributed`
+  Centralized control plane with remotely deployed Rust solver nodes
+
+Remote agents can be surfaced through:
+
+- static endpoint lists
+- manifest files
+- runtime registration and heartbeat
+
+## Contracts
+
+Shared contracts live in `schemas/` and stay JSON-first:
+
+- jobs
+- progress events
+- models
+- material libraries
+- project bundles
+- agent manifests
+
+This keeps the frontend, orchestrator, installer, and Rust runtime loosely
+coupled and lets each side evolve independently behind stable payload shapes.
+
+## Repository Shape
+
+See [repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+for the concrete directory layout and ownership boundaries.

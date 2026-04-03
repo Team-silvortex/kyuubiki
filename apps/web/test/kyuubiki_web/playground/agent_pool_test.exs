@@ -78,4 +78,48 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
              endpoint_count: 2
            }
   end
+
+  test "prefers tagged endpoints for matching solver methods" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "general-a", host: "127.0.0.1", port: 5101, tags: ["general"], capacity: 2},
+        %{id: "plane-a", host: "127.0.0.1", port: 5102, tags: ["plane", "2d"], capacity: 1},
+        %{id: "truss-a", host: "127.0.0.1", port: 5103, tags: ["truss", "2d"], capacity: 4}
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(AgentPool.checkout_endpoints("solve_truss_2d"), & &1.id) == [
+             "truss-a",
+             "general-a",
+             "plane-a"
+           ]
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(AgentPool.checkout_endpoints("solve_plane_triangle_2d"), & &1.id) == [
+             "plane-a",
+             "general-a",
+             "truss-a"
+           ]
+  end
+
+  test "sorts preferred agents by capacity before falling back" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "truss-low", host: "127.0.0.1", port: 5101, tags: ["truss", "2d"], capacity: 2},
+        %{id: "truss-high", host: "127.0.0.1", port: 5102, tags: ["truss", "2d"], capacity: 8},
+        %{id: "general", host: "127.0.0.1", port: 5103, tags: ["general"], capacity: 6}
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(AgentPool.checkout_endpoints("solve_truss_2d"), & &1.id) == [
+             "truss-high",
+             "truss-low",
+             "general"
+           ]
+  end
 end

@@ -14,6 +14,29 @@ It also now has an explicit deployment split:
 - `cloud control plane`: frontend + orchestrator + PostgreSQL
 - `distributed control plane`: orchestrator/frontend separated from remotely deployed solver nodes
 
+## Repository Shape
+
+The monorepo is intentionally split by responsibility:
+
+- `apps/`
+  Product-facing surfaces such as the browser workbench, orchestrator API, and
+  installer GUI
+- `workers/`
+  Rust data-plane crates, solver runtime, benchmark tooling, and installer CLI
+- `schemas/`
+  Versioned JSON contracts shared across the whole stack
+- `deploy/`
+  Deployment descriptors such as agent manifests
+- `docs/`
+  Architecture, development, and repository-structure references
+- `scripts/`
+  Host-native launch and workflow entry points
+
+Start here if you need the repo map:
+
+- [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
+- [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+
 ## What v0.2 Can Do
 
 ### Solvers
