@@ -54,6 +54,9 @@
 
   function currentEnvPayload() {
     return {
+      deploymentMode: document.getElementById("deployment-mode").value,
+      agentDiscovery: document.getElementById("agent-discovery").value,
+      agentManifestPath: document.getElementById("agent-manifest-path").value.trim(),
       storageBackend: document.getElementById("storage-mode").value,
       sqliteDatabasePath: document.getElementById("sqlite-path").value.trim(),
       databaseUrl: document.getElementById("database-url").value.trim(),
@@ -62,7 +65,7 @@
   }
 
   function currentMode() {
-    return document.getElementById("storage-mode").value || "sqlite";
+    return document.getElementById("deployment-mode").value || "local";
   }
 
   function setModeCard(mode) {
@@ -75,34 +78,82 @@
 
   function hydrateEnv(form) {
     if (!form) return;
+    document.getElementById("deployment-mode").value = form.deployment_mode || "local";
+    document.getElementById("agent-discovery").value = form.agent_discovery || "static";
+    document.getElementById("agent-manifest-path").value =
+      form.agent_manifest_path || "/Users/Shared/chroot/dev/kyuubiki/deploy/agents.local.json";
     document.getElementById("storage-mode").value = form.storage_backend || "sqlite";
     document.getElementById("sqlite-path").value =
       form.sqlite_database_path || "/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3";
     document.getElementById("database-url").value = form.database_url || "";
     document.getElementById("agent-endpoints").value =
       form.agent_endpoints || "127.0.0.1:5001,127.0.0.1:5002";
-    setModeCard(form.storage_backend || "sqlite");
+    setModeCard(form.deployment_mode || "local");
   }
 
   function applyPreset(mode) {
     const storageMode = document.getElementById("storage-mode");
-    if (mode === "sqlite") {
+    const deploymentMode = document.getElementById("deployment-mode");
+    const agentDiscovery = document.getElementById("agent-discovery");
+    const agentManifestPath = document.getElementById("agent-manifest-path");
+
+    if (mode === "local") {
+      deploymentMode.value = "local";
+      agentDiscovery.value = "static";
       storageMode.value = "sqlite";
       if (!document.getElementById("sqlite-path").value.trim()) {
         document.getElementById("sqlite-path").value =
           "/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3";
       }
-    } else {
+      if (!agentManifestPath.value.trim()) {
+        agentManifestPath.value = "/Users/Shared/chroot/dev/kyuubiki/deploy/agents.local.json";
+      }
+    } else if (mode === "cloud") {
+      deploymentMode.value = "cloud";
+      agentDiscovery.value = "static";
       storageMode.value = "postgres";
       if (!document.getElementById("database-url").value.trim()) {
         document.getElementById("database-url").value =
           "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev";
+      }
+    } else {
+      deploymentMode.value = "distributed";
+      agentDiscovery.value = "registry";
+      storageMode.value = "postgres";
+      if (!document.getElementById("database-url").value.trim()) {
+        document.getElementById("database-url").value =
+          "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev";
+      }
+      if (!agentManifestPath.value.trim()) {
+        agentManifestPath.value =
+          "/Users/Shared/chroot/dev/kyuubiki/deploy/agents.distributed.example.json";
       }
     }
     if (!document.getElementById("agent-endpoints").value.trim()) {
       document.getElementById("agent-endpoints").value = "127.0.0.1:5001,127.0.0.1:5002";
     }
     setModeCard(mode);
+  }
+
+  function currentRemoteBootstrapPayload() {
+    return {
+      sshUser: document.getElementById("remote-ssh-user").value.trim(),
+      targetHost: document.getElementById("remote-target-host").value.trim(),
+      remoteWorkspace: document.getElementById("remote-workspace").value.trim(),
+      sshPort: document.getElementById("remote-ssh-port").value
+        ? Number(document.getElementById("remote-ssh-port").value)
+        : null,
+    };
+  }
+
+  function currentRemoteAgentPayload() {
+    return {
+      ...currentRemoteBootstrapPayload(),
+      orchestratorUrl: document.getElementById("remote-orchestrator-url").value.trim(),
+      agentId: document.getElementById("remote-agent-id").value.trim(),
+      advertiseHost: document.getElementById("remote-advertise-host").value.trim(),
+      agentPort: Number(document.getElementById("remote-agent-port").value || "5001"),
+    };
   }
 
   function renderDoctor(report) {
@@ -285,14 +336,19 @@
           });
           break;
         case "use-local-mode":
-          applyPreset("sqlite");
+          applyPreset("local");
           showCompletion("Local SQLite profile selected.");
           appendOutput("mode", "selected local SQLite profile");
           break;
         case "use-cloud-mode":
-          applyPreset("postgres");
+          applyPreset("cloud");
           showCompletion("Cloud PostgreSQL profile selected.");
           appendOutput("mode", "selected cloud PostgreSQL profile");
+          break;
+        case "use-distributed-mode":
+          applyPreset("distributed");
+          showCompletion("Distributed control-plane profile selected.");
+          appendOutput("mode", "selected distributed control-plane profile");
           break;
         case "service-status":
           await runAction("service-status", refreshServiceStatus);
@@ -318,6 +374,14 @@
             const result = await invoke("service_start", { mode: "cloud" });
             await refreshServiceStatus();
             showCompletion("Cloud services started.");
+            return result;
+          });
+          break;
+        case "service-start-distributed":
+          await runAction("service-start-distributed", async () => {
+            const result = await invoke("service_start", { mode: "distributed" });
+            await refreshServiceStatus();
+            showCompletion("Distributed control plane started.");
             return result;
           });
           break;
@@ -348,10 +412,24 @@
           break;
         case "wizard-start-active":
           await runAction("wizard-start-active", async () => {
-            const mode = currentMode() === "postgres" ? "cloud" : "local";
+            const mode = currentMode() === "distributed" ? "distributed" : currentMode() === "cloud" ? "cloud" : "local";
             const result = await invoke("service_start", { mode });
             await refreshServiceStatus();
             showCompletion(`Started ${mode} profile.`);
+            return result;
+          });
+          break;
+        case "remote-bootstrap":
+          await runAction("remote-bootstrap", async () => {
+            const result = await invoke("remote_bootstrap", currentRemoteBootstrapPayload());
+            showCompletion("Remote workspace bootstrapped.");
+            return result;
+          });
+          break;
+        case "remote-start-agent":
+          await runAction("remote-start-agent", async () => {
+            const result = await invoke("remote_start_agent", currentRemoteAgentPayload());
+            showCompletion("Remote solver agent started.");
             return result;
           });
           break;
@@ -404,7 +482,7 @@
       if (envForm) {
         hydrateEnv(envForm);
       } else {
-        applyPreset("sqlite");
+        applyPreset("local");
       }
       renderServiceStatus(status.rendered);
       await refreshRuntimeLog().catch(() => {

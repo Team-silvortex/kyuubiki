@@ -22,11 +22,15 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/health" do
     agent_endpoints = KyuubikiWeb.Playground.AgentPool.endpoints()
+    deployment = KyuubikiWeb.Playground.AgentPool.deployment_info()
+    remote_registry = KyuubikiWeb.Playground.AgentRegistry.status_snapshot()
     watchdog = KyuubikiWeb.Jobs.Watchdog.status_snapshot()
 
     respond_json(conn, 200, %{
       "service" => "kyuubiki-orchestrator",
       "status" => "ok",
+      "deployment" => deployment,
+      "remote_solver_registry" => remote_registry,
       "watchdog" => watchdog,
       "transport" => %{
         "http" => 4000,
@@ -35,6 +39,47 @@ defmodule KyuubikiWeb.Router do
       },
       "solver_agents" => agent_endpoints
     })
+  end
+
+  get "/api/v1/agents" do
+    respond_json(conn, 200, %{
+      "agents" => KyuubikiWeb.Playground.AgentRegistry.agents(),
+      "summary" => KyuubikiWeb.Playground.AgentRegistry.status_snapshot()
+    })
+  end
+
+  post "/api/v1/agents/register" do
+    case KyuubikiWeb.Playground.AgentRegistry.register(conn.body_params) do
+      {:ok, agent} ->
+        _ = KyuubikiWeb.Playground.AgentPool.reload()
+        respond_json(conn, 201, %{"agent" => agent})
+
+      {:error, {:invalid_agent_field, field}} ->
+        respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
+
+      {:error, reason} ->
+        respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  post "/api/v1/agents/:agent_id/heartbeat" do
+    case KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, conn.body_params) do
+      {:ok, agent} ->
+        _ = KyuubikiWeb.Playground.AgentPool.reload()
+        respond_json(conn, 200, %{"agent" => agent})
+
+      {:error, {:invalid_agent_field, field}} ->
+        respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
+
+      {:error, reason} ->
+        respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  delete "/api/v1/agents/:agent_id" do
+    :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
+    _ = KyuubikiWeb.Playground.AgentPool.reload()
+    respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
   end
 
   post "/api/v1/fem/axial-bar/jobs" do

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+use std::net::{Shutdown, TcpListener, TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
@@ -46,6 +46,10 @@ struct WorkerConfig {
 struct AgentConfig {
     host: String,
     port: u16,
+    agent_id: Option<String>,
+    advertise_host: Option<String>,
+    orchestrator_url: Option<String>,
+    register_interval_ms: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,6 +115,10 @@ impl AgentConfig {
         let mut config = Self {
             host: "127.0.0.1".to_string(),
             port: 5001,
+            agent_id: None,
+            advertise_host: None,
+            orchestrator_url: None,
+            register_interval_ms: 5_000,
         };
 
         let mut args = args.iter();
@@ -127,8 +135,41 @@ impl AgentConfig {
                         config.port = value.parse().unwrap_or(config.port);
                     }
                 }
+                "--agent-id" => {
+                    if let Some(value) = args.next() {
+                        config.agent_id = Some(value.clone());
+                    }
+                }
+                "--advertise-host" => {
+                    if let Some(value) = args.next() {
+                        config.advertise_host = Some(value.clone());
+                    }
+                }
+                "--orchestrator-url" => {
+                    if let Some(value) = args.next() {
+                        config.orchestrator_url = Some(value.clone());
+                    }
+                }
+                "--register-interval-ms" => {
+                    if let Some(value) = args.next() {
+                        config.register_interval_ms =
+                            value.parse().unwrap_or(config.register_interval_ms);
+                    }
+                }
                 _ => {}
             }
+        }
+
+        if config.agent_id.is_none() {
+            config.agent_id = std::env::var("KYUUBIKI_AGENT_ID").ok();
+        }
+
+        if config.advertise_host.is_none() {
+            config.advertise_host = std::env::var("KYUUBIKI_AGENT_ADVERTISE_HOST").ok();
+        }
+
+        if config.orchestrator_url.is_none() {
+            config.orchestrator_url = std::env::var("KYUUBIKI_ORCHESTRATOR_URL").ok();
         }
 
         config
@@ -136,12 +177,17 @@ impl AgentConfig {
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    let registration = AgentRegistrationHandle::maybe_spawn(config);
     let listener = TcpListener::bind((config.host.as_str(), config.port))
         .map_err(|error| format!("failed to bind {}:{}: {error}", config.host, config.port))?;
 
     for stream in listener.incoming() {
         let stream = stream.map_err(|error| format!("failed to accept connection: {error}"))?;
         handle_connection(stream)?;
+    }
+
+    if let Some(registration) = registration {
+        registration.stop();
     }
 
     Ok(())
@@ -605,6 +651,173 @@ struct HeartbeatHandle {
     join_handle: Option<thread::JoinHandle<()>>,
 }
 
+struct AgentRegistrationHandle {
+    running: Arc<AtomicBool>,
+    join_handle: Option<thread::JoinHandle<()>>,
+}
+
+impl AgentRegistrationHandle {
+    fn maybe_spawn(config: &AgentConfig) -> Option<Self> {
+        let agent_id = config.agent_id.clone()?;
+        let orchestrator_url = config.orchestrator_url.clone()?;
+        let advertise_host = config
+            .advertise_host
+            .clone()
+            .unwrap_or_else(|| config.host.clone());
+        let port = config.port;
+        let interval_ms = config.register_interval_ms;
+        let running = Arc::new(AtomicBool::new(true));
+        let running_clone = Arc::clone(&running);
+        let initial_payload = serde_json::json!({
+            "id": agent_id,
+            "host": advertise_host,
+            "port": port,
+            "role": "solver"
+        });
+        let orchestrator_url_clone = orchestrator_url.clone();
+        let agent_id_clone = agent_id.clone();
+
+        let join_handle = thread::spawn(move || {
+            let _ = post_json(
+                &format!("{}/api/v1/agents/register", normalize_base_url(&orchestrator_url_clone)),
+                &initial_payload,
+            );
+
+            while running_clone.load(Ordering::SeqCst) {
+                thread::sleep(Duration::from_millis(interval_ms));
+
+                if !running_clone.load(Ordering::SeqCst) {
+                    break;
+                }
+
+                let _ = post_json(
+                    &format!(
+                        "{}/api/v1/agents/{}/heartbeat",
+                        normalize_base_url(&orchestrator_url_clone),
+                        agent_id_clone
+                    ),
+                    &initial_payload,
+                );
+            }
+
+            let _ = delete_request(&format!(
+                "{}/api/v1/agents/{}",
+                normalize_base_url(&orchestrator_url_clone),
+                agent_id_clone
+            ));
+        });
+
+        Some(Self {
+            running,
+            join_handle: Some(join_handle),
+        })
+    }
+
+    fn stop(mut self) {
+        self.running.store(false, Ordering::SeqCst);
+
+        if let Some(join_handle) = self.join_handle.take() {
+            let _ = join_handle.join();
+        }
+    }
+}
+
+fn normalize_base_url(url: &str) -> String {
+    url.trim_end_matches('/').to_string()
+}
+
+fn post_json(url: &str, payload: &serde_json::Value) -> Result<(), String> {
+    let body = serde_json::to_string(payload)
+        .map_err(|error| format!("failed to serialize registration payload: {error}"))?;
+    send_http_request("POST", url, Some(("application/json", body.as_bytes())))
+}
+
+fn delete_request(url: &str) -> Result<(), String> {
+    send_http_request("DELETE", url, None)
+}
+
+fn send_http_request(
+    method: &str,
+    url: &str,
+    body: Option<(&str, &[u8])>,
+) -> Result<(), String> {
+    let parsed = parse_http_url(url)?;
+    let address = format!("{}:{}", parsed.host, parsed.port);
+    let socket_addr = address
+        .to_socket_addrs()
+        .map_err(|error| format!("failed to resolve {address}: {error}"))?
+        .next()
+        .ok_or_else(|| format!("failed to resolve {address}"))?;
+
+    let mut stream = TcpStream::connect_timeout(&socket_addr, Duration::from_millis(1_500))
+        .map_err(|error| format!("failed to connect to {}:{}: {error}", parsed.host, parsed.port))?;
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(2_000)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(2_000)));
+
+    let (content_type, bytes) = body.unwrap_or(("application/json", &[]));
+    let request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {length}\r\n\r\n",
+        method = method,
+        path = parsed.path,
+        host = parsed.host,
+        content_type = content_type,
+        length = bytes.len()
+    );
+
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|error| format!("failed to write HTTP request: {error}"))?;
+    if !bytes.is_empty() {
+        stream
+            .write_all(bytes)
+            .map_err(|error| format!("failed to write HTTP request body: {error}"))?;
+    }
+    let _ = stream.flush();
+    let _ = stream.shutdown(Shutdown::Write);
+
+    let mut response = String::new();
+    stream
+        .read_to_string(&mut response)
+        .map_err(|error| format!("failed to read HTTP response: {error}"))?;
+
+    if response.starts_with("HTTP/1.1 2") || response.starts_with("HTTP/1.0 2") {
+        Ok(())
+    } else {
+        Err(format!("unexpected HTTP response from {url}: {response}"))
+    }
+}
+
+struct ParsedHttpUrl {
+    host: String,
+    port: u16,
+    path: String,
+}
+
+fn parse_http_url(url: &str) -> Result<ParsedHttpUrl, String> {
+    let raw = url
+        .strip_prefix("http://")
+        .ok_or_else(|| format!("unsupported orchestrator URL: {url} (expected http://...)"))?;
+    let (authority, path) = match raw.split_once('/') {
+        Some((authority, path)) => (authority, format!("/{}", path)),
+        None => (raw, "/".to_string()),
+    };
+    let (host, port) = match authority.split_once(':') {
+        Some((host, port)) => {
+            let port = port
+                .parse::<u16>()
+                .map_err(|_| format!("invalid orchestrator port in URL: {url}"))?;
+            (host.to_string(), port)
+        }
+        None => (authority.to_string(), 80),
+    };
+
+    if host.trim().is_empty() {
+        return Err(format!("invalid orchestrator host in URL: {url}"));
+    }
+
+    Ok(ParsedHttpUrl { host, port, path })
+}
+
 impl HeartbeatHandle {
     fn spawn(writer: Arc<Mutex<TcpStream>>, request_id: String, job_id: String) -> Self {
         let running = Arc::new(AtomicBool::new(true));
@@ -681,6 +894,7 @@ fn optional_string(value: Option<&str>) -> String {
 mod tests {
     use super::{
         AgentConfig, AgentReply, Command, WorkerConfig, format_event, handle_request_bytes,
+        parse_http_url,
     };
     use kyuubiki_protocol::{
         JobStatus, PlaneNodeInput, PlaneTriangleElementInput, ProgressEvent, RpcMethod, RpcRequest,
@@ -724,8 +938,21 @@ mod tests {
             Command::Agent(AgentConfig {
                 host: "127.0.0.1".to_string(),
                 port: 5001,
+                agent_id: None,
+                advertise_host: None,
+                orchestrator_url: None,
+                register_interval_ms: 5_000,
             })
         );
+    }
+
+    #[test]
+    fn parses_http_url_for_remote_registration() {
+        let parsed = parse_http_url("http://orchestrator.example.com:4000/api/v1/agents/register")
+            .expect("parsed URL");
+        assert_eq!(parsed.host, "orchestrator.example.com");
+        assert_eq!(parsed.port, 4000);
+        assert_eq!(parsed.path, "/api/v1/agents/register");
     }
 
     #[test]

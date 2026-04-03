@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start start-local start-cloud status stop restart restart-local restart-cloud export-db install doctor validate-env package installer-gui-dev installer-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
+.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
 
 help:
 	@echo "Available targets:"
@@ -9,11 +9,13 @@ help:
 	@echo "  make start       Start the orchestrator API, frontend, and solver agent"
 	@echo "  make start-local Start services with SQLite forced for local development"
 	@echo "  make start-cloud Start services with PostgreSQL forced for cloud/distributed use"
+	@echo "  make start-distributed Start only the control plane for distributed deployments"
 	@echo "  make status      Show local service status"
 	@echo "  make stop        Stop the orchestrator API, frontend, and solver agent"
 	@echo "  make restart     Restart the orchestrator API, frontend, and solver agent"
 	@echo "  make restart-local Restart services with SQLite forced for local development"
 	@echo "  make restart-cloud Restart services with PostgreSQL forced for cloud/distributed use"
+	@echo "  make restart-distributed Restart only the control plane for distributed deployments"
 	@echo "  make export-db   Export the current database snapshot as JSON"
 	@echo "  make install     Run the cross-platform installer/bootstrap utility"
 	@echo "  make doctor      Check local prerequisites for this platform"
@@ -51,6 +53,9 @@ start-local:
 start-cloud:
 	@$(ENTRYPOINT) start-cloud
 
+start-distributed:
+	@$(ENTRYPOINT) start-distributed
+
 status:
 	@$(ENTRYPOINT) status
 
@@ -65,6 +70,9 @@ restart-local:
 
 restart-cloud:
 	@$(ENTRYPOINT) restart-cloud
+
+restart-distributed:
+	@$(ENTRYPOINT) restart-distributed
 
 export-db:
 	@$(ENTRYPOINT) export-db

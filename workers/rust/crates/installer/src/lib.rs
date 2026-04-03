@@ -282,6 +282,8 @@ fn build_launch_manifest(root: &Path, platform: Platform) -> String {
             "  \"shell\": \"{shell}\",\n",
             "  \"workspace\": \"{workspace}\",\n",
             "  \"entrypoint\": \"{entry}\",\n",
+            "  \"deployment_profiles\": [\"local\", \"cloud\", \"distributed\"],\n",
+            "  \"agent_discovery\": [\"static\", \"manifest\"],\n",
             "  \"services\": [\n",
             "    {{\"name\": \"frontend\", \"port\": 3000}},\n",
             "    {{\"name\": \"orchestrator\", \"port\": 4000}},\n",
@@ -321,10 +323,24 @@ pub fn validate_env_file() -> Result<String, String> {
     let root = workspace_root();
     let env_file = root.join(".env.local");
     let env_map = parse_env_file(&env_file)?;
+    let deployment_mode = env_map
+        .get("KYUUBIKI_DEPLOYMENT_MODE")
+        .map(String::as_str)
+        .unwrap_or("local");
+    let agent_discovery = env_map
+        .get("KYUUBIKI_AGENT_DISCOVERY")
+        .map(String::as_str)
+        .unwrap_or("static");
 
     let storage_backend = env_map
         .get("KYUUBIKI_STORAGE_BACKEND")
         .ok_or_else(|| missing_env("KYUUBIKI_STORAGE_BACKEND"))?;
+
+    if !matches!(deployment_mode, "local" | "cloud" | "distributed") {
+        return Err(format!(
+            "invalid KYUUBIKI_DEPLOYMENT_MODE: {deployment_mode} (expected local, cloud, or distributed)"
+        ));
+    }
 
     if !matches!(storage_backend.as_str(), "postgres" | "sqlite" | "memory" | "json") {
         return Err(format!(
@@ -358,16 +374,35 @@ pub fn validate_env_file() -> Result<String, String> {
         }
     }
 
-    let agent_endpoints = env_map
-        .get("KYUUBIKI_AGENT_ENDPOINTS")
-        .map(String::as_str)
-        .unwrap_or("127.0.0.1:5001,127.0.0.1:5002");
+    let endpoints = match agent_discovery {
+        "static" => {
+            let agent_endpoints = env_map
+                .get("KYUUBIKI_AGENT_ENDPOINTS")
+                .map(String::as_str)
+                .unwrap_or("127.0.0.1:5001,127.0.0.1:5002");
 
-    let endpoints = parse_agent_endpoints(agent_endpoints)?;
+            parse_agent_endpoints(agent_endpoints)?
+        }
+        "manifest" => {
+            let manifest_path = env_map
+                .get("KYUUBIKI_AGENT_MANIFEST_PATH")
+                .ok_or_else(|| missing_env("KYUUBIKI_AGENT_MANIFEST_PATH"))?;
+
+            validate_agent_manifest_path(manifest_path)?;
+            parse_agent_manifest(Path::new(manifest_path))?
+        }
+        _ => {
+            return Err(format!(
+                "invalid KYUUBIKI_AGENT_DISCOVERY: {agent_discovery} (expected static or manifest)"
+            ))
+        }
+    };
 
     Ok(format!(
-        "validated .env.local (storage={}, agents={})",
+        "validated .env.local (deployment={}, storage={}, discovery={}, agents={})",
+        deployment_mode,
         storage_backend,
+        agent_discovery,
         endpoints.len()
     ))
 }
@@ -414,6 +449,53 @@ pub fn parse_agent_endpoints(value: &str) -> Result<Vec<(String, u16)>, String> 
 
     if parsed.is_empty() {
         return Err("KYUUBIKI_AGENT_ENDPOINTS must contain at least one host:port pair".to_string());
+    }
+
+    Ok(parsed)
+}
+
+fn validate_agent_manifest_path(path: &str) -> Result<(), String> {
+    if !(path.ends_with(".json")) {
+        return Err(
+            "invalid KYUUBIKI_AGENT_MANIFEST_PATH: expected a .json file path when using manifest discovery"
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+fn parse_agent_manifest(path: &Path) -> Result<Vec<(String, u16)>, String> {
+    let contents =
+        fs::read_to_string(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let payload: serde_json::Value =
+        serde_json::from_str(&contents).map_err(|error| format!("invalid JSON in {}: {error}", path.display()))?;
+    let agents = payload
+        .get("agents")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| format!("invalid agent manifest {}: missing agents array", path.display()))?;
+
+    let mut parsed = Vec::new();
+
+    for agent in agents {
+        let host = agent
+            .get("host")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| format!("invalid agent manifest {}: agent host missing", path.display()))?;
+        let port = agent
+            .get("port")
+            .and_then(serde_json::Value::as_u64)
+            .ok_or_else(|| format!("invalid agent manifest {}: agent port missing", path.display()))?;
+
+        if !(1..=u16::MAX as u64).contains(&port) {
+            return Err(format!("invalid agent manifest {}: agent port out of range", path.display()));
+        }
+
+        parsed.push((host.to_string(), port as u16));
+    }
+
+    if parsed.is_empty() {
+        return Err(format!("invalid agent manifest {}: no agents found", path.display()));
     }
 
     Ok(parsed)
@@ -535,5 +617,30 @@ mod tests {
     fn rejects_invalid_agent_endpoint_list() {
         assert!(parse_agent_endpoints("127.0.0.1").is_err());
         assert!(parse_agent_endpoints("127.0.0.1:abc").is_err());
+    }
+
+    #[test]
+    fn parses_agent_manifest_file() {
+        let path = workspace_root().join("tmp").join("installer-agent-manifest-test.json");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(
+            &path,
+            r#"{
+              "schema_version": "kyuubiki.agent-manifest/v1",
+              "deployment_mode": "distributed",
+              "agents": [
+                {"id": "solver-a", "host": "10.0.0.11", "port": 6101},
+                {"id": "solver-b", "host": "10.0.0.12", "port": 6102}
+              ]
+            }"#,
+        )
+        .unwrap();
+
+        let parsed = parse_agent_manifest(&path).unwrap();
+        assert_eq!(parsed.len(), 2);
+        assert_eq!(parsed[0].0, "10.0.0.11");
+        assert_eq!(parsed[1].1, 6102);
+
+        fs::remove_file(path).unwrap();
     }
 }

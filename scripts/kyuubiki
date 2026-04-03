@@ -42,11 +42,13 @@ Commands:
   start             Start the orchestrator API, frontend, and solver agent in the background
   start-local       Start services with SQLite forced for local development
   start-cloud       Start services with PostgreSQL forced for cloud/distributed use
+  start-distributed Start the control plane only for distributed deployments
   status            Show whether local services are running
   stop              Stop the orchestrator API, frontend, and solver agent services
   restart           Restart the orchestrator API, frontend, and solver agent services
   restart-local     Restart services with SQLite forced for local development
   restart-cloud     Restart services with PostgreSQL forced for cloud/distributed use
+  restart-distributed Restart the control plane only for distributed deployments
   export-db         Export the orchestrator database snapshot as JSON
   install           Run the cross-platform installer/bootstrap utility
   doctor            Run the cross-platform environment doctor
@@ -75,6 +77,7 @@ Examples:
   ./scripts/kyuubiki start
   ./scripts/kyuubiki start-local
   ./scripts/kyuubiki start-cloud
+  ./scripts/kyuubiki start-distributed
   KYUUBIKI_STORAGE_BACKEND=postgres DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev ./scripts/kyuubiki start
   cp .env.example .env.local && ./scripts/kyuubiki restart
   ./scripts/kyuubiki orchestrator
@@ -107,8 +110,19 @@ storage_mode_label() {
 
   case "$mode" in
     local) echo "sqlite" ;;
-    cloud) echo "postgres" ;;
+    cloud|distributed) echo "postgres" ;;
     *) echo "${KYUUBIKI_STORAGE_BACKEND:-sqlite}" ;;
+  esac
+}
+
+deployment_mode_label() {
+  local mode="${1:-default}"
+
+  case "$mode" in
+    local) echo "local" ;;
+    cloud) echo "cloud" ;;
+    distributed) echo "distributed" ;;
+    *) echo "${KYUUBIKI_DEPLOYMENT_MODE:-local}" ;;
   esac
 }
 
@@ -123,10 +137,19 @@ storage_mode_exports() {
       ensure_cloud_env
       printf 'KYUUBIKI_STORAGE_BACKEND="postgres" DATABASE_URL="%s"' "$DATABASE_URL"
       ;;
+    distributed)
+      ensure_cloud_env
+      printf 'KYUUBIKI_STORAGE_BACKEND="postgres" DATABASE_URL="%s"' "$DATABASE_URL"
+      ;;
     *)
       printf 'KYUUBIKI_STORAGE_BACKEND="%s"' "${KYUUBIKI_STORAGE_BACKEND:-sqlite}"
       ;;
   esac
+}
+
+deployment_mode_exports() {
+  local mode="${1:-default}"
+  printf 'KYUUBIKI_DEPLOYMENT_MODE="%s"' "$(deployment_mode_label "$mode")"
 }
 
 require_dir() {
@@ -249,8 +272,8 @@ run_orchestrator() {
 
   (
     cd "$WEB_DIR"
-    echo "serving orchestrator API at http://127.0.0.1:${port} ($(storage_mode_label "$mode"))"
-    eval "$(storage_mode_exports "$mode")" PORT="$port" mix run --no-halt
+    echo "serving orchestrator API at http://127.0.0.1:${port} ($(storage_mode_label "$mode"), $(deployment_mode_label "$mode"))"
+    eval "$(storage_mode_exports "$mode") $(deployment_mode_exports "$mode")" PORT="$port" mix run --no-halt
   )
 }
 
@@ -339,9 +362,9 @@ start_orchestrator_background() {
   fi
 
   screen -S "$ORCHESTRATOR_SCREEN" -X quit >/dev/null 2>&1 || true
-  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && $(storage_mode_exports "$mode") KYUUBIKI_AGENT_ENDPOINTS=\"$(agent_endpoints_value)\" PORT=\"$port\" mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
+  screen -dmS "$ORCHESTRATOR_SCREEN" zsh -lc "cd \"$WEB_DIR\" && $(storage_mode_exports "$mode") $(deployment_mode_exports "$mode") KYUUBIKI_AGENT_ENDPOINTS=\"$(agent_endpoints_value)\" PORT=\"$port\" mix run --no-halt >> \"$ORCHESTRATOR_LOG\" 2>&1"
 
-  echo "started orchestrator API at http://127.0.0.1:${port} ($(storage_mode_label "$mode"))"
+  echo "started orchestrator API at http://127.0.0.1:${port} ($(storage_mode_label "$mode"), $(deployment_mode_label "$mode"))"
   echo "log: $ORCHESTRATOR_LOG"
 }
 
@@ -404,7 +427,9 @@ stop_services() {
 
 start_services() {
   local mode="${1:-default}"
-  start_agents_background
+  if [[ "$mode" != "distributed" ]]; then
+    start_agents_background
+  fi
   start_orchestrator_background 4000 "$mode"
   start_frontend_background 3000
 }
@@ -434,6 +459,9 @@ case "$command" in
   start-cloud)
     start_services cloud
     ;;
+  start-distributed)
+    start_services distributed
+    ;;
   status)
     show_status
     ;;
@@ -448,6 +476,9 @@ case "$command" in
     ;;
   restart-cloud)
     restart_services cloud
+    ;;
+  restart-distributed)
+    restart_services distributed
     ;;
   export-db)
     run_export_db "$@"
@@ -499,6 +530,9 @@ case "$command" in
     ;;
   orchestrator-cloud)
     run_orchestrator "${1:-4000}" cloud
+    ;;
+  orchestrator-distributed)
+    run_orchestrator "${1:-4000}" distributed
     ;;
   agent)
     run_agent "${1:-5001}"

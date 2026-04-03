@@ -1,0 +1,30 @@
+{
+  "schema_version": "kyuubiki.agent-manifest/v1",
+  "deployment_mode": "distributed",
+  "control_plane": {
+    "orchestrator_url": "https://orchestrator.example.com",
+    "frontend_url": "https://workbench.example.com"
+  },
+  "agents": [
+    {
+      "id": "solver-shanghai-a",
+      "host": "10.20.0.11",
+      "port": 5001,
+      "role": "solver",
+      "region": "ap-shanghai",
+      "zone": "rack-a",
+      "capacity": 8,
+      "tags": ["cpu", "general"]
+    },
+    {
+      "id": "solver-shanghai-b",
+      "host": "10.20.0.12",
+      "port": 5001,
+      "role": "solver",
+      "region": "ap-shanghai",
+      "zone": "rack-b",
+      "capacity": 8,
+      "tags": ["cpu", "general"]
+    }
+  ]
+}

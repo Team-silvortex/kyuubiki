@@ -8,6 +8,12 @@ Kyuubiki is a browser-first FEM workbench with an engine-first split architectur
 
 `v0.2` is the first version where the stack feels like a real product rather than a prototype. It now supports persistent projects, chunked large-result browsing, immersive 3D editing, dual-database storage, portable project bundles, and a cross-platform installer GUI.
 
+It also now has an explicit deployment split:
+
+- `local workstation`: frontend + orchestrator + local Rust agents
+- `cloud control plane`: frontend + orchestrator + PostgreSQL
+- `distributed control plane`: orchestrator/frontend separated from remotely deployed solver nodes
+
 ## What v0.2 Can Do
 
 ### Solvers
@@ -72,6 +78,12 @@ SQLite or PostgreSQL
   <- projects / models / model_versions / jobs / results
 ```
 
+Distributed deployments can now discover agents in two independent ways:
+
+- `static`: `KYUUBIKI_AGENT_ENDPOINTS=host:port,...`
+- `manifest`: [agent-manifest.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/agent-manifest.schema.json) via `KYUUBIKI_AGENT_MANIFEST_PATH`
+- `registry`: remote Rust agents register and heartbeat into the orchestrator over HTTP
+
 The direction is engine-first:
 
 - Rust `engine` owns reusable solving and result-window helpers
@@ -123,6 +135,9 @@ The orchestrator currently provides:
 - chunked result APIs for large result windows
 - round-robin dispatch across multiple Rust RPC agents
 - failover when an agent endpoint is unavailable
+- deployment-aware health reporting
+- manifest-based remote agent discovery for distributed control-plane setups
+- runtime agent registration, heartbeat, and removal APIs for remote solver nodes
 
 ### Rust engine and agents
 
@@ -164,13 +179,19 @@ Persisted entities include:
 Recommended local setup:
 
 ```bash
+KYUUBIKI_DEPLOYMENT_MODE=local
+KYUUBIKI_AGENT_DISCOVERY=static
 KYUUBIKI_STORAGE_BACKEND=sqlite
 SQLITE_DATABASE_PATH=/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3
+KYUUBIKI_AGENT_ENDPOINTS=127.0.0.1:5001,127.0.0.1:5002
 ```
 
 Recommended cloud/distributed setup:
 
 ```bash
+KYUUBIKI_DEPLOYMENT_MODE=distributed
+KYUUBIKI_AGENT_DISCOVERY=registry
+KYUUBIKI_AGENT_MANIFEST_PATH=/Users/Shared/chroot/dev/kyuubiki/deploy/agents.distributed.example.json
 KYUUBIKI_STORAGE_BACKEND=postgres
 DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev
 ```
@@ -184,9 +205,32 @@ make start-local
 make restart-local
 make start-cloud
 make restart-cloud
+make start-distributed
+make restart-distributed
 ```
 
 `start-local` and `restart-local` force SQLite even if `.env.local` currently points at PostgreSQL. `start-cloud` and `restart-cloud` force PostgreSQL and require `DATABASE_URL`.
+
+`start-distributed` and `restart-distributed` start only the control plane. They do not spawn local solver agents, so the orchestrator can dispatch into a remote cluster defined by either static endpoints or an agent manifest.
+
+Remote solver registration API:
+
+- `GET /api/v1/agents`
+- `POST /api/v1/agents/register`
+- `POST /api/v1/agents/:agent_id/heartbeat`
+- `DELETE /api/v1/agents/:agent_id`
+
+Main distributed deployment assets:
+
+- [agents.local.json](/Users/Shared/chroot/dev/kyuubiki/deploy/agents.local.json)
+- [agents.distributed.example.json](/Users/Shared/chroot/dev/kyuubiki/deploy/agents.distributed.example.json)
+- [agent-manifest.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/agent-manifest.schema.json)
+
+The Tauri installer GUI now also includes a `Remote` panel for:
+
+- remote workspace bootstrap over `ssh`
+- remote Rust agent launch over `ssh`
+- distributed control-plane profile setup
 
 ## Project Format
 

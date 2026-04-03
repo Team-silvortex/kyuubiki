@@ -31,6 +31,9 @@ struct DoctorCheckPayload {
 
 #[derive(Serialize)]
 struct EnvFormPayload {
+    deployment_mode: String,
+    agent_discovery: String,
+    agent_manifest_path: String,
     storage_backend: String,
     sqlite_database_path: String,
     database_url: String,
@@ -40,6 +43,9 @@ struct EnvFormPayload {
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WriteEnvPayload {
+    deployment_mode: String,
+    agent_discovery: String,
+    agent_manifest_path: String,
     storage_backend: String,
     sqlite_database_path: String,
     database_url: String,
@@ -75,6 +81,28 @@ struct LogPayload {
 #[serde(rename_all = "camelCase")]
 struct BuildPayload {
     bundle_mode: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoteBootstrapPayload {
+    target_host: String,
+    ssh_user: String,
+    remote_workspace: String,
+    ssh_port: Option<u16>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoteAgentPayload {
+    target_host: String,
+    ssh_user: String,
+    remote_workspace: String,
+    orchestrator_url: String,
+    agent_id: String,
+    advertise_host: String,
+    agent_port: u16,
+    ssh_port: Option<u16>,
 }
 
 #[derive(Serialize)]
@@ -151,6 +179,9 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
     let contents = fs::read_to_string(&path)
         .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
 
+    let mut deployment_mode = "local".to_string();
+    let mut agent_discovery = "static".to_string();
+    let mut agent_manifest_path = String::new();
     let mut storage_backend = "sqlite".to_string();
     let mut sqlite_database_path = String::new();
     let mut database_url = String::new();
@@ -164,6 +195,9 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
 
       if let Some((key, value)) = line.split_once('=') {
         match key.trim() {
+          "KYUUBIKI_DEPLOYMENT_MODE" => deployment_mode = value.trim().to_string(),
+          "KYUUBIKI_AGENT_DISCOVERY" => agent_discovery = value.trim().to_string(),
+          "KYUUBIKI_AGENT_MANIFEST_PATH" => agent_manifest_path = value.trim().to_string(),
           "KYUUBIKI_STORAGE_BACKEND" => storage_backend = value.trim().to_string(),
           "SQLITE_DATABASE_PATH" => sqlite_database_path = value.trim().to_string(),
           "DATABASE_URL" => database_url = value.trim().to_string(),
@@ -174,6 +208,9 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
     }
 
     Ok(EnvFormPayload {
+      deployment_mode,
+      agent_discovery,
+      agent_manifest_path,
       storage_backend,
       sqlite_database_path,
       database_url,
@@ -185,7 +222,18 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
 fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
     let root = workspace_root();
     let path = root.join(".env.local");
-    let mut lines = vec![format!("KYUUBIKI_STORAGE_BACKEND={}", payload.storage_backend)];
+    let mut lines = vec![
+        format!("KYUUBIKI_DEPLOYMENT_MODE={}", payload.deployment_mode),
+        format!("KYUUBIKI_AGENT_DISCOVERY={}", payload.agent_discovery),
+        format!("KYUUBIKI_STORAGE_BACKEND={}", payload.storage_backend),
+    ];
+
+    if !payload.agent_manifest_path.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_AGENT_MANIFEST_PATH={}",
+            payload.agent_manifest_path.trim()
+        ));
+    }
 
     if !payload.sqlite_database_path.trim().is_empty() {
         lines.push(format!(
@@ -225,6 +273,7 @@ fn service_start(payload: ServicePayload) -> Result<String, String> {
     let command = match payload.mode.as_deref() {
         Some("local") => "start-local",
         Some("cloud") => "start-cloud",
+        Some("distributed") => "start-distributed",
         _ => "start",
     };
 
@@ -236,10 +285,39 @@ fn service_restart(payload: ServicePayload) -> Result<String, String> {
     let command = match payload.mode.as_deref() {
         Some("local") => "restart-local",
         Some("cloud") => "restart-cloud",
+        Some("distributed") => "restart-distributed",
         _ => "restart",
     };
 
     run_workspace_command(&["zsh", "./scripts/kyuubiki", command])
+}
+
+#[tauri::command]
+fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, String> {
+    let target = format!("{}@{}", payload.ssh_user.trim(), payload.target_host.trim());
+    let remote_command = format!(
+        "cd {} && zsh ./scripts/kyuubiki install bootstrap",
+        shell_escape(&payload.remote_workspace)
+    );
+
+    run_remote_ssh(payload.ssh_port, &target, &remote_command)
+}
+
+#[tauri::command]
+fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String> {
+    let target = format!("{}@{}", payload.ssh_user.trim(), payload.target_host.trim());
+    let screen_name = format!("kyuubiki_remote_agent_{}", payload.agent_port);
+    let remote_command = format!(
+        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} zsh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
+        workspace = shell_escape(&payload.remote_workspace),
+        screen = shell_escape(&screen_name),
+        orchestrator = shell_escape(&payload.orchestrator_url),
+        agent_id = shell_escape(&payload.agent_id),
+        advertise_host = shell_escape(&payload.advertise_host),
+        port = payload.agent_port
+    );
+
+    run_remote_ssh(payload.ssh_port, &target, &remote_command)
 }
 
 #[tauri::command]
@@ -408,6 +486,36 @@ fn run_workspace_command(args: &[&str]) -> Result<String, String> {
     }
 }
 
+fn run_remote_ssh(ssh_port: Option<u16>, target: &str, remote_command: &str) -> Result<String, String> {
+    let mut command = Command::new("ssh");
+    if let Some(port) = ssh_port {
+        command.arg("-p").arg(port.to_string());
+    }
+
+    let output = command
+        .arg(target)
+        .arg(remote_command)
+        .output()
+        .map_err(|error| format!("failed to run ssh command: {error}"))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if output.status.success() {
+        Ok(if stdout.is_empty() {
+            format!("remote command completed on {}", target)
+        } else {
+            stdout
+        })
+    } else {
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
+fn shell_escape(value: &str) -> String {
+    format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -424,6 +532,8 @@ fn main() {
             service_start,
             service_restart,
             service_stop,
+            remote_bootstrap,
+            remote_start_agent,
             read_runtime_log,
             start_log_stream,
             stop_log_stream,

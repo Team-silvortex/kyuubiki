@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.AnalysisResultStore
+  alias KyuubikiWeb.Playground.AgentRegistry
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Router
   alias KyuubikiWeb.TestSupport.FakePlaygroundAgent
@@ -17,10 +18,12 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     Store.reset()
     AnalysisResultStore.reset()
     Library.reset()
+    Enum.each(AgentRegistry.agents(), fn agent -> AgentRegistry.unregister(agent.id) end)
 
     original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
 
     on_exit(fn ->
+      Enum.each(AgentRegistry.agents(), fn agent -> AgentRegistry.unregister(agent.id) end)
       Application.put_env(:kyuubiki_web, AgentPool, original_config)
       AgentPool.reload()
     end)
@@ -777,8 +780,68 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     assert payload["service"] == "kyuubiki-orchestrator"
     assert payload["status"] == "ok"
+    assert payload["deployment"]["mode"] == "local"
+    assert payload["deployment"]["discovery"] == "static"
+    assert payload["remote_solver_registry"]["active_agents"] == 0
     assert payload["transport"]["http"] == 4000
     assert payload["transport"]["solver_agent_tcp"] == 5001
+  end
+
+  test "registers, heartbeats, and removes remote agents through the API" do
+    Application.put_env(:kyuubiki_web, AgentPool, discovery: :registry, endpoints: [])
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "solver-remote-a",
+          "host" => "10.20.0.11",
+          "port" => 6101,
+          "region" => "ap-shanghai"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 201
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["agent"]["id"] == "solver-remote-a"
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/solver-remote-a/heartbeat",
+        Jason.encode!(%{
+          "host" => "10.20.0.11",
+          "port" => 6101,
+          "zone" => "rack-a"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert Jason.decode!(conn.resp_body)["agent"]["zone"] == "rack-a"
+
+    conn =
+      :get
+      |> conn("/api/v1/agents")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["summary"]["active_agents"] == 1
+    assert Enum.map(payload["agents"], & &1["id"]) == ["solver-remote-a"]
+
+    conn =
+      :delete
+      |> conn("/api/v1/agents/solver-remote-a")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert Jason.decode!(conn.resp_body)["status"] == "removed"
   end
 
   test "surfaces solver failure messages through the orchestration API" do

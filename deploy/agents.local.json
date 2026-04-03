@@ -1,0 +1,22 @@
+{
+  "schema_version": "kyuubiki.agent-manifest/v1",
+  "deployment_mode": "local",
+  "agents": [
+    {
+      "id": "agent-1",
+      "host": "127.0.0.1",
+      "port": 5001,
+      "role": "solver",
+      "region": "local",
+      "tags": ["interactive", "default"]
+    },
+    {
+      "id": "agent-2",
+      "host": "127.0.0.1",
+      "port": 5002,
+      "role": "solver",
+      "region": "local",
+      "tags": ["interactive", "default"]
+    }
+  ]
+}

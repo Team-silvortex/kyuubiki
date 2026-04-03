@@ -61,6 +61,7 @@
           <button class="sidebar-tab" data-tab="wizard">Wizard</button>
           <button class="sidebar-tab active" data-tab="setup">Setup</button>
           <button class="sidebar-tab" data-tab="services">Services</button>
+          <button class="sidebar-tab" data-tab="remote">Remote</button>
           <button class="sidebar-tab" data-tab="release">Release</button>
           <button class="sidebar-tab" data-tab="output">Output</button>
         </aside>
@@ -79,11 +80,12 @@
                 <span class="wizard-index">1</span>
                 <div>
                   <h3>Choose a profile</h3>
-                  <p>Start with local SQLite for workstation use, or cloud PostgreSQL for distributed deployment.</p>
+                  <p>Start with local SQLite for workstation use, cloud PostgreSQL for hosted stacks, or distributed mode for a remote solver cluster.</p>
                 </div>
                 <div class="action-row">
                   <button class="primary" data-action="use-local-mode">Pick local</button>
                   <button data-action="use-cloud-mode">Pick cloud</button>
+                  <button data-action="use-distributed-mode">Pick distributed</button>
                 </div>
               </article>
               <article class="wizard-step">
@@ -112,7 +114,7 @@
                 <span class="wizard-index">4</span>
                 <div>
                   <h3>Run services</h3>
-                  <p>Bring up the frontend, orchestrator, and Rust agents with the active database profile.</p>
+                    <p>Bring up the frontend, orchestrator, and Rust agents with the active database profile.</p>
                 </div>
                 <div class="action-row">
                   <button class="primary" data-action="wizard-start-active">Start active profile</button>
@@ -200,6 +202,22 @@
                   <li>Requires `DATABASE_URL`</li>
                 </ul>
               </article>
+
+              <article class="mode-card" data-mode-card="distributed">
+                <div class="mode-header">
+                  <div>
+                    <p class="mode-badge">Control plane</p>
+                    <h3>Distributed orchestrator</h3>
+                  </div>
+                  <button class="primary" data-action="use-distributed-mode">Use distributed mode</button>
+                </div>
+                <p>Keep frontend and orchestrator centralized while remote Rust agents self-register into the cluster.</p>
+                <ul class="mode-points">
+                  <li>PostgreSQL-backed control plane</li>
+                  <li>Remote solver nodes register and heartbeat in</li>
+                  <li>Installer can bootstrap and start remote agents over SSH</li>
+                </ul>
+              </article>
             </div>
 
             <div class="form-shell">
@@ -210,6 +228,22 @@
 
               <div class="field-grid">
                 <label class="field">
+                  <span>Deployment mode</span>
+                  <select id="deployment-mode">
+                    <option value="local">Local workstation</option>
+                    <option value="cloud">Cloud control plane</option>
+                    <option value="distributed">Distributed control plane</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Agent discovery</span>
+                  <select id="agent-discovery">
+                    <option value="static">Static endpoints</option>
+                    <option value="manifest">Manifest file</option>
+                    <option value="registry">Runtime registry</option>
+                  </select>
+                </label>
+                <label class="field">
                   <span>Storage mode</span>
                   <select id="storage-mode">
                     <option value="sqlite">Local SQLite</option>
@@ -219,6 +253,10 @@
                 <label class="field">
                   <span>Agent endpoints</span>
                   <input id="agent-endpoints" type="text" placeholder="127.0.0.1:5001,127.0.0.1:5002" />
+                </label>
+                <label class="field field-span-2">
+                  <span>Agent manifest</span>
+                  <input id="agent-manifest-path" type="text" placeholder="./deploy/agents.distributed.example.json" />
                 </label>
                 <label class="field field-span-2">
                   <span>SQLite path</span>
@@ -274,6 +312,13 @@
                 </div>
               </article>
               <article class="service-card">
+                <h3>Distributed control plane</h3>
+                <p>Starts only the frontend and orchestrator, leaving solver capacity to remote registered agents.</p>
+                <div class="action-row">
+                  <button class="primary" data-action="service-start-distributed">Start distributed</button>
+                </div>
+              </article>
+              <article class="service-card">
                 <h3>Stop services</h3>
                 <p>Stops frontend, orchestrator, and all Rust agents without touching your data.</p>
                 <div class="action-row">
@@ -308,6 +353,69 @@
                 </div>
               </div>
               <pre id="runtime-log"></pre>
+            </div>
+          </section>
+
+          <section class="panel" data-panel="remote">
+            <div class="section-header">
+              <div>
+                <p class="section-eyebrow">Remote deployment</p>
+                <h2>Operate remote solver nodes</h2>
+              </div>
+            </div>
+
+            <div class="form-shell">
+              <div class="panel-header">
+                <h2>SSH target</h2>
+              </div>
+              <div class="field-grid">
+                <label class="field">
+                  <span>SSH user</span>
+                  <input id="remote-ssh-user" type="text" placeholder="ubuntu" />
+                </label>
+                <label class="field">
+                  <span>Target host</span>
+                  <input id="remote-target-host" type="text" placeholder="10.20.0.11" />
+                </label>
+                <label class="field">
+                  <span>SSH port</span>
+                  <input id="remote-ssh-port" type="number" placeholder="22" />
+                </label>
+                <label class="field field-span-2">
+                  <span>Remote workspace</span>
+                  <input id="remote-workspace" type="text" placeholder="/opt/kyuubiki" />
+                </label>
+              </div>
+              <div class="action-row">
+                <button class="primary" data-action="remote-bootstrap">Remote bootstrap</button>
+              </div>
+            </div>
+
+            <div class="form-shell">
+              <div class="panel-header">
+                <h2>Remote agent</h2>
+              </div>
+              <div class="field-grid">
+                <label class="field">
+                  <span>Agent id</span>
+                  <input id="remote-agent-id" type="text" placeholder="solver-shanghai-a" />
+                </label>
+                <label class="field">
+                  <span>Advertise host</span>
+                  <input id="remote-advertise-host" type="text" placeholder="10.20.0.11" />
+                </label>
+                <label class="field">
+                  <span>Agent port</span>
+                  <input id="remote-agent-port" type="number" placeholder="5001" />
+                </label>
+                <label class="field field-span-2">
+                  <span>Orchestrator URL</span>
+                  <input id="remote-orchestrator-url" type="text" placeholder="http://control-plane.example.com:4000" />
+                </label>
+              </div>
+              <div class="action-row">
+                <button class="primary" data-action="remote-start-agent">Start remote agent</button>
+              </div>
             </div>
           </section>
 

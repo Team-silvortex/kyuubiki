@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Application do
   def start(_type, _args) do
     children =
       [
+        KyuubikiWeb.Playground.AgentRegistry,
         KyuubikiWeb.Playground.AgentPool,
         {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
         KyuubikiWeb.Jobs.Watchdog

@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   @default_host "127.0.0.1"
   @default_port 5001
+  @default_discovery :static
 
   @type endpoint :: %{id: String.t(), host: String.t(), port: pos_integer()}
 
@@ -24,6 +25,11 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     GenServer.call(__MODULE__, :endpoints)
   end
 
+  @spec deployment_info() :: map()
+  def deployment_info do
+    GenServer.call(__MODULE__, :deployment_info)
+  end
+
   @spec reload() :: :ok
   def reload do
     GenServer.call(__MODULE__, :reload)
@@ -31,7 +37,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   @impl true
   def init(_opts) do
-    {:ok, %{endpoints: configured_endpoints(), cursor: 0}}
+    endpoints = configured_endpoints()
+    {:ok, %{endpoints: endpoints, cursor: 0, deployment: deployment_info_for(endpoints)}}
   end
 
   @impl true
@@ -39,9 +46,13 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     {:reply, state.endpoints, state}
   end
 
+  def handle_call(:deployment_info, _from, state) do
+    {:reply, state.deployment, state}
+  end
+
   def handle_call(:reload, _from, state) do
     endpoints = configured_endpoints()
-    {:reply, :ok, %{state | endpoints: endpoints, cursor: 0}}
+    {:reply, :ok, %{state | endpoints: endpoints, cursor: 0, deployment: deployment_info_for(endpoints)}}
   end
 
   def handle_call(:checkout_endpoints, _from, %{endpoints: endpoints, cursor: cursor} = state) do
@@ -58,12 +69,29 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp configured_endpoints do
-    case Application.get_env(:kyuubiki_web, __MODULE__, [])[:endpoints] do
+    config = Application.get_env(:kyuubiki_web, __MODULE__, [])
+
+    case config[:endpoints] do
       endpoints when is_list(endpoints) and endpoints != [] ->
         Enum.map(endpoints, &normalize_endpoint/1)
 
       _ ->
-        env_configured_endpoints()
+        configured_endpoints_from_discovery(config)
+    end
+  end
+
+  defp configured_endpoints_from_discovery(config) do
+    case discovery_mode(config) do
+      :registry -> registry_configured_endpoints()
+      :manifest -> manifest_configured_endpoints(config)
+      _ -> env_configured_endpoints()
+    end
+  end
+
+  defp registry_configured_endpoints do
+    case KyuubikiWeb.Playground.AgentRegistry.active_endpoints() do
+      [] -> env_configured_endpoints()
+      endpoints -> Enum.map(endpoints, &normalize_endpoint/1)
     end
   end
 
@@ -80,6 +108,21 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     case endpoints do
       [] -> [default_endpoint()]
       _ -> endpoints
+    end
+  end
+
+  defp manifest_configured_endpoints(config) do
+    manifest_path = manifest_path(config)
+
+    with path when is_binary(path) <- manifest_path,
+         true <- File.exists?(path),
+         {:ok, contents} <- File.read(path),
+         {:ok, payload} <- Jason.decode(contents),
+         agents when is_list(agents) <- Map.get(payload, "agents"),
+         endpoints when endpoints != [] <- agents |> Enum.map(&normalize_manifest_endpoint/1) |> Enum.reject(&is_nil/1) do
+      endpoints
+    else
+      _ -> env_configured_endpoints()
     end
   end
 
@@ -125,6 +168,68 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp normalize_endpoint(_endpoint), do: default_endpoint()
+
+  defp normalize_manifest_endpoint(
+         %{"host" => host, "port" => port} = endpoint
+       )
+       when is_binary(host) and is_integer(port) and port > 0 do
+    metadata =
+      endpoint
+      |> Map.take(["region", "zone", "role", "tags", "capacity"])
+      |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
+
+    metadata
+    |> Map.merge(%{
+      id: Map.get(endpoint, "id", "#{host}:#{port}"),
+      host: host,
+      port: port
+    })
+  end
+
+  defp normalize_manifest_endpoint(_endpoint), do: nil
+
+  defp deployment_info_for(endpoints) do
+    config = Application.get_env(:kyuubiki_web, __MODULE__, [])
+    discovery = discovery_mode(config)
+
+    %{
+      mode: deployment_mode(config),
+      discovery: discovery,
+      manifest_path: manifest_path(config),
+      endpoint_count: length(endpoints)
+    }
+  end
+
+  defp deployment_mode(config) do
+    config
+    |> Keyword.get(:deployment_mode, :local)
+    |> normalize_mode()
+  end
+
+  defp discovery_mode(config) do
+    config
+    |> Keyword.get(:discovery, @default_discovery)
+    |> normalize_discovery()
+  end
+
+  defp manifest_path(config) do
+    case Keyword.get(config, :manifest_path) do
+      path when is_binary(path) and path != "" -> path
+      _ -> nil
+    end
+  end
+
+  defp normalize_mode(mode) when mode in [:local, :cloud, :distributed], do: mode
+  defp normalize_mode("local"), do: :local
+  defp normalize_mode("cloud"), do: :cloud
+  defp normalize_mode("distributed"), do: :distributed
+  defp normalize_mode(_mode), do: :local
+
+  defp normalize_discovery(discovery) when discovery in [:static, :manifest, :registry], do: discovery
+  defp normalize_discovery("static"), do: :static
+  defp normalize_discovery("manifest"), do: :manifest
+  defp normalize_discovery("registry"), do: :registry
+  defp normalize_discovery(_discovery), do: @default_discovery
 
   defp default_endpoint do
     %{id: "#{@default_host}:#{@default_port}", host: @default_host, port: @default_port}

@@ -12,6 +12,25 @@ storage_backend =
     _ -> :sqlite
   end
 
+deployment_mode =
+  case System.get_env("KYUUBIKI_DEPLOYMENT_MODE") do
+    "cloud" -> :cloud
+    "distributed" -> :distributed
+    _ -> :local
+  end
+
+agent_discovery =
+  case System.get_env("KYUUBIKI_AGENT_DISCOVERY") do
+    "manifest" -> :manifest
+    _ -> :static
+  end
+
+agent_manifest_path =
+  System.get_env(
+    "KYUUBIKI_AGENT_MANIFEST_PATH",
+    Path.expand("../../../deploy/agents.local.json", __DIR__)
+  )
+
 database_url =
   System.get_env(
     "DATABASE_URL",
@@ -45,11 +64,18 @@ config :kyuubiki_web,
   storage_backend: storage_backend,
   ecto_repos: [KyuubikiWeb.PostgresRepo, KyuubikiWeb.SqliteRepo]
 
-config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool, endpoints: agent_endpoints
+config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool,
+  endpoints: agent_endpoints,
+  deployment_mode: deployment_mode,
+  discovery: agent_discovery,
+  manifest_path: agent_manifest_path
 
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentClient,
   connect_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_CONNECT_TIMEOUT_MS", "1500")),
   recv_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_RECV_TIMEOUT_MS", "15000"))
+
+config :kyuubiki_web, KyuubikiWeb.Playground.AgentRegistry,
+  stale_after_ms: String.to_integer(System.get_env("KYUUBIKI_REMOTE_AGENT_STALE_AFTER_MS", "15000"))
 
 config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
   scan_interval_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS", "5000")),
