@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useState } from "react";
-import { VirtualList } from "@/components/virtual-list";
+import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";

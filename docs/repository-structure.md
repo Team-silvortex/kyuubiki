@@ -25,6 +25,12 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
 - `dist/`
   Generated portable release scaffolds.
 
+See also:
+
+- [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
+- [tmp/README.md](/Users/Shared/chroot/dev/kyuubiki/tmp/README.md)
+- [dist/README.md](/Users/Shared/chroot/dev/kyuubiki/dist/README.md)
+
 ## Application Layer
 
 ### `apps/frontend`
@@ -34,6 +40,8 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
 - result browsing
 - immersive 3D editing
 - installer-independent browser client
+- `src/components/workbench` for domain surfaces
+- `src/components/ui` for reusable UI primitives
 
 ### `apps/web`
 
@@ -43,6 +51,10 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
 - result chunk APIs
 - watchdog and health surfaces
 - distributed agent routing and registration
+- `results/` for result persistence backends
+- `storage/` for repo modules and persisted record structs
+- `playground/` as the runtime/agent integration boundary
+- tests mirror this split under `apps/web/test/kyuubiki_web`
 
 ### `apps/installer-gui`
 
@@ -77,6 +89,12 @@ Benchmark profiles for medium, large, v2, and 10k-scale targets.
 
 Cross-platform CLI for doctor, env validation, release staging, and deployment
 setup.
+
+See [crates/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/README.md)
+for the crate-by-crate map.
+
+Rust tests remain colocated with crates or under crate-local `tests/`
+directories.
 
 ## Stable Boundaries
 

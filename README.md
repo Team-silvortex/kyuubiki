@@ -36,6 +36,7 @@ Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
 
 ## What v0.2 Can Do
 

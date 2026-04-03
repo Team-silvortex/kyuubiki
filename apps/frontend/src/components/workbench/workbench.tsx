@@ -11,15 +11,15 @@ import {
   type UIEvent as ReactUIEvent,
   type SetStateAction,
 } from "react";
-import { VirtualList } from "@/components/virtual-list";
-import { WorkbenchConsole } from "@/components/workbench-console";
-import { WorkbenchInspector } from "@/components/workbench-inspector";
-import { WorkbenchObjectTree } from "@/components/workbench-object-tree";
-import { WorkbenchViewport } from "@/components/workbench-viewport";
-import { createCustomMaterial, parseMaterialLibrary } from "@/lib/material-library";
+import { VirtualList } from "@/components/ui/virtual-list";
+import { WorkbenchConsole } from "@/components/workbench/workbench-console";
+import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
+import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
+import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
+import { createCustomMaterial, parseMaterialLibrary } from "@/lib/materials";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
-import { parsePlaygroundModel } from "@/lib/model-import";
-import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/project-format";
+import { parsePlaygroundModel } from "@/lib/models";
+import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/projects";
 import {
   buildStudyModelPayload,
   exportProjectBundle,
@@ -28,8 +28,8 @@ import {
   generateRectangularPanelMesh,
   type ParametricPanelConfig,
   type ParametricTrussConfig,
-} from "@/lib/modeler";
-import { SAMPLE_LIBRARY } from "@/lib/sample-library";
+} from "@/lib/models";
+import { SAMPLE_LIBRARY } from "@/lib/models";
 import {
   createAxialBarJob,
   createPlaneTriangle2dJob,
