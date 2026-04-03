@@ -299,6 +299,7 @@ const copy = {
     messages: "Messages",
     failureReason: "Failure reason",
     lastHeartbeat: "Last heartbeat",
+    heartbeatStatus: "Heartbeat status",
     cancelJob: "Cancel job",
     historyPanel: "Operation History",
     undo: "Undo",
@@ -550,6 +551,9 @@ const copy = {
       "The solver took too long to respond. The run was timed out and stopped safely.",
     translatedAgentTimeout:
       "The solver agent did not respond in time. Check the agent process or try the run again.",
+    heartbeatHealthy: "healthy",
+    heartbeatQuiet: "quiet",
+    heartbeatStale: "stale",
     mechanismRisk: "This topology still looks mechanism-prone. Add more triangulation or extra supports before solving.",
     addNode: "Add Node",
     addBranchNode: "Branch Node",
@@ -638,6 +642,7 @@ const copy = {
     messages: "消息",
     failureReason: "失败原因",
     lastHeartbeat: "最近心跳",
+    heartbeatStatus: "心跳状态",
     cancelJob: "取消任务",
     historyPanel: "操作历史",
     undo: "撤销",
@@ -882,6 +887,9 @@ const copy = {
     translatedWatchdogTimedOut: "任务运行时间过长，已经被看门狗超时终止。",
     translatedExecutionTimedOut: "求解器响应太久，任务已被安全超时终止。",
     translatedAgentTimeout: "求解代理在规定时间内没有响应。请检查 agent 进程，或稍后重试。",
+    heartbeatHealthy: "正常",
+    heartbeatQuiet: "安静",
+    heartbeatStale: "过期",
     mechanismRisk: "这个拓扑仍然很像机构。建议先增加三角化斜撑或额外支座再求解。",
     addNode: "新增节点",
     addBranchNode: "分支节点",
@@ -1558,6 +1566,52 @@ function formatMilliseconds(value: number | null | undefined) {
   return `${Math.round(value)} ms`;
 }
 
+function heartbeatStatus(
+  job: JobEnvelope["job"] | null,
+  languageCopy: (typeof copy)[Language],
+) {
+  if (!job?.updated_at) return "--";
+
+  const updatedAt = new Date(job.updated_at);
+  if (Number.isNaN(updatedAt.getTime())) return "--";
+
+  const active =
+    job.status === "queued" ||
+    job.status === "preprocessing" ||
+    job.status === "partitioning" ||
+    job.status === "solving" ||
+    job.status === "postprocessing";
+
+  if (!active) return languageCopy.heartbeatHealthy;
+
+  const ageMs = Math.max(0, Date.now() - updatedAt.getTime());
+
+  if (ageMs < 6_000) return languageCopy.heartbeatHealthy;
+  if (ageMs < 20_000) return `${languageCopy.heartbeatQuiet} ${Math.round(ageMs / 1000)}s`;
+  return `${languageCopy.heartbeatStale} ${Math.round(ageMs / 1000)}s`;
+}
+
+function heartbeatTone(job: JobEnvelope["job"] | null): "healthy" | "quiet" | "stale" {
+  if (!job?.updated_at) return "quiet";
+
+  const updatedAt = new Date(job.updated_at);
+  if (Number.isNaN(updatedAt.getTime())) return "quiet";
+
+  const active =
+    job.status === "queued" ||
+    job.status === "preprocessing" ||
+    job.status === "partitioning" ||
+    job.status === "solving" ||
+    job.status === "postprocessing";
+
+  if (!active) return "healthy";
+
+  const ageMs = Math.max(0, Date.now() - updatedAt.getTime());
+  if (ageMs < 6_000) return "healthy";
+  if (ageMs < 20_000) return "quiet";
+  return "stale";
+}
+
 function findNearestConnectableNode(model: Truss2dJobInput, nodeIndex: number): number | null {
   const origin = model.nodes[nodeIndex];
   if (!origin) return null;
@@ -1814,6 +1868,7 @@ export function Workbench() {
   const [adminJobCaseId, setAdminJobCaseId] = useState("");
   const [adminResultDraft, setAdminResultDraft] = useState("{}");
   const [isPending, startTransition] = useTransition();
+  const staleHeartbeatAlertedRef = useRef<string | null>(null);
   const dragHistoryCapturedRef = useRef(false);
   const drag3dHistoryCapturedRef = useRef(false);
   const dragFrameRef = useRef<number | null>(null);
@@ -1825,6 +1880,31 @@ export function Workbench() {
   useEffect(() => {
     setResultWindowOffset(0);
   }, [job?.job_id, studyKind]);
+
+  useEffect(() => {
+    if (!job?.job_id) {
+      staleHeartbeatAlertedRef.current = null;
+      return;
+    }
+
+    const tone = heartbeatTone(job);
+
+    if (tone === "stale") {
+      if (staleHeartbeatAlertedRef.current !== job.job_id) {
+        staleHeartbeatAlertedRef.current = job.job_id;
+        setMessage(
+          language === "zh"
+            ? `任务 ${job.job_id.slice(0, 8)} 心跳已过期，请检查 agent 或考虑取消任务。`
+            : `Job ${job.job_id.slice(0, 8)} heartbeat is stale. Check the agent or consider cancelling the run.`,
+        );
+      }
+      return;
+    }
+
+    if (staleHeartbeatAlertedRef.current === job.job_id) {
+      staleHeartbeatAlertedRef.current = null;
+    }
+  }, [job, language]);
 
   useEffect(() => {
     return () => {
@@ -3001,6 +3081,8 @@ export function Workbench() {
     planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
   const planeBounds = getTrussBounds(planeNodes);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
+  const heartbeatStatusValue = heartbeatStatus(job, t);
+  const heartbeatToneValue = heartbeatTone(job);
   const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
   const selectedTruss3dNodeData = selectedNode !== null ? displayTruss3dNodes[selectedNode] : null;
   const selectedTruss3dElementData = selectedElement !== null ? displayTruss3dElements[selectedElement] : null;
@@ -5199,6 +5281,11 @@ export function Workbench() {
                         <strong>{historyJob.job_id.slice(0, 8)}</strong>
                         <span>{historyJob.status}</span>
                         <small>{historyJob.project_id}</small>
+                        <small>
+                          <span className={`heartbeat-badge heartbeat-badge--${heartbeatTone(historyJob as JobEnvelope["job"])}`}>
+                            {heartbeatStatus(historyJob as JobEnvelope["job"], t)}
+                          </span>
+                        </small>
                         <small>{humanizeSolverFailure(historyJob.message, t) ?? historyJob.message ?? historyJob.worker_id ?? "--"}</small>
                       </button>
                     )}
@@ -6015,6 +6102,8 @@ export function Workbench() {
         reactionValue={isAxial ? scientific(axialResult?.reaction_force) : "--"}
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}
+        heartbeatStatusValue={heartbeatStatusValue}
+        heartbeatTone={heartbeatToneValue}
         failureReasonValue={translatedFailureReason ?? job?.message ?? "--"}
         canCancelJob={jobIsActive}
         onCancelJob={cancelCurrentJob}

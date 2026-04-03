@@ -1372,6 +1372,35 @@ th {
   letter-spacing: 0.01em;
 }
 
+.heartbeat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.heartbeat-badge--healthy {
+  background: rgba(74, 156, 97, 0.12);
+  border-color: rgba(74, 156, 97, 0.28);
+  color: #2f7a4a;
+}
+
+.heartbeat-badge--quiet {
+  background: rgba(22, 119, 163, 0.12);
+  border-color: rgba(22, 119, 163, 0.24);
+  color: #1b6a90;
+}
+
+.heartbeat-badge--stale {
+  background: rgba(217, 72, 59, 0.12);
+  border-color: rgba(217, 72, 59, 0.24);
+  color: #a5362d;
+}
+
 @media (max-width: 1380px) {
   .workbench-shell {
     grid-template-columns: 88px 320px minmax(0, 1fr);

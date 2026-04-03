@@ -146,6 +146,7 @@ type InspectorLabels = {
   createdAt: string;
   updatedAt: string;
   lastHeartbeat: string;
+  heartbeatStatus: string;
   hasResult: string;
   failureReason: string;
   cancelJob: string;
@@ -200,6 +201,8 @@ type WorkbenchInspectorProps = {
   reactionValue: string;
   createdAtValue: string;
   updatedAtValue: string;
+  heartbeatStatusValue: string;
+  heartbeatTone: "healthy" | "quiet" | "stale";
   failureReasonValue: string;
   canCancelJob: boolean;
   onCancelJob: () => void;
@@ -256,6 +259,8 @@ function WorkbenchInspectorInner({
   reactionValue,
   createdAtValue,
   updatedAtValue,
+  heartbeatStatusValue,
+  heartbeatTone,
   failureReasonValue,
   canCancelJob,
   onCancelJob,
@@ -465,6 +470,7 @@ function WorkbenchInspectorInner({
             <div><span>{t.createdAt}</span><strong>{createdAtValue}</strong></div>
             <div><span>{t.updatedAt}</span><strong>{updatedAtValue}</strong></div>
             <div><span>{t.lastHeartbeat}</span><strong>{updatedAtValue}</strong></div>
+            <div><span>{t.heartbeatStatus}</span><strong><span className={`heartbeat-badge heartbeat-badge--${heartbeatTone}`}>{heartbeatStatusValue}</span></strong></div>
             <div><span>{t.hasResult}</span><strong>{job?.has_result ? t.yes : t.no}</strong></div>
             <div><span>{t.failureReason}</span><strong>{failureReasonValue}</strong></div>
           </div>
