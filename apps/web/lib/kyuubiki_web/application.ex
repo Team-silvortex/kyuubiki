@@ -5,7 +5,12 @@ defmodule KyuubikiWeb.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [KyuubikiWeb.Playground.AgentPool] ++ storage_children() ++ maybe_http_server()
+    children =
+      [
+        KyuubikiWeb.Playground.AgentPool,
+        {Task.Supervisor, name: KyuubikiWeb.TaskSupervisor},
+        KyuubikiWeb.Jobs.Watchdog
+      ] ++ storage_children() ++ maybe_http_server()
 
     Supervisor.start_link(children, strategy: :one_for_one, name: KyuubikiWeb.Supervisor)
   end

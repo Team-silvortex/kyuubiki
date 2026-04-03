@@ -1,9 +1,15 @@
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::thread;
+use std::time::Duration;
 
 use kyuubiki_protocol::{
-    Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    CancelJobRequest, Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest,
+    RpcResponse, SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
+    SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
@@ -151,22 +157,21 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
             }
         };
 
-        let response = handle_request_bytes(&payload);
-        match response {
-            AgentReply::Stream(progress_frames, final_response) => {
-                for progress_frame in progress_frames {
-                    let encoded = serde_json::to_vec(&progress_frame)
-                        .map_err(|error| format!("failed to serialize progress frame: {error}"))?;
-                    write_frame(&mut stream, &encoded)
-                        .map_err(|error| format!("failed to write progress frame: {error}"))?;
-                }
+        let writer = Arc::new(Mutex::new(
+            stream
+                .try_clone()
+                .map_err(|error| format!("failed to clone stream: {error}"))?,
+        ));
 
-                let encoded = serde_json::to_vec(&final_response)
-                    .map_err(|error| format!("failed to serialize response: {error}"))?;
-                write_frame(&mut stream, &encoded)
-                    .map_err(|error| format!("failed to write response frame: {error}"))?;
-            }
-        }
+        let response = match serde_json::from_slice::<RpcRequest>(&payload) {
+            Ok(request) => handle_request(request, Some(writer.clone())),
+            Err(error) => AgentReply::Stream(
+                Vec::new(),
+                RpcResponse::error("unknown", "invalid_json", error.to_string()),
+            ),
+        };
+
+        write_agent_reply(&writer, response)?;
     }
 
     Ok(())
@@ -183,6 +188,10 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
         }
     };
 
+    handle_request(request, None)
+}
+
+fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) -> AgentReply {
     if request.rpc_version != 1 {
         return AgentReply::Stream(
             Vec::new(),
@@ -193,6 +202,8 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
             ),
         );
     }
+
+    let maybe_job_id = extract_job_id(&request.params);
 
     match request.method {
         RpcMethod::SolveBar1d => {
@@ -206,10 +217,32 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                 }
             };
 
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
             match solve_bar_1d(&params) {
                 Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
                     let progress_frames =
                         build_progress_frames("axial bar", &request.id, params.elements + 1);
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
                     AgentReply::Stream(
                         progress_frames,
                         RpcResponse::success(
@@ -218,10 +251,16 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                         ),
                     )
                 }
-                Err(error) => AgentReply::Stream(
-                    Vec::new(),
-                    RpcResponse::error(request.id, "solve_failed", error),
-                ),
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
             }
         }
         RpcMethod::SolveTruss2d => {
@@ -236,10 +275,32 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                 }
             };
 
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
             match solve_truss_2d(&params) {
                 Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
                     let progress_frames =
                         build_progress_frames("2d truss", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
                     AgentReply::Stream(
                         progress_frames,
                         RpcResponse::success(
@@ -248,10 +309,16 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                         ),
                     )
                 }
-                Err(error) => AgentReply::Stream(
-                    Vec::new(),
-                    RpcResponse::error(request.id, "solve_failed", error),
-                ),
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
             }
         }
         RpcMethod::SolveTruss3d => {
@@ -266,10 +333,32 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                 }
             };
 
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
             match solve_truss_3d(&params) {
                 Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
                     let progress_frames =
                         build_progress_frames("3d truss", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
                     AgentReply::Stream(
                         progress_frames,
                         RpcResponse::success(
@@ -278,10 +367,16 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                         ),
                     )
                 }
-                Err(error) => AgentReply::Stream(
-                    Vec::new(),
-                    RpcResponse::error(request.id, "solve_failed", error),
-                ),
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
             }
         }
         RpcMethod::SolvePlaneTriangle2d => {
@@ -297,10 +392,32 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                     }
                 };
 
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
             match solve_plane_triangle_2d(&params) {
                 Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
                     let progress_frames =
                         build_progress_frames("2d plane triangle", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
                     AgentReply::Stream(
                         progress_frames,
                         RpcResponse::success(
@@ -309,11 +426,34 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
                         ),
                     )
                 }
-                Err(error) => AgentReply::Stream(
-                    Vec::new(),
-                    RpcResponse::error(request.id, "solve_failed", error),
-                ),
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
             }
+        }
+        RpcMethod::CancelJob => {
+            let params = match serde_json::from_value::<CancelJobRequest>(request.params.clone()) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            register_cancel(params.job_id);
+            AgentReply::Stream(
+                Vec::new(),
+                RpcResponse::success(request.id, serde_json::json!({ "cancelled": true })),
+            )
         }
     }
 }
@@ -400,6 +540,116 @@ enum FrameReadError {
 
 enum AgentReply {
     Stream(Vec<RpcProgress>, RpcResponse),
+}
+
+fn cancellation_registry() -> &'static Mutex<HashSet<String>> {
+    static REGISTRY: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn register_cancel(job_id: String) {
+    if let Ok(mut registry) = cancellation_registry().lock() {
+        registry.insert(job_id);
+    }
+}
+
+fn take_cancelled(job_id: &str) -> bool {
+    if let Ok(mut registry) = cancellation_registry().lock() {
+        return registry.remove(job_id);
+    }
+
+    false
+}
+
+fn extract_job_id(params: &serde_json::Value) -> Option<String> {
+    params
+        .as_object()
+        .and_then(|value| value.get("job_id"))
+        .and_then(|value| value.as_str())
+        .map(|value| value.to_string())
+}
+
+fn write_agent_reply(
+    writer: &Arc<Mutex<TcpStream>>,
+    reply: AgentReply,
+) -> Result<(), String> {
+    match reply {
+        AgentReply::Stream(progress_frames, final_response) => {
+            for progress_frame in progress_frames {
+                write_json_frame(writer, &progress_frame)?;
+            }
+
+            write_json_frame(writer, &final_response)?;
+            Ok(())
+        }
+    }
+}
+
+fn write_json_frame<T: serde::Serialize>(
+    writer: &Arc<Mutex<TcpStream>>,
+    payload: &T,
+) -> Result<(), String> {
+    let encoded = serde_json::to_vec(payload)
+        .map_err(|error| format!("failed to serialize response frame: {error}"))?;
+
+    let mut guard = writer
+        .lock()
+        .map_err(|_| "failed to lock tcp writer".to_string())?;
+
+    write_frame(&mut guard, &encoded)
+        .map_err(|error| format!("failed to write response frame: {error}"))
+}
+
+struct HeartbeatHandle {
+    running: Arc<AtomicBool>,
+    join_handle: Option<thread::JoinHandle<()>>,
+}
+
+impl HeartbeatHandle {
+    fn spawn(writer: Arc<Mutex<TcpStream>>, request_id: String, job_id: String) -> Self {
+        let running = Arc::new(AtomicBool::new(true));
+        let running_clone = running.clone();
+
+        let join_handle = thread::spawn(move || {
+            while running_clone.load(Ordering::SeqCst) {
+                thread::sleep(Duration::from_millis(1_000));
+
+                if !running_clone.load(Ordering::SeqCst) {
+                    break;
+                }
+
+                let heartbeat = RpcProgress::heartbeat(
+                    request_id.clone(),
+                    ProgressEvent {
+                        job_id: job_id.clone(),
+                        stage: JobStatus::Solving,
+                        progress: 0.7,
+                        residual: None,
+                        iteration: None,
+                        peak_memory: None,
+                        message: Some("agent heartbeat: solver still active".to_string()),
+                    },
+                );
+
+                if write_json_frame(&writer, &heartbeat).is_err() {
+                    break;
+                }
+            }
+        });
+
+        Self {
+            running,
+            join_handle: Some(join_handle),
+        }
+    }
+
+    fn stop(mut self) {
+        self.running.store(false, Ordering::SeqCst);
+
+        if let Some(join_handle) = self.join_handle.take() {
+            let _ = join_handle.join();
+        }
+    }
 }
 
 fn format_event(event: &ProgressEvent) -> String {

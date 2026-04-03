@@ -27,6 +27,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_plane_triangle_2d", params, on_progress)
   end
 
+  @spec cancel_job(String.t()) :: {:ok, map()} | {:error, term()}
+  def cancel_job(job_id) when is_binary(job_id) do
+    request("cancel_job", %{job_id: job_id})
+  end
+
   @spec request(String.t(), map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def request(method, params, on_progress \\ fn _progress -> :ok end)
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) do
@@ -86,11 +91,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   end
 
   defp connect(endpoint) do
-    :gen_tcp.connect(String.to_charlist(endpoint.host), endpoint.port, [
-      :binary,
-      packet: 4,
-      active: false
-    ])
+    :gen_tcp.connect(
+      String.to_charlist(endpoint.host),
+      endpoint.port,
+      [
+        :binary,
+        packet: 4,
+        active: false
+      ],
+      connect_timeout_ms()
+    )
   end
 
   defp send_request(socket, request) do
@@ -99,11 +109,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   end
 
   defp recv_response(socket, request_id, on_progress) do
-    case :gen_tcp.recv(socket, 0, 5_000) do
+    case :gen_tcp.recv(socket, 0, recv_timeout_ms()) do
       {:ok, payload} ->
         case Jason.decode(payload) do
           {:ok,
-           %{"event" => "progress", "rpc_version" => @rpc_version, "id" => ^request_id} = frame} ->
+           %{"event" => event, "rpc_version" => @rpc_version, "id" => ^request_id} = frame}
+          when event in ["progress", "heartbeat"] ->
             _ = on_progress.(frame["progress"])
             recv_response(socket, request_id, on_progress)
 
@@ -151,5 +162,15 @@ defmodule KyuubikiWeb.Playground.AgentClient do
 
   defp request_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
+  end
+
+  defp connect_timeout_ms do
+    Application.get_env(:kyuubiki_web, __MODULE__, [])
+    |> Keyword.get(:connect_timeout_ms, 1_500)
+  end
+
+  defp recv_timeout_ms do
+    Application.get_env(:kyuubiki_web, __MODULE__, [])
+    |> Keyword.get(:recv_timeout_ms, 15_000)
   end
 end

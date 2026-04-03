@@ -38,3 +38,32 @@ defmodule KyuubikiWeb.TestSupport.FakePlaygroundAgent do
     end)
   end
 end
+
+defmodule KyuubikiWeb.TestSupport.FakeStallingAgent do
+  @moduledoc false
+
+  def start_link(opts \\ []) do
+    parent = self()
+    delay_ms = Keyword.get(opts, :delay_ms, 2_000)
+
+    Task.start_link(fn ->
+      {:ok, listen_socket} =
+        :gen_tcp.listen(0, [
+          :binary,
+          packet: 4,
+          active: false,
+          reuseaddr: true,
+          ip: {127, 0, 0, 1}
+        ])
+
+      {:ok, port} = :inet.port(listen_socket)
+      send(parent, {:fake_agent_ready, port})
+
+      {:ok, socket} = :gen_tcp.accept(listen_socket)
+      {:ok, _request_payload} = :gen_tcp.recv(socket, 0, 1_000)
+      Process.sleep(delay_ms)
+      :gen_tcp.close(socket)
+      :gen_tcp.close(listen_socket)
+    end)
+  end
+end

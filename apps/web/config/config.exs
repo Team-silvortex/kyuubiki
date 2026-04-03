@@ -47,6 +47,15 @@ config :kyuubiki_web,
 
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool, endpoints: agent_endpoints
 
+config :kyuubiki_web, KyuubikiWeb.Playground.AgentClient,
+  connect_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_CONNECT_TIMEOUT_MS", "1500")),
+  recv_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_AGENT_RECV_TIMEOUT_MS", "15000"))
+
+config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
+  scan_interval_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS", "5000")),
+  stale_job_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_STALE_JOB_MS", "30000")),
+  job_timeout_ms: String.to_integer(System.get_env("KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS", "120000"))
+
 config :kyuubiki_web, KyuubikiWeb.PostgresRepo,
   url: database_url,
   pool_size: String.to_integer(System.get_env("POOL_SIZE", "5")),

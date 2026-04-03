@@ -3,13 +3,15 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.Playground.AgentPool
-  alias KyuubikiWeb.TestSupport.FakePlaygroundAgent
+  alias KyuubikiWeb.TestSupport.{FakePlaygroundAgent, FakeStallingAgent}
 
   setup do
     original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
+    original_client_config = Application.get_env(:kyuubiki_web, AgentClient, [])
 
     on_exit(fn ->
       Application.put_env(:kyuubiki_web, AgentPool, original_config)
+      Application.put_env(:kyuubiki_web, AgentClient, original_client_config)
       AgentPool.reload()
     end)
 
@@ -184,6 +186,63 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert_in_delta result["tip_displacement"], 5.142857142857142e-5, 1.0e-12
   end
 
+  test "accepts heartbeat frames while waiting for the final response" do
+    test_process = self()
+
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "heartbeat",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.7,
+            "message" => "agent heartbeat: solver still active"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "tip_displacement" => 1.0,
+            "reaction_force" => -1.0,
+            "max_displacement" => 1.0,
+            "max_stress" => 1.0,
+            "nodes" => [],
+            "elements" => [],
+            "input" => %{
+              "length" => 1.0,
+              "area" => 1.0,
+              "youngs_modulus" => 1.0,
+              "elements" => 1,
+              "tip_force" => 1.0
+            }
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "heartbeat-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    assert {:ok, _result} =
+             AgentClient.solve_bar_1d(
+               %{
+                 length: 1.0,
+                 area: 1.0,
+                 youngs_modulus: 1.0,
+                 elements: 1,
+                 tip_force: 1.0
+               },
+               fn progress -> send(test_process, {:progress, progress}) end
+             )
+
+    assert_receive {:progress, %{"message" => "agent heartbeat: solver still active"}}
+  end
+
   defp await_fake_agent_port do
     receive do
       {:fake_agent_ready, port} -> port
@@ -237,5 +296,30 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
     assert endpoint.id == "online"
     assert result["max_stress"] == 1.0
+  end
+
+  test "times out when the agent stops responding" do
+    {:ok, _pid} = FakeStallingAgent.start_link(delay_ms: 250)
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "stalling", host: "127.0.0.1", port: port}]
+    )
+
+    Application.put_env(:kyuubiki_web, AgentClient,
+      connect_timeout_ms: 100,
+      recv_timeout_ms: 100
+    )
+
+    AgentPool.reload()
+
+    assert {:error, {:all_agents_failed, [%{agent: "rust-agent-rpc@stalling", reason: ":timeout"}]}} =
+             AgentClient.solve_bar_1d(%{
+               length: 1.0,
+               area: 1.0,
+               youngs_modulus: 1.0,
+               elements: 1,
+               tip_force: 1.0
+             })
   end
 end

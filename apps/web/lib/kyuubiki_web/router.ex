@@ -22,10 +22,12 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/health" do
     agent_endpoints = KyuubikiWeb.Playground.AgentPool.endpoints()
+    watchdog = KyuubikiWeb.Jobs.Watchdog.status_snapshot()
 
     respond_json(conn, 200, %{
       "service" => "kyuubiki-orchestrator",
       "status" => "ok",
+      "watchdog" => watchdog,
       "transport" => %{
         "http" => 4000,
         "solver_agent_tcp" => (List.first(agent_endpoints) || %{})[:port] || 5001,
@@ -91,6 +93,14 @@ defmodule KyuubikiWeb.Router do
 
   patch "/api/v1/jobs/:job_id" do
     case Analysis.update_job(job_id, conn.body_params) do
+      {:ok, payload} -> respond_json(conn, 200, payload)
+      {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
+      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+    end
+  end
+
+  post "/api/v1/jobs/:job_id/cancel" do
+    case Analysis.cancel_job(job_id) do
       {:ok, payload} -> respond_json(conn, 200, payload)
       {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
       {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})

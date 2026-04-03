@@ -38,6 +38,7 @@ import {
   createProject,
   createTruss2dJob,
   createTruss3dJob,
+  cancelJob,
   deleteJobRecord,
   deleteModel,
   deleteModelVersion,
@@ -297,6 +298,8 @@ const copy = {
     metrics: "Solver Metrics",
     messages: "Messages",
     failureReason: "Failure reason",
+    lastHeartbeat: "Last heartbeat",
+    cancelJob: "Cancel job",
     historyPanel: "Operation History",
     undo: "Undo",
     redo: "Redo",
@@ -323,6 +326,13 @@ const copy = {
     controls: "Controls",
     settings: "Settings",
     backend: "Backend",
+    watchdog: "Watchdog",
+    activeJobs: "Active jobs",
+    stalledJobs: "Stalled jobs",
+    timedOutJobs: "Timed out jobs",
+    scanEvery: "Scan every",
+    staleAfter: "Stall limit",
+    timeoutAfter: "Timeout limit",
     dataAdmin: "Data Admin",
     orchestrator: "Elixir orchestrator",
     solverAgent: "Rust solver agent",
@@ -478,6 +488,7 @@ const copy = {
     versionDeleted: "Version deleted.",
     resultJsonDownloaded: "Analysis result JSON downloaded.",
     resultCsvDownloaded: "Analysis result CSV downloaded.",
+    jobCancelled: "Job cancelled.",
     noResultToExport: "Run a study first before exporting analysis data.",
     modelTools: "Editing Tools",
     dragHint: "Drag truss nodes directly in the viewport to reshape geometry.",
@@ -531,6 +542,14 @@ const copy = {
       "The truss likely has a weak or disconnected region. Check supports, member links, and isolated nodes.",
     translatedSingular:
       "The stiffness matrix is singular. The model is still acting like a mechanism, so it needs more restraints or diagonal bracing.",
+    translatedWatchdogStalled:
+      "The job stopped reporting progress for too long. The watchdog marked it as stalled.",
+    translatedWatchdogTimedOut:
+      "The job ran too long and was stopped by the watchdog timeout.",
+    translatedExecutionTimedOut:
+      "The solver took too long to respond. The run was timed out and stopped safely.",
+    translatedAgentTimeout:
+      "The solver agent did not respond in time. Check the agent process or try the run again.",
     mechanismRisk: "This topology still looks mechanism-prone. Add more triangulation or extra supports before solving.",
     addNode: "Add Node",
     addBranchNode: "Branch Node",
@@ -618,6 +637,8 @@ const copy = {
     metrics: "求解指标",
     messages: "消息",
     failureReason: "失败原因",
+    lastHeartbeat: "最近心跳",
+    cancelJob: "取消任务",
     historyPanel: "操作历史",
     undo: "撤销",
     redo: "重做",
@@ -644,6 +665,13 @@ const copy = {
     controls: "控制",
     settings: "设置",
     backend: "后端",
+    watchdog: "看门狗",
+    activeJobs: "活跃任务",
+    stalledJobs: "卡住任务",
+    timedOutJobs: "超时任务",
+    scanEvery: "扫描周期",
+    staleAfter: "卡住阈值",
+    timeoutAfter: "超时阈值",
     dataAdmin: "数据管理",
     orchestrator: "Elixir 编排器",
     solverAgent: "Rust 求解代理",
@@ -799,6 +827,7 @@ const copy = {
     versionDeleted: "版本已删除。",
     resultJsonDownloaded: "分析结果 JSON 已下载。",
     resultCsvDownloaded: "分析结果 CSV 已下载。",
+    jobCancelled: "任务已取消。",
     noResultToExport: "请先运行一次分析再导出结果数据。",
     modelTools: "编辑工具",
     dragHint: "直接在视图区拖拽桁架节点来修改几何。",
@@ -849,6 +878,10 @@ const copy = {
     translatedSmallDeformation: "这个结构看起来过软，已经超出小变形求解范围。请补约束或增强薄弱跨段。",
     translatedConnectivity: "桁架里可能有连接偏弱或断开的区域。请检查约束、杆件连接和孤立节点。",
     translatedSingular: "刚度矩阵是奇异的。说明模型仍然像机构一样可动，需要更多约束或对角支撑。",
+    translatedWatchdogStalled: "任务长时间没有新的进度更新，已经被看门狗判定为卡住。",
+    translatedWatchdogTimedOut: "任务运行时间过长，已经被看门狗超时终止。",
+    translatedExecutionTimedOut: "求解器响应太久，任务已被安全超时终止。",
+    translatedAgentTimeout: "求解代理在规定时间内没有响应。请检查 agent 进程，或稍后重试。",
     mechanismRisk: "这个拓扑仍然很像机构。建议先增加三角化斜撑或额外支座再求解。",
     addNode: "新增节点",
     addBranchNode: "分支节点",
@@ -1168,6 +1201,18 @@ function fixed(value: number | null | undefined, digits = 2): string {
 function humanizeSolverFailure(message: string | null | undefined, languageCopy: (typeof copy)[Language]) {
   if (!message) return null;
 
+  if (message.includes("watchdog marked job stalled")) {
+    return languageCopy.translatedWatchdogStalled;
+  }
+
+  if (message.includes("watchdog timed out job")) {
+    return languageCopy.translatedWatchdogTimedOut;
+  }
+
+  if (message.includes("job execution timed out")) {
+    return languageCopy.translatedExecutionTimedOut;
+  }
+
   if (message.includes("small-deformation limit")) {
     return `${languageCopy.translatedSmallDeformation} ${languageCopy.translatedConnectivity}`;
   }
@@ -1178,6 +1223,10 @@ function humanizeSolverFailure(message: string | null | undefined, languageCopy:
 
   if (message.includes("supports or connectivity")) {
     return languageCopy.translatedConnectivity;
+  }
+
+  if (message.includes(":timeout") || message.includes("all_agents_failed")) {
+    return languageCopy.translatedAgentTimeout;
   }
 
   return message;
@@ -1499,6 +1548,14 @@ function pushNodeIssue(nodeIssues: Record<number, string[]>, nodeIndex: number, 
   if (!issues.includes(issue)) {
     nodeIssues[nodeIndex] = [...issues, issue];
   }
+}
+
+function formatMilliseconds(value: number | null | undefined) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "--";
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}s`;
+  }
+  return `${Math.round(value)} ms`;
 }
 
 function findNearestConnectableNode(model: Truss2dJobInput, nodeIndex: number): number | null {
@@ -2119,7 +2176,7 @@ export function Workbench() {
 
       setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, t));
 
-      if (payload.job.status === "completed" || payload.job.status === "failed") {
+      if (payload.job.status === "completed" || payload.job.status === "failed" || payload.job.status === "cancelled") {
         await refreshJobHistory();
         return;
       }
@@ -2173,6 +2230,21 @@ export function Workbench() {
         }
 
         setMessage(payload.job.status === "failed" ? formatJobMessage(payload.job, t.historyLoaded, t) : t.historyLoaded);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : t.initialFailed);
+      }
+    });
+  };
+
+  const cancelCurrentJob = () => {
+    if (!job?.job_id || !jobIsActive) return;
+
+    startTransition(async () => {
+      try {
+        const payload = await cancelJob(job.job_id);
+        setJob(payload.job);
+        setMessage(t.jobCancelled);
+        await refreshJobHistory();
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
@@ -2868,6 +2940,12 @@ export function Workbench() {
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d";
+  const jobIsActive =
+    job?.status === "queued" ||
+    job?.status === "preprocessing" ||
+    job?.status === "partitioning" ||
+    job?.status === "solving" ||
+    job?.status === "postprocessing";
   const axialResult = isAxial && isAxialResult(result) ? result : null;
   const trussResult = isTruss && isTrussResult(result) ? result : null;
   const truss3dResult = isTruss3d && isTruss3dResult(result) ? result : null;
@@ -5050,6 +5128,38 @@ export function Workbench() {
             </section>
             <section className="sidebar-card">
               <div className="card-head">
+                <h2>{t.watchdog}</h2>
+                <span>{health?.watchdog ? t.online : t.offline}</span>
+              </div>
+              <div className="sidebar-list">
+                <div>
+                  <span>{t.activeJobs}</span>
+                  <strong>{health?.watchdog?.active_jobs ?? 0}</strong>
+                </div>
+                <div>
+                  <span>{t.stalledJobs}</span>
+                  <strong>{health?.watchdog?.stalled_jobs ?? 0}</strong>
+                </div>
+                <div>
+                  <span>{t.timedOutJobs}</span>
+                  <strong>{health?.watchdog?.timed_out_jobs ?? 0}</strong>
+                </div>
+                <div>
+                  <span>{t.scanEvery}</span>
+                  <strong>{formatMilliseconds(health?.watchdog?.scan_interval_ms)}</strong>
+                </div>
+                <div>
+                  <span>{t.staleAfter}</span>
+                  <strong>{formatMilliseconds(health?.watchdog?.stale_job_ms)}</strong>
+                </div>
+                <div>
+                  <span>{t.timeoutAfter}</span>
+                  <strong>{formatMilliseconds(health?.watchdog?.job_timeout_ms)}</strong>
+                </div>
+              </div>
+            </section>
+            <section className="sidebar-card">
+              <div className="card-head">
                 <h2>{t.dataAdmin}</h2>
                 <span>
                   {t.databaseRecordCount}: {jobHistory.length + resultRecords.length}
@@ -5076,7 +5186,7 @@ export function Workbench() {
                   <VirtualList
                     className="history-list"
                     items={deferredJobHistory}
-                    itemHeight={94}
+                    itemHeight={112}
                     maxHeight={220}
                     emptyState={<p className="card-copy">{t.historyEmpty}</p>}
                     itemKey={(historyJob) => historyJob.job_id}
@@ -5089,11 +5199,25 @@ export function Workbench() {
                         <strong>{historyJob.job_id.slice(0, 8)}</strong>
                         <span>{historyJob.status}</span>
                         <small>{historyJob.project_id}</small>
+                        <small>{humanizeSolverFailure(historyJob.message, t) ?? historyJob.message ?? historyJob.worker_id ?? "--"}</small>
                       </button>
                     )}
                   />
                   {selectedAdminJob ? (
                     <>
+                      <div className="button-row">
+                        <button className="ghost-button" disabled={selectedAdminJob.status === "completed" || selectedAdminJob.status === "failed" || selectedAdminJob.status === "cancelled"} onClick={selectedAdminJob.job_id === job?.job_id ? cancelCurrentJob : async () => {
+                          try {
+                            await cancelJob(selectedAdminJob.job_id);
+                            setMessage(t.jobCancelled);
+                            await refreshJobHistory();
+                          } catch (error) {
+                            setMessage(error instanceof Error ? error.message : t.initialFailed);
+                          }
+                        }} type="button">
+                          {t.cancelJob}
+                        </button>
+                      </div>
                       <div className="form-grid compact">
                         <label>
                           <span>{t.adminMessage}</span>
@@ -5892,6 +6016,8 @@ export function Workbench() {
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}
         failureReasonValue={translatedFailureReason ?? job?.message ?? "--"}
+        canCancelJob={jobIsActive}
+        onCancelJob={cancelCurrentJob}
         onDownloadJson={downloadResultJson}
         onDownloadCsv={downloadResultCsv}
       />

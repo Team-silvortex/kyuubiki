@@ -140,6 +140,8 @@ pub enum RpcMethod {
     SolveTruss3d,
     #[serde(rename = "solve_plane_triangle_2d")]
     SolvePlaneTriangle2d,
+    #[serde(rename = "cancel_job")]
+    CancelJob,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -173,12 +175,26 @@ pub struct RpcResponse {
     pub error: Option<RpcError>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CancelJobRequest {
+    pub job_id: String,
+}
+
 impl RpcProgress {
     pub fn new(id: impl Into<String>, progress: ProgressEvent) -> Self {
         Self {
             rpc_version: 1,
             id: id.into(),
             event: "progress".to_string(),
+            progress,
+        }
+    }
+
+    pub fn heartbeat(id: impl Into<String>, progress: ProgressEvent) -> Self {
+        Self {
+            rpc_version: 1,
+            id: id.into(),
+            event: "heartbeat".to_string(),
             progress,
         }
     }

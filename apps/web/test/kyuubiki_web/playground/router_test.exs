@@ -149,6 +149,38 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert delete_project_conn.status == 200
   end
 
+  test "cancels an active job through the API" do
+    {:ok, job} =
+      Store.create(%{
+        job_id: "job-cancel",
+        project_id: "project-cancel",
+        simulation_case_id: "case-cancel"
+      })
+
+    assert job.status == :queued
+
+    Store.apply_progress(%{
+      job_id: "job-cancel",
+      stage: "solving",
+      progress: 0.6,
+      message: "solving structural system"
+    })
+
+    cancel_conn =
+      :post
+      |> conn("/api/v1/jobs/job-cancel/cancel")
+      |> Router.call(@opts)
+
+    assert cancel_conn.status == 200
+
+    payload = Jason.decode!(cancel_conn.resp_body)
+    assert payload["job"]["status"] == "cancelled"
+    assert payload["job"]["message"] == "job cancelled by operator"
+
+    assert {:ok, cancelled_job} = Store.get("job-cancel")
+    assert cancelled_job.status == :cancelled
+  end
+
   test "runs an axial bar job through the orchestration API" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([

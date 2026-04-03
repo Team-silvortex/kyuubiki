@@ -145,8 +145,10 @@ type InspectorLabels = {
   reaction: string;
   createdAt: string;
   updatedAt: string;
+  lastHeartbeat: string;
   hasResult: string;
   failureReason: string;
+  cancelJob: string;
   yes: string;
   no: string;
 };
@@ -199,6 +201,8 @@ type WorkbenchInspectorProps = {
   createdAtValue: string;
   updatedAtValue: string;
   failureReasonValue: string;
+  canCancelJob: boolean;
+  onCancelJob: () => void;
   onDownloadJson: () => void;
   onDownloadCsv: () => void;
 };
@@ -253,6 +257,8 @@ function WorkbenchInspectorInner({
   createdAtValue,
   updatedAtValue,
   failureReasonValue,
+  canCancelJob,
+  onCancelJob,
   onDownloadJson,
   onDownloadCsv,
 }: WorkbenchInspectorProps) {
@@ -448,6 +454,7 @@ function WorkbenchInspectorInner({
         <section className="info-card">
           <h3>{t.report}</h3>
           <div className="button-row">
+            <button className="ghost-button" disabled={!canCancelJob} onClick={onCancelJob} type="button">{t.cancelJob}</button>
             <button className="ghost-button" onClick={onDownloadJson} type="button">{t.exportData} {t.exportJson}</button>
             <button className="ghost-button" onClick={onDownloadCsv} type="button">{t.exportData} {t.exportCsv}</button>
           </div>
@@ -457,6 +464,7 @@ function WorkbenchInspectorInner({
             <div><span>{t.reaction}</span><strong>{reactionValue}</strong></div>
             <div><span>{t.createdAt}</span><strong>{createdAtValue}</strong></div>
             <div><span>{t.updatedAt}</span><strong>{updatedAtValue}</strong></div>
+            <div><span>{t.lastHeartbeat}</span><strong>{updatedAtValue}</strong></div>
             <div><span>{t.hasResult}</span><strong>{job?.has_result ? t.yes : t.no}</strong></div>
             <div><span>{t.failureReason}</span><strong>{failureReasonValue}</strong></div>
           </div>

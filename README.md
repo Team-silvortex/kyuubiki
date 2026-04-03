@@ -140,6 +140,7 @@ The Rust side currently provides:
 - progress events
 - multi-agent execution
 - benchmark profiles
+- dedicated `10k` benchmark profile for single-machine scale targets
 - mixed dense/sparse and specialized solver paths
 - result chunk helpers used by the engine/orchestrator split
 
@@ -305,6 +306,7 @@ cd /Users/Shared/chroot/dev/kyuubiki/workers/rust
 cargo run -p kyuubiki-benchmark -- --profile medium --repeat 3
 cargo run -p kyuubiki-benchmark -- --profile large --repeat 1
 cargo run -p kyuubiki-benchmark -- --profile v2 --repeat 1
+cargo run -p kyuubiki-benchmark -- --profile 10k --repeat 1
 ```
 
 Current benchmark tiers are aimed at:
@@ -312,6 +314,7 @@ Current benchmark tiers are aimed at:
 - `medium`: small-to-mid validation runs
 - `large`: low-thousands node class
 - `v2`: path toward the next scale target
+- `10k`: explicit single-machine `10k`-node route, starting with `2D truss` and `3D truss`
 
 ## Local Development
 

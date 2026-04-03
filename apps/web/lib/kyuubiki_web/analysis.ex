@@ -89,6 +89,29 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  def cancel_job(job_id) when is_binary(job_id) do
+    case Store.get(job_id) do
+      {:ok, job} ->
+        if job.status in [:completed, :failed, :cancelled] do
+          {:ok, serialize_payload(job)}
+        else
+          _ =
+            Store.apply_progress(%{
+              job_id: job_id,
+              stage: "cancelled",
+              progress: job.progress,
+              message: "job cancelled by operator"
+            })
+
+          _ = AgentClient.cancel_job(job_id)
+          fetch_job(job_id)
+        end
+
+      :error ->
+        {:error, {:job_not_found, job_id}}
+    end
+  end
+
   def delete_job(job_id) when is_binary(job_id) do
     _ = AnalysisResultStore.delete(job_id)
 
@@ -168,34 +191,93 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp start_background_job(job_id, method, params) do
-    Task.start(fn ->
-      case AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1)) do
-        {:ok, result, endpoint} ->
-          {:ok, _job} = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
-          :ok = AnalysisResultStore.put(job_id, result)
-          _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
-
-        {:error, reason} ->
-          _ =
-            Store.apply_progress(%{
-              job_id: job_id,
-              stage: "failed",
-              progress: 1.0,
-              message: inspect(reason)
-            })
-      end
+    Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
+      execute_background_job(job_id, method, params)
     end)
   end
 
   defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
-    attrs =
-      progress
-      |> Map.take(["stage", "progress", "residual", "iteration", "peak_memory", "message"])
-      |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
-      |> Map.put(:job_id, job_id)
+    case Store.get(job_id) do
+      {:ok, %{status: :cancelled}} ->
+        :ok
 
-    _ = Store.apply_progress(attrs)
+      {:ok, _job} ->
+        attrs =
+          progress
+          |> Map.take(["stage", "progress", "residual", "iteration", "peak_memory", "message"])
+          |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
+          |> Map.put(:job_id, job_id)
+
+        _ = Store.apply_progress(attrs)
+        :ok
+
+      :error ->
+        :ok
+    end
+  end
+
+  defp execute_background_job(job_id, method, params) do
+    timeout_ms = watchdog_job_timeout_ms()
+
+    task =
+      Task.async(fn ->
+        AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1))
+      end)
+
+    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
+      {:ok, {:ok, result, endpoint}} ->
+        unless cancelled?(job_id) do
+          {:ok, _job} = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
+          :ok = AnalysisResultStore.put(job_id, result)
+          _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
+        end
+
+      {:ok, {:error, {:rpc_error, "cancelled", message}}} ->
+        cancel_job_with_message(job_id, message)
+
+      {:ok, {:error, reason}} ->
+        unless cancelled?(job_id) do
+          fail_job(job_id, inspect(reason))
+        end
+
+      nil ->
+        unless cancelled?(job_id) do
+          fail_job(job_id, "job execution timed out after #{timeout_ms} ms")
+        end
+    end
+  end
+
+  defp fail_job(job_id, message) when is_binary(job_id) and is_binary(message) do
+    _ =
+      Store.apply_progress(%{
+        job_id: job_id,
+        stage: "failed",
+        progress: 1.0,
+        message: message
+      })
+
     :ok
+  end
+
+  defp cancel_job_with_message(job_id, message) when is_binary(job_id) and is_binary(message) do
+    _ =
+      Store.apply_progress(%{
+        job_id: job_id,
+        stage: "cancelled",
+        progress: 1.0,
+        message: message
+      })
+
+    :ok
+  end
+
+  defp cancelled?(job_id) when is_binary(job_id) do
+    match?({:ok, %{status: :cancelled}}, Store.get(job_id))
+  end
+
+  defp watchdog_job_timeout_ms do
+    Application.get_env(:kyuubiki_web, KyuubikiWeb.Jobs.Watchdog, [])
+    |> Keyword.get(:job_timeout_ms, 120_000)
   end
 
   defp create_job(attrs) do

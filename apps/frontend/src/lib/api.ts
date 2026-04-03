@@ -277,6 +277,14 @@ export type ModelVersionListPayload = {
 export type HealthPayload = {
   service: string;
   status: string;
+  watchdog?: {
+    scan_interval_ms: number;
+    stale_job_ms: number;
+    job_timeout_ms: number;
+    active_jobs: number;
+    stalled_jobs: number;
+    timed_out_jobs: number;
+  };
   transport?: {
     http: number;
     solver_agent_tcp: number;
@@ -463,6 +471,12 @@ export function updateJobRecord(
 export function deleteJobRecord(jobId: string): Promise<{ job: JobState; deleted: boolean }> {
   return requestJson<{ job: JobState; deleted: boolean }>(`/api/v1/jobs/${jobId}`, {
     method: "DELETE",
+  });
+}
+
+export function cancelJob(jobId: string): Promise<JobEnvelope> {
+  return requestJson<JobEnvelope>(`/api/v1/jobs/${jobId}/cancel`, {
+    method: "POST",
   });
 }
 

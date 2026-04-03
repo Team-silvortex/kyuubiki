@@ -1038,7 +1038,25 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
         return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
     }
     let compressed = matrix.compress();
-    solve_spd_compressed(&compressed, rhs, matrix)
+    match solve_spd_compressed(&compressed, rhs, matrix) {
+        Ok(solution) => Ok(solution),
+        Err(error) => {
+            let diagonal_scale = average_diagonal_magnitude(matrix).max(1.0);
+
+            for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
+                let regularized = regularize_sparse_diagonal(matrix, diagonal_scale * factor);
+                let compressed_regularized = regularized.compress();
+
+                if let Ok(solution) =
+                    solve_spd_compressed(&compressed_regularized, rhs, &regularized)
+                {
+                    return Ok(solution);
+                }
+            }
+
+            Err(error)
+        }
+    }
 }
 
 fn solve_spd_compressed(
@@ -1147,6 +1165,28 @@ fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
         }
     }
     dense
+}
+
+fn average_diagonal_magnitude(matrix: &SparseMatrix) -> f64 {
+    let size = matrix.size().max(1);
+    let diagonal_sum = matrix
+        .rows
+        .iter()
+        .enumerate()
+        .map(|(index, row)| row.get(&index).copied().unwrap_or(0.0).abs())
+        .sum::<f64>();
+
+    diagonal_sum / size as f64
+}
+
+fn regularize_sparse_diagonal(matrix: &SparseMatrix, epsilon: f64) -> SparseMatrix {
+    let mut regularized = matrix.clone();
+
+    for row in 0..regularized.size() {
+        regularized.add_at(row, row, epsilon);
+    }
+
+    regularized
 }
 
 fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f64>, String> {
