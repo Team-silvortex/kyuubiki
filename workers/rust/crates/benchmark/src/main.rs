@@ -154,6 +154,7 @@ struct BenchmarkResult {
     dof_count: usize,
     node_count: usize,
     element_count: usize,
+    peak_rss_kib: u64,
     max_displacement: f64,
     max_stress: f64,
 }
@@ -250,6 +251,13 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                     70, 70, 140.0, 140.0, 16.0,
                 )),
             },
+            BenchmarkCase {
+                id: "plane-panel-10k",
+                family: "plane_triangle_2d",
+                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    99, 99, 99.0, 99.0,
+                )),
+            },
         ],
     }
 }
@@ -269,6 +277,7 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
     let (mut node_count, mut element_count, mut dof_count) = workload_shape(&case.workload);
     let mut max_displacement = 0.0;
     let mut max_stress = 0.0;
+    let mut peak_rss_kib = current_peak_rss_kib();
     let mut error = None;
 
     for _ in 0..repeat {
@@ -326,6 +335,7 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
         };
 
         durations.push(started.elapsed().as_secs_f64() * 1000.0);
+        peak_rss_kib = peak_rss_kib.max(current_peak_rss_kib());
 
         if let Err(message) = outcome {
             error = Some(message);
@@ -354,6 +364,7 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
         dof_count,
         node_count,
         element_count,
+        peak_rss_kib,
         max_displacement,
         max_stress,
     }
@@ -386,13 +397,13 @@ fn print_table(results: &[BenchmarkResult], repeat: usize, profile: BenchmarkPro
     println!("repeat count: {repeat}");
     println!();
     println!(
-        "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10}",
-        "case", "family", "status", "nodes", "elems", "dofs", "min ms", "mean ms", "max ms"
+        "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10} {:>10}",
+        "case", "family", "status", "nodes", "elems", "dofs", "min ms", "mean ms", "max ms", "peak rss"
     );
 
     for result in results {
         println!(
-            "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10.4} {:>10.4} {:>10.4}",
+            "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10.4} {:>10.4} {:>10.4} {:>8} MiB",
             result.id,
             result.family,
             if result.ok { "ok" } else { "fail" },
@@ -401,12 +412,40 @@ fn print_table(results: &[BenchmarkResult], repeat: usize, profile: BenchmarkPro
             result.dof_count,
             result.min_ms,
             result.mean_ms,
-            result.max_ms
+            result.max_ms,
+            kib_to_mib(result.peak_rss_kib)
         );
         if let Some(error) = &result.error {
             println!("  error: {error}");
         }
     }
+}
+
+fn current_peak_rss_kib() -> u64 {
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
+        // SAFETY: libc fills the rusage struct on success.
+        let status = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
+        if status == 0 {
+            // SAFETY: getrusage succeeded, so the struct is initialized.
+            let usage = unsafe { usage.assume_init() };
+            #[cfg(target_os = "macos")]
+            {
+                return (usage.ru_maxrss as u64) / 1024;
+            }
+            #[cfg(target_os = "linux")]
+            {
+                return usage.ru_maxrss as u64;
+            }
+        }
+    }
+
+    0
+}
+
+fn kib_to_mib(kib: u64) -> u64 {
+    kib.div_ceil(1024)
 }
 
 fn generate_bar_case(elements: usize) -> SolveBarRequest {

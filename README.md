@@ -399,7 +399,9 @@ Current benchmark tiers are aimed at:
 - `medium`: small-to-mid validation runs
 - `large`: low-thousands node class
 - `v2`: path toward the next scale target
-- `10k`: explicit single-machine `10k`-node route, starting with `2D truss` and `3D truss`
+- `10k`: explicit single-machine `10k`-node route across `1D bar`, `2D truss`, `3D truss`, and `2D plane triangle`
+
+Benchmark table output now includes peak RSS so single-machine scale work can be tracked by both time and memory pressure.
 
 ## Local Development
 
@@ -465,4 +467,4 @@ This currently covers:
 - stronger immersive 3D editing
 - stronger local-first setup through SQLite and installer UX
 
-The next scale target after `v0.2` is clear: make single-machine `10k`-node workflows practical on an `M2 + 16GB` class machine, starting with `2D truss`.
+The next scale target after `v0.2` is clear: make single-machine `10k`-node workflows practical on an `M2 + 16GB` class machine across the main current solver families, then push beyond that baseline with better chunking, sparse solving, and distributed orchestration.
