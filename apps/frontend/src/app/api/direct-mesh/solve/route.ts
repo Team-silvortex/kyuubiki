@@ -1,0 +1,76 @@
+import { NextResponse } from "next/server";
+
+import { solveViaDirectMesh } from "@/lib/direct-mesh/rpc";
+import { putDirectMeshResult } from "@/lib/direct-mesh/results";
+
+export const runtime = "nodejs";
+
+type DirectMeshSolveBody = {
+  endpoints?: string[];
+  selection_mode?: "first_reachable" | "healthiest";
+  study_kind:
+    | "axial_bar_1d"
+    | "truss_2d"
+    | "truss_3d"
+    | "plane_triangle_2d";
+  input: Record<string, unknown>;
+};
+
+function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
+  switch (kind) {
+    case "axial_bar_1d":
+      return "solve_bar_1d" as const;
+    case "truss_2d":
+      return "solve_truss_2d" as const;
+    case "truss_3d":
+      return "solve_truss_3d" as const;
+    case "plane_triangle_2d":
+      return "solve_plane_triangle_2d" as const;
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as DirectMeshSolveBody;
+    const startedAt = new Date().toISOString();
+    const method = methodForStudyKind(body.study_kind);
+    const solved = await solveViaDirectMesh(
+      method,
+      body.input,
+      body.endpoints,
+      body.selection_mode ?? "healthiest",
+    );
+    const jobId = `direct-${Date.now().toString(36)}`;
+
+    putDirectMeshResult(jobId, {
+      studyKind: body.study_kind,
+      result: (solved.result ?? {}) as Record<string, unknown>,
+      endpoint: solved.endpoint,
+      storedAt: new Date().toISOString(),
+    });
+
+    return NextResponse.json({
+      job: {
+        job_id: jobId,
+        status: "completed",
+        worker_id: `direct-mesh@${solved.endpoint}`,
+        progress: 1,
+        message: "completed through direct mesh gui",
+        created_at: startedAt,
+        updated_at: new Date().toISOString(),
+        has_result: true,
+      },
+      result: solved.result,
+      direct_mesh: {
+        endpoint: solved.endpoint,
+        strategy: solved.strategy,
+        progress_frames: solved.progress_frames,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "direct mesh solve failed" },
+      { status: 502 },
+    );
+  }
+}

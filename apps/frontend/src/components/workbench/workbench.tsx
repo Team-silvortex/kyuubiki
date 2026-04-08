@@ -33,6 +33,7 @@ import {
 import { SAMPLE_LIBRARY } from "@/lib/models";
 import {
   createAxialBarJob,
+  createDirectMeshSolve,
   createPlaneTriangle2dJob,
   createModel,
   createModelVersion,
@@ -46,17 +47,22 @@ import {
   deleteProject,
   deleteResultRecord,
   fetchDatabaseExport,
+  fetchDirectMeshAgents,
+  fetchDirectMeshResultChunk,
   fetchModel,
   fetchModelVersion,
   fetchModelVersions,
   fetchHealth,
   fetchJobHistory,
   fetchJobStatus,
+  fetchProtocolAgents,
   fetchResultChunk,
   fetchProjects,
   fetchResults,
   type AxialBarJobInput,
   type AxialBarResult,
+  type DirectMeshSelectionMode,
+  type FrontendRuntimeMode,
   type HealthPayload,
   type JobEnvelope,
   type JobResultRecord,
@@ -66,6 +72,7 @@ import {
   type ModelVersionRecord,
   type PlaneTriangle2dJobInput,
   type PlaneTriangle2dResult,
+  type ProtocolAgentDescriptor,
   type ProjectRecord,
   type ResultRecord,
   resolvePlaneTriangle2dJobInput,
@@ -199,6 +206,12 @@ type ResultWindowState = {
   limit: number;
 };
 
+type DirectMeshExecutionState = {
+  endpoint: string;
+  strategy: DirectMeshSelectionMode;
+  at: string;
+};
+
 const RESULT_WINDOW_THRESHOLD = 400;
 const RESULT_WINDOW_BASE_SIZE = 240;
 
@@ -330,6 +343,24 @@ const copy = {
     controls: "Controls",
     settings: "Settings",
     backend: "Backend",
+    protocols: "Protocols",
+    controlPlaneProtocol: "Control plane",
+    solverRpcProtocol: "Solver RPC",
+    deploymentMode: "Deployment mode",
+    discoveryMode: "Discovery",
+    registeredAgents: "Registered agents",
+    reachableAgents: "Reachable agents",
+    runtimeMode: "Runtime mode",
+    cluster: "Cluster",
+    clusterSize: "Cluster size",
+    clusterHealth: "Cluster health",
+    peers: "Peers",
+    peerState: "Peer state",
+    headless: "Headless",
+    capabilities: "Capabilities",
+    methods: "Methods",
+    protocolAgents: "Protocol agents",
+    noProtocolAgents: "No reachable solver agents were described yet.",
     watchdog: "Watchdog",
     activeJobs: "Active jobs",
     stalledJobs: "Stalled jobs",
@@ -343,6 +374,13 @@ const copy = {
     ui: "Next.js UI",
     theme: "Theme",
     language: "Language",
+    frontendMode: "Frontend mode",
+    directMeshEndpoints: "Direct mesh endpoints",
+    directMeshEndpointsHelp: "Comma or newline separated host:port agents for the LAN mesh GUI path.",
+    directMeshCompleted: "Direct mesh solve completed",
+    directMeshStrategy: "Mesh strategy",
+    directMeshLastRoute: "Last route",
+    directMeshLastAgent: "Last agent",
     shortcutHints: "Shortcut hints",
     shortcutHintsHelp: "Show the 3D keyboard legend in the viewport.",
     immersiveGuard: "Immersive guard",
@@ -400,6 +438,14 @@ const copy = {
     immersiveEmptyJobs: "No jobs yet.",
     themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
     languages: { en: "English", zh: "中文" },
+    frontendModes: {
+      orchestrated_gui: "Orchestrated GUI",
+      direct_mesh_gui: "Direct mesh GUI",
+    },
+    directMeshStrategies: {
+      healthiest: "Healthiest agent",
+      first_reachable: "First reachable",
+    },
     shortcutLegendTitle: "3D controls",
     shortcutLegendRows: [
       "Drag pan · Alt+Drag orbit · Wheel zoom",
@@ -679,6 +725,24 @@ const copy = {
     controls: "控制",
     settings: "设置",
     backend: "后端",
+    protocols: "协议",
+    controlPlaneProtocol: "调度面协议",
+    solverRpcProtocol: "求解代理协议",
+    deploymentMode: "部署模式",
+    discoveryMode: "发现方式",
+    registeredAgents: "注册代理",
+    reachableAgents: "可达代理",
+    runtimeMode: "运行模式",
+    cluster: "集群",
+    clusterSize: "集群规模",
+    clusterHealth: "集群健康度",
+    peers: "对等节点",
+    peerState: "节点状态",
+    headless: "无头运行",
+    capabilities: "能力",
+    methods: "方法",
+    protocolAgents: "协议代理",
+    noProtocolAgents: "当前还没有可描述的求解代理。",
     watchdog: "看门狗",
     activeJobs: "活跃任务",
     stalledJobs: "卡住任务",
@@ -692,6 +756,13 @@ const copy = {
     ui: "Next.js 界面",
     theme: "主题",
     language: "语言",
+    frontendMode: "前端模式",
+    directMeshEndpoints: "直连集群节点",
+    directMeshEndpointsHelp: "用逗号或换行分隔的 host:port，供局域网直连 mesh GUI 使用。",
+    directMeshCompleted: "直连 Mesh 求解已完成",
+    directMeshStrategy: "Mesh 策略",
+    directMeshLastRoute: "最近路由",
+    directMeshLastAgent: "最近节点",
     shortcutHints: "快捷键提示",
     shortcutHintsHelp: "在三维视图区显示键盘快捷键速查卡。",
     immersiveGuard: "沉浸护栏",
@@ -749,6 +820,14 @@ const copy = {
     immersiveEmptyJobs: "当前还没有任务记录。",
     themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
     languages: { en: "English", zh: "中文" },
+    frontendModes: {
+      orchestrated_gui: "中心调度 GUI",
+      direct_mesh_gui: "直连 Mesh GUI",
+    },
+    directMeshStrategies: {
+      healthiest: "优先健康节点",
+      first_reachable: "首个可达节点",
+    },
     shortcutLegendTitle: "三维控制",
     shortcutLegendRows: [
       "拖拽平移 · Alt+拖拽旋转 · 滚轮缩放",
@@ -978,6 +1057,9 @@ function safeStorageGet(): {
   language?: Language;
   showShortcutHints?: boolean;
   immersiveGuardrails?: boolean;
+  frontendRuntimeMode?: FrontendRuntimeMode;
+  directMeshEndpointsText?: string;
+  directMeshSelectionMode?: DirectMeshSelectionMode;
 } {
   if (typeof window === "undefined") return {};
   try {
@@ -988,11 +1070,18 @@ function safeStorageGet(): {
           language?: Language;
           showShortcutHints?: boolean;
           immersiveGuardrails?: boolean;
+          frontendRuntimeMode?: FrontendRuntimeMode;
+          directMeshEndpointsText?: string;
+          directMeshSelectionMode?: DirectMeshSelectionMode;
         })
       : {};
   } catch {
     return {};
   }
+}
+
+function parseDirectMeshEndpoints(value: string) {
+  return [...new Set(value.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean))];
 }
 
 function serializeCurrentModel(
@@ -1825,6 +1914,33 @@ function clampChunkOffset(offset: number, totalItems: number, limit: number) {
   return Math.min(maxOffset, snapped);
 }
 
+function formatProtocolMethodLabel(method: string) {
+  return method.replaceAll("_", " ");
+}
+
+function clusterHealthTone(score: number | null | undefined) {
+  if (score == null) return "quiet";
+  if (score >= 85) return "healthy";
+  if (score >= 55) return "watch";
+  return "stale";
+}
+
+function formatPeerStatus(status: string | undefined, languageCopy: (typeof copy)[Language]) {
+  if (!status) return "--";
+  switch (status) {
+    case "healthy":
+      return languageCopy.heartbeatHealthy;
+    case "degraded":
+      return languageCopy.heartbeatQuiet;
+    case "unreachable":
+      return languageCopy.heartbeatStale;
+    case "seed":
+      return languageCopy.ready;
+    default:
+      return status.replaceAll("_", " ");
+  }
+}
+
 export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
@@ -1849,10 +1965,15 @@ export function Workbench() {
   const [projectNameDraft, setProjectNameDraft] = useState<string>(copy.en.defaultProject);
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState<string>("");
   const [health, setHealth] = useState<HealthPayload | null>(null);
+  const [protocolAgents, setProtocolAgents] = useState<ProtocolAgentDescriptor[]>([]);
   const [loadedModelName, setLoadedModelName] = useState<string>(copy.en.defaultModel);
   const [message, setMessage] = useState<string>(copy.en.initialLoaded);
   const [language, setLanguage] = useState<Language>("en");
   const [theme, setTheme] = useState<Theme>("linen");
+  const [frontendRuntimeMode, setFrontendRuntimeMode] = useState<FrontendRuntimeMode>("orchestrated_gui");
+  const [directMeshEndpointsText, setDirectMeshEndpointsText] = useState("127.0.0.1:5001,127.0.0.1:5002");
+  const [directMeshSelectionMode, setDirectMeshSelectionMode] = useState<DirectMeshSelectionMode>("healthiest");
+  const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
   const [immersiveViewport, setImmersiveViewport] = useState(false);
@@ -1978,9 +2099,12 @@ export function Workbench() {
       try {
         const safeOffset = clampChunkOffset(resultWindowOffset, totalItems, limit);
 
+        const chunkFetcher =
+          frontendRuntimeMode === "direct_mesh_gui" ? fetchDirectMeshResultChunk : fetchResultChunk;
+
         const [nodesChunk, elementsChunk] = await Promise.all([
-          fetchResultChunk(job.job_id, "nodes", { offset: safeOffset, limit }),
-          fetchResultChunk(job.job_id, "elements", { offset: safeOffset, limit }),
+          chunkFetcher(job.job_id, "nodes", { offset: safeOffset, limit }),
+          chunkFetcher(job.job_id, "elements", { offset: safeOffset, limit }),
         ]);
 
         if (cancelled) return;
@@ -2004,7 +2128,7 @@ export function Workbench() {
     return () => {
       cancelled = true;
     };
-  }, [job?.job_id, result, resultWindowLimit, resultWindowOffset]);
+  }, [frontendRuntimeMode, job?.job_id, result, resultWindowLimit, resultWindowOffset]);
 
   useEffect(() => {
     if (!resultWindow) return;
@@ -2022,6 +2146,9 @@ export function Workbench() {
     if (stored.theme) setTheme(stored.theme);
     if (typeof stored.showShortcutHints === "boolean") setShowShortcutHints(stored.showShortcutHints);
     if (typeof stored.immersiveGuardrails === "boolean") setImmersiveGuardrails(stored.immersiveGuardrails);
+    if (stored.frontendRuntimeMode) setFrontendRuntimeMode(stored.frontendRuntimeMode);
+    if (stored.directMeshEndpointsText) setDirectMeshEndpointsText(stored.directMeshEndpointsText);
+    if (stored.directMeshSelectionMode) setDirectMeshSelectionMode(stored.directMeshSelectionMode);
     if (stored.language) {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
@@ -2034,10 +2161,18 @@ export function Workbench() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
         SETTINGS_KEY,
-        JSON.stringify({ theme, language, showShortcutHints, immersiveGuardrails }),
+        JSON.stringify({
+          theme,
+          language,
+          showShortcutHints,
+          immersiveGuardrails,
+          frontendRuntimeMode,
+          directMeshEndpointsText,
+          directMeshSelectionMode,
+        }),
       );
     }
-  }, [theme, language, showShortcutHints, immersiveGuardrails]);
+  }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode]);
 
   useEffect(() => {
     return () => {
@@ -2117,6 +2252,10 @@ export function Workbench() {
   }, []);
 
   useEffect(() => {
+    void refreshHealth();
+  }, [frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode]);
+
+  useEffect(() => {
     const current = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
     setAdminJobMessage(current?.message ?? "");
     setAdminJobProjectId(current?.project_id ?? "");
@@ -2151,10 +2290,64 @@ export function Workbench() {
   }, [selectedModelId]);
 
   async function refreshHealth() {
+    if (frontendRuntimeMode === "direct_mesh_gui") {
+      try {
+        const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
+        const nextDirect = await fetchDirectMeshAgents(endpoints);
+        const directMethods = [...new Set(
+          nextDirect.agents.flatMap((agent) => agent.descriptor?.protocol?.methods ?? []),
+        )];
+
+        setProtocolAgents(nextDirect.agents);
+        setHealth({
+          service: "kyuubiki-frontend-direct-mesh",
+          status: nextDirect.agents.length > 0 ? "ok" : "degraded",
+          protocol: {
+            program: "kyuubiki-frontend",
+            role: "gui",
+            protocol: {
+              name: "kyuubiki.direct-mesh/http-v1",
+              version: 1,
+              transport: { kind: "http", encoding: "json" },
+            },
+            compatible_solver_rpc: {
+              name: "kyuubiki.solver-rpc/v1",
+              rpc_version: 1,
+              transport: {
+                kind: "tcp",
+                framing: "length_prefixed_u32",
+                encoding: "json",
+              },
+              methods: directMethods,
+            },
+          },
+          deployment: {
+            mode: "direct_mesh",
+            discovery: nextDirect.discovery,
+            endpoint_count: nextDirect.endpoint_count,
+          },
+          remote_solver_registry: {
+            active_agents: nextDirect.agents.length,
+          },
+        });
+      } catch {
+        setHealth(null);
+        setProtocolAgents([]);
+      }
+      return;
+    }
+
     try {
-      setHealth(await fetchHealth());
+      const [nextHealth, nextProtocolAgents] = await Promise.all([
+        fetchHealth(),
+        fetchProtocolAgents().catch(() => ({ agents: [] })),
+      ]);
+
+      setHealth(nextHealth);
+      setProtocolAgents(nextProtocolAgents.agents);
     } catch {
       setHealth(null);
+      setProtocolAgents([]);
     }
   }
 
@@ -2242,6 +2435,54 @@ export function Workbench() {
 
     startTransition(async () => {
       try {
+        if (frontendRuntimeMode === "direct_mesh_gui") {
+          const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
+          if (endpoints.length === 0) {
+            throw new Error(t.directMeshEndpointsHelp);
+          }
+
+          const created =
+            studyKind === "axial_bar_1d"
+              ? await createDirectMeshSolve<AxialBarResult>(
+                  "axial_bar_1d",
+                  toAxialInput(axialForm),
+                  endpoints,
+                  directMeshSelectionMode,
+                )
+              : studyKind === "truss_2d"
+                ? await createDirectMeshSolve<Truss2dResult>(
+                    "truss_2d",
+                    resolveTruss2dJobInput(trussModel) as unknown as Record<string, unknown>,
+                    endpoints,
+                    directMeshSelectionMode,
+                  )
+                : studyKind === "truss_3d"
+                  ? await createDirectMeshSolve<Truss3dResult>(
+                      "truss_3d",
+                      resolveTruss3dJobInput(truss3dModel) as unknown as Record<string, unknown>,
+                      endpoints,
+                      directMeshSelectionMode,
+                    )
+                  : await createDirectMeshSolve<PlaneTriangle2dResult>(
+                      "plane_triangle_2d",
+                      resolvePlaneTriangle2dJobInput(planeModel) as unknown as Record<string, unknown>,
+                      endpoints,
+                      directMeshSelectionMode,
+                    );
+
+          setJob(created.job);
+          if (created.result) {
+            setResult(created.result);
+          }
+          setDirectMeshExecution({
+            endpoint: created.direct_mesh.endpoint,
+            strategy: created.direct_mesh.strategy,
+            at: new Date().toISOString(),
+          });
+          setMessage(`${t.directMeshCompleted}: ${created.job.worker_id ?? "direct-mesh"}`);
+          return;
+        }
+
         const jobContext = {
           ...(selectedProjectId ? { project_id: selectedProjectId } : {}),
           ...(selectedVersionId ? { model_version_id: selectedVersionId } : {}),
@@ -5248,6 +5489,35 @@ export function Workbench() {
                     <option value="zh">{t.languages.zh}</option>
                   </select>
                 </label>
+                <label>
+                  <span>{t.frontendMode}</span>
+                  <select
+                    value={frontendRuntimeMode}
+                    onChange={(event) => setFrontendRuntimeMode(event.target.value as FrontendRuntimeMode)}
+                  >
+                    <option value="orchestrated_gui">{t.frontendModes.orchestrated_gui}</option>
+                    <option value="direct_mesh_gui">{t.frontendModes.direct_mesh_gui}</option>
+                  </select>
+                </label>
+                <label>
+                  <span>{t.directMeshStrategy}</span>
+                  <select
+                    value={directMeshSelectionMode}
+                    onChange={(event) => setDirectMeshSelectionMode(event.target.value as DirectMeshSelectionMode)}
+                  >
+                    <option value="healthiest">{t.directMeshStrategies.healthiest}</option>
+                    <option value="first_reachable">{t.directMeshStrategies.first_reachable}</option>
+                  </select>
+                </label>
+                <label className="field-span-2">
+                  <span>{t.directMeshEndpoints}</span>
+                  <small className="field-hint">{t.directMeshEndpointsHelp}</small>
+                  <textarea
+                    rows={3}
+                    value={directMeshEndpointsText}
+                    onChange={(event) => setDirectMeshEndpointsText(event.target.value)}
+                  />
+                </label>
                 <label className="toggle-row">
                   <div>
                     <span>{t.shortcutHints}</span>
@@ -5300,6 +5570,159 @@ export function Workbench() {
                   <strong>{health?.transport?.solver_agent_tcp ?? 5001}</strong>
                 </div>
               </div>
+            </section>
+            <section className="sidebar-card sidebar-card--compact">
+              <div className="card-head">
+                <h2>{t.protocols}</h2>
+                <span>{health?.protocol ? t.online : t.offline}</span>
+              </div>
+              <div className="sidebar-list">
+                <div>
+                  <span>{t.controlPlaneProtocol}</span>
+                  <strong>{health?.protocol?.protocol?.name ?? "--"}</strong>
+                </div>
+                <div>
+                  <span>{t.solverRpcProtocol}</span>
+                  <strong>{health?.protocol?.compatible_solver_rpc?.name ?? "--"}</strong>
+                </div>
+                <div>
+                  <span>{t.deploymentMode}</span>
+                  <strong>{health?.deployment?.mode ?? "--"}</strong>
+                </div>
+                <div>
+                  <span>{t.discoveryMode}</span>
+                  <strong>{health?.deployment?.discovery ?? "--"}</strong>
+                </div>
+                <div>
+                  <span>{t.registeredAgents}</span>
+                  <strong>{health?.remote_solver_registry?.active_agents ?? 0}</strong>
+                </div>
+                <div>
+                  <span>{t.reachableAgents}</span>
+                  <strong>{protocolAgents.length}</strong>
+                </div>
+                {frontendRuntimeMode === "direct_mesh_gui" ? (
+                  <>
+                    <div>
+                      <span>{t.directMeshStrategy}</span>
+                      <strong>{t.directMeshStrategies[directMeshSelectionMode]}</strong>
+                    </div>
+                    <div>
+                      <span>{t.directMeshLastAgent}</span>
+                      <strong>{directMeshExecution?.endpoint ?? "--"}</strong>
+                    </div>
+                    <div>
+                      <span>{t.directMeshLastRoute}</span>
+                      <strong>
+                        {directMeshExecution
+                          ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
+                          : "--"}
+                      </strong>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+              {health?.protocol?.compatible_solver_rpc?.methods?.length ? (
+                <div className="protocol-chip-row">
+                  {health.protocol.compatible_solver_rpc.methods.map((method) => (
+                    <span className="protocol-chip" key={method}>
+                      {formatProtocolMethodLabel(method)}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+            <section className="sidebar-card sidebar-card--compact">
+              <div className="card-head">
+                <h2>{t.protocolAgents}</h2>
+                <span>{protocolAgents.length}</span>
+              </div>
+              {protocolAgents.length === 0 ? (
+                <p className="card-copy">{t.noProtocolAgents}</p>
+              ) : (
+                <div className="protocol-agent-list">
+                  {protocolAgents.slice(0, 4).map((agent) => (
+                    <article className="protocol-agent-card" key={agent.id}>
+                      <div className="protocol-agent-card__head">
+                        <strong>{agent.id}</strong>
+                        <span>
+                          {agent.host}:{agent.port}
+                        </span>
+                      </div>
+                      <div className="sidebar-list">
+                        <div>
+                          <span>{t.runtimeMode}</span>
+                          <strong>{agent.descriptor?.runtime?.runtime_mode ?? "--"}</strong>
+                        </div>
+                        <div>
+                          <span>{t.cluster}</span>
+                          <strong>{agent.descriptor?.runtime?.cluster_id ?? "--"}</strong>
+                        </div>
+                        <div>
+                          <span>{t.clusterSize}</span>
+                          <strong>{agent.descriptor?.runtime?.cluster_size ?? 1}</strong>
+                        </div>
+                        <div>
+                          <span>{t.clusterHealth}</span>
+                          <strong>
+                            <span
+                              className={`status-chip status-chip--${clusterHealthTone(agent.descriptor?.runtime?.health_score)}`}
+                            >
+                              {agent.descriptor?.runtime?.health_score ?? "--"}
+                            </span>
+                          </strong>
+                        </div>
+                        <div>
+                          <span>{t.peers}</span>
+                          <strong>{agent.descriptor?.runtime?.peers?.length ?? 0}</strong>
+                        </div>
+                        <div>
+                          <span>{t.headless}</span>
+                          <strong>{agent.descriptor?.runtime?.headless ? t.yes : t.no}</strong>
+                        </div>
+                        <div>
+                          <span>{t.capabilities}</span>
+                          <strong>{agent.descriptor?.capabilities?.length ?? 0}</strong>
+                        </div>
+                        <div>
+                          <span>{t.methods}</span>
+                          <strong>{agent.descriptor?.protocol?.methods?.length ?? 0}</strong>
+                        </div>
+                      </div>
+                      {agent.descriptor?.capabilities?.length || agent.descriptor?.runtime?.peers?.length ? (
+                        <div className="protocol-chip-row">
+                          {agent.descriptor?.capabilities?.flatMap((capability) =>
+                            capability.tags.slice(0, 3).map((tag) => (
+                              <span className="protocol-chip" key={`${agent.id}-${capability.id}-${tag}`}>
+                                {tag}
+                              </span>
+                            )),
+                          ) ?? null}
+                          {agent.descriptor?.runtime?.peers?.slice(0, 2).map((peer) => (
+                            <span
+                              className={`protocol-chip protocol-chip--${clusterHealthTone(
+                                peer.status === "healthy"
+                                  ? 100
+                                  : peer.status === "degraded"
+                                    ? 65
+                                    : peer.status === "seed"
+                                      ? 85
+                                      : 25,
+                              )}`}
+                              key={`${agent.id}-${peer.address}`}
+                              title={`${t.peerState}: ${formatPeerStatus(peer.status, t)}`}
+                            >
+                              {peer.address}
+                            </span>
+                          )) ?? null}
+                        </div>
+                      ) : agent.descriptor_error ? (
+                        <p className="card-copy">{agent.descriptor_error}</p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
             <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">

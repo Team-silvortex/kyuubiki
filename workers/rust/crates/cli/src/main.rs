@@ -1,15 +1,15 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpListener, TcpStream, ToSocketAddrs};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use kyuubiki_protocol::{
-    AgentDescriptor, CancelJobRequest, Job, JobStatus, ProgressEvent, RPC_VERSION, RpcMethod,
-    RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolvePlaneTriangle2dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest,
+    AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
+    JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
+    SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
@@ -50,6 +50,8 @@ struct AgentConfig {
     advertise_host: Option<String>,
     orchestrator_url: Option<String>,
     register_interval_ms: u64,
+    cluster_id: Option<String>,
+    peers: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +121,8 @@ impl AgentConfig {
             advertise_host: None,
             orchestrator_url: None,
             register_interval_ms: 5_000,
+            cluster_id: None,
+            peers: vec![],
         };
 
         let mut args = args.iter();
@@ -156,6 +160,16 @@ impl AgentConfig {
                             value.parse().unwrap_or(config.register_interval_ms);
                     }
                 }
+                "--cluster-id" => {
+                    if let Some(value) = args.next() {
+                        config.cluster_id = Some(value.clone());
+                    }
+                }
+                "--peer" => {
+                    if let Some(value) = args.next() {
+                        config.peers.push(value.clone());
+                    }
+                }
                 _ => {}
             }
         }
@@ -172,12 +186,32 @@ impl AgentConfig {
             config.orchestrator_url = std::env::var("KYUUBIKI_ORCHESTRATOR_URL").ok();
         }
 
+        if config.cluster_id.is_none() {
+            config.cluster_id = std::env::var("KYUUBIKI_AGENT_CLUSTER_ID").ok();
+        }
+
+        if config.peers.is_empty() {
+            config.peers = std::env::var("KYUUBIKI_AGENT_PEERS")
+                .ok()
+                .map(|value| {
+                    value
+                        .split(',')
+                        .map(str::trim)
+                        .filter(|entry| !entry.is_empty())
+                        .map(ToString::to_string)
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+        }
+
         config
     }
 }
 
 fn run_agent(config: &AgentConfig) -> Result<(), String> {
+    store_runtime_descriptor(build_agent_descriptor(config));
     let registration = AgentRegistrationHandle::maybe_spawn(config);
+    let peer_mesh = PeerMeshHandle::maybe_spawn(config);
     let listener = TcpListener::bind((config.host.as_str(), config.port))
         .map_err(|error| format!("failed to bind {}:{}: {error}", config.host, config.port))?;
 
@@ -188,6 +222,10 @@ fn run_agent(config: &AgentConfig) -> Result<(), String> {
 
     if let Some(registration) = registration {
         registration.stop();
+    }
+
+    if let Some(peer_mesh) = peer_mesh {
+        peer_mesh.stop();
     }
 
     Ok(())
@@ -516,7 +554,54 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
 }
 
 fn agent_descriptor() -> AgentDescriptor {
-    AgentDescriptor::solver_agent_default()
+    runtime_descriptor()
+        .lock()
+        .map(|descriptor| descriptor.clone())
+        .unwrap_or_else(|_| AgentDescriptor::solver_agent_default())
+}
+
+fn runtime_descriptor() -> &'static Mutex<AgentDescriptor> {
+    static DESCRIPTOR: OnceLock<Mutex<AgentDescriptor>> = OnceLock::new();
+    DESCRIPTOR.get_or_init(|| Mutex::new(AgentDescriptor::solver_agent_default()))
+}
+
+fn store_runtime_descriptor(descriptor: AgentDescriptor) {
+    if let Ok(mut current) = runtime_descriptor().lock() {
+        *current = descriptor;
+    }
+}
+
+fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
+    let mut descriptor = AgentDescriptor::solver_agent_default();
+    descriptor.runtime = AgentClusterDescriptor {
+        cluster_id: config.cluster_id.clone(),
+        runtime_mode: agent_runtime_mode(config).to_string(),
+        headless: true,
+        cluster_size: 1 + config.peers.len(),
+        health_score: 100,
+        peers: config
+            .peers
+            .iter()
+            .cloned()
+            .map(|address| ClusterPeerDescriptor {
+                address,
+                status: "seed".to_string(),
+                failure_count: 0,
+                last_seen_unix_s: None,
+            })
+            .collect(),
+    };
+    descriptor
+}
+
+fn agent_runtime_mode(config: &AgentConfig) -> &'static str {
+    if !config.peers.is_empty() {
+        "peer_mesh"
+    } else if config.orchestrator_url.is_some() {
+        "orchestrated"
+    } else {
+        "standalone"
+    }
 }
 
 fn build_progress_frames(
@@ -671,6 +756,11 @@ struct AgentRegistrationHandle {
     join_handle: Option<thread::JoinHandle<()>>,
 }
 
+struct PeerMeshHandle {
+    running: Arc<AtomicBool>,
+    join_handle: Option<thread::JoinHandle<()>>,
+}
+
 impl AgentRegistrationHandle {
     fn maybe_spawn(config: &AgentConfig) -> Option<Self> {
         let agent_id = config.agent_id.clone()?;
@@ -687,7 +777,9 @@ impl AgentRegistrationHandle {
             "id": agent_id,
             "host": advertise_host,
             "port": port,
-            "role": "solver"
+            "role": "solver",
+            "cluster_id": config.cluster_id,
+            "tags": if config.peers.is_empty() { vec!["headless", "standalone"] } else { vec!["headless", "peer-mesh"] }
         });
         let orchestrator_url_clone = orchestrator_url.clone();
         let agent_id_clone = agent_id.clone();
@@ -737,8 +829,212 @@ impl AgentRegistrationHandle {
     }
 }
 
+impl PeerMeshHandle {
+    fn maybe_spawn(config: &AgentConfig) -> Option<Self> {
+        if config.peers.is_empty() {
+            return None;
+        }
+
+        let running = Arc::new(AtomicBool::new(true));
+        let running_clone = Arc::clone(&running);
+        let seed_peers = normalize_peer_addresses(config.peers.clone());
+        let self_addresses = self_addresses(config);
+        let cluster_id = config.cluster_id.clone();
+        let sync_interval_ms = config.register_interval_ms.max(1_000);
+
+        let join_handle = thread::spawn(move || {
+            let mut known_peers = seed_peers;
+            let mut peer_failures: HashMap<String, u32> = HashMap::new();
+            let mut peer_last_seen: HashMap<String, u64> = HashMap::new();
+
+            while running_clone.load(Ordering::SeqCst) {
+                let mut discovered = known_peers.clone();
+
+                for peer in known_peers.clone() {
+                    if let Ok(descriptor) = request_agent_descriptor(&peer) {
+                        discovered.extend(
+                            descriptor
+                                .runtime
+                                .peers
+                                .into_iter()
+                                .map(|peer| peer.address),
+                        );
+                        peer_failures.insert(peer.clone(), 0);
+                        peer_last_seen.insert(peer, unix_now_s());
+                    } else {
+                        let failure_count = peer_failures.entry(peer).or_insert(0);
+                        *failure_count += 1;
+                    }
+                }
+
+                known_peers = filter_self_peers(normalize_peer_addresses(discovered), &self_addresses);
+                update_runtime_mesh(
+                    cluster_id.clone(),
+                    build_peer_descriptors(&known_peers, &peer_failures, &peer_last_seen),
+                );
+
+                thread::sleep(Duration::from_millis(sync_interval_ms));
+            }
+        });
+
+        Some(Self {
+            running,
+            join_handle: Some(join_handle),
+        })
+    }
+
+    fn stop(mut self) {
+        self.running.store(false, Ordering::SeqCst);
+
+        if let Some(join_handle) = self.join_handle.take() {
+            let _ = join_handle.join();
+        }
+    }
+}
+
 fn normalize_base_url(url: &str) -> String {
     url.trim_end_matches('/').to_string()
+}
+
+fn self_addresses(config: &AgentConfig) -> Vec<String> {
+    let advertise_host = config
+        .advertise_host
+        .clone()
+        .unwrap_or_else(|| config.host.clone());
+
+    normalize_peer_addresses(vec![
+        format!("{}:{}", config.host, config.port),
+        format!("{}:{}", advertise_host, config.port),
+    ])
+}
+
+fn normalize_peer_addresses(peers: Vec<String>) -> Vec<String> {
+    let mut normalized = peers
+        .into_iter()
+        .map(|peer| peer.trim().to_string())
+        .filter(|peer| !peer.is_empty())
+        .collect::<Vec<_>>();
+    normalized.sort();
+    normalized.dedup();
+    normalized
+}
+
+fn filter_self_peers(peers: Vec<String>, self_addresses: &[String]) -> Vec<String> {
+    peers
+        .into_iter()
+        .filter(|peer| !self_addresses.iter().any(|self_address| self_address == peer))
+        .collect()
+}
+
+fn build_peer_descriptors(
+    peers: &[String],
+    failures: &HashMap<String, u32>,
+    last_seen: &HashMap<String, u64>,
+) -> Vec<ClusterPeerDescriptor> {
+    peers
+        .iter()
+        .cloned()
+        .map(|address| {
+            let failure_count = failures.get(&address).copied().unwrap_or(0);
+            let status = if last_seen.contains_key(&address) && failure_count == 0 {
+                "healthy"
+            } else if last_seen.contains_key(&address) {
+                "degraded"
+            } else {
+                "unreachable"
+            };
+
+            ClusterPeerDescriptor {
+                address: address.clone(),
+                status: status.to_string(),
+                failure_count,
+                last_seen_unix_s: last_seen.get(&address).copied(),
+            }
+        })
+        .collect()
+}
+
+fn update_runtime_mesh(cluster_id: Option<String>, peers: Vec<ClusterPeerDescriptor>) {
+    if let Ok(mut current) = runtime_descriptor().lock() {
+        current.runtime.cluster_id = cluster_id;
+        current.runtime.runtime_mode = if peers.is_empty() {
+            "standalone".to_string()
+        } else {
+            "peer_mesh".to_string()
+        };
+        current.runtime.headless = true;
+        current.runtime.cluster_size = 1 + peers.len();
+        current.runtime.health_score = compute_cluster_health_score(&peers);
+        current.runtime.peers = peers;
+    }
+}
+
+fn compute_cluster_health_score(peers: &[ClusterPeerDescriptor]) -> u8 {
+    if peers.is_empty() {
+        return 100;
+    }
+
+    let total = peers.len() as f32;
+    let healthy = peers
+        .iter()
+        .filter(|peer| peer.status == "healthy")
+        .count() as f32;
+    let degraded = peers
+        .iter()
+        .filter(|peer| peer.status == "degraded")
+        .count() as f32;
+    let score = ((healthy + degraded * 0.5) / total) * 100.0;
+    score.round().clamp(0.0, 100.0) as u8
+}
+
+fn unix_now_s() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn request_agent_descriptor(address: &str) -> Result<AgentDescriptor, String> {
+    let mut stream = TcpStream::connect(address)
+        .map_err(|error| format!("failed to connect to peer {address}: {error}"))?;
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(1_500)));
+    let _ = stream.set_write_timeout(Some(Duration::from_millis(1_500)));
+
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "peer-describe".to_string(),
+        method: RpcMethod::DescribeAgent,
+        params: serde_json::json!({}),
+    };
+
+    let payload = serde_json::to_vec(&request)
+        .map_err(|error| format!("failed to encode peer describe request: {error}"))?;
+    write_frame(&mut stream, &payload)
+        .map_err(|error| format!("failed to write peer request frame: {error}"))?;
+
+    let response_payload = read_frame(&mut stream)
+        .map_err(|error| format!("failed to read peer response: {}", frame_error_message(error)))?;
+
+    let response: RpcResponse = serde_json::from_slice(&response_payload)
+        .map_err(|error| format!("failed to decode peer response: {error}"))?;
+
+    if !response.ok {
+        let error = response
+            .error
+            .map(|error| format!("{}: {}", error.code, error.message))
+            .unwrap_or_else(|| "unknown peer error".to_string());
+        return Err(format!("peer describe failed: {error}"));
+    }
+
+    serde_json::from_value(response.result.unwrap_or_default())
+        .map_err(|error| format!("failed to decode peer descriptor: {error}"))
+}
+
+fn frame_error_message(error: FrameReadError) -> String {
+    match error {
+        FrameReadError::ConnectionClosed => "connection closed".to_string(),
+        FrameReadError::Io(error) => error.to_string(),
+    }
 }
 
 fn post_json(url: &str, payload: &serde_json::Value) -> Result<(), String> {
@@ -907,14 +1203,18 @@ fn optional_string(value: Option<&str>) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::{
-        AgentConfig, AgentReply, Command, WorkerConfig, format_event, handle_request_bytes,
-        parse_http_url,
+        AgentConfig, AgentReply, Command, WorkerConfig, build_agent_descriptor,
+        build_peer_descriptors, compute_cluster_health_score, filter_self_peers, format_event,
+        handle_request_bytes, normalize_peer_addresses, parse_http_url,
     };
     use kyuubiki_protocol::{
-        AgentDescriptor, JobStatus, PlaneNodeInput, PlaneTriangleElementInput, ProgressEvent,
-        RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolvePlaneTriangle2dRequest,
-        SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput,
+        AgentDescriptor, ClusterPeerDescriptor, JobStatus, PlaneNodeInput,
+        PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcRequest,
+        SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
+        Truss3dElementInput, Truss3dNodeInput,
     };
 
     #[test]
@@ -957,8 +1257,43 @@ mod tests {
                 advertise_host: None,
                 orchestrator_url: None,
                 register_interval_ms: 5_000,
+                cluster_id: None,
+                peers: vec![],
             })
         );
+    }
+
+    #[test]
+    fn parses_peer_mesh_agent_args() {
+        let config = AgentConfig::from_args(&[
+            "--cluster-id".to_string(),
+            "lan-lab-a".to_string(),
+            "--peer".to_string(),
+            "10.0.0.10:5001".to_string(),
+            "--peer".to_string(),
+            "10.0.0.11:5001".to_string(),
+        ]);
+
+        assert_eq!(config.cluster_id.as_deref(), Some("lan-lab-a"));
+        assert_eq!(config.peers.len(), 2);
+    }
+
+    #[test]
+    fn normalizes_and_filters_peer_addresses() {
+        let peers = normalize_peer_addresses(vec![
+            " 10.0.0.11:5001 ".to_string(),
+            "10.0.0.10:5001".to_string(),
+            "10.0.0.11:5001".to_string(),
+        ]);
+
+        assert_eq!(peers, vec!["10.0.0.10:5001".to_string(), "10.0.0.11:5001".to_string()]);
+
+        let filtered = filter_self_peers(
+            peers,
+            &["10.0.0.10:5001".to_string(), "127.0.0.1:5001".to_string()],
+        );
+
+        assert_eq!(filtered, vec!["10.0.0.11:5001".to_string()]);
     }
 
     #[test]
@@ -1230,5 +1565,70 @@ mod tests {
             .protocol
             .methods
             .contains(&RpcMethod::SolveTruss3d));
+        assert_eq!(descriptor.runtime.runtime_mode, "standalone");
+    }
+
+    #[test]
+    fn builds_peer_mesh_runtime_descriptor() {
+        let descriptor = build_agent_descriptor(&AgentConfig {
+            host: "127.0.0.1".to_string(),
+            port: 5001,
+            agent_id: Some("solver-a".to_string()),
+            advertise_host: Some("10.0.0.20".to_string()),
+            orchestrator_url: None,
+            register_interval_ms: 5_000,
+            cluster_id: Some("lan-a".to_string()),
+            peers: vec!["10.0.0.11:5001".to_string(), "10.0.0.12:5001".to_string()],
+        });
+
+        assert_eq!(descriptor.runtime.runtime_mode, "peer_mesh");
+        assert_eq!(descriptor.runtime.cluster_id.as_deref(), Some("lan-a"));
+        assert!(descriptor.runtime.headless);
+        assert_eq!(descriptor.runtime.cluster_size, 3);
+        assert_eq!(descriptor.runtime.health_score, 100);
+        assert_eq!(descriptor.runtime.peers.len(), 2);
+        assert_eq!(descriptor.runtime.peers[0].status, "seed");
+    }
+
+    #[test]
+    fn computes_cluster_health_score_from_peer_states() {
+        let peers = vec![
+            ClusterPeerDescriptor {
+                address: "10.0.0.10:5001".to_string(),
+                status: "healthy".to_string(),
+                failure_count: 0,
+                last_seen_unix_s: Some(1),
+            },
+            ClusterPeerDescriptor {
+                address: "10.0.0.11:5001".to_string(),
+                status: "degraded".to_string(),
+                failure_count: 2,
+                last_seen_unix_s: Some(1),
+            },
+            ClusterPeerDescriptor {
+                address: "10.0.0.12:5001".to_string(),
+                status: "unreachable".to_string(),
+                failure_count: 4,
+                last_seen_unix_s: None,
+            },
+        ];
+
+        assert_eq!(compute_cluster_health_score(&peers), 50);
+    }
+
+    #[test]
+    fn builds_peer_descriptors_from_failures_and_last_seen() {
+        let peers = vec!["10.0.0.10:5001".to_string(), "10.0.0.11:5001".to_string()];
+        let failures = HashMap::from([
+            ("10.0.0.10:5001".to_string(), 0_u32),
+            ("10.0.0.11:5001".to_string(), 2_u32),
+        ]);
+        let last_seen = HashMap::from([("10.0.0.10:5001".to_string(), 123_u64)]);
+
+        let descriptors = build_peer_descriptors(&peers, &failures, &last_seen);
+
+        assert_eq!(descriptors[0].status, "healthy");
+        assert_eq!(descriptors[1].status, "unreachable");
+        assert_eq!(descriptors[1].failure_count, 2);
     }
 }

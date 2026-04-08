@@ -15,6 +15,13 @@ Kyuubiki `v0.3` is the release where the system starts to behave like an engine-
 - runtime remote-agent registration and heartbeat APIs for distributed deployments
 - explicit control-plane and solver-RPC protocol descriptors
 - Rust agent self-description and generic runtime RPC methods (`ping`, `describe_agent`)
+- headless agent runtime metadata for standalone, orchestrated, and peer-mesh cluster modes
+- gossip-lite peer discovery for LAN solver meshes
+- explicit frontend runtime split in the architecture:
+  - `orchestrated_gui`
+  - `direct_mesh_gui`
+- direct-mesh frontend API routes that let the Next.js shell inspect and solve
+  against LAN Rust agents without going through Phoenix
 
 ### Changed
 
@@ -23,6 +30,8 @@ Kyuubiki `v0.3` is the release where the system starts to behave like an engine-
 - tightened the frontend toward a denser editor-style layout with more segmented tabs and less card sprawl
 - continued separating engine, orchestrator, installer, and workbench responsibilities
 - made the GUI, control plane, and solver agents more explicitly deployable as independent programs
+- clarified that the future frontend can run either through Phoenix or directly
+  against a LAN peer mesh while sharing the same contracts
 
 ### Scale snapshot
 

@@ -13,6 +13,16 @@ It also now has an explicit deployment split:
 - `local workstation`: frontend + orchestrator + local Rust agents
 - `cloud control plane`: frontend + orchestrator + PostgreSQL
 - `distributed control plane`: orchestrator/frontend separated from remotely deployed solver nodes
+- `headless peer mesh`: Rust solver agents can run without a GUI or Phoenix on the same host, and can advertise LAN peer-cluster topology through the shared RPC descriptor
+
+And the frontend direction is now explicitly split too:
+
+- `orchestrated_gui`
+  the current workbench mode, where the editor talks to Phoenix and Phoenix
+  talks to solver agents
+- `direct_mesh_gui`
+  a future mode where the editor can operate directly against a LAN peer mesh
+  of headless Rust agents without requiring Phoenix on the solver hot path
 
 And it now has an explicit protocol split:
 
@@ -128,6 +138,7 @@ The next layer of decoupling is now explicit too:
 - the frontend speaks the control-plane HTTP protocol
 - the orchestrator speaks the solver RPC protocol
 - solver agents can self-describe over RPC and the orchestrator can expose those descriptors over HTTP
+- the frontend is being prepared to support both orchestrated and direct-mesh runtime modes as separate programs sharing common contracts
 
 ## Current Capabilities by Layer
 
@@ -151,6 +162,12 @@ The workbench currently supports:
 - chunked browsing of large result sets
 - immersive 3D workspace with externalized tools/help panels
 - local settings persistence for theme, language, and shortcut hints
+- a frontend runtime switch between:
+  - `orchestrated_gui`
+  - `direct_mesh_gui`
+- direct-mesh frontend routes for LAN solver access:
+  - `/api/direct-mesh/agents`
+  - `/api/direct-mesh/solve`
 
 ### Orchestrator API
 
@@ -195,6 +212,9 @@ The Rust side currently provides:
 - framed TCP RPC transport
 - agent self-description via `describe_agent`
 - generic runtime `ping` and `cancel_job` methods
+- headless standalone agent mode
+- peer-mesh runtime metadata (`runtime_mode`, `cluster_id`, `peers`)
+- gossip-lite peer discovery between solver agents via `describe_agent`
 - progress events
 - multi-agent execution
 - benchmark profiles

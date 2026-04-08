@@ -22,6 +22,13 @@ details.
 - immersive 3D interaction
 - project/material/version management
 - chunk-aware large-result browsing
+- two future-facing runtime modes:
+  - `orchestrated_gui`
+    Browser/UI connected to the Phoenix control plane for centralized,
+    distributed clusters
+  - `direct_mesh_gui`
+    Browser/UI or desktop shell connected directly to headless Rust agents on a
+    LAN without routing through Phoenix for solver coordination
 
 ### Orchestrator Control Plane
 
@@ -48,6 +55,9 @@ The repository now explicitly supports:
   Frontend + orchestrator + PostgreSQL-backed shared control plane
 - `distributed`
   Centralized control plane with remotely deployed Rust solver nodes
+- `direct_mesh`
+  Frontend shell talking to a headless LAN solver mesh without a mandatory
+  Phoenix coordinator on the hot path
 
 Remote agents can be surfaced through:
 

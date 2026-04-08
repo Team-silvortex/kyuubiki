@@ -149,6 +149,24 @@ pub struct CapabilityDescriptor {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ClusterPeerDescriptor {
+    pub address: String,
+    pub status: String,
+    pub failure_count: u32,
+    pub last_seen_unix_s: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentClusterDescriptor {
+    pub cluster_id: Option<String>,
+    pub runtime_mode: String,
+    pub headless: bool,
+    pub cluster_size: usize,
+    pub health_score: u8,
+    pub peers: Vec<ClusterPeerDescriptor>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RpcProtocolDescriptor {
     pub name: String,
     pub rpc_version: u8,
@@ -163,6 +181,7 @@ pub struct AgentDescriptor {
     pub protocol: RpcProtocolDescriptor,
     pub capabilities: Vec<CapabilityDescriptor>,
     pub deployment_modes: Vec<String>,
+    pub runtime: AgentClusterDescriptor,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -335,6 +354,14 @@ impl AgentDescriptor {
                 "cloud".to_string(),
                 "distributed".to_string(),
             ],
+            runtime: AgentClusterDescriptor {
+                cluster_id: None,
+                runtime_mode: "standalone".to_string(),
+                headless: true,
+                cluster_size: 1,
+                health_score: 100,
+                peers: vec![],
+            },
         }
     }
 }

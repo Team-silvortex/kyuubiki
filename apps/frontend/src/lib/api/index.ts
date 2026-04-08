@@ -277,6 +277,38 @@ export type ModelVersionListPayload = {
 export type HealthPayload = {
   service: string;
   status: string;
+  protocol?: {
+    program: string;
+    role: string;
+    protocol?: {
+      name: string;
+      version: number;
+      transport?: {
+        kind: string;
+        encoding: string;
+      };
+      resources?: Record<string, string>;
+    };
+    compatible_solver_rpc?: {
+      name: string;
+      rpc_version: number;
+      transport?: {
+        kind: string;
+        framing?: string;
+        encoding: string;
+      };
+      methods?: string[];
+    };
+  };
+  deployment?: {
+    mode: string;
+    discovery: string;
+    manifest_path?: string | null;
+    endpoint_count: number;
+  };
+  remote_solver_registry?: {
+    active_agents: number;
+  };
   watchdog?: {
     scan_interval_ms: number;
     stale_job_ms: number;
@@ -289,6 +321,61 @@ export type HealthPayload = {
     http: number;
     solver_agent_tcp: number;
   };
+  solver_agents?: Array<{
+    id: string;
+    host: string;
+    port: number;
+  }>;
+};
+
+export type ProtocolAgentDescriptor = {
+  id: string;
+  host: string;
+  port: number;
+  tags?: string[];
+  capacity?: number | null;
+  region?: string | null;
+  zone?: string | null;
+  role?: string | null;
+  descriptor?: {
+    program: string;
+    role: string;
+    runtime: {
+      cluster_id?: string | null;
+      runtime_mode: string;
+      headless: boolean;
+      cluster_size?: number;
+      health_score?: number;
+      peers: Array<{
+        address: string;
+        status?: string;
+        failure_count?: number;
+        last_seen_unix_s?: number | null;
+      }>;
+    };
+    protocol: {
+      name: string;
+      rpc_version: number;
+      transport: {
+        kind: string;
+        framing?: string;
+        encoding: string;
+      };
+      methods: string[];
+    };
+    capabilities: Array<{
+      id: string;
+      role: string;
+      methods: string[];
+      tags: string[];
+    }>;
+    deployment_modes: string[];
+  };
+  descriptor_error?: string;
+};
+
+export type ProtocolAgentListPayload = {
+  agents: ProtocolAgentDescriptor[];
 };
 
 export type DatabaseExportPayload = {
@@ -326,6 +413,16 @@ export type ResultChunkPayload<TItem = Record<string, unknown>> = {
   returned: number;
   total: number;
   items: TItem[];
+};
+
+export type FrontendRuntimeMode = "orchestrated_gui" | "direct_mesh_gui";
+export type DirectMeshSelectionMode = "first_reachable" | "healthiest";
+
+export type DirectMeshAgentListPayload = {
+  mode: FrontendRuntimeMode;
+  discovery: string;
+  endpoint_count: number;
+  agents: ProtocolAgentDescriptor[];
 };
 
 function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
@@ -487,6 +584,38 @@ export function fetchHealth(): Promise<HealthPayload> {
   });
 }
 
+export function fetchProtocolAgents(): Promise<ProtocolAgentListPayload> {
+  return requestJson<ProtocolAgentListPayload>("/api/v1/protocol/agents", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAgentListPayload> {
+  return requestJson<DirectMeshAgentListPayload>("/api/direct-mesh/agents", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoints }),
+    cache: "no-store",
+  });
+}
+
+export function createDirectMeshSolve<TResult>(
+  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d",
+  input: Record<string, unknown>,
+  endpoints: string[],
+  selectionMode: DirectMeshSelectionMode,
+): Promise<JobEnvelope<TResult> & { direct_mesh: { endpoint: string; strategy: DirectMeshSelectionMode; progress_frames: Array<Record<string, unknown>> } }> {
+  return requestJson<JobEnvelope<TResult> & { direct_mesh: { endpoint: string; strategy: DirectMeshSelectionMode; progress_frames: Array<Record<string, unknown>> } }>(
+    "/api/direct-mesh/solve",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ study_kind: studyKind, input, endpoints, selection_mode: selectionMode }),
+    },
+  );
+}
+
 export function fetchDatabaseExport(): Promise<DatabaseExportPayload> {
   return requestJson<DatabaseExportPayload>("/api/v1/export/database", {
     method: "GET",
@@ -514,6 +643,24 @@ export function fetchResultChunk<TItem = Record<string, unknown>>(
   const suffix = params.size > 0 ? `?${params.toString()}` : "";
 
   return requestJson<ResultChunkPayload<TItem>>(`/api/v1/results/${jobId}/chunks/${kind}${suffix}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchDirectMeshResultChunk<TItem = Record<string, unknown>>(
+  jobId: string,
+  kind: ResultChunkKind,
+  options: { offset?: number; limit?: number } = {},
+): Promise<ResultChunkPayload<TItem>> {
+  const params = new URLSearchParams();
+
+  if (typeof options.offset === "number") params.set("offset", String(options.offset));
+  if (typeof options.limit === "number") params.set("limit", String(options.limit));
+
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+
+  return requestJson<ResultChunkPayload<TItem>>(`/api/direct-mesh/results/${jobId}/chunks/${kind}${suffix}`, {
     method: "GET",
     cache: "no-store",
   });
