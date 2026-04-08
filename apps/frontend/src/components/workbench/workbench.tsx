@@ -75,6 +75,7 @@ import {
   type ProtocolAgentDescriptor,
   type ProjectRecord,
   type ResultRecord,
+  type ResultChunkPayload,
   resolvePlaneTriangle2dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
@@ -214,6 +215,7 @@ type DirectMeshExecutionState = {
 
 const RESULT_WINDOW_THRESHOLD = 400;
 const RESULT_WINDOW_BASE_SIZE = 240;
+const RESULT_WINDOW_CACHE_LIMIT = 24;
 
 const defaultAxial: AxialFormState = {
   length: 1.2,
@@ -1914,6 +1916,45 @@ function clampChunkOffset(offset: number, totalItems: number, limit: number) {
   return Math.min(maxOffset, snapped);
 }
 
+function chunkCacheKey(
+  runtimeMode: FrontendRuntimeMode,
+  jobId: string,
+  kind: "nodes" | "elements",
+  offset: number,
+  limit: number,
+) {
+  return `${runtimeMode}:${jobId}:${kind}:${offset}:${limit}`;
+}
+
+function readChunkCache(
+  cache: Map<string, ResultChunkPayload<Record<string, unknown>>>,
+  key: string,
+) {
+  const cached = cache.get(key);
+  if (!cached) return null;
+  cache.delete(key);
+  cache.set(key, cached);
+  return cached;
+}
+
+function writeChunkCache(
+  cache: Map<string, ResultChunkPayload<Record<string, unknown>>>,
+  key: string,
+  value: ResultChunkPayload<Record<string, unknown>>,
+) {
+  if (cache.has(key)) {
+    cache.delete(key);
+  }
+
+  cache.set(key, value);
+
+  while (cache.size > RESULT_WINDOW_CACHE_LIMIT) {
+    const oldestKey = cache.keys().next().value;
+    if (!oldestKey) break;
+    cache.delete(oldestKey);
+  }
+}
+
 function formatProtocolMethodLabel(method: string) {
   return method.replaceAll("_", " ");
 }
@@ -2027,11 +2068,15 @@ export function Workbench() {
   const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const viewportPanelRef = useRef<HTMLElement | null>(null);
   const chunkScrollFrameRef = useRef<number | null>(null);
+  const chunkScrollLeftRef = useRef(0);
+  const chunkScrollDirectionRef = useRef<-1 | 0 | 1>(0);
+  const chunkCacheRef = useRef<Map<string, ResultChunkPayload<Record<string, unknown>>>>(new Map());
   const t = copy[language];
 
   useEffect(() => {
     setResultWindowOffset(0);
     setResultWindowLimit(RESULT_WINDOW_BASE_SIZE);
+    chunkCacheRef.current.clear();
   }, [job?.job_id, studyKind]);
 
   useEffect(() => {
@@ -2098,13 +2143,38 @@ export function Workbench() {
     (async () => {
       try {
         const safeOffset = clampChunkOffset(resultWindowOffset, totalItems, limit);
-
         const chunkFetcher =
           frontendRuntimeMode === "direct_mesh_gui" ? fetchDirectMeshResultChunk : fetchResultChunk;
+        const fetchChunk = async (kind: "nodes" | "elements", offset: number) => {
+          const key = chunkCacheKey(frontendRuntimeMode, job.job_id, kind, offset, limit);
+          const cached = readChunkCache(chunkCacheRef.current, key);
+          if (cached) return cached;
+
+          const chunk = await chunkFetcher(job.job_id, kind, { offset, limit });
+          writeChunkCache(chunkCacheRef.current, key, chunk as ResultChunkPayload<Record<string, unknown>>);
+          return chunk;
+        };
+
+        const nodesKey = chunkCacheKey(frontendRuntimeMode, job.job_id, "nodes", safeOffset, limit);
+        const elementsKey = chunkCacheKey(frontendRuntimeMode, job.job_id, "elements", safeOffset, limit);
+        const cachedNodes = readChunkCache(chunkCacheRef.current, nodesKey);
+        const cachedElements = readChunkCache(chunkCacheRef.current, elementsKey);
+
+        if (cachedNodes && cachedElements) {
+          setResultWindow({
+            jobId: job.job_id,
+            studyKind: nextStudyKind,
+            nodes: cachedNodes.items,
+            elements: cachedElements.items,
+            totalNodes: cachedNodes.total,
+            totalElements: cachedElements.total,
+            limit,
+          });
+        }
 
         const [nodesChunk, elementsChunk] = await Promise.all([
-          chunkFetcher(job.job_id, "nodes", { offset: safeOffset, limit }),
-          chunkFetcher(job.job_id, "elements", { offset: safeOffset, limit }),
+          fetchChunk("nodes", safeOffset),
+          fetchChunk("elements", safeOffset),
         ]);
 
         if (cancelled) return;
@@ -2118,6 +2188,24 @@ export function Workbench() {
           totalElements: elementsChunk.total,
           limit,
         });
+
+        const directionalOffsets =
+          chunkScrollDirectionRef.current > 0
+            ? [safeOffset + limit, safeOffset + limit * 2, safeOffset - limit]
+            : chunkScrollDirectionRef.current < 0
+              ? [safeOffset - limit, safeOffset - limit * 2, safeOffset + limit]
+              : [safeOffset - limit, safeOffset + limit];
+
+        const prefetchOffsets = directionalOffsets
+          .map((offset) => clampChunkOffset(offset, totalItems, limit))
+          .filter((offset, index, values) => offset !== safeOffset && values.indexOf(offset) === index);
+
+        void Promise.all(
+          prefetchOffsets.flatMap((offset) => [
+            fetchChunk("nodes", offset),
+            fetchChunk("elements", offset),
+          ]),
+        ).catch(() => undefined);
       } catch {
         if (!cancelled) {
           setResultWindow(null);
@@ -2511,6 +2599,10 @@ export function Workbench() {
     if (chunkScrollFrameRef.current !== null) return;
 
     const target = event.currentTarget;
+    const previousLeft = chunkScrollLeftRef.current;
+    chunkScrollDirectionRef.current =
+      target.scrollLeft > previousLeft ? 1 : target.scrollLeft < previousLeft ? -1 : 0;
+    chunkScrollLeftRef.current = target.scrollLeft;
 
     chunkScrollFrameRef.current = window.requestAnimationFrame(() => {
       chunkScrollFrameRef.current = null;
@@ -2521,7 +2613,9 @@ export function Workbench() {
       const maxOffset = Math.max(0, resultWindowMaxTotal - resultWindowLimit);
       if (maxOffset <= 0) return;
 
-      const ratio = target.scrollLeft / maxScrollLeft;
+      const viewportCenter = target.scrollLeft + target.clientWidth * 0.5;
+      const totalWidth = Math.max(target.scrollWidth, target.clientWidth);
+      const ratio = Math.min(1, Math.max(0, viewportCenter / totalWidth));
       const nextOffset = clampChunkOffset(ratio * maxOffset, resultWindowMaxTotal, resultWindowLimit);
 
       setResultWindowOffset((current) => (current === nextOffset ? current : nextOffset));
