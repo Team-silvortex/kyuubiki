@@ -921,24 +921,23 @@ impl SparseMatrix {
             return;
         }
 
-        if let Some((_, entry_value)) = self.rows[row]
-            .iter_mut()
-            .find(|(entry_column, _)| *entry_column == column)
-        {
-            *entry_value += value;
-            if entry_value.abs() <= 1.0e-18 {
-                self.rows[row].retain(|(entry_column, _)| *entry_column != column);
+        let row_entries = &mut self.rows[row];
+        match row_entries.binary_search_by_key(&column, |(entry_column, _)| *entry_column) {
+            Ok(index) => {
+                row_entries[index].1 += value;
+                if row_entries[index].1.abs() <= 1.0e-18 {
+                    row_entries.remove(index);
+                }
             }
-            return;
+            Err(index) => row_entries.insert(index, (column, value)),
         }
-
-        self.rows[row].push((column, value));
     }
 
     fn diagonal_value(&self, row: usize) -> f64 {
         self.rows[row]
-            .iter()
-            .find_map(|(column, value)| (*column == row).then_some(*value))
+            .binary_search_by_key(&row, |(column, _)| *column)
+            .ok()
+            .map(|index| self.rows[row][index].1)
             .unwrap_or(0.0)
     }
 
@@ -951,13 +950,7 @@ impl SparseMatrix {
 
         row_offsets.push(0);
         for (row_index, row) in self.rows.iter().enumerate() {
-            let mut entries = row
-                .iter()
-                .map(|&(column, value)| (column, value))
-                .collect::<Vec<_>>();
-            entries.sort_by_key(|(column, _)| *column);
-
-            for (column, value) in entries {
+            for &(column, value) in row {
                 if column == row_index {
                     diagonal[row_index] = value;
                 }

@@ -31,6 +31,8 @@ A change is not done until all of the following are true:
 - `./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3`
 - `make test`
 - `make verify`
+- `make benchmark-compare PROFILE=medium`
+- `make benchmark-report PROFILE=10k`
 
 ## PostgreSQL Mode
 

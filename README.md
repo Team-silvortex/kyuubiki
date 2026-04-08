@@ -392,6 +392,20 @@ cargo run -p kyuubiki-benchmark -- --profile medium --repeat 3
 cargo run -p kyuubiki-benchmark -- --profile large --repeat 1
 cargo run -p kyuubiki-benchmark -- --profile v2 --repeat 1
 cargo run -p kyuubiki-benchmark -- --profile 10k --repeat 1
+cargo run -p kyuubiki-benchmark -- --profile 15k --repeat 1
+cargo run -p kyuubiki-benchmark -- --profile 20k --repeat 1
+cargo run -p kyuubiki-benchmark -- --profile 10k --repeat 3 --baseline-out benchmarks/10k-baseline.json
+cargo run -p kyuubiki-benchmark -- --profile 10k --repeat 1 --baseline-compare benchmarks/10k-baseline.json
+cargo run -p kyuubiki-benchmark -- --profile 10k --repeat 1 --baseline-compare benchmarks/10k-baseline.json --compare-report-out benchmarks/reports/10k-compare.md
+```
+
+Or through Make:
+
+```bash
+make benchmark-baseline PROFILE=medium REPEAT=5
+make benchmark-compare PROFILE=medium REPEAT=3
+make benchmark-report PROFILE=10k REPEAT=1
+make verify
 ```
 
 Current benchmark tiers are aimed at:
@@ -400,8 +414,28 @@ Current benchmark tiers are aimed at:
 - `large`: low-thousands node class
 - `v2`: path toward the next scale target
 - `10k`: explicit single-machine `10k`-node route across `1D bar`, `2D truss`, `3D truss`, and `2D plane triangle`
+- `15k`: upper single-machine exploration tier
+- `20k`: stretch tier for machine-boundary probing
 
-Benchmark table output now includes peak RSS so single-machine scale work can be tracked by both time and memory pressure.
+Benchmark table output now includes `median`, `p95`, and peak RSS so single-machine scale work can be tracked by both latency stability and memory pressure. Baseline snapshots can be written with `--baseline-out`, later runs can be compared against them with `--baseline-compare`, and human-readable Markdown reports can be emitted with `--compare-report-out`.
+
+Checked-in single-machine baselines currently exist for:
+
+- [medium-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/medium-baseline.json)
+- [10k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/10k-baseline.json)
+- [15k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/15k-baseline.json)
+- [20k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/20k-baseline.json)
+
+Comparison reports are written under:
+
+- [workers/rust/benchmarks/reports](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/reports)
+
+`make verify` and CI use a lightweight regression gate against the checked-in `medium` baseline. Default guardrails are:
+
+- repeat count: `3`
+- median regression threshold: `25%`
+- peak RSS regression threshold: `20%`
+- ignore cases whose baseline median is under `1.0 ms`
 
 ## Local Development
 
@@ -468,3 +502,12 @@ This currently covers:
 - stronger local-first setup through SQLite and installer UX
 
 The next scale target after `v0.2` is clear: make single-machine `10k`-node workflows practical on an `M2 + 16GB` class machine across the main current solver families, then push beyond that baseline with better chunking, sparse solving, and distributed orchestration.
+
+Recent single-machine scaling probes on the current Rust solver stack show:
+
+- `15k` `2D truss`: `14884` nodes, `29768` DOF, about `9.19 s`, `61 MiB` peak RSS
+- `20k` `2D truss`: `19881` nodes, `39762` DOF, about `14.72 s`, `78 MiB` peak RSS
+- `15k` `2D plane triangle`: `14884` nodes, `29768` DOF, about `9.73 s`, `74 MiB` peak RSS
+- `20k` `2D plane triangle`: `19881` nodes, `39762` DOF, about `15.36 s`, `78 MiB` peak RSS
+- `15k` `3D truss`: `15138` nodes, `45414` DOF, about `228 ms`, `53 MiB` peak RSS
+- `20k` `3D truss`: `20000` nodes, `60000` DOF, about `301 ms`, `60 MiB` peak RSS

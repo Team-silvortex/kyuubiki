@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark
+.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -35,6 +35,9 @@ help:
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
+	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=medium by default)"
+	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline"
+	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline"
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
 	@echo "  zsh ./scripts/kyuubiki help    Show the unified local entrypoint"
@@ -117,6 +120,7 @@ format-rust:
 verify:
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
+	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-1.0}
 	@node --test apps/web/playground/test/fem.test.mjs
 
 tdd-web:
@@ -145,3 +149,13 @@ frontend:
 
 benchmark:
 	@$(ENTRYPOINT) benchmark $(ARGS)
+
+benchmark-baseline:
+	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-5} --baseline-out benchmarks/$${PROFILE:-medium}-baseline.json
+
+benchmark-compare:
+	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-1.0}
+
+benchmark-report:
+	@mkdir -p workers/rust/benchmarks/reports
+	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --compare-report-out benchmarks/reports/$${PROFILE:-medium}-compare.md

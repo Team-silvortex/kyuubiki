@@ -1,4 +1,8 @@
-use std::time::Instant;
+use std::{
+    fs,
+    process,
+    time::{Instant, SystemTime, UNIX_EPOCH},
+};
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
@@ -7,7 +11,7 @@ use kyuubiki_protocol::{
     SolveTruss2dRequest, SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput,
     TrussElementInput, TrussNodeInput,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 fn main() {
     let config = BenchmarkConfig::from_env();
@@ -18,29 +22,69 @@ fn main() {
         .iter()
         .map(|case| run_case(case, config.repeat))
         .collect::<Vec<_>>();
+    let report = BenchmarkReport {
+        repeat: config.repeat,
+    profile: config.profile,
+    generated_at_unix_s: unix_timestamp(),
+    cases: results,
+    };
+
+    if let Some(path) = &config.baseline_out {
+        let payload = serde_json::to_string_pretty(&report).expect("report should serialize");
+        fs::write(path, payload).expect("baseline snapshot should write");
+    }
+
+    let comparison = config
+        .baseline_compare
+        .as_ref()
+        .and_then(|path| load_baseline_report(path).ok())
+        .map(|baseline| compare_against_baseline(&report, &baseline));
+
+    if let (Some(path), Some(comparison)) = (&config.compare_report_out, &comparison) {
+        let payload = render_comparison_report(&report, comparison);
+        fs::write(path, payload).expect("comparison report should write");
+    }
 
     match config.format {
         OutputFormat::Json => {
             println!(
                 "{}",
-                serde_json::to_string_pretty(&BenchmarkReport {
-                    repeat: config.repeat,
-                    profile: config.profile,
-                    cases: results,
-                })
-                .expect("report should serialize")
+                serde_json::to_string_pretty(&report).expect("report should serialize")
             );
         }
-        OutputFormat::Table => print_table(&results, config.repeat, config.profile),
+        OutputFormat::Table => print_table(
+            &report.cases,
+            config.repeat,
+            config.profile,
+            comparison.as_ref(),
+        ),
+    }
+
+    if let Some(comparison) = &comparison {
+        let failures = evaluate_regressions(&config, comparison);
+        if !failures.is_empty() {
+            eprintln!();
+            eprintln!("benchmark regression gate failed:");
+            for failure in failures {
+                eprintln!("  {failure}");
+            }
+            process::exit(1);
+        }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 struct BenchmarkConfig {
     repeat: usize,
     case_filter: Option<String>,
     format: OutputFormat,
     profile: BenchmarkProfile,
+    baseline_out: Option<String>,
+    baseline_compare: Option<String>,
+    compare_report_out: Option<String>,
+    fail_on_median_regression_pct: Option<f64>,
+    fail_on_rss_regression_pct: Option<f64>,
+    min_baseline_median_ms: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -49,13 +93,15 @@ enum OutputFormat {
     Json,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum BenchmarkProfile {
     Medium,
     Large,
     V2,
     TenK,
+    FifteenK,
+    TwentyK,
 }
 
 impl BenchmarkProfile {
@@ -65,6 +111,8 @@ impl BenchmarkProfile {
             Self::Large => "large",
             Self::V2 => "v2",
             Self::TenK => "10k",
+            Self::FifteenK => "15k",
+            Self::TwentyK => "20k",
         }
     }
 }
@@ -76,6 +124,12 @@ impl BenchmarkConfig {
             case_filter: None,
             format: OutputFormat::Table,
             profile: BenchmarkProfile::Medium,
+            baseline_out: None,
+            baseline_compare: None,
+            compare_report_out: None,
+            fail_on_median_regression_pct: None,
+            fail_on_rss_regression_pct: None,
+            min_baseline_median_ms: 1.0,
         };
 
         let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -107,8 +161,41 @@ impl BenchmarkConfig {
                             "large" => BenchmarkProfile::Large,
                             "v2" => BenchmarkProfile::V2,
                             "10k" => BenchmarkProfile::TenK,
+                            "15k" => BenchmarkProfile::FifteenK,
+                            "20k" => BenchmarkProfile::TwentyK,
                             _ => BenchmarkProfile::Medium,
                         };
+                    }
+                }
+                "--baseline-out" => {
+                    if let Some(value) = args.next() {
+                        config.baseline_out = Some(value.clone());
+                    }
+                }
+                "--baseline-compare" => {
+                    if let Some(value) = args.next() {
+                        config.baseline_compare = Some(value.clone());
+                    }
+                }
+                "--compare-report-out" => {
+                    if let Some(value) = args.next() {
+                        config.compare_report_out = Some(value.clone());
+                    }
+                }
+                "--fail-on-median-regression-pct" => {
+                    if let Some(value) = args.next() {
+                        config.fail_on_median_regression_pct = value.parse().ok();
+                    }
+                }
+                "--fail-on-rss-regression-pct" => {
+                    if let Some(value) = args.next() {
+                        config.fail_on_rss_regression_pct = value.parse().ok();
+                    }
+                }
+                "--min-baseline-median-ms" => {
+                    if let Some(value) = args.next() {
+                        config.min_baseline_median_ms =
+                            value.parse().unwrap_or(config.min_baseline_median_ms);
                     }
                 }
                 _ => {}
@@ -134,14 +221,15 @@ enum BenchmarkWorkload {
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct BenchmarkReport {
     repeat: usize,
     profile: BenchmarkProfile,
+    generated_at_unix_s: u64,
     cases: Vec<BenchmarkResult>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct BenchmarkResult {
     id: String,
     family: String,
@@ -149,7 +237,9 @@ struct BenchmarkResult {
     error: Option<String>,
     repeat: usize,
     min_ms: f64,
+    median_ms: f64,
     mean_ms: f64,
+    p95_ms: f64,
     max_ms: f64,
     dof_count: usize,
     node_count: usize,
@@ -157,6 +247,20 @@ struct BenchmarkResult {
     peak_rss_kib: u64,
     max_displacement: f64,
     max_stress: f64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BenchmarkComparison {
+    baseline_generated_at_unix_s: u64,
+    cases: Vec<BenchmarkComparisonCase>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct BenchmarkComparisonCase {
+    id: String,
+    baseline_median_ms: f64,
+    median_delta_pct: f64,
+    peak_rss_delta_pct: f64,
 }
 
 fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
@@ -259,6 +363,62 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                 )),
             },
         ],
+        BenchmarkProfile::FifteenK => vec![
+            BenchmarkCase {
+                id: "axial-bar-15k",
+                family: "axial_bar_1d",
+                workload: BenchmarkWorkload::AxialBar(generate_bar_case(15_000)),
+            },
+            BenchmarkCase {
+                id: "truss-roof-15k",
+                family: "truss_2d",
+                workload: BenchmarkWorkload::Truss2d(generate_lattice_truss_10k(
+                    121, 121, 146.0, 146.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "space-frame-15k",
+                family: "truss_3d",
+                workload: BenchmarkWorkload::Truss3d(generate_space_frame_grid(
+                    86, 86, 172.0, 172.0, 18.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "plane-panel-15k",
+                family: "plane_triangle_2d",
+                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    121, 121, 121.0, 121.0,
+                )),
+            },
+        ],
+        BenchmarkProfile::TwentyK => vec![
+            BenchmarkCase {
+                id: "axial-bar-20k",
+                family: "axial_bar_1d",
+                workload: BenchmarkWorkload::AxialBar(generate_bar_case(20_000)),
+            },
+            BenchmarkCase {
+                id: "truss-roof-20k",
+                family: "truss_2d",
+                workload: BenchmarkWorkload::Truss2d(generate_lattice_truss_10k(
+                    140, 140, 168.0, 168.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "space-frame-20k",
+                family: "truss_3d",
+                workload: BenchmarkWorkload::Truss3d(generate_space_frame_grid(
+                    99, 99, 198.0, 198.0, 20.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "plane-panel-20k",
+                family: "plane_triangle_2d",
+                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    140, 140, 140.0, 140.0,
+                )),
+            },
+        ],
     }
 }
 
@@ -344,13 +504,17 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
     }
 
     let ok = error.is_none();
-    let min_ms = durations.iter().copied().fold(f64::INFINITY, f64::min);
-    let max_ms = durations.iter().copied().fold(0.0, f64::max);
+    let mut sorted = durations.clone();
+    sorted.sort_by(|lhs, rhs| lhs.total_cmp(rhs));
+    let min_ms = sorted.iter().copied().fold(f64::INFINITY, f64::min);
+    let max_ms = sorted.iter().copied().fold(0.0, f64::max);
     let mean_ms = if durations.is_empty() {
         0.0
     } else {
         durations.iter().copied().sum::<f64>() / durations.len() as f64
     };
+    let median_ms = percentile(&sorted, 0.5);
+    let p95_ms = percentile(&sorted, 0.95);
 
     BenchmarkResult {
         id: case.id.to_string(),
@@ -359,7 +523,9 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
         error,
         repeat,
         min_ms: if min_ms.is_finite() { min_ms } else { 0.0 },
+        median_ms,
         mean_ms,
+        p95_ms,
         max_ms,
         dof_count,
         node_count,
@@ -391,19 +557,30 @@ fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usize) {
     }
 }
 
-fn print_table(results: &[BenchmarkResult], repeat: usize, profile: BenchmarkProfile) {
+fn print_table(
+    results: &[BenchmarkResult],
+    repeat: usize,
+    profile: BenchmarkProfile,
+    comparison: Option<&BenchmarkComparison>,
+) {
     println!("kyuubiki benchmark suite");
     println!("profile: {}", profile.as_str());
     println!("repeat count: {repeat}");
+    if let Some(comparison) = comparison {
+        println!(
+            "baseline compare: {}",
+            comparison.baseline_generated_at_unix_s
+        );
+    }
     println!();
     println!(
-        "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10} {:>10}",
-        "case", "family", "status", "nodes", "elems", "dofs", "min ms", "mean ms", "max ms", "peak rss"
+        "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}",
+        "case", "family", "status", "nodes", "elems", "dofs", "min ms", "median", "mean ms", "p95 ms", "max ms", "peak rss"
     );
 
     for result in results {
         println!(
-            "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10.4} {:>10.4} {:>10.4} {:>8} MiB",
+            "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>10.4} {:>8} MiB",
             result.id,
             result.family,
             if result.ok { "ok" } else { "fail" },
@@ -411,12 +588,22 @@ fn print_table(results: &[BenchmarkResult], repeat: usize, profile: BenchmarkPro
             result.element_count,
             result.dof_count,
             result.min_ms,
+            result.median_ms,
             result.mean_ms,
+            result.p95_ms,
             result.max_ms,
             kib_to_mib(result.peak_rss_kib)
         );
         if let Some(error) = &result.error {
             println!("  error: {error}");
+        }
+        if let Some(delta) = comparison
+            .and_then(|comparison| comparison.cases.iter().find(|case| case.id == result.id))
+        {
+            println!(
+                "  vs baseline: median {:+.2}% | peak rss {:+.2}%",
+                delta.median_delta_pct, delta.peak_rss_delta_pct
+            );
         }
     }
 }
@@ -446,6 +633,149 @@ fn current_peak_rss_kib() -> u64 {
 
 fn kib_to_mib(kib: u64) -> u64 {
     kib.div_ceil(1024)
+}
+
+fn percentile(sorted: &[f64], fraction: f64) -> f64 {
+    if sorted.is_empty() {
+        return 0.0;
+    }
+
+    let index = ((sorted.len() - 1) as f64 * fraction).round() as usize;
+    sorted[index.min(sorted.len() - 1)]
+}
+
+fn unix_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn load_baseline_report(path: &str) -> Result<BenchmarkReport, String> {
+    let content = fs::read_to_string(path).map_err(|error| error.to_string())?;
+    serde_json::from_str(&content).map_err(|error| error.to_string())
+}
+
+fn compare_against_baseline(
+    current: &BenchmarkReport,
+    baseline: &BenchmarkReport,
+) -> BenchmarkComparison {
+    let cases = current
+        .cases
+        .iter()
+        .filter_map(|current_case| {
+            baseline
+                .cases
+                .iter()
+                .find(|baseline_case| baseline_case.id == current_case.id)
+                .map(|baseline_case| BenchmarkComparisonCase {
+                    id: current_case.id.clone(),
+                    baseline_median_ms: baseline_case.median_ms,
+                    median_delta_pct: percent_delta(
+                        baseline_case.median_ms,
+                        current_case.median_ms,
+                    ),
+                    peak_rss_delta_pct: percent_delta(
+                        baseline_case.peak_rss_kib as f64,
+                        current_case.peak_rss_kib as f64,
+                    ),
+                })
+        })
+        .collect();
+
+    BenchmarkComparison {
+        baseline_generated_at_unix_s: baseline.generated_at_unix_s,
+        cases,
+    }
+}
+
+fn evaluate_regressions(
+    config: &BenchmarkConfig,
+    comparison: &BenchmarkComparison,
+) -> Vec<String> {
+    let mut failures = Vec::new();
+
+    for case in &comparison.cases {
+        if case.baseline_median_ms < config.min_baseline_median_ms {
+            continue;
+        }
+
+        if let Some(threshold) = config.fail_on_median_regression_pct {
+            if case.median_delta_pct > threshold {
+                failures.push(format!(
+                    "{} median regression {:+.2}% exceeds threshold +{:.2}%",
+                    case.id, case.median_delta_pct, threshold
+                ));
+            }
+        }
+
+        if let Some(threshold) = config.fail_on_rss_regression_pct {
+            if case.peak_rss_delta_pct > threshold {
+                failures.push(format!(
+                    "{} peak RSS regression {:+.2}% exceeds threshold +{:.2}%",
+                    case.id, case.peak_rss_delta_pct, threshold
+                ));
+            }
+        }
+    }
+
+    failures
+}
+
+fn render_comparison_report(report: &BenchmarkReport, comparison: &BenchmarkComparison) -> String {
+    let mut lines = vec![
+        "# Kyuubiki Benchmark Comparison".to_string(),
+        String::new(),
+        format!("- Profile: `{}`", report.profile.as_str()),
+        format!("- Repeat count: `{}`", report.repeat),
+        format!("- Generated at (unix): `{}`", report.generated_at_unix_s),
+        format!(
+            "- Baseline generated at (unix): `{}`",
+            comparison.baseline_generated_at_unix_s
+        ),
+        String::new(),
+        "| Case | Status | Median ms | Delta | Peak RSS | Delta |".to_string(),
+        "| --- | --- | ---: | ---: | ---: | ---: |".to_string(),
+    ];
+
+    for result in &report.cases {
+        let (median_delta, rss_delta) = comparison
+            .cases
+            .iter()
+            .find(|case| case.id == result.id)
+            .map(|case| {
+                (
+                    format!("{:+.2}%", case.median_delta_pct),
+                    format!("{:+.2}%", case.peak_rss_delta_pct),
+                )
+            })
+            .unwrap_or_else(|| ("n/a".to_string(), "n/a".to_string()));
+
+        lines.push(format!(
+            "| `{}` | {} | {:.4} | {} | {} MiB | {} |",
+            result.id,
+            if result.ok { "ok" } else { "fail" },
+            result.median_ms,
+            median_delta,
+            kib_to_mib(result.peak_rss_kib),
+            rss_delta
+        ));
+
+        if let Some(error) = &result.error {
+            lines.push(format!("|  | error | `{}` |  |  |  |", error));
+        }
+    }
+
+    lines.push(String::new());
+    lines.join("\n")
+}
+
+fn percent_delta(old: f64, new: f64) -> f64 {
+    if old.abs() <= f64::EPSILON {
+        0.0
+    } else {
+        ((new - old) / old) * 100.0
+    }
 }
 
 fn generate_bar_case(elements: usize) -> SolveBarRequest {
@@ -809,6 +1139,12 @@ mod tests {
             case_filter: None,
             format: OutputFormat::Table,
             profile: BenchmarkProfile::Medium,
+            baseline_out: None,
+            baseline_compare: None,
+            compare_report_out: None,
+            fail_on_median_regression_pct: None,
+            fail_on_rss_regression_pct: None,
+            min_baseline_median_ms: 1.0,
         };
 
         assert_eq!(config.repeat, 10);
