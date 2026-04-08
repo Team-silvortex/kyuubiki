@@ -91,6 +91,7 @@ type ModelPanelTab = "tools" | "tree";
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 type ImmersiveToolTab = "node" | "props";
 type SystemDataTab = "jobs" | "results";
+type SystemPanelTab = "config" | "runtime" | "data";
 
 type AxialFormState = {
   length: number;
@@ -195,10 +196,11 @@ type ResultWindowState = {
   elements: Record<string, unknown>[];
   totalNodes: number;
   totalElements: number;
+  limit: number;
 };
 
 const RESULT_WINDOW_THRESHOLD = 400;
-const RESULT_WINDOW_SIZE = 240;
+const RESULT_WINDOW_BASE_SIZE = 240;
 
 const defaultAxial: AxialFormState = {
   length: 1.2,
@@ -447,7 +449,13 @@ const copy = {
     resultWindow: "Result Window",
     previousPage: "Previous",
     nextPage: "Next",
+    jumpStart: "Start",
+    jumpQuarter: "25%",
+    jumpMid: "50%",
+    jumpThreeQuarter: "75%",
+    jumpEnd: "End",
     pageRange: "Rows",
+    chunkSize: "Chunk",
     totalElements: "Elements",
     projectLibrary: "Project Library",
     projectNameField: "Project name",
@@ -790,7 +798,13 @@ const copy = {
     resultWindow: "结果窗口",
     previousPage: "上一页",
     nextPage: "下一页",
+    jumpStart: "开头",
+    jumpQuarter: "25%",
+    jumpMid: "50%",
+    jumpThreeQuarter: "75%",
+    jumpEnd: "末尾",
     pageRange: "区间",
+    chunkSize: "窗口",
     totalElements: "单元",
     projectLibrary: "项目库",
     projectNameField: "项目名",
@@ -1797,6 +1811,20 @@ function renderLoadGlyph(
   );
 }
 
+function computeResultWindowSize(totalItems: number) {
+  if (totalItems >= 20_000) return 720;
+  if (totalItems >= 15_000) return 600;
+  if (totalItems >= 10_000) return 480;
+  if (totalItems >= 4_000) return 360;
+  return RESULT_WINDOW_BASE_SIZE;
+}
+
+function clampChunkOffset(offset: number, totalItems: number, limit: number) {
+  const maxOffset = Math.max(0, totalItems - limit);
+  const snapped = Math.round(Math.max(0, offset) / limit) * limit;
+  return Math.min(maxOffset, snapped);
+}
+
 export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
@@ -1809,6 +1837,7 @@ export function Workbench() {
   const [result, setResult] = useState<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null>(null);
   const [resultWindow, setResultWindow] = useState<ResultWindowState | null>(null);
   const [resultWindowOffset, setResultWindowOffset] = useState(0);
+  const [resultWindowLimit, setResultWindowLimit] = useState(RESULT_WINDOW_BASE_SIZE);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
@@ -1853,6 +1882,7 @@ export function Workbench() {
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
   const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("samples");
   const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
+  const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("config");
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
   const [truss3dLinkMode, setTruss3dLinkMode] = useState(false);
   const [selectedTruss3dNodes, setSelectedTruss3dNodes] = useState<number[]>([]);
@@ -1880,6 +1910,7 @@ export function Workbench() {
 
   useEffect(() => {
     setResultWindowOffset(0);
+    setResultWindowLimit(RESULT_WINDOW_BASE_SIZE);
   }, [job?.job_id, studyKind]);
 
   useEffect(() => {
@@ -1923,10 +1954,16 @@ export function Workbench() {
 
     const totalNodes = Array.isArray(result.nodes) ? result.nodes.length : 0;
     const totalElements = Array.isArray(result.elements) ? result.elements.length : 0;
+    const totalItems = Math.max(totalNodes, totalElements);
 
     if (totalNodes <= RESULT_WINDOW_THRESHOLD && totalElements <= RESULT_WINDOW_THRESHOLD) {
       setResultWindow(null);
       return;
+    }
+
+    const limit = computeResultWindowSize(totalItems);
+    if (resultWindowLimit !== limit) {
+      setResultWindowLimit(limit);
     }
 
     const nextStudyKind: Exclude<StudyKind, "axial_bar_1d"> = isTrussResult(result)
@@ -1939,11 +1976,11 @@ export function Workbench() {
 
     (async () => {
       try {
-        const safeOffset = Math.max(0, resultWindowOffset);
+        const safeOffset = clampChunkOffset(resultWindowOffset, totalItems, limit);
 
         const [nodesChunk, elementsChunk] = await Promise.all([
-          fetchResultChunk(job.job_id, "nodes", { offset: safeOffset, limit: RESULT_WINDOW_SIZE }),
-          fetchResultChunk(job.job_id, "elements", { offset: safeOffset, limit: RESULT_WINDOW_SIZE }),
+          fetchResultChunk(job.job_id, "nodes", { offset: safeOffset, limit }),
+          fetchResultChunk(job.job_id, "elements", { offset: safeOffset, limit }),
         ]);
 
         if (cancelled) return;
@@ -1955,6 +1992,7 @@ export function Workbench() {
           elements: elementsChunk.items,
           totalNodes: nodesChunk.total,
           totalElements: elementsChunk.total,
+          limit,
         });
       } catch {
         if (!cancelled) {
@@ -1966,7 +2004,18 @@ export function Workbench() {
     return () => {
       cancelled = true;
     };
-  }, [job?.job_id, result, resultWindowOffset]);
+  }, [job?.job_id, result, resultWindowLimit, resultWindowOffset]);
+
+  useEffect(() => {
+    if (!resultWindow) return;
+
+    const totalItems = Math.max(resultWindow.totalNodes, resultWindow.totalElements);
+    const nextOffset = clampChunkOffset(resultWindowOffset, totalItems, resultWindowLimit);
+
+    if (nextOffset !== resultWindowOffset) {
+      setResultWindowOffset(nextOffset);
+    }
+  }, [resultWindow, resultWindowLimit, resultWindowOffset]);
 
   useEffect(() => {
     const stored = safeStorageGet();
@@ -2228,11 +2277,11 @@ export function Workbench() {
       const maxScrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
       if (maxScrollLeft <= 0) return;
 
-      const maxOffset = Math.max(0, resultWindowMaxTotal - RESULT_WINDOW_SIZE);
+      const maxOffset = Math.max(0, resultWindowMaxTotal - resultWindowLimit);
       if (maxOffset <= 0) return;
 
       const ratio = target.scrollLeft / maxScrollLeft;
-      const nextOffset = Math.round((ratio * maxOffset) / RESULT_WINDOW_SIZE) * RESULT_WINDOW_SIZE;
+      const nextOffset = clampChunkOffset(ratio * maxOffset, resultWindowMaxTotal, resultWindowLimit);
 
       setResultWindowOffset((current) => (current === nextOffset ? current : nextOffset));
     });
@@ -3117,14 +3166,30 @@ export function Workbench() {
         (isTruss ? trussResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : planeResult?.nodes.length) ??
         (isTruss ? trussModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : planeModel.nodes.length);
   const resultWindowMaxTotal = activeResultWindow ? Math.max(activeResultWindow.totalNodes, activeResultWindow.totalElements) : 0;
+  const activeResultWindowLimit = activeResultWindow?.limit ?? resultWindowLimit;
   const resultWindowStart = activeResultWindow ? Math.min(resultWindowOffset, Math.max(0, resultWindowMaxTotal - 1)) + 1 : 0;
-  const resultWindowEnd = activeResultWindow ? Math.min(resultWindowOffset + RESULT_WINDOW_SIZE, resultWindowMaxTotal) : 0;
+  const resultWindowEnd = activeResultWindow ? Math.min(resultWindowOffset + activeResultWindowLimit, resultWindowMaxTotal) : 0;
+  const resultWindowJumps = activeResultWindow
+    ? [
+        { label: t.jumpStart, offset: 0 },
+        { label: t.jumpQuarter, offset: clampChunkOffset(resultWindowMaxTotal * 0.25, resultWindowMaxTotal, activeResultWindowLimit) },
+        { label: t.jumpMid, offset: clampChunkOffset(resultWindowMaxTotal * 0.5, resultWindowMaxTotal, activeResultWindowLimit) },
+        {
+          label: t.jumpThreeQuarter,
+          offset: clampChunkOffset(resultWindowMaxTotal * 0.75, resultWindowMaxTotal, activeResultWindowLimit),
+        },
+        {
+          label: t.jumpEnd,
+          offset: clampChunkOffset(Math.max(0, resultWindowMaxTotal - activeResultWindowLimit), resultWindowMaxTotal, activeResultWindowLimit),
+        },
+      ].filter((jump, index, jumps) => jumps.findIndex((candidate) => candidate.offset === jump.offset) === index)
+    : [];
   const hasViewportDock = isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen));
   const showViewportToolStrip = isTruss3d && immersiveToolDrawerOpen;
   const shouldStretchSpaceViewport = isTruss3d && !hasViewportDock && !activeResultWindow;
   const viewportPixelWidth =
     activeResultWindow
-      ? Math.min(3200, 980 + Math.ceil(resultWindowMaxTotal / RESULT_WINDOW_SIZE) * 180)
+      ? Math.min(3200, 980 + Math.ceil(resultWindowMaxTotal / activeResultWindowLimit) * 180)
       : isTruss3d
         ? hasViewportDock
           ? 1120
@@ -5137,8 +5202,32 @@ export function Workbench() {
         ) : null}
 
         {sidebarSection === "system" ? (
-          <div className="sidebar-stack">
-            <section className="sidebar-card">
+          <div className="sidebar-stack panel-scroll-window">
+            <div className="panel-tabs panel-tabs--editor">
+              <button
+                className={`panel-tab${systemPanelTab === "config" ? " panel-tab--active" : ""}`}
+                onClick={() => setSystemPanelTab("config")}
+                type="button"
+              >
+                {language === "zh" ? "配置" : "Config"}
+              </button>
+              <button
+                className={`panel-tab${systemPanelTab === "runtime" ? " panel-tab--active" : ""}`}
+                onClick={() => setSystemPanelTab("runtime")}
+                type="button"
+              >
+                {language === "zh" ? "运行时" : "Runtime"}
+              </button>
+              <button
+                className={`panel-tab${systemPanelTab === "data" ? " panel-tab--active" : ""}`}
+                onClick={() => setSystemPanelTab("data")}
+                type="button"
+              >
+                {language === "zh" ? "数据" : "Data"}
+              </button>
+            </div>
+            {systemPanelTab === "config" ? (
+            <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">
                 <h2>{t.settings}</h2>
                 <span>{health?.status === "ok" ? t.online : t.offline}</span>
@@ -5189,7 +5278,10 @@ export function Workbench() {
                 </button>
               </div>
             </section>
-            <section className="sidebar-card">
+            ) : null}
+            {systemPanelTab === "runtime" ? (
+            <>
+            <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">
                 <h2>{t.backend}</h2>
                 <span>{health?.status ?? t.offline}</span>
@@ -5209,7 +5301,7 @@ export function Workbench() {
                 </div>
               </div>
             </section>
-            <section className="sidebar-card">
+            <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">
                 <h2>{t.watchdog}</h2>
                 <span>{health?.watchdog ? t.online : t.offline}</span>
@@ -5241,7 +5333,10 @@ export function Workbench() {
                 </div>
               </div>
             </section>
-            <section className="sidebar-card">
+            </>
+            ) : null}
+            {systemPanelTab === "data" ? (
+            <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">
                 <h2>{t.dataAdmin}</h2>
                 <span>
@@ -5389,6 +5484,7 @@ export function Workbench() {
                 </>
               )}
             </section>
+            ) : null}
           </div>
         ) : null}
       </aside>
@@ -5809,6 +5905,9 @@ export function Workbench() {
                   {t.pageRange}: {resultWindowStart}-{resultWindowEnd}
                 </span>
                 <span>
+                  {t.chunkSize}: {activeResultWindowLimit}
+                </span>
+                <span>
                   {t.nodes}: {activeResultWindow.totalNodes}
                 </span>
                 <span>
@@ -5816,20 +5915,35 @@ export function Workbench() {
                 </span>
               </div>
               <div className="button-row">
+                {resultWindowJumps.map((jump) => (
+                  <button
+                    key={jump.label}
+                    className="ghost-button ghost-button--compact"
+                    disabled={resultWindowOffset === jump.offset}
+                    onClick={() => setResultWindowOffset(jump.offset)}
+                    type="button"
+                  >
+                    {jump.label}
+                  </button>
+                ))}
                 <button
                   className="ghost-button ghost-button--compact"
                   disabled={resultWindowOffset <= 0}
-                  onClick={() => setResultWindowOffset((current) => Math.max(0, current - RESULT_WINDOW_SIZE))}
+                  onClick={() =>
+                    setResultWindowOffset((current) =>
+                      clampChunkOffset(current - activeResultWindowLimit, resultWindowMaxTotal, activeResultWindowLimit),
+                    )
+                  }
                   type="button"
                 >
                   {t.previousPage}
                 </button>
                 <button
                   className="ghost-button ghost-button--compact"
-                  disabled={resultWindowOffset + RESULT_WINDOW_SIZE >= resultWindowMaxTotal}
+                  disabled={resultWindowOffset + activeResultWindowLimit >= resultWindowMaxTotal}
                   onClick={() =>
                     setResultWindowOffset((current) =>
-                      Math.min(Math.max(0, resultWindowMaxTotal - RESULT_WINDOW_SIZE), current + RESULT_WINDOW_SIZE),
+                      clampChunkOffset(current + activeResultWindowLimit, resultWindowMaxTotal, activeResultWindowLimit),
                     )
                   }
                   type="button"

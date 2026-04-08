@@ -361,6 +361,22 @@ function stepForDensity(length: number, softLimit: number) {
   return length > softLimit ? Math.ceil(length / softLimit) : 1;
 }
 
+function initialRenderBudget(length: number) {
+  if (length >= 20_000) return 320;
+  if (length >= 10_000) return 280;
+  if (length >= 2_000) return 240;
+  if (length >= 800) return 200;
+  return length;
+}
+
+function renderBatchSize(length: number) {
+  if (length >= 20_000) return 640;
+  if (length >= 10_000) return 560;
+  if (length >= 2_000) return 420;
+  if (length >= 800) return 320;
+  return length;
+}
+
 function WorkbenchViewportInner({
   studyKind,
   sidebarSection,
@@ -433,13 +449,13 @@ function WorkbenchViewportInner({
 }: WorkbenchViewportProps) {
   const svgStyle = viewportPixelWidth ? { width: `${viewportPixelWidth}px`, minWidth: `${viewportPixelWidth}px` } : undefined;
   const isModelMode = sidebarSection === "model";
-  const trussLabelStep = stepForDensity(displayTrussNodes.length, isModelMode ? 22 : 12);
-  const trussMarkerStep = stepForDensity(displayTrussNodes.length, isModelMode ? 160 : 84);
-  const trussDeformedStep = stepForDensity(displayTrussElements.length, 180);
-  const truss3dLabelStep = stepForDensity(displayTruss3dNodes.length, 12);
-  const planeNodeLabelStep = stepForDensity(planeNodes.length, isModelMode ? 18 : 10);
-  const planeNodeMarkerStep = stepForDensity(planeNodes.length, isModelMode ? 128 : 72);
-  const planeDeformedStep = stepForDensity(planeElements.length, 120);
+  const [trussElementRenderLimit, setTrussElementRenderLimit] = useState(displayTrussElements.length);
+  const [trussNodeRenderLimit, setTrussNodeRenderLimit] = useState(displayTrussNodes.length);
+  const [truss3dElementRenderLimit, setTruss3dElementRenderLimit] = useState(displayTruss3dElements.length);
+  const [truss3dNodeRenderLimit, setTruss3dNodeRenderLimit] = useState(displayTruss3dNodes.length);
+  const [planeElementRenderLimit, setPlaneElementRenderLimit] = useState(planeElements.length);
+  const [planeNodeRenderLimit, setPlaneNodeRenderLimit] = useState(planeNodes.length);
+  const progressiveRenderFrameRef = useRef<number | null>(null);
   const [camera, setCamera] = useState<CameraState>(cameraForPreset("iso"));
   const dragModeRef = useRef<"orbit" | "pan" | null>(null);
   const dragNode3dRef = useRef<number | null>(null);
@@ -454,6 +470,108 @@ function WorkbenchViewportInner({
   const draftStartNodeIndex = memberDraftNodes[0] ?? null;
   const draftStartNode =
     truss3dLinkMode && draftStartNodeIndex !== null ? displayTruss3dNodes[draftStartNodeIndex] ?? null : null;
+  const visibleTrussElements = displayTrussElements.slice(0, trussElementRenderLimit);
+  const visibleTrussNodes = displayTrussNodes.slice(0, trussNodeRenderLimit);
+  const visibleTruss3dElements = displayTruss3dElements.slice(0, truss3dElementRenderLimit);
+  const visibleTruss3dNodes = displayTruss3dNodes.slice(0, truss3dNodeRenderLimit);
+  const visiblePlaneElements = planeElements.slice(0, planeElementRenderLimit);
+  const visiblePlaneNodes = planeNodes.slice(0, planeNodeRenderLimit);
+  const trussLabelStep = stepForDensity(visibleTrussNodes.length, isModelMode ? 22 : 12);
+  const trussMarkerStep = stepForDensity(visibleTrussNodes.length, isModelMode ? 160 : 84);
+  const trussDeformedStep = stepForDensity(visibleTrussElements.length, 180);
+  const truss3dLabelStep = stepForDensity(visibleTruss3dNodes.length, 12);
+  const planeNodeLabelStep = stepForDensity(visiblePlaneNodes.length, isModelMode ? 18 : 10);
+  const planeNodeMarkerStep = stepForDensity(visiblePlaneNodes.length, isModelMode ? 128 : 72);
+  const planeDeformedStep = stepForDensity(visiblePlaneElements.length, 120);
+
+  useEffect(() => {
+    const targets = {
+      trussElements: displayTrussElements.length,
+      trussNodes: displayTrussNodes.length,
+      truss3dElements: displayTruss3dElements.length,
+      truss3dNodes: displayTruss3dNodes.length,
+      planeElements: planeElements.length,
+      planeNodes: planeNodes.length,
+    };
+
+    setTrussElementRenderLimit(initialRenderBudget(targets.trussElements));
+    setTrussNodeRenderLimit(initialRenderBudget(targets.trussNodes));
+    setTruss3dElementRenderLimit(initialRenderBudget(targets.truss3dElements));
+    setTruss3dNodeRenderLimit(initialRenderBudget(targets.truss3dNodes));
+    setPlaneElementRenderLimit(initialRenderBudget(targets.planeElements));
+    setPlaneNodeRenderLimit(initialRenderBudget(targets.planeNodes));
+
+    if (progressiveRenderFrameRef.current !== null) {
+      window.cancelAnimationFrame(progressiveRenderFrameRef.current);
+    }
+
+    const advance = () => {
+      let complete = true;
+
+      setTrussElementRenderLimit((current) => {
+        const next = Math.min(targets.trussElements, current + renderBatchSize(targets.trussElements));
+        complete &&= next >= targets.trussElements;
+        return next;
+      });
+      setTrussNodeRenderLimit((current) => {
+        const next = Math.min(targets.trussNodes, current + renderBatchSize(targets.trussNodes));
+        complete &&= next >= targets.trussNodes;
+        return next;
+      });
+      setTruss3dElementRenderLimit((current) => {
+        const next = Math.min(targets.truss3dElements, current + renderBatchSize(targets.truss3dElements));
+        complete &&= next >= targets.truss3dElements;
+        return next;
+      });
+      setTruss3dNodeRenderLimit((current) => {
+        const next = Math.min(targets.truss3dNodes, current + renderBatchSize(targets.truss3dNodes));
+        complete &&= next >= targets.truss3dNodes;
+        return next;
+      });
+      setPlaneElementRenderLimit((current) => {
+        const next = Math.min(targets.planeElements, current + renderBatchSize(targets.planeElements));
+        complete &&= next >= targets.planeElements;
+        return next;
+      });
+      setPlaneNodeRenderLimit((current) => {
+        const next = Math.min(targets.planeNodes, current + renderBatchSize(targets.planeNodes));
+        complete &&= next >= targets.planeNodes;
+        return next;
+      });
+
+      if (!complete) {
+        progressiveRenderFrameRef.current = window.requestAnimationFrame(advance);
+      } else {
+        progressiveRenderFrameRef.current = null;
+      }
+    };
+
+    const needsProgressive =
+      targets.trussElements > initialRenderBudget(targets.trussElements) ||
+      targets.trussNodes > initialRenderBudget(targets.trussNodes) ||
+      targets.truss3dElements > initialRenderBudget(targets.truss3dElements) ||
+      targets.truss3dNodes > initialRenderBudget(targets.truss3dNodes) ||
+      targets.planeElements > initialRenderBudget(targets.planeElements) ||
+      targets.planeNodes > initialRenderBudget(targets.planeNodes);
+
+    if (needsProgressive) {
+      progressiveRenderFrameRef.current = window.requestAnimationFrame(advance);
+    }
+
+    return () => {
+      if (progressiveRenderFrameRef.current !== null) {
+        window.cancelAnimationFrame(progressiveRenderFrameRef.current);
+        progressiveRenderFrameRef.current = null;
+      }
+    };
+  }, [
+    displayTrussElements.length,
+    displayTrussNodes.length,
+    displayTruss3dElements.length,
+    displayTruss3dNodes.length,
+    planeElements.length,
+    planeNodes.length,
+  ]);
 
   useEffect(() => {
     setCamera((current) => ({ ...cameraForPreset(activeViewPreset), zoom: current.zoom }));
@@ -735,7 +853,7 @@ function WorkbenchViewportInner({
           {isModelMode ? title : trussTitle}
         </text>
         <g clipPath="url(#viewportClipTruss)">
-          {displayTrussElements.map((element) => {
+          {visibleTrussElements.map((element) => {
             if (element.material_id && hiddenTrussMaterialIds.includes(element.material_id)) return null;
             const start = toSvgPoint(displayTrussNodes[element.node_i], trussBounds);
             const end = toSvgPoint(displayTrussNodes[element.node_j], trussBounds);
@@ -761,7 +879,7 @@ function WorkbenchViewportInner({
           })}
 
           {trussResult
-            ? displayTrussElements.flatMap((element, index) => {
+            ? visibleTrussElements.flatMap((element, index) => {
                 if (element.material_id && hiddenTrussMaterialIds.includes(element.material_id)) return [];
                 if (index % trussDeformedStep !== 0) return [];
                 const start = toSvgPoint(
@@ -793,7 +911,7 @@ function WorkbenchViewportInner({
               })
             : null}
 
-          {displayTrussNodes.flatMap((node, index) => {
+          {visibleTrussNodes.flatMap((node, index) => {
             const point = toSvgPoint(node, trussBounds);
             if (!pointInsideViewport(point, 26)) return [];
             const showLabel = index % trussLabelStep === 0 || selectedNode === index || memberDraftNodes.includes(index);
@@ -883,7 +1001,7 @@ function WorkbenchViewportInner({
           <text x="136" y="390" className="node-label">X</text>
           <text x="68" y="324" className="node-label">Z</text>
           <text x="108" y="350" className="node-label">Y</text>
-          {displayTruss3dElements.map((element) => {
+          {visibleTruss3dElements.map((element) => {
             if (element.material_id && hiddenTruss3dMaterialIds.includes(element.material_id)) return null;
             const start = projectTruss3dPoint(displayTruss3dNodes[element.node_i], projected3d, camera, projectionMode);
             const end = projectTruss3dPoint(displayTruss3dNodes[element.node_j], projected3d, camera, projectionMode);
@@ -912,7 +1030,7 @@ function WorkbenchViewportInner({
             if (!lineInsideViewport(start, end, 42)) return null;
             return <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} className="bar bar--preview" />;
           })() : null}
-          {displayTruss3dNodes.map((node, index) => {
+          {visibleTruss3dNodes.map((node, index) => {
             const point = projectTruss3dPoint(node, projected3d, camera, projectionMode);
             if (!pointInsideViewport(point, 24)) return null;
             const showLabel = index % truss3dLabelStep === 0;
@@ -1029,7 +1147,7 @@ function WorkbenchViewportInner({
         {planeTitle}
       </text>
       <g clipPath="url(#viewportClipPlane)">
-        {planeElements.map((element) => {
+        {visiblePlaneElements.map((element) => {
           if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return null;
           const points = [
             toSvgPoint(planeNodes[element.node_i], planeBounds),
@@ -1050,7 +1168,7 @@ function WorkbenchViewportInner({
           );
         })}
         {planeResult
-          ? planeElements.flatMap((element, index) => {
+          ? visiblePlaneElements.flatMap((element, index) => {
               if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return [];
               if (index % planeDeformedStep !== 0) return [];
               const points = [
@@ -1077,7 +1195,7 @@ function WorkbenchViewportInner({
               );
             })
           : null}
-        {planeNodes.flatMap((node, index) => {
+        {visiblePlaneNodes.flatMap((node, index) => {
           const point = toSvgPoint(node, planeBounds);
           if (!pointInsideViewport(point, 18)) return [];
           const showLabel = index % planeNodeLabelStep === 0 || selectedPlaneNodeId === node.id;
