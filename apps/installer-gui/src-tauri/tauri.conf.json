@@ -25,6 +25,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [
+      "icons/kyuubiki-app.png",
+      "icons/kyuubiki-app.icns"
+    ]
   }
 }

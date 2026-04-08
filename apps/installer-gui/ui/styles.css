@@ -65,6 +65,28 @@ body {
   border-radius: 28px;
 }
 
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.hero-brand__icon {
+  width: 66px;
+  height: 66px;
+  border-radius: 18px;
+  border: 1px solid rgba(45, 111, 158, 0.18);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 28px rgba(24, 55, 85, 0.12);
+}
+
+.hero-brand__sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 .hero-visual {
   position: relative;
   min-height: 220px;
@@ -74,6 +96,31 @@ body {
     radial-gradient(circle at center, rgba(45, 111, 158, 0.16), transparent 58%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 250, 253, 0.92));
   overflow: hidden;
+}
+
+.hero-visual__logo,
+.hero-visual__dock {
+  position: absolute;
+  z-index: 2;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(45, 111, 158, 0.16);
+  box-shadow: 0 16px 32px rgba(24, 55, 85, 0.12);
+}
+
+.hero-visual__logo {
+  top: 26px;
+  right: 28px;
+  width: 104px;
+  height: 104px;
+}
+
+.hero-visual__dock {
+  left: 24px;
+  bottom: 26px;
+  width: 78px;
+  height: 78px;
+  border-radius: 18px;
 }
 
 .hero-orbit {
@@ -238,6 +285,33 @@ h3 {
   border-radius: 26px;
 }
 
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 8px 16px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4px;
+}
+
+.sidebar-brand__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(45, 111, 158, 0.16);
+}
+
+.sidebar-brand strong,
+.sidebar-brand span {
+  display: block;
+}
+
+.sidebar-brand span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -262,6 +336,25 @@ button {
   padding: 11px 14px;
   cursor: pointer;
   transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+}
+
+.sidebar-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-tab__glyph {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex: 0 0 auto;
 }
 
 .sidebar-tab:hover,
@@ -404,6 +497,33 @@ select {
 
 .completion-card--accent {
   background: linear-gradient(180deg, rgba(45, 111, 158, 0.12), rgba(255, 255, 255, 0.92));
+}
+
+.completion-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.completion-brand__icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  flex: 0 0 auto;
+}
+
+.completion-brand__icon--dock {
+  border-radius: 14px;
+}
+
+.completion-brand p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .completion-list {

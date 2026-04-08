@@ -1,6 +1,6 @@
 # kyuubiki v0.2
 
-Kyuubiki is a browser-first FEM workbench with an engine-first split architecture:
+Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
 - `Next.js` workbench UI for modeling, project management, result review, and immersive 3D editing
 - `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
@@ -89,6 +89,8 @@ Start here if you need the repo map:
 - local SQLite mode
 - cloud PostgreSQL mode
 - release scaffold generation under `dist/`
+- desktop icon assets wired from `assets/icons`
+- frontend browser/app icons wired from `assets/icons/app`
 
 ## Current Architecture
 
@@ -360,6 +362,21 @@ The GUI currently wraps:
 - service control
 - log viewing
 - release scaffold generation
+
+Shared installer/workbench branding now comes from:
+
+- [assets/brand/brand.json](/Users/Shared/chroot/dev/kyuubiki/assets/brand/brand.json)
+
+The installer consumes that branding through:
+
+- [apps/installer-gui/ui/assets/brand.json](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/assets/brand.json)
+- [apps/installer-gui/ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/index.html)
+- [apps/installer-gui/ui/app.js](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/app.js)
+
+The frontend consumes the same branding through:
+
+- [apps/frontend/src/app/layout.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/app/layout.tsx)
+- [apps/frontend/src/components/workbench/workbench.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench/workbench.tsx)
 
 ## Benchmarks
 

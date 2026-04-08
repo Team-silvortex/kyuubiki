@@ -11,6 +11,7 @@ import {
   type UIEvent as ReactUIEvent,
   type SetStateAction,
 } from "react";
+import brand from "../../../../../assets/brand/brand.json";
 import { VirtualList } from "@/components/ui/virtual-list";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
@@ -278,9 +279,9 @@ const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
 const copy = {
   en: {
-    brand: "Kyuubiki",
-    title: "Structural Workbench",
-    subtitle: "A formal front-end workbench for modeling, orchestration, and solver review.",
+    brand: brand.productName,
+    title: brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
+    subtitle: brand.workbenchDescription,
     rail: { study: "Study", model: "Model", library: "History", system: "System" },
     sections: { study: "Study Setup", model: "Model Studio", library: "Job History", system: "System" },
     kinds: { axial_bar_1d: "1D axial bar", truss_2d: "2D truss", truss_3d: "3D space truss", plane_triangle_2d: "2D plane triangle" },
@@ -433,7 +434,7 @@ const copy = {
     axialForce: "Axial force (N)",
     importedModel: "Imported model",
     importFailed: "Import failed",
-    initialLoaded: "Workbench connected to the orchestrator.",
+    initialLoaded: `${brand.productName} connected to the orchestrator.`,
     initialFailed: "Unable to reach the orchestrator.",
     dispatching: "Submitting a study to the orchestrator.",
     defaultModel: "manual-study",
@@ -621,7 +622,7 @@ const copy = {
     switchedTo3dStudio: "Switched to the 3D space studio.",
   },
   zh: {
-    brand: "Kyuubiki",
+    brand: brand.productName,
     title: "结构分析工作台",
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
     rail: { study: "研究", model: "建模", library: "历史", system: "系统" },

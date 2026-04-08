@@ -3,16 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Kyuubiki Installer</title>
+    <title id="brand-page-title">Kyuubiki Installer</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="shell">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Kyuubiki Desktop Setup</p>
-          <h1>Kyuubiki Installer</h1>
-          <p class="lede">
+          <div class="hero-brand">
+            <img src="./assets/kyuubiki-app.png" alt="Kyuubiki brand mark" class="hero-brand__icon" />
+            <div>
+              <p class="eyebrow" id="brand-desktop-setup">Kyuubiki Desktop Setup</p>
+              <p class="hero-brand__sub" id="brand-engine-tagline">Engine-first FEM workstation and control plane</p>
+            </div>
+          </div>
+          <h1 id="brand-installer-name">Kyuubiki Installer</h1>
+          <p class="lede" id="brand-installer-description">
             Visual installer for local SQLite workflows, cloud PostgreSQL deployment, and release staging.
           </p>
           <div class="hero-actions">
@@ -23,6 +29,8 @@
         </div>
 
         <div class="hero-visual" aria-hidden="true">
+          <img src="./assets/kyuubiki-app.png" alt="" class="hero-visual__logo" />
+          <img src="./assets/kyuubiki-dock.png" alt="" class="hero-visual__dock" />
           <div class="hero-orbit hero-orbit--large"></div>
           <div class="hero-orbit hero-orbit--medium"></div>
           <div class="hero-orbit hero-orbit--small"></div>
@@ -58,12 +66,19 @@
 
       <section class="workspace">
         <aside class="sidebar">
-          <button class="sidebar-tab" data-tab="wizard">Wizard</button>
-          <button class="sidebar-tab active" data-tab="setup">Setup</button>
-          <button class="sidebar-tab" data-tab="services">Services</button>
-          <button class="sidebar-tab" data-tab="remote">Remote</button>
-          <button class="sidebar-tab" data-tab="release">Release</button>
-          <button class="sidebar-tab" data-tab="output">Output</button>
+          <div class="sidebar-brand">
+            <img src="./assets/kyuubiki-app.png" alt="Kyuubiki icon" class="sidebar-brand__icon" />
+            <div>
+              <strong id="brand-product-name">Kyuubiki</strong>
+              <span id="brand-installer-console">Installer Console</span>
+            </div>
+          </div>
+          <button class="sidebar-tab" data-tab="wizard"><span class="sidebar-tab__glyph">W</span><span>Wizard</span></button>
+          <button class="sidebar-tab active" data-tab="setup"><span class="sidebar-tab__glyph">S</span><span>Setup</span></button>
+          <button class="sidebar-tab" data-tab="services"><span class="sidebar-tab__glyph">V</span><span>Services</span></button>
+          <button class="sidebar-tab" data-tab="remote"><span class="sidebar-tab__glyph">R</span><span>Remote</span></button>
+          <button class="sidebar-tab" data-tab="release"><span class="sidebar-tab__glyph">P</span><span>Release</span></button>
+          <button class="sidebar-tab" data-tab="output"><span class="sidebar-tab__glyph">O</span><span>Output</span></button>
         </aside>
 
         <div class="content">
@@ -146,6 +161,10 @@
               <article class="completion-card">
                 <p class="section-eyebrow">Welcome</p>
                 <h3>Fast path</h3>
+                <div class="completion-brand">
+                  <img src="./assets/kyuubiki-app.png" alt="Kyuubiki app icon" class="completion-brand__icon" />
+                  <p>Use the desktop installer to move from local workstation setup to distributed deployment without changing the core product shape.</p>
+                </div>
                 <ol class="completion-list">
                   <li>Pick `SQLite workstation` for single-machine iteration.</li>
                   <li>Write the environment and validate it immediately.</li>
@@ -155,6 +174,10 @@
               <article class="completion-card completion-card--accent">
                 <p class="section-eyebrow">Completion</p>
                 <h3>After setup</h3>
+                <div class="completion-brand completion-brand--dock">
+                  <img src="./assets/kyuubiki-dock.png" alt="Kyuubiki dock icon" class="completion-brand__icon completion-brand__icon--dock" />
+                  <p>Once the services are healthy, this same installer becomes your control surface for logs, release staging, and distributed rollout.</p>
+                </div>
                 <p id="completion-guide">
                   When the stack is healthy, use Services to inspect logs, then stage a release or build the installer bundle.
                 </p>

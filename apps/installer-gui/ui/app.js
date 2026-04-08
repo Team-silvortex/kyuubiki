@@ -25,6 +25,36 @@
   let stopLogListener = null;
   let streamedService = null;
   let latestLogSnapshot = "";
+  let brandConfig = null;
+
+  async function loadBrandConfig() {
+    const response = await fetch("./assets/brand.json");
+    if (!response.ok) {
+      throw new Error(`unable to load brand config (${response.status})`);
+    }
+
+    return response.json();
+  }
+
+  function applyBrandConfig(brand) {
+    brandConfig = brand;
+    const setText = (id, value) => {
+      const element = document.getElementById(id);
+      if (element && value) element.textContent = value;
+    };
+
+    if (brand?.installerName) {
+      document.title = brand.installerName;
+    }
+
+    setText("brand-page-title", brand?.installerName);
+    setText("brand-desktop-setup", brand?.desktopSetupLabel);
+    setText("brand-engine-tagline", brand?.engineTagline);
+    setText("brand-installer-name", brand?.installerName);
+    setText("brand-installer-description", brand?.installerDescription);
+    setText("brand-product-name", brand?.productName);
+    setText("brand-installer-console", brand?.installerConsoleName);
+  }
 
   async function listen(eventName, handler) {
     const tauri = window.__TAURI__;
@@ -472,12 +502,16 @@
   runAction(
     "startup",
     async () => {
-      const [doctor, envForm, status] = await Promise.all([
+      const [doctor, envForm, status, brand] = await Promise.all([
         invoke("doctor_report"),
         invoke("read_env_file").catch(() => null),
         invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
+        loadBrandConfig().catch(() => null),
       ]);
 
+      if (brand) {
+        applyBrandConfig(brand);
+      }
       renderDoctor(doctor);
       if (envForm) {
         hydrateEnv(envForm);
@@ -491,7 +525,9 @@
       if (liveTailToggle.checked) {
         await startRuntimeLogStream().catch(() => {});
       }
-      showCompletion("Installer GUI ready. Pick a profile, write env, then start services and watch live logs here.");
+      showCompletion(
+        `${brandConfig?.installerName || "Installer GUI"} ready. Pick a profile, write env, then start services and watch live logs here.`,
+      );
 
       return "installer gui ready";
     },

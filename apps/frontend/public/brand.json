@@ -1,0 +1,11 @@
+{
+  "productName": "Kyuubiki",
+  "applicationName": "Kyuubiki Workbench",
+  "installerName": "Kyuubiki Installer",
+  "installerConsoleName": "Installer Console",
+  "desktopSetupLabel": "Kyuubiki Desktop Setup",
+  "engineTagline": "Engine-first FEM workstation and control plane",
+  "workbenchDescription": "Kyuubiki browser workbench for orchestrated FEM studies",
+  "socialDescription": "Browser-first FEM workbench for orchestrated studies, immersive 3D editing, and distributed solver workflows.",
+  "installerDescription": "Visual installer for local SQLite workflows, cloud PostgreSQL deployment, and release staging."
+}
