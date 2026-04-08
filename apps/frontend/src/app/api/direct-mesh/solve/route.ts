@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { solveViaDirectMesh } from "@/lib/direct-mesh/rpc";
 import { putDirectMeshResult } from "@/lib/direct-mesh/results";
+import { authorizeDirectMeshRequest } from "@/lib/direct-mesh/security";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,9 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
 }
 
 export async function POST(request: Request) {
+  const unauthorized = authorizeDirectMeshRequest(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = (await request.json()) as DirectMeshSolveBody;
     const startedAt = new Date().toISOString();

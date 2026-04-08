@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { describeDirectMeshAgents } from "@/lib/direct-mesh/rpc";
+import { authorizeDirectMeshRequest } from "@/lib/direct-mesh/security";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
+  const unauthorized = authorizeDirectMeshRequest(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const body = (await request.json().catch(() => ({}))) as { endpoints?: string[] };
     const { endpoints, agents } = await describeDirectMeshAgents(body.endpoints);

@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.Analysis
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.Protocol
+  alias KyuubikiWeb.Security
 
   plug(Plug.Logger)
   plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
@@ -31,6 +32,7 @@ defmodule KyuubikiWeb.Router do
       "service" => "kyuubiki-orchestrator",
       "status" => "ok",
       "protocol" => Protocol.descriptor(),
+      "security" => Security.descriptor(),
       "deployment" => deployment,
       "remote_solver_registry" => remote_registry,
       "watchdog" => watchdog,
@@ -67,77 +69,91 @@ defmodule KyuubikiWeb.Router do
   end
 
   post "/api/v1/agents/register" do
-    case KyuubikiWeb.Playground.AgentRegistry.register(conn.body_params) do
-      {:ok, agent} ->
-        _ = KyuubikiWeb.Playground.AgentPool.reload()
-        respond_json(conn, 201, %{"agent" => agent})
+    with_auth(conn, :cluster, fn conn ->
+      case KyuubikiWeb.Playground.AgentRegistry.register(conn.body_params) do
+        {:ok, agent} ->
+          _ = KyuubikiWeb.Playground.AgentPool.reload()
+          respond_json(conn, 201, %{"agent" => agent})
 
-      {:error, {:invalid_agent_field, field}} ->
-        respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
+        {:error, {:invalid_agent_field, field}} ->
+          respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
 
-      {:error, reason} ->
-        respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   post "/api/v1/agents/:agent_id/heartbeat" do
-    case KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, conn.body_params) do
-      {:ok, agent} ->
-        _ = KyuubikiWeb.Playground.AgentPool.reload()
-        respond_json(conn, 200, %{"agent" => agent})
+    with_auth(conn, :cluster, fn conn ->
+      case KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, conn.body_params) do
+        {:ok, agent} ->
+          _ = KyuubikiWeb.Playground.AgentPool.reload()
+          respond_json(conn, 200, %{"agent" => agent})
 
-      {:error, {:invalid_agent_field, field}} ->
-        respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
+        {:error, {:invalid_agent_field, field}} ->
+          respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
 
-      {:error, reason} ->
-        respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   delete "/api/v1/agents/:agent_id" do
-    :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
-    _ = KyuubikiWeb.Playground.AgentPool.reload()
-    respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
+    with_auth(conn, :cluster, fn conn ->
+      :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
+      _ = KyuubikiWeb.Playground.AgentPool.reload()
+      respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
+    end)
   end
 
   post "/api/v1/fem/axial-bar/jobs" do
-    case Analysis.submit_axial_bar(conn.body_params) do
-      {:ok, payload} ->
-        respond_json(conn, 202, payload)
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_axial_bar(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
 
-      {:error, reason} ->
-        respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   post "/api/v1/fem/truss-2d/jobs" do
-    case Analysis.submit_truss_2d(conn.body_params) do
-      {:ok, payload} ->
-        respond_json(conn, 202, payload)
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_truss_2d(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
 
-      {:error, reason} ->
-        respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   post "/api/v1/fem/truss-3d/jobs" do
-    case Analysis.submit_truss_3d(conn.body_params) do
-      {:ok, payload} ->
-        respond_json(conn, 202, payload)
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_truss_3d(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
 
-      {:error, reason} ->
-        respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   post "/api/v1/fem/plane-triangle-2d/jobs" do
-    case Analysis.submit_plane_triangle_2d(conn.body_params) do
-      {:ok, payload} ->
-        respond_json(conn, 202, payload)
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_plane_triangle_2d(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
 
-      {:error, reason} ->
-        respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   get "/api/v1/jobs" do
@@ -155,27 +171,33 @@ defmodule KyuubikiWeb.Router do
   end
 
   patch "/api/v1/jobs/:job_id" do
-    case Analysis.update_job(job_id, conn.body_params) do
-      {:ok, payload} -> respond_json(conn, 200, payload)
-      {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Analysis.update_job(job_id, conn.body_params) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   post "/api/v1/jobs/:job_id/cancel" do
-    case Analysis.cancel_job(job_id) do
-      {:ok, payload} -> respond_json(conn, 200, payload)
-      {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Analysis.cancel_job(job_id) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   delete "/api/v1/jobs/:job_id" do
-    case Analysis.delete_job(job_id) do
-      {:ok, payload} -> respond_json(conn, 200, payload)
-      {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Analysis.delete_job(job_id) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   get "/api/v1/results" do
@@ -201,24 +223,28 @@ defmodule KyuubikiWeb.Router do
   end
 
   patch "/api/v1/results/:job_id" do
-    case Map.get(conn.body_params, "result") do
-      result when is_map(result) ->
-        case Analysis.update_result(job_id, result) do
-          {:ok, payload} -> respond_json(conn, 200, payload)
-          {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-        end
+    with_auth(conn, :write, fn conn ->
+      case Map.get(conn.body_params, "result") do
+        result when is_map(result) ->
+          case Analysis.update_result(job_id, result) do
+            {:ok, payload} -> respond_json(conn, 200, payload)
+            {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+          end
 
-      _ ->
-        respond_json(conn, 422, %{"error" => "missing_result_payload"})
-    end
+        _ ->
+          respond_json(conn, 422, %{"error" => "missing_result_payload"})
+      end
+    end)
   end
 
   delete "/api/v1/results/:job_id" do
-    case Analysis.delete_result(job_id) do
-      {:ok, payload} -> respond_json(conn, 200, payload)
-      {:error, {:result_not_found, _}} -> respond_json(conn, 404, %{"error" => "result_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Analysis.delete_result(job_id) do
+        {:ok, payload} -> respond_json(conn, 200, payload)
+        {:error, {:result_not_found, _}} -> respond_json(conn, 404, %{"error" => "result_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   get "/api/v1/export/database" do
@@ -231,10 +257,12 @@ defmodule KyuubikiWeb.Router do
   end
 
   post "/api/v1/projects" do
-    case Library.create_project(conn.body_params) do
-      {:ok, project} -> respond_json(conn, 201, %{"project" => project})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.create_project(conn.body_params) do
+        {:ok, project} -> respond_json(conn, 201, %{"project" => project})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   get "/api/v1/projects/:project_id" do
@@ -245,18 +273,22 @@ defmodule KyuubikiWeb.Router do
   end
 
   patch "/api/v1/projects/:project_id" do
-    case Library.update_project(project_id, conn.body_params) do
-      {:ok, project} -> respond_json(conn, 200, %{"project" => project})
-      :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.update_project(project_id, conn.body_params) do
+        {:ok, project} -> respond_json(conn, 200, %{"project" => project})
+        :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   delete "/api/v1/projects/:project_id" do
-    case Library.delete_project(project_id) do
-      {:ok, project} -> respond_json(conn, 200, %{"project" => project})
-      :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.delete_project(project_id) do
+        {:ok, project} -> respond_json(conn, 200, %{"project" => project})
+        :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
+      end
+    end)
   end
 
   get "/api/v1/projects/:project_id/models" do
@@ -267,10 +299,12 @@ defmodule KyuubikiWeb.Router do
   end
 
   post "/api/v1/projects/:project_id/models" do
-    case Library.create_model(project_id, conn.body_params) do
-      {:ok, model} -> respond_json(conn, 201, %{"model" => model})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.create_model(project_id, conn.body_params) do
+        {:ok, model} -> respond_json(conn, 201, %{"model" => model})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   get "/api/v1/models/:model_id" do
@@ -281,18 +315,22 @@ defmodule KyuubikiWeb.Router do
   end
 
   patch "/api/v1/models/:model_id" do
-    case Library.update_model(model_id, conn.body_params) do
-      {:ok, model} -> respond_json(conn, 200, %{"model" => model})
-      :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.update_model(model_id, conn.body_params) do
+        {:ok, model} -> respond_json(conn, 200, %{"model" => model})
+        :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   delete "/api/v1/models/:model_id" do
-    case Library.delete_model(model_id) do
-      {:ok, model} -> respond_json(conn, 200, %{"model" => model})
-      :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.delete_model(model_id) do
+        {:ok, model} -> respond_json(conn, 200, %{"model" => model})
+        :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
+      end
+    end)
   end
 
   get "/api/v1/models/:model_id/versions" do
@@ -303,10 +341,12 @@ defmodule KyuubikiWeb.Router do
   end
 
   post "/api/v1/models/:model_id/versions" do
-    case Library.create_version(model_id, conn.body_params) do
-      {:ok, version} -> respond_json(conn, 201, %{"version" => version})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.create_version(model_id, conn.body_params) do
+        {:ok, version} -> respond_json(conn, 201, %{"version" => version})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   get "/api/v1/model-versions/:version_id" do
@@ -317,25 +357,31 @@ defmodule KyuubikiWeb.Router do
   end
 
   patch "/api/v1/model-versions/:version_id" do
-    case Library.update_version(version_id, conn.body_params) do
-      {:ok, version} -> respond_json(conn, 200, %{"version" => version})
-      :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.update_version(version_id, conn.body_params) do
+        {:ok, version} -> respond_json(conn, 200, %{"version" => version})
+        :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   delete "/api/v1/model-versions/:version_id" do
-    case Library.delete_version(version_id) do
-      {:ok, version} -> respond_json(conn, 200, %{"version" => version})
-      :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Library.delete_version(version_id) do
+        {:ok, version} -> respond_json(conn, 200, %{"version" => version})
+        :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
+      end
+    end)
   end
 
   post "/api/playground/run" do
-    case Analysis.submit_axial_bar(conn.body_params) do
-      {:ok, payload} -> respond_json(conn, 202, payload)
-      {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-    end
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_axial_bar(conn.body_params) do
+        {:ok, payload} -> respond_json(conn, 202, payload)
+        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
   end
 
   match _ do
@@ -346,5 +392,15 @@ defmodule KyuubikiWeb.Router do
     conn
     |> Plug.Conn.put_resp_content_type("application/json")
     |> Plug.Conn.send_resp(status, Jason.encode!(payload))
+  end
+
+  defp with_auth(conn, scope, fun) do
+    case Security.authorize(conn, scope) do
+      :ok ->
+        fun.(conn)
+
+      {:error, status, payload} ->
+        respond_json(conn, status, payload)
+    end
   end
 end

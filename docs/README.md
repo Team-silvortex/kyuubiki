@@ -5,8 +5,14 @@ engineering direction.
 
 - `architecture.md`
   Runtime-layer split across frontend, orchestrator, and Rust data plane.
+- `system-overview.md`
+  The full runtime map across GUI, control plane, and solver data plane.
 - `protocols.md`
   Public HTTP and TCP contracts that let the GUI, control plane, and solver agents run as separate programs.
+- `operations.md`
+  Deployment modes, watchdog knobs, and runtime entry points.
+- `security.md`
+  Current guardrails, token protection, and deployment safety notes.
 - `repository-structure.md`
   Concrete directory ownership and generated-path boundaries.
 - `development.md`
@@ -14,4 +20,12 @@ engineering direction.
 - `tdd.md`
   TDD workflow and test-first expectations across Elixir and Rust.
 
-Read these in that order if you are new to the repository.
+Read these in roughly this order if you are new to the repository:
+
+1. `system-overview.md`
+2. `architecture.md`
+3. `protocols.md`
+4. `security.md`
+5. `operations.md`
+6. `repository-structure.md`
+7. `development.md`

@@ -64,6 +64,10 @@ config :kyuubiki_web,
   storage_backend: storage_backend,
   ecto_repos: [KyuubikiWeb.PostgresRepo, KyuubikiWeb.SqliteRepo]
 
+config :kyuubiki_web, KyuubikiWeb.Security,
+  api_token: System.get_env("KYUUBIKI_API_TOKEN"),
+  protect_reads?: System.get_env("KYUUBIKI_PROTECT_READS", "false") == "true"
+
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool,
   endpoints: agent_endpoints,
   deployment_mode: deployment_mode,

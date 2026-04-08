@@ -50,8 +50,11 @@ The monorepo is intentionally split by responsibility:
 Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
+- [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
+- [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
+- [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
 
 ## What v0.3 Can Do
@@ -259,6 +262,24 @@ KYUUBIKI_AGENT_MANIFEST_PATH=/Users/Shared/chroot/dev/kyuubiki/deploy/agents.dis
 KYUUBIKI_STORAGE_BACKEND=postgres
 DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev
 ```
+
+## Security and Guardrails
+
+Kyuubiki now has a small but formal deployment guardrail layer:
+
+- optional control-plane API token protection via:
+  - `KYUUBIKI_API_TOKEN`
+  - `KYUUBIKI_PROTECT_READS`
+- optional direct-mesh route protection via:
+  - `KYUUBIKI_DIRECT_MESH_ENABLED`
+  - `KYUUBIKI_DIRECT_MESH_TOKEN`
+- watchdogs, heartbeat freshness, cancellation, and stale-job detection for long runs
+
+Use these references as the current system handbook:
+
+- [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
+- [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
+- [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
 
 The launcher reads this from [/.env.local](/Users/Shared/chroot/dev/kyuubiki/.env.local).
 

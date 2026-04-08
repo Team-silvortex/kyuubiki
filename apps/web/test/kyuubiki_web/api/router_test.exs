@@ -21,14 +21,96 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     Enum.each(AgentRegistry.agents(), fn agent -> AgentRegistry.unregister(agent.id) end)
 
     original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
+    original_security = Application.get_env(:kyuubiki_web, KyuubikiWeb.Security, [])
 
     on_exit(fn ->
       Enum.each(AgentRegistry.agents(), fn agent -> AgentRegistry.unregister(agent.id) end)
       Application.put_env(:kyuubiki_web, AgentPool, original_config)
+      Application.put_env(:kyuubiki_web, KyuubikiWeb.Security, original_security)
       AgentPool.reload()
     end)
 
     :ok
+  end
+
+  test "rejects mutating routes without an API token when control-plane protection is enabled" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "secret-token",
+      protect_reads?: false
+    )
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/projects",
+        Jason.encode!(%{"name" => "Locked Project", "description" => "protected"})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "unauthorized"
+  end
+
+  test "accepts mutating routes with a valid bearer token when control-plane protection is enabled" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "secret-token",
+      protect_reads?: false
+    )
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/projects",
+        Jason.encode!(%{"name" => "Protected Project", "description" => "authorized"})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("authorization", "Bearer secret-token")
+      |> Router.call(@opts)
+
+    assert conn.status == 201
+    assert Jason.decode!(conn.resp_body)["project"]["name"] == "Protected Project"
+  end
+
+  test "protects cluster registration routes with the same API token" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "cluster-secret",
+      protect_reads?: false
+    )
+
+    unauthorized_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-a",
+          "host" => "127.0.0.1",
+          "port" => 5001,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert unauthorized_conn.status == 401
+
+    authorized_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-a",
+          "host" => "127.0.0.1",
+          "port" => 5001,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-secret")
+      |> Router.call(@opts)
+
+    assert authorized_conn.status == 201
+    assert Jason.decode!(authorized_conn.resp_body)["agent"]["id"] == "remote-a"
   end
 
   test "supports CRUD for projects, models, and model versions" do

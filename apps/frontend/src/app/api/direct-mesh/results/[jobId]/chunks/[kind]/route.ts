@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { chunkDirectMeshResult } from "@/lib/direct-mesh/results";
+import { authorizeDirectMeshRequest } from "@/lib/direct-mesh/security";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,9 @@ type RouteContext = {
 };
 
 export async function GET(request: Request, context: RouteContext) {
+  const unauthorized = authorizeDirectMeshRequest(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(request.url);
     const offset = Number(searchParams.get("offset") ?? "0");
