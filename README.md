@@ -1,4 +1,4 @@
-# kyuubiki v0.2
+# kyuubiki v0.3
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -6,13 +6,18 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 
-`v0.2` is the first version where the stack feels like a real product rather than a prototype. It now supports persistent projects, chunked large-result browsing, immersive 3D editing, dual-database storage, portable project bundles, and a cross-platform installer GUI.
+`v0.3` is the first version where Kyuubiki starts to feel like an engine-backed FEM product rather than a polished prototype. It now couples an editor-style workbench with chunked large-result handling, distributed agent orchestration, dual-database storage, installer flows, and benchmarked single-machine scaling through the `10k` to `20k` node class.
 
 It also now has an explicit deployment split:
 
 - `local workstation`: frontend + orchestrator + local Rust agents
 - `cloud control plane`: frontend + orchestrator + PostgreSQL
 - `distributed control plane`: orchestrator/frontend separated from remotely deployed solver nodes
+
+And it now has an explicit protocol split:
+
+- `kyuubiki.control-plane/http-v1`
+- `kyuubiki.solver-rpc/v1`
 
 ## Repository Shape
 
@@ -36,9 +41,10 @@ Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
 
-## What v0.2 Can Do
+## What v0.3 Can Do
 
 ### Solvers
 
@@ -57,7 +63,8 @@ Start here if you need the repo map:
 - box selection, multi-selection, focus, frame selection, and nudge tools in `3D`
 - immersive 3D workspace mode
 - undo / redo for frontend modeling actions
-- compact tabbed UI with virtualized lists and chunk-aware large-result browsing
+- editor-style compact UI with denser tabs, virtualized lists, and docked panels
+- lazy-rendered large-result windows with chunk-aware browsing for `10k+` scale review
 
 ### Materials
 
@@ -116,6 +123,12 @@ The direction is engine-first:
 - Phoenix/Plug orchestration owns jobs, storage, and HTTP APIs
 - frontend consumes stable APIs instead of solver internals
 
+The next layer of decoupling is now explicit too:
+
+- the frontend speaks the control-plane HTTP protocol
+- the orchestrator speaks the solver RPC protocol
+- solver agents can self-describe over RPC and the orchestrator can expose those descriptors over HTTP
+
 ## Current Capabilities by Layer
 
 ### Frontend workbench
@@ -123,8 +136,8 @@ The direction is engine-first:
 Main entry points:
 
 - [page.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/app/page.tsx)
-- [workbench.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench.tsx)
-- [workbench-viewport.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench-viewport.tsx)
+- [workbench.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench/workbench.tsx)
+- [workbench-viewport.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench/workbench-viewport.tsx)
 
 The workbench currently supports:
 
@@ -153,6 +166,7 @@ Core orchestration:
 The orchestrator currently provides:
 
 - health endpoint
+- protocol descriptor endpoints
 - FEM job submission
 - job lookup and job history
 - project/model/model-version CRUD
@@ -164,6 +178,7 @@ The orchestrator currently provides:
 - deployment-aware health reporting
 - manifest-based remote agent discovery for distributed control-plane setups
 - runtime agent registration, heartbeat, and removal APIs for remote solver nodes
+- watchdog timeouts, stale-job detection, heartbeat surfacing, and cancel support for long-running jobs
 
 ### Rust engine and agents
 
@@ -178,12 +193,15 @@ Main crates:
 The Rust side currently provides:
 
 - framed TCP RPC transport
+- agent self-description via `describe_agent`
+- generic runtime `ping` and `cancel_job` methods
 - progress events
 - multi-agent execution
 - benchmark profiles
-- dedicated `10k` benchmark profile for single-machine scale targets
+- dedicated `10k`, `15k`, and `20k` benchmark profiles for single-machine scale targets
 - mixed dense/sparse and specialized solver paths
 - result chunk helpers used by the engine/orchestrator split
+- checked-in performance baselines and compare reports with regression gates
 
 ## Storage Modes
 
@@ -492,16 +510,17 @@ This currently covers:
 - browser FEM tests
 - formatting checks
 
-## v0.2 Direction
+## v0.3 Direction
 
-`v0.2` is about making Kyuubiki feel coherent end-to-end:
+`v0.3` is about making Kyuubiki feel cohesive under load, not just feature-complete:
 
 - engine-oriented separation between UI, orchestration, and solving
-- better large-result handling through chunked APIs
-- stronger immersive 3D editing
-- stronger local-first setup through SQLite and installer UX
+- stronger editor-style frontend ergonomics for 2D and 3D work
+- viewport-aware large-result handling with chunking and progressive rendering
+- stronger distributed-control-plane behavior with remote agents and runtime health
+- benchmarked single-machine scaling with checked-in baselines and regression gates
 
-The next scale target after `v0.2` is clear: make single-machine `10k`-node workflows practical on an `M2 + 16GB` class machine across the main current solver families, then push beyond that baseline with better chunking, sparse solving, and distributed orchestration.
+The next scale target after `v0.3` is clear: keep `10k` as the comfort zone, treat `15k` as a stable upper tier, and use `20k` as the single-machine stretch band on an `M2 + 16GB` class machine while continuing to shift the browser toward viewport-driven data loading.
 
 Recent single-machine scaling probes on the current Rust solver stack show:
 
@@ -511,3 +530,8 @@ Recent single-machine scaling probes on the current Rust solver stack show:
 - `20k` `2D plane triangle`: `19881` nodes, `39762` DOF, about `15.36 s`, `78 MiB` peak RSS
 - `15k` `3D truss`: `15138` nodes, `45414` DOF, about `228 ms`, `53 MiB` peak RSS
 - `20k` `3D truss`: `20000` nodes, `60000` DOF, about `301 ms`, `60 MiB` peak RSS
+
+Checked-in repeat-based baselines now also exist for:
+
+- [15k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/15k-baseline.json)
+- [20k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/20k-baseline.json)

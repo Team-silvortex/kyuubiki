@@ -7,9 +7,9 @@ use std::thread;
 use std::time::Duration;
 
 use kyuubiki_protocol::{
-    CancelJobRequest, Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest,
-    RpcResponse, SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
-    SolveTruss3dRequest,
+    AgentDescriptor, CancelJobRequest, Job, JobStatus, ProgressEvent, RPC_VERSION, RpcMethod,
+    RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolvePlaneTriangle2dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
@@ -238,7 +238,7 @@ fn handle_request_bytes(payload: &[u8]) -> AgentReply {
 }
 
 fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) -> AgentReply {
-    if request.rpc_version != 1 {
+    if request.rpc_version != RPC_VERSION {
         return AgentReply::Stream(
             Vec::new(),
             RpcResponse::error(
@@ -252,6 +252,17 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
     let maybe_job_id = extract_job_id(&request.params);
 
     match request.method {
+        RpcMethod::Ping => AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::success(request.id, serde_json::json!({ "pong": true })),
+        ),
+        RpcMethod::DescribeAgent => AgentReply::Stream(
+            Vec::new(),
+            RpcResponse::success(
+                request.id,
+                serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize"),
+            ),
+        ),
         RpcMethod::SolveBar1d => {
             let params = match serde_json::from_value::<SolveBarRequest>(request.params.clone()) {
                 Ok(params) => params,
@@ -502,6 +513,10 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
             )
         }
     }
+}
+
+fn agent_descriptor() -> AgentDescriptor {
+    AgentDescriptor::solver_agent_default()
 }
 
 fn build_progress_frames(
@@ -897,9 +912,9 @@ mod tests {
         parse_http_url,
     };
     use kyuubiki_protocol::{
-        JobStatus, PlaneNodeInput, PlaneTriangleElementInput, ProgressEvent, RpcMethod, RpcRequest,
-        SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest, Truss3dElementInput,
-        Truss3dNodeInput,
+        AgentDescriptor, JobStatus, PlaneNodeInput, PlaneTriangleElementInput, ProgressEvent,
+        RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolvePlaneTriangle2dRequest,
+        SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput,
     };
 
     #[test]
@@ -958,7 +973,7 @@ mod tests {
     #[test]
     fn handles_solver_rpc_requests() {
         let request = RpcRequest {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: "rpc-1".to_string(),
             method: RpcMethod::SolveBar1d,
             params: serde_json::to_value(SolveBarRequest {
@@ -991,7 +1006,7 @@ mod tests {
     #[test]
     fn handles_plane_triangle_rpc_requests() {
         let request = RpcRequest {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: "rpc-plane".to_string(),
             method: RpcMethod::SolvePlaneTriangle2d,
             params: serde_json::to_value(SolvePlaneTriangle2dRequest {
@@ -1054,7 +1069,7 @@ mod tests {
     #[test]
     fn handles_truss_3d_rpc_requests() {
         let request = RpcRequest {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: "rpc-truss-3d".to_string(),
             method: RpcMethod::SolveTruss3d,
             params: serde_json::to_value(SolveTruss3dRequest {
@@ -1168,5 +1183,52 @@ mod tests {
                 .expect("3d truss result");
         assert_eq!(result.nodes.len(), 4);
         assert_eq!(result.elements.len(), 6);
+    }
+
+    #[test]
+    fn handles_ping_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-ping".to_string(),
+            method: RpcMethod::Ping,
+            params: serde_json::json!({}),
+        };
+
+        let AgentReply::Stream(progress_frames, final_response) =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        assert!(progress_frames.is_empty());
+        assert!(final_response.ok);
+        assert_eq!(
+            final_response.result.expect("ping result"),
+            serde_json::json!({ "pong": true })
+        );
+    }
+
+    #[test]
+    fn handles_describe_agent_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-describe".to_string(),
+            method: RpcMethod::DescribeAgent,
+            params: serde_json::json!({}),
+        };
+
+        let AgentReply::Stream(progress_frames, final_response) =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        assert!(progress_frames.is_empty());
+        assert!(final_response.ok);
+
+        let descriptor: AgentDescriptor =
+            serde_json::from_value(final_response.result.expect("descriptor result"))
+                .expect("agent descriptor");
+
+        assert_eq!(descriptor.program, "kyuubiki-rust-agent");
+        assert_eq!(descriptor.protocol.rpc_version, RPC_VERSION);
+        assert!(descriptor
+            .protocol
+            .methods
+            .contains(&RpcMethod::SolveTruss3d));
     }
 }

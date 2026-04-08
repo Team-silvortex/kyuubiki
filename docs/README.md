@@ -5,6 +5,8 @@ engineering direction.
 
 - `architecture.md`
   Runtime-layer split across frontend, orchestrator, and Rust data plane.
+- `protocols.md`
+  Public HTTP and TCP contracts that let the GUI, control plane, and solver agents run as separate programs.
 - `repository-structure.md`
   Concrete directory ownership and generated-path boundaries.
 - `development.md`

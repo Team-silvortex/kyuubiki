@@ -780,11 +780,89 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     assert payload["service"] == "kyuubiki-orchestrator"
     assert payload["status"] == "ok"
+    assert payload["protocol"]["program"] == "kyuubiki-orchestrator"
+    assert payload["protocol"]["compatible_solver_rpc"]["name"] == "kyuubiki.solver-rpc/v1"
     assert payload["deployment"]["mode"] == "local"
     assert payload["deployment"]["discovery"] == "static"
     assert payload["remote_solver_registry"]["active_agents"] == 0
     assert payload["transport"]["http"] == 4000
     assert payload["transport"]["solver_agent_tcp"] == 5001
+  end
+
+  test "exposes decoupled protocol descriptors for control plane and solver rpc" do
+    conn =
+      :get
+      |> conn("/api/v1/protocol")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["program"] == "kyuubiki-orchestrator"
+    assert payload["protocol"]["name"] == "kyuubiki.control-plane/http-v1"
+    assert payload["compatible_solver_rpc"]["name"] == "kyuubiki.solver-rpc/v1"
+
+    conn =
+      :get
+      |> conn("/api/v1/protocol/solver-rpc")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert "describe_agent" in payload["methods"]
+    assert payload["transport"]["framing"] == "length_prefixed_u32"
+  end
+
+  test "describes reachable solver agents through the protocol endpoint" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => true,
+          "result" => %{
+            "program" => "kyuubiki-rust-agent",
+            "role" => "solver_agent",
+            "protocol" => %{
+              "name" => "kyuubiki.solver-rpc/v1",
+              "rpc_version" => 1,
+              "transport" => %{
+                "kind" => "tcp",
+                "framing" => "length_prefixed_u32",
+                "encoding" => "json"
+              },
+              "methods" => ["ping", "describe_agent", "solve_truss_2d"]
+            },
+            "capabilities" => [
+              %{
+                "id" => "truss-2d",
+                "role" => "solver",
+                "methods" => ["solve_truss_2d"],
+                "tags" => ["truss", "cpu"]
+              }
+            ],
+            "deployment_modes" => ["local", "distributed"]
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "protocol-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :get
+      |> conn("/api/v1/protocol/agents")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    [agent] = payload["agents"]
+    assert agent["id"] == "protocol-agent"
+    assert agent["descriptor"]["program"] == "kyuubiki-rust-agent"
+    assert "describe_agent" in agent["descriptor"]["protocol"]["methods"]
   end
 
   test "registers, heartbeats, and removes remote agents through the API" do

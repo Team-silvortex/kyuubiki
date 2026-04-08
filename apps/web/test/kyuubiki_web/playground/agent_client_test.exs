@@ -243,6 +243,47 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert_receive {:progress, %{"message" => "agent heartbeat: solver still active"}}
   end
 
+  test "describes an agent over the rpc protocol" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => true,
+          "result" => %{
+            "program" => "kyuubiki-rust-agent",
+            "role" => "solver_agent",
+            "protocol" => %{
+              "name" => "kyuubiki.solver-rpc/v1",
+              "rpc_version" => 1,
+              "transport" => %{
+                "kind" => "tcp",
+                "framing" => "length_prefixed_u32",
+                "encoding" => "json"
+              },
+              "methods" => ["ping", "describe_agent", "solve_truss_3d"]
+            },
+            "capabilities" => [
+              %{
+                "id" => "truss-3d",
+                "role" => "solver",
+                "methods" => ["solve_truss_3d"],
+                "tags" => ["truss", "space", "cpu"]
+              }
+            ],
+            "deployment_modes" => ["local", "distributed"]
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    endpoint = %{id: "describe-agent", host: "127.0.0.1", port: port}
+
+    assert {:ok, descriptor} = AgentClient.describe_agent(endpoint)
+    assert descriptor["program"] == "kyuubiki-rust-agent"
+    assert descriptor["protocol"]["name"] == "kyuubiki.solver-rpc/v1"
+    assert "describe_agent" in descriptor["protocol"]["methods"]
+  end
+
   defp await_fake_agent_port do
     receive do
       {:fake_agent_ready, port} -> port

@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+pub const RPC_VERSION: u8 = 1;
+pub const SOLVER_RPC_PROTOCOL: &str = "kyuubiki.solver-rpc/v1";
+pub const CONTROL_PLANE_PROTOCOL: &str = "kyuubiki.control-plane/http-v1";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum JobStatus {
@@ -130,8 +134,44 @@ pub struct SolveBarResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TransportDescriptor {
+    pub kind: String,
+    pub framing: Option<String>,
+    pub encoding: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CapabilityDescriptor {
+    pub id: String,
+    pub role: String,
+    pub methods: Vec<RpcMethod>,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RpcProtocolDescriptor {
+    pub name: String,
+    pub rpc_version: u8,
+    pub transport: TransportDescriptor,
+    pub methods: Vec<RpcMethod>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AgentDescriptor {
+    pub program: String,
+    pub role: String,
+    pub protocol: RpcProtocolDescriptor,
+    pub capabilities: Vec<CapabilityDescriptor>,
+    pub deployment_modes: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum RpcMethod {
+    #[serde(rename = "ping")]
+    Ping,
+    #[serde(rename = "describe_agent")]
+    DescribeAgent,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
     #[serde(rename = "solve_truss_2d")]
@@ -183,7 +223,7 @@ pub struct CancelJobRequest {
 impl RpcProgress {
     pub fn new(id: impl Into<String>, progress: ProgressEvent) -> Self {
         Self {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: id.into(),
             event: "progress".to_string(),
             progress,
@@ -192,7 +232,7 @@ impl RpcProgress {
 
     pub fn heartbeat(id: impl Into<String>, progress: ProgressEvent) -> Self {
         Self {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: id.into(),
             event: "heartbeat".to_string(),
             progress,
@@ -203,7 +243,7 @@ impl RpcProgress {
 impl RpcResponse {
     pub fn success(id: impl Into<String>, result: Value) -> Self {
         Self {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: id.into(),
             ok: true,
             result: Some(result),
@@ -217,7 +257,7 @@ impl RpcResponse {
         message: impl Into<String>,
     ) -> Self {
         Self {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: id.into(),
             ok: false,
             result: None,
@@ -225,6 +265,76 @@ impl RpcResponse {
                 code: code.into(),
                 message: message.into(),
             }),
+        }
+    }
+}
+
+impl RpcProtocolDescriptor {
+    pub fn solver_agent_default() -> Self {
+        Self {
+            name: SOLVER_RPC_PROTOCOL.to_string(),
+            rpc_version: RPC_VERSION,
+            transport: TransportDescriptor {
+                kind: "tcp".to_string(),
+                framing: Some("length_prefixed_u32".to_string()),
+                encoding: "json".to_string(),
+            },
+            methods: vec![
+                RpcMethod::Ping,
+                RpcMethod::DescribeAgent,
+                RpcMethod::SolveBar1d,
+                RpcMethod::SolveTruss2d,
+                RpcMethod::SolveTruss3d,
+                RpcMethod::SolvePlaneTriangle2d,
+                RpcMethod::CancelJob,
+            ],
+        }
+    }
+}
+
+impl AgentDescriptor {
+    pub fn solver_agent_default() -> Self {
+        Self {
+            program: "kyuubiki-rust-agent".to_string(),
+            role: "solver_agent".to_string(),
+            protocol: RpcProtocolDescriptor::solver_agent_default(),
+            capabilities: vec![
+                CapabilityDescriptor {
+                    id: "bar-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveBar1d],
+                    tags: vec!["bar".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "truss-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveTruss2d],
+                    tags: vec!["truss".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "truss-3d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveTruss3d],
+                    tags: vec!["truss".to_string(), "space".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "plane-triangle-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolvePlaneTriangle2d],
+                    tags: vec!["plane".to_string(), "mesh".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "control".to_string(),
+                    role: "runtime".to_string(),
+                    methods: vec![RpcMethod::Ping, RpcMethod::DescribeAgent, RpcMethod::CancelJob],
+                    tags: vec!["control".to_string(), "general".to_string()],
+                },
+            ],
+            deployment_modes: vec![
+                "local".to_string(),
+                "cloud".to_string(),
+                "distributed".to_string(),
+            ],
         }
     }
 }
@@ -448,8 +558,9 @@ pub struct ResultChunkResponse {
 #[cfg(test)]
 mod tests {
     use super::{
-        Job, JobStatus, ProgressEvent, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-        SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
+        AgentDescriptor, Job, JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress,
+        RpcRequest, RpcResponse, SolveBarRequest, SolvePlaneTriangle2dRequest,
+        SolveTruss3dRequest,
     };
 
     #[test]
@@ -476,7 +587,7 @@ mod tests {
     #[test]
     fn serializes_rpc_round_trip() {
         let request = RpcRequest {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: "rpc-1".to_string(),
             method: RpcMethod::SolveBar1d,
             params: serde_json::to_value(SolveBarRequest {
@@ -493,7 +604,7 @@ mod tests {
         let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
 
         assert_eq!(decoded.method, RpcMethod::SolveBar1d);
-        assert_eq!(decoded.rpc_version, 1);
+        assert_eq!(decoded.rpc_version, RPC_VERSION);
         assert_eq!(decoded.id, "rpc-1");
         let params: SolveBarRequest = serde_json::from_value(decoded.params).expect("params");
         assert_eq!(params.elements, 3);
@@ -502,7 +613,7 @@ mod tests {
     #[test]
     fn serializes_plane_triangle_rpc_round_trip() {
         let request = RpcRequest {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: "rpc-plane".to_string(),
             method: RpcMethod::SolvePlaneTriangle2d,
             params: serde_json::to_value(SolvePlaneTriangle2dRequest {
@@ -522,7 +633,7 @@ mod tests {
     #[test]
     fn serializes_truss_3d_rpc_round_trip() {
         let request = RpcRequest {
-            rpc_version: 1,
+            rpc_version: RPC_VERSION,
             id: "rpc-truss-3d".to_string(),
             method: RpcMethod::SolveTruss3d,
             params: serde_json::to_value(SolveTruss3dRequest {
@@ -551,6 +662,22 @@ mod tests {
             response.error.expect("error payload").code,
             "invalid_request"
         );
+    }
+
+    #[test]
+    fn serializes_agent_descriptor_round_trip() {
+        let descriptor = AgentDescriptor::solver_agent_default();
+
+        let json = serde_json::to_string(&descriptor).expect("descriptor should serialize");
+        let decoded: AgentDescriptor =
+            serde_json::from_str(&json).expect("descriptor should decode");
+
+        assert_eq!(decoded.program, "kyuubiki-rust-agent");
+        assert_eq!(decoded.protocol.rpc_version, RPC_VERSION);
+        assert!(decoded
+            .protocol
+            .methods
+            .contains(&RpcMethod::DescribeAgent));
     }
 
     #[test]

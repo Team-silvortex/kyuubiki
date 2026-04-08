@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.3
+
+Kyuubiki `v0.3` is the release where the system starts to behave like an engine-backed FEM workstation under real scale, not just a coherent local-first prototype.
+
+### Added
+
+- formal benchmark scaling tiers for `10k`, `15k`, and `20k`
+- checked-in single-machine baselines for `medium`, `10k`, `15k`, and `20k`
+- benchmark comparison reports and regression gates
+- progressive/lazy rendering for large viewport result windows
+- adaptive chunk windows with jump navigation for large result browsing
+- watchdog-backed job timeout, stale detection, heartbeat status, and cancel flows
+- runtime remote-agent registration and heartbeat APIs for distributed deployments
+- explicit control-plane and solver-RPC protocol descriptors
+- Rust agent self-description and generic runtime RPC methods (`ping`, `describe_agent`)
+
+### Changed
+
+- pushed sparse-first solver performance further for `2D truss`, `2D plane triangle`, and `3D truss`
+- improved single-machine `M2 + 16GB` behavior through `10k` and into the `15k`/`20k` node class
+- tightened the frontend toward a denser editor-style layout with more segmented tabs and less card sprawl
+- continued separating engine, orchestrator, installer, and workbench responsibilities
+- made the GUI, control plane, and solver agents more explicitly deployable as independent programs
+
+### Scale snapshot
+
+- `10k` is now the practical comfort tier
+- `15k` is a stable upper tier
+- `20k` is a real single-machine stretch tier, with model-family-dependent cost
+
+### Direction after v0.3
+
+- push viewport-driven chunk loading beyond page-style result windows
+- keep improving sparse solver stability and performance before chasing larger raw node counts
+- deepen distributed orchestration and remote deployment workflows without coupling them to any single frontend mode
+
 ## v0.2
 
 Kyuubiki `v0.2` is the first release where the system behaves like a coherent local-first FEM workbench rather than a loose prototype.

@@ -32,6 +32,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("cancel_job", %{job_id: job_id})
   end
 
+  @spec ping(AgentPool.endpoint() | nil) :: {:ok, map()} | {:error, term()}
+  def ping(endpoint \\ nil) do
+    request_to_target("ping", %{}, endpoint)
+  end
+
+  @spec describe_agent(AgentPool.endpoint() | nil) :: {:ok, map()} | {:error, term()}
+  def describe_agent(endpoint \\ nil) do
+    request_to_target("describe_agent", %{}, endpoint)
+  end
+
   @spec request(String.t(), map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def request(method, params, on_progress \\ fn _progress -> :ok end)
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) do
@@ -58,6 +68,19 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       "method" => method,
       "params" => params
     }
+  end
+
+  defp request_to_target(method, params, nil) do
+    request(method, params)
+  end
+
+  defp request_to_target(method, params, endpoint) when is_map(endpoint) do
+    request_id = request_id()
+    request = build_request(request_id, method, params)
+
+    with {:ok, result} <- request_once(normalize_endpoint(endpoint), request_id, request, fn _ -> :ok end) do
+      {:ok, result}
+    end
   end
 
   defp attempt_request([], _request_id, _request, _on_progress, failures) do
@@ -101,6 +124,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       ],
       connect_timeout_ms()
     )
+  end
+
+  defp normalize_endpoint(%{id: _id, host: _host, port: _port} = endpoint), do: endpoint
+
+  defp normalize_endpoint(%{"host" => host, "port" => port} = endpoint) do
+    %{
+      id: Map.get(endpoint, "id", "#{host}:#{port}"),
+      host: host,
+      port: port
+    }
   end
 
   defp send_request(socket, request) do

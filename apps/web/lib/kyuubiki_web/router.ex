@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.Router do
 
   alias KyuubikiWeb.Analysis
   alias KyuubikiWeb.Library
+  alias KyuubikiWeb.Protocol
 
   plug(Plug.Logger)
   plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
@@ -29,6 +30,7 @@ defmodule KyuubikiWeb.Router do
     respond_json(conn, 200, %{
       "service" => "kyuubiki-orchestrator",
       "status" => "ok",
+      "protocol" => Protocol.descriptor(),
       "deployment" => deployment,
       "remote_solver_registry" => remote_registry,
       "watchdog" => watchdog,
@@ -39,6 +41,22 @@ defmodule KyuubikiWeb.Router do
       },
       "solver_agents" => agent_endpoints
     })
+  end
+
+  get "/api/v1/protocol" do
+    respond_json(conn, 200, Protocol.descriptor())
+  end
+
+  get "/api/v1/protocol/control-plane" do
+    respond_json(conn, 200, Protocol.control_plane_protocol())
+  end
+
+  get "/api/v1/protocol/solver-rpc" do
+    respond_json(conn, 200, Protocol.solver_rpc_protocol())
+  end
+
+  get "/api/v1/protocol/agents" do
+    respond_json(conn, 200, %{"agents" => Protocol.describe_agents()})
   end
 
   get "/api/v1/agents" do
