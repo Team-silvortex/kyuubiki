@@ -1062,6 +1062,9 @@ function safeStorageGet(): {
   frontendRuntimeMode?: FrontendRuntimeMode;
   directMeshEndpointsText?: string;
   directMeshSelectionMode?: DirectMeshSelectionMode;
+  controlPlaneApiToken?: string;
+  clusterApiToken?: string;
+  directMeshApiToken?: string;
 } {
   if (typeof window === "undefined") return {};
   try {
@@ -1075,11 +1078,44 @@ function safeStorageGet(): {
           frontendRuntimeMode?: FrontendRuntimeMode;
           directMeshEndpointsText?: string;
           directMeshSelectionMode?: DirectMeshSelectionMode;
+          controlPlaneApiToken?: string;
+          clusterApiToken?: string;
+          directMeshApiToken?: string;
         })
       : {};
   } catch {
     return {};
   }
+}
+
+function sanitizeWorkbenchSettings(input: {
+  theme: Theme;
+  language: Language;
+  showShortcutHints: boolean;
+  immersiveGuardrails: boolean;
+  frontendRuntimeMode: FrontendRuntimeMode;
+  directMeshEndpointsText: string;
+  directMeshSelectionMode: DirectMeshSelectionMode;
+  controlPlaneApiToken: string;
+  clusterApiToken: string;
+  directMeshApiToken: string;
+}) {
+  return {
+    theme: input.theme,
+    language: input.language,
+    showShortcutHints: input.showShortcutHints,
+    immersiveGuardrails: input.immersiveGuardrails,
+    frontendRuntimeMode: input.frontendRuntimeMode,
+    directMeshEndpointsText: input.directMeshEndpointsText,
+    directMeshSelectionMode: input.directMeshSelectionMode,
+    ...(input.controlPlaneApiToken.trim()
+      ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
+      : {}),
+    ...(input.clusterApiToken.trim() ? { clusterApiToken: input.clusterApiToken.trim() } : {}),
+    ...(input.directMeshApiToken.trim()
+      ? { directMeshApiToken: input.directMeshApiToken.trim() }
+      : {}),
+  };
 }
 
 function parseDirectMeshEndpoints(value: string) {
@@ -2014,6 +2050,9 @@ export function Workbench() {
   const [frontendRuntimeMode, setFrontendRuntimeMode] = useState<FrontendRuntimeMode>("orchestrated_gui");
   const [directMeshEndpointsText, setDirectMeshEndpointsText] = useState("127.0.0.1:5001,127.0.0.1:5002");
   const [directMeshSelectionMode, setDirectMeshSelectionMode] = useState<DirectMeshSelectionMode>("healthiest");
+  const [controlPlaneApiToken, setControlPlaneApiToken] = useState("");
+  const [clusterApiToken, setClusterApiToken] = useState("");
+  const [directMeshApiToken, setDirectMeshApiToken] = useState("");
   const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
@@ -2237,6 +2276,9 @@ export function Workbench() {
     if (stored.frontendRuntimeMode) setFrontendRuntimeMode(stored.frontendRuntimeMode);
     if (stored.directMeshEndpointsText) setDirectMeshEndpointsText(stored.directMeshEndpointsText);
     if (stored.directMeshSelectionMode) setDirectMeshSelectionMode(stored.directMeshSelectionMode);
+    if (stored.controlPlaneApiToken) setControlPlaneApiToken(stored.controlPlaneApiToken);
+    if (stored.clusterApiToken) setClusterApiToken(stored.clusterApiToken);
+    if (stored.directMeshApiToken) setDirectMeshApiToken(stored.directMeshApiToken);
     if (stored.language) {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
@@ -2249,7 +2291,7 @@ export function Workbench() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
         SETTINGS_KEY,
-        JSON.stringify({
+        JSON.stringify(sanitizeWorkbenchSettings({
           theme,
           language,
           showShortcutHints,
@@ -2257,10 +2299,13 @@ export function Workbench() {
           frontendRuntimeMode,
           directMeshEndpointsText,
           directMeshSelectionMode,
-        }),
+          controlPlaneApiToken,
+          clusterApiToken,
+          directMeshApiToken,
+        })),
       );
     }
-  }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode]);
+  }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode, controlPlaneApiToken, clusterApiToken, directMeshApiToken]);
 
   useEffect(() => {
     return () => {
@@ -3476,6 +3521,38 @@ export function Workbench() {
   const selectedNodeIssues =
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
   const translatedFailureReason = humanizeSolverFailure(job?.message, t);
+  const securityUi =
+    language === "zh"
+      ? {
+          controlPlaneToken: "控制面 API Token",
+          clusterToken: "集群 API Token",
+          directMeshToken: "直连网格 Token",
+          protectReads: "保护只读接口",
+          clusterWindow: "集群时间窗",
+          directMeshRoutes: "直连网格路由",
+          security: "安全",
+          enabled: "已启用",
+          disabled: "未启用",
+          configured: "已配置",
+          notConfigured: "未配置",
+          mutatingRoutes: "写入路由保护",
+          clusterRoutes: "集群路由保护",
+        }
+      : {
+          controlPlaneToken: "Control-plane API token",
+          clusterToken: "Cluster API token",
+          directMeshToken: "Direct mesh token",
+          protectReads: "Protect reads",
+          clusterWindow: "Cluster time window",
+          directMeshRoutes: "Direct mesh routes",
+          security: "Security",
+          enabled: "Enabled",
+          disabled: "Disabled",
+          configured: "Configured",
+          notConfigured: "Not configured",
+          mutatingRoutes: "Mutating routes",
+          clusterRoutes: "Cluster routes",
+        };
   const planeMaxVonMises = Math.max(...planeElements.map((element) => element.von_mises ?? 0), 0);
   const currentMaterials =
     studyKind === "truss_2d"
@@ -5612,6 +5689,48 @@ export function Workbench() {
                     onChange={(event) => setDirectMeshEndpointsText(event.target.value)}
                   />
                 </label>
+                <label className="field-span-2">
+                  <span>{securityUi.controlPlaneToken}</span>
+                  <small className="field-hint">
+                    {language === "zh"
+                      ? "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。"
+                      : "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests."}
+                  </small>
+                  <input
+                    type="password"
+                    value={controlPlaneApiToken}
+                    onChange={(event) => setControlPlaneApiToken(event.target.value)}
+                    placeholder={language === "zh" ? "可选的控制面令牌" : "Optional control-plane token"}
+                  />
+                </label>
+                <label className="field-span-2">
+                  <span>{securityUi.clusterToken}</span>
+                  <small className="field-hint">
+                    {language === "zh"
+                      ? "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。"
+                      : "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty."}
+                  </small>
+                  <input
+                    type="password"
+                    value={clusterApiToken}
+                    onChange={(event) => setClusterApiToken(event.target.value)}
+                    placeholder={language === "zh" ? "可选的集群专用令牌" : "Optional cluster-only token"}
+                  />
+                </label>
+                <label className="field-span-2">
+                  <span>{securityUi.directMeshToken}</span>
+                  <small className="field-hint">
+                    {language === "zh"
+                      ? "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。"
+                      : "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests."}
+                  </small>
+                  <input
+                    type="password"
+                    value={directMeshApiToken}
+                    onChange={(event) => setDirectMeshApiToken(event.target.value)}
+                    placeholder={language === "zh" ? "可选的直连网格令牌" : "Optional direct-mesh token"}
+                  />
+                </label>
                 <label className="toggle-row">
                   <div>
                     <span>{t.shortcutHints}</span>
@@ -5725,6 +5844,75 @@ export function Workbench() {
                   ))}
                 </div>
               ) : null}
+            </section>
+            <section className="sidebar-card sidebar-card--compact">
+              <div className="card-head">
+                <h2>{securityUi.security}</h2>
+                <span>
+                  {health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
+                </span>
+              </div>
+              <div className="sidebar-list">
+                <div>
+                  <span>{securityUi.controlPlaneToken}</span>
+                  <strong>
+                    {health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
+                  </strong>
+                </div>
+                <div>
+                  <span>{securityUi.clusterToken}</span>
+                  <strong>
+                    {health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured}
+                  </strong>
+                </div>
+                <div>
+                  <span>{securityUi.clusterWindow}</span>
+                  <strong>{health?.security?.cluster_timestamp_window_ms ?? 30000} ms</strong>
+                </div>
+                <div>
+                  <span>{language === "zh" ? "Agent 白名单" : "Agent allowlist"}</span>
+                  <strong>
+                    {health?.security?.cluster_agent_allowlist_enabled
+                      ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
+                      : securityUi.disabled}
+                  </strong>
+                </div>
+                <div>
+                  <span>{language === "zh" ? "Cluster 白名单" : "Cluster allowlist"}</span>
+                  <strong>
+                    {health?.security?.cluster_cluster_allowlist_enabled
+                      ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
+                      : securityUi.disabled}
+                  </strong>
+                </div>
+                <div>
+                  <span>{securityUi.protectReads}</span>
+                  <strong>{health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled}</strong>
+                </div>
+                <div>
+                  <span>{securityUi.mutatingRoutes}</span>
+                  <strong>
+                    {health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled}
+                  </strong>
+                </div>
+                <div>
+                  <span>{securityUi.clusterRoutes}</span>
+                  <strong>
+                    {health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled}
+                  </strong>
+                </div>
+                <div>
+                  <span>{securityUi.directMeshRoutes}</span>
+                  <strong>
+                    {directMeshApiToken ? securityUi.configured : securityUi.enabled}
+                  </strong>
+                </div>
+              </div>
+              <p className="card-copy">
+                {language === "zh"
+                  ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器设置里。"
+                  : "Runtime security state comes from /api/health; frontend tokens stay only in local browser settings."}
+              </p>
             </section>
             <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">

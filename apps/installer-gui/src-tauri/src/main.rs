@@ -38,6 +38,14 @@ struct EnvFormPayload {
     sqlite_database_path: String,
     database_url: String,
     agent_endpoints: String,
+    kyuubiki_api_token: String,
+    kyuubiki_cluster_api_token: String,
+    kyuubiki_cluster_allowed_agent_ids: String,
+    kyuubiki_cluster_allowed_cluster_ids: String,
+    kyuubiki_cluster_timestamp_window_ms: String,
+    kyuubiki_protect_reads: bool,
+    kyuubiki_direct_mesh_enabled: bool,
+    kyuubiki_direct_mesh_token: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -50,6 +58,14 @@ struct WriteEnvPayload {
     sqlite_database_path: String,
     database_url: String,
     agent_endpoints: String,
+    kyuubiki_api_token: String,
+    kyuubiki_cluster_api_token: String,
+    kyuubiki_cluster_allowed_agent_ids: String,
+    kyuubiki_cluster_allowed_cluster_ids: String,
+    kyuubiki_cluster_timestamp_window_ms: String,
+    kyuubiki_protect_reads: bool,
+    kyuubiki_direct_mesh_enabled: bool,
+    kyuubiki_direct_mesh_token: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -186,6 +202,14 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
     let mut sqlite_database_path = String::new();
     let mut database_url = String::new();
     let mut agent_endpoints = "127.0.0.1:5001,127.0.0.1:5002".to_string();
+    let mut kyuubiki_api_token = String::new();
+    let mut kyuubiki_cluster_api_token = String::new();
+    let mut kyuubiki_cluster_allowed_agent_ids = String::new();
+    let mut kyuubiki_cluster_allowed_cluster_ids = String::new();
+    let mut kyuubiki_cluster_timestamp_window_ms = "30000".to_string();
+    let mut kyuubiki_protect_reads = false;
+    let mut kyuubiki_direct_mesh_enabled = true;
+    let mut kyuubiki_direct_mesh_token = String::new();
 
     for raw_line in contents.lines() {
       let line = raw_line.trim();
@@ -202,6 +226,20 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
           "SQLITE_DATABASE_PATH" => sqlite_database_path = value.trim().to_string(),
           "DATABASE_URL" => database_url = value.trim().to_string(),
           "KYUUBIKI_AGENT_ENDPOINTS" => agent_endpoints = value.trim().to_string(),
+          "KYUUBIKI_API_TOKEN" => kyuubiki_api_token = value.trim().to_string(),
+          "KYUUBIKI_CLUSTER_API_TOKEN" => kyuubiki_cluster_api_token = value.trim().to_string(),
+          "KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS" => {
+              kyuubiki_cluster_allowed_agent_ids = value.trim().to_string()
+          }
+          "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS" => {
+              kyuubiki_cluster_allowed_cluster_ids = value.trim().to_string()
+          }
+          "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS" => {
+              kyuubiki_cluster_timestamp_window_ms = value.trim().to_string()
+          }
+          "KYUUBIKI_PROTECT_READS" => kyuubiki_protect_reads = value.trim() == "true",
+          "KYUUBIKI_DIRECT_MESH_ENABLED" => kyuubiki_direct_mesh_enabled = value.trim() != "false",
+          "KYUUBIKI_DIRECT_MESH_TOKEN" => kyuubiki_direct_mesh_token = value.trim().to_string(),
           _ => {}
         }
       }
@@ -215,6 +253,14 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
       sqlite_database_path,
       database_url,
       agent_endpoints,
+      kyuubiki_api_token,
+      kyuubiki_cluster_api_token,
+      kyuubiki_cluster_allowed_agent_ids,
+      kyuubiki_cluster_allowed_cluster_ids,
+      kyuubiki_cluster_timestamp_window_ms,
+      kyuubiki_protect_reads,
+      kyuubiki_direct_mesh_enabled,
+      kyuubiki_direct_mesh_token,
     })
 }
 
@@ -250,6 +296,58 @@ fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         lines.push(format!(
             "KYUUBIKI_AGENT_ENDPOINTS={}",
             payload.agent_endpoints.trim()
+        ));
+    }
+
+    if !payload.kyuubiki_api_token.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_API_TOKEN={}",
+            payload.kyuubiki_api_token.trim()
+        ));
+    }
+
+    if !payload.kyuubiki_cluster_api_token.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_CLUSTER_API_TOKEN={}",
+            payload.kyuubiki_cluster_api_token.trim()
+        ));
+    }
+
+    if !payload.kyuubiki_cluster_allowed_agent_ids.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS={}",
+            payload.kyuubiki_cluster_allowed_agent_ids.trim()
+        ));
+    }
+
+    if !payload.kyuubiki_cluster_allowed_cluster_ids.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS={}",
+            payload.kyuubiki_cluster_allowed_cluster_ids.trim()
+        ));
+    }
+
+    if !payload.kyuubiki_cluster_timestamp_window_ms.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS={}",
+            payload.kyuubiki_cluster_timestamp_window_ms.trim()
+        ));
+    }
+
+    lines.push(format!(
+        "KYUUBIKI_PROTECT_READS={}",
+        if payload.kyuubiki_protect_reads { "true" } else { "false" }
+    ));
+
+    lines.push(format!(
+        "KYUUBIKI_DIRECT_MESH_ENABLED={}",
+        if payload.kyuubiki_direct_mesh_enabled { "true" } else { "false" }
+    ));
+
+    if !payload.kyuubiki_direct_mesh_token.trim().is_empty() {
+        lines.push(format!(
+            "KYUUBIKI_DIRECT_MESH_TOKEN={}",
+            payload.kyuubiki_direct_mesh_token.trim()
         ));
     }
 

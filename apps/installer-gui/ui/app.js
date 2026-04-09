@@ -91,6 +91,17 @@
       sqliteDatabasePath: document.getElementById("sqlite-path").value.trim(),
       databaseUrl: document.getElementById("database-url").value.trim(),
       agentEndpoints: document.getElementById("agent-endpoints").value.trim(),
+      kyuubikiApiToken: document.getElementById("api-token").value.trim(),
+      kyuubikiClusterApiToken: document.getElementById("cluster-api-token").value.trim(),
+      kyuubikiClusterAllowedAgentIds:
+        document.getElementById("cluster-allowed-agent-ids").value.trim(),
+      kyuubikiClusterAllowedClusterIds:
+        document.getElementById("cluster-allowed-cluster-ids").value.trim(),
+      kyuubikiClusterTimestampWindowMs:
+        document.getElementById("cluster-timestamp-window").value.trim() || "30000",
+      kyuubikiProtectReads: document.getElementById("protect-reads").value === "true",
+      kyuubikiDirectMeshEnabled: document.getElementById("direct-mesh-enabled").value === "true",
+      kyuubikiDirectMeshToken: document.getElementById("direct-mesh-token").value.trim(),
     };
   }
 
@@ -118,6 +129,17 @@
     document.getElementById("database-url").value = form.database_url || "";
     document.getElementById("agent-endpoints").value =
       form.agent_endpoints || "127.0.0.1:5001,127.0.0.1:5002";
+    document.getElementById("api-token").value = form.kyuubiki_api_token || "";
+    document.getElementById("cluster-api-token").value = form.kyuubiki_cluster_api_token || "";
+    document.getElementById("cluster-allowed-agent-ids").value =
+      form.kyuubiki_cluster_allowed_agent_ids || "";
+    document.getElementById("cluster-allowed-cluster-ids").value =
+      form.kyuubiki_cluster_allowed_cluster_ids || "";
+    document.getElementById("cluster-timestamp-window").value =
+      form.kyuubiki_cluster_timestamp_window_ms || "30000";
+    document.getElementById("protect-reads").value = form.kyuubiki_protect_reads ? "true" : "false";
+    document.getElementById("direct-mesh-enabled").value = form.kyuubiki_direct_mesh_enabled === false ? "false" : "true";
+    document.getElementById("direct-mesh-token").value = form.kyuubiki_direct_mesh_token || "";
     setModeCard(form.deployment_mode || "local");
   }
 

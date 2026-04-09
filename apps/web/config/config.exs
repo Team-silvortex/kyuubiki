@@ -66,6 +66,21 @@ config :kyuubiki_web,
 
 config :kyuubiki_web, KyuubikiWeb.Security,
   api_token: System.get_env("KYUUBIKI_API_TOKEN"),
+  cluster_api_token: System.get_env("KYUUBIKI_CLUSTER_API_TOKEN"),
+  cluster_allowed_agent_ids:
+    System.get_env("KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS", "")
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> MapSet.new(),
+  cluster_allowed_cluster_ids:
+    System.get_env("KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS", "")
+    |> String.split(",", trim: true)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> MapSet.new(),
+  cluster_timestamp_window_ms:
+    String.to_integer(System.get_env("KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS", "30000")),
   protect_reads?: System.get_env("KYUUBIKI_PROTECT_READS", "false") == "true"
 
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentPool,

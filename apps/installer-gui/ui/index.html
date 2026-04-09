@@ -289,6 +289,44 @@
                   <span>PostgreSQL URL</span>
                   <input id="database-url" type="text" placeholder="ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev" />
                 </label>
+                <label class="field field-span-2">
+                  <span>Control-plane API token</span>
+                  <input id="api-token" type="password" placeholder="optional shared token" />
+                </label>
+                <label class="field field-span-2">
+                  <span>Cluster API token</span>
+                  <input id="cluster-api-token" type="password" placeholder="optional cluster-only token" />
+                </label>
+                <label class="field">
+                  <span>Allowed agent IDs</span>
+                  <input id="cluster-allowed-agent-ids" type="text" placeholder="agent-a,agent-b" />
+                </label>
+                <label class="field">
+                  <span>Allowed cluster IDs</span>
+                  <input id="cluster-allowed-cluster-ids" type="text" placeholder="lan-mesh-a,site-b" />
+                </label>
+                <label class="field">
+                  <span>Cluster timestamp window (ms)</span>
+                  <input id="cluster-timestamp-window" type="number" min="1000" step="1000" placeholder="30000" />
+                </label>
+                <label class="field">
+                  <span>Protect reads</span>
+                  <select id="protect-reads">
+                    <option value="false">Disabled</option>
+                    <option value="true">Enabled</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Direct mesh routes</span>
+                  <select id="direct-mesh-enabled">
+                    <option value="true">Enabled</option>
+                    <option value="false">Disabled</option>
+                  </select>
+                </label>
+                <label class="field field-span-2">
+                  <span>Direct mesh token</span>
+                  <input id="direct-mesh-token" type="password" placeholder="optional direct-mesh token" />
+                </label>
               </div>
 
               <div class="action-row">

@@ -21,6 +21,10 @@ Supported request headers:
 Environment variables:
 
 - `KYUUBIKI_API_TOKEN`
+- `KYUUBIKI_CLUSTER_API_TOKEN`
+- `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS`
+- `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS`
+- `KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS`
 - `KYUUBIKI_PROTECT_READS=true|false`
 
 Behavior:
@@ -29,6 +33,16 @@ Behavior:
   local-friendly mode, reads and writes are open
 - token configured
   mutating and cluster routes require the token
+- cluster token configured
+  cluster registration, heartbeat, and removal routes require the dedicated cluster token
+- cluster agent allowlist configured
+  only registered agent IDs in the allowlist may join or heartbeat
+- cluster ID allowlist configured
+  cluster routes require a matching allowed `cluster_id`
+- cluster token omitted
+  cluster routes fall back to `KYUUBIKI_API_TOKEN`
+- cluster timestamp header present
+  cluster routes reject stale requests outside the configured timestamp window
 - `KYUUBIKI_PROTECT_READS=true`
   read routes should also be considered protected in deployment policy
 
@@ -42,6 +56,23 @@ Direct mesh routes can now be disabled or token-protected:
 This is important because direct mesh routes bypass Phoenix job persistence and
 talk straight to solver agents.
 
+### Frontend operator settings
+
+The workbench can now carry optional operator tokens from browser-local
+settings:
+
+- control-plane token
+- cluster token
+- direct-mesh token
+
+They are currently stored in browser local storage and attached as:
+
+- `x-kyuubiki-token` to `/api/v1` and `/api/health`
+- `x-kyuubiki-token` to `/api/direct-mesh/*`
+
+The installer GUI can also write these environment variables into `.env.local`
+for deployment setup.
+
 ## Operational recommendations
 
 ### Local workstation
@@ -54,6 +85,9 @@ talk straight to solver agents.
 
 - use `postgres`
 - set `KYUUBIKI_API_TOKEN`
+- set `KYUUBIKI_CLUSTER_API_TOKEN` for remote node registration instead of reusing the main write token
+- use `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS` and `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS` when you want a low-overhead membership gate without introducing certificates yet
+- keep the cluster timestamp window short unless your deployment has unusual clock skew
 - disable direct mesh unless explicitly required
 - place the orchestrator behind TLS termination or a trusted reverse proxy
 
@@ -70,7 +104,7 @@ These areas are not yet finished security features:
 
 - no built-in TLS for solver RPC
 - no multi-user authn/authz model
-- no signed cluster membership
+- no signed cluster membership yet
 - no per-project permissions
 - no audit log retention policy yet
 

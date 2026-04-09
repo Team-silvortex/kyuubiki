@@ -309,6 +309,18 @@ export type HealthPayload = {
   remote_solver_registry?: {
     active_agents: number;
   };
+  security?: {
+    api_token_configured: boolean;
+    cluster_token_configured: boolean;
+    cluster_agent_allowlist_enabled: boolean;
+    cluster_agent_allowlist_count: number;
+    cluster_cluster_allowlist_enabled: boolean;
+    cluster_cluster_allowlist_count: number;
+    cluster_timestamp_window_ms: number;
+    protect_reads: boolean;
+    mutating_routes_protected: boolean;
+    cluster_routes_protected: boolean;
+  };
   watchdog?: {
     scan_interval_ms: number;
     stale_job_ms: number;
@@ -425,6 +437,8 @@ export type DirectMeshAgentListPayload = {
   agents: ProtocolAgentDescriptor[];
 };
 
+const SETTINGS_KEY = "kyuubiki-workbench-settings";
+
 function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
   return new Map((materials ?? []).map((material) => [material.id, material]));
 }
@@ -490,8 +504,55 @@ export function resolvePlaneTriangle2dJobInput(
   };
 }
 
+function authHeadersFor(url: string) {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as {
+      controlPlaneApiToken?: string;
+      clusterApiToken?: string;
+      directMeshApiToken?: string;
+    };
+
+    if (url.startsWith("/api/direct-mesh")) {
+      return parsed.directMeshApiToken ? { "x-kyuubiki-token": parsed.directMeshApiToken } : {};
+    }
+
+    if (
+      url === "/api/v1/agents/register" ||
+      /^\/api\/v1\/agents\/[^/]+\/heartbeat$/.test(url) ||
+      /^\/api\/v1\/agents\/[^/]+$/.test(url)
+    ) {
+      return parsed.clusterApiToken
+        ? { "x-kyuubiki-token": parsed.clusterApiToken }
+        : parsed.controlPlaneApiToken
+          ? { "x-kyuubiki-token": parsed.controlPlaneApiToken }
+          : {};
+    }
+
+    if (url.startsWith("/api/v1") || url.startsWith("/api/playground") || url === "/api/health") {
+      return parsed.controlPlaneApiToken ? { "x-kyuubiki-token": parsed.controlPlaneApiToken } : {};
+    }
+
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
+  const headers = new Headers(init?.headers);
+  Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
+    if (value) headers.set(key, value);
+  });
+
+  const response = await fetch(url, {
+    ...init,
+    headers,
+  });
   const payload = (await response.json()) as T & { error?: string };
 
   if (!response.ok) {

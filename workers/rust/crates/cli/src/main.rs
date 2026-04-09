@@ -49,6 +49,7 @@ struct AgentConfig {
     agent_id: Option<String>,
     advertise_host: Option<String>,
     orchestrator_url: Option<String>,
+    cluster_api_token: Option<String>,
     register_interval_ms: u64,
     cluster_id: Option<String>,
     peers: Vec<String>,
@@ -120,6 +121,7 @@ impl AgentConfig {
             agent_id: None,
             advertise_host: None,
             orchestrator_url: None,
+            cluster_api_token: None,
             register_interval_ms: 5_000,
             cluster_id: None,
             peers: vec![],
@@ -152,6 +154,11 @@ impl AgentConfig {
                 "--orchestrator-url" => {
                     if let Some(value) = args.next() {
                         config.orchestrator_url = Some(value.clone());
+                    }
+                }
+                "--cluster-api-token" => {
+                    if let Some(value) = args.next() {
+                        config.cluster_api_token = Some(value.clone());
                     }
                 }
                 "--register-interval-ms" => {
@@ -188,6 +195,10 @@ impl AgentConfig {
 
         if config.cluster_id.is_none() {
             config.cluster_id = std::env::var("KYUUBIKI_AGENT_CLUSTER_ID").ok();
+        }
+
+        if config.cluster_api_token.is_none() {
+            config.cluster_api_token = std::env::var("KYUUBIKI_CLUSTER_API_TOKEN").ok();
         }
 
         if config.peers.is_empty() {
@@ -771,14 +782,16 @@ impl AgentRegistrationHandle {
             .unwrap_or_else(|| config.host.clone());
         let port = config.port;
         let interval_ms = config.register_interval_ms;
+        let cluster_api_token = config.cluster_api_token.clone();
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = Arc::clone(&running);
+        let cluster_id = config.cluster_id.clone();
         let initial_payload = serde_json::json!({
             "id": agent_id,
             "host": advertise_host,
             "port": port,
             "role": "solver",
-            "cluster_id": config.cluster_id,
+            "cluster_id": cluster_id,
             "tags": if config.peers.is_empty() { vec!["headless", "standalone"] } else { vec!["headless", "peer-mesh"] }
         });
         let orchestrator_url_clone = orchestrator_url.clone();
@@ -788,6 +801,7 @@ impl AgentRegistrationHandle {
             let _ = post_json(
                 &format!("{}/api/v1/agents/register", normalize_base_url(&orchestrator_url_clone)),
                 &initial_payload,
+                cluster_auth_headers(cluster_api_token.as_deref(), &agent_id, cluster_id.as_deref()),
             );
 
             while running_clone.load(Ordering::SeqCst) {
@@ -804,6 +818,7 @@ impl AgentRegistrationHandle {
                         agent_id_clone
                     ),
                     &initial_payload,
+                    cluster_auth_headers(cluster_api_token.as_deref(), &agent_id_clone, cluster_id.as_deref()),
                 );
             }
 
@@ -811,7 +826,7 @@ impl AgentRegistrationHandle {
                 "{}/api/v1/agents/{}",
                 normalize_base_url(&orchestrator_url_clone),
                 agent_id_clone
-            ));
+            ), cluster_auth_headers(cluster_api_token.as_deref(), &agent_id_clone, cluster_id.as_deref()));
         });
 
         Some(Self {
@@ -1037,20 +1052,25 @@ fn frame_error_message(error: FrameReadError) -> String {
     }
 }
 
-fn post_json(url: &str, payload: &serde_json::Value) -> Result<(), String> {
+fn post_json(
+    url: &str,
+    payload: &serde_json::Value,
+    extra_headers: Vec<(String, String)>,
+) -> Result<(), String> {
     let body = serde_json::to_string(payload)
         .map_err(|error| format!("failed to serialize registration payload: {error}"))?;
-    send_http_request("POST", url, Some(("application/json", body.as_bytes())))
+    send_http_request("POST", url, Some(("application/json", body.as_bytes())), extra_headers)
 }
 
-fn delete_request(url: &str) -> Result<(), String> {
-    send_http_request("DELETE", url, None)
+fn delete_request(url: &str, extra_headers: Vec<(String, String)>) -> Result<(), String> {
+    send_http_request("DELETE", url, None, extra_headers)
 }
 
 fn send_http_request(
     method: &str,
     url: &str,
     body: Option<(&str, &[u8])>,
+    extra_headers: Vec<(String, String)>,
 ) -> Result<(), String> {
     let parsed = parse_http_url(url)?;
     let address = format!("{}:{}", parsed.host, parsed.port);
@@ -1066,14 +1086,20 @@ fn send_http_request(
     let _ = stream.set_write_timeout(Some(Duration::from_millis(2_000)));
 
     let (content_type, bytes) = body.unwrap_or(("application/json", &[]));
-    let request = format!(
-        "{method} {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {length}\r\n\r\n",
+    let mut request = format!(
+        "{method} {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\nContent-Type: {content_type}\r\nContent-Length: {length}\r\n",
         method = method,
         path = parsed.path,
         host = parsed.host,
         content_type = content_type,
         length = bytes.len()
     );
+
+    for (header, value) in extra_headers {
+        request.push_str(&format!("{header}: {value}\r\n"));
+    }
+
+    request.push_str("\r\n");
 
     stream
         .write_all(request.as_bytes())
@@ -1095,6 +1121,38 @@ fn send_http_request(
         Ok(())
     } else {
         Err(format!("unexpected HTTP response from {url}: {response}"))
+    }
+}
+
+fn cluster_auth_headers(
+    token: Option<&str>,
+    agent_id: &str,
+    cluster_id: Option<&str>,
+) -> Vec<(String, String)> {
+    match token {
+        Some(token) if !token.trim().is_empty() => {
+            let mut headers = vec![
+                ("x-kyuubiki-token".to_string(), token.trim().to_string()),
+                ("x-kyuubiki-agent-id".to_string(), agent_id.to_string()),
+                (
+                    "x-kyuubiki-cluster-ts".to_string(),
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .map(|duration| duration.as_millis().to_string())
+                        .unwrap_or_else(|_| "0".to_string()),
+                ),
+            ];
+
+            if let Some(cluster_id) = cluster_id.filter(|value| !value.trim().is_empty()) {
+                headers.push((
+                    "x-kyuubiki-cluster-id".to_string(),
+                    cluster_id.trim().to_string(),
+                ));
+            }
+
+            headers
+        }
+        _ => vec![],
     }
 }
 
@@ -1256,6 +1314,7 @@ mod tests {
                 agent_id: None,
                 advertise_host: None,
                 orchestrator_url: None,
+                cluster_api_token: None,
                 register_interval_ms: 5_000,
                 cluster_id: None,
                 peers: vec![],
@@ -1576,6 +1635,7 @@ mod tests {
             agent_id: Some("solver-a".to_string()),
             advertise_host: Some("10.0.0.20".to_string()),
             orchestrator_url: None,
+            cluster_api_token: None,
             register_interval_ms: 5_000,
             cluster_id: Some("lan-a".to_string()),
             peers: vec!["10.0.0.11:5001".to_string(), "10.0.0.12:5001".to_string()],

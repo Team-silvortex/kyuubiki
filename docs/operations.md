@@ -67,6 +67,21 @@ Environment variables:
 - `KYUUBIKI_AGENT_CONNECT_TIMEOUT_MS`
 - `KYUUBIKI_AGENT_RECV_TIMEOUT_MS`
 
+## Security controls
+
+Common environment switches:
+
+- `KYUUBIKI_API_TOKEN`
+- `KYUUBIKI_CLUSTER_API_TOKEN`
+- `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS`
+- `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS`
+- `KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS`
+- `KYUUBIKI_PROTECT_READS=true|false`
+- `KYUUBIKI_DIRECT_MESH_ENABLED=true|false`
+- `KYUUBIKI_DIRECT_MESH_TOKEN`
+
+These can now be written from the installer GUI Setup panel.
+
 ## Useful entry points
 
 - `make start-local`

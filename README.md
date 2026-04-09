@@ -269,6 +269,10 @@ Kyuubiki now has a small but formal deployment guardrail layer:
 
 - optional control-plane API token protection via:
   - `KYUUBIKI_API_TOKEN`
+  - `KYUUBIKI_CLUSTER_API_TOKEN`
+  - `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS`
+  - `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS`
+  - `KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS`
   - `KYUUBIKI_PROTECT_READS`
 - optional direct-mesh route protection via:
   - `KYUUBIKI_DIRECT_MESH_ENABLED`
