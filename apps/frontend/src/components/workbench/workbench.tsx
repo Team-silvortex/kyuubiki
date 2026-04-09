@@ -1938,18 +1938,48 @@ function renderLoadGlyph(
   );
 }
 
-function computeResultWindowSize(totalItems: number) {
-  if (totalItems >= 20_000) return 720;
-  if (totalItems >= 15_000) return 600;
-  if (totalItems >= 10_000) return 480;
-  if (totalItems >= 4_000) return 360;
-  return RESULT_WINDOW_BASE_SIZE;
+function computeResultWindowSize(totalItems: number, viewportWidth = 980) {
+  const base =
+    totalItems >= 20_000
+      ? 720
+      : totalItems >= 15_000
+        ? 600
+        : totalItems >= 10_000
+          ? 480
+          : totalItems >= 4_000
+            ? 360
+            : RESULT_WINDOW_BASE_SIZE;
+
+  const widthFactor = Math.min(1.8, Math.max(0.85, viewportWidth / 980));
+  const scaled = Math.round((base * widthFactor) / 60) * 60;
+  return Math.max(RESULT_WINDOW_BASE_SIZE, scaled);
 }
 
 function clampChunkOffset(offset: number, totalItems: number, limit: number) {
   const maxOffset = Math.max(0, totalItems - limit);
   const snapped = Math.round(Math.max(0, offset) / limit) * limit;
   return Math.min(maxOffset, snapped);
+}
+
+function computeVisibleResultWindowOffset(
+  totalItems: number,
+  limit: number,
+  viewportWidth: number,
+  scrollLeft: number,
+  scrollWidth: number,
+) {
+  if (totalItems <= limit || scrollWidth <= viewportWidth + 1) {
+    return 0;
+  }
+
+  const maxTravel = Math.max(1, scrollWidth - viewportWidth);
+  const visibleStartRatio = Math.min(1, Math.max(0, scrollLeft / maxTravel));
+  const visibleSpanRatio = Math.min(1, Math.max(0.08, viewportWidth / Math.max(scrollWidth, viewportWidth)));
+  const visibleSpan = Math.max(1, Math.round(totalItems * visibleSpanRatio));
+  const maxVisibleStart = Math.max(0, totalItems - visibleSpan);
+  const visibleStart = visibleStartRatio * maxVisibleStart;
+  const overscan = Math.max(60, Math.round(limit * 0.25));
+  return clampChunkOffset(visibleStart - overscan, totalItems, limit);
 }
 
 function chunkCacheKey(
@@ -2031,6 +2061,7 @@ export function Workbench() {
   const [resultWindow, setResultWindow] = useState<ResultWindowState | null>(null);
   const [resultWindowOffset, setResultWindowOffset] = useState(0);
   const [resultWindowLimit, setResultWindowLimit] = useState(RESULT_WINDOW_BASE_SIZE);
+  const [canvasViewportWidth, setCanvasViewportWidth] = useState(980);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
@@ -2106,6 +2137,7 @@ export function Workbench() {
   const dragFrameRef = useRef<number | null>(null);
   const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const viewportPanelRef = useRef<HTMLElement | null>(null);
+  const canvasStageRef = useRef<HTMLDivElement | null>(null);
   const chunkScrollFrameRef = useRef<number | null>(null);
   const chunkScrollLeftRef = useRef(0);
   const chunkScrollDirectionRef = useRef<-1 | 0 | 1>(0);
@@ -2152,6 +2184,20 @@ export function Workbench() {
   }, []);
 
   useEffect(() => {
+    const syncCanvasViewportWidth = () => {
+      const nextWidth = canvasStageRef.current?.clientWidth ?? 980;
+      setCanvasViewportWidth((current) => (current === nextWidth ? current : nextWidth));
+    };
+
+    syncCanvasViewportWidth();
+    window.addEventListener("resize", syncCanvasViewportWidth);
+
+    return () => {
+      window.removeEventListener("resize", syncCanvasViewportWidth);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!job?.job_id || !result || isAxialResult(result)) {
       setResultWindow(null);
       return;
@@ -2166,7 +2212,7 @@ export function Workbench() {
       return;
     }
 
-    const limit = computeResultWindowSize(totalItems);
+    const limit = computeResultWindowSize(totalItems, canvasViewportWidth);
     if (resultWindowLimit !== limit) {
       setResultWindowLimit(limit);
     }
@@ -2255,7 +2301,7 @@ export function Workbench() {
     return () => {
       cancelled = true;
     };
-  }, [frontendRuntimeMode, job?.job_id, result, resultWindowLimit, resultWindowOffset]);
+  }, [canvasViewportWidth, frontendRuntimeMode, job?.job_id, result, resultWindowLimit, resultWindowOffset]);
 
   useEffect(() => {
     if (!resultWindow) return;
@@ -2644,6 +2690,9 @@ export function Workbench() {
     if (chunkScrollFrameRef.current !== null) return;
 
     const target = event.currentTarget;
+    if (target.clientWidth > 0) {
+      setCanvasViewportWidth((current) => (current === target.clientWidth ? current : target.clientWidth));
+    }
     const previousLeft = chunkScrollLeftRef.current;
     chunkScrollDirectionRef.current =
       target.scrollLeft > previousLeft ? 1 : target.scrollLeft < previousLeft ? -1 : 0;
@@ -2655,13 +2704,13 @@ export function Workbench() {
       const maxScrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
       if (maxScrollLeft <= 0) return;
 
-      const maxOffset = Math.max(0, resultWindowMaxTotal - resultWindowLimit);
-      if (maxOffset <= 0) return;
-
-      const viewportCenter = target.scrollLeft + target.clientWidth * 0.5;
-      const totalWidth = Math.max(target.scrollWidth, target.clientWidth);
-      const ratio = Math.min(1, Math.max(0, viewportCenter / totalWidth));
-      const nextOffset = clampChunkOffset(ratio * maxOffset, resultWindowMaxTotal, resultWindowLimit);
+      const nextOffset = computeVisibleResultWindowOffset(
+        resultWindowMaxTotal,
+        resultWindowLimit,
+        target.clientWidth,
+        target.scrollLeft,
+        target.scrollWidth,
+      );
 
       setResultWindowOffset((current) => (current === nextOffset ? current : nextOffset));
     });
@@ -6664,7 +6713,11 @@ export function Workbench() {
               </div>
             </div>
           ) : null}
-          <div className={`canvas-stage${isTruss3d ? " canvas-stage--space" : ""}${shouldStretchSpaceViewport ? " canvas-stage--space-fluid" : ""}`} onScroll={handleCanvasStageScroll}>
+          <div
+            className={`canvas-stage${isTruss3d ? " canvas-stage--space" : ""}${shouldStretchSpaceViewport ? " canvas-stage--space-fluid" : ""}`}
+            onScroll={handleCanvasStageScroll}
+            ref={canvasStageRef}
+          >
           <WorkbenchViewport
             studyKind={studyKind}
             sidebarSection={sidebarSection}
