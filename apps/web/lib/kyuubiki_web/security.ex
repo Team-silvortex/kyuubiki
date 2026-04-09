@@ -38,6 +38,7 @@ defmodule KyuubikiWeb.Security do
       "cluster_agent_allowlist_count" => MapSet.size(cluster_allowed_agent_ids()),
       "cluster_cluster_allowlist_enabled" => cluster_cluster_allowlist_enabled?(),
       "cluster_cluster_allowlist_count" => MapSet.size(cluster_allowed_cluster_ids()),
+      "cluster_fingerprint_required" => cluster_fingerprint_required?(),
       "cluster_timestamp_window_ms" => cluster_timestamp_window_ms(),
       "cluster_identity_headers_required" => cluster_token_required?(),
       "protect_reads" => protect_reads?(),
@@ -52,6 +53,7 @@ defmodule KyuubikiWeb.Security do
            {:ok, body_agent_id} <- fetch_string_field(attrs, "id"),
            true <- header_agent_id == body_agent_id,
            :ok <- validate_cluster_id_match(conn, attrs),
+           :ok <- validate_cluster_fingerprint_presence(conn),
            :ok <- validate_cluster_registration_allowlist(conn, body_agent_id, attrs) do
         :ok
       else
@@ -73,6 +75,7 @@ defmodule KyuubikiWeb.Security do
       with {:ok, header_agent_id} <- required_header(conn, "x-kyuubiki-agent-id"),
            true <- header_agent_id == agent_id,
            :ok <- validate_cluster_id_match(conn, attrs),
+           :ok <- validate_cluster_fingerprint_presence(conn),
            :ok <- validate_cluster_agent_allowlist(conn, agent_id, attrs) do
         :ok
       else
@@ -137,6 +140,10 @@ defmodule KyuubikiWeb.Security do
 
   defp cluster_cluster_allowlist_enabled? do
     MapSet.size(cluster_allowed_cluster_ids()) > 0
+  end
+
+  defp cluster_fingerprint_required? do
+    config()[:cluster_require_fingerprint?] == true
   end
 
   defp config do
@@ -212,6 +219,17 @@ defmodule KyuubikiWeb.Security do
     end
   end
 
+  defp validate_cluster_fingerprint_presence(conn) do
+    if cluster_fingerprint_required?() do
+      case cluster_fingerprint(conn) do
+        {:ok, _} -> :ok
+        :error -> :error
+      end
+    else
+      :ok
+    end
+  end
+
   defp validate_agent_id_allowlist(agent_id) do
     if cluster_agent_allowlist_enabled?() and not MapSet.member?(cluster_allowed_agent_ids(), agent_id) do
       :error
@@ -243,6 +261,13 @@ defmodule KyuubikiWeb.Security do
           value when is_binary(value) and value != "" -> value
           _ -> nil
         end
+    end
+  end
+
+  def cluster_fingerprint(conn) do
+    case Plug.Conn.get_req_header(conn, "x-kyuubiki-agent-fingerprint") do
+      [value | _] when value not in [nil, ""] -> {:ok, value}
+      _ -> :error
     end
   end
 

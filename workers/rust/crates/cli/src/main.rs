@@ -50,6 +50,7 @@ struct AgentConfig {
     advertise_host: Option<String>,
     orchestrator_url: Option<String>,
     cluster_api_token: Option<String>,
+    agent_fingerprint: Option<String>,
     register_interval_ms: u64,
     cluster_id: Option<String>,
     peers: Vec<String>,
@@ -122,6 +123,7 @@ impl AgentConfig {
             advertise_host: None,
             orchestrator_url: None,
             cluster_api_token: None,
+            agent_fingerprint: None,
             register_interval_ms: 5_000,
             cluster_id: None,
             peers: vec![],
@@ -159,6 +161,11 @@ impl AgentConfig {
                 "--cluster-api-token" => {
                     if let Some(value) = args.next() {
                         config.cluster_api_token = Some(value.clone());
+                    }
+                }
+                "--agent-fingerprint" => {
+                    if let Some(value) = args.next() {
+                        config.agent_fingerprint = Some(value.clone());
                     }
                 }
                 "--register-interval-ms" => {
@@ -199,6 +206,10 @@ impl AgentConfig {
 
         if config.cluster_api_token.is_none() {
             config.cluster_api_token = std::env::var("KYUUBIKI_CLUSTER_API_TOKEN").ok();
+        }
+
+        if config.agent_fingerprint.is_none() {
+            config.agent_fingerprint = std::env::var("KYUUBIKI_AGENT_FINGERPRINT").ok();
         }
 
         if config.peers.is_empty() {
@@ -783,6 +794,7 @@ impl AgentRegistrationHandle {
         let port = config.port;
         let interval_ms = config.register_interval_ms;
         let cluster_api_token = config.cluster_api_token.clone();
+        let agent_fingerprint = config.agent_fingerprint.clone();
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = Arc::clone(&running);
         let cluster_id = config.cluster_id.clone();
@@ -801,7 +813,12 @@ impl AgentRegistrationHandle {
             let _ = post_json(
                 &format!("{}/api/v1/agents/register", normalize_base_url(&orchestrator_url_clone)),
                 &initial_payload,
-                cluster_auth_headers(cluster_api_token.as_deref(), &agent_id, cluster_id.as_deref()),
+                cluster_auth_headers(
+                    cluster_api_token.as_deref(),
+                    &agent_id,
+                    cluster_id.as_deref(),
+                    agent_fingerprint.as_deref(),
+                ),
             );
 
             while running_clone.load(Ordering::SeqCst) {
@@ -818,7 +835,12 @@ impl AgentRegistrationHandle {
                         agent_id_clone
                     ),
                     &initial_payload,
-                    cluster_auth_headers(cluster_api_token.as_deref(), &agent_id_clone, cluster_id.as_deref()),
+                    cluster_auth_headers(
+                        cluster_api_token.as_deref(),
+                        &agent_id_clone,
+                        cluster_id.as_deref(),
+                        agent_fingerprint.as_deref(),
+                    ),
                 );
             }
 
@@ -826,7 +848,12 @@ impl AgentRegistrationHandle {
                 "{}/api/v1/agents/{}",
                 normalize_base_url(&orchestrator_url_clone),
                 agent_id_clone
-            ), cluster_auth_headers(cluster_api_token.as_deref(), &agent_id_clone, cluster_id.as_deref()));
+            ), cluster_auth_headers(
+                cluster_api_token.as_deref(),
+                &agent_id_clone,
+                cluster_id.as_deref(),
+                agent_fingerprint.as_deref(),
+            ));
         });
 
         Some(Self {
@@ -1128,6 +1155,7 @@ fn cluster_auth_headers(
     token: Option<&str>,
     agent_id: &str,
     cluster_id: Option<&str>,
+    fingerprint: Option<&str>,
 ) -> Vec<(String, String)> {
     match token {
         Some(token) if !token.trim().is_empty() => {
@@ -1147,6 +1175,13 @@ fn cluster_auth_headers(
                 headers.push((
                     "x-kyuubiki-cluster-id".to_string(),
                     cluster_id.trim().to_string(),
+                ));
+            }
+
+            if let Some(fingerprint) = fingerprint.filter(|value| !value.trim().is_empty()) {
+                headers.push((
+                    "x-kyuubiki-agent-fingerprint".to_string(),
+                    fingerprint.trim().to_string(),
                 ));
             }
 
@@ -1315,6 +1350,7 @@ mod tests {
                 advertise_host: None,
                 orchestrator_url: None,
                 cluster_api_token: None,
+                agent_fingerprint: None,
                 register_interval_ms: 5_000,
                 cluster_id: None,
                 peers: vec![],
@@ -1636,6 +1672,7 @@ mod tests {
             advertise_host: Some("10.0.0.20".to_string()),
             orchestrator_url: None,
             cluster_api_token: None,
+            agent_fingerprint: None,
             register_interval_ms: 5_000,
             cluster_id: Some("lan-a".to_string()),
             peers: vec!["10.0.0.11:5001".to_string(), "10.0.0.12:5001".to_string()],

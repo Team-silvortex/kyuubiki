@@ -24,6 +24,7 @@ Environment variables:
 - `KYUUBIKI_CLUSTER_API_TOKEN`
 - `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS`
 - `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS`
+- `KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT=true|false`
 - `KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS`
 - `KYUUBIKI_PROTECT_READS=true|false`
 
@@ -39,6 +40,8 @@ Behavior:
   only registered agent IDs in the allowlist may join or heartbeat
 - cluster ID allowlist configured
   cluster routes require a matching allowed `cluster_id`
+- cluster fingerprint required
+  cluster routes require `x-kyuubiki-agent-fingerprint`, and an already-registered agent ID may only heartbeat or unregister with the same fingerprint
 - cluster token omitted
   cluster routes fall back to `KYUUBIKI_API_TOKEN`
 - cluster timestamp header present
@@ -87,6 +90,7 @@ for deployment setup.
 - set `KYUUBIKI_API_TOKEN`
 - set `KYUUBIKI_CLUSTER_API_TOKEN` for remote node registration instead of reusing the main write token
 - use `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS` and `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS` when you want a low-overhead membership gate without introducing certificates yet
+- turn on `KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT=true` when you want a low-friction binding between an agent ID and a specific node identity without going all the way to PKI
 - keep the cluster timestamp window short unless your deployment has unusual clock skew
 - disable direct mesh unless explicitly required
 - place the orchestrator behind TLS termination or a trusted reverse proxy

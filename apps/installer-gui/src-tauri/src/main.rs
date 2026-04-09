@@ -42,6 +42,7 @@ struct EnvFormPayload {
     kyuubiki_cluster_api_token: String,
     kyuubiki_cluster_allowed_agent_ids: String,
     kyuubiki_cluster_allowed_cluster_ids: String,
+    kyuubiki_cluster_require_fingerprint: bool,
     kyuubiki_cluster_timestamp_window_ms: String,
     kyuubiki_protect_reads: bool,
     kyuubiki_direct_mesh_enabled: bool,
@@ -62,6 +63,7 @@ struct WriteEnvPayload {
     kyuubiki_cluster_api_token: String,
     kyuubiki_cluster_allowed_agent_ids: String,
     kyuubiki_cluster_allowed_cluster_ids: String,
+    kyuubiki_cluster_require_fingerprint: bool,
     kyuubiki_cluster_timestamp_window_ms: String,
     kyuubiki_protect_reads: bool,
     kyuubiki_direct_mesh_enabled: bool,
@@ -206,6 +208,7 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
     let mut kyuubiki_cluster_api_token = String::new();
     let mut kyuubiki_cluster_allowed_agent_ids = String::new();
     let mut kyuubiki_cluster_allowed_cluster_ids = String::new();
+    let mut kyuubiki_cluster_require_fingerprint = false;
     let mut kyuubiki_cluster_timestamp_window_ms = "30000".to_string();
     let mut kyuubiki_protect_reads = false;
     let mut kyuubiki_direct_mesh_enabled = true;
@@ -234,6 +237,9 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
           "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS" => {
               kyuubiki_cluster_allowed_cluster_ids = value.trim().to_string()
           }
+          "KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT" => {
+              kyuubiki_cluster_require_fingerprint = value.trim() == "true"
+          }
           "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS" => {
               kyuubiki_cluster_timestamp_window_ms = value.trim().to_string()
           }
@@ -257,6 +263,7 @@ fn read_env_file() -> Result<EnvFormPayload, String> {
       kyuubiki_cluster_api_token,
       kyuubiki_cluster_allowed_agent_ids,
       kyuubiki_cluster_allowed_cluster_ids,
+      kyuubiki_cluster_require_fingerprint,
       kyuubiki_cluster_timestamp_window_ms,
       kyuubiki_protect_reads,
       kyuubiki_direct_mesh_enabled,
@@ -326,6 +333,11 @@ fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
             payload.kyuubiki_cluster_allowed_cluster_ids.trim()
         ));
     }
+
+    lines.push(format!(
+        "KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT={}",
+        if payload.kyuubiki_cluster_require_fingerprint { "true" } else { "false" }
+    ));
 
     if !payload.kyuubiki_cluster_timestamp_window_ms.trim().is_empty() {
         lines.push(format!(

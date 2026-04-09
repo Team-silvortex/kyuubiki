@@ -316,6 +316,7 @@ export type HealthPayload = {
     cluster_agent_allowlist_count: number;
     cluster_cluster_allowlist_enabled: boolean;
     cluster_cluster_allowlist_count: number;
+    cluster_fingerprint_required: boolean;
     cluster_timestamp_window_ms: number;
     protect_reads: boolean;
     mutating_routes_protected: boolean;

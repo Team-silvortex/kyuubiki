@@ -280,6 +280,77 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert Jason.decode!(heartbeat_conn.resp_body)["error"] == "invalid_cluster_identity"
   end
 
+  test "rejects protected cluster registration when fingerprint is required but missing" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "shared-secret",
+      cluster_api_token: "cluster-only-secret",
+      cluster_require_fingerprint?: true,
+      protect_reads?: false
+    )
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-fp-a",
+          "host" => "127.0.0.1",
+          "port" => 5007,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-fp-a")
+      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> Router.call(@opts)
+
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "invalid_cluster_identity"
+  end
+
+  test "rejects protected cluster heartbeat when fingerprint does not match the registered agent" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "shared-secret",
+      cluster_api_token: "cluster-only-secret",
+      cluster_require_fingerprint?: true,
+      protect_reads?: false
+    )
+
+    register_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-fp-b",
+          "host" => "127.0.0.1",
+          "port" => 5008,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-fp-b")
+      |> put_req_header("x-kyuubiki-agent-fingerprint", "fp-good")
+      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> Router.call(@opts)
+
+    assert register_conn.status == 201
+
+    heartbeat_conn =
+      :post
+      |> conn("/api/v1/agents/remote-fp-b/heartbeat", Jason.encode!(%{}))
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-fp-b")
+      |> put_req_header("x-kyuubiki-agent-fingerprint", "fp-bad")
+      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> Router.call(@opts)
+
+    assert heartbeat_conn.status == 401
+    assert Jason.decode!(heartbeat_conn.resp_body)["error"] == "invalid_cluster_identity"
+  end
+
   test "supports CRUD for projects, models, and model versions" do
     create_project_conn =
       :post

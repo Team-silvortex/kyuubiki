@@ -5886,6 +5886,12 @@ export function Workbench() {
                   </strong>
                 </div>
                 <div>
+                  <span>{language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding"}</span>
+                  <strong>
+                    {health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled}
+                  </strong>
+                </div>
+                <div>
                   <span>{securityUi.protectReads}</span>
                   <strong>{health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled}</strong>
                 </div>

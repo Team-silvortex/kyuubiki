@@ -70,9 +70,11 @@ defmodule KyuubikiWeb.Router do
 
   post "/api/v1/agents/register" do
     with_auth(conn, :cluster, fn conn ->
-      case Security.validate_cluster_registration_identity(conn, conn.body_params) do
+      body_params = with_cluster_fingerprint(conn, conn.body_params)
+
+      case Security.validate_cluster_registration_identity(conn, body_params) do
         :ok ->
-          case KyuubikiWeb.Playground.AgentRegistry.register(conn.body_params) do
+          case KyuubikiWeb.Playground.AgentRegistry.register(body_params) do
             {:ok, agent} ->
               _ = KyuubikiWeb.Playground.AgentPool.reload()
               respond_json(conn, 201, %{"agent" => agent})
@@ -92,18 +94,26 @@ defmodule KyuubikiWeb.Router do
 
   post "/api/v1/agents/:agent_id/heartbeat" do
     with_auth(conn, :cluster, fn conn ->
-      case Security.validate_cluster_agent_identity(conn, agent_id, conn.body_params) do
+      body_params = with_cluster_fingerprint(conn, conn.body_params)
+
+      case Security.validate_cluster_agent_identity(conn, agent_id, body_params) do
         :ok ->
-          case KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, conn.body_params) do
-            {:ok, agent} ->
-              _ = KyuubikiWeb.Playground.AgentPool.reload()
-              respond_json(conn, 200, %{"agent" => agent})
+          case validate_registered_fingerprint(conn, agent_id) do
+            :ok ->
+              case KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, body_params) do
+                {:ok, agent} ->
+                  _ = KyuubikiWeb.Playground.AgentPool.reload()
+                  respond_json(conn, 200, %{"agent" => agent})
 
-            {:error, {:invalid_agent_field, field}} ->
-              respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
+                {:error, {:invalid_agent_field, field}} ->
+                  respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
 
-            {:error, reason} ->
-              respond_json(conn, 422, %{"error" => inspect(reason)})
+                {:error, reason} ->
+                  respond_json(conn, 422, %{"error" => inspect(reason)})
+              end
+
+            {:error, status, payload} ->
+              respond_json(conn, status, payload)
           end
 
         {:error, status, payload} ->
@@ -116,9 +126,15 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :cluster, fn conn ->
       case Security.validate_cluster_agent_identity(conn, agent_id) do
         :ok ->
-          :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
-          _ = KyuubikiWeb.Playground.AgentPool.reload()
-          respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
+          case validate_registered_fingerprint(conn, agent_id) do
+            :ok ->
+              :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
+              _ = KyuubikiWeb.Playground.AgentPool.reload()
+              respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
+
+            {:error, status, payload} ->
+              respond_json(conn, status, payload)
+          end
 
         {:error, status, payload} ->
           respond_json(conn, status, payload)
@@ -410,6 +426,33 @@ defmodule KyuubikiWeb.Router do
     conn
     |> Plug.Conn.put_resp_content_type("application/json")
     |> Plug.Conn.send_resp(status, Jason.encode!(payload))
+  end
+
+  defp with_cluster_fingerprint(conn, attrs) when is_map(attrs) do
+    case Security.cluster_fingerprint(conn) do
+      {:ok, fingerprint} -> Map.put(attrs, "fingerprint", fingerprint)
+      :error -> attrs
+    end
+  end
+
+  defp validate_registered_fingerprint(conn, agent_id) do
+    case Enum.find(KyuubikiWeb.Playground.AgentRegistry.agents(), &(&1.id == agent_id)) do
+      %{fingerprint: registered} when is_binary(registered) and registered != "" ->
+        case Security.cluster_fingerprint(conn) do
+          {:ok, ^registered} ->
+            :ok
+
+          _ ->
+            {:error, 401,
+             %{
+               "error" => "invalid_cluster_identity",
+               "message" => "cluster fingerprint does not match the registered agent identity"
+             }}
+        end
+
+      _ ->
+        :ok
+    end
   end
 
   defp with_auth(conn, scope, fun) do

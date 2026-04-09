@@ -79,6 +79,8 @@ config :kyuubiki_web, KyuubikiWeb.Security,
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
     |> MapSet.new(),
+  cluster_require_fingerprint?:
+    System.get_env("KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT", "false") == "true",
   cluster_timestamp_window_ms:
     String.to_integer(System.get_env("KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS", "30000")),
   protect_reads?: System.get_env("KYUUBIKI_PROTECT_READS", "false") == "true"

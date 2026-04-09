@@ -97,6 +97,8 @@
         document.getElementById("cluster-allowed-agent-ids").value.trim(),
       kyuubikiClusterAllowedClusterIds:
         document.getElementById("cluster-allowed-cluster-ids").value.trim(),
+      kyuubikiClusterRequireFingerprint:
+        document.getElementById("cluster-require-fingerprint").value === "true",
       kyuubikiClusterTimestampWindowMs:
         document.getElementById("cluster-timestamp-window").value.trim() || "30000",
       kyuubikiProtectReads: document.getElementById("protect-reads").value === "true",
@@ -135,6 +137,8 @@
       form.kyuubiki_cluster_allowed_agent_ids || "";
     document.getElementById("cluster-allowed-cluster-ids").value =
       form.kyuubiki_cluster_allowed_cluster_ids || "";
+    document.getElementById("cluster-require-fingerprint").value =
+      form.kyuubiki_cluster_require_fingerprint ? "true" : "false";
     document.getElementById("cluster-timestamp-window").value =
       form.kyuubiki_cluster_timestamp_window_ms || "30000";
     document.getElementById("protect-reads").value = form.kyuubiki_protect_reads ? "true" : "false";
