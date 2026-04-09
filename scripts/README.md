@@ -13,7 +13,19 @@ Typical responsibilities:
 - start/stop/restart orchestration
 - mode switching (`local`, `cloud`, `distributed`)
 - verification/test wrappers
-- packaging and installer entry points
+- component-scoped build entry points
+- runtime and desktop packaging entry points
+- installer entry points
+
+Examples now include:
+
+- `build-frontend`
+- `build-orchestrator`
+- `build-agent`
+- `build-installer-gui`
+- `build-workbench-gui`
+- `package-runtime`
+- `package-desktop`
 
 Keep these scripts thin. Product logic should live in the application/runtime
 code, not in shell branching.

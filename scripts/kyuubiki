@@ -40,6 +40,11 @@ Usage:
 
 Commands:
   help              Show this help
+  build-frontend    Build the browser workbench production bundle
+  build-orchestrator Compile the Elixir control plane in production mode
+  build-agent       Build the Rust solver agent binary in release mode
+  build-installer-gui Build the Tauri installer GUI bundles
+  build-workbench-gui Build the Tauri desktop workbench shell bundles
   start             Start the orchestrator API, frontend, and solver agent in the background
   start-local       Start services with SQLite forced for local development
   start-cloud       Start services with PostgreSQL forced for cloud/distributed use
@@ -55,6 +60,8 @@ Commands:
   doctor            Run the cross-platform environment doctor
   validate-env      Validate required environment variables from .env.local
   package           Stage a portable release directory under dist/
+  package-runtime   Stage the portable runtime release scaffold under dist/
+  package-desktop   Build both Tauri desktop shells
   installer-gui-dev Run the Tauri installer GUI in development mode
   installer-gui-build Build the Tauri installer GUI bundles
   workbench-gui-dev Run the Tauri desktop workbench shell in development mode
@@ -78,6 +85,11 @@ Examples:
   ./scripts/kyuubiki agent -- --port 5001
   ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
   ./scripts/kyuubiki start
+  ./scripts/kyuubiki build-frontend
+  ./scripts/kyuubiki build-orchestrator
+  ./scripts/kyuubiki build-agent
+  ./scripts/kyuubiki package-runtime
+  ./scripts/kyuubiki package-desktop
   ./scripts/kyuubiki start-local
   ./scripts/kyuubiki start-cloud
   ./scripts/kyuubiki start-distributed
@@ -400,6 +412,39 @@ run_workbench_gui_build() {
   )
 }
 
+run_build_frontend() {
+  require_dir "$FRONTEND_DIR"
+  (
+    cd "$FRONTEND_DIR"
+    npm run build
+  )
+}
+
+run_build_orchestrator() {
+  require_dir "$WEB_DIR"
+  (
+    cd "$WEB_DIR"
+    MIX_ENV=prod mix compile
+  )
+}
+
+run_build_agent() {
+  require_dir "$RUST_DIR"
+  (
+    cd "$RUST_DIR"
+    cargo build -p kyuubiki-cli --release
+  )
+}
+
+run_package_runtime() {
+  run_installer stage-release "$@"
+}
+
+run_package_desktop() {
+  run_installer_gui_build
+  run_workbench_gui_build
+}
+
 start_orchestrator_background() {
   local port="${1:-4000}"
   local mode="${2:-default}"
@@ -503,6 +548,21 @@ case "$command" in
   help)
     usage
     ;;
+  build-frontend)
+    run_build_frontend
+    ;;
+  build-orchestrator)
+    run_build_orchestrator
+    ;;
+  build-agent)
+    run_build_agent
+    ;;
+  build-installer-gui)
+    run_installer_gui_build
+    ;;
+  build-workbench-gui)
+    run_workbench_gui_build
+    ;;
   start)
     start_services
     ;;
@@ -546,7 +606,13 @@ case "$command" in
     run_installer validate-env "$@"
     ;;
   package)
-    run_installer stage-release "$@"
+    run_package_runtime "$@"
+    ;;
+  package-runtime)
+    run_package_runtime "$@"
+    ;;
+  package-desktop)
+    run_package_desktop
     ;;
   installer-gui-dev)
     run_installer_gui_dev

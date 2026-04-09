@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.4
+
+Kyuubiki `v0.4` is the release where the system becomes much more explicitly multi-program: browser workbench, desktop shells, orchestrator, direct mesh routes, and headless solver agents can now be reasoned about as cooperating surfaces instead of one blurred stack.
+
+### Added
+
+- shared desktop runtime crate for Tauri installer and Tauri workbench shells
+- Tauri desktop workbench shell logs/status workflow
+- direct-mesh result chunk API for large result review without Phoenix on the solver hot path
+- stable frontend `typecheck` command that prepares missing Next route type artifacts before `tsc`
+- integration smoke coverage for:
+  - local orchestrator + agent + API solve flow
+  - protected cluster register / heartbeat / unregister flow
+  - `direct_mesh_gui` LAN discovery + direct solve + chunk retrieval
+- aggregate `make test-integration` entrypoint
+
+### Changed
+
+- tightened startup/restart behavior in `scripts/kyuubiki` with explicit port release and listener wait logic
+- aligned `direct_mesh_gui` input normalization with the main frontend job contracts
+- continued hardening remote cluster security with:
+  - dedicated cluster token
+  - allowlists
+  - fingerprint binding
+  - replay-window timestamp checks
+- continued documenting the stack as independent but cooperating programs with shared contracts
+
+### Direction after v0.4
+
+- extend integration testing into the Tauri workbench shell end-to-end path
+- keep pushing visible-window-driven chunking instead of page-style browsing
+- deepen distributed and peer-mesh execution without re-coupling the frontend to Phoenix
+- keep refining the desktop and direct-mesh surfaces as first-class runtime modes
+
 ## v0.3
 
 Kyuubiki `v0.3` is the release where the system starts to behave like an engine-backed FEM workstation under real scale, not just a coherent local-first prototype.

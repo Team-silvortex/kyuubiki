@@ -88,10 +88,21 @@ These can now be written from the installer GUI Setup panel.
 - `make start-local`
 - `make start-cloud`
 - `make start-distributed`
+- `make build-frontend`
+- `make build-orchestrator`
+- `make build-agent`
+- `make build-installer-gui`
+- `make build-workbench-gui`
+- `make package-runtime`
+- `make package-desktop`
 - `make status`
 - `make stop`
 - `make benchmark-compare PROFILE=medium`
 - `make benchmark-report PROFILE=10k`
+
+For the full component/output matrix, see:
+
+- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 
 ## Health and descriptors
 

@@ -11,6 +11,8 @@ engineering direction.
   Public HTTP and TCP contracts that let the GUI, control plane, and solver agents run as separate programs.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
+- `packaging-and-deployment.md`
+  Component build commands, artifact paths, and packaging output boundaries.
 - `security.md`
   Current guardrails, token protection, and deployment safety notes.
 - `repository-structure.md`
@@ -27,5 +29,6 @@ Read these in roughly this order if you are new to the repository:
 3. `protocols.md`
 4. `security.md`
 5. `operations.md`
-6. `repository-structure.md`
-7. `development.md`
+6. `packaging-and-deployment.md`
+7. `repository-structure.md`
+8. `development.md`

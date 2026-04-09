@@ -1,4 +1,4 @@
-# kyuubiki v0.3
+# kyuubiki v0.4
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -6,7 +6,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 
-`v0.3` is the first version where Kyuubiki starts to feel like an engine-backed FEM product rather than a polished prototype. It now couples an editor-style workbench with chunked large-result handling, distributed agent orchestration, dual-database storage, installer flows, and benchmarked single-machine scaling through the `10k` to `20k` node class.
+`v0.4` is the first version where Kyuubiki starts to feel like a family of cooperating FEM programs rather than one monolithic app. It now couples an editor-style workbench with chunked large-result handling, distributed agent orchestration, direct-mesh frontend execution, desktop shells, integration smoke coverage, and benchmarked single-machine scaling through the `10k` to `20k` node class.
 
 It also now has an explicit deployment split:
 
@@ -55,9 +55,10 @@ Start here if you need the repo map:
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
 - [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
 - [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
+- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
 
-## What v0.3 Can Do
+## What v0.4 Can Do
 
 ### Solvers
 
@@ -106,12 +107,17 @@ Start here if you need the repo map:
 - Rust installer CLI
 - Tauri installer GUI
 - Tauri desktop workbench shell
+- component-scoped build and packaging entry points
 - environment validation
 - local SQLite mode
 - cloud PostgreSQL mode
 - release scaffold generation under `dist/`
 - desktop icon assets wired from `assets/icons`
 - frontend browser/app icons wired from `assets/icons/app`
+
+Packaging and deployment paths are now documented centrally in:
+
+- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 
 ## Current Architecture
 
@@ -144,6 +150,21 @@ The next layer of decoupling is now explicit too:
 - solver agents can self-describe over RPC and the orchestrator can expose those descriptors over HTTP
 - the frontend is being prepared to support both orchestrated and direct-mesh runtime modes as separate programs sharing common contracts
 
+## Integration Coverage
+
+Current cross-process smoke coverage lives under [tests/integration](/Users/Shared/chroot/dev/kyuubiki/tests/integration) and can be run with:
+
+- `make test-integration`
+- `make test-integration-api`
+- `make test-integration-cluster`
+- `make test-integration-direct-mesh`
+
+The current suite verifies:
+
+- local orchestrator + solver agent + API solve flow
+- protected cluster register / heartbeat / unregister flow
+- `direct_mesh_gui` LAN agent discovery, direct solve, and result chunk retrieval
+
 ## Current Capabilities by Layer
 
 ### Frontend workbench
@@ -172,6 +193,7 @@ The workbench currently supports:
 - direct-mesh frontend routes for LAN solver access:
   - `/api/direct-mesh/agents`
   - `/api/direct-mesh/solve`
+  - `/api/direct-mesh/results/:job_id/chunks/:kind`
 
 Frontend validation notes:
 
@@ -206,6 +228,7 @@ The orchestrator currently provides:
 - manifest-based remote agent discovery for distributed control-plane setups
 - runtime agent registration, heartbeat, and removal APIs for remote solver nodes
 - watchdog timeouts, stale-job detection, heartbeat surfacing, and cancel support for long-running jobs
+- dedicated cluster token, allowlist, fingerprint, and replay-window guardrails for remote agent routes
 
 ### Rust engine and agents
 
@@ -232,6 +255,30 @@ The Rust side currently provides:
 - mixed dense/sparse and specialized solver paths
 - result chunk helpers used by the engine/orchestrator split
 - checked-in performance baselines and compare reports with regression gates
+- shared desktop runtime used by both Tauri shells
+
+### Desktop shells
+
+- Tauri installer GUI
+- Tauri desktop workbench shell
+- shared desktop runtime crate for local stack control and log access
+- smoke-tested desktop workbench shell entry points
+
+## Component Build And Package Entry Points
+
+Use these commands when managing artifacts component-by-component:
+
+- `make build-frontend`
+- `make build-orchestrator`
+- `make build-agent`
+- `make build-installer-gui`
+- `make build-workbench-gui`
+- `make package-runtime`
+- `make package-desktop`
+
+The packaging/output map for those commands lives in:
+
+- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 
 ## Storage Modes
 
