@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-playground test-workbench-gui test-integration-api verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-playground test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -29,7 +29,10 @@ help:
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
 	@echo "  make test-workbench-gui Run desktop workbench shell smoke tests"
+	@echo "  make test-integration Run the current cross-process integration smoke suite"
 	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
+	@echo "  make test-integration-cluster Run the protected cluster registration/heartbeat integration smoke test"
+	@echo "  make test-integration-direct-mesh Run the direct_mesh_gui LAN agent solve + chunk smoke test"
 	@echo "  make verify      Run formatting checks and tests"
 	@echo "  make format      Format all code"
 	@echo "  make smoke       Run the Elixir -> Rust smoke flow"
@@ -122,8 +125,16 @@ test-playground:
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke
 
+test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh
+
 test-integration-api:
 	@node --test tests/integration/orchestrator-agent-api-smoke.test.mjs
+
+test-integration-cluster:
+	@node --test tests/integration/distributed-control-plane-smoke.test.mjs
+
+test-integration-direct-mesh:
+	@node --test tests/integration/direct-mesh-gui-smoke.test.mjs
 
 format: format-web format-rust
 

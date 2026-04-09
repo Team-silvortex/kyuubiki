@@ -6,7 +6,7 @@ unit-test suite.
 Current safety rails include:
 
 - `npm run build`
-- `npx tsc --noEmit`
+- `npm run typecheck`
 
 As frontend-specific test coverage grows, place browser/workbench tests under
 this directory by domain rather than mixing them into generated or dependency

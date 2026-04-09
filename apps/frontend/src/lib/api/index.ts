@@ -444,6 +444,24 @@ function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
   return new Map((materials ?? []).map((material) => [material.id, material]));
 }
 
+export function resolveAxialBarJobInput(
+  input: AxialBarJobInput,
+): {
+  length: number;
+  area: number;
+  elements: number;
+  tip_force: number;
+  youngs_modulus: number;
+} {
+  return {
+    length: input.length,
+    area: input.area,
+    elements: input.elements,
+    tip_force: input.tip_force,
+    youngs_modulus: input.youngs_modulus_gpa * 1.0e9,
+  };
+}
+
 export function resolveTruss2dJobInput(
   input: Truss2dJobInput,
 ): Omit<Truss2dJobInput, "materials"> {

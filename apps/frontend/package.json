@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "node ./scripts/typecheck.mjs"
   },
   "dependencies": {
     "jszip": "^3.10.1",

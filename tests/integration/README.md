@@ -12,4 +12,7 @@ The first target focuses on the local workstation stack:
 
 Run with:
 
+- `make test-integration`
 - `make test-integration-api`
+- `make test-integration-cluster`
+- `make test-integration-direct-mesh`

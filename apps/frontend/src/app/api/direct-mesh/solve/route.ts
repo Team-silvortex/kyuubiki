@@ -1,5 +1,15 @@
 import { NextResponse } from "next/server";
 
+import {
+  resolveAxialBarJobInput,
+  resolvePlaneTriangle2dJobInput,
+  resolveTruss2dJobInput,
+  resolveTruss3dJobInput,
+  type AxialBarJobInput,
+  type PlaneTriangle2dJobInput,
+  type Truss2dJobInput,
+  type Truss3dJobInput,
+} from "@/lib/api";
 import { solveViaDirectMesh } from "@/lib/direct-mesh/rpc";
 import { putDirectMeshResult } from "@/lib/direct-mesh/results";
 import { authorizeDirectMeshRequest } from "@/lib/direct-mesh/security";
@@ -30,6 +40,22 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
   }
 }
 
+function normalizeInputForStudyKind(
+  kind: DirectMeshSolveBody["study_kind"],
+  input: DirectMeshSolveBody["input"],
+) {
+  switch (kind) {
+    case "axial_bar_1d":
+      return resolveAxialBarJobInput(input as AxialBarJobInput);
+    case "truss_2d":
+      return resolveTruss2dJobInput(input as Truss2dJobInput);
+    case "truss_3d":
+      return resolveTruss3dJobInput(input as Truss3dJobInput);
+    case "plane_triangle_2d":
+      return resolvePlaneTriangle2dJobInput(input as PlaneTriangle2dJobInput);
+  }
+}
+
 export async function POST(request: Request) {
   const unauthorized = authorizeDirectMeshRequest(request);
   if (unauthorized) return unauthorized;
@@ -38,9 +64,10 @@ export async function POST(request: Request) {
     const body = (await request.json()) as DirectMeshSolveBody;
     const startedAt = new Date().toISOString();
     const method = methodForStudyKind(body.study_kind);
+    const normalizedInput = normalizeInputForStudyKind(body.study_kind, body.input);
     const solved = await solveViaDirectMesh(
       method,
-      body.input,
+      normalizedInput,
       body.endpoints,
       body.selection_mode ?? "healthiest",
     );

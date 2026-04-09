@@ -33,6 +33,7 @@ A change is not done until all of the following are true:
 - `make verify`
 - `make benchmark-compare PROFILE=medium`
 - `make benchmark-report PROFILE=10k`
+- `cd apps/frontend && npm run typecheck`
 
 ## PostgreSQL Mode
 
@@ -55,4 +56,5 @@ lightweight memory/json backend so tests and quick UI iteration keep working.
 
 - Elixir unit and integration tests go under `apps/web/test`
 - Rust unit tests live next to code, integration tests go under each crate's `tests/`
+- frontend build/type validation lives under `apps/frontend` and should use `npm run build` plus `npm run typecheck`
 - Shared contract changes should be covered in both stacks when relevant

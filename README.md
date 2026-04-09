@@ -173,6 +173,12 @@ The workbench currently supports:
   - `/api/direct-mesh/agents`
   - `/api/direct-mesh/solve`
 
+Frontend validation notes:
+
+- use `npm run build` for full production validation
+- use `npm run typecheck` for a stable TypeScript-only check
+- `typecheck` will prepare missing Next route type artifacts before running `tsc`
+
 ### Orchestrator API
 
 Main router:
