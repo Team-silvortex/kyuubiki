@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-playground test-workbench-gui test-integration-api verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -28,6 +28,8 @@ help:
 	@echo "  make test        Run all project tests"
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
+	@echo "  make test-workbench-gui Run desktop workbench shell smoke tests"
+	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
 	@echo "  make verify      Run formatting checks and tests"
 	@echo "  make format      Format all code"
 	@echo "  make smoke       Run the Elixir -> Rust smoke flow"
@@ -116,6 +118,12 @@ test-rust:
 
 test-playground:
 	@node --test apps/web/playground/test/fem.test.mjs
+
+test-workbench-gui:
+	@cd apps/workbench-gui && npm run test:smoke
+
+test-integration-api:
+	@node --test tests/integration/orchestrator-agent-api-smoke.test.mjs
 
 format: format-web format-rust
 

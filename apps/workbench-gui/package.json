@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:smoke": "node --test ./test/smoke.test.mjs",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
