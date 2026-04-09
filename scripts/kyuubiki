@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$ROOT_DIR/apps/web"
 FRONTEND_DIR="$ROOT_DIR/apps/frontend"
 INSTALLER_GUI_DIR="$ROOT_DIR/apps/installer-gui"
+WORKBENCH_GUI_DIR="$ROOT_DIR/apps/workbench-gui"
 RUST_DIR="$ROOT_DIR/workers/rust"
 RUN_DIR="$ROOT_DIR/tmp/run"
 ENV_FILE="$ROOT_DIR/.env.local"
@@ -56,6 +57,8 @@ Commands:
   package           Stage a portable release directory under dist/
   installer-gui-dev Run the Tauri installer GUI in development mode
   installer-gui-build Build the Tauri installer GUI bundles
+  workbench-gui-dev Run the Tauri desktop workbench shell in development mode
+  workbench-gui-build Build the Tauri desktop workbench shell bundles
   test              Run all tests
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
@@ -91,6 +94,8 @@ Examples:
   ./scripts/kyuubiki package
   ./scripts/kyuubiki installer-gui-dev
   ./scripts/kyuubiki installer-gui-build
+  ./scripts/kyuubiki workbench-gui-dev
+  ./scripts/kyuubiki workbench-gui-build
 EOF
 }
 
@@ -350,6 +355,22 @@ run_installer_gui_build() {
   )
 }
 
+run_workbench_gui_dev() {
+  require_dir "$WORKBENCH_GUI_DIR"
+  (
+    cd "$WORKBENCH_GUI_DIR"
+    npm run tauri:dev
+  )
+}
+
+run_workbench_gui_build() {
+  require_dir "$WORKBENCH_GUI_DIR"
+  (
+    cd "$WORKBENCH_GUI_DIR"
+    npm run tauri:build
+  )
+}
+
 start_orchestrator_background() {
   local port="${1:-4000}"
   local mode="${2:-default}"
@@ -500,6 +521,12 @@ case "$command" in
     ;;
   installer-gui-build)
     run_installer_gui_build
+    ;;
+  workbench-gui-dev)
+    run_workbench_gui_dev
+    ;;
+  workbench-gui-build)
+    run_workbench_gui_build
     ;;
   test)
     make -C "$ROOT_DIR" test

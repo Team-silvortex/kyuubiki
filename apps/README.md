@@ -7,6 +7,9 @@ Top-level application surfaces live here.
   interaction layer.
 - `installer-gui/`
   Tauri desktop installer and deployment control GUI.
+- `workbench-gui/`
+  Tauri desktop shell for the local engineering workbench. It embeds the
+  browser workbench inside a native window and exposes local runtime controls.
 - `web/`
   Elixir orchestrator API. This is the control plane for jobs, storage, result
   chunking, health, watchdog, and distributed agent coordination.

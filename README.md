@@ -105,6 +105,7 @@ Start here if you need the repo map:
 
 - Rust installer CLI
 - Tauri installer GUI
+- Tauri desktop workbench shell
 - environment validation
 - local SQLite mode
 - cloud PostgreSQL mode
@@ -417,6 +418,28 @@ Common commands:
 make installer-gui-dev
 make installer-gui-build
 ```
+
+### Tauri workbench GUI
+
+Kyuubiki also includes a thin desktop shell for the workbench itself.
+
+- app root: [apps/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui)
+- Tauri backend: [src-tauri/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/src-tauri/src/main.rs)
+- desktop shell UI: [ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/ui/index.html)
+
+Common commands:
+
+```bash
+make workbench-gui-dev
+make workbench-gui-build
+```
+
+The desktop shell currently provides:
+
+- native service start/restart/stop controls
+- local runtime status output
+- embedded workbench view
+- quick log inspection for `frontend`, `orchestrator`, and local agents
 
 The GUI currently wraps:
 

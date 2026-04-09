@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kyuubiki Workbench</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <img alt="Kyuubiki" class="brand__icon" src="./assets/kyuubiki-app.png" />
+          <div>
+            <div class="brand__eyebrow">Desktop shell</div>
+            <h1 class="brand__title">Kyuubiki Workbench</h1>
+            <p class="brand__copy">Local desktop wrapper for the orchestrated or direct-mesh engineering UI.</p>
+          </div>
+        </div>
+
+        <section class="panel">
+          <div class="panel__title">Runtime</div>
+          <div class="status-grid">
+            <div>
+              <div class="status-grid__label">Workbench</div>
+              <div class="status-grid__value" id="workbench-url">--</div>
+            </div>
+            <div>
+              <div class="status-grid__label">Orchestrator</div>
+              <div class="status-grid__value" id="orchestrator-url">--</div>
+            </div>
+            <div>
+              <div class="status-grid__label">Mode</div>
+              <div class="status-grid__value" id="deployment-mode">--</div>
+            </div>
+            <div>
+              <div class="status-grid__label">Shell</div>
+              <div class="status-grid__value">Tauri</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__title">Runtime Console</div>
+          <div class="segmented-tabs">
+            <button class="segmented-tabs__tab is-active" data-console-tab="status" type="button">Status</button>
+            <button class="segmented-tabs__tab" data-console-tab="logs" type="button">Logs</button>
+          </div>
+          <div class="button-row">
+            <button data-action="start-local">Start local</button>
+            <button data-action="restart-local">Restart local</button>
+            <button data-action="refresh">Refresh</button>
+            <button class="button--danger" data-action="stop">Stop</button>
+          </div>
+          <pre class="status-output" id="status-output">Loading status…</pre>
+          <div class="logs-panel is-hidden" id="logs-panel">
+            <div class="logs-panel__toolbar">
+              <div class="segmented-tabs segmented-tabs--tight">
+                <button class="segmented-tabs__tab is-active" data-log-service="frontend" type="button">Frontend</button>
+                <button class="segmented-tabs__tab" data-log-service="orchestrator" type="button">API</button>
+                <button class="segmented-tabs__tab" data-log-service="agent-5001" type="button">Agent A</button>
+                <button class="segmented-tabs__tab" data-log-service="agent-5002" type="button">Agent B</button>
+              </div>
+              <button class="ghost-button" data-action="refresh-log" type="button">Refresh log</button>
+            </div>
+            <pre class="status-output" id="log-output">Select a service log…</pre>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__title">Workbench</div>
+          <div class="button-row">
+            <button data-action="reload-frame">Reload frame</button>
+            <button data-action="open-local">Load local UI</button>
+          </div>
+          <div class="shortcut-list">
+            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>R</kbd> reload embedded workbench</span></div>
+            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>1</kbd> status console</span></div>
+            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>2</kbd> runtime logs</span></div>
+            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>L</kbd> refresh current log</span></div>
+            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>Shift</kbd> + <kbd>R</kbd> restart local stack</span></div>
+          </div>
+          <p class="panel__note">
+            This shell keeps the web workbench isolated as its own program while giving you a native desktop entrypoint.
+          </p>
+        </section>
+      </aside>
+
+      <main class="viewer">
+        <div class="viewer__toolbar">
+          <img alt="Dock" class="viewer__dock-icon" src="./assets/kyuubiki-dock.png" />
+          <div class="viewer__headline">
+            <strong>Embedded workbench</strong>
+            <span id="viewer-caption">Waiting for local UI…</span>
+          </div>
+        </div>
+        <iframe id="workbench-frame" title="Kyuubiki Workbench"></iframe>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+  </html>

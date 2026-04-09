@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-playground verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -23,6 +23,8 @@ help:
 	@echo "  make package     Stage a portable release directory under dist/"
 	@echo "  make installer-gui-dev   Run the Tauri installer GUI in development mode"
 	@echo "  make installer-gui-build Build the Tauri installer GUI bundles"
+	@echo "  make workbench-gui-dev   Run the Tauri desktop workbench shell in development mode"
+	@echo "  make workbench-gui-build Build the Tauri desktop workbench shell bundles"
 	@echo "  make test        Run all project tests"
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
@@ -97,6 +99,12 @@ installer-gui-dev:
 
 installer-gui-build:
 	@$(ENTRYPOINT) installer-gui-build
+
+workbench-gui-dev:
+	@$(ENTRYPOINT) workbench-gui-dev
+
+workbench-gui-build:
+	@$(ENTRYPOINT) workbench-gui-build
 
 test: test-web test-rust test-playground
 

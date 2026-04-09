@@ -7,6 +7,11 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
 
+use kyuubiki_desktop_runtime::{
+    log_path_for, read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
+    service_start as desktop_service_start, service_status as desktop_service_status,
+    service_stop as desktop_service_stop, ServiceMode,
+};
 use kyuubiki_installer::{
     doctor_report as build_doctor_report, export_launch_config, init_env as installer_init_env,
     parse_platform, prepare_layout as installer_prepare_layout, stage_release as installer_stage_release,
@@ -374,32 +379,32 @@ fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
 #[tauri::command]
 fn service_status() -> Result<ServiceStatusPayload, String> {
     Ok(ServiceStatusPayload {
-        rendered: run_workspace_command(&["zsh", "./scripts/kyuubiki", "status"])?,
+        rendered: desktop_service_status()?,
     })
 }
 
 #[tauri::command]
 fn service_start(payload: ServicePayload) -> Result<String, String> {
-    let command = match payload.mode.as_deref() {
-        Some("local") => "start-local",
-        Some("cloud") => "start-cloud",
-        Some("distributed") => "start-distributed",
-        _ => "start",
+    let mode = match payload.mode.as_deref() {
+        Some("local") => ServiceMode::Local,
+        Some("cloud") => ServiceMode::Cloud,
+        Some("distributed") => ServiceMode::Distributed,
+        _ => ServiceMode::Default,
     };
 
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", command])
+    desktop_service_start(mode)
 }
 
 #[tauri::command]
 fn service_restart(payload: ServicePayload) -> Result<String, String> {
-    let command = match payload.mode.as_deref() {
-        Some("local") => "restart-local",
-        Some("cloud") => "restart-cloud",
-        Some("distributed") => "restart-distributed",
-        _ => "restart",
+    let mode = match payload.mode.as_deref() {
+        Some("local") => ServiceMode::Local,
+        Some("cloud") => ServiceMode::Cloud,
+        Some("distributed") => ServiceMode::Distributed,
+        _ => ServiceMode::Default,
     };
 
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", command])
+    desktop_service_restart(mode)
 }
 
 #[tauri::command]
@@ -432,35 +437,14 @@ fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String> {
 
 #[tauri::command]
 fn service_stop() -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", "stop"])
-}
-
-fn log_path_for(service: &str) -> Result<PathBuf, String> {
-    let root = workspace_root();
-    let filename = match service {
-        "frontend" => "frontend.log",
-        "orchestrator" => "orchestrator.log",
-        "agent-5001" => "agent-5001.log",
-        "agent-5002" => "agent-5002.log",
-        other => return Err(format!("unknown service log: {other}")),
-    };
-
-    Ok(root.join("tmp").join("run").join(filename))
+    desktop_service_stop()
 }
 
 #[tauri::command]
 fn read_runtime_log(payload: LogPayload) -> Result<RuntimeLogPayload, String> {
-    let log_path = log_path_for(&payload.service)?;
-
-    let contents = fs::read_to_string(&log_path)
-        .map_err(|error| format!("failed to read {}: {error}", log_path.display()))?;
-
-    let lines: Vec<&str> = contents.lines().collect();
-    let start = lines.len().saturating_sub(160);
-
     Ok(RuntimeLogPayload {
-        service: payload.service,
-        rendered: lines[start..].join("\n"),
+        service: payload.service.clone(),
+        rendered: read_shared_runtime_log(&payload.service, 160)?,
     })
 }
 
@@ -559,37 +543,6 @@ fn build_installer_bundle(payload: BuildPayload) -> Result<String, String> {
         let detail = if stderr.is_empty() { stdout } else { stderr };
         Err(if detail.is_empty() {
             "installer build failed".to_string()
-        } else {
-            detail
-        })
-    }
-}
-
-fn run_workspace_command(args: &[&str]) -> Result<String, String> {
-    let root = workspace_root();
-    let (program, tail) = args
-        .split_first()
-        .ok_or_else(|| "missing process command".to_string())?;
-
-    let output = Command::new(program)
-        .args(tail)
-        .current_dir(&root)
-        .output()
-        .map_err(|error| format!("failed to run {}: {error}", args.join(" ")))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if output.status.success() {
-        Ok(if stdout.is_empty() {
-            "command completed".to_string()
-        } else {
-            stdout
-        })
-    } else {
-        let detail = if stderr.is_empty() { stdout } else { stderr };
-        Err(if detail.is_empty() {
-            format!("command failed: {}", args.join(" "))
         } else {
             detail
         })
