@@ -26,6 +26,8 @@ Kyuubiki `v0.4` is the release where the system becomes much more explicitly mul
   - fingerprint binding
   - replay-window timestamp checks
 - continued documenting the stack as independent but cooperating programs with shared contracts
+- clarified multi-platform desktop packaging with staged `macos / linux / windows`
+  desktop manifests, Windows `.ico` support, and a formal desktop release checklist
 
 ### Direction after v0.4
 

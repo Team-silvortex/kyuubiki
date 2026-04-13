@@ -99,7 +99,7 @@ type ModelPanelTab = "tools" | "tree";
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 type ImmersiveToolTab = "node" | "props";
 type SystemDataTab = "jobs" | "results";
-type SystemPanelTab = "config" | "runtime" | "data";
+type SystemPanelTab = "config" | "assistant" | "runtime" | "data";
 
 type AxialFormState = {
   length: number;
@@ -344,6 +344,29 @@ const copy = {
     overview: "Overview",
     controls: "Controls",
     settings: "Settings",
+    assistant: "Assistant",
+    assistantSummary: "Context",
+    assistantStatusReady: "Ready",
+    assistantCurrentStudy: "Study",
+    assistantCurrentRuntime: "Runtime",
+    assistantCurrentJob: "Job",
+    assistantCurrentResult: "Result",
+    assistantEmpty: "The workbench looks healthy. No assisted action is needed right now.",
+    assistantNeedsProject: "Attach this workspace to a project",
+    assistantNeedsProjectHint: "Projects make saved models, jobs, exports, and history easier to manage.",
+    assistantOpenProjects: "Open projects",
+    assistantRefreshRuntime: "Refresh runtime status",
+    assistantRefreshRuntimeHint: "The runtime snapshot is missing or stale. Pull the latest health and agent state.",
+    assistantConfigureDirectMesh: "Configure direct mesh endpoints",
+    assistantConfigureDirectMeshHint: "Direct mesh mode needs at least one reachable host:port endpoint before it can route solves.",
+    assistantRunStudy: "Run the current study",
+    assistantRunStudyHint: "The model is ready enough to submit. Launch a fresh solve with the current inputs.",
+    assistantCancelRun: "Cancel the active run",
+    assistantCancelRunHint: "A solve is still in flight. Stop it if you want to edit the model or retry with different settings.",
+    assistantApplyFix: "Apply the first suggested fix",
+    assistantApplyFixHint: "The 2D truss precheck found a blocking issue and already prepared a safe first repair.",
+    assistantEnterImmersive: "Open immersive 3D viewport",
+    assistantEnterImmersiveHint: "Switch the 3D study into fullscreen editing when you want more room for picking and navigation.",
     backend: "Backend",
     protocols: "Protocols",
     controlPlaneProtocol: "Control plane",
@@ -726,6 +749,29 @@ const copy = {
     overview: "概览",
     controls: "控制",
     settings: "设置",
+    assistant: "助手",
+    assistantSummary: "上下文",
+    assistantStatusReady: "就绪",
+    assistantCurrentStudy: "当前研究",
+    assistantCurrentRuntime: "运行模式",
+    assistantCurrentJob: "当前任务",
+    assistantCurrentResult: "当前结果",
+    assistantEmpty: "当前工作台状态健康，暂时没有需要助手介入的动作。",
+    assistantNeedsProject: "把当前工作区挂到项目里",
+    assistantNeedsProjectHint: "挂到项目后，保存模型、任务历史和导出管理都会更顺手。",
+    assistantOpenProjects: "打开项目",
+    assistantRefreshRuntime: "刷新运行时状态",
+    assistantRefreshRuntimeHint: "当前运行时快照缺失或偏旧，可以重新拉一次健康状态和 agent 信息。",
+    assistantConfigureDirectMesh: "配置直连 Mesh 节点",
+    assistantConfigureDirectMeshHint: "直连 Mesh 模式至少需要一个可达的 host:port 节点才能路由求解。",
+    assistantRunStudy: "运行当前研究",
+    assistantRunStudyHint: "当前模型已经基本可提交，可以直接发起一次新求解。",
+    assistantCancelRun: "取消正在运行的任务",
+    assistantCancelRunHint: "当前仍有任务在执行，如果你要改模型或重试参数，可以先停掉它。",
+    assistantApplyFix: "应用第一条建议修复",
+    assistantApplyFixHint: "二维桁架预检查发现了阻塞问题，而且已经准备好一个安全的首个修复动作。",
+    assistantEnterImmersive: "打开沉浸式三维视图",
+    assistantEnterImmersiveHint: "编辑三维模型时切到全屏，会更适合选点、导航和建模。",
     backend: "后端",
     protocols: "协议",
     controlPlaneProtocol: "调度面协议",
@@ -3656,6 +3702,99 @@ export function Workbench() {
           ? 1120
           : undefined
         : 980;
+  const directMeshEndpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
+  const hasAnyResult = Boolean(axialResult || trussResult || truss3dResult || planeResult);
+  const assistantCards: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    actionLabel: string;
+    tone: "good" | "watch" | "risk";
+    onAction: () => void;
+  }> = [];
+
+  if (!selectedProjectId) {
+    assistantCards.push({
+      id: "project",
+      title: t.assistantNeedsProject,
+      summary: t.assistantNeedsProjectHint,
+      actionLabel: t.assistantOpenProjects,
+      tone: "watch",
+      onAction: () => {
+        setSidebarSection("library");
+        setLibraryTab("projects");
+      },
+    });
+  }
+
+  if (frontendRuntimeMode === "direct_mesh_gui" && directMeshEndpoints.length === 0) {
+    assistantCards.push({
+      id: "direct-mesh",
+      title: t.assistantConfigureDirectMesh,
+      summary: t.assistantConfigureDirectMeshHint,
+      actionLabel: t.settings,
+      tone: "risk",
+      onAction: () => {
+        setSidebarSection("system");
+        setSystemPanelTab("config");
+      },
+    });
+  }
+
+  if (!health) {
+    assistantCards.push({
+      id: "runtime",
+      title: t.assistantRefreshRuntime,
+      summary: t.assistantRefreshRuntimeHint,
+      actionLabel: t.refresh,
+      tone: "watch",
+      onAction: () => {
+        void refreshHealth();
+      },
+    });
+  }
+
+  if (jobIsActive) {
+    assistantCards.push({
+      id: "job",
+      title: t.assistantCancelRun,
+      summary: t.assistantCancelRunHint,
+      actionLabel: t.cancelJob,
+      tone: "watch",
+      onAction: cancelCurrentJob,
+    });
+  } else if (isTruss && trussDiagnostics?.blockingMessages.length && trussDiagnostics.suggestions[0]) {
+    assistantCards.push({
+      id: "fix",
+      title: t.assistantApplyFix,
+      summary: `${t.assistantApplyFixHint} ${trussDiagnostics.blockingMessages[0]}`,
+      actionLabel: t.assistantApplyFix,
+      tone: "risk",
+      onAction: () => applyTrussSuggestion(trussDiagnostics.suggestions[0]),
+    });
+  } else if (!hasAnyResult) {
+    assistantCards.push({
+      id: "run",
+      title: t.assistantRunStudy,
+      summary: t.assistantRunStudyHint,
+      actionLabel: t.run,
+      tone: "good",
+      onAction: runAnalysis,
+    });
+  }
+
+  if (isTruss3d && !immersiveViewport) {
+    assistantCards.push({
+      id: "immersive",
+      title: t.assistantEnterImmersive,
+      summary: t.assistantEnterImmersiveHint,
+      actionLabel: t.enterImmersive,
+      tone: "good",
+      onAction: () => {
+        void toggleImmersiveViewport();
+      },
+    });
+  }
 
   const buildSnapshot = (): WorkbenchSnapshot => ({
     studyKind,
@@ -5673,6 +5812,13 @@ export function Workbench() {
                 {language === "zh" ? "配置" : "Config"}
               </button>
               <button
+                className={`panel-tab${systemPanelTab === "assistant" ? " panel-tab--active" : ""}`}
+                onClick={() => setSystemPanelTab("assistant")}
+                type="button"
+              >
+                {t.assistant}
+              </button>
+              <button
                 className={`panel-tab${systemPanelTab === "runtime" ? " panel-tab--active" : ""}`}
                 onClick={() => setSystemPanelTab("runtime")}
                 type="button"
@@ -5810,6 +5956,60 @@ export function Workbench() {
                 </button>
               </div>
             </section>
+            ) : null}
+            {systemPanelTab === "assistant" ? (
+            <>
+            <section className="sidebar-card sidebar-card--compact">
+              <div className="card-head">
+                <h2>{t.assistant}</h2>
+                <span>{assistantCards.length > 0 ? assistantCards.length : t.assistantStatusReady}</span>
+              </div>
+              <div className="sidebar-list">
+                <div>
+                  <span>{t.assistantCurrentStudy}</span>
+                  <strong>{t.kinds[studyKind]}</strong>
+                </div>
+                <div>
+                  <span>{t.assistantCurrentRuntime}</span>
+                  <strong>{t.frontendModes[frontendRuntimeMode]}</strong>
+                </div>
+                <div>
+                  <span>{t.assistantCurrentJob}</span>
+                  <strong>{job?.status ?? t.none}</strong>
+                </div>
+                <div>
+                  <span>{t.assistantCurrentResult}</span>
+                  <strong>{hasAnyResult ? t.yes : t.no}</strong>
+                </div>
+              </div>
+            </section>
+            {assistantCards.length === 0 ? (
+              <section className="sidebar-card sidebar-card--compact">
+                <div className="card-head">
+                  <h2>{t.assistantSummary}</h2>
+                  <span>{t.assistantStatusReady}</span>
+                </div>
+                <p className="card-copy">{t.assistantEmpty}</p>
+              </section>
+            ) : (
+              assistantCards.slice(0, 5).map((card) => (
+                <section className="sidebar-card sidebar-card--compact" key={card.id}>
+                  <div className="card-head">
+                    <h2>{card.title}</h2>
+                    <span className={`status-chip status-chip--${card.tone}`}>
+                      {card.tone === "good" ? t.stabilityGood : card.tone === "watch" ? t.stabilityWatch : t.stabilityRisk}
+                    </span>
+                  </div>
+                  <p className="card-copy">{card.summary}</p>
+                  <div className="button-row">
+                    <button className="ghost-button" onClick={card.onAction} type="button">
+                      {card.actionLabel}
+                    </button>
+                  </div>
+                </section>
+              ))
+            )}
+            </>
             ) : null}
             {systemPanelTab === "runtime" ? (
             <>

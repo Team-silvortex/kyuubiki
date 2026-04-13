@@ -154,10 +154,15 @@ Desktop packaging now follows a simple rule:
 That keeps `macos`, `linux`, and `windows` deployment paths visible and
 manageable even when you are not cross-compiling on the current machine.
 
+The platform-specific release checklist lives in:
+
+- [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
+
 ## Related docs
 
 - [README.md](/Users/Shared/chroot/dev/kyuubiki/README.md)
 - [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
+- [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
 - [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
 - [deploy/README.md](/Users/Shared/chroot/dev/kyuubiki/deploy/README.md)
 - [dist/README.md](/Users/Shared/chroot/dev/kyuubiki/dist/README.md)

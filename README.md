@@ -118,6 +118,14 @@ Start here if you need the repo map:
 Packaging and deployment paths are now documented centrally in:
 
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
+- [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
+
+Desktop release planning now includes:
+
+- explicit `macos / linux / windows` bundle expectations
+- checked icon-format requirements by platform
+- staged desktop manifests under `dist/<platform>/desktop/...`
+- a fixed release ordering and artifact naming convention
 
 ## Current Architecture
 

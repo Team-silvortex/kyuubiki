@@ -13,6 +13,8 @@ engineering direction.
   Deployment modes, watchdog knobs, and runtime entry points.
 - `packaging-and-deployment.md`
   Component build commands, artifact paths, and packaging output boundaries.
+- `desktop-release-checklist.md`
+  Platform-specific desktop bundle targets, icon requirements, and release checks.
 - `security.md`
   Current guardrails, token protection, and deployment safety notes.
 - `repository-structure.md`
@@ -30,5 +32,6 @@ Read these in roughly this order if you are new to the repository:
 4. `security.md`
 5. `operations.md`
 6. `packaging-and-deployment.md`
-7. `repository-structure.md`
-8. `development.md`
+7. `desktop-release-checklist.md`
+8. `repository-structure.md`
+9. `development.md`
