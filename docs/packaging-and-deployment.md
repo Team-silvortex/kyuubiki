@@ -29,6 +29,8 @@ Use these commands when working component-by-component:
 - `make build-agent`
 - `make build-installer-gui`
 - `make build-workbench-gui`
+- `zsh ./scripts/kyuubiki build-installer-gui macos|linux|windows`
+- `zsh ./scripts/kyuubiki build-workbench-gui macos|linux|windows`
 
 These are thin wrappers over the component-native toolchains:
 
@@ -45,9 +47,23 @@ Use these commands when building deployable layouts:
   Builds the staged runtime scaffold under `dist/<platform>`
 - `make package-desktop`
   Builds the Tauri installer GUI and Tauri workbench GUI packaging outputs
+- `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
+- `zsh ./scripts/kyuubiki package-desktop all`
 
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.
+
+Current staged runtime layout:
+
+- `dist/<platform>/bin`
+- `dist/<platform>/config`
+- `dist/<platform>/data`
+- `dist/<platform>/desktop/installer-gui`
+- `dist/<platform>/desktop/workbench-gui`
+- `dist/<platform>/logs`
+- `dist/<platform>/manifests`
+- `dist/<platform>/scripts`
+- `dist/<platform>/exports`
 
 ## Output boundaries
 
@@ -125,6 +141,18 @@ need Phoenix on the solver hot path.
 - GUI talks to LAN Rust agents through direct-mesh routes
 - chunked result browsing still works
 - no project/job persistence requirement on the solver hot path
+
+## Desktop packaging behavior
+
+Desktop packaging now follows a simple rule:
+
+- if the requested platform matches the current host platform, the Tauri shell
+  is actually built
+- if the requested platform is different, `kyuubiki` still stages the matching
+  desktop manifests under `dist/<platform>/desktop/...`
+
+That keeps `macos`, `linux`, and `windows` deployment paths visible and
+manageable even when you are not cross-compiling on the current machine.
 
 ## Related docs
 

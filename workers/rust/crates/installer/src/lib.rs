@@ -169,6 +169,8 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         "bin",
         "config",
         "data",
+        "desktop/installer-gui",
+        "desktop/workbench-gui",
         "logs",
         "manifests",
         "scripts",
@@ -182,6 +184,11 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     let launch_path = release_dir.join("manifests").join("launch.json");
     let readme_path = release_dir.join("README.txt");
     let env_example_target = release_dir.join("config").join(".env.example");
+    let desktop_readme_path = release_dir.join("desktop").join("README.txt");
+    let installer_gui_manifest_path =
+        release_dir.join("desktop").join("installer-gui").join("manifest.json");
+    let workbench_gui_manifest_path =
+        release_dir.join("desktop").join("workbench-gui").join("manifest.json");
 
     fs::write(&manifest_path, build_release_manifest(&root, &release_dir, platform))
         .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
@@ -189,6 +196,18 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         .map_err(|error| format!("failed to write {}: {error}", launch_path.display()))?;
     fs::write(&readme_path, build_release_readme(platform))
         .map_err(|error| format!("failed to write {}: {error}", readme_path.display()))?;
+    fs::write(&desktop_readme_path, build_desktop_readme())
+        .map_err(|error| format!("failed to write {}: {error}", desktop_readme_path.display()))?;
+    fs::write(
+        &installer_gui_manifest_path,
+        build_desktop_app_manifest("installer-gui", platform),
+    )
+    .map_err(|error| format!("failed to write {}: {error}", installer_gui_manifest_path.display()))?;
+    fs::write(
+        &workbench_gui_manifest_path,
+        build_desktop_app_manifest("workbench-gui", platform),
+    )
+    .map_err(|error| format!("failed to write {}: {error}", workbench_gui_manifest_path.display()))?;
 
     let env_example = root.join(".env.example");
     if env_example.exists() {
@@ -255,6 +274,7 @@ fn build_release_manifest(root: &Path, release_dir: &Path, platform: Platform) -
             "    \"bin\",\n",
             "    \"config\",\n",
             "    \"data\",\n",
+            "    \"desktop\",\n",
             "    \"logs\",\n",
             "    \"exports\",\n",
             "    \"manifests\",\n",
@@ -306,12 +326,74 @@ fn build_release_readme(platform: Platform) -> String {
             "Platform: {platform}\n\n",
             "This directory is a repo-local deployment scaffold.\n",
             "It is intentionally lightweight and does not install host-level packages.\n\n",
+            "Directory shape:\n",
+            "- bin/        component binaries or launch helpers\n",
+            "- config/     environment and deployment configuration\n",
+            "- data/       local runtime state\n",
+            "- desktop/    desktop-shell packaging placeholders\n",
+            "- logs/       runtime logs\n",
+            "- manifests/  release and launch manifests\n",
+            "- scripts/    operator entry points\n",
+            "- exports/    snapshots and operator exports\n\n",
             "Suggested flow:\n",
             "1. copy config/.env.example to config/.env.local when packaging externally\n",
             "2. use scripts/start to launch services\n",
             "3. use scripts/export-db to snapshot persisted data\n"
         ),
         platform = platform.as_str()
+    )
+}
+
+fn build_desktop_readme() -> String {
+    concat!(
+        "Desktop packaging placeholders\n\n",
+        "installer-gui/\n",
+        "  Reserved for the Tauri installer GUI build output or packaged bundle references.\n",
+        "  Contains a manifest.json packaging descriptor.\n\n",
+        "workbench-gui/\n",
+        "  Reserved for the Tauri desktop workbench shell build output or packaged bundle references.\n",
+        "  Contains a manifest.json packaging descriptor.\n"
+    )
+    .to_string()
+}
+
+fn build_desktop_app_manifest(app: &str, platform: Platform) -> String {
+    let (product_name, source_dir, target_dir, build_command) = match app {
+        "installer-gui" => (
+            "Kyuubiki Installer",
+            "apps/installer-gui",
+            "apps/installer-gui/src-tauri/target",
+            "make build-installer-gui",
+        ),
+        _ => (
+            "Kyuubiki Workbench",
+            "apps/workbench-gui",
+            "apps/workbench-gui/src-tauri/target",
+            "make build-workbench-gui",
+        ),
+    };
+
+    format!(
+        concat!(
+            "{{\n",
+            "  \"schema_version\": \"kyuubiki.desktop-package/v1\",\n",
+            "  \"app\": \"{app}\",\n",
+            "  \"product_name\": \"{product_name}\",\n",
+            "  \"platform\": \"{platform}\",\n",
+            "  \"expected_bundle_kinds\": [{bundle_kinds}],\n",
+            "  \"source_dir\": \"{source_dir}\",\n",
+            "  \"tauri_target_dir\": \"{target_dir}\",\n",
+            "  \"build_command\": \"{build_command}\",\n",
+            "  \"notes\": \"Use the platform-scoped desktop packaging flow to populate this placeholder.\"\n",
+            "}}\n"
+        ),
+        app = app,
+        product_name = product_name,
+        platform = platform.as_str(),
+        bundle_kinds = platform.desktop_bundle_kinds_json(),
+        source_dir = source_dir,
+        target_dir = target_dir,
+        build_command = build_command,
     )
 }
 
@@ -585,6 +667,14 @@ impl Platform {
         match self {
             Self::Windows => "zsh ./scripts/kyuubiki",
             Self::Macos | Self::Linux => "zsh ./scripts/kyuubiki",
+        }
+    }
+
+    fn desktop_bundle_kinds_json(self) -> &'static str {
+        match self {
+            Self::Macos => "\"app\", \"dmg\"",
+            Self::Linux => "\"appimage\", \"deb\", \"rpm\"",
+            Self::Windows => "\"msi\", \"nsis\"",
         }
     }
 }

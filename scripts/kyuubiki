@@ -43,8 +43,8 @@ Commands:
   build-frontend    Build the browser workbench production bundle
   build-orchestrator Compile the Elixir control plane in production mode
   build-agent       Build the Rust solver agent binary in release mode
-  build-installer-gui Build the Tauri installer GUI bundles
-  build-workbench-gui Build the Tauri desktop workbench shell bundles
+  build-installer-gui [platform] Build the Tauri installer GUI bundles
+  build-workbench-gui [platform] Build the Tauri desktop workbench shell bundles
   start             Start the orchestrator API, frontend, and solver agent in the background
   start-local       Start services with SQLite forced for local development
   start-cloud       Start services with PostgreSQL forced for cloud/distributed use
@@ -61,7 +61,7 @@ Commands:
   validate-env      Validate required environment variables from .env.local
   package           Stage a portable release directory under dist/
   package-runtime   Stage the portable runtime release scaffold under dist/
-  package-desktop   Build both Tauri desktop shells
+  package-desktop [platform|all] Build/stage both Tauri desktop shells
   installer-gui-dev Run the Tauri installer GUI in development mode
   installer-gui-build Build the Tauri installer GUI bundles
   workbench-gui-dev Run the Tauri desktop workbench shell in development mode
@@ -90,6 +90,8 @@ Examples:
   ./scripts/kyuubiki build-agent
   ./scripts/kyuubiki package-runtime
   ./scripts/kyuubiki package-desktop
+  ./scripts/kyuubiki package-desktop linux
+  ./scripts/kyuubiki package-desktop all
   ./scripts/kyuubiki start-local
   ./scripts/kyuubiki start-cloud
   ./scripts/kyuubiki start-distributed
@@ -109,6 +111,15 @@ Examples:
   ./scripts/kyuubiki workbench-gui-dev
   ./scripts/kyuubiki workbench-gui-build
 EOF
+}
+
+host_platform() {
+  case "$(uname -s)" in
+    Darwin) echo "macos" ;;
+    Linux) echo "linux" ;;
+    MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
+    *) echo "linux" ;;
+  esac
 }
 
 sqlite_database_path_value() {
@@ -389,11 +400,17 @@ run_installer_gui_dev() {
 }
 
 run_installer_gui_build() {
+  local platform="${1:-$(host_platform)}"
   require_dir "$INSTALLER_GUI_DIR"
   (
     cd "$INSTALLER_GUI_DIR"
-    npm run tauri:build
+    if [[ "$platform" == "$(host_platform)" ]]; then
+      npm run tauri:build
+    else
+      echo "installer-gui cross-platform bundle build is not performed on this host; staging ${platform} desktop manifest instead"
+    fi
   )
+  run_installer stage-release "$platform"
 }
 
 run_workbench_gui_dev() {
@@ -405,11 +422,17 @@ run_workbench_gui_dev() {
 }
 
 run_workbench_gui_build() {
+  local platform="${1:-$(host_platform)}"
   require_dir "$WORKBENCH_GUI_DIR"
   (
     cd "$WORKBENCH_GUI_DIR"
-    npm run tauri:build
+    if [[ "$platform" == "$(host_platform)" ]]; then
+      npm run tauri:build
+    else
+      echo "workbench-gui cross-platform bundle build is not performed on this host; staging ${platform} desktop manifest instead"
+    fi
   )
+  run_installer stage-release "$platform"
 }
 
 run_build_frontend() {
@@ -441,8 +464,21 @@ run_package_runtime() {
 }
 
 run_package_desktop() {
-  run_installer_gui_build
-  run_workbench_gui_build
+  local platform="${1:-$(host_platform)}"
+
+  if [[ "$platform" == "all" ]]; then
+    local target
+    for target in macos linux windows; do
+      run_installer stage-release "$target"
+    done
+    run_installer_gui_build "$(host_platform)"
+    run_workbench_gui_build "$(host_platform)"
+    return 0
+  fi
+
+  run_installer stage-release "$platform"
+  run_installer_gui_build "$platform"
+  run_workbench_gui_build "$platform"
 }
 
 start_orchestrator_background() {
@@ -558,10 +594,10 @@ case "$command" in
     run_build_agent
     ;;
   build-installer-gui)
-    run_installer_gui_build
+    run_installer_gui_build "${1:-$(host_platform)}"
     ;;
   build-workbench-gui)
-    run_workbench_gui_build
+    run_workbench_gui_build "${1:-$(host_platform)}"
     ;;
   start)
     start_services
@@ -612,19 +648,19 @@ case "$command" in
     run_package_runtime "$@"
     ;;
   package-desktop)
-    run_package_desktop
+    run_package_desktop "${1:-$(host_platform)}"
     ;;
   installer-gui-dev)
     run_installer_gui_dev
     ;;
   installer-gui-build)
-    run_installer_gui_build
+    run_installer_gui_build "${1:-$(host_platform)}"
     ;;
   workbench-gui-dev)
     run_workbench_gui_dev
     ;;
   workbench-gui-build)
-    run_workbench_gui_build
+    run_workbench_gui_build "${1:-$(host_platform)}"
     ;;
   test)
     make -C "$ROOT_DIR" test

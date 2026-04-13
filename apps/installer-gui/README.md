@@ -30,12 +30,18 @@ operator-facing surface in the repository.
 - `make installer-gui-dev`
 - `make installer-gui-build`
 - `make package-desktop`
+- `zsh ./scripts/kyuubiki build-installer-gui macos|linux|windows`
+- `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
 
 ## Output
 
 Tauri build output lands under:
 
 - `apps/installer-gui/src-tauri/target`
+
+Platform-scoped staged desktop manifests land under:
+
+- `dist/<platform>/desktop/installer-gui`
 
 Do not treat that directory as source-owned. The source of truth is:
 

@@ -20,8 +20,14 @@ Useful commands:
 
 - `make workbench-gui-dev`
 - `make workbench-gui-build`
+- `zsh ./scripts/kyuubiki build-workbench-gui macos|linux|windows`
+- `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
 
 Branding:
 
 - desktop icons: [src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/src-tauri/icons)
 - shell visuals: [ui/assets](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/ui/assets)
+
+Staged platform descriptors land under:
+
+- `dist/<platform>/desktop/workbench-gui`

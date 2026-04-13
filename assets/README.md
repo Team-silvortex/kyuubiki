@@ -6,7 +6,7 @@ useful to the repository.
 - `brand/`
   Shared brand metadata and product naming copy.
 - `icons/app/`
-  Main application icon assets (`.png`, `.icns`).
+  Main application icon assets (`.png`, `.icns`, `.ico`).
 - `icons/dock/`
   Dock-oriented icon assets (`.png`, `.icns`) for future macOS-specific polish.
 

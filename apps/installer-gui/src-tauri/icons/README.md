@@ -6,6 +6,8 @@ This directory contains the packaged desktop icons for the Tauri installer.
   Main application icon used for the installer window/app bundle.
 - `kyuubiki-app.icns`
   macOS application icon bundle.
+- `kyuubiki-app.ico`
+  Windows application icon bundle.
 - `kyuubiki-dock.png`
   Dock-oriented variant kept for future macOS dock-specific packaging polish.
 - `kyuubiki-dock.icns`
