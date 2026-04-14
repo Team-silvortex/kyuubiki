@@ -7,6 +7,7 @@ import {
   ensurePyodideRuntime,
   WORKBENCH_SCRIPT_ACTIONS,
   type WorkbenchScriptActionDefinition,
+  type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptLanguage,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
@@ -14,6 +15,8 @@ import {
 type WorkbenchScriptPanelProps = {
   language: WorkbenchScriptLanguage;
   snapshot: WorkbenchScriptSnapshot;
+  getSnapshot: () => WorkbenchScriptSnapshot;
+  actionLog: WorkbenchScriptActionLogEntry[];
   onInvokeAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
 };
 
@@ -45,6 +48,8 @@ const copy = {
     stateKeys: "State fields",
     actionCount: "Actions",
     payload: "Payload",
+    actionLog: "Action log",
+    noActionLog: "No scripted actions yet.",
     categories: {
       navigation: "Navigation",
       settings: "Settings",
@@ -82,6 +87,8 @@ const copy = {
     stateKeys: "状态字段",
     actionCount: "动作数",
     payload: "参数",
+    actionLog: "动作日志",
+    noActionLog: "还没有脚本动作记录。",
     categories: {
       navigation: "导航",
       settings: "设置",
@@ -112,7 +119,7 @@ function stringifyPayload(payload: Record<string, unknown> | undefined): string 
   return payload ? JSON.stringify(payload) : "{}";
 }
 
-export function WorkbenchScriptPanel({ language, snapshot, onInvokeAction }: WorkbenchScriptPanelProps) {
+export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, onInvokeAction }: WorkbenchScriptPanelProps) {
   const t = copy[language];
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [output, setOutput] = useState<string[]>([]);
@@ -171,7 +178,7 @@ export function WorkbenchScriptPanel({ language, snapshot, onInvokeAction }: Wor
           const result = await onInvokeAction(action, payload);
           return JSON.stringify(result ?? { ok: true, action });
         },
-        state_json: () => JSON.stringify(snapshot),
+        state_json: () => JSON.stringify(getSnapshot()),
         actions_json: () => JSON.stringify(WORKBENCH_SCRIPT_ACTIONS),
         log: (message: string) => appendOutput(message),
         sleep: async (seconds = 0) =>
@@ -284,6 +291,32 @@ export function WorkbenchScriptPanel({ language, snapshot, onInvokeAction }: Wor
 
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
+          <h2>{t.actionLog}</h2>
+          <span>{actionLog.length}</span>
+        </div>
+        {actionLog.length === 0 ? (
+          <p className="card-copy">{t.noActionLog}</p>
+        ) : (
+          <div className="script-panel__catalog">
+            {actionLog.map((entry) => (
+              <article className="script-panel__action" key={entry.id}>
+                <div className="script-panel__action-head">
+                  <strong>{entry.action}</strong>
+                  <span>{entry.status}</span>
+                </div>
+                <p className="card-copy">{entry.summary}</p>
+                <div className="script-panel__payload">
+                  <span>Time</span>
+                  <code>{entry.at}</code>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="sidebar-card sidebar-card--compact">
+        <div className="card-head">
           <h2>{t.actionCatalog}</h2>
           <span>{WORKBENCH_SCRIPT_ACTIONS.length}</span>
         </div>
@@ -311,4 +344,3 @@ export function WorkbenchScriptPanel({ language, snapshot, onInvokeAction }: Wor
     </>
   );
 }
-

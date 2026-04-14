@@ -26,6 +26,15 @@ export type WorkbenchScriptSnapshot = {
   resultCount: number;
   protocolAgentCount: number;
   healthStatus: string | null;
+  message: string;
+};
+
+export type WorkbenchScriptActionLogEntry = {
+  id: string;
+  action: string;
+  status: "started" | "completed" | "failed";
+  at: string;
+  summary: string;
 };
 
 export type WorkbenchScriptActionDefinition = {
@@ -415,6 +424,9 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # - ky.log(*parts)
 # - await ky.invoke("action/id", payload_dict)
 # - await ky.sleep(seconds)
+# - await ky.wait_until(...)
+# - await ky.wait_for_job_done()
+# - await ky.wait_for_message("completed")
 
 ky.log("Current study:", state["studyKind"])
 ky.log("Current sidebar:", state["sidebarSection"])
@@ -456,9 +468,34 @@ class _KyuubikiBridge:
     async def sleep(self, seconds=0.0):
         await __kyuubikiBridge.sleep(seconds)
 
+    async def wait_until(self, predicate, timeout=30.0, interval=0.25):
+        elapsed = 0.0
+        while elapsed <= timeout:
+            current = self.state()
+            if predicate(current):
+                return current
+            await self.sleep(interval)
+            elapsed += interval
+        raise TimeoutError(f"Condition not met within {timeout} seconds")
+
+    async def wait_for_job_done(self, timeout=90.0, interval=0.5):
+        terminal = {"completed", "failed", "cancelled"}
+        return await self.wait_until(
+            lambda current: current.get("jobStatus") in terminal,
+            timeout=timeout,
+            interval=interval,
+        )
+
+    async def wait_for_message(self, text, timeout=30.0, interval=0.25):
+        needle = str(text)
+        return await self.wait_until(
+            lambda current: needle in str(current.get("message", "")),
+            timeout=timeout,
+            interval=interval,
+        )
+
 ky = _KyuubikiBridge()
 state = ky.state()
 actions = ky.actions()
 `;
 }
-

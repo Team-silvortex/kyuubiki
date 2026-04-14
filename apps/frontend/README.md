@@ -30,8 +30,15 @@ Automation support:
 
 - The System panel now exposes a `Scripts` surface powered by WASM Python
   (Pyodide).
+- The assistant surface now supports two execution modes:
+  `local` for built-in rule/diagnostic guidance, and `llm` for OpenAI-compatible
+  remote model planning.
 - Frontend operations are registered behind a script action bridge so browser
   workflows can be automated without coupling to backend internals.
+- The scripting bridge exposes live state polling helpers such as
+  `wait_until`, `wait_for_job_done`, and `wait_for_message`.
+- Scripted frontend actions are recorded into a lightweight action log inside
+  the script panel so future assistants can replay or audit what they did.
 - The first script run downloads the Pyodide runtime into the browser cache.
 
 This app should stay API-driven. It should consume control-plane, solver-RPC,

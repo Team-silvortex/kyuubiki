@@ -13,11 +13,13 @@ import {
 } from "react";
 import brand from "../../../../../assets/brand/brand.json";
 import { VirtualList } from "@/components/ui/virtual-list";
+import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
+import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { createCustomMaterial, parseMaterialLibrary } from "@/lib/materials";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/models";
@@ -32,7 +34,7 @@ import {
   type ParametricTrussConfig,
 } from "@/lib/models";
 import { SAMPLE_LIBRARY } from "@/lib/models";
-import { type WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import { type WorkbenchScriptActionLogEntry, type WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import {
   createAxialBarJob,
   createDirectMeshSolve,
@@ -102,6 +104,7 @@ type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 type ImmersiveToolTab = "node" | "props";
 type SystemDataTab = "jobs" | "results";
 type SystemPanelTab = "config" | "assistant" | "scripts" | "runtime" | "data";
+type AssistantMode = "local" | "llm";
 
 type AxialFormState = {
   length: number;
@@ -1115,6 +1118,10 @@ function safeStorageGet(): {
   controlPlaneApiToken?: string;
   clusterApiToken?: string;
   directMeshApiToken?: string;
+  assistantMode?: AssistantMode;
+  assistantApiBaseUrl?: string;
+  assistantApiKey?: string;
+  assistantModel?: string;
 } {
   if (typeof window === "undefined") return {};
   try {
@@ -1131,6 +1138,10 @@ function safeStorageGet(): {
           controlPlaneApiToken?: string;
           clusterApiToken?: string;
           directMeshApiToken?: string;
+          assistantMode?: AssistantMode;
+          assistantApiBaseUrl?: string;
+          assistantApiKey?: string;
+          assistantModel?: string;
         })
       : {};
   } catch {
@@ -1149,6 +1160,10 @@ function sanitizeWorkbenchSettings(input: {
   controlPlaneApiToken: string;
   clusterApiToken: string;
   directMeshApiToken: string;
+  assistantMode: AssistantMode;
+  assistantApiBaseUrl: string;
+  assistantApiKey: string;
+  assistantModel: string;
 }) {
   return {
     theme: input.theme,
@@ -1158,6 +1173,9 @@ function sanitizeWorkbenchSettings(input: {
     frontendRuntimeMode: input.frontendRuntimeMode,
     directMeshEndpointsText: input.directMeshEndpointsText,
     directMeshSelectionMode: input.directMeshSelectionMode,
+    assistantMode: input.assistantMode,
+    assistantApiBaseUrl: input.assistantApiBaseUrl.trim(),
+    assistantModel: input.assistantModel.trim(),
     ...(input.controlPlaneApiToken.trim()
       ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
       : {}),
@@ -1165,6 +1183,7 @@ function sanitizeWorkbenchSettings(input: {
     ...(input.directMeshApiToken.trim()
       ? { directMeshApiToken: input.directMeshApiToken.trim() }
       : {}),
+    ...(input.assistantApiKey.trim() ? { assistantApiKey: input.assistantApiKey.trim() } : {}),
   };
 }
 
@@ -2134,6 +2153,10 @@ export function Workbench() {
   const [controlPlaneApiToken, setControlPlaneApiToken] = useState("");
   const [clusterApiToken, setClusterApiToken] = useState("");
   const [directMeshApiToken, setDirectMeshApiToken] = useState("");
+  const [assistantMode, setAssistantMode] = useState<AssistantMode>("local");
+  const [assistantApiBaseUrl, setAssistantApiBaseUrl] = useState("https://api.openai.com/v1");
+  const [assistantApiKey, setAssistantApiKey] = useState("");
+  const [assistantModel, setAssistantModel] = useState("gpt-4.1-mini");
   const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
@@ -2175,6 +2198,7 @@ export function Workbench() {
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
   const [selectedAdminJobId, setSelectedAdminJobId] = useState<string | null>(null);
   const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
+  const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [adminJobMessage, setAdminJobMessage] = useState("");
   const [adminJobProjectId, setAdminJobProjectId] = useState("");
   const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
@@ -2375,6 +2399,14 @@ export function Workbench() {
     if (stored.controlPlaneApiToken) setControlPlaneApiToken(stored.controlPlaneApiToken);
     if (stored.clusterApiToken) setClusterApiToken(stored.clusterApiToken);
     if (stored.directMeshApiToken) setDirectMeshApiToken(stored.directMeshApiToken);
+    if (stored.assistantMode) setAssistantMode(stored.assistantMode);
+    if (typeof stored.assistantApiBaseUrl === "string" && stored.assistantApiBaseUrl.trim()) {
+      setAssistantApiBaseUrl(stored.assistantApiBaseUrl);
+    }
+    if (typeof stored.assistantApiKey === "string") setAssistantApiKey(stored.assistantApiKey);
+    if (typeof stored.assistantModel === "string" && stored.assistantModel.trim()) {
+      setAssistantModel(stored.assistantModel);
+    }
     if (stored.language) {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
@@ -2398,10 +2430,14 @@ export function Workbench() {
           controlPlaneApiToken,
           clusterApiToken,
           directMeshApiToken,
+          assistantMode,
+          assistantApiBaseUrl,
+          assistantApiKey,
+          assistantModel,
         })),
       );
     }
-  }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode, controlPlaneApiToken, clusterApiToken, directMeshApiToken]);
+  }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode, controlPlaneApiToken, clusterApiToken, directMeshApiToken, assistantMode, assistantApiBaseUrl, assistantApiKey, assistantModel]);
 
   useEffect(() => {
     return () => {
@@ -3800,6 +3836,21 @@ export function Workbench() {
     });
   }
 
+  const requestLlmAssistantPlan = async (prompt: string): Promise<AssistantPlan> =>
+    requestWorkbenchAssistantPlan({
+      baseUrl: assistantApiBaseUrl,
+      apiKey: assistantApiKey,
+      model: assistantModel,
+      prompt,
+      snapshot: getScriptSnapshot(),
+      localHints: assistantCards.map((card) => ({
+        id: card.id,
+        title: card.title,
+        summary: card.summary,
+        actionLabel: card.actionLabel,
+      })),
+    });
+
   const scriptSnapshot: WorkbenchScriptSnapshot = {
     studyKind,
     sidebarSection,
@@ -3824,296 +3875,381 @@ export function Workbench() {
     resultCount: resultRecords.length,
     protocolAgentCount: protocolAgents.length,
     healthStatus: health?.status ?? null,
+    message,
   };
 
+  const appendScriptActionLog = (entry: Omit<WorkbenchScriptActionLogEntry, "id" | "at">) => {
+    setScriptActionLog((current) => [
+      {
+        id: `${Date.now()}-${current.length}`,
+        at: new Date().toISOString(),
+        ...entry,
+      },
+      ...current,
+    ].slice(0, 40));
+  };
+
+  const getScriptSnapshot = (): WorkbenchScriptSnapshot => ({
+    studyKind,
+    sidebarSection,
+    studyTab,
+    modelTab,
+    libraryTab,
+    systemPanelTab,
+    language,
+    theme,
+    frontendRuntimeMode,
+    selectedProjectId,
+    selectedModelId,
+    selectedVersionId,
+    loadedModelName,
+    activeMaterial,
+    selectedNode,
+    selectedElement,
+    hasResult: Boolean(result),
+    jobStatus: job?.status ?? null,
+    projectCount: projects.length,
+    jobHistoryCount: jobHistory.length,
+    resultCount: resultRecords.length,
+    protocolAgentCount: protocolAgents.length,
+    healthStatus: health?.status ?? null,
+    message,
+  });
+
   const invokeScriptAction = async (action: string, payload: Record<string, unknown> = {}) => {
-    switch (action) {
-      case "nav/setSidebarSection": {
-        const section = payload.section;
-        if (section === "study" || section === "model" || section === "library" || section === "system") {
-          setSidebarSection(section);
+    appendScriptActionLog({ action, status: "started", summary: JSON.stringify(payload) });
+
+    try {
+      let resultPayload: Record<string, unknown>;
+      switch (action) {
+        case "nav/setSidebarSection": {
+          const section = payload.section;
+          if (section === "study" || section === "model" || section === "library" || section === "system") {
+            setSidebarSection(section);
+          }
+          resultPayload = { ok: true, action, section };
+          break;
         }
-        return { ok: true, action, section };
-      }
-      case "nav/setStudyKind": {
-        const nextStudyKind = payload.studyKind;
-        if (
-          nextStudyKind === "axial_bar_1d" ||
-          nextStudyKind === "truss_2d" ||
-          nextStudyKind === "truss_3d" ||
-          nextStudyKind === "plane_triangle_2d"
-        ) {
-          recordHistory(t.changeStudyType);
-          setStudyKind(nextStudyKind);
+        case "nav/setStudyKind": {
+          const nextStudyKind = payload.studyKind;
+          if (
+            nextStudyKind === "axial_bar_1d" ||
+            nextStudyKind === "truss_2d" ||
+            nextStudyKind === "truss_3d" ||
+            nextStudyKind === "plane_triangle_2d"
+          ) {
+            recordHistory(t.changeStudyType);
+            setStudyKind(nextStudyKind);
+          }
+          resultPayload = { ok: true, action, studyKind: nextStudyKind };
+          break;
         }
-        return { ok: true, action, studyKind: nextStudyKind };
-      }
-      case "settings/patch": {
-        if (payload.language === "en" || payload.language === "zh") {
-          handleLanguageChange(payload.language);
+        case "settings/patch": {
+          if (payload.language === "en" || payload.language === "zh") {
+            handleLanguageChange(payload.language);
+          }
+          if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
+            setTheme(payload.theme);
+          }
+          if (payload.frontendRuntimeMode === "orchestrated_gui" || payload.frontendRuntimeMode === "direct_mesh_gui") {
+            setFrontendRuntimeMode(payload.frontendRuntimeMode);
+          }
+          if (typeof payload.directMeshEndpointsText === "string") {
+            setDirectMeshEndpointsText(payload.directMeshEndpointsText);
+          }
+          if (payload.directMeshSelectionMode === "healthiest" || payload.directMeshSelectionMode === "first_reachable") {
+            setDirectMeshSelectionMode(payload.directMeshSelectionMode);
+          }
+          resultPayload = { ok: true, action };
+          break;
         }
-        if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
-          setTheme(payload.theme);
+        case "runtime/refreshAll": {
+          await Promise.all([refreshHealth(), refreshJobHistory(), refreshResults(), refreshProjects()]);
+          resultPayload = { ok: true, action };
+          break;
         }
-        if (payload.frontendRuntimeMode === "orchestrated_gui" || payload.frontendRuntimeMode === "direct_mesh_gui") {
-          setFrontendRuntimeMode(payload.frontendRuntimeMode);
+        case "project/create": {
+          const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : t.defaultProject;
+          const description = typeof payload.description === "string" ? payload.description : "";
+          const created = await createProject({ name, description });
+          setSelectedProjectId(created.project.project_id);
+          setProjectNameDraft(created.project.name);
+          setProjectDescriptionDraft(created.project.description ?? "");
+          await refreshProjects();
+          setMessage(t.projectCreated);
+          resultPayload = { ok: true, action, projectId: created.project.project_id };
+          break;
         }
-        if (typeof payload.directMeshEndpointsText === "string") {
-          setDirectMeshEndpointsText(payload.directMeshEndpointsText);
+        case "project/select": {
+          const projectId = typeof payload.projectId === "string" ? payload.projectId : null;
+          if (projectId) {
+            setSelectedProjectId(projectId);
+          }
+          resultPayload = { ok: true, action, projectId };
+          break;
         }
-        if (payload.directMeshSelectionMode === "healthiest" || payload.directMeshSelectionMode === "first_reachable") {
-          setDirectMeshSelectionMode(payload.directMeshSelectionMode);
+        case "project/updateSelected": {
+          if (!selectedProjectId) {
+            throw new Error(t.projectRequired);
+          }
+          const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : projectNameDraft || t.defaultProject;
+          const description = typeof payload.description === "string" ? payload.description : projectDescriptionDraft;
+          await updateProject(selectedProjectId, { name, description });
+          setProjectNameDraft(name);
+          setProjectDescriptionDraft(description);
+          await refreshProjects();
+          setMessage(t.projectUpdated);
+          resultPayload = { ok: true, action, projectId: selectedProjectId };
+          break;
         }
-        return { ok: true, action };
-      }
-      case "runtime/refreshAll": {
-        await Promise.all([refreshHealth(), refreshJobHistory(), refreshResults(), refreshProjects()]);
-        return { ok: true, action };
-      }
-      case "project/create": {
-        const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : t.defaultProject;
-        const description = typeof payload.description === "string" ? payload.description : "";
-        const created = await createProject({ name, description });
-        setSelectedProjectId(created.project.project_id);
-        setProjectNameDraft(created.project.name);
-        setProjectDescriptionDraft(created.project.description ?? "");
-        await refreshProjects();
-        setMessage(t.projectCreated);
-        return { ok: true, action, projectId: created.project.project_id };
-      }
-      case "project/select": {
-        const projectId = typeof payload.projectId === "string" ? payload.projectId : null;
-        if (projectId) {
-          setSelectedProjectId(projectId);
+        case "project/deleteSelected": {
+          if (!selectedProjectId) {
+            throw new Error(t.projectRequired);
+          }
+          await deleteProject(selectedProjectId);
+          setSelectedProjectId(null);
+          setSelectedModelId(null);
+          setSelectedVersionId(null);
+          await refreshProjects();
+          setMessage(t.projectDeleted);
+          resultPayload = { ok: true, action };
+          break;
         }
-        return { ok: true, action, projectId };
-      }
-      case "project/updateSelected": {
-        if (!selectedProjectId) {
-          throw new Error(t.projectRequired);
+        case "project/exportJson": {
+          await downloadProjectBundleJson();
+          resultPayload = { ok: true, action };
+          break;
         }
-        const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : projectNameDraft || t.defaultProject;
-        const description = typeof payload.description === "string" ? payload.description : projectDescriptionDraft;
-        await updateProject(selectedProjectId, { name, description });
-        setProjectNameDraft(name);
-        setProjectDescriptionDraft(description);
-        await refreshProjects();
-        setMessage(t.projectUpdated);
-        return { ok: true, action, projectId: selectedProjectId };
-      }
-      case "project/deleteSelected": {
-        if (!selectedProjectId) {
-          throw new Error(t.projectRequired);
+        case "project/exportZip": {
+          await downloadProjectBundleZip();
+          resultPayload = { ok: true, action };
+          break;
         }
-        await deleteProject(selectedProjectId);
-        setSelectedProjectId(null);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        await refreshProjects();
-        setMessage(t.projectDeleted);
-        return { ok: true, action };
-      }
-      case "project/exportJson": {
-        await downloadProjectBundleJson();
-        return { ok: true, action };
-      }
-      case "project/exportZip": {
-        await downloadProjectBundleZip();
-        return { ok: true, action };
-      }
-      case "model/generateTruss": {
-        generateModel();
-        return { ok: true, action };
-      }
-      case "model/generatePanel": {
-        generatePanelModel();
-        return { ok: true, action };
-      }
-      case "model/save":
-      case "model/saveAs": {
-        if (!selectedProjectId) {
-          throw new Error(t.projectRequired);
+        case "model/generateTruss": {
+          generateModel();
+          resultPayload = { ok: true, action };
+          break;
         }
-        const payloadModel = serializeCurrentModel(
-          studyKind,
-          loadedModelName,
-          activeMaterial,
-          axialForm,
-          trussModel,
-          truss3dModel,
-          planeModel,
-          parametric,
-        );
-        if (!selectedModelId || action === "model/saveAs") {
-          const created = await createModel(selectedProjectId, {
+        case "model/generatePanel": {
+          generatePanelModel();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "model/save":
+        case "model/saveAs": {
+          if (!selectedProjectId) {
+            throw new Error(t.projectRequired);
+          }
+          const payloadModel = serializeCurrentModel(
+            studyKind,
+            loadedModelName,
+            activeMaterial,
+            axialForm,
+            trussModel,
+            truss3dModel,
+            planeModel,
+            parametric,
+          );
+          if (!selectedModelId || action === "model/saveAs") {
+            const created = await createModel(selectedProjectId, {
+              name: loadedModelName,
+              kind: studyKind,
+              material: activeMaterial,
+              model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
+              payload: payloadModel,
+            });
+            setSelectedModelId(created.model.model_id);
+            setSelectedVersionId(created.model.latest_version_id ?? null);
+            await refreshProjects();
+            await refreshVersions(created.model.model_id);
+            setMessage(t.modelCreated);
+            resultPayload = { ok: true, action, modelId: created.model.model_id };
+            break;
+          }
+
+          await updateModel(selectedModelId, {
             name: loadedModelName,
             kind: studyKind,
             material: activeMaterial,
             model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
             payload: payloadModel,
           });
-          setSelectedModelId(created.model.model_id);
-          setSelectedVersionId(created.model.latest_version_id ?? null);
+          const version = await createModelVersion(selectedModelId, {
+            name: loadedModelName,
+            kind: studyKind,
+            material: activeMaterial,
+            model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
+            payload: payloadModel,
+          });
+          setSelectedVersionId(version.version.version_id);
           await refreshProjects();
-          await refreshVersions(created.model.model_id);
-          setMessage(t.modelCreated);
-          return { ok: true, action, modelId: created.model.model_id };
-        }
-
-        await updateModel(selectedModelId, {
-          name: loadedModelName,
-          kind: studyKind,
-          material: activeMaterial,
-          model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
-          payload: payloadModel,
-        });
-        const version = await createModelVersion(selectedModelId, {
-          name: loadedModelName,
-          kind: studyKind,
-          material: activeMaterial,
-          model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
-          payload: payloadModel,
-        });
-        setSelectedVersionId(version.version.version_id);
-        await refreshProjects();
-        await refreshVersions(selectedModelId);
-        setMessage(t.modelSaved);
-        return { ok: true, action, versionId: version.version.version_id };
-      }
-      case "model/deleteSelected": {
-        if (!selectedModelId) {
-          throw new Error(t.noSavedModels);
-        }
-        await deleteModel(selectedModelId);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        setModelVersions([]);
-        await refreshProjects();
-        setMessage(t.modelDeletedStored);
-        return { ok: true, action };
-      }
-      case "model/renameSelectedVersion": {
-        if (!selectedVersionId) {
-          throw new Error(t.noVersions);
-        }
-        await updateModelVersion(selectedVersionId, { name: loadedModelName });
-        await refreshVersions(selectedModelId ?? "");
-        setMessage(t.versionRenamed);
-        return { ok: true, action, versionId: selectedVersionId };
-      }
-      case "model/deleteSelectedVersion": {
-        if (!selectedVersionId) {
-          throw new Error(t.noVersions);
-        }
-        await deleteModelVersion(selectedVersionId);
-        setSelectedVersionId(null);
-        if (selectedModelId) {
           await refreshVersions(selectedModelId);
+          setMessage(t.modelSaved);
+          resultPayload = { ok: true, action, versionId: version.version.version_id };
+          break;
         }
-        await refreshProjects();
-        setMessage(t.versionDeleted);
-        return { ok: true, action };
-      }
-      case "model/setWorkspaceMeta": {
-        if (typeof payload.loadedModelName === "string") {
-          setLoadedModelName(payload.loadedModelName);
+        case "model/deleteSelected": {
+          if (!selectedModelId) {
+            throw new Error(t.noSavedModels);
+          }
+          await deleteModel(selectedModelId);
+          setSelectedModelId(null);
+          setSelectedVersionId(null);
+          setModelVersions([]);
+          await refreshProjects();
+          setMessage(t.modelDeletedStored);
+          resultPayload = { ok: true, action };
+          break;
         }
-        if (typeof payload.activeMaterial === "string") {
-          setActiveMaterial(payload.activeMaterial);
+        case "model/renameSelectedVersion": {
+          if (!selectedVersionId) {
+            throw new Error(t.noVersions);
+          }
+          await updateModelVersion(selectedVersionId, { name: loadedModelName });
+          await refreshVersions(selectedModelId ?? "");
+          setMessage(t.versionRenamed);
+          resultPayload = { ok: true, action, versionId: selectedVersionId };
+          break;
         }
-        return { ok: true, action };
-      }
-      case "state/setParametric": {
-        recordHistory(t.editParametric);
-        setParametric((current) => ({ ...current, ...(payload as Partial<ParametricTrussConfig>) }));
-        return { ok: true, action };
-      }
-      case "state/setPanelParametric": {
-        recordHistory(t.editParametric);
-        setPanelParametric((current) => ({ ...current, ...(payload as Partial<ParametricPanelConfig>) }));
-        return { ok: true, action };
-      }
-      case "state/replaceTruss2dModel": {
-        recordHistory(t.importAction);
-        setStudyKind("truss_2d");
-        setTrussModel(resolveTruss2dJobInput(payload as unknown as Truss2dJobInput));
-        resetActiveResult(setResult, setJob);
-        return { ok: true, action };
-      }
-      case "state/replaceTruss3dModel": {
-        recordHistory(t.importAction);
-        setStudyKind("truss_3d");
-        setTruss3dModel(resolveTruss3dJobInput(payload as unknown as Truss3dJobInput));
-        resetActiveResult(setResult, setJob);
-        return { ok: true, action };
-      }
-      case "state/replacePlaneModel": {
-        recordHistory(t.importAction);
-        setStudyKind("plane_triangle_2d");
-        setPlaneModel(resolvePlaneTriangle2dJobInput(payload as unknown as PlaneTriangle2dJobInput));
-        resetActiveResult(setResult, setJob);
-        return { ok: true, action };
-      }
-      case "selection/set": {
-        setSelectedNode(typeof payload.nodeIndex === "number" ? payload.nodeIndex : null);
-        setSelectedElement(typeof payload.elementIndex === "number" ? payload.elementIndex : null);
-        return { ok: true, action };
-      }
-      case "job/run": {
-        runAnalysis();
-        return { ok: true, action };
-      }
-      case "job/cancel": {
-        cancelCurrentJob();
-        return { ok: true, action };
-      }
-      case "history/undo": {
-        handleUndo();
-        return { ok: true, action };
-      }
-      case "history/redo": {
-        handleRedo();
-        return { ok: true, action };
-      }
-      case "viewport/toggleImmersive": {
-        await toggleImmersiveViewport();
-        return { ok: true, action };
-      }
-      case "viewport/set3dView": {
-        if (payload.preset === "iso" || payload.preset === "front" || payload.preset === "right" || payload.preset === "top") {
-          setTruss3dViewPreset(payload.preset);
+        case "model/deleteSelectedVersion": {
+          if (!selectedVersionId) {
+            throw new Error(t.noVersions);
+          }
+          await deleteModelVersion(selectedVersionId);
+          setSelectedVersionId(null);
+          if (selectedModelId) {
+            await refreshVersions(selectedModelId);
+          }
+          await refreshProjects();
+          setMessage(t.versionDeleted);
+          resultPayload = { ok: true, action };
+          break;
         }
-        if (payload.projection === "ortho" || payload.projection === "persp") {
-          setTruss3dProjectionMode(payload.projection);
+        case "model/setWorkspaceMeta": {
+          if (typeof payload.loadedModelName === "string") {
+            setLoadedModelName(payload.loadedModelName);
+          }
+          if (typeof payload.activeMaterial === "string") {
+            setActiveMaterial(payload.activeMaterial);
+          }
+          resultPayload = { ok: true, action };
+          break;
         }
-        return { ok: true, action };
-      }
-      case "viewport/focus3d": {
-        setTruss3dFocusRequestVersion((current) => current + 1);
-        return { ok: true, action };
-      }
-      case "viewport/reset3d": {
-        setTruss3dResetRequestVersion((current) => current + 1);
-        return { ok: true, action };
-      }
-      case "viewport/toggleFlags": {
-        if (typeof payload.grid === "boolean") {
-          setTruss3dShowGrid(payload.grid);
+        case "state/setParametric": {
+          recordHistory(t.editParametric);
+          setParametric((current) => ({ ...current, ...(payload as Partial<ParametricTrussConfig>) }));
+          resultPayload = { ok: true, action };
+          break;
         }
-        if (typeof payload.labels === "boolean") {
-          setTruss3dShowLabels(payload.labels);
+        case "state/setPanelParametric": {
+          recordHistory(t.editParametric);
+          setPanelParametric((current) => ({ ...current, ...(payload as Partial<ParametricPanelConfig>) }));
+          resultPayload = { ok: true, action };
+          break;
         }
-        if (typeof payload.nodes === "boolean") {
-          setTruss3dShowNodes(payload.nodes);
+        case "state/replaceTruss2dModel": {
+          recordHistory(t.importAction);
+          setStudyKind("truss_2d");
+          setTrussModel(resolveTruss2dJobInput(payload as unknown as Truss2dJobInput));
+          resetActiveResult(setResult, setJob);
+          resultPayload = { ok: true, action };
+          break;
         }
-        return { ok: true, action };
+        case "state/replaceTruss3dModel": {
+          recordHistory(t.importAction);
+          setStudyKind("truss_3d");
+          setTruss3dModel(resolveTruss3dJobInput(payload as unknown as Truss3dJobInput));
+          resetActiveResult(setResult, setJob);
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "state/replacePlaneModel": {
+          recordHistory(t.importAction);
+          setStudyKind("plane_triangle_2d");
+          setPlaneModel(resolvePlaneTriangle2dJobInput(payload as unknown as PlaneTriangle2dJobInput));
+          resetActiveResult(setResult, setJob);
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "selection/set": {
+          setSelectedNode(typeof payload.nodeIndex === "number" ? payload.nodeIndex : null);
+          setSelectedElement(typeof payload.elementIndex === "number" ? payload.elementIndex : null);
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "job/run": {
+          runAnalysis();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "job/cancel": {
+          cancelCurrentJob();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "history/undo": {
+          handleUndo();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "history/redo": {
+          handleRedo();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "viewport/toggleImmersive": {
+          await toggleImmersiveViewport();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "viewport/set3dView": {
+          if (payload.preset === "iso" || payload.preset === "front" || payload.preset === "right" || payload.preset === "top") {
+            setTruss3dViewPreset(payload.preset);
+          }
+          if (payload.projection === "ortho" || payload.projection === "persp") {
+            setTruss3dProjectionMode(payload.projection);
+          }
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "viewport/focus3d": {
+          setTruss3dFocusRequestVersion((current) => current + 1);
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "viewport/reset3d": {
+          setTruss3dResetRequestVersion((current) => current + 1);
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "viewport/toggleFlags": {
+          if (typeof payload.grid === "boolean") {
+            setTruss3dShowGrid(payload.grid);
+          }
+          if (typeof payload.labels === "boolean") {
+            setTruss3dShowLabels(payload.labels);
+          }
+          if (typeof payload.nodes === "boolean") {
+            setTruss3dShowNodes(payload.nodes);
+          }
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "data/exportDatabase": {
+          await downloadDatabaseSnapshot();
+          resultPayload = { ok: true, action };
+          break;
+        }
+        default:
+          throw new Error(`Unknown script action: ${action}`);
       }
-      case "data/exportDatabase": {
-        await downloadDatabaseSnapshot();
-        return { ok: true, action };
-      }
-      default:
-        throw new Error(`Unknown script action: ${action}`);
+
+      appendScriptActionLog({ action, status: "completed", summary: JSON.stringify(resultPayload) });
+      return resultPayload;
+    } catch (error) {
+      const summary = error instanceof Error ? error.message : String(error);
+      appendScriptActionLog({ action, status: "failed", summary });
+      throw error;
     }
   };
 
@@ -6286,61 +6422,35 @@ export function Workbench() {
             </section>
             ) : null}
             {systemPanelTab === "assistant" ? (
-            <>
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.assistant}</h2>
-                <span>{assistantCards.length > 0 ? assistantCards.length : t.assistantStatusReady}</span>
-              </div>
-              <div className="sidebar-list">
-                <div>
-                  <span>{t.assistantCurrentStudy}</span>
-                  <strong>{t.kinds[studyKind]}</strong>
-                </div>
-                <div>
-                  <span>{t.assistantCurrentRuntime}</span>
-                  <strong>{t.frontendModes[frontendRuntimeMode]}</strong>
-                </div>
-                <div>
-                  <span>{t.assistantCurrentJob}</span>
-                  <strong>{job?.status ?? t.none}</strong>
-                </div>
-                <div>
-                  <span>{t.assistantCurrentResult}</span>
-                  <strong>{hasAnyResult ? t.yes : t.no}</strong>
-                </div>
-              </div>
-            </section>
-            {assistantCards.length === 0 ? (
-              <section className="sidebar-card sidebar-card--compact">
-                <div className="card-head">
-                  <h2>{t.assistantSummary}</h2>
-                  <span>{t.assistantStatusReady}</span>
-                </div>
-                <p className="card-copy">{t.assistantEmpty}</p>
-              </section>
-            ) : (
-              assistantCards.slice(0, 5).map((card) => (
-                <section className="sidebar-card sidebar-card--compact" key={card.id}>
-                  <div className="card-head">
-                    <h2>{card.title}</h2>
-                    <span className={`status-chip status-chip--${card.tone}`}>
-                      {card.tone === "good" ? t.stabilityGood : card.tone === "watch" ? t.stabilityWatch : t.stabilityRisk}
-                    </span>
-                  </div>
-                  <p className="card-copy">{card.summary}</p>
-                  <div className="button-row">
-                    <button className="ghost-button" onClick={card.onAction} type="button">
-                      {card.actionLabel}
-                    </button>
-                  </div>
-                </section>
-              ))
-            )}
-            </>
+              <WorkbenchAssistantPanel
+                currentJobLabel={job?.status ?? t.none}
+                currentResultLabel={hasAnyResult ? t.yes : t.no}
+                currentRuntimeLabel={t.frontendModes[frontendRuntimeMode]}
+                currentStudyLabel={t.kinds[studyKind]}
+                language={language}
+                llmApiKey={assistantApiKey}
+                llmBaseUrl={assistantApiBaseUrl}
+                llmModel={assistantModel}
+                localCards={assistantCards}
+                mode={assistantMode}
+                onExecuteLlmAction={async (action, payload) => {
+                  await invokeScriptAction(action, payload ?? {});
+                }}
+                onLlmApiKeyChange={setAssistantApiKey}
+                onLlmBaseUrlChange={setAssistantApiBaseUrl}
+                onLlmModelChange={setAssistantModel}
+                onModeChange={setAssistantMode}
+                onRequestPlan={requestLlmAssistantPlan}
+              />
             ) : null}
             {systemPanelTab === "scripts" ? (
-              <WorkbenchScriptPanel language={language} onInvokeAction={invokeScriptAction} snapshot={scriptSnapshot} />
+              <WorkbenchScriptPanel
+                actionLog={scriptActionLog}
+                getSnapshot={getScriptSnapshot}
+                language={language}
+                onInvokeAction={invokeScriptAction}
+                snapshot={scriptSnapshot}
+              />
             ) : null}
             {systemPanelTab === "runtime" ? (
             <>
