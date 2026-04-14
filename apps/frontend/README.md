@@ -21,8 +21,18 @@ Key subtrees:
   Generic reusable UI primitives.
 - `src/lib/`
   Browser-side API clients, import/export helpers, materials, and model logic.
+- `src/lib/scripting/`
+  Pyodide/WASM Python runtime helpers and the frontend automation action catalog.
 - `public/models/`
   Sample models bundled with the frontend.
+
+Automation support:
+
+- The System panel now exposes a `Scripts` surface powered by WASM Python
+  (Pyodide).
+- Frontend operations are registered behind a script action bridge so browser
+  workflows can be automated without coupling to backend internals.
+- The first script run downloads the Pyodide runtime into the browser cache.
 
 This app should stay API-driven. It should consume control-plane, solver-RPC,
 and schema contracts rather than backend implementation details.

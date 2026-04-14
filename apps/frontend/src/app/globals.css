@@ -101,6 +101,88 @@ button {
   flex-wrap: wrap;
 }
 
+.script-panel__snapshot,
+.script-panel__output,
+.script-panel__editor,
+.script-panel__payload code {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--panel-soft), rgba(255, 255, 255, 0.4));
+  color: var(--ink);
+  font-family: "SF Mono", "IBM Plex Mono", "Menlo", monospace;
+}
+
+.script-panel__snapshot,
+.script-panel__output {
+  margin: 10px 0 0;
+  padding: 10px;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 260px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.script-panel__editor {
+  margin-top: 10px;
+  padding: 12px;
+  resize: vertical;
+  min-height: 280px;
+  line-height: 1.45;
+}
+
+.script-panel__catalog {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.script-panel__action {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  background: linear-gradient(180deg, var(--panel-soft), rgba(255, 255, 255, 0.36));
+}
+
+.script-panel__action-head,
+.script-panel__payload {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.script-panel__action-head {
+  margin-bottom: 6px;
+}
+
+.script-panel__action-head strong {
+  font-size: 0.84rem;
+  word-break: break-all;
+}
+
+.script-panel__action-head span,
+.script-panel__payload span {
+  font-size: 0.74rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.script-panel__payload {
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.script-panel__payload code {
+  display: block;
+  padding: 8px 10px;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .material-library {
   display: grid;
   gap: 10px;

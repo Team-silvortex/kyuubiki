@@ -12,6 +12,9 @@ This directory contains the browser workbench surface:
   Bottom report/messages/results surface.
 - `workbench-object-tree.tsx`
   Modeling-side object tree and selection list.
+- `workbench-script-panel.tsx`
+  WASM Python automation surface that drives registered frontend actions through
+  a Pyodide bridge.
 
 These files are intentionally grouped because they evolve together as one UI
 domain even when they are rendered separately.
