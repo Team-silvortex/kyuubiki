@@ -33,6 +33,9 @@ Automation support:
 - The assistant surface now supports two execution modes:
   `local` for built-in rule/diagnostic guidance, and `llm` for OpenAI-compatible
   remote model planning.
+- LLM-assisted execution is guarded by an explicit approval step before actions
+  can run.
+- Executed assistant plans are grouped into rollbackable frontend transactions.
 - Frontend operations are registered behind a script action bridge so browser
   workflows can be automated without coupling to backend internals.
 - The scripting bridge exposes live state polling helpers such as

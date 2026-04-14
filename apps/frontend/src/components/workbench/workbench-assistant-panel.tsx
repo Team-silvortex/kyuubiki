@@ -26,11 +26,14 @@ type WorkbenchAssistantPanelProps = {
   llmBaseUrl: string;
   llmApiKey: string;
   llmModel: string;
+  transactions: Array<{ id: string; summary: string; createdAt: string; executedActions: string[] }>;
   onLlmBaseUrlChange: (value: string) => void;
   onLlmApiKeyChange: (value: string) => void;
   onLlmModelChange: (value: string) => void;
   onRequestPlan: (prompt: string) => Promise<AssistantPlan>;
-  onExecuteLlmAction: (action: string, payload?: Record<string, unknown>) => Promise<void>;
+  onExecuteLlmAction: (action: string, payload?: Record<string, unknown>, reason?: string) => Promise<void>;
+  onExecuteLlmPlan: (actions: AssistantPlan["suggested_actions"], summary: string) => Promise<void>;
+  onRollbackTransaction: (id: string) => void;
 };
 
 const copy = {
@@ -61,6 +64,11 @@ const copy = {
     localEngine: "Rules engine",
     llmEngine: "Remote model",
     notConfigured: "Fill in the endpoint and model before requesting an LLM plan.",
+    approveExecution: "I reviewed this plan and approve execution.",
+    executePlan: "Execute plan",
+    transactions: "Transactions",
+    noTransactions: "No assistant transactions yet.",
+    rollback: "Rollback",
   },
   zh: {
     mode: "模式",
@@ -89,6 +97,11 @@ const copy = {
     localEngine: "规则引擎",
     llmEngine: "远程模型",
     notConfigured: "请先填好接口地址和模型名，再请求大模型计划。",
+    approveExecution: "我已经检查这份计划，允许执行。",
+    executePlan: "执行整份计划",
+    transactions: "事务记录",
+    noTransactions: "还没有助手事务记录。",
+    rollback: "回滚",
   },
 } as const;
 
@@ -104,17 +117,21 @@ export function WorkbenchAssistantPanel({
   llmBaseUrl,
   llmApiKey,
   llmModel,
+  transactions,
   onLlmBaseUrlChange,
   onLlmApiKeyChange,
   onLlmModelChange,
   onRequestPlan,
   onExecuteLlmAction,
+  onExecuteLlmPlan,
+  onRollbackTransaction,
 }: WorkbenchAssistantPanelProps) {
   const t = copy[language];
   const [prompt, setPrompt] = useState("");
   const [plan, setPlan] = useState<AssistantPlan | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [approvedExecution, setApprovedExecution] = useState(false);
 
   const requestPlan = async () => {
     if (!llmBaseUrl.trim() || !llmModel.trim()) {
@@ -128,6 +145,7 @@ export function WorkbenchAssistantPanel({
     try {
       const nextPlan = await onRequestPlan(prompt.trim() || t.promptPlaceholder);
       setPlan(nextPlan);
+      setApprovedExecution(false);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : String(requestError));
     } finally {
@@ -268,7 +286,8 @@ export function WorkbenchAssistantPanel({
                       <div className="button-row">
                         <button
                           className="ghost-button ghost-button--compact"
-                          onClick={() => void onExecuteLlmAction(entry.action, entry.payload)}
+                          disabled={!approvedExecution}
+                          onClick={() => void onExecuteLlmAction(entry.action, entry.payload, entry.reason)}
                           type="button"
                         >
                           {t.runAction}
@@ -277,12 +296,64 @@ export function WorkbenchAssistantPanel({
                     </article>
                   ))
                 )}
+                {plan.suggested_actions.length > 0 ? (
+                  <>
+                    <label className="toggle-row">
+                      <div>
+                        <span>{t.approveExecution}</span>
+                      </div>
+                      <input
+                        checked={approvedExecution}
+                        onChange={(event) => setApprovedExecution(event.target.checked)}
+                        type="checkbox"
+                      />
+                    </label>
+                    <div className="button-row">
+                      <button
+                        className="ghost-button"
+                        disabled={!approvedExecution || pending}
+                        onClick={() => void onExecuteLlmPlan(plan.suggested_actions, plan.summary || t.llmTitle)}
+                        type="button"
+                      >
+                        {t.executePlan}
+                      </button>
+                    </div>
+                  </>
+                ) : null}
               </section>
             </>
           ) : null}
+
+          <section className="sidebar-card sidebar-card--compact">
+            <div className="card-head">
+              <h2>{t.transactions}</h2>
+              <span>{transactions.length}</span>
+            </div>
+            {transactions.length === 0 ? (
+              <p className="card-copy">{t.noTransactions}</p>
+            ) : (
+              transactions.map((entry) => (
+                <article className="script-panel__action" key={entry.id}>
+                  <div className="script-panel__action-head">
+                    <strong>{entry.summary}</strong>
+                    <span>{entry.executedActions.length}</span>
+                  </div>
+                  <p className="card-copy">{entry.createdAt}</p>
+                  <div className="script-panel__payload">
+                    <span>Actions</span>
+                    <code>{entry.executedActions.join(", ")}</code>
+                  </div>
+                  <div className="button-row">
+                    <button className="ghost-button ghost-button--compact" onClick={() => onRollbackTransaction(entry.id)} type="button">
+                      {t.rollback}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </section>
         </>
       )}
     </>
   );
 }
-

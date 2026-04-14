@@ -11,6 +11,9 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
   Product-facing applications.
 - `workers/`
   Compute/runtime crates and executables.
+- `sdks/`
+  Headless client libraries for protocol-driven access from external tools,
+  automation, and AI runtimes.
 - `schemas/`
   Versioned JSON contracts shared across UI, orchestrator, installer, and
   solver nodes.
@@ -62,6 +65,23 @@ See also:
 - environment setup
 - local/cloud/distributed launch flows
 - remote bootstrap and remote agent control
+
+## Headless SDK Layer
+
+### `sdks/python`
+
+- stdlib-first Python SDK for control-plane HTTP and direct solver RPC access
+- aimed at notebooks, local automation, and AI-driven orchestration
+
+### `sdks/elixir`
+
+- lightweight Elixir SDK for protocol-level access without depending on Phoenix
+- suited for BEAM-side automation, service integration, and broker processes
+
+### `sdks/rust`
+
+- native Rust SDK for embedding control-plane and solver-RPC access into tools
+- intended for headless agents, CLIs, and engine-adjacent services
 
 ## Compute Layer
 

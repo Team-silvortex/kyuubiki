@@ -212,6 +212,14 @@ type ResultWindowState = {
   limit: number;
 };
 
+type AssistantTransactionEntry = {
+  id: string;
+  summary: string;
+  createdAt: string;
+  snapshot: WorkbenchSnapshot;
+  executedActions: string[];
+};
+
 type DirectMeshExecutionState = {
   endpoint: string;
   strategy: DirectMeshSelectionMode;
@@ -2199,6 +2207,7 @@ export function Workbench() {
   const [selectedAdminJobId, setSelectedAdminJobId] = useState<string | null>(null);
   const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
+  const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
   const [adminJobMessage, setAdminJobMessage] = useState("");
   const [adminJobProjectId, setAdminJobProjectId] = useState("");
   const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
@@ -4284,6 +4293,43 @@ export function Workbench() {
     setSelectedElement(snapshot.selectedElement);
     setMemberDraftNodes(snapshot.memberDraftNodes);
     resetActiveResult(setResult, setJob);
+  };
+
+  const recordAssistantTransaction = (summary: string, executedActions: string[]) => {
+    const entry: AssistantTransactionEntry = {
+      id: `assistant-${Date.now()}`,
+      summary,
+      createdAt: new Date().toISOString(),
+      snapshot: buildSnapshot(),
+      executedActions,
+    };
+    setAssistantTransactions((current) => [entry, ...current].slice(0, 12));
+    return entry.id;
+  };
+
+  const rollbackAssistantTransaction = (transactionId: string) => {
+    const entry = assistantTransactions.find((transaction) => transaction.id === transactionId);
+    if (!entry) return;
+    restoreSnapshot(entry.snapshot);
+    setAssistantTransactions((current) => current.filter((transaction) => transaction.id !== transactionId));
+    setMessage(language === "zh" ? "已回滚上一轮助手事务。" : "Rolled back the last assistant transaction.");
+  };
+
+  const executeAssistantPlan = async (
+    actions: Array<{ action: string; payload?: Record<string, unknown>; reason?: string }>,
+    summary: string,
+  ) => {
+    const transactionId = recordAssistantTransaction(summary, actions.map((entry) => entry.action));
+    try {
+      for (const entry of actions) {
+        await invokeScriptAction(entry.action, entry.payload ?? {});
+      }
+      setMessage(language === "zh" ? "助手计划已执行。" : "Assistant plan executed.");
+      return transactionId;
+    } catch (error) {
+      rollbackAssistantTransaction(transactionId);
+      throw error;
+    }
   };
 
   const recordHistory = (label: string) => {
@@ -6433,14 +6479,24 @@ export function Workbench() {
                 llmModel={assistantModel}
                 localCards={assistantCards}
                 mode={assistantMode}
-                onExecuteLlmAction={async (action, payload) => {
-                  await invokeScriptAction(action, payload ?? {});
+                onExecuteLlmAction={async (action, payload, reason) => {
+                  await executeAssistantPlan([{ action, payload, reason }], reason ?? action);
+                }}
+                onExecuteLlmPlan={async (actions, summary) => {
+                  await executeAssistantPlan(actions, summary);
                 }}
                 onLlmApiKeyChange={setAssistantApiKey}
                 onLlmBaseUrlChange={setAssistantApiBaseUrl}
                 onLlmModelChange={setAssistantModel}
                 onModeChange={setAssistantMode}
                 onRequestPlan={requestLlmAssistantPlan}
+                onRollbackTransaction={rollbackAssistantTransaction}
+                transactions={assistantTransactions.map((entry) => ({
+                  id: entry.id,
+                  summary: entry.summary,
+                  createdAt: entry.createdAt,
+                  executedActions: entry.executedActions,
+                }))}
               />
             ) : null}
             {systemPanelTab === "scripts" ? (

@@ -38,6 +38,8 @@ The monorepo is intentionally split by responsibility:
   installer GUI
 - `workers/`
   Rust data-plane crates, solver runtime, benchmark tooling, and installer CLI
+- `sdks/`
+  Headless protocol clients for automation, AI agents, and external tools
 - `schemas/`
   Versioned JSON contracts shared across the whole stack
 - `deploy/`
@@ -53,6 +55,7 @@ Start here if you need the repo map:
 - [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
+- [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
 - [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
 - [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
