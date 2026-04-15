@@ -1,3 +1,4 @@
+use crate::auth::KyuubikiAuth;
 use crate::error::{SdkError, SdkResult};
 use serde_json::Value;
 use std::io::{Read, Write};
@@ -7,15 +8,19 @@ pub struct ControlPlaneClient {
     host: String,
     port: u16,
     base_path: String,
-    token: Option<String>,
+    auth: Option<KyuubikiAuth>,
 }
 
 impl ControlPlaneClient {
     pub fn new(base_url: &str) -> SdkResult<Self> {
-        Self::new_with_token(base_url, None)
+        Self::new_with_auth(base_url, None)
     }
 
     pub fn new_with_token(base_url: &str, token: Option<String>) -> SdkResult<Self> {
+        Self::new_with_auth(base_url, token.map(KyuubikiAuth::access_token))
+    }
+
+    pub fn new_with_auth(base_url: &str, auth: Option<KyuubikiAuth>) -> SdkResult<Self> {
         let trimmed = base_url.trim_end_matches('/');
         let without_scheme = trimmed
             .strip_prefix("http://")
@@ -33,7 +38,7 @@ impl ControlPlaneClient {
             host,
             port,
             base_path,
-            token,
+            auth,
         })
     }
 
@@ -49,12 +54,24 @@ impl ControlPlaneClient {
         self.request_json("GET", "/api/v1/protocol/agents", None)
     }
 
+    pub fn list_jobs(&self) -> SdkResult<Value> {
+        self.request_json("GET", "/api/v1/jobs", None)
+    }
+
     pub fn fetch_job(&self, job_id: &str) -> SdkResult<Value> {
         self.request_json("GET", &format!("/api/v1/jobs/{job_id}"), None)
     }
 
+    pub fn update_job(&self, job_id: &str, payload: &Value) -> SdkResult<Value> {
+        self.request_json("PATCH", &format!("/api/v1/jobs/{job_id}"), Some(payload))
+    }
+
     pub fn cancel_job(&self, job_id: &str) -> SdkResult<Value> {
         self.request_json("POST", &format!("/api/v1/jobs/{job_id}/cancel"), None)
+    }
+
+    pub fn delete_job(&self, job_id: &str) -> SdkResult<Value> {
+        self.request_json("DELETE", &format!("/api/v1/jobs/{job_id}"), None)
     }
 
     pub fn create_axial_bar_job(&self, payload: &Value) -> SdkResult<Value> {
@@ -73,6 +90,42 @@ impl ControlPlaneClient {
         self.request_json("POST", "/api/v1/fem/plane-triangle-2d/jobs", Some(payload))
     }
 
+    pub fn list_results(&self) -> SdkResult<Value> {
+        self.request_json("GET", "/api/v1/results", None)
+    }
+
+    pub fn fetch_result(&self, job_id: &str) -> SdkResult<Value> {
+        self.request_json("GET", &format!("/api/v1/results/{job_id}"), None)
+    }
+
+    pub fn fetch_result_chunk(&self, job_id: &str, kind: &str, offset: Option<usize>, limit: Option<usize>) -> SdkResult<Value> {
+        let mut path = format!("/api/v1/results/{job_id}/chunks/{kind}");
+        let mut query = Vec::new();
+        if let Some(offset) = offset {
+            query.push(format!("offset={offset}"));
+        }
+        if let Some(limit) = limit {
+            query.push(format!("limit={limit}"));
+        }
+        if !query.is_empty() {
+            path.push('?');
+            path.push_str(&query.join("&"));
+        }
+        self.request_json("GET", &path, None)
+    }
+
+    pub fn update_result(&self, job_id: &str, result: &Value) -> SdkResult<Value> {
+        self.request_json("PATCH", &format!("/api/v1/results/{job_id}"), Some(&serde_json::json!({ "result": result })))
+    }
+
+    pub fn delete_result(&self, job_id: &str) -> SdkResult<Value> {
+        self.request_json("DELETE", &format!("/api/v1/results/{job_id}"), None)
+    }
+
+    pub fn export_database(&self) -> SdkResult<Value> {
+        self.request_json("GET", "/api/v1/export/database", None)
+    }
+
     fn request_json(&self, method: &str, path: &str, payload: Option<&Value>) -> SdkResult<Value> {
         let request_path = format!("{}{}", self.base_path, path);
         let body = payload.map(serde_json::to_vec).transpose()?.unwrap_or_default();
@@ -82,8 +135,8 @@ impl ControlPlaneClient {
             self.host,
             body.len()
         );
-        if let Some(token) = &self.token {
-            request.push_str(&format!("x-kyuubiki-token: {token}\r\n"));
+        if let Some(auth) = &self.auth {
+            request.push_str(&format!("{}: {}\r\n", auth.header_name, auth.header_value));
         }
         request.push_str("\r\n");
 
@@ -97,10 +150,19 @@ impl ControlPlaneClient {
         stream.read_to_string(&mut response)?;
         let (headers, body) = response
             .split_once("\r\n\r\n")
-            .ok_or_else(|| SdkError::Http("invalid HTTP response".into()))?;
+            .ok_or_else(|| SdkError::Transport("invalid HTTP response".into()))?;
 
-        if !headers.starts_with("HTTP/1.1 2") && !headers.starts_with("HTTP/1.0 2") {
-            return Err(SdkError::Http(body.to_string()));
+        let status_code = headers
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::<u16>().ok())
+            .ok_or_else(|| SdkError::Transport("invalid HTTP status line".into()))?;
+
+        if !(200..300).contains(&status_code) {
+            return Err(SdkError::HttpStatus {
+                status_code,
+                body: body.to_string(),
+            });
         }
 
         Ok(serde_json::from_str(body)?)

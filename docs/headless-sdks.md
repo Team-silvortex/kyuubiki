@@ -23,10 +23,18 @@ The headless SDK layer gives them a cleaner tool surface:
 - Elixir
 - Python
 
+Minimal end-to-end examples:
+
+- [sdks/python/examples/run_study.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/examples/run_study.py)
+- [sdks/elixir/examples/run_study.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/examples/run_study.exs)
+- [sdks/rust/examples/run_study.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/examples/run_study.rs)
+
 All three SDKs expose the same conceptual split:
 
 - `ControlPlaneClient`
 - `SolverRpcClient`
+- `Session`
+- `AgentClient`
 
 ## Design goals
 
@@ -34,6 +42,7 @@ All three SDKs expose the same conceptual split:
 - simple JSON payloads for AI-generated requests
 - usable in cloud, distributed, and direct headless LAN deployments
 - small enough to embed into agent runtimes without dragging UI dependencies
+- explicit auth and error surfaces so higher-level agent loops can branch safely
 
 ## First-cut capabilities
 
@@ -42,9 +51,18 @@ All three SDKs expose the same conceptual split:
 - `GET /api/health`
 - `GET /api/v1/protocol`
 - `GET /api/v1/protocol/agents`
+- `GET /api/v1/jobs`
+- `PATCH /api/v1/jobs/:job_id`
+- `DELETE /api/v1/jobs/:job_id`
 - `POST /api/v1/fem/*/jobs`
 - `GET /api/v1/jobs/:job_id`
 - `POST /api/v1/jobs/:job_id/cancel`
+- `GET /api/v1/results`
+- `GET /api/v1/results/:job_id`
+- `GET /api/v1/results/:job_id/chunks/:kind`
+- `PATCH /api/v1/results/:job_id`
+- `DELETE /api/v1/results/:job_id`
+- `GET /api/v1/export/database`
 
 ### Solver RPC
 
@@ -68,3 +86,14 @@ For AI agents, the recommended flow is:
 
 The SDKs are deliberately thin wrappers over public contracts so higher-level AI
 planning layers can stay language-agnostic.
+
+They now also expose a small workflow layer:
+
+- submit one job by solve kind
+- submit many jobs in sequence
+- wait for terminal job states by polling the control plane
+- optionally bypass the control plane and solve directly over solver RPC
+- run one study and fetch its result bundle in one call
+- browse large result windows in chunked pages
+- retry transient failures without retrying auth or logic errors
+- classify failures into machine-usable buckets for agent policy layers

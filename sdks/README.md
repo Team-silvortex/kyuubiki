@@ -13,19 +13,41 @@ Current language targets:
 - `python/`
 - `elixir/`
 
+Minimal runnable examples now live at:
+
+- [sdks/python/examples/run_study.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/examples/run_study.py)
+- [sdks/elixir/examples/run_study.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/examples/run_study.exs)
+- [sdks/rust/examples/run_study.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/examples/run_study.rs)
+
 Each SDK follows the same split:
 
 - `ControlPlaneClient`
   Talks to `kyuubiki.control-plane/http-v1`
 - `SolverRpcClient`
   Talks to `kyuubiki.solver-rpc/v1`
+- `Session`
+  A higher-level AI/automation entry point for submit, batch, and wait flows
+- `Auth`
+  Reusable header-based auth descriptor for control-plane clients
+- `AgentClient`
+  AI-oriented orchestration helper for run-study, job-bundle, and chunk-browse flows
 
-The first SDK cut focuses on the smallest useful headless surface:
+Recent additions:
+
+- retry policies for transient study failures
+- explicit error-to-failure classification
+- auto-paged chunk iterators or streams for large result windows
+
+The current SDK cut focuses on the smallest useful headless surface plus a
+thin workflow layer:
 
 - health and protocol descriptor discovery
 - reachable agent discovery
+- jobs/results/export CRUD through the control plane
 - solver job submission through the control plane
+- batch submit and terminal-state polling helpers
 - direct TCP RPC access to headless agents
+- structured transport / HTTP / RPC / timeout errors
 - JSON-first payloads that AI models can generate or inspect easily
 
 These SDKs intentionally target the public protocol boundaries described in

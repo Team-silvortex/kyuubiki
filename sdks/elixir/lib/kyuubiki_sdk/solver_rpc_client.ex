@@ -1,6 +1,8 @@
 defmodule KyuubikiSdk.SolverRpcClient do
   @moduledoc "TCP RPC client for kyuubiki.solver-rpc/v1."
 
+  alias KyuubikiSdk.Error
+
   defstruct [:host, :port, :timeout]
 
   def new(host, port, opts \\ []) do
@@ -27,7 +29,9 @@ defmodule KyuubikiSdk.SolverRpcClient do
       :gen_tcp.close(socket)
       {:ok, response}
     else
-      error -> error
+      {:error, %Error{} = error} -> {:error, error}
+      {:error, reason} -> {:error, Error.transport(inspect(reason))}
+      error -> {:error, Error.transport(inspect(error))}
     end
   end
 
@@ -56,7 +60,8 @@ defmodule KyuubikiSdk.SolverRpcClient do
           {:ok, %{result: frame["result"], progress_frames: Enum.reverse(progress_frames)}}
 
         true ->
-          {:error, frame["error"]}
+          error = frame["error"] || %{}
+          {:error, Error.rpc(error["message"] || "rpc failed", code: error["code"])}
       end
     end
   end

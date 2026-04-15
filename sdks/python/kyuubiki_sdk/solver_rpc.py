@@ -6,6 +6,8 @@ import struct
 import uuid
 from typing import Any
 
+from .errors import KyuubikiRpcError, KyuubikiTransportError
+
 
 class SolverRpcClient:
     def __init__(self, host: str, port: int, timeout_s: float = 15.0) -> None:
@@ -24,7 +26,12 @@ class SolverRpcClient:
             }
         ).encode("utf-8")
 
-        with socket.create_connection((self.host, self.port), timeout=self.timeout_s) as sock:
+        try:
+            sock = socket.create_connection((self.host, self.port), timeout=self.timeout_s)
+        except OSError as error:
+            raise KyuubikiTransportError(str(error)) from error
+
+        with sock:
             sock.sendall(struct.pack(">I", len(payload)) + payload)
             progress_frames: list[dict[str, Any]] = []
 
@@ -40,14 +47,15 @@ class SolverRpcClient:
                         "result": frame.get("result"),
                         "progress_frames": progress_frames,
                     }
-                raise RuntimeError(frame.get("error", {}).get("message", "rpc failed"))
+                error = frame.get("error", {})
+                raise KyuubikiRpcError(error.get("message", "rpc failed"), code=error.get("code"))
 
     def _recv_exact(self, sock: socket.socket, size: int) -> bytes:
         chunks = bytearray()
         while len(chunks) < size:
             chunk = sock.recv(size - len(chunks))
             if not chunk:
-                raise RuntimeError("rpc connection closed before frame completed")
+                raise KyuubikiTransportError("rpc connection closed before frame completed")
             chunks.extend(chunk)
         return bytes(chunks)
 

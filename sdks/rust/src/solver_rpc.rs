@@ -86,12 +86,19 @@ impl SolverRpcClient {
                     progress_frames,
                 });
             }
-            let message = decoded
-                .get("error")
+            let error = decoded.get("error");
+            let message = error
                 .and_then(|error| error.get("message"))
                 .and_then(Value::as_str)
                 .unwrap_or("rpc failed");
-            return Err(SdkError::Rpc(message.to_string()));
+            let code = error
+                .and_then(|error| error.get("code"))
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            return Err(SdkError::Rpc {
+                message: message.to_string(),
+                code,
+            });
         }
     }
 }
