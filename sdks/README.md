@@ -19,6 +19,12 @@ Minimal runnable examples now live at:
 - [sdks/elixir/examples/run_study.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/examples/run_study.exs)
 - [sdks/rust/examples/run_study.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/examples/run_study.rs)
 
+Smoke tests now live at:
+
+- [sdks/python/tests/test_smoke.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/tests/test_smoke.py)
+- [sdks/elixir/test/smoke_test.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/test/smoke_test.exs)
+- [sdks/rust/tests/smoke.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/tests/smoke.rs)
+
 Each SDK follows the same split:
 
 - `ControlPlaneClient`

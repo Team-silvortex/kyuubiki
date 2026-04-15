@@ -39,7 +39,7 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     query =
       opts
       |> Enum.filter(fn {_key, value} -> not is_nil(value) end)
-      |> Enum.map(fn {key, value} -> {key |> to_string() |> String.to_charlist(), to_charlist(to_string(value))} end)
+      |> Enum.map(fn {key, value} -> {to_string(key), to_string(value)} end)
 
     path = "/api/v1/results/#{job_id}/chunks/#{kind}"
     request(client, :get, path <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
@@ -53,8 +53,10 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     :inets.start()
     url = String.to_charlist(client.base_url <> path)
     headers =
-      [{"content-type", "application/json"}] ++
-        if client.auth, do: [{client.auth.header_name, client.auth.header_value}], else: []
+      [{~c"content-type", ~c"application/json"}] ++
+        if client.auth,
+          do: [{String.to_charlist(client.auth.header_name), String.to_charlist(client.auth.header_value)}],
+          else: []
 
     body = if payload, do: Jason.encode!(payload), else: ""
 
