@@ -19,10 +19,15 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
   solver nodes.
 - `deploy/`
   Deployment descriptors such as agent manifests.
+- `assets/`
+  Curated brand, app icon, and dock icon source assets shared by frontend and
+  desktop shells.
 - `scripts/`
   Host-native launch and workflow entry points.
 - `docs/`
   Architecture, development, and project-shape documentation.
+- `tests/`
+  Cross-process and repository-level smoke coverage that spans multiple apps.
 - `tmp/`
   Local runtime state, SQLite files, and logs. Never treat this as source.
 - `dist/`
@@ -33,6 +38,7 @@ See also:
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
 - [tmp/README.md](/Users/Shared/chroot/dev/kyuubiki/tmp/README.md)
 - [dist/README.md](/Users/Shared/chroot/dev/kyuubiki/dist/README.md)
+- [tests/integration/README.md](/Users/Shared/chroot/dev/kyuubiki/tests/integration/README.md)
 
 ## Application Layer
 
@@ -115,6 +121,15 @@ for the crate-by-crate map.
 
 Rust tests remain colocated with crates or under crate-local `tests/`
 directories.
+
+## Repository-Level Tests
+
+### `tests/integration`
+
+- cross-process smoke coverage
+- launcher-driven local workstation validation
+- cluster registration and heartbeat coverage
+- direct-mesh frontend integration paths
 
 ## Stable Boundaries
 

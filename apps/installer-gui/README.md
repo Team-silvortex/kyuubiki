@@ -47,5 +47,7 @@ Do not treat that directory as source-owned. The source of truth is:
 
 - the Rust installer/runtime crates
 - the Tauri shell source in this app
+- repo-relative runtime defaults such as `./deploy/agents.local.json` and
+  `./tmp/data/kyuubiki_dev.sqlite3`
 - the shared packaging docs in
   [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)

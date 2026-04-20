@@ -1,4 +1,8 @@
 (function () {
+  const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json";
+  const DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json";
+  const DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
+
   const invoke = async (command, payload = {}) => {
     const tauri = window.__TAURI__;
     if (!tauri?.core?.invoke) {
@@ -124,10 +128,10 @@
     document.getElementById("deployment-mode").value = form.deployment_mode || "local";
     document.getElementById("agent-discovery").value = form.agent_discovery || "static";
     document.getElementById("agent-manifest-path").value =
-      form.agent_manifest_path || "/Users/Shared/chroot/dev/kyuubiki/deploy/agents.local.json";
+      form.agent_manifest_path || DEFAULT_AGENT_MANIFEST_PATH;
     document.getElementById("storage-mode").value = form.storage_backend || "sqlite";
     document.getElementById("sqlite-path").value =
-      form.sqlite_database_path || "/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3";
+      form.sqlite_database_path || DEFAULT_SQLITE_DATABASE_PATH;
     document.getElementById("database-url").value = form.database_url || "";
     document.getElementById("agent-endpoints").value =
       form.agent_endpoints || "127.0.0.1:5001,127.0.0.1:5002";
@@ -158,11 +162,10 @@
       agentDiscovery.value = "static";
       storageMode.value = "sqlite";
       if (!document.getElementById("sqlite-path").value.trim()) {
-        document.getElementById("sqlite-path").value =
-          "/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3";
+        document.getElementById("sqlite-path").value = DEFAULT_SQLITE_DATABASE_PATH;
       }
       if (!agentManifestPath.value.trim()) {
-        agentManifestPath.value = "/Users/Shared/chroot/dev/kyuubiki/deploy/agents.local.json";
+        agentManifestPath.value = DEFAULT_AGENT_MANIFEST_PATH;
       }
     } else if (mode === "cloud") {
       deploymentMode.value = "cloud";
@@ -181,8 +184,7 @@
           "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev";
       }
       if (!agentManifestPath.value.trim()) {
-        agentManifestPath.value =
-          "/Users/Shared/chroot/dev/kyuubiki/deploy/agents.distributed.example.json";
+        agentManifestPath.value = DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH;
       }
     }
     if (!document.getElementById("agent-endpoints").value.trim()) {

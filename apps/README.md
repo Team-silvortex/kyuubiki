@@ -16,3 +16,8 @@ Top-level application surfaces live here.
 
 The `apps/` directory is intentionally product-facing. Shared compute/runtime
 code lives outside this tree in `workers/` and `schemas/`.
+
+See also:
+
+- [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)

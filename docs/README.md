@@ -11,6 +11,8 @@ engineering direction.
   Public HTTP and TCP contracts that let the GUI, control plane, and solver agents run as separate programs.
 - `headless-sdks.md`
   Protocol-first Rust, Elixir, and Python SDK layer for headless AI and automation clients.
+- `testing-and-ci.md`
+  Test-layer map, local verification entry points, and CI job layout.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
 - `packaging-and-deployment.md`
@@ -32,9 +34,10 @@ Read these in roughly this order if you are new to the repository:
 2. `architecture.md`
 3. `protocols.md`
 4. `headless-sdks.md`
-5. `security.md`
-6. `operations.md`
-7. `packaging-and-deployment.md`
-8. `desktop-release-checklist.md`
-9. `repository-structure.md`
-10. `development.md`
+5. `testing-and-ci.md`
+6. `security.md`
+7. `operations.md`
+8. `packaging-and-deployment.md`
+9. `desktop-release-checklist.md`
+10. `repository-structure.md`
+11. `development.md`

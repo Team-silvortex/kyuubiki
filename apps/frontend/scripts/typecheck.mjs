@@ -1,8 +1,9 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const ROOT = "/Users/Shared/chroot/dev/kyuubiki/apps/frontend";
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP_ROOT = path.join(ROOT, "src", "app");
 const TYPE_ROOT = path.join(ROOT, ".next", "types", "app");
 

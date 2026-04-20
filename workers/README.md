@@ -13,3 +13,8 @@ Compute and runtime tooling live here.
 
 The `workers/` tree should stay UI-agnostic. It is the data plane, not the
 control plane.
+
+See also:
+
+- [workers/rust/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/README.md)
+- [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)

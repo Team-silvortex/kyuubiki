@@ -1,4 +1,4 @@
-# kyuubiki v0.4
+# kyuubiki v0.5
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -6,7 +6,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 
-`v0.4` is the first version where Kyuubiki starts to feel like a family of cooperating FEM programs rather than one monolithic app. It now couples an editor-style workbench with chunked large-result handling, distributed agent orchestration, direct-mesh frontend execution, desktop shells, integration smoke coverage, and benchmarked single-machine scaling through the `10k` to `20k` node class.
+`v0.5` is the first version where the repository itself starts to match the system it contains. Kyuubiki now presents itself as a layered FEM platform with clearer runtime boundaries, protocol-driven headless SDKs, dedicated smoke coverage for each major surface, and a more explicit local-to-CI verification path.
 
 It also now has an explicit deployment split:
 
@@ -56,12 +56,13 @@ Start here if you need the repo map:
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
 - [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
+- [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
 - [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
 - [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
 
-## What v0.4 Can Do
+## What v0.5 Can Do
 
 ### Solvers
 
@@ -118,6 +119,15 @@ Start here if you need the repo map:
 - desktop icon assets wired from `assets/icons`
 - frontend browser/app icons wired from `assets/icons/app`
 
+### Headless SDKs and automation
+
+- Python headless SDK
+- Elixir headless SDK
+- Rust headless SDK
+- shared `ControlPlaneClient`, `SolverRpcClient`, `Session`, and `AgentClient` layers
+- SDK smoke coverage across all three language targets
+- AI-friendly run-study, retry, failure classification, and chunk-browse helpers
+
 Packaging and deployment paths are now documented centrally in:
 
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
@@ -170,6 +180,7 @@ Current cross-process smoke coverage lives under [tests/integration](/Users/Shar
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
 - `make test-sdk`
+- `make test-frontend`
 
 The current suite verifies:
 
@@ -177,6 +188,11 @@ The current suite verifies:
 - protected cluster register / heartbeat / unregister flow
 - `direct_mesh_gui` LAN agent discovery, direct solve, and result chunk retrieval
 - Python / Elixir / Rust headless SDK run-study + chunk-browse smoke coverage
+- frontend production build and type validation as a first-class test layer
+
+The broader validation map now lives in:
+
+- [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
 
 ## Current Capabilities by Layer
 
@@ -316,7 +332,7 @@ Recommended local setup:
 KYUUBIKI_DEPLOYMENT_MODE=local
 KYUUBIKI_AGENT_DISCOVERY=static
 KYUUBIKI_STORAGE_BACKEND=sqlite
-SQLITE_DATABASE_PATH=/Users/Shared/chroot/dev/kyuubiki/tmp/data/kyuubiki_dev.sqlite3
+SQLITE_DATABASE_PATH=./tmp/data/kyuubiki_dev.sqlite3
 KYUUBIKI_AGENT_ENDPOINTS=127.0.0.1:5001,127.0.0.1:5002
 ```
 
@@ -325,7 +341,7 @@ Recommended cloud/distributed setup:
 ```bash
 KYUUBIKI_DEPLOYMENT_MODE=distributed
 KYUUBIKI_AGENT_DISCOVERY=registry
-KYUUBIKI_AGENT_MANIFEST_PATH=/Users/Shared/chroot/dev/kyuubiki/deploy/agents.distributed.example.json
+KYUUBIKI_AGENT_MANIFEST_PATH=./deploy/agents.distributed.example.json
 KYUUBIKI_STORAGE_BACKEND=postgres
 DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev
 ```
@@ -540,7 +556,7 @@ Benchmark runner:
 Profiles:
 
 ```bash
-cd /Users/Shared/chroot/dev/kyuubiki/workers/rust
+cd <repo>/workers/rust
 cargo run -p kyuubiki-benchmark -- --profile medium --repeat 3
 cargo run -p kyuubiki-benchmark -- --profile large --repeat 1
 cargo run -p kyuubiki-benchmark -- --profile v2 --repeat 1
@@ -595,7 +611,7 @@ Comparison reports are written under:
 Start everything:
 
 ```bash
-cd /Users/Shared/chroot/dev/kyuubiki
+cd <repo>
 make start
 ```
 

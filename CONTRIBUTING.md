@@ -28,8 +28,13 @@ A change is not done until all of the following are true:
 - `make tdd-web TEST="--only focus"`
 - `make tdd-rust FILTER=solver`
 - `./scripts/kyuubiki smoke`
+- `./scripts/kyuubiki sdk-smoke`
+- `./scripts/kyuubiki frontend-test`
 - `./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3`
 - `make test`
+- `make test-sdk`
+- `make test-frontend`
+- `make test-integration-api`
 - `make verify`
 - `make benchmark-compare PROFILE=medium`
 - `make benchmark-report PROFILE=10k`

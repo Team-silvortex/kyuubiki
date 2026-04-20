@@ -149,6 +149,50 @@ jobs:
             cluster) make test-integration-cluster ;;
             direct-mesh) make test-integration-direct-mesh ;;
           esac
+      - name: Upload integration runtime logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs-${{ matrix.target }}-${{ github.run_attempt }}
+          path: tmp/run
+          if-no-files-found: ignore
+      - name: Summarize integration failure logs
+        if: failure()
+        run: |
+          {
+            echo "## Integration Failure Summary: ${{ matrix.target }}"
+            echo
+            if [ -d tmp/run ]; then
+              echo "### Available Logs"
+              echo
+              echo '```text'
+              find tmp/run -maxdepth 1 -type f | sort
+              echo '```'
+              echo
+
+              for log in $(find tmp/run -maxdepth 1 -type f | sort); do
+                echo "### Signals: ${log}"
+                echo
+                if grep -E -i -m 40 'error|exception|panic|timed out|timeout|refused|failed|failure|undefined|denied|unauthorized|invalid|traceback' "$log" >/tmp/kyuubiki-log-signals.txt 2>/dev/null; then
+                  echo '```text'
+                  cat /tmp/kyuubiki-log-signals.txt
+                  echo '```'
+                else
+                  echo "_No high-signal error lines matched the default patterns._"
+                fi
+                echo
+
+                echo "### Tail: ${log}"
+                echo
+                echo '```text'
+                tail -n 80 "$log" || true
+                echo '```'
+                echo
+              done
+            else
+              echo "No tmp/run directory was produced."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   workbench-gui-smoke:
     name: workbench-gui-smoke
