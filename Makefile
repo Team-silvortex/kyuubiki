@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-installer-gui build-workbench-gui package-runtime package-desktop start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-playground test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-installer-gui build-workbench-gui package-runtime package-desktop start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -35,6 +35,8 @@ help:
 	@echo "  make test        Run all project tests"
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
+	@echo "  make test-frontend Run frontend typecheck and production build"
+	@echo "  make test-sdk    Run Python / Elixir / Rust SDK smoke tests"
 	@echo "  make test-workbench-gui Run desktop workbench shell smoke tests"
 	@echo "  make test-integration Run the current cross-process integration smoke suite"
 	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
@@ -139,13 +141,19 @@ workbench-gui-dev:
 workbench-gui-build:
 	@$(ENTRYPOINT) workbench-gui-build
 
-test: test-web test-rust test-playground
+test: test-web test-rust test-frontend test-sdk test-playground
 
 test-web:
 	@cd apps/web && mix test
 
 test-rust:
 	@cd workers/rust && cargo test
+
+test-frontend:
+	@cd apps/frontend && npm run typecheck && npm run build
+
+test-sdk:
+	@$(ENTRYPOINT) sdk-smoke
 
 test-playground:
 	@node --test apps/web/playground/test/fem.test.mjs
@@ -175,6 +183,7 @@ format-rust:
 verify:
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
+	@$(ENTRYPOINT) sdk-smoke
 	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-1.0}
 	@node --test apps/web/playground/test/fem.test.mjs
 

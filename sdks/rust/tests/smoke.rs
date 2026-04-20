@@ -13,9 +13,7 @@ fn agent_client_runs_study_and_browses_chunks() {
     let server = thread::spawn(move || {
         for _ in 0..4 {
             let (mut stream, _) = listener.accept().expect("accept");
-            let mut buffer = [0_u8; 4096];
-            let size = stream.read(&mut buffer).expect("read request");
-            let request = String::from_utf8_lossy(&buffer[..size]);
+            let request = read_http_request(&mut stream);
             let path = request
                 .lines()
                 .next()
@@ -84,4 +82,40 @@ fn agent_client_runs_study_and_browses_chunks() {
     assert_eq!(page.get("total").and_then(|value| value.as_u64()), Some(3));
 
     server.join().expect("server thread");
+}
+
+fn read_http_request(stream: &mut std::net::TcpStream) -> String {
+    let mut buffer = Vec::new();
+    let mut chunk = [0_u8; 1024];
+
+    loop {
+        let size = stream.read(&mut chunk).expect("read request chunk");
+        if size == 0 {
+            break;
+        }
+        buffer.extend_from_slice(&chunk[..size]);
+
+        if let Some(header_end) = find_bytes(&buffer, b"\r\n\r\n") {
+            let headers = String::from_utf8_lossy(&buffer[..header_end + 4]);
+            let content_length = headers
+                .lines()
+                .find_map(|line| {
+                    let lower = line.to_ascii_lowercase();
+                    lower
+                        .strip_prefix("content-length: ")
+                        .and_then(|value| value.trim().parse::<usize>().ok())
+                })
+                .unwrap_or(0);
+            let body_received = buffer.len().saturating_sub(header_end + 4);
+            if body_received >= content_length {
+                break;
+            }
+        }
+    }
+
+    String::from_utf8_lossy(&buffer).into_owned()
+}
+
+fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+    haystack.windows(needle.len()).position(|window| window == needle)
 }

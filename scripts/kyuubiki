@@ -70,6 +70,8 @@ Commands:
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
   rust-test         Run Rust tests
+  frontend-test     Run frontend typecheck and production build
+  sdk-smoke         Run the Python / Elixir / Rust headless SDK smoke suite
   playground-test   Run browser FEM tests
   agent             Run the Rust FEM TCP agent
   frontend          Run the Next.js workbench UI
@@ -77,6 +79,7 @@ Commands:
   format            Format Elixir and Rust code
   worker [args...]  Run the Rust mock worker CLI
   smoke             Run the Elixir -> Rust integration smoke test
+  sdk-smoke         Run the Python / Elixir / Rust SDK smoke suite
   playground        Run the API-only orchestrator locally (legacy alias)
   orchestrator      Run the API-only orchestrator locally
 
@@ -315,6 +318,27 @@ run_playground_tests() {
   (
     cd "$ROOT_DIR"
     node --test apps/web/playground/test/fem.test.mjs
+  )
+}
+
+run_sdk_smoke() {
+  require_dir "$ROOT_DIR/sdks/python"
+  require_dir "$ROOT_DIR/sdks/elixir"
+  require_dir "$ROOT_DIR/sdks/rust"
+
+  (
+    cd "$ROOT_DIR"
+    PYTHONPATH=sdks/python python3 -m unittest discover -s sdks/python/tests
+  )
+
+  (
+    cd "$ROOT_DIR/sdks/elixir"
+    mix test
+  )
+
+  (
+    cd "$ROOT_DIR"
+    cargo test --manifest-path sdks/rust/Cargo.toml --test smoke
   )
 }
 
@@ -679,6 +703,16 @@ case "$command" in
       cd "$RUST_DIR"
       cargo test "$@"
     )
+    ;;
+  frontend-test)
+    (
+      cd "$FRONTEND_DIR"
+      npm run typecheck
+      npm run build
+    )
+    ;;
+  sdk-smoke)
+    run_sdk_smoke
     ;;
   playground-test)
     run_playground_tests

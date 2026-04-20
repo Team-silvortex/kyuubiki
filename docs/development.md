@@ -32,6 +32,8 @@ a test before production code changes.
 Use `./scripts/kyuubiki` as the top-level local launcher.
 
 - `./scripts/kyuubiki smoke` runs the current Elixir -> Rust integration flow
+- `./scripts/kyuubiki sdk-smoke` runs the Python / Elixir / Rust SDK smoke suite
+- `./scripts/kyuubiki frontend-test` runs frontend typecheck plus production build verification
 - `./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3`
   runs the Rust worker directly
 - `./scripts/kyuubiki playground` serves the in-browser FEM playground through the

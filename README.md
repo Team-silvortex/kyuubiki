@@ -169,12 +169,14 @@ Current cross-process smoke coverage lives under [tests/integration](/Users/Shar
 - `make test-integration-api`
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
+- `make test-sdk`
 
 The current suite verifies:
 
 - local orchestrator + solver agent + API solve flow
 - protected cluster register / heartbeat / unregister flow
 - `direct_mesh_gui` LAN agent discovery, direct solve, and result chunk retrieval
+- Python / Elixir / Rust headless SDK run-study + chunk-browse smoke coverage
 
 ## Current Capabilities by Layer
 

@@ -4,9 +4,15 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   web:
+    name: web-test
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: apps/web
@@ -16,17 +22,146 @@ jobs:
         with:
           elixir-version: "1.19.5"
           otp-version: "28.0"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            apps/web/deps
+            apps/web/_build
+          key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-beam-web-
       - run: mix format --check-formatted
       - run: mix test
 
   rust:
+    name: rust-test
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: workers/rust
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            workers/rust
+            sdks/rust
       - run: cargo fmt --check
       - run: cargo test
       - run: cargo run -q -p kyuubiki-benchmark -- --profile medium --repeat 3 --baseline-compare benchmarks/medium-baseline.json --fail-on-median-regression-pct 25 --fail-on-rss-regression-pct 20 --min-baseline-median-ms 1.0
+
+  frontend:
+    name: frontend-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  sdk-smoke:
+    name: sdk-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [web, rust]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            sdks/elixir/deps
+            sdks/elixir/_build
+          key: ${{ runner.os }}-beam-sdk-${{ hashFiles('sdks/elixir/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-beam-sdk-
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            sdks/rust
+      - run: zsh ./scripts/kyuubiki sdk-smoke
+
+  integration-smoke:
+    name: integration-smoke-${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [web, rust]
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [api, cluster, direct-mesh]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/frontend/package-lock.json
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.19.5"
+          otp-version: "28.0"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            apps/web/deps
+            apps/web/_build
+          key: ${{ runner.os }}-beam-web-${{ hashFiles('apps/web/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-beam-web-
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            workers/rust
+      - name: Ensure screen is available
+        run: |
+          if ! command -v screen >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y screen
+          fi
+      - name: Install frontend deps for direct mesh
+        if: matrix.target == 'direct-mesh'
+        working-directory: apps/frontend
+        run: npm ci
+      - name: Run integration smoke
+        run: |
+          case "${{ matrix.target }}" in
+            api) make test-integration-api ;;
+            cluster) make test-integration-cluster ;;
+            direct-mesh) make test-integration-direct-mesh ;;
+          esac
+
+  workbench-gui-smoke:
+    name: workbench-gui-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/workbench-gui/package-lock.json
+      - working-directory: apps/workbench-gui
+        run: npm ci
+      - working-directory: apps/workbench-gui
+        run: npm run test:smoke

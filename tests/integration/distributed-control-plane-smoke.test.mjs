@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = "/Users/Shared/chroot/dev/kyuubiki";
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
 const ORCHESTRATOR_URL = "http://127.0.0.1:4000";
 const CONTROL_TOKEN = "integration-control-token";

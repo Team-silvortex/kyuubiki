@@ -17,6 +17,15 @@ Typical responsibilities:
 - runtime and desktop packaging entry points
 - installer entry points
 
+Useful smoke wrappers:
+
+- `./scripts/kyuubiki smoke`
+  Current Elixir -> Rust integration smoke flow.
+- `./scripts/kyuubiki sdk-smoke`
+  Python / Elixir / Rust headless SDK smoke suite.
+- `./scripts/kyuubiki frontend-test`
+  Frontend typecheck plus production build verification.
+
 Examples now include:
 
 - `build-frontend`
