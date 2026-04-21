@@ -18,6 +18,9 @@ Browser-side support code is organized by domain:
   Material editing commands should also live here when they can stay pure.
   Snapshot/history helpers belong here too when they only manipulate workbench
   state structure rather than rendering.
+  Node/member editing commands should move here as they become pure enough.
+  This now includes both 2D and 3D truss editing commands.
+  Plane-element editing commands should follow the same pattern.
 
 Keep these modules UI-independent when possible so the workbench surface stays
 focused on interaction and presentation.

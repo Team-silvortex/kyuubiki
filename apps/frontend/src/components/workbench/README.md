@@ -15,6 +15,8 @@ This directory contains the browser workbench surface:
 - `workbench-script-panel.tsx`
   WASM Python automation surface that drives registered frontend actions through
   a Pyodide bridge.
+- `workbench-study-sidebar.tsx`
+  Study setup and run controls surface extracted from the main workbench shell.
 
 These files are intentionally grouped because they evolve together as one UI
 domain even when they are rendered separately.
