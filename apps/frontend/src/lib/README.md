@@ -13,6 +13,11 @@ Browser-side support code is organized by domain:
 - `workbench/`
   Workbench-facing pure helpers for settings, serialization, export, and other
   non-JSX logic shared by heavy frontend surfaces.
+  This also includes result-window sizing, offset, and chunk-cache helpers for
+  large-result browsing.
+  Material editing commands should also live here when they can stay pure.
+  Snapshot/history helpers belong here too when they only manipulate workbench
+  state structure rather than rendering.
 
 Keep these modules UI-independent when possible so the workbench surface stays
 focused on interaction and presentation.

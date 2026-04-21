@@ -20,7 +20,7 @@ import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tre
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
-import { createCustomMaterial, parseMaterialLibrary } from "@/lib/materials";
+import { parseMaterialLibrary } from "@/lib/materials";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/models";
 import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/projects";
@@ -37,6 +37,48 @@ import {
   toAxialInput,
   WORKBENCH_SETTINGS_KEY,
 } from "@/lib/workbench/helpers";
+import {
+  buildWorkbenchSnapshot,
+  createAssistantTransactionEntry,
+  pushHistoryEntry,
+  restoreWorkbenchSnapshot,
+  stepHistory,
+  type AssistantTransactionEntry,
+  type HistoryEntry,
+  type WorkbenchSnapshot,
+} from "@/lib/workbench/history";
+import {
+  addCustomMaterialToPlaneModel,
+  addCustomMaterialToTruss3dModel,
+  addCustomMaterialToTrussModel,
+  addPresetMaterialToPlaneModel,
+  addPresetMaterialToTruss3dModel,
+  addPresetMaterialToTrussModel,
+  applyMaterialToPlaneModel,
+  applyMaterialToTruss3dModel,
+  applyMaterialToTrussModel,
+  deleteMaterialFromPlaneModel,
+  deleteMaterialFromTruss3dModel,
+  deleteMaterialFromTrussModel,
+  ensurePlaneModelMaterials,
+  ensureTruss3dModelMaterials,
+  ensureTrussModelMaterials,
+  mergeImportedMaterials,
+  nextMaterialId,
+  updateMaterialInPlaneModel,
+  updateMaterialInTruss3dModel,
+  updateMaterialInTrussModel,
+} from "@/lib/workbench/material-commands";
+import {
+  clampChunkOffset,
+  chunkCacheKey,
+  computeResultWindowSize,
+  computeVisibleResultWindowOffset,
+  readChunkCache,
+  RESULT_WINDOW_BASE_SIZE,
+  RESULT_WINDOW_THRESHOLD,
+  writeChunkCache,
+} from "@/lib/workbench/result-window";
 import {
   exportProjectBundle,
   exportStudyModel,
@@ -83,7 +125,6 @@ import {
   type JobEnvelope,
   type JobResultRecord,
   type JobState,
-  type ModelMaterial,
   type ModelRecord,
   type ModelVersionRecord,
   type PlaneTriangle2dJobInput,
@@ -193,27 +234,6 @@ type StabilitySummary = {
   hotspotNodes: number[];
 };
 
-type WorkbenchSnapshot = {
-  studyKind: StudyKind;
-  axialForm: AxialFormState;
-  trussModel: Truss2dJobInput;
-  truss3dModel: Truss3dJobInput;
-  planeModel: PlaneTriangle2dJobInput;
-  parametric: ParametricTrussConfig;
-  panelParametric: ParametricPanelConfig;
-  activeMaterial: string;
-  loadedModelName: string;
-  sidebarSection: SidebarSection;
-  selectedNode: number | null;
-  selectedElement: number | null;
-  memberDraftNodes: number[];
-};
-
-type HistoryEntry = {
-  label: string;
-  snapshot: WorkbenchSnapshot;
-};
-
 type ResultWindowState = {
   jobId: string;
   studyKind: Exclude<StudyKind, "axial_bar_1d">;
@@ -224,23 +244,11 @@ type ResultWindowState = {
   limit: number;
 };
 
-type AssistantTransactionEntry = {
-  id: string;
-  summary: string;
-  createdAt: string;
-  snapshot: WorkbenchSnapshot;
-  executedActions: string[];
-};
-
 type DirectMeshExecutionState = {
   endpoint: string;
   strategy: DirectMeshSelectionMode;
   at: string;
 };
-
-const RESULT_WINDOW_THRESHOLD = 400;
-const RESULT_WINDOW_BASE_SIZE = 240;
-const RESULT_WINDOW_CACHE_LIMIT = 24;
 
 const defaultAxial: AxialFormState = {
   length: 1.2,
@@ -1125,62 +1133,6 @@ const copy = {
   },
 } as const;
 
-function nextMaterialId(materials: ModelMaterial[] | undefined) {
-  return `mat-${(materials?.length ?? 0) + 1}`;
-}
-
-function ensureTrussModelMaterials(model: Truss2dJobInput, fallbackValue = "70"): Truss2dJobInput {
-  const materials =
-    model.materials && model.materials.length > 0
-      ? model.materials
-      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1" })];
-  const defaultMaterialId = materials[0]?.id;
-
-  return {
-    ...model,
-    materials,
-    elements: model.elements.map((element) => ({
-      ...element,
-      material_id: element.material_id ?? defaultMaterialId,
-    })),
-  };
-}
-
-function ensureTruss3dModelMaterials(model: Truss3dJobInput, fallbackValue = "70"): Truss3dJobInput {
-  const materials =
-    model.materials && model.materials.length > 0
-      ? model.materials
-      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1" })];
-  const defaultMaterialId = materials[0]?.id;
-
-  return {
-    ...model,
-    materials,
-    elements: model.elements.map((element) => ({
-      ...element,
-      material_id: element.material_id ?? defaultMaterialId,
-    })),
-  };
-}
-
-function ensurePlaneModelMaterials(model: PlaneTriangle2dJobInput, fallbackValue = "70"): PlaneTriangle2dJobInput {
-  const fallbackPoisson = model.elements[0]?.poisson_ratio ?? 0.33;
-  const materials =
-    model.materials && model.materials.length > 0
-      ? model.materials
-      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1", poisson_ratio: fallbackPoisson })];
-  const defaultMaterialId = materials[0]?.id;
-
-  return {
-    ...model,
-    materials,
-    elements: model.elements.map((element) => ({
-      ...element,
-      material_id: element.material_id ?? defaultMaterialId,
-    })),
-  };
-}
-
 function humanizeSolverFailure(message: string | null | undefined, languageCopy: (typeof copy)[Language]) {
   if (!message) return null;
 
@@ -1749,89 +1701,6 @@ function renderLoadGlyph(
       <circle cx={x2} cy={y2} r={3.5} />
     </g>
   );
-}
-
-function computeResultWindowSize(totalItems: number, viewportWidth = 980) {
-  const base =
-    totalItems >= 20_000
-      ? 720
-      : totalItems >= 15_000
-        ? 600
-        : totalItems >= 10_000
-          ? 480
-          : totalItems >= 4_000
-            ? 360
-            : RESULT_WINDOW_BASE_SIZE;
-
-  const widthFactor = Math.min(1.8, Math.max(0.85, viewportWidth / 980));
-  const scaled = Math.round((base * widthFactor) / 60) * 60;
-  return Math.max(RESULT_WINDOW_BASE_SIZE, scaled);
-}
-
-function clampChunkOffset(offset: number, totalItems: number, limit: number) {
-  const maxOffset = Math.max(0, totalItems - limit);
-  const snapped = Math.round(Math.max(0, offset) / limit) * limit;
-  return Math.min(maxOffset, snapped);
-}
-
-function computeVisibleResultWindowOffset(
-  totalItems: number,
-  limit: number,
-  viewportWidth: number,
-  scrollLeft: number,
-  scrollWidth: number,
-) {
-  if (totalItems <= limit || scrollWidth <= viewportWidth + 1) {
-    return 0;
-  }
-
-  const maxTravel = Math.max(1, scrollWidth - viewportWidth);
-  const visibleStartRatio = Math.min(1, Math.max(0, scrollLeft / maxTravel));
-  const visibleSpanRatio = Math.min(1, Math.max(0.08, viewportWidth / Math.max(scrollWidth, viewportWidth)));
-  const visibleSpan = Math.max(1, Math.round(totalItems * visibleSpanRatio));
-  const maxVisibleStart = Math.max(0, totalItems - visibleSpan);
-  const visibleStart = visibleStartRatio * maxVisibleStart;
-  const overscan = Math.max(60, Math.round(limit * 0.25));
-  return clampChunkOffset(visibleStart - overscan, totalItems, limit);
-}
-
-function chunkCacheKey(
-  runtimeMode: FrontendRuntimeMode,
-  jobId: string,
-  kind: "nodes" | "elements",
-  offset: number,
-  limit: number,
-) {
-  return `${runtimeMode}:${jobId}:${kind}:${offset}:${limit}`;
-}
-
-function readChunkCache(
-  cache: Map<string, ResultChunkPayload<Record<string, unknown>>>,
-  key: string,
-) {
-  const cached = cache.get(key);
-  if (!cached) return null;
-  cache.delete(key);
-  cache.set(key, cached);
-  return cached;
-}
-
-function writeChunkCache(
-  cache: Map<string, ResultChunkPayload<Record<string, unknown>>>,
-  key: string,
-  value: ResultChunkPayload<Record<string, unknown>>,
-) {
-  if (cache.has(key)) {
-    cache.delete(key);
-  }
-
-  cache.set(key, value);
-
-  while (cache.size > RESULT_WINDOW_CACHE_LIMIT) {
-    const oldestKey = cache.keys().next().value;
-    if (!oldestKey) break;
-    cache.delete(oldestKey);
-  }
 }
 
 function formatProtocolMethodLabel(method: string) {
@@ -4009,46 +3878,51 @@ export function Workbench() {
   };
 
   const buildSnapshot = (): WorkbenchSnapshot => ({
-    studyKind,
-    axialForm,
-    trussModel,
-    truss3dModel,
-    planeModel,
-    parametric,
-    panelParametric,
-    activeMaterial,
-    loadedModelName,
-    sidebarSection,
-    selectedNode,
-    selectedElement,
-    memberDraftNodes,
+    ...buildWorkbenchSnapshot({
+      studyKind,
+      axialForm,
+      trussModel,
+      truss3dModel,
+      planeModel,
+      parametric,
+      panelParametric,
+      activeMaterial,
+      loadedModelName,
+      sidebarSection,
+      selectedNode,
+      selectedElement,
+      memberDraftNodes,
+    }),
   });
 
   const restoreSnapshot = (snapshot: WorkbenchSnapshot) => {
-    setStudyKind(snapshot.studyKind);
-    setAxialForm(snapshot.axialForm);
-    setTrussModel(snapshot.trussModel);
-    setTruss3dModel(snapshot.truss3dModel);
-    setPlaneModel(snapshot.planeModel);
-    setParametric(snapshot.parametric);
-    setPanelParametric(snapshot.panelParametric);
-    setActiveMaterial(snapshot.activeMaterial);
-    setLoadedModelName(snapshot.loadedModelName);
-    setSidebarSection(snapshot.sidebarSection);
-    setSelectedNode(snapshot.selectedNode);
-    setSelectedElement(snapshot.selectedElement);
-    setMemberDraftNodes(snapshot.memberDraftNodes);
-    resetActiveResult(setResult, setJob);
+    restoreWorkbenchSnapshot(
+      snapshot,
+      {
+        setStudyKind,
+        setAxialForm,
+        setTrussModel,
+        setTruss3dModel,
+        setPlaneModel,
+        setParametric,
+        setPanelParametric,
+        setActiveMaterial,
+        setLoadedModelName,
+        setSidebarSection,
+        setSelectedNode,
+        setSelectedElement,
+        setMemberDraftNodes,
+      },
+      () => resetActiveResult(setResult, setJob),
+    );
   };
 
   const recordAssistantTransaction = (summary: string, executedActions: string[]) => {
-    const entry: AssistantTransactionEntry = {
-      id: `assistant-${Date.now()}`,
+    const entry: AssistantTransactionEntry = createAssistantTransactionEntry(
       summary,
-      createdAt: new Date().toISOString(),
-      snapshot: buildSnapshot(),
       executedActions,
-    };
+      buildSnapshot(),
+    );
     setAssistantTransactions((current) => [entry, ...current].slice(0, 12));
     return entry.id;
   };
@@ -4080,26 +3954,26 @@ export function Workbench() {
 
   const recordHistory = (label: string) => {
     const snapshot = buildSnapshot();
-    setUndoStack((current) => [...current.slice(-39), { label, snapshot }]);
+    setUndoStack((current) => pushHistoryEntry(current, label, snapshot));
     setRedoStack([]);
   };
 
   const handleUndo = () => {
-    const entry = undoStack.at(-1);
-    if (!entry) return;
     const currentSnapshot = buildSnapshot();
-    setUndoStack((current) => current.slice(0, -1));
-    setRedoStack((current) => [...current.slice(-39), { label: entry.label, snapshot: currentSnapshot }]);
+    const { entry, nextSource, nextTarget } = stepHistory(undoStack, redoStack, currentSnapshot);
+    if (!entry) return;
+    setUndoStack(nextSource);
+    setRedoStack(nextTarget);
     restoreSnapshot(entry.snapshot);
     setMessage(t.undoApplied);
   };
 
   const handleRedo = () => {
-    const entry = redoStack.at(-1);
-    if (!entry) return;
     const currentSnapshot = buildSnapshot();
-    setRedoStack((current) => current.slice(0, -1));
-    setUndoStack((current) => [...current.slice(-39), { label: entry.label, snapshot: currentSnapshot }]);
+    const { entry, nextSource, nextTarget } = stepHistory(redoStack, undoStack, currentSnapshot);
+    if (!entry) return;
+    setRedoStack(nextSource);
+    setUndoStack(nextTarget);
     restoreSnapshot(entry.snapshot);
     setMessage(t.redoApplied);
   };
@@ -4438,41 +4312,16 @@ export function Workbench() {
     resetActiveResult(setResult, setJob);
 
     if (studyKind === "truss_2d") {
-      setTrussModel((current) => ({
-        ...current,
-        materials: [
-          ...(current.materials ?? []),
-          createMaterialDefinition(activeMaterial, (current.materials?.length ?? 0) + 1, {
-            id: nextMaterialId(current.materials),
-          }),
-        ],
-      }));
+      setTrussModel((current) => addPresetMaterialToTrussModel(current, activeMaterial));
       return;
     }
 
     if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => ({
-        ...current,
-        materials: [
-          ...(current.materials ?? []),
-          createMaterialDefinition(activeMaterial, (current.materials?.length ?? 0) + 1, {
-            id: nextMaterialId(current.materials),
-          }),
-        ],
-      }));
+      setTruss3dModel((current) => addPresetMaterialToTruss3dModel(current, activeMaterial));
       return;
     }
 
-    setPlaneModel((current) => ({
-      ...current,
-      materials: [
-        ...(current.materials ?? []),
-        createMaterialDefinition(activeMaterial, (current.materials?.length ?? 0) + 1, {
-          id: nextMaterialId(current.materials),
-          poisson_ratio: current.elements[0]?.poisson_ratio ?? 0.33,
-        }),
-      ],
-    }));
+    setPlaneModel((current) => addPresetMaterialToPlaneModel(current, activeMaterial));
   };
 
   const addCustomMaterialToCurrentModel = () => {
@@ -4481,28 +4330,16 @@ export function Workbench() {
     resetActiveResult(setResult, setJob);
 
     if (studyKind === "truss_2d") {
-      setTrussModel((current) => ({
-        ...current,
-        materials: [...(current.materials ?? []), createCustomMaterial((current.materials?.length ?? 0) + 1)],
-      }));
+      setTrussModel((current) => addCustomMaterialToTrussModel(current));
       return;
     }
 
     if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => ({
-        ...current,
-        materials: [...(current.materials ?? []), createCustomMaterial((current.materials?.length ?? 0) + 1)],
-      }));
+      setTruss3dModel((current) => addCustomMaterialToTruss3dModel(current));
       return;
     }
 
-    setPlaneModel((current) => ({
-      ...current,
-      materials: [
-        ...(current.materials ?? []),
-        createCustomMaterial((current.materials?.length ?? 0) + 1),
-      ],
-    }));
+    setPlaneModel((current) => addCustomMaterialToPlaneModel(current));
   };
 
   const applyMaterialToCurrentModel = (materialId: string, mode: "selected" | "all") => {
@@ -4511,62 +4348,16 @@ export function Workbench() {
     resetActiveResult(setResult, setJob);
 
     if (studyKind === "truss_2d") {
-      setTrussModel((current) => {
-        const material = current.materials?.find((entry) => entry.id === materialId);
-        return {
-          ...current,
-          elements: current.elements.map((element, index) =>
-            mode === "all" || index === selectedElement
-              ? {
-                  ...element,
-                  material_id: materialId,
-                  youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
-                }
-              : element,
-          ),
-        };
-      });
+      setTrussModel((current) => applyMaterialToTrussModel(current, materialId, mode, selectedElement));
       return;
     }
 
     if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => {
-        const material = current.materials?.find((entry) => entry.id === materialId);
-        return {
-          ...current,
-          elements: current.elements.map((element, index) =>
-            mode === "all" || index === selectedElement
-              ? {
-                  ...element,
-                  material_id: materialId,
-                  youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
-                }
-              : element,
-          ),
-        };
-      });
+      setTruss3dModel((current) => applyMaterialToTruss3dModel(current, materialId, mode, selectedElement));
       return;
     }
 
-    setPlaneModel((current) => {
-      const material = current.materials?.find((entry) => entry.id === materialId);
-      return {
-        ...current,
-        elements: current.elements.map((element, index) =>
-          mode === "all" || index === selectedElement
-            ? {
-                ...element,
-                material_id: materialId,
-                youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
-                poisson_ratio:
-                  material?.poisson_ratio === null || material?.poisson_ratio === undefined
-                    ? element.poisson_ratio
-                    : material.poisson_ratio,
-              }
-            : element,
-        ),
-      };
-    });
+    setPlaneModel((current) => applyMaterialToPlaneModel(current, materialId, mode, selectedElement));
   };
 
   const toggleMaterialVisibility = (materialId: string) => {
@@ -4587,32 +4378,12 @@ export function Workbench() {
       recordHistory(t.editMaterial);
       resetActiveResult(setResult, setJob);
 
-      const mergeMaterials = (current: ModelMaterial[] | undefined) => {
-        const existing = current ?? [];
-        const existingIds = new Set(existing.map((material) => material.id));
-        const next = [...existing];
-
-        imported.forEach((material, index) => {
-          const baseId = material.id || `mat-import-${index + 1}`;
-          let nextId = baseId;
-          let suffix = 2;
-          while (existingIds.has(nextId)) {
-            nextId = `${baseId}-${suffix}`;
-            suffix += 1;
-          }
-          existingIds.add(nextId);
-          next.push({ ...material, id: nextId });
-        });
-
-        return next;
-      };
-
       if (studyKind === "truss_2d") {
-        setTrussModel((current) => ({ ...current, materials: mergeMaterials(current.materials) }));
+        setTrussModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       } else if (studyKind === "truss_3d") {
-        setTruss3dModel((current) => ({ ...current, materials: mergeMaterials(current.materials) }));
+        setTruss3dModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       } else {
-        setPlaneModel((current) => ({ ...current, materials: mergeMaterials(current.materials) }));
+        setPlaneModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       }
 
       setMessage(language === "zh" ? "外部材料库已导入。" : "Imported external material library.");
@@ -4630,51 +4401,17 @@ export function Workbench() {
     recordHistory(t.editMemberAction);
     resetActiveResult(setResult, setJob);
 
-    const updateMaterialList = (materials: ModelMaterial[] | undefined) =>
-      (materials ?? []).map((material) =>
-        material.id === materialId ? { ...material, [field]: value } : material,
-      );
-
     if (studyKind === "truss_2d") {
-      setTrussModel((current) => ({
-        ...current,
-        materials: updateMaterialList(current.materials),
-        elements: current.elements.map((element) =>
-          element.material_id === materialId && field === "youngs_modulus"
-            ? { ...element, youngs_modulus: Number(value) }
-            : element,
-        ),
-      }));
+      setTrussModel((current) => updateMaterialInTrussModel(current, materialId, field, value));
       return;
     }
 
     if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => ({
-        ...current,
-        materials: updateMaterialList(current.materials),
-        elements: current.elements.map((element) =>
-          element.material_id === materialId && field === "youngs_modulus"
-            ? { ...element, youngs_modulus: Number(value) }
-            : element,
-        ),
-      }));
+      setTruss3dModel((current) => updateMaterialInTruss3dModel(current, materialId, field, value));
       return;
     }
 
-    setPlaneModel((current) => ({
-      ...current,
-      materials: updateMaterialList(current.materials),
-      elements: current.elements.map((element) => {
-        if (element.material_id !== materialId) return element;
-        if (field === "youngs_modulus") {
-          return { ...element, youngs_modulus: Number(value) };
-        }
-        if (field === "poisson_ratio") {
-          return { ...element, poisson_ratio: Number(value) };
-        }
-        return element;
-      }),
-    }));
+    setPlaneModel((current) => updateMaterialInPlaneModel(current, materialId, field, value));
   };
 
   const deleteCurrentMaterial = (materialId: string) => {
@@ -4683,74 +4420,16 @@ export function Workbench() {
     resetActiveResult(setResult, setJob);
 
     if (studyKind === "truss_2d") {
-      setTrussModel((current) => {
-        const materials = current.materials ?? [];
-        if (materials.length <= 1) return current;
-        const nextMaterials = materials.filter((material) => material.id !== materialId);
-        const fallback = nextMaterials[0];
-        return {
-          ...current,
-          materials: nextMaterials,
-          elements: current.elements.map((element) =>
-            element.material_id === materialId
-              ? {
-                  ...element,
-                  material_id: fallback?.id,
-                  youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
-                }
-              : element,
-          ),
-        };
-      });
+      setTrussModel((current) => deleteMaterialFromTrussModel(current, materialId));
       return;
     }
 
     if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => {
-        const materials = current.materials ?? [];
-        if (materials.length <= 1) return current;
-        const nextMaterials = materials.filter((material) => material.id !== materialId);
-        const fallback = nextMaterials[0];
-        return {
-          ...current,
-          materials: nextMaterials,
-          elements: current.elements.map((element) =>
-            element.material_id === materialId
-              ? {
-                  ...element,
-                  material_id: fallback?.id,
-                  youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
-                }
-              : element,
-          ),
-        };
-      });
+      setTruss3dModel((current) => deleteMaterialFromTruss3dModel(current, materialId));
       return;
     }
 
-    setPlaneModel((current) => {
-      const materials = current.materials ?? [];
-      if (materials.length <= 1) return current;
-      const nextMaterials = materials.filter((material) => material.id !== materialId);
-      const fallback = nextMaterials[0];
-      return {
-        ...current,
-        materials: nextMaterials,
-        elements: current.elements.map((element) =>
-          element.material_id === materialId
-            ? {
-                ...element,
-                material_id: fallback?.id,
-                youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
-                poisson_ratio:
-                  fallback?.poisson_ratio === null || fallback?.poisson_ratio === undefined
-                    ? element.poisson_ratio
-                    : fallback.poisson_ratio,
-              }
-            : element,
-        ),
-      };
-    });
+    setPlaneModel((current) => deleteMaterialFromPlaneModel(current, materialId));
   };
 
   const addNode = (connectToSelected: boolean) => {
