@@ -53,14 +53,38 @@ Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
 - [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
+- [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
 - [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
 - [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+- [docs/frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
+- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
 - [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
 - [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
+
+## Read By Intent
+
+- new to the project:
+  [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md),
+  [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md),
+  [docs/architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/architecture.md),
+  [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- changing protocols or automation surfaces:
+  [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md),
+  [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md),
+  [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
+- changing tests, CI, or release flow:
+  [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md),
+  [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md),
+  [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
+- changing workbench UX or visual language:
+  [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md),
+  [docs/frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md),
+  [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md),
+  [apps/frontend/README.md](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/README.md)
 
 ## What v0.5 Can Do
 

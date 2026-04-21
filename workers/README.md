@@ -2,6 +2,14 @@
 
 Compute and runtime tooling live here.
 
+## Quick Map
+
+- `rust/`
+  Shared protocol contracts, reusable engine logic, solver kernels, the TCP
+  agent runtime, benchmark tooling, and installer/deployment CLI.
+
+## Ownership Boundary
+
 - `rust/`
   Rust workspace containing:
   - `protocol/` shared RPC and result payload definitions
@@ -18,3 +26,4 @@ See also:
 
 - [workers/rust/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/README.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)

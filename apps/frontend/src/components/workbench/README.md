@@ -18,3 +18,16 @@ This directory contains the browser workbench surface:
 
 These files are intentionally grouped because they evolve together as one UI
 domain even when they are rendered separately.
+
+Implementation rules for this directory:
+
+- `workbench.tsx` coordinates the shell and shared state, but should not absorb
+  every domain transform or render helper forever
+- heavy surfaces should split by visible responsibility
+- viewport-specific interaction logic should stay close to the viewport surface
+- domain transforms should prefer `src/lib` when they are reusable outside one
+  render tree
+
+See:
+
+- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)

@@ -2,6 +2,20 @@
 
 Top-level application surfaces live here.
 
+## Quick Map
+
+- `frontend/`
+  Browser workbench and direct-mesh-capable GUI surface.
+- `web/`
+  Phoenix/Plug control plane for jobs, persistence, results, and agent
+  orchestration.
+- `installer-gui/`
+  Tauri installer/operator console for local, cloud, and distributed setups.
+- `workbench-gui/`
+  Tauri desktop shell that wraps the browser workbench for native use.
+
+## Ownership Boundary
+
 - `frontend/`
   Next.js workbench UI. This is the browser-facing modeling, review, and 3D
   interaction layer.
@@ -21,3 +35,4 @@ See also:
 
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
 - [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+- [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)

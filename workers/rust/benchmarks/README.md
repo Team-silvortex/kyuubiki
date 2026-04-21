@@ -8,7 +8,7 @@ This directory stores checked-in benchmark baselines and generated comparison re
 Typical commands:
 
 ```bash
-cd /Users/Shared/chroot/dev/kyuubiki
+cd <repo>
 make benchmark-baseline PROFILE=10k REPEAT=3
 make benchmark-compare PROFILE=10k REPEAT=1
 make benchmark-report PROFILE=10k REPEAT=1

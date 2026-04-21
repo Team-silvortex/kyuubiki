@@ -10,3 +10,7 @@ Component code is split by role rather than by route.
 
 Keep domain-specific stateful surfaces in `workbench/`. Only promote code into
 `ui/` when it is genuinely generic.
+
+For component splitting, ownership, and state placement rules, see:
+
+- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)

@@ -14,6 +14,11 @@ The goal is to support local workstation runs, cloud control planes, and remote
 solver clusters without forcing those modes to share unnecessary implementation
 details.
 
+The architectural style follows the shared principles in
+[philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md):
+engine first, explicit boundaries, local-first development, and distributed
+readiness.
+
 ## Runtime Layers
 
 ### Frontend Workbench

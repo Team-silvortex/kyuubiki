@@ -25,7 +25,19 @@ import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/models";
 import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/projects";
 import {
-  buildStudyModelPayload,
+  fixed,
+  formatMilliseconds,
+  formatTime,
+  parseDirectMeshEndpoints,
+  safeStorageGet,
+  sanitizeWorkbenchSettings,
+  scientific,
+  serializeCurrentModel,
+  serializeResultCsv,
+  toAxialInput,
+  WORKBENCH_SETTINGS_KEY,
+} from "@/lib/workbench/helpers";
+import {
   exportProjectBundle,
   exportStudyModel,
   generatePrattTruss,
@@ -304,8 +316,6 @@ const defaultTruss3d: Truss3dJobInput = {
     { id: "e5", node_i: 2, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
   ],
 };
-
-const SETTINGS_KEY = "kyuubiki-workbench-settings";
 
 const copy = {
   en: {
@@ -1115,126 +1125,6 @@ const copy = {
   },
 } as const;
 
-function safeStorageGet(): {
-  theme?: Theme;
-  language?: Language;
-  showShortcutHints?: boolean;
-  immersiveGuardrails?: boolean;
-  frontendRuntimeMode?: FrontendRuntimeMode;
-  directMeshEndpointsText?: string;
-  directMeshSelectionMode?: DirectMeshSelectionMode;
-  controlPlaneApiToken?: string;
-  clusterApiToken?: string;
-  directMeshApiToken?: string;
-  assistantMode?: AssistantMode;
-  assistantApiBaseUrl?: string;
-  assistantApiKey?: string;
-  assistantModel?: string;
-} {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(SETTINGS_KEY);
-    return raw
-      ? (JSON.parse(raw) as {
-          theme?: Theme;
-          language?: Language;
-          showShortcutHints?: boolean;
-          immersiveGuardrails?: boolean;
-          frontendRuntimeMode?: FrontendRuntimeMode;
-          directMeshEndpointsText?: string;
-          directMeshSelectionMode?: DirectMeshSelectionMode;
-          controlPlaneApiToken?: string;
-          clusterApiToken?: string;
-          directMeshApiToken?: string;
-          assistantMode?: AssistantMode;
-          assistantApiBaseUrl?: string;
-          assistantApiKey?: string;
-          assistantModel?: string;
-        })
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function sanitizeWorkbenchSettings(input: {
-  theme: Theme;
-  language: Language;
-  showShortcutHints: boolean;
-  immersiveGuardrails: boolean;
-  frontendRuntimeMode: FrontendRuntimeMode;
-  directMeshEndpointsText: string;
-  directMeshSelectionMode: DirectMeshSelectionMode;
-  controlPlaneApiToken: string;
-  clusterApiToken: string;
-  directMeshApiToken: string;
-  assistantMode: AssistantMode;
-  assistantApiBaseUrl: string;
-  assistantApiKey: string;
-  assistantModel: string;
-}) {
-  return {
-    theme: input.theme,
-    language: input.language,
-    showShortcutHints: input.showShortcutHints,
-    immersiveGuardrails: input.immersiveGuardrails,
-    frontendRuntimeMode: input.frontendRuntimeMode,
-    directMeshEndpointsText: input.directMeshEndpointsText,
-    directMeshSelectionMode: input.directMeshSelectionMode,
-    assistantMode: input.assistantMode,
-    assistantApiBaseUrl: input.assistantApiBaseUrl.trim(),
-    assistantModel: input.assistantModel.trim(),
-    ...(input.controlPlaneApiToken.trim()
-      ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
-      : {}),
-    ...(input.clusterApiToken.trim() ? { clusterApiToken: input.clusterApiToken.trim() } : {}),
-    ...(input.directMeshApiToken.trim()
-      ? { directMeshApiToken: input.directMeshApiToken.trim() }
-      : {}),
-    ...(input.assistantApiKey.trim() ? { assistantApiKey: input.assistantApiKey.trim() } : {}),
-  };
-}
-
-function parseDirectMeshEndpoints(value: string) {
-  return [...new Set(value.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean))];
-}
-
-function serializeCurrentModel(
-  studyKind: StudyKind,
-  loadedModelName: string,
-  activeMaterial: string,
-  axialForm: AxialFormState,
-  trussModel: Truss2dJobInput,
-  truss3dModel: Truss3dJobInput,
-  planeModel: PlaneTriangle2dJobInput,
-  parametric: ParametricTrussConfig,
-): Record<string, unknown> {
-  return buildStudyModelPayload(studyKind, {
-    name: loadedModelName,
-    material: activeMaterial,
-    youngsModulusGpa:
-      studyKind === "axial_bar_1d"
-        ? axialForm.youngsModulusGpa
-        : studyKind === "truss_2d"
-          ? parametric.youngsModulusGpa
-          : studyKind === "truss_3d"
-            ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
-            : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
-    materials:
-      studyKind === "truss_2d"
-        ? trussModel.materials
-        : studyKind === "truss_3d"
-          ? truss3dModel.materials
-          : studyKind === "plane_triangle_2d"
-            ? planeModel.materials
-            : undefined,
-    axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
-    truss: studyKind === "truss_2d" ? trussModel : undefined,
-    truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
-    plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
-  });
-}
-
 function nextMaterialId(materials: ModelMaterial[] | undefined) {
   return `mat-${(materials?.length ?? 0) + 1}`;
 }
@@ -1289,140 +1179,6 @@ function ensurePlaneModelMaterials(model: PlaneTriangle2dJobInput, fallbackValue
       material_id: element.material_id ?? defaultMaterialId,
     })),
   };
-}
-
-function toCsvRow(values: Array<string | number | boolean | null | undefined>) {
-  return values
-    .map((value) => {
-      const text = value === null || value === undefined ? "" : String(value);
-      if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
-        return `"${text.replaceAll("\"", "\"\"")}"`;
-      }
-      return text;
-    })
-    .join(",");
-}
-
-function serializeResultCsv(
-  studyKind: StudyKind,
-  job: JobEnvelope["job"] | null,
-  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null,
-) {
-  if (!result) return "";
-
-  const lines: string[] = [];
-  lines.push("meta");
-  lines.push(toCsvRow(["study_kind", studyKind]));
-  lines.push(toCsvRow(["job_id", job?.job_id]));
-  lines.push(toCsvRow(["status", job?.status]));
-  lines.push(toCsvRow(["worker_id", job?.worker_id]));
-  lines.push("");
-
-  if (isAxialResult(result)) {
-    lines.push("nodes");
-    lines.push(toCsvRow(["index", "x", "displacement"]));
-    result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.x, node.displacement])));
-    lines.push("");
-    lines.push("elements");
-    lines.push(toCsvRow(["index", "x1", "x2", "strain", "stress", "axial_force"]));
-    result.elements.forEach((element) =>
-      lines.push(toCsvRow([element.index, element.x1, element.x2, element.strain, element.stress, element.axial_force])),
-    );
-    return lines.join("\n");
-  }
-
-  if (isTruss3dResult(result)) {
-    lines.push("nodes");
-    lines.push(toCsvRow(["index", "id", "x", "y", "z", "ux", "uy", "uz"]));
-    result.nodes.forEach((node) =>
-      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.z, node.ux, node.uy, node.uz])),
-    );
-    lines.push("");
-    lines.push("elements");
-    lines.push(toCsvRow(["index", "id", "node_i", "node_j", "length", "strain", "stress", "axial_force"]));
-    result.elements.forEach((element) =>
-      lines.push(
-        toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.strain, element.stress, element.axial_force]),
-      ),
-    );
-    return lines.join("\n");
-  }
-
-  if (isTrussResult(result)) {
-    lines.push("nodes");
-    lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy"]));
-    result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy])));
-    lines.push("");
-    lines.push("elements");
-    lines.push(toCsvRow(["index", "id", "node_i", "node_j", "length", "strain", "stress", "axial_force"]));
-    result.elements.forEach((element) =>
-      lines.push(
-        toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.strain, element.stress, element.axial_force]),
-      ),
-    );
-    return lines.join("\n");
-  }
-
-  lines.push("nodes");
-  lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy"]));
-  result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy])));
-  lines.push("");
-  lines.push("elements");
-  lines.push(
-    toCsvRow([
-      "index",
-      "id",
-      "node_i",
-      "node_j",
-      "node_k",
-      "area",
-      "strain_x",
-      "strain_y",
-      "gamma_xy",
-      "stress_x",
-      "stress_y",
-      "tau_xy",
-      "von_mises",
-    ]),
-  );
-  result.elements.forEach((element) =>
-    lines.push(
-      toCsvRow([
-        element.index,
-        element.id,
-        element.node_i,
-        element.node_j,
-        element.node_k,
-        element.area,
-        element.strain_x,
-        element.strain_y,
-        element.gamma_xy,
-        element.stress_x,
-        element.stress_y,
-        element.tau_xy,
-        element.von_mises,
-      ]),
-    ),
-  );
-  return lines.join("\n");
-}
-
-function toAxialInput(form: AxialFormState): AxialBarJobInput {
-  return {
-    length: form.length,
-    area: form.area,
-    elements: form.elements,
-    tip_force: form.tipForce,
-    youngs_modulus_gpa: form.youngsModulusGpa,
-  };
-}
-
-function scientific(value: number | null | undefined, digits = 3): string {
-  return typeof value === "number" ? value.toExponential(digits) : "--";
-}
-
-function fixed(value: number | null | undefined, digits = 2): string {
-  return typeof value === "number" ? value.toFixed(digits) : "--";
 }
 
 function humanizeSolverFailure(message: string | null | undefined, languageCopy: (typeof copy)[Language]) {
@@ -1597,18 +1353,6 @@ function materialColorByIndex(index: number) {
   return MATERIAL_COLOR_STOPS[index % MATERIAL_COLOR_STOPS.length];
 }
 
-function formatTime(value: string | undefined, language: Language): string {
-  if (!value) return "--";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
 function isAxialResult(value: unknown): value is AxialBarResult {
   return typeof value === "object" && value !== null && "tip_displacement" in value;
 }
@@ -1775,14 +1519,6 @@ function pushNodeIssue(nodeIssues: Record<number, string[]>, nodeIndex: number, 
   if (!issues.includes(issue)) {
     nodeIssues[nodeIndex] = [...issues, issue];
   }
-}
-
-function formatMilliseconds(value: number | null | undefined) {
-  if (typeof value !== "number" || Number.isNaN(value)) return "--";
-  if (value >= 1000) {
-    return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}s`;
-  }
-  return `${Math.round(value)} ms`;
 }
 
 function heartbeatStatus(
@@ -2399,16 +2135,22 @@ export function Workbench() {
 
   useEffect(() => {
     const stored = safeStorageGet();
-    if (stored.theme) setTheme(stored.theme);
+    if (stored.theme === "linen" || stored.theme === "marine" || stored.theme === "graphite") {
+      setTheme(stored.theme);
+    }
     if (typeof stored.showShortcutHints === "boolean") setShowShortcutHints(stored.showShortcutHints);
     if (typeof stored.immersiveGuardrails === "boolean") setImmersiveGuardrails(stored.immersiveGuardrails);
     if (stored.frontendRuntimeMode) setFrontendRuntimeMode(stored.frontendRuntimeMode);
     if (stored.directMeshEndpointsText) setDirectMeshEndpointsText(stored.directMeshEndpointsText);
-    if (stored.directMeshSelectionMode) setDirectMeshSelectionMode(stored.directMeshSelectionMode);
+    if (stored.directMeshSelectionMode === "healthiest" || stored.directMeshSelectionMode === "first_reachable") {
+      setDirectMeshSelectionMode(stored.directMeshSelectionMode);
+    }
     if (stored.controlPlaneApiToken) setControlPlaneApiToken(stored.controlPlaneApiToken);
     if (stored.clusterApiToken) setClusterApiToken(stored.clusterApiToken);
     if (stored.directMeshApiToken) setDirectMeshApiToken(stored.directMeshApiToken);
-    if (stored.assistantMode) setAssistantMode(stored.assistantMode);
+    if (stored.assistantMode === "local" || stored.assistantMode === "llm") {
+      setAssistantMode(stored.assistantMode);
+    }
     if (typeof stored.assistantApiBaseUrl === "string" && stored.assistantApiBaseUrl.trim()) {
       setAssistantApiBaseUrl(stored.assistantApiBaseUrl);
     }
@@ -2416,7 +2158,7 @@ export function Workbench() {
     if (typeof stored.assistantModel === "string" && stored.assistantModel.trim()) {
       setAssistantModel(stored.assistantModel);
     }
-    if (stored.language) {
+    if (stored.language === "en" || stored.language === "zh") {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
       setMessage(copy[stored.language].initialLoaded);
@@ -2427,7 +2169,7 @@ export function Workbench() {
     document.documentElement.dataset.theme = theme;
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
-        SETTINGS_KEY,
+        WORKBENCH_SETTINGS_KEY,
         JSON.stringify(sanitizeWorkbenchSettings({
           theme,
           language,
@@ -3073,6 +2815,7 @@ export function Workbench() {
         truss3dModel,
         planeModel,
         parametric,
+        round,
       ),
       null,
       2,
@@ -3167,6 +2910,7 @@ export function Workbench() {
         truss3dModel,
         planeModel,
         parametric,
+        round,
       ),
       jobs: jobHistory,
       results,
@@ -3446,6 +3190,7 @@ export function Workbench() {
       truss3dModel,
       planeModel,
       parametric,
+      round,
     );
 
     startTransition(async () => {
@@ -4058,6 +3803,7 @@ export function Workbench() {
             truss3dModel,
             planeModel,
             parametric,
+            round,
           );
           if (!selectedModelId || action === "model/saveAs") {
             const created = await createModel(selectedProjectId, {

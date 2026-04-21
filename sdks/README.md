@@ -7,6 +7,14 @@
 - CLI tools and notebooks
 - backend integrations that should not depend on the browser workbench
 
+## Quick Start
+
+If you are integrating from outside the monorepo, start with:
+
+1. [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
+2. [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
+3. one language example below
+
 Current language targets:
 
 - `rust/`

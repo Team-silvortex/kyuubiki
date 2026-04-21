@@ -13,6 +13,11 @@ This repository is no longer a thin scaffold. It contains:
 The default development style remains TDD-first. New behavior should start with
 a test before production code changes.
 
+The repository also now has an explicit style baseline:
+
+- [philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
+- [frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
+
 ## Repository Conventions
 
 - Put BEAM application code under `apps/web`
@@ -26,6 +31,8 @@ a test before production code changes.
 - Treat `tmp/` and `dist/` as generated/runtime directories
 - Reach first for `make tdd-web` or `make tdd-rust` instead of editing code
   without a failing test
+- prefer extending existing tokens, contracts, and module boundaries before
+  inventing parallel patterns
 
 ## Unified Entry Point
 
@@ -55,7 +62,7 @@ The orchestrator supports dual SQL-backed persistence:
 Example:
 
 ```bash
-cd /Users/Shared/chroot/dev/kyuubiki
+cd <repo>
 make start-local
 ```
 

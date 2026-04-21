@@ -48,7 +48,7 @@ storage.
 Example:
 
 ```bash
-cd /Users/Shared/chroot/dev/kyuubiki
+cd <repo>
 KYUUBIKI_STORAGE_BACKEND=postgres \
 DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
 zsh ./scripts/kyuubiki start
