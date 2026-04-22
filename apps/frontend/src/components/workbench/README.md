@@ -19,10 +19,18 @@ This directory contains the browser workbench surface:
   Study setup and run controls surface extracted from the main workbench shell.
 - `workbench-model-sidebar.tsx`
   Model editing shell for tools/tree tabs extracted from the main workbench shell.
+- `workbench-model-tools-card.tsx`
+  Model-side node/member action card extracted from the model tools surface.
 - `workbench-material-library-card.tsx`
   Material editing and import/apply card extracted from the model tools surface.
 - `workbench-parametric-card.tsx`
   Parametric generator card extracted from the model tools surface.
+- `workbench-system-config-card.tsx`
+  System settings/configuration card extracted from the system sidebar surface.
+- `workbench-system-metrics-card.tsx`
+  Reusable runtime/security/watchdog metrics card extracted from the system sidebar surface.
+- `workbench-truss3d-tree-card.tsx`
+  3D object tree card extracted from the model tree surface.
 - `workbench-library-sidebar.tsx`
   Sample/project/model/job library surface extracted from the main workbench shell.
 

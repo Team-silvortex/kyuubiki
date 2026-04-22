@@ -20,10 +20,14 @@ import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/workbench-library-sidebar";
 import { WorkbenchMaterialLibraryCard } from "@/components/workbench/workbench-material-library-card";
 import { WorkbenchModelSidebar } from "@/components/workbench/workbench-model-sidebar";
+import { WorkbenchModelToolsCard } from "@/components/workbench/workbench-model-tools-card";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { WorkbenchParametricCard } from "@/components/workbench/workbench-parametric-card";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchStudySidebar } from "@/components/workbench/workbench-study-sidebar";
+import { WorkbenchSystemConfigCard } from "@/components/workbench/workbench-system-config-card";
+import { WorkbenchSystemMetricsCard } from "@/components/workbench/workbench-system-metrics-card";
+import { WorkbenchTruss3dTreeCard } from "@/components/workbench/workbench-truss3d-tree-card";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { parseMaterialLibrary } from "@/lib/materials";
@@ -4662,88 +4666,76 @@ export function Workbench() {
 
   const modelToolsContent: ReactNode = (
     <>
-      <section className="sidebar-card">
-        <div className="card-head">
-          <h2>{isTruss3d ? t.spaceStudio : t.sections.model}</h2>
-          <span>{isTruss3d ? t.orbitHint : t.dragToEdit}</span>
-        </div>
-        <p className="card-copy">{isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : t.modelStudioHint}</p>
-        {isTruss ? (
-          <>
-            <div className="button-row">
-              <button className="ghost-button" onClick={() => addNode(false)} type="button">
-                {t.addNode}
-              </button>
-              <button className="ghost-button" disabled={selectedNode === null} onClick={() => addNode(true)} type="button">
-                {t.addBranchNode}
-              </button>
-              <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedNode} type="button">
-                {t.deleteNode}
-              </button>
-            </div>
-            <div className="button-row">
-              <button className="ghost-button" onClick={toggleMemberFromDraft} type="button">
-                {t.toggleMember}
-              </button>
-              <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
-                {t.deleteMember}
-              </button>
-            </div>
-          </>
-        ) : null}
-        {isTruss3d ? (
-          <>
-            <div className="button-row">
-              <button className="ghost-button" onClick={() => addTruss3dNode(false)} type="button">
-                {t.addNode}
-              </button>
-              <button className="ghost-button" disabled={selectedNode === null} onClick={() => addTruss3dNode(true)} type="button">
-                {t.addBranchNode}
-              </button>
-              <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedTruss3dNode} type="button">
-                {t.deleteNode}
-              </button>
-            </div>
-            <div className="button-row">
-              <button className={`ghost-button${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={toggleTruss3dLinkMode} type="button">
-                {truss3dLinkMode ? t.linkModeActive : t.linkMode}
-              </button>
-              <button className="ghost-button" onClick={toggleTruss3dMemberFromDraft} type="button">
-                {t.toggleMember}
-              </button>
-              <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedTruss3dElement} type="button">
-                {t.deleteMember}
-              </button>
-            </div>
-            <p className="card-copy">{t.linkModeIdle}</p>
-          </>
-        ) : null}
-        <div className="button-row">
-          <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
-            {t.undo}
-          </button>
-          <button className="ghost-button" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
-            {t.redo}
-          </button>
-        </div>
-        <div className="button-row">
-          <button className="ghost-button" onClick={downloadModel} type="button">
-            {t.download}
-          </button>
-          <button
-            className="ghost-button"
-            onClick={() => {
-              setStudyKind(isPlane ? "plane_triangle_2d" : isTruss3d ? "truss_3d" : "truss_2d");
-              setSidebarSection("study");
-              setMessage(isPlane ? t.planeHint : isTruss3d ? t.switchedTo3dStudio : t.switchedTo2dStudio);
-            }}
-            type="button"
-          >
-            {t.saveForSolver}
-          </button>
-        </div>
-        <p className="card-copy">{t.selectionHint}</p>
-      </section>
+      <WorkbenchModelToolsCard
+        title={isTruss3d ? t.spaceStudio : t.sections.model}
+        status={isTruss3d ? t.orbitHint : t.dragToEdit}
+        hint={isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : t.modelStudioHint}
+        selectionHint={t.selectionHint}
+        addNodeLabel={t.addNode}
+        addBranchNodeLabel={t.addBranchNode}
+        deleteNodeLabel={t.deleteNode}
+        toggleMemberLabel={t.toggleMember}
+        deleteMemberLabel={t.deleteMember}
+        linkModeLabel={t.linkMode}
+        linkModeActiveLabel={t.linkModeActive}
+        linkModeHint={t.linkModeIdle}
+        undoLabel={t.undo}
+        redoLabel={t.redo}
+        downloadLabel={t.download}
+        saveForSolverLabel={t.saveForSolver}
+        canAddBranchNode={selectedNode !== null}
+        canDeleteNode={selectedNode !== null}
+        canDeleteMember={selectedElement !== null}
+        canUndo={undoStack.length > 0}
+        canRedo={redoStack.length > 0}
+        isTruss={isTruss}
+        isTruss3d={isTruss3d}
+        truss3dLinkMode={truss3dLinkMode}
+        onAddNode={() => {
+          if (isTruss3d) {
+            addTruss3dNode(false);
+            return;
+          }
+          addNode(false);
+        }}
+        onAddBranchNode={() => {
+          if (isTruss3d) {
+            addTruss3dNode(true);
+            return;
+          }
+          addNode(true);
+        }}
+        onDeleteNode={() => {
+          if (isTruss3d) {
+            deleteSelectedTruss3dNode();
+            return;
+          }
+          deleteSelectedNode();
+        }}
+        onToggleMember={() => {
+          if (isTruss3d) {
+            toggleTruss3dMemberFromDraft();
+            return;
+          }
+          toggleMemberFromDraft();
+        }}
+        onDeleteMember={() => {
+          if (isTruss3d) {
+            deleteSelectedTruss3dElement();
+            return;
+          }
+          deleteSelectedElement();
+        }}
+        onToggleLinkMode={toggleTruss3dLinkMode}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onDownload={downloadModel}
+        onSaveForSolver={() => {
+          setStudyKind(isPlane ? "plane_triangle_2d" : isTruss3d ? "truss_3d" : "truss_2d");
+          setSidebarSection("study");
+          setMessage(isPlane ? t.planeHint : isTruss3d ? t.switchedTo3dStudio : t.switchedTo2dStudio);
+        }}
+      />
 
       {!isAxial ? (
         <WorkbenchMaterialLibraryCard
@@ -4797,72 +4789,44 @@ export function Workbench() {
   );
 
   const modelTreeContent: ReactNode = isTruss3d ? (
-    <section className="sidebar-card">
-      <div className="card-head">
-        <h2>{t.objectTree}</h2>
-        <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.nodes}` : truss3dLinkMode ? t.linkModeActive : `${memberDraftNodes.length}/2`}</span>
-      </div>
-      <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.orbitHint}</p>
-      <div className="table-like">
-        <div className="table-like__head table-like__head--space">
-          <span>ID</span>
-          <span>X</span>
-          <span>Y</span>
-          <span>Z</span>
-        </div>
-        <VirtualList
-          className="table-like__body"
-          items={truss3dModel.nodes}
-          itemHeight={46}
-          maxHeight={240}
-          itemKey={(node) => node.id}
-          renderItem={(node, index) => (
-            <button
-              className={`table-like__row table-like__row--space${selectedTruss3dNodes.includes(index) || selectedNode === index ? " table-like__row--active" : ""}${memberDraftNodes.includes(index) ? " table-like__row--draft" : ""}`}
-              onClick={() => handleTruss3dNodePick(index)}
-              type="button"
-            >
-              <strong>{node.id}</strong>
-              <span>{fixed(node.x, 2)}</span>
-              <span>{fixed(node.y, 2)}</span>
-              <span>{fixed(node.z, 2)}</span>
-            </button>
-          )}
-        />
-      </div>
-      <div className="table-like model-tree-spacer">
-        <div className="table-like__head">
-          <span>ID</span>
-          <span>{t.nodeI}</span>
-          <span>{t.nodeJ}</span>
-          <span>{t.area}</span>
-        </div>
-        <VirtualList
-          className="table-like__body"
-          items={displayTruss3dElements}
-          itemHeight={44}
-          maxHeight={240}
-          itemKey={(element) => element.id}
-          renderItem={(element, index) => (
-            <button
-              className={`table-like__row${selectedElement === index ? " table-like__row--active" : ""}`}
-              onClick={() => {
-                setSelectedElement(index);
-                setSelectedNode(null);
-                setSelectedTruss3dNodes([]);
-                setMemberDraftNodes([]);
-              }}
-              type="button"
-            >
-              <strong>{element.id}</strong>
-              <span>{element.node_i}</span>
-              <span>{element.node_j}</span>
-              <span>{fixed(truss3dModel.elements[index]?.area, 4)}</span>
-            </button>
-          )}
-        />
-      </div>
-    </section>
+    <WorkbenchTruss3dTreeCard
+      title={t.objectTree}
+      countLabel={
+        selectedTruss3dNodes.length > 1
+          ? `${selectedTruss3dNodes.length} ${t.nodes}`
+          : truss3dLinkMode
+            ? t.linkModeActive
+            : `${memberDraftNodes.length}/2`
+      }
+      hint={truss3dLinkMode ? t.linkModeIdle : t.orbitHint}
+      nodeILabel={t.nodeI}
+      nodeJLabel={t.nodeJ}
+      areaLabel={t.area}
+      nodes={truss3dModel.nodes.map((node, index) => ({
+        index,
+        id: node.id,
+        x: fixed(node.x, 2),
+        y: fixed(node.y, 2),
+        z: fixed(node.z, 2),
+        active: selectedTruss3dNodes.includes(index) || selectedNode === index,
+        draft: memberDraftNodes.includes(index),
+      }))}
+      elements={displayTruss3dElements.map((element, index) => ({
+        index,
+        id: element.id,
+        nodeI: element.node_i,
+        nodeJ: element.node_j,
+        area: fixed(truss3dModel.elements[index]?.area, 4),
+        active: selectedElement === index,
+      }))}
+      onSelectNode={handleTruss3dNodePick}
+      onSelectElement={(index) => {
+        setSelectedElement(index);
+        setSelectedNode(null);
+        setSelectedTruss3dNodes([]);
+        setMemberDraftNodes([]);
+      }}
+    />
   ) : (
     <WorkbenchObjectTree
       title={t.objectTree}
@@ -5066,128 +5030,81 @@ export function Workbench() {
               </button>
             </div>
             {systemPanelTab === "config" ? (
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.settings}</h2>
-                <span>{health?.status === "ok" ? t.online : t.offline}</span>
-              </div>
-              <div className="form-grid compact">
-                <label>
-                  <span>{t.theme}</span>
-                  <select value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>
-                    <option value="linen">{t.themes.linen}</option>
-                    <option value="marine">{t.themes.marine}</option>
-                    <option value="graphite">{t.themes.graphite}</option>
-                  </select>
-                </label>
-                <label>
-                  <span>{t.language}</span>
-                  <select value={language} onChange={(event) => handleLanguageChange(event.target.value as Language)}>
-                    <option value="en">{t.languages.en}</option>
-                    <option value="zh">{t.languages.zh}</option>
-                  </select>
-                </label>
-                <label>
-                  <span>{t.frontendMode}</span>
-                  <select
-                    value={frontendRuntimeMode}
-                    onChange={(event) => setFrontendRuntimeMode(event.target.value as FrontendRuntimeMode)}
-                  >
-                    <option value="orchestrated_gui">{t.frontendModes.orchestrated_gui}</option>
-                    <option value="direct_mesh_gui">{t.frontendModes.direct_mesh_gui}</option>
-                  </select>
-                </label>
-                <label>
-                  <span>{t.directMeshStrategy}</span>
-                  <select
-                    value={directMeshSelectionMode}
-                    onChange={(event) => setDirectMeshSelectionMode(event.target.value as DirectMeshSelectionMode)}
-                  >
-                    <option value="healthiest">{t.directMeshStrategies.healthiest}</option>
-                    <option value="first_reachable">{t.directMeshStrategies.first_reachable}</option>
-                  </select>
-                </label>
-                <label className="field-span-2">
-                  <span>{t.directMeshEndpoints}</span>
-                  <small className="field-hint">{t.directMeshEndpointsHelp}</small>
-                  <textarea
-                    rows={3}
-                    value={directMeshEndpointsText}
-                    onChange={(event) => setDirectMeshEndpointsText(event.target.value)}
-                  />
-                </label>
-                <label className="field-span-2">
-                  <span>{securityUi.controlPlaneToken}</span>
-                  <small className="field-hint">
-                    {language === "zh"
-                      ? "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。"
-                      : "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests."}
-                  </small>
-                  <input
-                    type="password"
-                    value={controlPlaneApiToken}
-                    onChange={(event) => setControlPlaneApiToken(event.target.value)}
-                    placeholder={language === "zh" ? "可选的控制面令牌" : "Optional control-plane token"}
-                  />
-                </label>
-                <label className="field-span-2">
-                  <span>{securityUi.clusterToken}</span>
-                  <small className="field-hint">
-                    {language === "zh"
-                      ? "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。"
-                      : "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty."}
-                  </small>
-                  <input
-                    type="password"
-                    value={clusterApiToken}
-                    onChange={(event) => setClusterApiToken(event.target.value)}
-                    placeholder={language === "zh" ? "可选的集群专用令牌" : "Optional cluster-only token"}
-                  />
-                </label>
-                <label className="field-span-2">
-                  <span>{securityUi.directMeshToken}</span>
-                  <small className="field-hint">
-                    {language === "zh"
-                      ? "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。"
-                      : "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests."}
-                  </small>
-                  <input
-                    type="password"
-                    value={directMeshApiToken}
-                    onChange={(event) => setDirectMeshApiToken(event.target.value)}
-                    placeholder={language === "zh" ? "可选的直连网格令牌" : "Optional direct-mesh token"}
-                  />
-                </label>
-                <label className="toggle-row">
-                  <div>
-                    <span>{t.shortcutHints}</span>
-                    <small className="field-hint">{t.shortcutHintsHelp}</small>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={showShortcutHints}
-                    onChange={(event) => setShowShortcutHints(event.target.checked)}
-                  />
-                </label>
-                <label className="toggle-row">
-                  <div>
-                    <span>{t.immersiveGuard}</span>
-                    <small className="field-hint">{t.immersiveGuardHelp}</small>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={immersiveGuardrails}
-                    onChange={(event) => setImmersiveGuardrails(event.target.checked)}
-                  />
-                </label>
-              </div>
-              <p className="card-copy">{t.browserLimitsNote}</p>
-              <div className="button-row">
-                <button className="ghost-button" onClick={() => void downloadDatabaseSnapshot()} type="button">
-                  {language === "zh" ? "导出数据库快照" : "Export database snapshot"}
-                </button>
-              </div>
-            </section>
+            <WorkbenchSystemConfigCard
+              title={t.settings}
+              status={health?.status === "ok" ? t.online : t.offline}
+              themeLabel={t.theme}
+              languageLabel={t.language}
+              frontendModeLabel={t.frontendMode}
+              directMeshStrategyLabel={t.directMeshStrategy}
+              directMeshEndpointsLabel={t.directMeshEndpoints}
+              directMeshEndpointsHelp={t.directMeshEndpointsHelp}
+              controlPlaneTokenLabel={securityUi.controlPlaneToken}
+              controlPlaneTokenHelp={
+                language === "zh"
+                  ? "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。"
+                  : "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests."
+              }
+              controlPlaneTokenPlaceholder={language === "zh" ? "可选的控制面令牌" : "Optional control-plane token"}
+              clusterTokenLabel={securityUi.clusterToken}
+              clusterTokenHelp={
+                language === "zh"
+                  ? "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。"
+                  : "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty."
+              }
+              clusterTokenPlaceholder={language === "zh" ? "可选的集群专用令牌" : "Optional cluster-only token"}
+              directMeshTokenLabel={securityUi.directMeshToken}
+              directMeshTokenHelp={
+                language === "zh"
+                  ? "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。"
+                  : "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests."
+              }
+              directMeshTokenPlaceholder={language === "zh" ? "可选的直连网格令牌" : "Optional direct-mesh token"}
+              shortcutHintsLabel={t.shortcutHints}
+              shortcutHintsHelp={t.shortcutHintsHelp}
+              immersiveGuardLabel={t.immersiveGuard}
+              immersiveGuardHelp={t.immersiveGuardHelp}
+              browserLimitsNote={t.browserLimitsNote}
+              exportDatabaseLabel={language === "zh" ? "导出数据库快照" : "Export database snapshot"}
+              theme={theme}
+              language={language}
+              frontendRuntimeMode={frontendRuntimeMode}
+              directMeshSelectionMode={directMeshSelectionMode}
+              directMeshEndpointsText={directMeshEndpointsText}
+              controlPlaneApiToken={controlPlaneApiToken}
+              clusterApiToken={clusterApiToken}
+              directMeshApiToken={directMeshApiToken}
+              showShortcutHints={showShortcutHints}
+              immersiveGuardrails={immersiveGuardrails}
+              themeOptions={[
+                { value: "linen", label: t.themes.linen },
+                { value: "marine", label: t.themes.marine },
+                { value: "graphite", label: t.themes.graphite },
+              ]}
+              languageOptions={[
+                { value: "en", label: t.languages.en },
+                { value: "zh", label: t.languages.zh },
+              ]}
+              frontendModeOptions={[
+                { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
+                { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
+              ]}
+              directMeshStrategyOptions={[
+                { value: "healthiest", label: t.directMeshStrategies.healthiest },
+                { value: "first_reachable", label: t.directMeshStrategies.first_reachable },
+              ]}
+              onThemeChange={setTheme}
+              onLanguageChange={handleLanguageChange}
+              onFrontendRuntimeModeChange={setFrontendRuntimeMode}
+              onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
+              onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
+              onControlPlaneApiTokenChange={setControlPlaneApiToken}
+              onClusterApiTokenChange={setClusterApiToken}
+              onDirectMeshApiTokenChange={setDirectMeshApiToken}
+              onShowShortcutHintsChange={setShowShortcutHints}
+              onImmersiveGuardrailsChange={setImmersiveGuardrails}
+              onExportDatabase={() => void downloadDatabaseSnapshot()}
+            />
             ) : null}
             {systemPanelTab === "assistant" ? (
               <WorkbenchAssistantPanel
@@ -5232,162 +5149,107 @@ export function Workbench() {
             ) : null}
             {systemPanelTab === "runtime" ? (
             <>
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.backend}</h2>
-                <span>{health?.status ?? t.offline}</span>
-              </div>
-              <div className="sidebar-list">
-                <div>
-                  <span>{t.ui}</span>
-                  <strong>3000</strong>
-                </div>
-                <div>
-                  <span>{t.orchestrator}</span>
-                  <strong>{health ? "4000" : t.offline}</strong>
-                </div>
-                <div>
-                  <span>{t.solverAgent}</span>
-                  <strong>{health?.transport?.solver_agent_tcp ?? 5001}</strong>
-                </div>
-              </div>
-            </section>
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.protocols}</h2>
-                <span>{health?.protocol ? t.online : t.offline}</span>
-              </div>
-              <div className="sidebar-list">
-                <div>
-                  <span>{t.controlPlaneProtocol}</span>
-                  <strong>{health?.protocol?.protocol?.name ?? "--"}</strong>
-                </div>
-                <div>
-                  <span>{t.solverRpcProtocol}</span>
-                  <strong>{health?.protocol?.compatible_solver_rpc?.name ?? "--"}</strong>
-                </div>
-                <div>
-                  <span>{t.deploymentMode}</span>
-                  <strong>{health?.deployment?.mode ?? "--"}</strong>
-                </div>
-                <div>
-                  <span>{t.discoveryMode}</span>
-                  <strong>{health?.deployment?.discovery ?? "--"}</strong>
-                </div>
-                <div>
-                  <span>{t.registeredAgents}</span>
-                  <strong>{health?.remote_solver_registry?.active_agents ?? 0}</strong>
-                </div>
-                <div>
-                  <span>{t.reachableAgents}</span>
-                  <strong>{protocolAgents.length}</strong>
-                </div>
-                {frontendRuntimeMode === "direct_mesh_gui" ? (
-                  <>
-                    <div>
-                      <span>{t.directMeshStrategy}</span>
-                      <strong>{t.directMeshStrategies[directMeshSelectionMode]}</strong>
-                    </div>
-                    <div>
-                      <span>{t.directMeshLastAgent}</span>
-                      <strong>{directMeshExecution?.endpoint ?? "--"}</strong>
-                    </div>
-                    <div>
-                      <span>{t.directMeshLastRoute}</span>
-                      <strong>
-                        {directMeshExecution
+            <WorkbenchSystemMetricsCard
+              title={t.backend}
+              status={health?.status ?? t.offline}
+              rows={[
+                { label: t.ui, value: "3000" },
+                { label: t.orchestrator, value: health ? "4000" : t.offline },
+                { label: t.solverAgent, value: health?.transport?.solver_agent_tcp ?? 5001 },
+              ]}
+            />
+            <WorkbenchSystemMetricsCard
+              title={t.protocols}
+              status={health?.protocol ? t.online : t.offline}
+              rows={[
+                { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
+                { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
+                { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
+                { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
+                { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
+                { label: t.reachableAgents, value: protocolAgents.length },
+                ...(frontendRuntimeMode === "direct_mesh_gui"
+                  ? [
+                      { label: t.directMeshStrategy, value: t.directMeshStrategies[directMeshSelectionMode] },
+                      { label: t.directMeshLastAgent, value: directMeshExecution?.endpoint ?? "--" },
+                      {
+                        label: t.directMeshLastRoute,
+                        value: directMeshExecution
                           ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
-                          : "--"}
-                      </strong>
-                    </div>
-                  </>
-                ) : null}
-              </div>
-              {health?.protocol?.compatible_solver_rpc?.methods?.length ? (
-                <div className="protocol-chip-row">
-                  {health.protocol.compatible_solver_rpc.methods.map((method) => (
-                    <span className="protocol-chip" key={method}>
-                      {formatProtocolMethodLabel(method)}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </section>
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{securityUi.security}</h2>
-                <span>
-                  {health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
-                </span>
-              </div>
-              <div className="sidebar-list">
-                <div>
-                  <span>{securityUi.controlPlaneToken}</span>
-                  <strong>
-                    {health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
-                  </strong>
-                </div>
-                <div>
-                  <span>{securityUi.clusterToken}</span>
-                  <strong>
-                    {health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured}
-                  </strong>
-                </div>
-                <div>
-                  <span>{securityUi.clusterWindow}</span>
-                  <strong>{health?.security?.cluster_timestamp_window_ms ?? 30000} ms</strong>
-                </div>
-                <div>
-                  <span>{language === "zh" ? "Agent 白名单" : "Agent allowlist"}</span>
-                  <strong>
-                    {health?.security?.cluster_agent_allowlist_enabled
-                      ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
-                      : securityUi.disabled}
-                  </strong>
-                </div>
-                <div>
-                  <span>{language === "zh" ? "Cluster 白名单" : "Cluster allowlist"}</span>
-                  <strong>
-                    {health?.security?.cluster_cluster_allowlist_enabled
-                      ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
-                      : securityUi.disabled}
-                  </strong>
-                </div>
-                <div>
-                  <span>{language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding"}</span>
-                  <strong>
-                    {health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled}
-                  </strong>
-                </div>
-                <div>
-                  <span>{securityUi.protectReads}</span>
-                  <strong>{health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled}</strong>
-                </div>
-                <div>
-                  <span>{securityUi.mutatingRoutes}</span>
-                  <strong>
-                    {health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled}
-                  </strong>
-                </div>
-                <div>
-                  <span>{securityUi.clusterRoutes}</span>
-                  <strong>
-                    {health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled}
-                  </strong>
-                </div>
-                <div>
-                  <span>{securityUi.directMeshRoutes}</span>
-                  <strong>
-                    {directMeshApiToken ? securityUi.configured : securityUi.enabled}
-                  </strong>
-                </div>
-              </div>
-              <p className="card-copy">
-                {language === "zh"
-                  ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器设置里。"
-                  : "Runtime security state comes from /api/health; frontend tokens stay only in local browser settings."}
-              </p>
-            </section>
+                          : "--",
+                      },
+                    ]
+                  : []),
+              ]}
+              extra={
+                health?.protocol?.compatible_solver_rpc?.methods?.length ? (
+                  <div className="protocol-chip-row">
+                    {health.protocol.compatible_solver_rpc.methods.map((method) => (
+                      <span className="protocol-chip" key={method}>
+                        {formatProtocolMethodLabel(method)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null
+              }
+            />
+            <WorkbenchSystemMetricsCard
+              title={securityUi.security}
+              status={health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
+              rows={[
+                {
+                  label: securityUi.controlPlaneToken,
+                  value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
+                },
+                {
+                  label: securityUi.clusterToken,
+                  value: health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured,
+                },
+                {
+                  label: securityUi.clusterWindow,
+                  value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
+                },
+                {
+                  label: language === "zh" ? "Agent 白名单" : "Agent allowlist",
+                  value: health?.security?.cluster_agent_allowlist_enabled
+                    ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
+                    : securityUi.disabled,
+                },
+                {
+                  label: language === "zh" ? "Cluster 白名单" : "Cluster allowlist",
+                  value: health?.security?.cluster_cluster_allowlist_enabled
+                    ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
+                    : securityUi.disabled,
+                },
+                {
+                  label: language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding",
+                  value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
+                },
+                {
+                  label: securityUi.protectReads,
+                  value: health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled,
+                },
+                {
+                  label: securityUi.mutatingRoutes,
+                  value: health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled,
+                },
+                {
+                  label: securityUi.clusterRoutes,
+                  value: health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled,
+                },
+                {
+                  label: securityUi.directMeshRoutes,
+                  value: directMeshApiToken ? securityUi.configured : securityUi.enabled,
+                },
+              ]}
+              footer={
+                <p className="card-copy">
+                  {language === "zh"
+                    ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器设置里。"
+                    : "Runtime security state comes from /api/health; frontend tokens stay only in local browser settings."}
+                </p>
+              }
+            />
             <section className="sidebar-card sidebar-card--compact">
               <div className="card-head">
                 <h2>{t.protocolAgents}</h2>
@@ -5480,38 +5342,18 @@ export function Workbench() {
                 </div>
               )}
             </section>
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.watchdog}</h2>
-                <span>{health?.watchdog ? t.online : t.offline}</span>
-              </div>
-              <div className="sidebar-list">
-                <div>
-                  <span>{t.activeJobs}</span>
-                  <strong>{health?.watchdog?.active_jobs ?? 0}</strong>
-                </div>
-                <div>
-                  <span>{t.stalledJobs}</span>
-                  <strong>{health?.watchdog?.stalled_jobs ?? 0}</strong>
-                </div>
-                <div>
-                  <span>{t.timedOutJobs}</span>
-                  <strong>{health?.watchdog?.timed_out_jobs ?? 0}</strong>
-                </div>
-                <div>
-                  <span>{t.scanEvery}</span>
-                  <strong>{formatMilliseconds(health?.watchdog?.scan_interval_ms)}</strong>
-                </div>
-                <div>
-                  <span>{t.staleAfter}</span>
-                  <strong>{formatMilliseconds(health?.watchdog?.stale_job_ms)}</strong>
-                </div>
-                <div>
-                  <span>{t.timeoutAfter}</span>
-                  <strong>{formatMilliseconds(health?.watchdog?.job_timeout_ms)}</strong>
-                </div>
-              </div>
-            </section>
+            <WorkbenchSystemMetricsCard
+              title={t.watchdog}
+              status={health?.watchdog ? t.online : t.offline}
+              rows={[
+                { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
+                { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
+                { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
+                { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
+                { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
+                { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },
+              ]}
+            />
             </>
             ) : null}
             {systemPanelTab === "data" ? (
