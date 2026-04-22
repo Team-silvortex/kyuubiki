@@ -16,6 +16,7 @@ import brand from "../../../../../assets/brand/brand.json";
 import { VirtualList } from "@/components/ui/virtual-list";
 import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
+import { WorkbenchDataAdminPanel } from "@/components/workbench/workbench-data-admin-panel";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/workbench-library-sidebar";
 import { WorkbenchMaterialLibraryCard } from "@/components/workbench/workbench-material-library-card";
@@ -23,6 +24,7 @@ import { WorkbenchModelSidebar } from "@/components/workbench/workbench-model-si
 import { WorkbenchModelToolsCard } from "@/components/workbench/workbench-model-tools-card";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { WorkbenchParametricCard } from "@/components/workbench/workbench-parametric-card";
+import { WorkbenchProtocolAgentsCard } from "@/components/workbench/workbench-protocol-agents-card";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchStudySidebar } from "@/components/workbench/workbench-study-sidebar";
 import { WorkbenchSystemConfigCard } from "@/components/workbench/workbench-system-config-card";
@@ -57,6 +59,15 @@ import {
   type HistoryEntry,
   type WorkbenchSnapshot,
 } from "@/lib/workbench/history";
+import {
+  buildAdminJobRows,
+  buildAdminResultRows,
+  buildProtocolAgentCards,
+  buildStudyControlsRows,
+  buildStudyKindOptions,
+  buildStudySummaryRows,
+  buildTruss3dTreeRows,
+} from "@/lib/workbench/view-models";
 import {
   addCustomMaterialToPlaneModel,
   addCustomMaterialToTruss3dModel,
@@ -3364,6 +3375,35 @@ export function Workbench() {
     id: material.id,
     label: `${material.name} (${round(material.youngs_modulus / 1.0e9)} GPa)`,
   }));
+  const adminJobRows = buildAdminJobRows({
+    jobs: deferredJobHistory,
+    heartbeatTone: (job) => heartbeatTone(job),
+    heartbeatLabel: (job) => heartbeatStatus(job, t),
+    detailLabel: (job) => humanizeSolverFailure(job.message, t) ?? job.message ?? job.worker_id ?? "--",
+  });
+  const adminResultRows = buildAdminResultRows({
+    records: deferredResultRecords,
+    updatedAtLabel: (record) => (record.updated_at ? formatTime(record.updated_at, language) : t.hasResult),
+    summaryLabel: (record) => Object.keys(record.result).join(", ").slice(0, 64) || t.resultPayload,
+  });
+  const protocolAgentCards = buildProtocolAgentCards({
+    agents: protocolAgents,
+    labels: {
+      runtimeMode: t.runtimeMode,
+      cluster: t.cluster,
+      clusterSize: t.clusterSize,
+      clusterHealth: t.clusterHealth,
+      peers: t.peers,
+      headless: t.headless,
+      yes: t.yes,
+      no: t.no,
+      capabilities: t.capabilities,
+      methods: t.methods,
+      peerState: t.peerState,
+    },
+    clusterHealthTone,
+    peerStatusLabel: (status) => formatPeerStatus(status, t),
+  });
   const trussElementColors = displayTrussElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
   const truss3dElementColors = displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
   const planeElementColors = planeModel.elements.map((element) => materialColorMap.get(element.material_id ?? "") ?? planeStressFill(0, 1));
@@ -4540,64 +4580,65 @@ export function Workbench() {
     setTruss3dModel((current) => updateTruss3dNodePositionCommand(current, index, position, round));
   };
 
-  const studyKindOptions = [
-    { value: "axial_bar_1d" as const, label: t.kinds.axial_bar_1d },
-    { value: "truss_2d" as const, label: t.kinds.truss_2d },
-    { value: "truss_3d" as const, label: t.kinds.truss_3d },
-    { value: "plane_triangle_2d" as const, label: t.kinds.plane_triangle_2d },
-  ];
+  const studyKindOptions = buildStudyKindOptions(t.kinds);
+  const studySummaryRows = buildStudySummaryRows({
+    labels: {
+      modelName: t.modelName,
+      material: t.material,
+      mesh: t.mesh,
+      load: t.load,
+      support: t.support,
+    },
+    loadedModelName,
+    materialLabel: localMaterialLabel(activeMaterial, language),
+    meshValue: isAxial
+      ? axialForm.elements
+      : isTruss
+        ? trussModel.elements.length
+        : isTruss3d
+          ? truss3dModel.elements.length
+          : planeModel.elements.length,
+    loadValue: isAxial
+      ? `${fixed(axialForm.tipForce, 0)} N`
+      : isTruss
+        ? `${fixed(trussModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`
+        : isTruss3d
+          ? `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`
+          : `${fixed(planeModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`,
+    supportValue: isAxial ? "Node 0" : isTruss3d ? "Fixed tripod" : "Pinned base",
+  });
 
-  const studySummaryRows = [
-    { label: t.modelName, value: loadedModelName },
-    { label: t.material, value: localMaterialLabel(activeMaterial, language) },
-    {
-      label: t.mesh,
-      value: isAxial
-        ? axialForm.elements
-        : isTruss
-          ? trussModel.elements.length
-          : isTruss3d
-            ? truss3dModel.elements.length
-            : planeModel.elements.length,
+  const studyControlsRows = buildStudyControlsRows({
+    labels: {
+      nodes: t.nodes,
+      trussElements: t.trussElements,
+      material: t.material,
+      sourceModel: t.sourceModel,
+      spatialTrussElements: t.spatialTrussElements,
+      load: t.load,
+      planeElements: t.planeElements,
+      thickness: t.thickness,
     },
-    {
-      label: t.load,
-      value: isAxial
-        ? `${fixed(axialForm.tipForce, 0)} N`
-        : isTruss
-          ? `${fixed(trussModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`
-          : isTruss3d
-            ? `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`
-            : `${fixed(planeModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`,
-    },
-    {
-      label: t.support,
-      value: isAxial ? "Node 0" : isTruss3d ? "Fixed tripod" : "Pinned base",
-    },
-  ];
-
-  const studyControlsRows = isAxial
-    ? []
-    : isTruss
-      ? [
-          { label: t.nodes, value: trussModel.nodes.length },
-          { label: t.trussElements, value: trussModel.elements.length },
-          { label: t.material, value: localMaterialLabel(activeMaterial, language) },
-          { label: t.sourceModel, value: loadedModelName },
-        ]
-      : isTruss3d
-        ? [
-            { label: t.nodes, value: truss3dModel.nodes.length },
-            { label: t.spatialTrussElements, value: truss3dModel.elements.length },
-            { label: t.load, value: `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N` },
-            { label: t.sourceModel, value: loadedModelName },
-          ]
-        : [
-            { label: t.nodes, value: planeModel.nodes.length },
-            { label: t.planeElements, value: planeModel.elements.length },
-            { label: t.thickness, value: fixed(planeModel.elements[0]?.thickness, 3) },
-            { label: t.sourceModel, value: loadedModelName },
-          ];
+    studyKind,
+    loadedModelName,
+    materialLabel: localMaterialLabel(activeMaterial, language),
+    trussNodeCount: trussModel.nodes.length,
+    trussElementCount: trussModel.elements.length,
+    truss3dNodeCount: truss3dModel.nodes.length,
+    truss3dElementCount: truss3dModel.elements.length,
+    truss3dLoadValue: `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`,
+    planeNodeCount: planeModel.nodes.length,
+    planeElementCount: planeModel.elements.length,
+    planeThicknessValue: fixed(planeModel.elements[0]?.thickness, 3),
+  });
+  const truss3dTreeRows = buildTruss3dTreeRows({
+    nodes: truss3dModel.nodes,
+    elements: displayTruss3dElements,
+    selectedNode,
+    selectedTruss3dNodes,
+    memberDraftNodes,
+    fixed,
+  });
 
   const studyControlsContent = isAxial ? (
     <div className="form-grid compact">
@@ -4802,22 +4843,11 @@ export function Workbench() {
       nodeILabel={t.nodeI}
       nodeJLabel={t.nodeJ}
       areaLabel={t.area}
-      nodes={truss3dModel.nodes.map((node, index) => ({
-        index,
-        id: node.id,
-        x: fixed(node.x, 2),
-        y: fixed(node.y, 2),
-        z: fixed(node.z, 2),
-        active: selectedTruss3dNodes.includes(index) || selectedNode === index,
-        draft: memberDraftNodes.includes(index),
-      }))}
-      elements={displayTruss3dElements.map((element, index) => ({
-        index,
-        id: element.id,
-        nodeI: element.node_i,
-        nodeJ: element.node_j,
-        area: fixed(truss3dModel.elements[index]?.area, 4),
-        active: selectedElement === index,
+      nodes={truss3dTreeRows.nodes}
+      elements={truss3dTreeRows.elements.map((element) => ({
+        ...element,
+        area: fixed(truss3dModel.elements[element.index]?.area, 4),
+        active: selectedElement === element.index,
       }))}
       onSelectNode={handleTruss3dNodePick}
       onSelectElement={(index) => {
@@ -5250,98 +5280,12 @@ export function Workbench() {
                 </p>
               }
             />
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.protocolAgents}</h2>
-                <span>{protocolAgents.length}</span>
-              </div>
-              {protocolAgents.length === 0 ? (
-                <p className="card-copy">{t.noProtocolAgents}</p>
-              ) : (
-                <div className="protocol-agent-list">
-                  {protocolAgents.slice(0, 4).map((agent) => (
-                    <article className="protocol-agent-card" key={agent.id}>
-                      <div className="protocol-agent-card__head">
-                        <strong>{agent.id}</strong>
-                        <span>
-                          {agent.host}:{agent.port}
-                        </span>
-                      </div>
-                      <div className="sidebar-list">
-                        <div>
-                          <span>{t.runtimeMode}</span>
-                          <strong>{agent.descriptor?.runtime?.runtime_mode ?? "--"}</strong>
-                        </div>
-                        <div>
-                          <span>{t.cluster}</span>
-                          <strong>{agent.descriptor?.runtime?.cluster_id ?? "--"}</strong>
-                        </div>
-                        <div>
-                          <span>{t.clusterSize}</span>
-                          <strong>{agent.descriptor?.runtime?.cluster_size ?? 1}</strong>
-                        </div>
-                        <div>
-                          <span>{t.clusterHealth}</span>
-                          <strong>
-                            <span
-                              className={`status-chip status-chip--${clusterHealthTone(agent.descriptor?.runtime?.health_score)}`}
-                            >
-                              {agent.descriptor?.runtime?.health_score ?? "--"}
-                            </span>
-                          </strong>
-                        </div>
-                        <div>
-                          <span>{t.peers}</span>
-                          <strong>{agent.descriptor?.runtime?.peers?.length ?? 0}</strong>
-                        </div>
-                        <div>
-                          <span>{t.headless}</span>
-                          <strong>{agent.descriptor?.runtime?.headless ? t.yes : t.no}</strong>
-                        </div>
-                        <div>
-                          <span>{t.capabilities}</span>
-                          <strong>{agent.descriptor?.capabilities?.length ?? 0}</strong>
-                        </div>
-                        <div>
-                          <span>{t.methods}</span>
-                          <strong>{agent.descriptor?.protocol?.methods?.length ?? 0}</strong>
-                        </div>
-                      </div>
-                      {agent.descriptor?.capabilities?.length || agent.descriptor?.runtime?.peers?.length ? (
-                        <div className="protocol-chip-row">
-                          {agent.descriptor?.capabilities?.flatMap((capability) =>
-                            capability.tags.slice(0, 3).map((tag) => (
-                              <span className="protocol-chip" key={`${agent.id}-${capability.id}-${tag}`}>
-                                {tag}
-                              </span>
-                            )),
-                          ) ?? null}
-                          {agent.descriptor?.runtime?.peers?.slice(0, 2).map((peer) => (
-                            <span
-                              className={`protocol-chip protocol-chip--${clusterHealthTone(
-                                peer.status === "healthy"
-                                  ? 100
-                                  : peer.status === "degraded"
-                                    ? 65
-                                    : peer.status === "seed"
-                                      ? 85
-                                      : 25,
-                              )}`}
-                              key={`${agent.id}-${peer.address}`}
-                              title={`${t.peerState}: ${formatPeerStatus(peer.status, t)}`}
-                            >
-                              {peer.address}
-                            </span>
-                          )) ?? null}
-                        </div>
-                      ) : agent.descriptor_error ? (
-                        <p className="card-copy">{agent.descriptor_error}</p>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
+            <WorkbenchProtocolAgentsCard
+              title={t.protocolAgents}
+              countLabel={String(protocolAgents.length)}
+              emptyLabel={t.noProtocolAgents}
+              agents={protocolAgentCards}
+            />
             <WorkbenchSystemMetricsCard
               title={t.watchdog}
               status={health?.watchdog ? t.online : t.offline}
@@ -5357,154 +5301,70 @@ export function Workbench() {
             </>
             ) : null}
             {systemPanelTab === "data" ? (
-            <section className="sidebar-card sidebar-card--compact">
-              <div className="card-head">
-                <h2>{t.dataAdmin}</h2>
-                <span>
-                  {t.databaseRecordCount}: {jobHistory.length + resultRecords.length}
-                </span>
-              </div>
-              <div className="panel-tabs">
-                <button
-                  className={`panel-tab${systemDataTab === "jobs" ? " panel-tab--active" : ""}`}
-                  onClick={() => setSystemDataTab("jobs")}
-                  type="button"
-                >
-                  {t.adminJobs}
-                </button>
-                <button
-                  className={`panel-tab${systemDataTab === "results" ? " panel-tab--active" : ""}`}
-                  onClick={() => setSystemDataTab("results")}
-                  type="button"
-                >
-                  {t.adminResults}
-                </button>
-              </div>
-              {systemDataTab === "jobs" ? (
-                <>
-                  <VirtualList
-                    className="history-list"
-                    items={deferredJobHistory}
-                    itemHeight={112}
-                    maxHeight={220}
-                    emptyState={<p className="card-copy">{t.historyEmpty}</p>}
-                    itemKey={(historyJob) => historyJob.job_id}
-                    renderItem={(historyJob) => (
-                      <button
-                        className={`history-item${selectedAdminJobId === historyJob.job_id ? " history-item--active" : ""}`}
-                        onClick={() => setSelectedAdminJobId(historyJob.job_id)}
-                        type="button"
-                      >
-                        <strong>{historyJob.job_id.slice(0, 8)}</strong>
-                        <span>{historyJob.status}</span>
-                        <small>{historyJob.project_id}</small>
-                        <small>
-                          <span className={`heartbeat-badge heartbeat-badge--${heartbeatTone(historyJob as JobEnvelope["job"])}`}>
-                            {heartbeatStatus(historyJob as JobEnvelope["job"], t)}
-                          </span>
-                        </small>
-                        <small>{humanizeSolverFailure(historyJob.message, t) ?? historyJob.message ?? historyJob.worker_id ?? "--"}</small>
-                      </button>
-                    )}
-                  />
-                  {selectedAdminJob ? (
-                    <>
-                      <div className="button-row">
-                        <button className="ghost-button" disabled={selectedAdminJob.status === "completed" || selectedAdminJob.status === "failed" || selectedAdminJob.status === "cancelled"} onClick={selectedAdminJob.job_id === job?.job_id ? cancelCurrentJob : async () => {
-                          try {
-                            await cancelJob(selectedAdminJob.job_id);
-                            setMessage(t.jobCancelled);
-                            await refreshJobHistory();
-                          } catch (error) {
-                            setMessage(error instanceof Error ? error.message : t.initialFailed);
-                          }
-                        }} type="button">
-                          {t.cancelJob}
-                        </button>
-                      </div>
-                      <div className="form-grid compact">
-                        <label>
-                          <span>{t.adminMessage}</span>
-                          <input value={adminJobMessage} onChange={(event) => setAdminJobMessage(event.target.value)} />
-                        </label>
-                        <label>
-                          <span>{t.adminProjectId}</span>
-                          <input value={adminJobProjectId} onChange={(event) => setAdminJobProjectId(event.target.value)} />
-                        </label>
-                        <label>
-                          <span>{t.adminModelVersionId}</span>
-                          <input value={adminJobModelVersionId} onChange={(event) => setAdminJobModelVersionId(event.target.value)} />
-                        </label>
-                        <label>
-                          <span>{t.adminCaseId}</span>
-                          <input value={adminJobCaseId} onChange={(event) => setAdminJobCaseId(event.target.value)} />
-                        </label>
-                      </div>
-                      <div className="button-row">
-                        <button className="ghost-button" onClick={saveAdminJobRecord} type="button">
-                          {t.saveRecord}
-                        </button>
-                        <button className="ghost-button" onClick={deleteAdminJobRecord} type="button">
-                          {t.deleteRecord}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="card-copy">{t.selectRecord}</p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <VirtualList
-                    className="history-list"
-                    items={deferredResultRecords}
-                    itemHeight={88}
-                    maxHeight={220}
-                    emptyState={<p className="card-copy">{t.historyEmpty}</p>}
-                    itemKey={(entry) => entry.job_id}
-                    renderItem={(entry) => (
-                      <button
-                        className={`history-item${selectedAdminResultJobId === entry.job_id ? " history-item--active" : ""}`}
-                        onClick={() => setSelectedAdminResultJobId(entry.job_id)}
-                        type="button"
-                      >
-                        <strong>{entry.job_id.slice(0, 8)}</strong>
-                        <span>{entry.updated_at ? formatTime(entry.updated_at, language) : t.hasResult}</span>
-                        <small>{Object.keys(entry.result).join(", ").slice(0, 64) || t.resultPayload}</small>
-                      </button>
-                    )}
-                  />
-                  {selectedAdminResult ? (
-                    <>
-                      <div className="form-grid compact">
-                        <label>
-                          <span>{t.resultPayload}</span>
-                          <textarea
-                            className="json-editor"
-                            value={adminResultDraft}
-                            onChange={(event) => setAdminResultDraft(event.target.value)}
-                            rows={10}
-                          />
-                        </label>
-                      </div>
-                      <div className="button-row">
-                        <button className="ghost-button" onClick={saveAdminResultRecord} type="button">
-                          {t.saveRecord}
-                        </button>
-                        <button className="ghost-button" onClick={exportAdminResultRecord} type="button">
-                          {t.exportRecord}
-                        </button>
-                        <button className="ghost-button" onClick={deleteAdminResultRecord} type="button">
-                          {t.deleteRecord}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="card-copy">{t.selectRecord}</p>
-                  )}
-                </>
+            <WorkbenchDataAdminPanel
+              title={t.dataAdmin}
+              recordCountLabel={`${t.databaseRecordCount}: ${jobHistory.length + resultRecords.length}`}
+              jobsTabLabel={t.adminJobs}
+              resultsTabLabel={t.adminResults}
+              historyEmptyLabel={t.historyEmpty}
+              selectRecordLabel={t.selectRecord}
+              cancelJobLabel={t.cancelJob}
+              saveRecordLabel={t.saveRecord}
+              deleteRecordLabel={t.deleteRecord}
+              exportRecordLabel={t.exportRecord}
+              adminMessageLabel={t.adminMessage}
+              adminProjectIdLabel={t.adminProjectId}
+              adminModelVersionIdLabel={t.adminModelVersionId}
+              adminCaseIdLabel={t.adminCaseId}
+              resultPayloadLabel={t.resultPayload}
+              activeTab={systemDataTab}
+              onTabChange={setSystemDataTab}
+              jobRows={adminJobRows}
+              selectedAdminJobId={selectedAdminJobId}
+              onSelectAdminJob={setSelectedAdminJobId}
+              selectedAdminJob={Boolean(selectedAdminJob)}
+              canCancelSelectedJob={Boolean(
+                selectedAdminJob &&
+                  selectedAdminJob.status !== "completed" &&
+                  selectedAdminJob.status !== "failed" &&
+                  selectedAdminJob.status !== "cancelled",
               )}
-            </section>
+              onCancelSelectedJob={() => {
+                if (!selectedAdminJob) return;
+                if (selectedAdminJob.job_id === job?.job_id) {
+                  cancelCurrentJob();
+                  return;
+                }
+                void (async () => {
+                  try {
+                    await cancelJob(selectedAdminJob.job_id);
+                    setMessage(t.jobCancelled);
+                    await refreshJobHistory();
+                  } catch (error) {
+                    setMessage(error instanceof Error ? error.message : t.initialFailed);
+                  }
+                })();
+              }}
+              adminJobMessage={adminJobMessage}
+              onAdminJobMessageChange={setAdminJobMessage}
+              adminJobProjectId={adminJobProjectId}
+              onAdminJobProjectIdChange={setAdminJobProjectId}
+              adminJobModelVersionId={adminJobModelVersionId}
+              onAdminJobModelVersionIdChange={setAdminJobModelVersionId}
+              adminJobCaseId={adminJobCaseId}
+              onAdminJobCaseIdChange={setAdminJobCaseId}
+              onSaveAdminJob={saveAdminJobRecord}
+              onDeleteAdminJob={deleteAdminJobRecord}
+              resultRows={adminResultRows}
+              selectedAdminResultJobId={selectedAdminResultJobId}
+              onSelectAdminResult={setSelectedAdminResultJobId}
+              selectedAdminResult={Boolean(selectedAdminResult)}
+              adminResultDraft={adminResultDraft}
+              onAdminResultDraftChange={setAdminResultDraft}
+              onSaveAdminResult={saveAdminResultRecord}
+              onExportAdminResult={exportAdminResultRecord}
+              onDeleteAdminResult={deleteAdminResultRecord}
+            />
             ) : null}
           </div>
         ) : null}

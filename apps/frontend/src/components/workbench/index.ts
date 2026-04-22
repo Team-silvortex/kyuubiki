@@ -1,9 +1,11 @@
 export { Workbench } from "./workbench";
 export { WorkbenchLibrarySidebar } from "./workbench-library-sidebar";
+export { WorkbenchDataAdminPanel } from "./workbench-data-admin-panel";
 export { WorkbenchMaterialLibraryCard } from "./workbench-material-library-card";
 export { WorkbenchModelSidebar } from "./workbench-model-sidebar";
 export { WorkbenchModelToolsCard } from "./workbench-model-tools-card";
 export { WorkbenchParametricCard } from "./workbench-parametric-card";
+export { WorkbenchProtocolAgentsCard } from "./workbench-protocol-agents-card";
 export { WorkbenchStudySidebar } from "./workbench-study-sidebar";
 export { WorkbenchSystemConfigCard } from "./workbench-system-config-card";
 export { WorkbenchSystemMetricsCard } from "./workbench-system-metrics-card";

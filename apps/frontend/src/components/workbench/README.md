@@ -25,6 +25,8 @@ This directory contains the browser workbench surface:
   Material editing and import/apply card extracted from the model tools surface.
 - `workbench-parametric-card.tsx`
   Parametric generator card extracted from the model tools surface.
+- `workbench-protocol-agents-card.tsx`
+  Runtime protocol agent observer card extracted from the system sidebar.
 - `workbench-system-config-card.tsx`
   System settings/configuration card extracted from the system sidebar surface.
 - `workbench-system-metrics-card.tsx`
@@ -33,6 +35,8 @@ This directory contains the browser workbench surface:
   3D object tree card extracted from the model tree surface.
 - `workbench-library-sidebar.tsx`
   Sample/project/model/job library surface extracted from the main workbench shell.
+- `workbench-data-admin-panel.tsx`
+  Data admin CRUD surface extracted from the system sidebar.
 
 These files are intentionally grouped because they evolve together as one UI
 domain even when they are rendered separately.
