@@ -17,6 +17,10 @@ This directory contains the browser workbench surface:
   a Pyodide bridge.
 - `workbench-study-sidebar.tsx`
   Study setup and run controls surface extracted from the main workbench shell.
+- `workbench-model-sidebar.tsx`
+  Model editing shell for tools/tree tabs extracted from the main workbench shell.
+- `workbench-library-sidebar.tsx`
+  Sample/project/model/job library surface extracted from the main workbench shell.
 
 These files are intentionally grouped because they evolve together as one UI
 domain even when they are rendered separately.

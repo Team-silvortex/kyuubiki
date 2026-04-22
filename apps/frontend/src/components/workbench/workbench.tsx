@@ -8,6 +8,7 @@ import {
   useTransition,
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
   type UIEvent as ReactUIEvent,
   type SetStateAction,
 } from "react";
@@ -16,6 +17,8 @@ import { VirtualList } from "@/components/ui/virtual-list";
 import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
+import { WorkbenchLibrarySidebar } from "@/components/workbench/workbench-library-sidebar";
+import { WorkbenchModelSidebar } from "@/components/workbench/workbench-model-sidebar";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchStudySidebar } from "@/components/workbench/workbench-study-sidebar";
@@ -4655,6 +4658,439 @@ export function Workbench() {
     </div>
   ) : null;
 
+  const modelToolsContent: ReactNode = (
+    <>
+      <section className="sidebar-card">
+        <div className="card-head">
+          <h2>{isTruss3d ? t.spaceStudio : t.sections.model}</h2>
+          <span>{isTruss3d ? t.orbitHint : t.dragToEdit}</span>
+        </div>
+        <p className="card-copy">{isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : t.modelStudioHint}</p>
+        {isTruss ? (
+          <>
+            <div className="button-row">
+              <button className="ghost-button" onClick={() => addNode(false)} type="button">
+                {t.addNode}
+              </button>
+              <button className="ghost-button" disabled={selectedNode === null} onClick={() => addNode(true)} type="button">
+                {t.addBranchNode}
+              </button>
+              <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedNode} type="button">
+                {t.deleteNode}
+              </button>
+            </div>
+            <div className="button-row">
+              <button className="ghost-button" onClick={toggleMemberFromDraft} type="button">
+                {t.toggleMember}
+              </button>
+              <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
+                {t.deleteMember}
+              </button>
+            </div>
+          </>
+        ) : null}
+        {isTruss3d ? (
+          <>
+            <div className="button-row">
+              <button className="ghost-button" onClick={() => addTruss3dNode(false)} type="button">
+                {t.addNode}
+              </button>
+              <button className="ghost-button" disabled={selectedNode === null} onClick={() => addTruss3dNode(true)} type="button">
+                {t.addBranchNode}
+              </button>
+              <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedTruss3dNode} type="button">
+                {t.deleteNode}
+              </button>
+            </div>
+            <div className="button-row">
+              <button className={`ghost-button${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={toggleTruss3dLinkMode} type="button">
+                {truss3dLinkMode ? t.linkModeActive : t.linkMode}
+              </button>
+              <button className="ghost-button" onClick={toggleTruss3dMemberFromDraft} type="button">
+                {t.toggleMember}
+              </button>
+              <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedTruss3dElement} type="button">
+                {t.deleteMember}
+              </button>
+            </div>
+            <p className="card-copy">{t.linkModeIdle}</p>
+          </>
+        ) : null}
+        <div className="button-row">
+          <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
+            {t.undo}
+          </button>
+          <button className="ghost-button" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
+            {t.redo}
+          </button>
+        </div>
+        <div className="button-row">
+          <button className="ghost-button" onClick={downloadModel} type="button">
+            {t.download}
+          </button>
+          <button
+            className="ghost-button"
+            onClick={() => {
+              setStudyKind(isPlane ? "plane_triangle_2d" : isTruss3d ? "truss_3d" : "truss_2d");
+              setSidebarSection("study");
+              setMessage(isPlane ? t.planeHint : isTruss3d ? t.switchedTo3dStudio : t.switchedTo2dStudio);
+            }}
+            type="button"
+          >
+            {t.saveForSolver}
+          </button>
+        </div>
+        <p className="card-copy">{t.selectionHint}</p>
+      </section>
+
+      {!isAxial ? (
+        <section className="sidebar-card">
+          <div className="card-head">
+            <h2>{language === "zh" ? "材料库" : "Material Library"}</h2>
+            <span>{currentMaterials.length}</span>
+          </div>
+          <div className="button-row">
+            <select value={activeMaterial} onChange={(event) => setActiveMaterial(event.target.value)}>
+              {MATERIAL_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {localMaterialLabel(preset.value, language)}
+                </option>
+              ))}
+            </select>
+            <button className="ghost-button" onClick={addMaterialToCurrentModel} type="button">
+              {language === "zh" ? "添加材料" : "Add material"}
+            </button>
+            <button className="ghost-button" onClick={addCustomMaterialToCurrentModel} type="button">
+              {language === "zh" ? "新建自定义" : "New custom"}
+            </button>
+          </div>
+          <label className="import-box">
+            <span>{language === "zh" ? "导入材料库" : "Import materials"}</span>
+            <small>{language === "zh" ? "支持 JSON / CSV 材料文件。" : "Accepts JSON / CSV material libraries."}</small>
+            <input
+              type="file"
+              accept=".json,.csv,text/csv,application/json"
+              onChange={(event) => void importMaterials(event.target.files?.[0])}
+            />
+          </label>
+          <div className="material-library">
+            {currentMaterials.map((material) => (
+              <div key={material.id} className="material-chip-card">
+                <div className="material-chip-card__head">
+                  <span
+                    className="material-chip-card__swatch"
+                    style={{ background: materialColorMap.get(material.id) ?? "#1677a3" }}
+                  />
+                  <strong>{material.id}</strong>
+                </div>
+                <div className="form-grid compact">
+                  <label>
+                    <span>{t.material}</span>
+                    <input
+                      value={material.name}
+                      onChange={(event) => updateCurrentMaterial(material.id, "name", event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>{t.modulus}</span>
+                    <input
+                      type="number"
+                      min={0.1}
+                      step={0.1}
+                      value={round(material.youngs_modulus / 1.0e9)}
+                      onChange={(event) =>
+                        updateCurrentMaterial(material.id, "youngs_modulus", Number(event.target.value) * 1.0e9)
+                      }
+                    />
+                  </label>
+                  {isPlane ? (
+                    <label>
+                      <span>{t.poissonRatio}</span>
+                      <input
+                        type="number"
+                        min={0.01}
+                        max={0.49}
+                        step={0.01}
+                        value={material.poisson_ratio ?? 0.33}
+                        onChange={(event) =>
+                          updateCurrentMaterial(material.id, "poisson_ratio", Number(event.target.value))
+                        }
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <div className="button-row">
+                  <button
+                    className={`ghost-button ghost-button--compact${hiddenMaterialIds.includes(material.id) ? "" : " ghost-button--active"}`}
+                    onClick={() => toggleMaterialVisibility(material.id)}
+                    type="button"
+                  >
+                    {hiddenMaterialIds.includes(material.id)
+                      ? language === "zh"
+                        ? "显示"
+                        : "Show"
+                      : language === "zh"
+                        ? "隐藏"
+                        : "Hide"}
+                  </button>
+                </div>
+                <div className="button-row">
+                  <button
+                    className="ghost-button ghost-button--compact"
+                    disabled={selectedElement === null}
+                    onClick={() => applyMaterialToCurrentModel(material.id, "selected")}
+                    type="button"
+                  >
+                    {language === "zh" ? "赋给当前单元" : "Apply to selected"}
+                  </button>
+                  <button
+                    className="ghost-button ghost-button--compact"
+                    onClick={() => applyMaterialToCurrentModel(material.id, "all")}
+                    type="button"
+                  >
+                    {language === "zh" ? "赋给全部单元" : "Apply to all"}
+                  </button>
+                  <button
+                    className="ghost-button ghost-button--compact"
+                    disabled={currentMaterials.length <= 1}
+                    onClick={() => deleteCurrentMaterial(material.id)}
+                    type="button"
+                  >
+                    {language === "zh" ? "删除材料" : "Delete material"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {!isTruss3d ? (
+        <section className="sidebar-card">
+          <div className="card-head">
+            <h2>{isPlane ? t.panelGenerator : t.parametric}</h2>
+            <span>{t.modelTools}</span>
+          </div>
+          <div className="form-grid compact">
+            {isPlane ? (
+              <>
+                <label>
+                  <span>{t.length}</span>
+                  <input type="number" min={0.2} step={0.1} value={panelParametric.width} onChange={(event) => handlePanelParametricChange("width", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.height}</span>
+                  <input type="number" min={0.2} step={0.1} value={panelParametric.height} onChange={(event) => handlePanelParametricChange("height", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.divisionsX}</span>
+                  <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsX} onChange={(event) => handlePanelParametricChange("divisionsX", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.divisionsY}</span>
+                  <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsY} onChange={(event) => handlePanelParametricChange("divisionsY", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.planeThickness}</span>
+                  <input type="number" min={0.001} step={0.001} value={panelParametric.thickness} onChange={(event) => handlePanelParametricChange("thickness", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.modulus}</span>
+                  <input type="number" min={0.1} step={0.1} value={panelParametric.youngsModulusGpa} onChange={(event) => handlePanelParametricChange("youngsModulusGpa", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.poissonRatio}</span>
+                  <input type="number" min={0.01} max={0.49} step={0.01} value={panelParametric.poissonRatio} onChange={(event) => handlePanelParametricChange("poissonRatio", Number(event.target.value))} />
+                </label>
+                <label>
+                  <span>{t.loadCase}</span>
+                  <input type="number" step={100} value={panelParametric.loadY} onChange={(event) => handlePanelParametricChange("loadY", Number(event.target.value))} />
+                </label>
+              </>
+            ) : (
+              <>
+                <label>
+                  <span>{t.bays}</span>
+                  <input
+                    type="number"
+                    min={2}
+                    max={10}
+                    step={1}
+                    value={parametric.bays}
+                    onChange={(event) => handleParametricChange("bays", Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>{t.length}</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={0.5}
+                    value={parametric.span}
+                    onChange={(event) => handleParametricChange("span", Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>{t.height}</span>
+                  <input
+                    type="number"
+                    min={0.2}
+                    step={0.1}
+                    value={parametric.height}
+                    onChange={(event) => handleParametricChange("height", Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>{t.area}</span>
+                  <input
+                    type="number"
+                    min={0.0001}
+                    step={0.0001}
+                    value={parametric.area}
+                    onChange={(event) => handleParametricChange("area", Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>{t.modulus}</span>
+                  <input
+                    type="number"
+                    min={0.1}
+                    step={0.1}
+                    value={parametric.youngsModulusGpa}
+                    onChange={(event) => handleParametricChange("youngsModulusGpa", Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  <span>{t.loadCase}</span>
+                  <input
+                    type="number"
+                    step={100}
+                    value={parametric.loadY}
+                    onChange={(event) => handleParametricChange("loadY", Number(event.target.value))}
+                  />
+                </label>
+              </>
+            )}
+          </div>
+          <button className="solve-button" onClick={isPlane ? generatePanelModel : generateModel} type="button">
+            {isPlane ? t.generatePanel : t.generate}
+          </button>
+        </section>
+      ) : null}
+    </>
+  );
+
+  const modelTreeContent: ReactNode = isTruss3d ? (
+    <section className="sidebar-card">
+      <div className="card-head">
+        <h2>{t.objectTree}</h2>
+        <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.nodes}` : truss3dLinkMode ? t.linkModeActive : `${memberDraftNodes.length}/2`}</span>
+      </div>
+      <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.orbitHint}</p>
+      <div className="table-like">
+        <div className="table-like__head table-like__head--space">
+          <span>ID</span>
+          <span>X</span>
+          <span>Y</span>
+          <span>Z</span>
+        </div>
+        <VirtualList
+          className="table-like__body"
+          items={truss3dModel.nodes}
+          itemHeight={46}
+          maxHeight={240}
+          itemKey={(node) => node.id}
+          renderItem={(node, index) => (
+            <button
+              className={`table-like__row table-like__row--space${selectedTruss3dNodes.includes(index) || selectedNode === index ? " table-like__row--active" : ""}${memberDraftNodes.includes(index) ? " table-like__row--draft" : ""}`}
+              onClick={() => handleTruss3dNodePick(index)}
+              type="button"
+            >
+              <strong>{node.id}</strong>
+              <span>{fixed(node.x, 2)}</span>
+              <span>{fixed(node.y, 2)}</span>
+              <span>{fixed(node.z, 2)}</span>
+            </button>
+          )}
+        />
+      </div>
+      <div className="table-like model-tree-spacer">
+        <div className="table-like__head">
+          <span>ID</span>
+          <span>{t.nodeI}</span>
+          <span>{t.nodeJ}</span>
+          <span>{t.area}</span>
+        </div>
+        <VirtualList
+          className="table-like__body"
+          items={displayTruss3dElements}
+          itemHeight={44}
+          maxHeight={240}
+          itemKey={(element) => element.id}
+          renderItem={(element, index) => (
+            <button
+              className={`table-like__row${selectedElement === index ? " table-like__row--active" : ""}`}
+              onClick={() => {
+                setSelectedElement(index);
+                setSelectedNode(null);
+                setSelectedTruss3dNodes([]);
+                setMemberDraftNodes([]);
+              }}
+              type="button"
+            >
+              <strong>{element.id}</strong>
+              <span>{element.node_i}</span>
+              <span>{element.node_j}</span>
+              <span>{fixed(truss3dModel.elements[index]?.area, 4)}</span>
+            </button>
+          )}
+        />
+      </div>
+    </section>
+  ) : (
+    <WorkbenchObjectTree
+      title={t.objectTree}
+      countLabel={isTruss ? `${memberDraftNodes.length}/2` : String(planeModel.elements.length)}
+      hint={isPlane ? t.planeHint : t.dragHint}
+      diagnosticsLabel={t.diagnostics}
+      loadCaseLabel={t.loadCase}
+      nodeJLabel={t.nodeJ}
+      nodeKLabel={t.nodeK}
+      nodeRows={(isPlane ? planeModel.nodes : trussModel.nodes).map((node) => ({
+        id: node.id,
+        x: node.x,
+        y: node.y,
+        load_y: node.load_y,
+      }))}
+      elementRows={(isPlane ? planeElements : displayTrussElements).map((element) => ({
+        id: element.id,
+        node_i: element.node_i,
+        node_j: "node_j" in element ? element.node_j : undefined,
+        node_k: "node_k" in element ? element.node_k : undefined,
+      }))}
+      isPlane={isPlane}
+      isTruss={isTruss}
+      selectedNode={selectedNode}
+      selectedElement={selectedElement}
+      nodeIssueCounts={Object.fromEntries(
+        Object.entries(trussDiagnostics?.nodeIssues ?? {}).map(([key, issues]) => [Number(key), issues.length]),
+      )}
+      onSelectNode={(index) => {
+        if (isPlane) {
+          setSelectedNode(index);
+          setSelectedElement(null);
+        } else {
+          toggleDraftNode(index);
+        }
+      }}
+      onSelectElement={(index) => {
+        setSelectedElement(index);
+        setSelectedNode(null);
+        if (isTruss) setMemberDraftNodes([]);
+      }}
+    />
+  );
+
   return (
     <div className="workbench-shell">
       <aside className="app-rail panel">
@@ -4713,678 +5149,65 @@ export function Workbench() {
         ) : null}
 
         {sidebarSection === "model" ? (
-          <div className={`sidebar-stack panel-scroll-window${isTruss3d ? " sidebar-stack--space" : ""}`}>
-            <div className="panel-tabs">
-              <button className={`panel-tab${modelTab === "tools" ? " panel-tab--active" : ""}`} onClick={() => setModelTab("tools")} type="button">{t.tabs.tools}</button>
-              <button className={`panel-tab${modelTab === "tree" ? " panel-tab--active" : ""}`} onClick={() => setModelTab("tree")} type="button">{t.tabs.tree}</button>
-            </div>
-            {modelTab === "tools" ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{isTruss3d ? t.spaceStudio : t.sections.model}</h2>
-                <span>{isTruss3d ? t.orbitHint : t.dragToEdit}</span>
-              </div>
-              <p className="card-copy">{isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : t.modelStudioHint}</p>
-              {isTruss ? (
-                <>
-                  <div className="button-row">
-                    <button className="ghost-button" onClick={() => addNode(false)} type="button">
-                      {t.addNode}
-                    </button>
-                    <button className="ghost-button" disabled={selectedNode === null} onClick={() => addNode(true)} type="button">
-                      {t.addBranchNode}
-                    </button>
-                    <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedNode} type="button">
-                      {t.deleteNode}
-                    </button>
-                  </div>
-                  <div className="button-row">
-                    <button className="ghost-button" onClick={toggleMemberFromDraft} type="button">
-                      {t.toggleMember}
-                    </button>
-                    <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedElement} type="button">
-                      {t.deleteMember}
-                    </button>
-                  </div>
-                </>
-              ) : null}
-              {isTruss3d ? (
-                <>
-                  <div className="button-row">
-                    <button className="ghost-button" onClick={() => addTruss3dNode(false)} type="button">
-                      {t.addNode}
-                    </button>
-                    <button className="ghost-button" disabled={selectedNode === null} onClick={() => addTruss3dNode(true)} type="button">
-                      {t.addBranchNode}
-                    </button>
-                    <button className="ghost-button" disabled={selectedNode === null} onClick={deleteSelectedTruss3dNode} type="button">
-                      {t.deleteNode}
-                    </button>
-                  </div>
-                  <div className="button-row">
-                    <button className={`ghost-button${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={toggleTruss3dLinkMode} type="button">
-                      {truss3dLinkMode ? t.linkModeActive : t.linkMode}
-                    </button>
-                    <button className="ghost-button" onClick={toggleTruss3dMemberFromDraft} type="button">
-                      {t.toggleMember}
-                    </button>
-                    <button className="ghost-button" disabled={selectedElement === null} onClick={deleteSelectedTruss3dElement} type="button">
-                      {t.deleteMember}
-                    </button>
-                  </div>
-                  <p className="card-copy">{t.linkModeIdle}</p>
-                </>
-              ) : null}
-              <div className="button-row">
-                <button className="ghost-button" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
-                  {t.undo}
-                </button>
-                <button className="ghost-button" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
-                  {t.redo}
-                </button>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" onClick={downloadModel} type="button">
-                  {t.download}
-                </button>
-                <button
-                  className="ghost-button"
-                  onClick={() => {
-                    setStudyKind(isPlane ? "plane_triangle_2d" : isTruss3d ? "truss_3d" : "truss_2d");
-                    setSidebarSection("study");
-                    setMessage(isPlane ? t.planeHint : isTruss3d ? t.switchedTo3dStudio : t.switchedTo2dStudio);
-                  }}
-                  type="button"
-                >
-                  {t.saveForSolver}
-                </button>
-              </div>
-              <p className="card-copy">{t.selectionHint}</p>
-            </section>
-            ) : null}
-
-            {modelTab === "tools" && !isAxial ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{language === "zh" ? "材料库" : "Material Library"}</h2>
-                <span>{currentMaterials.length}</span>
-              </div>
-              <div className="button-row">
-                <select value={activeMaterial} onChange={(event) => setActiveMaterial(event.target.value)}>
-                  {MATERIAL_PRESETS.map((preset) => (
-                    <option key={preset.value} value={preset.value}>
-                      {localMaterialLabel(preset.value, language)}
-                    </option>
-                  ))}
-                </select>
-                <button className="ghost-button" onClick={addMaterialToCurrentModel} type="button">
-                  {language === "zh" ? "添加材料" : "Add material"}
-                </button>
-                <button className="ghost-button" onClick={addCustomMaterialToCurrentModel} type="button">
-                  {language === "zh" ? "新建自定义" : "New custom"}
-                </button>
-              </div>
-              <label className="import-box">
-                <span>{language === "zh" ? "导入材料库" : "Import materials"}</span>
-                <small>{language === "zh" ? "支持 JSON / CSV 材料文件。" : "Accepts JSON / CSV material libraries."}</small>
-                <input
-                  type="file"
-                  accept=".json,.csv,text/csv,application/json"
-                  onChange={(event) => void importMaterials(event.target.files?.[0])}
-                />
-              </label>
-              <div className="material-library">
-                {currentMaterials.map((material) => (
-                  <div key={material.id} className="material-chip-card">
-                    <div className="material-chip-card__head">
-                      <span
-                        className="material-chip-card__swatch"
-                        style={{ background: materialColorMap.get(material.id) ?? "#1677a3" }}
-                      />
-                      <strong>{material.id}</strong>
-                    </div>
-                    <div className="form-grid compact">
-                      <label>
-                        <span>{t.material}</span>
-                        <input
-                          value={material.name}
-                          onChange={(event) => updateCurrentMaterial(material.id, "name", event.target.value)}
-                        />
-                      </label>
-                      <label>
-                        <span>{t.modulus}</span>
-                        <input
-                          type="number"
-                          min={0.1}
-                          step={0.1}
-                          value={round(material.youngs_modulus / 1.0e9)}
-                          onChange={(event) =>
-                            updateCurrentMaterial(material.id, "youngs_modulus", Number(event.target.value) * 1.0e9)
-                          }
-                        />
-                      </label>
-                      {isPlane ? (
-                        <label>
-                          <span>{t.poissonRatio}</span>
-                          <input
-                            type="number"
-                            min={0.01}
-                            max={0.49}
-                            step={0.01}
-                            value={material.poisson_ratio ?? 0.33}
-                            onChange={(event) =>
-                              updateCurrentMaterial(material.id, "poisson_ratio", Number(event.target.value))
-                            }
-                          />
-                        </label>
-                      ) : null}
-                    </div>
-                    <div className="button-row">
-                      <button
-                        className={`ghost-button ghost-button--compact${hiddenMaterialIds.includes(material.id) ? "" : " ghost-button--active"}`}
-                        onClick={() => toggleMaterialVisibility(material.id)}
-                        type="button"
-                      >
-                        {hiddenMaterialIds.includes(material.id)
-                          ? language === "zh" ? "显示" : "Show"
-                          : language === "zh" ? "隐藏" : "Hide"}
-                      </button>
-                    </div>
-                    <div className="button-row">
-                      <button
-                        className="ghost-button ghost-button--compact"
-                        disabled={selectedElement === null}
-                        onClick={() => applyMaterialToCurrentModel(material.id, "selected")}
-                        type="button"
-                      >
-                        {language === "zh" ? "赋给当前单元" : "Apply to selected"}
-                      </button>
-                      <button
-                        className="ghost-button ghost-button--compact"
-                        onClick={() => applyMaterialToCurrentModel(material.id, "all")}
-                        type="button"
-                      >
-                        {language === "zh" ? "赋给全部单元" : "Apply to all"}
-                      </button>
-                      <button
-                        className="ghost-button ghost-button--compact"
-                        disabled={currentMaterials.length <= 1}
-                        onClick={() => deleteCurrentMaterial(material.id)}
-                        type="button"
-                      >
-                        {language === "zh" ? "删除材料" : "Delete material"}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-            ) : null}
-
-            {modelTab === "tools" && !isTruss3d ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{isPlane ? t.panelGenerator : t.parametric}</h2>
-                <span>{t.modelTools}</span>
-              </div>
-              <div className="form-grid compact">
-                {isPlane ? (
-                  <>
-                    <label>
-                      <span>{t.length}</span>
-                      <input type="number" min={0.2} step={0.1} value={panelParametric.width} onChange={(event) => handlePanelParametricChange("width", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.height}</span>
-                      <input type="number" min={0.2} step={0.1} value={panelParametric.height} onChange={(event) => handlePanelParametricChange("height", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.divisionsX}</span>
-                      <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsX} onChange={(event) => handlePanelParametricChange("divisionsX", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.divisionsY}</span>
-                      <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsY} onChange={(event) => handlePanelParametricChange("divisionsY", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.planeThickness}</span>
-                      <input type="number" min={0.001} step={0.001} value={panelParametric.thickness} onChange={(event) => handlePanelParametricChange("thickness", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.modulus}</span>
-                      <input type="number" min={0.1} step={0.1} value={panelParametric.youngsModulusGpa} onChange={(event) => handlePanelParametricChange("youngsModulusGpa", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.poissonRatio}</span>
-                      <input type="number" min={0.01} max={0.49} step={0.01} value={panelParametric.poissonRatio} onChange={(event) => handlePanelParametricChange("poissonRatio", Number(event.target.value))} />
-                    </label>
-                    <label>
-                      <span>{t.loadCase}</span>
-                      <input type="number" step={100} value={panelParametric.loadY} onChange={(event) => handlePanelParametricChange("loadY", Number(event.target.value))} />
-                    </label>
-                  </>
-                ) : (
-                  <>
-                    <label>
-                      <span>{t.bays}</span>
-                      <input
-                        type="number"
-                        min={2}
-                        max={10}
-                        step={1}
-                        value={parametric.bays}
-                        onChange={(event) => handleParametricChange("bays", Number(event.target.value))}
-                      />
-                    </label>
-                    <label>
-                      <span>{t.length}</span>
-                      <input
-                        type="number"
-                        min={1}
-                        step={0.5}
-                        value={parametric.span}
-                        onChange={(event) => handleParametricChange("span", Number(event.target.value))}
-                      />
-                    </label>
-                    <label>
-                      <span>{t.height}</span>
-                      <input
-                        type="number"
-                        min={0.2}
-                        step={0.1}
-                        value={parametric.height}
-                        onChange={(event) => handleParametricChange("height", Number(event.target.value))}
-                      />
-                    </label>
-                    <label>
-                      <span>{t.area}</span>
-                      <input
-                        type="number"
-                        min={0.0001}
-                        step={0.0001}
-                        value={parametric.area}
-                        onChange={(event) => handleParametricChange("area", Number(event.target.value))}
-                      />
-                    </label>
-                    <label>
-                      <span>{t.modulus}</span>
-                      <input
-                        type="number"
-                        min={0.1}
-                        step={0.1}
-                        value={parametric.youngsModulusGpa}
-                        onChange={(event) =>
-                          handleParametricChange("youngsModulusGpa", Number(event.target.value))
-                        }
-                      />
-                    </label>
-                    <label>
-                      <span>{t.loadCase}</span>
-                      <input
-                        type="number"
-                        step={100}
-                        value={parametric.loadY}
-                        onChange={(event) => handleParametricChange("loadY", Number(event.target.value))}
-                      />
-                    </label>
-                  </>
-                )}
-              </div>
-              <button className="solve-button" onClick={isPlane ? generatePanelModel : generateModel} type="button">
-                {isPlane ? t.generatePanel : t.generate}
-              </button>
-            </section>
-            ) : null}
-
-            {modelTab === "tree" && isTruss3d ? (
-              <section className="sidebar-card">
-                <div className="card-head">
-                  <h2>{t.objectTree}</h2>
-                  <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.nodes}` : truss3dLinkMode ? t.linkModeActive : `${memberDraftNodes.length}/2`}</span>
-                </div>
-                <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.orbitHint}</p>
-                <div className="table-like">
-                  <div className="table-like__head table-like__head--space">
-                    <span>ID</span>
-                    <span>X</span>
-                    <span>Y</span>
-                    <span>Z</span>
-                  </div>
-                  <VirtualList
-                    className="table-like__body"
-                    items={truss3dModel.nodes}
-                    itemHeight={46}
-                    maxHeight={240}
-                    itemKey={(node) => node.id}
-                    renderItem={(node, index) => (
-                      <button
-                        className={`table-like__row table-like__row--space${selectedTruss3dNodes.includes(index) || selectedNode === index ? " table-like__row--active" : ""}${memberDraftNodes.includes(index) ? " table-like__row--draft" : ""}`}
-                        onClick={() => handleTruss3dNodePick(index)}
-                        type="button"
-                      >
-                        <strong>{node.id}</strong>
-                        <span>{fixed(node.x, 2)}</span>
-                        <span>{fixed(node.y, 2)}</span>
-                        <span>{fixed(node.z, 2)}</span>
-                      </button>
-                    )}
-                  />
-                </div>
-                <div className="table-like model-tree-spacer">
-                  <div className="table-like__head">
-                    <span>ID</span>
-                    <span>{t.nodeI}</span>
-                    <span>{t.nodeJ}</span>
-                    <span>{t.area}</span>
-                  </div>
-                  <VirtualList
-                    className="table-like__body"
-                    items={displayTruss3dElements}
-                    itemHeight={44}
-                    maxHeight={240}
-                    itemKey={(element) => element.id}
-                    renderItem={(element, index) => (
-                      <button
-                        className={`table-like__row${selectedElement === index ? " table-like__row--active" : ""}`}
-                        onClick={() => {
-                          setSelectedElement(index);
-                          setSelectedNode(null);
-                          setSelectedTruss3dNodes([]);
-                          setMemberDraftNodes([]);
-                        }}
-                        type="button"
-                      >
-                        <strong>{element.id}</strong>
-                        <span>{element.node_i}</span>
-                        <span>{element.node_j}</span>
-                        <span>{fixed(truss3dModel.elements[index]?.area, 4)}</span>
-                      </button>
-                    )}
-                  />
-                </div>
-              </section>
-            ) : modelTab === "tree" ? (
-              <WorkbenchObjectTree
-                title={t.objectTree}
-                countLabel={isTruss ? `${memberDraftNodes.length}/2` : String(planeModel.elements.length)}
-                hint={isPlane ? t.planeHint : t.dragHint}
-                diagnosticsLabel={t.diagnostics}
-                loadCaseLabel={t.loadCase}
-                nodeJLabel={t.nodeJ}
-                nodeKLabel={t.nodeK}
-                nodeRows={(isPlane ? planeModel.nodes : trussModel.nodes).map((node) => ({
-                  id: node.id,
-                  x: node.x,
-                  y: node.y,
-                  load_y: node.load_y,
-                }))}
-                elementRows={(isPlane ? planeElements : displayTrussElements).map((element) => ({
-                  id: element.id,
-                  node_i: element.node_i,
-                  node_j: "node_j" in element ? element.node_j : undefined,
-                  node_k: "node_k" in element ? element.node_k : undefined,
-                }))}
-                isPlane={isPlane}
-                isTruss={isTruss}
-                selectedNode={selectedNode}
-                selectedElement={selectedElement}
-                nodeIssueCounts={Object.fromEntries(
-                  Object.entries(trussDiagnostics?.nodeIssues ?? {}).map(([key, issues]) => [Number(key), issues.length]),
-                )}
-                onSelectNode={(index) => {
-                  if (isPlane) {
-                    setSelectedNode(index);
-                    setSelectedElement(null);
-                  } else {
-                    toggleDraftNode(index);
-                  }
-                }}
-                onSelectElement={(index) => {
-                  setSelectedElement(index);
-                  setSelectedNode(null);
-                  if (isTruss) setMemberDraftNodes([]);
-                }}
-              />
-            ) : null}
-          </div>
+          <WorkbenchModelSidebar
+            modelTab={modelTab}
+            onModelTabChange={setModelTab}
+            isTruss3d={isTruss3d}
+            toolsTabLabel={t.tabs.tools}
+            treeTabLabel={t.tabs.tree}
+            toolsContent={modelToolsContent}
+            treeContent={modelTreeContent}
+          />
         ) : null}
 
         {sidebarSection === "library" ? (
-          <div className="sidebar-stack panel-scroll-window">
-            <div className="panel-tabs panel-tabs--wide">
-              <button className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{t.tabs.samples}</span></button>
-              <button className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{t.tabs.projects}</span></button>
-              <button className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("models")} type="button"><span className="panel-tab__glyph">M</span><span>{t.tabs.models}</span></button>
-              <button className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => setLibraryTab("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{t.tabs.jobs}</span></button>
-            </div>
-            {libraryTab === "samples" ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{t.sampleLibrary}</h2>
-                <button
-                  className="link-button"
-                  onClick={() => {
-                    void refreshJobHistory();
-                    void refreshProjects();
-                  }}
-                  type="button"
-                >
-                  {t.refresh}
-                </button>
-              </div>
-              <p className="card-copy">{t.historyHint}</p>
-              <label className="import-box">
-                <span>{t.importModel}</span>
-                <small>{t.importHint}</small>
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={(event) => importModel(event.target.files?.[0])}
-                />
-              </label>
-              <VirtualList
-                className="history-list"
-                items={SAMPLE_LIBRARY}
-                itemHeight={102}
-                maxHeight={328}
-                itemKey={(sample) => sample.id}
-                renderItem={(sample) => (
-                  <button className="history-item" onClick={() => openSample(sample.href)} type="button">
-                    <strong>{sample.name}</strong>
-                    <span>{t.kinds[sample.kind]}</span>
-                    <small>{sample.summary}</small>
-                  </button>
-                )}
-              />
-            </section>
-            ) : null}
-
-            {libraryTab === "projects" ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{t.projectLibrary}</h2>
-                <span>{projects.length}</span>
-              </div>
-              <div className="form-grid compact">
-                <label>
-                  <span>{t.projectNameField}</span>
-                  <input value={projectNameDraft} onChange={(event) => setProjectNameDraft(event.target.value)} />
-                </label>
-                <label>
-                  <span>{t.projectDescriptionField}</span>
-                  <input value={projectDescriptionDraft} onChange={(event) => setProjectDescriptionDraft(event.target.value)} />
-                </label>
-                <label>
-                  <span>{t.projectLibrary}</span>
-                  <select
-                    value={selectedProjectId ?? ""}
-                    onChange={(event) => {
-                      setSelectedProjectId(event.target.value || null);
-                      setSelectedModelId(null);
-                    }}
-                  >
-                    <option value="">{t.none}</option>
-                    {projects.map((project) => (
-                      <option key={project.project_id} value={project.project_id}>
-                        {project.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" onClick={createProjectRecord} type="button">
-                  {t.createProject}
-                </button>
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={updateProjectRecord} type="button">
-                  {t.updateProject}
-                </button>
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={deleteProjectRecord} type="button">
-                  {t.deleteProject}
-                </button>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={() => void downloadProjectBundleJson()} type="button">
-                  {t.exportProjectJson}
-                </button>
-                <button className="ghost-button" disabled={!selectedProjectId} onClick={() => void downloadProjectBundleZip()} type="button">
-                  {t.exportProjectZip}
-                </button>
-              </div>
-              <label className="import-box">
-                <span>{t.importProject}</span>
-                <small>{t.importProjectHint}</small>
-                <input
-                  type="file"
-                  accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
-                  onChange={(event) => void importProjectBundle(event.target.files?.[0])}
-                />
-              </label>
-              {projects.length === 0 ? <p className="card-copy">{t.projectEmpty}</p> : null}
-            </section>
-            ) : null}
-
-            {libraryTab === "models" ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{t.savedModels}</h2>
-                <span>{selectedProjectModels.length}</span>
-              </div>
-              <div className="form-grid compact">
-                <label>
-                  <span>{t.modelName}</span>
-                  <input value={loadedModelName} onChange={(event) => setLoadedModelName(event.target.value)} />
-                </label>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" onClick={() => saveModelVersion(false)} type="button">
-                  {t.save}
-                </button>
-                <button className="ghost-button" onClick={() => saveModelVersion(true)} type="button">
-                  {t.saveAs}
-                </button>
-                <button className="ghost-button" disabled={!selectedModelId} onClick={deleteSavedModelRecord} type="button">
-                  {t.deleteSavedModel}
-                </button>
-              </div>
-              <VirtualList
-                className="history-list"
-                items={deferredProjectModels}
-                itemHeight={112}
-                maxHeight={344}
-                emptyState={<p className="card-copy">{t.noSavedModels}</p>}
-                itemKey={(model) => model.model_id}
-                renderItem={(model) => (
-                  <button
-                    className={`history-item${selectedModelId === model.model_id ? " history-item--active" : ""}`}
-                    onClick={() => openSavedModel(model)}
-                    type="button"
-                  >
-                    <strong>{model.name}</strong>
-                    <span>{t.kinds[model.kind as keyof typeof t.kinds] ?? model.kind}</span>
-                    <small>
-                      {t.updatedAt}: {formatTime(model.updated_at, language)}
-                    </small>
-                    <small>
-                      v{model.latest_version_number ?? 1}
-                    </small>
-                  </button>
-                )}
-              />
-            </section>
-            ) : null}
-
-            {libraryTab === "models" ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{t.versions}</h2>
-                <span>{modelVersions.length}</span>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button" disabled={!selectedVersionId} onClick={renameSelectedVersion} type="button">
-                  {t.renameVersion}
-                </button>
-                <button className="ghost-button" disabled={!selectedVersionId} onClick={deleteSelectedVersion} type="button">
-                  {t.deleteVersion}
-                </button>
-              </div>
-              <VirtualList
-                className="history-list"
-                items={deferredModelVersions}
-                itemHeight={100}
-                maxHeight={320}
-                emptyState={<p className="card-copy">{t.noVersions}</p>}
-                itemKey={(version) => version.version_id}
-                renderItem={(version) => (
-                  <button
-                    className={`history-item${selectedVersionId === version.version_id ? " history-item--active" : ""}`}
-                    onClick={() => openSavedVersion(version)}
-                    type="button"
-                  >
-                    <strong>{version.name}</strong>
-                    <span>v{version.version_number}</span>
-                    <small>
-                      {t.updatedAt}: {formatTime(version.updated_at, language)}
-                    </small>
-                  </button>
-                )}
-              />
-            </section>
-            ) : null}
-
-            {libraryTab === "jobs" ? (
-            <section className="sidebar-card">
-              <div className="card-head">
-                <h2>{t.sections.library}</h2>
-                <span>{jobHistory.length}</span>
-              </div>
-              <VirtualList
-                className="history-list"
-                items={deferredJobHistory}
-                itemHeight={112}
-                maxHeight={360}
-                emptyState={<p className="card-copy">{t.historyEmpty}</p>}
-                itemKey={(historyJob) => historyJob.job_id}
-                renderItem={(historyJob) => (
-                  <button
-                    className={`history-item${job?.job_id === historyJob.job_id ? " history-item--active" : ""}`}
-                    onClick={() => openHistoryJob(historyJob.job_id)}
-                    type="button"
-                  >
-                    <strong>{historyJob.job_id.slice(0, 8)}</strong>
-                    <span>{historyJob.status}</span>
-                    <small>
-                      {t.updatedAt}: {formatTime(historyJob.updated_at, language)}
-                    </small>
-                    <small>
-                      {t.hasResult}: {historyJob.has_result ? t.yes : t.no}
-                    </small>
-                  </button>
-                )}
-              />
-            </section>
-            ) : null}
-          </div>
+          <WorkbenchLibrarySidebar
+            libraryTab={libraryTab}
+            onLibraryTabChange={setLibraryTab}
+            labels={t}
+            samples={SAMPLE_LIBRARY}
+            projects={projects}
+            selectedProjectId={selectedProjectId}
+            onSelectedProjectChange={(projectId) => {
+              setSelectedProjectId(projectId);
+              setSelectedModelId(null);
+            }}
+            projectNameDraft={projectNameDraft}
+            onProjectNameDraftChange={setProjectNameDraft}
+            projectDescriptionDraft={projectDescriptionDraft}
+            onProjectDescriptionDraftChange={setProjectDescriptionDraft}
+            onCreateProject={createProjectRecord}
+            onUpdateProject={updateProjectRecord}
+            onDeleteProject={deleteProjectRecord}
+            onExportProjectJson={() => void downloadProjectBundleJson()}
+            onExportProjectZip={() => void downloadProjectBundleZip()}
+            onImportProjectBundle={(file) => void importProjectBundle(file)}
+            selectedProjectModels={selectedProjectModels}
+            deferredProjectModels={deferredProjectModels}
+            selectedModelId={selectedModelId}
+            loadedModelName={loadedModelName}
+            onLoadedModelNameChange={setLoadedModelName}
+            onSaveModel={saveModelVersion}
+            onDeleteSavedModel={deleteSavedModelRecord}
+            onOpenSavedModel={openSavedModel}
+            deferredModelVersions={deferredModelVersions}
+            modelVersions={modelVersions}
+            selectedVersionId={selectedVersionId}
+            onRenameSelectedVersion={renameSelectedVersion}
+            onDeleteSelectedVersion={deleteSelectedVersion}
+            onOpenSavedVersion={openSavedVersion}
+            deferredJobHistory={deferredJobHistory}
+            jobHistory={jobHistory}
+            activeJobId={job?.job_id ?? null}
+            onOpenHistoryJob={openHistoryJob}
+            onOpenSample={openSample}
+            onRefresh={() => {
+              void refreshJobHistory();
+              void refreshProjects();
+            }}
+            onImportModel={importModel}
+            formatTime={(value) => formatTime(value, language)}
+          />
         ) : null}
 
         {sidebarSection === "system" ? (
