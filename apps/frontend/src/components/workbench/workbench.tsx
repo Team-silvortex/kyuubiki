@@ -18,8 +18,10 @@ import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assist
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/workbench-library-sidebar";
+import { WorkbenchMaterialLibraryCard } from "@/components/workbench/workbench-material-library-card";
 import { WorkbenchModelSidebar } from "@/components/workbench/workbench-model-sidebar";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
+import { WorkbenchParametricCard } from "@/components/workbench/workbench-parametric-card";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchStudySidebar } from "@/components/workbench/workbench-study-sidebar";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
@@ -4744,238 +4746,52 @@ export function Workbench() {
       </section>
 
       {!isAxial ? (
-        <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{language === "zh" ? "材料库" : "Material Library"}</h2>
-            <span>{currentMaterials.length}</span>
-          </div>
-          <div className="button-row">
-            <select value={activeMaterial} onChange={(event) => setActiveMaterial(event.target.value)}>
-              {MATERIAL_PRESETS.map((preset) => (
-                <option key={preset.value} value={preset.value}>
-                  {localMaterialLabel(preset.value, language)}
-                </option>
-              ))}
-            </select>
-            <button className="ghost-button" onClick={addMaterialToCurrentModel} type="button">
-              {language === "zh" ? "添加材料" : "Add material"}
-            </button>
-            <button className="ghost-button" onClick={addCustomMaterialToCurrentModel} type="button">
-              {language === "zh" ? "新建自定义" : "New custom"}
-            </button>
-          </div>
-          <label className="import-box">
-            <span>{language === "zh" ? "导入材料库" : "Import materials"}</span>
-            <small>{language === "zh" ? "支持 JSON / CSV 材料文件。" : "Accepts JSON / CSV material libraries."}</small>
-            <input
-              type="file"
-              accept=".json,.csv,text/csv,application/json"
-              onChange={(event) => void importMaterials(event.target.files?.[0])}
-            />
-          </label>
-          <div className="material-library">
-            {currentMaterials.map((material) => (
-              <div key={material.id} className="material-chip-card">
-                <div className="material-chip-card__head">
-                  <span
-                    className="material-chip-card__swatch"
-                    style={{ background: materialColorMap.get(material.id) ?? "#1677a3" }}
-                  />
-                  <strong>{material.id}</strong>
-                </div>
-                <div className="form-grid compact">
-                  <label>
-                    <span>{t.material}</span>
-                    <input
-                      value={material.name}
-                      onChange={(event) => updateCurrentMaterial(material.id, "name", event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    <span>{t.modulus}</span>
-                    <input
-                      type="number"
-                      min={0.1}
-                      step={0.1}
-                      value={round(material.youngs_modulus / 1.0e9)}
-                      onChange={(event) =>
-                        updateCurrentMaterial(material.id, "youngs_modulus", Number(event.target.value) * 1.0e9)
-                      }
-                    />
-                  </label>
-                  {isPlane ? (
-                    <label>
-                      <span>{t.poissonRatio}</span>
-                      <input
-                        type="number"
-                        min={0.01}
-                        max={0.49}
-                        step={0.01}
-                        value={material.poisson_ratio ?? 0.33}
-                        onChange={(event) =>
-                          updateCurrentMaterial(material.id, "poisson_ratio", Number(event.target.value))
-                        }
-                      />
-                    </label>
-                  ) : null}
-                </div>
-                <div className="button-row">
-                  <button
-                    className={`ghost-button ghost-button--compact${hiddenMaterialIds.includes(material.id) ? "" : " ghost-button--active"}`}
-                    onClick={() => toggleMaterialVisibility(material.id)}
-                    type="button"
-                  >
-                    {hiddenMaterialIds.includes(material.id)
-                      ? language === "zh"
-                        ? "显示"
-                        : "Show"
-                      : language === "zh"
-                        ? "隐藏"
-                        : "Hide"}
-                  </button>
-                </div>
-                <div className="button-row">
-                  <button
-                    className="ghost-button ghost-button--compact"
-                    disabled={selectedElement === null}
-                    onClick={() => applyMaterialToCurrentModel(material.id, "selected")}
-                    type="button"
-                  >
-                    {language === "zh" ? "赋给当前单元" : "Apply to selected"}
-                  </button>
-                  <button
-                    className="ghost-button ghost-button--compact"
-                    onClick={() => applyMaterialToCurrentModel(material.id, "all")}
-                    type="button"
-                  >
-                    {language === "zh" ? "赋给全部单元" : "Apply to all"}
-                  </button>
-                  <button
-                    className="ghost-button ghost-button--compact"
-                    disabled={currentMaterials.length <= 1}
-                    onClick={() => deleteCurrentMaterial(material.id)}
-                    type="button"
-                  >
-                    {language === "zh" ? "删除材料" : "Delete material"}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <WorkbenchMaterialLibraryCard
+          language={language}
+          materialLabel={t.material}
+          modulusLabel={t.modulus}
+          poissonRatioLabel={t.poissonRatio}
+          activeMaterial={activeMaterial}
+          currentMaterials={currentMaterials}
+          hiddenMaterialIds={hiddenMaterialIds}
+          isPlane={isPlane}
+          selectedElement={selectedElement}
+          localMaterialLabel={localMaterialLabel}
+          getMaterialColor={(materialId) => materialColorMap.get(materialId) ?? "#1677a3"}
+          onActiveMaterialChange={setActiveMaterial}
+          onAddMaterial={addMaterialToCurrentModel}
+          onAddCustomMaterial={addCustomMaterialToCurrentModel}
+          onImportMaterials={(file) => void importMaterials(file)}
+          onUpdateMaterial={updateCurrentMaterial}
+          onToggleMaterialVisibility={toggleMaterialVisibility}
+          onApplyMaterial={applyMaterialToCurrentModel}
+          onDeleteMaterial={deleteCurrentMaterial}
+          round={round}
+        />
       ) : null}
 
       {!isTruss3d ? (
-        <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{isPlane ? t.panelGenerator : t.parametric}</h2>
-            <span>{t.modelTools}</span>
-          </div>
-          <div className="form-grid compact">
-            {isPlane ? (
-              <>
-                <label>
-                  <span>{t.length}</span>
-                  <input type="number" min={0.2} step={0.1} value={panelParametric.width} onChange={(event) => handlePanelParametricChange("width", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.height}</span>
-                  <input type="number" min={0.2} step={0.1} value={panelParametric.height} onChange={(event) => handlePanelParametricChange("height", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.divisionsX}</span>
-                  <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsX} onChange={(event) => handlePanelParametricChange("divisionsX", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.divisionsY}</span>
-                  <input type="number" min={1} max={12} step={1} value={panelParametric.divisionsY} onChange={(event) => handlePanelParametricChange("divisionsY", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.planeThickness}</span>
-                  <input type="number" min={0.001} step={0.001} value={panelParametric.thickness} onChange={(event) => handlePanelParametricChange("thickness", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.modulus}</span>
-                  <input type="number" min={0.1} step={0.1} value={panelParametric.youngsModulusGpa} onChange={(event) => handlePanelParametricChange("youngsModulusGpa", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.poissonRatio}</span>
-                  <input type="number" min={0.01} max={0.49} step={0.01} value={panelParametric.poissonRatio} onChange={(event) => handlePanelParametricChange("poissonRatio", Number(event.target.value))} />
-                </label>
-                <label>
-                  <span>{t.loadCase}</span>
-                  <input type="number" step={100} value={panelParametric.loadY} onChange={(event) => handlePanelParametricChange("loadY", Number(event.target.value))} />
-                </label>
-              </>
-            ) : (
-              <>
-                <label>
-                  <span>{t.bays}</span>
-                  <input
-                    type="number"
-                    min={2}
-                    max={10}
-                    step={1}
-                    value={parametric.bays}
-                    onChange={(event) => handleParametricChange("bays", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.length}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    step={0.5}
-                    value={parametric.span}
-                    onChange={(event) => handleParametricChange("span", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.height}</span>
-                  <input
-                    type="number"
-                    min={0.2}
-                    step={0.1}
-                    value={parametric.height}
-                    onChange={(event) => handleParametricChange("height", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.area}</span>
-                  <input
-                    type="number"
-                    min={0.0001}
-                    step={0.0001}
-                    value={parametric.area}
-                    onChange={(event) => handleParametricChange("area", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.modulus}</span>
-                  <input
-                    type="number"
-                    min={0.1}
-                    step={0.1}
-                    value={parametric.youngsModulusGpa}
-                    onChange={(event) => handleParametricChange("youngsModulusGpa", Number(event.target.value))}
-                  />
-                </label>
-                <label>
-                  <span>{t.loadCase}</span>
-                  <input
-                    type="number"
-                    step={100}
-                    value={parametric.loadY}
-                    onChange={(event) => handleParametricChange("loadY", Number(event.target.value))}
-                  />
-                </label>
-              </>
-            )}
-          </div>
-          <button className="solve-button" onClick={isPlane ? generatePanelModel : generateModel} type="button">
-            {isPlane ? t.generatePanel : t.generate}
-          </button>
-        </section>
+        <WorkbenchParametricCard
+          isPlane={isPlane}
+          title={isPlane ? t.panelGenerator : t.parametric}
+          subtitle={t.modelTools}
+          lengthLabel={t.length}
+          heightLabel={t.height}
+          divisionsXLabel={t.divisionsX}
+          divisionsYLabel={t.divisionsY}
+          thicknessLabel={t.planeThickness}
+          modulusLabel={t.modulus}
+          poissonRatioLabel={t.poissonRatio}
+          loadCaseLabel={t.loadCase}
+          baysLabel={t.bays}
+          areaLabel={t.area}
+          generateLabel={isPlane ? t.generatePanel : t.generate}
+          panelParametric={panelParametric}
+          parametric={parametric}
+          onPanelParametricChange={handlePanelParametricChange}
+          onParametricChange={handleParametricChange}
+          onGenerate={isPlane ? generatePanelModel : generateModel}
+        />
       ) : null}
     </>
   );

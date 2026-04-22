@@ -19,6 +19,10 @@ This directory contains the browser workbench surface:
   Study setup and run controls surface extracted from the main workbench shell.
 - `workbench-model-sidebar.tsx`
   Model editing shell for tools/tree tabs extracted from the main workbench shell.
+- `workbench-material-library-card.tsx`
+  Material editing and import/apply card extracted from the model tools surface.
+- `workbench-parametric-card.tsx`
+  Parametric generator card extracted from the model tools surface.
 - `workbench-library-sidebar.tsx`
   Sample/project/model/job library surface extracted from the main workbench shell.
 
