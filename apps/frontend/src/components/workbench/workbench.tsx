@@ -16,21 +16,23 @@ import brand from "../../../../../assets/brand/brand.json";
 import { VirtualList } from "@/components/ui/virtual-list";
 import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
-import { WorkbenchDataAdminPanel } from "@/components/workbench/workbench-data-admin-panel";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
-import { WorkbenchLibrarySidebar } from "@/components/workbench/workbench-library-sidebar";
-import { WorkbenchMaterialLibraryCard } from "@/components/workbench/workbench-material-library-card";
-import { WorkbenchModelSidebar } from "@/components/workbench/workbench-model-sidebar";
-import { WorkbenchModelToolsCard } from "@/components/workbench/workbench-model-tools-card";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
-import { WorkbenchParametricCard } from "@/components/workbench/workbench-parametric-card";
-import { WorkbenchProtocolAgentsCard } from "@/components/workbench/workbench-protocol-agents-card";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
-import { WorkbenchStudySidebar } from "@/components/workbench/workbench-study-sidebar";
-import { WorkbenchSystemConfigCard } from "@/components/workbench/workbench-system-config-card";
-import { WorkbenchSystemMetricsCard } from "@/components/workbench/workbench-system-metrics-card";
-import { WorkbenchTruss3dTreeCard } from "@/components/workbench/workbench-truss3d-tree-card";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
+import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
+import { WorkbenchMaterialLibraryCard } from "@/components/workbench/model/workbench-material-library-card";
+import { WorkbenchModelSidebar } from "@/components/workbench/model/workbench-model-sidebar";
+import { WorkbenchModelToolsCard } from "@/components/workbench/model/workbench-model-tools-card";
+import { WorkbenchParametricCard } from "@/components/workbench/model/workbench-parametric-card";
+import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench-truss3d-tree-card";
+import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
+import { WorkbenchDataAdminPanel } from "@/components/workbench/system/workbench-data-admin-panel";
+import { WorkbenchProtocolAgentsCard } from "@/components/workbench/system/workbench-protocol-agents-card";
+import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
+import { WorkbenchSystemMetricsCard } from "@/components/workbench/system/workbench-system-metrics-card";
+import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
+import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { parseMaterialLibrary } from "@/lib/materials";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
@@ -5021,122 +5023,92 @@ export function Workbench() {
         ) : null}
 
         {sidebarSection === "system" ? (
-          <div className="sidebar-stack panel-scroll-window">
-            <div className="panel-tabs panel-tabs--editor">
-              <button
-                className={`panel-tab${systemPanelTab === "config" ? " panel-tab--active" : ""}`}
-                onClick={() => setSystemPanelTab("config")}
-                type="button"
-              >
-                {language === "zh" ? "配置" : "Config"}
-              </button>
-              <button
-                className={`panel-tab${systemPanelTab === "assistant" ? " panel-tab--active" : ""}`}
-                onClick={() => setSystemPanelTab("assistant")}
-                type="button"
-              >
-                {t.assistant}
-              </button>
-              <button
-                className={`panel-tab${systemPanelTab === "scripts" ? " panel-tab--active" : ""}`}
-                onClick={() => setSystemPanelTab("scripts")}
-                type="button"
-              >
-                {t.scripts}
-              </button>
-              <button
-                className={`panel-tab${systemPanelTab === "runtime" ? " panel-tab--active" : ""}`}
-                onClick={() => setSystemPanelTab("runtime")}
-                type="button"
-              >
-                {language === "zh" ? "运行时" : "Runtime"}
-              </button>
-              <button
-                className={`panel-tab${systemPanelTab === "data" ? " panel-tab--active" : ""}`}
-                onClick={() => setSystemPanelTab("data")}
-                type="button"
-              >
-                {language === "zh" ? "数据" : "Data"}
-              </button>
-            </div>
-            {systemPanelTab === "config" ? (
-            <WorkbenchSystemConfigCard
-              title={t.settings}
-              status={health?.status === "ok" ? t.online : t.offline}
-              themeLabel={t.theme}
-              languageLabel={t.language}
-              frontendModeLabel={t.frontendMode}
-              directMeshStrategyLabel={t.directMeshStrategy}
-              directMeshEndpointsLabel={t.directMeshEndpoints}
-              directMeshEndpointsHelp={t.directMeshEndpointsHelp}
-              controlPlaneTokenLabel={securityUi.controlPlaneToken}
-              controlPlaneTokenHelp={
-                language === "zh"
-                  ? "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。"
-                  : "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests."
-              }
-              controlPlaneTokenPlaceholder={language === "zh" ? "可选的控制面令牌" : "Optional control-plane token"}
-              clusterTokenLabel={securityUi.clusterToken}
-              clusterTokenHelp={
-                language === "zh"
-                  ? "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。"
-                  : "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty."
-              }
-              clusterTokenPlaceholder={language === "zh" ? "可选的集群专用令牌" : "Optional cluster-only token"}
-              directMeshTokenLabel={securityUi.directMeshToken}
-              directMeshTokenHelp={
-                language === "zh"
-                  ? "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。"
-                  : "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests."
-              }
-              directMeshTokenPlaceholder={language === "zh" ? "可选的直连网格令牌" : "Optional direct-mesh token"}
-              shortcutHintsLabel={t.shortcutHints}
-              shortcutHintsHelp={t.shortcutHintsHelp}
-              immersiveGuardLabel={t.immersiveGuard}
-              immersiveGuardHelp={t.immersiveGuardHelp}
-              browserLimitsNote={t.browserLimitsNote}
-              exportDatabaseLabel={language === "zh" ? "导出数据库快照" : "Export database snapshot"}
-              theme={theme}
-              language={language}
-              frontendRuntimeMode={frontendRuntimeMode}
-              directMeshSelectionMode={directMeshSelectionMode}
-              directMeshEndpointsText={directMeshEndpointsText}
-              controlPlaneApiToken={controlPlaneApiToken}
-              clusterApiToken={clusterApiToken}
-              directMeshApiToken={directMeshApiToken}
-              showShortcutHints={showShortcutHints}
-              immersiveGuardrails={immersiveGuardrails}
-              themeOptions={[
-                { value: "linen", label: t.themes.linen },
-                { value: "marine", label: t.themes.marine },
-                { value: "graphite", label: t.themes.graphite },
-              ]}
-              languageOptions={[
-                { value: "en", label: t.languages.en },
-                { value: "zh", label: t.languages.zh },
-              ]}
-              frontendModeOptions={[
-                { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
-                { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
-              ]}
-              directMeshStrategyOptions={[
-                { value: "healthiest", label: t.directMeshStrategies.healthiest },
-                { value: "first_reachable", label: t.directMeshStrategies.first_reachable },
-              ]}
-              onThemeChange={setTheme}
-              onLanguageChange={handleLanguageChange}
-              onFrontendRuntimeModeChange={setFrontendRuntimeMode}
-              onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
-              onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
-              onControlPlaneApiTokenChange={setControlPlaneApiToken}
-              onClusterApiTokenChange={setClusterApiToken}
-              onDirectMeshApiTokenChange={setDirectMeshApiToken}
-              onShowShortcutHintsChange={setShowShortcutHints}
-              onImmersiveGuardrailsChange={setImmersiveGuardrails}
-              onExportDatabase={() => void downloadDatabaseSnapshot()}
-            />
-            ) : null}
-            {systemPanelTab === "assistant" ? (
+          <WorkbenchSystemSidebar
+            systemPanelTab={systemPanelTab}
+            onSystemPanelTabChange={setSystemPanelTab}
+            configTabLabel={language === "zh" ? "配置" : "Config"}
+            assistantTabLabel={t.assistant}
+            scriptsTabLabel={t.scripts}
+            runtimeTabLabel={language === "zh" ? "运行时" : "Runtime"}
+            dataTabLabel={language === "zh" ? "数据" : "Data"}
+            configContent={
+              <WorkbenchSystemConfigCard
+                title={t.settings}
+                status={health?.status === "ok" ? t.online : t.offline}
+                themeLabel={t.theme}
+                languageLabel={t.language}
+                frontendModeLabel={t.frontendMode}
+                directMeshStrategyLabel={t.directMeshStrategy}
+                directMeshEndpointsLabel={t.directMeshEndpoints}
+                directMeshEndpointsHelp={t.directMeshEndpointsHelp}
+                controlPlaneTokenLabel={securityUi.controlPlaneToken}
+                controlPlaneTokenHelp={
+                  language === "zh"
+                    ? "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。"
+                    : "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests."
+                }
+                controlPlaneTokenPlaceholder={language === "zh" ? "可选的控制面令牌" : "Optional control-plane token"}
+                clusterTokenLabel={securityUi.clusterToken}
+                clusterTokenHelp={
+                  language === "zh"
+                    ? "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。"
+                    : "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty."
+                }
+                clusterTokenPlaceholder={language === "zh" ? "可选的集群专用令牌" : "Optional cluster-only token"}
+                directMeshTokenLabel={securityUi.directMeshToken}
+                directMeshTokenHelp={
+                  language === "zh"
+                    ? "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。"
+                    : "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests."
+                }
+                directMeshTokenPlaceholder={language === "zh" ? "可选的直连网格令牌" : "Optional direct-mesh token"}
+                shortcutHintsLabel={t.shortcutHints}
+                shortcutHintsHelp={t.shortcutHintsHelp}
+                immersiveGuardLabel={t.immersiveGuard}
+                immersiveGuardHelp={t.immersiveGuardHelp}
+                browserLimitsNote={t.browserLimitsNote}
+                exportDatabaseLabel={language === "zh" ? "导出数据库快照" : "Export database snapshot"}
+                theme={theme}
+                language={language}
+                frontendRuntimeMode={frontendRuntimeMode}
+                directMeshSelectionMode={directMeshSelectionMode}
+                directMeshEndpointsText={directMeshEndpointsText}
+                controlPlaneApiToken={controlPlaneApiToken}
+                clusterApiToken={clusterApiToken}
+                directMeshApiToken={directMeshApiToken}
+                showShortcutHints={showShortcutHints}
+                immersiveGuardrails={immersiveGuardrails}
+                themeOptions={[
+                  { value: "linen", label: t.themes.linen },
+                  { value: "marine", label: t.themes.marine },
+                  { value: "graphite", label: t.themes.graphite },
+                ]}
+                languageOptions={[
+                  { value: "en", label: t.languages.en },
+                  { value: "zh", label: t.languages.zh },
+                ]}
+                frontendModeOptions={[
+                  { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
+                  { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
+                ]}
+                directMeshStrategyOptions={[
+                  { value: "healthiest", label: t.directMeshStrategies.healthiest },
+                  { value: "first_reachable", label: t.directMeshStrategies.first_reachable },
+                ]}
+                onThemeChange={setTheme}
+                onLanguageChange={handleLanguageChange}
+                onFrontendRuntimeModeChange={setFrontendRuntimeMode}
+                onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
+                onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
+                onControlPlaneApiTokenChange={setControlPlaneApiToken}
+                onClusterApiTokenChange={setClusterApiToken}
+                onDirectMeshApiTokenChange={setDirectMeshApiToken}
+                onShowShortcutHintsChange={setShowShortcutHints}
+                onImmersiveGuardrailsChange={setImmersiveGuardrails}
+                onExportDatabase={() => void downloadDatabaseSnapshot()}
+              />
+            }
+            assistantContent={
               <WorkbenchAssistantPanel
                 currentJobLabel={job?.status ?? t.none}
                 currentResultLabel={hasAnyResult ? t.yes : t.no}
@@ -5167,8 +5139,8 @@ export function Workbench() {
                   executedActions: entry.executedActions,
                 }))}
               />
-            ) : null}
-            {systemPanelTab === "scripts" ? (
+            }
+            scriptsContent={
               <WorkbenchScriptPanel
                 actionLog={scriptActionLog}
                 getSnapshot={getScriptSnapshot}
@@ -5176,197 +5148,177 @@ export function Workbench() {
                 onInvokeAction={invokeScriptAction}
                 snapshot={scriptSnapshot}
               />
-            ) : null}
-            {systemPanelTab === "runtime" ? (
-            <>
-            <WorkbenchSystemMetricsCard
-              title={t.backend}
-              status={health?.status ?? t.offline}
-              rows={[
-                { label: t.ui, value: "3000" },
-                { label: t.orchestrator, value: health ? "4000" : t.offline },
-                { label: t.solverAgent, value: health?.transport?.solver_agent_tcp ?? 5001 },
-              ]}
-            />
-            <WorkbenchSystemMetricsCard
-              title={t.protocols}
-              status={health?.protocol ? t.online : t.offline}
-              rows={[
-                { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
-                { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
-                { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
-                { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
-                { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
-                { label: t.reachableAgents, value: protocolAgents.length },
-                ...(frontendRuntimeMode === "direct_mesh_gui"
-                  ? [
-                      { label: t.directMeshStrategy, value: t.directMeshStrategies[directMeshSelectionMode] },
-                      { label: t.directMeshLastAgent, value: directMeshExecution?.endpoint ?? "--" },
-                      {
-                        label: t.directMeshLastRoute,
-                        value: directMeshExecution
-                          ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
-                          : "--",
-                      },
-                    ]
-                  : []),
-              ]}
-              extra={
-                health?.protocol?.compatible_solver_rpc?.methods?.length ? (
-                  <div className="protocol-chip-row">
-                    {health.protocol.compatible_solver_rpc.methods.map((method) => (
-                      <span className="protocol-chip" key={method}>
-                        {formatProtocolMethodLabel(method)}
-                      </span>
-                    ))}
-                  </div>
-                ) : null
-              }
-            />
-            <WorkbenchSystemMetricsCard
-              title={securityUi.security}
-              status={health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
-              rows={[
-                {
-                  label: securityUi.controlPlaneToken,
-                  value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
-                },
-                {
-                  label: securityUi.clusterToken,
-                  value: health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured,
-                },
-                {
-                  label: securityUi.clusterWindow,
-                  value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
-                },
-                {
-                  label: language === "zh" ? "Agent 白名单" : "Agent allowlist",
-                  value: health?.security?.cluster_agent_allowlist_enabled
-                    ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
-                    : securityUi.disabled,
-                },
-                {
-                  label: language === "zh" ? "Cluster 白名单" : "Cluster allowlist",
-                  value: health?.security?.cluster_cluster_allowlist_enabled
-                    ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
-                    : securityUi.disabled,
-                },
-                {
-                  label: language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding",
-                  value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
-                },
-                {
-                  label: securityUi.protectReads,
-                  value: health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled,
-                },
-                {
-                  label: securityUi.mutatingRoutes,
-                  value: health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled,
-                },
-                {
-                  label: securityUi.clusterRoutes,
-                  value: health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled,
-                },
-                {
-                  label: securityUi.directMeshRoutes,
-                  value: directMeshApiToken ? securityUi.configured : securityUi.enabled,
-                },
-              ]}
-              footer={
-                <p className="card-copy">
-                  {language === "zh"
-                    ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器设置里。"
-                    : "Runtime security state comes from /api/health; frontend tokens stay only in local browser settings."}
-                </p>
-              }
-            />
-            <WorkbenchProtocolAgentsCard
-              title={t.protocolAgents}
-              countLabel={String(protocolAgents.length)}
-              emptyLabel={t.noProtocolAgents}
-              agents={protocolAgentCards}
-            />
-            <WorkbenchSystemMetricsCard
-              title={t.watchdog}
-              status={health?.watchdog ? t.online : t.offline}
-              rows={[
-                { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
-                { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
-                { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
-                { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
-                { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
-                { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },
-              ]}
-            />
-            </>
-            ) : null}
-            {systemPanelTab === "data" ? (
-            <WorkbenchDataAdminPanel
-              title={t.dataAdmin}
-              recordCountLabel={`${t.databaseRecordCount}: ${jobHistory.length + resultRecords.length}`}
-              jobsTabLabel={t.adminJobs}
-              resultsTabLabel={t.adminResults}
-              historyEmptyLabel={t.historyEmpty}
-              selectRecordLabel={t.selectRecord}
-              cancelJobLabel={t.cancelJob}
-              saveRecordLabel={t.saveRecord}
-              deleteRecordLabel={t.deleteRecord}
-              exportRecordLabel={t.exportRecord}
-              adminMessageLabel={t.adminMessage}
-              adminProjectIdLabel={t.adminProjectId}
-              adminModelVersionIdLabel={t.adminModelVersionId}
-              adminCaseIdLabel={t.adminCaseId}
-              resultPayloadLabel={t.resultPayload}
-              activeTab={systemDataTab}
-              onTabChange={setSystemDataTab}
-              jobRows={adminJobRows}
-              selectedAdminJobId={selectedAdminJobId}
-              onSelectAdminJob={setSelectedAdminJobId}
-              selectedAdminJob={Boolean(selectedAdminJob)}
-              canCancelSelectedJob={Boolean(
-                selectedAdminJob &&
-                  selectedAdminJob.status !== "completed" &&
-                  selectedAdminJob.status !== "failed" &&
-                  selectedAdminJob.status !== "cancelled",
-              )}
-              onCancelSelectedJob={() => {
-                if (!selectedAdminJob) return;
-                if (selectedAdminJob.job_id === job?.job_id) {
-                  cancelCurrentJob();
-                  return;
+            }
+            runtimeContent={
+              <WorkbenchSystemRuntimePanel
+                backendTitle={t.backend}
+                backendStatus={health?.status ?? t.offline}
+                backendRows={[
+                  { label: t.ui, value: "3000" },
+                  { label: t.orchestrator, value: health ? "4000" : t.offline },
+                  { label: t.solverAgent, value: health?.transport?.solver_agent_tcp ?? 5001 },
+                ]}
+                protocolsTitle={t.protocols}
+                protocolsStatus={health?.protocol ? t.online : t.offline}
+                protocolRows={[
+                  { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
+                  { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
+                  { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
+                  { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
+                  { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
+                  { label: t.reachableAgents, value: protocolAgents.length },
+                  ...(frontendRuntimeMode === "direct_mesh_gui"
+                    ? [
+                        { label: t.directMeshStrategy, value: t.directMeshStrategies[directMeshSelectionMode] },
+                        { label: t.directMeshLastAgent, value: directMeshExecution?.endpoint ?? "--" },
+                        {
+                          label: t.directMeshLastRoute,
+                          value: directMeshExecution
+                            ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
+                            : "--",
+                        },
+                      ]
+                    : []),
+                ]}
+                protocolMethods={health?.protocol?.compatible_solver_rpc?.methods?.map((method) => formatProtocolMethodLabel(method))}
+                securityTitle={securityUi.security}
+                securityStatus={health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
+                securityRows={[
+                  {
+                    label: securityUi.controlPlaneToken,
+                    value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
+                  },
+                  {
+                    label: securityUi.clusterToken,
+                    value: health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured,
+                  },
+                  {
+                    label: securityUi.clusterWindow,
+                    value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
+                  },
+                  {
+                    label: language === "zh" ? "Agent 白名单" : "Agent allowlist",
+                    value: health?.security?.cluster_agent_allowlist_enabled
+                      ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
+                      : securityUi.disabled,
+                  },
+                  {
+                    label: language === "zh" ? "Cluster 白名单" : "Cluster allowlist",
+                    value: health?.security?.cluster_cluster_allowlist_enabled
+                      ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
+                      : securityUi.disabled,
+                  },
+                  {
+                    label: language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding",
+                    value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
+                  },
+                  {
+                    label: securityUi.protectReads,
+                    value: health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled,
+                  },
+                  {
+                    label: securityUi.mutatingRoutes,
+                    value: health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled,
+                  },
+                  {
+                    label: securityUi.clusterRoutes,
+                    value: health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled,
+                  },
+                  {
+                    label: securityUi.directMeshRoutes,
+                    value: directMeshApiToken ? securityUi.configured : securityUi.enabled,
+                  },
+                ]}
+                securityFooter={
+                  <p className="card-copy">
+                    {language === "zh"
+                      ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器设置里。"
+                      : "Runtime security state comes from /api/health; frontend tokens stay only in local browser settings."}
+                  </p>
                 }
-                void (async () => {
-                  try {
-                    await cancelJob(selectedAdminJob.job_id);
-                    setMessage(t.jobCancelled);
-                    await refreshJobHistory();
-                  } catch (error) {
-                    setMessage(error instanceof Error ? error.message : t.initialFailed);
+                protocolAgentsTitle={t.protocolAgents}
+                protocolAgentsCountLabel={String(protocolAgents.length)}
+                protocolAgentsEmptyLabel={t.noProtocolAgents}
+                protocolAgents={protocolAgentCards}
+                watchdogTitle={t.watchdog}
+                watchdogStatus={health?.watchdog ? t.online : t.offline}
+                watchdogRows={[
+                  { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
+                  { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
+                  { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
+                  { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
+                  { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
+                  { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },
+                ]}
+              />
+            }
+            dataContent={
+              <WorkbenchDataAdminPanel
+                title={t.dataAdmin}
+                recordCountLabel={`${t.databaseRecordCount}: ${jobHistory.length + resultRecords.length}`}
+                jobsTabLabel={t.adminJobs}
+                resultsTabLabel={t.adminResults}
+                historyEmptyLabel={t.historyEmpty}
+                selectRecordLabel={t.selectRecord}
+                cancelJobLabel={t.cancelJob}
+                saveRecordLabel={t.saveRecord}
+                deleteRecordLabel={t.deleteRecord}
+                exportRecordLabel={t.exportRecord}
+                adminMessageLabel={t.adminMessage}
+                adminProjectIdLabel={t.adminProjectId}
+                adminModelVersionIdLabel={t.adminModelVersionId}
+                adminCaseIdLabel={t.adminCaseId}
+                resultPayloadLabel={t.resultPayload}
+                activeTab={systemDataTab}
+                onTabChange={setSystemDataTab}
+                jobRows={adminJobRows}
+                selectedAdminJobId={selectedAdminJobId}
+                onSelectAdminJob={setSelectedAdminJobId}
+                selectedAdminJob={Boolean(selectedAdminJob)}
+                canCancelSelectedJob={Boolean(
+                  selectedAdminJob &&
+                    selectedAdminJob.status !== "completed" &&
+                    selectedAdminJob.status !== "failed" &&
+                    selectedAdminJob.status !== "cancelled",
+                )}
+                onCancelSelectedJob={() => {
+                  if (!selectedAdminJob) return;
+                  if (selectedAdminJob.job_id === job?.job_id) {
+                    cancelCurrentJob();
+                    return;
                   }
-                })();
-              }}
-              adminJobMessage={adminJobMessage}
-              onAdminJobMessageChange={setAdminJobMessage}
-              adminJobProjectId={adminJobProjectId}
-              onAdminJobProjectIdChange={setAdminJobProjectId}
-              adminJobModelVersionId={adminJobModelVersionId}
-              onAdminJobModelVersionIdChange={setAdminJobModelVersionId}
-              adminJobCaseId={adminJobCaseId}
-              onAdminJobCaseIdChange={setAdminJobCaseId}
-              onSaveAdminJob={saveAdminJobRecord}
-              onDeleteAdminJob={deleteAdminJobRecord}
-              resultRows={adminResultRows}
-              selectedAdminResultJobId={selectedAdminResultJobId}
-              onSelectAdminResult={setSelectedAdminResultJobId}
-              selectedAdminResult={Boolean(selectedAdminResult)}
-              adminResultDraft={adminResultDraft}
-              onAdminResultDraftChange={setAdminResultDraft}
-              onSaveAdminResult={saveAdminResultRecord}
-              onExportAdminResult={exportAdminResultRecord}
-              onDeleteAdminResult={deleteAdminResultRecord}
-            />
-            ) : null}
-          </div>
+                  void (async () => {
+                    try {
+                      await cancelJob(selectedAdminJob.job_id);
+                      setMessage(t.jobCancelled);
+                      await refreshJobHistory();
+                    } catch (error) {
+                      setMessage(error instanceof Error ? error.message : t.initialFailed);
+                    }
+                  })();
+                }}
+                adminJobMessage={adminJobMessage}
+                onAdminJobMessageChange={setAdminJobMessage}
+                adminJobProjectId={adminJobProjectId}
+                onAdminJobProjectIdChange={setAdminJobProjectId}
+                adminJobModelVersionId={adminJobModelVersionId}
+                onAdminJobModelVersionIdChange={setAdminJobModelVersionId}
+                adminJobCaseId={adminJobCaseId}
+                onAdminJobCaseIdChange={setAdminJobCaseId}
+                onSaveAdminJob={saveAdminJobRecord}
+                onDeleteAdminJob={deleteAdminJobRecord}
+                resultRows={adminResultRows}
+                selectedAdminResultJobId={selectedAdminResultJobId}
+                onSelectAdminResult={setSelectedAdminResultJobId}
+                selectedAdminResult={Boolean(selectedAdminResult)}
+                adminResultDraft={adminResultDraft}
+                onAdminResultDraftChange={setAdminResultDraft}
+                onSaveAdminResult={saveAdminResultRecord}
+                onExportAdminResult={exportAdminResultRecord}
+                onDeleteAdminResult={deleteAdminResultRecord}
+              />
+            }
+          />
         ) : null}
       </aside>
 

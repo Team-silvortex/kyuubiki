@@ -1,6 +1,8 @@
 # Workbench Components
 
-This directory contains the browser workbench surface:
+This directory contains the browser workbench surface.
+
+Top-level files keep the shell and cross-cutting surfaces:
 
 - `workbench.tsx`
   Top-level state orchestration for the frontend workbench.
@@ -15,28 +17,19 @@ This directory contains the browser workbench surface:
 - `workbench-script-panel.tsx`
   WASM Python automation surface that drives registered frontend actions through
   a Pyodide bridge.
-- `workbench-study-sidebar.tsx`
-  Study setup and run controls surface extracted from the main workbench shell.
-- `workbench-model-sidebar.tsx`
-  Model editing shell for tools/tree tabs extracted from the main workbench shell.
-- `workbench-model-tools-card.tsx`
-  Model-side node/member action card extracted from the model tools surface.
-- `workbench-material-library-card.tsx`
-  Material editing and import/apply card extracted from the model tools surface.
-- `workbench-parametric-card.tsx`
-  Parametric generator card extracted from the model tools surface.
-- `workbench-protocol-agents-card.tsx`
-  Runtime protocol agent observer card extracted from the system sidebar.
-- `workbench-system-config-card.tsx`
-  System settings/configuration card extracted from the system sidebar surface.
-- `workbench-system-metrics-card.tsx`
-  Reusable runtime/security/watchdog metrics card extracted from the system sidebar surface.
-- `workbench-truss3d-tree-card.tsx`
-  3D object tree card extracted from the model tree surface.
-- `workbench-library-sidebar.tsx`
-  Sample/project/model/job library surface extracted from the main workbench shell.
-- `workbench-data-admin-panel.tsx`
-  Data admin CRUD surface extracted from the system sidebar.
+
+Subdirectories group extracted workbench surfaces by domain:
+
+- `study/`
+  Study setup and run controls extracted from the main workbench shell.
+- `model/`
+  Modeling-side shells and cards such as tools, materials, parametric generators,
+  and 3D tree surfaces.
+- `library/`
+  Sample/project/model/job library surfaces.
+- `system/`
+  Runtime/config/data administration surfaces, including the system section shell
+  and runtime panel composition.
 
 These files are intentionally grouped because they evolve together as one UI
 domain even when they are rendered separately.
