@@ -8,6 +8,8 @@ Top-level files keep the shell and cross-cutting surfaces:
   Top-level state orchestration for the frontend workbench.
 - `workbench-viewport.tsx`
   2D/3D visualization and interaction surface.
+- `workbench-viewport-panel.tsx`
+  Viewport panel shell for head actions, dock layout, result bar, and canvas stage.
 - `workbench-inspector.tsx`
   Right-side diagnostics, properties, history, and reporting surface.
 - `workbench-console.tsx`

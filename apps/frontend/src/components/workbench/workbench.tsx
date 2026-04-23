@@ -3,6 +3,7 @@
 import {
   useDeferredValue,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useTransition,
@@ -19,6 +20,7 @@ import { WorkbenchConsole } from "@/components/workbench/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
+import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
 import { WorkbenchMaterialLibraryCard } from "@/components/workbench/model/workbench-material-library-card";
@@ -3277,48 +3279,68 @@ export function Workbench() {
   const axialElements = axialResult?.elements ?? [];
   const axialLength = axialResult?.input.length ?? axialForm.length;
   const axialScale = axialResult?.max_displacement ? 140 / axialResult.max_displacement : 1;
-  const displayTrussNodes = buildDisplayTrussNodes(
-    trussModel,
-    trussResult,
-    activeResultWindow?.studyKind === "truss_2d" ? (activeResultWindow.nodes as Truss2dResult["nodes"]) : undefined,
-  );
-  const displayTrussElements = buildDisplayTrussElements(
-    trussModel,
-    trussResult,
-    activeResultWindow?.studyKind === "truss_2d" ? (activeResultWindow.elements as Truss2dResult["elements"]) : undefined,
-  );
-  const trussBounds = getTrussBounds(displayTrussNodes);
-  const displayTruss3dNodes = buildDisplayTruss3dNodes(
-    truss3dModel,
-    truss3dResult,
-    activeResultWindow?.studyKind === "truss_3d" ? (activeResultWindow.nodes as Truss3dResult["nodes"]) : undefined,
-  );
-  const displayTruss3dElements = buildDisplayTruss3dElements(
-    truss3dModel,
-    truss3dResult,
-    activeResultWindow?.studyKind === "truss_3d" ? (activeResultWindow.elements as Truss3dResult["elements"]) : undefined,
-  );
   const planeWindowNodes =
     activeResultWindow?.studyKind === "plane_triangle_2d" ? (activeResultWindow.nodes as PlaneTriangle2dResult["nodes"]) : undefined;
   const planeWindowElements =
     activeResultWindow?.studyKind === "plane_triangle_2d" ? (activeResultWindow.elements as PlaneTriangle2dResult["elements"]) : undefined;
-  const planeNodes =
-    (planeWindowNodes ?? planeResult?.nodes)?.map((node, index) => ({
-      ...planeModel.nodes[node.index ?? index],
-      ...node,
-      fix_x: planeModel.nodes[node.index ?? index]?.fix_x ?? false,
-      fix_y: planeModel.nodes[node.index ?? index]?.fix_y ?? false,
-      load_x: planeModel.nodes[node.index ?? index]?.load_x ?? 0,
-      load_y: planeModel.nodes[node.index ?? index]?.load_y ?? 0,
-    })) ??
-    planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
-  const planeElements =
-    (planeWindowElements ?? planeResult?.elements)?.map((element) => ({
-      ...element,
-      material_id: planeModel.elements[element.index]?.material_id,
-    })) ??
-    planeModel.elements.map((element, index) => ({ ...element, index, area: 0, strain_x: 0, strain_y: 0, gamma_xy: 0, stress_x: 0, stress_y: 0, tau_xy: 0, von_mises: 0 }));
-  const planeBounds = getTrussBounds(planeNodes);
+  const trussWindowNodes =
+    activeResultWindow?.studyKind === "truss_2d" ? (activeResultWindow.nodes as Truss2dResult["nodes"]) : undefined;
+  const trussWindowElements =
+    activeResultWindow?.studyKind === "truss_2d" ? (activeResultWindow.elements as Truss2dResult["elements"]) : undefined;
+  const truss3dWindowNodes =
+    activeResultWindow?.studyKind === "truss_3d" ? (activeResultWindow.nodes as Truss3dResult["nodes"]) : undefined;
+  const truss3dWindowElements =
+    activeResultWindow?.studyKind === "truss_3d" ? (activeResultWindow.elements as Truss3dResult["elements"]) : undefined;
+  const { displayTrussNodes, displayTrussElements, trussBounds } = useMemo(() => {
+    const nextDisplayTrussNodes = buildDisplayTrussNodes(trussModel, trussResult, trussWindowNodes);
+    const nextDisplayTrussElements = buildDisplayTrussElements(trussModel, trussResult, trussWindowElements);
+
+    return {
+      displayTrussNodes: nextDisplayTrussNodes,
+      displayTrussElements: nextDisplayTrussElements,
+      trussBounds: getTrussBounds(nextDisplayTrussNodes),
+    };
+  }, [trussModel, trussResult, trussWindowNodes, trussWindowElements]);
+  const { displayTruss3dNodes, displayTruss3dElements } = useMemo(() => ({
+    displayTruss3dNodes: buildDisplayTruss3dNodes(truss3dModel, truss3dResult, truss3dWindowNodes),
+    displayTruss3dElements: buildDisplayTruss3dElements(truss3dModel, truss3dResult, truss3dWindowElements),
+  }), [truss3dModel, truss3dResult, truss3dWindowNodes, truss3dWindowElements]);
+  const { planeNodes, planeElements, planeBounds, planeMaxVonMises } = useMemo(() => {
+    const nextPlaneNodes =
+      (planeWindowNodes ?? planeResult?.nodes)?.map((node, index) => ({
+        ...planeModel.nodes[node.index ?? index],
+        ...node,
+        fix_x: planeModel.nodes[node.index ?? index]?.fix_x ?? false,
+        fix_y: planeModel.nodes[node.index ?? index]?.fix_y ?? false,
+        load_x: planeModel.nodes[node.index ?? index]?.load_x ?? 0,
+        load_y: planeModel.nodes[node.index ?? index]?.load_y ?? 0,
+      })) ??
+      planeModel.nodes.map((node, index) => ({ ...node, index, ux: 0, uy: 0 }));
+    const nextPlaneElements =
+      (planeWindowElements ?? planeResult?.elements)?.map((element) => ({
+        ...element,
+        material_id: planeModel.elements[element.index]?.material_id,
+      })) ??
+      planeModel.elements.map((element, index) => ({
+        ...element,
+        index,
+        area: 0,
+        strain_x: 0,
+        strain_y: 0,
+        gamma_xy: 0,
+        stress_x: 0,
+        stress_y: 0,
+        tau_xy: 0,
+        von_mises: 0,
+      }));
+
+    return {
+      planeNodes: nextPlaneNodes,
+      planeElements: nextPlaneElements,
+      planeBounds: getTrussBounds(nextPlaneNodes),
+      planeMaxVonMises: Math.max(...nextPlaneElements.map((element) => element.von_mises ?? 0), 0),
+    };
+  }, [planeWindowNodes, planeWindowElements, planeResult, planeModel]);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const heartbeatStatusValue = heartbeatStatus(job, t);
   const heartbeatToneValue = heartbeatTone(job);
@@ -3362,53 +3384,178 @@ export function Workbench() {
           mutatingRoutes: "Mutating routes",
           clusterRoutes: "Cluster routes",
         };
-  const planeMaxVonMises = Math.max(...planeElements.map((element) => element.von_mises ?? 0), 0);
-  const currentMaterials =
-    studyKind === "truss_2d"
-      ? trussModel.materials ?? []
-      : studyKind === "truss_3d"
-        ? truss3dModel.materials ?? []
-        : studyKind === "plane_triangle_2d"
-          ? planeModel.materials ?? []
-          : [];
+  const currentMaterials = useMemo(
+    () =>
+      studyKind === "truss_2d"
+        ? trussModel.materials ?? []
+        : studyKind === "truss_3d"
+          ? truss3dModel.materials ?? []
+          : studyKind === "plane_triangle_2d"
+            ? planeModel.materials ?? []
+            : [],
+    [studyKind, trussModel.materials, truss3dModel.materials, planeModel.materials],
+  );
   const hiddenMaterialIds = hiddenMaterials[studyKind] ?? [];
-  const materialColorMap = new Map(currentMaterials.map((material, index) => [material.id, materialColorByIndex(index)]));
-  const materialOptions = currentMaterials.map((material) => ({
-    id: material.id,
-    label: `${material.name} (${round(material.youngs_modulus / 1.0e9)} GPa)`,
-  }));
-  const adminJobRows = buildAdminJobRows({
-    jobs: deferredJobHistory,
-    heartbeatTone: (job) => heartbeatTone(job),
-    heartbeatLabel: (job) => heartbeatStatus(job, t),
-    detailLabel: (job) => humanizeSolverFailure(job.message, t) ?? job.message ?? job.worker_id ?? "--",
-  });
-  const adminResultRows = buildAdminResultRows({
-    records: deferredResultRecords,
-    updatedAtLabel: (record) => (record.updated_at ? formatTime(record.updated_at, language) : t.hasResult),
-    summaryLabel: (record) => Object.keys(record.result).join(", ").slice(0, 64) || t.resultPayload,
-  });
-  const protocolAgentCards = buildProtocolAgentCards({
-    agents: protocolAgents,
-    labels: {
-      runtimeMode: t.runtimeMode,
-      cluster: t.cluster,
-      clusterSize: t.clusterSize,
-      clusterHealth: t.clusterHealth,
-      peers: t.peers,
-      headless: t.headless,
-      yes: t.yes,
-      no: t.no,
-      capabilities: t.capabilities,
-      methods: t.methods,
-      peerState: t.peerState,
-    },
-    clusterHealthTone,
-    peerStatusLabel: (status) => formatPeerStatus(status, t),
-  });
-  const trussElementColors = displayTrussElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
-  const truss3dElementColors = displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3");
-  const planeElementColors = planeModel.elements.map((element) => materialColorMap.get(element.material_id ?? "") ?? planeStressFill(0, 1));
+  const materialColorMap = useMemo(
+    () => new Map(currentMaterials.map((material, index) => [material.id, materialColorByIndex(index)])),
+    [currentMaterials],
+  );
+  const materialOptions = useMemo(
+    () =>
+      currentMaterials.map((material) => ({
+        id: material.id,
+        label: `${material.name} (${round(material.youngs_modulus / 1.0e9)} GPa)`,
+      })),
+    [currentMaterials],
+  );
+  const adminJobRows = useMemo(
+    () =>
+      buildAdminJobRows({
+        jobs: deferredJobHistory,
+        heartbeatTone: (job) => heartbeatTone(job),
+        heartbeatLabel: (job) => heartbeatStatus(job, t),
+        detailLabel: (job) => humanizeSolverFailure(job.message, t) ?? job.message ?? job.worker_id ?? "--",
+      }),
+    [deferredJobHistory, t],
+  );
+  const adminResultRows = useMemo(
+    () =>
+      buildAdminResultRows({
+        records: deferredResultRecords,
+        updatedAtLabel: (record) => (record.updated_at ? formatTime(record.updated_at, language) : t.hasResult),
+        summaryLabel: (record) => Object.keys(record.result).join(", ").slice(0, 64) || t.resultPayload,
+      }),
+    [deferredResultRecords, formatTime, language, t.hasResult, t.resultPayload],
+  );
+  const protocolAgentCards = useMemo(
+    () =>
+      buildProtocolAgentCards({
+        agents: protocolAgents,
+        labels: {
+          runtimeMode: t.runtimeMode,
+          cluster: t.cluster,
+          clusterSize: t.clusterSize,
+          clusterHealth: t.clusterHealth,
+          peers: t.peers,
+          headless: t.headless,
+          yes: t.yes,
+          no: t.no,
+          capabilities: t.capabilities,
+          methods: t.methods,
+          peerState: t.peerState,
+        },
+        clusterHealthTone,
+        peerStatusLabel: (status) => formatPeerStatus(status, t),
+      }),
+    [protocolAgents, t],
+  );
+  const runtimeBackendRows = useMemo(
+    () => [
+      { label: t.ui, value: "3000" },
+      { label: t.orchestrator, value: health ? "4000" : t.offline },
+      { label: t.solverAgent, value: health?.transport?.solver_agent_tcp ?? 5001 },
+    ],
+    [health, t],
+  );
+  const runtimeProtocolRows = useMemo(
+    () => [
+      { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
+      { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
+      { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
+      { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
+      { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
+      { label: t.reachableAgents, value: protocolAgents.length },
+      ...(frontendRuntimeMode === "direct_mesh_gui"
+        ? [
+            { label: t.directMeshStrategy, value: t.directMeshStrategies[directMeshSelectionMode] },
+            { label: t.directMeshLastAgent, value: directMeshExecution?.endpoint ?? "--" },
+            {
+              label: t.directMeshLastRoute,
+              value: directMeshExecution
+                ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
+                : "--",
+            },
+          ]
+        : []),
+    ],
+    [directMeshExecution, directMeshSelectionMode, formatTime, frontendRuntimeMode, health, language, protocolAgents.length, t],
+  );
+  const runtimeProtocolMethods = useMemo(
+    () => health?.protocol?.compatible_solver_rpc?.methods?.map((method) => formatProtocolMethodLabel(method)),
+    [health?.protocol?.compatible_solver_rpc?.methods],
+  );
+  const runtimeSecurityRows = useMemo(
+    () => [
+      {
+        label: securityUi.controlPlaneToken,
+        value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
+      },
+      {
+        label: securityUi.clusterToken,
+        value: health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured,
+      },
+      {
+        label: securityUi.clusterWindow,
+        value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
+      },
+      {
+        label: language === "zh" ? "Agent 白名单" : "Agent allowlist",
+        value: health?.security?.cluster_agent_allowlist_enabled
+          ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
+          : securityUi.disabled,
+      },
+      {
+        label: language === "zh" ? "Cluster 白名单" : "Cluster allowlist",
+        value: health?.security?.cluster_cluster_allowlist_enabled
+          ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
+          : securityUi.disabled,
+      },
+      {
+        label: language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding",
+        value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
+      },
+      {
+        label: securityUi.protectReads,
+        value: health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled,
+      },
+      {
+        label: securityUi.mutatingRoutes,
+        value: health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled,
+      },
+      {
+        label: securityUi.clusterRoutes,
+        value: health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled,
+      },
+      {
+        label: securityUi.directMeshRoutes,
+        value: directMeshApiToken ? securityUi.configured : securityUi.enabled,
+      },
+    ],
+    [directMeshApiToken, health, language, securityUi],
+  );
+  const runtimeWatchdogRows = useMemo(
+    () => [
+      { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
+      { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
+      { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
+      { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
+      { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
+      { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },
+    ],
+    [health, t],
+  );
+  const trussElementColors = useMemo(
+    () => displayTrussElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
+    [displayTrussElements, materialColorMap],
+  );
+  const truss3dElementColors = useMemo(
+    () => displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
+    [displayTruss3dElements, materialColorMap],
+  );
+  const planeElementColors = useMemo(
+    () => planeModel.elements.map((element) => materialColorMap.get(element.material_id ?? "") ?? planeStressFill(0, 1)),
+    [planeModel.elements, materialColorMap],
+  );
   const nodeCount =
     isAxial
       ? axialNodes.length
@@ -5153,82 +5300,14 @@ export function Workbench() {
               <WorkbenchSystemRuntimePanel
                 backendTitle={t.backend}
                 backendStatus={health?.status ?? t.offline}
-                backendRows={[
-                  { label: t.ui, value: "3000" },
-                  { label: t.orchestrator, value: health ? "4000" : t.offline },
-                  { label: t.solverAgent, value: health?.transport?.solver_agent_tcp ?? 5001 },
-                ]}
+                backendRows={runtimeBackendRows}
                 protocolsTitle={t.protocols}
                 protocolsStatus={health?.protocol ? t.online : t.offline}
-                protocolRows={[
-                  { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
-                  { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
-                  { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
-                  { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
-                  { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
-                  { label: t.reachableAgents, value: protocolAgents.length },
-                  ...(frontendRuntimeMode === "direct_mesh_gui"
-                    ? [
-                        { label: t.directMeshStrategy, value: t.directMeshStrategies[directMeshSelectionMode] },
-                        { label: t.directMeshLastAgent, value: directMeshExecution?.endpoint ?? "--" },
-                        {
-                          label: t.directMeshLastRoute,
-                          value: directMeshExecution
-                            ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
-                            : "--",
-                        },
-                      ]
-                    : []),
-                ]}
-                protocolMethods={health?.protocol?.compatible_solver_rpc?.methods?.map((method) => formatProtocolMethodLabel(method))}
+                protocolRows={runtimeProtocolRows}
+                protocolMethods={runtimeProtocolMethods}
                 securityTitle={securityUi.security}
                 securityStatus={health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
-                securityRows={[
-                  {
-                    label: securityUi.controlPlaneToken,
-                    value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
-                  },
-                  {
-                    label: securityUi.clusterToken,
-                    value: health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured,
-                  },
-                  {
-                    label: securityUi.clusterWindow,
-                    value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
-                  },
-                  {
-                    label: language === "zh" ? "Agent 白名单" : "Agent allowlist",
-                    value: health?.security?.cluster_agent_allowlist_enabled
-                      ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
-                      : securityUi.disabled,
-                  },
-                  {
-                    label: language === "zh" ? "Cluster 白名单" : "Cluster allowlist",
-                    value: health?.security?.cluster_cluster_allowlist_enabled
-                      ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
-                      : securityUi.disabled,
-                  },
-                  {
-                    label: language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding",
-                    value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
-                  },
-                  {
-                    label: securityUi.protectReads,
-                    value: health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled,
-                  },
-                  {
-                    label: securityUi.mutatingRoutes,
-                    value: health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled,
-                  },
-                  {
-                    label: securityUi.clusterRoutes,
-                    value: health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled,
-                  },
-                  {
-                    label: securityUi.directMeshRoutes,
-                    value: directMeshApiToken ? securityUi.configured : securityUi.enabled,
-                  },
-                ]}
+                securityRows={runtimeSecurityRows}
                 securityFooter={
                   <p className="card-copy">
                     {language === "zh"
@@ -5242,14 +5321,7 @@ export function Workbench() {
                 protocolAgents={protocolAgentCards}
                 watchdogTitle={t.watchdog}
                 watchdogStatus={health?.watchdog ? t.online : t.offline}
-                watchdogRows={[
-                  { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
-                  { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
-                  { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
-                  { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
-                  { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
-                  { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },
-                ]}
+                watchdogRows={runtimeWatchdogRows}
               />
             }
             dataContent={
@@ -5323,10 +5395,12 @@ export function Workbench() {
       </aside>
 
       <main className="workspace-main">
-        <section ref={viewportPanelRef} className={`panel canvas-panel${immersiveViewport ? " canvas-panel--immersive" : ""}`}>
-          <div className="panel-head">
-            <h2>{sidebarSection === "model" ? t.sections.model : t.viewport}</h2>
-            <div className="panel-head__actions">
+        <WorkbenchViewportPanel
+          viewportPanelRef={viewportPanelRef}
+          immersiveViewport={immersiveViewport}
+          title={sidebarSection === "model" ? t.sections.model : t.viewport}
+          headActions={
+            <>
               {isTruss3d && immersiveViewport ? (
                 <div className="immersive-switches">
                   <button
@@ -5390,11 +5464,11 @@ export function Workbench() {
                 </button>
               ) : null}
               <span>{job?.status ?? "idle"}</span>
-            </div>
-          </div>
-          <div className={`canvas-layout${hasViewportDock ? " canvas-layout--split" : ""}`}>
-          {hasViewportDock ? (
-            <div className="viewport-dock">
+            </>
+          }
+          hasViewportDock={hasViewportDock}
+          dockContent={
+            <>
               {immersiveViewport && immersiveToolDrawerOpen ? (
                 <section className="viewport-dock__card">
                   <div className="card-head">
@@ -5728,10 +5802,11 @@ export function Workbench() {
                   </div>
                 </section>
               ) : null}
-            </div>
-          ) : null}
-          {activeResultWindow ? (
-            <div className="viewport-window-bar">
+            </>
+          }
+          resultWindowBar={
+            activeResultWindow ? (
+              <div className="viewport-window-bar">
               <div className="viewport-window-bar__meta">
                 <strong>{t.resultWindow}</strong>
                 <span>
@@ -5785,13 +5860,14 @@ export function Workbench() {
                 </button>
               </div>
             </div>
-          ) : null}
-          <div
-            className={`canvas-stage${isTruss3d ? " canvas-stage--space" : ""}${shouldStretchSpaceViewport ? " canvas-stage--space-fluid" : ""}`}
-            onScroll={handleCanvasStageScroll}
-            ref={canvasStageRef}
-          >
-          <WorkbenchViewport
+            ) : null
+          }
+          isTruss3d={isTruss3d}
+          shouldStretchSpaceViewport={shouldStretchSpaceViewport}
+          onCanvasStageScroll={handleCanvasStageScroll}
+          canvasStageRef={canvasStageRef}
+          viewportContent={
+            <WorkbenchViewport
             studyKind={studyKind}
             sidebarSection={sidebarSection}
             title={t.sections.model}
@@ -5889,10 +5965,10 @@ export function Workbench() {
             onBoxSelectModeChange={setTruss3dBoxSelectMode}
             viewportPixelWidth={viewportPixelWidth}
           />
-          </div>
-          </div>
-          {immersiveViewport && sidebarSection === "library" ? (
-            <div className="immersive-drawer">
+          }
+          immersiveDrawer={
+            immersiveViewport && sidebarSection === "library" ? (
+              <div className="immersive-drawer">
               <section className="immersive-drawer__card">
                 <div className="card-head">
                   <h2>{t.immersiveDrawer}</h2>
@@ -5967,8 +6043,9 @@ export function Workbench() {
                 </div>
               </section>
             </div>
-          ) : null}
-        </section>
+            ) : null
+          }
+        />
 
         <WorkbenchConsole
           sidebarSection={sidebarSection}

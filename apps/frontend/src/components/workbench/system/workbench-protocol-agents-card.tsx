@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 type ProtocolAgentMetric = {
   label: string;
   value: string | number;
@@ -28,7 +30,7 @@ type WorkbenchProtocolAgentsCardProps = {
   agents: ProtocolAgentCardRow[];
 };
 
-export function WorkbenchProtocolAgentsCard({
+export const WorkbenchProtocolAgentsCard = memo(function WorkbenchProtocolAgentsCard({
   title,
   countLabel,
   emptyLabel,
@@ -85,4 +87,4 @@ export function WorkbenchProtocolAgentsCard({
       )}
     </section>
   );
-}
+});

@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { VirtualList } from "@/components/ui/virtual-list";
 import type { JobState, ModelRecord, ModelVersionRecord, ProjectRecord } from "@/lib/api";
 
@@ -93,7 +95,7 @@ type WorkbenchLibrarySidebarProps = {
   formatTime: (value: string | undefined) => string;
 };
 
-export function WorkbenchLibrarySidebar({
+export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   libraryTab,
   onLibraryTabChange,
   labels,
@@ -360,4 +362,4 @@ export function WorkbenchLibrarySidebar({
       ) : null}
     </div>
   );
-}
+});

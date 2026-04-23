@@ -1,5 +1,7 @@
 "use client";
 
+import { memo } from "react";
+
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type DataTab = "jobs" | "results";
@@ -64,7 +66,7 @@ type WorkbenchDataAdminPanelProps = {
   onDeleteAdminResult: () => void;
 };
 
-export function WorkbenchDataAdminPanel({
+export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   title,
   recordCountLabel,
   jobsTabLabel,
@@ -238,4 +240,4 @@ export function WorkbenchDataAdminPanel({
       )}
     </section>
   );
-}
+});

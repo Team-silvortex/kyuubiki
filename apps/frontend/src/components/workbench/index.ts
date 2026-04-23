@@ -1,5 +1,6 @@
 export { Workbench } from "./workbench";
 export { WorkbenchStudySidebar } from "./study/workbench-study-sidebar";
+export { WorkbenchViewportPanel } from "./workbench-viewport-panel";
 export { WorkbenchLibrarySidebar } from "./library/workbench-library-sidebar";
 export { WorkbenchMaterialLibraryCard } from "./model/workbench-material-library-card";
 export { WorkbenchModelSidebar } from "./model/workbench-model-sidebar";
