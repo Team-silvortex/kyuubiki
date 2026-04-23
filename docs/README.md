@@ -55,6 +55,8 @@ If you are new to the repo, read these first:
   Deployment modes, watchdog knobs, and runtime entry points.
 - `security.md`
   Current guardrails, token protection, and deployment safety notes.
+- `security-sensitive-modules.md`
+  Marked source paths that require security-focused review before changes.
 - `packaging-and-deployment.md`
   Component build commands, artifact paths, and packaging output boundaries.
 - `desktop-release-checklist.md`

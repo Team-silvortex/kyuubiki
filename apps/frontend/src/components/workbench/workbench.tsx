@@ -14,7 +14,6 @@ import {
   type SetStateAction,
 } from "react";
 import brand from "../../../../../assets/brand/brand.json";
-import { VirtualList } from "@/components/ui/virtual-list";
 import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
@@ -30,9 +29,7 @@ import { WorkbenchParametricCard } from "@/components/workbench/model/workbench-
 import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench-truss3d-tree-card";
 import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
 import { WorkbenchDataAdminPanel } from "@/components/workbench/system/workbench-data-admin-panel";
-import { WorkbenchProtocolAgentsCard } from "@/components/workbench/system/workbench-protocol-agents-card";
 import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
-import { WorkbenchSystemMetricsCard } from "@/components/workbench/system/workbench-system-metrics-card";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
@@ -66,6 +63,10 @@ import {
 import {
   buildAdminJobRows,
   buildAdminResultRows,
+  buildLibraryJobRows,
+  buildLibraryModelRows,
+  buildLibrarySampleRows,
+  buildLibraryVersionRows,
   buildProtocolAgentCards,
   buildStudyControlsRows,
   buildStudyKindOptions,
@@ -3427,6 +3428,40 @@ export function Workbench() {
       }),
     [deferredResultRecords, formatTime, language, t.hasResult, t.resultPayload],
   );
+  const librarySampleRows = useMemo(
+    () =>
+      buildLibrarySampleRows({
+        samples: SAMPLE_LIBRARY,
+        kindLabel: (kind) => (kind in t.kinds ? t.kinds[kind as StudyKind] : kind),
+      }),
+    [t],
+  );
+  const libraryModelRows = useMemo(
+    () =>
+      buildLibraryModelRows({
+        models: deferredProjectModels,
+        kindLabel: (kind) => (kind in t.kinds ? t.kinds[kind as StudyKind] : kind),
+        updatedAtLabel: (value) => formatTime(value, language),
+      }),
+    [deferredProjectModels, formatTime, language, t],
+  );
+  const libraryVersionRows = useMemo(
+    () =>
+      buildLibraryVersionRows({
+        versions: deferredModelVersions,
+        updatedAtLabel: (value) => formatTime(value, language),
+      }),
+    [deferredModelVersions, formatTime, language],
+  );
+  const libraryJobRows = useMemo(
+    () =>
+      buildLibraryJobRows({
+        jobs: deferredJobHistory,
+        updatedAtLabel: (value) => formatTime(value, language),
+        hasResultLabel: (hasResult) => (hasResult ? t.yes : t.no),
+      }),
+    [deferredJobHistory, formatTime, language, t.no, t.yes],
+  );
   const protocolAgentCards = useMemo(
     () =>
       buildProtocolAgentCards({
@@ -5124,7 +5159,7 @@ export function Workbench() {
             libraryTab={libraryTab}
             onLibraryTabChange={setLibraryTab}
             labels={t}
-            samples={SAMPLE_LIBRARY}
+            sampleRows={librarySampleRows}
             projects={projects}
             selectedProjectId={selectedProjectId}
             onSelectedProjectChange={(projectId) => {
@@ -5141,22 +5176,28 @@ export function Workbench() {
             onExportProjectJson={() => void downloadProjectBundleJson()}
             onExportProjectZip={() => void downloadProjectBundleZip()}
             onImportProjectBundle={(file) => void importProjectBundle(file)}
-            selectedProjectModels={selectedProjectModels}
-            deferredProjectModels={deferredProjectModels}
+            selectedProjectModelCount={selectedProjectModels.length}
+            modelRows={libraryModelRows}
             selectedModelId={selectedModelId}
             loadedModelName={loadedModelName}
             onLoadedModelNameChange={setLoadedModelName}
             onSaveModel={saveModelVersion}
             onDeleteSavedModel={deleteSavedModelRecord}
-            onOpenSavedModel={openSavedModel}
-            deferredModelVersions={deferredModelVersions}
-            modelVersions={modelVersions}
+            onOpenSavedModel={(modelId) => {
+              const model = selectedProjectModels.find((entry) => entry.model_id === modelId);
+              if (model) openSavedModel(model);
+            }}
+            versionRows={libraryVersionRows}
+            modelVersionCount={modelVersions.length}
             selectedVersionId={selectedVersionId}
             onRenameSelectedVersion={renameSelectedVersion}
             onDeleteSelectedVersion={deleteSelectedVersion}
-            onOpenSavedVersion={openSavedVersion}
-            deferredJobHistory={deferredJobHistory}
-            jobHistory={jobHistory}
+            onOpenSavedVersion={(versionId) => {
+              const version = modelVersions.find((entry) => entry.version_id === versionId);
+              if (version) openSavedVersion(version);
+            }}
+            jobRows={libraryJobRows}
+            jobCount={jobHistory.length}
             activeJobId={job?.job_id ?? null}
             onOpenHistoryJob={openHistoryJob}
             onOpenSample={openSample}
@@ -5165,7 +5206,6 @@ export function Workbench() {
               void refreshProjects();
             }}
             onImportModel={importModel}
-            formatTime={(value) => formatTime(value, language)}
           />
         ) : null}
 
@@ -5987,7 +6027,7 @@ export function Workbench() {
                   <div className="immersive-drawer__section">
                     <h3>{t.immersiveSamples}</h3>
                     <div className="immersive-drawer__list">
-                      {SAMPLE_LIBRARY.slice(0, 4).map((sample) => (
+                      {librarySampleRows.slice(0, 4).map((sample) => (
                         <button
                           key={sample.href}
                           className="history-item immersive-drawer__button"
@@ -5995,7 +6035,7 @@ export function Workbench() {
                           type="button"
                         >
                           <strong>{sample.name}</strong>
-                          <span>{sample.kind}</span>
+                          <span>{sample.kindLabel}</span>
                         </button>
                       ))}
                     </div>
@@ -6003,16 +6043,19 @@ export function Workbench() {
                   <div className="immersive-drawer__section">
                     <h3>{t.immersiveModels}</h3>
                     <div className="immersive-drawer__list">
-                      {deferredProjectModels.slice(0, 4).length > 0 ? (
-                        deferredProjectModels.slice(0, 4).map((model) => (
+                      {libraryModelRows.slice(0, 4).length > 0 ? (
+                        libraryModelRows.slice(0, 4).map((model) => (
                           <button
-                            key={model.model_id}
+                            key={model.id}
                             className="history-item immersive-drawer__button"
-                            onClick={() => openSavedModel(model)}
+                            onClick={() => {
+                              const modelRecord = selectedProjectModels.find((entry) => entry.model_id === model.id);
+                              if (modelRecord) openSavedModel(modelRecord);
+                            }}
                             type="button"
                           >
                             <strong>{model.name}</strong>
-                            <small>{t.updatedAt}: {formatTime(model.updated_at, language)}</small>
+                            <small>{t.updatedAt}: {model.updatedAt}</small>
                           </button>
                         ))
                       ) : (
@@ -6023,15 +6066,15 @@ export function Workbench() {
                   <div className="immersive-drawer__section">
                     <h3>{t.immersiveJobs}</h3>
                     <div className="immersive-drawer__list">
-                      {deferredJobHistory.slice(0, 4).length > 0 ? (
-                        deferredJobHistory.slice(0, 4).map((historyJob) => (
+                      {libraryJobRows.slice(0, 4).length > 0 ? (
+                        libraryJobRows.slice(0, 4).map((historyJob) => (
                           <button
-                            key={historyJob.job_id}
+                            key={historyJob.id}
                             className="history-item immersive-drawer__button"
-                            onClick={() => openHistoryJob(historyJob.job_id)}
+                            onClick={() => openHistoryJob(historyJob.id)}
                             type="button"
                           >
-                            <strong>{historyJob.job_id.slice(0, 8)}</strong>
+                            <strong>{historyJob.shortId}</strong>
                             <span>{historyJob.status}</span>
                           </button>
                         ))

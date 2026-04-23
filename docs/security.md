@@ -4,6 +4,10 @@ Kyuubiki is still in an engine-building phase, so the default local developer
 experience is intentionally low friction. For anything beyond a trusted local
 machine or small trusted LAN, enable the guardrails below.
 
+Security-sensitive paths are explicitly marked in:
+
+- `security-sensitive-modules.md`
+
 ## Current security model
 
 ### Control plane
@@ -111,6 +115,9 @@ These areas are not yet finished security features:
 - no signed cluster membership yet
 - no per-project permissions
 - no audit log retention policy yet
+- read routes are not yet consistently wrapped with `with_auth(conn, :read, ...)`
+  even though `KYUUBIKI_PROTECT_READS` is already represented in runtime config
+  and health metadata
 
 For now, think of the current token support as a deployment guardrail, not a
 complete security architecture.

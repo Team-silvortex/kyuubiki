@@ -3,16 +3,39 @@
 import { memo } from "react";
 
 import { VirtualList } from "@/components/ui/virtual-list";
-import type { JobState, ModelRecord, ModelVersionRecord, ProjectRecord } from "@/lib/api";
+import type { ProjectRecord } from "@/lib/api";
 
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 
-type SampleEntry = {
+type SampleRow = {
   id: string;
   name: string;
-  kind: string;
+  kindLabel: string;
   href: string;
   summary: string;
+};
+
+type ModelRow = {
+  id: string;
+  name: string;
+  kindLabel: string;
+  updatedAt: string;
+  versionLabel: string;
+};
+
+type VersionRow = {
+  id: string;
+  name: string;
+  versionLabel: string;
+  updatedAt: string;
+};
+
+type JobRow = {
+  id: string;
+  shortId: string;
+  status: string;
+  updatedAt: string;
+  hasResult: string;
 };
 
 type LibraryLabels = {
@@ -57,7 +80,7 @@ type WorkbenchLibrarySidebarProps = {
   libraryTab: LibraryPanelTab;
   onLibraryTabChange: (tab: LibraryPanelTab) => void;
   labels: LibraryLabels;
-  samples: SampleEntry[];
+  sampleRows: SampleRow[];
   projects: ProjectRecord[];
   selectedProjectId: string | null;
   onSelectedProjectChange: (projectId: string | null) => void;
@@ -71,35 +94,34 @@ type WorkbenchLibrarySidebarProps = {
   onExportProjectJson: () => void;
   onExportProjectZip: () => void;
   onImportProjectBundle: (file: File | undefined) => void | Promise<void>;
-  selectedProjectModels: ModelRecord[];
-  deferredProjectModels: ModelRecord[];
+  selectedProjectModelCount: number;
+  modelRows: ModelRow[];
   selectedModelId: string | null;
   loadedModelName: string;
   onLoadedModelNameChange: (value: string) => void;
   onSaveModel: (saveAs: boolean) => void;
   onDeleteSavedModel: () => void;
-  onOpenSavedModel: (model: ModelRecord) => void;
-  deferredModelVersions: ModelVersionRecord[];
-  modelVersions: ModelVersionRecord[];
+  onOpenSavedModel: (modelId: string) => void;
+  versionRows: VersionRow[];
+  modelVersionCount: number;
   selectedVersionId: string | null;
   onRenameSelectedVersion: () => void;
   onDeleteSelectedVersion: () => void;
-  onOpenSavedVersion: (version: ModelVersionRecord) => void;
-  deferredJobHistory: JobState[];
-  jobHistory: JobState[];
+  onOpenSavedVersion: (versionId: string) => void;
+  jobRows: JobRow[];
+  jobCount: number;
   activeJobId: string | null;
   onOpenHistoryJob: (jobId: string) => void;
   onOpenSample: (href: string) => void;
   onRefresh: () => void;
   onImportModel: (file: File | undefined) => void;
-  formatTime: (value: string | undefined) => string;
 };
 
 export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   libraryTab,
   onLibraryTabChange,
   labels,
-  samples,
+  sampleRows,
   projects,
   selectedProjectId,
   onSelectedProjectChange,
@@ -113,28 +135,27 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   onExportProjectJson,
   onExportProjectZip,
   onImportProjectBundle,
-  selectedProjectModels,
-  deferredProjectModels,
+  selectedProjectModelCount,
+  modelRows,
   selectedModelId,
   loadedModelName,
   onLoadedModelNameChange,
   onSaveModel,
   onDeleteSavedModel,
   onOpenSavedModel,
-  deferredModelVersions,
-  modelVersions,
+  versionRows,
+  modelVersionCount,
   selectedVersionId,
   onRenameSelectedVersion,
   onDeleteSelectedVersion,
   onOpenSavedVersion,
-  deferredJobHistory,
-  jobHistory,
+  jobRows,
+  jobCount,
   activeJobId,
   onOpenHistoryJob,
   onOpenSample,
   onRefresh,
   onImportModel,
-  formatTime,
 }: WorkbenchLibrarySidebarProps) {
   return (
     <div className="sidebar-stack panel-scroll-window">
@@ -165,14 +186,14 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           </label>
           <VirtualList
             className="history-list"
-            items={samples}
+            items={sampleRows}
             itemHeight={102}
             maxHeight={328}
             itemKey={(sample) => sample.id}
             renderItem={(sample) => (
               <button className="history-item" onClick={() => onOpenSample(sample.href)} type="button">
                 <strong>{sample.name}</strong>
-                <span>{labels.kinds[sample.kind] ?? sample.kind}</span>
+                <span>{sample.kindLabel}</span>
                 <small>{sample.summary}</small>
               </button>
             )}
@@ -246,7 +267,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
         <section className="sidebar-card">
           <div className="card-head">
             <h2>{labels.savedModels}</h2>
-            <span>{selectedProjectModels.length}</span>
+            <span>{selectedProjectModelCount}</span>
           </div>
           <div className="form-grid compact">
             <label>
@@ -267,23 +288,23 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           </div>
           <VirtualList
             className="history-list"
-            items={deferredProjectModels}
+            items={modelRows}
             itemHeight={112}
             maxHeight={344}
             emptyState={<p className="card-copy">{labels.noSavedModels}</p>}
-            itemKey={(model) => model.model_id}
+            itemKey={(model) => model.id}
             renderItem={(model) => (
               <button
-                className={`history-item${selectedModelId === model.model_id ? " history-item--active" : ""}`}
-                onClick={() => onOpenSavedModel(model)}
+                className={`history-item${selectedModelId === model.id ? " history-item--active" : ""}`}
+                onClick={() => onOpenSavedModel(model.id)}
                 type="button"
               >
                 <strong>{model.name}</strong>
-                <span>{labels.kinds[model.kind] ?? model.kind}</span>
+                <span>{model.kindLabel}</span>
                 <small>
-                  {labels.updatedAt}: {formatTime(model.updated_at)}
+                  {labels.updatedAt}: {model.updatedAt}
                 </small>
-                <small>v{model.latest_version_number ?? 1}</small>
+                <small>{model.versionLabel}</small>
               </button>
             )}
           />
@@ -294,7 +315,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
         <section className="sidebar-card">
           <div className="card-head">
             <h2>{labels.versions}</h2>
-            <span>{modelVersions.length}</span>
+            <span>{modelVersionCount}</span>
           </div>
           <div className="button-row">
             <button className="ghost-button" disabled={!selectedVersionId} onClick={onRenameSelectedVersion} type="button">
@@ -306,21 +327,21 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           </div>
           <VirtualList
             className="history-list"
-            items={deferredModelVersions}
+            items={versionRows}
             itemHeight={100}
             maxHeight={320}
             emptyState={<p className="card-copy">{labels.noVersions}</p>}
-            itemKey={(version) => version.version_id}
+            itemKey={(version) => version.id}
             renderItem={(version) => (
               <button
-                className={`history-item${selectedVersionId === version.version_id ? " history-item--active" : ""}`}
-                onClick={() => onOpenSavedVersion(version)}
+                className={`history-item${selectedVersionId === version.id ? " history-item--active" : ""}`}
+                onClick={() => onOpenSavedVersion(version.id)}
                 type="button"
               >
                 <strong>{version.name}</strong>
-                <span>v{version.version_number}</span>
+                <span>{version.versionLabel}</span>
                 <small>
-                  {labels.updatedAt}: {formatTime(version.updated_at)}
+                  {labels.updatedAt}: {version.updatedAt}
                 </small>
               </button>
             )}
@@ -332,28 +353,28 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
         <section className="sidebar-card">
           <div className="card-head">
             <h2>{labels.sections.library}</h2>
-            <span>{jobHistory.length}</span>
+            <span>{jobCount}</span>
           </div>
           <VirtualList
             className="history-list"
-            items={deferredJobHistory}
+            items={jobRows}
             itemHeight={112}
             maxHeight={360}
             emptyState={<p className="card-copy">{labels.historyEmpty}</p>}
-            itemKey={(historyJob) => historyJob.job_id}
+            itemKey={(historyJob) => historyJob.id}
             renderItem={(historyJob) => (
               <button
-                className={`history-item${activeJobId === historyJob.job_id ? " history-item--active" : ""}`}
-                onClick={() => onOpenHistoryJob(historyJob.job_id)}
+                className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
+                onClick={() => onOpenHistoryJob(historyJob.id)}
                 type="button"
               >
-                <strong>{historyJob.job_id.slice(0, 8)}</strong>
+                <strong>{historyJob.shortId}</strong>
                 <span>{historyJob.status}</span>
                 <small>
-                  {labels.updatedAt}: {formatTime(historyJob.updated_at)}
+                  {labels.updatedAt}: {historyJob.updatedAt}
                 </small>
                 <small>
-                  {labels.hasResult}: {historyJob.has_result ? labels.yes : labels.no}
+                  {labels.hasResult}: {historyJob.hasResult}
                 </small>
               </button>
             )}

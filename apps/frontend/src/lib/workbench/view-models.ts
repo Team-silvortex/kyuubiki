@@ -1,11 +1,88 @@
 import type {
   JobEnvelope,
   JobState,
+  ModelRecord,
+  ModelVersionRecord,
   ProtocolAgentDescriptor,
   ResultRecord,
   Truss3dElementInput,
   Truss3dNodeInput,
 } from "@/lib/api";
+
+export type SampleLibraryEntry = {
+  id: string;
+  name: string;
+  kind: string;
+  href: string;
+  summary: string;
+};
+
+export function buildLibrarySampleRows({
+  samples,
+  kindLabel,
+}: {
+  samples: SampleLibraryEntry[];
+  kindLabel: (kind: string) => string;
+}) {
+  return samples.map((sample) => ({
+    id: sample.id,
+    name: sample.name,
+    kindLabel: kindLabel(sample.kind),
+    href: sample.href,
+    summary: sample.summary,
+  }));
+}
+
+export function buildLibraryModelRows({
+  models,
+  kindLabel,
+  updatedAtLabel,
+}: {
+  models: ModelRecord[];
+  kindLabel: (kind: string) => string;
+  updatedAtLabel: (value: string) => string;
+}) {
+  return models.map((model) => ({
+    id: model.model_id,
+    name: model.name,
+    kindLabel: kindLabel(model.kind),
+    updatedAt: updatedAtLabel(model.updated_at),
+    versionLabel: `v${model.latest_version_number ?? 1}`,
+  }));
+}
+
+export function buildLibraryVersionRows({
+  versions,
+  updatedAtLabel,
+}: {
+  versions: ModelVersionRecord[];
+  updatedAtLabel: (value: string) => string;
+}) {
+  return versions.map((version) => ({
+    id: version.version_id,
+    name: version.name,
+    versionLabel: `v${version.version_number}`,
+    updatedAt: updatedAtLabel(version.updated_at),
+  }));
+}
+
+export function buildLibraryJobRows({
+  jobs,
+  updatedAtLabel,
+  hasResultLabel,
+}: {
+  jobs: JobState[];
+  updatedAtLabel: (value: string | undefined) => string;
+  hasResultLabel: (hasResult: boolean) => string;
+}) {
+  return jobs.map((job) => ({
+    id: job.job_id,
+    shortId: job.job_id.slice(0, 8),
+    status: job.status,
+    updatedAt: updatedAtLabel(job.updated_at),
+    hasResult: hasResultLabel(Boolean(job.has_result)),
+  }));
+}
 
 export function buildAdminJobRows({
   jobs,
