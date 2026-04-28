@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AssistantPlan } from "@/lib/assistant/openai-compatible";
+import { getWorkbenchScriptActionDefinition, isWorkbenchScriptActionHighRisk } from "@/lib/scripting/workbench-script-runtime";
 
 type AssistantMode = "local" | "llm";
 
@@ -69,6 +70,8 @@ const copy = {
     transactions: "Transactions",
     noTransactions: "No assistant transactions yet.",
     rollback: "Rollback",
+    confirmationRequired: "Confirmation required",
+    highRiskHint: "This action will trigger an extra operator confirmation before execution.",
   },
   zh: {
     mode: "模式",
@@ -102,6 +105,8 @@ const copy = {
     transactions: "事务记录",
     noTransactions: "还没有助手事务记录。",
     rollback: "回滚",
+    confirmationRequired: "需要确认",
+    highRiskHint: "这个动作在真正执行前，还会额外弹出一次操作员确认。",
   },
 } as const;
 
@@ -272,29 +277,35 @@ export function WorkbenchAssistantPanel({
                 {plan.suggested_actions.length === 0 ? (
                   <p className="card-copy">{t.noSuggestedActions}</p>
                 ) : (
-                  plan.suggested_actions.map((entry, index) => (
-                    <article className="script-panel__action" key={`${entry.action}-${index}`}>
-                      <div className="script-panel__action-head">
-                        <strong>{entry.action}</strong>
-                        <span>{t.llmMode}</span>
-                      </div>
-                      <p className="card-copy">{entry.reason}</p>
-                      <div className="script-panel__payload">
-                        <span>Payload</span>
-                        <code>{JSON.stringify(entry.payload ?? {}, null, 2)}</code>
-                      </div>
-                      <div className="button-row">
-                        <button
-                          className="ghost-button ghost-button--compact"
-                          disabled={!approvedExecution}
-                          onClick={() => void onExecuteLlmAction(entry.action, entry.payload, entry.reason)}
-                          type="button"
-                        >
-                          {t.runAction}
-                        </button>
-                      </div>
-                    </article>
-                  ))
+                  plan.suggested_actions.map((entry, index) => {
+                    const actionDefinition = getWorkbenchScriptActionDefinition(entry.action);
+                    const highRisk = isWorkbenchScriptActionHighRisk(entry.action);
+                    return (
+                      <article className="script-panel__action" key={`${entry.action}-${index}`}>
+                        <div className="script-panel__action-head">
+                          <strong>{entry.action}</strong>
+                          <span>{highRisk ? t.confirmationRequired : t.llmMode}</span>
+                        </div>
+                        {actionDefinition ? <p className="card-copy">{actionDefinition.summary[language]}</p> : null}
+                        <p className="card-copy">{entry.reason}</p>
+                        {highRisk ? <p className="card-copy">{t.highRiskHint}</p> : null}
+                        <div className="script-panel__payload">
+                          <span>Payload</span>
+                          <code>{JSON.stringify(entry.payload ?? {}, null, 2)}</code>
+                        </div>
+                        <div className="button-row">
+                          <button
+                            className="ghost-button ghost-button--compact"
+                            disabled={!approvedExecution}
+                            onClick={() => void onExecuteLlmAction(entry.action, entry.payload, entry.reason)}
+                            type="button"
+                          >
+                            {t.runAction}
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })
                 )}
                 {plan.suggested_actions.length > 0 ? (
                   <>

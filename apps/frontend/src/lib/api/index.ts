@@ -439,6 +439,7 @@ export type DirectMeshAgentListPayload = {
 };
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
+const SECRETS_KEY = "kyuubiki-workbench-secrets";
 
 function resolveMaterialLookup(materials: ModelMaterial[] | undefined) {
   return new Map((materials ?? []).map((material) => [material.id, material]));
@@ -527,10 +528,33 @@ function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
   try {
-    const raw = window.localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return {};
+    const rawSecrets = window.sessionStorage.getItem(SECRETS_KEY);
+    const rawSettings = window.localStorage.getItem(SETTINGS_KEY);
+    if (!rawSecrets && !rawSettings) return {};
 
-    const parsed = JSON.parse(raw) as {
+    const parsedSecrets = rawSecrets
+      ? (JSON.parse(rawSecrets) as {
+          controlPlaneApiToken?: string;
+          clusterApiToken?: string;
+          directMeshApiToken?: string;
+        })
+      : {};
+    const parsedLegacySettings = rawSettings
+      ? (JSON.parse(rawSettings) as {
+          controlPlaneApiToken?: string;
+          clusterApiToken?: string;
+          directMeshApiToken?: string;
+        })
+      : {};
+
+    const parsed = {
+      controlPlaneApiToken:
+        parsedSecrets.controlPlaneApiToken ?? parsedLegacySettings.controlPlaneApiToken,
+      clusterApiToken:
+        parsedSecrets.clusterApiToken ?? parsedLegacySettings.clusterApiToken,
+      directMeshApiToken:
+        parsedSecrets.directMeshApiToken ?? parsedLegacySettings.directMeshApiToken,
+    } as {
       controlPlaneApiToken?: string;
       clusterApiToken?: string;
       directMeshApiToken?: string;

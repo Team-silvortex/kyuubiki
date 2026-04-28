@@ -5,6 +5,7 @@ import {
   buildWorkbenchPythonPrelude,
   DEFAULT_WORKBENCH_PYTHON,
   ensurePyodideRuntime,
+  isWorkbenchScriptActionHighRisk,
   WORKBENCH_SCRIPT_ACTIONS,
   type WorkbenchScriptActionDefinition,
   type WorkbenchScriptActionLogEntry,
@@ -50,6 +51,10 @@ const copy = {
     payload: "Payload",
     actionLog: "Action log",
     noActionLog: "No scripted actions yet.",
+    riskNormal: "Normal",
+    riskSensitive: "Sensitive",
+    riskDestructive: "Destructive",
+    confirmationRequired: "Requires confirmation before execution.",
     categories: {
       navigation: "Navigation",
       settings: "Settings",
@@ -89,6 +94,10 @@ const copy = {
     payload: "参数",
     actionLog: "动作日志",
     noActionLog: "还没有脚本动作记录。",
+    riskNormal: "普通",
+    riskSensitive: "敏感",
+    riskDestructive: "高风险",
+    confirmationRequired: "执行前需要额外确认。",
     categories: {
       navigation: "导航",
       settings: "设置",
@@ -325,9 +334,17 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
             <article className="script-panel__action" key={action.id}>
               <div className="script-panel__action-head">
                 <strong>{action.id}</strong>
-                <span>{t.categories[action.category as keyof typeof t.categories] ?? action.category}</span>
+                <span>
+                  {t.categories[action.category as keyof typeof t.categories] ?? action.category}
+                  {action.risk === "destructive"
+                    ? ` · ${t.riskDestructive}`
+                    : action.risk === "sensitive"
+                      ? ` · ${t.riskSensitive}`
+                      : ` · ${t.riskNormal}`}
+                </span>
               </div>
               <p className="card-copy">{action.summary[language]}</p>
+              {isWorkbenchScriptActionHighRisk(action.id) ? <p className="card-copy">{t.confirmationRequired}</p> : null}
               <div className="script-panel__payload">
                 <span>{t.payload}</span>
                 <code>{stringifyPayload(action.payloadExample)}</code>

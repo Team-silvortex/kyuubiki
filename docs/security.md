@@ -97,7 +97,17 @@ settings:
 - cluster token
 - direct-mesh token
 
-They are currently stored in browser local storage and attached as:
+They are now stored in browser session storage, while non-sensitive UI
+preferences remain in local storage. Legacy local-storage tokens are migrated
+out on load.
+
+Assistant-planned actions and WASM Python scripted actions now share the same
+high-risk confirmation gate inside the workbench action executor. Destructive
+or sensitive actions such as project/model deletion, job cancellation, and
+database or project export require an explicit operator confirmation even when
+triggered through the assistant or the scripting bridge.
+
+Attached as:
 
 - `x-kyuubiki-token` to `/api/v1` and `/api/health`
 - `x-kyuubiki-token` to `/api/direct-mesh/*`

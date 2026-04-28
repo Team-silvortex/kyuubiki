@@ -13,6 +13,7 @@ import type {
 } from "@/lib/api";
 
 export const WORKBENCH_SETTINGS_KEY = "kyuubiki-workbench-settings";
+export const WORKBENCH_SECRETS_KEY = "kyuubiki-workbench-secrets";
 
 export type StoredWorkbenchSettings = {
   theme?: string;
@@ -22,13 +23,33 @@ export type StoredWorkbenchSettings = {
   frontendRuntimeMode?: FrontendRuntimeMode;
   directMeshEndpointsText?: string;
   directMeshSelectionMode?: string;
+  assistantMode?: string;
+  assistantApiBaseUrl?: string;
+  assistantModel?: string;
   controlPlaneApiToken?: string;
   clusterApiToken?: string;
   directMeshApiToken?: string;
+  assistantApiKey?: string;
+};
+
+type PersistedWorkbenchSettings = {
+  theme?: string;
+  language?: string;
+  showShortcutHints?: boolean;
+  immersiveGuardrails?: boolean;
+  frontendRuntimeMode?: FrontendRuntimeMode;
+  directMeshEndpointsText?: string;
+  directMeshSelectionMode?: string;
   assistantMode?: string;
   assistantApiBaseUrl?: string;
-  assistantApiKey?: string;
   assistantModel?: string;
+};
+
+type StoredWorkbenchSecrets = {
+  controlPlaneApiToken?: string;
+  clusterApiToken?: string;
+  directMeshApiToken?: string;
+  assistantApiKey?: string;
 };
 
 export type WorkbenchSettingsInput = {
@@ -66,14 +87,55 @@ export function safeStorageGet(): StoredWorkbenchSettings {
   if (typeof window === "undefined") return {};
 
   try {
-    const raw = window.localStorage.getItem(WORKBENCH_SETTINGS_KEY);
-    return raw ? (JSON.parse(raw) as StoredWorkbenchSettings) : {};
+    const rawSettings = window.localStorage.getItem(WORKBENCH_SETTINGS_KEY);
+    const parsedSettings = rawSettings ? (JSON.parse(rawSettings) as StoredWorkbenchSettings) : {};
+
+    const rawSecrets = window.sessionStorage.getItem(WORKBENCH_SECRETS_KEY);
+    const parsedSecrets = rawSecrets ? (JSON.parse(rawSecrets) as StoredWorkbenchSecrets) : {};
+
+    const legacySecrets: StoredWorkbenchSecrets = {
+      ...(parsedSettings.controlPlaneApiToken ? { controlPlaneApiToken: parsedSettings.controlPlaneApiToken } : {}),
+      ...(parsedSettings.clusterApiToken ? { clusterApiToken: parsedSettings.clusterApiToken } : {}),
+      ...(parsedSettings.directMeshApiToken ? { directMeshApiToken: parsedSettings.directMeshApiToken } : {}),
+      ...(parsedSettings.assistantApiKey ? { assistantApiKey: parsedSettings.assistantApiKey } : {}),
+    };
+
+    const mergedSecrets =
+      Object.keys(parsedSecrets).length > 0
+        ? parsedSecrets
+        : Object.keys(legacySecrets).length > 0
+          ? legacySecrets
+          : {};
+
+    if (Object.keys(legacySecrets).length > 0) {
+      window.sessionStorage.setItem(WORKBENCH_SECRETS_KEY, JSON.stringify(mergedSecrets));
+
+      const sanitizedSettings: PersistedWorkbenchSettings = {
+        theme: parsedSettings.theme,
+        language: parsedSettings.language,
+        showShortcutHints: parsedSettings.showShortcutHints,
+        immersiveGuardrails: parsedSettings.immersiveGuardrails,
+        frontendRuntimeMode: parsedSettings.frontendRuntimeMode,
+        directMeshEndpointsText: parsedSettings.directMeshEndpointsText,
+        directMeshSelectionMode: parsedSettings.directMeshSelectionMode,
+        assistantMode: parsedSettings.assistantMode,
+        assistantApiBaseUrl: parsedSettings.assistantApiBaseUrl,
+        assistantModel: parsedSettings.assistantModel,
+      };
+
+      window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizedSettings));
+    }
+
+    return {
+      ...parsedSettings,
+      ...mergedSecrets,
+    };
   } catch {
     return {};
   }
 }
 
-export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput) {
+export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput): PersistedWorkbenchSettings {
   return {
     theme: input.theme,
     language: input.language,
@@ -85,6 +147,11 @@ export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput) {
     assistantMode: input.assistantMode,
     assistantApiBaseUrl: input.assistantApiBaseUrl.trim(),
     assistantModel: input.assistantModel.trim(),
+  };
+}
+
+export function sanitizeWorkbenchSecrets(input: WorkbenchSettingsInput): StoredWorkbenchSecrets {
+  return {
     ...(input.controlPlaneApiToken.trim()
       ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
       : {}),
@@ -94,6 +161,19 @@ export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput) {
       : {}),
     ...(input.assistantApiKey.trim() ? { assistantApiKey: input.assistantApiKey.trim() } : {}),
   };
+}
+
+export function persistWorkbenchSettings(input: WorkbenchSettingsInput) {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.setItem(
+    WORKBENCH_SETTINGS_KEY,
+    JSON.stringify(sanitizeWorkbenchSettings(input)),
+  );
+  window.sessionStorage.setItem(
+    WORKBENCH_SECRETS_KEY,
+    JSON.stringify(sanitizeWorkbenchSecrets(input)),
+  );
 }
 
 export function parseDirectMeshEndpoints(value: string) {

@@ -39,11 +39,13 @@ Sensitivity levels:
 | `apps/web/lib/kyuubiki_web/playground/agent_client.ex` | Orchestrator TCP client to Rust solver agents. | Timeouts, frame parsing, error propagation, and network boundary assumptions. |
 | `apps/web/lib/kyuubiki_web/storage/**` | SQLite/Postgres repos, schema setup, and persistence records for jobs, results, projects, and model versions. | Migration safety, data export scope, result payload size, and accidental sensitive-data logging. |
 | `apps/web/lib/kyuubiki_web/jobs/**` and `apps/web/lib/kyuubiki_web/results/**` | Job/result persistence and watchdog-driven lifecycle state. | Cancellation semantics, stale job handling, result chunk boundaries, and operator edits. |
-| `apps/frontend/src/lib/workbench/helpers.ts` | Browser-local workbench settings include control-plane, cluster, and direct-mesh tokens. | Local storage behavior, token redaction, export boundaries, and accidental serialization of secrets. |
+| `apps/frontend/src/lib/workbench/helpers.ts` | Workbench settings bridge persistent UI prefs and session-scoped secrets for operator tokens and LLM API keys. | Session storage behavior, migration of legacy secrets, token redaction, export boundaries, and accidental serialization of secrets. |
 | `apps/frontend/src/components/workbench/system/workbench-system-config-card.tsx` | UI surface for entering operator tokens and exporting database snapshots. | Password field behavior, copy/export affordances, and avoiding accidental display of token values. |
-| `apps/frontend/src/lib/api/index.ts` | Frontend API client attaches operator tokens to orchestrator and direct-mesh requests. | Header construction, token scope separation, and error handling without leaking secrets. |
+| `apps/frontend/src/lib/api/index.ts` | Frontend API client attaches operator tokens to orchestrator and direct-mesh requests. | Header construction, session-secret lookup, token scope separation, and error handling without leaking secrets. |
 | `apps/frontend/src/lib/assistant/openai-compatible.ts` | Optional LLM integration receives workbench context and returns executable action plans. | Prompt data minimization, API key storage, action validation, and tool-result redaction. |
 | `apps/frontend/src/lib/scripting/workbench-script-runtime.ts` | Scriptable workbench actions include project/model CRUD and runtime operations. | Action allowlist, destructive actions, confirmation strategy, and future WASM Python sandboxing. |
+| `apps/frontend/src/components/workbench/workbench.tsx` | Central workbench action executor is shared by manual UI actions, assistant plans, and WASM Python bridge calls. | Keep the high-risk confirmation gate centralized; do not add bypass paths for destructive/export actions. |
+| `apps/frontend/src/components/workbench/workbench-assistant-panel.tsx` and `apps/frontend/src/components/workbench/workbench-script-panel.tsx` | UI surfaces that expose executable automation actions to operators. | Show risk state clearly, avoid “silent execute” affordances, and keep action metadata aligned with runtime guardrails. |
 | `apps/frontend/src/lib/models/model-import.ts` | Imports external model JSON into solver/project state. | Schema validation, size limits, numeric bounds, and safe evolution across model schema versions. |
 | `apps/frontend/src/lib/projects/**` | Project bundle import/export. | Archive/file parsing, path traversal prevention, payload size, and result/data export scope. |
 | `apps/frontend/src/lib/materials/material-library.ts` | External material library import. | CSV/JSON parsing, numeric bounds, duplicate IDs, and maliciously large files. |
@@ -80,6 +82,9 @@ Sensitivity levels:
 - Browser-local token storage is convenient for workstation mode, not a
   multi-user auth model. Do not serialize those settings into project/model
   exports.
+- Assistant and script actions now depend on a centralized confirmation gate
+  for high-risk operations. Keep new destructive or export-capable actions
+  classified in the shared action catalog before exposing them to automation.
 
 ## Change Checklist
 

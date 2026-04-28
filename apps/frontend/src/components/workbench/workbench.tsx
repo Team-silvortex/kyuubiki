@@ -38,17 +38,16 @@ import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/models";
 import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/projects";
 import {
+  persistWorkbenchSettings,
   fixed,
   formatMilliseconds,
   formatTime,
   parseDirectMeshEndpoints,
   safeStorageGet,
-  sanitizeWorkbenchSettings,
   scientific,
   serializeCurrentModel,
   serializeResultCsv,
   toAxialInput,
-  WORKBENCH_SETTINGS_KEY,
 } from "@/lib/workbench/helpers";
 import {
   buildWorkbenchSnapshot,
@@ -142,7 +141,11 @@ import {
   type ParametricTrussConfig,
 } from "@/lib/models";
 import { SAMPLE_LIBRARY } from "@/lib/models";
-import { type WorkbenchScriptActionLogEntry, type WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import {
+  getWorkbenchScriptActionDefinition,
+  type WorkbenchScriptActionLogEntry,
+  type WorkbenchScriptSnapshot,
+} from "@/lib/scripting/workbench-script-runtime";
 import {
   createAxialBarJob,
   createDirectMeshSolve,
@@ -2091,25 +2094,22 @@ export function Workbench() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(
-        WORKBENCH_SETTINGS_KEY,
-        JSON.stringify(sanitizeWorkbenchSettings({
-          theme,
-          language,
-          showShortcutHints,
-          immersiveGuardrails,
-          frontendRuntimeMode,
-          directMeshEndpointsText,
-          directMeshSelectionMode,
-          controlPlaneApiToken,
-          clusterApiToken,
-          directMeshApiToken,
-          assistantMode,
-          assistantApiBaseUrl,
-          assistantApiKey,
-          assistantModel,
-        })),
-      );
+      persistWorkbenchSettings({
+        theme,
+        language,
+        showShortcutHints,
+        immersiveGuardrails,
+        frontendRuntimeMode,
+        directMeshEndpointsText,
+        directMeshSelectionMode,
+        controlPlaneApiToken,
+        clusterApiToken,
+        directMeshApiToken,
+        assistantMode,
+        assistantApiBaseUrl,
+        assistantApiKey,
+        assistantModel,
+      });
     }
   }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode, controlPlaneApiToken, clusterApiToken, directMeshApiToken, assistantMode, assistantApiBaseUrl, assistantApiKey, assistantModel]);
 
@@ -3802,6 +3802,19 @@ export function Workbench() {
   });
 
   const invokeScriptAction = async (action: string, payload: Record<string, unknown> = {}) => {
+    const actionDefinition = getWorkbenchScriptActionDefinition(action);
+    if (actionDefinition?.requiresConfirmation) {
+      const confirmationMessage =
+        language === "zh"
+          ? `动作 ${action} 属于高风险操作，可能修改、删除或导出敏感数据。\n\n请确认是否继续执行。`
+          : `The action ${action} is high risk and may modify, delete, or export sensitive data.\n\nConfirm execution?`;
+      if (typeof window !== "undefined" && !window.confirm(confirmationMessage)) {
+        const summary = language === "zh" ? "已被操作员取消确认。" : "Cancelled by operator confirmation.";
+        appendScriptActionLog({ action, status: "failed", summary });
+        throw new Error(summary);
+      }
+    }
+
     appendScriptActionLog({ action, status: "started", summary: JSON.stringify(payload) });
 
     try {
@@ -5351,8 +5364,8 @@ export function Workbench() {
                 securityFooter={
                   <p className="card-copy">
                     {language === "zh"
-                      ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器设置里。"
-                      : "Runtime security state comes from /api/health; frontend tokens stay only in local browser settings."}
+                      ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器会话里。"
+                      : "Runtime security state comes from /api/health; frontend tokens stay only in the current browser session."}
                   </p>
                 }
                 protocolAgentsTitle={t.protocolAgents}
