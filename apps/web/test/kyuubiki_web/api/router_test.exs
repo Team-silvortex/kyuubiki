@@ -72,6 +72,52 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert Jason.decode!(conn.resp_body)["project"]["name"] == "Protected Project"
   end
 
+  test "rejects read routes without an API token when read protection is enabled" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "secret-token",
+      protect_reads?: true
+    )
+
+    conn =
+      :get
+      |> conn("/api/v1/projects")
+      |> Router.call(@opts)
+
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "unauthorized"
+  end
+
+  test "accepts read routes with a valid token when read protection is enabled" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "secret-token",
+      protect_reads?: true
+    )
+
+    conn =
+      :get
+      |> conn("/api/health")
+      |> put_req_header("x-kyuubiki-token", "secret-token")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert Jason.decode!(conn.resp_body)["status"] == "ok"
+  end
+
+  test "keeps read routes open when read protection is disabled" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "secret-token",
+      protect_reads?: false
+    )
+
+    conn =
+      :get
+      |> conn("/api/v1/export/database")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert is_map(Jason.decode!(conn.resp_body))
+  end
+
   test "protects cluster registration routes with a dedicated cluster token" do
     Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
       api_token: "cluster-secret",
@@ -109,7 +155,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-a")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert authorized_conn.status == 201
@@ -136,7 +185,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("x-kyuubiki-token", "shared-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-b")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert conn.status == 201
@@ -165,7 +217,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-c")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond) - 10_000))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond) - 10_000)
+      )
       |> Router.call(@opts)
 
     assert stale_conn.status == 401
@@ -197,7 +252,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-d")
       |> put_req_header("x-kyuubiki-cluster-id", "lan-a")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert conn.status == 201
@@ -226,7 +284,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-denied")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert conn.status == 401
@@ -258,7 +319,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-e")
       |> put_req_header("x-kyuubiki-cluster-id", "lan-ok")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert register_conn.status == 201
@@ -273,7 +337,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-e")
       |> put_req_header("x-kyuubiki-cluster-id", "lan-other")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert heartbeat_conn.status == 401
@@ -302,7 +369,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-fp-a")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert conn.status == 401
@@ -332,7 +402,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-fp-b")
       |> put_req_header("x-kyuubiki-agent-fingerprint", "fp-good")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert register_conn.status == 201
@@ -344,7 +417,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-fp-b")
       |> put_req_header("x-kyuubiki-agent-fingerprint", "fp-bad")
-      |> put_req_header("x-kyuubiki-cluster-ts", Integer.to_string(System.system_time(:millisecond)))
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
       |> Router.call(@opts)
 
     assert heartbeat_conn.status == 401
@@ -1398,7 +1474,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     update_result_conn =
       :patch
-      |> conn("/api/v1/results/job-admin", Jason.encode!(%{"result" => %{"kind" => "truss_2d", "max_displacement" => 4.0e-6}}))
+      |> conn(
+        "/api/v1/results/job-admin",
+        Jason.encode!(%{"result" => %{"kind" => "truss_2d", "max_displacement" => 4.0e-6}})
+      )
       |> put_req_header("content-type", "application/json")
       |> Router.call(@opts)
 

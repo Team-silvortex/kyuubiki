@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { describeDirectMeshAgents } from "@/lib/direct-mesh/rpc";
-import { authorizeDirectMeshRequest } from "@/lib/direct-mesh/security";
+import { authorizeDirectMeshRequest, resolveAuthorizedDirectMeshEndpoints } from "@/lib/direct-mesh/security";
 
 export const runtime = "nodejs";
 
@@ -11,7 +11,8 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json().catch(() => ({}))) as { endpoints?: string[] };
-    const { endpoints, agents } = await describeDirectMeshAgents(body.endpoints);
+    const endpoints = resolveAuthorizedDirectMeshEndpoints(body.endpoints);
+    const { agents } = await describeDirectMeshAgents(endpoints);
 
     return NextResponse.json({
       mode: "direct_mesh_gui",

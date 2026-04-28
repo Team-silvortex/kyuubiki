@@ -118,6 +118,10 @@ defmodule KyuubikiWeb.Security do
     direct_cluster_token() || configured_token(:write)
   end
 
+  defp configured_token(:read) do
+    configured_token(:write)
+  end
+
   defp configured_token(:write) do
     config()[:api_token]
   end
@@ -231,7 +235,8 @@ defmodule KyuubikiWeb.Security do
   end
 
   defp validate_agent_id_allowlist(agent_id) do
-    if cluster_agent_allowlist_enabled?() and not MapSet.member?(cluster_allowed_agent_ids(), agent_id) do
+    if cluster_agent_allowlist_enabled?() and
+         not MapSet.member?(cluster_allowed_agent_ids(), agent_id) do
       :error
     else
       :ok

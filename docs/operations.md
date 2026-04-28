@@ -80,6 +80,8 @@ Common environment switches:
 - `KYUUBIKI_PROTECT_READS=true|false`
 - `KYUUBIKI_DIRECT_MESH_ENABLED=true|false`
 - `KYUUBIKI_DIRECT_MESH_TOKEN`
+- `KYUUBIKI_DIRECT_MESH_ENDPOINTS`
+- `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true|false`
 
 These can now be written from the installer GUI Setup panel.
 

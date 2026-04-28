@@ -12,7 +12,7 @@ import {
 } from "@/lib/api";
 import { solveViaDirectMesh } from "@/lib/direct-mesh/rpc";
 import { putDirectMeshResult } from "@/lib/direct-mesh/results";
-import { authorizeDirectMeshRequest } from "@/lib/direct-mesh/security";
+import { authorizeDirectMeshRequest, resolveAuthorizedDirectMeshEndpoints } from "@/lib/direct-mesh/security";
 
 export const runtime = "nodejs";
 
@@ -65,10 +65,11 @@ export async function POST(request: Request) {
     const startedAt = new Date().toISOString();
     const method = methodForStudyKind(body.study_kind);
     const normalizedInput = normalizeInputForStudyKind(body.study_kind, body.input);
+    const endpoints = resolveAuthorizedDirectMeshEndpoints(body.endpoints);
     const solved = await solveViaDirectMesh(
       method,
       normalizedInput,
-      body.endpoints,
+      endpoints,
       body.selection_mode ?? "healthiest",
     );
     const jobId = `direct-${Date.now().toString(36)}`;

@@ -385,6 +385,7 @@ Kyuubiki now has a small but formal deployment guardrail layer:
 - optional direct-mesh route protection via:
   - `KYUUBIKI_DIRECT_MESH_ENABLED`
   - `KYUUBIKI_DIRECT_MESH_TOKEN`
+  - `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS`
 - watchdogs, heartbeat freshness, cancellation, and stale-job detection for long runs
 
 Use these references as the current system handbook:

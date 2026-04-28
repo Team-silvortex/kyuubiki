@@ -60,6 +60,10 @@ export function resolveDirectMeshEndpoints(input?: string[]) {
   return normalized.length > 0 ? normalized : endpointsFromEnv();
 }
 
+export function normalizeDirectMeshEndpoints(input: string[]) {
+  return normalizeEndpoints(input);
+}
+
 function descriptorHealthScore(agent: DirectMeshAgentSummary) {
   const score = (agent.descriptor as { runtime?: { health_score?: number } } | undefined)?.runtime?.health_score;
   return typeof score === "number" ? score : 0;

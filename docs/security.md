@@ -38,6 +38,8 @@ Behavior:
   local-friendly mode, reads and writes are open
 - token configured
   mutating and cluster routes require the token
+- token configured on non-local deployments
+  read routes are also protected by default unless `KYUUBIKI_PROTECT_READS=false`
 - cluster token configured
   cluster registration, heartbeat, and removal routes require the dedicated cluster token
 - cluster agent allowlist configured
@@ -53,15 +55,38 @@ Behavior:
 - `KYUUBIKI_PROTECT_READS=true`
   read routes should also be considered protected in deployment policy
 
+Protected read routes now include:
+
+- `/api/health`
+- `/api/v1/protocol*`
+- `/api/v1/agents`
+- `/api/v1/jobs*`
+- `/api/v1/results*`
+- `/api/v1/export/database`
+- `/api/v1/projects*`
+- `/api/v1/models*`
+- `/api/v1/model-versions*`
+
 ### Direct mesh GUI
 
 Direct mesh routes can now be disabled or token-protected:
 
 - `KYUUBIKI_DIRECT_MESH_ENABLED=false`
 - `KYUUBIKI_DIRECT_MESH_TOKEN=<token>`
+- `KYUUBIKI_DIRECT_MESH_ENDPOINTS=host:port,...`
+- `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true|false`
 
 This is important because direct mesh routes bypass Phoenix job persistence and
 talk straight to solver agents.
+
+Endpoint policy:
+
+- `local` deployment
+  request-defined direct-mesh endpoints are allowed by default
+- `cloud` or `distributed` deployment
+  request-defined endpoints are denied by default; direct mesh requests must use
+  the environment-configured endpoint list unless
+  `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true`
 
 ### Frontend operator settings
 
@@ -92,6 +117,8 @@ for deployment setup.
 
 - use `postgres`
 - set `KYUUBIKI_API_TOKEN`
+- leave read protection enabled for `cloud` and `distributed` deployments unless
+  you have a deliberate reverse-proxy or network-isolation reason not to
 - set `KYUUBIKI_CLUSTER_API_TOKEN` for remote node registration instead of reusing the main write token
 - use `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS` and `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS` when you want a low-overhead membership gate without introducing certificates yet
 - turn on `KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT=true` when you want a low-friction binding between an agent ID and a specific node identity without going all the way to PKI
@@ -115,9 +142,6 @@ These areas are not yet finished security features:
 - no signed cluster membership yet
 - no per-project permissions
 - no audit log retention policy yet
-- read routes are not yet consistently wrapped with `with_auth(conn, :read, ...)`
-  even though `KYUUBIKI_PROTECT_READS` is already represented in runtime config
-  and health metadata
 
 For now, think of the current token support as a deployment guardrail, not a
 complete security architecture.

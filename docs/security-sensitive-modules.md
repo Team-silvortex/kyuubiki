@@ -61,17 +61,19 @@ Sensitivity levels:
 
 ## Current Review Notes
 
-- `KYUUBIKI_PROTECT_READS` is configured and reported, but read routes in
-  `apps/web/lib/kyuubiki_web/router.ex` are not yet consistently wrapped with
-  `with_auth(conn, :read, ...)`. Treat result reads, model reads, agent reads,
-  and `GET /api/v1/export/database` as high-sensitivity routes until read-route
-  enforcement is completed.
+- Read routes in `apps/web/lib/kyuubiki_web/router.ex` are now wrapped with
+  `with_auth(conn, :read, ...)`, and non-local deployments default to
+  `protect_reads? = true` unless explicitly overridden. Keep new GET routes on
+  the same path discipline.
 - `GET /api/v1/export/database` returns a full database snapshot and is
-  currently a high-value read endpoint. It should be protected before any
-  non-local deployment.
+  still a high-value read endpoint even after read-route protection. Treat
+  changes there as sensitive and prefer additional network or proxy controls in
+  real deployments.
 - Direct mesh is intentionally powerful: it bypasses Phoenix job persistence and
   opens TCP sockets from the Next.js server process to solver agents. Keep it
-  disabled or token-protected outside trusted local/LAN environments.
+  disabled or token-protected outside trusted local/LAN environments. In
+  non-local deployments, keep request-defined endpoints disabled unless you
+  deliberately want operators to probe a broader agent surface.
 - Remote deployment through the Tauri installer uses SSH and shell command
   construction. Treat all changes there as critical even when inputs appear to
   be operator-only.
