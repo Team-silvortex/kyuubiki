@@ -115,6 +115,34 @@ When the control plane is reachable, these high-risk action events are also
 posted into the orchestrator's append-only security event stream and included
 in database exports under `security_events`.
 
+For analysis-oriented workflows, Kyuubiki now also exposes a dedicated
+`GET /api/v1/export/security-events` endpoint that returns:
+
+- export timestamp
+- normalized export schema metadata
+- applied filter echo
+- compact source/risk/status summary counts
+- the filtered event list itself
+
+The persisted security-event stream now supports filtered reads by:
+
+- `source`
+- `risk`
+- `status`
+- `action`
+- `study_kind`
+- `project_id`
+- `model_version_id`
+- `occurred_after`
+- `occurred_before`
+
+The runtime workbench panel consumes these filters to provide:
+
+- time-window views such as last hour, day, week, or month
+- compact event aggregates by risk and status
+- lightweight study, project, and model-version facets for operator review
+- simple trend buckets and source-by-status summaries for quick operator triage
+
 Attached as:
 
 - `x-kyuubiki-token` to `/api/v1` and `/api/health`

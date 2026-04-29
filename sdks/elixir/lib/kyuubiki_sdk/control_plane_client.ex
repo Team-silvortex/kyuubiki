@@ -49,6 +49,15 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def delete_result(client, job_id), do: request(client, :delete, "/api/v1/results/#{job_id}")
   def export_database(client), do: request(client, :get, "/api/v1/export/database")
 
+  def export_security_events(client, opts \\ []) do
+    query =
+      opts
+      |> Enum.filter(fn {_key, value} -> not is_nil(value) and value != "" end)
+      |> Enum.map(fn {key, value} -> {to_string(key), to_string(value)} end)
+
+    request(client, :get, "/api/v1/export/security-events" <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
+  end
+
   defp request(client, method, path, payload \\ nil) do
     :inets.start()
     url = String.to_charlist(client.base_url <> path)

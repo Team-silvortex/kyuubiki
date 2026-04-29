@@ -73,6 +73,9 @@ Sensitivity levels:
   still a high-value read endpoint even after read-route protection. Treat
   changes there as sensitive and prefer additional network or proxy controls in
   real deployments.
+- `GET /api/v1/export/security-events` is narrower than a full database export,
+  but still exposes operator activity history and deployment context. Treat its
+  schema, filtering, and auth behavior as security-sensitive.
 - Direct mesh is intentionally powerful: it bypasses Phoenix job persistence and
   opens TCP sockets from the Next.js server process to solver agents. Keep it
   disabled or token-protected outside trusted local/LAN environments. In

@@ -175,8 +175,57 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
-  def list_security_events do
-    %{"events" => SecurityEventStore.list()}
+  def list_security_events(filters \\ %{}) when is_map(filters) do
+    %{"events" => SecurityEventStore.list(filters)}
+  end
+
+  def export_security_events(filters \\ %{}) when is_map(filters) do
+    events = SecurityEventStore.list(filters)
+
+    summary =
+      Enum.reduce(
+        events,
+        %{"total" => length(events), "by_source" => %{}, "by_risk" => %{}, "by_status" => %{}},
+        fn event, acc ->
+          acc
+          |> put_in(
+            ["by_source", event["source"]],
+            get_in(acc, ["by_source", event["source"]]) |> Kernel.||(0) |> Kernel.+(1)
+          )
+          |> put_in(
+            ["by_risk", event["risk"]],
+            get_in(acc, ["by_risk", event["risk"]]) |> Kernel.||(0) |> Kernel.+(1)
+          )
+          |> put_in(
+            ["by_status", event["status"]],
+            get_in(acc, ["by_status", event["status"]]) |> Kernel.||(0) |> Kernel.+(1)
+          )
+        end
+      )
+
+    %{
+      "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
+      "schema" => %{
+        "name" => "kyuubiki.security-events.export/v1",
+        "version" => 1,
+        "fields" => [
+          %{"name" => "event_id", "type" => "string"},
+          %{"name" => "event_type", "type" => "string"},
+          %{"name" => "source", "type" => "string"},
+          %{"name" => "action", "type" => "string"},
+          %{"name" => "risk", "type" => "string"},
+          %{"name" => "status", "type" => "string"},
+          %{"name" => "note", "type" => "string|null"},
+          %{"name" => "context", "type" => "object"},
+          %{"name" => "occurred_at", "type" => "datetime"},
+          %{"name" => "inserted_at", "type" => "datetime|null"},
+          %{"name" => "updated_at", "type" => "datetime|null"}
+        ]
+      },
+      "filters" => normalize_export_filters(filters),
+      "summary" => summary,
+      "events" => events
+    }
   end
 
   def export_database do
@@ -201,6 +250,24 @@ defmodule KyuubikiWeb.Analysis do
       "results" => list_results()["results"],
       "security_events" => list_security_events()["events"]
     }
+  end
+
+  defp normalize_export_filters(filters) do
+    filters
+    |> Map.take([
+      "source",
+      "risk",
+      "status",
+      "action",
+      "study_kind",
+      "project_id",
+      "model_version_id",
+      "occurred_after",
+      "occurred_before",
+      "limit"
+    ])
+    |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
+    |> Map.new()
   end
 
   defp start_background_job(job_id, method, params) do

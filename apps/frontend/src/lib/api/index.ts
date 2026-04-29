@@ -428,6 +428,23 @@ export type SecurityEventEnvelope = {
   event: SecurityEventRecord;
 };
 
+export type SecurityEventExportPayload = {
+  exported_at: string;
+  schema: {
+    name: string;
+    version: number;
+    fields: Array<{ name: string; type: string }>;
+  };
+  filters: Record<string, string>;
+  summary: {
+    total: number;
+    by_source: Record<string, number>;
+    by_risk: Record<string, number>;
+    by_status: Record<string, number>;
+  };
+  events: SecurityEventRecord[];
+};
+
 export type ResultRecord = {
   job_id: string;
   result: Record<string, unknown>;
@@ -750,8 +767,27 @@ export function fetchDatabaseExport(): Promise<DatabaseExportPayload> {
   });
 }
 
-export function fetchSecurityEvents(): Promise<SecurityEventListPayload> {
-  return requestJson<SecurityEventListPayload>("/api/v1/security-events", {
+export function fetchSecurityEvents(filters: {
+  source?: string;
+  risk?: string;
+  status?: string;
+  action?: string;
+  study_kind?: string;
+  project_id?: string;
+  model_version_id?: string;
+  occurred_after?: string;
+  occurred_before?: string;
+  limit?: number;
+} = {}): Promise<SecurityEventListPayload> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      params.set(key, String(value));
+    }
+  });
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+
+  return requestJson<SecurityEventListPayload>(`/api/v1/security-events${suffix}`, {
     method: "GET",
     cache: "no-store",
   });
@@ -772,6 +808,32 @@ export function createSecurityEvent(input: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
+  });
+}
+
+export function exportSecurityEvents(filters: {
+  source?: string;
+  risk?: string;
+  status?: string;
+  action?: string;
+  study_kind?: string;
+  project_id?: string;
+  model_version_id?: string;
+  occurred_after?: string;
+  occurred_before?: string;
+  limit?: number;
+} = {}): Promise<SecurityEventExportPayload> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      params.set(key, String(value));
+    }
+  });
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+
+  return requestJson<SecurityEventExportPayload>(`/api/v1/export/security-events${suffix}`, {
+    method: "GET",
+    cache: "no-store",
   });
 }
 

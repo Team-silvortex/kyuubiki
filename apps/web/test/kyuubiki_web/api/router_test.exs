@@ -1513,6 +1513,20 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert is_list(export_payload["models"])
     assert is_list(export_payload["model_versions"])
 
+    security_export_conn =
+      :get
+      |> conn("/api/v1/export/security-events?status=completed")
+      |> Router.call(@opts)
+
+    assert security_export_conn.status == 200
+    security_export_payload = Jason.decode!(security_export_conn.resp_body)
+    assert security_export_payload["schema"]["name"] == "kyuubiki.security-events.export/v1"
+    assert security_export_payload["filters"]["status"] == "completed"
+    assert security_export_payload["summary"]["total"] == 1
+
+    assert [%{"event_id" => "event-admin", "status" => "completed"}] =
+             security_export_payload["events"]
+
     delete_result_conn =
       :delete
       |> conn("/api/v1/results/job-admin")
@@ -1573,6 +1587,37 @@ defmodule KyuubikiWeb.Playground.RouterTest do
                "status" => "cancelled"
              }
            ] = Jason.decode!(list_conn.resp_body)["events"]
+
+    {:ok, _second_event} =
+      SecurityEventStore.create(%{
+        "event_id" => "event-2",
+        "event_type" => "security_high_risk_action",
+        "source" => "assistant",
+        "action" => "data/exportDatabase",
+        "risk" => "sensitive",
+        "status" => "completed",
+        "note" => "assistant finished export",
+        "context" => %{"study_kind" => "truss_2d", "project_id" => "proj-2"},
+        "occurred_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601()
+      })
+
+    filtered_conn =
+      :get
+      |> conn("/api/v1/security-events?source=assistant&risk=sensitive&action=export")
+      |> Router.call(@opts)
+
+    assert filtered_conn.status == 200
+
+    assert [%{"event_id" => "event-2", "source" => "assistant"}] =
+             Jason.decode!(filtered_conn.resp_body)["events"]
+
+    window_filtered_conn =
+      :get
+      |> conn("/api/v1/security-events?occurred_after=2026-04-29T09:00:00Z")
+      |> Router.call(@opts)
+
+    assert window_filtered_conn.status == 200
+    assert [%{"event_id" => "event-2"}] = Jason.decode!(window_filtered_conn.resp_body)["events"]
   end
 
   defp await_fake_agent_port do

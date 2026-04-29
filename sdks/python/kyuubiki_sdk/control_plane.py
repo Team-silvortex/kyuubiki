@@ -111,3 +111,6 @@ class ControlPlaneClient:
 
     def export_database(self) -> dict[str, Any]:
         return self._request("/api/v1/export/database")
+
+    def export_security_events(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._request("/api/v1/export/security-events", query=query)

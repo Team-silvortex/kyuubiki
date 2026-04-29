@@ -126,6 +126,22 @@ impl ControlPlaneClient {
         self.request_json("GET", "/api/v1/export/database", None)
     }
 
+    pub fn export_security_events(&self, query: Option<&[(&str, String)]>) -> SdkResult<Value> {
+        let mut path = String::from("/api/v1/export/security-events");
+        if let Some(query) = query {
+            let query = query
+                .iter()
+                .filter(|(_, value)| !value.is_empty())
+                .map(|(key, value)| format!("{key}={value}"))
+                .collect::<Vec<_>>();
+            if !query.is_empty() {
+                path.push('?');
+                path.push_str(&query.join("&"));
+            }
+        }
+        self.request_json("GET", &path, None)
+    }
+
     fn request_json(&self, method: &str, path: &str, payload: Option<&Value>) -> SdkResult<Value> {
         let request_path = format!("{}{}", self.base_path, path);
         let body = payload.map(serde_json::to_vec).transpose()?.unwrap_or_default();

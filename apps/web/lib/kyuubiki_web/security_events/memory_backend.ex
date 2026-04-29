@@ -21,8 +21,12 @@ defmodule KyuubikiWeb.SecurityEvents.MemoryBackend do
     end
   end
 
-  def list do
-    Agent.get(__MODULE__, fn events -> events end)
+  def list(filters \\ %{}) do
+    Agent.get(__MODULE__, fn events ->
+      events
+      |> Enum.filter(&matches_filters?(&1, filters))
+      |> Enum.take(normalize_limit(filters))
+    end)
   end
 
   def reset do
@@ -82,4 +86,85 @@ defmodule KyuubikiWeb.SecurityEvents.MemoryBackend do
 
   defp normalize_context(value) when is_map(value), do: value
   defp normalize_context(_value), do: %{}
+
+  defp normalize_limit(filters) do
+    case Map.get(filters, "limit") do
+      value when is_binary(value) ->
+        case Integer.parse(value) do
+          {parsed, ""} when parsed > 0 -> min(parsed, 500)
+          _ -> 100
+        end
+
+      value when is_integer(value) and value > 0 ->
+        min(value, 500)
+
+      _ ->
+        100
+    end
+  end
+
+  defp matches_filters?(event, filters) do
+    matches_exact?(event["source"], Map.get(filters, "source")) and
+      matches_exact?(event["risk"], Map.get(filters, "risk")) and
+      matches_exact?(event["status"], Map.get(filters, "status")) and
+      matches_contains?(event["action"], Map.get(filters, "action")) and
+      matches_time_after?(event["occurred_at"], Map.get(filters, "occurred_after")) and
+      matches_time_before?(event["occurred_at"], Map.get(filters, "occurred_before")) and
+      matches_context?(event["context"], "study_kind", Map.get(filters, "study_kind")) and
+      matches_context?(event["context"], "project_id", Map.get(filters, "project_id")) and
+      matches_context?(event["context"], "model_version_id", Map.get(filters, "model_version_id"))
+  end
+
+  defp matches_exact?(_value, nil), do: true
+  defp matches_exact?(_value, ""), do: true
+  defp matches_exact?(value, filter), do: value == filter
+
+  defp matches_contains?(_value, nil), do: true
+  defp matches_contains?(_value, ""), do: true
+
+  defp matches_contains?(value, filter) when is_binary(value) and is_binary(filter) do
+    String.contains?(String.downcase(value), String.downcase(filter))
+  end
+
+  defp matches_contains?(_value, _filter), do: false
+
+  defp matches_time_after?(_value, nil), do: true
+  defp matches_time_after?(_value, ""), do: true
+
+  defp matches_time_after?(value, filter) when is_binary(value) and is_binary(filter) do
+    case {DateTime.from_iso8601(value), DateTime.from_iso8601(filter)} do
+      {{:ok, value_dt, _}, {:ok, filter_dt, _}} ->
+        DateTime.compare(value_dt, filter_dt) in [:gt, :eq]
+
+      _ ->
+        false
+    end
+  end
+
+  defp matches_time_after?(_value, _filter), do: false
+
+  defp matches_time_before?(_value, nil), do: true
+  defp matches_time_before?(_value, ""), do: true
+
+  defp matches_time_before?(value, filter) when is_binary(value) and is_binary(filter) do
+    case {DateTime.from_iso8601(value), DateTime.from_iso8601(filter)} do
+      {{:ok, value_dt, _}, {:ok, filter_dt, _}} ->
+        DateTime.compare(value_dt, filter_dt) in [:lt, :eq]
+
+      _ ->
+        false
+    end
+  end
+
+  defp matches_time_before?(_value, _filter), do: false
+
+  defp matches_context?(context, _key, nil) when is_map(context), do: true
+  defp matches_context?(context, _key, "") when is_map(context), do: true
+
+  defp matches_context?(context, key, filter) when is_map(context),
+    do: Map.get(context, key) == filter
+
+  defp matches_context?(_context, _key, nil), do: true
+  defp matches_context?(_context, _key, ""), do: true
+  defp matches_context?(_context, _key, _filter), do: false
 end

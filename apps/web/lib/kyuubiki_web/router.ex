@@ -328,9 +328,15 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/export/security-events" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, Analysis.export_security_events(conn.query_params))
+    end)
+  end
+
   get "/api/v1/security-events" do
     with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.list_security_events())
+      respond_json(conn, 200, Analysis.list_security_events(conn.query_params))
     end)
   end
 

@@ -6,7 +6,7 @@ defmodule KyuubikiWeb.SecurityEvents.Store do
   alias KyuubikiWeb.Storage
 
   def create(attrs), do: backend().create(attrs)
-  def list, do: backend().list()
+  def list(filters \\ %{}), do: backend().list(filters)
   def reset, do: backend().reset()
 
   defp backend do

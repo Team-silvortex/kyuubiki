@@ -48,6 +48,43 @@ type WorkbenchSystemRuntimePanelProps = {
   auditCountLabel: string;
   auditEmptyLabel: string;
   auditSessionLabel: string;
+  auditWindowLabel: string;
+  auditSourceLabel: string;
+  auditRiskLabel: string;
+  auditStatusLabel: string;
+  auditActionLabel: string;
+  auditSummaryTitle: string;
+  auditSummaryRows: Array<{ label: string; value: string }>;
+  auditTrendTitle: string;
+  auditTrendEmptyLabel: string;
+  auditTrendBars: Array<{ key: string; label: string; value: string; ratio: number }>;
+  auditSourceStatusTitle: string;
+  auditSourceStatusFacets: Array<{ key: string; label: string; value: string }>;
+  auditStudyFacetTitle: string;
+  auditProjectFacetTitle: string;
+  auditModelVersionFacetTitle: string;
+  auditFacetEmptyLabel: string;
+  auditStudyFacets: Array<{ key: string; label: string; value: string }>;
+  auditProjectFacets: Array<{ key: string; label: string; value: string }>;
+  auditModelVersionFacets: Array<{ key: string; label: string; value: string }>;
+  auditRefreshLabel: string;
+  auditExportLabel: string;
+  auditWindowValue: string;
+  auditSourceValue: string;
+  auditRiskValue: string;
+  auditStatusValue: string;
+  auditActionValue: string;
+  auditWindowOptions: Array<{ value: string; label: string }>;
+  auditSourceOptions: Array<{ value: string; label: string }>;
+  auditRiskOptions: Array<{ value: string; label: string }>;
+  auditStatusOptions: Array<{ value: string; label: string }>;
+  onAuditWindowChange: (value: string) => void;
+  onAuditSourceChange: (value: string) => void;
+  onAuditRiskChange: (value: string) => void;
+  onAuditStatusChange: (value: string) => void;
+  onAuditActionChange: (value: string) => void;
+  onAuditRefresh: () => void;
+  onAuditExport: () => void;
   auditEntries: Array<{
     id: string;
     at: string;
@@ -82,6 +119,43 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   auditCountLabel,
   auditEmptyLabel,
   auditSessionLabel,
+  auditWindowLabel,
+  auditSourceLabel,
+  auditRiskLabel,
+  auditStatusLabel,
+  auditActionLabel,
+  auditSummaryTitle,
+  auditSummaryRows,
+  auditTrendTitle,
+  auditTrendEmptyLabel,
+  auditTrendBars,
+  auditSourceStatusTitle,
+  auditSourceStatusFacets,
+  auditStudyFacetTitle,
+  auditProjectFacetTitle,
+  auditModelVersionFacetTitle,
+  auditFacetEmptyLabel,
+  auditStudyFacets,
+  auditProjectFacets,
+  auditModelVersionFacets,
+  auditRefreshLabel,
+  auditExportLabel,
+  auditWindowValue,
+  auditSourceValue,
+  auditRiskValue,
+  auditStatusValue,
+  auditActionValue,
+  auditWindowOptions,
+  auditSourceOptions,
+  auditRiskOptions,
+  auditStatusOptions,
+  onAuditWindowChange,
+  onAuditSourceChange,
+  onAuditRiskChange,
+  onAuditStatusChange,
+  onAuditActionChange,
+  onAuditRefresh,
+  onAuditExport,
   auditEntries,
   protocolAgentsTitle,
   protocolAgentsCountLabel,
@@ -121,6 +195,43 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
         countLabel={auditCountLabel}
         emptyLabel={auditEmptyLabel}
         sessionLabel={auditSessionLabel}
+        windowLabel={auditWindowLabel}
+        sourceLabel={auditSourceLabel}
+        riskLabel={auditRiskLabel}
+        statusLabel={auditStatusLabel}
+        actionLabel={auditActionLabel}
+        summaryTitle={auditSummaryTitle}
+        summaryRows={auditSummaryRows}
+        trendTitle={auditTrendTitle}
+        trendEmptyLabel={auditTrendEmptyLabel}
+        trendBars={auditTrendBars}
+        sourceStatusTitle={auditSourceStatusTitle}
+        sourceStatusFacets={auditSourceStatusFacets}
+        studyFacetTitle={auditStudyFacetTitle}
+        projectFacetTitle={auditProjectFacetTitle}
+        modelVersionFacetTitle={auditModelVersionFacetTitle}
+        facetEmptyLabel={auditFacetEmptyLabel}
+        studyFacets={auditStudyFacets}
+        projectFacets={auditProjectFacets}
+        modelVersionFacets={auditModelVersionFacets}
+        refreshLabel={auditRefreshLabel}
+        exportLabel={auditExportLabel}
+        windowValue={auditWindowValue}
+        sourceValue={auditSourceValue}
+        riskValue={auditRiskValue}
+        statusValue={auditStatusValue}
+        actionValue={auditActionValue}
+        windowOptions={auditWindowOptions}
+        sourceOptions={auditSourceOptions}
+        riskOptions={auditRiskOptions}
+        statusOptions={auditStatusOptions}
+        onWindowChange={onAuditWindowChange}
+        onSourceChange={onAuditSourceChange}
+        onRiskChange={onAuditRiskChange}
+        onStatusChange={onAuditStatusChange}
+        onActionChange={onAuditActionChange}
+        onRefresh={onAuditRefresh}
+        onExport={onAuditExport}
         entries={auditEntries}
       />
       <WorkbenchProtocolAgentsCard

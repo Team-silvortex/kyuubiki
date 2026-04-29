@@ -1509,6 +1509,42 @@ th {
   margin-top: 10px;
 }
 
+.audit-trend-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.audit-trend-row {
+  display: grid;
+  gap: 4px;
+}
+
+.audit-trend-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.audit-trend-track {
+  position: relative;
+  overflow: hidden;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(16, 41, 63, 0.08);
+  border: 1px solid rgba(16, 41, 63, 0.06);
+}
+
+.audit-trend-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent-cool), rgba(22, 119, 163, 0.42));
+}
+
 .protocol-chip {
   display: inline-flex;
   align-items: center;

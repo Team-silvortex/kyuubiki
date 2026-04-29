@@ -162,6 +162,8 @@ import {
   createModel,
   createModelVersion,
   createProject,
+  fetchSecurityEvents,
+  exportSecurityEvents,
   createTruss2dJob,
   createTruss3dJob,
   cancelJob,
@@ -199,6 +201,7 @@ import {
   type ProjectRecord,
   type ResultRecord,
   type ResultChunkPayload,
+  type SecurityEventRecord,
   resolvePlaneTriangle2dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
@@ -224,6 +227,14 @@ type ImmersiveToolTab = "node" | "props";
 type SystemDataTab = "jobs" | "results";
 type SystemPanelTab = "config" | "assistant" | "scripts" | "runtime" | "data";
 type AssistantMode = "local" | "llm";
+type SecurityEventWindow = "" | "1h" | "24h" | "7d" | "30d";
+
+const SECURITY_EVENT_WINDOW_MS: Record<Exclude<SecurityEventWindow, "">, number> = {
+  "1h": 60 * 60 * 1_000,
+  "24h": 24 * 60 * 60 * 1_000,
+  "7d": 7 * 24 * 60 * 60 * 1_000,
+  "30d": 30 * 24 * 60 * 60 * 1_000,
+};
 
 type AxialFormState = {
   length: number;
@@ -1880,6 +1891,12 @@ export function Workbench() {
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
   const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
+  const [securityEventRecords, setSecurityEventRecords] = useState<SecurityEventRecord[]>([]);
+  const [securityEventWindowFilter, setSecurityEventWindowFilter] = useState<SecurityEventWindow>("24h");
+  const [securityEventSourceFilter, setSecurityEventSourceFilter] = useState("");
+  const [securityEventRiskFilter, setSecurityEventRiskFilter] = useState("");
+  const [securityEventStatusFilter, setSecurityEventStatusFilter] = useState("");
+  const [securityEventActionFilter, setSecurityEventActionFilter] = useState("");
   const [adminJobMessage, setAdminJobMessage] = useState("");
   const [adminJobProjectId, setAdminJobProjectId] = useState("");
   const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
@@ -2203,11 +2220,22 @@ export function Workbench() {
     void refreshJobHistory();
     void refreshResults();
     void refreshProjects(true);
+    void refreshSecurityEvents();
   }, []);
 
   useEffect(() => {
     void refreshHealth();
   }, [frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode]);
+
+  useEffect(() => {
+    void refreshSecurityEvents();
+  }, [
+    securityEventWindowFilter,
+    securityEventSourceFilter,
+    securityEventRiskFilter,
+    securityEventStatusFilter,
+    securityEventActionFilter,
+  ]);
 
   useEffect(() => {
     const current = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
@@ -2362,6 +2390,26 @@ export function Workbench() {
       }
     } catch {
       setProjects([]);
+    }
+  }
+
+  async function refreshSecurityEvents() {
+    try {
+      const occurredAfter =
+        securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
+          ? new Date(Date.now() - SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]).toISOString()
+          : undefined;
+      const payload = await fetchSecurityEvents({
+        occurred_after: occurredAfter,
+        source: securityEventSourceFilter || undefined,
+        risk: securityEventRiskFilter || undefined,
+        status: securityEventStatusFilter || undefined,
+        action: securityEventActionFilter || undefined,
+        limit: 120,
+      });
+      setSecurityEventRecords(payload.events);
+    } catch {
+      setSecurityEventRecords([]);
     }
   }
 
@@ -2882,6 +2930,28 @@ export function Workbench() {
       const timestamp = snapshot.exported_at.replaceAll(":", "-");
       downloadTextFile(`kyuubiki-database-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
       setMessage(t.databaseExported);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
+  };
+
+  const downloadSecurityEventExport = async () => {
+    try {
+      const occurredAfter =
+        securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
+          ? new Date(Date.now() - SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]).toISOString()
+          : undefined;
+      const snapshot = await exportSecurityEvents({
+        occurred_after: occurredAfter,
+        source: securityEventSourceFilter || undefined,
+        risk: securityEventRiskFilter || undefined,
+        status: securityEventStatusFilter || undefined,
+        action: securityEventActionFilter || undefined,
+        limit: 500,
+      });
+      const timestamp = snapshot.exported_at.replaceAll(":", "-");
+      downloadTextFile(`kyuubiki-security-events-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
+      setMessage(language === "zh" ? "安全事件分析包已下载。" : "Security event export downloaded.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.initialFailed);
     }
@@ -3585,9 +3655,9 @@ export function Workbench() {
   );
   const runtimeAuditEntries = useMemo(
     () =>
-      securityAuditLog.map((entry) => ({
-        id: entry.id,
-        at: formatTime(entry.at, language),
+      securityEventRecords.map((entry) => ({
+        id: entry.event_id,
+        at: formatTime(entry.occurred_at, language),
         action: entry.action,
         source:
           entry.source === "assistant"
@@ -3621,10 +3691,176 @@ export function Workbench() {
                 : language === "zh"
                   ? "失败"
                   : "Failed",
-        note: entry.note,
+        note: entry.note ?? "--",
       })),
-    [formatTime, language, securityAuditLog],
+    [formatTime, language, securityEventRecords],
   );
+  const runtimeAuditSummaryRows = useMemo(() => {
+    const countByRisk = securityEventRecords.reduce<Record<string, number>>((accumulator, entry) => {
+      accumulator[entry.risk] = (accumulator[entry.risk] ?? 0) + 1;
+      return accumulator;
+    }, {});
+    const countByStatus = securityEventRecords.reduce<Record<string, number>>((accumulator, entry) => {
+      accumulator[entry.status] = (accumulator[entry.status] ?? 0) + 1;
+      return accumulator;
+    }, {});
+
+    return [
+      {
+        label: language === "zh" ? "敏感" : "Sensitive",
+        value: String(countByRisk.sensitive ?? 0),
+      },
+      {
+        label: language === "zh" ? "高风险" : "Destructive",
+        value: String(countByRisk.destructive ?? 0),
+      },
+      {
+        label: language === "zh" ? "已执行" : "Completed",
+        value: String(countByStatus.completed ?? 0),
+      },
+      {
+        label: language === "zh" ? "已取消" : "Cancelled",
+        value: String(countByStatus.cancelled ?? 0),
+      },
+      {
+        label: language === "zh" ? "失败" : "Failed",
+        value: String(countByStatus.failed ?? 0),
+      },
+      {
+        label: language === "zh" ? "待确认" : "Prompted",
+        value: String(countByStatus.prompted ?? 0),
+      },
+    ];
+  }, [language, securityEventRecords]);
+  const runtimeAuditTrendBars = useMemo(() => {
+    if (securityEventRecords.length === 0) return [];
+
+    const bucketCount =
+      securityEventWindowFilter === "1h" ? 6 : securityEventWindowFilter === "24h" ? 8 : securityEventWindowFilter === "7d" ? 7 : 6;
+    const bucketWindowMs =
+      securityEventWindowFilter === "1h"
+        ? 10 * 60 * 1_000
+        : securityEventWindowFilter === "24h"
+          ? 3 * 60 * 60 * 1_000
+          : securityEventWindowFilter === "7d"
+            ? 24 * 60 * 60 * 1_000
+            : securityEventWindowFilter === "30d"
+              ? 5 * 24 * 60 * 60 * 1_000
+              : 24 * 60 * 60 * 1_000;
+    const bucketLabels = Array.from({ length: bucketCount }, (_, index) => {
+      if (securityEventWindowFilter === "1h") {
+        return language === "zh" ? `${(bucketCount - index) * 10} 分内` : `${(bucketCount - index) * 10}m`;
+      }
+      if (securityEventWindowFilter === "24h") {
+        return language === "zh" ? `${(bucketCount - index) * 3} 小时内` : `${(bucketCount - index) * 3}h`;
+      }
+      if (securityEventWindowFilter === "7d") {
+        return language === "zh" ? `${bucketCount - index} 天内` : `${bucketCount - index}d`;
+      }
+      if (securityEventWindowFilter === "30d") {
+        return language === "zh" ? `${(bucketCount - index) * 5} 天内` : `${(bucketCount - index) * 5}d`;
+      }
+      return language === "zh" ? `${bucketCount - index} 天内` : `${bucketCount - index}d`;
+    });
+    const now = Date.now();
+    const counts = new Array(bucketCount).fill(0);
+
+    securityEventRecords.forEach((entry) => {
+      const occurredAt = Date.parse(entry.occurred_at);
+      if (Number.isNaN(occurredAt)) return;
+      const ageMs = Math.max(now - occurredAt, 0);
+      const bucketIndex = Math.min(Math.floor(ageMs / bucketWindowMs), bucketCount - 1);
+      counts[bucketCount - bucketIndex - 1] += 1;
+    });
+
+    const maxCount = Math.max(...counts, 1);
+    return counts.map((count, index) => ({
+      key: `${bucketLabels[index]}-${index}`,
+      label: bucketLabels[index],
+      value: String(count),
+      ratio: count / maxCount,
+    }));
+  }, [language, securityEventRecords, securityEventWindowFilter]);
+  const runtimeAuditSourceStatusFacets = useMemo(() => {
+    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
+      const key = `${entry.source}:${entry.status}`;
+      accumulator.set(key, (accumulator.get(key) ?? 0) + 1);
+      return accumulator;
+    }, new Map<string, number>());
+
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 6)
+      .map(([key, value]) => {
+        const [source, status] = key.split(":");
+        const sourceLabel =
+          source === "assistant" ? (language === "zh" ? "助手" : "Assistant") : language === "zh" ? "脚本" : "Script";
+        const statusLabel =
+          status === "prompted"
+            ? language === "zh"
+              ? "待确认"
+              : "Prompted"
+            : status === "cancelled"
+              ? language === "zh"
+                ? "已取消"
+                : "Cancelled"
+              : status === "completed"
+                ? language === "zh"
+                  ? "已执行"
+                  : "Completed"
+                : language === "zh"
+                  ? "失败"
+                  : "Failed";
+
+        return {
+          key,
+          label: `${sourceLabel} / ${statusLabel}`,
+          value: String(value),
+        };
+      });
+  }, [language, securityEventRecords]);
+  const runtimeAuditStudyFacets = useMemo(() => {
+    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
+      const studyKind = typeof entry.context.study_kind === "string" ? entry.context.study_kind : "";
+      if (!studyKind) return accumulator;
+      accumulator.set(studyKind, (accumulator.get(studyKind) ?? 0) + 1);
+      return accumulator;
+    }, new Map<string, number>());
+
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 4)
+      .map(([label, value]) => ({ key: label, label, value: String(value) }));
+  }, [securityEventRecords]);
+  const runtimeAuditProjectFacets = useMemo(() => {
+    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
+      const projectId = typeof entry.context.project_id === "string" ? entry.context.project_id : "";
+      if (!projectId) return accumulator;
+      const shortId = projectId.slice(0, 8);
+      accumulator.set(shortId, (accumulator.get(shortId) ?? 0) + 1);
+      return accumulator;
+    }, new Map<string, number>());
+
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 4)
+      .map(([label, value]) => ({ key: label, label, value: String(value) }));
+  }, [securityEventRecords]);
+  const runtimeAuditModelVersionFacets = useMemo(() => {
+    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
+      const modelVersionId =
+        typeof entry.context.model_version_id === "string" ? entry.context.model_version_id : "";
+      if (!modelVersionId) return accumulator;
+      const shortId = modelVersionId.slice(0, 8);
+      accumulator.set(shortId, (accumulator.get(shortId) ?? 0) + 1);
+      return accumulator;
+    }, new Map<string, number>());
+
+    return [...counts.entries()]
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 4)
+      .map(([label, value]) => ({ key: label, label, value: String(value) }));
+  }, [securityEventRecords]);
   const runtimeWatchdogRows = useMemo(
     () => [
       { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
@@ -3971,7 +4207,7 @@ export function Workbench() {
           break;
         }
         case "runtime/refreshAll": {
-          await Promise.all([refreshHealth(), refreshJobHistory(), refreshResults(), refreshProjects()]);
+          await Promise.all([refreshHealth(), refreshJobHistory(), refreshResults(), refreshProjects(), refreshSecurityEvents()]);
           resultPayload = { ok: true, action };
           break;
         }
@@ -5496,13 +5732,70 @@ export function Workbench() {
                   </p>
                 }
                 auditTitle={language === "zh" ? "安全审计" : "Security audit"}
-                auditCountLabel={String(securityAuditLog.length)}
-                auditEmptyLabel={language === "zh" ? "当前会话里还没有高风险动作记录。" : "No high-risk actions have been recorded in this session yet."}
+                auditCountLabel={String(securityEventRecords.length)}
+                auditEmptyLabel={language === "zh" ? "当前筛选下还没有安全事件。" : "No security events match the current filters."}
                 auditSessionLabel={
                   language === "zh"
-                    ? "记录当前会话里由助手或脚本触发的高风险确认动作。"
-                    : "Tracks high-risk confirmed actions triggered by the assistant or scripting in the current session."
+                    ? "这里展示控制面持久化的高风险自动化事件流，现在支持时间窗口、小聚合和上下文分面。"
+                    : "Shows the control-plane persisted high-risk automation event stream with time windows, small aggregates, and context facets."
                 }
+                auditWindowLabel={language === "zh" ? "时间窗" : "Window"}
+                auditSourceLabel={language === "zh" ? "来源" : "Source"}
+                auditRiskLabel={language === "zh" ? "风险" : "Risk"}
+                auditStatusLabel={language === "zh" ? "状态" : "Status"}
+                auditActionLabel={language === "zh" ? "动作" : "Action"}
+                auditSummaryTitle={language === "zh" ? "事件摘要" : "Event summary"}
+                auditSummaryRows={runtimeAuditSummaryRows}
+                auditTrendTitle={language === "zh" ? "时间趋势" : "Event trend"}
+                auditTrendEmptyLabel={language === "zh" ? "当前窗口下还没有趋势数据。" : "No trend data is available for the current window."}
+                auditTrendBars={runtimeAuditTrendBars}
+                auditSourceStatusTitle={language === "zh" ? "来源 × 状态" : "Source × status"}
+                auditSourceStatusFacets={runtimeAuditSourceStatusFacets}
+                auditStudyFacetTitle={language === "zh" ? "Study 分面" : "Study facets"}
+                auditProjectFacetTitle={language === "zh" ? "Project 分面" : "Project facets"}
+                auditModelVersionFacetTitle={language === "zh" ? "Version 分面" : "Version facets"}
+                auditFacetEmptyLabel={language === "zh" ? "当前窗口下没有可用分面。" : "No facets are available for the current window."}
+                auditStudyFacets={runtimeAuditStudyFacets}
+                auditProjectFacets={runtimeAuditProjectFacets}
+                auditModelVersionFacets={runtimeAuditModelVersionFacets}
+                auditRefreshLabel={language === "zh" ? "刷新事件" : "Refresh events"}
+                auditExportLabel={language === "zh" ? "导出分析包" : "Export bundle"}
+                auditWindowValue={securityEventWindowFilter}
+                auditSourceValue={securityEventSourceFilter}
+                auditRiskValue={securityEventRiskFilter}
+                auditStatusValue={securityEventStatusFilter}
+                auditActionValue={securityEventActionFilter}
+                auditWindowOptions={[
+                  { value: "", label: language === "zh" ? "全部时间" : "All time" },
+                  { value: "1h", label: language === "zh" ? "最近 1 小时" : "Last 1 hour" },
+                  { value: "24h", label: language === "zh" ? "最近 24 小时" : "Last 24 hours" },
+                  { value: "7d", label: language === "zh" ? "最近 7 天" : "Last 7 days" },
+                  { value: "30d", label: language === "zh" ? "最近 30 天" : "Last 30 days" },
+                ]}
+                auditSourceOptions={[
+                  { value: "", label: language === "zh" ? "全部" : "All" },
+                  { value: "assistant", label: language === "zh" ? "助手" : "Assistant" },
+                  { value: "script", label: language === "zh" ? "脚本" : "Script" },
+                ]}
+                auditRiskOptions={[
+                  { value: "", label: language === "zh" ? "全部" : "All" },
+                  { value: "sensitive", label: language === "zh" ? "敏感" : "Sensitive" },
+                  { value: "destructive", label: language === "zh" ? "高风险" : "Destructive" },
+                ]}
+                auditStatusOptions={[
+                  { value: "", label: language === "zh" ? "全部" : "All" },
+                  { value: "prompted", label: language === "zh" ? "待确认" : "Prompted" },
+                  { value: "cancelled", label: language === "zh" ? "已取消" : "Cancelled" },
+                  { value: "completed", label: language === "zh" ? "已执行" : "Completed" },
+                  { value: "failed", label: language === "zh" ? "失败" : "Failed" },
+                ]}
+                onAuditWindowChange={(value) => setSecurityEventWindowFilter(value as SecurityEventWindow)}
+                onAuditSourceChange={setSecurityEventSourceFilter}
+                onAuditRiskChange={setSecurityEventRiskFilter}
+                onAuditStatusChange={setSecurityEventStatusFilter}
+                onAuditActionChange={setSecurityEventActionFilter}
+                onAuditRefresh={() => void refreshSecurityEvents()}
+                onAuditExport={() => void downloadSecurityEventExport()}
                 auditEntries={runtimeAuditEntries}
                 protocolAgentsTitle={t.protocolAgents}
                 protocolAgentsCountLabel={String(protocolAgents.length)}
