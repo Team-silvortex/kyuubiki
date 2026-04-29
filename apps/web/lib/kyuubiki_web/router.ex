@@ -328,6 +328,27 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/security-events" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, Analysis.list_security_events())
+    end)
+  end
+
+  post "/api/v1/security-events" do
+    with_auth(conn, :write, fn conn ->
+      case Analysis.create_security_event(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 201, payload)
+
+        {:error, {:invalid_security_event_field, field}} ->
+          respond_json(conn, 422, %{"error" => "invalid_security_event_field", "field" => field})
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
   get "/api/v1/projects" do
     with_auth(conn, :read, fn conn ->
       {:ok, projects} = Library.list_projects()

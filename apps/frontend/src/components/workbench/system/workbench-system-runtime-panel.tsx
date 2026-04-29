@@ -3,6 +3,7 @@
 import { memo, type ReactNode } from "react";
 
 import { WorkbenchProtocolAgentsCard } from "@/components/workbench/system/workbench-protocol-agents-card";
+import { WorkbenchSecurityAuditCard } from "@/components/workbench/system/workbench-security-audit-card";
 import { WorkbenchSystemMetricsCard } from "@/components/workbench/system/workbench-system-metrics-card";
 
 type MetricRow = {
@@ -43,6 +44,19 @@ type WorkbenchSystemRuntimePanelProps = {
   securityStatus: ReactNode;
   securityRows: MetricRow[];
   securityFooter: ReactNode;
+  auditTitle: string;
+  auditCountLabel: string;
+  auditEmptyLabel: string;
+  auditSessionLabel: string;
+  auditEntries: Array<{
+    id: string;
+    at: string;
+    action: string;
+    source: string;
+    risk: string;
+    status: string;
+    note: string;
+  }>;
   protocolAgentsTitle: string;
   protocolAgentsCountLabel: string;
   protocolAgentsEmptyLabel: string;
@@ -64,6 +78,11 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   securityStatus,
   securityRows,
   securityFooter,
+  auditTitle,
+  auditCountLabel,
+  auditEmptyLabel,
+  auditSessionLabel,
+  auditEntries,
   protocolAgentsTitle,
   protocolAgentsCountLabel,
   protocolAgentsEmptyLabel,
@@ -96,6 +115,13 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
         status={securityStatus}
         rows={securityRows}
         footer={securityFooter}
+      />
+      <WorkbenchSecurityAuditCard
+        title={auditTitle}
+        countLabel={auditCountLabel}
+        emptyLabel={auditEmptyLabel}
+        sessionLabel={auditSessionLabel}
+        entries={auditEntries}
       />
       <WorkbenchProtocolAgentsCard
         title={protocolAgentsTitle}

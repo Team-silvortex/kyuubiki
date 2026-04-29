@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.SecurityEvents.Store, as: SecurityEventStore
 
   @spec submit_axial_bar(map()) :: {:ok, map()} | {:error, term()}
   def submit_axial_bar(params) when is_map(params) do
@@ -167,6 +168,17 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  def create_security_event(attrs) when is_map(attrs) do
+    case SecurityEventStore.create(attrs) do
+      {:ok, event} -> {:ok, %{"event" => event}}
+      {:error, _reason} = error -> error
+    end
+  end
+
+  def list_security_events do
+    %{"events" => SecurityEventStore.list()}
+  end
+
   def export_database do
     {:ok, projects} = Library.list_projects()
     models = Enum.flat_map(projects, &Map.get(&1, "models", []))
@@ -186,7 +198,8 @@ defmodule KyuubikiWeb.Analysis do
       "models" => models,
       "model_versions" => model_versions,
       "jobs" => list_jobs()["jobs"],
-      "results" => list_results()["results"]
+      "results" => list_results()["results"],
+      "security_events" => list_security_events()["events"]
     }
   end
 
@@ -345,7 +358,9 @@ defmodule KyuubikiWeb.Analysis do
 
   defp normalize_chunk_integer(params, key, default) do
     case Map.get(params, key, default) do
-      value when is_integer(value) and value >= 0 -> {:ok, value}
+      value when is_integer(value) and value >= 0 ->
+        {:ok, value}
+
       value when is_binary(value) ->
         case Integer.parse(value) do
           {parsed, ""} when parsed >= 0 -> {:ok, parsed}

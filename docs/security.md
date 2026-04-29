@@ -107,6 +107,14 @@ or sensitive actions such as project/model deletion, job cancellation, and
 database or project export require an explicit operator confirmation even when
 triggered through the assistant or the scripting bridge.
 
+The workbench also keeps a session-scoped security audit trail for these
+high-risk automation actions so operators can see whether they were prompted,
+cancelled, completed, or failed during the current browser session.
+
+When the control plane is reachable, these high-risk action events are also
+posted into the orchestrator's append-only security event stream and included
+in database exports under `security_events`.
+
 Attached as:
 
 - `x-kyuubiki-token` to `/api/v1` and `/api/health`

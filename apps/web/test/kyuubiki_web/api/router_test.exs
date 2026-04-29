@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
   alias KyuubikiWeb.Playground.AgentRegistry
   alias KyuubikiWeb.Playground.AgentPool
   alias KyuubikiWeb.Router
+  alias KyuubikiWeb.SecurityEvents.Store, as: SecurityEventStore
   alias KyuubikiWeb.TestSupport.FakePlaygroundAgent
 
   @opts Router.init([])
@@ -18,6 +19,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     Store.reset()
     AnalysisResultStore.reset()
     Library.reset()
+    SecurityEventStore.reset()
     Enum.each(AgentRegistry.agents(), fn agent -> AgentRegistry.unregister(agent.id) end)
 
     original_config = Application.get_env(:kyuubiki_web, AgentPool, [])
@@ -1455,6 +1457,19 @@ defmodule KyuubikiWeb.Playground.RouterTest do
         "max_displacement" => 2.0e-6
       })
 
+    {:ok, _event_payload} =
+      SecurityEventStore.create(%{
+        "event_id" => "event-admin",
+        "event_type" => "security_high_risk_action",
+        "source" => "assistant",
+        "action" => "data/exportDatabase",
+        "risk" => "sensitive",
+        "status" => "completed",
+        "note" => "database export finished",
+        "context" => %{"study_kind" => "truss_2d"},
+        "occurred_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601()
+      })
+
     update_job_conn =
       :patch
       |> conn("/api/v1/jobs/job-admin", Jason.encode!(%{"message" => "reviewed"}))
@@ -1493,6 +1508,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     export_payload = Jason.decode!(export_conn.resp_body)
     assert [%{"job_id" => "job-admin"}] = export_payload["jobs"]
     assert [%{"job_id" => "job-admin"}] = export_payload["results"]
+    assert [%{"event_id" => "event-admin"}] = export_payload["security_events"]
     assert is_list(export_payload["projects"])
     assert is_list(export_payload["models"])
     assert is_list(export_payload["model_versions"])
@@ -1517,6 +1533,46 @@ defmodule KyuubikiWeb.Playground.RouterTest do
       |> Router.call(@opts)
 
     assert missing_job_conn.status == 422
+  end
+
+  test "supports append-only security event ingestion and listing" do
+    create_conn =
+      :post
+      |> conn(
+        "/api/v1/security-events",
+        Jason.encode!(%{
+          "event_id" => "event-1",
+          "event_type" => "security_high_risk_action",
+          "source" => "script",
+          "action" => "project/deleteSelected",
+          "risk" => "destructive",
+          "status" => "cancelled",
+          "note" => "operator cancelled confirmation",
+          "context" => %{"project_id" => "proj-1", "study_kind" => "truss_3d"},
+          "occurred_at" => "2026-04-29T08:00:00Z"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert create_conn.status == 201
+    assert Jason.decode!(create_conn.resp_body)["event"]["action"] == "project/deleteSelected"
+
+    list_conn =
+      :get
+      |> conn("/api/v1/security-events")
+      |> Router.call(@opts)
+
+    assert list_conn.status == 200
+
+    assert [
+             %{
+               "event_id" => "event-1",
+               "source" => "script",
+               "risk" => "destructive",
+               "status" => "cancelled"
+             }
+           ] = Jason.decode!(list_conn.resp_body)["events"]
   end
 
   defp await_fake_agent_port do

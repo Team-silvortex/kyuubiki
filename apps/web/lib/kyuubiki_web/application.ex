@@ -28,7 +28,8 @@ defmodule KyuubikiWeb.Application do
       [
         {KyuubikiWeb.Jobs.MemoryBackend, []},
         {KyuubikiWeb.AnalysisResultMemoryBackend, []},
-        {KyuubikiWeb.Library.MemoryBackend, []}
+        {KyuubikiWeb.Library.MemoryBackend, []},
+        {KyuubikiWeb.SecurityEvents.MemoryBackend, []}
       ]
     end
   end

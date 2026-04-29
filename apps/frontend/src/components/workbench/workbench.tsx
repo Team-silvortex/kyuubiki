@@ -60,6 +60,14 @@ import {
   type WorkbenchSnapshot,
 } from "@/lib/workbench/history";
 import {
+  createSecurityAuditEntry,
+  readSecurityAuditLog,
+  writeSecurityAuditLog,
+  type WorkbenchSecurityAuditEntry,
+  type WorkbenchSecurityAuditRisk,
+  type WorkbenchSecurityAuditSource,
+} from "@/lib/workbench/security-audit";
+import {
   buildAdminJobRows,
   buildAdminResultRows,
   buildLibraryJobRows,
@@ -148,6 +156,7 @@ import {
 } from "@/lib/scripting/workbench-script-runtime";
 import {
   createAxialBarJob,
+  createSecurityEvent,
   createDirectMeshSolve,
   createPlaneTriangle2dJob,
   createModel,
@@ -1870,6 +1879,7 @@ export function Workbench() {
   const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
+  const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
   const [adminJobMessage, setAdminJobMessage] = useState("");
   const [adminJobProjectId, setAdminJobProjectId] = useState("");
   const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
@@ -2089,7 +2099,12 @@ export function Workbench() {
       setLoadedModelName(copy[stored.language].defaultModel);
       setMessage(copy[stored.language].initialLoaded);
     }
+    setSecurityAuditLog(readSecurityAuditLog());
   }, []);
+
+  useEffect(() => {
+    writeSecurityAuditLog(securityAuditLog);
+  }, [securityAuditLog]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -3568,6 +3583,48 @@ export function Workbench() {
     ],
     [directMeshApiToken, health, language, securityUi],
   );
+  const runtimeAuditEntries = useMemo(
+    () =>
+      securityAuditLog.map((entry) => ({
+        id: entry.id,
+        at: formatTime(entry.at, language),
+        action: entry.action,
+        source:
+          entry.source === "assistant"
+            ? language === "zh"
+              ? "助手"
+              : "Assistant"
+            : language === "zh"
+              ? "脚本"
+              : "Script",
+        risk:
+          entry.risk === "destructive"
+            ? language === "zh"
+              ? "高风险"
+              : "Destructive"
+            : language === "zh"
+              ? "敏感"
+              : "Sensitive",
+        status:
+          entry.status === "prompted"
+            ? language === "zh"
+              ? "待确认"
+              : "Prompted"
+            : entry.status === "cancelled"
+              ? language === "zh"
+                ? "已取消"
+                : "Cancelled"
+              : entry.status === "completed"
+                ? language === "zh"
+                  ? "已执行"
+                  : "Completed"
+                : language === "zh"
+                  ? "失败"
+                  : "Failed",
+        note: entry.note,
+      })),
+    [formatTime, language, securityAuditLog],
+  );
   const runtimeWatchdogRows = useMemo(
     () => [
       { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
@@ -3774,6 +3831,38 @@ export function Workbench() {
     ].slice(0, 40));
   };
 
+  const persistSecurityAuditEvent = async (entry: WorkbenchSecurityAuditEntry) => {
+    try {
+      await createSecurityEvent({
+        event_id: entry.id,
+        event_type: "security_high_risk_action",
+        source: entry.source,
+        action: entry.action,
+        risk: entry.risk,
+        status: entry.status,
+        note: entry.note,
+        occurred_at: entry.at,
+        context: {
+          frontend_runtime_mode: frontendRuntimeMode,
+          study_kind: studyKind,
+          project_id: selectedProjectId,
+          model_id: selectedModelId,
+          model_version_id: selectedVersionId,
+          language,
+          immersive_viewport: immersiveViewport,
+        },
+      });
+    } catch {
+      // Keep local audit logging available even when the control plane is unreachable.
+    }
+  };
+
+  const recordSecurityAuditEvent = (entry: Omit<WorkbenchSecurityAuditEntry, "id" | "at">) => {
+    const event = createSecurityAuditEntry(entry);
+    setSecurityAuditLog((current) => [event, ...current].slice(0, 80));
+    void persistSecurityAuditEvent(event);
+  };
+
   const getScriptSnapshot = (): WorkbenchScriptSnapshot => ({
     studyKind,
     sidebarSection,
@@ -3801,15 +3890,35 @@ export function Workbench() {
     message,
   });
 
-  const invokeScriptAction = async (action: string, payload: Record<string, unknown> = {}) => {
+  const invokeScriptAction = async (
+    action: string,
+    payload: Record<string, unknown> = {},
+    source: WorkbenchSecurityAuditSource = "script",
+    note?: string,
+  ) => {
     const actionDefinition = getWorkbenchScriptActionDefinition(action);
     if (actionDefinition?.requiresConfirmation) {
+      const auditRisk = actionDefinition.risk as WorkbenchSecurityAuditRisk;
+      recordSecurityAuditEvent({
+        action,
+        source,
+        risk: auditRisk,
+        status: "prompted",
+        note: note ?? (language === "zh" ? "等待操作员确认。" : "Waiting for operator confirmation."),
+      });
       const confirmationMessage =
         language === "zh"
           ? `动作 ${action} 属于高风险操作，可能修改、删除或导出敏感数据。\n\n请确认是否继续执行。`
           : `The action ${action} is high risk and may modify, delete, or export sensitive data.\n\nConfirm execution?`;
       if (typeof window !== "undefined" && !window.confirm(confirmationMessage)) {
         const summary = language === "zh" ? "已被操作员取消确认。" : "Cancelled by operator confirmation.";
+        recordSecurityAuditEvent({
+          action,
+          source,
+          risk: auditRisk,
+          status: "cancelled",
+          note: summary,
+        });
         appendScriptActionLog({ action, status: "failed", summary });
         throw new Error(summary);
       }
@@ -4144,9 +4253,27 @@ export function Workbench() {
       }
 
       appendScriptActionLog({ action, status: "completed", summary: JSON.stringify(resultPayload) });
+      if (actionDefinition?.requiresConfirmation) {
+        recordSecurityAuditEvent({
+          action,
+          source,
+          risk: actionDefinition.risk as WorkbenchSecurityAuditRisk,
+          status: "completed",
+          note: note ?? (language === "zh" ? "高风险动作已执行完成。" : "High-risk action completed."),
+        });
+      }
       return resultPayload;
     } catch (error) {
       const summary = error instanceof Error ? error.message : String(error);
+      if (actionDefinition?.requiresConfirmation) {
+        recordSecurityAuditEvent({
+          action,
+          source,
+          risk: actionDefinition.risk as WorkbenchSecurityAuditRisk,
+          status: "failed",
+          note: summary,
+        });
+      }
       appendScriptActionLog({ action, status: "failed", summary });
       throw error;
     }
@@ -4217,7 +4344,7 @@ export function Workbench() {
     const transactionId = recordAssistantTransaction(summary, actions.map((entry) => entry.action));
     try {
       for (const entry of actions) {
-        await invokeScriptAction(entry.action, entry.payload ?? {});
+        await invokeScriptAction(entry.action, entry.payload ?? {}, "assistant", entry.reason);
       }
       setMessage(language === "zh" ? "助手计划已执行。" : "Assistant plan executed.");
       return transactionId;
@@ -5368,6 +5495,15 @@ export function Workbench() {
                       : "Runtime security state comes from /api/health; frontend tokens stay only in the current browser session."}
                   </p>
                 }
+                auditTitle={language === "zh" ? "安全审计" : "Security audit"}
+                auditCountLabel={String(securityAuditLog.length)}
+                auditEmptyLabel={language === "zh" ? "当前会话里还没有高风险动作记录。" : "No high-risk actions have been recorded in this session yet."}
+                auditSessionLabel={
+                  language === "zh"
+                    ? "记录当前会话里由助手或脚本触发的高风险确认动作。"
+                    : "Tracks high-risk confirmed actions triggered by the assistant or scripting in the current session."
+                }
+                auditEntries={runtimeAuditEntries}
                 protocolAgentsTitle={t.protocolAgents}
                 protocolAgentsCountLabel={String(protocolAgents.length)}
                 protocolAgentsEmptyLabel={t.noProtocolAgents}

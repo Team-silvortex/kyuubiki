@@ -403,6 +403,29 @@ export type DatabaseExportPayload = {
     inserted_at?: string;
     updated_at?: string;
   }>;
+  security_events?: SecurityEventRecord[];
+};
+
+export type SecurityEventRecord = {
+  event_id: string;
+  event_type: string;
+  source: string;
+  action: string;
+  risk: string;
+  status: string;
+  note?: string | null;
+  context: Record<string, unknown>;
+  occurred_at: string;
+  inserted_at?: string;
+  updated_at?: string;
+};
+
+export type SecurityEventListPayload = {
+  events: SecurityEventRecord[];
+};
+
+export type SecurityEventEnvelope = {
+  event: SecurityEventRecord;
 };
 
 export type ResultRecord = {
@@ -724,6 +747,31 @@ export function fetchDatabaseExport(): Promise<DatabaseExportPayload> {
   return requestJson<DatabaseExportPayload>("/api/v1/export/database", {
     method: "GET",
     cache: "no-store",
+  });
+}
+
+export function fetchSecurityEvents(): Promise<SecurityEventListPayload> {
+  return requestJson<SecurityEventListPayload>("/api/v1/security-events", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function createSecurityEvent(input: {
+  event_id: string;
+  event_type: string;
+  source: string;
+  action: string;
+  risk: string;
+  status: string;
+  note?: string | null;
+  context?: Record<string, unknown>;
+  occurred_at: string;
+}): Promise<SecurityEventEnvelope> {
+  return requestJson<SecurityEventEnvelope>("/api/v1/security-events", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
   });
 }
 
