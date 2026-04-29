@@ -645,6 +645,25 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return payload;
 }
 
+async function requestText(url: string, init?: RequestInit): Promise<string> {
+  const headers = new Headers(init?.headers);
+  Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
+    if (value) headers.set(key, value);
+  });
+
+  const response = await fetch(url, {
+    ...init,
+    headers,
+  });
+  const payload = await response.text();
+
+  if (!response.ok) {
+    throw new Error(payload || "request failed");
+  }
+
+  return payload;
+}
+
 export function createAxialBarJob(input: AxialBarJobInput): Promise<JobEnvelope<AxialBarResult>> {
   return requestJson<JobEnvelope<AxialBarResult>>("/api/v1/fem/axial-bar/jobs", {
     method: "POST",
@@ -832,6 +851,32 @@ export function exportSecurityEvents(filters: {
   const suffix = params.size > 0 ? `?${params.toString()}` : "";
 
   return requestJson<SecurityEventExportPayload>(`/api/v1/export/security-events${suffix}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function exportSecurityEventsCsv(filters: {
+  source?: string;
+  risk?: string;
+  status?: string;
+  action?: string;
+  study_kind?: string;
+  project_id?: string;
+  model_version_id?: string;
+  occurred_after?: string;
+  occurred_before?: string;
+  limit?: number;
+} = {}): Promise<string> {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      params.set(key, String(value));
+    }
+  });
+  const suffix = params.size > 0 ? `?${params.toString()}` : "";
+
+  return requestText(`/api/v1/export/security-events.csv${suffix}`, {
     method: "GET",
     cache: "no-store",
   });

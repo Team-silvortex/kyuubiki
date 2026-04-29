@@ -114,3 +114,22 @@ class ControlPlaneClient:
 
     def export_security_events(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
         return self._request("/api/v1/export/security-events", query=query)
+
+    def export_security_events_csv(self, query: dict[str, Any] | None = None) -> str:
+        url = f"{self.base_url}/api/v1/export/security-events.csv"
+        if query:
+            url = f"{url}?{urllib.parse.urlencode(query)}"
+        request = urllib.request.Request(url, method="GET")
+        headers = {"Content-Type": "application/json"}
+        if self.auth is not None:
+            self.auth.apply(headers)
+        for header_name, header_value in headers.items():
+            request.add_header(header_name, header_value)
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.read().decode("utf-8")
+        except HTTPError as error:
+            body_text = error.read().decode("utf-8", errors="replace")
+            raise KyuubikiHttpError(error.code, body_text) from error
+        except URLError as error:
+            raise KyuubikiTransportError(str(error.reason)) from error

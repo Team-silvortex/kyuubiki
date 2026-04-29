@@ -58,6 +58,15 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     request(client, :get, "/api/v1/export/security-events" <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
   end
 
+  def export_security_events_csv(client, opts \\ []) do
+    query =
+      opts
+      |> Enum.filter(fn {_key, value} -> not is_nil(value) and value != "" end)
+      |> Enum.map(fn {key, value} -> {to_string(key), to_string(value)} end)
+
+    request_text(client, :get, "/api/v1/export/security-events.csv" <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
+  end
+
   defp request(client, method, path, payload \\ nil) do
     :inets.start()
     url = String.to_charlist(client.base_url <> path)
@@ -80,6 +89,29 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     case :httpc.request(method, request, [], options) do
       {:ok, {{_, status, _}, _headers, response_body}} when status in 200..299 ->
         {:ok, Jason.decode!(response_body)}
+
+      {:ok, {{_, status, _}, _headers, response_body}} ->
+        {:error, Error.http(status, response_body)}
+
+      {:error, reason} ->
+        {:error, Error.transport(inspect(reason))}
+    end
+  end
+
+  defp request_text(client, method, path) do
+    :inets.start()
+    url = String.to_charlist(client.base_url <> path)
+    headers =
+      [{~c"content-type", ~c"application/json"}] ++
+        if client.auth,
+          do: [{String.to_charlist(client.auth.header_name), String.to_charlist(client.auth.header_value)}],
+          else: []
+
+    options = [body_format: :binary]
+
+    case :httpc.request(method, {url, headers}, [], options) do
+      {:ok, {{_, status, _}, _headers, response_body}} when status in 200..299 ->
+        {:ok, response_body}
 
       {:ok, {{_, status, _}, _headers, response_body}} ->
         {:error, Error.http(status, response_body)}

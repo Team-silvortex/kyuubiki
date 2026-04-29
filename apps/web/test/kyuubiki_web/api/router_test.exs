@@ -1527,6 +1527,24 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert [%{"event_id" => "event-admin", "status" => "completed"}] =
              security_export_payload["events"]
 
+    security_export_csv_conn =
+      :get
+      |> conn("/api/v1/export/security-events.csv?status=completed")
+      |> Router.call(@opts)
+
+    assert security_export_csv_conn.status == 200
+
+    assert get_resp_header(security_export_csv_conn, "content-type") == [
+             "text/csv; charset=utf-8"
+           ]
+
+    assert String.contains?(
+             security_export_csv_conn.resp_body,
+             "event_id,event_type,source,action"
+           )
+
+    assert String.contains?(security_export_csv_conn.resp_body, "event-admin")
+
     delete_result_conn =
       :delete
       |> conn("/api/v1/results/job-admin")

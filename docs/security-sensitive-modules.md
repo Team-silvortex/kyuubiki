@@ -76,6 +76,9 @@ Sensitivity levels:
 - `GET /api/v1/export/security-events` is narrower than a full database export,
   but still exposes operator activity history and deployment context. Treat its
   schema, filtering, and auth behavior as security-sensitive.
+- `GET /api/v1/export/security-events.csv` shares the same exposure boundary as
+  the JSON security-event export. Keep the flattened column set stable and do
+  not accidentally widen context leakage when adding new exported fields.
 - Direct mesh is intentionally powerful: it bypasses Phoenix job persistence and
   opens TCP sockets from the Next.js server process to solver agents. Keep it
   disabled or token-protected outside trusted local/LAN environments. In

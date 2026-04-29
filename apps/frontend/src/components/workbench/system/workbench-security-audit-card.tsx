@@ -38,6 +38,7 @@ type WorkbenchSecurityAuditCardProps = {
   modelVersionFacets: Array<{ key: string; label: string; value: string }>;
   refreshLabel: string;
   exportLabel: string;
+  exportCsvLabel: string;
   windowValue: string;
   sourceValue: string;
   riskValue: string;
@@ -54,6 +55,7 @@ type WorkbenchSecurityAuditCardProps = {
   onActionChange: (value: string) => void;
   onRefresh: () => void;
   onExport: () => void;
+  onExportCsv: () => void;
   entries: SecurityAuditEntryRow[];
 };
 
@@ -83,6 +85,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
   modelVersionFacets,
   refreshLabel,
   exportLabel,
+  exportCsvLabel,
   windowValue,
   sourceValue,
   riskValue,
@@ -99,6 +102,7 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
   onActionChange,
   onRefresh,
   onExport,
+  onExportCsv,
   entries,
 }: WorkbenchSecurityAuditCardProps) {
   return (
@@ -259,6 +263,9 @@ export const WorkbenchSecurityAuditCard = memo(function WorkbenchSecurityAuditCa
         </button>
         <button className="ghost-button ghost-button--compact" onClick={onExport} type="button">
           {exportLabel}
+        </button>
+        <button className="ghost-button ghost-button--compact" onClick={onExportCsv} type="button">
+          {exportCsvLabel}
         </button>
       </div>
       {entries.length === 0 ? (

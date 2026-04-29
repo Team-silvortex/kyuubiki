@@ -228,6 +228,51 @@ defmodule KyuubikiWeb.Analysis do
     }
   end
 
+  def export_security_events_csv(filters \\ %{}) when is_map(filters) do
+    events = SecurityEventStore.list(filters)
+
+    rows = [
+      [
+        "event_id",
+        "event_type",
+        "source",
+        "action",
+        "risk",
+        "status",
+        "note",
+        "study_kind",
+        "project_id",
+        "model_version_id",
+        "occurred_at",
+        "inserted_at",
+        "updated_at"
+      ]
+      | Enum.map(events, fn event ->
+          context = event["context"] || %{}
+
+          [
+            event["event_id"],
+            event["event_type"],
+            event["source"],
+            event["action"],
+            event["risk"],
+            event["status"],
+            event["note"],
+            context["study_kind"],
+            context["project_id"],
+            context["model_version_id"],
+            event["occurred_at"],
+            event["inserted_at"],
+            event["updated_at"]
+          ]
+        end)
+    ]
+
+    rows
+    |> Enum.map_join("\n", fn row -> Enum.map_join(row, ",", &csv_escape/1) end)
+    |> Kernel.<>("\n")
+  end
+
   def export_database do
     {:ok, projects} = Library.list_projects()
     models = Enum.flat_map(projects, &Map.get(&1, "models", []))
@@ -269,6 +314,20 @@ defmodule KyuubikiWeb.Analysis do
     |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
     |> Map.new()
   end
+
+  defp csv_escape(nil), do: ""
+
+  defp csv_escape(value) when is_binary(value) do
+    escaped = String.replace(value, "\"", "\"\"")
+
+    if String.contains?(escaped, [",", "\"", "\n", "\r"]) do
+      ~s("#{escaped}")
+    else
+      escaped
+    end
+  end
+
+  defp csv_escape(value), do: value |> to_string() |> csv_escape()
 
   defp start_background_job(job_id, method, params) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->

@@ -142,6 +142,22 @@ impl ControlPlaneClient {
         self.request_json("GET", &path, None)
     }
 
+    pub fn export_security_events_csv(&self, query: Option<&[(&str, String)]>) -> SdkResult<String> {
+        let mut path = String::from("/api/v1/export/security-events.csv");
+        if let Some(query) = query {
+            let query = query
+                .iter()
+                .filter(|(_, value)| !value.is_empty())
+                .map(|(key, value)| format!("{key}={value}"))
+                .collect::<Vec<_>>();
+            if !query.is_empty() {
+                path.push('?');
+                path.push_str(&query.join("&"));
+            }
+        }
+        self.request_text("GET", &path)
+    }
+
     fn request_json(&self, method: &str, path: &str, payload: Option<&Value>) -> SdkResult<Value> {
         let request_path = format!("{}{}", self.base_path, path);
         let body = payload.map(serde_json::to_vec).transpose()?.unwrap_or_default();
@@ -182,5 +198,41 @@ impl ControlPlaneClient {
         }
 
         Ok(serde_json::from_str(body)?)
+    }
+
+    fn request_text(&self, method: &str, path: &str) -> SdkResult<String> {
+        let request_path = format!("{}{}", self.base_path, path);
+        let mut request = format!(
+            "{method} {request_path} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\nContent-Type: application/json\r\nContent-Length: 0\r\n",
+            self.host
+        );
+        if let Some(auth) = &self.auth {
+            request.push_str(&format!("{}: {}\r\n", auth.header_name, auth.header_value));
+        }
+        request.push_str("\r\n");
+
+        let mut stream = TcpStream::connect((self.host.as_str(), self.port))?;
+        stream.write_all(request.as_bytes())?;
+
+        let mut response = String::new();
+        stream.read_to_string(&mut response)?;
+        let (headers, body) = response
+            .split_once("\r\n\r\n")
+            .ok_or_else(|| SdkError::Transport("invalid HTTP response".into()))?;
+
+        let status_code = headers
+            .split_whitespace()
+            .nth(1)
+            .and_then(|value| value.parse::<u16>().ok())
+            .ok_or_else(|| SdkError::Transport("invalid HTTP status line".into()))?;
+
+        if !(200..300).contains(&status_code) {
+            return Err(SdkError::HttpStatus {
+                status_code,
+                body: body.to_string(),
+            });
+        }
+
+        Ok(body.to_string())
     }
 }

@@ -69,6 +69,7 @@ type WorkbenchSystemRuntimePanelProps = {
   auditModelVersionFacets: Array<{ key: string; label: string; value: string }>;
   auditRefreshLabel: string;
   auditExportLabel: string;
+  auditExportCsvLabel: string;
   auditWindowValue: string;
   auditSourceValue: string;
   auditRiskValue: string;
@@ -85,6 +86,7 @@ type WorkbenchSystemRuntimePanelProps = {
   onAuditActionChange: (value: string) => void;
   onAuditRefresh: () => void;
   onAuditExport: () => void;
+  onAuditExportCsv: () => void;
   auditEntries: Array<{
     id: string;
     at: string;
@@ -140,6 +142,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   auditModelVersionFacets,
   auditRefreshLabel,
   auditExportLabel,
+  auditExportCsvLabel,
   auditWindowValue,
   auditSourceValue,
   auditRiskValue,
@@ -156,6 +159,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   onAuditActionChange,
   onAuditRefresh,
   onAuditExport,
+  onAuditExportCsv,
   auditEntries,
   protocolAgentsTitle,
   protocolAgentsCountLabel,
@@ -216,6 +220,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
         modelVersionFacets={auditModelVersionFacets}
         refreshLabel={auditRefreshLabel}
         exportLabel={auditExportLabel}
+        exportCsvLabel={auditExportCsvLabel}
         windowValue={auditWindowValue}
         sourceValue={auditSourceValue}
         riskValue={auditRiskValue}
@@ -232,6 +237,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
         onActionChange={onAuditActionChange}
         onRefresh={onAuditRefresh}
         onExport={onAuditExport}
+        onExportCsv={onAuditExportCsv}
         entries={auditEntries}
       />
       <WorkbenchProtocolAgentsCard

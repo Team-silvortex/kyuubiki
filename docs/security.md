@@ -124,6 +124,11 @@ For analysis-oriented workflows, Kyuubiki now also exposes a dedicated
 - compact source/risk/status summary counts
 - the filtered event list itself
 
+There is also a companion `GET /api/v1/export/security-events.csv` endpoint for
+flat spreadsheet and notebook workflows. It exports a stable row shape with
+top-level event fields plus `study_kind`, `project_id`, and `model_version_id`
+lifted out of event context.
+
 The persisted security-event stream now supports filtered reads by:
 
 - `source`

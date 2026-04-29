@@ -70,6 +70,7 @@ All three SDKs expose the same conceptual split:
 - `DELETE /api/v1/results/:job_id`
 - `GET /api/v1/export/database`
 - `GET /api/v1/export/security-events`
+- `GET /api/v1/export/security-events.csv`
 
 ### Solver RPC
 

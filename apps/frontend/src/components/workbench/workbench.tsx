@@ -164,6 +164,7 @@ import {
   createProject,
   fetchSecurityEvents,
   exportSecurityEvents,
+  exportSecurityEventsCsv,
   createTruss2dJob,
   createTruss3dJob,
   cancelJob,
@@ -534,6 +535,9 @@ const copy = {
     saveRecord: "Save record",
     deleteRecord: "Delete record",
     exportRecord: "Export record",
+    openLinkedVersion: "Open linked version",
+    filterProject: "Filter project",
+    filterVersion: "Filter version",
     resultPayload: "Result JSON",
     resultSaved: "Result record updated.",
     resultDeleted: "Result record deleted.",
@@ -940,6 +944,9 @@ const copy = {
     saveRecord: "保存记录",
     deleteRecord: "删除记录",
     exportRecord: "导出记录",
+    openLinkedVersion: "打开关联版本",
+    filterProject: "筛选项目",
+    filterVersion: "筛选版本",
     resultPayload: "结果 JSON",
     resultSaved: "结果记录已更新。",
     resultDeleted: "结果记录已删除。",
@@ -1888,6 +1895,8 @@ export function Workbench() {
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
   const [selectedAdminJobId, setSelectedAdminJobId] = useState<string | null>(null);
   const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
+  const [adminFilterProjectId, setAdminFilterProjectId] = useState("");
+  const [adminFilterModelVersionId, setAdminFilterModelVersionId] = useState("");
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
   const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
@@ -2957,6 +2966,28 @@ export function Workbench() {
     }
   };
 
+  const downloadSecurityEventCsvExport = async () => {
+    try {
+      const occurredAfter =
+        securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
+          ? new Date(Date.now() - SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]).toISOString()
+          : undefined;
+      const csv = await exportSecurityEventsCsv({
+        occurred_after: occurredAfter,
+        source: securityEventSourceFilter || undefined,
+        risk: securityEventRiskFilter || undefined,
+        status: securityEventStatusFilter || undefined,
+        action: securityEventActionFilter || undefined,
+        limit: 1000,
+      });
+      const timestamp = new Date().toISOString().replaceAll(":", "-");
+      downloadTextFile(`kyuubiki-security-events-${timestamp}.csv`, csv);
+      setMessage(language === "zh" ? "安全事件 CSV 已下载。" : "Security event CSV downloaded.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    }
+  };
+
   const saveAdminJobRecord = () => {
     if (!selectedAdminJobId) return;
 
@@ -3263,15 +3294,20 @@ export function Workbench() {
   };
 
   const openSavedVersion = (version: ModelVersionRecord) => {
+    openModelVersionById(version.version_id);
+  };
+
+  const openModelVersionById = (versionId: string) => {
     startTransition(async () => {
       try {
-        const payload = await fetchModelVersion(version.version_id);
+        const payload = await fetchModelVersion(versionId);
         recordHistory(t.historyAction);
         applyPersistedPayload(payload.version.payload, payload.version.name);
         setSelectedModelId(payload.version.model_id);
         setSelectedProjectId(payload.version.project_id);
         setSelectedVersionId(payload.version.version_id);
         setMessage(t.versionLoaded);
+        setSidebarSection("model");
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
@@ -3308,6 +3344,26 @@ export function Workbench() {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
       }
     });
+  };
+
+  const openSelectedAdminJobVersion = () => {
+    if (!selectedAdminJob?.model_version_id) {
+      setMessage(language === "zh" ? "这个任务还没有关联模型版本。" : "This job does not have a linked model version.");
+      return;
+    }
+
+    openModelVersionById(selectedAdminJob.model_version_id);
+  };
+
+  const openSelectedAdminResultVersion = () => {
+    const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
+
+    if (!linkedJob?.model_version_id) {
+      setMessage(language === "zh" ? "这个结果还没有关联模型版本。" : "This result does not have a linked model version.");
+      return;
+    }
+
+    openModelVersionById(linkedJob.model_version_id);
   };
 
   const deleteSavedModelRecord = () => {
@@ -3497,21 +3553,39 @@ export function Workbench() {
   const adminJobRows = useMemo(
     () =>
       buildAdminJobRows({
-        jobs: deferredJobHistory,
+        jobs: deferredJobHistory.filter((job) => {
+          const matchesProject =
+            !adminFilterProjectId ||
+            (job.project_id ?? "").toLowerCase().includes(adminFilterProjectId.trim().toLowerCase());
+          const matchesVersion =
+            !adminFilterModelVersionId ||
+            (job.model_version_id ?? "").toLowerCase().includes(adminFilterModelVersionId.trim().toLowerCase());
+          return matchesProject && matchesVersion;
+        }),
         heartbeatTone: (job) => heartbeatTone(job),
         heartbeatLabel: (job) => heartbeatStatus(job, t),
         detailLabel: (job) => humanizeSolverFailure(job.message, t) ?? job.message ?? job.worker_id ?? "--",
       }),
-    [deferredJobHistory, t],
+    [adminFilterModelVersionId, adminFilterProjectId, deferredJobHistory, t],
   );
   const adminResultRows = useMemo(
     () =>
       buildAdminResultRows({
-        records: deferredResultRecords,
+        records: deferredResultRecords.filter((record) => {
+          const linkedJob = jobHistory.find((job) => job.job_id === record.job_id);
+          const matchesProject =
+            !adminFilterProjectId ||
+            (linkedJob?.project_id ?? "").toLowerCase().includes(adminFilterProjectId.trim().toLowerCase());
+          const matchesVersion =
+            !adminFilterModelVersionId ||
+            (linkedJob?.model_version_id ?? "").toLowerCase().includes(adminFilterModelVersionId.trim().toLowerCase());
+          return matchesProject && matchesVersion;
+        }),
+        jobs: jobHistory,
         updatedAtLabel: (record) => (record.updated_at ? formatTime(record.updated_at, language) : t.hasResult),
         summaryLabel: (record) => Object.keys(record.result).join(", ").slice(0, 64) || t.resultPayload,
       }),
-    [deferredResultRecords, formatTime, language, t.hasResult, t.resultPayload],
+    [adminFilterModelVersionId, adminFilterProjectId, deferredResultRecords, formatTime, jobHistory, language, t.hasResult, t.resultPayload],
   );
   const librarySampleRows = useMemo(
     () =>
@@ -5760,6 +5834,7 @@ export function Workbench() {
                 auditModelVersionFacets={runtimeAuditModelVersionFacets}
                 auditRefreshLabel={language === "zh" ? "刷新事件" : "Refresh events"}
                 auditExportLabel={language === "zh" ? "导出分析包" : "Export bundle"}
+                auditExportCsvLabel={language === "zh" ? "导出 CSV" : "Export CSV"}
                 auditWindowValue={securityEventWindowFilter}
                 auditSourceValue={securityEventSourceFilter}
                 auditRiskValue={securityEventRiskFilter}
@@ -5796,6 +5871,7 @@ export function Workbench() {
                 onAuditActionChange={setSecurityEventActionFilter}
                 onAuditRefresh={() => void refreshSecurityEvents()}
                 onAuditExport={() => void downloadSecurityEventExport()}
+                onAuditExportCsv={() => void downloadSecurityEventCsvExport()}
                 auditEntries={runtimeAuditEntries}
                 protocolAgentsTitle={t.protocolAgents}
                 protocolAgentsCountLabel={String(protocolAgents.length)}
@@ -5818,6 +5894,13 @@ export function Workbench() {
                 saveRecordLabel={t.saveRecord}
                 deleteRecordLabel={t.deleteRecord}
                 exportRecordLabel={t.exportRecord}
+                openLinkedVersionLabel={t.openLinkedVersion}
+                filterProjectLabel={t.filterProject}
+                filterVersionLabel={t.filterVersion}
+                filterProjectValue={adminFilterProjectId}
+                onFilterProjectChange={setAdminFilterProjectId}
+                filterVersionValue={adminFilterModelVersionId}
+                onFilterVersionChange={setAdminFilterModelVersionId}
                 adminMessageLabel={t.adminMessage}
                 adminProjectIdLabel={t.adminProjectId}
                 adminModelVersionIdLabel={t.adminModelVersionId}
@@ -5829,12 +5912,14 @@ export function Workbench() {
                 selectedAdminJobId={selectedAdminJobId}
                 onSelectAdminJob={setSelectedAdminJobId}
                 selectedAdminJob={Boolean(selectedAdminJob)}
+                selectedAdminJobHasVersion={Boolean(selectedAdminJob?.model_version_id)}
                 canCancelSelectedJob={Boolean(
                   selectedAdminJob &&
                     selectedAdminJob.status !== "completed" &&
                     selectedAdminJob.status !== "failed" &&
                     selectedAdminJob.status !== "cancelled",
                 )}
+                onOpenSelectedJobVersion={openSelectedAdminJobVersion}
                 onCancelSelectedJob={() => {
                   if (!selectedAdminJob) return;
                   if (selectedAdminJob.job_id === job?.job_id) {
@@ -5865,9 +5950,13 @@ export function Workbench() {
                 selectedAdminResultJobId={selectedAdminResultJobId}
                 onSelectAdminResult={setSelectedAdminResultJobId}
                 selectedAdminResult={Boolean(selectedAdminResult)}
+                selectedAdminResultHasVersion={Boolean(
+                  jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.model_version_id,
+                )}
                 adminResultDraft={adminResultDraft}
                 onAdminResultDraftChange={setAdminResultDraft}
                 onSaveAdminResult={saveAdminResultRecord}
+                onOpenSelectedResultVersion={openSelectedAdminResultVersion}
                 onExportAdminResult={exportAdminResultRecord}
                 onDeleteAdminResult={deleteAdminResultRecord}
               />

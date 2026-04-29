@@ -107,16 +107,23 @@ export function buildAdminJobRows({
 
 export function buildAdminResultRows({
   records,
+  jobs,
   updatedAtLabel,
   summaryLabel,
 }: {
   records: ResultRecord[];
+  jobs: JobState[];
   updatedAtLabel: (record: ResultRecord) => string;
   summaryLabel: (record: ResultRecord) => string;
 }) {
+  const jobLookup = new Map(jobs.map((job) => [job.job_id, job]));
+
   return records.map((record) => ({
     id: record.job_id,
     updatedAt: updatedAtLabel(record),
+    projectId: jobLookup.get(record.job_id)?.project_id?.slice(0, 8) ?? null,
+    modelVersionId: jobLookup.get(record.job_id)?.model_version_id?.slice(0, 8) ?? null,
+    status: jobLookup.get(record.job_id)?.status ?? null,
     summary: summaryLabel(record),
   }));
 }

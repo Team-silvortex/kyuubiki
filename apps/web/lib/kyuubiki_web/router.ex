@@ -334,6 +334,12 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/export/security-events.csv" do
+    with_auth(conn, :read, fn conn ->
+      respond_text(conn, 200, "text/csv", Analysis.export_security_events_csv(conn.query_params))
+    end)
+  end
+
   get "/api/v1/security-events" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, Analysis.list_security_events(conn.query_params))
@@ -508,6 +514,12 @@ defmodule KyuubikiWeb.Router do
     conn
     |> Plug.Conn.put_resp_content_type("application/json")
     |> Plug.Conn.send_resp(status, Jason.encode!(payload))
+  end
+
+  defp respond_text(conn, status, content_type, payload) do
+    conn
+    |> Plug.Conn.put_resp_content_type(content_type)
+    |> Plug.Conn.send_resp(status, payload)
   end
 
   defp with_cluster_fingerprint(conn, attrs) when is_map(attrs) do
