@@ -35,13 +35,22 @@ type WorkbenchDataAdminPanelProps = {
   saveRecordLabel: string;
   deleteRecordLabel: string;
   exportRecordLabel: string;
+  openLinkedProjectLabel: string;
   openLinkedVersionLabel: string;
   filterProjectLabel: string;
   filterVersionLabel: string;
+  useCurrentProjectLabel: string;
+  useCurrentVersionLabel: string;
+  clearFiltersLabel: string;
   filterProjectValue: string;
   onFilterProjectChange: (value: string) => void;
   filterVersionValue: string;
   onFilterVersionChange: (value: string) => void;
+  canUseCurrentProject: boolean;
+  canUseCurrentVersion: boolean;
+  onUseCurrentProject: () => void;
+  onUseCurrentVersion: () => void;
+  onClearFilters: () => void;
   adminMessageLabel: string;
   adminProjectIdLabel: string;
   adminModelVersionIdLabel: string;
@@ -54,8 +63,10 @@ type WorkbenchDataAdminPanelProps = {
   onSelectAdminJob: (jobId: string) => void;
   selectedAdminJob: boolean;
   selectedAdminJobHasVersion: boolean;
+  selectedAdminJobHasProject: boolean;
   canCancelSelectedJob: boolean;
   onCancelSelectedJob: () => void;
+  onOpenSelectedJobProject: () => void;
   onOpenSelectedJobVersion: () => void;
   adminJobMessage: string;
   onAdminJobMessageChange: (value: string) => void;
@@ -71,10 +82,12 @@ type WorkbenchDataAdminPanelProps = {
   selectedAdminResultJobId: string | null;
   onSelectAdminResult: (jobId: string) => void;
   selectedAdminResult: boolean;
+  selectedAdminResultHasProject: boolean;
   selectedAdminResultHasVersion: boolean;
   adminResultDraft: string;
   onAdminResultDraftChange: (value: string) => void;
   onSaveAdminResult: () => void;
+  onOpenSelectedResultProject: () => void;
   onOpenSelectedResultVersion: () => void;
   onExportAdminResult: () => void;
   onDeleteAdminResult: () => void;
@@ -91,13 +104,22 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   saveRecordLabel,
   deleteRecordLabel,
   exportRecordLabel,
+  openLinkedProjectLabel,
   openLinkedVersionLabel,
   filterProjectLabel,
   filterVersionLabel,
+  useCurrentProjectLabel,
+  useCurrentVersionLabel,
+  clearFiltersLabel,
   filterProjectValue,
   onFilterProjectChange,
   filterVersionValue,
   onFilterVersionChange,
+  canUseCurrentProject,
+  canUseCurrentVersion,
+  onUseCurrentProject,
+  onUseCurrentVersion,
+  onClearFilters,
   adminMessageLabel,
   adminProjectIdLabel,
   adminModelVersionIdLabel,
@@ -110,8 +132,10 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   onSelectAdminJob,
   selectedAdminJob,
   selectedAdminJobHasVersion,
+  selectedAdminJobHasProject,
   canCancelSelectedJob,
   onCancelSelectedJob,
+  onOpenSelectedJobProject,
   onOpenSelectedJobVersion,
   adminJobMessage,
   onAdminJobMessageChange,
@@ -127,10 +151,12 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   selectedAdminResultJobId,
   onSelectAdminResult,
   selectedAdminResult,
+  selectedAdminResultHasProject,
   selectedAdminResultHasVersion,
   adminResultDraft,
   onAdminResultDraftChange,
   onSaveAdminResult,
+  onOpenSelectedResultProject,
   onOpenSelectedResultVersion,
   onExportAdminResult,
   onDeleteAdminResult,
@@ -158,6 +184,17 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           <span>{filterVersionLabel}</span>
           <input value={filterVersionValue} onChange={(event) => onFilterVersionChange(event.target.value)} />
         </label>
+      </div>
+      <div className="button-row">
+        <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentProject} onClick={onUseCurrentProject} type="button">
+          {useCurrentProjectLabel}
+        </button>
+        <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentVersion} onClick={onUseCurrentVersion} type="button">
+          {useCurrentVersionLabel}
+        </button>
+        <button className="ghost-button ghost-button--compact" onClick={onClearFilters} type="button">
+          {clearFiltersLabel}
+        </button>
       </div>
       {activeTab === "jobs" ? (
         <>
@@ -189,6 +226,14 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               <div className="button-row">
                 <button className="ghost-button" disabled={!canCancelSelectedJob} onClick={onCancelSelectedJob} type="button">
                   {cancelJobLabel}
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={!selectedAdminJobHasProject}
+                  onClick={onOpenSelectedJobProject}
+                  type="button"
+                >
+                  {openLinkedProjectLabel}
                 </button>
                 <button
                   className="ghost-button"
@@ -270,6 +315,14 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               <div className="button-row">
                 <button className="ghost-button" onClick={onSaveAdminResult} type="button">
                   {saveRecordLabel}
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={!selectedAdminResultHasProject}
+                  onClick={onOpenSelectedResultProject}
+                  type="button"
+                >
+                  {openLinkedProjectLabel}
                 </button>
                 <button
                   className="ghost-button"

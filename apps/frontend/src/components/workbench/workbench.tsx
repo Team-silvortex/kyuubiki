@@ -535,14 +535,19 @@ const copy = {
     saveRecord: "Save record",
     deleteRecord: "Delete record",
     exportRecord: "Export record",
+    openLinkedProject: "Open linked project",
     openLinkedVersion: "Open linked version",
     filterProject: "Filter project",
     filterVersion: "Filter version",
+    useCurrentProject: "Use current project",
+    useCurrentVersion: "Use current version",
+    clearFilters: "Clear filters",
     resultPayload: "Result JSON",
     resultSaved: "Result record updated.",
     resultDeleted: "Result record deleted.",
     jobSaved: "Job record updated.",
     jobDeleted: "Job record deleted.",
+    linkedProjectOpened: "Opened the linked project context.",
     invalidJson: "Invalid JSON payload.",
     databaseRecordCount: "Records",
     immersiveStudy: "Study",
@@ -944,14 +949,19 @@ const copy = {
     saveRecord: "保存记录",
     deleteRecord: "删除记录",
     exportRecord: "导出记录",
+    openLinkedProject: "打开关联项目",
     openLinkedVersion: "打开关联版本",
     filterProject: "筛选项目",
     filterVersion: "筛选版本",
+    useCurrentProject: "使用当前项目",
+    useCurrentVersion: "使用当前版本",
+    clearFilters: "清空筛选",
     resultPayload: "结果 JSON",
     resultSaved: "结果记录已更新。",
     resultDeleted: "结果记录已删除。",
     jobSaved: "任务记录已更新。",
     jobDeleted: "任务记录已删除。",
+    linkedProjectOpened: "已打开关联项目上下文。",
     invalidJson: "JSON 内容无效。",
     databaseRecordCount: "记录数",
     immersiveStudy: "研究",
@@ -3364,6 +3374,64 @@ export function Workbench() {
     }
 
     openModelVersionById(linkedJob.model_version_id);
+  };
+
+  const openProjectContextById = (projectId: string) => {
+    const project = projects.find((entry) => entry.project_id === projectId);
+
+    if (!project) {
+      setMessage(language === "zh" ? "找不到关联项目。" : "Could not find the linked project.");
+      return;
+    }
+
+    const firstModelId = project.models?.[0]?.model_id ?? null;
+    const firstVersionId = project.models?.[0]?.latest_version_id ?? null;
+
+    setSelectedProjectId(project.project_id);
+    setSelectedModelId(firstModelId);
+    setSelectedVersionId(firstVersionId);
+    setSidebarSection("library");
+
+    if (firstModelId) {
+      void refreshVersions(firstModelId);
+    } else {
+      setModelVersions([]);
+    }
+
+    setMessage(t.linkedProjectOpened);
+  };
+
+  const openSelectedAdminJobProject = () => {
+    if (!selectedAdminJob?.project_id) {
+      setMessage(language === "zh" ? "这个任务还没有关联项目。" : "This job does not have a linked project.");
+      return;
+    }
+
+    openProjectContextById(selectedAdminJob.project_id);
+  };
+
+  const openSelectedAdminResultProject = () => {
+    const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
+
+    if (!linkedJob?.project_id) {
+      setMessage(language === "zh" ? "这个结果还没有关联项目。" : "This result does not have a linked project.");
+      return;
+    }
+
+    openProjectContextById(linkedJob.project_id);
+  };
+
+  const useCurrentProjectAsAdminFilter = () => {
+    setAdminFilterProjectId(selectedProjectId ?? "");
+  };
+
+  const useCurrentVersionAsAdminFilter = () => {
+    setAdminFilterModelVersionId(selectedVersionId ?? "");
+  };
+
+  const clearAdminFilters = () => {
+    setAdminFilterProjectId("");
+    setAdminFilterModelVersionId("");
   };
 
   const deleteSavedModelRecord = () => {
@@ -5894,13 +5962,22 @@ export function Workbench() {
                 saveRecordLabel={t.saveRecord}
                 deleteRecordLabel={t.deleteRecord}
                 exportRecordLabel={t.exportRecord}
+                openLinkedProjectLabel={t.openLinkedProject}
                 openLinkedVersionLabel={t.openLinkedVersion}
                 filterProjectLabel={t.filterProject}
                 filterVersionLabel={t.filterVersion}
+                useCurrentProjectLabel={t.useCurrentProject}
+                useCurrentVersionLabel={t.useCurrentVersion}
+                clearFiltersLabel={t.clearFilters}
                 filterProjectValue={adminFilterProjectId}
                 onFilterProjectChange={setAdminFilterProjectId}
                 filterVersionValue={adminFilterModelVersionId}
                 onFilterVersionChange={setAdminFilterModelVersionId}
+                canUseCurrentProject={Boolean(selectedProjectId)}
+                canUseCurrentVersion={Boolean(selectedVersionId)}
+                onUseCurrentProject={useCurrentProjectAsAdminFilter}
+                onUseCurrentVersion={useCurrentVersionAsAdminFilter}
+                onClearFilters={clearAdminFilters}
                 adminMessageLabel={t.adminMessage}
                 adminProjectIdLabel={t.adminProjectId}
                 adminModelVersionIdLabel={t.adminModelVersionId}
@@ -5913,12 +5990,14 @@ export function Workbench() {
                 onSelectAdminJob={setSelectedAdminJobId}
                 selectedAdminJob={Boolean(selectedAdminJob)}
                 selectedAdminJobHasVersion={Boolean(selectedAdminJob?.model_version_id)}
+                selectedAdminJobHasProject={Boolean(selectedAdminJob?.project_id)}
                 canCancelSelectedJob={Boolean(
                   selectedAdminJob &&
                     selectedAdminJob.status !== "completed" &&
                     selectedAdminJob.status !== "failed" &&
                     selectedAdminJob.status !== "cancelled",
                 )}
+                onOpenSelectedJobProject={openSelectedAdminJobProject}
                 onOpenSelectedJobVersion={openSelectedAdminJobVersion}
                 onCancelSelectedJob={() => {
                   if (!selectedAdminJob) return;
@@ -5950,12 +6029,16 @@ export function Workbench() {
                 selectedAdminResultJobId={selectedAdminResultJobId}
                 onSelectAdminResult={setSelectedAdminResultJobId}
                 selectedAdminResult={Boolean(selectedAdminResult)}
+                selectedAdminResultHasProject={Boolean(
+                  jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.project_id,
+                )}
                 selectedAdminResultHasVersion={Boolean(
                   jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.model_version_id,
                 )}
                 adminResultDraft={adminResultDraft}
                 onAdminResultDraftChange={setAdminResultDraft}
                 onSaveAdminResult={saveAdminResultRecord}
+                onOpenSelectedResultProject={openSelectedAdminResultProject}
                 onOpenSelectedResultVersion={openSelectedAdminResultVersion}
                 onExportAdminResult={exportAdminResultRecord}
                 onDeleteAdminResult={deleteAdminResultRecord}
