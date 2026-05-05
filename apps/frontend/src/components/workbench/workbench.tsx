@@ -1923,6 +1923,7 @@ export function Workbench() {
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
   const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
   const [securityEventRecords, setSecurityEventRecords] = useState<SecurityEventRecord[]>([]);
+  const [scriptRecordingMode, setScriptRecordingMode] = useState(false);
   const [securityEventWindowFilter, setSecurityEventWindowFilter] = useState<SecurityEventWindow>("24h");
   const [securityEventSourceFilter, setSecurityEventSourceFilter] = useState("");
   const [securityEventRiskFilter, setSecurityEventRiskFilter] = useState("");
@@ -3614,17 +3615,144 @@ export function Workbench() {
     return resultJobId ? jobHistory.find((entry) => entry.job_id === resultJobId) ?? null : null;
   };
 
+  const handleSidebarSectionChange = (section: SidebarSection) => {
+    setSidebarSection(section);
+    recordManualDslAction("nav/setSidebarSection", { section });
+  };
+
+  const handleStudyTabChange = (tab: StudyPanelTab) => {
+    setStudyTab(tab);
+    recordManualDslAction("nav/setTabs", { studyTab: tab });
+  };
+
+  const handleModelTabChange = (tab: ModelPanelTab) => {
+    setModelTab(tab);
+    recordManualDslAction("nav/setTabs", { modelTab: tab });
+  };
+
+  const handleLibraryTabChange = (tab: LibraryPanelTab) => {
+    setLibraryTab(tab);
+    recordManualDslAction("nav/setTabs", { libraryTab: tab });
+  };
+
+  const handleSystemPanelTabChange = (tab: SystemPanelTab) => {
+    setSystemPanelTab(tab);
+    recordManualDslAction("nav/setTabs", { systemPanelTab: tab });
+  };
+
+  const handleSystemDataTabChange = (tab: SystemDataTab) => {
+    setSystemDataTab(tab);
+    recordManualDslAction("nav/setTabs", { systemPanelTab: "data", systemDataTab: tab });
+  };
+
+  const handleAdminFilterProjectChange = (value: string) => {
+    setAdminFilterProjectId(value);
+    recordManualDslAction("data/setFilters", { activeTab: systemDataTab, projectId: value, modelVersionId: adminFilterModelVersionId });
+  };
+
+  const handleAdminFilterModelVersionChange = (value: string) => {
+    setAdminFilterModelVersionId(value);
+    recordManualDslAction("data/setFilters", { activeTab: systemDataTab, projectId: adminFilterProjectId, modelVersionId: value });
+  };
+
+  const handleSelectAdminJob = (jobId: string) => {
+    setSelectedAdminJobId(jobId);
+    recordManualDslAction("data/selectRecord", { activeTab: "jobs", jobId });
+  };
+
+  const handleSelectAdminResult = (jobId: string) => {
+    setSelectedAdminResultJobId(jobId);
+    recordManualDslAction("data/selectRecord", { activeTab: "results", resultJobId: jobId });
+  };
+
+  const handleTruss3dViewPresetChange = (preset: "iso" | "front" | "right" | "top") => {
+    setTruss3dViewPreset(preset);
+    recordManualDslAction("viewport/set3dView", { preset });
+  };
+
+  const handleTruss3dProjectionModeChange = (mode: "ortho" | "persp") => {
+    setTruss3dProjectionMode(mode);
+    recordManualDslAction("viewport/set3dView", { projection: mode });
+  };
+
+  const handleTruss3dBoxSelectModeChange = (next: boolean) => {
+    setTruss3dBoxSelectMode(next);
+    recordManualDslAction("viewport/setUiState", { boxSelectMode: next });
+  };
+
+  const handleTruss3dShowGridChange = (next: boolean) => {
+    setTruss3dShowGrid(next);
+    recordManualDslAction("viewport/toggleFlags", { grid: next });
+  };
+
+  const handleTruss3dShowLabelsChange = (next: boolean) => {
+    setTruss3dShowLabels(next);
+    recordManualDslAction("viewport/toggleFlags", { labels: next });
+  };
+
+  const handleTruss3dShowNodesChange = (next: boolean) => {
+    setTruss3dShowNodes(next);
+    recordManualDslAction("viewport/toggleFlags", { nodes: next });
+  };
+
+  const handleToggleTruss3dLinkMode = () => {
+    toggleTruss3dLinkMode();
+    recordManualDslAction("viewport/setUiState", { linkMode: !truss3dLinkMode });
+  };
+
+  const handleToggleImmersiveViewport = async () => {
+    await toggleImmersiveViewport();
+    recordManualDslAction("viewport/setUiState", { immersiveViewport: !immersiveViewport });
+  };
+
+  const handleToggleImmersiveToolDrawer = () => {
+    setImmersiveToolDrawerOpen((current) => {
+      const next = !current;
+      recordManualDslAction("viewport/setUiState", { toolDrawerOpen: next });
+      return next;
+    });
+  };
+
+  const handleToggleImmersiveHelpDrawer = () => {
+    setImmersiveHelpDrawerOpen((current) => {
+      const next = !current;
+      recordManualDslAction("viewport/setUiState", { helpDrawerOpen: next });
+      return next;
+    });
+  };
+
+  const handleTruss3dFocusViewport = () => {
+    setTruss3dFocusRequestVersion((current) => current + 1);
+    recordManualDslAction("viewport/focus3d", {});
+  };
+
+  const handleTruss3dResetViewport = () => {
+    setTruss3dResetRequestVersion((current) => current + 1);
+    recordManualDslAction("viewport/reset3d", {});
+  };
+
   const useCurrentProjectAsAdminFilter = () => {
     setAdminFilterProjectId(selectedProjectId ?? "");
+    recordManualDslAction("data/setFilters", {
+      activeTab: systemDataTab,
+      projectId: selectedProjectId ?? "",
+      modelVersionId: adminFilterModelVersionId,
+    });
   };
 
   const useCurrentVersionAsAdminFilter = () => {
     setAdminFilterModelVersionId(selectedVersionId ?? "");
+    recordManualDslAction("data/setFilters", {
+      activeTab: systemDataTab,
+      projectId: adminFilterProjectId,
+      modelVersionId: selectedVersionId ?? "",
+    });
   };
 
   const clearAdminFilters = () => {
     setAdminFilterProjectId("");
     setAdminFilterModelVersionId("");
+    recordManualDslAction("data/setFilters", { activeTab: systemDataTab, projectId: "", modelVersionId: "" });
   };
 
   const deleteSavedModelRecord = () => {
@@ -4410,10 +4538,23 @@ export function Workbench() {
       {
         id: `${Date.now()}-${current.length}`,
         at: new Date().toISOString(),
-        ...entry,
+      ...entry,
       },
       ...current,
     ].slice(0, 40));
+  };
+
+  const recordManualDslAction = (action: string, payload: Record<string, unknown>) => {
+    if (!scriptRecordingMode) return;
+
+    appendScriptActionLog({
+      action,
+      source: "manual",
+      status: "completed",
+      summary: JSON.stringify(payload),
+      payload,
+      note: language === "zh" ? "手动 UI 录制" : "Recorded from manual UI interaction",
+    });
   };
 
   const persistSecurityAuditEvent = async (entry: WorkbenchSecurityAuditEntry) => {
@@ -4518,12 +4659,12 @@ export function Workbench() {
           status: "cancelled",
           note: summary,
         });
-        appendScriptActionLog({ action, status: "failed", summary });
+        appendScriptActionLog({ action, source, status: "failed", summary, payload, note: summary });
         throw new Error(summary);
       }
     }
 
-    appendScriptActionLog({ action, status: "started", summary: JSON.stringify(payload) });
+    appendScriptActionLog({ action, source, status: "started", summary: JSON.stringify(payload), payload, note });
 
     try {
       let resultPayload: Record<string, unknown>;
@@ -4998,7 +5139,7 @@ export function Workbench() {
           throw new Error(`Unknown script action: ${action}`);
       }
 
-      appendScriptActionLog({ action, status: "completed", summary: JSON.stringify(resultPayload) });
+      appendScriptActionLog({ action, source, status: "completed", summary: JSON.stringify(resultPayload), payload, result: resultPayload, note });
       if (actionDefinition?.requiresConfirmation) {
         recordSecurityAuditEvent({
           action,
@@ -5020,7 +5161,7 @@ export function Workbench() {
           note: summary,
         });
       }
-      appendScriptActionLog({ action, status: "failed", summary });
+      appendScriptActionLog({ action, source, status: "failed", summary, payload, note: summary });
       throw error;
     }
   };
@@ -5983,7 +6124,7 @@ export function Workbench() {
             <button
               key={item.key}
               className={`rail-button${sidebarSection === item.key ? " rail-button--active" : ""}`}
-              onClick={() => setSidebarSection(item.key)}
+              onClick={() => handleSidebarSectionChange(item.key)}
               type="button"
             >
               <span>{item.symbol}</span>
@@ -6003,7 +6144,7 @@ export function Workbench() {
         {sidebarSection === "study" ? (
           <WorkbenchStudySidebar
             studyTab={studyTab}
-            onStudyTabChange={setStudyTab}
+            onStudyTabChange={handleStudyTabChange}
             sectionTitle={t.sections.study}
             summaryTabLabel={t.tabs.summary}
             controlsTabLabel={t.tabs.controls}
@@ -6031,7 +6172,7 @@ export function Workbench() {
         {sidebarSection === "model" ? (
           <WorkbenchModelSidebar
             modelTab={modelTab}
-            onModelTabChange={setModelTab}
+            onModelTabChange={handleModelTabChange}
             isTruss3d={isTruss3d}
             toolsTabLabel={t.tabs.tools}
             treeTabLabel={t.tabs.tree}
@@ -6043,7 +6184,7 @@ export function Workbench() {
         {sidebarSection === "library" ? (
           <WorkbenchLibrarySidebar
             libraryTab={libraryTab}
-            onLibraryTabChange={setLibraryTab}
+            onLibraryTabChange={handleLibraryTabChange}
             labels={t}
             sampleRows={librarySampleRows}
             projects={projects}
@@ -6098,7 +6239,7 @@ export function Workbench() {
         {sidebarSection === "system" ? (
           <WorkbenchSystemSidebar
             systemPanelTab={systemPanelTab}
-            onSystemPanelTabChange={setSystemPanelTab}
+            onSystemPanelTabChange={handleSystemPanelTabChange}
             configTabLabel={language === "zh" ? "配置" : "Config"}
             assistantTabLabel={t.assistant}
             scriptsTabLabel={t.scripts}
@@ -6218,7 +6359,9 @@ export function Workbench() {
                 actionLog={scriptActionLog}
                 getSnapshot={getScriptSnapshot}
                 language={language}
+                recordingMode={scriptRecordingMode}
                 onInvokeAction={invokeScriptAction}
+                onToggleRecordingMode={() => setScriptRecordingMode((current) => !current)}
                 snapshot={scriptSnapshot}
               />
             }
@@ -6339,9 +6482,9 @@ export function Workbench() {
                 useCurrentVersionLabel={t.useCurrentVersion}
                 clearFiltersLabel={t.clearFilters}
                 filterProjectValue={adminFilterProjectId}
-                onFilterProjectChange={setAdminFilterProjectId}
+                onFilterProjectChange={handleAdminFilterProjectChange}
                 filterVersionValue={adminFilterModelVersionId}
-                onFilterVersionChange={setAdminFilterModelVersionId}
+                onFilterVersionChange={handleAdminFilterModelVersionChange}
                 canUseCurrentProject={Boolean(selectedProjectId)}
                 canUseCurrentVersion={Boolean(selectedVersionId)}
                 onUseCurrentProject={useCurrentProjectAsAdminFilter}
@@ -6353,10 +6496,10 @@ export function Workbench() {
                 adminCaseIdLabel={t.adminCaseId}
                 resultPayloadLabel={t.resultPayload}
                 activeTab={systemDataTab}
-                onTabChange={setSystemDataTab}
+                onTabChange={handleSystemDataTabChange}
                 jobRows={adminJobRows}
                 selectedAdminJobId={selectedAdminJobId}
-                onSelectAdminJob={setSelectedAdminJobId}
+                onSelectAdminJob={handleSelectAdminJob}
                 selectedAdminJob={Boolean(selectedAdminJob)}
                 selectedAdminJobHasVersion={Boolean(selectedAdminJob?.model_version_id)}
                 selectedAdminJobHasProject={Boolean(selectedAdminJob?.project_id)}
@@ -6398,7 +6541,7 @@ export function Workbench() {
                 onDeleteAdminJob={deleteAdminJobRecord}
                 resultRows={adminResultRows}
                 selectedAdminResultJobId={selectedAdminResultJobId}
-                onSelectAdminResult={setSelectedAdminResultJobId}
+                onSelectAdminResult={handleSelectAdminResult}
                 selectedAdminResult={Boolean(selectedAdminResult)}
                 selectedAdminResultHasProject={Boolean(
                   jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.project_id,
@@ -6435,35 +6578,35 @@ export function Workbench() {
                 <div className="immersive-switches">
                   <button
                     className={`ghost-button ghost-button--compact${sidebarSection === "study" ? " ghost-button--active" : ""}`}
-                    onClick={() => setSidebarSection("study")}
+                    onClick={() => handleSidebarSectionChange("study")}
                     type="button"
                   >
                     {t.immersiveStudy}
                   </button>
                   <button
                     className={`ghost-button ghost-button--compact${sidebarSection === "model" ? " ghost-button--active" : ""}`}
-                    onClick={() => setSidebarSection("model")}
+                    onClick={() => handleSidebarSectionChange("model")}
                     type="button"
                   >
                     {t.immersiveModel}
                   </button>
                   <button
                     className={`ghost-button ghost-button--compact${sidebarSection === "library" ? " ghost-button--active" : ""}`}
-                    onClick={() => setSidebarSection(sidebarSection === "library" ? "model" : "library")}
+                    onClick={() => handleSidebarSectionChange(sidebarSection === "library" ? "model" : "library")}
                     type="button"
                   >
                     {t.immersiveLibrary}
                   </button>
                   <button
                     className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={() => setImmersiveToolDrawerOpen((current) => !current)}
+                    onClick={handleToggleImmersiveToolDrawer}
                     type="button"
                   >
                     {t.immersiveTools}
                   </button>
                   <button
                     className={`ghost-button ghost-button--compact${immersiveHelpDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={() => setImmersiveHelpDrawerOpen((current) => !current)}
+                    onClick={handleToggleImmersiveHelpDrawer}
                     type="button"
                   >
                     {t.immersiveHelp}
@@ -6474,14 +6617,14 @@ export function Workbench() {
                 <div className="immersive-switches">
                   <button
                     className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={() => setImmersiveToolDrawerOpen((current) => !current)}
+                    onClick={handleToggleImmersiveToolDrawer}
                     type="button"
                   >
                     {t.immersiveTools}
                   </button>
                   <button
                     className={`ghost-button ghost-button--compact${immersiveHelpDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={() => setImmersiveHelpDrawerOpen((current) => !current)}
+                    onClick={handleToggleImmersiveHelpDrawer}
                     type="button"
                   >
                     {t.immersiveHelp}
@@ -6489,7 +6632,7 @@ export function Workbench() {
                 </div>
               ) : null}
               {isTruss3d ? (
-                <button className={`ghost-button ghost-button--compact${immersiveViewport ? " ghost-button--active" : ""}`} onClick={toggleImmersiveViewport} type="button">
+                <button className={`ghost-button ghost-button--compact${immersiveViewport ? " ghost-button--active" : ""}`} onClick={() => void handleToggleImmersiveViewport()} type="button">
                   {immersiveViewport ? t.exitImmersive : t.enterImmersive}
                 </button>
               ) : null}
@@ -6511,7 +6654,7 @@ export function Workbench() {
                         <button
                           key={preset}
                           className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
-                          onClick={() => setTruss3dViewPreset(preset)}
+                          onClick={() => handleTruss3dViewPresetChange(preset)}
                           type="button"
                         >
                           {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
@@ -6519,7 +6662,7 @@ export function Workbench() {
                       ))}
                       <button
                         className={`ghost-button ghost-button--compact${selectedNode !== null || selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
+                        onClick={handleTruss3dFocusViewport}
                         type="button"
                       >
                         FOCUS
@@ -6533,7 +6676,7 @@ export function Workbench() {
                       </button>
                       <button
                         className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dProjectionMode((current) => (current === "ortho" ? "persp" : "ortho"))}
+                        onClick={() => handleTruss3dProjectionModeChange(truss3dProjectionMode === "ortho" ? "persp" : "ortho")}
                         type="button"
                       >
                         {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
@@ -6561,14 +6704,14 @@ export function Workbench() {
                       </button>
                       <button
                         className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dBoxSelectMode((current) => !current)}
+                        onClick={() => handleTruss3dBoxSelectModeChange(!truss3dBoxSelectMode)}
                         type="button"
                       >
                         BOX
                       </button>
                       <button
                         className="ghost-button ghost-button--compact"
-                        onClick={() => setTruss3dResetRequestVersion((current) => current + 1)}
+                        onClick={handleTruss3dResetViewport}
                         type="button"
                       >
                         RESET
@@ -6602,7 +6745,7 @@ export function Workbench() {
                             </button>
                           </div>
                           <div className="button-row">
-                            <button className={`ghost-button ghost-button--compact${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={toggleTruss3dLinkMode} type="button">
+                            <button className={`ghost-button ghost-button--compact${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={handleToggleTruss3dLinkMode} type="button">
                               {truss3dLinkMode ? t.linkModeActive : t.linkMode}
                             </button>
                             <button className="ghost-button ghost-button--compact" onClick={toggleTruss3dMemberFromDraft} type="button">
@@ -6988,11 +7131,11 @@ export function Workbench() {
             showShortcutHints={showShortcutHints}
             shortcutLegendTitle={t.shortcutLegendTitle}
             shortcutLegendRows={[...t.shortcutLegendRows]}
-            onProjectionModeChange={setTruss3dProjectionMode}
-            onShowGridChange={setTruss3dShowGrid}
-            onShowLabelsChange={setTruss3dShowLabels}
-            onShowNodesChange={setTruss3dShowNodes}
-            onBoxSelectModeChange={setTruss3dBoxSelectMode}
+            onProjectionModeChange={handleTruss3dProjectionModeChange}
+            onShowGridChange={handleTruss3dShowGridChange}
+            onShowLabelsChange={handleTruss3dShowLabelsChange}
+            onShowNodesChange={handleTruss3dShowNodesChange}
+            onBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
             viewportPixelWidth={viewportPixelWidth}
           />
           }
@@ -7006,7 +7149,7 @@ export function Workbench() {
                     <span>{t.immersiveLibrary}</span>
                     <button
                       className="ghost-button ghost-button--compact"
-                      onClick={() => setSidebarSection("model")}
+                      onClick={() => handleSidebarSectionChange("model")}
                       type="button"
                     >
                       {t.close}

@@ -2,10 +2,14 @@
 
 import { useEffect, useState } from "react";
 import {
+  buildWorkbenchRecordedMacroDraft,
   buildWorkbenchPythonPrelude,
   DEFAULT_WORKBENCH_PYTHON,
   ensurePyodideRuntime,
   isWorkbenchScriptActionHighRisk,
+  parseWorkbenchRecordedMacroDraft,
+  serializeWorkbenchRecordedMacroDraft,
+  serializeWorkbenchMacroPythonSnippet,
   WORKBENCH_SCRIPT_MACROS,
   WORKBENCH_SCRIPT_ACTIONS,
   type WorkbenchScriptActionDefinition,
@@ -19,6 +23,8 @@ type WorkbenchScriptPanelProps = {
   snapshot: WorkbenchScriptSnapshot;
   getSnapshot: () => WorkbenchScriptSnapshot;
   actionLog: WorkbenchScriptActionLogEntry[];
+  recordingMode: boolean;
+  onToggleRecordingMode: () => void;
   onInvokeAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
 };
 
@@ -41,6 +47,13 @@ const copy = {
     resetScript: "Reset template",
     runScript: "Run script",
     clearOutput: "Clear output",
+    startRecording: "Start recording",
+    stopRecording: "Stop recording",
+    recordingActive: "Recording manual UI actions into the DSL event stream.",
+    exportMacroJson: "Export macro JSON",
+    importMacroJson: "Import macro JSON",
+    macroJsonExported: "Exported the current recorded macro as JSON.",
+    macroJsonImported: "Imported a macro JSON draft into the editor.",
     snapshot: "Snapshot",
     actionCatalog: "Action catalog",
     macroCatalog: "Macro catalog",
@@ -53,6 +66,13 @@ const copy = {
     payload: "Payload",
     actionLog: "Action log",
     noActionLog: "No scripted actions yet.",
+    insertMacroDraft: "Insert macro draft",
+    macroDraftInserted: "Inserted a macro draft from recent action log.",
+    noMacroDraftSource: "Run a few actions first so the panel can assemble a draft macro.",
+    actionSource: "Source",
+    actionPayload: "Payload",
+    actionResult: "Result",
+    actionNote: "Note",
     riskNormal: "Normal",
     riskSensitive: "Sensitive",
     riskDestructive: "Destructive",
@@ -86,6 +106,13 @@ const copy = {
     resetScript: "重置模板",
     runScript: "运行脚本",
     clearOutput: "清空输出",
+    startRecording: "开始录制",
+    stopRecording: "停止录制",
+    recordingActive: "正在把手动 UI 操作记录进 DSL 事件流。",
+    exportMacroJson: "导出宏 JSON",
+    importMacroJson: "导入宏 JSON",
+    macroJsonExported: "已把当前录制宏导出为 JSON。",
+    macroJsonImported: "已把宏 JSON 草稿导入编辑器。",
     snapshot: "状态快照",
     actionCatalog: "动作目录",
     macroCatalog: "宏动作目录",
@@ -98,6 +125,13 @@ const copy = {
     payload: "参数",
     actionLog: "动作日志",
     noActionLog: "还没有脚本动作记录。",
+    insertMacroDraft: "插入宏草稿",
+    macroDraftInserted: "已根据最近动作日志插入宏草稿。",
+    noMacroDraftSource: "先执行几条动作，面板才能帮你拼出宏草稿。",
+    actionSource: "来源",
+    actionPayload: "参数",
+    actionResult: "结果",
+    actionNote: "备注",
     riskNormal: "普通",
     riskSensitive: "敏感",
     riskDestructive: "高风险",
@@ -133,7 +167,17 @@ function stringifyPayload(payload: Record<string, unknown> | undefined): string 
   return payload ? JSON.stringify(payload) : "{}";
 }
 
-export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, onInvokeAction }: WorkbenchScriptPanelProps) {
+function downloadTextFile(filename: string, contents: string) {
+  const blob = new Blob([contents], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
   const t = copy[language];
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [output, setOutput] = useState<string[]>([]);
@@ -224,6 +268,46 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.run_macro("${macroId}", ${stringifyPayload(payload)})\n`);
   };
 
+  const insertMacroDraftFromLog = () => {
+    const draft = buildWorkbenchRecordedMacroDraft(actionLog);
+
+    if (!draft) {
+      appendOutput(`[macro] ${t.noMacroDraftSource}`);
+      return;
+    }
+
+    const snippet = serializeWorkbenchMacroPythonSnippet(draft);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+    appendOutput(`[macro] ${t.macroDraftInserted}`);
+  };
+
+  const exportMacroDraftJson = () => {
+    const draft = buildWorkbenchRecordedMacroDraft(actionLog);
+
+    if (!draft) {
+      appendOutput(`[macro] ${t.noMacroDraftSource}`);
+      return;
+    }
+
+    downloadTextFile(`${draft.id}.json`, serializeWorkbenchRecordedMacroDraft(draft));
+    appendOutput(`[macro] ${t.macroJsonExported}`);
+  };
+
+  const importMacroJson = async (file: File | undefined) => {
+    if (!file) return;
+
+    try {
+      const parsed = parseWorkbenchRecordedMacroDraft(JSON.parse(await file.text()) as unknown);
+      const snippet = serializeWorkbenchMacroPythonSnippet(parsed);
+      setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+      appendOutput(`[macro] ${t.macroJsonImported}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput(`[macro] ${message}`);
+      setRuntimeError(message);
+    }
+  };
+
   return (
     <>
       <section className="sidebar-card sidebar-card--compact">
@@ -254,10 +338,29 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
           <button className="ghost-button" onClick={() => void runScript()} type="button">
             {t.runScript}
           </button>
+          <button className={`ghost-button${recordingMode ? " ghost-button--active" : ""}`} onClick={onToggleRecordingMode} type="button">
+            {recordingMode ? t.stopRecording : t.startRecording}
+          </button>
+          <button className="ghost-button" onClick={exportMacroDraftJson} type="button">
+            {t.exportMacroJson}
+          </button>
+          <label className="ghost-button" style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
+            {t.importMacroJson}
+            <input
+              accept="application/json,.json"
+              hidden
+              onChange={(event) => {
+                void importMacroJson(event.target.files?.[0]);
+                event.currentTarget.value = "";
+              }}
+              type="file"
+            />
+          </label>
           <button className="ghost-button" onClick={() => setOutput([])} type="button">
             {t.clearOutput}
           </button>
         </div>
+        {recordingMode ? <p className="card-copy">{t.recordingActive}</p> : null}
       </section>
 
       <section className="sidebar-card sidebar-card--compact">
@@ -313,6 +416,11 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
           <h2>{t.actionLog}</h2>
           <span>{actionLog.length}</span>
         </div>
+        <div className="button-row">
+          <button className="ghost-button ghost-button--compact" onClick={insertMacroDraftFromLog} type="button">
+            {t.insertMacroDraft}
+          </button>
+        </div>
         {actionLog.length === 0 ? (
           <p className="card-copy">{t.noActionLog}</p>
         ) : (
@@ -324,6 +432,30 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
                   <span>{entry.status}</span>
                 </div>
                 <p className="card-copy">{entry.summary}</p>
+                {entry.source ? (
+                  <div className="script-panel__payload">
+                    <span>{t.actionSource}</span>
+                    <code>{entry.source}</code>
+                  </div>
+                ) : null}
+                {entry.payload ? (
+                  <div className="script-panel__payload">
+                    <span>{t.actionPayload}</span>
+                    <code>{JSON.stringify(entry.payload)}</code>
+                  </div>
+                ) : null}
+                {entry.result ? (
+                  <div className="script-panel__payload">
+                    <span>{t.actionResult}</span>
+                    <code>{JSON.stringify(entry.result)}</code>
+                  </div>
+                ) : null}
+                {entry.note ? (
+                  <div className="script-panel__payload">
+                    <span>{t.actionNote}</span>
+                    <code>{entry.note}</code>
+                  </div>
+                ) : null}
                 <div className="script-panel__payload">
                   <span>Time</span>
                   <code>{entry.at}</code>

@@ -46,9 +46,13 @@ export type WorkbenchScriptSnapshot = {
 export type WorkbenchScriptActionLogEntry = {
   id: string;
   action: string;
+  source?: "script" | "assistant" | "manual";
   status: "started" | "completed" | "failed";
   at: string;
   summary: string;
+  payload?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  note?: string;
 };
 
 export type WorkbenchScriptActionDefinition = {
@@ -78,6 +82,11 @@ export type WorkbenchScriptMacroDefinition = {
     zh: string;
   };
   payloadExample?: Record<string, unknown>;
+  steps: WorkbenchScriptMacroStep[];
+};
+
+export type WorkbenchRecordedMacroDraft = {
+  id: string;
   steps: WorkbenchScriptMacroStep[];
 };
 
@@ -595,6 +604,81 @@ export function getWorkbenchScriptMacroDefinition(macroId: string) {
   return WORKBENCH_SCRIPT_MACROS.find((entry) => entry.id === macroId) ?? null;
 }
 
+export function buildWorkbenchRecordedMacroDraft(
+  actionLog: WorkbenchScriptActionLogEntry[],
+  options: {
+    id?: string;
+    maxSteps?: number;
+  } = {},
+): WorkbenchRecordedMacroDraft | null {
+  const steps = actionLog
+    .filter(
+      (entry) =>
+        entry.action !== "macro/run" &&
+        ((entry.source === "manual" && entry.status === "completed") || entry.status === "started"),
+    )
+    .slice(0, options.maxSteps ?? 12)
+    .reverse()
+    .flatMap((entry) => {
+      const payload = entry.payload;
+      return [{ action: entry.action, ...(payload ? { payload } : {}) }];
+    });
+
+  if (steps.length === 0) {
+    return null;
+  }
+
+  return {
+    id: options.id ?? "macro/draft-from-log",
+    steps,
+  };
+}
+
+export function isWorkbenchMacroStep(value: unknown): value is WorkbenchScriptMacroStep {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { action?: unknown; payload?: unknown };
+  if (typeof candidate.action !== "string" || candidate.action.trim().length === 0) return false;
+  if (candidate.payload === undefined) return true;
+  return Boolean(candidate.payload && typeof candidate.payload === "object" && !Array.isArray(candidate.payload));
+}
+
+export function parseWorkbenchRecordedMacroDraft(value: unknown): WorkbenchRecordedMacroDraft {
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid macro document.");
+  }
+
+  const candidate = value as { id?: unknown; steps?: unknown };
+  const id = typeof candidate.id === "string" && candidate.id.trim() ? candidate.id : "macro/imported";
+  const steps = Array.isArray(candidate.steps) ? candidate.steps : null;
+
+  if (!steps || steps.length === 0) {
+    throw new Error("Macro document does not contain any steps.");
+  }
+
+  const normalizedSteps = steps.map((step) => {
+    if (!isWorkbenchMacroStep(step)) {
+      throw new Error("Macro document contains an invalid step.");
+    }
+    return {
+      action: step.action,
+      ...(step.payload ? { payload: step.payload } : {}),
+    };
+  });
+
+  return {
+    id,
+    steps: normalizedSteps,
+  };
+}
+
+export function serializeWorkbenchRecordedMacroDraft(macro: WorkbenchRecordedMacroDraft): string {
+  return JSON.stringify(macro, null, 2);
+}
+
+export function serializeWorkbenchMacroPythonSnippet(macro: WorkbenchRecordedMacroDraft): string {
+  return `recorded_macro = ${JSON.stringify(macro, null, 2)}\n\nawait ky.run_macro_definition(recorded_macro)\n`;
+}
+
 function resolveWorkbenchMacroTemplateString(
   value: string,
   payload: Record<string, unknown>,
@@ -732,6 +816,7 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # - ky.log(*parts)
 # - await ky.invoke("action/id", payload_dict)
 # - await ky.run_macro("macro/id", payload_dict)
+# - await ky.run_macro_definition(macro_dict)
 # - await ky.sleep(seconds)
 # - await ky.wait_until(...)
 # - await ky.wait_for_job_done()
@@ -781,6 +866,17 @@ class _KyuubikiBridge:
         if payload is None:
             payload = {}
         return await self.invoke("macro/run", {"macroId": macro, **payload})
+
+    async def run_steps(self, steps):
+        results = []
+        for step in steps:
+            action = step.get("action")
+            payload = step.get("payload", {})
+            results.append(await self.invoke(action, payload))
+        return results
+
+    async def run_macro_definition(self, macro):
+        return await self.run_steps(macro.get("steps", []))
 
     async def sleep(self, seconds=0.0):
         await __kyuubikiBridge.sleep(seconds)
