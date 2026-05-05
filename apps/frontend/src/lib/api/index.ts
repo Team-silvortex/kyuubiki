@@ -626,39 +626,122 @@ function authHeadersFor(url: string) {
   }
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
-  Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
-    if (value) headers.set(key, value);
-  });
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
-  const response = await fetch(url, {
-    ...init,
-    headers,
-  });
-  const payload = (await response.json()) as T & { error?: string };
-
-  if (!response.ok) {
-    throw new Error(payload.error ?? "request failed");
-  }
-
-  return payload;
+function isAbortLikeError(error: unknown): boolean {
+  return error instanceof DOMException
+    ? error.name === "AbortError"
+    : error instanceof Error && error.name === "AbortError";
 }
 
-async function requestText(url: string, init?: RequestInit): Promise<string> {
+function buildTimeoutMessage(url: string) {
+  return `request timed out: ${url}`;
+}
+
+async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(buildTimeoutMessage(url)), timeoutMs);
+  const forwardAbort = () => controller.abort(init?.signal?.reason);
+
+  if (init?.signal) {
+    if (init.signal.aborted) {
+      controller.abort(init.signal.reason);
+    } else {
+      init.signal.addEventListener("abort", forwardAbort, { once: true });
+    }
+  }
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (isAbortLikeError(error)) {
+      const reason =
+        typeof controller.signal.reason === "string" && controller.signal.reason.trim()
+          ? controller.signal.reason
+          : buildTimeoutMessage(url);
+      throw new Error(reason);
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+    init?.signal?.removeEventListener("abort", forwardAbort);
+  }
+}
+
+async function readResponsePayload(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  const text = await response.text();
+  if (!text.trim()) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
+}
+
+async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?: number): Promise<T> {
   const headers = new Headers(init?.headers);
   Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
     if (value) headers.set(key, value);
   });
 
-  const response = await fetch(url, {
-    ...init,
-    headers,
+  const response = await fetchWithTimeout(
+    url,
+    {
+      ...init,
+      headers,
+    },
+    timeoutMs,
+  );
+  const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string }) | string | null;
+
+  if (!response.ok) {
+    if (payload && typeof payload === "object") {
+      throw new Error(payload.error ?? payload.message ?? `request failed: ${response.status}`);
+    }
+
+    if (typeof payload === "string" && payload.trim()) {
+      throw new Error(payload);
+    }
+
+    throw new Error(`request failed: ${response.status}`);
+  }
+
+  return (payload ?? {}) as T;
+}
+
+async function requestText(url: string, init?: RequestInit, timeoutMs?: number): Promise<string> {
+  const headers = new Headers(init?.headers);
+  Object.entries(authHeadersFor(url)).forEach(([key, value]) => {
+    if (value) headers.set(key, value);
   });
+
+  const response = await fetchWithTimeout(
+    url,
+    {
+      ...init,
+      headers,
+    },
+    timeoutMs,
+  );
   const payload = await response.text();
 
   if (!response.ok) {
-    throw new Error(payload || "request failed");
+    throw new Error(payload || `request failed: ${response.status}`);
   }
 
   return payload;

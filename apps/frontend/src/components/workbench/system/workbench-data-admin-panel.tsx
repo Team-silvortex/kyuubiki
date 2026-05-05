@@ -35,6 +35,7 @@ type WorkbenchDataAdminPanelProps = {
   saveRecordLabel: string;
   deleteRecordLabel: string;
   exportRecordLabel: string;
+  applyRecordContextLabel: string;
   openLinkedProjectLabel: string;
   openLinkedVersionLabel: string;
   filterProjectLabel: string;
@@ -64,8 +65,10 @@ type WorkbenchDataAdminPanelProps = {
   selectedAdminJob: boolean;
   selectedAdminJobHasVersion: boolean;
   selectedAdminJobHasProject: boolean;
+  selectedAdminJobHasContext: boolean;
   canCancelSelectedJob: boolean;
   onCancelSelectedJob: () => void;
+  onApplySelectedJobContext: () => void;
   onOpenSelectedJobProject: () => void;
   onOpenSelectedJobVersion: () => void;
   adminJobMessage: string;
@@ -84,9 +87,11 @@ type WorkbenchDataAdminPanelProps = {
   selectedAdminResult: boolean;
   selectedAdminResultHasProject: boolean;
   selectedAdminResultHasVersion: boolean;
+  selectedAdminResultHasContext: boolean;
   adminResultDraft: string;
   onAdminResultDraftChange: (value: string) => void;
   onSaveAdminResult: () => void;
+  onApplySelectedResultContext: () => void;
   onOpenSelectedResultProject: () => void;
   onOpenSelectedResultVersion: () => void;
   onExportAdminResult: () => void;
@@ -104,6 +109,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   saveRecordLabel,
   deleteRecordLabel,
   exportRecordLabel,
+  applyRecordContextLabel,
   openLinkedProjectLabel,
   openLinkedVersionLabel,
   filterProjectLabel,
@@ -133,8 +139,10 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   selectedAdminJob,
   selectedAdminJobHasVersion,
   selectedAdminJobHasProject,
+  selectedAdminJobHasContext,
   canCancelSelectedJob,
   onCancelSelectedJob,
+  onApplySelectedJobContext,
   onOpenSelectedJobProject,
   onOpenSelectedJobVersion,
   adminJobMessage,
@@ -153,9 +161,11 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   selectedAdminResult,
   selectedAdminResultHasProject,
   selectedAdminResultHasVersion,
+  selectedAdminResultHasContext,
   adminResultDraft,
   onAdminResultDraftChange,
   onSaveAdminResult,
+  onApplySelectedResultContext,
   onOpenSelectedResultProject,
   onOpenSelectedResultVersion,
   onExportAdminResult,
@@ -226,6 +236,14 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               <div className="button-row">
                 <button className="ghost-button" disabled={!canCancelSelectedJob} onClick={onCancelSelectedJob} type="button">
                   {cancelJobLabel}
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={!selectedAdminJobHasContext}
+                  onClick={onApplySelectedJobContext}
+                  type="button"
+                >
+                  {applyRecordContextLabel}
                 </button>
                 <button
                   className="ghost-button"
@@ -315,6 +333,14 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
               <div className="button-row">
                 <button className="ghost-button" onClick={onSaveAdminResult} type="button">
                   {saveRecordLabel}
+                </button>
+                <button
+                  className="ghost-button"
+                  disabled={!selectedAdminResultHasContext}
+                  onClick={onApplySelectedResultContext}
+                  type="button"
+                >
+                  {applyRecordContextLabel}
                 </button>
                 <button
                   className="ghost-button"

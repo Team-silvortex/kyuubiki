@@ -9,16 +9,30 @@ export type WorkbenchScriptSnapshot = {
   modelTab: string;
   libraryTab: string;
   systemPanelTab: string;
+  systemDataTab: string;
   language: WorkbenchScriptLanguage;
   theme: string;
   frontendRuntimeMode: string;
   selectedProjectId: string | null;
   selectedModelId: string | null;
   selectedVersionId: string | null;
+  selectedAdminJobId: string | null;
+  selectedAdminResultJobId: string | null;
+  adminFilterProjectId: string;
+  adminFilterModelVersionId: string;
   loadedModelName: string;
   activeMaterial: string;
   selectedNode: number | null;
   selectedElement: number | null;
+  selectedTruss3dNodeIndices: number[];
+  memberDraftNodeIndices: number[];
+  immersiveViewport: boolean;
+  immersiveToolDrawerOpen: boolean;
+  immersiveHelpDrawerOpen: boolean;
+  truss3dProjectionMode: string;
+  truss3dViewPreset: string;
+  truss3dBoxSelectMode: boolean;
+  truss3dLinkMode: boolean;
   hasResult: boolean;
   jobStatus: string | null;
   projectCount: number;
@@ -49,6 +63,27 @@ export type WorkbenchScriptActionDefinition = {
   payloadExample?: Record<string, unknown>;
 };
 
+export type WorkbenchScriptMacroStep = {
+  action: string;
+  payload?: Record<string, unknown>;
+};
+
+export type WorkbenchScriptMacroDefinition = {
+  id: string;
+  category: string;
+  risk: "normal" | "sensitive" | "destructive";
+  requiresConfirmation?: boolean;
+  summary: {
+    en: string;
+    zh: string;
+  };
+  payloadExample?: Record<string, unknown>;
+  steps: WorkbenchScriptMacroStep[];
+};
+
+const MACRO_TEMPLATE_EXACT_RE = /^\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}$/;
+const MACRO_TEMPLATE_INLINE_RE = /\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}/g;
+
 export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
   {
     id: "nav/setSidebarSection",
@@ -69,6 +104,16 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
       zh: "切换当前研究类型。",
     },
     payloadExample: { studyKind: "truss_3d" },
+  },
+  {
+    id: "nav/setTabs",
+    category: "navigation",
+    risk: "normal",
+    summary: {
+      en: "Switch study, model, library, system, or data subtabs in one action.",
+      zh: "一次动作切换 study、model、library、system 或 data 子标签。",
+    },
+    payloadExample: { libraryTab: "projects", systemPanelTab: "data", systemDataTab: "results" },
   },
   {
     id: "settings/patch",
@@ -282,6 +327,16 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     payloadExample: { nodeIndex: 0, elementIndex: null },
   },
   {
+    id: "selection/set3d",
+    category: "selection",
+    risk: "normal",
+    summary: {
+      en: "Patch the active 3D node selection, draft link nodes, or link mode state.",
+      zh: "更新当前三维节点选择、连线草稿节点或连线模式状态。",
+    },
+    payloadExample: { nodeIndices: [0, 1], anchorNodeIndex: 0, memberDraftNodeIndices: [0, 1], linkMode: true },
+  },
+  {
     id: "job/run",
     category: "job",
     risk: "normal",
@@ -366,6 +421,46 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     payloadExample: { grid: true, labels: false, nodes: true },
   },
   {
+    id: "viewport/setUiState",
+    category: "viewport",
+    risk: "normal",
+    summary: {
+      en: "Control immersive viewport drawers, box select, or 3D link mode UI state.",
+      zh: "控制沉浸式视图抽屉、框选或三维连线模式等 UI 状态。",
+    },
+    payloadExample: { immersiveViewport: true, toolDrawerOpen: true, helpDrawerOpen: false, boxSelectMode: false, linkMode: true },
+  },
+  {
+    id: "data/setFilters",
+    category: "data",
+    risk: "normal",
+    summary: {
+      en: "Set the jobs/results filter fields and optionally switch the active data tab.",
+      zh: "设置 jobs/results 的筛选字段，并可切换当前数据标签。",
+    },
+    payloadExample: { activeTab: "results", projectId: "proj_123", modelVersionId: "ver_456" },
+  },
+  {
+    id: "data/selectRecord",
+    category: "data",
+    risk: "normal",
+    summary: {
+      en: "Select a job or result record in System > Data.",
+      zh: "在 System > Data 中选中一条任务或结果记录。",
+    },
+    payloadExample: { activeTab: "jobs", jobId: "job_123" },
+  },
+  {
+    id: "data/openLinkedContext",
+    category: "data",
+    risk: "normal",
+    summary: {
+      en: "Open or apply the linked project/version context from a selected job or result record.",
+      zh: "从选中的任务或结果记录打开或应用关联的项目/版本上下文。",
+    },
+    payloadExample: { target: "result", mode: "apply" },
+  },
+  {
     id: "data/exportDatabase",
     category: "data",
     risk: "sensitive",
@@ -377,12 +472,172 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
   },
 ];
 
+export const WORKBENCH_SCRIPT_MACROS: WorkbenchScriptMacroDefinition[] = [
+  {
+    id: "macro/openDataResults",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Open System > Data > Results and keep the current data filters.",
+      zh: "打开 System > Data > Results，并保留当前数据筛选。",
+    },
+    steps: [
+      { action: "nav/setSidebarSection", payload: { section: "system" } },
+      { action: "nav/setTabs", payload: { systemPanelTab: "data", systemDataTab: "results" } },
+    ],
+  },
+  {
+    id: "macro/openProjectLibrary",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Open Library > Projects for project-oriented browsing.",
+      zh: "打开 Library > Projects，便于从项目视角浏览。",
+    },
+    steps: [
+      { action: "nav/setSidebarSection", payload: { section: "library" } },
+      { action: "nav/setTabs", payload: { libraryTab: "projects" } },
+    ],
+  },
+  {
+    id: "macro/prepare3dEditing",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Switch into the 3D modeling surface with model tools visible.",
+      zh: "切到三维建模工作面，并展开建模工具。",
+    },
+    steps: [
+      { action: "nav/setStudyKind", payload: { studyKind: "truss_3d" } },
+      { action: "nav/setSidebarSection", payload: { section: "model" } },
+      { action: "nav/setTabs", payload: { modelTab: "tools" } },
+      { action: "viewport/setUiState", payload: { toolDrawerOpen: true, helpDrawerOpen: false } },
+    ],
+  },
+  {
+    id: "macro/focusCurrent3dSelection",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Bring the 3D editor into focus and frame the current selection.",
+      zh: "把三维编辑区切到前台，并聚焦当前选择。",
+    },
+    steps: [
+      { action: "nav/setSidebarSection", payload: { section: "model" } },
+      { action: "nav/setTabs", payload: { modelTab: "tools" } },
+      { action: "viewport/focus3d" },
+    ],
+  },
+  {
+    id: "macro/reviewSelectedDataRecord",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Apply the currently selected job/result record back into the workbench context.",
+      zh: "把当前选中的任务/结果记录重新应用回工作台上下文。",
+    },
+    payloadExample: { target: "result" },
+    steps: [
+      { action: "nav/setSidebarSection", payload: { section: "system" } },
+      { action: "nav/setTabs", payload: { systemPanelTab: "data" } },
+      { action: "data/openLinkedContext", payload: { target: "{{payload.target}}", mode: "{{payload.mode}}" } },
+    ],
+  },
+  {
+    id: "macro/filterProjectResults",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Open System > Data > Results and apply project/version filters from macro input.",
+      zh: "打开 System > Data > Results，并套用宏输入里的项目/版本筛选。",
+    },
+    payloadExample: { projectId: "proj_123", modelVersionId: "ver_456" },
+    steps: [
+      { action: "nav/setSidebarSection", payload: { section: "system" } },
+      { action: "nav/setTabs", payload: { systemPanelTab: "data", systemDataTab: "results" } },
+      {
+        action: "data/setFilters",
+        payload: {
+          activeTab: "results",
+          projectId: "{{payload.projectId}}",
+          modelVersionId: "{{payload.modelVersionId}}",
+        },
+      },
+    ],
+  },
+  {
+    id: "macro/openResultVersionReview",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Select a result record and open its linked saved version for review.",
+      zh: "选中一条结果记录，并打开它关联的保存版本进行复查。",
+    },
+    payloadExample: { resultJobId: "job_123" },
+    steps: [
+      { action: "nav/setSidebarSection", payload: { section: "system" } },
+      { action: "nav/setTabs", payload: { systemPanelTab: "data", systemDataTab: "results" } },
+      { action: "data/selectRecord", payload: { activeTab: "results", resultJobId: "{{payload.resultJobId}}" } },
+      { action: "data/openLinkedContext", payload: { target: "result", mode: "version", resultJobId: "{{payload.resultJobId}}" } },
+    ],
+  },
+];
+
 export function getWorkbenchScriptActionDefinition(actionId: string) {
   return WORKBENCH_SCRIPT_ACTIONS.find((entry) => entry.id === actionId) ?? null;
 }
 
 export function isWorkbenchScriptActionHighRisk(actionId: string) {
   return Boolean(getWorkbenchScriptActionDefinition(actionId)?.requiresConfirmation);
+}
+
+export function getWorkbenchScriptMacroDefinition(macroId: string) {
+  return WORKBENCH_SCRIPT_MACROS.find((entry) => entry.id === macroId) ?? null;
+}
+
+function resolveWorkbenchMacroTemplateString(
+  value: string,
+  payload: Record<string, unknown>,
+  snapshot: WorkbenchScriptSnapshot,
+): unknown {
+  const exact = value.match(MACRO_TEMPLATE_EXACT_RE);
+
+  if (exact) {
+    const [, source, key] = exact;
+    return source === "payload"
+      ? payload[key]
+      : snapshot[key as keyof WorkbenchScriptSnapshot];
+  }
+
+  return value.replaceAll(MACRO_TEMPLATE_INLINE_RE, (_full, source: string, key: string) => {
+    const resolved =
+      source === "payload"
+        ? payload[key]
+        : snapshot[key as keyof WorkbenchScriptSnapshot];
+    return resolved === undefined || resolved === null ? "" : String(resolved);
+  });
+}
+
+export function resolveWorkbenchMacroPayloadTemplates(
+  value: unknown,
+  payload: Record<string, unknown>,
+  snapshot: WorkbenchScriptSnapshot,
+): unknown {
+  if (typeof value === "string") {
+    return resolveWorkbenchMacroTemplateString(value, payload, snapshot);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveWorkbenchMacroPayloadTemplates(entry, payload, snapshot));
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, resolveWorkbenchMacroPayloadTemplates(entry, payload, snapshot)]),
+    );
+  }
+
+  return value;
 }
 
 type PyodideInterface = {
@@ -401,6 +656,7 @@ declare global {
       invoke: (action: string, payloadJson?: string) => Promise<string>;
       state_json: () => string;
       actions_json: () => string;
+      macros_json: () => string;
       log: (message: string) => void;
       sleep: (seconds?: number) => Promise<void>;
     };
@@ -472,8 +728,10 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # Available helpers:
 # - state: current frontend snapshot (dict)
 # - actions: action catalog (list[dict])
+# - macros: macro catalog (list[dict])
 # - ky.log(*parts)
 # - await ky.invoke("action/id", payload_dict)
+# - await ky.run_macro("macro/id", payload_dict)
 # - await ky.sleep(seconds)
 # - await ky.wait_until(...)
 # - await ky.wait_for_job_done()
@@ -507,6 +765,9 @@ class _KyuubikiBridge:
     def actions(self):
         return json.loads(__kyuubikiBridge.actions_json())
 
+    def macros(self):
+        return json.loads(__kyuubikiBridge.macros_json())
+
     def log(self, *parts):
         __kyuubikiBridge.log(" ".join(str(part) for part in parts))
 
@@ -515,6 +776,11 @@ class _KyuubikiBridge:
             payload = {}
         result = await __kyuubikiBridge.invoke(action, json.dumps(payload))
         return json.loads(result)
+
+    async def run_macro(self, macro, payload=None):
+        if payload is None:
+            payload = {}
+        return await self.invoke("macro/run", {"macroId": macro, **payload})
 
     async def sleep(self, seconds=0.0):
         await __kyuubikiBridge.sleep(seconds)
@@ -548,5 +814,6 @@ class _KyuubikiBridge:
 ky = _KyuubikiBridge()
 state = ky.state()
 actions = ky.actions()
+macros = ky.macros()
 `;
 }

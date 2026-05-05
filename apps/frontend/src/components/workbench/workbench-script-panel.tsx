@@ -6,6 +6,7 @@ import {
   DEFAULT_WORKBENCH_PYTHON,
   ensurePyodideRuntime,
   isWorkbenchScriptActionHighRisk,
+  WORKBENCH_SCRIPT_MACROS,
   WORKBENCH_SCRIPT_ACTIONS,
   type WorkbenchScriptActionDefinition,
   type WorkbenchScriptActionLogEntry,
@@ -42,6 +43,7 @@ const copy = {
     clearOutput: "Clear output",
     snapshot: "Snapshot",
     actionCatalog: "Action catalog",
+    macroCatalog: "Macro catalog",
     editor: "Python script",
     output: "Output",
     noOutput: "Script output will appear here.",
@@ -67,6 +69,7 @@ const copy = {
       history: "History",
       viewport: "Viewport",
       data: "Data",
+      macro: "Macro",
     },
   },
   zh: {
@@ -85,6 +88,7 @@ const copy = {
     clearOutput: "清空输出",
     snapshot: "状态快照",
     actionCatalog: "动作目录",
+    macroCatalog: "宏动作目录",
     editor: "Python 脚本",
     output: "输出",
     noOutput: "脚本输出会显示在这里。",
@@ -110,6 +114,7 @@ const copy = {
       history: "历史",
       viewport: "视图",
       data: "数据",
+      macro: "宏动作",
     },
   },
 } as const;
@@ -189,6 +194,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         },
         state_json: () => JSON.stringify(getSnapshot()),
         actions_json: () => JSON.stringify(WORKBENCH_SCRIPT_ACTIONS),
+        macros_json: () => JSON.stringify(WORKBENCH_SCRIPT_MACROS),
         log: (message: string) => appendOutput(message),
         sleep: async (seconds = 0) =>
           new Promise<void>((resolve) => {
@@ -212,6 +218,10 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const insertAction = (action: WorkbenchScriptActionDefinition) => {
     const payload = stringifyPayload(action.payloadExample);
     setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.invoke("${action.id}", ${payload})\n`);
+  };
+
+  const insertMacro = (macroId: string, payload?: Record<string, unknown>) => {
+    setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.run_macro("${macroId}", ${stringifyPayload(payload)})\n`);
   };
 
   return (
@@ -262,7 +272,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
           </div>
           <div>
             <span>{t.actionCount}</span>
-            <strong>{WORKBENCH_SCRIPT_ACTIONS.length}</strong>
+            <strong>{WORKBENCH_SCRIPT_ACTIONS.length + WORKBENCH_SCRIPT_MACROS.length}</strong>
           </div>
           <div>
             <span>{t.lineCount}</span>
@@ -351,6 +361,52 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
               </div>
               <div className="button-row">
                 <button className="ghost-button ghost-button--compact" onClick={() => insertAction(action)} type="button">
+                  {language === "zh" ? "插入" : "Insert"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="sidebar-card sidebar-card--compact">
+        <div className="card-head">
+          <h2>{t.macroCatalog}</h2>
+          <span>{WORKBENCH_SCRIPT_MACROS.length}</span>
+        </div>
+        <div className="script-panel__catalog">
+          {WORKBENCH_SCRIPT_MACROS.map((macro) => (
+            <article className="script-panel__action" key={macro.id}>
+              <div className="script-panel__action-head">
+                <strong>{macro.id}</strong>
+                <span>
+                  {t.categories[macro.category as keyof typeof t.categories] ?? macro.category}
+                  {macro.risk === "destructive"
+                    ? ` · ${t.riskDestructive}`
+                    : macro.risk === "sensitive"
+                      ? ` · ${t.riskSensitive}`
+                      : ` · ${t.riskNormal}`}
+                </span>
+              </div>
+              <p className="card-copy">{macro.summary[language]}</p>
+              {macro.requiresConfirmation ? <p className="card-copy">{t.confirmationRequired}</p> : null}
+              <div className="script-panel__payload">
+                <span>{t.payload}</span>
+                <code>{stringifyPayload(macro.payloadExample)}</code>
+              </div>
+              <div className="script-panel__payload">
+                <span>{language === "zh" ? "步骤" : "Steps"}</span>
+                <code>{macro.steps.map((step) => step.action).join(" -> ")}</code>
+              </div>
+              {macro.payloadExample ? (
+                <p className="card-copy">
+                  {language === "zh"
+                    ? "这个宏支持通过 payload 覆盖模板参数。"
+                    : "This macro supports payload-driven template parameters."}
+                </p>
+              ) : null}
+              <div className="button-row">
+                <button className="ghost-button ghost-button--compact" onClick={() => insertMacro(macro.id, macro.payloadExample)} type="button">
                   {language === "zh" ? "插入" : "Insert"}
                 </button>
               </div>

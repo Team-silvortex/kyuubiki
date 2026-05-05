@@ -151,6 +151,8 @@ import {
 import { SAMPLE_LIBRARY } from "@/lib/models";
 import {
   getWorkbenchScriptActionDefinition,
+  getWorkbenchScriptMacroDefinition,
+  resolveWorkbenchMacroPayloadTemplates,
   type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
@@ -535,6 +537,7 @@ const copy = {
     saveRecord: "Save record",
     deleteRecord: "Delete record",
     exportRecord: "Export record",
+    applyRecordContext: "Apply record context",
     openLinkedProject: "Open linked project",
     openLinkedVersion: "Open linked version",
     filterProject: "Filter project",
@@ -547,6 +550,7 @@ const copy = {
     resultDeleted: "Result record deleted.",
     jobSaved: "Job record updated.",
     jobDeleted: "Job record deleted.",
+    recordContextApplied: "Applied the record context to the workbench.",
     linkedProjectOpened: "Opened the linked project context.",
     invalidJson: "Invalid JSON payload.",
     databaseRecordCount: "Records",
@@ -676,6 +680,7 @@ const copy = {
     projectDeleted: "Project deleted.",
     projectRequired: "Create or select a project before saving models.",
     projectExported: "Project bundle exported.",
+    projectExportedPartial: "Project bundle exported with partial data. Some models or results could not be fetched in time.",
     databaseExported: "Database snapshot exported.",
     projectImported: "Project bundle imported.",
     modelSaved: "Saved a new model version.",
@@ -749,6 +754,8 @@ const copy = {
       "The solver took too long to respond. The run was timed out and stopped safely.",
     translatedAgentTimeout:
       "The solver agent did not respond in time. Check the agent process or try the run again.",
+    requestTimedOut: "The request took too long. The workbench kept the last stable state.",
+    pollingDetached: "Live polling paused to keep the UI responsive. Refresh the job state when ready.",
     heartbeatHealthy: "healthy",
     heartbeatQuiet: "quiet",
     heartbeatStale: "stale",
@@ -949,6 +956,7 @@ const copy = {
     saveRecord: "保存记录",
     deleteRecord: "删除记录",
     exportRecord: "导出记录",
+    applyRecordContext: "应用记录上下文",
     openLinkedProject: "打开关联项目",
     openLinkedVersion: "打开关联版本",
     filterProject: "筛选项目",
@@ -961,6 +969,7 @@ const copy = {
     resultDeleted: "结果记录已删除。",
     jobSaved: "任务记录已更新。",
     jobDeleted: "任务记录已删除。",
+    recordContextApplied: "已将记录上下文应用到工作台。",
     linkedProjectOpened: "已打开关联项目上下文。",
     invalidJson: "JSON 内容无效。",
     databaseRecordCount: "记录数",
@@ -1090,6 +1099,7 @@ const copy = {
     projectDeleted: "项目已删除。",
     projectRequired: "保存模型前请先创建或选择一个项目。",
     projectExported: "项目包已导出。",
+    projectExportedPartial: "项目包已导出，但只包含部分数据；有些模型或结果未能及时读取。",
     databaseExported: "数据库快照已导出。",
     projectImported: "项目包已导入。",
     modelSaved: "已保存新模型版本。",
@@ -1156,6 +1166,8 @@ const copy = {
     translatedWatchdogTimedOut: "任务运行时间过长，已经被看门狗超时终止。",
     translatedExecutionTimedOut: "求解器响应太久，任务已被安全超时终止。",
     translatedAgentTimeout: "求解代理在规定时间内没有响应。请检查 agent 进程，或稍后重试。",
+    requestTimedOut: "请求等待过久，工作台已保留最近一次稳定状态。",
+    pollingDetached: "为了保持界面流畅，实时轮询已暂停；你可以稍后手动刷新任务状态。",
     heartbeatHealthy: "正常",
     heartbeatQuiet: "安静",
     heartbeatStale: "过期",
@@ -1933,6 +1945,13 @@ export function Workbench() {
   const chunkScrollLeftRef = useRef(0);
   const chunkScrollDirectionRef = useRef<-1 | 0 | 1>(0);
   const chunkCacheRef = useRef<Map<string, ResultChunkPayload<Record<string, unknown>>>>(new Map());
+  const healthRefreshSeqRef = useRef(0);
+  const jobHistoryRefreshSeqRef = useRef(0);
+  const resultRefreshSeqRef = useRef(0);
+  const projectRefreshSeqRef = useRef(0);
+  const securityEventsRefreshSeqRef = useRef(0);
+  const versionsRefreshSeqRef = useRef(0);
+  const jobPollTokenRef = useRef(0);
   const t = copy[language];
 
   useEffect(() => {
@@ -2082,9 +2101,9 @@ export function Workbench() {
             fetchChunk("elements", offset),
           ]),
         ).catch(() => undefined);
-      } catch {
-        if (!cancelled) {
-          setResultWindow(null);
+      } catch (error) {
+        if (!cancelled && error instanceof Error && error.message.startsWith("request timed out:")) {
+          setMessage(t.requestTimedOut);
         }
       }
     })();
@@ -2092,7 +2111,7 @@ export function Workbench() {
     return () => {
       cancelled = true;
     };
-  }, [canvasViewportWidth, frontendRuntimeMode, job?.job_id, result, resultWindowLimit, resultWindowOffset]);
+  }, [canvasViewportWidth, frontendRuntimeMode, job?.job_id, result, resultWindowLimit, resultWindowOffset, t.requestTimedOut]);
 
   useEffect(() => {
     if (!resultWindow) return;
@@ -2169,6 +2188,12 @@ export function Workbench() {
       if (dragFrameRef.current !== null) {
         window.cancelAnimationFrame(dragFrameRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      jobPollTokenRef.current += 1;
     };
   }, []);
 
@@ -2291,6 +2316,8 @@ export function Workbench() {
   }, [selectedModelId]);
 
   async function refreshHealth() {
+    const refreshSeq = ++healthRefreshSeqRef.current;
+
     if (frontendRuntimeMode === "direct_mesh_gui") {
       try {
         const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
@@ -2298,6 +2325,8 @@ export function Workbench() {
         const directMethods = [...new Set(
           nextDirect.agents.flatMap((agent) => agent.descriptor?.protocol?.methods ?? []),
         )];
+
+        if (refreshSeq !== healthRefreshSeqRef.current) return;
 
         setProtocolAgents(nextDirect.agents);
         setHealth({
@@ -2332,6 +2361,7 @@ export function Workbench() {
           },
         });
       } catch {
+        if (refreshSeq !== healthRefreshSeqRef.current) return;
         setHealth(null);
         setProtocolAgents([]);
       }
@@ -2344,41 +2374,54 @@ export function Workbench() {
         fetchProtocolAgents().catch(() => ({ agents: [] })),
       ]);
 
+      if (refreshSeq !== healthRefreshSeqRef.current) return;
+
       setHealth(nextHealth);
       setProtocolAgents(nextProtocolAgents.agents);
     } catch {
+      if (refreshSeq !== healthRefreshSeqRef.current) return;
       setHealth(null);
       setProtocolAgents([]);
     }
   }
 
   async function refreshJobHistory() {
+    const refreshSeq = ++jobHistoryRefreshSeqRef.current;
+
     try {
       const payload = await fetchJobHistory();
+      if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
       setJobHistory(payload.jobs);
       setSelectedAdminJobId((current) =>
         current && payload.jobs.some((entry) => entry.job_id === current) ? current : payload.jobs[0]?.job_id ?? null,
       );
     } catch {
+      if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
       setJobHistory([]);
       setSelectedAdminJobId(null);
     }
   }
 
   async function refreshResults() {
+    const refreshSeq = ++resultRefreshSeqRef.current;
+
     try {
       const payload = await fetchResults();
+      if (refreshSeq !== resultRefreshSeqRef.current) return;
       setResultRecords(payload.results);
       setSelectedAdminResultJobId((current) =>
         current && payload.results.some((entry) => entry.job_id === current) ? current : payload.results[0]?.job_id ?? null,
       );
     } catch {
+      if (refreshSeq !== resultRefreshSeqRef.current) return;
       setResultRecords([]);
       setSelectedAdminResultJobId(null);
     }
   }
 
   async function refreshProjects(bootstrap = false) {
+    const refreshSeq = ++projectRefreshSeqRef.current;
+
     try {
       const payload = await fetchProjects();
       let nextProjects = payload.projects;
@@ -2387,6 +2430,8 @@ export function Workbench() {
         const created = await createProject({ name: copy.en.defaultProject, description: "Local workspace" });
         nextProjects = [created.project];
       }
+
+      if (refreshSeq !== projectRefreshSeqRef.current) return;
 
       setProjects(nextProjects);
 
@@ -2408,11 +2453,14 @@ export function Workbench() {
         setSelectedVersionId(null);
       }
     } catch {
+      if (refreshSeq !== projectRefreshSeqRef.current) return;
       setProjects([]);
     }
   }
 
   async function refreshSecurityEvents() {
+    const refreshSeq = ++securityEventsRefreshSeqRef.current;
+
     try {
       const occurredAfter =
         securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
@@ -2426,17 +2474,23 @@ export function Workbench() {
         action: securityEventActionFilter || undefined,
         limit: 120,
       });
+      if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
       setSecurityEventRecords(payload.events);
     } catch {
+      if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
       setSecurityEventRecords([]);
     }
   }
 
   async function refreshVersions(modelId: string) {
+    const refreshSeq = ++versionsRefreshSeqRef.current;
+
     try {
       const payload = await fetchModelVersions(modelId);
+      if (refreshSeq !== versionsRefreshSeqRef.current) return;
       setModelVersions(payload.versions);
     } catch {
+      if (refreshSeq !== versionsRefreshSeqRef.current) return;
       setModelVersions([]);
     }
   }
@@ -2453,6 +2507,7 @@ export function Workbench() {
 
     setMessage(t.dispatching);
     setResult(null);
+    jobPollTokenRef.current += 1;
 
     startTransition(async () => {
       try {
@@ -2522,7 +2577,13 @@ export function Workbench() {
         await refreshJobHistory();
         await pollJob(created.job.job_id, studyKind);
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
+        setMessage(
+          error instanceof Error
+            ? error.message.startsWith("request timed out:")
+              ? t.requestTimedOut
+              : error.message
+            : t.initialFailed,
+        );
       }
     });
   };
@@ -2559,34 +2620,62 @@ export function Workbench() {
   };
 
   const pollJob = async (jobId: string, kind: StudyKind) => {
+    const pollToken = ++jobPollTokenRef.current;
+    let consecutiveErrors = 0;
+
     for (let attempt = 0; attempt < 40; attempt += 1) {
-      const payload =
-        kind === "axial_bar_1d"
-          ? await fetchJobStatus<AxialBarResult>(jobId)
-          : kind === "truss_2d"
-            ? await fetchJobStatus<Truss2dResult>(jobId)
-            : kind === "truss_3d"
-              ? await fetchJobStatus<Truss3dResult>(jobId)
-            : await fetchJobStatus<PlaneTriangle2dResult>(jobId);
+      if (pollToken !== jobPollTokenRef.current) return;
 
-      setJob(payload.job);
+      try {
+        const payload =
+          kind === "axial_bar_1d"
+            ? await fetchJobStatus<AxialBarResult>(jobId)
+            : kind === "truss_2d"
+              ? await fetchJobStatus<Truss2dResult>(jobId)
+              : kind === "truss_3d"
+                ? await fetchJobStatus<Truss3dResult>(jobId)
+                : await fetchJobStatus<PlaneTriangle2dResult>(jobId);
 
-      if (payload.result) {
-        setResult(payload.result);
-      }
+        if (pollToken !== jobPollTokenRef.current) return;
 
-      setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, t));
+        consecutiveErrors = 0;
+        setJob(payload.job);
 
-      if (payload.job.status === "completed" || payload.job.status === "failed" || payload.job.status === "cancelled") {
-        await refreshJobHistory();
-        return;
+        if (payload.result) {
+          setResult(payload.result);
+        }
+
+        setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, t));
+
+        if (payload.job.status === "completed" || payload.job.status === "failed" || payload.job.status === "cancelled") {
+          await refreshJobHistory();
+          return;
+        }
+      } catch (error) {
+        if (pollToken !== jobPollTokenRef.current) return;
+
+        consecutiveErrors += 1;
+
+        if (consecutiveErrors >= 3) {
+          throw error;
+        }
+
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
+        continue;
       }
 
       await new Promise((resolve) => window.setTimeout(resolve, 250));
     }
+
+    if (pollToken === jobPollTokenRef.current) {
+      setMessage(t.pollingDetached);
+      await refreshJobHistory();
+    }
   };
 
   const openHistoryJob = (jobId: string) => {
+    jobPollTokenRef.current += 1;
+
     startTransition(async () => {
       try {
         const payload = await fetchJobStatus<AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult>(jobId);
@@ -2639,6 +2728,7 @@ export function Workbench() {
 
   const cancelCurrentJob = () => {
     if (!job?.job_id || !jobIsActive) return;
+    jobPollTokenRef.current += 1;
 
     startTransition(async () => {
       try {
@@ -2647,9 +2737,41 @@ export function Workbench() {
         setMessage(t.jobCancelled);
         await refreshJobHistory();
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
+        setMessage(
+          error instanceof Error
+            ? error.message.startsWith("request timed out:")
+              ? t.requestTimedOut
+              : error.message
+            : t.initialFailed,
+        );
       }
     });
+  };
+
+  const fetchTextWithTimeout = async (url: string, timeoutMs = 12_000) => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`request failed: ${response.status}`);
+      }
+
+      return await response.text();
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error(t.requestTimedOut);
+      }
+
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
   };
 
   const importModel = async (file: File | undefined) => {
@@ -2700,8 +2822,7 @@ export function Workbench() {
   const openSample = (href: string) => {
     startTransition(async () => {
       try {
-        const response = await fetch(href, { cache: "no-store" });
-        const text = await response.text();
+        const text = await fetchTextWithTimeout(href);
         const imported = parsePlaygroundModel(text);
         recordHistory(t.sampleAction);
         setLoadedModelName(imported.name);
@@ -2864,7 +2985,7 @@ export function Workbench() {
       throw new Error(t.projectRequired);
     }
 
-    const modelDetails = await Promise.all(
+    const modelDetailsSettled = await Promise.allSettled(
       selectedProjectModels.map(async (model) => {
         const modelEnvelope = await fetchModel(model.model_id);
         const versionsEnvelope = await fetchModelVersions(model.model_id);
@@ -2875,7 +2996,9 @@ export function Workbench() {
       }),
     );
 
-    const resultCandidates: Array<JobResultRecord | null> = await Promise.all(
+    const modelDetails = modelDetailsSettled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
+
+    const resultCandidatesSettled = await Promise.allSettled(
       jobHistory
         .filter((historyJob) => historyJob.has_result)
         .map(async (historyJob) => {
@@ -2898,35 +3021,44 @@ export function Workbench() {
         }),
     );
 
+    const resultCandidates = resultCandidatesSettled.flatMap((entry): Array<JobResultRecord | null> =>
+      entry.status === "fulfilled" ? [entry.value as JobResultRecord | null] : [],
+    );
     const results = resultCandidates.filter((entry): entry is JobResultRecord => entry !== null);
+    const partial =
+      modelDetails.length !== selectedProjectModels.length ||
+      resultCandidatesSettled.some((entry) => entry.status === "rejected");
 
-    return exportProjectBundle({
-      project: selectedProject,
-      models: modelDetails.map((entry) => entry.model),
-      modelVersions: modelDetails.flatMap((entry) => entry.versions),
-      activeModelId: selectedModelId,
-      activeVersionId: selectedVersionId,
-      workspaceSnapshot: serializeCurrentModel(
-        studyKind,
-        loadedModelName,
-        activeMaterial,
-        axialForm,
-        trussModel,
-        truss3dModel,
-        planeModel,
-        parametric,
-        round,
-      ),
-      jobs: jobHistory,
-      results,
-    });
+    return {
+      bundle: exportProjectBundle({
+        project: selectedProject,
+        models: modelDetails.map((entry) => entry.model),
+        modelVersions: modelDetails.flatMap((entry) => entry.versions),
+        activeModelId: selectedModelId,
+        activeVersionId: selectedVersionId,
+        workspaceSnapshot: serializeCurrentModel(
+          studyKind,
+          loadedModelName,
+          activeMaterial,
+          axialForm,
+          trussModel,
+          truss3dModel,
+          planeModel,
+          parametric,
+          round,
+        ),
+        jobs: jobHistory,
+        results,
+      }),
+      partial,
+    };
   };
 
   const downloadProjectBundleJson = async () => {
     try {
-      const bundle = await buildProjectBundleJson();
+      const { bundle, partial } = await buildProjectBundleJson();
       downloadTextFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki.json`, bundle);
-      setMessage(t.projectExported);
+      setMessage(partial ? t.projectExportedPartial : t.projectExported);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.initialFailed);
     }
@@ -2934,10 +3066,10 @@ export function Workbench() {
 
   const downloadProjectBundleZip = async () => {
     try {
-      const bundle = await buildProjectBundleJson();
+      const { bundle, partial } = await buildProjectBundleJson();
       const blob = await exportProjectBundleZip(bundle);
       downloadBlobFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki`, blob);
-      setMessage(t.projectExported);
+      setMessage(partial ? t.projectExportedPartial : t.projectExported);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.initialFailed);
     }
@@ -3376,6 +3508,25 @@ export function Workbench() {
     openModelVersionById(linkedJob.model_version_id);
   };
 
+  const applyJobContextToWorkbench = (entry: JobState) => {
+    setAdminFilterProjectId(entry.project_id ?? "");
+    setAdminFilterModelVersionId(entry.model_version_id ?? "");
+    setAdminJobCaseId(entry.simulation_case_id ?? "");
+    setLibraryTab("projects");
+
+    if (entry.model_version_id) {
+      openModelVersionById(entry.model_version_id);
+      return;
+    }
+
+    if (entry.project_id) {
+      openProjectContextById(entry.project_id);
+      return;
+    }
+
+    setMessage(language === "zh" ? "这条记录还没有可应用的项目或版本上下文。" : "This record does not have a linked project or version context yet.");
+  };
+
   const openProjectContextById = (projectId: string) => {
     const project = projects.find((entry) => entry.project_id === projectId);
 
@@ -3419,6 +3570,48 @@ export function Workbench() {
     }
 
     openProjectContextById(linkedJob.project_id);
+  };
+
+  const applySelectedAdminJobContext = () => {
+    if (!selectedAdminJob) {
+      setMessage(language === "zh" ? "请先选择一条任务记录。" : "Select a job record first.");
+      return;
+    }
+
+    applyJobContextToWorkbench(selectedAdminJob);
+    if (!selectedAdminJob.model_version_id && !selectedAdminJob.project_id) {
+      return;
+    }
+    setMessage(t.recordContextApplied);
+  };
+
+  const applySelectedAdminResultContext = () => {
+    const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
+
+    if (!linkedJob) {
+      setMessage(language === "zh" ? "找不到这条结果对应的任务记录。" : "Could not find the job record linked to this result.");
+      return;
+    }
+
+    applyJobContextToWorkbench(linkedJob);
+    if (!linkedJob.model_version_id && !linkedJob.project_id) {
+      return;
+    }
+    setMessage(t.recordContextApplied);
+  };
+
+  const resolveScriptLinkedJob = (payload: Record<string, unknown>) => {
+    const target = payload.target === "job" || payload.target === "result" ? payload.target : "job";
+    const explicitJobId = typeof payload.jobId === "string" ? payload.jobId : null;
+    const explicitResultJobId = typeof payload.resultJobId === "string" ? payload.resultJobId : null;
+
+    if (target === "job") {
+      const jobId = explicitJobId ?? selectedAdminJobId;
+      return jobId ? jobHistory.find((entry) => entry.job_id === jobId) ?? null : null;
+    }
+
+    const resultJobId = explicitResultJobId ?? explicitJobId ?? selectedAdminResultJobId;
+    return resultJobId ? jobHistory.find((entry) => entry.job_id === resultJobId) ?? null : null;
   };
 
   const useCurrentProjectAsAdminFilter = () => {
@@ -4178,16 +4371,30 @@ export function Workbench() {
     modelTab,
     libraryTab,
     systemPanelTab,
+    systemDataTab,
     language,
     theme,
     frontendRuntimeMode,
     selectedProjectId,
     selectedModelId,
     selectedVersionId,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+    adminFilterProjectId,
+    adminFilterModelVersionId,
     loadedModelName,
     activeMaterial,
     selectedNode,
     selectedElement,
+    selectedTruss3dNodeIndices: selectedTruss3dNodes,
+    memberDraftNodeIndices: memberDraftNodes,
+    immersiveViewport,
+    immersiveToolDrawerOpen,
+    immersiveHelpDrawerOpen,
+    truss3dProjectionMode,
+    truss3dViewPreset,
+    truss3dBoxSelectMode,
+    truss3dLinkMode,
     hasResult: hasAnyResult,
     jobStatus: job?.status ?? null,
     projectCount: projects.length,
@@ -4248,16 +4455,30 @@ export function Workbench() {
     modelTab,
     libraryTab,
     systemPanelTab,
+    systemDataTab,
     language,
     theme,
     frontendRuntimeMode,
     selectedProjectId,
     selectedModelId,
     selectedVersionId,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+    adminFilterProjectId,
+    adminFilterModelVersionId,
     loadedModelName,
     activeMaterial,
     selectedNode,
     selectedElement,
+    selectedTruss3dNodeIndices: selectedTruss3dNodes,
+    memberDraftNodeIndices: memberDraftNodes,
+    immersiveViewport,
+    immersiveToolDrawerOpen,
+    immersiveHelpDrawerOpen,
+    truss3dProjectionMode,
+    truss3dViewPreset,
+    truss3dBoxSelectMode,
+    truss3dLinkMode,
     hasResult: Boolean(result),
     jobStatus: job?.status ?? null,
     projectCount: projects.length,
@@ -4307,6 +4528,25 @@ export function Workbench() {
     try {
       let resultPayload: Record<string, unknown>;
       switch (action) {
+        case "macro/run": {
+          const macroId = typeof payload.macroId === "string" ? payload.macroId : null;
+          const macro = macroId ? getWorkbenchScriptMacroDefinition(macroId) : null;
+
+          if (!macro) {
+            throw new Error(language === "zh" ? "找不到指定的宏动作。" : "Could not find the requested macro.");
+          }
+
+          const macroPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "macroId"));
+          const macroSnapshot = getScriptSnapshot();
+
+          for (const step of macro.steps) {
+            const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
+            await invokeScriptAction(step.action, nextPayload, source, note ?? macro.summary[language]);
+          }
+
+          resultPayload = { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };
+          break;
+        }
         case "nav/setSidebarSection": {
           const section = payload.section;
           if (section === "study" || section === "model" || section === "library" || section === "system") {
@@ -4327,6 +4567,36 @@ export function Workbench() {
             setStudyKind(nextStudyKind);
           }
           resultPayload = { ok: true, action, studyKind: nextStudyKind };
+          break;
+        }
+        case "nav/setTabs": {
+          if (payload.studyTab === "summary" || payload.studyTab === "controls") {
+            setStudyTab(payload.studyTab);
+          }
+          if (payload.modelTab === "tools" || payload.modelTab === "tree") {
+            setModelTab(payload.modelTab);
+          }
+          if (
+            payload.libraryTab === "samples" ||
+            payload.libraryTab === "projects" ||
+            payload.libraryTab === "models" ||
+            payload.libraryTab === "jobs"
+          ) {
+            setLibraryTab(payload.libraryTab);
+          }
+          if (
+            payload.systemPanelTab === "config" ||
+            payload.systemPanelTab === "assistant" ||
+            payload.systemPanelTab === "scripts" ||
+            payload.systemPanelTab === "runtime" ||
+            payload.systemPanelTab === "data"
+          ) {
+            setSystemPanelTab(payload.systemPanelTab);
+          }
+          if (payload.systemDataTab === "jobs" || payload.systemDataTab === "results") {
+            setSystemDataTab(payload.systemDataTab);
+          }
+          resultPayload = { ok: true, action };
           break;
         }
         case "settings/patch": {
@@ -4563,6 +4833,22 @@ export function Workbench() {
           resultPayload = { ok: true, action };
           break;
         }
+        case "selection/set3d": {
+          if (Array.isArray(payload.nodeIndices)) {
+            setSelectedTruss3dNodes(payload.nodeIndices.filter((entry): entry is number => typeof entry === "number"));
+          }
+          if (typeof payload.anchorNodeIndex === "number" || payload.anchorNodeIndex === null) {
+            setSelectedNode(typeof payload.anchorNodeIndex === "number" ? payload.anchorNodeIndex : null);
+          }
+          if (Array.isArray(payload.memberDraftNodeIndices)) {
+            setMemberDraftNodes(payload.memberDraftNodeIndices.filter((entry): entry is number => typeof entry === "number"));
+          }
+          if (typeof payload.linkMode === "boolean") {
+            setTruss3dLinkMode(payload.linkMode);
+          }
+          resultPayload = { ok: true, action };
+          break;
+        }
         case "job/run": {
           runAnalysis();
           resultPayload = { ok: true, action };
@@ -4619,6 +4905,88 @@ export function Workbench() {
             setTruss3dShowNodes(payload.nodes);
           }
           resultPayload = { ok: true, action };
+          break;
+        }
+        case "viewport/setUiState": {
+          if (typeof payload.immersiveViewport === "boolean" && payload.immersiveViewport !== immersiveViewport) {
+            await toggleImmersiveViewport();
+          }
+          if (typeof payload.toolDrawerOpen === "boolean") {
+            setImmersiveToolDrawerOpen(payload.toolDrawerOpen);
+          }
+          if (typeof payload.helpDrawerOpen === "boolean") {
+            setImmersiveHelpDrawerOpen(payload.helpDrawerOpen);
+          }
+          if (typeof payload.boxSelectMode === "boolean") {
+            setTruss3dBoxSelectMode(payload.boxSelectMode);
+          }
+          if (typeof payload.linkMode === "boolean") {
+            setTruss3dLinkMode(payload.linkMode);
+          }
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "data/setFilters": {
+          if (payload.activeTab === "jobs" || payload.activeTab === "results") {
+            setSystemDataTab(payload.activeTab);
+          }
+          if (typeof payload.projectId === "string" || payload.projectId === null) {
+            setAdminFilterProjectId(typeof payload.projectId === "string" ? payload.projectId : "");
+          }
+          if (typeof payload.modelVersionId === "string" || payload.modelVersionId === null) {
+            setAdminFilterModelVersionId(typeof payload.modelVersionId === "string" ? payload.modelVersionId : "");
+          }
+          setSidebarSection("system");
+          setSystemPanelTab("data");
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "data/selectRecord": {
+          if (payload.activeTab === "jobs" || payload.activeTab === "results") {
+            setSystemDataTab(payload.activeTab);
+          }
+          if (typeof payload.jobId === "string") {
+            setSelectedAdminJobId(payload.jobId);
+          }
+          if (typeof payload.resultJobId === "string") {
+            setSelectedAdminResultJobId(payload.resultJobId);
+          }
+          setSidebarSection("system");
+          setSystemPanelTab("data");
+          resultPayload = { ok: true, action };
+          break;
+        }
+        case "data/openLinkedContext": {
+          const mode =
+            payload.mode === "apply" || payload.mode === "project" || payload.mode === "version" ? payload.mode : "apply";
+          const linkedJob = resolveScriptLinkedJob(payload);
+
+          if (!linkedJob) {
+            throw new Error(language === "zh" ? "找不到关联的数据记录上下文。" : "Could not resolve the linked data record context.");
+          }
+
+          if (mode === "version") {
+            if (!linkedJob.model_version_id) {
+              throw new Error(language === "zh" ? "这条记录没有关联模型版本。" : "This record does not have a linked model version.");
+            }
+            openModelVersionById(linkedJob.model_version_id);
+          } else if (mode === "project") {
+            if (!linkedJob.project_id) {
+              throw new Error(language === "zh" ? "这条记录没有关联项目。" : "This record does not have a linked project.");
+            }
+            openProjectContextById(linkedJob.project_id);
+          } else {
+            applyJobContextToWorkbench(linkedJob);
+          }
+
+          resultPayload = {
+            ok: true,
+            action,
+            mode,
+            jobId: linkedJob.job_id,
+            projectId: linkedJob.project_id ?? null,
+            modelVersionId: linkedJob.model_version_id ?? null,
+          };
           break;
         }
         case "data/exportDatabase": {
@@ -5962,6 +6330,7 @@ export function Workbench() {
                 saveRecordLabel={t.saveRecord}
                 deleteRecordLabel={t.deleteRecord}
                 exportRecordLabel={t.exportRecord}
+                applyRecordContextLabel={t.applyRecordContext}
                 openLinkedProjectLabel={t.openLinkedProject}
                 openLinkedVersionLabel={t.openLinkedVersion}
                 filterProjectLabel={t.filterProject}
@@ -5991,12 +6360,14 @@ export function Workbench() {
                 selectedAdminJob={Boolean(selectedAdminJob)}
                 selectedAdminJobHasVersion={Boolean(selectedAdminJob?.model_version_id)}
                 selectedAdminJobHasProject={Boolean(selectedAdminJob?.project_id)}
+                selectedAdminJobHasContext={Boolean(selectedAdminJob?.project_id || selectedAdminJob?.model_version_id)}
                 canCancelSelectedJob={Boolean(
                   selectedAdminJob &&
                     selectedAdminJob.status !== "completed" &&
                     selectedAdminJob.status !== "failed" &&
                     selectedAdminJob.status !== "cancelled",
                 )}
+                onApplySelectedJobContext={applySelectedAdminJobContext}
                 onOpenSelectedJobProject={openSelectedAdminJobProject}
                 onOpenSelectedJobVersion={openSelectedAdminJobVersion}
                 onCancelSelectedJob={() => {
@@ -6035,9 +6406,14 @@ export function Workbench() {
                 selectedAdminResultHasVersion={Boolean(
                   jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.model_version_id,
                 )}
+                selectedAdminResultHasContext={Boolean(
+                  jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.project_id ||
+                    jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.model_version_id,
+                )}
                 adminResultDraft={adminResultDraft}
                 onAdminResultDraftChange={setAdminResultDraft}
                 onSaveAdminResult={saveAdminResultRecord}
+                onApplySelectedResultContext={applySelectedAdminResultContext}
                 onOpenSelectedResultProject={openSelectedAdminResultProject}
                 onOpenSelectedResultVersion={openSelectedAdminResultVersion}
                 onExportAdminResult={exportAdminResultRecord}
