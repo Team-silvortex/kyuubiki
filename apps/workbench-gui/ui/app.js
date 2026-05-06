@@ -1,4 +1,4 @@
-const { invoke } = window.__TAURI__.core;
+import { invokeTauri, loadDesktopBrand, setText } from "./shared/tauri-bridge.js";
 
 const state = {
   workbenchUrl: "http://127.0.0.1:3000",
@@ -35,7 +35,7 @@ function renderLogServiceTabs() {
 }
 
 async function loadEnvironment() {
-  const environment = await invoke("workbench_environment");
+  const environment = await invokeTauri("workbench_environment");
   state.workbenchUrl = environment.workbench_url;
   state.orchestratorUrl = environment.orchestrator_url;
   elements.workbenchUrl.textContent = environment.workbench_url;
@@ -54,7 +54,7 @@ function isShortcutModifier(event) {
 
 async function refreshStatus() {
   try {
-    const payload = await invoke("service_status");
+    const payload = await invokeTauri("service_status");
     elements.statusOutput.textContent = payload.rendered;
   } catch (error) {
     elements.statusOutput.textContent = String(error);
@@ -63,7 +63,7 @@ async function refreshStatus() {
 
 async function refreshLog() {
   try {
-    const payload = await invoke("read_runtime_log", { payload: { service: state.logService } });
+    const payload = await invokeTauri("read_runtime_log", { payload: { service: state.logService } });
     elements.logOutput.textContent = payload.rendered || `${state.logService} log is empty.`;
   } catch (error) {
     elements.logOutput.textContent = String(error);
@@ -100,7 +100,7 @@ async function runAction(action) {
     }
 
     if (action === "stop") {
-      elements.statusOutput.textContent = await invoke("service_stop");
+      elements.statusOutput.textContent = await invokeTauri("service_stop");
       if (state.consoleTab === "logs") {
         await refreshLog();
       }
@@ -108,7 +108,7 @@ async function runAction(action) {
     }
 
     if (action === "start-local") {
-      elements.statusOutput.textContent = await invoke("service_start", { payload: { mode: "local" } });
+      elements.statusOutput.textContent = await invokeTauri("service_start", { payload: { mode: "local" } });
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
         await refreshLog();
@@ -117,7 +117,7 @@ async function runAction(action) {
     }
 
     if (action === "restart-local") {
-      elements.statusOutput.textContent = await invoke("service_restart", { payload: { mode: "local" } });
+      elements.statusOutput.textContent = await invokeTauri("service_restart", { payload: { mode: "local" } });
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
         await refreshLog();
@@ -192,6 +192,16 @@ window.addEventListener("keydown", async (event) => {
 });
 
 async function boot() {
+  const brand = await loadDesktopBrand();
+  if (brand) {
+    if (brand.applicationName) {
+      document.title = brand.applicationName;
+      setText("brand-workbench-name", brand.applicationName);
+    }
+
+    setText("brand-workbench-description", brand.workbenchShellDescription);
+  }
+
   await loadEnvironment();
   loadWorkbenchFrame();
   renderConsoleTabs();

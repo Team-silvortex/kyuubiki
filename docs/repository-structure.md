@@ -56,6 +56,12 @@ See also:
 - `src/components/workbench` for domain surfaces
 - `src/components/ui` for reusable UI primitives
 
+### `apps/desktop-shared`
+
+- shared desktop frontend helper source
+- sync script for brand manifest and Tauri bridge helpers
+- source-of-truth layer for the desktop Tauri app family
+
 ### `apps/web`
 
 - Elixir orchestrator API
@@ -75,6 +81,19 @@ See also:
 - environment setup
 - local/cloud/distributed launch flows
 - remote bootstrap and remote agent control
+
+### `apps/hub-gui`
+
+- Tauri desktop hub shell
+- project launch surface
+- runtime control and operator overview
+- intended to sit above installer and workbench in the desktop product split
+
+### `apps/workbench-gui`
+
+- Tauri desktop workbench shell
+- native wrapper around the browser workbench
+- local runtime status and log access through the shared desktop runtime crate
 
 ## Headless SDK Layer
 

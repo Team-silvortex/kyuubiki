@@ -164,13 +164,12 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     let root = workspace_root();
     validate_env_file()?;
     let release_dir = target_dir.unwrap_or_else(|| root.join("dist").join(platform.as_str()));
+    let desktop_apps = ["hub-gui", "installer-gui", "workbench-gui"];
 
     for relative in [
         "bin",
         "config",
         "data",
-        "desktop/installer-gui",
-        "desktop/workbench-gui",
         "logs",
         "manifests",
         "scripts",
@@ -179,16 +178,17 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         fs::create_dir_all(release_dir.join(relative))
             .map_err(|error| format!("failed to create {}: {error}", release_dir.join(relative).display()))?;
     }
+    for app in desktop_apps {
+        let path = release_dir.join("desktop").join(app);
+        fs::create_dir_all(&path)
+            .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
+    }
 
     let manifest_path = release_dir.join("manifests").join("release-manifest.json");
     let launch_path = release_dir.join("manifests").join("launch.json");
     let readme_path = release_dir.join("README.txt");
     let env_example_target = release_dir.join("config").join(".env.example");
     let desktop_readme_path = release_dir.join("desktop").join("README.txt");
-    let installer_gui_manifest_path =
-        release_dir.join("desktop").join("installer-gui").join("manifest.json");
-    let workbench_gui_manifest_path =
-        release_dir.join("desktop").join("workbench-gui").join("manifest.json");
 
     fs::write(&manifest_path, build_release_manifest(&root, &release_dir, platform))
         .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
@@ -198,16 +198,11 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         .map_err(|error| format!("failed to write {}: {error}", readme_path.display()))?;
     fs::write(&desktop_readme_path, build_desktop_readme())
         .map_err(|error| format!("failed to write {}: {error}", desktop_readme_path.display()))?;
-    fs::write(
-        &installer_gui_manifest_path,
-        build_desktop_app_manifest("installer-gui", platform),
-    )
-    .map_err(|error| format!("failed to write {}: {error}", installer_gui_manifest_path.display()))?;
-    fs::write(
-        &workbench_gui_manifest_path,
-        build_desktop_app_manifest("workbench-gui", platform),
-    )
-    .map_err(|error| format!("failed to write {}: {error}", workbench_gui_manifest_path.display()))?;
+    for app in desktop_apps {
+        let manifest_path = release_dir.join("desktop").join(app).join("manifest.json");
+        fs::write(&manifest_path, build_desktop_app_manifest(app, platform))
+            .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
+    }
 
     let env_example = root.join(".env.example");
     if env_example.exists() {
@@ -347,6 +342,9 @@ fn build_release_readme(platform: Platform) -> String {
 fn build_desktop_readme() -> String {
     concat!(
         "Desktop packaging placeholders\n\n",
+        "hub-gui/\n",
+        "  Reserved for the Tauri Hub shell build output or packaged bundle references.\n",
+        "  Contains a manifest.json packaging descriptor.\n\n",
         "installer-gui/\n",
         "  Reserved for the Tauri installer GUI build output or packaged bundle references.\n",
         "  Contains a manifest.json packaging descriptor.\n\n",
@@ -359,6 +357,12 @@ fn build_desktop_readme() -> String {
 
 fn build_desktop_app_manifest(app: &str, platform: Platform) -> String {
     let (product_name, source_dir, target_dir, build_command) = match app {
+        "hub-gui" => (
+            "Kyuubiki Hub",
+            "apps/hub-gui",
+            "apps/hub-gui/src-tauri/target",
+            "make build-hub-gui",
+        ),
         "installer-gui" => (
             "Kyuubiki Installer",
             "apps/installer-gui",

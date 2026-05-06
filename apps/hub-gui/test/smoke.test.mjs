@@ -10,33 +10,31 @@ function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
-test("desktop shell exposes runtime and log panels", () => {
+test("hub shell exposes the desktop information architecture", () => {
   const html = read("ui/index.html");
 
-  assert.match(html, /data-console-tab="status"/);
-  assert.match(html, /data-console-tab="logs"/);
-  assert.match(html, /data-log-service="frontend"/);
-  assert.match(html, /data-log-service="orchestrator"/);
-  assert.match(html, /id="workbench-frame"/);
+  assert.match(html, /data-target="projects"/);
+  assert.match(html, /data-target="runtimes"/);
+  assert.match(html, /data-target="deploy"/);
+  assert.match(html, /data-target="observe"/);
+  assert.match(html, /data-target="tools"/);
+  assert.match(html, /Open workbench/);
+  assert.match(html, /Start local stack/);
 });
 
-test("desktop shell registers local runtime actions and shortcuts", () => {
-  const html = read("ui/index.html");
+test("hub shell registers section switching behavior", () => {
   const js = read("ui/app.js");
   const bridge = read("ui/shared/tauri-bridge.js");
 
-  assert.match(html, /shortcut-list/);
-  assert.match(html, /reload embedded workbench/);
-  assert.match(js, /service_start/);
-  assert.match(js, /service_restart/);
-  assert.match(js, /service_stop/);
-  assert.match(js, /read_runtime_log/);
-  assert.match(js, /keydown/);
+  assert.match(js, /sectionModel/);
+  assert.match(js, /setSection/);
+  assert.match(js, /hub-nav__item--active/);
+  assert.match(js, /addEventListener\("click"/);
   assert.match(bridge, /invokeTauri/);
   assert.match(bridge, /loadDesktopBrand/);
 });
 
-test("tauri backend exposes workbench runtime commands", () => {
+test("tauri backend exposes hub runtime commands", () => {
   const rust = read("src-tauri/src/main.rs");
 
   assert.match(rust, /service_status/);
@@ -44,5 +42,5 @@ test("tauri backend exposes workbench runtime commands", () => {
   assert.match(rust, /service_restart/);
   assert.match(rust, /service_stop/);
   assert.match(rust, /read_runtime_log/);
-  assert.match(rust, /workbench_environment/);
+  assert.match(rust, /hub_environment/);
 });

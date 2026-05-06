@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "sync:shared": "node ../desktop-shared/scripts/sync-desktop-shared.mjs",
+    "test:smoke": "node --test ./test/smoke.test.mjs",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },

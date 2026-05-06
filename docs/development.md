@@ -7,7 +7,9 @@ This repository is no longer a thin scaffold. It contains:
 - a Next.js workbench
 - an Elixir orchestrator API
 - a Rust engine/solver workspace
+- a Tauri Hub GUI
 - a Tauri installer GUI
+- a Tauri workbench GUI
 - local, cloud, and distributed deployment modes
 
 The default development style remains TDD-first. New behavior should start with
@@ -22,7 +24,10 @@ The repository also now has an explicit style baseline:
 
 - Put BEAM application code under `apps/web`
 - Put browser UI code under `apps/frontend`
+- Put shared desktop UI helpers under `apps/desktop-shared`
+- Put hub GUI code under `apps/hub-gui`
 - Put installer GUI code under `apps/installer-gui`
+- Put workbench GUI code under `apps/workbench-gui`
 - Keep shared contracts in `schemas`
 - Keep deployment descriptors in `deploy`
 - Keep Rust crates under `workers/rust/crates`

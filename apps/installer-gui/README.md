@@ -27,11 +27,22 @@ operator-facing surface in the repository.
 
 ## Commands
 
+- `npm run sync:shared`
 - `make installer-gui-dev`
 - `make installer-gui-build`
+- `make test-installer-gui`
 - `make package-desktop`
 - `zsh ./scripts/kyuubiki build-installer-gui macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
+
+## Validation
+
+- shared UI sync:
+  `cd apps/installer-gui && npm run sync:shared`
+- smoke test:
+  `cd apps/installer-gui && npm run test:smoke`
+- Tauri shell check:
+  `cargo check --offline --manifest-path src-tauri/Cargo.toml`
 
 ## Output
 

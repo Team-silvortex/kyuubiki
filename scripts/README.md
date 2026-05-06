@@ -36,6 +36,10 @@ Examples now include:
 - `build-workbench-gui`
 - `package-runtime`
 - `package-desktop`
+- `sync-desktop-shared`
+- `test-hub-gui`
+- `test-installer-gui`
+- `test-workbench-gui`
 
 Keep these scripts thin. Product logic should live in the application/runtime
 code, not in shell branching.

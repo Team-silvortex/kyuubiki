@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -29,6 +29,7 @@ help:
 	@echo "  make package     Stage a portable release directory under dist/"
 	@echo "  make package-runtime Stage the portable runtime release scaffold under dist/"
 	@echo "  make package-desktop Build/stage all Tauri desktop shells"
+	@echo "  make sync-desktop-shared Refresh shared desktop UI helper files into each Tauri app"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
 	@echo "  make installer-gui-dev   Run the Tauri installer GUI in development mode"
@@ -40,6 +41,8 @@ help:
 	@echo "  make test-rust   Run Rust workspace tests"
 	@echo "  make test-frontend Run frontend typecheck and production build"
 	@echo "  make test-sdk    Run Python / Elixir / Rust SDK smoke tests"
+	@echo "  make test-hub-gui Run Hub desktop shell smoke tests"
+	@echo "  make test-installer-gui Run installer desktop shell smoke tests"
 	@echo "  make test-workbench-gui Run desktop workbench shell smoke tests"
 	@echo "  make test-integration Run the current cross-process integration smoke suite"
 	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
@@ -135,6 +138,9 @@ package-runtime:
 package-desktop:
 	@$(ENTRYPOINT) package-desktop
 
+sync-desktop-shared:
+	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs
+
 hub-gui-dev:
 	@$(ENTRYPOINT) hub-gui-dev
 
@@ -169,6 +175,12 @@ test-sdk:
 
 test-playground:
 	@node --test apps/web/playground/test/fem.test.mjs
+
+test-hub-gui:
+	@cd apps/hub-gui && npm run test:smoke
+
+test-installer-gui:
+	@cd apps/installer-gui && npm run test:smoke
 
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke

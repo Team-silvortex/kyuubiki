@@ -1,16 +1,14 @@
+import {
+  invokeTauri as invoke,
+  listenTauri as listen,
+  loadDesktopBrand as loadBrandConfig,
+  setText,
+} from "./shared/tauri-bridge.js";
+
 (function () {
   const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json";
   const DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json";
   const DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
-
-  const invoke = async (command, payload = {}) => {
-    const tauri = window.__TAURI__;
-    if (!tauri?.core?.invoke) {
-      throw new Error("Tauri runtime is not available. Run this UI inside the desktop installer.");
-    }
-
-    return tauri.core.invoke(command, payload);
-  };
 
   const output = document.getElementById("output");
   const serviceStatus = document.getElementById("service-status");
@@ -42,11 +40,6 @@
 
   function applyBrandConfig(brand) {
     brandConfig = brand;
-    const setText = (id, value) => {
-      const element = document.getElementById(id);
-      if (element && value) element.textContent = value;
-    };
-
     if (brand?.installerName) {
       document.title = brand.installerName;
     }
@@ -58,15 +51,6 @@
     setText("brand-installer-description", brand?.installerDescription);
     setText("brand-product-name", brand?.productName);
     setText("brand-installer-console", brand?.installerConsoleName);
-  }
-
-  async function listen(eventName, handler) {
-    const tauri = window.__TAURI__;
-    if (!tauri?.event?.listen) {
-      throw new Error("Tauri event API is not available.");
-    }
-
-    return tauri.event.listen(eventName, handler);
   }
 
   function setOutput(value) {

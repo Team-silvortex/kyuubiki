@@ -6,6 +6,8 @@ Top-level application surfaces live here.
 
 - `frontend/`
   Browser workbench and direct-mesh-capable GUI surface.
+- `desktop-shared/`
+  Shared frontend helper and asset sync source for the desktop Tauri app family.
 - `web/`
   Phoenix/Plug control plane for jobs, persistence, results, and agent
   orchestration.
@@ -22,6 +24,9 @@ Top-level application surfaces live here.
 - `frontend/`
   Next.js workbench UI. This is the browser-facing modeling, review, and 3D
   interaction layer.
+- `desktop-shared/`
+  Source-of-truth desktop frontend helper layer. It syncs shared Tauri-UI
+  assets into `hub-gui`, `installer-gui`, and `workbench-gui`.
 - `installer-gui/`
   Tauri desktop installer and deployment control GUI.
 - `hub-gui/`
@@ -36,6 +41,12 @@ Top-level application surfaces live here.
 
 The `apps/` directory is intentionally product-facing. Shared compute/runtime
 code lives outside this tree in `workers/` and `schemas/`.
+
+The three desktop-facing Tauri apps are intended to evolve as one family:
+
+- `hub-gui/` for desktop entry and orchestration
+- `installer-gui/` for setup, deployment, and heavier operator flows
+- `workbench-gui/` for focused modeling and analysis
 
 See also:
 

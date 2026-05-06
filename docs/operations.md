@@ -93,6 +93,7 @@ These can now be written from the installer GUI Setup panel.
 - `make build-frontend`
 - `make build-orchestrator`
 - `make build-agent`
+- `make build-hub-gui`
 - `make build-installer-gui`
 - `make build-workbench-gui`
 - `make package-runtime`

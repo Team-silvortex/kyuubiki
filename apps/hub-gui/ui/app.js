@@ -1,3 +1,5 @@
+import { loadDesktopBrand, setText } from "./shared/tauri-bridge.js";
+
 const sectionModel = {
   projects: {
     title: "Projects",
@@ -26,6 +28,19 @@ const copy = document.getElementById("section-copy");
 const navItems = Array.from(document.querySelectorAll(".hub-nav__item"));
 const panels = Array.from(document.querySelectorAll(".hub-panel"));
 
+async function applyBrand() {
+  const brand = await loadDesktopBrand();
+  if (!brand) {
+    return;
+  }
+
+  if (brand.hubName) {
+    document.title = brand.hubName;
+  }
+
+  setText("brand-hub-title", brand.hubName);
+}
+
 function setSection(section) {
   const next = sectionModel[section];
   if (!next) return;
@@ -51,4 +66,5 @@ navItems.forEach((item) => {
   item.addEventListener("click", () => setSection(item.dataset.target));
 });
 
+await applyBrand();
 setSection("projects");
