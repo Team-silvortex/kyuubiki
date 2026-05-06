@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
 
@@ -35,14 +35,24 @@ function usage() {
 Usage:
   kyuubiki help
   kyuubiki project inspect <bundle> [--json]
+  kyuubiki project validate <input> [--json]
   kyuubiki project normalize <input> --out <output>
+  kyuubiki project unpack <bundle> --out <directory>
+  kyuubiki project pack <input> --out <bundle>
+  kyuubiki project diff <left> <right> [--json]
   kyuubiki macro inspect <macro.json> [--json]
+  kyuubiki macro validate <input> [--json]
   kyuubiki macro normalize <input> --out <output>
 
 Examples:
   kyuubiki project inspect demo.kyuubiki
+  kyuubiki project validate demo.kyuubiki --json
   kyuubiki project normalize demo.kyuubiki --out demo.normalized.kyuubiki
+  kyuubiki project unpack demo.kyuubiki --out ./tmp/demo-project
+  kyuubiki project pack ./tmp/demo-project --out demo.repacked.kyuubiki
+  kyuubiki project diff before.kyuubiki after.kyuubiki
   kyuubiki macro inspect review-result.json
+  kyuubiki macro validate review-result.json --json
   kyuubiki macro normalize review-result.json --out review-result.normalized.json
 `);
 }
@@ -345,6 +355,22 @@ async function parseProjectBundleFile(filePath) {
   return normalizeProjectBundle(JSON.parse(await readFile(absolutePath, "utf8")));
 }
 
+async function pathIsDirectory(targetPath) {
+  try {
+    return (await stat(path.resolve(targetPath))).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+async function parseProjectBundleInput(inputPath) {
+  const absolutePath = path.resolve(inputPath);
+  if (await pathIsDirectory(absolutePath)) {
+    return normalizeProjectBundle(JSON.parse(await readFile(path.join(absolutePath, PROJECT_MANIFEST_PATH), "utf8")));
+  }
+  return parseProjectBundleFile(absolutePath);
+}
+
 function finalizeProjectBundle(bundle) {
   const normalized = normalizeProjectBundle(bundle);
   const fileManifest = normalized.project_file_manifest ?? defaultProjectFileManifest();
@@ -494,6 +520,119 @@ async function writeOutputFile(outputPath, contents, binary = false) {
   await writeFile(absolutePath, contents, binary ? undefined : "utf8");
 }
 
+async function writeProjectDirectory(bundle, outputDirectory) {
+  const finalized = finalizeProjectBundle(bundle);
+  const fileManifest = finalized.project_file_manifest;
+  const assetCatalog = finalized.asset_catalog;
+  const absoluteOutputDirectory = path.resolve(outputDirectory);
+
+  const writeProjectFile = async (relativePath, contents) => {
+    await writeOutputFile(path.join(absoluteOutputDirectory, relativePath), contents);
+  };
+
+  await writeProjectFile(PROJECT_MANIFEST_PATH, JSON.stringify(finalized, null, 2));
+  await writeProjectFile(PROJECT_ENGINE_MANIFEST_PATH, JSON.stringify(fileManifest, null, 2));
+  await writeProjectFile(PROJECT_RECORD_PATH, JSON.stringify(finalized.project, null, 2));
+  await writeProjectFile(fileManifest.project_record_path, JSON.stringify(finalized.project, null, 2));
+  await writeProjectFile(
+    fileManifest.workspace_settings_path,
+    JSON.stringify(
+      {
+        active_model_id: finalized.active_model_id ?? null,
+        active_version_id: finalized.active_version_id ?? null,
+        exported_at: finalized.exported_at ?? null,
+        project_schema_version: finalized.project_schema_version,
+        layout_version: fileManifest.layout_version,
+      },
+      null,
+      2,
+    ),
+  );
+
+  if (finalized.workspace_snapshot) {
+    await writeProjectFile(WORKSPACE_SNAPSHOT_PATH, JSON.stringify(finalized.workspace_snapshot, null, 2));
+    await writeProjectFile(fileManifest.workspace_snapshot_path, JSON.stringify(finalized.workspace_snapshot, null, 2));
+  }
+
+  if ((finalized.automation_presets?.length ?? 0) > 0) {
+    await writeProjectFile(fileManifest.automation_presets_path, JSON.stringify(finalized.automation_presets, null, 2));
+  }
+
+  await writeProjectFile(fileManifest.asset_catalog_path, JSON.stringify(finalized.asset_catalog, null, 2));
+  await writeProjectFile(fileManifest.asset_references_path, JSON.stringify(finalized.asset_references, null, 2));
+
+  for (const model of finalized.models) {
+    const assetPath = `${fileManifest.model_directory}/${slugifyPathSegment(model.model_id)}.json`;
+    const meta = assetCatalog.find((entry) => entry.kind === "model" && entry.source_id === model.model_id);
+    await writeProjectFile(`models/${model.model_id}.json`, JSON.stringify(model, null, 2));
+    await writeProjectFile(assetPath, JSON.stringify(model, null, 2));
+    if (meta) await writeProjectFile(`${assetPath}.meta`, JSON.stringify(meta, null, 2));
+  }
+
+  for (const version of finalized.model_versions) {
+    const assetPath = `${fileManifest.version_directory}/${slugifyPathSegment(version.version_id)}.json`;
+    const meta = assetCatalog.find((entry) => entry.kind === "model_version" && entry.source_id === version.version_id);
+    await writeProjectFile(`versions/${version.version_id}.json`, JSON.stringify(version, null, 2));
+    await writeProjectFile(assetPath, JSON.stringify(version, null, 2));
+    if (meta) await writeProjectFile(`${assetPath}.meta`, JSON.stringify(meta, null, 2));
+  }
+
+  await writeProjectFile(JOBS_INDEX_PATH, JSON.stringify(finalized.jobs ?? [], null, 2));
+  await writeProjectFile(STANDARD_JOBS_INDEX_PATH, JSON.stringify(finalized.jobs ?? [], null, 2));
+  for (const job of finalized.jobs ?? []) {
+    const jobId = typeof job.job_id === "string" ? job.job_id : "job";
+    const assetPath = `${fileManifest.job_directory}/${slugifyPathSegment(jobId)}.json`;
+    const meta = assetCatalog.find((entry) => entry.kind === "job" && entry.source_id === jobId);
+    await writeProjectFile(`jobs/${jobId}.json`, JSON.stringify(job, null, 2));
+    await writeProjectFile(assetPath, JSON.stringify(job, null, 2));
+    if (meta) await writeProjectFile(`${assetPath}.meta`, JSON.stringify(meta, null, 2));
+  }
+
+  await writeProjectFile(RESULTS_INDEX_PATH, JSON.stringify(finalized.results ?? [], null, 2));
+  await writeProjectFile(STANDARD_RESULTS_INDEX_PATH, JSON.stringify(finalized.results ?? [], null, 2));
+  for (const result of finalized.results ?? []) {
+    const resultId = typeof result.job_id === "string" ? result.job_id : "result";
+    const assetPath = `${fileManifest.result_directory}/${slugifyPathSegment(resultId)}.json`;
+    const meta = assetCatalog.find((entry) => entry.kind === "result" && entry.source_id === resultId);
+    await writeProjectFile(`results/${resultId}.json`, JSON.stringify(result, null, 2));
+    await writeProjectFile(assetPath, JSON.stringify(result, null, 2));
+    if (meta) await writeProjectFile(`${assetPath}.meta`, JSON.stringify(meta, null, 2));
+  }
+
+  const projectMeta = assetCatalog.find((entry) => entry.kind === "project" && entry.source_id === finalized.project.project_id);
+  if (projectMeta) await writeProjectFile(`${fileManifest.project_record_path}.meta`, JSON.stringify(projectMeta, null, 2));
+
+  const workspaceSettingsMeta = assetCatalog.find((entry) => entry.kind === "workspace_settings" && entry.source_id === finalized.project.project_id);
+  if (workspaceSettingsMeta) {
+    await writeProjectFile(`${fileManifest.workspace_settings_path}.meta`, JSON.stringify(workspaceSettingsMeta, null, 2));
+  }
+
+  const workspaceSnapshotSourceId = finalized.active_version_id ?? finalized.active_model_id ?? finalized.project.project_id;
+  const workspaceSnapshotMeta = assetCatalog.find((entry) => entry.kind === "workspace_snapshot" && entry.source_id === workspaceSnapshotSourceId);
+  if (workspaceSnapshotMeta && finalized.workspace_snapshot) {
+    await writeProjectFile(`${fileManifest.workspace_snapshot_path}.meta`, JSON.stringify(workspaceSnapshotMeta, null, 2));
+  }
+
+  if ((finalized.automation_presets?.length ?? 0) > 0) {
+    const presetMetas = assetCatalog.filter((entry) => entry.kind === "automation_preset");
+    await writeProjectFile(`${fileManifest.automation_presets_path}.meta`, JSON.stringify(presetMetas, null, 2));
+  }
+
+  await writeProjectFile(
+    "README.txt",
+    [
+      "Kyuubiki project directory",
+      "",
+      `Schema: ${finalized.project_schema_version}`,
+      `Layout: ${fileManifest.layout_version}`,
+      `Manifest: ${PROJECT_MANIFEST_PATH}`,
+      `Engine manifest: ${fileManifest.engine_manifest_path}`,
+      `Asset catalog: ${fileManifest.asset_catalog_path}`,
+      `Asset references: ${fileManifest.asset_references_path}`,
+    ].join("\n"),
+  );
+}
+
 function projectInspectSummary(bundle) {
   return {
     schema: bundle.project_schema_version,
@@ -514,7 +653,7 @@ function projectInspectSummary(bundle) {
 }
 
 async function handleProjectInspect(inputPath, flags) {
-  const bundle = finalizeProjectBundle(await parseProjectBundleFile(inputPath));
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
   const summary = projectInspectSummary(bundle);
   if (flags.json) {
     console.log(JSON.stringify(summary, null, 2));
@@ -535,10 +674,29 @@ async function handleProjectInspect(inputPath, flags) {
   console.log(`Workspace snapshot: ${summary.has_workspace_snapshot ? "yes" : "no"}`);
 }
 
+async function handleProjectValidate(inputPath, flags) {
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
+  const report = validateProjectBundle(bundle);
+  if (flags.json) {
+    console.log(JSON.stringify(report, null, 2));
+    if (!report.ok) process.exitCode = 1;
+    return;
+  }
+  console.log(`Project validation: ${report.ok ? "ok" : "failed"}`);
+  console.log(`Project: ${report.summary.project_name} (${report.summary.project_id})`);
+  console.log(`Issues: ${report.issue_count}`);
+  if (report.issues.length > 0) {
+    for (const issue of report.issues) {
+      console.log(`- ${issue}`);
+    }
+    process.exitCode = 1;
+  }
+}
+
 async function handleProjectNormalize(inputPath, flags) {
   const outputPath = typeof flags.out === "string" ? flags.out : null;
   if (!outputPath) fail("project normalize requires --out <output>");
-  const bundle = finalizeProjectBundle(await parseProjectBundleFile(inputPath));
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
   if (outputPath.endsWith(".kyuubiki")) {
     const zip = await exportProjectBundleZip(bundle);
     await writeOutputFile(outputPath, zip, true);
@@ -546,6 +704,242 @@ async function handleProjectNormalize(inputPath, flags) {
     await writeOutputFile(outputPath, JSON.stringify(bundle, null, 2));
   }
   console.log(`normalized project bundle -> ${path.resolve(outputPath)}`);
+}
+
+async function handleProjectUnpack(inputPath, flags) {
+  const outputPath = typeof flags.out === "string" ? flags.out : null;
+  if (!outputPath) fail("project unpack requires --out <directory>");
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
+  await writeProjectDirectory(bundle, outputPath);
+  console.log(`unpacked project bundle -> ${path.resolve(outputPath)}`);
+}
+
+async function handleProjectPack(inputPath, flags) {
+  const outputPath = typeof flags.out === "string" ? flags.out : null;
+  if (!outputPath) fail("project pack requires --out <bundle>");
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
+  if (outputPath.endsWith(".kyuubiki")) {
+    const zip = await exportProjectBundleZip(bundle);
+    await writeOutputFile(outputPath, zip, true);
+  } else {
+    await writeOutputFile(outputPath, JSON.stringify(bundle, null, 2));
+  }
+  console.log(`packed project bundle -> ${path.resolve(outputPath)}`);
+}
+
+function buildKindIndex(entries = []) {
+  const index = new Map();
+  for (const entry of entries) {
+    const bucket = index.get(entry.kind) ?? [];
+    bucket.push(entry.source_id);
+    index.set(entry.kind, bucket);
+  }
+  for (const bucket of index.values()) {
+    bucket.sort();
+  }
+  return index;
+}
+
+function diffSortedLists(left = [], right = []) {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  return {
+    added: right.filter((entry) => !leftSet.has(entry)),
+    removed: left.filter((entry) => !rightSet.has(entry)),
+  };
+}
+
+function projectDiffSummary(left, right) {
+  const leftKinds = buildKindIndex(left.asset_catalog);
+  const rightKinds = buildKindIndex(right.asset_catalog);
+  const kindNames = Array.from(new Set([...leftKinds.keys(), ...rightKinds.keys()])).sort();
+  return {
+    left: projectInspectSummary(left),
+    right: projectInspectSummary(right),
+    changed_project_identity:
+      left.project.project_id !== right.project.project_id || left.project.name !== right.project.name,
+    active_model_changed: left.active_model_id !== right.active_model_id,
+    active_version_changed: left.active_version_id !== right.active_version_id,
+    asset_kind_diff: Object.fromEntries(
+      kindNames.map((kind) => [kind, diffSortedLists(leftKinds.get(kind) ?? [], rightKinds.get(kind) ?? [])]),
+    ),
+    automation_preset_ids: diffSortedLists(
+      (left.automation_presets ?? []).map((entry) => entry.presetId).sort(),
+      (right.automation_presets ?? []).map((entry) => entry.presetId).sort(),
+    ),
+  };
+}
+
+function validateProjectBundle(bundle) {
+  const issues = [];
+  const fileManifest = bundle.project_file_manifest ?? defaultProjectFileManifest();
+  const assetCatalog = bundle.asset_catalog ?? [];
+  const assetReferences = bundle.asset_references ?? [];
+  const guidSet = new Set();
+  const guidByKindAndSource = new Map();
+
+  for (const entry of assetCatalog) {
+    if (!entry?.guid || typeof entry.guid !== "string") {
+      issues.push("asset_catalog contains an entry without a valid guid");
+      continue;
+    }
+    if (guidSet.has(entry.guid)) {
+      issues.push(`duplicate asset guid detected: ${entry.guid}`);
+    }
+    guidSet.add(entry.guid);
+    guidByKindAndSource.set(`${entry.kind}:${entry.source_id}`, entry.guid);
+  }
+
+  const ensureGuid = (key, label) => {
+    if (!guidByKindAndSource.has(key)) {
+      issues.push(`missing asset catalog entry for ${label}`);
+    }
+  };
+
+  ensureGuid(`project:${bundle.project.project_id}`, `project ${bundle.project.project_id}`);
+  ensureGuid(`workspace_settings:${bundle.project.project_id}`, `workspace settings for project ${bundle.project.project_id}`);
+
+  if (bundle.workspace_snapshot) {
+    const workspaceSnapshotSourceId = bundle.active_version_id ?? bundle.active_model_id ?? bundle.project.project_id;
+    ensureGuid(`workspace_snapshot:${workspaceSnapshotSourceId}`, "workspace snapshot");
+  }
+
+  for (const model of bundle.models) {
+    ensureGuid(`model:${model.model_id}`, `model ${model.model_id}`);
+  }
+
+  for (const version of bundle.model_versions) {
+    ensureGuid(`model_version:${version.version_id}`, `model version ${version.version_id}`);
+    if (!bundle.models.some((model) => model.model_id === version.model_id)) {
+      issues.push(`model version ${version.version_id} points to missing model ${version.model_id}`);
+    }
+  }
+
+  for (const preset of bundle.automation_presets ?? []) {
+    ensureGuid(`automation_preset:${preset.presetId}`, `automation preset ${preset.presetId}`);
+  }
+
+  for (const job of bundle.jobs ?? []) {
+    const jobId = typeof job.job_id === "string" ? job.job_id : null;
+    if (!jobId) {
+      issues.push("job record is missing job_id");
+      continue;
+    }
+    ensureGuid(`job:${jobId}`, `job ${jobId}`);
+    if (typeof job.model_version_id === "string" && !bundle.model_versions.some((version) => version.version_id === job.model_version_id)) {
+      issues.push(`job ${jobId} points to missing model version ${job.model_version_id}`);
+    }
+  }
+
+  for (const result of bundle.results ?? []) {
+    ensureGuid(`result:${result.job_id}`, `result ${result.job_id}`);
+    if (!(bundle.jobs ?? []).some((job) => job.job_id === result.job_id)) {
+      issues.push(`result ${result.job_id} has no matching job record`);
+    }
+  }
+
+  if (bundle.active_model_id && !bundle.models.some((model) => model.model_id === bundle.active_model_id)) {
+    issues.push(`active_model_id points to missing model ${bundle.active_model_id}`);
+  }
+  if (bundle.active_version_id && !bundle.model_versions.some((version) => version.version_id === bundle.active_version_id)) {
+    issues.push(`active_version_id points to missing model version ${bundle.active_version_id}`);
+  }
+
+  const expectedPaths = new Set([
+    fileManifest.project_record_path,
+    fileManifest.workspace_settings_path,
+    fileManifest.workspace_snapshot_path,
+    fileManifest.automation_presets_path,
+    fileManifest.asset_catalog_path,
+    fileManifest.asset_references_path,
+  ]);
+  for (const entry of assetCatalog) {
+    if (!entry.path || typeof entry.path !== "string") {
+      issues.push(`asset ${entry.guid} is missing a valid path`);
+      continue;
+    }
+    if (
+      entry.path !== fileManifest.project_record_path &&
+      entry.path !== fileManifest.workspace_settings_path &&
+      entry.path !== fileManifest.workspace_snapshot_path &&
+      entry.path !== fileManifest.automation_presets_path &&
+      !entry.path.startsWith(`${fileManifest.model_directory}/`) &&
+      !entry.path.startsWith(`${fileManifest.version_directory}/`) &&
+      !entry.path.startsWith(`${fileManifest.job_directory}/`) &&
+      !entry.path.startsWith(`${fileManifest.result_directory}/`)
+    ) {
+      issues.push(`asset ${entry.guid} uses unexpected path ${entry.path}`);
+    } else {
+      expectedPaths.add(entry.path);
+    }
+  }
+
+  for (const reference of assetReferences) {
+    if (!guidSet.has(reference.from_guid)) {
+      issues.push(`asset reference has unknown from_guid ${reference.from_guid}`);
+    }
+    if (!guidSet.has(reference.to_guid)) {
+      issues.push(`asset reference has unknown to_guid ${reference.to_guid}`);
+    }
+  }
+
+  return {
+    ok: issues.length === 0,
+    issue_count: issues.length,
+    issues,
+    summary: projectInspectSummary(bundle),
+    expected_paths: Array.from(expectedPaths).sort(),
+  };
+}
+
+function validateMacroDraft(macro) {
+  const issues = [];
+  if (!macro.id || typeof macro.id !== "string") {
+    issues.push("macro id is missing");
+  }
+  if (!Array.isArray(macro.steps) || macro.steps.length === 0) {
+    issues.push("macro has no steps");
+  }
+  for (const [index, step] of (macro.steps ?? []).entries()) {
+    if (!step.action || typeof step.action !== "string") {
+      issues.push(`step ${index} is missing action`);
+    }
+    if (step.payload !== undefined && (!step.payload || typeof step.payload !== "object" || Array.isArray(step.payload))) {
+      issues.push(`step ${index} has an invalid payload`);
+    }
+  }
+  return {
+    ok: issues.length === 0,
+    issue_count: issues.length,
+    issues,
+    summary: {
+      id: macro.id,
+      step_count: macro.steps.length,
+      actions: macro.steps.map((step) => step.action),
+    },
+  };
+}
+
+async function handleProjectDiff(leftInputPath, rightInputPath, flags) {
+  const left = finalizeProjectBundle(await parseProjectBundleInput(leftInputPath));
+  const right = finalizeProjectBundle(await parseProjectBundleInput(rightInputPath));
+  const summary = projectDiffSummary(left, right);
+  if (flags.json) {
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+  console.log(`Left:  ${summary.left.project_name} (${summary.left.project_id})`);
+  console.log(`Right: ${summary.right.project_name} (${summary.right.project_id})`);
+  console.log(`Schema: ${summary.left.schema} -> ${summary.right.schema}`);
+  console.log(`Layout: ${summary.left.layout} -> ${summary.right.layout}`);
+  console.log(`Active model changed: ${summary.active_model_changed ? "yes" : "no"}`);
+  console.log(`Active version changed: ${summary.active_version_changed ? "yes" : "no"}`);
+  console.log(`Project identity changed: ${summary.changed_project_identity ? "yes" : "no"}`);
+  console.log("Asset kind diff:");
+  for (const [kind, diff] of Object.entries(summary.asset_kind_diff)) {
+    console.log(`  ${kind}: +${diff.added.length} / -${diff.removed.length}`);
+  }
+  console.log(`Automation presets: +${summary.automation_preset_ids.added.length} / -${summary.automation_preset_ids.removed.length}`);
 }
 
 async function handleMacroInspect(inputPath, flags) {
@@ -558,6 +952,25 @@ async function handleMacroInspect(inputPath, flags) {
   console.log(`Macro: ${summary.id}`);
   console.log(`Steps: ${summary.step_count}`);
   console.log(`Actions: ${summary.actions.join(", ")}`);
+}
+
+async function handleMacroValidate(inputPath, flags) {
+  const macro = normalizeMacroDraft(JSON.parse(await readFile(path.resolve(inputPath), "utf8")));
+  const report = validateMacroDraft(macro);
+  if (flags.json) {
+    console.log(JSON.stringify(report, null, 2));
+    if (!report.ok) process.exitCode = 1;
+    return;
+  }
+  console.log(`Macro validation: ${report.ok ? "ok" : "failed"}`);
+  console.log(`Macro: ${report.summary.id}`);
+  console.log(`Steps: ${report.summary.step_count}`);
+  if (report.issues.length > 0) {
+    for (const issue of report.issues) {
+      console.log(`- ${issue}`);
+    }
+    process.exitCode = 1;
+  }
 }
 
 async function handleMacroNormalize(inputPath, flags) {
@@ -579,10 +992,17 @@ async function main() {
   }
 
   if (scope === "project") {
-    const [, , inputPath] = positionalArgs(args);
-    if (!inputPath) fail("project command requires an input path");
-    if (command === "inspect") return handleProjectInspect(inputPath, flags);
-    if (command === "normalize") return handleProjectNormalize(inputPath, flags);
+    const [, , firstInputPath, secondInputPath] = positionalArgs(args);
+    if (!firstInputPath) fail("project command requires an input path");
+    if (command === "inspect") return handleProjectInspect(firstInputPath, flags);
+    if (command === "validate") return handleProjectValidate(firstInputPath, flags);
+    if (command === "normalize") return handleProjectNormalize(firstInputPath, flags);
+    if (command === "unpack") return handleProjectUnpack(firstInputPath, flags);
+    if (command === "pack") return handleProjectPack(firstInputPath, flags);
+    if (command === "diff") {
+      if (!secondInputPath) fail("project diff requires <left> <right>");
+      return handleProjectDiff(firstInputPath, secondInputPath, flags);
+    }
     fail(`unknown project command: ${command}`);
   }
 
@@ -590,6 +1010,7 @@ async function main() {
     const [, , inputPath] = positionalArgs(args);
     if (!inputPath) fail("macro command requires an input path");
     if (command === "inspect") return handleMacroInspect(inputPath, flags);
+    if (command === "validate") return handleMacroValidate(inputPath, flags);
     if (command === "normalize") return handleMacroNormalize(inputPath, flags);
     fail(`unknown macro command: ${command}`);
   }

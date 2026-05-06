@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki Hub</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="hub-shell">
+      <aside class="hub-rail">
+        <div class="brand">
+          <div class="brand-mark">K</div>
+          <div>
+            <strong>Kyuubiki Hub</strong>
+            <span>desktop control shell</span>
+          </div>
+        </div>
+
+        <nav class="hub-nav">
+          <button class="hub-nav__item hub-nav__item--active" data-target="projects">Projects</button>
+          <button class="hub-nav__item" data-target="runtimes">Runtimes</button>
+          <button class="hub-nav__item" data-target="deploy">Deploy</button>
+          <button class="hub-nav__item" data-target="observe">Observe</button>
+          <button class="hub-nav__item" data-target="tools">Tools</button>
+        </nav>
+      </aside>
+
+      <main class="hub-main">
+        <header class="hub-head">
+          <div>
+            <h1 id="section-title">Projects</h1>
+            <p id="section-copy">Open recent engineering work, import standardized bundles, and jump into Workbench.</p>
+          </div>
+          <div class="hub-actions">
+            <button>Open workbench</button>
+            <button>Start local stack</button>
+            <button>Validate env</button>
+          </div>
+        </header>
+
+        <section class="hub-grid" id="projects-panel">
+          <article class="hub-card">
+            <h2>Recent projects</h2>
+            <div class="hub-list">
+              <div class="hub-list__row">
+                <strong>Bridge Study</strong>
+                <span>local workstation</span>
+              </div>
+              <div class="hub-list__row">
+                <strong>Lan Cluster Truss</strong>
+                <span>direct mesh</span>
+              </div>
+              <div class="hub-list__row">
+                <strong>Plate Library</strong>
+                <span>cloud control plane</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="hub-card">
+            <h2>Project actions</h2>
+            <div class="hub-stack">
+              <button>New project</button>
+              <button>Import .kyuubiki</button>
+              <button>Open project directory</button>
+              <button>Review automation presets</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="hub-grid hub-panel hidden" id="runtimes-panel">
+          <article class="hub-card">
+            <h2>Local runtime</h2>
+            <div class="hub-metrics">
+              <div><span>Status</span><strong>ready</strong></div>
+              <div><span>Frontend</span><strong>127.0.0.1:3000</strong></div>
+              <div><span>Control plane</span><strong>127.0.0.1:4000</strong></div>
+              <div><span>Agents</span><strong>2 online</strong></div>
+            </div>
+          </article>
+
+          <article class="hub-card">
+            <h2>Remote targets</h2>
+            <div class="hub-list">
+              <div class="hub-list__row">
+                <strong>cluster-a</strong>
+                <span>distributed</span>
+              </div>
+              <div class="hub-list__row">
+                <strong>mesh-lab</strong>
+                <span>direct mesh</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="hub-grid hub-panel hidden" id="deploy-panel">
+          <article class="hub-card">
+            <h2>Deployment modes</h2>
+            <div class="hub-stack">
+              <button>Local workstation</button>
+              <button>Cloud control plane</button>
+              <button>Distributed control plane</button>
+              <button>Direct mesh</button>
+            </div>
+          </article>
+
+          <article class="hub-card">
+            <h2>Bootstrap</h2>
+            <div class="hub-stack">
+              <button>Open installer workflows</button>
+              <button>Prepare manifests</button>
+              <button>Run doctor</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="hub-grid hub-panel hidden" id="observe-panel">
+          <article class="hub-card">
+            <h2>Health and watchdog</h2>
+            <div class="hub-metrics">
+              <div><span>Watchdog</span><strong>stable</strong></div>
+              <div><span>Security events</span><strong>2 recent</strong></div>
+              <div><span>Failed jobs</span><strong>0</strong></div>
+            </div>
+          </article>
+
+          <article class="hub-card">
+            <h2>Log tail</h2>
+            <pre class="hub-log">[frontend] ready
+[orchestrator] healthy
+[agent:5001] idle
+[agent:5002] idle</pre>
+          </article>
+        </section>
+
+        <section class="hub-grid hub-panel hidden" id="tools-panel">
+          <article class="hub-card">
+            <h2>Diagnostics and packaging</h2>
+            <div class="hub-stack">
+              <button>Run benchmark</button>
+              <button>Validate project bundle</button>
+              <button>Export database</button>
+              <button>Stage desktop package</button>
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <aside class="hub-side">
+        <article class="hub-card">
+          <h2>Quick launch</h2>
+          <div class="hub-stack">
+            <button>Workbench</button>
+            <button>Installer</button>
+            <button>CLI tools</button>
+          </div>
+        </article>
+
+        <article class="hub-card">
+          <h2>Current mode</h2>
+          <div class="hub-metrics">
+            <div><span>Runtime</span><strong>orchestrated_gui</strong></div>
+            <div><span>Storage</span><strong>sqlite</strong></div>
+            <div><span>Profile</span><strong>local workstation</strong></div>
+          </div>
+        </article>
+      </aside>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

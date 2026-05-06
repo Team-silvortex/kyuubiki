@@ -4,6 +4,7 @@ Use this checklist when preparing desktop-facing `kyuubiki` deliverables.
 
 It covers:
 
+- `hub-gui`
 - `installer-gui`
 - `workbench-gui`
 - `macos`
@@ -15,11 +16,13 @@ It covers:
 Use a predictable versioned prefix for all desktop-facing outputs:
 
 - `kyuubiki-installer-v<version>-<platform>-<bundle>`
+- `kyuubiki-hub-v<version>-<platform>-<bundle>`
 - `kyuubiki-workbench-v<version>-<platform>-<bundle>`
 
 Examples:
 
 - `kyuubiki-installer-v0.5-macos-dmg`
+- `kyuubiki-hub-v0.5-linux-appimage`
 - `kyuubiki-workbench-v0.5-linux-appimage`
 - `kyuubiki-installer-v0.5-windows-msi`
 
@@ -35,6 +38,7 @@ Keep these names aligned with:
   - [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
   - [assets/icons/dock](/Users/Shared/chroot/dev/kyuubiki/assets/icons/dock)
 - Confirm desktop icon copies exist under:
+  - [apps/hub-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/src-tauri/icons)
   - [apps/installer-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/icons)
   - [apps/workbench-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/src-tauri/icons)
 - Confirm runtime scaffold exists:
@@ -57,11 +61,13 @@ Icon inputs:
 Typical commands:
 
 - `zsh ./scripts/kyuubiki build-installer-gui macos`
+- `zsh ./scripts/kyuubiki build-hub-gui macos`
 - `zsh ./scripts/kyuubiki build-workbench-gui macos`
 - `zsh ./scripts/kyuubiki package-desktop macos`
 
 Staged descriptor paths:
 
+- [dist/macos/desktop/hub-gui](/Users/Shared/chroot/dev/kyuubiki/dist/macos/desktop/hub-gui)
 - [dist/macos/desktop/installer-gui](/Users/Shared/chroot/dev/kyuubiki/dist/macos/desktop/installer-gui)
 - [dist/macos/desktop/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/dist/macos/desktop/workbench-gui)
 
@@ -86,11 +92,13 @@ Icon inputs:
 Typical commands:
 
 - `zsh ./scripts/kyuubiki build-installer-gui linux`
+- `zsh ./scripts/kyuubiki build-hub-gui linux`
 - `zsh ./scripts/kyuubiki build-workbench-gui linux`
 - `zsh ./scripts/kyuubiki package-desktop linux`
 
 Staged descriptor paths:
 
+- [dist/linux/desktop/hub-gui](/Users/Shared/chroot/dev/kyuubiki/dist/linux/desktop/hub-gui)
 - [dist/linux/desktop/installer-gui](/Users/Shared/chroot/dev/kyuubiki/dist/linux/desktop/installer-gui)
 - [dist/linux/desktop/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/dist/linux/desktop/workbench-gui)
 
@@ -115,11 +123,13 @@ Icon inputs:
 Typical commands:
 
 - `zsh ./scripts/kyuubiki build-installer-gui windows`
+- `zsh ./scripts/kyuubiki build-hub-gui windows`
 - `zsh ./scripts/kyuubiki build-workbench-gui windows`
 - `zsh ./scripts/kyuubiki package-desktop windows`
 
 Staged descriptor paths:
 
+- [dist/windows/desktop/hub-gui](/Users/Shared/chroot/dev/kyuubiki/dist/windows/desktop/hub-gui)
 - [dist/windows/desktop/installer-gui](/Users/Shared/chroot/dev/kyuubiki/dist/windows/desktop/installer-gui)
 - [dist/windows/desktop/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/dist/windows/desktop/workbench-gui)
 
@@ -139,6 +149,7 @@ When preparing a release, keep the order stable:
 3. Refresh desktop manifests:
    `zsh ./scripts/kyuubiki package-desktop all`
 4. Build the current host-platform desktop bundles:
+   - `zsh ./scripts/kyuubiki build-hub-gui <host-platform>`
    - `zsh ./scripts/kyuubiki build-installer-gui <host-platform>`
    - `zsh ./scripts/kyuubiki build-workbench-gui <host-platform>`
 5. Verify icon inputs and manifest bundle targets for all three supported platforms.

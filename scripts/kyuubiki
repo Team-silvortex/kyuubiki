@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WEB_DIR="$ROOT_DIR/apps/web"
 FRONTEND_DIR="$ROOT_DIR/apps/frontend"
+HUB_GUI_DIR="$ROOT_DIR/apps/hub-gui"
 INSTALLER_GUI_DIR="$ROOT_DIR/apps/installer-gui"
 WORKBENCH_GUI_DIR="$ROOT_DIR/apps/workbench-gui"
 RUST_DIR="$ROOT_DIR/workers/rust"
@@ -45,6 +46,7 @@ Commands:
   build-frontend    Build the browser workbench production bundle
   build-orchestrator Compile the Elixir control plane in production mode
   build-agent       Build the Rust solver agent binary in release mode
+  build-hub-gui     Build the Tauri Hub GUI bundles
   build-installer-gui [platform] Build the Tauri installer GUI bundles
   build-workbench-gui [platform] Build the Tauri desktop workbench shell bundles
   start             Start the orchestrator API, frontend, and solver agent in the background
@@ -63,7 +65,9 @@ Commands:
   validate-env      Validate required environment variables from .env.local
   package           Stage a portable release directory under dist/
   package-runtime   Stage the portable runtime release scaffold under dist/
-  package-desktop [platform|all] Build/stage both Tauri desktop shells
+  package-desktop [platform|all] Build/stage all Tauri desktop shells
+  hub-gui-dev       Run the Tauri Hub GUI in development mode
+  hub-gui-build     Build the Tauri Hub GUI bundles
   installer-gui-dev Run the Tauri installer GUI in development mode
   installer-gui-build Build the Tauri installer GUI bundles
   workbench-gui-dev Run the Tauri desktop workbench shell in development mode
@@ -88,14 +92,20 @@ Commands:
 Examples:
   ./scripts/kyuubiki smoke
   ./scripts/kyuubiki project inspect demo.kyuubiki
+  ./scripts/kyuubiki project validate demo.kyuubiki --json
   ./scripts/kyuubiki project normalize demo.kyuubiki --out demo.normalized.kyuubiki
+  ./scripts/kyuubiki project unpack demo.kyuubiki --out ./tmp/demo-project
+  ./scripts/kyuubiki project pack ./tmp/demo-project --out demo.repacked.kyuubiki
+  ./scripts/kyuubiki project diff before.kyuubiki after.kyuubiki
   ./scripts/kyuubiki macro inspect review-result.json
+  ./scripts/kyuubiki macro validate review-result.json --json
   ./scripts/kyuubiki agent -- --port 5001
   ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
   ./scripts/kyuubiki start
   ./scripts/kyuubiki build-frontend
   ./scripts/kyuubiki build-orchestrator
   ./scripts/kyuubiki build-agent
+  ./scripts/kyuubiki build-hub-gui
   ./scripts/kyuubiki package-runtime
   ./scripts/kyuubiki package-desktop
   ./scripts/kyuubiki package-desktop linux
@@ -114,6 +124,8 @@ Examples:
   ./scripts/kyuubiki validate-env
   ./scripts/kyuubiki install bootstrap
   ./scripts/kyuubiki package
+  ./scripts/kyuubiki hub-gui-dev
+  ./scripts/kyuubiki hub-gui-build
   ./scripts/kyuubiki installer-gui-dev
   ./scripts/kyuubiki installer-gui-build
   ./scripts/kyuubiki workbench-gui-dev
@@ -428,6 +440,28 @@ run_installer() {
   )
 }
 
+run_hub_gui_dev() {
+  require_dir "$HUB_GUI_DIR"
+  (
+    cd "$HUB_GUI_DIR"
+    npm run tauri:dev
+  )
+}
+
+run_hub_gui_build() {
+  local platform="${1:-$(host_platform)}"
+  require_dir "$HUB_GUI_DIR"
+  (
+    cd "$HUB_GUI_DIR"
+    if [[ "$platform" == "$(host_platform)" ]]; then
+      npm run tauri:build
+    else
+      echo "hub-gui cross-platform bundle build is not performed on this host; staging ${platform} desktop manifest instead"
+    fi
+  )
+  run_installer stage-release "$platform"
+}
+
 run_installer_gui_dev() {
   require_dir "$INSTALLER_GUI_DIR"
   (
@@ -508,12 +542,14 @@ run_package_desktop() {
     for target in macos linux windows; do
       run_installer stage-release "$target"
     done
+    run_hub_gui_build "$(host_platform)"
     run_installer_gui_build "$(host_platform)"
     run_workbench_gui_build "$(host_platform)"
     return 0
   fi
 
   run_installer stage-release "$platform"
+  run_hub_gui_build "$platform"
   run_installer_gui_build "$platform"
   run_workbench_gui_build "$platform"
 }
@@ -636,6 +672,9 @@ case "$command" in
   build-agent)
     run_build_agent
     ;;
+  build-hub-gui)
+    run_hub_gui_build "${1:-$(host_platform)}"
+    ;;
   build-installer-gui)
     run_installer_gui_build "${1:-$(host_platform)}"
     ;;
@@ -692,6 +731,12 @@ case "$command" in
     ;;
   package-desktop)
     run_package_desktop "${1:-$(host_platform)}"
+    ;;
+  hub-gui-dev)
+    run_hub_gui_dev
+    ;;
+  hub-gui-build)
+    run_hub_gui_build "${1:-$(host_platform)}"
     ;;
   installer-gui-dev)
     run_installer_gui_dev

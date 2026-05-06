@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-installer-gui build-workbench-gui package-runtime package-desktop start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -9,6 +9,7 @@ help:
 	@echo "  make build-frontend Build the Next.js workbench production bundle"
 	@echo "  make build-orchestrator Compile the Elixir control plane in production mode"
 	@echo "  make build-agent Build the Rust solver agent release binary"
+	@echo "  make build-hub-gui Build the Tauri hub desktop bundles (host platform)"
 	@echo "  make build-installer-gui Build the Tauri installer desktop bundles (host platform)"
 	@echo "  make build-workbench-gui Build the Tauri workbench desktop bundles (host platform)"
 	@echo "  make start       Start the orchestrator API, frontend, and solver agent"
@@ -27,7 +28,9 @@ help:
 	@echo "  make validate-env Validate required .env.local configuration"
 	@echo "  make package     Stage a portable release directory under dist/"
 	@echo "  make package-runtime Stage the portable runtime release scaffold under dist/"
-	@echo "  make package-desktop Build/stage both Tauri desktop shells"
+	@echo "  make package-desktop Build/stage all Tauri desktop shells"
+	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
+	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
 	@echo "  make installer-gui-dev   Run the Tauri installer GUI in development mode"
 	@echo "  make installer-gui-build Build the Tauri installer GUI bundles"
 	@echo "  make workbench-gui-dev   Run the Tauri desktop workbench shell in development mode"
@@ -71,6 +74,9 @@ build-orchestrator:
 
 build-agent:
 	@$(ENTRYPOINT) build-agent
+
+build-hub-gui:
+	@$(ENTRYPOINT) build-hub-gui
 
 build-installer-gui:
 	@$(ENTRYPOINT) build-installer-gui
@@ -128,6 +134,12 @@ package-runtime:
 
 package-desktop:
 	@$(ENTRYPOINT) package-desktop
+
+hub-gui-dev:
+	@$(ENTRYPOINT) hub-gui-dev
+
+hub-gui-build:
+	@$(ENTRYPOINT) hub-gui-build
 
 installer-gui-dev:
 	@$(ENTRYPOINT) installer-gui-dev

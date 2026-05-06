@@ -31,6 +31,7 @@ Examples now include:
 - `build-frontend`
 - `build-orchestrator`
 - `build-agent`
+- `build-hub-gui`
 - `build-installer-gui`
 - `build-workbench-gui`
 - `package-runtime`

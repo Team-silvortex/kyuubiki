@@ -16,6 +16,7 @@ Use it when you need to answer:
 | `apps/frontend` | browser workbench | `make build-frontend` | `apps/frontend/.next` |
 | `apps/web` | Phoenix orchestrator / control plane | `make build-orchestrator` | `apps/web/_build` |
 | `workers/rust/crates/cli` | headless Rust solver agent | `make build-agent` | `workers/rust/target/release/kyuubiki-cli` |
+| `apps/hub-gui` | Tauri desktop hub shell | `make build-hub-gui` | `apps/hub-gui/src-tauri/target` |
 | `apps/installer-gui` | Tauri installer shell | `make build-installer-gui` | `apps/installer-gui/src-tauri/target` |
 | `apps/workbench-gui` | Tauri desktop workbench shell | `make build-workbench-gui` | `apps/workbench-gui/src-tauri/target` |
 | `workers/rust/crates/installer` | release staging / portable layout generator | `make package-runtime` | `dist/<platform>` |
@@ -27,8 +28,10 @@ Use these commands when working component-by-component:
 - `make build-frontend`
 - `make build-orchestrator`
 - `make build-agent`
+- `make build-hub-gui`
 - `make build-installer-gui`
 - `make build-workbench-gui`
+- `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-installer-gui macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-workbench-gui macos|linux|windows`
 
@@ -46,7 +49,7 @@ Use these commands when building deployable layouts:
 - `make package-runtime`
   Builds the staged runtime scaffold under `dist/<platform>`
 - `make package-desktop`
-  Builds the Tauri installer GUI and Tauri workbench GUI packaging outputs
+  Builds the Tauri Hub GUI, installer GUI, and workbench GUI packaging outputs
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop all`
 
@@ -58,6 +61,7 @@ Current staged runtime layout:
 - `dist/<platform>/bin`
 - `dist/<platform>/config`
 - `dist/<platform>/data`
+- `dist/<platform>/desktop/hub-gui`
 - `dist/<platform>/desktop/installer-gui`
 - `dist/<platform>/desktop/workbench-gui`
 - `dist/<platform>/logs`
@@ -86,6 +90,7 @@ These are tool outputs and should be treated as disposable:
 - `apps/frontend/.next`
 - `apps/web/_build`
 - `workers/rust/target`
+- `apps/hub-gui/src-tauri/target`
 - `apps/installer-gui/src-tauri/target`
 - `apps/workbench-gui/src-tauri/target`
 - `dist/`

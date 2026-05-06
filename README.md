@@ -5,6 +5,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Next.js` workbench UI for modeling, project management, result review, and immersive 3D editing
 - `Elixir` orchestrator API for jobs, persistence, chunked result delivery, and multi-agent coordination
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
+- an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
 `v0.5` is the first version where the repository itself starts to match the system it contains. Kyuubiki now presents itself as a layered FEM platform with clearer runtime boundaries, protocol-driven headless SDKs, dedicated smoke coverage for each major surface, and a more explicit local-to-CI verification path.
 
@@ -53,6 +54,7 @@ Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
 - [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
+- [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
 - [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
 - [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
@@ -133,6 +135,7 @@ Start here if you need the repo map:
 ### Installer and packaging
 
 - Rust installer CLI
+- Tauri Hub GUI shell
 - Tauri installer GUI
 - Tauri desktop workbench shell
 - component-scoped build and packaging entry points
@@ -257,8 +260,13 @@ Frontend validation notes:
 Frontend CLI notes:
 
 - `./scripts/kyuubiki project inspect <bundle>`
+- `./scripts/kyuubiki project validate <input> [--json]`
 - `./scripts/kyuubiki project normalize <input> --out <output>`
+- `./scripts/kyuubiki project unpack <bundle> --out <directory>`
+- `./scripts/kyuubiki project pack <input> --out <bundle>`
+- `./scripts/kyuubiki project diff <left> <right>`
 - `./scripts/kyuubiki macro inspect <macro.json>`
+- `./scripts/kyuubiki macro validate <input> [--json]`
 - `./scripts/kyuubiki macro normalize <input> --out <output>`
 - the frontend package also exposes a `kyuubiki` bin via
   [apps/frontend/package.json](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/package.json)
@@ -333,6 +341,7 @@ Use these commands when managing artifacts component-by-component:
 - `make build-frontend`
 - `make build-orchestrator`
 - `make build-agent`
+- `make build-hub-gui`
 - `make build-installer-gui`
 - `make build-workbench-gui`
 - `make package-runtime`
@@ -546,6 +555,25 @@ Common commands:
 ```bash
 make installer-gui-dev
 make installer-gui-build
+```
+
+### Tauri Hub GUI
+
+Kyuubiki now also includes an emerging Tauri-based desktop hub that is meant to
+be the daily launcher, runtime controller, and operator shell above installer
+and workbench.
+
+- app root: [apps/hub-gui](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui)
+- Tauri backend: [src-tauri/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/src-tauri/src/main.rs)
+- hub shell UI: [ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/ui/index.html)
+- architecture notes:
+  [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
+
+Common commands:
+
+```bash
+make hub-gui-dev
+make hub-gui-build
 ```
 
 ### Tauri workbench GUI

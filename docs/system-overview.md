@@ -10,6 +10,16 @@ contract surface:
 - `Solver data plane`
   Rust engine crates and headless Rust agents.
 
+On the desktop product side, Kyuubiki also now needs three cooperating GUI
+surfaces:
+
+- `Hub`
+  desktop entrypoint, runtime launcher, and operator shell
+- `Workbench`
+  focused modeling and analysis surface
+- `Installer`
+  bootstrap and heavier deployment setup surface
+
 ## Runtime split
 
 ### `orchestrated_gui`
