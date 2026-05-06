@@ -5,9 +5,12 @@ import {
   buildWorkbenchRecordedMacroDraft,
   buildWorkbenchPythonPrelude,
   DEFAULT_WORKBENCH_PYTHON,
+  deleteWorkbenchMacroPreset,
   ensurePyodideRuntime,
   isWorkbenchScriptActionHighRisk,
+  listWorkbenchMacroPresets,
   parseWorkbenchRecordedMacroDraft,
+  saveWorkbenchMacroPreset,
   serializeWorkbenchRecordedMacroDraft,
   serializeWorkbenchMacroPythonSnippet,
   WORKBENCH_SCRIPT_MACROS,
@@ -15,6 +18,7 @@ import {
   type WorkbenchScriptActionDefinition,
   type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptLanguage,
+  type WorkbenchMacroPresetRecord,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
 
@@ -54,6 +58,19 @@ const copy = {
     importMacroJson: "Import macro JSON",
     macroJsonExported: "Exported the current recorded macro as JSON.",
     macroJsonImported: "Imported a macro JSON draft into the editor.",
+    projectPresets: "Project presets",
+    presetName: "Preset name",
+    presetNamePlaceholder: "review current result context",
+    savePreset: "Save preset",
+    insertPreset: "Insert preset",
+    exportPresetJson: "Export preset JSON",
+    deletePreset: "Delete preset",
+    noProjectSelected: "Select a project first to save presets against project context.",
+    noPresetDraft: "Build or import a macro draft first so it can be saved as a preset.",
+    noPresets: "No saved presets for the current project yet.",
+    presetSaved: "Saved the current macro draft into project presets.",
+    presetDeleted: "Deleted the selected project preset.",
+    presetInserted: "Inserted the selected project preset into the editor.",
     snapshot: "Snapshot",
     actionCatalog: "Action catalog",
     macroCatalog: "Macro catalog",
@@ -113,6 +130,19 @@ const copy = {
     importMacroJson: "导入宏 JSON",
     macroJsonExported: "已把当前录制宏导出为 JSON。",
     macroJsonImported: "已把宏 JSON 草稿导入编辑器。",
+    projectPresets: "项目预设",
+    presetName: "预设名称",
+    presetNamePlaceholder: "复查当前结果上下文",
+    savePreset: "保存预设",
+    insertPreset: "插入预设",
+    exportPresetJson: "导出预设 JSON",
+    deletePreset: "删除预设",
+    noProjectSelected: "先选中一个项目，预设才能挂到项目上下文下面。",
+    noPresetDraft: "先生成或导入一个宏草稿，才能把它保存成预设。",
+    noPresets: "当前项目还没有保存的预设。",
+    presetSaved: "已把当前宏草稿保存到项目预设。",
+    presetDeleted: "已删除选中的项目预设。",
+    presetInserted: "已把选中的项目预设插入编辑器。",
     snapshot: "状态快照",
     actionCatalog: "动作目录",
     macroCatalog: "宏动作目录",
@@ -183,6 +213,9 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const [output, setOutput] = useState<string[]>([]);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [presetName, setPresetName] = useState("");
+  const [presetRecords, setPresetRecords] = useState<WorkbenchMacroPresetRecord[]>([]);
+  const [macroDraftBuffer, setMacroDraftBuffer] = useState<ReturnType<typeof buildWorkbenchRecordedMacroDraft> | null>(null);
 
   useEffect(() => {
     const stored = safeStorageGet();
@@ -201,9 +234,19 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     );
   }, [scriptCode]);
 
+  useEffect(() => {
+    setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
+  }, [snapshot.selectedProjectId]);
+
   const appendOutput = (line: string) => {
     setOutput((current) => [...current.slice(-199), line]);
   };
+
+  const refreshPresetRecords = () => {
+    setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
+  };
+
+  const resolveCurrentDraft = () => macroDraftBuffer ?? buildWorkbenchRecordedMacroDraft(actionLog);
 
   const loadRuntime = async () => {
     setRuntimeError(null);
@@ -276,6 +319,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       return;
     }
 
+    setMacroDraftBuffer(draft);
     const snippet = serializeWorkbenchMacroPythonSnippet(draft);
     setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
     appendOutput(`[macro] ${t.macroDraftInserted}`);
@@ -289,6 +333,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       return;
     }
 
+    setMacroDraftBuffer(draft);
     downloadTextFile(`${draft.id}.json`, serializeWorkbenchRecordedMacroDraft(draft));
     appendOutput(`[macro] ${t.macroJsonExported}`);
   };
@@ -298,6 +343,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
     try {
       const parsed = parseWorkbenchRecordedMacroDraft(JSON.parse(await file.text()) as unknown);
+      setMacroDraftBuffer(parsed);
       const snippet = serializeWorkbenchMacroPythonSnippet(parsed);
       setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
       appendOutput(`[macro] ${t.macroJsonImported}`);
@@ -306,6 +352,55 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       appendOutput(`[macro] ${message}`);
       setRuntimeError(message);
     }
+  };
+
+  const saveCurrentPreset = () => {
+    if (!snapshot.selectedProjectId) {
+      appendOutput(`[preset] ${t.noProjectSelected}`);
+      return;
+    }
+
+    const draft = resolveCurrentDraft();
+    if (!draft) {
+      appendOutput(`[preset] ${t.noPresetDraft}`);
+      return;
+    }
+
+    try {
+      const saved = saveWorkbenchMacroPreset({
+        projectId: snapshot.selectedProjectId,
+        name: presetName || draft.id.replace(/^macro\//, "").replaceAll("-", " "),
+        macro: draft,
+      });
+      setMacroDraftBuffer(saved.macro);
+      setPresetName(saved.name);
+      refreshPresetRecords();
+      appendOutput(`[preset] ${t.presetSaved}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput(`[preset] ${message}`);
+      setRuntimeError(message);
+    }
+  };
+
+  const insertPreset = (preset: WorkbenchMacroPresetRecord) => {
+    setMacroDraftBuffer(preset.macro);
+    setPresetName(preset.name);
+    const snippet = serializeWorkbenchMacroPythonSnippet(preset.macro);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+    appendOutput(`[preset] ${t.presetInserted}`);
+  };
+
+  const exportPresetJson = (preset: WorkbenchMacroPresetRecord) => {
+    setMacroDraftBuffer(preset.macro);
+    downloadTextFile(`${preset.name.replace(/\s+/g, "-").toLowerCase() || preset.presetId}.json`, serializeWorkbenchRecordedMacroDraft(preset.macro));
+    appendOutput(`[macro] ${t.macroJsonExported}`);
+  };
+
+  const deletePreset = (preset: WorkbenchMacroPresetRecord) => {
+    deleteWorkbenchMacroPreset(preset.presetId);
+    refreshPresetRecords();
+    appendOutput(`[preset] ${t.presetDeleted}`);
   };
 
   return (
@@ -361,6 +456,62 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
           </button>
         </div>
         {recordingMode ? <p className="card-copy">{t.recordingActive}</p> : null}
+      </section>
+
+      <section className="sidebar-card sidebar-card--compact">
+        <div className="card-head">
+          <h2>{t.projectPresets}</h2>
+          <span>{presetRecords.length}</span>
+        </div>
+        {!snapshot.selectedProjectId ? <p className="card-copy">{t.noProjectSelected}</p> : null}
+        <label className="field-label">
+          <span>{t.presetName}</span>
+          <input
+            className="text-input"
+            onChange={(event) => setPresetName(event.target.value)}
+            placeholder={t.presetNamePlaceholder}
+            type="text"
+            value={presetName}
+          />
+        </label>
+        <div className="button-row">
+          <button className="ghost-button" disabled={!snapshot.selectedProjectId} onClick={saveCurrentPreset} type="button">
+            {t.savePreset}
+          </button>
+        </div>
+        {presetRecords.length === 0 ? (
+          <p className="card-copy">{snapshot.selectedProjectId ? t.noPresets : t.noProjectSelected}</p>
+        ) : (
+          <div className="script-panel__catalog">
+            {presetRecords.map((preset) => (
+              <article className="script-panel__action" key={preset.presetId}>
+                <div className="script-panel__action-head">
+                  <strong>{preset.name}</strong>
+                  <span>{preset.updatedAt}</span>
+                </div>
+                <div className="script-panel__payload">
+                  <span>ID</span>
+                  <code>{preset.macro.id}</code>
+                </div>
+                <div className="script-panel__payload">
+                  <span>Steps</span>
+                  <code>{String(preset.macro.steps.length)}</code>
+                </div>
+                <div className="button-row">
+                  <button className="ghost-button ghost-button--compact" onClick={() => insertPreset(preset)} type="button">
+                    {t.insertPreset}
+                  </button>
+                  <button className="ghost-button ghost-button--compact" onClick={() => exportPresetJson(preset)} type="button">
+                    {t.exportPresetJson}
+                  </button>
+                  <button className="ghost-button ghost-button--compact" onClick={() => deletePreset(preset)} type="button">
+                    {t.deletePreset}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="sidebar-card sidebar-card--compact">

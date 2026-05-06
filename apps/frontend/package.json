@@ -2,7 +2,11 @@
   "name": "kyuubiki-frontend",
   "version": "0.1.0",
   "private": true,
+  "bin": {
+    "kyuubiki": "./scripts/kyuubiki-cli.mjs"
+  },
   "scripts": {
+    "cli": "node ./scripts/kyuubiki-cli.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

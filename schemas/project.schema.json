@@ -2,17 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kyuubiki.local/schemas/project.schema.json",
   "title": "Kyuubiki Project Bundle",
-  "description": "Portable JSON project package for persisted project, model, and version data.",
+  "description": "Portable JSON project package for persisted project, workspace, automation, model, and version data.",
   "type": "object",
   "required": ["project_schema_version", "project", "models", "model_versions"],
   "properties": {
     "project_schema_version": {
       "type": "string",
-      "const": "kyuubiki.project/v1"
+      "const": "kyuubiki.project/v2"
     },
     "exported_at": {
       "type": "string",
       "format": "date-time"
+    },
+    "project_file_manifest": {
+      "$ref": "#/$defs/projectFileManifestV1"
     },
     "project": {
       "$ref": "#/$defs/projectRecordV1"
@@ -56,10 +59,62 @@
         { "$ref": "model.schema.json#/$defs/planeTriangle2dModelV1" },
         { "type": "null" }
       ]
+    },
+    "automation_presets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/automationPresetRecordV1"
+      }
+    },
+    "asset_catalog": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/projectAssetMetaRecordV1"
+      }
+    },
+    "asset_references": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/projectAssetReferenceRecordV1"
+      }
     }
   },
   "additionalProperties": false,
   "$defs": {
+    "projectFileManifestV1": {
+      "type": "object",
+      "required": [
+        "layout_version",
+        "engine_manifest_path",
+        "root_manifest_path",
+        "project_record_path",
+        "workspace_settings_path",
+        "workspace_snapshot_path",
+        "automation_presets_path",
+        "asset_catalog_path",
+        "asset_references_path",
+        "model_directory",
+        "version_directory",
+        "job_directory",
+        "result_directory"
+      ],
+      "properties": {
+        "layout_version": { "type": "string", "const": "kyuubiki.project-layout/v1" },
+        "engine_manifest_path": { "type": "string", "minLength": 1 },
+        "root_manifest_path": { "type": "string", "minLength": 1 },
+        "project_record_path": { "type": "string", "minLength": 1 },
+        "workspace_settings_path": { "type": "string", "minLength": 1 },
+        "workspace_snapshot_path": { "type": "string", "minLength": 1 },
+        "automation_presets_path": { "type": "string", "minLength": 1 },
+        "asset_catalog_path": { "type": "string", "minLength": 1 },
+        "asset_references_path": { "type": "string", "minLength": 1 },
+        "model_directory": { "type": "string", "minLength": 1 },
+        "version_directory": { "type": "string", "minLength": 1 },
+        "job_directory": { "type": "string", "minLength": 1 },
+        "result_directory": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
     "projectRecordV1": {
       "type": "object",
       "required": ["project_id", "name", "inserted_at", "updated_at"],
@@ -69,6 +124,91 @@
         "description": { "type": ["string", "null"] },
         "inserted_at": { "type": "string", "format": "date-time" },
         "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "automationPresetRecordV1": {
+      "type": "object",
+      "required": ["presetId", "projectId", "name", "macro", "updatedAt"],
+      "properties": {
+        "presetId": { "type": "string", "minLength": 1 },
+        "projectId": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "macro": {
+          "type": "object",
+          "required": ["id", "steps"],
+          "properties": {
+            "id": { "type": "string", "minLength": 1 },
+            "steps": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/automationMacroStepV1"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "automationMacroStepV1": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": { "type": "string", "minLength": 1 },
+        "payload": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "projectAssetMetaRecordV1": {
+      "type": "object",
+      "required": ["guid", "meta_version", "kind", "path", "source_id"],
+      "properties": {
+        "guid": { "type": "string", "minLength": 1 },
+        "meta_version": { "type": "string", "const": "kyuubiki.asset-meta/v1" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "project",
+            "workspace_settings",
+            "workspace_snapshot",
+            "automation_preset",
+            "model",
+            "model_version",
+            "job",
+            "result"
+          ]
+        },
+        "path": { "type": "string", "minLength": 1 },
+        "source_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "updated_at": { "type": ["string", "null"], "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "projectAssetReferenceRecordV1": {
+      "type": "object",
+      "required": ["from_guid", "relation", "to_guid"],
+      "properties": {
+        "from_guid": { "type": "string", "minLength": 1 },
+        "relation": {
+          "type": "string",
+          "enum": [
+            "contains",
+            "active_model",
+            "active_version",
+            "workspace_snapshot_of",
+            "workspace_settings_for",
+            "automation_for",
+            "version_of",
+            "job_for_project",
+            "job_for_version",
+            "result_for_job"
+          ]
+        },
+        "to_guid": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": false
     },

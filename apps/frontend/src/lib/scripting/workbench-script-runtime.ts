@@ -90,8 +90,17 @@ export type WorkbenchRecordedMacroDraft = {
   steps: WorkbenchScriptMacroStep[];
 };
 
+export type WorkbenchMacroPresetRecord = {
+  presetId: string;
+  projectId: string;
+  name: string;
+  macro: WorkbenchRecordedMacroDraft;
+  updatedAt: string;
+};
+
 const MACRO_TEMPLATE_EXACT_RE = /^\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}$/;
 const MACRO_TEMPLATE_INLINE_RE = /\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}/g;
+const WORKBENCH_MACRO_PRESETS_KEY = "kyuubiki-workbench-macro-presets";
 
 export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
   {
@@ -677,6 +686,102 @@ export function serializeWorkbenchRecordedMacroDraft(macro: WorkbenchRecordedMac
 
 export function serializeWorkbenchMacroPythonSnippet(macro: WorkbenchRecordedMacroDraft): string {
   return `recorded_macro = ${JSON.stringify(macro, null, 2)}\n\nawait ky.run_macro_definition(recorded_macro)\n`;
+}
+
+function safeReadWorkbenchMacroPresetRecords(): WorkbenchMacroPresetRecord[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(WORKBENCH_MACRO_PRESETS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.flatMap((entry) => {
+      if (!entry || typeof entry !== "object") return [];
+      const candidate = entry as Partial<WorkbenchMacroPresetRecord>;
+      if (
+        typeof candidate.presetId !== "string" ||
+        typeof candidate.projectId !== "string" ||
+        typeof candidate.name !== "string" ||
+        typeof candidate.updatedAt !== "string"
+      ) {
+        return [];
+      }
+
+      try {
+        return [
+          {
+            presetId: candidate.presetId,
+            projectId: candidate.projectId,
+            name: candidate.name,
+            macro: parseWorkbenchRecordedMacroDraft(candidate.macro),
+            updatedAt: candidate.updatedAt,
+          },
+        ];
+      } catch {
+        return [];
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
+function writeWorkbenchMacroPresetRecords(records: WorkbenchMacroPresetRecord[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(WORKBENCH_MACRO_PRESETS_KEY, JSON.stringify(records));
+}
+
+function normalizeWorkbenchMacroPresetName(name: string) {
+  return name.trim().replace(/\s+/g, " ").slice(0, 64);
+}
+
+export function listWorkbenchMacroPresets(projectId: string | null): WorkbenchMacroPresetRecord[] {
+  if (!projectId) return [];
+
+  return safeReadWorkbenchMacroPresetRecords()
+    .filter((entry) => entry.projectId === projectId)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+}
+
+export function saveWorkbenchMacroPreset(params: {
+  projectId: string;
+  name: string;
+  macro: WorkbenchRecordedMacroDraft;
+  presetId?: string;
+}): WorkbenchMacroPresetRecord {
+  const projectId = params.projectId.trim();
+  const name = normalizeWorkbenchMacroPresetName(params.name);
+
+  if (!projectId) {
+    throw new Error("A project must be selected before saving a macro preset.");
+  }
+
+  if (!name) {
+    throw new Error("Macro preset name cannot be empty.");
+  }
+
+  const records = safeReadWorkbenchMacroPresetRecords();
+  const now = new Date().toISOString();
+  const presetId = params.presetId?.trim() || `preset_${Math.random().toString(36).slice(2, 10)}`;
+  const nextRecord: WorkbenchMacroPresetRecord = {
+    presetId,
+    projectId,
+    name,
+    macro: parseWorkbenchRecordedMacroDraft(params.macro),
+    updatedAt: now,
+  };
+
+  const nextRecords = [...records.filter((entry) => entry.presetId !== presetId), nextRecord];
+  writeWorkbenchMacroPresetRecords(nextRecords);
+  return nextRecord;
+}
+
+export function deleteWorkbenchMacroPreset(presetId: string) {
+  const normalizedPresetId = presetId.trim();
+  if (!normalizedPresetId) return;
+  const records = safeReadWorkbenchMacroPresetRecords();
+  writeWorkbenchMacroPresetRecords(records.filter((entry) => entry.presetId !== normalizedPresetId));
 }
 
 function resolveWorkbenchMacroTemplateString(

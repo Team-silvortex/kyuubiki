@@ -152,7 +152,9 @@ import { SAMPLE_LIBRARY } from "@/lib/models";
 import {
   getWorkbenchScriptActionDefinition,
   getWorkbenchScriptMacroDefinition,
+  listWorkbenchMacroPresets,
   resolveWorkbenchMacroPayloadTemplates,
+  saveWorkbenchMacroPreset,
   type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
@@ -3048,6 +3050,7 @@ export function Workbench() {
           parametric,
           round,
         ),
+        automationPresets: listWorkbenchMacroPresets(selectedProject.project_id),
         jobs: jobHistory,
         results,
       }),
@@ -3248,6 +3251,19 @@ export function Workbench() {
             model_schema_version: extraVersion.model_schema_version,
             payload: extraVersion.payload,
           });
+        }
+      }
+
+      for (const preset of bundle.automation_presets ?? []) {
+        try {
+          saveWorkbenchMacroPreset({
+            projectId: createdProject.project.project_id,
+            presetId: preset.presetId,
+            name: preset.name,
+            macro: preset.macro,
+          });
+        } catch {
+          // Ignore malformed preset payloads so model/project import stays usable.
         }
       }
 

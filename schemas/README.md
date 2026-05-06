@@ -7,7 +7,9 @@ README.
 - `progress-event.schema.json` is for streamed runtime updates
 - `model.schema.json` is for versioned browser model import/export payloads
 - `material-library.schema.json` is for reusable material library import/export payloads
-- `project.schema.json` is for portable `.kyuubiki.json` project bundles
+- `project.schema.json` is for portable `.kyuubiki.json` project bundles and
+  standardized `.kyuubiki` archive manifests, including asset catalogs and meta
+  sidecars plus guid reference graphs
 - `agent-manifest.schema.json` is for local/distributed solver node manifests
 
 They are intentionally lightweight and JSON-first. They now serve four

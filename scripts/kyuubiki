@@ -40,6 +40,8 @@ Usage:
 
 Commands:
   help              Show this help
+  project           Run the integrated frontend project-bundle CLI
+  macro             Run the integrated frontend macro CLI
   build-frontend    Build the browser workbench production bundle
   build-orchestrator Compile the Elixir control plane in production mode
   build-agent       Build the Rust solver agent binary in release mode
@@ -85,6 +87,9 @@ Commands:
 
 Examples:
   ./scripts/kyuubiki smoke
+  ./scripts/kyuubiki project inspect demo.kyuubiki
+  ./scripts/kyuubiki project normalize demo.kyuubiki --out demo.normalized.kyuubiki
+  ./scripts/kyuubiki macro inspect review-result.json
   ./scripts/kyuubiki agent -- --port 5001
   ./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3
   ./scripts/kyuubiki start
@@ -396,6 +401,14 @@ run_benchmark() {
   )
 }
 
+run_frontend_cli() {
+  require_dir "$FRONTEND_DIR"
+  (
+    cd "$FRONTEND_DIR"
+    node ./scripts/kyuubiki-cli.mjs "$@"
+  )
+}
+
 run_export_db() {
   local url="${1:-http://127.0.0.1:4000/api/v1/export/database}"
 
@@ -607,6 +620,12 @@ fi
 case "$command" in
   help)
     usage
+    ;;
+  project)
+    run_frontend_cli project "$@"
+    ;;
+  macro)
+    run_frontend_cli macro "$@"
     ;;
   build-frontend)
     run_build_frontend

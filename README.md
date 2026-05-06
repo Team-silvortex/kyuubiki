@@ -254,6 +254,15 @@ Frontend validation notes:
 - use `npm run typecheck` for a stable TypeScript-only check
 - `typecheck` will prepare missing Next route type artifacts before running `tsc`
 
+Frontend CLI notes:
+
+- `./scripts/kyuubiki project inspect <bundle>`
+- `./scripts/kyuubiki project normalize <input> --out <output>`
+- `./scripts/kyuubiki macro inspect <macro.json>`
+- `./scripts/kyuubiki macro normalize <input> --out <output>`
+- the frontend package also exposes a `kyuubiki` bin via
+  [apps/frontend/package.json](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/package.json)
+
 ### Orchestrator API
 
 Main router:
@@ -432,7 +441,7 @@ The Tauri installer GUI now also includes a `Remote` panel for:
 
 ## Project Format
 
-Kyuubiki has a portable project format built around JSON schemas.
+Kyuubiki has a portable, engine-style project format built around JSON schemas.
 
 Main schemas:
 
@@ -443,30 +452,43 @@ Main schemas:
 ### Single-file project export
 
 - extension: `.kyuubiki.json`
-- schema: `kyuubiki.project/v1`
+- schema: `kyuubiki.project/v2`
 
 ### Project archive export
 
 - extension: `.kyuubiki`
 - container: `zip`
+- layout: `kyuubiki.project-layout/v1`
 
-Current archive layout:
+Current standardized archive layout:
 
 ```text
 project.json
-project/project.json
-models/<model_id>.json
-versions/<version_id>.json
-jobs/jobs.json
-jobs/<job_id>.json
-results/results.json
-results/<job_id>.json
-workspace/manifest.json
-workspace/current-model.json
+.kyuubiki/project.json
+Assets/project/project.json
+Assets/models/<model_id>.json
+Assets/versions/<version_id>.json
+ProjectSettings/workspace.json
+ProjectSettings/automation-presets.json
+ProjectSettings/asset-catalog.json
+ProjectSettings/asset-references.json
+Workspace/current-model.json
+Analysis/jobs/index.json
+Analysis/jobs/<job_id>.json
+Analysis/results/index.json
+Analysis/results/<job_id>.json
 README.txt
 ```
 
-The root `project.json` remains the canonical manifest. Detached analysis payloads live under `results/` so exported bundles can be reviewed offline.
+The root `project.json` remains the canonical portable manifest. The hidden
+`.kyuubiki/project.json` file describes the archive layout itself, while
+`ProjectSettings/` holds workspace/editor state and automation presets. Detached
+analysis payloads live under `Analysis/` so exported bundles can be reviewed
+offline. `ProjectSettings/asset-catalog.json` adds stable asset-level GUID
+tracking, `ProjectSettings/asset-references.json` captures guid-to-guid
+relations, and core resources emit adjacent `*.meta` sidecars inside the
+archive.
+Legacy layout aliases are still emitted for compatibility with older imports.
 
 ## Installer
 

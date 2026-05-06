@@ -17,6 +17,10 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
 - `schemas/`
   Versioned JSON contracts shared across UI, orchestrator, installer, and
   solver nodes.
+  Project bundles now standardize around an engine-style archive layout with
+  `Assets/`, `ProjectSettings/`, `Workspace/`, and `Analysis/` roots inside
+  `.kyuubiki` exports, plus an asset catalog and `.meta` sidecars for stable
+  asset tracking, and a guid reference graph for cross-asset relations.
 - `deploy/`
   Deployment descriptors such as agent manifests.
 - `assets/`

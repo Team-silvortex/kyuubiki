@@ -12,6 +12,13 @@ import type {
   TrussElementInput,
   TrussNodeInput,
 } from "@/lib/api";
+import type { WorkbenchMacroPresetRecord } from "@/lib/scripting/workbench-script-runtime";
+import {
+  PROJECT_SCHEMA_VERSION,
+  defaultProjectFileManifest,
+  type ProjectAssetMetaRecord,
+  type ProjectAssetReferenceRecord,
+} from "@/lib/projects";
 
 export type ParametricTrussConfig = {
   bays: number;
@@ -34,8 +41,6 @@ export type ParametricPanelConfig = {
 };
 
 export const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
-export const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v1";
-
 export function generateRectangularPanelMesh(config: ParametricPanelConfig): PlaneTriangle2dJobInput {
   const width = Math.max(0.2, config.width);
   const height = Math.max(0.2, config.height);
@@ -269,6 +274,9 @@ export function exportProjectBundle(payload: {
   activeModelId?: string | null;
   activeVersionId?: string | null;
   workspaceSnapshot?: Record<string, unknown> | null;
+  automationPresets?: WorkbenchMacroPresetRecord[];
+  assetCatalog?: ProjectAssetMetaRecord[];
+  assetReferences?: ProjectAssetReferenceRecord[];
   jobs?: JobState[];
   results?: JobResultRecord[];
 }): string {
@@ -276,12 +284,16 @@ export function exportProjectBundle(payload: {
     {
       project_schema_version: PROJECT_SCHEMA_VERSION,
       exported_at: new Date().toISOString(),
+      project_file_manifest: defaultProjectFileManifest(),
       project: payload.project,
       models: payload.models,
       model_versions: payload.modelVersions,
       active_model_id: payload.activeModelId ?? null,
       active_version_id: payload.activeVersionId ?? null,
       workspace_snapshot: payload.workspaceSnapshot ?? null,
+      automation_presets: payload.automationPresets ?? [],
+      asset_catalog: payload.assetCatalog ?? [],
+      asset_references: payload.assetReferences ?? [],
       jobs: payload.jobs ?? [],
       results: payload.results ?? [],
     },
