@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -29,6 +29,10 @@ help:
 	@echo "  make package     Stage a portable release directory under dist/"
 	@echo "  make package-runtime Stage the portable runtime release scaffold under dist/"
 	@echo "  make package-desktop Build/stage all Tauri desktop shells"
+	@echo "  make desktop-stage Stage the desktop/runtime release scaffold for PLATFORM=<host|macos|linux|windows|all>"
+	@echo "  make desktop-build-host Build all three desktop shells for the current host platform"
+	@echo "  make desktop-release Stage, build, and verify desktop release output for PLATFORM=<host|macos|linux|windows|all>"
+	@echo "  make desktop-verify Verify staged manifests and icon inputs for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make sync-desktop-shared Refresh shared desktop UI helper files into each Tauri app"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
@@ -137,6 +141,18 @@ package-runtime:
 
 package-desktop:
 	@$(ENTRYPOINT) package-desktop
+
+desktop-stage:
+	@$(ENTRYPOINT) desktop-stage $(PLATFORM)
+
+desktop-build-host:
+	@$(ENTRYPOINT) desktop-build-host
+
+desktop-release:
+	@$(ENTRYPOINT) desktop-release $(PLATFORM)
+
+desktop-verify:
+	@$(ENTRYPOINT) desktop-verify $(PLATFORM)
 
 sync-desktop-shared:
 	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs

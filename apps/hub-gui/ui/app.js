@@ -1,4 +1,4 @@
-import { loadDesktopBrand, setText } from "./shared/tauri-bridge.js";
+import { loadDesktopBrand, setText, syncDesktopStates } from "./shared/tauri-bridge.js";
 
 const sectionModel = {
   projects: {
@@ -67,4 +67,5 @@ navItems.forEach((item) => {
 });
 
 await applyBrand();
+syncDesktopStates();
 setSection("projects");

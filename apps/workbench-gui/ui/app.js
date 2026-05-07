@@ -1,4 +1,10 @@
-import { invokeTauri, loadDesktopBrand, setText } from "./shared/tauri-bridge.js";
+import {
+  applyDesktopState,
+  invokeTauri,
+  loadDesktopBrand,
+  setText,
+  syncDesktopStates,
+} from "./shared/tauri-bridge.js";
 
 const state = {
   workbenchUrl: "http://127.0.0.1:3000",
@@ -40,7 +46,7 @@ async function loadEnvironment() {
   state.orchestratorUrl = environment.orchestrator_url;
   elements.workbenchUrl.textContent = environment.workbench_url;
   elements.orchestratorUrl.textContent = environment.orchestrator_url;
-  elements.deploymentMode.textContent = environment.deployment_mode;
+  applyDesktopState(elements.deploymentMode, environment.deployment_mode, { kind: "activity" });
 }
 
 function loadWorkbenchFrame() {
@@ -204,6 +210,7 @@ async function boot() {
 
   await loadEnvironment();
   loadWorkbenchFrame();
+  syncDesktopStates();
   renderConsoleTabs();
   renderLogServiceTabs();
   await refreshStatus();

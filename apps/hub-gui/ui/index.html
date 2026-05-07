@@ -73,10 +73,10 @@
           <article class="hub-card desktop-shell-surface-card">
             <h2>Local runtime</h2>
             <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state desktop-shell-state--healthy">ready</strong></div>
+              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="health">ready</strong></div>
               <div class="desktop-shell-metric-row"><span>Frontend</span><strong>127.0.0.1:3000</strong></div>
               <div class="desktop-shell-metric-row"><span>Control plane</span><strong>127.0.0.1:4000</strong></div>
-              <div class="desktop-shell-metric-row"><span>Agents</span><strong class="desktop-shell-state desktop-shell-state--active">2 online</strong></div>
+              <div class="desktop-shell-metric-row"><span>Agents</span><strong class="desktop-shell-state" data-desktop-state="activity">2 online</strong></div>
             </div>
           </article>
 
@@ -120,9 +120,9 @@
           <article class="hub-card desktop-shell-surface-card">
             <h2>Health and watchdog</h2>
             <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Watchdog</span><strong class="desktop-shell-state desktop-shell-state--healthy">stable</strong></div>
-              <div class="desktop-shell-metric-row"><span>Security events</span><strong class="desktop-shell-state desktop-shell-state--warning">2 recent</strong></div>
-              <div class="desktop-shell-metric-row"><span>Failed jobs</span><strong class="desktop-shell-state desktop-shell-state--healthy">0</strong></div>
+              <div class="desktop-shell-metric-row"><span>Watchdog</span><strong class="desktop-shell-state" data-desktop-state="health">stable</strong></div>
+              <div class="desktop-shell-metric-row"><span>Security events</span><strong class="desktop-shell-state" data-desktop-state="health">2 recent</strong></div>
+              <div class="desktop-shell-metric-row"><span>Failed jobs</span><strong class="desktop-shell-state" data-desktop-state="health" data-state-value="0 failed">0</strong></div>
             </div>
           </article>
 
@@ -161,9 +161,9 @@
         <article class="hub-card desktop-shell-surface-card">
           <h2>Current mode</h2>
             <div class="hub-metrics">
-            <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state desktop-shell-state--active">orchestrated_gui</strong></div>
-            <div class="desktop-shell-metric-row"><span>Storage</span><strong class="desktop-shell-state desktop-shell-state--idle">sqlite</strong></div>
-            <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state desktop-shell-state--idle">local workstation</strong></div>
+            <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state" data-desktop-state="activity">orchestrated_gui</strong></div>
+            <div class="desktop-shell-metric-row"><span>Storage</span><strong class="desktop-shell-state" data-desktop-state="activity">sqlite</strong></div>
+            <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state" data-desktop-state="activity">local workstation</strong></div>
           </div>
         </article>
       </aside>

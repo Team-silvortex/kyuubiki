@@ -36,6 +36,10 @@ Examples now include:
 - `build-workbench-gui`
 - `package-runtime`
 - `package-desktop`
+- `desktop-stage`
+- `desktop-build-host`
+- `desktop-release`
+- `desktop-verify`
 - `sync-desktop-shared`
 - `test-hub-gui`
 - `test-installer-gui`

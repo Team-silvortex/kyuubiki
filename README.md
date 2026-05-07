@@ -166,6 +166,11 @@ Desktop release planning now includes:
 - checked icon-format requirements by platform
 - staged desktop manifests under `dist/<platform>/desktop/...`
 - a fixed release ordering and artifact naming convention
+- unified desktop operator entry points:
+  - `make desktop-stage PLATFORM=all`
+  - `make desktop-build-host`
+  - `make desktop-release`
+  - `make desktop-verify PLATFORM=all`
 
 ## Current Architecture
 

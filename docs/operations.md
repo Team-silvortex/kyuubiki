@@ -98,6 +98,10 @@ These can now be written from the installer GUI Setup panel.
 - `make build-workbench-gui`
 - `make package-runtime`
 - `make package-desktop`
+- `make desktop-stage PLATFORM=all`
+- `make desktop-build-host`
+- `make desktop-release`
+- `make desktop-verify PLATFORM=all`
 - `make status`
 - `make stop`
 - `make benchmark-compare PROFILE=medium`

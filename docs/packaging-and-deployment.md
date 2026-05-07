@@ -50,8 +50,20 @@ Use these commands when building deployable layouts:
   Builds the staged runtime scaffold under `dist/<platform>`
 - `make package-desktop`
   Builds the Tauri Hub GUI, installer GUI, and workbench GUI packaging outputs
+- `make desktop-stage PLATFORM=macos|linux|windows|all`
+  Stages the release scaffold and desktop manifests under `dist/<platform>`
+- `make desktop-build-host`
+  Builds the `hub-gui`, `installer-gui`, and `workbench-gui` bundles for the current host
+- `make desktop-release PLATFORM=macos|linux|windows|all`
+  Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
+- `make desktop-verify PLATFORM=macos|linux|windows|all`
+  Verifies staged manifests and required icon inputs for each desktop app
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop all`
+- `zsh ./scripts/kyuubiki desktop-stage macos|linux|windows|all`
+- `zsh ./scripts/kyuubiki desktop-build-host`
+- `zsh ./scripts/kyuubiki desktop-release macos|linux|windows|all`
+- `zsh ./scripts/kyuubiki desktop-verify macos|linux|windows|all`
 
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.
@@ -158,6 +170,24 @@ Desktop packaging now follows a simple rule:
 
 That keeps `macos`, `linux`, and `windows` deployment paths visible and
 manageable even when you are not cross-compiling on the current machine.
+
+## Recommended desktop release flow
+
+Use one of these two operator-facing flows:
+
+- stage only:
+  `make desktop-stage PLATFORM=all`
+- full host release pass:
+  `make desktop-release`
+
+`desktop-release` intentionally does three things in one stable order:
+
+1. stage `dist/<platform>` layout and desktop manifests
+2. build the host-native `hub-gui`, `installer-gui`, and `workbench-gui` bundles
+3. verify desktop manifests plus platform-specific icon inputs
+
+This keeps the current host honest while still preserving all three rollout
+paths inside `dist/`.
 
 The platform-specific release checklist lives in:
 

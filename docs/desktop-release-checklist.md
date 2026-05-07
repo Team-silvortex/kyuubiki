@@ -64,6 +64,7 @@ Typical commands:
 - `zsh ./scripts/kyuubiki build-hub-gui macos`
 - `zsh ./scripts/kyuubiki build-workbench-gui macos`
 - `zsh ./scripts/kyuubiki package-desktop macos`
+- `zsh ./scripts/kyuubiki desktop-verify macos`
 
 Staged descriptor paths:
 
@@ -95,6 +96,7 @@ Typical commands:
 - `zsh ./scripts/kyuubiki build-hub-gui linux`
 - `zsh ./scripts/kyuubiki build-workbench-gui linux`
 - `zsh ./scripts/kyuubiki package-desktop linux`
+- `zsh ./scripts/kyuubiki desktop-verify linux`
 
 Staged descriptor paths:
 
@@ -126,6 +128,7 @@ Typical commands:
 - `zsh ./scripts/kyuubiki build-hub-gui windows`
 - `zsh ./scripts/kyuubiki build-workbench-gui windows`
 - `zsh ./scripts/kyuubiki package-desktop windows`
+- `zsh ./scripts/kyuubiki desktop-verify windows`
 
 Staged descriptor paths:
 
@@ -145,15 +148,15 @@ When preparing a release, keep the order stable:
 
 1. Update version notes and changelog.
 2. Refresh runtime scaffold:
-   `zsh ./scripts/kyuubiki package-runtime`
+   `zsh ./scripts/kyuubiki desktop-stage all`
 3. Refresh desktop manifests:
-   `zsh ./scripts/kyuubiki package-desktop all`
+   `zsh ./scripts/kyuubiki desktop-verify all`
 4. Build the current host-platform desktop bundles:
-   - `zsh ./scripts/kyuubiki build-hub-gui <host-platform>`
-   - `zsh ./scripts/kyuubiki build-installer-gui <host-platform>`
-   - `zsh ./scripts/kyuubiki build-workbench-gui <host-platform>`
-5. Verify icon inputs and manifest bundle targets for all three supported platforms.
-6. Publish artifacts using the naming convention above.
+   - `zsh ./scripts/kyuubiki desktop-build-host`
+5. Run the host release wrapper:
+   - `zsh ./scripts/kyuubiki desktop-release <host-platform>`
+6. Verify icon inputs and manifest bundle targets for all three supported platforms.
+7. Publish artifacts using the naming convention above.
 
 ## Notes
 

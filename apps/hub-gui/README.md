@@ -37,6 +37,8 @@ overview.
 - `make hub-gui-build`
 - `make test-hub-gui`
 - `make package-desktop`
+- `make desktop-build-host`
+- `make desktop-verify PLATFORM=macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
 

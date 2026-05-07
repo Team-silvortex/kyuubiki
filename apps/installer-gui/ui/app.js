@@ -1,8 +1,10 @@
 import {
+  applyDesktopState,
   invokeTauri as invoke,
   listenTauri as listen,
   loadDesktopBrand,
   setText,
+  syncDesktopStates,
 } from "./shared/tauri-bridge.js";
 
 (function () {
@@ -94,8 +96,8 @@ import {
     document.querySelectorAll("[data-mode-card]").forEach((card) => {
       card.classList.toggle("mode-card--active", card.dataset.modeCard === mode);
     });
-    currentModeLabel.textContent = mode;
-    serviceModePill.textContent = `${mode} profile`;
+    applyDesktopState(currentModeLabel, mode, { kind: "activity" });
+    applyDesktopState(serviceModePill, `${mode} profile`, { kind: "activity" });
   }
 
   function hydrateEnv(form) {
@@ -197,10 +199,13 @@ import {
     report.checks.forEach((check) => {
       const card = document.createElement("article");
       card.className = "doctor-card desktop-shell-surface-card";
+      const stateLabel = check.ok ? "ok" : "missing";
+      const stateClass = check.ok ? "ok" : "missing";
       card.innerHTML = `
         <strong>${check.label}</strong>
-        <span class="doctor-state desktop-shell-state ${check.ok ? "desktop-shell-state--healthy ok" : "desktop-shell-state--warning missing"}">${check.ok ? "ok" : "missing"}</span>
+        <span class="doctor-state ${stateClass}">${stateLabel}</span>
       `;
+      applyDesktopState(card.querySelector(".doctor-state"), stateLabel, { kind: "health" });
       doctorGrid.appendChild(card);
     });
   }
@@ -515,6 +520,7 @@ import {
       if (brand) {
         applyBrandConfig(brand);
       }
+      syncDesktopStates();
       renderDoctor(doctor);
       if (envForm) {
         hydrateEnv(envForm);
