@@ -6,6 +6,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../.
 const APPS = ["hub-gui", "installer-gui", "workbench-gui"];
 
 const sharedBridgeSource = path.join(ROOT, "apps/desktop-shared/ui/tauri-bridge.js");
+const sharedCssSource = path.join(ROOT, "apps/desktop-shared/ui/desktop-shell.css");
 const brandSource = path.join(ROOT, "assets/brand/brand.json");
 
 function ensureDir(target) {
@@ -19,6 +20,7 @@ function copy(source, target) {
 
 for (const app of APPS) {
   copy(sharedBridgeSource, path.join(ROOT, "apps", app, "ui/shared/tauri-bridge.js"));
+  copy(sharedCssSource, path.join(ROOT, "apps", app, "ui/shared/desktop-shell.css"));
   copy(brandSource, path.join(ROOT, "apps", app, "ui/assets/brand.json"));
 }
 

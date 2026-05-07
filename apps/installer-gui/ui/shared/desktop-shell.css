@@ -1,0 +1,138 @@
+:root {
+  color-scheme: light;
+  --desktop-font-family: "SF Pro Display", "Segoe UI", sans-serif;
+  --desktop-display-font-family: "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
+  --desktop-mono-font-family: "SF Mono", "Menlo", monospace;
+  --desktop-radius-card: 18px;
+  --desktop-radius-shell: 28px;
+  --desktop-radius-pill: 999px;
+  --desktop-shadow-soft: 0 16px 40px rgba(23, 47, 70, 0.10);
+  --desktop-shadow-strong: 0 18px 44px rgba(24, 55, 85, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+}
+
+.desktop-shell-eyebrow {
+  color: var(--muted, #68819a);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.desktop-shell-card-title {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted, #68819a);
+  font-weight: 700;
+}
+
+.desktop-shell-stat-label {
+  color: var(--muted, #68819a);
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.desktop-shell-note {
+  margin: 0;
+  color: var(--muted, #68819a);
+  line-height: 1.5;
+}
+
+.desktop-shell-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: var(--desktop-radius-pill);
+  border: 1px solid var(--line, rgba(26, 54, 84, 0.14));
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--text, #102438);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.desktop-shell-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.desktop-shell-section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.desktop-shell-button-primary {
+  background: linear-gradient(180deg, rgba(125, 181, 217, 0.24), rgba(255, 255, 255, 0.96));
+  border-color: rgba(47, 111, 150, 0.24);
+  color: var(--text, #102438);
+}
+
+.desktop-shell-button-danger {
+  border-color: rgba(181, 75, 75, 0.22);
+  color: #b54b4b;
+}
+
+.desktop-shell-button-ghost {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.desktop-shell-surface-card {
+  border: 1px solid var(--line, rgba(26, 54, 84, 0.14));
+  border-radius: calc(var(--desktop-radius-card) + 2px);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.desktop-shell-metric-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line, rgba(26, 54, 84, 0.14));
+}
+
+.desktop-shell-console-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.desktop-shell-state {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.desktop-shell-state--active {
+  color: var(--accent, #2d83b7);
+}
+
+.desktop-shell-state--healthy {
+  color: var(--ok, #1f7a4c);
+}
+
+.desktop-shell-state--warning {
+  color: var(--warn, #bf6b18);
+}
+
+.desktop-shell-state--danger {
+  color: #b54b4b;
+}
+
+.desktop-shell-state--idle {
+  color: var(--muted, #68819a);
+}

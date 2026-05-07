@@ -1,5 +1,6 @@
+@import "./shared/desktop-shell.css";
+
 :root {
-  color-scheme: light;
   --bg: #eef4f7;
   --panel: rgba(255, 255, 255, 0.9);
   --panel-soft: rgba(244, 249, 251, 0.92);
@@ -10,10 +11,6 @@
   --accent-strong: #2f6f96;
 }
 
-* {
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
   min-height: 100vh;
@@ -21,15 +18,14 @@ body {
     radial-gradient(circle at top left, rgba(125, 181, 217, 0.18), transparent 28%),
     linear-gradient(180deg, #f8fbfc 0%, var(--bg) 100%);
   color: var(--text);
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--desktop-display-font-family);
 }
 
 button {
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--desktop-radius-pill);
   background: linear-gradient(180deg, var(--panel), rgba(255, 255, 255, 0.7));
   color: var(--text);
-  font: inherit;
   font-weight: 700;
   padding: 0.72rem 1rem;
   cursor: pointer;
@@ -59,7 +55,7 @@ button {
 .hub-rail {
   padding: 1rem;
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: var(--desktop-radius-shell);
   background: linear-gradient(180deg, var(--panel), rgba(255, 255, 255, 0.62));
 }
 
@@ -88,7 +84,7 @@ button {
   place-items: center;
   width: 48px;
   height: 48px;
-  border-radius: 18px;
+  border-radius: var(--desktop-radius-card);
   background: linear-gradient(160deg, var(--accent), #d9eef8);
   color: #12304a;
   font-size: 1.3rem;
@@ -126,7 +122,7 @@ button {
   align-items: flex-start;
   padding: 1.25rem 1.5rem;
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: var(--desktop-radius-shell);
   background: linear-gradient(180deg, var(--panel), rgba(255, 255, 255, 0.62));
 }
 

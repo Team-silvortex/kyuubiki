@@ -15,6 +15,10 @@ Current shared source files:
 
 - `ui/tauri-bridge.js`
   Desktop-safe Tauri invoke/listen helpers plus light brand loading helpers.
+- `ui/desktop-shell.css`
+  Shared desktop shell tokens for typography, radius, shadow, and base button
+  behavior, plus semantic shell classes such as eyebrow, card-title, stat-label,
+  note, and chip.
 - `scripts/sync-desktop-shared.mjs`
   Copies the shared helper and the canonical brand manifest into each desktop
   app.

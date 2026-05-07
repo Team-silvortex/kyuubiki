@@ -1,5 +1,6 @@
+@import "./shared/desktop-shell.css";
+
 :root {
-  color-scheme: light;
   --bg: #edf2f5;
   --panel: rgba(255, 255, 255, 0.88);
   --line: rgba(26, 54, 84, 0.14);
@@ -8,16 +9,12 @@
   --accent: #2d83b7;
   --accent-soft: rgba(45, 131, 183, 0.14);
   --danger: #b54b4b;
-  --shadow: 0 16px 40px rgba(23, 47, 70, 0.10);
-  font-family: "SF Pro Display", "Segoe UI", sans-serif;
-}
-
-* {
-  box-sizing: border-box;
+  --shadow: var(--desktop-shadow-soft);
 }
 
 body {
   margin: 0;
+  font-family: var(--desktop-font-family);
   background:
     radial-gradient(circle at top left, rgba(45, 131, 183, 0.14), transparent 32%),
     linear-gradient(180deg, #f4f7f9, var(--bg));
@@ -45,7 +42,7 @@ body {
   align-items: center;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--desktop-radius-card);
   background: var(--panel);
   box-shadow: var(--shadow);
 }
@@ -97,7 +94,7 @@ kbd {
   justify-content: center;
   min-width: 24px;
   padding: 3px 7px;
-  border-radius: 8px;
+  border-radius: calc(var(--desktop-radius-card) - 10px);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.9);
   color: var(--text);
@@ -107,7 +104,7 @@ kbd {
 
 .panel {
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: var(--desktop-radius-card);
   background: var(--panel);
   box-shadow: var(--shadow);
   padding: 16px;
@@ -197,7 +194,7 @@ button:hover {
   border: 1px solid var(--line);
   color: var(--muted);
   white-space: pre-wrap;
-  font-family: "SF Mono", "Menlo", monospace;
+  font-family: var(--desktop-mono-font-family);
   font-size: 12px;
   line-height: 1.45;
 }

@@ -13,7 +13,7 @@
           <div class="brand-mark">K</div>
           <div>
             <strong id="brand-hub-title">Kyuubiki Hub</strong>
-            <span>desktop control shell</span>
+            <span class="desktop-shell-note">desktop control shell</span>
           </div>
         </div>
 
@@ -30,17 +30,17 @@
         <header class="hub-head">
           <div>
             <h1 id="section-title">Projects</h1>
-            <p id="section-copy">Open recent engineering work, import standardized bundles, and jump into Workbench.</p>
+            <p id="section-copy" class="desktop-shell-note">Open recent engineering work, import standardized bundles, and jump into Workbench.</p>
           </div>
-          <div class="hub-actions">
-            <button>Open workbench</button>
-            <button>Start local stack</button>
+          <div class="hub-actions desktop-shell-action-row">
+            <button class="desktop-shell-button-primary">Open workbench</button>
+            <button class="desktop-shell-button-primary">Start local stack</button>
             <button>Validate env</button>
           </div>
         </header>
 
         <section class="hub-grid" id="projects-panel">
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Recent projects</h2>
             <div class="hub-list">
               <div class="hub-list__row">
@@ -58,10 +58,10 @@
             </div>
           </article>
 
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Project actions</h2>
-            <div class="hub-stack">
-              <button>New project</button>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary">New project</button>
               <button>Import .kyuubiki</button>
               <button>Open project directory</button>
               <button>Review automation presets</button>
@@ -70,17 +70,17 @@
         </section>
 
         <section class="hub-grid hub-panel hidden" id="runtimes-panel">
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Local runtime</h2>
             <div class="hub-metrics">
-              <div><span>Status</span><strong>ready</strong></div>
-              <div><span>Frontend</span><strong>127.0.0.1:3000</strong></div>
-              <div><span>Control plane</span><strong>127.0.0.1:4000</strong></div>
-              <div><span>Agents</span><strong>2 online</strong></div>
+              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state desktop-shell-state--healthy">ready</strong></div>
+              <div class="desktop-shell-metric-row"><span>Frontend</span><strong>127.0.0.1:3000</strong></div>
+              <div class="desktop-shell-metric-row"><span>Control plane</span><strong>127.0.0.1:4000</strong></div>
+              <div class="desktop-shell-metric-row"><span>Agents</span><strong class="desktop-shell-state desktop-shell-state--active">2 online</strong></div>
             </div>
           </article>
 
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Remote targets</h2>
             <div class="hub-list">
               <div class="hub-list__row">
@@ -96,19 +96,19 @@
         </section>
 
         <section class="hub-grid hub-panel hidden" id="deploy-panel">
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Deployment modes</h2>
-            <div class="hub-stack">
-              <button>Local workstation</button>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary">Local workstation</button>
               <button>Cloud control plane</button>
               <button>Distributed control plane</button>
               <button>Direct mesh</button>
             </div>
           </article>
 
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Bootstrap</h2>
-            <div class="hub-stack">
+            <div class="hub-stack desktop-shell-action-row">
               <button>Open installer workflows</button>
               <button>Prepare manifests</button>
               <button>Run doctor</button>
@@ -117,16 +117,16 @@
         </section>
 
         <section class="hub-grid hub-panel hidden" id="observe-panel">
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Health and watchdog</h2>
             <div class="hub-metrics">
-              <div><span>Watchdog</span><strong>stable</strong></div>
-              <div><span>Security events</span><strong>2 recent</strong></div>
-              <div><span>Failed jobs</span><strong>0</strong></div>
+              <div class="desktop-shell-metric-row"><span>Watchdog</span><strong class="desktop-shell-state desktop-shell-state--healthy">stable</strong></div>
+              <div class="desktop-shell-metric-row"><span>Security events</span><strong class="desktop-shell-state desktop-shell-state--warning">2 recent</strong></div>
+              <div class="desktop-shell-metric-row"><span>Failed jobs</span><strong class="desktop-shell-state desktop-shell-state--healthy">0</strong></div>
             </div>
           </article>
 
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Log tail</h2>
             <pre class="hub-log">[frontend] ready
 [orchestrator] healthy
@@ -136,9 +136,9 @@
         </section>
 
         <section class="hub-grid hub-panel hidden" id="tools-panel">
-          <article class="hub-card">
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Diagnostics and packaging</h2>
-            <div class="hub-stack">
+            <div class="hub-stack desktop-shell-action-row">
               <button>Run benchmark</button>
               <button>Validate project bundle</button>
               <button>Export database</button>
@@ -149,21 +149,21 @@
       </main>
 
       <aside class="hub-side">
-        <article class="hub-card">
+        <article class="hub-card desktop-shell-surface-card">
           <h2>Quick launch</h2>
-          <div class="hub-stack">
-            <button>Workbench</button>
+          <div class="hub-stack desktop-shell-action-row">
+            <button class="desktop-shell-button-primary">Workbench</button>
             <button>Installer</button>
             <button>CLI tools</button>
           </div>
         </article>
 
-        <article class="hub-card">
+        <article class="hub-card desktop-shell-surface-card">
           <h2>Current mode</h2>
-          <div class="hub-metrics">
-            <div><span>Runtime</span><strong>orchestrated_gui</strong></div>
-            <div><span>Storage</span><strong>sqlite</strong></div>
-            <div><span>Profile</span><strong>local workstation</strong></div>
+            <div class="hub-metrics">
+            <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state desktop-shell-state--active">orchestrated_gui</strong></div>
+            <div class="desktop-shell-metric-row"><span>Storage</span><strong class="desktop-shell-state desktop-shell-state--idle">sqlite</strong></div>
+            <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state desktop-shell-state--idle">local workstation</strong></div>
           </div>
         </article>
       </aside>

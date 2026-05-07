@@ -13,7 +13,7 @@
           <div class="hero-brand">
             <img src="./assets/kyuubiki-app.png" alt="Kyuubiki brand mark" class="hero-brand__icon" />
             <div>
-              <p class="eyebrow" id="brand-desktop-setup">Kyuubiki Desktop Setup</p>
+              <p class="eyebrow desktop-shell-eyebrow" id="brand-desktop-setup">Kyuubiki Desktop Setup</p>
               <p class="hero-brand__sub" id="brand-engine-tagline">Engine-first FEM workstation and control plane</p>
             </div>
           </div>
@@ -21,8 +21,8 @@
           <p class="lede" id="brand-installer-description">
             Visual installer for local SQLite workflows, cloud PostgreSQL deployment, and release staging.
           </p>
-          <div class="hero-actions">
-            <button class="primary" data-action="doctor">Run doctor</button>
+          <div class="hero-actions desktop-shell-action-row">
+            <button class="primary desktop-shell-button-primary" data-action="doctor">Run doctor</button>
             <button data-action="bootstrap">Bootstrap workspace</button>
             <button data-action="service-status">Check services</button>
           </div>
@@ -38,21 +38,21 @@
           <div class="hero-node hero-node--a"></div>
           <div class="hero-node hero-node--b"></div>
           <div class="hero-node hero-node--c"></div>
-          <div class="hero-chip hero-chip--sqlite">SQLite local</div>
-          <div class="hero-chip hero-chip--postgres">PostgreSQL cloud</div>
-          <div class="hero-chip hero-chip--agents">Rust agents x2</div>
+          <div class="hero-chip hero-chip--sqlite desktop-shell-chip">SQLite local</div>
+          <div class="hero-chip hero-chip--postgres desktop-shell-chip">PostgreSQL cloud</div>
+          <div class="hero-chip hero-chip--agents desktop-shell-chip">Rust agents x2</div>
         </div>
 
         <div class="hero-meta">
-          <div class="meta-card">
+          <div class="meta-card desktop-shell-surface-card">
             <span>Platform</span>
             <strong id="platform-label">platform</strong>
           </div>
-          <div class="meta-card">
+          <div class="meta-card desktop-shell-surface-card">
             <span>Workspace</span>
             <strong id="workspace-label">workspace</strong>
           </div>
-          <div class="meta-card">
+          <div class="meta-card desktop-shell-surface-card">
             <span>Current mode</span>
             <strong id="current-mode-label">local</strong>
           </div>
@@ -83,60 +83,60 @@
 
         <div class="content">
           <section class="panel" data-panel="wizard">
-            <div class="section-header">
+            <div class="section-header desktop-shell-section-header">
               <div>
-                <p class="section-eyebrow">Guided flow</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Guided flow</p>
                 <h2>Desktop install wizard</h2>
               </div>
             </div>
 
             <div class="wizard-grid">
-              <article class="wizard-step">
+              <article class="wizard-step desktop-shell-surface-card">
                 <span class="wizard-index">1</span>
                 <div>
                   <h3>Choose a profile</h3>
                   <p>Start with local SQLite for workstation use, cloud PostgreSQL for hosted stacks, or distributed mode for a remote solver cluster.</p>
                 </div>
-                <div class="action-row">
-                  <button class="primary" data-action="use-local-mode">Pick local</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="use-local-mode">Pick local</button>
                   <button data-action="use-cloud-mode">Pick cloud</button>
                   <button data-action="use-distributed-mode">Pick distributed</button>
                 </div>
               </article>
-              <article class="wizard-step">
+              <article class="wizard-step desktop-shell-surface-card">
                 <span class="wizard-index">2</span>
                 <div>
                   <h3>Write environment</h3>
                   <p>Save the active profile to `.env.local` and validate the configuration immediately.</p>
                 </div>
-                <div class="action-row">
-                  <button class="primary" data-action="write-env">Write env</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="write-env">Write env</button>
                   <button data-action="validate-env">Validate env</button>
                 </div>
               </article>
-              <article class="wizard-step">
+              <article class="wizard-step desktop-shell-surface-card">
                 <span class="wizard-index">3</span>
                 <div>
                   <h3>Prepare workspace</h3>
                   <p>Create runtime folders, initialize the workspace, and check prerequisites in one pass.</p>
                 </div>
-                <div class="action-row">
-                  <button class="primary" data-action="bootstrap">Bootstrap</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="bootstrap">Bootstrap</button>
                   <button data-action="doctor">Run doctor</button>
                 </div>
               </article>
-              <article class="wizard-step">
+              <article class="wizard-step desktop-shell-surface-card">
                 <span class="wizard-index">4</span>
                 <div>
                   <h3>Run services</h3>
                     <p>Bring up the frontend, orchestrator, and Rust agents with the active database profile.</p>
                 </div>
-                <div class="action-row">
-                  <button class="primary" data-action="wizard-start-active">Start active profile</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="wizard-start-active">Start active profile</button>
                   <button data-action="service-status">Check status</button>
                 </div>
               </article>
-              <article class="wizard-step">
+              <article class="wizard-step desktop-shell-surface-card">
                 <span class="wizard-index">5</span>
                 <div>
                   <h3>Build deliverables</h3>
@@ -150,8 +150,8 @@
                     <option value="release-bundle">Release bundle</option>
                   </select>
                 </label>
-                <div class="action-row">
-                  <button class="primary" data-action="stage-release">Stage release</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="stage-release">Stage release</button>
                   <button data-action="build-installer">Build installer app</button>
                 </div>
               </article>
@@ -159,7 +159,7 @@
 
             <div class="completion-shell">
               <article class="completion-card">
-                <p class="section-eyebrow">Welcome</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Welcome</p>
                 <h3>Fast path</h3>
                 <div class="completion-brand">
                   <img src="./assets/kyuubiki-app.png" alt="Kyuubiki app icon" class="completion-brand__icon" />
@@ -172,7 +172,7 @@
                 </ol>
               </article>
               <article class="completion-card completion-card--accent">
-                <p class="section-eyebrow">Completion</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Completion</p>
                 <h3>After setup</h3>
                 <div class="completion-brand completion-brand--dock">
                   <img src="./assets/kyuubiki-dock.png" alt="Kyuubiki dock icon" class="completion-brand__icon completion-brand__icon--dock" />
@@ -186,9 +186,9 @@
           </section>
 
           <section class="panel panel-visible" data-panel="setup">
-            <div class="section-header">
+            <div class="section-header desktop-shell-section-header">
               <div>
-                <p class="section-eyebrow">Database profile</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Database profile</p>
                 <h2>Choose your deployment mode</h2>
               </div>
             </div>
@@ -197,10 +197,10 @@
               <article class="mode-card mode-card--active" data-mode-card="local">
                 <div class="mode-header">
                   <div>
-                    <p class="mode-badge">Local first</p>
+                    <p class="mode-badge desktop-shell-chip">Local first</p>
                     <h3>SQLite workstation</h3>
                   </div>
-                  <button class="primary" data-action="use-local-mode">Use local mode</button>
+                  <button class="primary desktop-shell-button-primary" data-action="use-local-mode">Use local mode</button>
                 </div>
                 <p>Embedded database with minimal host burden. Best for single-machine work and fast setup.</p>
                 <ul class="mode-points">
@@ -213,10 +213,10 @@
               <article class="mode-card" data-mode-card="cloud">
                 <div class="mode-header">
                   <div>
-                    <p class="mode-badge">Cloud ready</p>
+                    <p class="mode-badge desktop-shell-chip">Cloud ready</p>
                     <h3>PostgreSQL deployment</h3>
                   </div>
-                  <button class="primary" data-action="use-cloud-mode">Use cloud mode</button>
+                  <button class="primary desktop-shell-button-primary" data-action="use-cloud-mode">Use cloud mode</button>
                 </div>
                 <p>Recommended for multi-node workers, cloud services, and shared environments.</p>
                 <ul class="mode-points">
@@ -229,10 +229,10 @@
               <article class="mode-card" data-mode-card="distributed">
                 <div class="mode-header">
                   <div>
-                    <p class="mode-badge">Control plane</p>
+                    <p class="mode-badge desktop-shell-chip">Control plane</p>
                     <h3>Distributed orchestrator</h3>
                   </div>
-                  <button class="primary" data-action="use-distributed-mode">Use distributed mode</button>
+                  <button class="primary desktop-shell-button-primary" data-action="use-distributed-mode">Use distributed mode</button>
                 </div>
                 <p>Keep frontend and orchestrator centralized while remote Rust agents self-register into the cluster.</p>
                 <ul class="mode-points">
@@ -244,9 +244,9 @@
             </div>
 
             <div class="form-shell">
-              <div class="panel-header">
+              <div class="panel-header desktop-shell-section-header">
                 <h2>Environment</h2>
-                <button class="primary" data-action="validate-env">Validate</button>
+                <button class="primary desktop-shell-button-primary" data-action="validate-env">Validate</button>
               </div>
 
               <div class="field-grid">
@@ -336,7 +336,7 @@
                 </label>
               </div>
 
-              <div class="action-row">
+              <div class="action-row desktop-shell-action-row">
                 <button data-action="write-env">Write .env.local</button>
                 <button data-action="reload-env">Reload current env</button>
                 <button data-action="prepare-layout">Prepare layout</button>
@@ -344,8 +344,8 @@
               </div>
             </div>
 
-            <div class="doctor-shell">
-              <div class="panel-header">
+            <div class="doctor-shell desktop-shell-surface-card">
+              <div class="panel-header desktop-shell-section-header">
                 <h2>Doctor checks</h2>
                 <button data-action="doctor">Refresh doctor</button>
               </div>
@@ -354,59 +354,59 @@
           </section>
 
           <section class="panel" data-panel="services">
-            <div class="section-header">
+            <div class="section-header desktop-shell-section-header">
               <div>
-                <p class="section-eyebrow">Service control</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Service control</p>
                 <h2>Run the whole stack</h2>
               </div>
               <button data-action="service-status">Refresh status</button>
             </div>
 
             <div class="service-grid">
-              <article class="service-card">
+              <article class="service-card desktop-shell-surface-card">
                 <h3>Local stack</h3>
                 <p>Starts the frontend, orchestrator, and agents with SQLite forced.</p>
-                <div class="action-row">
-                  <button class="primary" data-action="service-start-local">Start local</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="service-start-local">Start local</button>
                   <button data-action="service-restart-local">Restart local</button>
                 </div>
               </article>
-              <article class="service-card">
+              <article class="service-card desktop-shell-surface-card">
                 <h3>Cloud stack</h3>
                 <p>Starts the same services with PostgreSQL forced for shared or distributed deployment.</p>
-                <div class="action-row">
-                  <button class="primary" data-action="service-start-cloud">Start cloud</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="service-start-cloud">Start cloud</button>
                   <button data-action="service-restart-cloud">Restart cloud</button>
                 </div>
               </article>
-              <article class="service-card">
+              <article class="service-card desktop-shell-surface-card">
                 <h3>Distributed control plane</h3>
                 <p>Starts only the frontend and orchestrator, leaving solver capacity to remote registered agents.</p>
-                <div class="action-row">
-                  <button class="primary" data-action="service-start-distributed">Start distributed</button>
+                <div class="action-row desktop-shell-action-row">
+                  <button class="primary desktop-shell-button-primary" data-action="service-start-distributed">Start distributed</button>
                 </div>
               </article>
-              <article class="service-card">
+              <article class="service-card desktop-shell-surface-card">
                 <h3>Stop services</h3>
                 <p>Stops frontend, orchestrator, and all Rust agents without touching your data.</p>
-                <div class="action-row">
+                <div class="action-row desktop-shell-action-row">
                   <button data-action="service-stop">Stop all</button>
                 </div>
               </article>
             </div>
 
-            <div class="status-shell">
-              <div class="panel-header">
+            <div class="status-shell desktop-shell-surface-card">
+              <div class="panel-header desktop-shell-section-header">
                 <h2>Current service status</h2>
-                <span class="status-pill" id="service-mode-pill">unknown</span>
+                <span class="status-pill desktop-shell-chip" id="service-mode-pill">unknown</span>
               </div>
               <pre id="service-status"></pre>
             </div>
 
-            <div class="log-shell">
-              <div class="panel-header">
+            <div class="log-shell desktop-shell-surface-card">
+              <div class="panel-header desktop-shell-section-header">
                 <h2>Runtime logs</h2>
-                <div class="action-row">
+                <div class="action-row desktop-shell-action-row desktop-shell-console-toolbar">
                   <select id="log-service">
                     <option value="orchestrator">orchestrator</option>
                     <option value="frontend">frontend</option>
@@ -427,7 +427,7 @@
           <section class="panel" data-panel="remote">
             <div class="section-header">
               <div>
-                <p class="section-eyebrow">Remote deployment</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Remote deployment</p>
                 <h2>Operate remote solver nodes</h2>
               </div>
             </div>
@@ -490,7 +490,7 @@
           <section class="panel" data-panel="release">
             <div class="section-header">
               <div>
-                <p class="section-eyebrow">Portable packaging</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Portable packaging</p>
                 <h2>Stage a release directory</h2>
               </div>
               <button class="primary" data-action="stage-release">Stage release</button>
@@ -525,7 +525,7 @@
           <section class="panel" data-panel="output">
             <div class="section-header">
               <div>
-                <p class="section-eyebrow">Command log</p>
+                <p class="section-eyebrow desktop-shell-eyebrow">Command log</p>
                 <h2>Installer output</h2>
               </div>
               <button data-action="clear-output">Clear</button>

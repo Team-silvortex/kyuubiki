@@ -1,7 +1,7 @@
 import {
   invokeTauri as invoke,
   listenTauri as listen,
-  loadDesktopBrand as loadBrandConfig,
+  loadDesktopBrand,
   setText,
 } from "./shared/tauri-bridge.js";
 
@@ -28,15 +28,6 @@ import {
   let streamedService = null;
   let latestLogSnapshot = "";
   let brandConfig = null;
-
-  async function loadBrandConfig() {
-    const response = await fetch("./assets/brand.json");
-    if (!response.ok) {
-      throw new Error(`unable to load brand config (${response.status})`);
-    }
-
-    return response.json();
-  }
 
   function applyBrandConfig(brand) {
     brandConfig = brand;
@@ -205,10 +196,10 @@ import {
 
     report.checks.forEach((check) => {
       const card = document.createElement("article");
-      card.className = "doctor-card";
+      card.className = "doctor-card desktop-shell-surface-card";
       card.innerHTML = `
         <strong>${check.label}</strong>
-        <span class="doctor-state ${check.ok ? "ok" : "missing"}">${check.ok ? "ok" : "missing"}</span>
+        <span class="doctor-state desktop-shell-state ${check.ok ? "desktop-shell-state--healthy ok" : "desktop-shell-state--warning missing"}">${check.ok ? "ok" : "missing"}</span>
       `;
       doctorGrid.appendChild(card);
     });
@@ -518,7 +509,7 @@ import {
         invoke("doctor_report"),
         invoke("read_env_file").catch(() => null),
         invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
-        loadBrandConfig().catch(() => null),
+        loadDesktopBrand().catch(() => null),
       ]);
 
       if (brand) {
