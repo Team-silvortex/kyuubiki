@@ -126,6 +126,14 @@ button {
   background: linear-gradient(180deg, var(--panel), rgba(255, 255, 255, 0.62));
 }
 
+.hub-head__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  min-width: 110px;
+}
+
 .hub-head h1 {
   font-size: 2rem;
 }
@@ -142,10 +150,173 @@ button {
   gap: 0.7rem;
 }
 
+.hub-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+
+.hub-toolbar--left {
+  justify-content: flex-start;
+}
+
+.hub-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.hub-field--stacked {
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.hub-field select {
+  border: 1px solid var(--line);
+  border-radius: var(--desktop-radius-pill);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text);
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+}
+
+.hub-field input {
+  min-width: min(460px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text);
+  padding: 0.75rem 0.95rem;
+  font: inherit;
+}
+
+.hub-field textarea {
+  min-width: min(460px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--text);
+  padding: 0.75rem 0.95rem;
+  font: inherit;
+  resize: vertical;
+}
+
 .hub-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.hub-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.95rem;
+}
+
+.hub-recent-panel {
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.hub-recent-panel--wide {
+  margin-top: 0.85rem;
+}
+
+.hub-recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.hub-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.55rem;
+}
+
+.hub-history-section {
+  margin-top: 0.8rem;
+}
+
+.hub-history-filters {
+  margin-top: 0.55rem;
+}
+
+.hub-history-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.hub-history-item__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  flex: 1;
+  text-align: left;
+}
+
+.hub-history-item__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.hub-history-item__summary strong {
+  font-size: 0.95rem;
+}
+
+.hub-history-item__meta {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.hub-history-item__summary span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.hub-history-item__alias {
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.hub-history-item__controls {
+  display: flex;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.hub-recent-item {
+  width: 100%;
+  text-align: left;
+  font-weight: 600;
+  padding: 0.65rem 0.8rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hub-recent-empty {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .hub-card {
@@ -173,6 +344,35 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.hub-list__card {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.54);
+}
+
+.hub-list__card p {
+  margin: 0.6rem 0 0;
+}
+
+.hub-list__card code {
+  display: block;
+  margin-top: 0.65rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "SFMono-Regular", Menlo, monospace;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.hub-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .hub-log {
   margin: 0.9rem 0 0;
   padding: 1rem;
@@ -181,6 +381,16 @@ button {
   background: rgba(18, 39, 57, 0.95);
   color: #e7f2f7;
   font-family: "SFMono-Regular", Menlo, monospace;
+}
+
+.hub-log--compact {
+  min-height: 120px;
+  max-height: 180px;
+}
+
+button.is-busy {
+  opacity: 0.7;
+  cursor: progress;
 }
 
 .hidden {
@@ -208,6 +418,10 @@ button {
   }
 
   .hub-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-recent-grid {
     grid-template-columns: 1fr;
   }
 

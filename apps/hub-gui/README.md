@@ -14,10 +14,27 @@ overview.
 ## Responsibilities
 
 - project launcher
+- guided assistant entrypoint with local hints and optional OpenAI-compatible model planning
+- project bundle inspect / validate / normalize / unpack / pack / diff entrypoint
+- recent bundle / compare / output path recall for repeat project operations
+- recent project-bundle action history with restore / re-run controls and outcome-aware summaries
+- lightweight recent-action filters for failed, inspect, normalize, and diff flows
+- recent-action cleanup controls for keeping failed items only or clearing the history
+- filtered recent-action JSON export for lightweight local analysis handoff
+- local recent-action JSON import with lightweight merge semantics for cross-machine handoff
+- lightweight pinning for favorite recent actions so common project flows stay at the top
+- dedicated Favorites view above recent history so pinned flows stay immediately visible
+- lightweight favorite labels for pinned flows so common routines can read like named shortcuts
+- one-click CLI command copy from favorites so common bundle workflows can jump straight into shell automation
+- one-click Python stub copy from favorites so common bundle workflows can jump into the front-end DSL / Pyodide path
 - runtime lifecycle overview
 - local/cloud/distributed mode selection
 - diagnostics and health summary
+- desktop release stage / verify / host-build control
 - quick launch into `Workbench`, `Installer`, and future admin tools
+
+Quick launch behavior now prefers an already-built host desktop bundle when one
+exists, and falls back to the repo-local `tauri:dev` shell during development.
 
 ## Main paths
 

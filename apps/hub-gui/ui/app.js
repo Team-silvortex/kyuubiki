@@ -1,4 +1,10 @@
-import { loadDesktopBrand, setText, syncDesktopStates } from "./shared/tauri-bridge.js";
+import {
+  applyDesktopState,
+  invokeTauri,
+  loadDesktopBrand,
+  setText,
+  syncDesktopStates,
+} from "./shared/tauri-bridge.js";
 
 const sectionModel = {
   projects: {
@@ -23,10 +29,1011 @@ const sectionModel = {
   },
 };
 
-const title = document.getElementById("section-title");
-const copy = document.getElementById("section-copy");
-const navItems = Array.from(document.querySelectorAll(".hub-nav__item"));
-const panels = Array.from(document.querySelectorAll(".hub-panel"));
+const HUB_RECENTS_KEY = "kyuubiki.hub.recents.v1";
+const HUB_ASSISTANT_SETTINGS_KEY = "kyuubiki.hub.assistant.settings.v1";
+const HUB_ASSISTANT_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
+const HUB_ASSISTANT_AUDIT_KEY = "kyuubiki.hub.assistant.audit.v1";
+const HUB_RECENTS_LIMIT = 6;
+const HUB_ACTION_HISTORY_LIMIT = 8;
+const HUB_ASSISTANT_AUDIT_LIMIT = 16;
+const HUB_ASSISTANT_MODEL_PRESETS = ["gpt-5", "gpt-5-mini", "gpt-4.1", "custom"];
+const HUB_ASSISTANT_ACTION_RISK = {
+  "hub/focusSection": "low",
+  "hub/openWorkbench": "low",
+  "hub/openInstaller": "sensitive",
+  "hub/startLocal": "sensitive",
+  "hub/validateEnv": "low",
+  "hub/desktopStage": "sensitive",
+  "hub/desktopBuildHost": "high",
+  "hub/desktopVerify": "sensitive",
+  "hub/setBundleContext": "low",
+  "hub/projectInspect": "low",
+  "hub/projectValidate": "low",
+  "hub/projectNormalize": "sensitive",
+  "hub/projectUnpack": "sensitive",
+  "hub/projectPack": "high",
+  "hub/projectDiff": "low",
+};
+const PROJECT_ACTION_LABELS = {
+  "project inspect": "project-inspect",
+  "project validate": "project-validate",
+  "project normalize": "project-normalize",
+  "project unpack": "project-unpack",
+  "project pack": "project-pack",
+  "project diff": "project-diff",
+};
+const HUB_ASSISTANT_ACTIONS = [
+  { id: "hub/focusSection", summary: "Focus a Hub section.", payloadExample: { section: "projects" } },
+  { id: "hub/openWorkbench", summary: "Open the Workbench desktop shell.", payloadExample: {} },
+  { id: "hub/openInstaller", summary: "Open the Installer desktop shell.", payloadExample: {} },
+  { id: "hub/startLocal", summary: "Start the local stack.", payloadExample: {} },
+  { id: "hub/validateEnv", summary: "Validate the desktop environment.", payloadExample: {} },
+  { id: "hub/desktopStage", summary: "Prepare desktop manifests for the selected platform.", payloadExample: {} },
+  { id: "hub/desktopBuildHost", summary: "Build host bundles for the current machine.", payloadExample: {} },
+  { id: "hub/desktopVerify", summary: "Verify the current desktop release staging area.", payloadExample: {} },
+  { id: "hub/setBundleContext", summary: "Fill Hub bundle path inputs.", payloadExample: { path: "", comparePath: "", out: "" } },
+  { id: "hub/projectInspect", summary: "Inspect the selected project bundle.", payloadExample: { path: "" } },
+  { id: "hub/projectValidate", summary: "Validate the selected project bundle.", payloadExample: { path: "" } },
+  { id: "hub/projectNormalize", summary: "Normalize the selected project bundle.", payloadExample: { path: "", out: "" } },
+  { id: "hub/projectUnpack", summary: "Unpack the selected project bundle.", payloadExample: { path: "", out: "" } },
+  { id: "hub/projectPack", summary: "Pack a project directory into a bundle.", payloadExample: { path: "", out: "" } },
+  { id: "hub/projectDiff", summary: "Diff two project bundles.", payloadExample: { leftPath: "", rightPath: "" } },
+];
+
+const state = {
+  hostPlatform: "macos",
+  activeSection: "projects",
+  isBusy: false,
+  historyFilter: "all",
+  assistantMode: "local",
+  assistantPlan: null,
+};
+
+const elements = {
+  title: document.getElementById("section-title"),
+  copy: document.getElementById("section-copy"),
+  navItems: Array.from(document.querySelectorAll(".hub-nav__item")),
+  panels: Array.from(document.querySelectorAll(".hub-panel")),
+  releasePlatform: document.getElementById("release-platform"),
+  projectBundlePath: document.getElementById("project-bundle-path"),
+  projectBundleComparePath: document.getElementById("project-bundle-compare-path"),
+  projectBundleOutPath: document.getElementById("project-bundle-out-path"),
+  projectBundleOutput: document.getElementById("project-bundle-output"),
+  historyImportInput: document.getElementById("history-import-input"),
+  recentBundleList: document.getElementById("recent-bundle-list"),
+  recentCompareList: document.getElementById("recent-compare-list"),
+  recentOutputList: document.getElementById("recent-output-list"),
+  favoriteActionList: document.getElementById("favorite-action-list"),
+  recentActionList: document.getElementById("recent-action-list"),
+  operationOutput: document.getElementById("hub-operation-output"),
+  runtimeStatusOutput: document.getElementById("runtime-status-output"),
+  localRuntimeStatus: document.getElementById("local-runtime-status"),
+  workbenchUrl: document.getElementById("local-workbench-url"),
+  orchestratorUrl: document.getElementById("local-orchestrator-url"),
+  currentRuntimeMode: document.getElementById("current-runtime-mode"),
+  currentProfile: document.getElementById("current-profile"),
+  actionState: document.getElementById("hub-action-state"),
+  actionButtons: Array.from(document.querySelectorAll("[data-action]")),
+  sectionJumpButtons: Array.from(document.querySelectorAll("[data-target-section]")),
+  historyFilterButtons: Array.from(document.querySelectorAll("[data-history-filter]")),
+  historyManageButtons: Array.from(document.querySelectorAll("[data-history-manage]")),
+  assistantModeButtons: Array.from(document.querySelectorAll("[data-assistant-mode]")),
+  assistantEngineState: document.getElementById("assistant-engine-state"),
+  assistantContextSection: document.getElementById("assistant-context-section"),
+  assistantContextRuntime: document.getElementById("assistant-context-runtime"),
+  assistantContextBundle: document.getElementById("assistant-context-bundle"),
+  assistantLocalPanel: document.getElementById("assistant-local-panel"),
+  assistantLocalCards: document.getElementById("assistant-local-cards"),
+  assistantLlmPanel: document.getElementById("assistant-llm-panel"),
+  assistantBaseUrl: document.getElementById("assistant-base-url"),
+  assistantApiKey: document.getElementById("assistant-api-key"),
+  assistantModelPreset: document.getElementById("assistant-model-preset"),
+  assistantModelName: document.getElementById("assistant-model-name"),
+  assistantPrompt: document.getElementById("assistant-prompt"),
+  assistantEndpointPolicy: document.getElementById("assistant-endpoint-policy"),
+  assistantRequestPlan: document.getElementById("assistant-request-plan"),
+  assistantApprovePlan: document.getElementById("assistant-approve-plan"),
+  assistantExecutePlan: document.getElementById("assistant-execute-plan"),
+  assistantPlanActions: document.getElementById("assistant-plan-actions"),
+  assistantOutput: document.getElementById("assistant-output"),
+  assistantAuditList: document.getElementById("assistant-audit-list"),
+};
+
+function loadHubRecents() {
+  try {
+    const raw = window.localStorage.getItem(HUB_RECENTS_KEY);
+    if (!raw) {
+      return { bundles: [], compares: [], outputs: [] };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      bundles: Array.isArray(parsed?.bundles) ? parsed.bundles : [],
+      compares: Array.isArray(parsed?.compares) ? parsed.compares : [],
+      outputs: Array.isArray(parsed?.outputs) ? parsed.outputs : [],
+      actions: Array.isArray(parsed?.actions) ? parsed.actions : [],
+    };
+  } catch {
+    return { bundles: [], compares: [], outputs: [], actions: [] };
+  }
+}
+
+function persistHubRecents(recents) {
+  window.localStorage.setItem(HUB_RECENTS_KEY, JSON.stringify(recents));
+}
+
+function appendTextElement(parent, tagName, text, className) {
+  const element = document.createElement(tagName);
+  if (className) {
+    element.className = className;
+  }
+  element.textContent = text;
+  parent.appendChild(element);
+  return element;
+}
+
+function appendAssistantCardHeader(parent, title, badgeText, badgeClassName) {
+  const header = document.createElement("div");
+  header.className = "desktop-shell-section-header";
+  appendTextElement(header, "strong", title);
+  appendTextElement(header, "span", badgeText, badgeClassName);
+  parent.appendChild(header);
+  return header;
+}
+
+function loadHubAssistantSettings() {
+  try {
+    const raw = window.localStorage.getItem(HUB_ASSISTANT_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      mode: parsed?.mode === "llm" ? "llm" : "local",
+      baseUrl: String(parsed?.baseUrl || ""),
+      modelPreset: HUB_ASSISTANT_MODEL_PRESETS.includes(String(parsed?.modelPreset || "")) ? parsed.modelPreset : "gpt-5",
+      model: String(parsed?.model || "gpt-5"),
+    };
+  } catch {
+    return { mode: "local", baseUrl: "", modelPreset: "gpt-5", model: "gpt-5" };
+  }
+}
+
+function persistHubAssistantSettings(settings) {
+  window.localStorage.setItem(HUB_ASSISTANT_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadHubAssistantSecrets() {
+  try {
+    const raw = window.sessionStorage.getItem(HUB_ASSISTANT_SECRETS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return {
+      apiKey: String(parsed?.apiKey || ""),
+    };
+  } catch {
+    return { apiKey: "" };
+  }
+}
+
+function persistHubAssistantSecrets(secrets) {
+  window.sessionStorage.setItem(HUB_ASSISTANT_SECRETS_KEY, JSON.stringify(secrets));
+}
+
+function loadHubAssistantAudit() {
+  try {
+    const raw = window.sessionStorage.getItem(HUB_ASSISTANT_AUDIT_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistHubAssistantAudit(entries) {
+  window.sessionStorage.setItem(HUB_ASSISTANT_AUDIT_KEY, JSON.stringify(entries.slice(0, HUB_ASSISTANT_AUDIT_LIMIT)));
+}
+
+function assistantRiskLevel(action) {
+  return HUB_ASSISTANT_ACTION_RISK[action] || "low";
+}
+
+function assistantRiskStateClass(risk) {
+  switch (risk) {
+    case "high":
+      return "desktop-shell-state desktop-shell-state--danger";
+    case "sensitive":
+      return "desktop-shell-state desktop-shell-state--warning";
+    default:
+      return "desktop-shell-state desktop-shell-state--healthy";
+  }
+}
+
+function assistantStatusStateClass(status) {
+  switch (status) {
+    case "failed":
+    case "cancelled":
+      return "desktop-shell-state desktop-shell-state--danger";
+    case "prompted":
+    case "confirmed":
+      return "desktop-shell-state desktop-shell-state--warning";
+    case "completed":
+      return "desktop-shell-state desktop-shell-state--healthy";
+    default:
+      return "desktop-shell-state desktop-shell-state--idle";
+  }
+}
+
+function assistantDeliveryStateClass(delivery) {
+  switch (delivery) {
+    case "synced":
+      return "desktop-shell-state desktop-shell-state--healthy";
+    case "sync_failed":
+      return "desktop-shell-state desktop-shell-state--danger";
+    default:
+      return "desktop-shell-state desktop-shell-state--idle";
+  }
+}
+
+function formatAssistantAuditTime(value) {
+  const timestamp = new Date(String(value || "").trim());
+  if (Number.isNaN(timestamp.getTime())) {
+    return String(value || "").trim();
+  }
+
+  return timestamp.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function renderHubAssistantAudit(entries = loadHubAssistantAudit()) {
+  if (!elements.assistantAuditList) {
+    return;
+  }
+
+  elements.assistantAuditList.innerHTML = "";
+  if (!entries.length) {
+    renderEmptyHistoryState(elements.assistantAuditList, "No assistant actions recorded in this session.");
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const article = document.createElement("article");
+    article.className = "hub-list__card";
+    const header = document.createElement("div");
+    header.className = "desktop-shell-section-header";
+    appendTextElement(header, "strong", entry.action);
+    const badges = document.createElement("div");
+    badges.className = "desktop-shell-action-row";
+    appendTextElement(badges, "span", entry.risk, assistantRiskStateClass(entry.risk));
+    appendTextElement(badges, "span", entry.status, assistantStatusStateClass(entry.status));
+    appendTextElement(badges, "span", entry.delivery || "local", assistantDeliveryStateClass(entry.delivery || "local"));
+    header.appendChild(badges);
+    article.appendChild(header);
+    appendTextElement(
+      article,
+      "p",
+      `${formatAssistantAuditTime(entry.createdAt)} · ${entry.source}${entry.note ? ` · ${entry.note}` : ""}`,
+      "desktop-shell-note",
+    );
+    elements.assistantAuditList.appendChild(article);
+  });
+}
+
+function rememberHubAssistantAudit(entry) {
+  const normalized = {
+    auditId: String(entry?.auditId || `hub-assistant-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
+    action: String(entry?.action || "").trim(),
+    risk: String(entry?.risk || "low").trim(),
+    status: String(entry?.status || "idle").trim(),
+    source: String(entry?.source || "assistant").trim(),
+    note: String(entry?.note || "").trim(),
+    createdAt: new Date().toISOString(),
+    delivery: String(entry?.delivery || "local").trim(),
+  };
+
+  if (!normalized.action) {
+    return loadHubAssistantAudit();
+  }
+
+  const next = [normalized, ...loadHubAssistantAudit()].slice(0, HUB_ASSISTANT_AUDIT_LIMIT);
+  persistHubAssistantAudit(next);
+  renderHubAssistantAudit(next);
+  if (entry?.sync !== false) {
+    void mirrorHubAssistantAuditToSecurityEvents(normalized);
+  }
+  return next;
+}
+
+function currentOrchestratorBaseUrl() {
+  const text = String(elements.orchestratorUrl?.textContent || "").trim();
+  return text || "http://127.0.0.1:4000";
+}
+
+function currentAssistantAuditContext() {
+  return {
+    section: state.activeSection,
+    runtime: String(elements.currentRuntimeMode?.textContent || "").trim(),
+    profile: String(elements.currentProfile?.textContent || "").trim(),
+    bundle_path: String(elements.projectBundlePath?.value || "").trim(),
+    compare_path: String(elements.projectBundleComparePath?.value || "").trim(),
+    output_path: String(elements.projectBundleOutPath?.value || "").trim(),
+  };
+}
+
+function updateHubAssistantAuditDelivery(auditId, delivery, noteSuffix = "") {
+  const entries = loadHubAssistantAudit();
+  const next = entries.map((entry) => {
+    if (entry.auditId !== auditId) {
+      return entry;
+    }
+    return {
+      ...entry,
+      delivery,
+      note: noteSuffix ? `${entry.note}${entry.note ? " · " : ""}${noteSuffix}` : entry.note,
+    };
+  });
+  persistHubAssistantAudit(next);
+  renderHubAssistantAudit(next);
+}
+
+async function mirrorHubAssistantAuditToSecurityEvents(entry) {
+  const baseUrl = currentOrchestratorBaseUrl().replace(/\/+$/, "");
+  try {
+    const response = await fetch(`${baseUrl}/api/v1/security-events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        event_id: entry.auditId,
+        event_type: "hub.assistant.action",
+        source: "hub-assistant",
+        action: entry.action,
+        risk: entry.risk,
+        status: entry.status,
+        note: entry.note || null,
+        context: {
+          ...currentAssistantAuditContext(),
+          assistant_source: entry.source,
+          delivery: "hub-session",
+        },
+        occurred_at: entry.createdAt,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`control-plane sync failed (${response.status})`);
+    }
+
+    updateHubAssistantAuditDelivery(entry.auditId, "synced");
+  } catch (error) {
+    updateHubAssistantAuditDelivery(
+      entry.auditId,
+      "sync_failed",
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
+function saveHubRecents(recents) {
+  persistHubRecents(recents);
+  renderHubRecents(recents);
+}
+
+function pushRecentValue(values, value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return values.slice(0, HUB_RECENTS_LIMIT);
+  }
+
+  return [normalized, ...values.filter((entry) => entry !== normalized)].slice(0, HUB_RECENTS_LIMIT);
+}
+
+function summarizeProjectActionResult(value) {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.length > 140 ? `${normalized.slice(0, 137)}...` : normalized;
+}
+
+function formatProjectActionTime(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  const timestamp = new Date(normalized);
+  if (Number.isNaN(timestamp.getTime())) {
+    return normalized;
+  }
+
+  return timestamp.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function projectActionStateClass(status) {
+  switch (String(status || "").trim()) {
+    case "ok":
+      return "desktop-shell-state desktop-shell-state--healthy";
+    case "failed":
+      return "desktop-shell-state desktop-shell-state--danger";
+    default:
+      return "desktop-shell-state desktop-shell-state--idle";
+  }
+}
+
+function rememberProjectBundleAction(
+  action,
+  { bundlePath = "", comparePath = "", outputPath = "", status = "idle", note = "", executedAt = "" } = {},
+) {
+  const normalizedAction = String(action || "").trim();
+  if (!normalizedAction) {
+    return [];
+  }
+
+  const recents = loadHubRecents();
+  const existingEntry = (recents.actions ?? []).find((entry) => {
+    return (
+      entry.action === normalizedAction &&
+      String(entry.bundlePath || "").trim() === String(bundlePath || "").trim() &&
+      String(entry.comparePath || "").trim() === String(comparePath || "").trim() &&
+      String(entry.outputPath || "").trim() === String(outputPath || "").trim()
+    );
+  });
+  const nextEntry = {
+    action: normalizedAction,
+    bundlePath: String(bundlePath || "").trim(),
+    comparePath: String(comparePath || "").trim(),
+    outputPath: String(outputPath || "").trim(),
+    status: String(status || "idle").trim() || "idle",
+    note: summarizeProjectActionResult(note),
+    executedAt: String(executedAt || "").trim() || new Date().toISOString(),
+    pinned: Boolean(existingEntry?.pinned),
+    favoriteLabel: String(existingEntry?.favoriteLabel || "").trim(),
+  };
+
+  return [
+    nextEntry,
+    ...(recents.actions ?? []).filter((entry) => {
+      return !(
+        entry.action === nextEntry.action &&
+        entry.bundlePath === nextEntry.bundlePath &&
+        entry.comparePath === nextEntry.comparePath &&
+        entry.outputPath === nextEntry.outputPath
+      );
+    }),
+  ].slice(0, HUB_ACTION_HISTORY_LIMIT);
+}
+
+function normalizeImportedProjectAction(entry) {
+  const normalizedAction = String(entry?.action || "").trim();
+  if (!normalizedAction) {
+    return null;
+  }
+
+  return {
+    action: normalizedAction,
+    bundlePath: String(entry?.bundlePath || "").trim(),
+    comparePath: String(entry?.comparePath || "").trim(),
+    outputPath: String(entry?.outputPath || "").trim(),
+    status: String(entry?.status || "idle").trim() || "idle",
+    note: summarizeProjectActionResult(entry?.note || ""),
+    executedAt: String(entry?.executedAt || "").trim() || new Date().toISOString(),
+    pinned: Boolean(entry?.pinned),
+    favoriteLabel: String(entry?.favoriteLabel || "").trim(),
+  };
+}
+
+function mergeProjectActionHistory(existingActions, importedActions) {
+  const merged = [];
+
+  for (const entry of [...importedActions, ...existingActions]) {
+    const normalized = normalizeImportedProjectAction(entry);
+    if (!normalized) {
+      continue;
+    }
+
+    const duplicateIndex = merged.findIndex((candidate) => {
+      return (
+        candidate.action === normalized.action &&
+        candidate.bundlePath === normalized.bundlePath &&
+        candidate.comparePath === normalized.comparePath &&
+        candidate.outputPath === normalized.outputPath
+      );
+    });
+
+    if (duplicateIndex >= 0) {
+      continue;
+    }
+
+    merged.push(normalized);
+    if (merged.length >= HUB_ACTION_HISTORY_LIMIT) {
+      break;
+    }
+  }
+
+  return merged;
+}
+
+function actionIdentity(entry) {
+  return [
+    String(entry?.action || "").trim(),
+    String(entry?.bundlePath || "").trim(),
+    String(entry?.comparePath || "").trim(),
+    String(entry?.outputPath || "").trim(),
+  ].join("::");
+}
+
+function shellQuote(value) {
+  const normalized = String(value || "");
+  if (!normalized) {
+    return "''";
+  }
+
+  return `'${normalized.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildProjectCliCommand(entry) {
+  const action = String(entry?.action || "").trim();
+  const bundlePath = String(entry?.bundlePath || "").trim();
+  const comparePath = String(entry?.comparePath || "").trim();
+  const outputPath = String(entry?.outputPath || "").trim();
+
+  switch (action) {
+    case "project inspect":
+      return `kyuubiki project inspect ${shellQuote(bundlePath)} --json`;
+    case "project validate":
+      return `kyuubiki project validate ${shellQuote(bundlePath)} --json`;
+    case "project normalize":
+      return `kyuubiki project normalize ${shellQuote(bundlePath)} --out ${shellQuote(outputPath)}`;
+    case "project unpack":
+      return `kyuubiki project unpack ${shellQuote(bundlePath)} --out ${shellQuote(outputPath)}`;
+    case "project pack":
+      return `kyuubiki project pack ${shellQuote(bundlePath)} --out ${shellQuote(outputPath)}`;
+    case "project diff":
+      return `kyuubiki project diff ${shellQuote(bundlePath)} ${shellQuote(comparePath)} --json`;
+    default:
+      return "";
+  }
+}
+
+function buildPythonMacroStub(entry) {
+  const action = String(entry?.action || "").trim();
+  const bundlePath = JSON.stringify(String(entry?.bundlePath || "").trim());
+  const comparePath = JSON.stringify(String(entry?.comparePath || "").trim());
+  const outputPath = JSON.stringify(String(entry?.outputPath || "").trim());
+  const label = JSON.stringify(String(entry?.favoriteLabel || entry?.action || "favorite-workflow").trim());
+
+  switch (action) {
+    case "project inspect":
+      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectInspect", {"path": ${bundlePath}})\n`;
+    case "project validate":
+      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectValidate", {"path": ${bundlePath}})\n`;
+    case "project normalize":
+      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectNormalize", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
+    case "project unpack":
+      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectUnpack", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
+    case "project pack":
+      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectPack", {"path": ${bundlePath}, "out": ${outputPath}})\n`;
+    case "project diff":
+      return `# ${JSON.parse(label)}\nawait ky.invoke("hub/projectDiff", {"leftPath": ${bundlePath}, "rightPath": ${comparePath}})\n`;
+    default:
+      return "";
+  }
+}
+
+async function copyProjectCliCommand(entry) {
+  const command = buildProjectCliCommand(entry);
+  if (!command) {
+    setProjectBundleOutput(`cannot build CLI command for ${entry.action}`);
+    return;
+  }
+
+  await navigator.clipboard.writeText(command);
+  setProjectBundleOutput(`copied CLI command for ${entry.favoriteLabel || entry.action}`);
+}
+
+async function copyPythonMacroStub(entry) {
+  const snippet = buildPythonMacroStub(entry);
+  if (!snippet) {
+    setProjectBundleOutput(`cannot build Python stub for ${entry.action}`);
+    return;
+  }
+
+  await navigator.clipboard.writeText(snippet);
+  setProjectBundleOutput(`copied Python stub for ${entry.favoriteLabel || entry.action}`);
+}
+
+function sortProjectActionHistory(actions) {
+  return [...actions].sort((left, right) => {
+    if (Boolean(left?.pinned) !== Boolean(right?.pinned)) {
+      return left?.pinned ? -1 : 1;
+    }
+
+    const leftTime = new Date(String(left?.executedAt || "")).getTime();
+    const rightTime = new Date(String(right?.executedAt || "")).getTime();
+    return (Number.isNaN(rightTime) ? 0 : rightTime) - (Number.isNaN(leftTime) ? 0 : leftTime);
+  });
+}
+
+function saveProjectBundleRecents({
+  action = "",
+  bundlePath = "",
+  comparePath = "",
+  outputPath = "",
+  status = "idle",
+  note = "",
+  executedAt = "",
+} = {}) {
+  const next = loadHubRecents();
+  next.bundles = pushRecentValue(next.bundles, bundlePath);
+  next.compares = pushRecentValue(next.compares, comparePath);
+  next.outputs = pushRecentValue(next.outputs, outputPath);
+  next.actions = rememberProjectBundleAction(action, { bundlePath, comparePath, outputPath, status, note, executedAt });
+  saveHubRecents(next);
+}
+
+function renderRecentPathList(container, values, input) {
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = "";
+  if (!values.length) {
+    const empty = document.createElement("div");
+    empty.className = "hub-recent-empty";
+    empty.textContent = "No recent entries yet.";
+    container.appendChild(empty);
+    return;
+  }
+
+  values.forEach((value) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hub-recent-item desktop-shell-button-ghost";
+    button.textContent = value;
+    button.title = value;
+    button.addEventListener("click", () => {
+      input.value = value;
+      input.focus();
+    });
+    container.appendChild(button);
+  });
+}
+
+function renderHubRecents(recents = loadHubRecents()) {
+  renderRecentPathList(elements.recentBundleList, recents.bundles, elements.projectBundlePath);
+  renderRecentPathList(elements.recentCompareList, recents.compares, elements.projectBundleComparePath);
+  renderRecentPathList(elements.recentOutputList, recents.outputs, elements.projectBundleOutPath);
+  renderHistoryFilters();
+  renderRecentActionHistory(sortProjectActionHistory(recents.actions ?? []));
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+}
+
+function renderRecentActionHistory(actions) {
+  if (!elements.recentActionList || !elements.favoriteActionList) {
+    return;
+  }
+
+  const filteredActions = actions.filter((entry) => matchesHistoryFilter(entry));
+  const favoriteActions = filteredActions.filter((entry) => entry.pinned);
+  const recentActions = filteredActions.filter((entry) => !entry.pinned);
+  elements.favoriteActionList.innerHTML = "";
+  elements.recentActionList.innerHTML = "";
+  if (!actions.length) {
+    renderEmptyHistoryState(elements.favoriteActionList, "No favorite actions yet.");
+    renderEmptyHistoryState(elements.recentActionList, "No recent project actions yet.");
+    return;
+  }
+
+  if (!filteredActions.length) {
+    renderEmptyHistoryState(elements.favoriteActionList, `No favorites match the ${state.historyFilter} filter.`);
+    renderEmptyHistoryState(elements.recentActionList, `No actions match the ${state.historyFilter} filter.`);
+    return;
+  }
+
+  if (!favoriteActions.length) {
+    renderEmptyHistoryState(elements.favoriteActionList, "No pinned favorites yet.");
+  } else {
+    renderProjectActionEntries(elements.favoriteActionList, favoriteActions);
+  }
+
+  if (!recentActions.length) {
+    renderEmptyHistoryState(elements.recentActionList, "No non-pinned actions in this view.");
+  } else {
+    renderProjectActionEntries(elements.recentActionList, recentActions);
+  }
+}
+
+function renderEmptyHistoryState(container, message) {
+  const empty = document.createElement("div");
+  empty.className = "hub-recent-empty";
+  empty.textContent = message;
+  container.appendChild(empty);
+}
+
+function renderProjectActionEntries(container, actions) {
+  actions.forEach((entry) => {
+    const shell = document.createElement("div");
+    shell.className = "hub-history-item";
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "hub-history-item__summary desktop-shell-button-ghost";
+    const paths = [entry.bundlePath, entry.comparePath, entry.outputPath].filter(Boolean).join("  •  ");
+    const badge = `<span class="${projectActionStateClass(entry.status)}">${entry.status || "idle"}</span>`;
+    const time = formatProjectActionTime(entry.executedAt);
+    const meta = [badge, time ? `<span>${time}</span>` : ""].filter(Boolean).join("");
+    const details = summarizeProjectActionResult(entry.note) || paths || "No stored paths";
+    const title = entry.pinned && entry.favoriteLabel ? entry.favoriteLabel : entry.action;
+    button.innerHTML = `
+      <div class="hub-history-item__heading">
+        <strong>${title}</strong>
+        <div class="hub-history-item__meta">${meta}</div>
+      </div>
+      ${entry.pinned && entry.favoriteLabel ? `<span class="hub-history-item__alias">${entry.action}</span>` : ""}
+      <span>${details}</span>
+    `;
+    button.addEventListener("click", () => {
+      restoreProjectActionContext(entry);
+      setProjectBundleOutput(`restored ${entry.action} context`);
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "hub-history-item__controls";
+
+    const restoreButton = document.createElement("button");
+    restoreButton.type = "button";
+    restoreButton.className = "desktop-shell-button-ghost";
+    restoreButton.textContent = "Restore";
+    restoreButton.addEventListener("click", () => {
+      restoreProjectActionContext(entry);
+      setProjectBundleOutput(`restored ${entry.action} context`);
+    });
+
+    const rerunButton = document.createElement("button");
+    rerunButton.type = "button";
+    rerunButton.className = "desktop-shell-button-primary";
+    rerunButton.textContent = "Re-run";
+    rerunButton.addEventListener("click", () => {
+      restoreProjectActionContext(entry);
+      void rerunProjectActionEntry(entry);
+    });
+
+    const pinButton = document.createElement("button");
+    pinButton.type = "button";
+    pinButton.className = entry.pinned ? "desktop-shell-button-primary" : "desktop-shell-button-ghost";
+    pinButton.textContent = entry.pinned ? "Pinned" : "Pin";
+    pinButton.addEventListener("click", () => {
+      togglePinnedProjectAction(entry);
+    });
+
+    controls.append(restoreButton);
+
+    if (entry.pinned) {
+      const renameButton = document.createElement("button");
+      renameButton.type = "button";
+      renameButton.className = "desktop-shell-button-ghost";
+      renameButton.textContent = "Label";
+      renameButton.addEventListener("click", () => {
+        renamePinnedProjectAction(entry);
+      });
+      controls.append(renameButton);
+
+      const copyButton = document.createElement("button");
+      copyButton.type = "button";
+      copyButton.className = "desktop-shell-button-ghost";
+      copyButton.textContent = "Copy CLI";
+      copyButton.addEventListener("click", () => {
+        void copyProjectCliCommand(entry);
+      });
+      controls.append(copyButton);
+
+      const pythonButton = document.createElement("button");
+      pythonButton.type = "button";
+      pythonButton.className = "desktop-shell-button-ghost";
+      pythonButton.textContent = "Copy Python";
+      pythonButton.addEventListener("click", () => {
+        void copyPythonMacroStub(entry);
+      });
+      controls.append(pythonButton);
+    }
+
+    controls.append(pinButton, rerunButton);
+    shell.append(button, controls);
+    container.appendChild(shell);
+  });
+}
+
+function renderHistoryFilters() {
+  elements.historyFilterButtons.forEach((button) => {
+    const isActive = button.dataset.historyFilter === state.historyFilter;
+    button.classList.toggle("desktop-shell-button-primary", isActive);
+    button.classList.toggle("desktop-shell-button-ghost", !isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function matchesHistoryFilter(entry) {
+  switch (state.historyFilter) {
+    case "failed":
+      return entry.status === "failed";
+    case "inspect":
+      return entry.action === "project inspect";
+    case "normalize":
+      return entry.action === "project normalize";
+    case "diff":
+      return entry.action === "project diff";
+    case "all":
+    default:
+      return true;
+  }
+}
+
+function currentFilteredHistoryActions(actions = loadHubRecents().actions ?? []) {
+  return actions.filter((entry) => matchesHistoryFilter(entry));
+}
+
+function togglePinnedProjectAction(entry) {
+  const recents = loadHubRecents();
+  const identity = actionIdentity(entry);
+  recents.actions = (recents.actions ?? []).map((candidate) => {
+    if (actionIdentity(candidate) !== identity) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      pinned: !candidate.pinned,
+      favoriteLabel: candidate.pinned ? "" : candidate.favoriteLabel,
+    };
+  });
+  saveHubRecents(recents);
+  setProjectBundleOutput(`${entry.pinned ? "unpinned" : "pinned"} ${entry.action}`);
+}
+
+function renamePinnedProjectAction(entry) {
+  const currentLabel = String(entry.favoriteLabel || "");
+  const nextLabel = window.prompt("Favorite label", currentLabel || entry.action);
+  if (nextLabel === null) {
+    return;
+  }
+
+  const recents = loadHubRecents();
+  const identity = actionIdentity(entry);
+  recents.actions = (recents.actions ?? []).map((candidate) => {
+    if (actionIdentity(candidate) !== identity) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      favoriteLabel: String(nextLabel || "").trim(),
+    };
+  });
+  saveHubRecents(recents);
+  setProjectBundleOutput(`updated label for ${entry.action}`);
+}
+
+function downloadHubJson(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+function exportRecentActionHistory() {
+  const recents = loadHubRecents();
+  const actions = currentFilteredHistoryActions(recents.actions ?? []);
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    filter: state.historyFilter,
+    actionCount: actions.length,
+    actions,
+  };
+
+  downloadHubJson(`kyuubiki-hub-recent-actions-${state.historyFilter}.json`, payload);
+  setProjectBundleOutput(`exported ${actions.length} recent actions as JSON`);
+}
+
+async function importRecentActionHistory(file) {
+  if (!file) {
+    return;
+  }
+
+  const raw = await file.text();
+  const parsed = JSON.parse(raw);
+  const importedActions = Array.isArray(parsed?.actions) ? parsed.actions : [];
+  const recents = loadHubRecents();
+  recents.actions = mergeProjectActionHistory(recents.actions ?? [], importedActions);
+  saveHubRecents(recents);
+  setProjectBundleOutput(`imported ${recents.actions.length} recent actions from JSON`);
+}
+
+function manageRecentActionHistory(mode) {
+  const recents = loadHubRecents();
+
+  switch (mode) {
+    case "keep-failed":
+      recents.actions = (recents.actions ?? []).filter((entry) => entry.status === "failed");
+      saveHubRecents(recents);
+      setProjectBundleOutput("kept failed recent actions only");
+      return;
+    case "import-json":
+      elements.historyImportInput?.click();
+      return;
+    case "clear":
+      recents.actions = [];
+      saveHubRecents(recents);
+      setProjectBundleOutput("cleared recent action history");
+      return;
+    case "export-json":
+      exportRecentActionHistory();
+      return;
+    default:
+      return;
+  }
+}
+
+function restoreProjectActionContext(entry) {
+  elements.projectBundlePath.value = entry.bundlePath || "";
+  elements.projectBundleComparePath.value = entry.comparePath || "";
+  elements.projectBundleOutPath.value = entry.outputPath || "";
+}
+
+async function rerunProjectActionEntry(entry) {
+  const action = PROJECT_ACTION_LABELS[entry.action];
+  if (!action) {
+    setProjectBundleOutput(`cannot re-run unknown action: ${entry.action}`);
+    return;
+  }
+
+  await runAction(action);
+}
+
+async function runProjectBundleAction({ action, command, payload, outputTarget, successOutput }) {
+  const executedAt = new Date().toISOString();
+
+  try {
+    const result = await invokeTauri(command, { payload });
+    saveProjectBundleRecents({
+      action,
+      bundlePath: elements.projectBundlePath?.value,
+      comparePath: elements.projectBundleComparePath?.value,
+      outputPath: elements.projectBundleOutPath?.value,
+      status: "ok",
+      note: result,
+      executedAt,
+    });
+    outputTarget(result);
+    setBusy(false, "ready");
+  } catch (error) {
+    const message = String(error);
+    saveProjectBundleRecents({
+      action,
+      bundlePath: elements.projectBundlePath?.value,
+      comparePath: elements.projectBundleComparePath?.value,
+      outputPath: elements.projectBundleOutPath?.value,
+      status: "failed",
+      note: message,
+      executedAt,
+    });
+    outputTarget(message);
+    setBusy(false, "failed");
+  }
+}
 
 async function applyBrand() {
   const brand = await loadDesktopBrand();
@@ -45,14 +1052,15 @@ function setSection(section) {
   const next = sectionModel[section];
   if (!next) return;
 
-  title.textContent = next.title;
-  copy.textContent = next.copy;
+  state.activeSection = section;
+  elements.title.textContent = next.title;
+  elements.copy.textContent = next.copy;
 
-  navItems.forEach((item) => {
+  elements.navItems.forEach((item) => {
     item.classList.toggle("hub-nav__item--active", item.dataset.target === section);
   });
 
-  panels.forEach((panel) => {
+  elements.panels.forEach((panel) => {
     panel.classList.toggle("hidden", panel.id !== `${section}-panel`);
   });
 
@@ -60,12 +1068,878 @@ function setSection(section) {
   if (defaultProjectsPanel) {
     defaultProjectsPanel.classList.toggle("hidden", section !== "projects");
   }
+
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
 }
 
-navItems.forEach((item) => {
+function setOperationOutput(value) {
+  elements.operationOutput.textContent = value;
+}
+
+function setRuntimeStatusOutput(value) {
+  elements.runtimeStatusOutput.textContent = value;
+}
+
+function setProjectBundleOutput(value) {
+  elements.projectBundleOutput.textContent = value;
+}
+
+function setAssistantOutput(value) {
+  if (elements.assistantOutput) {
+    elements.assistantOutput.textContent = value;
+  }
+}
+
+function currentProjectBundlePayload() {
+  return { path: elements.projectBundlePath?.value || "" };
+}
+
+function currentProjectBundleOutputPayload() {
+  return {
+    path: elements.projectBundlePath?.value || "",
+    out: elements.projectBundleOutPath?.value || "",
+  };
+}
+
+function currentProjectBundleComparePayload() {
+  return {
+    leftPath: elements.projectBundlePath?.value || "",
+    rightPath: elements.projectBundleComparePath?.value || "",
+  };
+}
+
+function currentAssistantSnapshot() {
+  return {
+    activeSection: state.activeSection,
+    runtimeStatus: elements.localRuntimeStatus?.textContent?.trim() || "unknown",
+    profile: elements.currentProfile?.textContent?.trim() || "unknown",
+    bundlePath: elements.projectBundlePath?.value?.trim() || "",
+    comparePath: elements.projectBundleComparePath?.value?.trim() || "",
+    outputPath: elements.projectBundleOutPath?.value?.trim() || "",
+    favorites: loadHubRecents().actions?.filter((entry) => entry.pinned).length ?? 0,
+  };
+}
+
+function renderAssistantContext() {
+  const snapshot = currentAssistantSnapshot();
+  setText(elements.assistantContextSection, snapshot.activeSection);
+  setText(elements.assistantContextRuntime, snapshot.runtimeStatus);
+  setText(elements.assistantContextBundle, snapshot.bundlePath || "--");
+}
+
+function setAssistantMode(mode) {
+  state.assistantMode = mode === "llm" ? "llm" : "local";
+  elements.assistantModeButtons.forEach((button) => {
+    const active = button.dataset.assistantMode === state.assistantMode;
+    button.classList.toggle("desktop-shell-button-primary", active);
+    button.classList.toggle("desktop-shell-button-ghost", !active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  elements.assistantLocalPanel?.classList.toggle("hidden", state.assistantMode !== "local");
+  elements.assistantLlmPanel?.classList.toggle("hidden", state.assistantMode !== "llm");
+  applyDesktopState(elements.assistantEngineState, state.assistantMode === "llm" ? "remote model" : "local guide", {
+    kind: "activity",
+  });
+  persistHubAssistantSettings({
+    ...loadHubAssistantSettings(),
+    mode: state.assistantMode,
+    baseUrl: elements.assistantBaseUrl?.value || "",
+    modelPreset: elements.assistantModelPreset?.value || "gpt-5",
+    model: elements.assistantModelName?.value || "gpt-5",
+  });
+}
+
+function buildHubAssistantLocalCards() {
+  const snapshot = currentAssistantSnapshot();
+  const cards = [];
+
+  if (!snapshot.bundlePath) {
+    cards.push({
+      id: "bundle-path",
+      title: "Start with a bundle path",
+      summary: "Paste a .kyuubiki path first so the Hub can inspect, validate, or normalize it safely.",
+      actionLabel: "Focus Projects",
+      tone: "watch",
+      onAction: () => {
+        setSection("projects");
+        elements.projectBundlePath?.focus();
+        setProjectBundleOutput("focused the bundle path field");
+      },
+    });
+  }
+
+  if (!/ready|healthy/i.test(snapshot.runtimeStatus)) {
+    cards.push({
+      id: "start-local",
+      title: "Bring the local stack online",
+      summary: "The Hub does not currently see a healthy local runtime, so starting the local stack is the safest next step.",
+      actionLabel: "Start local stack",
+      tone: "risk",
+      onAction: () => {
+        void runAction("start-local");
+      },
+    });
+  }
+
+  if (snapshot.bundlePath) {
+    cards.push({
+      id: "inspect-bundle",
+      title: "Inspect the selected bundle",
+      summary: "Inspecting first gives a quick structural read before we normalize, unpack, or diff anything.",
+      actionLabel: "Inspect bundle",
+      tone: "good",
+      onAction: () => {
+        void runAction("project-inspect");
+      },
+    });
+  }
+
+  if (snapshot.bundlePath && snapshot.outputPath) {
+    cards.push({
+      id: "normalize-bundle",
+      title: "Normalize into the target path",
+      summary: "You already have both the source and output path, so normalization is ready to run.",
+      actionLabel: "Normalize bundle",
+      tone: "good",
+      onAction: () => {
+        void runAction("project-normalize");
+      },
+    });
+  }
+
+  if (snapshot.bundlePath && snapshot.comparePath) {
+    cards.push({
+      id: "diff-bundles",
+      title: "Compare the current pair",
+      summary: "Both bundle inputs are present, so the Hub can run a safe diff without more setup.",
+      actionLabel: "Diff bundles",
+      tone: "watch",
+      onAction: () => {
+        void runAction("project-diff");
+      },
+    });
+  }
+
+  cards.push({
+    id: "open-workbench",
+    title: "Jump into Workbench",
+    summary: "Open the modeling and analysis surface when you are ready to move past bundle-level prep.",
+    actionLabel: "Open Workbench",
+    tone: "good",
+    onAction: () => {
+      void runAction("open-workbench");
+    },
+  });
+
+  return cards.slice(0, 5);
+}
+
+function renderHubAssistantLocalCards() {
+  if (!elements.assistantLocalCards) {
+    return;
+  }
+
+  const cards = buildHubAssistantLocalCards();
+  elements.assistantLocalCards.innerHTML = "";
+  if (!cards.length) {
+    renderEmptyHistoryState(elements.assistantLocalCards, "The local guide does not see an urgent next step right now.");
+    return;
+  }
+
+  cards.forEach((card) => {
+    const article = document.createElement("article");
+    article.className = "hub-list__card";
+    appendAssistantCardHeader(
+      article,
+      card.title,
+      card.tone,
+      `desktop-shell-state desktop-shell-state--${
+        card.tone === "risk" ? "danger" : card.tone === "watch" ? "warning" : "healthy"
+      }`,
+    );
+    appendTextElement(article, "p", card.summary, "desktop-shell-note");
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "desktop-shell-action-row";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "desktop-shell-button-ghost";
+    button.textContent = card.actionLabel;
+    button.addEventListener("click", card.onAction);
+    buttonRow.appendChild(button);
+    article.appendChild(buttonRow);
+    elements.assistantLocalCards.appendChild(article);
+  });
+}
+
+function extractAssistantJsonBlock(value) {
+  const fenced = value.match(/```json\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    return fenced[1].trim();
+  }
+
+  const firstBrace = value.indexOf("{");
+  const lastBrace = value.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    return value.slice(firstBrace, lastBrace + 1);
+  }
+
+  return value.trim();
+}
+
+function validateAssistantBaseUrl(value) {
+  const baseUrl = value.trim();
+  if (!baseUrl) {
+    return { ok: false, reason: "Fill in the assistant base URL before requesting a plan." };
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    return { ok: false, reason: "Assistant base URL must be a valid absolute URL." };
+  }
+
+  const protocol = parsed.protocol.toLowerCase();
+  const hostname = parsed.hostname.toLowerCase();
+  const isLoopback =
+    hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+
+  if (protocol === "https:") {
+    return { ok: true, normalized: baseUrl };
+  }
+
+  if (protocol === "http:" && isLoopback) {
+    return { ok: true, normalized: baseUrl };
+  }
+
+  return {
+    ok: false,
+    reason: "Assistant base URL must use https, or http only for localhost / 127.0.0.1 / ::1.",
+  };
+}
+
+function updateAssistantEndpointPolicy() {
+  if (!elements.assistantEndpointPolicy || !elements.assistantBaseUrl) {
+    return;
+  }
+
+  const baseUrl = elements.assistantBaseUrl.value.trim();
+  if (!baseUrl) {
+    elements.assistantEndpointPolicy.textContent =
+      "Use https:// for remote providers, or http://localhost / 127.0.0.1 for local gateways. The API key is sent directly to the configured base URL.";
+    return;
+  }
+
+  const validation = validateAssistantBaseUrl(baseUrl);
+  if (!validation.ok) {
+    elements.assistantEndpointPolicy.textContent = `${validation.reason} The API key is sent directly to the configured base URL.`;
+    return;
+  }
+
+  elements.assistantEndpointPolicy.textContent =
+    "Assistant endpoint looks allowed. The API key is sent directly to the configured base URL for plan generation.";
+}
+
+async function requestHubAssistantPlan() {
+  const baseUrl = elements.assistantBaseUrl?.value?.trim() || "";
+  const model = elements.assistantModelName?.value?.trim() || "";
+  const prompt = elements.assistantPrompt?.value?.trim() || "";
+  const apiKey = elements.assistantApiKey?.value?.trim() || "";
+  const baseUrlValidation = validateAssistantBaseUrl(baseUrl);
+
+  if (!baseUrlValidation.ok || !model) {
+    throw new Error(baseUrlValidation.reason || "Fill in the assistant base URL and model before requesting a plan.");
+  }
+
+  const response = await fetch(`${baseUrlValidation.normalized.replace(/\/+$/, "")}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are the Kyuubiki Hub assistant. Return strict JSON with keys summary, rationale, suggested_actions. suggested_actions must be an array of objects with action, payload, reason. Only suggest actions from the provided Hub action catalog. Keep it concise, safe, and onboarding-oriented.",
+        },
+        {
+          role: "user",
+          content: JSON.stringify(
+            {
+              prompt,
+              snapshot: currentAssistantSnapshot(),
+              action_catalog: HUB_ASSISTANT_ACTIONS,
+              local_hints: buildHubAssistantLocalCards().map((card) => ({
+                id: card.id,
+                title: card.title,
+                summary: card.summary,
+                actionLabel: card.actionLabel,
+              })),
+            },
+            null,
+            2,
+          ),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`assistant request failed (${response.status}): ${body.slice(0, 240)}`);
+  }
+
+  const payload = await response.json();
+  const content = payload?.choices?.[0]?.message?.content;
+  if (!content) {
+    throw new Error("assistant response did not include a message body");
+  }
+
+  const parsed = JSON.parse(extractAssistantJsonBlock(content));
+  return {
+    summary: String(parsed?.summary || ""),
+    rationale: String(parsed?.rationale || ""),
+    suggested_actions: Array.isArray(parsed?.suggested_actions)
+      ? parsed.suggested_actions.map((entry) => ({
+          action: String(entry?.action || ""),
+          payload: entry && typeof entry.payload === "object" && entry.payload ? entry.payload : {},
+          reason: String(entry?.reason || ""),
+        }))
+      : [],
+  };
+}
+
+function renderHubAssistantPlan() {
+  if (!elements.assistantPlanActions) {
+    return;
+  }
+
+  const plan = state.assistantPlan;
+  elements.assistantPlanActions.innerHTML = "";
+  if (!plan) {
+    renderEmptyHistoryState(elements.assistantPlanActions, "No model plan yet.");
+    return;
+  }
+
+  const summaryCard = document.createElement("article");
+  summaryCard.className = "hub-list__card";
+  appendAssistantCardHeader(summaryCard, plan.summary || "Model plan", `${plan.suggested_actions.length} actions`);
+  appendTextElement(
+    summaryCard,
+    "p",
+    plan.rationale || "The connected model returned a concise operational plan.",
+    "desktop-shell-note",
+  );
+  elements.assistantPlanActions.appendChild(summaryCard);
+
+  if (!plan.suggested_actions.length) {
+    renderEmptyHistoryState(elements.assistantPlanActions, "The model returned no executable Hub actions.");
+    return;
+  }
+
+  plan.suggested_actions.forEach((entry) => {
+    const article = document.createElement("article");
+    article.className = "hub-list__card";
+    appendAssistantCardHeader(
+      article,
+      entry.action,
+      assistantRiskLevel(entry.action),
+      assistantRiskStateClass(assistantRiskLevel(entry.action)),
+    );
+    appendTextElement(article, "p", entry.reason || "No rationale supplied.", "desktop-shell-note");
+    appendTextElement(article, "code", JSON.stringify(entry.payload || {}, null, 2));
+    const row = document.createElement("div");
+    row.className = "desktop-shell-action-row";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "desktop-shell-button-ghost";
+    button.textContent = "Run action";
+    button.addEventListener("click", () => {
+      void executeHubAssistantAction(entry.action, entry.payload || {});
+    });
+    row.appendChild(button);
+    article.appendChild(row);
+    elements.assistantPlanActions.appendChild(article);
+  });
+}
+
+function confirmHubAssistantAction(action, source = "assistant") {
+  const risk = assistantRiskLevel(action);
+  if (risk === "low") {
+    return true;
+  }
+
+  const note = source === "plan" ? "model plan action" : "assistant action";
+  rememberHubAssistantAudit({ action, risk, status: "prompted", source, note });
+  const message =
+    risk === "high"
+      ? `High-risk ${note}: ${action}\n\nThis may launch builds or rewrite bundle outputs.\n\nContinue?`
+      : `Sensitive ${note}: ${action}\n\nPlease confirm before the Hub continues.\n\nContinue?`;
+  const approved = window.confirm(message);
+  rememberHubAssistantAudit({
+    action,
+    risk,
+    status: approved ? "confirmed" : "cancelled",
+    source,
+    note,
+  });
+  return approved;
+}
+
+function applyAssistantBundlePayload(payload) {
+  if (typeof payload?.path === "string") {
+    elements.projectBundlePath.value = payload.path;
+  }
+  if (typeof payload?.comparePath === "string" || typeof payload?.rightPath === "string") {
+    elements.projectBundleComparePath.value = String(payload.comparePath ?? payload.rightPath ?? "");
+  }
+  if (typeof payload?.out === "string") {
+    elements.projectBundleOutPath.value = payload.out;
+  }
+}
+
+async function executeHubAssistantAction(action, payload = {}, source = "assistant") {
+  const risk = assistantRiskLevel(action);
+  if (!confirmHubAssistantAction(action, source)) {
+    setAssistantOutput(`Cancelled ${action}.`);
+    return;
+  }
+
+  switch (action) {
+    case "hub/focusSection":
+      setSection(typeof payload.section === "string" ? payload.section : "projects");
+      setAssistantOutput(`Focused ${typeof payload.section === "string" ? payload.section : "projects"} section.`);
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "focused Hub section" });
+      return;
+    case "hub/openWorkbench":
+      await runAction("open-workbench");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Workbench shell" });
+      return;
+    case "hub/openInstaller":
+      await runAction("open-installer");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer shell" });
+      return;
+    case "hub/startLocal":
+      await runAction("start-local");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "started local stack" });
+      return;
+    case "hub/validateEnv":
+      await runAction("validate-env");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated environment" });
+      return;
+    case "hub/desktopStage":
+      await runAction("desktop-stage");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "staged desktop release" });
+      return;
+    case "hub/desktopBuildHost":
+      await runAction("desktop-build-host");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "built host desktop bundles" });
+      return;
+    case "hub/desktopVerify":
+      await runAction("desktop-verify");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "verified desktop release" });
+      return;
+    case "hub/setBundleContext":
+      applyAssistantBundlePayload(payload);
+      renderAssistantContext();
+      setAssistantOutput("Updated bundle context in the Hub.");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "updated bundle inputs" });
+      return;
+    case "hub/projectInspect":
+      applyAssistantBundlePayload(payload);
+      await runAction("project-inspect");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "inspected project bundle" });
+      return;
+    case "hub/projectValidate":
+      applyAssistantBundlePayload(payload);
+      await runAction("project-validate");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated project bundle" });
+      return;
+    case "hub/projectNormalize":
+      applyAssistantBundlePayload(payload);
+      await runAction("project-normalize");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "normalized project bundle" });
+      return;
+    case "hub/projectUnpack":
+      applyAssistantBundlePayload(payload);
+      await runAction("project-unpack");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "unpacked project bundle" });
+      return;
+    case "hub/projectPack":
+      applyAssistantBundlePayload(payload);
+      await runAction("project-pack");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "packed project bundle" });
+      return;
+    case "hub/projectDiff":
+      applyAssistantBundlePayload(payload);
+      await runAction("project-diff");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "diffed project bundles" });
+      return;
+    default:
+      rememberHubAssistantAudit({ action, risk, status: "failed", source, note: "unknown assistant action" });
+      throw new Error(`Unknown assistant action: ${action}`);
+  }
+}
+
+async function executeHubAssistantPlan() {
+  if (!state.assistantPlan?.suggested_actions?.length) {
+    setAssistantOutput("No assistant plan is available to execute.");
+    return;
+  }
+
+  if (!elements.assistantApprovePlan?.checked) {
+    setAssistantOutput("Review the generated plan and confirm execution first.");
+    return;
+  }
+
+  for (const entry of state.assistantPlan.suggested_actions) {
+    try {
+      await executeHubAssistantAction(entry.action, entry.payload || {}, "plan");
+    } catch (error) {
+      rememberHubAssistantAudit({
+        action: entry.action,
+        risk: assistantRiskLevel(entry.action),
+        status: "failed",
+        source: "plan",
+        note: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+  setAssistantOutput(`Executed ${state.assistantPlan.suggested_actions.length} assistant actions.`);
+}
+
+function setBusy(isBusy, label = "idle") {
+  state.isBusy = isBusy;
+  applyDesktopState(elements.actionState, label, { kind: "activity" });
+  elements.actionButtons.forEach((button) => {
+    button.disabled = isBusy;
+    button.classList.toggle("is-busy", isBusy);
+  });
+}
+
+function syncAssistantSettingsFromInputs() {
+  persistHubAssistantSettings({
+    mode: state.assistantMode,
+    baseUrl: elements.assistantBaseUrl?.value || "",
+    modelPreset: elements.assistantModelPreset?.value || "gpt-5",
+    model: elements.assistantModelName?.value || "gpt-5",
+  });
+  persistHubAssistantSecrets({
+    apiKey: elements.assistantApiKey?.value || "",
+  });
+}
+
+function applyAssistantSettings() {
+  const settings = loadHubAssistantSettings();
+  const secrets = loadHubAssistantSecrets();
+  state.assistantMode = settings.mode;
+  if (elements.assistantBaseUrl) {
+    elements.assistantBaseUrl.value = settings.baseUrl;
+  }
+  if (elements.assistantModelPreset) {
+    elements.assistantModelPreset.value = settings.modelPreset;
+  }
+  if (elements.assistantModelName) {
+    elements.assistantModelName.value = settings.model;
+  }
+  if (elements.assistantApiKey) {
+    elements.assistantApiKey.value = secrets.apiKey;
+  }
+  setAssistantMode(settings.mode);
+  updateAssistantEndpointPolicy();
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+  renderHubAssistantPlan();
+  renderHubAssistantAudit();
+}
+
+async function loadEnvironment() {
+  const environment = await invokeTauri("hub_environment");
+  state.hostPlatform = environment.host_platform;
+
+  if (elements.releasePlatform) {
+    elements.releasePlatform.value = environment.host_platform;
+  }
+
+  if (elements.workbenchUrl) {
+    elements.workbenchUrl.textContent = environment.workbench_url;
+  }
+
+  if (elements.orchestratorUrl) {
+    elements.orchestratorUrl.textContent = environment.orchestrator_url;
+  }
+
+  applyDesktopState(elements.currentRuntimeMode, "orchestrated_gui", { kind: "activity" });
+  applyDesktopState(elements.currentProfile, environment.deployment_mode, { kind: "activity" });
+  renderAssistantContext();
+}
+
+async function refreshRuntimeStatus() {
+  try {
+    const payload = await invokeTauri("service_status");
+    setRuntimeStatusOutput(payload.rendered);
+    applyDesktopState(elements.localRuntimeStatus, payload.rendered, { kind: "health" });
+  } catch (error) {
+    const message = String(error);
+    setRuntimeStatusOutput(message);
+    applyDesktopState(elements.localRuntimeStatus, message, { kind: "health" });
+  }
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+}
+
+async function runAction(action) {
+  if (state.isBusy) {
+    return;
+  }
+
+  setBusy(true, "running");
+
+  try {
+    switch (action) {
+      case "open-workbench":
+        setOperationOutput(await invokeTauri("launch_workbench_gui"));
+        setSection("projects");
+        setBusy(false, "ready");
+        return;
+      case "open-installer":
+        setOperationOutput(await invokeTauri("launch_installer_gui"));
+        setSection("deploy");
+        setBusy(false, "ready");
+        return;
+      case "project-inspect":
+        await runProjectBundleAction({
+          action: "project inspect",
+          command: "project_bundle_inspect",
+          payload: currentProjectBundlePayload(),
+          outputTarget: setProjectBundleOutput,
+        });
+        return;
+      case "project-validate":
+        await runProjectBundleAction({
+          action: "project validate",
+          command: "project_bundle_validate",
+          payload: currentProjectBundlePayload(),
+          outputTarget: setProjectBundleOutput,
+        });
+        return;
+      case "project-normalize":
+        await runProjectBundleAction({
+          action: "project normalize",
+          command: "project_bundle_normalize",
+          payload: currentProjectBundleOutputPayload(),
+          outputTarget: setProjectBundleOutput,
+        });
+        return;
+      case "project-unpack":
+        await runProjectBundleAction({
+          action: "project unpack",
+          command: "project_bundle_unpack",
+          payload: currentProjectBundleOutputPayload(),
+          outputTarget: setProjectBundleOutput,
+        });
+        return;
+      case "project-pack":
+        await runProjectBundleAction({
+          action: "project pack",
+          command: "project_bundle_pack",
+          payload: currentProjectBundleOutputPayload(),
+          outputTarget: setProjectBundleOutput,
+        });
+        return;
+      case "project-diff":
+        await runProjectBundleAction({
+          action: "project diff",
+          command: "project_bundle_diff",
+          payload: currentProjectBundleComparePayload(),
+          outputTarget: setProjectBundleOutput,
+        });
+        return;
+      case "start-local":
+        setOperationOutput(await invokeTauri("service_start", { payload: { mode: "local" } }));
+        await refreshRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "start-cloud":
+        setOperationOutput(await invokeTauri("service_start", { payload: { mode: "cloud" } }));
+        await refreshRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "start-distributed":
+        setOperationOutput(await invokeTauri("service_start", { payload: { mode: "distributed" } }));
+        await refreshRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "restart-local":
+        setOperationOutput(await invokeTauri("service_restart", { payload: { mode: "local" } }));
+        await refreshRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "stop-stack":
+        setOperationOutput(await invokeTauri("service_stop"));
+        await refreshRuntimeStatus();
+        setBusy(false, "idle");
+        return;
+      case "validate-env":
+        setOperationOutput(await invokeTauri("validate_env"));
+        setBusy(false, "ready");
+        return;
+      case "run-doctor": {
+        const payload = await invokeTauri("doctor_report");
+        setOperationOutput(payload.rendered);
+        setBusy(false, "ready");
+        return;
+      }
+      case "desktop-stage":
+        setOperationOutput(
+          await invokeTauri("desktop_stage", {
+            payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
+          }),
+        );
+        setBusy(false, "ready");
+        return;
+      case "desktop-verify":
+        setOperationOutput(
+          await invokeTauri("desktop_verify", {
+            payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
+          }),
+        );
+        setBusy(false, "ready");
+        return;
+      case "desktop-build-host":
+        setOperationOutput(await invokeTauri("desktop_build_host"));
+        setBusy(false, "ready");
+        return;
+      default:
+        setBusy(false, "idle");
+        return;
+    }
+  } catch (error) {
+    setOperationOutput(String(error));
+    setBusy(false, "failed");
+  }
+}
+
+elements.navItems.forEach((item) => {
   item.addEventListener("click", () => setSection(item.dataset.target));
 });
 
+for (const button of document.querySelectorAll("[data-action]")) {
+  button.addEventListener("click", async () => {
+    await runAction(button.dataset.action);
+  });
+}
+
+elements.sectionJumpButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setSection(button.dataset.targetSection);
+    applyDesktopState(elements.actionState, "active", { kind: "activity" });
+    setOperationOutput(`focused ${button.dataset.targetSection} section`);
+  });
+});
+
+elements.assistantModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setAssistantMode(button.dataset.assistantMode || "local");
+  });
+});
+
+elements.assistantModelPreset?.addEventListener("change", () => {
+  const preset = elements.assistantModelPreset.value;
+  if (preset !== "custom" && elements.assistantModelName) {
+    elements.assistantModelName.value = preset;
+  }
+  syncAssistantSettingsFromInputs();
+});
+
+elements.assistantBaseUrl?.addEventListener("change", () => {
+  syncAssistantSettingsFromInputs();
+  updateAssistantEndpointPolicy();
+});
+elements.assistantBaseUrl?.addEventListener("input", updateAssistantEndpointPolicy);
+elements.assistantApiKey?.addEventListener("change", syncAssistantSettingsFromInputs);
+elements.assistantModelName?.addEventListener("change", syncAssistantSettingsFromInputs);
+elements.projectBundlePath?.addEventListener("input", () => {
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+});
+elements.projectBundleComparePath?.addEventListener("input", () => {
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+});
+elements.projectBundleOutPath?.addEventListener("input", () => {
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+});
+
+elements.assistantRequestPlan?.addEventListener("click", async () => {
+  try {
+    elements.assistantRequestPlan.disabled = true;
+    setAssistantOutput("Planning...");
+    syncAssistantSettingsFromInputs();
+    state.assistantPlan = await requestHubAssistantPlan();
+    elements.assistantApprovePlan.checked = false;
+    renderHubAssistantPlan();
+    setAssistantOutput(state.assistantPlan.summary || "Generated a Hub assistant plan.");
+  } catch (error) {
+    setAssistantOutput(error instanceof Error ? error.message : String(error));
+  } finally {
+    elements.assistantRequestPlan.disabled = false;
+  }
+});
+
+elements.assistantExecutePlan?.addEventListener("click", async () => {
+  try {
+    elements.assistantExecutePlan.disabled = true;
+    await executeHubAssistantPlan();
+  } catch (error) {
+    setAssistantOutput(error instanceof Error ? error.message : String(error));
+  } finally {
+    elements.assistantExecutePlan.disabled = false;
+  }
+});
+
+elements.historyFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.historyFilter = button.dataset.historyFilter || "all";
+    renderHubRecents();
+    setProjectBundleOutput(`filtered recent actions: ${state.historyFilter}`);
+  });
+});
+
+elements.historyManageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    manageRecentActionHistory(button.dataset.historyManage || "");
+  });
+});
+
+elements.historyImportInput?.addEventListener("change", async (event) => {
+  const input = event.currentTarget;
+  const file = input?.files?.[0];
+
+  try {
+    await importRecentActionHistory(file);
+  } catch (error) {
+    setProjectBundleOutput(`failed to import recent action history: ${String(error)}`);
+  } finally {
+    if (input) {
+      input.value = "";
+    }
+  }
+});
+
 await applyBrand();
+await loadEnvironment();
 syncDesktopStates();
-setSection("projects");
+renderHubRecents();
+applyAssistantSettings();
+setSection(state.activeSection);
+setBusy(false, "idle");
+await refreshRuntimeStatus();

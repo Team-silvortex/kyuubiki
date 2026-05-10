@@ -139,6 +139,26 @@ struct RuntimeLogPayload {
     rendered: String,
 }
 
+fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(format!("{label} is required"));
+    }
+
+    if trimmed.starts_with('-') {
+        return Err(format!("{label} must not start with '-'"));
+    }
+
+    if !trimmed
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_' | ':' | '@'))
+    {
+        return Err(format!("{label} contains unsupported characters"));
+    }
+
+    Ok(trimmed.to_string())
+}
+
 static LOG_STREAMS: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
 
 fn log_streams() -> &'static Mutex<HashMap<String, Arc<AtomicBool>>> {
@@ -409,7 +429,9 @@ fn service_restart(payload: ServicePayload) -> Result<String, String> {
 
 #[tauri::command]
 fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, String> {
-    let target = format!("{}@{}", payload.ssh_user.trim(), payload.target_host.trim());
+    let ssh_user = validate_ssh_identity(&payload.ssh_user, "ssh user")?;
+    let target_host = validate_ssh_identity(&payload.target_host, "target host")?;
+    let target = format!("{ssh_user}@{target_host}");
     let remote_command = format!(
         "cd {} && zsh ./scripts/kyuubiki install bootstrap",
         shell_escape(&payload.remote_workspace)
@@ -420,7 +442,9 @@ fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, String> {
 
 #[tauri::command]
 fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String> {
-    let target = format!("{}@{}", payload.ssh_user.trim(), payload.target_host.trim());
+    let ssh_user = validate_ssh_identity(&payload.ssh_user, "ssh user")?;
+    let target_host = validate_ssh_identity(&payload.target_host, "target host")?;
+    let target = format!("{ssh_user}@{target_host}");
     let screen_name = format!("kyuubiki_remote_agent_{}", payload.agent_port);
     let remote_command = format!(
         "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} zsh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",

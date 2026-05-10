@@ -32,10 +32,14 @@
             <h1 id="section-title">Projects</h1>
             <p id="section-copy" class="desktop-shell-note">Open recent engineering work, import standardized bundles, and jump into Workbench.</p>
           </div>
+          <div class="hub-head__status">
+            <div class="desktop-shell-note">Action status</div>
+            <strong class="desktop-shell-state" data-desktop-state="activity" id="hub-action-state">idle</strong>
+          </div>
           <div class="hub-actions desktop-shell-action-row">
-            <button class="desktop-shell-button-primary">Open workbench</button>
-            <button class="desktop-shell-button-primary">Start local stack</button>
-            <button>Validate env</button>
+            <button class="desktop-shell-button-primary" data-action="open-workbench">Open workbench</button>
+            <button class="desktop-shell-button-primary" data-action="start-local">Start local stack</button>
+            <button data-action="validate-env">Validate env</button>
           </div>
         </header>
 
@@ -59,13 +63,69 @@
           </article>
 
           <article class="hub-card desktop-shell-surface-card">
-            <h2>Project actions</h2>
-            <div class="hub-stack desktop-shell-action-row">
-              <button class="desktop-shell-button-primary">New project</button>
-              <button>Import .kyuubiki</button>
-              <button>Open project directory</button>
-              <button>Review automation presets</button>
+            <h2>Project bundle tools</h2>
+            <div class="hub-toolbar hub-toolbar--left">
+              <label class="hub-field hub-field--stacked">
+                <span>Bundle path</span>
+                <input id="project-bundle-path" placeholder="/path/to/project.kyuubiki" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span>Compare path</span>
+                <input id="project-bundle-compare-path" placeholder="/path/to/other-project.kyuubiki" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span>Output path</span>
+                <input id="project-bundle-out-path" placeholder="/path/to/output.kyuubiki or /path/to/project-dir" type="text" />
+              </label>
             </div>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" data-action="project-inspect">Inspect .kyuubiki</button>
+              <button data-action="project-validate">Validate .kyuubiki</button>
+              <button data-action="project-normalize">Normalize bundle</button>
+              <button data-action="project-unpack">Unpack bundle</button>
+              <button data-action="project-pack">Pack project</button>
+              <button data-action="project-diff">Diff bundles</button>
+              <button data-action="open-workbench">Open workbench</button>
+              <button data-target-section="tools">Desktop tools</button>
+            </div>
+            <div class="hub-recent-grid">
+              <section class="hub-recent-panel">
+                <div class="desktop-shell-note">Recent bundles</div>
+                <div class="hub-recent-list" id="recent-bundle-list"></div>
+              </section>
+              <section class="hub-recent-panel">
+                <div class="desktop-shell-note">Recent compare paths</div>
+                <div class="hub-recent-list" id="recent-compare-list"></div>
+              </section>
+              <section class="hub-recent-panel">
+                <div class="desktop-shell-note">Recent outputs</div>
+                <div class="hub-recent-list" id="recent-output-list"></div>
+              </section>
+            </div>
+            <section class="hub-recent-panel hub-recent-panel--wide">
+              <div class="desktop-shell-note">Recent bundle actions</div>
+              <div class="hub-history-filters desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" data-history-filter="all">All</button>
+                <button data-history-filter="failed">Failed</button>
+                <button data-history-filter="inspect">Inspect</button>
+                <button data-history-filter="normalize">Normalize</button>
+                <button data-history-filter="diff">Diff</button>
+                <button data-history-manage="keep-failed">Keep failed only</button>
+                <button data-history-manage="import-json">Import JSON</button>
+                <button data-history-manage="export-json">Export JSON</button>
+                <button data-history-manage="clear">Clear history</button>
+              </div>
+              <input accept="application/json" class="hidden" id="history-import-input" type="file" />
+              <section class="hub-history-section">
+                <div class="desktop-shell-note">Favorites</div>
+                <div class="hub-history-list" id="favorite-action-list"></div>
+              </section>
+              <section class="hub-history-section">
+                <div class="desktop-shell-note">Recent</div>
+                <div class="hub-history-list" id="recent-action-list"></div>
+              </section>
+            </section>
+            <pre class="hub-log hub-log--compact" id="project-bundle-output">Project bundle tools are ready.</pre>
           </article>
         </section>
 
@@ -73,11 +133,12 @@
           <article class="hub-card desktop-shell-surface-card">
             <h2>Local runtime</h2>
             <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="health">ready</strong></div>
-              <div class="desktop-shell-metric-row"><span>Frontend</span><strong>127.0.0.1:3000</strong></div>
-              <div class="desktop-shell-metric-row"><span>Control plane</span><strong>127.0.0.1:4000</strong></div>
+              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="health" id="local-runtime-status">ready</strong></div>
+              <div class="desktop-shell-metric-row"><span>Frontend</span><strong id="local-workbench-url">127.0.0.1:3000</strong></div>
+              <div class="desktop-shell-metric-row"><span>Control plane</span><strong id="local-orchestrator-url">127.0.0.1:4000</strong></div>
               <div class="desktop-shell-metric-row"><span>Agents</span><strong class="desktop-shell-state" data-desktop-state="activity">2 online</strong></div>
             </div>
+            <pre class="hub-log hub-log--compact" id="runtime-status-output">Loading runtime status…</pre>
           </article>
 
           <article class="hub-card desktop-shell-surface-card">
@@ -99,19 +160,19 @@
           <article class="hub-card desktop-shell-surface-card">
             <h2>Deployment modes</h2>
             <div class="hub-stack desktop-shell-action-row">
-              <button class="desktop-shell-button-primary">Local workstation</button>
-              <button>Cloud control plane</button>
-              <button>Distributed control plane</button>
-              <button>Direct mesh</button>
+              <button class="desktop-shell-button-primary" data-action="start-local">Local workstation</button>
+              <button data-action="start-cloud">Cloud control plane</button>
+              <button data-action="start-distributed">Distributed control plane</button>
+              <button data-action="restart-local">Restart local stack</button>
             </div>
           </article>
 
           <article class="hub-card desktop-shell-surface-card">
             <h2>Bootstrap</h2>
             <div class="hub-stack desktop-shell-action-row">
-              <button>Open installer workflows</button>
-              <button>Prepare manifests</button>
-              <button>Run doctor</button>
+              <button data-action="validate-env">Validate env</button>
+              <button data-action="desktop-stage">Prepare manifests</button>
+              <button data-action="run-doctor">Run doctor</button>
             </div>
           </article>
         </section>
@@ -138,12 +199,26 @@
         <section class="hub-grid hub-panel hidden" id="tools-panel">
           <article class="hub-card desktop-shell-surface-card">
             <h2>Diagnostics and packaging</h2>
+            <div class="hub-toolbar">
+              <label class="hub-field">
+                <span>Target platform</span>
+                <select id="release-platform">
+                  <option value="macos">macOS</option>
+                  <option value="linux">Linux</option>
+                  <option value="windows">Windows</option>
+                </select>
+              </label>
+            </div>
             <div class="hub-stack desktop-shell-action-row">
               <button>Run benchmark</button>
               <button>Validate project bundle</button>
               <button>Export database</button>
-              <button>Stage desktop package</button>
+              <button data-action="desktop-stage">Stage desktop package</button>
+              <button data-action="desktop-build-host">Build host bundles</button>
+              <button data-action="desktop-verify">Verify desktop release</button>
+              <button data-action="stop-stack">Stop local stack</button>
             </div>
+            <pre class="hub-log" id="hub-operation-output">Hub desktop release actions are ready.</pre>
           </article>
         </section>
       </main>
@@ -152,18 +227,87 @@
         <article class="hub-card desktop-shell-surface-card">
           <h2>Quick launch</h2>
           <div class="hub-stack desktop-shell-action-row">
-            <button class="desktop-shell-button-primary">Workbench</button>
-            <button>Installer</button>
-            <button>CLI tools</button>
+            <button class="desktop-shell-button-primary" data-action="open-workbench">Workbench</button>
+            <button data-action="open-installer">Installer</button>
+            <button data-target-section="tools">CLI tools</button>
           </div>
+        </article>
+
+        <article class="hub-card desktop-shell-surface-card">
+          <div class="desktop-shell-section-header">
+            <h2>Assistant</h2>
+            <strong class="desktop-shell-state" data-desktop-state="activity" id="assistant-engine-state">local</strong>
+          </div>
+          <div class="hub-stack desktop-shell-action-row">
+            <button class="desktop-shell-button-primary" data-assistant-mode="local" id="assistant-mode-local">Local guide</button>
+            <button data-assistant-mode="llm" id="assistant-mode-llm">Model assist</button>
+          </div>
+          <div class="hub-metrics">
+            <div class="desktop-shell-metric-row"><span>Section</span><strong id="assistant-context-section">projects</strong></div>
+            <div class="desktop-shell-metric-row"><span>Runtime</span><strong id="assistant-context-runtime">ready</strong></div>
+            <div class="desktop-shell-metric-row"><span>Bundle</span><strong id="assistant-context-bundle">--</strong></div>
+          </div>
+
+          <section id="assistant-local-panel">
+            <p class="desktop-shell-note">Use the local guide to surface the safest next steps from the current Hub context.</p>
+            <div class="hub-list" id="assistant-local-cards"></div>
+          </section>
+
+          <section class="hidden" id="assistant-llm-panel">
+            <p class="desktop-shell-note">Connect an OpenAI-compatible model for higher-level onboarding and operational plans.</p>
+            <div class="hub-toolbar hub-toolbar--left">
+              <label class="hub-field hub-field--stacked">
+                <span>Base URL</span>
+                <input id="assistant-base-url" placeholder="https://api.openai.com/v1" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span>API key</span>
+                <input id="assistant-api-key" placeholder="sk-..." type="password" />
+              </label>
+              <label class="hub-field">
+                <span>Preset</span>
+                <select id="assistant-model-preset">
+                  <option value="gpt-5">gpt-5</option>
+                  <option value="gpt-5-mini">gpt-5-mini</option>
+                  <option value="gpt-4.1">gpt-4.1</option>
+                  <option value="custom">custom</option>
+                </select>
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span>Model</span>
+                <input id="assistant-model-name" placeholder="gpt-5" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span>Request</span>
+                <textarea id="assistant-prompt" placeholder="Example: help me get from a fresh Hub session to a safe first project inspection." rows="4"></textarea>
+              </label>
+            </div>
+            <p class="desktop-shell-note" id="assistant-endpoint-policy">
+              Use <code>https://</code> for remote providers, or <code>http://localhost</code> / <code>127.0.0.1</code> for local gateways. The API key is sent directly to the configured base URL.
+            </p>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" id="assistant-request-plan">Generate plan</button>
+              <label class="hub-inline-check">
+                <input id="assistant-approve-plan" type="checkbox" />
+                <span>I reviewed this plan and allow execution.</span>
+              </label>
+              <button id="assistant-execute-plan">Execute plan</button>
+            </div>
+            <div class="hub-list" id="assistant-plan-actions"></div>
+            <pre class="hub-log hub-log--compact" id="assistant-output">Assistant is ready.</pre>
+            <section class="hub-recent-panel hub-recent-panel--wide">
+              <div class="desktop-shell-note">Assistant audit</div>
+              <div class="hub-list" id="assistant-audit-list"></div>
+            </section>
+          </section>
         </article>
 
         <article class="hub-card desktop-shell-surface-card">
           <h2>Current mode</h2>
             <div class="hub-metrics">
-            <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state" data-desktop-state="activity">orchestrated_gui</strong></div>
+            <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state" data-desktop-state="activity" id="current-runtime-mode">orchestrated_gui</strong></div>
             <div class="desktop-shell-metric-row"><span>Storage</span><strong class="desktop-shell-state" data-desktop-state="activity">sqlite</strong></div>
-            <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state" data-desktop-state="activity">local workstation</strong></div>
+            <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state" data-desktop-state="activity" id="current-profile">local workstation</strong></div>
           </div>
         </article>
       </aside>
