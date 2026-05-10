@@ -75,7 +75,9 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
              mode: :distributed,
              discovery: :manifest,
              manifest_path: manifest_path,
-             endpoint_count: 2
+             endpoint_count: 2,
+             cooling_down_count: 0,
+             ready_endpoint_count: 2
            }
   end
 
@@ -121,5 +123,53 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
              "truss-low",
              "general"
            ]
+  end
+
+  test "deprioritizes cooling endpoints after reported failures and exposes cooldown state" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "agent-a", host: "127.0.0.1", port: 5101},
+        %{id: "agent-b", host: "127.0.0.1", port: 5102},
+        %{id: "agent-c", host: "127.0.0.1", port: 5103}
+      ],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+    assert :ok = AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
+
+    assert Enum.map(AgentPool.checkout_endpoints(), & &1.id) == ["agent-b", "agent-c", "agent-a"]
+
+    cooled =
+      AgentPool.endpoints()
+      |> Enum.find(&(&1.id == "agent-a"))
+
+    assert cooled.consecutive_failures == 1
+    assert cooled.cooldown_remaining_ms > 0
+    assert cooled.last_failure_reason == ":timeout"
+    assert is_binary(cooled.cooldown_until)
+
+    assert AgentPool.deployment_info().cooling_down_count == 1
+    assert AgentPool.deployment_info().ready_endpoint_count == 2
+  end
+
+  test "clears cooldown state after a reported success" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{id: "agent-a", host: "127.0.0.1", port: 5101}
+      ],
+      failure_cooldown_ms: 60_000
+    )
+
+    assert :ok = AgentPool.reload()
+    assert :ok = AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
+    assert :ok = AgentPool.report_success(%{id: "agent-a", host: "127.0.0.1", port: 5101})
+
+    endpoint = hd(AgentPool.endpoints())
+
+    assert endpoint.consecutive_failures == 0
+    assert endpoint.cooldown_remaining_ms == 0
+    assert endpoint.last_failure_reason == nil
+    assert AgentPool.deployment_info().cooling_down_count == 0
   end
 end

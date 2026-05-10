@@ -362,5 +362,46 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
                elements: 1,
                tip_force: 1.0
              })
+
+    endpoint = hd(AgentPool.endpoints())
+    assert endpoint.consecutive_failures == 1
+    assert endpoint.cooldown_remaining_ms > 0
+    assert endpoint.last_failure_reason == ":timeout"
+  end
+
+  test "does not put an agent into cooldown when it returns a valid rpc error" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => false,
+          "error" => %{
+            "code" => "solve_failed",
+            "message" => "invalid model"
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "rpc-error-agent", host: "127.0.0.1", port: port}],
+      failure_cooldown_ms: 60_000
+    )
+
+    AgentPool.reload()
+
+    assert {:error, {:rpc_error, "solve_failed", "invalid model"}} =
+             AgentClient.solve_bar_1d(%{
+               length: 1.0,
+               area: 1.0,
+               youngs_modulus: 1.0,
+               elements: 1,
+               tip_force: 1.0
+             })
+
+    endpoint = hd(AgentPool.endpoints())
+    assert endpoint.consecutive_failures == 0
+    assert endpoint.cooldown_remaining_ms == 0
+    assert endpoint.last_failure_reason == nil
   end
 end

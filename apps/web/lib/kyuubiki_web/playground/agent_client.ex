@@ -77,9 +77,20 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp request_to_target(method, params, endpoint) when is_map(endpoint) do
     request_id = request_id()
     request = build_request(request_id, method, params)
+    normalized = normalize_endpoint(endpoint)
 
-    with {:ok, result} <- request_once(normalize_endpoint(endpoint), request_id, request, fn _ -> :ok end) do
-      {:ok, result}
+    case request_once(normalized, request_id, request, fn _ -> :ok end) do
+      {:ok, result} ->
+        :ok = AgentPool.report_success(normalized)
+        {:ok, result}
+
+      {:error, {:rpc_error, _code, _message} = reason} ->
+        :ok = AgentPool.report_success(normalized)
+        {:error, reason}
+
+      {:error, reason} ->
+        :ok = AgentPool.report_failure(normalized, reason)
+        {:error, reason}
     end
   end
 
@@ -90,12 +101,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   defp attempt_request([endpoint | rest], request_id, request, on_progress, failures) do
     case request_once(endpoint, request_id, request, on_progress) do
       {:ok, result} ->
+        :ok = AgentPool.report_success(endpoint)
         {:ok, result, endpoint}
 
       {:error, {:rpc_error, _code, _message} = reason} ->
+        :ok = AgentPool.report_success(endpoint)
         {:error, reason}
 
       {:error, reason} ->
+        :ok = AgentPool.report_failure(endpoint, reason)
+
         attempt_request(rest, request_id, request, on_progress, [
           %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
         ])

@@ -20,6 +20,16 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     GenServer.call(__MODULE__, {:checkout_endpoints, method})
   end
 
+  @spec report_failure(endpoint(), term()) :: :ok
+  def report_failure(endpoint, reason) when is_map(endpoint) do
+    GenServer.call(__MODULE__, {:report_failure, endpoint, inspect(reason)})
+  end
+
+  @spec report_success(endpoint()) :: :ok
+  def report_success(endpoint) when is_map(endpoint) do
+    GenServer.call(__MODULE__, {:report_success, endpoint})
+  end
+
   @spec endpoints() :: [endpoint()]
   def endpoints do
     GenServer.call(__MODULE__, :endpoints)
@@ -38,31 +48,43 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   @impl true
   def init(_opts) do
     endpoints = configured_endpoints()
-    {:ok, %{endpoints: endpoints, cursor: 0, deployment: deployment_info_for(endpoints)}}
+    {:ok, %{endpoints: endpoints, cursor: 0, health: %{}, deployment: deployment_info_for(endpoints, %{})}}
   end
 
   @impl true
   def handle_call(:endpoints, _from, state) do
-    {:reply, state.endpoints, state}
+    {:reply, enrich_endpoints(state.endpoints, state.health), state}
   end
 
   def handle_call(:deployment_info, _from, state) do
-    {:reply, state.deployment, state}
+    {:reply, deployment_info_for(state.endpoints, state.health), state}
   end
 
   def handle_call(:reload, _from, state) do
     endpoints = configured_endpoints()
-    {:reply, :ok, %{state | endpoints: endpoints, cursor: 0, deployment: deployment_info_for(endpoints)}}
+    health = prune_health(state.health, endpoints)
+    {:reply, :ok, %{state | endpoints: endpoints, cursor: 0, health: health, deployment: deployment_info_for(endpoints, health)}}
   end
 
-  def handle_call({:checkout_endpoints, method}, _from, %{endpoints: endpoints, cursor: cursor} = state) do
+  def handle_call({:checkout_endpoints, method}, _from, %{endpoints: endpoints, cursor: cursor, health: health} = state) do
     ordered =
       endpoints
       |> rotate(cursor)
       |> route_endpoints(method)
+      |> deprioritize_cooling_endpoints(health)
 
     next_cursor = if endpoints == [], do: 0, else: rem(cursor + 1, length(endpoints))
     {:reply, ordered, %{state | cursor: next_cursor}}
+  end
+
+  def handle_call({:report_failure, endpoint, reason}, _from, state) do
+    health = mark_failure(state.health, endpoint, reason)
+    {:reply, :ok, %{state | health: health, deployment: deployment_info_for(state.endpoints, health)}}
+  end
+
+  def handle_call({:report_success, endpoint}, _from, state) do
+    health = clear_health(state.health, endpoint)
+    {:reply, :ok, %{state | health: health, deployment: deployment_info_for(state.endpoints, health)}}
   end
 
   defp rotate([], _cursor), do: []
@@ -83,6 +105,18 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       end)
 
     sort_by_capacity(preferred) ++ fallback
+  end
+
+  defp deprioritize_cooling_endpoints(endpoints, health) do
+    {available, cooling} =
+      Enum.split_with(endpoints, fn endpoint ->
+        cooldown_remaining_ms(health, endpoint) <= 0
+      end)
+
+    case available do
+      [] -> endpoints
+      _ -> available ++ cooling
+    end
   end
 
   defp configured_endpoints do
@@ -212,16 +246,88 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   defp normalize_manifest_endpoint(_endpoint), do: nil
 
-  defp deployment_info_for(endpoints) do
+  defp deployment_info_for(endpoints, health) do
     config = Application.get_env(:kyuubiki_web, __MODULE__, [])
     discovery = discovery_mode(config)
+    cooling_down_count = Enum.count(endpoints, &(cooldown_remaining_ms(health, &1) > 0))
 
     %{
       mode: deployment_mode(config),
       discovery: discovery,
       manifest_path: manifest_path(config),
-      endpoint_count: length(endpoints)
+      endpoint_count: length(endpoints),
+      cooling_down_count: cooling_down_count,
+      ready_endpoint_count: max(length(endpoints) - cooling_down_count, 0)
     }
+  end
+
+  defp enrich_endpoints(endpoints, health) do
+    Enum.map(endpoints, fn endpoint ->
+      health_state = Map.get(health, endpoint.id, %{})
+      remaining_ms = cooldown_remaining_ms(health, endpoint)
+
+      endpoint
+      |> Map.put(:cooldown_remaining_ms, max(remaining_ms, 0))
+      |> Map.put(:consecutive_failures, Map.get(health_state, :consecutive_failures, 0))
+      |> Map.put(:last_failure_reason, Map.get(health_state, :last_failure_reason))
+      |> maybe_put_iso(:cooldown_until, Map.get(health_state, :cooldown_until))
+      |> maybe_put_iso(:last_failure_at, Map.get(health_state, :last_failure_at))
+    end)
+  end
+
+  defp maybe_put_iso(endpoint, _key, nil), do: endpoint
+  defp maybe_put_iso(endpoint, key, %DateTime{} = value), do: Map.put(endpoint, key, DateTime.to_iso8601(value))
+
+  defp prune_health(health, endpoints) do
+    valid_ids = MapSet.new(Enum.map(endpoints, & &1.id))
+
+    health
+    |> Enum.filter(fn {id, _state} -> MapSet.member?(valid_ids, id) end)
+    |> Enum.into(%{})
+  end
+
+  defp clear_health(health, %{id: id}) when is_binary(id), do: Map.delete(health, id)
+  defp clear_health(health, _endpoint), do: health
+
+  defp mark_failure(health, %{id: id}, reason) when is_binary(id) do
+    current = Map.get(health, id, %{})
+    failures = Map.get(current, :consecutive_failures, 0) + 1
+    cooldown_ms = failure_cooldown_ms(failures)
+    now = DateTime.utc_now()
+
+    Map.put(health, id, %{
+      consecutive_failures: failures,
+      cooldown_until: DateTime.add(now, cooldown_ms, :millisecond),
+      last_failure_at: now,
+      last_failure_reason: reason
+    })
+  end
+
+  defp mark_failure(health, _endpoint, _reason), do: health
+
+  defp cooldown_remaining_ms(health, %{id: id}) when is_binary(id) do
+    case Map.get(health, id) do
+      %{cooldown_until: %DateTime{} = cooldown_until} ->
+        DateTime.diff(cooldown_until, DateTime.utc_now(), :millisecond)
+
+      _ ->
+        0
+    end
+  end
+
+  defp cooldown_remaining_ms(_health, _endpoint), do: 0
+
+  defp failure_cooldown_ms(consecutive_failures) do
+    base_ms =
+      Application.get_env(:kyuubiki_web, __MODULE__, [])
+      |> Keyword.get(:failure_cooldown_ms, 5_000)
+
+    max_ms =
+      Application.get_env(:kyuubiki_web, __MODULE__, [])
+      |> Keyword.get(:failure_cooldown_max_ms, 30_000)
+
+    multiplier = min(max(consecutive_failures - 1, 0), 3)
+    min(base_ms * round(:math.pow(2, multiplier)), max_ms)
   end
 
   defp deployment_mode(config) do
