@@ -30,6 +30,7 @@ overview.
 - runtime lifecycle overview
 - local/cloud/distributed mode selection
 - diagnostics and health summary
+- integrated desktop readiness wall for `macos / linux / windows` staging, icons, manifests, and host bundles
 - desktop release stage / verify / host-build control
 - quick launch into `Workbench`, `Installer`, and future admin tools
 
@@ -53,7 +54,8 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 - `make hub-gui-dev`
 - `make hub-gui-build`
 - `make test-hub-gui`
-- `make package-desktop`
+- `make desktop-status PLATFORM=all`
+- `make package-desktop PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-verify PLATFORM=macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`

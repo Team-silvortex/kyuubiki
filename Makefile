@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -9,9 +9,9 @@ help:
 	@echo "  make build-frontend Build the Next.js workbench production bundle"
 	@echo "  make build-orchestrator Compile the Elixir control plane in production mode"
 	@echo "  make build-agent Build the Rust solver agent release binary"
-	@echo "  make build-hub-gui Build the Tauri hub desktop bundles (host platform)"
-	@echo "  make build-installer-gui Build the Tauri installer desktop bundles (host platform)"
-	@echo "  make build-workbench-gui Build the Tauri workbench desktop bundles (host platform)"
+	@echo "  make build-hub-gui Build the Tauri hub desktop bundles for PLATFORM=<host|macos|linux|windows>"
+	@echo "  make build-installer-gui Build the Tauri installer desktop bundles for PLATFORM=<host|macos|linux|windows>"
+	@echo "  make build-workbench-gui Build the Tauri workbench desktop bundles for PLATFORM=<host|macos|linux|windows>"
 	@echo "  make start       Start the orchestrator API, frontend, and solver agent"
 	@echo "  make start-local Start services with SQLite forced for local development"
 	@echo "  make start-cloud Start services with PostgreSQL forced for cloud/distributed use"
@@ -28,7 +28,8 @@ help:
 	@echo "  make validate-env Validate required .env.local configuration"
 	@echo "  make package     Stage a portable release directory under dist/"
 	@echo "  make package-runtime Stage the portable runtime release scaffold under dist/"
-	@echo "  make package-desktop Build/stage all Tauri desktop shells"
+	@echo "  make package-desktop Build/stage all Tauri desktop shells for PLATFORM=<host|macos|linux|windows|all>"
+	@echo "  make desktop-status Show host/platform desktop packaging readiness for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make desktop-stage Stage the desktop/runtime release scaffold for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make desktop-build-host Build all three desktop shells for the current host platform"
 	@echo "  make desktop-release Stage, build, and verify desktop release output for PLATFORM=<host|macos|linux|windows|all>"
@@ -83,13 +84,13 @@ build-agent:
 	@$(ENTRYPOINT) build-agent
 
 build-hub-gui:
-	@$(ENTRYPOINT) build-hub-gui
+	@$(ENTRYPOINT) build-hub-gui $(PLATFORM)
 
 build-installer-gui:
-	@$(ENTRYPOINT) build-installer-gui
+	@$(ENTRYPOINT) build-installer-gui $(PLATFORM)
 
 build-workbench-gui:
-	@$(ENTRYPOINT) build-workbench-gui
+	@$(ENTRYPOINT) build-workbench-gui $(PLATFORM)
 
 start:
 	@$(ENTRYPOINT) start
@@ -140,7 +141,10 @@ package-runtime:
 	@$(ENTRYPOINT) package-runtime $(ARGS)
 
 package-desktop:
-	@$(ENTRYPOINT) package-desktop
+	@$(ENTRYPOINT) package-desktop $(PLATFORM)
+
+desktop-status:
+	@$(ENTRYPOINT) desktop-status $(PLATFORM)
 
 desktop-stage:
 	@$(ENTRYPOINT) desktop-stage $(PLATFORM)
@@ -161,19 +165,19 @@ hub-gui-dev:
 	@$(ENTRYPOINT) hub-gui-dev
 
 hub-gui-build:
-	@$(ENTRYPOINT) hub-gui-build
+	@$(ENTRYPOINT) hub-gui-build $(PLATFORM)
 
 installer-gui-dev:
 	@$(ENTRYPOINT) installer-gui-dev
 
 installer-gui-build:
-	@$(ENTRYPOINT) installer-gui-build
+	@$(ENTRYPOINT) installer-gui-build $(PLATFORM)
 
 workbench-gui-dev:
 	@$(ENTRYPOINT) workbench-gui-dev
 
 workbench-gui-build:
-	@$(ENTRYPOINT) workbench-gui-build
+	@$(ENTRYPOINT) workbench-gui-build $(PLATFORM)
 
 test: test-web test-rust test-frontend test-sdk test-playground
 

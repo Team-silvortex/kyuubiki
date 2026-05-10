@@ -113,6 +113,7 @@ const elements = {
   currentRuntimeMode: document.getElementById("current-runtime-mode"),
   currentProfile: document.getElementById("current-profile"),
   actionState: document.getElementById("hub-action-state"),
+  desktopStatusOutput: document.getElementById("hub-desktop-status-output"),
   actionButtons: Array.from(document.querySelectorAll("[data-action]")),
   sectionJumpButtons: Array.from(document.querySelectorAll("[data-target-section]")),
   historyFilterButtons: Array.from(document.querySelectorAll("[data-history-filter]")),
@@ -1077,6 +1078,12 @@ function setOperationOutput(value) {
   elements.operationOutput.textContent = value;
 }
 
+function setDesktopStatusOutput(value) {
+  if (elements.desktopStatusOutput) {
+    elements.desktopStatusOutput.textContent = value;
+  }
+}
+
 function setRuntimeStatusOutput(value) {
   elements.runtimeStatusOutput.textContent = value;
 }
@@ -1664,7 +1671,7 @@ async function loadEnvironment() {
   const environment = await invokeTauri("hub_environment");
   state.hostPlatform = environment.host_platform;
 
-  if (elements.releasePlatform) {
+  if (elements.releasePlatform && !elements.releasePlatform.value) {
     elements.releasePlatform.value = environment.host_platform;
   }
 
@@ -1693,6 +1700,18 @@ async function refreshRuntimeStatus() {
   }
   renderAssistantContext();
   renderHubAssistantLocalCards();
+}
+
+async function refreshDesktopStatusOutput() {
+  try {
+    setDesktopStatusOutput(
+      await invokeTauri("desktop_status", {
+        payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
+      }),
+    );
+  } catch (error) {
+    setDesktopStatusOutput(String(error));
+  }
 }
 
 async function runAction(action) {
@@ -1803,6 +1822,12 @@ async function runAction(action) {
             payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
           }),
         );
+        await refreshDesktopStatusOutput();
+        setBusy(false, "ready");
+        return;
+      case "desktop-status":
+        await refreshDesktopStatusOutput();
+        setOperationOutput("refreshed desktop packaging readiness");
         setBusy(false, "ready");
         return;
       case "desktop-verify":
@@ -1811,10 +1836,12 @@ async function runAction(action) {
             payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
           }),
         );
+        await refreshDesktopStatusOutput();
         setBusy(false, "ready");
         return;
       case "desktop-build-host":
         setOperationOutput(await invokeTauri("desktop_build_host"));
+        await refreshDesktopStatusOutput();
         setBusy(false, "ready");
         return;
       default:
@@ -1866,6 +1893,9 @@ elements.assistantBaseUrl?.addEventListener("change", () => {
 elements.assistantBaseUrl?.addEventListener("input", updateAssistantEndpointPolicy);
 elements.assistantApiKey?.addEventListener("change", syncAssistantSettingsFromInputs);
 elements.assistantModelName?.addEventListener("change", syncAssistantSettingsFromInputs);
+elements.releasePlatform?.addEventListener("change", () => {
+  void refreshDesktopStatusOutput();
+});
 elements.projectBundlePath?.addEventListener("input", () => {
   renderAssistantContext();
   renderHubAssistantLocalCards();
@@ -1943,3 +1973,4 @@ applyAssistantSettings();
 setSection(state.activeSection);
 setBusy(false, "idle");
 await refreshRuntimeStatus();
+await refreshDesktopStatusOutput();

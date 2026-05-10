@@ -31,7 +31,8 @@ operator-facing surface in the repository.
 - `make installer-gui-dev`
 - `make installer-gui-build`
 - `make test-installer-gui`
-- `make package-desktop`
+- `make desktop-status PLATFORM=all`
+- `make package-desktop PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-verify PLATFORM=macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-installer-gui macos|linux|windows`

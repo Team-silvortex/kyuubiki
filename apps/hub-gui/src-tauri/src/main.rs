@@ -181,6 +181,177 @@ fn verify_desktop_platform(platform: Platform) -> Result<String, String> {
     Ok(lines.join("\n"))
 }
 
+fn desktop_runtime_stage_status(platform: Platform) -> &'static str {
+    let root = workspace_root().join("dist").join(platform.as_str());
+    if root.join("bin").is_dir() && root.join("config").is_dir() && root.join("desktop").is_dir() {
+        "present"
+    } else {
+        "missing"
+    }
+}
+
+fn desktop_manifest_status(platform: Platform, app: &str) -> &'static str {
+    let manifest = workspace_root()
+        .join("dist")
+        .join(platform.as_str())
+        .join("desktop")
+        .join(app)
+        .join("manifest.json");
+
+    if manifest.is_file() {
+        "present"
+    } else {
+        "missing"
+    }
+}
+
+fn desktop_icon_status(platform: Platform, app: &str) -> String {
+    let icon_dir = workspace_root()
+        .join("apps")
+        .join(app)
+        .join("src-tauri")
+        .join("icons");
+
+    match platform {
+        Platform::Macos => {
+            if has_icon_with_suffix(&icon_dir, ".png") && has_icon_with_suffix(&icon_dir, ".icns") {
+                "ready (.png + .icns)".to_string()
+            } else {
+                "missing macOS icons".to_string()
+            }
+        }
+        Platform::Linux => {
+            if has_icon_with_suffix(&icon_dir, ".png") {
+                "ready (.png)".to_string()
+            } else {
+                "missing Linux icons".to_string()
+            }
+        }
+        Platform::Windows => {
+            if has_icon_with_suffix(&icon_dir, ".png") && has_icon_with_suffix(&icon_dir, ".ico") {
+                "ready (.png + .ico)".to_string()
+            } else {
+                "missing Windows icons".to_string()
+            }
+        }
+    }
+}
+
+fn desktop_host_bundle_status(app: &str, product_name: &str, crate_name: &str) -> &'static str {
+    if built_app_candidates(app, product_name, crate_name)
+        .into_iter()
+        .any(|path| path.exists())
+    {
+        "present"
+    } else {
+        "missing"
+    }
+}
+
+fn render_desktop_status_for_platform(platform: Platform) -> String {
+    let mut lines = Vec::new();
+    lines.push(String::new());
+    lines.push(format!("platform: {}", platform.as_str()));
+    lines.push(format!(
+        "  runtime scaffold: {}",
+        desktop_runtime_stage_status(platform)
+    ));
+
+    for (app, product_name, crate_name) in [
+        ("hub-gui", "Kyuubiki Hub", "kyuubiki-hub-gui"),
+        (
+            "installer-gui",
+            "Kyuubiki Installer",
+            "kyuubiki-installer-gui",
+        ),
+        (
+            "workbench-gui",
+            "Kyuubiki Workbench",
+            "kyuubiki-workbench-gui",
+        ),
+    ] {
+        lines.push(format!(
+            "  {:<16} manifest={:<8} icons={}",
+            format!("{app}:"),
+            desktop_manifest_status(platform, app),
+            desktop_icon_status(platform, app)
+        ));
+
+        if platform == Platform::current() {
+            lines.push(format!(
+                "  {:<16} host-bundle={}",
+                format!("{app}:"),
+                desktop_host_bundle_status(app, product_name, crate_name)
+            ));
+        }
+    }
+
+    lines.push(format!(
+        "  verification: {}",
+        if verify_desktop_platform(platform).is_ok() {
+            "ready"
+        } else {
+            "needs attention"
+        }
+    ));
+
+    lines.join("\n")
+}
+
+fn desktop_status_text(target: Option<String>) -> String {
+    let host = Platform::current();
+    let normalized = target.unwrap_or_else(|| host.as_str().to_string());
+    let mut lines = vec![
+        "desktop packaging status".to_string(),
+        format!("  host platform: {}", host.as_str()),
+        format!("  dist root: {}", workspace_root().join("dist").display()),
+    ];
+
+    if normalized == "all" {
+        for platform in [Platform::Macos, Platform::Linux, Platform::Windows] {
+            lines.push(render_desktop_status_for_platform(platform));
+        }
+        lines.push(String::new());
+        lines.push("next steps:".to_string());
+        lines.push("  - Stage every platform scaffold: zsh ./scripts/kyuubiki desktop-stage all".to_string());
+        lines.push("  - Build this host's desktop bundles: zsh ./scripts/kyuubiki desktop-build-host".to_string());
+        lines.push("  - Verify manifests and icon inputs: zsh ./scripts/kyuubiki desktop-verify all".to_string());
+        return lines.join("\n");
+    }
+
+    let platform = parse_platform(Some(normalized.clone()));
+    lines.push(render_desktop_status_for_platform(platform));
+    lines.push(String::new());
+    lines.push("next steps:".to_string());
+
+    if desktop_runtime_stage_status(platform) == "missing" {
+        lines.push(format!(
+            "  - Stage runtime + desktop manifests: zsh ./scripts/kyuubiki desktop-stage {}",
+            platform.as_str()
+        ));
+    }
+
+    if platform == host {
+        lines.push("  - Build host-native Tauri bundles: zsh ./scripts/kyuubiki desktop-build-host".to_string());
+        lines.push(format!(
+            "  - Run the full host release pass: zsh ./scripts/kyuubiki desktop-release {}",
+            platform.as_str()
+        ));
+    } else {
+        lines.push(format!(
+            "  - This host only stages {} manifests; build native bundles on a {} machine",
+            platform.as_str(),
+            platform.as_str()
+        ));
+        lines.push(format!(
+            "  - Verify staged rollout descriptors: zsh ./scripts/kyuubiki desktop-verify {}",
+            platform.as_str()
+        ));
+    }
+
+    lines.join("\n")
+}
+
 fn run_npm(dir: &Path, args: &[&str]) -> Result<String, String> {
     let output = Command::new(npm_command())
         .current_dir(dir)
@@ -514,6 +685,11 @@ fn desktop_build_host() -> Result<String, String> {
 }
 
 #[tauri::command]
+fn desktop_status(payload: PlatformPayload) -> Result<String, String> {
+    Ok(desktop_status_text(payload.platform))
+}
+
+#[tauri::command]
 fn project_bundle_inspect(payload: ProjectBundlePayload) -> Result<String, String> {
     run_project_cli("inspect", &payload.path)
 }
@@ -589,6 +765,7 @@ fn main() {
             read_runtime_log,
             doctor_report,
             validate_env,
+            desktop_status,
             desktop_stage,
             desktop_verify,
             desktop_build_host,

@@ -46,6 +46,10 @@ These are thin wrappers over the component-native toolchains:
 
 Use these commands when building deployable layouts:
 
+- `make desktop-status PLATFORM=macos|linux|windows|all`
+  Prints host-aware desktop packaging readiness, including staged runtime
+  scaffold state, desktop manifest presence, icon readiness, and host bundle
+  visibility
 - `make package-runtime`
   Builds the staged runtime scaffold under `dist/<platform>`
 - `make package-desktop`
@@ -60,6 +64,7 @@ Use these commands when building deployable layouts:
   Verifies staged manifests and required icon inputs for each desktop app
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop all`
+- `zsh ./scripts/kyuubiki desktop-status macos|linux|windows|all`
 - `zsh ./scripts/kyuubiki desktop-stage macos|linux|windows|all`
 - `zsh ./scripts/kyuubiki desktop-build-host`
 - `zsh ./scripts/kyuubiki desktop-release macos|linux|windows|all`
@@ -171,10 +176,37 @@ Desktop packaging now follows a simple rule:
 That keeps `macos`, `linux`, and `windows` deployment paths visible and
 manageable even when you are not cross-compiling on the current machine.
 
+## Recommended operator flow
+
+When packaging desktop deliverables, the smoothest path is now:
+
+1. inspect current readiness:
+   `make desktop-status PLATFORM=all`
+2. stage or refresh rollout scaffolds:
+   `make desktop-stage PLATFORM=all`
+3. build host-native desktop bundles:
+   `make desktop-build-host`
+4. run the integrated release pass for the current host:
+   `make desktop-release`
+5. re-check descriptors and icon coverage:
+   `make desktop-verify PLATFORM=all`
+
+`desktop-status` is intentionally the first stop. It gives operators one place
+to see:
+
+- current host platform
+- whether `dist/<platform>` scaffolds are already present
+- whether each desktop app has a staged manifest
+- whether required icon inputs are ready for each platform
+- whether host-native Tauri bundle directories already exist
+- which next command makes sense from the current state
+
 ## Recommended desktop release flow
 
 Use one of these two operator-facing flows:
 
+- inspect readiness first:
+  `make desktop-status PLATFORM=all`
 - stage only:
   `make desktop-stage PLATFORM=all`
 - full host release pass:

@@ -203,6 +203,7 @@
               <label class="hub-field">
                 <span>Target platform</span>
                 <select id="release-platform">
+                  <option value="all">All platforms</option>
                   <option value="macos">macOS</option>
                   <option value="linux">Linux</option>
                   <option value="windows">Windows</option>
@@ -213,11 +214,13 @@
               <button>Run benchmark</button>
               <button>Validate project bundle</button>
               <button>Export database</button>
+              <button data-action="desktop-status">Desktop status</button>
               <button data-action="desktop-stage">Stage desktop package</button>
               <button data-action="desktop-build-host">Build host bundles</button>
               <button data-action="desktop-verify">Verify desktop release</button>
               <button data-action="stop-stack">Stop local stack</button>
             </div>
+            <pre class="hub-log hub-log--compact" id="hub-desktop-status-output">Desktop release readiness will appear here.</pre>
             <pre class="hub-log" id="hub-operation-output">Hub desktop release actions are ready.</pre>
           </article>
         </section>

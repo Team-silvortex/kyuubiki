@@ -6405,8 +6405,8 @@ export function Workbench() {
                 auditEmptyLabel={language === "zh" ? "当前筛选下还没有安全事件。" : "No security events match the current filters."}
                 auditSessionLabel={
                   language === "zh"
-                    ? "这里展示控制面持久化的高风险自动化事件流，现在支持时间窗口、小聚合和上下文分面。"
-                    : "Shows the control-plane persisted high-risk automation event stream with time windows, small aggregates, and context facets."
+                    ? "这里展示控制面持久化的自动化与助手事件流，包括 Workbench 助手、脚本和 Hub 助手的高风险动作。"
+                    : "Shows the control-plane persisted automation and assistant event stream, including Workbench assistant, scripting, and Hub assistant actions."
                 }
                 auditWindowLabel={language === "zh" ? "时间窗" : "Window"}
                 auditSourceLabel={language === "zh" ? "来源" : "Source"}
@@ -6445,16 +6445,20 @@ export function Workbench() {
                 auditSourceOptions={[
                   { value: "", label: language === "zh" ? "全部" : "All" },
                   { value: "assistant", label: language === "zh" ? "助手" : "Assistant" },
+                  { value: "hub-assistant", label: language === "zh" ? "Hub 助手" : "Hub assistant" },
                   { value: "script", label: language === "zh" ? "脚本" : "Script" },
                 ]}
                 auditRiskOptions={[
                   { value: "", label: language === "zh" ? "全部" : "All" },
+                  { value: "low", label: language === "zh" ? "低" : "Low" },
                   { value: "sensitive", label: language === "zh" ? "敏感" : "Sensitive" },
+                  { value: "high", label: language === "zh" ? "高" : "High" },
                   { value: "destructive", label: language === "zh" ? "高风险" : "Destructive" },
                 ]}
                 auditStatusOptions={[
                   { value: "", label: language === "zh" ? "全部" : "All" },
                   { value: "prompted", label: language === "zh" ? "待确认" : "Prompted" },
+                  { value: "confirmed", label: language === "zh" ? "已确认" : "Confirmed" },
                   { value: "cancelled", label: language === "zh" ? "已取消" : "Cancelled" },
                   { value: "completed", label: language === "zh" ? "已执行" : "Completed" },
                   { value: "failed", label: language === "zh" ? "失败" : "Failed" },

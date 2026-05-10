@@ -33,6 +33,8 @@ It is intentionally thin:
 - `make workbench-gui-dev`
 - `make workbench-gui-build`
 - `make test-workbench-gui`
+- `make desktop-status PLATFORM=all`
+- `make package-desktop PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-verify PLATFORM=macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-workbench-gui macos|linux|windows`

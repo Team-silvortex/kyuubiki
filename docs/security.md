@@ -148,6 +148,16 @@ The runtime workbench panel consumes these filters to provide:
 - lightweight study, project, and model-version facets for operator review
 - simple trend buckets and source-by-status summaries for quick operator triage
 
+Current security-event sources now include:
+
+- `assistant`
+  Workbench assistant-planned actions
+- `script`
+  Workbench scripting and WASM Python automation actions
+- `hub-assistant`
+  Hub desktop assistant actions, including prompted/confirmed/cancelled/completed
+  and best-effort control-plane mirroring state
+
 Attached as:
 
 - `x-kyuubiki-token` to `/api/v1` and `/api/health`

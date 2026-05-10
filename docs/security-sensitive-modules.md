@@ -46,6 +46,7 @@ Sensitivity levels:
 | `apps/frontend/src/lib/scripting/workbench-script-runtime.ts` | Scriptable workbench actions include project/model CRUD and runtime operations. | Action allowlist, destructive actions, confirmation strategy, and future WASM Python sandboxing. |
 | `apps/frontend/src/components/workbench/workbench.tsx` | Central workbench action executor is shared by manual UI actions, assistant plans, and WASM Python bridge calls. | Keep the high-risk confirmation gate and session audit logging centralized; do not add bypass paths for destructive/export actions. |
 | `apps/frontend/src/lib/workbench/security-audit.ts` | Session-scoped audit trail for high-risk assistant and scripting actions. | Keep storage session-bounded, avoid secret leakage in notes, and preserve event ordering for prompt/cancel/complete/fail states. |
+| `apps/hub-gui/ui/app.js` | Hub desktop assistant can call local desktop actions, mirror security events to the control plane, and store assistant audit state in the current session. | Keep model output rendering text-only, preserve endpoint restrictions, classify high-risk actions before execution, and never let control-plane sync failures bypass local audit or confirmation. |
 | `apps/web/lib/kyuubiki_web/security_events/**` | Append-only control-plane event stream for high-risk automation actions. | Keep validation strict, preserve append-only semantics, and avoid storing secrets in event context or notes. |
 | `apps/frontend/src/components/workbench/workbench-assistant-panel.tsx` and `apps/frontend/src/components/workbench/workbench-script-panel.tsx` | UI surfaces that expose executable automation actions to operators. | Show risk state clearly, avoid “silent execute” affordances, and keep action metadata aligned with runtime guardrails. |
 | `apps/frontend/src/lib/models/model-import.ts` | Imports external model JSON into solver/project state. | Schema validation, size limits, numeric bounds, and safe evolution across model schema versions. |
@@ -93,6 +94,10 @@ Sensitivity levels:
 - Assistant and script actions now depend on a centralized confirmation gate
   for high-risk operations. Keep new destructive or export-capable actions
   classified in the shared action catalog before exposing them to automation.
+- Hub assistant actions now participate in the same broader security-event
+  stream under `source = "hub-assistant"`. Keep that source stable so runtime
+  analysis, exports, and external notebooks can distinguish desktop-assistant
+  activity from Workbench assistant or script activity.
 
 ## Change Checklist
 

@@ -22,8 +22,10 @@ test("hub shell exposes the desktop information architecture", () => {
   assert.match(html, /data-action="open-installer"/);
   assert.match(html, /Start local stack/);
   assert.match(html, /Stage desktop package/);
+  assert.match(html, /Desktop status/);
   assert.match(html, /Build host bundles/);
   assert.match(html, /Verify desktop release/);
+  assert.match(html, /hub-desktop-status-output/);
   assert.match(html, /hub-action-state/);
   assert.match(html, /assistant-engine-state/);
   assert.match(html, /assistant-mode-local/);
@@ -75,6 +77,7 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /setSection/);
   assert.match(js, /runAction/);
   assert.match(js, /setBusy/);
+  assert.match(js, /setDesktopStatusOutput/);
   assert.match(js, /setAssistantOutput/);
   assert.match(js, /setProjectBundleOutput/);
   assert.match(js, /currentAssistantSnapshot/);
@@ -175,6 +178,7 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /cleared recent action history/);
   assert.match(js, /currentProjectBundleOutputPayload/);
   assert.match(js, /currentProjectBundleComparePayload/);
+  assert.match(js, /refreshDesktopStatusOutput/);
   assert.match(js, /project_bundle_inspect/);
   assert.match(js, /project_bundle_validate/);
   assert.match(js, /project_bundle_normalize/);
@@ -184,6 +188,7 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /launch_workbench_gui/);
   assert.match(js, /launch_installer_gui/);
   assert.match(js, /data-target-section/);
+  assert.match(js, /desktop_status/);
   assert.match(js, /desktop_build_host/);
   assert.match(js, /desktop_stage/);
   assert.match(js, /desktop_verify/);
@@ -203,9 +208,12 @@ test("tauri backend exposes hub runtime commands", () => {
   assert.match(rust, /read_runtime_log/);
   assert.match(rust, /doctor_report/);
   assert.match(rust, /validate_env/);
+  assert.match(rust, /desktop_status/);
   assert.match(rust, /desktop_stage/);
   assert.match(rust, /desktop_verify/);
   assert.match(rust, /desktop_build_host/);
+  assert.match(rust, /desktop_status_text/);
+  assert.match(rust, /render_desktop_status_for_platform/);
   assert.match(rust, /project_bundle_inspect/);
   assert.match(rust, /project_bundle_validate/);
   assert.match(rust, /project_bundle_normalize/);

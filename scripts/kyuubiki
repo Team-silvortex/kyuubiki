@@ -46,7 +46,7 @@ Commands:
   build-frontend    Build the browser workbench production bundle
   build-orchestrator Compile the Elixir control plane in production mode
   build-agent       Build the Rust solver agent binary in release mode
-  build-hub-gui     Build the Tauri Hub GUI bundles
+  build-hub-gui [platform] Build the Tauri Hub GUI bundles
   build-installer-gui [platform] Build the Tauri installer GUI bundles
   build-workbench-gui [platform] Build the Tauri desktop workbench shell bundles
   start             Start the orchestrator API, frontend, and solver agent in the background
@@ -66,6 +66,7 @@ Commands:
   package           Stage a portable release directory under dist/
   package-runtime   Stage the portable runtime release scaffold under dist/
   package-desktop [platform|all] Build/stage all Tauri desktop shells
+  desktop-status [platform|all] Show host/platform desktop packaging readiness and next steps
   desktop-stage [platform|all] Stage the desktop/runtime release scaffold under dist/
   desktop-build-host Build the Hub, Installer, and Workbench desktop bundles for this host
   desktop-release [platform|all] Stage desktop release output and build host-native desktop bundles
@@ -110,10 +111,13 @@ Examples:
   ./scripts/kyuubiki build-orchestrator
   ./scripts/kyuubiki build-agent
   ./scripts/kyuubiki build-hub-gui
+  ./scripts/kyuubiki build-hub-gui linux
   ./scripts/kyuubiki package-runtime
   ./scripts/kyuubiki package-desktop
   ./scripts/kyuubiki package-desktop linux
   ./scripts/kyuubiki package-desktop all
+  ./scripts/kyuubiki desktop-status
+  ./scripts/kyuubiki desktop-status all
   ./scripts/kyuubiki desktop-stage all
   ./scripts/kyuubiki desktop-build-host
   ./scripts/kyuubiki desktop-release
@@ -562,6 +566,180 @@ run_package_desktop() {
   run_workbench_gui_build "$platform"
 }
 
+desktop_target_apps() {
+  echo "hub-gui installer-gui workbench-gui"
+}
+
+desktop_icon_dir_for_app() {
+  local app="$1"
+  echo "$ROOT_DIR/apps/${app}/src-tauri/icons"
+}
+
+desktop_has_icon_pattern() {
+  local app="$1"
+  local pattern="$2"
+  local icon_dir candidate
+  icon_dir="$(desktop_icon_dir_for_app "$app")"
+
+  for candidate in "$icon_dir"/$~pattern; do
+    if [[ -f "$candidate" ]]; then
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+desktop_icon_status() {
+  local platform="$1"
+  local app="$2"
+
+  case "$platform" in
+    macos)
+      if desktop_has_icon_pattern "$app" "*.png" && desktop_has_icon_pattern "$app" "*.icns"; then
+        echo "ready (.png + .icns)"
+      else
+        echo "missing macOS icons"
+      fi
+      ;;
+    linux)
+      if desktop_has_icon_pattern "$app" "*.png"; then
+        echo "ready (.png)"
+      else
+        echo "missing Linux icons"
+      fi
+      ;;
+    windows)
+      if desktop_has_icon_pattern "$app" "*.png" && desktop_has_icon_pattern "$app" "*.ico"; then
+        echo "ready (.png + .ico)"
+      else
+        echo "missing Windows icons"
+      fi
+      ;;
+    *)
+      echo "unknown"
+      ;;
+  esac
+}
+
+desktop_manifest_status() {
+  local platform="$1"
+  local app="$2"
+  local manifest="$ROOT_DIR/dist/${platform}/desktop/${app}/manifest.json"
+
+  if [[ -f "$manifest" ]]; then
+    echo "present"
+  else
+    echo "missing"
+  fi
+}
+
+desktop_bundle_dir_for_app() {
+  local app="$1"
+  echo "$ROOT_DIR/apps/${app}/src-tauri/target/release/bundle"
+}
+
+desktop_host_bundle_status() {
+  local app="$1"
+  local bundle_dir
+  bundle_dir="$(desktop_bundle_dir_for_app "$app")"
+
+  if [[ -d "$bundle_dir" ]]; then
+    echo "present"
+  else
+    echo "missing"
+  fi
+}
+
+desktop_runtime_stage_status() {
+  local platform="$1"
+  local root="$ROOT_DIR/dist/${platform}"
+
+  if [[ -d "$root/bin" && -d "$root/config" && -d "$root/desktop" ]]; then
+    echo "present"
+  else
+    echo "missing"
+  fi
+}
+
+print_desktop_status_for_platform() {
+  local platform="$1"
+  local runtime_status
+  runtime_status="$(desktop_runtime_stage_status "$platform")"
+
+  echo
+  echo "platform: ${platform}"
+  echo "  runtime scaffold: ${runtime_status}"
+
+  local app manifest_status icon_status host_bundle_status
+  for app in ${(s: :)$(desktop_target_apps)}; do
+    manifest_status="$(desktop_manifest_status "$platform" "$app")"
+    icon_status="$(desktop_icon_status "$platform" "$app")"
+    printf '  %-16s manifest=%-8s icons=%s\n' "${app}:" "$manifest_status" "$icon_status"
+
+    if [[ "$platform" == "$(host_platform)" ]]; then
+      host_bundle_status="$(desktop_host_bundle_status "$app")"
+      printf '  %-16s host-bundle=%s\n' "${app}:" "$host_bundle_status"
+    fi
+  done
+
+  if verify_desktop_platform "$platform" >/dev/null 2>&1; then
+    echo "  verification: ready"
+  else
+    echo "  verification: needs attention"
+  fi
+}
+
+print_desktop_next_steps() {
+  local platform="$1"
+  local host
+  host="$(host_platform)"
+
+  echo
+  echo "next steps:"
+
+  if [[ "$platform" == "all" ]]; then
+    echo "  - Stage every platform scaffold: zsh ./scripts/kyuubiki desktop-stage all"
+    echo "  - Build this host's desktop bundles: zsh ./scripts/kyuubiki desktop-build-host"
+    echo "  - Verify manifests and icon inputs: zsh ./scripts/kyuubiki desktop-verify all"
+    return 0
+  fi
+
+  if [[ "$(desktop_runtime_stage_status "$platform")" == "missing" ]]; then
+    echo "  - Stage runtime + desktop manifests: zsh ./scripts/kyuubiki desktop-stage ${platform}"
+  fi
+
+  if [[ "$platform" == "$host" ]]; then
+    echo "  - Build host-native Tauri bundles: zsh ./scripts/kyuubiki desktop-build-host"
+    echo "  - Run the full host release pass: zsh ./scripts/kyuubiki desktop-release ${platform}"
+  else
+    echo "  - This host only stages ${platform} manifests; build native bundles on a ${platform} machine"
+    echo "  - Verify staged rollout descriptors: zsh ./scripts/kyuubiki desktop-verify ${platform}"
+  fi
+}
+
+run_desktop_status() {
+  local platform="${1:-$(host_platform)}"
+  local host
+  host="$(host_platform)"
+
+  echo "desktop packaging status"
+  echo "  host platform: ${host}"
+  echo "  dist root: $ROOT_DIR/dist"
+
+  if [[ "$platform" == "all" ]]; then
+    local target
+    for target in macos linux windows; do
+      print_desktop_status_for_platform "$target"
+    done
+    print_desktop_next_steps all
+    return 0
+  fi
+
+  print_desktop_status_for_platform "$platform"
+  print_desktop_next_steps "$platform"
+}
+
 run_desktop_stage() {
   local platform="${1:-$(host_platform)}"
 
@@ -871,6 +1049,9 @@ case "$command" in
     ;;
   package-desktop)
     run_package_desktop "${1:-$(host_platform)}"
+    ;;
+  desktop-status)
+    run_desktop_status "${1:-$(host_platform)}"
     ;;
   desktop-stage)
     run_desktop_stage "${1:-$(host_platform)}"

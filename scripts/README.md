@@ -36,6 +36,7 @@ Examples now include:
 - `build-workbench-gui`
 - `package-runtime`
 - `package-desktop`
+- `desktop-status`
 - `desktop-stage`
 - `desktop-build-host`
 - `desktop-release`

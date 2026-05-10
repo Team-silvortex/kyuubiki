@@ -34,6 +34,8 @@ Keep these names aligned with:
 
 ## Shared preflight
 
+- Review current readiness:
+  - `zsh ./scripts/kyuubiki desktop-status all`
 - Confirm brand assets exist under:
   - [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
   - [assets/icons/dock](/Users/Shared/chroot/dev/kyuubiki/assets/icons/dock)
@@ -147,16 +149,18 @@ Suggested verification:
 When preparing a release, keep the order stable:
 
 1. Update version notes and changelog.
-2. Refresh runtime scaffold:
+2. Inspect readiness and missing pieces:
+   `zsh ./scripts/kyuubiki desktop-status all`
+3. Refresh runtime scaffold:
    `zsh ./scripts/kyuubiki desktop-stage all`
-3. Refresh desktop manifests:
+4. Refresh desktop manifests:
    `zsh ./scripts/kyuubiki desktop-verify all`
-4. Build the current host-platform desktop bundles:
+5. Build the current host-platform desktop bundles:
    - `zsh ./scripts/kyuubiki desktop-build-host`
-5. Run the host release wrapper:
+6. Run the host release wrapper:
    - `zsh ./scripts/kyuubiki desktop-release <host-platform>`
-6. Verify icon inputs and manifest bundle targets for all three supported platforms.
-7. Publish artifacts using the naming convention above.
+7. Verify icon inputs and manifest bundle targets for all three supported platforms.
+8. Publish artifacts using the naming convention above.
 
 ## Notes
 

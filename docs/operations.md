@@ -97,7 +97,8 @@ These can now be written from the installer GUI Setup panel.
 - `make build-installer-gui`
 - `make build-workbench-gui`
 - `make package-runtime`
-- `make package-desktop`
+- `make package-desktop PLATFORM=all`
+- `make desktop-status PLATFORM=all`
 - `make desktop-stage PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-release`
