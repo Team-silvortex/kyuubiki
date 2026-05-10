@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   href: string;
   summary: string;
 };
@@ -55,5 +55,12 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "plane_quad_2d",
     href: "/models/quad-plate-patch-2d.json",
     summary: "Single bilinear quad patch for quick plane-stress solver checks.",
+  },
+  {
+    id: "portal-frame-2d",
+    name: "Portal Frame 2D",
+    kind: "frame_2d",
+    href: "/models/portal-frame-2d.json",
+    summary: "Compact 2D frame with bending and rotation response for first-pass beam-column checks.",
   },
 ];

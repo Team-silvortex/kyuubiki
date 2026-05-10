@@ -1,4 +1,5 @@
 import type {
+  Frame2dJobInput,
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
@@ -50,12 +51,21 @@ export type ImportedTruss3dModel = {
   model: Truss3dJobInput;
 };
 
+export type ImportedFrame2dModel = {
+  kind: "frame_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: Frame2dJobInput;
+};
+
 export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedTruss2dModel
   | ImportedPlaneTriangle2dModel
   | ImportedPlaneQuad2dModel
-  | ImportedTruss3dModel;
+  | ImportedTruss3dModel
+  | ImportedFrame2dModel;
 
 const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 
@@ -405,6 +415,65 @@ function parseTruss3dV1(raw: Record<string, unknown>): ImportedTruss3dModel {
   };
 }
 
+function parseFrame2dNode(raw: unknown, index: number): Frame2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    fix_rz: Boolean(node.fix_rz),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+    moment_z: numberOrZero(node.moment_z),
+  };
+}
+
+function parseFrame2dElement(raw: unknown, index: number): Frame2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    moment_of_inertia: requiredNumber(element.moment_of_inertia, `elements[${index}].moment_of_inertia`),
+    section_modulus: requiredNumber(element.section_modulus, `elements[${index}].section_modulus`),
+    material_id: optionalString(element.material_id),
+  };
+}
+
+function parseFrame2dV1(raw: Record<string, unknown>): ImportedFrame2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseFrame2dNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseFrame2dElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "frame_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-frame-2d",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
 export function parsePlaygroundModel(text: string): ImportedModel {
   const raw = JSON.parse(text) as Record<string, unknown>;
   assertSupportedVersion(raw);
@@ -426,6 +495,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "truss_3d") {
     return parseTruss3dV1(raw);
+  }
+
+  if (kind === "frame_2d") {
+    return parseFrame2dV1(raw);
   }
 
   if (kind === "truss_2d") {

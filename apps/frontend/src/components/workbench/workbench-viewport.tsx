@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneResultField = "von_mises" | "principal_stress_1" | "max_in_plane_shear";
 
 type DisplayTrussNode = {
@@ -838,13 +838,13 @@ function WorkbenchViewportInner({
     );
   }
 
-  if (studyKind === "truss_2d") {
+  if (studyKind === "truss_2d" || studyKind === "frame_2d") {
     return (
       <svg
         viewBox="0 0 980 460"
         className={`viewport-svg${boxSelectMode ? " viewport-svg--box-select" : ""}`}
         style={svgStyle}
-        aria-label="2d truss response"
+        aria-label={studyKind === "frame_2d" ? "2d frame response" : "2d truss response"}
         onPointerLeave={onStopDraggingNode}
         onPointerMove={onTrussPointerMove}
         onPointerUp={onStopDraggingNode}

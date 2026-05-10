@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -86,6 +86,36 @@ type PlaneElementSelection = {
   max_in_plane_shear?: number;
 };
 
+type FrameNodeSelection = {
+  id: string;
+  x: number;
+  y: number;
+  load_x: number;
+  load_y: number;
+  moment_z: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_rz: boolean;
+  displacement_magnitude?: number;
+  rz?: number;
+};
+
+type FrameElementSelection = {
+  id: string;
+  index: number;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+  moment_of_inertia: number;
+  section_modulus: number;
+  axial_stress?: number;
+  max_bending_stress?: number;
+  max_combined_stress?: number;
+  moment_i?: number;
+  moment_j?: number;
+};
+
 type JobLike = {
   status?: string | null;
   worker_id?: string | null;
@@ -121,6 +151,15 @@ type InspectorLabels = {
   modulus: string;
   planeThickness: string;
   poissonRatio: string;
+  fixRz: string;
+  momentZ: string;
+  rotationZ: string;
+  frameElements: string;
+  momentOfInertia: string;
+  sectionModulus: string;
+  bendingStress: string;
+  combinedStress: string;
+  maxMoment: string;
   selectionHint: string;
   diagnostics: string;
   stabilityScore: string;
@@ -178,6 +217,8 @@ type WorkbenchInspectorProps = {
   selectedTruss3dElementData: Truss3dElementSelection | null;
   selectedPlaneNodeData: PlaneNodeSelection | null;
   selectedPlaneElementData: PlaneElementSelection | null;
+  selectedFrameNodeData: FrameNodeSelection | null;
+  selectedFrameElementData: FrameElementSelection | null;
   trussElementArea: number;
   trussElementModulusGpa: number;
   trussElementMaterialId: string;
@@ -242,6 +283,8 @@ function WorkbenchInspectorInner({
   selectedTruss3dElementData,
   selectedPlaneNodeData,
   selectedPlaneElementData,
+  selectedFrameNodeData,
+  selectedFrameElementData,
   trussElementArea,
   trussElementModulusGpa,
   trussElementMaterialId,
@@ -296,6 +339,7 @@ function WorkbenchInspectorInner({
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
+  const isFrame = studyKind === "frame_2d";
   const historyRows = [
     ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
     ...redoStack.slice(-2).reverse().map((entry) => ({ key: `redo-${entry.label}`, label: entry.label, kind: t.redo })),
@@ -403,6 +447,34 @@ function WorkbenchInspectorInner({
                 <label><span>{t.principalStress1}</span><input value={typeof selectedPlaneElementData.principal_stress_1 === "number" ? selectedPlaneElementData.principal_stress_1.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.principalStress2}</span><input value={typeof selectedPlaneElementData.principal_stress_2 === "number" ? selectedPlaneElementData.principal_stress_2.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.maxInPlaneShear}</span><input value={typeof selectedPlaneElementData.max_in_plane_shear === "number" ? selectedPlaneElementData.max_in_plane_shear.toExponential(3) : "--"} readOnly /></label>
+              </div>
+            ) : isFrame && selectedFrameNodeData ? (
+              <div className="form-grid compact">
+                <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
+                <label><span>{t.nodeX}</span><input value={selectedFrameNodeData.x} readOnly /></label>
+                <label><span>{t.nodeY}</span><input value={selectedFrameNodeData.y} readOnly /></label>
+                <label><span>{t.loadX}</span><input value={selectedFrameNodeData.load_x} readOnly /></label>
+                <label><span>{t.loadY}</span><input value={selectedFrameNodeData.load_y} readOnly /></label>
+                <label><span>{t.momentZ}</span><input value={selectedFrameNodeData.moment_z} readOnly /></label>
+                <label><span>{t.displacementMagnitude}</span><input value={typeof selectedFrameNodeData.displacement_magnitude === "number" ? selectedFrameNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.rotationZ}</span><input value={typeof selectedFrameNodeData.rz === "number" ? selectedFrameNodeData.rz.toExponential(3) : "--"} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedFrameNodeData.fix_x} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} readOnly /></label>
+              </div>
+            ) : isFrame && selectedFrameElementData ? (
+              <div className="form-grid compact">
+                <label><span>{t.memberSelection}</span><input value={selectedFrameElementData.id} readOnly /></label>
+                <label><span>{t.nodeI}</span><input value={selectedFrameElementData.node_i} readOnly /></label>
+                <label><span>{t.nodeJ}</span><input value={selectedFrameElementData.node_j} readOnly /></label>
+                <label><span>{t.area}</span><input value={selectedFrameElementData.area} readOnly /></label>
+                <label><span>{t.modulus}</span><input value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} readOnly /></label>
+                <label><span>{t.momentOfInertia}</span><input value={selectedFrameElementData.moment_of_inertia.toExponential(3)} readOnly /></label>
+                <label><span>{t.sectionModulus}</span><input value={selectedFrameElementData.section_modulus.toExponential(3)} readOnly /></label>
+                <label><span>{t.principalStress1}</span><input value={typeof selectedFrameElementData.axial_stress === "number" ? selectedFrameElementData.axial_stress.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.bendingStress}</span><input value={typeof selectedFrameElementData.max_bending_stress === "number" ? selectedFrameElementData.max_bending_stress.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.combinedStress}</span><input value={typeof selectedFrameElementData.max_combined_stress === "number" ? selectedFrameElementData.max_combined_stress.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.maxMoment}</span><input value={Math.max(Math.abs(selectedFrameElementData.moment_i ?? 0), Math.abs(selectedFrameElementData.moment_j ?? 0)).toExponential(3)} readOnly /></label>
               </div>
             ) : (
               <p className="card-copy">{t.selectionHint}</p>

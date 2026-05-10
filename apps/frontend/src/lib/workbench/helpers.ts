@@ -2,6 +2,8 @@ import { buildStudyModelPayload } from "@/lib/models";
 import type {
   AxialBarJobInput,
   AxialBarResult,
+  Frame2dJobInput,
+  Frame2dResult,
   FrontendRuntimeMode,
   JobEnvelope,
   PlaneQuad2dJobInput,
@@ -71,7 +73,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -200,6 +202,7 @@ export function serializeCurrentModel(
   trussModel: Truss2dJobInput,
   truss3dModel: Truss3dJobInput,
   planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput,
+  frameModel: Frame2dJobInput,
   parametric: ParametricLike,
   round: (value: number) => number,
 ): Record<string, unknown> {
@@ -213,12 +216,16 @@ export function serializeCurrentModel(
           ? parametric.youngsModulusGpa
           : studyKind === "truss_3d"
             ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
+            : studyKind === "frame_2d"
+              ? round((frameModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
     materials:
       studyKind === "truss_2d"
         ? trussModel.materials
         : studyKind === "truss_3d"
           ? truss3dModel.materials
+          : studyKind === "frame_2d"
+            ? frameModel.materials
           : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
             ? planeModel.materials
             : undefined,
@@ -226,6 +233,7 @@ export function serializeCurrentModel(
     truss: studyKind === "truss_2d" ? trussModel : undefined,
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
     plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
+    frame: studyKind === "frame_2d" ? frameModel : undefined,
   });
 }
 
@@ -253,10 +261,21 @@ function isTrussResult(value: unknown): value is Truss2dResult {
   return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && !("tip_displacement" in value) && Array.isArray((value as Truss2dResult).nodes) && !(value as Truss2dResult).nodes.some((node) => "z" in node);
 }
 
+function isFrame2dResult(value: unknown): value is Frame2dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_rotation" in value &&
+    "max_moment" in value &&
+    "nodes" in value &&
+    "elements" in value
+  );
+}
+
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | null,
+  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -308,6 +327,55 @@ export function serializeResultCsv(
     result.elements.forEach((element) =>
       lines.push(
         toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.strain, element.stress, element.axial_force]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isFrame2dResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy", "rz", "displacement_magnitude"]));
+    result.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy, node.rz, node.displacement_magnitude])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "axial_force_i",
+        "shear_force_i",
+        "moment_i",
+        "axial_force_j",
+        "shear_force_j",
+        "moment_j",
+        "axial_stress",
+        "max_bending_stress",
+        "max_combined_stress",
+      ]),
+    );
+    result.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.length,
+          element.axial_force_i,
+          element.shear_force_i,
+          element.moment_i,
+          element.axial_force_j,
+          element.shear_force_j,
+          element.moment_j,
+          element.axial_stress,
+          element.max_bending_stress,
+          element.max_combined_stress,
+        ]),
       ),
     );
     return lines.join("\n");

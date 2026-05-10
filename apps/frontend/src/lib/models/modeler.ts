@@ -1,5 +1,6 @@
 import type {
   AxialBarJobInput,
+  Frame2dJobInput,
   JobResultRecord,
   JobState,
   ModelMaterial,
@@ -228,7 +229,7 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
 }
 
 export function exportStudyModel(
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d",
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -238,6 +239,7 @@ export function exportStudyModel(
     truss?: Truss2dJobInput;
     truss3d?: Truss3dJobInput;
     plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+    frame?: Frame2dJobInput;
   },
 ): string {
   if ((kind === "plane_triangle_2d" || kind === "plane_quad_2d") && payload.plane) {
@@ -291,6 +293,23 @@ export function exportStudyModel(
     );
   }
 
+  if (kind === "frame_2d" && payload.frame) {
+    return JSON.stringify(
+      {
+        kind,
+        model_schema_version: MODEL_SCHEMA_VERSION,
+        name: payload.name,
+        material: payload.material,
+        youngs_modulus_gpa: payload.youngsModulusGpa,
+        materials: payload.frame.materials ?? payload.materials,
+        nodes: payload.frame.nodes,
+        elements: payload.frame.elements,
+      },
+      null,
+      2,
+    );
+  }
+
   if (payload.axial) {
     return JSON.stringify(
       {
@@ -313,7 +332,7 @@ export function exportStudyModel(
 }
 
 export function buildStudyModelPayload(
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d",
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -323,6 +342,7 @@ export function buildStudyModelPayload(
     truss?: Truss2dJobInput;
     truss3d?: Truss3dJobInput;
     plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+    frame?: Frame2dJobInput;
   },
 ): Record<string, unknown> {
   return JSON.parse(exportStudyModel(kind, payload)) as Record<string, unknown>;

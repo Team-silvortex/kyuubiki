@@ -194,6 +194,7 @@ export function buildStudyKindOptions(kinds: {
   truss_3d: string;
   plane_triangle_2d: string;
   plane_quad_2d: string;
+  frame_2d: string;
 }) {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
@@ -201,6 +202,7 @@ export function buildStudyKindOptions(kinds: {
     { value: "truss_3d" as const, label: kinds.truss_3d },
     { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
     { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
+    { value: "frame_2d" as const, label: kinds.frame_2d },
   ];
 }
 
@@ -250,9 +252,10 @@ export function buildStudyControlsRows({
     spatialTrussElements: string;
     load: string;
     planeElements: string;
+    frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
+  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;
@@ -282,6 +285,15 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: truss3dNodeCount },
       { label: labels.spatialTrussElements, value: truss3dElementCount },
       { label: labels.load, value: truss3dLoadValue },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "frame_2d") {
+    return [
+      { label: labels.nodes, value: trussNodeCount },
+      { label: labels.frameElements, value: trussElementCount },
+      { label: labels.material, value: materialLabel },
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }

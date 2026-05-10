@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from "react";
 import type {
+  Frame2dJobInput,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   Truss2dJobInput,
@@ -12,7 +13,8 @@ export type WorkbenchStudyKind =
   | "truss_2d"
   | "truss_3d"
   | "plane_triangle_2d"
-  | "plane_quad_2d";
+  | "plane_quad_2d"
+  | "frame_2d";
 export type WorkbenchSidebarSection = "study" | "model" | "library" | "system";
 
 export type WorkbenchAxialFormState = {
@@ -30,6 +32,7 @@ export type WorkbenchSnapshot = {
   trussModel: Truss2dJobInput;
   truss3dModel: Truss3dJobInput;
   planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+  frameModel: Frame2dJobInput;
   parametric: ParametricTrussConfig;
   panelParametric: ParametricPanelConfig;
   activeMaterial: string;
@@ -59,6 +62,7 @@ type SnapshotSetters = {
   setTrussModel: Dispatch<SetStateAction<Truss2dJobInput>>;
   setTruss3dModel: Dispatch<SetStateAction<Truss3dJobInput>>;
   setPlaneModel: Dispatch<SetStateAction<PlaneTriangle2dJobInput | PlaneQuad2dJobInput>>;
+  setFrameModel: Dispatch<SetStateAction<Frame2dJobInput>>;
   setParametric: Dispatch<SetStateAction<ParametricTrussConfig>>;
   setPanelParametric: Dispatch<SetStateAction<ParametricPanelConfig>>;
   setActiveMaterial: Dispatch<SetStateAction<string>>;
@@ -86,6 +90,7 @@ export function restoreWorkbenchSnapshot(
   setters.setTrussModel(snapshot.trussModel);
   setters.setTruss3dModel(snapshot.truss3dModel);
   setters.setPlaneModel(snapshot.planeModel);
+  setters.setFrameModel(snapshot.frameModel);
   setters.setParametric(snapshot.parametric);
   setters.setPanelParametric(snapshot.panelParametric);
   setters.setActiveMaterial(snapshot.activeMaterial);
