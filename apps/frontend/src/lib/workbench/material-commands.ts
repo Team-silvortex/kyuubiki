@@ -1,10 +1,13 @@
 import { createCustomMaterial, createMaterialDefinition } from "@/lib/materials";
 import type {
   ModelMaterial,
+  PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
+
+type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
 
 export function nextMaterialId(materials: ModelMaterial[] | undefined) {
   return `mat-${(materials?.length ?? 0) + 1}`;
@@ -44,7 +47,7 @@ export function ensureTruss3dModelMaterials(model: Truss3dJobInput, fallbackValu
   };
 }
 
-export function ensurePlaneModelMaterials(model: PlaneTriangle2dJobInput, fallbackValue = "70"): PlaneTriangle2dJobInput {
+export function ensurePlaneModelMaterials(model: PlaneStudyJobInput, fallbackValue = "70"): PlaneStudyJobInput {
   const fallbackPoisson = model.elements[0]?.poisson_ratio ?? 0.33;
   const materials =
     model.materials && model.materials.length > 0
@@ -86,7 +89,7 @@ export function addPresetMaterialToTruss3dModel(model: Truss3dJobInput, activeMa
   };
 }
 
-export function addPresetMaterialToPlaneModel(model: PlaneTriangle2dJobInput, activeMaterial: string) {
+export function addPresetMaterialToPlaneModel(model: PlaneStudyJobInput, activeMaterial: string) {
   return {
     ...model,
     materials: [
@@ -113,7 +116,7 @@ export function addCustomMaterialToTruss3dModel(model: Truss3dJobInput) {
   };
 }
 
-export function addCustomMaterialToPlaneModel(model: PlaneTriangle2dJobInput) {
+export function addCustomMaterialToPlaneModel(model: PlaneStudyJobInput) {
   return {
     ...model,
     materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],

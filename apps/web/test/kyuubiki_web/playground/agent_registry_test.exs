@@ -42,4 +42,32 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
 
     assert heartbeat_agent.zone == "rack-b"
   end
+
+  test "keeps capability and health metadata for managed remote agents" do
+    assert {:ok, agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-remote-c",
+               "host" => "10.20.0.13",
+               "port" => 6103,
+               "methods" => ["solve_truss_2d", "cancel_job"],
+               "health_score" => 88,
+               "capabilities" => [
+                 %{
+                   "id" => "truss-2d",
+                   "role" => "solver",
+                   "methods" => ["solve_truss_2d"],
+                   "tags" => ["truss", "2d"]
+                 }
+               ]
+             })
+
+    assert agent.health_score == 88
+    assert agent.methods == ["solve_truss_2d", "cancel_job"]
+    assert [%{id: "truss-2d", methods: ["solve_truss_2d"], tags: ["truss", "2d"]}] = agent.capabilities
+
+    endpoint = hd(AgentRegistry.active_endpoints())
+    assert endpoint.health_score == 88
+    assert endpoint.methods == ["solve_truss_2d", "cancel_job"]
+    assert [%{id: "truss-2d"}] = endpoint.capabilities
+  end
 end

@@ -12,9 +12,12 @@ type ConsoleElement = {
   node_i?: number;
   node_j?: number;
   node_k?: number;
+  node_l?: number;
   stress?: number;
   axial_force?: number;
   von_mises?: number;
+  principal_stress_1?: number;
+  max_in_plane_shear?: number;
 };
 
 type WorkbenchConsoleProps = {
@@ -128,12 +131,21 @@ function WorkbenchConsoleInner({
                   <span>
                     {"x1" in element && typeof element.x1 === "number"
                       ? `${fixed(element.x1, 2)} - ${fixed(element.x2, 2)}`
-                      : typeof element.node_k === "number"
-                        ? `${element.node_i} - ${element.node_j} - ${element.node_k}`
+                      : typeof element.node_l === "number"
+                        ? `${element.node_i} - ${element.node_j} - ${element.node_k} - ${element.node_l}`
+                        : typeof element.node_k === "number"
+                          ? `${element.node_i} - ${element.node_j} - ${element.node_k}`
                         : `${element.node_i} - ${element.node_j}`}
                   </span>
-                  <span>{scientific(typeof element.von_mises === "number" ? element.von_mises : element.stress)}</span>
-                  <span>{scientific(element.axial_force)}</span>
+                  <span>
+                    {scientific(typeof element.von_mises === "number" ? element.von_mises : element.stress)}
+                    {typeof element.principal_stress_1 === "number" ? ` / ${scientific(element.principal_stress_1)}` : ""}
+                  </span>
+                  <span>
+                    {typeof element.max_in_plane_shear === "number"
+                      ? scientific(element.max_in_plane_shear)
+                      : scientific(element.axial_force)}
+                  </span>
                 </div>
               )}
             />

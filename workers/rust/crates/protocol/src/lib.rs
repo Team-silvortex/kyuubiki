@@ -199,6 +199,8 @@ pub enum RpcMethod {
     SolveTruss3d,
     #[serde(rename = "solve_plane_triangle_2d")]
     SolvePlaneTriangle2d,
+    #[serde(rename = "solve_plane_quad_2d")]
+    SolvePlaneQuad2d,
     #[serde(rename = "cancel_job")]
     CancelJob,
 }
@@ -305,6 +307,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveTruss2d,
                 RpcMethod::SolveTruss3d,
                 RpcMethod::SolvePlaneTriangle2d,
+                RpcMethod::SolvePlaneQuad2d,
                 RpcMethod::CancelJob,
             ],
         }
@@ -343,9 +346,24 @@ impl AgentDescriptor {
                     tags: vec!["plane".to_string(), "mesh".to_string(), "cpu".to_string()],
                 },
                 CapabilityDescriptor {
+                    id: "plane-quad-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolvePlaneQuad2d],
+                    tags: vec![
+                        "plane".to_string(),
+                        "mesh".to_string(),
+                        "quad".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
                     id: "control".to_string(),
                     role: "runtime".to_string(),
-                    methods: vec![RpcMethod::Ping, RpcMethod::DescribeAgent, RpcMethod::CancelJob],
+                    methods: vec![
+                        RpcMethod::Ping,
+                        RpcMethod::DescribeAgent,
+                        RpcMethod::CancelJob,
+                    ],
                     tags: vec!["control".to_string(), "general".to_string()],
                 },
             ],
@@ -514,6 +532,24 @@ pub struct SolvePlaneTriangle2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlaneQuadElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub thickness: f64,
+    pub youngs_modulus: f64,
+    pub poisson_ratio: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolvePlaneQuad2dRequest {
+    pub nodes: Vec<PlaneNodeInput>,
+    pub elements: Vec<PlaneQuadElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaneNodeResult {
     pub index: usize,
     pub id: String,
@@ -521,6 +557,7 @@ pub struct PlaneNodeResult {
     pub y: f64,
     pub ux: f64,
     pub uy: f64,
+    pub displacement_magnitude: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -537,6 +574,9 @@ pub struct PlaneTriangleElementResult {
     pub stress_x: f64,
     pub stress_y: f64,
     pub tau_xy: f64,
+    pub principal_stress_1: f64,
+    pub principal_stress_2: f64,
+    pub max_in_plane_shear: f64,
     pub von_mises: f64,
 }
 
@@ -550,12 +590,43 @@ pub struct SolvePlaneTriangle2dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PlaneQuadElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub area: f64,
+    pub strain_x: f64,
+    pub strain_y: f64,
+    pub gamma_xy: f64,
+    pub stress_x: f64,
+    pub stress_y: f64,
+    pub tau_xy: f64,
+    pub principal_stress_1: f64,
+    pub principal_stress_2: f64,
+    pub max_in_plane_shear: f64,
+    pub von_mises: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolvePlaneQuad2dResult {
+    pub input: SolvePlaneQuad2dRequest,
+    pub nodes: Vec<PlaneNodeResult>,
+    pub elements: Vec<PlaneQuadElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
     Truss2d(SolveTruss2dResult),
     Truss3d(SolveTruss3dResult),
     PlaneTriangle2d(SolvePlaneTriangle2dResult),
+    PlaneQuad2d(SolvePlaneQuad2dResult),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -585,9 +656,9 @@ pub struct ResultChunkResponse {
 #[cfg(test)]
 mod tests {
     use super::{
-        AgentDescriptor, Job, JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress,
-        RpcRequest, RpcResponse, SolveBarRequest, SolvePlaneTriangle2dRequest,
-        SolveTruss3dRequest,
+        AgentDescriptor, Job, JobStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION,
+        RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolvePlaneQuad2dRequest,
+        SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
     };
 
     #[test]
@@ -658,6 +729,35 @@ mod tests {
     }
 
     #[test]
+    fn serializes_plane_quad_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-plane-quad".to_string(),
+            method: RpcMethod::SolvePlaneQuad2d,
+            params: serde_json::to_value(SolvePlaneQuad2dRequest {
+                nodes: vec![],
+                elements: vec![PlaneQuadElementInput {
+                    id: "q0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    node_l: 3,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolvePlaneQuad2d);
+        assert_eq!(decoded.id, "rpc-plane-quad");
+    }
+
+    #[test]
     fn serializes_truss_3d_rpc_round_trip() {
         let request = RpcRequest {
             rpc_version: RPC_VERSION,
@@ -701,10 +801,7 @@ mod tests {
 
         assert_eq!(decoded.program, "kyuubiki-rust-agent");
         assert_eq!(decoded.protocol.rpc_version, RPC_VERSION);
-        assert!(decoded
-            .protocol
-            .methods
-            .contains(&RpcMethod::DescribeAgent));
+        assert!(decoded.protocol.methods.contains(&RpcMethod::DescribeAgent));
     }
 
     #[test]

@@ -16,6 +16,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           optional(:zone) => String.t(),
           optional(:capacity) => pos_integer(),
           optional(:tags) => [String.t()],
+          optional(:methods) => [String.t()],
+          optional(:capabilities) => [map()],
+          optional(:health_score) => non_neg_integer(),
           required(:last_seen_at) => DateTime.t()
         }
 
@@ -122,6 +125,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          zone: optional_string(attrs, "zone"),
          capacity: optional_integer(attrs, "capacity"),
          tags: optional_tags(attrs, "tags"),
+         methods: optional_methods(attrs, "methods"),
+         capabilities: optional_capabilities(attrs, "capabilities"),
+         health_score: optional_health_score(attrs, "health_score"),
          last_seen_at: now
        }}
     end
@@ -176,6 +182,65 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     end
   end
 
+  defp optional_methods(attrs, key) do
+    case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
+      values when is_list(values) -> values |> Enum.filter(&is_binary/1) |> Enum.uniq()
+      _ -> []
+    end
+  end
+
+  defp optional_capabilities(attrs, key) do
+    case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
+      values when is_list(values) ->
+        values
+        |> Enum.map(&normalize_capability/1)
+        |> Enum.reject(&is_nil/1)
+
+      _ ->
+        []
+    end
+  end
+
+  defp normalize_capability(%{} = capability) do
+    id = capability["id"] || capability[:id]
+    role = capability["role"] || capability[:role]
+
+    if is_binary(id) and id != "" and is_binary(role) and role != "" do
+      %{
+        id: id,
+        role: role,
+        methods:
+          capability
+          |> Map.get("methods", capability[:methods] || [])
+          |> List.wrap()
+          |> Enum.filter(&is_binary/1)
+          |> Enum.uniq(),
+        tags:
+          capability
+          |> Map.get("tags", capability[:tags] || [])
+          |> List.wrap()
+          |> Enum.filter(&is_binary/1)
+          |> Enum.uniq()
+      }
+    end
+  end
+
+  defp normalize_capability(_capability), do: nil
+
+  defp optional_health_score(attrs, key) do
+    case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
+      value when is_integer(value) and value >= 0 and value <= 100 -> value
+      value when is_binary(value) ->
+        case Integer.parse(value) do
+          {score, ""} when score >= 0 and score <= 100 -> score
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
+
   defp active_agents(agents) do
     limit_ms = stale_after_ms()
     now = DateTime.utc_now()
@@ -202,6 +267,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       zone: agent.zone,
       capacity: agent.capacity,
       tags: agent.tags,
+      methods: agent.methods,
+      capabilities: agent.capabilities,
+      health_score: agent.health_score,
       last_seen_at: DateTime.to_iso8601(agent.last_seen_at)
     }
   end

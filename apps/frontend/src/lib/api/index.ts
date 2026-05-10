@@ -93,9 +93,29 @@ export type PlaneTriangleElementInput = {
   material_id?: string;
 };
 
+export type PlaneQuadElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  node_l: number;
+  thickness: number;
+  youngs_modulus: number;
+  poisson_ratio: number;
+  material_id?: string;
+};
+
 export type PlaneTriangle2dJobInput = {
   nodes: PlaneNodeInput[];
   elements: PlaneTriangleElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type PlaneQuad2dJobInput = {
+  nodes: PlaneNodeInput[];
+  elements: PlaneQuadElementInput[];
   materials?: ModelMaterial[];
   project_id?: string;
   model_version_id?: string;
@@ -177,7 +197,7 @@ export type Truss3dResult = {
 export type PlaneTriangle2dResult = {
   max_displacement: number;
   max_stress: number;
-  nodes: Array<{ index: number; id: string; x: number; y: number; ux: number; uy: number }>;
+  nodes: Array<{ index: number; id: string; x: number; y: number; ux: number; uy: number; displacement_magnitude: number }>;
   elements: Array<{
     index: number;
     id: string;
@@ -191,9 +211,38 @@ export type PlaneTriangle2dResult = {
     stress_x: number;
     stress_y: number;
     tau_xy: number;
+    principal_stress_1: number;
+    principal_stress_2: number;
+    max_in_plane_shear: number;
     von_mises: number;
   }>;
   input: PlaneTriangle2dJobInput;
+};
+
+export type PlaneQuad2dResult = {
+  max_displacement: number;
+  max_stress: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; ux: number; uy: number; displacement_magnitude: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    node_l: number;
+    area: number;
+    strain_x: number;
+    strain_y: number;
+    gamma_xy: number;
+    stress_x: number;
+    stress_y: number;
+    tau_xy: number;
+    principal_stress_1: number;
+    principal_stress_2: number;
+    max_in_plane_shear: number;
+    von_mises: number;
+  }>;
+  input: PlaneQuad2dJobInput;
 };
 
 export type JobEnvelope<TResult = unknown> = {
@@ -564,6 +613,29 @@ export function resolvePlaneTriangle2dJobInput(
   };
 }
 
+export function resolvePlaneQuad2dJobInput(
+  input: PlaneQuad2dJobInput,
+): Omit<PlaneQuad2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+        poisson_ratio:
+          material?.poisson_ratio === null || material?.poisson_ratio === undefined
+            ? element.poisson_ratio
+            : material.poisson_ratio,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
@@ -781,6 +853,16 @@ export function createPlaneTriangle2dJob(
   });
 }
 
+export function createPlaneQuad2dJob(
+  input: PlaneQuad2dJobInput,
+): Promise<JobEnvelope<PlaneQuad2dResult>> {
+  return requestJson<JobEnvelope<PlaneQuad2dResult>>("/api/v1/fem/plane-quad-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
   return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
     method: "GET",
@@ -847,7 +929,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d",
+  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

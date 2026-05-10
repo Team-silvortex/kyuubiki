@@ -1,4 +1,10 @@
-import type { ModelMaterial, PlaneTriangle2dJobInput, Truss2dJobInput, Truss3dJobInput } from "@/lib/api";
+import type {
+  ModelMaterial,
+  PlaneQuad2dJobInput,
+  PlaneTriangle2dJobInput,
+  Truss2dJobInput,
+  Truss3dJobInput,
+} from "@/lib/api";
 import { createMaterialDefinition } from "@/lib/materials";
 
 export type ImportedAxialBarModel = {
@@ -28,6 +34,14 @@ export type ImportedPlaneTriangle2dModel = {
   model: PlaneTriangle2dJobInput;
 };
 
+export type ImportedPlaneQuad2dModel = {
+  kind: "plane_quad_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: PlaneQuad2dJobInput;
+};
+
 export type ImportedTruss3dModel = {
   kind: "truss_3d";
   name: string;
@@ -40,6 +54,7 @@ export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedTruss2dModel
   | ImportedPlaneTriangle2dModel
+  | ImportedPlaneQuad2dModel
   | ImportedTruss3dModel;
 
 const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
@@ -246,6 +261,24 @@ function parsePlaneElement(
   };
 }
 
+function parsePlaneQuadElement(
+  raw: unknown,
+  index: number,
+): PlaneQuad2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`),
+    node_l: requiredNonNegativeInteger(element.node_l, `elements[${index}].node_l`),
+    thickness: requiredNumber(element.thickness, `elements[${index}].thickness`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    poisson_ratio: requiredNumber(element.poisson_ratio, `elements[${index}].poisson_ratio`),
+    material_id: optionalString(element.material_id),
+  };
+}
+
 function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTriangle2dModel {
   const material = normalizeMaterial(raw.material);
   const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
@@ -277,6 +310,37 @@ function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTria
   return {
     kind: "plane_triangle_2d",
     name: typeof raw.name === "string" ? raw.name : "imported-plane",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
+function parsePlaneQuad2dV1(raw: Record<string, unknown>): ImportedPlaneQuad2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const poissonRatio = requiredNumber(raw.poisson_ratio ?? 0.33, "poisson_ratio");
+  const materials = parseMaterials(raw, material, youngsModulusGpa, poissonRatio);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parsePlaneNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parsePlaneQuadElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 4) {
+    throw new Error("nodes must contain at least four entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "plane_quad_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-plane-quad",
     material,
     youngsModulusGpa,
     model: { nodes, elements, materials },
@@ -354,6 +418,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "plane_triangle_2d") {
     return parsePlaneTriangle2dV1(raw);
+  }
+
+  if (kind === "plane_quad_2d") {
+    return parsePlaneQuad2dV1(raw);
   }
 
   if (kind === "truss_3d") {

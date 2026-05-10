@@ -193,12 +193,14 @@ export function buildStudyKindOptions(kinds: {
   truss_2d: string;
   truss_3d: string;
   plane_triangle_2d: string;
+  plane_quad_2d: string;
 }) {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
     { value: "truss_2d" as const, label: kinds.truss_2d },
     { value: "truss_3d" as const, label: kinds.truss_3d },
     { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
+    { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
   ];
 }
 
@@ -250,7 +252,7 @@ export function buildStudyControlsRows({
     planeElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;

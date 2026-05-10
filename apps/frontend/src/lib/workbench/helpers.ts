@@ -4,6 +4,8 @@ import type {
   AxialBarResult,
   FrontendRuntimeMode,
   JobEnvelope,
+  PlaneQuad2dJobInput,
+  PlaneQuad2dResult,
   PlaneTriangle2dJobInput,
   PlaneTriangle2dResult,
   Truss2dJobInput,
@@ -69,7 +71,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
 
 type AxialFormLike = {
   length: number;
@@ -197,7 +199,7 @@ export function serializeCurrentModel(
   axialForm: AxialFormLike,
   trussModel: Truss2dJobInput,
   truss3dModel: Truss3dJobInput,
-  planeModel: PlaneTriangle2dJobInput,
+  planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput,
   parametric: ParametricLike,
   round: (value: number) => number,
 ): Record<string, unknown> {
@@ -217,13 +219,13 @@ export function serializeCurrentModel(
         ? trussModel.materials
         : studyKind === "truss_3d"
           ? truss3dModel.materials
-          : studyKind === "plane_triangle_2d"
+          : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
             ? planeModel.materials
             : undefined,
     axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
     truss: studyKind === "truss_2d" ? trussModel : undefined,
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
-    plane: studyKind === "plane_triangle_2d" ? planeModel : undefined,
+    plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
   });
 }
 
@@ -254,7 +256,7 @@ function isTrussResult(value: unknown): value is Truss2dResult {
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | null,
+  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | null,
 ) {
   if (!result) return "";
 
@@ -312,8 +314,10 @@ export function serializeResultCsv(
   }
 
   lines.push("nodes");
-  lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy"]));
-  result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy])));
+  lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy", "displacement_magnitude"]));
+  result.nodes.forEach((node) =>
+    lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy, node.displacement_magnitude])),
+  );
   lines.push("");
   lines.push("elements");
   lines.push(
@@ -330,6 +334,9 @@ export function serializeResultCsv(
       "stress_x",
       "stress_y",
       "tau_xy",
+      "principal_stress_1",
+      "principal_stress_2",
+      "max_in_plane_shear",
       "von_mises",
     ]),
   );
@@ -348,6 +355,9 @@ export function serializeResultCsv(
         element.stress_x,
         element.stress_y,
         element.tau_xy,
+        element.principal_stress_1,
+        element.principal_stress_2,
+        element.max_in_plane_shear,
         element.von_mises,
       ]),
     ),

@@ -9,10 +9,12 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveBarRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
+    SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
+    MockSolver, solve_bar_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_truss_2d,
+    solve_truss_3d,
 };
 
 fn main() {
@@ -320,7 +322,8 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
             Vec::new(),
             RpcResponse::success(
                 request.id,
-                serde_json::to_value(agent_descriptor()).expect("agent descriptor should serialize"),
+                serde_json::to_value(agent_descriptor())
+                    .expect("agent descriptor should serialize"),
             ),
         ),
         RpcMethod::SolveBar1d => {
@@ -555,6 +558,65 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                 }
             }
         }
+        RpcMethod::SolvePlaneQuad2d => {
+            let params =
+                match serde_json::from_value::<SolvePlaneQuad2dRequest>(request.params.clone()) {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_plane_quad_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d plane quad", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("plane quad result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
         RpcMethod::CancelJob => {
             let params = match serde_json::from_value::<CancelJobRequest>(request.params.clone()) {
                 Ok(params) => params,
@@ -614,6 +676,22 @@ fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
             .collect(),
     };
     descriptor
+}
+
+fn registration_payload(config: &AgentConfig) -> serde_json::Value {
+    let descriptor = agent_descriptor();
+
+    serde_json::json!({
+        "id": config.agent_id,
+        "host": config.advertise_host.clone().unwrap_or_else(|| config.host.clone()),
+        "port": config.port,
+        "role": "solver",
+        "cluster_id": config.cluster_id,
+        "tags": if config.peers.is_empty() { vec!["headless", "standalone"] } else { vec!["headless", "peer-mesh"] },
+        "methods": descriptor.protocol.methods,
+        "capabilities": descriptor.capabilities,
+        "health_score": descriptor.runtime.health_score
+    })
 }
 
 fn agent_runtime_mode(config: &AgentConfig) -> &'static str {
@@ -737,10 +815,7 @@ fn extract_job_id(params: &serde_json::Value) -> Option<String> {
         .map(|value| value.to_string())
 }
 
-fn write_agent_reply(
-    writer: &Arc<Mutex<TcpStream>>,
-    reply: AgentReply,
-) -> Result<(), String> {
+fn write_agent_reply(writer: &Arc<Mutex<TcpStream>>, reply: AgentReply) -> Result<(), String> {
     match reply {
         AgentReply::Stream(progress_frames, final_response) => {
             for progress_frame in progress_frames {
@@ -787,31 +862,22 @@ impl AgentRegistrationHandle {
     fn maybe_spawn(config: &AgentConfig) -> Option<Self> {
         let agent_id = config.agent_id.clone()?;
         let orchestrator_url = config.orchestrator_url.clone()?;
-        let advertise_host = config
-            .advertise_host
-            .clone()
-            .unwrap_or_else(|| config.host.clone());
-        let port = config.port;
         let interval_ms = config.register_interval_ms;
         let cluster_api_token = config.cluster_api_token.clone();
         let agent_fingerprint = config.agent_fingerprint.clone();
         let running = Arc::new(AtomicBool::new(true));
         let running_clone = Arc::clone(&running);
         let cluster_id = config.cluster_id.clone();
-        let initial_payload = serde_json::json!({
-            "id": agent_id,
-            "host": advertise_host,
-            "port": port,
-            "role": "solver",
-            "cluster_id": cluster_id,
-            "tags": if config.peers.is_empty() { vec!["headless", "standalone"] } else { vec!["headless", "peer-mesh"] }
-        });
+        let initial_payload = registration_payload(config);
         let orchestrator_url_clone = orchestrator_url.clone();
         let agent_id_clone = agent_id.clone();
 
         let join_handle = thread::spawn(move || {
             let _ = post_json(
-                &format!("{}/api/v1/agents/register", normalize_base_url(&orchestrator_url_clone)),
+                &format!(
+                    "{}/api/v1/agents/register",
+                    normalize_base_url(&orchestrator_url_clone)
+                ),
                 &initial_payload,
                 cluster_auth_headers(
                     cluster_api_token.as_deref(),
@@ -844,16 +910,19 @@ impl AgentRegistrationHandle {
                 );
             }
 
-            let _ = delete_request(&format!(
-                "{}/api/v1/agents/{}",
-                normalize_base_url(&orchestrator_url_clone),
-                agent_id_clone
-            ), cluster_auth_headers(
-                cluster_api_token.as_deref(),
-                &agent_id_clone,
-                cluster_id.as_deref(),
-                agent_fingerprint.as_deref(),
-            ));
+            let _ = delete_request(
+                &format!(
+                    "{}/api/v1/agents/{}",
+                    normalize_base_url(&orchestrator_url_clone),
+                    agent_id_clone
+                ),
+                cluster_auth_headers(
+                    cluster_api_token.as_deref(),
+                    &agent_id_clone,
+                    cluster_id.as_deref(),
+                    agent_fingerprint.as_deref(),
+                ),
+            );
         });
 
         Some(Self {
@@ -909,7 +978,8 @@ impl PeerMeshHandle {
                     }
                 }
 
-                known_peers = filter_self_peers(normalize_peer_addresses(discovered), &self_addresses);
+                known_peers =
+                    filter_self_peers(normalize_peer_addresses(discovered), &self_addresses);
                 update_runtime_mesh(
                     cluster_id.clone(),
                     build_peer_descriptors(&known_peers, &peer_failures, &peer_last_seen),
@@ -964,7 +1034,11 @@ fn normalize_peer_addresses(peers: Vec<String>) -> Vec<String> {
 fn filter_self_peers(peers: Vec<String>, self_addresses: &[String]) -> Vec<String> {
     peers
         .into_iter()
-        .filter(|peer| !self_addresses.iter().any(|self_address| self_address == peer))
+        .filter(|peer| {
+            !self_addresses
+                .iter()
+                .any(|self_address| self_address == peer)
+        })
         .collect()
 }
 
@@ -1017,10 +1091,7 @@ fn compute_cluster_health_score(peers: &[ClusterPeerDescriptor]) -> u8 {
     }
 
     let total = peers.len() as f32;
-    let healthy = peers
-        .iter()
-        .filter(|peer| peer.status == "healthy")
-        .count() as f32;
+    let healthy = peers.iter().filter(|peer| peer.status == "healthy").count() as f32;
     let degraded = peers
         .iter()
         .filter(|peer| peer.status == "degraded")
@@ -1054,8 +1125,12 @@ fn request_agent_descriptor(address: &str) -> Result<AgentDescriptor, String> {
     write_frame(&mut stream, &payload)
         .map_err(|error| format!("failed to write peer request frame: {error}"))?;
 
-    let response_payload = read_frame(&mut stream)
-        .map_err(|error| format!("failed to read peer response: {}", frame_error_message(error)))?;
+    let response_payload = read_frame(&mut stream).map_err(|error| {
+        format!(
+            "failed to read peer response: {}",
+            frame_error_message(error)
+        )
+    })?;
 
     let response: RpcResponse = serde_json::from_slice(&response_payload)
         .map_err(|error| format!("failed to decode peer response: {error}"))?;
@@ -1086,7 +1161,12 @@ fn post_json(
 ) -> Result<(), String> {
     let body = serde_json::to_string(payload)
         .map_err(|error| format!("failed to serialize registration payload: {error}"))?;
-    send_http_request("POST", url, Some(("application/json", body.as_bytes())), extra_headers)
+    send_http_request(
+        "POST",
+        url,
+        Some(("application/json", body.as_bytes())),
+        extra_headers,
+    )
 }
 
 fn delete_request(url: &str, extra_headers: Vec<(String, String)>) -> Result<(), String> {
@@ -1108,7 +1188,12 @@ fn send_http_request(
         .ok_or_else(|| format!("failed to resolve {address}"))?;
 
     let mut stream = TcpStream::connect_timeout(&socket_addr, Duration::from_millis(1_500))
-        .map_err(|error| format!("failed to connect to {}:{}: {error}", parsed.host, parsed.port))?;
+        .map_err(|error| {
+            format!(
+                "failed to connect to {}:{}: {error}",
+                parsed.host, parsed.port
+            )
+        })?;
     let _ = stream.set_read_timeout(Some(Duration::from_millis(2_000)));
     let _ = stream.set_write_timeout(Some(Duration::from_millis(2_000)));
 
@@ -1304,9 +1389,9 @@ mod tests {
         handle_request_bytes, normalize_peer_addresses, parse_http_url,
     };
     use kyuubiki_protocol::{
-        AgentDescriptor, ClusterPeerDescriptor, JobStatus, PlaneNodeInput,
+        AgentDescriptor, ClusterPeerDescriptor, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
         PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcRequest,
-        SolveBarRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
+        SolveBarRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
         Truss3dElementInput, Truss3dNodeInput,
     };
 
@@ -1381,7 +1466,10 @@ mod tests {
             "10.0.0.11:5001".to_string(),
         ]);
 
-        assert_eq!(peers, vec!["10.0.0.10:5001".to_string(), "10.0.0.11:5001".to_string()]);
+        assert_eq!(
+            peers,
+            vec!["10.0.0.10:5001".to_string(), "10.0.0.11:5001".to_string()]
+        );
 
         let filtered = filter_self_peers(
             peers,
@@ -1493,6 +1581,79 @@ mod tests {
             serde_json::from_value(final_response.result.expect("solver result"))
                 .expect("plane result");
         assert_eq!(result.nodes.len(), 3);
+        assert_eq!(result.elements.len(), 1);
+    }
+
+    #[test]
+    fn handles_plane_quad_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-plane-quad".to_string(),
+            method: RpcMethod::SolvePlaneQuad2d,
+            params: serde_json::to_value(SolvePlaneQuad2dRequest {
+                nodes: vec![
+                    PlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                    PlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: false,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                    PlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        fix_x: false,
+                        fix_y: false,
+                        load_x: 0.0,
+                        load_y: -1000.0,
+                    },
+                    PlaneNodeInput {
+                        id: "n3".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_x: true,
+                        fix_y: false,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                ],
+                elements: vec![PlaneQuadElementInput {
+                    id: "q0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    node_l: 3,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolvePlaneQuad2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("plane quad result");
+        assert_eq!(result.nodes.len(), 4);
         assert_eq!(result.elements.len(), 1);
     }
 
@@ -1656,10 +1817,12 @@ mod tests {
 
         assert_eq!(descriptor.program, "kyuubiki-rust-agent");
         assert_eq!(descriptor.protocol.rpc_version, RPC_VERSION);
-        assert!(descriptor
-            .protocol
-            .methods
-            .contains(&RpcMethod::SolveTruss3d));
+        assert!(
+            descriptor
+                .protocol
+                .methods
+                .contains(&RpcMethod::SolveTruss3d)
+        );
         assert_eq!(descriptor.runtime.runtime_mode, "standalone");
     }
 

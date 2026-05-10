@@ -3,7 +3,8 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
+type PlaneResultField = "von_mises" | "principal_stress_1" | "max_in_plane_shear";
 
 type DisplayTrussNode = {
   index: number;
@@ -72,7 +73,10 @@ type PlaneElement = {
   node_i: number;
   node_j: number;
   node_k: number;
+  node_l?: number;
   von_mises?: number;
+  principal_stress_1?: number;
+  max_in_plane_shear?: number;
   material_id?: string;
 };
 
@@ -93,6 +97,7 @@ type WorkbenchViewportProps = {
   trussTitle: string;
   truss3dTitle: string;
   planeTitle: string;
+  planeLegend: string;
   axialNodes: Array<{ x: number; displacement: number }>;
   axialLength: number;
   axialScale: number;
@@ -121,7 +126,8 @@ type WorkbenchViewportProps = {
   hiddenPlaneMaterialIds: string[];
   planeBounds: Bounds;
   planeResult: boolean;
-  planeMaxVonMises: number;
+  planeResultField: PlaneResultField;
+  planeResultFieldMax: number;
   selectedPlaneNodeId: string | null;
   onSelectPlaneElement: (index: number) => void;
   onSelectPlaneNode: (index: number) => void;
@@ -385,6 +391,7 @@ function WorkbenchViewportInner({
   trussTitle,
   truss3dTitle,
   planeTitle,
+  planeLegend,
   axialNodes,
   axialLength,
   axialScale,
@@ -413,7 +420,8 @@ function WorkbenchViewportInner({
   hiddenPlaneMaterialIds,
   planeBounds,
   planeResult,
-  planeMaxVonMises,
+  planeResultField,
+  planeResultFieldMax,
   selectedPlaneNodeId,
   onSelectPlaneElement,
   onSelectPlaneNode,
@@ -1146,21 +1154,37 @@ function WorkbenchViewportInner({
       <text x="48" y="58" className="svg-title">
         {planeTitle}
       </text>
+      {planeResult ? (
+        <text x="760" y="58" className="svg-copy svg-copy--muted">
+          {planeLegend}
+        </text>
+      ) : null}
       <g clipPath="url(#viewportClipPlane)">
         {visiblePlaneElements.map((element) => {
           if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return null;
-          const points = [
-            toSvgPoint(planeNodes[element.node_i], planeBounds),
-            toSvgPoint(planeNodes[element.node_j], planeBounds),
-            toSvgPoint(planeNodes[element.node_k], planeBounds),
-          ];
+          const nodeIndices =
+            typeof element.node_l === "number"
+              ? [element.node_i, element.node_j, element.node_k, element.node_l]
+              : [element.node_i, element.node_j, element.node_k];
+          const points = nodeIndices.map((nodeIndex) => toSvgPoint(planeNodes[nodeIndex], planeBounds));
           if (!polygonInsideViewport(points)) return null;
           return (
             <polygon
               key={`plane-${element.id}`}
               points={points.map((point) => `${point.x},${point.y}`).join(" ")}
               className={`plane-triangle${selectedElement === element.index ? " plane-triangle--active" : ""}`}
-              style={{ fill: planeResult ? planeStressFill(element.von_mises ?? 0, planeMaxVonMises) : planeElementColors[element.index] }}
+              style={{
+                fill: planeResult
+                  ? planeStressFill(
+                      planeResultField === "principal_stress_1"
+                        ? Math.abs(element.principal_stress_1 ?? 0)
+                        : planeResultField === "max_in_plane_shear"
+                          ? Math.abs(element.max_in_plane_shear ?? 0)
+                          : Math.abs(element.von_mises ?? 0),
+                      planeResultFieldMax,
+                    )
+                  : planeElementColors[element.index],
+              }}
               onPointerDown={() => {
                 if (isModelMode) onSelectPlaneElement(element.index);
               }}
@@ -1171,20 +1195,19 @@ function WorkbenchViewportInner({
           ? visiblePlaneElements.flatMap((element, index) => {
               if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return [];
               if (index % planeDeformedStep !== 0) return [];
-              const points = [
+              const nodeIndices =
+                typeof element.node_l === "number"
+                  ? [element.node_i, element.node_j, element.node_k, element.node_l]
+                  : [element.node_i, element.node_j, element.node_k];
+              const points = nodeIndices.map((nodeIndex) =>
                 toSvgPoint(
-                  { x: planeNodes[element.node_i].x + planeNodes[element.node_i].ux * 5000, y: planeNodes[element.node_i].y + planeNodes[element.node_i].uy * 5000 },
+                  {
+                    x: planeNodes[nodeIndex].x + planeNodes[nodeIndex].ux * 5000,
+                    y: planeNodes[nodeIndex].y + planeNodes[nodeIndex].uy * 5000,
+                  },
                   planeBounds,
                 ),
-                toSvgPoint(
-                  { x: planeNodes[element.node_j].x + planeNodes[element.node_j].ux * 5000, y: planeNodes[element.node_j].y + planeNodes[element.node_j].uy * 5000 },
-                  planeBounds,
-                ),
-                toSvgPoint(
-                  { x: planeNodes[element.node_k].x + planeNodes[element.node_k].ux * 5000, y: planeNodes[element.node_k].y + planeNodes[element.node_k].uy * 5000 },
-                  planeBounds,
-                ),
-              ];
+              );
               if (!polygonInsideViewport(points, 70)) return [];
               return (
                 <polygon

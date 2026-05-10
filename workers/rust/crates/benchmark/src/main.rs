@@ -1,15 +1,13 @@
 use std::{
-    fs,
-    process,
+    fs, process,
     time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult,
-    PlaneNodeInput, PlaneTriangleElementInput, SolveBarRequest, SolvePlaneTriangle2dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput,
-    TrussElementInput, TrussNodeInput,
+    AnalysisResult, PlaneNodeInput, PlaneTriangleElementInput, SolveBarRequest,
+    SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest, Truss3dElementInput,
+    Truss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,9 +22,9 @@ fn main() {
         .collect::<Vec<_>>();
     let report = BenchmarkReport {
         repeat: config.repeat,
-    profile: config.profile,
-    generated_at_unix_s: unix_timestamp(),
-    cases: results,
+        profile: config.profile,
+        generated_at_unix_s: unix_timestamp(),
+        cases: results,
     };
 
     if let Some(path) = &config.baseline_out {
@@ -310,7 +308,9 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
             BenchmarkCase {
                 id: "plane-panel-large",
                 family: "plane_triangle_2d",
-                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(21, 21, 21.0, 21.0)),
+                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    21, 21, 21.0, 21.0,
+                )),
             },
         ],
         BenchmarkProfile::V2 => vec![
@@ -334,7 +334,9 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
             BenchmarkCase {
                 id: "plane-panel-v2",
                 family: "plane_triangle_2d",
-                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(70, 70, 70.0, 70.0)),
+                workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    70, 70, 70.0, 70.0,
+                )),
             },
         ],
         BenchmarkProfile::TenK => vec![
@@ -346,7 +348,9 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
             BenchmarkCase {
                 id: "truss-roof-10k",
                 family: "truss_2d",
-                workload: BenchmarkWorkload::Truss2d(generate_lattice_truss_10k(99, 99, 120.0, 120.0)),
+                workload: BenchmarkWorkload::Truss2d(generate_lattice_truss_10k(
+                    99, 99, 120.0, 120.0,
+                )),
             },
             BenchmarkCase {
                 id: "space-frame-10k",
@@ -538,7 +542,9 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
 
 fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usize) {
     match workload {
-        BenchmarkWorkload::AxialBar(request) => (request.elements + 1, request.elements, request.elements),
+        BenchmarkWorkload::AxialBar(request) => {
+            (request.elements + 1, request.elements, request.elements)
+        }
         BenchmarkWorkload::Truss2d(request) => (
             request.nodes.len(),
             request.elements.len(),
@@ -575,7 +581,18 @@ fn print_table(
     println!();
     println!(
         "{:<22} {:<20} {:<6} {:>6} {:>6} {:>7} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}",
-        "case", "family", "status", "nodes", "elems", "dofs", "min ms", "median", "mean ms", "p95 ms", "max ms", "peak rss"
+        "case",
+        "family",
+        "status",
+        "nodes",
+        "elems",
+        "dofs",
+        "min ms",
+        "median",
+        "mean ms",
+        "p95 ms",
+        "max ms",
+        "peak rss"
     );
 
     for result in results {
@@ -689,10 +706,7 @@ fn compare_against_baseline(
     }
 }
 
-fn evaluate_regressions(
-    config: &BenchmarkConfig,
-    comparison: &BenchmarkComparison,
-) -> Vec<String> {
+fn evaluate_regressions(config: &BenchmarkConfig, comparison: &BenchmarkComparison) -> Vec<String> {
     let mut failures = Vec::new();
 
     for case in &comparison.cases {
@@ -1028,10 +1042,13 @@ fn generate_space_frame_grid(
     for j in 0..=ny {
         for i in 0..=nx {
             let index = j * (nx + 1) + i;
-            let radial_distance =
-                ((i as isize - center_i as isize).abs() + (j as isize - center_j as isize).abs())
-                    as f64;
-            let load = if radial_distance <= 2.0 { -4_000.0 } else { 0.0 };
+            let radial_distance = ((i as isize - center_i as isize).abs()
+                + (j as isize - center_j as isize).abs()) as f64;
+            let load = if radial_distance <= 2.0 {
+                -4_000.0
+            } else {
+                0.0
+            };
 
             nodes.push(Truss3dNodeInput {
                 id: format!("t{index}"),

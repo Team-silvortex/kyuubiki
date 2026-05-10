@@ -85,24 +85,22 @@ pub fn run_doctor() {
 }
 
 pub fn print_help() {
-    println!(
-        concat!(
-            "kyuubiki-installer\n\n",
-            "Commands:\n",
-            "  help             Show this help\n",
-            "  doctor           Check local prerequisites for the current platform\n",
-            "  validate-env     Validate required environment variables from .env.local\n",
-            "  init-env         Create .env.local from .env.example when missing\n",
-            "  prepare-layout   Create repo-local runtime folders\n",
-            "  export-launch    Print a cross-platform launch manifest as JSON\n",
-            "  stage-release    Create a portable release directory layout under dist/\n",
-            "  bootstrap        Run doctor + prepare-layout + init-env\n\n",
-            "Examples:\n",
-            "  cargo run -p kyuubiki-installer -- doctor\n",
-            "  cargo run -p kyuubiki-installer -- stage-release\n",
-            "  cargo run -p kyuubiki-installer -- stage-release windows ./dist/windows-preview\n",
-        )
-    );
+    println!(concat!(
+        "kyuubiki-installer\n\n",
+        "Commands:\n",
+        "  help             Show this help\n",
+        "  doctor           Check local prerequisites for the current platform\n",
+        "  validate-env     Validate required environment variables from .env.local\n",
+        "  init-env         Create .env.local from .env.example when missing\n",
+        "  prepare-layout   Create repo-local runtime folders\n",
+        "  export-launch    Print a cross-platform launch manifest as JSON\n",
+        "  stage-release    Create a portable release directory layout under dist/\n",
+        "  bootstrap        Run doctor + prepare-layout + init-env\n\n",
+        "Examples:\n",
+        "  cargo run -p kyuubiki-installer -- doctor\n",
+        "  cargo run -p kyuubiki-installer -- stage-release\n",
+        "  cargo run -p kyuubiki-installer -- stage-release windows ./dist/windows-preview\n",
+    ));
 }
 
 pub fn init_env(force: bool) -> Result<String, String> {
@@ -175,8 +173,12 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         "scripts",
         "exports",
     ] {
-        fs::create_dir_all(release_dir.join(relative))
-            .map_err(|error| format!("failed to create {}: {error}", release_dir.join(relative).display()))?;
+        fs::create_dir_all(release_dir.join(relative)).map_err(|error| {
+            format!(
+                "failed to create {}: {error}",
+                release_dir.join(relative).display()
+            )
+        })?;
     }
     for app in desktop_apps {
         let path = release_dir.join("desktop").join(app);
@@ -190,8 +192,11 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     let env_example_target = release_dir.join("config").join(".env.example");
     let desktop_readme_path = release_dir.join("desktop").join("README.txt");
 
-    fs::write(&manifest_path, build_release_manifest(&root, &release_dir, platform))
-        .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
+    fs::write(
+        &manifest_path,
+        build_release_manifest(&root, &release_dir, platform),
+    )
+    .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
     fs::write(&launch_path, build_launch_manifest(&root, platform))
         .map_err(|error| format!("failed to write {}: {error}", launch_path.display()))?;
     fs::write(&readme_path, build_release_readme(platform))
@@ -212,7 +217,10 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
 
     write_release_scripts(&release_dir, platform)?;
 
-    Ok(format!("staged release layout at {}", release_dir.display()))
+    Ok(format!(
+        "staged release layout at {}",
+        release_dir.display()
+    ))
 }
 
 fn write_release_scripts(release_dir: &Path, platform: Platform) -> Result<(), String> {
@@ -402,7 +410,8 @@ fn build_desktop_app_manifest(app: &str, platform: Platform) -> String {
 }
 
 fn write_text_file(path: &Path, contents: &str) -> Result<(), String> {
-    fs::write(path, contents).map_err(|error| format!("failed to write {}: {error}", path.display()))
+    fs::write(path, contents)
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))
 }
 
 pub fn validate_env_file() -> Result<String, String> {
@@ -428,7 +437,10 @@ pub fn validate_env_file() -> Result<String, String> {
         ));
     }
 
-    if !matches!(storage_backend.as_str(), "postgres" | "sqlite" | "memory" | "json") {
+    if !matches!(
+        storage_backend.as_str(),
+        "postgres" | "sqlite" | "memory" | "json"
+    ) {
         return Err(format!(
             "invalid KYUUBIKI_STORAGE_BACKEND: {storage_backend} (expected postgres, sqlite, memory, or json)"
         ));
@@ -481,7 +493,7 @@ pub fn validate_env_file() -> Result<String, String> {
         _ => {
             return Err(format!(
                 "invalid KYUUBIKI_AGENT_DISCOVERY: {agent_discovery} (expected static, manifest, or registry)"
-            ))
+            ));
         }
     };
 
@@ -495,8 +507,8 @@ pub fn validate_env_file() -> Result<String, String> {
 }
 
 pub fn parse_env_file(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let contents =
-        fs::read_to_string(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let contents = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
     let mut values = BTreeMap::new();
 
     for raw_line in contents.lines() {
@@ -506,7 +518,11 @@ pub fn parse_env_file(path: &Path) -> Result<BTreeMap<String, String>, String> {
         }
 
         let Some((key, value)) = line.split_once('=') else {
-            return Err(format!("invalid env line in {}: {}", path.display(), raw_line));
+            return Err(format!(
+                "invalid env line in {}: {}",
+                path.display(),
+                raw_line
+            ));
         };
 
         values.insert(key.trim().to_string(), value.trim().to_string());
@@ -518,9 +534,15 @@ pub fn parse_env_file(path: &Path) -> Result<BTreeMap<String, String>, String> {
 pub fn parse_agent_endpoints(value: &str) -> Result<Vec<(String, u16)>, String> {
     let mut parsed = Vec::new();
 
-    for endpoint in value.split(',').map(str::trim).filter(|item| !item.is_empty()) {
+    for endpoint in value
+        .split(',')
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+    {
         let Some((host, port)) = endpoint.rsplit_once(':') else {
-            return Err(format!("invalid KYUUBIKI_AGENT_ENDPOINTS entry: {endpoint}"));
+            return Err(format!(
+                "invalid KYUUBIKI_AGENT_ENDPOINTS entry: {endpoint}"
+            ));
         };
 
         let port_number = port
@@ -528,14 +550,18 @@ pub fn parse_agent_endpoints(value: &str) -> Result<Vec<(String, u16)>, String> 
             .map_err(|_| format!("invalid agent port in KYUUBIKI_AGENT_ENDPOINTS: {endpoint}"))?;
 
         if host.trim().is_empty() {
-            return Err(format!("invalid agent host in KYUUBIKI_AGENT_ENDPOINTS: {endpoint}"));
+            return Err(format!(
+                "invalid agent host in KYUUBIKI_AGENT_ENDPOINTS: {endpoint}"
+            ));
         }
 
         parsed.push((host.trim().to_string(), port_number));
     }
 
     if parsed.is_empty() {
-        return Err("KYUUBIKI_AGENT_ENDPOINTS must contain at least one host:port pair".to_string());
+        return Err(
+            "KYUUBIKI_AGENT_ENDPOINTS must contain at least one host:port pair".to_string(),
+        );
     }
 
     Ok(parsed)
@@ -553,14 +579,19 @@ fn validate_agent_manifest_path(path: &str) -> Result<(), String> {
 }
 
 fn parse_agent_manifest(path: &Path) -> Result<Vec<(String, u16)>, String> {
-    let contents =
-        fs::read_to_string(path).map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    let payload: serde_json::Value =
-        serde_json::from_str(&contents).map_err(|error| format!("invalid JSON in {}: {error}", path.display()))?;
+    let contents = fs::read_to_string(path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let payload: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|error| format!("invalid JSON in {}: {error}", path.display()))?;
     let agents = payload
         .get("agents")
         .and_then(serde_json::Value::as_array)
-        .ok_or_else(|| format!("invalid agent manifest {}: missing agents array", path.display()))?;
+        .ok_or_else(|| {
+            format!(
+                "invalid agent manifest {}: missing agents array",
+                path.display()
+            )
+        })?;
 
     let mut parsed = Vec::new();
 
@@ -568,21 +599,37 @@ fn parse_agent_manifest(path: &Path) -> Result<Vec<(String, u16)>, String> {
         let host = agent
             .get("host")
             .and_then(serde_json::Value::as_str)
-            .ok_or_else(|| format!("invalid agent manifest {}: agent host missing", path.display()))?;
+            .ok_or_else(|| {
+                format!(
+                    "invalid agent manifest {}: agent host missing",
+                    path.display()
+                )
+            })?;
         let port = agent
             .get("port")
             .and_then(serde_json::Value::as_u64)
-            .ok_or_else(|| format!("invalid agent manifest {}: agent port missing", path.display()))?;
+            .ok_or_else(|| {
+                format!(
+                    "invalid agent manifest {}: agent port missing",
+                    path.display()
+                )
+            })?;
 
         if !(1..=u16::MAX as u64).contains(&port) {
-            return Err(format!("invalid agent manifest {}: agent port out of range", path.display()));
+            return Err(format!(
+                "invalid agent manifest {}: agent port out of range",
+                path.display()
+            ));
         }
 
         parsed.push((host.to_string(), port as u16));
     }
 
     if parsed.is_empty() {
-        return Err(format!("invalid agent manifest {}: no agents found", path.display()));
+        return Err(format!(
+            "invalid agent manifest {}: no agents found",
+            path.display()
+        ));
     }
 
     Ok(parsed)
@@ -689,13 +736,19 @@ mod tests {
 
     #[test]
     fn parses_unknown_platform_to_current() {
-        assert_eq!(parse_platform(Some("unknown".to_string())), Platform::current());
+        assert_eq!(
+            parse_platform(Some("unknown".to_string())),
+            Platform::current()
+        );
     }
 
     #[test]
     fn release_manifest_contains_expected_schema() {
-        let manifest =
-            build_release_manifest(Path::new("/tmp/workspace"), Path::new("/tmp/dist/macos"), Platform::Macos);
+        let manifest = build_release_manifest(
+            Path::new("/tmp/workspace"),
+            Path::new("/tmp/dist/macos"),
+            Platform::Macos,
+        );
         assert!(manifest.contains("\"schema_version\": \"kyuubiki.release/v1\""));
         assert!(manifest.contains("\"platform\": \"macos\""));
     }
@@ -716,7 +769,9 @@ mod tests {
 
     #[test]
     fn parses_agent_manifest_file() {
-        let path = workspace_root().join("tmp").join("installer-agent-manifest-test.json");
+        let path = workspace_root()
+            .join("tmp")
+            .join("installer-agent-manifest-test.json");
         fs::create_dir_all(path.parent().unwrap()).unwrap();
         fs::write(
             &path,

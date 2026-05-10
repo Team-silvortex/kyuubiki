@@ -1,9 +1,10 @@
 use kyuubiki_protocol::{
-    ElementResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneTriangleElementResult,
-    ProgressEvent, SolveBarRequest, SolveBarResult, SolvePlaneTriangle2dRequest,
-    SolvePlaneTriangle2dResult, SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest,
-    SolveTruss3dResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
-    TrussNodeResult,
+    ElementResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput,
+    PlaneQuadElementResult, PlaneTriangleElementInput, PlaneTriangleElementResult, ProgressEvent,
+    SolveBarRequest, SolveBarResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
+    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveTruss2dRequest,
+    SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Truss3dElementResult,
+    Truss3dNodeResult, TrussElementResult, TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -512,6 +513,9 @@ pub fn solve_plane_triangle_2d(
             y: node.y,
             ux: displacements[index * 2],
             uy: displacements[index * 2 + 1],
+            displacement_magnitude: (displacements[index * 2].powi(2)
+                + displacements[index * 2 + 1].powi(2))
+            .sqrt(),
         })
         .collect::<Vec<_>>();
 
@@ -532,10 +536,7 @@ pub fn solve_plane_triangle_2d(
 
             let strain = multiply_matrix_vector_3x6(&computed.b_matrix, &element_displacements);
             let stress = multiply_matrix_vector_3x3(&computed.d_matrix, &strain);
-            let von_mises = ((stress[0] * stress[0]) - (stress[0] * stress[1])
-                + (stress[1] * stress[1])
-                + 3.0 * stress[2] * stress[2])
-                .sqrt();
+            let derived = derive_planar_stress_metrics(stress[0], stress[1], stress[2]);
 
             Ok::<PlaneTriangleElementResult, String>(PlaneTriangleElementResult {
                 index,
@@ -550,7 +551,10 @@ pub fn solve_plane_triangle_2d(
                 stress_x: stress[0],
                 stress_y: stress[1],
                 tau_xy: stress[2],
-                von_mises,
+                principal_stress_1: derived.principal_stress_1,
+                principal_stress_2: derived.principal_stress_2,
+                max_in_plane_shear: derived.max_in_plane_shear,
+                von_mises: derived.von_mises,
             })
         })
         .collect::<Result<Vec<_>, String>>()?;
@@ -565,6 +569,183 @@ pub fn solve_plane_triangle_2d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolvePlaneTriangle2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_stress,
+    })
+}
+
+pub fn solve_plane_quad_2d(
+    request: &SolvePlaneQuad2dRequest,
+) -> Result<SolvePlaneQuad2dResult, String> {
+    validate_plane_quad_request(request)?;
+
+    let dof_count = request.nodes.len() * 2;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 2] = node.load_x;
+        force_vector[index * 2 + 1] = node.load_y;
+    }
+
+    let computed_elements = request
+        .elements
+        .iter()
+        .map(|element| precompute_plane_quad_element(request, element))
+        .collect::<Result<Vec<_>, String>>()?;
+
+    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+        let triangles = [
+            (
+                [element.node_i, element.node_j, element.node_k],
+                &computed.first,
+            ),
+            (
+                [element.node_i, element.node_k, element.node_l],
+                &computed.second,
+            ),
+        ];
+
+        for (nodes, triangle) in triangles {
+            let map = [
+                nodes[0] * 2,
+                nodes[0] * 2 + 1,
+                nodes[1] * 2,
+                nodes[1] * 2 + 1,
+                nodes[2] * 2,
+                nodes[2] * 2 + 1,
+            ];
+
+            for row in 0..6 {
+                for column in 0..6 {
+                    add_at(
+                        &mut global_stiffness,
+                        map[row],
+                        map[column],
+                        triangle.stiffness[row][column],
+                    );
+                }
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 2);
+            }
+            if node.fix_y {
+                dofs.push(index * 2 + 1);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| PlaneNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            ux: displacements[index * 2],
+            uy: displacements[index * 2 + 1],
+            displacement_magnitude: (displacements[index * 2].powi(2)
+                + displacements[index * 2 + 1].powi(2))
+            .sqrt(),
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+        .map(|(index, (element, computed))| {
+            let first_displacements = [
+                displacements[element.node_i * 2],
+                displacements[element.node_i * 2 + 1],
+                displacements[element.node_j * 2],
+                displacements[element.node_j * 2 + 1],
+                displacements[element.node_k * 2],
+                displacements[element.node_k * 2 + 1],
+            ];
+            let second_displacements = [
+                displacements[element.node_i * 2],
+                displacements[element.node_i * 2 + 1],
+                displacements[element.node_k * 2],
+                displacements[element.node_k * 2 + 1],
+                displacements[element.node_l * 2],
+                displacements[element.node_l * 2 + 1],
+            ];
+
+            let first_state = plane_triangle_state(&computed.first, &first_displacements);
+            let second_state = plane_triangle_state(&computed.second, &second_displacements);
+            let total_area = computed.first.area + computed.second.area;
+
+            let weighted = |left: f64, right: f64| -> f64 {
+                ((left * computed.first.area) + (right * computed.second.area)) / total_area
+            };
+
+            PlaneQuadElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                node_k: element.node_k,
+                node_l: element.node_l,
+                area: total_area,
+                strain_x: weighted(first_state.strain[0], second_state.strain[0]),
+                strain_y: weighted(first_state.strain[1], second_state.strain[1]),
+                gamma_xy: weighted(first_state.strain[2], second_state.strain[2]),
+                stress_x: weighted(first_state.stress[0], second_state.stress[0]),
+                stress_y: weighted(first_state.stress[1], second_state.stress[1]),
+                tau_xy: weighted(first_state.stress[2], second_state.stress[2]),
+                principal_stress_1: weighted(
+                    first_state.principal_stress_1,
+                    second_state.principal_stress_1,
+                ),
+                principal_stress_2: weighted(
+                    first_state.principal_stress_2,
+                    second_state.principal_stress_2,
+                ),
+                max_in_plane_shear: weighted(
+                    first_state.max_in_plane_shear,
+                    second_state.max_in_plane_shear,
+                ),
+                von_mises: weighted(first_state.von_mises, second_state.von_mises),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.von_mises.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolvePlaneQuad2dResult {
         input: request.clone(),
         nodes,
         elements,
@@ -678,6 +859,80 @@ fn validate_plane_request(request: &SolvePlaneTriangle2dRequest) -> Result<(), S
     Ok(())
 }
 
+fn validate_plane_quad_request(request: &SolvePlaneQuad2dRequest) -> Result<(), String> {
+    if request.nodes.len() < 4 {
+        return Err("plane quad model must define at least four nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("plane quad model must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
+        return Err("plane quad model must include at least one support".to_string());
+    }
+
+    for element in &request.elements {
+        let indices = [
+            element.node_i,
+            element.node_j,
+            element.node_k,
+            element.node_l,
+        ];
+
+        if indices.iter().any(|&index| index >= request.nodes.len()) {
+            return Err("plane quad element references an out-of-range node".to_string());
+        }
+
+        let unique_count = indices
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len();
+        if unique_count < 4 {
+            return Err("plane quad element must reference four distinct nodes".to_string());
+        }
+
+        if !(element.thickness.is_finite() && element.thickness > 0.0) {
+            return Err("plane quad element thickness must be positive".to_string());
+        }
+
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("plane quad element youngs_modulus must be positive".to_string());
+        }
+
+        if !(element.poisson_ratio.is_finite()
+            && element.poisson_ratio > -1.0
+            && element.poisson_ratio < 0.5)
+        {
+            return Err(
+                "plane quad element poisson_ratio must be between -1.0 and 0.5".to_string(),
+            );
+        }
+
+        let first_area = signed_triangle_area(
+            &request.nodes[element.node_i],
+            &request.nodes[element.node_j],
+            &request.nodes[element.node_k],
+        )
+        .abs();
+        let second_area = signed_triangle_area(
+            &request.nodes[element.node_i],
+            &request.nodes[element.node_k],
+            &request.nodes[element.node_l],
+        )
+        .abs();
+
+        if first_area <= 1.0e-12 || second_area <= 1.0e-12 {
+            return Err(
+                "plane quad element must decompose into positive-area triangles".to_string(),
+            );
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String> {
     if request.nodes.len() < 3 {
         return Err("3d truss must define at least three nodes".to_string());
@@ -785,6 +1040,12 @@ struct PlaneTriangleComputed {
     d_matrix: [[f64; 3]; 3],
 }
 
+#[derive(Debug, Clone)]
+struct PlaneQuadComputed {
+    first: PlaneTriangleComputed,
+    second: PlaneTriangleComputed,
+}
+
 fn precompute_plane_triangle_element(
     request: &SolvePlaneTriangle2dRequest,
     element: &kyuubiki_protocol::PlaneTriangleElementInput,
@@ -797,6 +1058,94 @@ fn precompute_plane_triangle_element(
         b_matrix,
         d_matrix,
     })
+}
+
+fn precompute_plane_quad_element(
+    request: &SolvePlaneQuad2dRequest,
+    element: &PlaneQuadElementInput,
+) -> Result<PlaneQuadComputed, String> {
+    let first = PlaneTriangleElementInput {
+        id: format!("{}#0", element.id),
+        node_i: element.node_i,
+        node_j: element.node_j,
+        node_k: element.node_k,
+        thickness: element.thickness,
+        youngs_modulus: element.youngs_modulus,
+        poisson_ratio: element.poisson_ratio,
+    };
+    let second = PlaneTriangleElementInput {
+        id: format!("{}#1", element.id),
+        node_i: element.node_i,
+        node_j: element.node_k,
+        node_k: element.node_l,
+        thickness: element.thickness,
+        youngs_modulus: element.youngs_modulus,
+        poisson_ratio: element.poisson_ratio,
+    };
+
+    let triangle_request = SolvePlaneTriangle2dRequest {
+        nodes: request.nodes.clone(),
+        elements: vec![],
+    };
+
+    Ok(PlaneQuadComputed {
+        first: precompute_plane_triangle_element(&triangle_request, &first)?,
+        second: precompute_plane_triangle_element(&triangle_request, &second)?,
+    })
+}
+
+#[derive(Debug, Clone)]
+struct PlaneTriangleState {
+    strain: [f64; 3],
+    stress: [f64; 3],
+    principal_stress_1: f64,
+    principal_stress_2: f64,
+    max_in_plane_shear: f64,
+    von_mises: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct PlanarStressMetrics {
+    principal_stress_1: f64,
+    principal_stress_2: f64,
+    max_in_plane_shear: f64,
+    von_mises: f64,
+}
+
+fn plane_triangle_state(
+    computed: &PlaneTriangleComputed,
+    element_displacements: &[f64; 6],
+) -> PlaneTriangleState {
+    let strain = multiply_matrix_vector_3x6(&computed.b_matrix, element_displacements);
+    let stress = multiply_matrix_vector_3x3(&computed.d_matrix, &strain);
+    let derived = derive_planar_stress_metrics(stress[0], stress[1], stress[2]);
+
+    PlaneTriangleState {
+        strain,
+        stress,
+        principal_stress_1: derived.principal_stress_1,
+        principal_stress_2: derived.principal_stress_2,
+        max_in_plane_shear: derived.max_in_plane_shear,
+        von_mises: derived.von_mises,
+    }
+}
+
+fn derive_planar_stress_metrics(sigma_x: f64, sigma_y: f64, tau_xy: f64) -> PlanarStressMetrics {
+    let center = 0.5 * (sigma_x + sigma_y);
+    let radius = (((0.5 * (sigma_x - sigma_y)).powi(2)) + tau_xy.powi(2)).sqrt();
+    let principal_stress_1 = center + radius;
+    let principal_stress_2 = center - radius;
+    let max_in_plane_shear = radius;
+    let von_mises =
+        ((sigma_x * sigma_x) - (sigma_x * sigma_y) + (sigma_y * sigma_y) + 3.0 * tau_xy * tau_xy)
+            .sqrt();
+
+    PlanarStressMetrics {
+        principal_stress_1,
+        principal_stress_2,
+        max_in_plane_shear,
+        von_mises,
+    }
 }
 
 fn signed_triangle_area(
@@ -1109,11 +1458,7 @@ fn solve_spd_compressed(
 
     for index in 0..size {
         let diag = matrix.diagonal(index);
-        diagonal[index] = if diag.abs() < 1.0e-12 {
-            1.0e-12
-        } else {
-            diag
-        };
+        diagonal[index] = if diag.abs() < 1.0e-12 { 1.0e-12 } else { diag };
         z[index] = r[index] / diagonal[index];
         p[index] = z[index];
     }
@@ -1183,7 +1528,11 @@ fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
     lhs.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
 }
 
-fn solve_spd_fallback(matrix: &SparseMatrix, rhs: &[f64], reason: &str) -> Result<Vec<f64>, String> {
+fn solve_spd_fallback(
+    matrix: &SparseMatrix,
+    rhs: &[f64],
+    reason: &str,
+) -> Result<Vec<f64>, String> {
     if rhs.len() <= 1024 {
         solve_linear_system(sparse_to_dense(matrix), rhs.to_vec())
     } else {
@@ -1324,12 +1673,14 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
+        MockSolver, solve_bar_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_truss_2d,
+        solve_truss_3d,
     };
     use kyuubiki_protocol::{
-        Job, JobStatus, PlaneNodeInput, PlaneTriangleElementInput, SolveBarRequest,
-        SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest, Truss3dElementInput,
-        Truss3dNodeInput, TrussElementInput, TrussNodeInput,
+        Job, JobStatus, PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput,
+        SolveBarRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
+        SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
+        TrussNodeInput,
     };
 
     #[test]
@@ -1571,6 +1922,68 @@ mod tests {
         assert_eq!(result.elements.len(), 2);
         assert!(result.max_displacement > 0.0);
         assert!(result.max_stress > 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_plane_quad_patch() {
+        let request = SolvePlaneQuad2dRequest {
+            nodes: vec![
+                PlaneNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                PlaneNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_x: false,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                PlaneNodeInput {
+                    id: "n2".to_string(),
+                    x: 1.0,
+                    y: 1.0,
+                    fix_x: false,
+                    fix_y: false,
+                    load_x: 0.0,
+                    load_y: -1000.0,
+                },
+                PlaneNodeInput {
+                    id: "n3".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    fix_x: true,
+                    fix_y: false,
+                    load_x: 0.0,
+                    load_y: -1000.0,
+                },
+            ],
+            elements: vec![PlaneQuadElementInput {
+                id: "q0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                node_l: 3,
+                thickness: 0.02,
+                youngs_modulus: 70.0e9,
+                poisson_ratio: 0.33,
+            }],
+        };
+
+        let result = solve_plane_quad_2d(&request).expect("plane quad solve should succeed");
+
+        assert_eq!(result.nodes.len(), 4);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.max_displacement > 0.0);
+        assert!(result.max_stress > 0.0);
+        assert!(result.elements[0].area > 0.0);
     }
 
     #[test]

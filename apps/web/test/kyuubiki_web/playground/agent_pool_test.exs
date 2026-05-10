@@ -125,6 +125,52 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
            ]
   end
 
+  test "prefers method-capable and healthier endpoints before tag-only fallbacks" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "tag-only",
+          host: "127.0.0.1",
+          port: 5101,
+          tags: ["truss"],
+          capacity: 9,
+          health_score: 100
+        },
+        %{
+          id: "method-low-health",
+          host: "127.0.0.1",
+          port: 5102,
+          methods: ["solve_truss_2d"],
+          capacity: 2,
+          health_score: 55
+        },
+        %{
+          id: "capability-high-health",
+          host: "127.0.0.1",
+          port: 5103,
+          capacity: 1,
+          health_score: 95,
+          capabilities: [
+            %{
+              id: "truss-2d",
+              role: "solver",
+              methods: ["solve_truss_2d"],
+              tags: ["truss", "2d"]
+            }
+          ]
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(AgentPool.checkout_endpoints("solve_truss_2d"), & &1.id) == [
+             "capability-high-health",
+             "method-low-health",
+             "tag-only"
+           ]
+  end
+
   test "deprioritizes cooling endpoints after reported failures and exposes cooldown state" do
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [

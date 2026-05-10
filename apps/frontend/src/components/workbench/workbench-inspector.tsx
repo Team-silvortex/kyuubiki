@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -69,6 +69,7 @@ type PlaneNodeSelection = {
   y: number;
   load_x: number;
   load_y: number;
+  displacement_magnitude?: number;
   fix_x: boolean;
   fix_y: boolean;
 };
@@ -79,6 +80,10 @@ type PlaneElementSelection = {
   node_i: number;
   node_j: number;
   node_k: number;
+  node_l?: number;
+  principal_stress_1?: number;
+  principal_stress_2?: number;
+  max_in_plane_shear?: number;
 };
 
 type JobLike = {
@@ -143,6 +148,12 @@ type InspectorLabels = {
   tipDisp: string;
   maxStress: string;
   reaction: string;
+  displacementMagnitude: string;
+  principalStress1: string;
+  principalStress2: string;
+  maxInPlaneShear: string;
+  currentField: string;
+  planeHotspots: string;
   createdAt: string;
   updatedAt: string;
   lastHeartbeat: string;
@@ -199,6 +210,8 @@ type WorkbenchInspectorProps = {
   tipDisplacement: string;
   maxStressValue: string;
   reactionValue: string;
+  planeHotspotFieldLabel?: string;
+  planeHotspotElements: Array<{ id: string; value: string }>;
   createdAtValue: string;
   updatedAtValue: string;
   heartbeatStatusValue: string;
@@ -257,6 +270,8 @@ function WorkbenchInspectorInner({
   tipDisplacement,
   maxStressValue,
   reactionValue,
+  planeHotspotFieldLabel,
+  planeHotspotElements,
   createdAtValue,
   updatedAtValue,
   heartbeatStatusValue,
@@ -270,7 +285,7 @@ function WorkbenchInspectorInner({
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
-  const isPlane = studyKind === "plane_triangle_2d";
+  const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
   const historyRows = [
     ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
     ...redoStack.slice(-2).reverse().map((entry) => ({ key: `redo-${entry.label}`, label: entry.label, kind: t.redo })),
@@ -354,6 +369,7 @@ function WorkbenchInspectorInner({
                 <label><span>{t.nodeY}</span><input type="number" step={0.1} value={selectedPlaneNodeData.y} onChange={(event) => onUpdateSelectedPlaneNode("y", Number(event.target.value))} /></label>
                 <label><span>{t.loadX}</span><input type="number" step={100} value={selectedPlaneNodeData.load_x} onChange={(event) => onUpdateSelectedPlaneNode("load_x", Number(event.target.value))} /></label>
                 <label><span>{t.loadY}</span><input type="number" step={100} value={selectedPlaneNodeData.load_y} onChange={(event) => onUpdateSelectedPlaneNode("load_y", Number(event.target.value))} /></label>
+                <label><span>{t.displacementMagnitude}</span><input value={typeof selectedPlaneNodeData.displacement_magnitude === "number" ? selectedPlaneNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
                 <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_x} onChange={(event) => onUpdateSelectedPlaneNode("fix_x", event.target.checked)} /></label>
                 <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_y} onChange={(event) => onUpdateSelectedPlaneNode("fix_y", event.target.checked)} /></label>
               </div>
@@ -374,6 +390,9 @@ function WorkbenchInspectorInner({
                 <label><span>{t.planeThickness}</span><input type="number" step={0.001} value={planeElementThickness} onChange={(event) => onUpdateSelectedPlaneElement("thickness", Number(event.target.value))} /></label>
                 <label><span>{t.modulus}</span><input type="number" step={0.1} value={planeElementModulusGpa} onChange={(event) => onUpdateSelectedPlaneElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
                 <label><span>{t.poissonRatio}</span><input type="number" step={0.01} min={0.01} max={0.49} value={planeElementPoissonRatio} onChange={(event) => onUpdateSelectedPlaneElement("poisson_ratio", Number(event.target.value))} /></label>
+                <label><span>{t.principalStress1}</span><input value={typeof selectedPlaneElementData.principal_stress_1 === "number" ? selectedPlaneElementData.principal_stress_1.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.principalStress2}</span><input value={typeof selectedPlaneElementData.principal_stress_2 === "number" ? selectedPlaneElementData.principal_stress_2.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.maxInPlaneShear}</span><input value={typeof selectedPlaneElementData.max_in_plane_shear === "number" ? selectedPlaneElementData.max_in_plane_shear.toExponential(3) : "--"} readOnly /></label>
               </div>
             ) : (
               <p className="card-copy">{t.selectionHint}</p>
@@ -474,6 +493,26 @@ function WorkbenchInspectorInner({
             <div><span>{t.hasResult}</span><strong>{job?.has_result ? t.yes : t.no}</strong></div>
             <div><span>{t.failureReason}</span><strong>{failureReasonValue}</strong></div>
           </div>
+          {isPlane ? (
+            <div className="diagnostic-list">
+              <div className="diagnostic-item">
+                <strong>{t.currentField}: {planeHotspotFieldLabel ?? "--"}</strong>
+              </div>
+              {planeHotspotElements.length > 0 ? (
+                <>
+                  <p className="card-copy">{t.planeHotspots}</p>
+                  {planeHotspotElements.map((entry) => (
+                    <div key={entry.id} className="diagnostic-item">
+                      <strong>{entry.id}</strong>
+                      <small>{entry.value}</small>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <p className="card-copy">--</p>
+              )}
+            </div>
+          ) : null}
         </section>
         ) : null}
       </div>

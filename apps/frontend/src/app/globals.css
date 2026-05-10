@@ -1000,6 +1000,17 @@ html[data-theme="graphite"] .viewport-frame {
   font-weight: 800;
 }
 
+.svg-copy {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.svg-copy--muted {
+  opacity: 0.92;
+}
+
 .legend-label,
 .node-label {
   fill: var(--muted);

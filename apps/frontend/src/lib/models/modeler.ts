@@ -5,6 +5,7 @@ import type {
   ModelMaterial,
   ModelRecord,
   ModelVersionRecord,
+  PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   ProjectRecord,
   Truss2dJobInput,
@@ -39,6 +40,8 @@ export type ParametricPanelConfig = {
   poissonRatio: number;
   loadY: number;
 };
+
+export type ParametricPanelElementKind = "triangle" | "quad";
 
 export const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 export function generateRectangularPanelMesh(config: ParametricPanelConfig): PlaneTriangle2dJobInput {
@@ -108,6 +111,64 @@ export function generateRectangularPanelMesh(config: ParametricPanelConfig): Pla
   return { nodes, elements };
 }
 
+export function generateRectangularQuadPanelMesh(config: ParametricPanelConfig): PlaneQuad2dJobInput {
+  const width = Math.max(0.2, config.width);
+  const height = Math.max(0.2, config.height);
+  const divisionsX = Math.max(1, Math.round(config.divisionsX));
+  const divisionsY = Math.max(1, Math.round(config.divisionsY));
+  const thickness = Math.max(0.001, config.thickness);
+  const modulus = Math.max(0.1, config.youngsModulusGpa) * 1.0e9;
+  const poissonRatio = Math.min(0.49, Math.max(0.01, config.poissonRatio));
+  const loadY = config.loadY;
+
+  const nodes: PlaneQuad2dJobInput["nodes"] = [];
+  const elements: PlaneQuad2dJobInput["elements"] = [];
+
+  const dx = width / divisionsX;
+  const dy = height / divisionsY;
+
+  for (let row = 0; row <= divisionsY; row += 1) {
+    for (let col = 0; col <= divisionsX; col += 1) {
+      const index = row * (divisionsX + 1) + col;
+      const onLeftEdge = col === 0;
+      const onRightEdge = col === divisionsX;
+
+      nodes.push({
+        id: `q${index}`,
+        x: round(col * dx),
+        y: round(row * dy),
+        fix_x: onLeftEdge,
+        fix_y: onLeftEdge,
+        load_x: 0,
+        load_y: onRightEdge ? loadY / (divisionsY + 1) : 0,
+      });
+    }
+  }
+
+  for (let row = 0; row < divisionsY; row += 1) {
+    for (let col = 0; col < divisionsX; col += 1) {
+      const n0 = row * (divisionsX + 1) + col;
+      const n1 = n0 + 1;
+      const n2 = n0 + divisionsX + 2;
+      const n3 = n0 + divisionsX + 1;
+      const base = elements.length;
+
+      elements.push({
+        id: `pq${base}`,
+        node_i: n0,
+        node_j: n1,
+        node_k: n2,
+        node_l: n3,
+        thickness,
+        youngs_modulus: modulus,
+        poisson_ratio: poissonRatio,
+      });
+    }
+  }
+
+  return { nodes, elements };
+}
+
 export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInput {
   const bays = Math.max(2, Math.round(config.bays));
   const span = Math.max(1, config.span);
@@ -167,7 +228,7 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
 }
 
 export function exportStudyModel(
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d",
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d",
   payload: {
     name: string;
     material: string;
@@ -176,10 +237,10 @@ export function exportStudyModel(
     axial?: AxialBarJobInput;
     truss?: Truss2dJobInput;
     truss3d?: Truss3dJobInput;
-    plane?: PlaneTriangle2dJobInput;
+    plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
   },
 ): string {
-  if (kind === "plane_triangle_2d" && payload.plane) {
+  if ((kind === "plane_triangle_2d" || kind === "plane_quad_2d") && payload.plane) {
     return JSON.stringify(
       {
         kind,
@@ -252,7 +313,7 @@ export function exportStudyModel(
 }
 
 export function buildStudyModelPayload(
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d",
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d",
   payload: {
     name: string;
     material: string;
@@ -261,7 +322,7 @@ export function buildStudyModelPayload(
     axial?: AxialBarJobInput;
     truss?: Truss2dJobInput;
     truss3d?: Truss3dJobInput;
-    plane?: PlaneTriangle2dJobInput;
+    plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
   },
 ): Record<string, unknown> {
   return JSON.parse(exportStudyModel(kind, payload)) as Record<string, unknown>;

@@ -48,7 +48,14 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   @impl true
   def init(_opts) do
     endpoints = configured_endpoints()
-    {:ok, %{endpoints: endpoints, cursor: 0, health: %{}, deployment: deployment_info_for(endpoints, %{})}}
+
+    {:ok,
+     %{
+       endpoints: endpoints,
+       cursor: 0,
+       health: %{},
+       deployment: deployment_info_for(endpoints, %{})
+     }}
   end
 
   @impl true
@@ -63,10 +70,22 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   def handle_call(:reload, _from, state) do
     endpoints = configured_endpoints()
     health = prune_health(state.health, endpoints)
-    {:reply, :ok, %{state | endpoints: endpoints, cursor: 0, health: health, deployment: deployment_info_for(endpoints, health)}}
+
+    {:reply, :ok,
+     %{
+       state
+       | endpoints: endpoints,
+         cursor: 0,
+         health: health,
+         deployment: deployment_info_for(endpoints, health)
+     }}
   end
 
-  def handle_call({:checkout_endpoints, method}, _from, %{endpoints: endpoints, cursor: cursor, health: health} = state) do
+  def handle_call(
+        {:checkout_endpoints, method},
+        _from,
+        %{endpoints: endpoints, cursor: cursor, health: health} = state
+      ) do
     ordered =
       endpoints
       |> rotate(cursor)
@@ -79,12 +98,16 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   def handle_call({:report_failure, endpoint, reason}, _from, state) do
     health = mark_failure(state.health, endpoint, reason)
-    {:reply, :ok, %{state | health: health, deployment: deployment_info_for(state.endpoints, health)}}
+
+    {:reply, :ok,
+     %{state | health: health, deployment: deployment_info_for(state.endpoints, health)}}
   end
 
   def handle_call({:report_success, endpoint}, _from, state) do
     health = clear_health(state.health, endpoint)
-    {:reply, :ok, %{state | health: health, deployment: deployment_info_for(state.endpoints, health)}}
+
+    {:reply, :ok,
+     %{state | health: health, deployment: deployment_info_for(state.endpoints, health)}}
   end
 
   defp rotate([], _cursor), do: []
@@ -95,16 +118,28 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp route_endpoints(endpoints, nil), do: endpoints
+
   defp route_endpoints(endpoints, method) when is_binary(method) do
     tags = preferred_tags(method)
 
-    {preferred, fallback} =
+    {capable, remaining} =
       Enum.split_with(endpoints, fn endpoint ->
-        endpoint_tags(endpoint)
-        |> Enum.any?(&(&1 in tags))
+        supports_method?(endpoint, method)
       end)
 
-    sort_by_capacity(preferred) ++ fallback
+    case capable do
+      [] ->
+        {preferred_by_tags, fallback} =
+          Enum.split_with(remaining, fn endpoint ->
+            endpoint_tags(endpoint)
+            |> Enum.any?(&(&1 in tags))
+          end)
+
+        sort_by_health_capacity(preferred_by_tags) ++ fallback
+
+      _ ->
+        sort_by_health_capacity(capable) ++ remaining
+    end
   end
 
   defp deprioritize_cooling_endpoints(endpoints, health) do
@@ -170,7 +205,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
          {:ok, contents} <- File.read(path),
          {:ok, payload} <- Jason.decode(contents),
          agents when is_list(agents) <- Map.get(payload, "agents"),
-         endpoints when endpoints != [] <- agents |> Enum.map(&normalize_manifest_endpoint/1) |> Enum.reject(&is_nil/1) do
+         endpoints when endpoints != [] <-
+           agents |> Enum.map(&normalize_manifest_endpoint/1) |> Enum.reject(&is_nil/1) do
       endpoints
     else
       _ -> env_configured_endpoints()
@@ -207,7 +243,10 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     |> Map.merge(%{
       id: Map.get(endpoint, :id, "#{host}:#{port}"),
       host: host,
-      port: port
+      port: port,
+      methods: normalize_methods(Map.get(endpoint, :methods)),
+      capabilities: normalize_capabilities(Map.get(endpoint, :capabilities)),
+      health_score: normalize_health_score(Map.get(endpoint, :health_score))
     })
   end
 
@@ -221,19 +260,29 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       region: Map.get(endpoint, "region"),
       zone: Map.get(endpoint, "zone"),
       capacity: Map.get(endpoint, "capacity"),
-      tags: Map.get(endpoint, "tags")
+      tags: Map.get(endpoint, "tags"),
+      methods: normalize_methods(Map.get(endpoint, "methods")),
+      capabilities: normalize_capabilities(Map.get(endpoint, "capabilities")),
+      health_score: normalize_health_score(Map.get(endpoint, "health_score"))
     }
   end
 
   defp normalize_endpoint(_endpoint), do: default_endpoint()
 
-  defp normalize_manifest_endpoint(
-         %{"host" => host, "port" => port} = endpoint
-       )
+  defp normalize_manifest_endpoint(%{"host" => host, "port" => port} = endpoint)
        when is_binary(host) and is_integer(port) and port > 0 do
     metadata =
       endpoint
-      |> Map.take(["region", "zone", "role", "tags", "capacity"])
+      |> Map.take([
+        "region",
+        "zone",
+        "role",
+        "tags",
+        "capacity",
+        "methods",
+        "capabilities",
+        "health_score"
+      ])
       |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
 
     metadata
@@ -276,7 +325,9 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp maybe_put_iso(endpoint, _key, nil), do: endpoint
-  defp maybe_put_iso(endpoint, key, %DateTime{} = value), do: Map.put(endpoint, key, DateTime.to_iso8601(value))
+
+  defp maybe_put_iso(endpoint, key, %DateTime{} = value),
+    do: Map.put(endpoint, key, DateTime.to_iso8601(value))
 
   defp prune_health(health, endpoints) do
     valid_ids = MapSet.new(Enum.map(endpoints, & &1.id))
@@ -355,7 +406,9 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp normalize_mode("distributed"), do: :distributed
   defp normalize_mode(_mode), do: :local
 
-  defp normalize_discovery(discovery) when discovery in [:static, :manifest, :registry], do: discovery
+  defp normalize_discovery(discovery) when discovery in [:static, :manifest, :registry],
+    do: discovery
+
   defp normalize_discovery("static"), do: :static
   defp normalize_discovery("manifest"), do: :manifest
   defp normalize_discovery("registry"), do: :registry
@@ -366,24 +419,108 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   defp endpoint_tags(endpoint) do
-    endpoint
-    |> Map.get(:tags, [])
-    |> List.wrap()
-    |> Enum.filter(&is_binary/1)
+    direct =
+      endpoint
+      |> Map.get(:tags, [])
+      |> List.wrap()
+      |> Enum.filter(&is_binary/1)
+
+    capability_tags =
+      endpoint
+      |> Map.get(:capabilities, [])
+      |> List.wrap()
+      |> Enum.flat_map(fn capability ->
+        capability
+        |> Map.get(:tags, [])
+        |> List.wrap()
+        |> Enum.filter(&is_binary/1)
+      end)
+
+    Enum.uniq(direct ++ capability_tags)
   end
 
-  defp sort_by_capacity(endpoints) do
+  defp sort_by_health_capacity(endpoints) do
     endpoints
     |> Enum.with_index()
     |> Enum.sort_by(fn {endpoint, index} ->
-      {-Map.get(endpoint, :capacity, 1), index}
+      {
+        -(Map.get(endpoint, :health_score) || 100),
+        -Map.get(endpoint, :capacity, 1),
+        index
+      }
     end)
     |> Enum.map(&elem(&1, 0))
   end
+
+  defp supports_method?(endpoint, method) when is_binary(method) do
+    direct_methods =
+      endpoint
+      |> Map.get(:methods, [])
+      |> List.wrap()
+      |> Enum.filter(&is_binary/1)
+
+    capability_methods =
+      endpoint
+      |> Map.get(:capabilities, [])
+      |> List.wrap()
+      |> Enum.flat_map(fn capability ->
+        capability
+        |> Map.get(:methods, [])
+        |> List.wrap()
+        |> Enum.filter(&is_binary/1)
+      end)
+
+    method in Enum.uniq(direct_methods ++ capability_methods)
+  end
+
+  defp normalize_methods(values) when is_list(values),
+    do: values |> Enum.filter(&is_binary/1) |> Enum.uniq()
+
+  defp normalize_methods(_values), do: []
+
+  defp normalize_capabilities(values) when is_list(values) do
+    values
+    |> Enum.map(&normalize_capability/1)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp normalize_capabilities(_values), do: []
+
+  defp normalize_capability(%{} = capability) do
+    id = capability["id"] || capability[:id]
+    role = capability["role"] || capability[:role]
+
+    if is_binary(id) and id != "" and is_binary(role) and role != "" do
+      %{
+        id: id,
+        role: role,
+        methods:
+          capability
+          |> Map.get("methods", capability[:methods] || [])
+          |> List.wrap()
+          |> Enum.filter(&is_binary/1)
+          |> Enum.uniq(),
+        tags:
+          capability
+          |> Map.get("tags", capability[:tags] || [])
+          |> List.wrap()
+          |> Enum.filter(&is_binary/1)
+          |> Enum.uniq()
+      }
+    end
+  end
+
+  defp normalize_capability(_capability), do: nil
+
+  defp normalize_health_score(value) when is_integer(value) and value >= 0 and value <= 100,
+    do: value
+
+  defp normalize_health_score(_value), do: nil
 
   defp preferred_tags("solve_bar_1d"), do: ["bar"]
   defp preferred_tags("solve_truss_2d"), do: ["truss"]
   defp preferred_tags("solve_truss_3d"), do: ["truss", "space"]
   defp preferred_tags("solve_plane_triangle_2d"), do: ["plane", "mesh"]
+  defp preferred_tags("solve_plane_quad_2d"), do: ["plane", "mesh", "quad"]
   defp preferred_tags(_method), do: ["general", "cpu"]
 end

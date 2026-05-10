@@ -1,12 +1,18 @@
 import type { Dispatch, SetStateAction } from "react";
 import type {
+  PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
 import type { ParametricPanelConfig, ParametricTrussConfig } from "@/lib/models";
 
-export type WorkbenchStudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+export type WorkbenchStudyKind =
+  | "axial_bar_1d"
+  | "truss_2d"
+  | "truss_3d"
+  | "plane_triangle_2d"
+  | "plane_quad_2d";
 export type WorkbenchSidebarSection = "study" | "model" | "library" | "system";
 
 export type WorkbenchAxialFormState = {
@@ -23,7 +29,7 @@ export type WorkbenchSnapshot = {
   axialForm: WorkbenchAxialFormState;
   trussModel: Truss2dJobInput;
   truss3dModel: Truss3dJobInput;
-  planeModel: PlaneTriangle2dJobInput;
+  planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
   parametric: ParametricTrussConfig;
   panelParametric: ParametricPanelConfig;
   activeMaterial: string;
@@ -52,7 +58,7 @@ type SnapshotSetters = {
   setAxialForm: Dispatch<SetStateAction<WorkbenchAxialFormState>>;
   setTrussModel: Dispatch<SetStateAction<Truss2dJobInput>>;
   setTruss3dModel: Dispatch<SetStateAction<Truss3dJobInput>>;
-  setPlaneModel: Dispatch<SetStateAction<PlaneTriangle2dJobInput>>;
+  setPlaneModel: Dispatch<SetStateAction<PlaneTriangle2dJobInput | PlaneQuad2dJobInput>>;
   setParametric: Dispatch<SetStateAction<ParametricTrussConfig>>;
   setPanelParametric: Dispatch<SetStateAction<ParametricPanelConfig>>;
   setActiveMaterial: Dispatch<SetStateAction<string>>;

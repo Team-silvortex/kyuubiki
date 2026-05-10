@@ -1002,6 +1002,145 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert length(result_payload["result"]["elements"]) == 1
   end
 
+  test "runs a plane quad job through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.65,
+            "iteration" => 2,
+            "message" => "assembling quad plane system"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{"index" => 0, "id" => "n0", "x" => 0.0, "y" => 0.0, "ux" => 0.0, "uy" => 0.0},
+              %{"index" => 1, "id" => "n1", "x" => 1.0, "y" => 0.0, "ux" => 8.0e-8, "uy" => 0.0},
+              %{
+                "index" => 2,
+                "id" => "n2",
+                "x" => 1.0,
+                "y" => 1.0,
+                "ux" => 1.1e-7,
+                "uy" => -2.1e-7
+              },
+              %{
+                "index" => 3,
+                "id" => "n3",
+                "x" => 0.0,
+                "y" => 1.0,
+                "ux" => 0.0,
+                "uy" => -8.0e-8
+              }
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "q0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "node_l" => 3,
+                "area" => 1.0,
+                "strain_x" => 8.0e-8,
+                "strain_y" => -2.1e-7,
+                "gamma_xy" => 0.0,
+                "stress_x" => 4.8e3,
+                "stress_y" => -3.2e3,
+                "tau_xy" => 0.0,
+                "von_mises" => 6.4e3
+              }
+            ],
+            "max_displacement" => 2.4e-7,
+            "max_stress" => 6.4e3,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/plane-quad-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "fix_x" => false,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0
+            },
+            %{
+              "id" => "n2",
+              "x" => 1.0,
+              "y" => 1.0,
+              "fix_x" => false,
+              "fix_y" => false,
+              "load_x" => 0.0,
+              "load_y" => -1000.0
+            },
+            %{
+              "id" => "n3",
+              "x" => 0.0,
+              "y" => 1.0,
+              "fix_x" => true,
+              "fix_y" => false,
+              "load_x" => 0.0,
+              "load_y" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "q0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "node_k" => 2,
+              "node_l" => 3,
+              "thickness" => 0.02,
+              "youngs_modulus" => 7.0e10,
+              "poisson_ratio" => 0.33
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["max_stress"] > 0
+    assert length(result_payload["result"]["elements"]) == 1
+  end
+
   test "runs a three dimensional truss job through the orchestration API" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([
@@ -1639,7 +1778,8 @@ defmodule KyuubikiWeb.Playground.RouterTest do
   end
 
   test "serves a Hub-facing workload catalog with project download URLs" do
-    {:ok, project} = Library.create_project(%{"name" => "Bridge Pack", "description" => "starter"})
+    {:ok, project} =
+      Library.create_project(%{"name" => "Bridge Pack", "description" => "starter"})
 
     {:ok, _model} =
       Library.create_model(project["project_id"], %{
@@ -1679,11 +1819,13 @@ defmodule KyuubikiWeb.Playground.RouterTest do
              } = workload
            ] = payload["workloads"]
 
-    assert workload["download_url"] == "https://hub.example.com/api/v1/projects/#{project_id}/bundle"
+    assert workload["download_url"] ==
+             "https://hub.example.com/api/v1/projects/#{project_id}/bundle"
   end
 
   test "exports a project bundle for Hub workload download" do
-    {:ok, project} = Library.create_project(%{"name" => "Downloadable Pack", "description" => "bundle"})
+    {:ok, project} =
+      Library.create_project(%{"name" => "Downloadable Pack", "description" => "bundle"})
 
     {:ok, model} =
       Library.create_model(project["project_id"], %{

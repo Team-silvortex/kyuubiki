@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use kyuubiki_installer::{
-    exit_on_err, export_launch_config, init_env, parse_platform, print_help, prepare_layout,
+    exit_on_err, export_launch_config, init_env, parse_platform, prepare_layout, print_help,
     run_doctor, stage_release, validate_env_file,
 };
 

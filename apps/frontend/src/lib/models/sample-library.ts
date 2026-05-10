@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d";
+  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d";
   href: string;
   summary: string;
 };
@@ -48,5 +48,12 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "plane_triangle_2d",
     href: "/models/aluminum-panel-2d.json",
     summary: "Plane stress panel with symmetric bottom supports and edge load.",
+  },
+  {
+    id: "quad-plate-patch-2d",
+    name: "Quad Plate Patch 2D",
+    kind: "plane_quad_2d",
+    href: "/models/quad-plate-patch-2d.json",
+    summary: "Single bilinear quad patch for quick plane-stress solver checks.",
   },
 ];

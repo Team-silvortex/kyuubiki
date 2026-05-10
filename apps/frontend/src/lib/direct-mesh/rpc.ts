@@ -7,7 +7,8 @@ type RpcMethod =
   | "solve_bar_1d"
   | "solve_truss_2d"
   | "solve_truss_3d"
-  | "solve_plane_triangle_2d";
+  | "solve_plane_triangle_2d"
+  | "solve_plane_quad_2d";
 
 type RpcFrame =
   | {

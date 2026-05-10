@@ -27,6 +27,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_plane_triangle_2d", params, on_progress)
   end
 
+  @spec solve_plane_quad_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_plane_quad_2d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_plane_quad_2d", params, on_progress)
+  end
+
   @spec cancel_job(String.t()) :: {:ok, map()} | {:error, term()}
   def cancel_job(job_id) when is_binary(job_id) do
     request("cancel_job", %{job_id: job_id})
@@ -160,8 +165,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     case :gen_tcp.recv(socket, 0, recv_timeout_ms()) do
       {:ok, payload} ->
         case Jason.decode(payload) do
-          {:ok,
-           %{"event" => event, "rpc_version" => @rpc_version, "id" => ^request_id} = frame}
+          {:ok, %{"event" => event, "rpc_version" => @rpc_version, "id" => ^request_id} = frame}
           when event in ["progress", "heartbeat"] ->
             _ = on_progress.(frame["progress"])
             recv_response(socket, request_id, on_progress)
