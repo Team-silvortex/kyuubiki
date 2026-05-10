@@ -1,6 +1,6 @@
 # Packaging And Deployment
 
-This document is the packaging map for `kyuubiki v0.5`.
+This document is the packaging map for `kyuubiki v0.7.4`.
 
 Use it when you need to answer:
 

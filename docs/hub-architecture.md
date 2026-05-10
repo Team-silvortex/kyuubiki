@@ -7,6 +7,17 @@ It sits above the existing workbench and installer/operator surfaces and gives
 the system one place to manage projects, runtimes, deployment modes, logs, and
 desktop launch flows.
 
+The most important boundary to keep stable is this:
+
+- `Hub` manages runtimes
+- `orchestrator/control plane` is one managed runtime target
+- `Workbench` is a launched engineering surface
+- `solver agents` are managed compute peers
+
+That means the Hub must not collapse into the control plane. It can start a
+local control plane, connect to a remote one, switch across several of them, or
+work without one for local bundle and desktop tasks.
+
 ## Why a Hub exists
 
 Kyuubiki is no longer one app. It is a multi-load system made of:
@@ -119,6 +130,16 @@ The Hub should treat runtime targets as first-class entities:
 - `distributed control plane`
 - `direct mesh`
 
+Within that model, the orchestrator is not the Hub itself. It is one runtime
+target family that the Hub can manage:
+
+- `local orchestrator`
+  a control-plane process running on the same workstation as the Hub
+- `remote orchestrator`
+  a control-plane endpoint running elsewhere and reached over protocol/API
+- `multi-orchestrator fleet`
+  several control-plane targets that the Hub can inspect and switch between
+
 Each target should expose:
 
 - mode
@@ -128,6 +149,9 @@ Each target should expose:
 - last activity
 - linked projects
 - linked logs
+
+This split matters because it keeps the Hub useful even when the control plane
+is absent, remote, restarting, or one of several managed targets.
 
 ## Initial repository shape
 

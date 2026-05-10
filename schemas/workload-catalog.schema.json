@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.dev/schemas/workload-catalog.schema.json",
+  "title": "Kyuubiki Workload Catalog",
+  "description": "Hub-facing catalog for downloadable or registrable project workloads.",
+  "type": "object",
+  "required": ["schema_version", "workloads"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "kyuubiki.workload-catalog/v1"
+    },
+    "sourceLabel": {
+      "type": "string",
+      "description": "Human-readable label for the remote source or distribution channel."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "workloads": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/workload"
+      }
+    }
+  },
+  "$defs": {
+    "workload": {
+      "type": "object",
+      "required": ["label"],
+      "properties": {
+        "label": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "schema": {
+          "type": "string",
+          "description": "Project bundle schema version, for example kyuubiki.project/v2."
+        },
+        "layout": {
+          "type": "string",
+          "description": "Project file layout version, for example kyuubiki.project-layout/v1."
+        },
+        "bundle_path": {
+          "type": "string",
+          "description": "Optional local bundle path when the catalog is generated locally."
+        },
+        "download_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Remote URL that Hub can download directly."
+        },
+        "model_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "version_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "job_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "result_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "anyOf": [
+        { "required": ["download_url"] },
+        { "required": ["bundle_path"] },
+        { "required": ["project_id"] }
+      ],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

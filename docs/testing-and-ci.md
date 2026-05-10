@@ -1,7 +1,7 @@
 # Testing And CI
 
 This document is the quick map for how Kyuubiki currently validates itself in
-`v0.5`.
+`v0.7.4`.
 
 ## Why the test stack is layered
 
@@ -58,9 +58,11 @@ These tests use small local loopback fixtures and focus on:
 
 ### Desktop shell checks
 
+- `make test-hub-gui`
+- `make test-installer-gui`
 - `make test-workbench-gui`
 
-This validates the Tauri workbench shell surface without requiring a full
+These validate the current desktop shell family without requiring a full
 desktop release build.
 
 ## Unified entry points
@@ -84,6 +86,8 @@ Current GitHub Actions jobs are intentionally separated:
 - `integration-smoke-api`
 - `integration-smoke-cluster`
 - `integration-smoke-direct-mesh`
+- `hub-gui-smoke`
+- `installer-gui-smoke`
 - `workbench-gui-smoke`
 
 ## Failure diagnostics

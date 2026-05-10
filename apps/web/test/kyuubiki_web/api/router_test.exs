@@ -1638,6 +1638,101 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert [%{"event_id" => "event-2"}] = Jason.decode!(window_filtered_conn.resp_body)["events"]
   end
 
+  test "serves a Hub-facing workload catalog with project download URLs" do
+    {:ok, project} = Library.create_project(%{"name" => "Bridge Pack", "description" => "starter"})
+
+    {:ok, _model} =
+      Library.create_model(project["project_id"], %{
+        "name" => "Bridge Truss",
+        "kind" => "truss_2d",
+        "payload" => %{
+          "model_schema_version" => "kyuubiki.model/v1",
+          "kind" => "truss_2d",
+          "name" => "Bridge Truss",
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    conn =
+      :get
+      |> conn("/api/v1/workloads/catalog")
+      |> put_req_header("x-forwarded-proto", "https")
+      |> put_req_header("x-forwarded-host", "hub.example.com")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["schema_version"] == "kyuubiki.workload-catalog/v1"
+    assert payload["sourceLabel"] == "Kyuubiki Control Plane"
+
+    project_id = project["project_id"]
+
+    assert [
+             %{
+               "label" => "Bridge Pack",
+               "project_id" => ^project_id,
+               "schema" => "kyuubiki.project/v2",
+               "layout" => "kyuubiki.project-layout/v1",
+               "model_count" => 1
+             } = workload
+           ] = payload["workloads"]
+
+    assert workload["download_url"] == "https://hub.example.com/api/v1/projects/#{project_id}/bundle"
+  end
+
+  test "exports a project bundle for Hub workload download" do
+    {:ok, project} = Library.create_project(%{"name" => "Downloadable Pack", "description" => "bundle"})
+
+    {:ok, model} =
+      Library.create_model(project["project_id"], %{
+        "name" => "Space Truss",
+        "kind" => "truss_3d",
+        "payload" => %{
+          "model_schema_version" => "kyuubiki.model/v1",
+          "kind" => "truss_3d",
+          "name" => "Space Truss",
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    {:ok, version} =
+      Library.create_version(model["model_id"], %{
+        "kind" => "truss_3d",
+        "payload" => %{
+          "model_schema_version" => "kyuubiki.model/v1",
+          "kind" => "truss_3d",
+          "name" => "Space Truss v1",
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    conn =
+      :get
+      |> conn("/api/v1/projects/#{project["project_id"]}/bundle")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert get_resp_header(conn, "content-type") == ["application/json; charset=utf-8"]
+    assert [disposition] = get_resp_header(conn, "content-disposition")
+    assert disposition =~ "attachment;"
+    assert disposition =~ ".kyuubiki.json"
+
+    payload = Jason.decode!(conn.resp_body)
+    model_id = model["model_id"]
+    version_id = version["version_id"]
+    assert payload["project_schema_version"] == "kyuubiki.project/v2"
+    assert payload["project"]["project_id"] == project["project_id"]
+    assert payload["project_file_manifest"]["layout_version"] == "kyuubiki.project-layout/v1"
+    assert Enum.any?(payload["models"], &(&1["model_id"] == model_id))
+    assert Enum.any?(payload["model_versions"], &(&1["version_id"] == version_id))
+    assert payload["active_model_id"] == model_id
+    assert payload["active_version_id"] == version_id
+  end
+
   defp await_fake_agent_port do
     receive do
       {:fake_agent_ready, port} -> port

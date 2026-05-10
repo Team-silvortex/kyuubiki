@@ -7,6 +7,7 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.Library
   alias KyuubikiWeb.Protocol
   alias KyuubikiWeb.Security
+  alias KyuubikiWeb.Workloads
 
   plug(Plug.Logger)
   plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
@@ -346,6 +347,12 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/workloads/catalog" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, Workloads.workload_catalog(request_base_url(conn)))
+    end)
+  end
+
   post "/api/v1/security-events" do
     with_auth(conn, :write, fn conn ->
       case Analysis.create_security_event(conn.body_params) do
@@ -382,6 +389,25 @@ defmodule KyuubikiWeb.Router do
       case Library.get_project(project_id) do
         {:ok, project} -> respond_json(conn, 200, %{"project" => project})
         :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
+      end
+    end)
+  end
+
+  get "/api/v1/projects/:project_id/bundle" do
+    with_auth(conn, :read, fn conn ->
+      case Workloads.export_project_bundle(project_id) do
+        {:ok, bundle} ->
+          filename = Workloads.bundle_filename(bundle["project"])
+
+          conn
+          |> Plug.Conn.put_resp_header("content-disposition", ~s(attachment; filename="#{filename}"))
+          |> respond_json(200, bundle)
+
+        {:error, :project_not_found} ->
+          respond_json(conn, 404, %{"error" => "project_not_found"})
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
       end
     end)
   end
@@ -520,6 +546,46 @@ defmodule KyuubikiWeb.Router do
     conn
     |> Plug.Conn.put_resp_content_type(content_type)
     |> Plug.Conn.send_resp(status, payload)
+  end
+
+  defp request_base_url(conn) do
+    scheme =
+      case Plug.Conn.get_req_header(conn, "x-forwarded-proto") do
+        [value | _] -> value
+        _ -> Atom.to_string(conn.scheme)
+      end
+
+    host =
+      case Plug.Conn.get_req_header(conn, "x-forwarded-host") do
+        [value | _] -> value
+        _ -> conn.host
+      end
+
+    port =
+      case Plug.Conn.get_req_header(conn, "x-forwarded-port") do
+        [value | _] ->
+          case Integer.parse(value) do
+            {parsed, ""} -> parsed
+            _ -> conn.port
+          end
+
+        _ ->
+          case scheme do
+            "https" -> 443
+            "http" -> 80
+            _ -> conn.port
+          end
+      end
+
+    default_port? =
+      (scheme == "http" and port == 80) or
+        (scheme == "https" and port == 443)
+
+    if default_port? do
+      "#{scheme}://#{host}"
+    else
+      "#{scheme}://#{host}:#{port}"
+    end
   end
 
   defp with_cluster_fingerprint(conn, attrs) when is_map(attrs) do

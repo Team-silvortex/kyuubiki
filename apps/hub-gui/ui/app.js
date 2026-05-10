@@ -30,12 +30,14 @@ const sectionModel = {
 };
 
 const HUB_RECENTS_KEY = "kyuubiki.hub.recents.v1";
+const HUB_WORKLOAD_LIBRARY_KEY = "kyuubiki.hub.workloads.v1";
 const HUB_ASSISTANT_SETTINGS_KEY = "kyuubiki.hub.assistant.settings.v1";
 const HUB_ASSISTANT_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
 const HUB_ASSISTANT_AUDIT_KEY = "kyuubiki.hub.assistant.audit.v1";
 const HUB_RECENTS_LIMIT = 6;
 const HUB_ACTION_HISTORY_LIMIT = 8;
 const HUB_ASSISTANT_AUDIT_LIMIT = 16;
+const HUB_WORKLOAD_LIBRARY_LIMIT = 32;
 const HUB_ASSISTANT_MODEL_PRESETS = ["gpt-5", "gpt-5-mini", "gpt-4.1", "custom"];
 const HUB_ASSISTANT_ACTION_RISK = {
   "hub/focusSection": "low",
@@ -99,6 +101,11 @@ const elements = {
   projectBundleComparePath: document.getElementById("project-bundle-compare-path"),
   projectBundleOutPath: document.getElementById("project-bundle-out-path"),
   projectBundleOutput: document.getElementById("project-bundle-output"),
+  workloadCatalogUrl: document.getElementById("workload-catalog-url"),
+  workloadLabel: document.getElementById("workload-label"),
+  workloadImportInput: document.getElementById("workload-import-input"),
+  workloadLibraryList: document.getElementById("workload-library-list"),
+  workloadLibraryOutput: document.getElementById("workload-library-output"),
   historyImportInput: document.getElementById("history-import-input"),
   recentBundleList: document.getElementById("recent-bundle-list"),
   recentCompareList: document.getElementById("recent-compare-list"),
@@ -163,6 +170,23 @@ function persistHubRecents(recents) {
   window.localStorage.setItem(HUB_RECENTS_KEY, JSON.stringify(recents));
 }
 
+function loadHubWorkloadLibrary() {
+  try {
+    const raw = window.localStorage.getItem(HUB_WORKLOAD_LIBRARY_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistHubWorkloadLibrary(entries) {
+  window.localStorage.setItem(
+    HUB_WORKLOAD_LIBRARY_KEY,
+    JSON.stringify(entries.slice(0, HUB_WORKLOAD_LIBRARY_LIMIT)),
+  );
+}
+
 function appendTextElement(parent, tagName, text, className) {
   const element = document.createElement(tagName);
   if (className) {
@@ -180,6 +204,73 @@ function appendAssistantCardHeader(parent, title, badgeText, badgeClassName) {
   appendTextElement(header, "span", badgeText, badgeClassName);
   parent.appendChild(header);
   return header;
+}
+
+function workloadIdentity(entry) {
+  return [
+    String(entry?.sourceKind || "").trim(),
+    String(entry?.bundlePath || "").trim(),
+    String(entry?.downloadUrl || "").trim(),
+    String(entry?.projectId || "").trim(),
+  ].join("::");
+}
+
+function normalizeHubWorkloadEntry(entry) {
+  const label = String(entry?.label || entry?.projectName || "").trim();
+  const sourceKind = String(entry?.sourceKind || "").trim() || "local-bundle";
+  const bundlePath = String(entry?.bundlePath || "").trim();
+  const downloadUrl = String(entry?.downloadUrl || "").trim();
+  const projectId = String(entry?.projectId || "").trim();
+  const projectName = String(entry?.projectName || "").trim();
+
+  if (!label && !bundlePath && !downloadUrl && !projectId) {
+    return null;
+  }
+
+  return {
+    id: String(entry?.id || `workload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
+    label: label || projectName || bundlePath || downloadUrl || "workload",
+    note: String(entry?.note || "").trim(),
+    sourceKind,
+    sourceLabel: String(entry?.sourceLabel || "").trim(),
+    bundlePath,
+    downloadUrl,
+    projectId,
+    projectName,
+    schema: String(entry?.schema || "").trim(),
+    layout: String(entry?.layout || "").trim(),
+    modelCount: Number.isFinite(Number(entry?.modelCount)) ? Number(entry.modelCount) : 0,
+    versionCount: Number.isFinite(Number(entry?.versionCount)) ? Number(entry.versionCount) : 0,
+    jobCount: Number.isFinite(Number(entry?.jobCount)) ? Number(entry.jobCount) : 0,
+    resultCount: Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0,
+    downloadedAt: String(entry?.downloadedAt || "").trim(),
+    attachedAt: String(entry?.attachedAt || "").trim(),
+    addedAt: String(entry?.addedAt || "").trim() || new Date().toISOString(),
+    updatedAt: String(entry?.updatedAt || "").trim() || new Date().toISOString(),
+  };
+}
+
+function mergeHubWorkloadLibrary(existingEntries, incomingEntries) {
+  const merged = [];
+
+  for (const candidate of [...incomingEntries, ...existingEntries]) {
+    const normalized = normalizeHubWorkloadEntry(candidate);
+    if (!normalized) {
+      continue;
+    }
+
+    const duplicateIndex = merged.findIndex((entry) => workloadIdentity(entry) === workloadIdentity(normalized));
+    if (duplicateIndex >= 0) {
+      continue;
+    }
+
+    merged.push(normalized);
+    if (merged.length >= HUB_WORKLOAD_LIBRARY_LIMIT) {
+      break;
+    }
+  }
+
+  return merged;
 }
 
 function loadHubAssistantSettings() {
@@ -350,6 +441,24 @@ function currentOrchestratorBaseUrl() {
   return text || "http://127.0.0.1:4000";
 }
 
+function currentLocalWorkloadCatalogUrl() {
+  return `${currentOrchestratorBaseUrl().replace(/\/+$/u, "")}/api/v1/workloads/catalog`;
+}
+
+function ensureDefaultWorkloadCatalogUrl(force = false) {
+  if (!elements.workloadCatalogUrl) {
+    return "";
+  }
+
+  if (!force && String(elements.workloadCatalogUrl.value || "").trim()) {
+    return String(elements.workloadCatalogUrl.value || "").trim();
+  }
+
+  const next = currentLocalWorkloadCatalogUrl();
+  elements.workloadCatalogUrl.value = next;
+  return next;
+}
+
 function currentAssistantAuditContext() {
   return {
     section: state.activeSection,
@@ -419,6 +528,491 @@ async function mirrorHubAssistantAuditToSecurityEvents(entry) {
 function saveHubRecents(recents) {
   persistHubRecents(recents);
   renderHubRecents(recents);
+}
+
+function setWorkloadLibraryOutput(value) {
+  if (elements.workloadLibraryOutput) {
+    elements.workloadLibraryOutput.textContent = value;
+  }
+}
+
+function inferDownloadFilename(url, fallback = "kyuubiki-workload.kyuubiki") {
+  try {
+    const parsed = new URL(String(url || "").trim());
+    const pathname = parsed.pathname.split("/").filter(Boolean).at(-1);
+    return pathname || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function downloadHubBlob(filename, blob) {
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+function workloadSourceBadge(entry) {
+  if (entry.sourceKind === "remote-catalog" && entry.bundlePath) {
+    return ["attached local", "desktop-shell-state desktop-shell-state--healthy"];
+  }
+
+  if (entry.sourceKind === "remote-catalog" && entry.downloadedAt) {
+    return ["downloaded", "desktop-shell-state desktop-shell-state--warning"];
+  }
+
+  switch (entry.sourceKind) {
+    case "remote-catalog":
+      return ["remote catalog", "desktop-shell-state desktop-shell-state--healthy"];
+    case "imported-library":
+      return ["imported", "desktop-shell-state desktop-shell-state--warning"];
+    default:
+      return ["local bundle", "desktop-shell-state desktop-shell-state--idle"];
+  }
+}
+
+function markHubWorkloadDownloaded(entry) {
+  const next = loadHubWorkloadLibrary().map((candidate) => {
+    if (workloadIdentity(candidate) !== workloadIdentity(entry)) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      downloadedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
+  saveHubWorkloadLibrary(next);
+}
+
+function updateHubWorkloadEntry(entry, updater) {
+  const next = loadHubWorkloadLibrary()
+    .map((candidate) => {
+      if (workloadIdentity(candidate) !== workloadIdentity(entry)) {
+        return candidate;
+      }
+
+      return normalizeHubWorkloadEntry(
+        updater({
+          ...candidate,
+        }),
+      );
+    })
+    .filter(Boolean);
+  saveHubWorkloadLibrary(next);
+}
+
+async function downloadRemoteWorkloadBundle(entry) {
+  const validation = validateHubCatalogUrl(entry.downloadUrl || "");
+  if (!validation.ok) {
+    throw new Error(validation.reason);
+  }
+
+  const response = await fetch(validation.normalized);
+  if (!response.ok) {
+    throw new Error(`bundle download failed (${response.status})`);
+  }
+
+  const blob = await response.blob();
+  const filename = inferDownloadFilename(validation.normalized);
+  downloadHubBlob(filename, blob);
+  markHubWorkloadDownloaded(entry);
+  setWorkloadLibraryOutput(`downloaded ${entry.label} as ${filename}`);
+}
+
+async function openWorkloadInWorkbench(entry) {
+  if (!entry.bundlePath) {
+    throw new Error("This workload does not have a local bundle path yet.");
+  }
+
+  elements.projectBundlePath.value = entry.bundlePath;
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+  setWorkloadLibraryOutput(`loaded ${entry.label} into the bundle path and opening Workbench`);
+  await runAction("open-workbench");
+}
+
+async function attachCurrentBundleToWorkload(entry) {
+  const bundlePath = String(elements.projectBundlePath?.value || "").trim();
+  if (!bundlePath) {
+    throw new Error("Fill in the current bundle path before attaching it to this workload.");
+  }
+
+  const inspectRaw = await invokeTauri("project_bundle_inspect", { payload: { path: bundlePath } });
+  const summary = projectSummaryFromInspectPayload(inspectRaw);
+  updateHubWorkloadEntry(entry, (candidate) => ({
+    ...candidate,
+    bundlePath,
+    projectId: summary.projectId || candidate.projectId,
+    projectName: summary.projectName || candidate.projectName,
+    schema: summary.schema || candidate.schema,
+    layout: summary.layout || candidate.layout,
+    modelCount: summary.modelCount,
+    versionCount: summary.versionCount,
+    jobCount: summary.jobCount,
+    resultCount: summary.resultCount,
+    attachedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }));
+  setWorkloadLibraryOutput(`attached local bundle ${bundlePath} to ${entry.label}`);
+}
+
+function saveHubWorkloadLibrary(entries) {
+  persistHubWorkloadLibrary(entries);
+  renderHubWorkloadLibrary(entries);
+}
+
+function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
+  if (!elements.workloadLibraryList) {
+    return;
+  }
+
+  elements.workloadLibraryList.innerHTML = "";
+  if (!entries.length) {
+    renderEmptyHistoryState(
+      elements.workloadLibraryList,
+      "No managed workloads yet. Register a current bundle or sync a remote catalog.",
+    );
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const shell = document.createElement("div");
+    shell.className = "hub-history-item";
+
+    const summary = document.createElement("button");
+    summary.type = "button";
+    summary.className = "hub-history-item__summary desktop-shell-button-ghost";
+    const [sourceLabel, sourceClass] = workloadSourceBadge(entry);
+    const metaBits = [
+      entry.projectId ? `project ${entry.projectId}` : "",
+      entry.schema || "",
+      entry.layout || "",
+      entry.attachedAt ? `attached ${formatProjectActionTime(entry.attachedAt)}` : "",
+      entry.downloadedAt ? `downloaded ${formatProjectActionTime(entry.downloadedAt)}` : "",
+    ].filter(Boolean);
+    const heading = document.createElement("div");
+    heading.className = "hub-history-item__heading";
+    appendTextElement(heading, "strong", entry.label);
+    const meta = document.createElement("div");
+    meta.className = "hub-history-item__meta";
+    appendTextElement(meta, "span", sourceLabel, sourceClass);
+    heading.appendChild(meta);
+    summary.appendChild(heading);
+    appendTextElement(summary, "span", metaBits.join(" · ") || "workload entry", "hub-history-item__alias");
+    appendTextElement(summary, "span", entry.note || entry.bundlePath || entry.downloadUrl || "--");
+    summary.addEventListener("click", () => {
+      if (entry.bundlePath) {
+        elements.projectBundlePath.value = entry.bundlePath;
+      }
+      if (entry.downloadUrl && elements.workloadCatalogUrl) {
+        elements.workloadCatalogUrl.value = entry.downloadUrl;
+      }
+      setWorkloadLibraryOutput(`restored workload context for ${entry.label}`);
+      renderAssistantContext();
+      renderHubAssistantLocalCards();
+    });
+
+    const controls = document.createElement("div");
+    controls.className = "hub-history-item__controls";
+
+    const useButton = document.createElement("button");
+    useButton.type = "button";
+    useButton.className = "desktop-shell-button-ghost";
+    useButton.textContent = "Use";
+    useButton.addEventListener("click", () => {
+      if (entry.bundlePath) {
+        elements.projectBundlePath.value = entry.bundlePath;
+      }
+      setWorkloadLibraryOutput(`loaded ${entry.label} into the bundle path`);
+      renderAssistantContext();
+      renderHubAssistantLocalCards();
+    });
+
+    const workbenchButton = document.createElement("button");
+    workbenchButton.type = "button";
+    workbenchButton.className = "desktop-shell-button-ghost";
+    workbenchButton.textContent = "Open in Workbench";
+    workbenchButton.disabled = !entry.bundlePath;
+    workbenchButton.addEventListener("click", () => {
+      void openWorkloadInWorkbench(entry).catch((error) => {
+        setWorkloadLibraryOutput(String(error));
+      });
+    });
+
+    const inspectButton = document.createElement("button");
+    inspectButton.type = "button";
+    inspectButton.className = "desktop-shell-button-ghost";
+    inspectButton.textContent = "Inspect";
+    inspectButton.disabled = !entry.bundlePath;
+    inspectButton.addEventListener("click", () => {
+      if (entry.bundlePath) {
+        elements.projectBundlePath.value = entry.bundlePath;
+        void runAction("project-inspect");
+      }
+    });
+
+    const validateButton = document.createElement("button");
+    validateButton.type = "button";
+    validateButton.className = "desktop-shell-button-ghost";
+    validateButton.textContent = "Validate";
+    validateButton.disabled = !entry.bundlePath;
+    validateButton.addEventListener("click", () => {
+      if (entry.bundlePath) {
+        elements.projectBundlePath.value = entry.bundlePath;
+        void runAction("project-validate");
+      }
+    });
+
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.className = "desktop-shell-button-ghost";
+    downloadButton.textContent = "Download";
+    downloadButton.disabled = !entry.downloadUrl;
+    downloadButton.addEventListener("click", () => {
+      void downloadRemoteWorkloadBundle(entry).catch((error) => {
+        setWorkloadLibraryOutput(String(error));
+      });
+    });
+
+    const attachButton = document.createElement("button");
+    attachButton.type = "button";
+    attachButton.className = "desktop-shell-button-ghost";
+    attachButton.textContent = entry.bundlePath ? "Reattach bundle" : "Attach current bundle";
+    attachButton.addEventListener("click", () => {
+      void attachCurrentBundleToWorkload(entry).catch((error) => {
+        setWorkloadLibraryOutput(String(error));
+      });
+    });
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "desktop-shell-button-ghost";
+    removeButton.textContent = "Remove";
+    removeButton.addEventListener("click", () => {
+      const next = loadHubWorkloadLibrary().filter((candidate) => workloadIdentity(candidate) !== workloadIdentity(entry));
+      saveHubWorkloadLibrary(next);
+      setWorkloadLibraryOutput(`removed ${entry.label} from the workload library`);
+    });
+
+    controls.append(useButton, workbenchButton, inspectButton, validateButton, downloadButton, attachButton, removeButton);
+    shell.append(summary, controls);
+    elements.workloadLibraryList.appendChild(shell);
+  });
+}
+
+function projectSummaryFromInspectPayload(raw) {
+  const parsed = JSON.parse(raw);
+  return {
+    projectId: String(parsed?.project_id || "").trim(),
+    projectName: String(parsed?.project_name || "").trim(),
+    schema: String(parsed?.schema || "").trim(),
+    layout: String(parsed?.layout || "").trim(),
+    modelCount: Number(parsed?.model_count || 0),
+    versionCount: Number(parsed?.version_count || 0),
+    jobCount: Number(parsed?.job_count || 0),
+    resultCount: Number(parsed?.result_count || 0),
+  };
+}
+
+async function registerCurrentBundleAsWorkload() {
+  const bundlePath = String(elements.projectBundlePath?.value || "").trim();
+  if (!bundlePath) {
+    throw new Error("Fill in a bundle path before registering a workload.");
+  }
+
+  const inspectRaw = await invokeTauri("project_bundle_inspect", { payload: { path: bundlePath } });
+  const summary = projectSummaryFromInspectPayload(inspectRaw);
+  const note = String(elements.workloadLabel?.value || "").trim();
+  const entry = normalizeHubWorkloadEntry({
+    label: note || summary.projectName || summary.projectId || bundlePath,
+    note: note || `Registered from local bundle ${bundlePath}`,
+    sourceKind: "local-bundle",
+    sourceLabel: "Hub local registration",
+    bundlePath,
+    projectId: summary.projectId,
+    projectName: summary.projectName,
+    schema: summary.schema,
+    layout: summary.layout,
+    modelCount: summary.modelCount,
+    versionCount: summary.versionCount,
+    jobCount: summary.jobCount,
+    resultCount: summary.resultCount,
+  });
+
+  const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), [entry]);
+  saveHubWorkloadLibrary(next);
+  setWorkloadLibraryOutput(`registered ${entry.label} in the workload library`);
+}
+
+function validateHubCatalogUrl(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return { ok: false, reason: "Fill in a workload catalog URL first." };
+  }
+
+  try {
+    const parsed = new URL(normalized);
+    const protocol = parsed.protocol.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase();
+    const isLoopback =
+      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+    if (protocol === "https:" || (protocol === "http:" && isLoopback)) {
+      return { ok: true, normalized };
+    }
+    return {
+      ok: false,
+      reason: "Catalog URL must use https, or http only for localhost / 127.0.0.1 / ::1.",
+    };
+  } catch {
+    return { ok: false, reason: "Catalog URL must be a valid absolute URL." };
+  }
+}
+
+function validateRemoteWorkloadCatalogPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return { ok: false, reason: "Catalog payload must be a JSON object." };
+  }
+
+  if (payload.schema_version !== "kyuubiki.workload-catalog/v1") {
+    return {
+      ok: false,
+      reason: "Catalog schema_version must be kyuubiki.workload-catalog/v1.",
+    };
+  }
+
+  if (!Array.isArray(payload.workloads)) {
+    return { ok: false, reason: "Catalog workloads must be an array." };
+  }
+
+  for (const [index, workload] of payload.workloads.entries()) {
+    if (!workload || typeof workload !== "object" || Array.isArray(workload)) {
+      return { ok: false, reason: `Workload ${index + 1} must be an object.` };
+    }
+
+    if (!String(workload.label || "").trim()) {
+      return { ok: false, reason: `Workload ${index + 1} is missing label.` };
+    }
+
+    const hasRequiredLocator =
+      String(workload.download_url || "").trim() ||
+      String(workload.bundle_path || "").trim() ||
+      String(workload.project_id || "").trim();
+    if (!hasRequiredLocator) {
+      return {
+        ok: false,
+        reason: `Workload ${index + 1} must define download_url, bundle_path, or project_id.`,
+      };
+    }
+  }
+
+  return { ok: true };
+}
+
+function normalizeRemoteWorkloadCatalogPayload(payload, catalogUrl) {
+  const list = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.workloads)
+      ? payload.workloads
+      : Array.isArray(payload?.items)
+        ? payload.items
+        : [];
+
+  return list
+    .map((entry) =>
+      normalizeHubWorkloadEntry({
+        label: entry?.label || entry?.name || entry?.projectName || entry?.project_name,
+        note: entry?.note || entry?.description || `Synced from ${catalogUrl}`,
+        sourceKind: "remote-catalog",
+        sourceLabel: entry?.sourceLabel || payload?.sourceLabel || catalogUrl,
+        bundlePath: entry?.bundlePath || entry?.bundle_path || "",
+        downloadUrl: entry?.downloadUrl || entry?.download_url || catalogUrl,
+        projectId: entry?.projectId || entry?.project_id || "",
+        projectName: entry?.projectName || entry?.project_name || "",
+        schema: entry?.schema || "",
+        layout: entry?.layout || "",
+        modelCount: entry?.modelCount || entry?.model_count || 0,
+        versionCount: entry?.versionCount || entry?.version_count || 0,
+        jobCount: entry?.jobCount || entry?.job_count || 0,
+        resultCount: entry?.resultCount || entry?.result_count || 0,
+      }),
+    )
+    .filter(Boolean);
+}
+
+async function syncRemoteWorkloadCatalog(urlOverride = "") {
+  const selectedUrl =
+    String(urlOverride || "").trim() || String(elements.workloadCatalogUrl?.value || "").trim();
+  const validation = validateHubCatalogUrl(selectedUrl);
+  if (!validation.ok) {
+    throw new Error(validation.reason);
+  }
+
+  if (elements.workloadCatalogUrl) {
+    elements.workloadCatalogUrl.value = validation.normalized;
+  }
+
+  const response = await fetch(validation.normalized);
+  if (!response.ok) {
+    throw new Error(`catalog sync failed (${response.status})`);
+  }
+
+  const payload = await response.json();
+  const payloadValidation = validateRemoteWorkloadCatalogPayload(payload);
+  if (!payloadValidation.ok) {
+    throw new Error(payloadValidation.reason);
+  }
+  const normalized = normalizeRemoteWorkloadCatalogPayload(payload, validation.normalized);
+  const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), normalized);
+  saveHubWorkloadLibrary(next);
+  setWorkloadLibraryOutput(`synced ${normalized.length} workload entries from remote catalog`);
+}
+
+async function syncLocalControlPlaneWorkloads() {
+  const catalogUrl = ensureDefaultWorkloadCatalogUrl(true);
+  await syncRemoteWorkloadCatalog(catalogUrl);
+}
+
+function exportHubWorkloadLibrary() {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    workloadCount: loadHubWorkloadLibrary().length,
+    workloads: loadHubWorkloadLibrary(),
+  };
+  downloadHubJson("kyuubiki-hub-workloads.json", payload);
+  setWorkloadLibraryOutput(`exported ${payload.workloadCount} workload entries as JSON`);
+}
+
+async function importHubWorkloadLibrary(file) {
+  if (!file) {
+    return;
+  }
+
+  const raw = await file.text();
+  const parsed = JSON.parse(raw);
+  const imported = Array.isArray(parsed?.workloads) ? parsed.workloads : [];
+  const normalized = imported
+    .map((entry) =>
+      normalizeHubWorkloadEntry({
+        ...entry,
+        sourceKind: entry?.sourceKind || "imported-library",
+      }),
+    )
+    .filter(Boolean);
+  const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), normalized);
+  saveHubWorkloadLibrary(next);
+  setWorkloadLibraryOutput(`imported ${normalized.length} workload entries into the Hub library`);
+}
+
+function clearHubWorkloadLibrary() {
+  saveHubWorkloadLibrary([]);
+  setWorkloadLibraryOutput("cleared the Hub workload library");
 }
 
 function pushRecentValue(values, value) {
@@ -714,6 +1308,7 @@ function renderHubRecents(recents = loadHubRecents()) {
   renderRecentPathList(elements.recentOutputList, recents.outputs, elements.projectBundleOutPath);
   renderHistoryFilters();
   renderRecentActionHistory(sortProjectActionHistory(recents.actions ?? []));
+  renderHubWorkloadLibrary();
   renderAssistantContext();
   renderHubAssistantLocalCards();
 }
@@ -1683,6 +2278,8 @@ async function loadEnvironment() {
     elements.orchestratorUrl.textContent = environment.orchestrator_url;
   }
 
+  ensureDefaultWorkloadCatalogUrl();
+
   applyDesktopState(elements.currentRuntimeMode, "orchestrated_gui", { kind: "activity" });
   applyDesktopState(elements.currentProfile, environment.deployment_mode, { kind: "activity" });
   renderAssistantContext();
@@ -1780,6 +2377,30 @@ async function runAction(action) {
           payload: currentProjectBundleComparePayload(),
           outputTarget: setProjectBundleOutput,
         });
+        return;
+      case "workload-register-local":
+        await registerCurrentBundleAsWorkload();
+        setBusy(false, "ready");
+        return;
+      case "workload-sync-local":
+        await syncLocalControlPlaneWorkloads();
+        setBusy(false, "ready");
+        return;
+      case "workload-sync-remote":
+        await syncRemoteWorkloadCatalog();
+        setBusy(false, "ready");
+        return;
+      case "workload-export-library":
+        exportHubWorkloadLibrary();
+        setBusy(false, "ready");
+        return;
+      case "workload-import-library":
+        elements.workloadImportInput?.click();
+        setBusy(false, "idle");
+        return;
+      case "workload-clear-library":
+        clearHubWorkloadLibrary();
+        setBusy(false, "ready");
         return;
       case "start-local":
         setOperationOutput(await invokeTauri("service_start", { payload: { mode: "local" } }));
@@ -1958,6 +2579,21 @@ elements.historyImportInput?.addEventListener("change", async (event) => {
     await importRecentActionHistory(file);
   } catch (error) {
     setProjectBundleOutput(`failed to import recent action history: ${String(error)}`);
+  } finally {
+    if (input) {
+      input.value = "";
+    }
+  }
+});
+
+elements.workloadImportInput?.addEventListener("change", async (event) => {
+  const input = event.currentTarget;
+  const file = input?.files?.[0];
+
+  try {
+    await importHubWorkloadLibrary(file);
+  } catch (error) {
+    setWorkloadLibraryOutput(`failed to import workload library: ${String(error)}`);
   } finally {
     if (input) {
       input.value = "";

@@ -1,4 +1,4 @@
-# kyuubiki v0.5
+# kyuubiki v0.7.4
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -7,13 +7,18 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 - an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
-`v0.5` is the first version where the repository itself starts to match the system it contains. Kyuubiki now presents itself as a layered FEM platform with clearer runtime boundaries, protocol-driven headless SDKs, dedicated smoke coverage for each major surface, and a more explicit local-to-CI verification path.
+`v0.7.4` is the current repository-wide release baseline. At this point Kyuubiki has moved past being only a browser FEM workbench and now reads much more like a layered engineering platform: browser and desktop work surfaces, a Phoenix control plane, Rust solver agents, shared headless SDKs, standardized project bundles, and a real desktop operator entry path through `Kyuubiki Hub`.
 
 It also now has an explicit deployment split:
 
 - `local workstation`: frontend + orchestrator + local Rust agents
 - `cloud control plane`: frontend + orchestrator + PostgreSQL
 - `distributed control plane`: orchestrator/frontend separated from remotely deployed solver nodes
+
+On the desktop side, `Kyuubiki Hub` sits above those runtime shapes. The Hub is
+the operator-facing shell; the orchestrator is one managed runtime workload that
+the Hub can start locally, connect to remotely, or switch between across
+targets.
 - `headless peer mesh`: Rust solver agents can run without a GUI or Phoenix on the same host, and can advertise LAN peer-cluster topology through the shared RPC descriptor
 
 And the frontend direction is now explicitly split too:
@@ -88,7 +93,7 @@ Start here if you need the repo map:
   [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md),
   [apps/frontend/README.md](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/README.md)
 
-## What v0.5 Can Do
+## What v0.7.4 Can Do
 
 ### Solvers
 
@@ -131,6 +136,10 @@ Start here if you need the repo map:
 - database snapshot export
 - persistent job history
 - project bundle import/export
+- Hub workload library plus remote workload catalog sync
+- one-click Hub sync against the local control-plane workload catalog
+- formal `kyuubiki.workload-catalog/v1` schema plus example catalog payload
+- control-plane workload distribution endpoints for Hub catalog sync and per-project bundle download
 
 ### Installer and packaging
 
@@ -145,6 +154,8 @@ Start here if you need the repo map:
 - release scaffold generation under `dist/`
 - desktop icon assets wired from `assets/icons`
 - frontend browser/app icons wired from `assets/icons/app`
+- unified desktop readiness/status reporting for `macos / linux / windows`
+- host-aware desktop build/stage/verify flow through both CLI and Hub
 
 ### Headless SDKs and automation
 
@@ -154,6 +165,18 @@ Start here if you need the repo map:
 - shared `ControlPlaneClient`, `SolverRpcClient`, `Session`, and `AgentClient` layers
 - SDK smoke coverage across all three language targets
 - AI-friendly run-study, retry, failure classification, and chunk-browse helpers
+- frontend DSL / Pyodide automation path
+- macro recording, JSON import/export, and project-scoped automation presets
+
+### Hub and operator workflow
+
+- `Kyuubiki Hub` desktop entry shell
+- project bundle inspect / validate / normalize / unpack / pack / diff
+- recent bundle workflow history with restore / re-run / pin / export / import
+- favorite workflow shortcuts with CLI and Python stub copy
+- local guide and model-assisted onboarding in Hub
+- assistant action audit with control-plane security-event mirroring
+- shared desktop app family across `hub-gui`, `installer-gui`, and `workbench-gui`
 
 Packaging and deployment paths are now documented centrally in:
 

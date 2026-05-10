@@ -16,6 +16,12 @@ overview.
 - project launcher
 - guided assistant entrypoint with local hints and optional OpenAI-compatible model planning
 - project bundle inspect / validate / normalize / unpack / pack / diff entrypoint
+- Hub-managed workload library for local bundles, imported bundle packs, and future remote catalog delivery
+- remote workload catalog sync backed by a formal schema contract
+- one-click sync from the local control plane workload catalog, with the Hub pre-filling the current local catalog endpoint
+- downloaded remote workloads can be attached back to a local `.kyuubiki` path for unified Hub management
+- remote catalog sync now rejects payloads that do not match `kyuubiki.workload-catalog/v1`
+- the control plane can now serve `/api/v1/workloads/catalog` plus `/api/v1/projects/:project_id/bundle` for first-party Hub distribution
 - recent bundle / compare / output path recall for repeat project operations
 - recent project-bundle action history with restore / re-run controls and outcome-aware summaries
 - lightweight recent-action filters for failed, inspect, normalize, and diff flows
@@ -86,4 +92,6 @@ Do not treat that directory as source-owned. The source of truth is:
 - the shared desktop runtime crate
 - the repository-level desktop packaging flow
 - [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
+- example workload catalog:
+  [deploy/workload-catalog.example.json](/Users/Shared/chroot/dev/kyuubiki/deploy/workload-catalog.example.json)
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)

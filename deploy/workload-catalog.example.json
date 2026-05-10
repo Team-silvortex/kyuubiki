@@ -1,0 +1,35 @@
+{
+  "schema_version": "kyuubiki.workload-catalog/v1",
+  "sourceLabel": "Kyuubiki Example Workload Catalog",
+  "generated_at": "2026-05-10T00:00:00Z",
+  "workloads": [
+    {
+      "label": "Bridge Starter Pack",
+      "description": "A downloadable starter project bundle for local onboarding and stress testing.",
+      "project_id": "bridge-starter-pack",
+      "project_name": "Bridge Starter Pack",
+      "schema": "kyuubiki.project/v2",
+      "layout": "kyuubiki.project-layout/v1",
+      "download_url": "https://hub.example.com/workloads/bridge-starter-pack.kyuubiki",
+      "model_count": 1,
+      "version_count": 2,
+      "job_count": 3,
+      "result_count": 3,
+      "tags": ["starter", "2d", "bridge"]
+    },
+    {
+      "label": "Local Lab Snapshot",
+      "description": "Example of a locally generated catalog entry that points at a bundle path instead of a remote URL.",
+      "project_id": "local-lab-snapshot",
+      "project_name": "Local Lab Snapshot",
+      "schema": "kyuubiki.project/v2",
+      "layout": "kyuubiki.project-layout/v1",
+      "bundle_path": "/opt/kyuubiki/workloads/local-lab-snapshot.kyuubiki",
+      "model_count": 2,
+      "version_count": 4,
+      "job_count": 6,
+      "result_count": 6,
+      "tags": ["local", "sample", "3d"]
+    }
+  ]
+}

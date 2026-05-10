@@ -45,21 +45,34 @@
 
         <section class="hub-grid" id="projects-panel">
           <article class="hub-card desktop-shell-surface-card">
-            <h2>Recent projects</h2>
-            <div class="hub-list">
-              <div class="hub-list__row">
-                <strong>Bridge Study</strong>
-                <span>local workstation</span>
-              </div>
-              <div class="hub-list__row">
-                <strong>Lan Cluster Truss</strong>
-                <span>direct mesh</span>
-              </div>
-              <div class="hub-list__row">
-                <strong>Plate Library</strong>
-                <span>cloud control plane</span>
-              </div>
+            <h2>Workload library</h2>
+            <p class="desktop-shell-note">
+              Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.
+            </p>
+            <div class="hub-toolbar hub-toolbar--left">
+              <label class="hub-field hub-field--stacked">
+                <span>Catalog URL</span>
+                <input id="workload-catalog-url" placeholder="https://hub.example.com/catalog/workloads.json" type="text" />
+              </label>
+              <label class="hub-field hub-field--stacked">
+                <span>Label or note</span>
+                <input id="workload-label" placeholder="Bridge starter pack / downloaded from release note" type="text" />
+              </label>
             </div>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" data-action="workload-register-local">Register current bundle</button>
+              <button data-action="workload-sync-local">Sync local control plane</button>
+              <button data-action="workload-sync-remote">Sync remote catalog</button>
+              <button data-action="workload-export-library">Export library JSON</button>
+              <button data-action="workload-import-library">Import library JSON</button>
+              <button data-action="workload-clear-library">Clear library</button>
+            </div>
+            <input accept="application/json" class="hidden" id="workload-import-input" type="file" />
+            <div class="hub-history-section">
+              <div class="desktop-shell-note">Managed workloads</div>
+              <div class="hub-history-list" id="workload-library-list"></div>
+            </div>
+            <pre class="hub-log hub-log--compact" id="workload-library-output">Workload library is ready.</pre>
           </article>
 
           <article class="hub-card desktop-shell-surface-card">

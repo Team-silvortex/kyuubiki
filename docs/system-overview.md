@@ -20,6 +20,19 @@ surfaces:
 - `Installer`
   bootstrap and heavier deployment setup surface
 
+The relationship between `Hub` and `control plane` is intentional:
+
+- the Hub is not the control plane
+- the control plane is one runtime workload the Hub can manage
+- a local orchestrator is only the default managed target, not the only one
+
+That design keeps the desktop entrypoint compatible with:
+
+- local single-machine stacks
+- remote control planes
+- several control-plane targets in one operator session
+- local bundle and packaging work even when no control plane is running
+
 ## Runtime split
 
 ### `orchestrated_gui`
@@ -87,6 +100,9 @@ Peer mesh mode currently covers:
 - cancellation
 - result chunk APIs
 - remote agent registration
+
+When viewed from the Hub, the control plane behaves as a managed runtime target
+rather than as the desktop shell itself.
 
 ### Solver data plane
 
