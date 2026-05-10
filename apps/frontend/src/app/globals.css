@@ -1163,6 +1163,13 @@ html[data-theme="graphite"] .guide {
   stroke-width: 3;
 }
 
+.plane-triangle--focused {
+  stroke: rgba(241, 122, 46, 0.96);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 18px rgba(241, 122, 46, 0.38));
+  animation: plane-hotspot-pulse 1.2s ease-out 1;
+}
+
 .plane-triangle--deformed {
   fill: rgba(199, 100, 37, 0.14);
   stroke: var(--accent);
@@ -1189,6 +1196,18 @@ html[data-theme="graphite"] .guide {
 
 .node-base--active {
   fill: var(--accent);
+}
+
+@keyframes plane-hotspot-pulse {
+  0% {
+    stroke-width: 6;
+    filter: drop-shadow(0 0 28px rgba(241, 122, 46, 0.56));
+  }
+
+  100% {
+    stroke-width: 4;
+    filter: drop-shadow(0 0 18px rgba(241, 122, 46, 0.38));
+  }
 }
 
 .node-base--warning {

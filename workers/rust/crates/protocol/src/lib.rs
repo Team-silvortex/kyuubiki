@@ -201,6 +201,8 @@ pub enum RpcMethod {
     SolvePlaneTriangle2d,
     #[serde(rename = "solve_plane_quad_2d")]
     SolvePlaneQuad2d,
+    #[serde(rename = "solve_frame_2d")]
+    SolveFrame2d,
     #[serde(rename = "cancel_job")]
     CancelJob,
 }
@@ -308,6 +310,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveTruss3d,
                 RpcMethod::SolvePlaneTriangle2d,
                 RpcMethod::SolvePlaneQuad2d,
+                RpcMethod::SolveFrame2d,
                 RpcMethod::CancelJob,
             ],
         }
@@ -353,6 +356,17 @@ impl AgentDescriptor {
                         "plane".to_string(),
                         "mesh".to_string(),
                         "quad".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "frame-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveFrame2d],
+                    tags: vec![
+                        "frame".to_string(),
+                        "beam".to_string(),
+                        "bending".to_string(),
                         "cpu".to_string(),
                     ],
                 },
@@ -550,6 +564,36 @@ pub struct SolvePlaneQuad2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_rz: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub moment_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub moment_of_inertia: f64,
+    pub section_modulus: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dRequest {
+    pub nodes: Vec<Frame2dNodeInput>,
+    pub elements: Vec<Frame2dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaneNodeResult {
     pub index: usize,
     pub id: String,
@@ -620,6 +664,47 @@ pub struct SolvePlaneQuad2dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub rz: f64,
+    pub displacement_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame2dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub axial_force_i: f64,
+    pub shear_force_i: f64,
+    pub moment_i: f64,
+    pub axial_force_j: f64,
+    pub shear_force_j: f64,
+    pub moment_j: f64,
+    pub axial_stress: f64,
+    pub max_bending_stress: f64,
+    pub max_combined_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame2dResult {
+    pub input: SolveFrame2dRequest,
+    pub nodes: Vec<Frame2dNodeResult>,
+    pub elements: Vec<Frame2dElementResult>,
+    pub max_displacement: f64,
+    pub max_rotation: f64,
+    pub max_moment: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
@@ -627,6 +712,7 @@ pub enum AnalysisResult {
     Truss3d(SolveTruss3dResult),
     PlaneTriangle2d(SolvePlaneTriangle2dResult),
     PlaneQuad2d(SolvePlaneQuad2dResult),
+    Frame2d(SolveFrame2dResult),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -656,8 +742,9 @@ pub struct ResultChunkResponse {
 #[cfg(test)]
 mod tests {
     use super::{
-        AgentDescriptor, Job, JobStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION,
-        RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolvePlaneQuad2dRequest,
+        AgentDescriptor, Frame2dElementInput, Frame2dNodeInput, Job, JobStatus,
+        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
+        RpcResponse, SolveBarRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
     };
 
@@ -755,6 +842,57 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolvePlaneQuad2d);
         assert_eq!(decoded.id, "rpc-plane-quad");
+    }
+
+    #[test]
+    fn serializes_frame_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-frame-2d".to_string(),
+            method: RpcMethod::SolveFrame2d,
+            params: serde_json::to_value(SolveFrame2dRequest {
+                nodes: vec![
+                    Frame2dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                    Frame2dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: false,
+                        fix_y: false,
+                        fix_rz: false,
+                        load_x: 0.0,
+                        load_y: -1000.0,
+                        moment_z: 0.0,
+                    },
+                ],
+                elements: vec![Frame2dElementInput {
+                    id: "f0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 210.0e9,
+                    moment_of_inertia: 8.0e-6,
+                    section_modulus: 1.6e-4,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveFrame2d);
+        assert_eq!(decoded.id, "rpc-frame-2d");
     }
 
     #[test]

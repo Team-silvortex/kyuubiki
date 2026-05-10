@@ -660,6 +660,8 @@ const copy = {
     maxInPlaneShear: "Max in-plane shear",
     currentField: "Current field",
     planeHotspots: "Top hot elements",
+    topN: "Top N",
+    exportHotspots: "Export hotspots",
     planeResultLegend: "Fill: von Mises · Overlay: deformed shape",
     planeViewVonMises: "von Mises",
     planeViewPrincipal1: "Principal 1",
@@ -1095,6 +1097,8 @@ const copy = {
     maxInPlaneShear: "最大面内剪应力",
     currentField: "当前结果场",
     planeHotspots: "热点单元",
+    topN: "热点数",
+    exportHotspots: "导出热点",
     planeResultLegend: "填色：von Mises · 叠加：变形后形状",
     planeViewVonMises: "von Mises",
     planeViewPrincipal1: "主应力 1",
@@ -1940,6 +1944,8 @@ export function Workbench() {
   const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
   const [planeResultField, setPlaneResultField] = useState<PlaneResultField>("von_mises");
+  const [planeHotspotLimit, setPlaneHotspotLimit] = useState(5);
+  const [focusedPlaneElement, setFocusedPlaneElement] = useState<number | null>(null);
   const [result, setResult] = useState<
     AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | null
   >(null);
@@ -3105,6 +3111,21 @@ export function Workbench() {
     setMessage(t.resultCsvDownloaded);
   };
 
+  const downloadPlaneHotspotSummary = () => {
+    if (!isPlane || planeHotspotElements.length === 0) {
+      setMessage(t.noResultToExport);
+      return;
+    }
+
+    const lines = [
+      ["rank", "id", "field", "value"].join(","),
+      ...planeHotspotElements.map((entry, index) => [index + 1, entry.id, planeResultField, entry.value].join(",")),
+    ];
+
+    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-${planeResultField}-hotspots.csv`, lines.join("\n"));
+    setMessage(t.resultCsvDownloaded);
+  };
+
   const buildProjectBundleJson = async () => {
     if (!selectedProject) {
       throw new Error(t.projectRequired);
@@ -4036,17 +4057,31 @@ export function Workbench() {
     () =>
       planeElements
         .map((element) => ({
+          index: element.index,
           id: element.id,
           value: planeResultFieldValue(element, planeResultField),
+          active: selectedElement === element.index,
         }))
         .sort((left, right) => right.value - left.value)
-        .slice(0, 3)
+        .slice(0, planeHotspotLimit)
         .map((element) => ({
+          index: element.index,
           id: element.id,
           value: scientific(element.value),
+          active: element.active,
         })),
-    [planeElements, planeResultField],
+    [planeElements, planeResultField, selectedElement, planeHotspotLimit],
   );
+
+  useEffect(() => {
+    if (focusedPlaneElement === null) return;
+
+    const timeout = window.setTimeout(() => {
+      setFocusedPlaneElement(null);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [focusedPlaneElement]);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const heartbeatStatusValue = heartbeatStatus(job, t);
   const heartbeatToneValue = heartbeatTone(job);
@@ -7309,6 +7344,7 @@ export function Workbench() {
             planeResultField={planeResultField}
             planeResultFieldMax={planeResultFieldMax}
             selectedPlaneNodeId={selectedPlaneNodeData?.id ?? null}
+            focusedPlaneElement={focusedPlaneElement}
             onSelectPlaneElement={(index) => {
               setSelectedElement(index);
               setSelectedNode(null);
@@ -7533,6 +7569,7 @@ export function Workbench() {
         reactionValue={isAxial ? scientific(axialResult?.reaction_force) : "--"}
         planeHotspotFieldLabel={isPlane ? planeResultFieldLabel : undefined}
         planeHotspotElements={isPlane ? planeHotspotElements : []}
+        planeHotspotLimit={planeHotspotLimit}
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}
         heartbeatStatusValue={heartbeatStatusValue}
@@ -7542,6 +7579,14 @@ export function Workbench() {
         onCancelJob={cancelCurrentJob}
         onDownloadJson={downloadResultJson}
         onDownloadCsv={downloadResultCsv}
+        onDownloadPlaneHotspots={downloadPlaneHotspotSummary}
+        onSelectPlaneHotspot={(index) => {
+          setSidebarSection("model");
+          setSelectedElement(index);
+          setSelectedNode(null);
+          setFocusedPlaneElement(index);
+        }}
+        onPlaneHotspotLimitChange={setPlaneHotspotLimit}
       />
     </div>
   );

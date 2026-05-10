@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 
 import {
   resolveAxialBarJobInput,
+  resolveFrame2dJobInput,
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
   type AxialBarJobInput,
+  type Frame2dJobInput,
   type PlaneQuad2dJobInput,
   type PlaneTriangle2dJobInput,
   type Truss2dJobInput,
@@ -26,7 +28,8 @@ type DirectMeshSolveBody = {
     | "truss_2d"
     | "truss_3d"
     | "plane_triangle_2d"
-    | "plane_quad_2d";
+    | "plane_quad_2d"
+    | "frame_2d";
   input: Record<string, unknown>;
 };
 
@@ -42,6 +45,8 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
       return "solve_plane_triangle_2d" as const;
     case "plane_quad_2d":
       return "solve_plane_quad_2d" as const;
+    case "frame_2d":
+      return "solve_frame_2d" as const;
   }
 }
 
@@ -60,6 +65,8 @@ function normalizeInputForStudyKind(
       return resolvePlaneTriangle2dJobInput(input as PlaneTriangle2dJobInput);
     case "plane_quad_2d":
       return resolvePlaneQuad2dJobInput(input as PlaneQuad2dJobInput);
+    case "frame_2d":
+      return resolveFrame2dJobInput(input as Frame2dJobInput);
   }
 }
 

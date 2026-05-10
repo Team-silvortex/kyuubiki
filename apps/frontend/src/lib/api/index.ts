@@ -121,6 +121,37 @@ export type PlaneQuad2dJobInput = {
   model_version_id?: string;
 };
 
+export type Frame2dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_rz: boolean;
+  load_x: number;
+  load_y: number;
+  moment_z: number;
+};
+
+export type Frame2dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+  moment_of_inertia: number;
+  section_modulus: number;
+  material_id?: string;
+};
+
+export type Frame2dJobInput = {
+  nodes: Frame2dNodeInput[];
+  elements: Frame2dElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type JobState = {
   job_id: string;
   status: string;
@@ -243,6 +274,40 @@ export type PlaneQuad2dResult = {
     von_mises: number;
   }>;
   input: PlaneQuad2dJobInput;
+};
+
+export type Frame2dResult = {
+  max_displacement: number;
+  max_rotation: number;
+  max_moment: number;
+  max_stress: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    ux: number;
+    uy: number;
+    rz: number;
+    displacement_magnitude: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    axial_force_i: number;
+    shear_force_i: number;
+    moment_i: number;
+    axial_force_j: number;
+    shear_force_j: number;
+    moment_j: number;
+    axial_stress: number;
+    max_bending_stress: number;
+    max_combined_stress: number;
+  }>;
+  input: Frame2dJobInput;
 };
 
 export type JobEnvelope<TResult = unknown> = {
@@ -636,6 +701,25 @@ export function resolvePlaneQuad2dJobInput(
   };
 }
 
+export function resolveFrame2dJobInput(
+  input: Frame2dJobInput,
+): Omit<Frame2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
@@ -863,6 +947,16 @@ export function createPlaneQuad2dJob(
   });
 }
 
+export function createFrame2dJob(
+  input: Frame2dJobInput,
+): Promise<JobEnvelope<Frame2dResult>> {
+  return requestJson<JobEnvelope<Frame2dResult>>("/api/v1/fem/frame-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
   return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
     method: "GET",
@@ -929,7 +1023,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d",
+  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

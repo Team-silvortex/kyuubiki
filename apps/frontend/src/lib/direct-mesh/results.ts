@@ -1,5 +1,5 @@
 export type DirectMeshCachedResult = {
-  studyKind: "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "axial_bar_1d";
+  studyKind: "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "axial_bar_1d" | "frame_2d";
   result: Record<string, unknown>;
   endpoint: string;
   storedAt: string;

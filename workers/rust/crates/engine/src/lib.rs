@@ -1,9 +1,11 @@
 use kyuubiki_protocol::{
     AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
-    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
+    solve_bar_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_truss_2d,
+    solve_truss_3d,
 };
 use serde_json::Value;
 
@@ -14,6 +16,7 @@ pub enum EngineSolveRequest {
     Truss3d(SolveTruss3dRequest),
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
     PlaneQuad2d(SolvePlaneQuad2dRequest),
+    Frame2d(SolveFrame2dRequest),
 }
 
 pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
@@ -30,6 +33,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::PlaneQuad2d(request) => {
             solve_plane_quad_2d(&request).map(AnalysisResult::PlaneQuad2d)
+        }
+        EngineSolveRequest::Frame2d(request) => {
+            solve_frame_2d(&request).map(AnalysisResult::Frame2d)
         }
     }
 }
@@ -61,6 +67,10 @@ pub fn chunk_result(
             encode_slice(&result.nodes)?
         }
         (AnalysisResult::PlaneQuad2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::Frame2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
+        (AnalysisResult::Frame2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
     };

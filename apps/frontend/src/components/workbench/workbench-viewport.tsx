@@ -129,6 +129,7 @@ type WorkbenchViewportProps = {
   planeResultField: PlaneResultField;
   planeResultFieldMax: number;
   selectedPlaneNodeId: string | null;
+  focusedPlaneElement: number | null;
   onSelectPlaneElement: (index: number) => void;
   onSelectPlaneNode: (index: number) => void;
   selectedTruss3dNode: number | null;
@@ -423,6 +424,7 @@ function WorkbenchViewportInner({
   planeResultField,
   planeResultFieldMax,
   selectedPlaneNodeId,
+  focusedPlaneElement,
   onSelectPlaneElement,
   onSelectPlaneNode,
   selectedTruss3dNode,
@@ -1172,7 +1174,7 @@ function WorkbenchViewportInner({
             <polygon
               key={`plane-${element.id}`}
               points={points.map((point) => `${point.x},${point.y}`).join(" ")}
-              className={`plane-triangle${selectedElement === element.index ? " plane-triangle--active" : ""}`}
+              className={`plane-triangle${selectedElement === element.index ? " plane-triangle--active" : ""}${focusedPlaneElement === element.index ? " plane-triangle--focused" : ""}`}
               style={{
                 fill: planeResult
                   ? planeStressFill(

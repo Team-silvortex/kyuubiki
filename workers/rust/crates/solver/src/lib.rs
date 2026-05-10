@@ -1,7 +1,8 @@
 use kyuubiki_protocol::{
-    ElementResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput,
-    PlaneQuadElementResult, PlaneTriangleElementInput, PlaneTriangleElementResult, ProgressEvent,
-    SolveBarRequest, SolveBarResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
+    ElementResult, Frame2dElementResult, Frame2dNodeResult, Job, JobStatus, NodeResult,
+    PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
+    PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult,
+    SolveFrame2dRequest, SolveFrame2dResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
     SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveTruss2dRequest,
     SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Truss3dElementResult,
     Truss3dNodeResult, TrussElementResult, TrussNodeResult,
@@ -754,6 +755,184 @@ pub fn solve_plane_quad_2d(
     })
 }
 
+pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResult, String> {
+    validate_frame_2d_request(request)?;
+
+    let dof_count = request.nodes.len() * 3;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 3] = node.load_x;
+        force_vector[index * 3 + 1] = node.load_y;
+        force_vector[index * 3 + 2] = node.moment_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = (dx * dx + dy * dy).sqrt();
+        let c = dx / length;
+        let s = dy / length;
+        let local_stiffness = frame_local_stiffness(element.area, element.youngs_modulus, element.moment_of_inertia, length);
+        let transform = frame_transform(c, s);
+        let global_element_stiffness = transform_frame_stiffness(&local_stiffness, &transform);
+        let map = [
+            element.node_i * 3,
+            element.node_i * 3 + 1,
+            element.node_i * 3 + 2,
+            element.node_j * 3,
+            element.node_j * 3 + 1,
+            element.node_j * 3 + 2,
+        ];
+
+        for row in 0..6 {
+            for column in 0..6 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    global_element_stiffness[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 3);
+            }
+            if node.fix_y {
+                dofs.push(index * 3 + 1);
+            }
+            if node.fix_rz {
+                dofs.push(index * 3 + 2);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| {
+            let ux = displacements[index * 3];
+            let uy = displacements[index * 3 + 1];
+            let rz = displacements[index * 3 + 2];
+
+            Frame2dNodeResult {
+                index,
+                id: node.id.clone(),
+                x: node.x,
+                y: node.y,
+                ux,
+                uy,
+                rz,
+                displacement_magnitude: (ux * ux + uy * uy).sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let length = (dx * dx + dy * dy).sqrt();
+            let c = dx / length;
+            let s = dy / length;
+            let local_stiffness = frame_local_stiffness(
+                element.area,
+                element.youngs_modulus,
+                element.moment_of_inertia,
+                length,
+            );
+            let transform = frame_transform(c, s);
+            let global_displacements = [
+                displacements[element.node_i * 3],
+                displacements[element.node_i * 3 + 1],
+                displacements[element.node_i * 3 + 2],
+                displacements[element.node_j * 3],
+                displacements[element.node_j * 3 + 1],
+                displacements[element.node_j * 3 + 2],
+            ];
+            let local_displacements = multiply_matrix_vector_6x6(&transform, &global_displacements);
+            let local_forces = multiply_matrix_vector_6x6(&local_stiffness, &local_displacements);
+            let axial_stress = local_forces[0].abs().max(local_forces[3].abs()) / element.area;
+            let bending_stress = local_forces[2]
+                .abs()
+                .max(local_forces[5].abs())
+                / element.section_modulus;
+            let max_combined_stress = axial_stress + bending_stress;
+
+            Frame2dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                axial_force_i: local_forces[0],
+                shear_force_i: local_forces[1],
+                moment_i: local_forces[2],
+                axial_force_j: local_forces[3],
+                shear_force_j: local_forces[4],
+                moment_j: local_forces[5],
+                axial_stress,
+                max_bending_stress: bending_stress,
+                max_combined_stress,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| node.displacement_magnitude)
+        .fold(0.0_f64, f64::max);
+    let max_rotation = nodes
+        .iter()
+        .map(|node| node.rz.abs())
+        .fold(0.0_f64, f64::max);
+    let max_moment = elements
+        .iter()
+        .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.max_combined_stress)
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveFrame2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_rotation,
+        max_moment,
+        max_stress,
+    })
+}
+
 fn validate_request(request: &SolveBarRequest) -> Result<(), String> {
     if !(request.length.is_finite() && request.length > 0.0) {
         return Err("length must be a positive finite number".to_string());
@@ -927,6 +1106,61 @@ fn validate_plane_quad_request(request: &SolvePlaneQuad2dRequest) -> Result<(), 
             return Err(
                 "plane quad element must decompose into positive-area triangles".to_string(),
             );
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_frame_2d_request(request: &SolveFrame2dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("2d frame must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("2d frame must define at least one element".to_string());
+    }
+
+    if !request
+        .nodes
+        .iter()
+        .any(|node| node.fix_x || node.fix_y || node.fix_rz)
+    {
+        return Err("2d frame must include at least one support".to_string());
+    }
+
+    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
+        sum + usize::from(node.fix_x) + usize::from(node.fix_y) + usize::from(node.fix_rz)
+    });
+    if constrained_dofs < 3 {
+        return Err("2d frame must restrain at least three degrees of freedom".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("2d frame element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("2d frame element must connect two distinct nodes".to_string());
+        }
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("2d frame element area must be positive".to_string());
+        }
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("2d frame element youngs_modulus must be positive".to_string());
+        }
+        if !(element.moment_of_inertia.is_finite() && element.moment_of_inertia > 0.0) {
+            return Err("2d frame element moment_of_inertia must be positive".to_string());
+        }
+        if !(element.section_modulus.is_finite() && element.section_modulus > 0.0) {
+            return Err("2d frame element section_modulus must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = ((node_j.x - node_i.x).powi(2) + (node_j.y - node_i.y).powi(2)).sqrt();
+        if length <= 1.0e-12 {
+            return Err("2d frame element length must be positive".to_string());
         }
     }
 
@@ -1234,6 +1468,103 @@ fn multiply_matrix_vector_3x3(matrix: &[[f64; 3]; 3], vector: &[f64; 3]) -> [f64
         output[row] = (0..3).map(|index| matrix[row][index] * vector[index]).sum();
     }
 
+    output
+}
+
+fn frame_local_stiffness(
+    area: f64,
+    youngs_modulus: f64,
+    moment_of_inertia: f64,
+    length: f64,
+) -> [[f64; 6]; 6] {
+    let axial = youngs_modulus * area / length;
+    let flexural = youngs_modulus * moment_of_inertia;
+    let l2 = length * length;
+    let l3 = l2 * length;
+
+    [
+        [axial, 0.0, 0.0, -axial, 0.0, 0.0],
+        [
+            0.0,
+            12.0 * flexural / l3,
+            6.0 * flexural / l2,
+            0.0,
+            -12.0 * flexural / l3,
+            6.0 * flexural / l2,
+        ],
+        [
+            0.0,
+            6.0 * flexural / l2,
+            4.0 * flexural / length,
+            0.0,
+            -6.0 * flexural / l2,
+            2.0 * flexural / length,
+        ],
+        [-axial, 0.0, 0.0, axial, 0.0, 0.0],
+        [
+            0.0,
+            -12.0 * flexural / l3,
+            -6.0 * flexural / l2,
+            0.0,
+            12.0 * flexural / l3,
+            -6.0 * flexural / l2,
+        ],
+        [
+            0.0,
+            6.0 * flexural / l2,
+            2.0 * flexural / length,
+            0.0,
+            -6.0 * flexural / l2,
+            4.0 * flexural / length,
+        ],
+    ]
+}
+
+fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
+    [
+        [c, s, 0.0, 0.0, 0.0, 0.0],
+        [-s, c, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0, c, s, 0.0],
+        [0.0, 0.0, 0.0, -s, c, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    ]
+}
+
+fn transform_frame_stiffness(
+    local_stiffness: &[[f64; 6]; 6],
+    transform: &[[f64; 6]; 6],
+) -> [[f64; 6]; 6] {
+    let transform_t = transpose_6x6(transform);
+    let left = multiply_matrix_6x6_6x6(&transform_t, local_stiffness);
+    multiply_matrix_6x6_6x6(&left, transform)
+}
+
+fn transpose_6x6(input: &[[f64; 6]; 6]) -> [[f64; 6]; 6] {
+    let mut output = [[0.0; 6]; 6];
+    for row in 0..6 {
+        for column in 0..6 {
+            output[column][row] = input[row][column];
+        }
+    }
+    output
+}
+
+fn multiply_matrix_6x6_6x6(lhs: &[[f64; 6]; 6], rhs: &[[f64; 6]; 6]) -> [[f64; 6]; 6] {
+    let mut output = [[0.0; 6]; 6];
+    for row in 0..6 {
+        for column in 0..6 {
+            output[row][column] = (0..6).map(|index| lhs[row][index] * rhs[index][column]).sum();
+        }
+    }
+    output
+}
+
+fn multiply_matrix_vector_6x6(matrix: &[[f64; 6]; 6], vector: &[f64; 6]) -> [f64; 6] {
+    let mut output = [0.0; 6];
+    for row in 0..6 {
+        output[row] = (0..6).map(|index| matrix[row][index] * vector[index]).sum();
+    }
     output
 }
 
@@ -1673,12 +2004,13 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_truss_2d,
-        solve_truss_3d,
+        MockSolver, solve_bar_1d, solve_frame_2d, solve_plane_quad_2d,
+        solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
     };
     use kyuubiki_protocol::{
-        Job, JobStatus, PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput,
-        SolveBarRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
+        Frame2dElementInput, Frame2dNodeInput, Job, JobStatus, PlaneNodeInput,
+        PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveFrame2dRequest,
+        SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
         SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
         TrussNodeInput,
     };
@@ -1984,6 +2316,61 @@ mod tests {
         assert!(result.max_displacement > 0.0);
         assert!(result.max_stress > 0.0);
         assert!(result.elements[0].area > 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_frame_2d_cantilever() {
+        let request = SolveFrame2dRequest {
+            nodes: vec![
+                Frame2dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_rz: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    moment_z: 0.0,
+                },
+                Frame2dNodeInput {
+                    id: "n1".to_string(),
+                    x: 2.0,
+                    y: 0.0,
+                    fix_x: false,
+                    fix_y: false,
+                    fix_rz: false,
+                    load_x: 0.0,
+                    load_y: -1000.0,
+                    moment_z: 0.0,
+                },
+            ],
+            elements: vec![Frame2dElementInput {
+                id: "f0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 8.0e-6,
+                section_modulus: 1.6e-4,
+            }],
+        };
+
+        let result = solve_frame_2d(&request).expect("frame solve should succeed");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.max_displacement > 0.0);
+        assert!(result.max_rotation > 0.0);
+        assert!(result.max_moment > 0.0);
+        assert!(result.max_stress > 0.0);
+
+        let tip = &result.nodes[1];
+        let expected_tip_uy = (1000.0 * 2.0_f64.powi(3)) / (3.0 * 210.0e9 * 8.0e-6);
+        let expected_tip_rz = (1000.0 * 2.0_f64.powi(2)) / (2.0 * 210.0e9 * 8.0e-6);
+
+        assert!((tip.uy.abs() - expected_tip_uy).abs() / expected_tip_uy < 1.0e-6);
+        assert!((tip.rz.abs() - expected_tip_rz).abs() / expected_tip_rz < 1.0e-6);
     }
 
     #[test]

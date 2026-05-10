@@ -59,6 +59,16 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec submit_frame_2d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_frame_2d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_frame_2d(params),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      start_background_job(job.job_id, "solve_frame_2d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
   @spec fetch_job(String.t()) :: {:ok, map()} | {:error, term()}
   def fetch_job(job_id) when is_binary(job_id) do
     case Store.get(job_id) do
@@ -594,6 +604,18 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp normalize_plane_quad_2d(_params), do: {:error, :invalid_plane_quad_model}
+
+  defp normalize_frame_2d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_frame_2d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_frame_2d(_params), do: {:error, :invalid_frame_model}
 
   defp random_id do
     :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)

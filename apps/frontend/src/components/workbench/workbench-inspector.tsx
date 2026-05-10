@@ -154,6 +154,8 @@ type InspectorLabels = {
   maxInPlaneShear: string;
   currentField: string;
   planeHotspots: string;
+  topN: string;
+  exportHotspots: string;
   createdAt: string;
   updatedAt: string;
   lastHeartbeat: string;
@@ -211,7 +213,8 @@ type WorkbenchInspectorProps = {
   maxStressValue: string;
   reactionValue: string;
   planeHotspotFieldLabel?: string;
-  planeHotspotElements: Array<{ id: string; value: string }>;
+  planeHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
+  planeHotspotLimit: number;
   createdAtValue: string;
   updatedAtValue: string;
   heartbeatStatusValue: string;
@@ -221,6 +224,9 @@ type WorkbenchInspectorProps = {
   onCancelJob: () => void;
   onDownloadJson: () => void;
   onDownloadCsv: () => void;
+  onDownloadPlaneHotspots: () => void;
+  onSelectPlaneHotspot: (index: number) => void;
+  onPlaneHotspotLimitChange: (limit: number) => void;
 };
 
 type InspectorTab = "properties" | "diagnostics" | "history" | "report";
@@ -272,6 +278,7 @@ function WorkbenchInspectorInner({
   reactionValue,
   planeHotspotFieldLabel,
   planeHotspotElements,
+  planeHotspotLimit,
   createdAtValue,
   updatedAtValue,
   heartbeatStatusValue,
@@ -281,6 +288,9 @@ function WorkbenchInspectorInner({
   onCancelJob,
   onDownloadJson,
   onDownloadCsv,
+  onDownloadPlaneHotspots,
+  onSelectPlaneHotspot,
+  onPlaneHotspotLimitChange,
 }: WorkbenchInspectorProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
   const isTruss = studyKind === "truss_2d";
@@ -498,14 +508,35 @@ function WorkbenchInspectorInner({
               <div className="diagnostic-item">
                 <strong>{t.currentField}: {planeHotspotFieldLabel ?? "--"}</strong>
               </div>
+              <div className="button-row">
+                <span className="card-copy">{t.topN}</span>
+                {[3, 5, 10].map((limit) => (
+                  <button
+                    key={limit}
+                    className={`ghost-button ghost-button--compact${planeHotspotLimit === limit ? " ghost-button--active" : ""}`}
+                    onClick={() => onPlaneHotspotLimitChange(limit)}
+                    type="button"
+                  >
+                    {limit}
+                  </button>
+                ))}
+                <button className="ghost-button ghost-button--compact" onClick={onDownloadPlaneHotspots} type="button">
+                  {t.exportHotspots}
+                </button>
+              </div>
               {planeHotspotElements.length > 0 ? (
                 <>
                   <p className="card-copy">{t.planeHotspots}</p>
                   {planeHotspotElements.map((entry) => (
-                    <div key={entry.id} className="diagnostic-item">
+                    <button
+                      key={entry.id}
+                      className={`history-item${entry.active ? " history-item--active" : ""}`}
+                      onClick={() => onSelectPlaneHotspot(entry.index)}
+                      type="button"
+                    >
                       <strong>{entry.id}</strong>
                       <small>{entry.value}</small>
-                    </div>
+                    </button>
                   ))}
                 </>
               ) : (
