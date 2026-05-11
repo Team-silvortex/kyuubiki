@@ -23,6 +23,7 @@ type WorkbenchModelToolsCardProps = {
   canUndo: boolean;
   canRedo: boolean;
   isTruss: boolean;
+  isFrame: boolean;
   isTruss3d: boolean;
   truss3dLinkMode: boolean;
   onAddNode: () => void;
@@ -60,6 +61,7 @@ export function WorkbenchModelToolsCard({
   canUndo,
   canRedo,
   isTruss,
+  isFrame,
   isTruss3d,
   truss3dLinkMode,
   onAddNode,
@@ -80,7 +82,7 @@ export function WorkbenchModelToolsCard({
         <span>{status}</span>
       </div>
       <p className="card-copy">{hint}</p>
-      {isTruss ? (
+      {isTruss || isFrame ? (
         <>
           <div className="button-row">
             <button className="ghost-button" onClick={onAddNode} type="button">

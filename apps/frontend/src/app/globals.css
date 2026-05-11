@@ -1137,6 +1137,12 @@ html[data-theme="graphite"] .guide {
   stroke-width: 10;
 }
 
+.bar--focused {
+  stroke: rgba(241, 122, 46, 0.96);
+  stroke-width: 8;
+  filter: drop-shadow(0 0 12px rgba(241, 122, 46, 0.32));
+}
+
 .bar--preview {
   stroke: var(--accent);
   stroke-width: 5;

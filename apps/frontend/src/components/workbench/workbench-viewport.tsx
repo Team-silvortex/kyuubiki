@@ -5,6 +5,7 @@ import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardE
 type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneResultField = "von_mises" | "principal_stress_1" | "max_in_plane_shear";
+type FrameResultField = "axial_stress" | "max_bending_stress" | "max_combined_stress" | "moment";
 
 type DisplayTrussNode = {
   index: number;
@@ -28,6 +29,11 @@ type DisplayTrussElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  axial_stress?: number;
+  max_bending_stress?: number;
+  max_combined_stress?: number;
+  moment_i?: number;
+  moment_j?: number;
   material_id?: string;
 };
 
@@ -95,6 +101,7 @@ type WorkbenchViewportProps = {
   title: string;
   axialTitle: string;
   trussTitle: string;
+  trussLegend?: string;
   truss3dTitle: string;
   planeTitle: string;
   planeLegend: string;
@@ -107,6 +114,9 @@ type WorkbenchViewportProps = {
   hiddenTrussMaterialIds: string[];
   trussBounds: Bounds;
   trussResult: boolean;
+  frameResultField: FrameResultField;
+  frameResultFieldMax: number;
+  focusedFrameElement: number | null;
   trussHotspotNodes: number[];
   trussNodeIssues: Record<number, string[]>;
   selectedNode: number | null;
@@ -390,6 +400,7 @@ function WorkbenchViewportInner({
   title,
   axialTitle,
   trussTitle,
+  trussLegend,
   truss3dTitle,
   planeTitle,
   planeLegend,
@@ -402,6 +413,9 @@ function WorkbenchViewportInner({
   hiddenTrussMaterialIds,
   trussBounds,
   trussResult,
+  frameResultField,
+  frameResultFieldMax,
+  focusedFrameElement,
   trussHotspotNodes,
   trussNodeIssues,
   selectedNode,
@@ -862,6 +876,11 @@ function WorkbenchViewportInner({
         <text x="48" y="58" className="svg-title">
           {isModelMode ? title : trussTitle}
         </text>
+        {trussResult && trussLegend ? (
+          <text x="760" y="58" className="svg-copy svg-copy--muted">
+            {trussLegend}
+          </text>
+        ) : null}
         <g clipPath="url(#viewportClipTruss)">
           {visibleTrussElements.map((element) => {
             if (element.material_id && hiddenTrussMaterialIds.includes(element.material_id)) return null;
@@ -876,8 +895,22 @@ function WorkbenchViewportInner({
                 y1={start.y}
                 x2={end.x}
                 y2={end.y}
-                className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}`}
-                style={{ stroke: trussElementColors[element.index] }}
+                className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}${focusedFrameElement === element.index ? " bar--focused" : ""}`}
+                style={{
+                  stroke:
+                    studyKind === "frame_2d" && trussResult
+                      ? planeStressFill(
+                          frameResultField === "axial_stress"
+                            ? Math.abs(element.axial_stress ?? 0)
+                            : frameResultField === "max_bending_stress"
+                              ? Math.abs(element.max_bending_stress ?? 0)
+                              : frameResultField === "moment"
+                                ? Math.max(Math.abs(element.moment_i ?? 0), Math.abs(element.moment_j ?? 0))
+                                : Math.abs(element.max_combined_stress ?? 0),
+                          frameResultFieldMax,
+                        )
+                      : trussElementColors[element.index],
+                }}
                 onPointerDown={(event) => {
                   if (isModelMode) {
                     event.stopPropagation();

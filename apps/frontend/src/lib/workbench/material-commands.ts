@@ -1,5 +1,6 @@
 import { createCustomMaterial, createMaterialDefinition } from "@/lib/materials";
 import type {
+  Frame2dJobInput,
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
@@ -65,6 +66,23 @@ export function ensurePlaneModelMaterials(model: PlaneStudyJobInput, fallbackVal
   };
 }
 
+export function ensureFrameModelMaterials(model: Frame2dJobInput, fallbackValue = "70"): Frame2dJobInput {
+  const materials =
+    model.materials && model.materials.length > 0
+      ? model.materials
+      : [createMaterialDefinition(fallbackValue, 1, { id: "mat-1" })];
+  const defaultMaterialId = materials[0]?.id;
+
+  return {
+    ...model,
+    materials,
+    elements: model.elements.map((element) => ({
+      ...element,
+      material_id: element.material_id ?? defaultMaterialId,
+    })),
+  };
+}
+
 export function addPresetMaterialToTrussModel(model: Truss2dJobInput, activeMaterial: string) {
   return {
     ...model,
@@ -102,6 +120,18 @@ export function addPresetMaterialToPlaneModel(model: PlaneStudyJobInput, activeM
   };
 }
 
+export function addPresetMaterialToFrameModel(model: Frame2dJobInput, activeMaterial: string) {
+  return {
+    ...model,
+    materials: [
+      ...(model.materials ?? []),
+      createMaterialDefinition(activeMaterial, (model.materials?.length ?? 0) + 1, {
+        id: nextMaterialId(model.materials),
+      }),
+    ],
+  };
+}
+
 export function addCustomMaterialToTrussModel(model: Truss2dJobInput) {
   return {
     ...model,
@@ -117,6 +147,13 @@ export function addCustomMaterialToTruss3dModel(model: Truss3dJobInput) {
 }
 
 export function addCustomMaterialToPlaneModel(model: PlaneStudyJobInput) {
+  return {
+    ...model,
+    materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],
+  };
+}
+
+export function addCustomMaterialToFrameModel(model: Frame2dJobInput) {
   return {
     ...model,
     materials: [...(model.materials ?? []), createCustomMaterial((model.materials?.length ?? 0) + 1)],
@@ -184,6 +221,27 @@ export function applyMaterialToPlaneModel(
               material?.poisson_ratio === null || material?.poisson_ratio === undefined
                 ? element.poisson_ratio
                 : material.poisson_ratio,
+          }
+        : element,
+    ),
+  };
+}
+
+export function applyMaterialToFrameModel(
+  model: Frame2dJobInput,
+  materialId: string,
+  mode: "selected" | "all",
+  selectedElement: number | null,
+) {
+  const material = model.materials?.find((entry) => entry.id === materialId);
+  return {
+    ...model,
+    elements: model.elements.map((element, index) =>
+      mode === "all" || index === selectedElement
+        ? {
+            ...element,
+            material_id: materialId,
+            youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
           }
         : element,
     ),
@@ -274,6 +332,27 @@ export function updateMaterialInPlaneModel(
   };
 }
 
+export function updateMaterialInFrameModel(
+  model: Frame2dJobInput,
+  materialId: string,
+  field: "name" | "youngs_modulus" | "poisson_ratio",
+  value: string | number,
+) {
+  const materials = (model.materials ?? []).map((material) =>
+    material.id === materialId ? { ...material, [field]: value } : material,
+  );
+
+  return {
+    ...model,
+    materials,
+    elements: model.elements.map((element) =>
+      element.material_id === materialId && field === "youngs_modulus"
+        ? { ...element, youngs_modulus: Number(value) }
+        : element,
+    ),
+  };
+}
+
 export function deleteMaterialFromTrussModel(model: Truss2dJobInput, materialId: string) {
   const materials = model.materials ?? [];
   if (materials.length <= 1) return model;
@@ -332,6 +411,26 @@ export function deleteMaterialFromPlaneModel(model: PlaneTriangle2dJobInput, mat
               fallback?.poisson_ratio === null || fallback?.poisson_ratio === undefined
                 ? element.poisson_ratio
                 : fallback.poisson_ratio,
+          }
+        : element,
+    ),
+  };
+}
+
+export function deleteMaterialFromFrameModel(model: Frame2dJobInput, materialId: string) {
+  const materials = model.materials ?? [];
+  if (materials.length <= 1) return model;
+  const nextMaterials = materials.filter((material) => material.id !== materialId);
+  const fallback = nextMaterials[0];
+  return {
+    ...model,
+    materials: nextMaterials,
+    elements: model.elements.map((element) =>
+      element.material_id === materialId
+        ? {
+            ...element,
+            material_id: fallback?.id,
+            youngs_modulus: fallback?.youngs_modulus ?? element.youngs_modulus,
           }
         : element,
     ),

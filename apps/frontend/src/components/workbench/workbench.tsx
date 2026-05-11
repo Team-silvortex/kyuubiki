@@ -81,15 +81,19 @@ import {
   buildTruss3dTreeRows,
 } from "@/lib/workbench/view-models";
 import {
+  addCustomMaterialToFrameModel,
   addCustomMaterialToPlaneModel,
+  addPresetMaterialToFrameModel,
   addCustomMaterialToTruss3dModel,
   addCustomMaterialToTrussModel,
+  applyMaterialToFrameModel,
   addPresetMaterialToPlaneModel,
   addPresetMaterialToTruss3dModel,
   addPresetMaterialToTrussModel,
   applyMaterialToPlaneModel,
   applyMaterialToTruss3dModel,
   applyMaterialToTrussModel,
+  deleteMaterialFromFrameModel,
   deleteMaterialFromPlaneModel,
   deleteMaterialFromTruss3dModel,
   deleteMaterialFromTrussModel,
@@ -97,6 +101,7 @@ import {
   ensureTruss3dModelMaterials,
   ensureTrussModelMaterials,
   mergeImportedMaterials,
+  updateMaterialInFrameModel,
   updateMaterialInPlaneModel,
   updateMaterialInTruss3dModel,
   updateMaterialInTrussModel,
@@ -111,6 +116,15 @@ import {
   RESULT_WINDOW_THRESHOLD,
   writeChunkCache,
 } from "@/lib/workbench/result-window";
+import {
+  addFrame2dNode,
+  assignFrame2dElementMaterial,
+  deleteFrame2dElement,
+  deleteFrame2dNode,
+  toggleFrame2dMember,
+  updateFrame2dElement,
+  updateFrame2dNode,
+} from "@/lib/workbench/frame2d-commands";
 import {
   addTruss2dNode,
   assignTruss2dElementMaterial,
@@ -238,6 +252,7 @@ type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
 type FrameStudyJobInput = Frame2dJobInput;
+type FrameResultField = "axial_stress" | "max_bending_stress" | "max_combined_stress" | "moment";
 type StudyPanelTab = "summary" | "controls";
 type ModelPanelTab = "tools" | "tree";
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
@@ -285,6 +300,11 @@ type DisplayTrussElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  axial_stress?: number;
+  max_bending_stress?: number;
+  max_combined_stress?: number;
+  moment_i?: number;
+  moment_j?: number;
   material_id?: string;
 };
 
@@ -1700,6 +1720,11 @@ function buildDisplayFrameElements(
       strain: 0,
       stress: element.max_combined_stress,
       axial_force: Math.max(Math.abs(element.moment_i), Math.abs(element.moment_j)),
+      axial_stress: element.axial_stress,
+      max_bending_stress: element.max_bending_stress,
+      max_combined_stress: element.max_combined_stress,
+      moment_i: element.moment_i,
+      moment_j: element.moment_j,
       material_id: model.elements[element.index]?.material_id,
     }));
   }
@@ -2026,6 +2051,28 @@ function planeResultFieldValue(
   return Math.abs(element.von_mises ?? 0);
 }
 
+function frameResultFieldValue(
+  element: {
+    axial_stress?: number;
+    max_bending_stress?: number;
+    max_combined_stress?: number;
+    moment_i?: number;
+    moment_j?: number;
+  },
+  field: FrameResultField,
+) {
+  if (field === "axial_stress") {
+    return Math.abs(element.axial_stress ?? 0);
+  }
+  if (field === "max_bending_stress") {
+    return Math.abs(element.max_bending_stress ?? 0);
+  }
+  if (field === "moment") {
+    return Math.max(Math.abs(element.moment_i ?? 0), Math.abs(element.moment_j ?? 0));
+  }
+  return Math.abs(element.max_combined_stress ?? 0);
+}
+
 function renderSupportGlyph(
   point: { x: number; y: number },
   constraints: { fix_x: boolean; fix_y: boolean },
@@ -2098,8 +2145,10 @@ export function Workbench() {
   const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
   const [planeResultField, setPlaneResultField] = useState<PlaneResultField>("von_mises");
+  const [frameResultField, setFrameResultField] = useState<FrameResultField>("max_combined_stress");
   const [planeHotspotLimit, setPlaneHotspotLimit] = useState(5);
   const [focusedPlaneElement, setFocusedPlaneElement] = useState<number | null>(null);
+  const [focusedFrameElement, setFocusedFrameElement] = useState<number | null>(null);
   const [result, setResult] = useState<
     AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null
   >(null);
@@ -3309,6 +3358,21 @@ export function Workbench() {
     setMessage(t.resultCsvDownloaded);
   };
 
+  const downloadFrameHotspotSummary = () => {
+    if (!isFrame || frameHotspotElements.length === 0) {
+      setMessage(t.noResultToExport);
+      return;
+    }
+
+    const lines = [
+      ["rank", "id", "field", "value"].join(","),
+      ...frameHotspotElements.map((entry, index) => [index + 1, entry.id, frameResultField, entry.value].join(",")),
+    ];
+
+    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-${frameResultField}-hotspots.csv`, lines.join("\n"));
+    setMessage(t.resultCsvDownloaded);
+  };
+
   const buildProjectBundleJson = async () => {
     if (!selectedProject) {
       throw new Error(t.projectRequired);
@@ -4239,6 +4303,10 @@ export function Workbench() {
     () => Math.max(...planeElements.map((element) => planeResultFieldValue(element, planeResultField)), 0),
     [planeElements, planeResultField],
   );
+  const frameResultFieldMax = useMemo(
+    () => Math.max(...displayTrussElements.map((element) => frameResultFieldValue(element, frameResultField)), 0),
+    [displayTrussElements, frameResultField],
+  );
   const planeResultFieldLabel =
     planeResultField === "principal_stress_1"
       ? t.planeViewPrincipal1
@@ -4251,6 +4319,15 @@ export function Workbench() {
       : planeResultField === "max_in_plane_shear"
         ? `${t.planeViewMaxShear} · ${t.planeResultLegend}`
         : `${t.planeViewVonMises} · ${t.planeResultLegend}`;
+  const frameResultFieldLabel =
+    frameResultField === "axial_stress"
+      ? t.stress
+      : frameResultField === "max_bending_stress"
+        ? t.bendingStress
+        : frameResultField === "moment"
+          ? t.maxMoment
+          : t.combinedStress;
+  const frameLegendText = `${frameResultFieldLabel} · ${t.planeResultLegend}`;
   const planeHotspotElements = useMemo(
     () =>
       planeElements
@@ -4270,6 +4347,25 @@ export function Workbench() {
         })),
     [planeElements, planeResultField, selectedElement, planeHotspotLimit],
   );
+  const frameHotspotElements = useMemo(
+    () =>
+      displayTrussElements
+        .map((element) => ({
+          index: element.index,
+          id: element.id,
+          value: frameResultFieldValue(element, frameResultField),
+          active: selectedElement === element.index,
+        }))
+        .sort((left, right) => right.value - left.value)
+        .slice(0, planeHotspotLimit)
+        .map((element) => ({
+          index: element.index,
+          id: element.id,
+          value: scientific(element.value),
+          active: element.active,
+        })),
+    [displayTrussElements, frameResultField, selectedElement, planeHotspotLimit],
+  );
 
   useEffect(() => {
     if (focusedPlaneElement === null) return;
@@ -4280,6 +4376,16 @@ export function Workbench() {
 
     return () => window.clearTimeout(timeout);
   }, [focusedPlaneElement]);
+
+  useEffect(() => {
+    if (focusedFrameElement === null) return;
+
+    const timeout = window.setTimeout(() => {
+      setFocusedFrameElement(null);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [focusedFrameElement]);
   const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const heartbeatStatusValue = heartbeatStatus(job, t);
   const heartbeatToneValue = heartbeatTone(job);
@@ -4762,8 +4868,13 @@ export function Workbench() {
     [health, t],
   );
   const trussElementColors = useMemo(
-    () => displayTrussElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
-    [displayTrussElements, materialColorMap],
+    () =>
+      displayTrussElements.map((element) =>
+        isFrame && frameResult
+          ? planeStressFill(frameResultFieldValue(element, frameResultField), frameResultFieldMax)
+          : materialColorMap.get(element.material_id ?? "") ?? "#1677a3",
+      ),
+    [displayTrussElements, frameResult, frameResultField, frameResultFieldMax, isFrame, materialColorMap],
   );
   const truss3dElementColors = useMemo(
     () => displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
@@ -5898,6 +6009,33 @@ export function Workbench() {
     setPlaneModel((current) => assignPlaneElementMaterial(current, selectedElement, materialId));
   };
 
+  const updateSelectedFrameNode = (
+    key: keyof Frame2dJobInput["nodes"][number],
+    value: number | boolean,
+  ) => {
+    if (selectedNode === null) return;
+    recordHistory(t.editNodeAction);
+    resetActiveResult(setResult, setJob);
+    setFrameModel((current) => updateFrame2dNode(current, selectedNode, key, value));
+  };
+
+  const updateSelectedFrameElement = (
+    key: keyof Frame2dJobInput["elements"][number],
+    value: number,
+  ) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setFrameModel((current) => updateFrame2dElement(current, selectedElement, key, value));
+  };
+
+  const assignSelectedFrameElementMaterial = (materialId: string) => {
+    if (selectedElement === null) return;
+    recordHistory(t.editMemberAction);
+    resetActiveResult(setResult, setJob);
+    setFrameModel((current) => assignFrame2dElementMaterial(current, selectedElement, materialId));
+  };
+
   const addMaterialToCurrentModel = () => {
     if (studyKind === "axial_bar_1d") return;
     recordHistory(t.editMemberAction);
@@ -5910,6 +6048,11 @@ export function Workbench() {
 
     if (studyKind === "truss_3d") {
       setTruss3dModel((current) => addPresetMaterialToTruss3dModel(current, activeMaterial));
+      return;
+    }
+
+    if (studyKind === "frame_2d") {
+      setFrameModel((current) => addPresetMaterialToFrameModel(current, activeMaterial));
       return;
     }
 
@@ -5931,6 +6074,11 @@ export function Workbench() {
       return;
     }
 
+    if (studyKind === "frame_2d") {
+      setFrameModel((current) => addCustomMaterialToFrameModel(current));
+      return;
+    }
+
     setPlaneModel((current) => addCustomMaterialToPlaneModel(current));
   };
 
@@ -5946,6 +6094,11 @@ export function Workbench() {
 
     if (studyKind === "truss_3d") {
       setTruss3dModel((current) => applyMaterialToTruss3dModel(current, materialId, mode, selectedElement));
+      return;
+    }
+
+    if (studyKind === "frame_2d") {
+      setFrameModel((current) => applyMaterialToFrameModel(current, materialId, mode, selectedElement));
       return;
     }
 
@@ -5974,6 +6127,8 @@ export function Workbench() {
         setTrussModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       } else if (studyKind === "truss_3d") {
         setTruss3dModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
+      } else if (studyKind === "frame_2d") {
+        setFrameModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       } else {
         setPlaneModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       }
@@ -6003,6 +6158,11 @@ export function Workbench() {
       return;
     }
 
+    if (studyKind === "frame_2d") {
+      setFrameModel((current) => updateMaterialInFrameModel(current, materialId, field, value));
+      return;
+    }
+
     setPlaneModel((current) => updateMaterialInPlaneModel(current, materialId, field, value));
   };
 
@@ -6021,10 +6181,28 @@ export function Workbench() {
       return;
     }
 
+    if (studyKind === "frame_2d") {
+      setFrameModel((current) => deleteMaterialFromFrameModel(current, materialId));
+      return;
+    }
+
     setPlaneModel((current) => deleteMaterialFromPlaneModel(current, materialId));
   };
 
   const addNode = (connectToSelected: boolean) => {
+    if (isFrame) {
+      recordHistory(t.addNodeAction);
+      setStudyKind("frame_2d");
+      setSidebarSection("model");
+      resetActiveResult(setResult, setJob);
+      const nextState = addFrame2dNode(frameModel, connectToSelected, selectedNode, round);
+      setFrameModel(nextState.model);
+      setSelectedNode(nextState.nextSelectedNode);
+      setSelectedElement(nextState.nextSelectedElement);
+      setMemberDraftNodes([]);
+      setMessage(nextState.createdBranch ? t.branchCreated : t.nodeCreated);
+      return;
+    }
     recordHistory(t.addNodeAction);
     setStudyKind("truss_2d");
     setSidebarSection("model");
@@ -6055,6 +6233,15 @@ export function Workbench() {
     if (selectedNode === null) return;
     recordHistory(t.deleteNodeAction);
     resetActiveResult(setResult, setJob);
+    if (isFrame) {
+      setFrameModel((current) => deleteFrame2dNode(current, selectedNode));
+      setSelectedNode(null);
+      setSelectedTruss3dNodes([]);
+      setSelectedElement(null);
+      setMemberDraftNodes([]);
+      setMessage(t.nodeDeleted);
+      return;
+    }
     setTrussModel((current) => deleteTruss2dNode(current, selectedNode));
     setSelectedNode(null);
     setSelectedTruss3dNodes([]);
@@ -6162,6 +6349,16 @@ export function Workbench() {
     recordHistory(t.toggleMemberAction);
 
     resetActiveResult(setResult, setJob);
+    if (isFrame) {
+      const nextState = toggleFrame2dMember(frameModel, memberDraftNodes);
+      if (!nextState.valid) return;
+      setFrameModel(nextState.model);
+      setSelectedElement(nextState.removedExisting ? null : nextState.nextSelectedElement);
+      setSelectedTruss3dNodes([]);
+      setMemberDraftNodes([]);
+      setMessage(nextState.removedExisting ? t.memberRemoved : t.memberCreated);
+      return;
+    }
     const nextState = toggleTruss2dMember(trussModel, memberDraftNodes, parametric);
     if (!nextState.valid) return;
     setTrussModel(nextState.model);
@@ -6184,6 +6381,12 @@ export function Workbench() {
     if (selectedElement === null) return;
     recordHistory(t.deleteMemberAction);
     resetActiveResult(setResult, setJob);
+    if (isFrame) {
+      setFrameModel((current) => deleteFrame2dElement(current, selectedElement));
+      setSelectedElement(null);
+      setMessage(t.memberDeleted);
+      return;
+    }
     setTrussModel((current) => deleteTruss2dElement(current, selectedElement));
     setSelectedElement(null);
     setMessage(t.memberDeleted);
@@ -6200,7 +6403,7 @@ export function Workbench() {
   };
 
   const handleTrussPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (draggingNode === null || studyKind !== "truss_2d") return;
+    if (draggingNode === null || (studyKind !== "truss_2d" && studyKind !== "frame_2d")) return;
     if (!dragHistoryCapturedRef.current) {
       recordHistory(t.dragNodeAction);
       dragHistoryCapturedRef.current = true;
@@ -6219,6 +6422,13 @@ export function Workbench() {
       if (!nextPoint) return;
 
       resetActiveResult(setResult, setJob);
+      if (studyKind === "frame_2d") {
+        setFrameModel((current) =>
+          updateFrame2dNode(updateFrame2dNode(current, draggingNode, "x", nextPoint.x), draggingNode, "y", nextPoint.y),
+        );
+        return;
+      }
+
       setTrussModel((current) => ({
         ...current,
         nodes: current.nodes.map((node, index) =>
@@ -6398,6 +6608,7 @@ export function Workbench() {
         canUndo={undoStack.length > 0}
         canRedo={redoStack.length > 0}
         isTruss={isTruss}
+        isFrame={isFrame}
         isTruss3d={isTruss3d}
         truss3dLinkMode={truss3dLinkMode}
         onAddNode={() => {
@@ -6446,7 +6657,7 @@ export function Workbench() {
         }}
       />
 
-      {!isAxial && !isFrame ? (
+      {!isAxial ? (
         <WorkbenchMaterialLibraryCard
           language={language}
           materialLabel={t.material}
@@ -6528,7 +6739,7 @@ export function Workbench() {
   ) : (
     <WorkbenchObjectTree
       title={t.objectTree}
-      countLabel={isTruss ? `${memberDraftNodes.length}/2` : isFrame ? String(frameModel.elements.length) : String(planeModel.elements.length)}
+      countLabel={isTruss || isFrame ? `${memberDraftNodes.length}/2` : String(planeModel.elements.length)}
       hint={isPlane ? t.planeHint : isFrame ? t.frameEditorHint : t.dragHint}
       diagnosticsLabel={t.diagnostics}
       loadCaseLabel={t.loadCase}
@@ -6557,9 +6768,6 @@ export function Workbench() {
         if (isPlane) {
           setSelectedNode(index);
           setSelectedElement(null);
-        } else if (isFrame) {
-          setSelectedNode(index);
-          setSelectedElement(null);
         } else {
           toggleDraftNode(index);
         }
@@ -6567,7 +6775,7 @@ export function Workbench() {
       onSelectElement={(index) => {
         setSelectedElement(index);
         setSelectedNode(null);
-        if (isTruss) setMemberDraftNodes([]);
+        if (isTruss || isFrame) setMemberDraftNodes([]);
       }}
     />
   );
@@ -7492,6 +7700,38 @@ export function Workbench() {
                     </button>
                   </>
                 ) : null}
+                {isFrame && frameResult ? (
+                  <>
+                    <button
+                      className={`ghost-button ghost-button--compact${frameResultField === "axial_stress" ? " ghost-button--active" : ""}`}
+                      onClick={() => setFrameResultField("axial_stress")}
+                      type="button"
+                    >
+                      {t.stress}
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${frameResultField === "max_bending_stress" ? " ghost-button--active" : ""}`}
+                      onClick={() => setFrameResultField("max_bending_stress")}
+                      type="button"
+                    >
+                      {t.bendingStress}
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${frameResultField === "max_combined_stress" ? " ghost-button--active" : ""}`}
+                      onClick={() => setFrameResultField("max_combined_stress")}
+                      type="button"
+                    >
+                      {t.combinedStress}
+                    </button>
+                    <button
+                      className={`ghost-button ghost-button--compact${frameResultField === "moment" ? " ghost-button--active" : ""}`}
+                      onClick={() => setFrameResultField("moment")}
+                      type="button"
+                    >
+                      {t.maxMoment}
+                    </button>
+                  </>
+                ) : null}
                 {resultWindowJumps.map((jump) => (
                   <button
                     key={jump.label}
@@ -7542,6 +7782,7 @@ export function Workbench() {
             title={t.sections.model}
             axialTitle={t.kinds.axial_bar_1d}
             trussTitle={t.kinds[isFrame ? "frame_2d" : "truss_2d"]}
+            trussLegend={isFrame && frameResult ? frameLegendText : undefined}
             truss3dTitle={t.kinds.truss_3d}
             planeTitle={t.kinds[studyKind === "plane_quad_2d" ? "plane_quad_2d" : "plane_triangle_2d"]}
             planeLegend={planeLegendText}
@@ -7554,6 +7795,9 @@ export function Workbench() {
             hiddenTrussMaterialIds={isTruss || isFrame ? hiddenMaterialIds : []}
             trussBounds={trussBounds}
             trussResult={Boolean(trussResult || frameResult)}
+            frameResultField={frameResultField}
+            frameResultFieldMax={frameResultFieldMax}
+            focusedFrameElement={focusedFrameElement}
             trussHotspotNodes={trussStability?.hotspotNodes ?? []}
             trussNodeIssues={trussDiagnostics?.nodeIssues ?? {}}
             selectedNode={selectedNode}
@@ -7568,8 +7812,9 @@ export function Workbench() {
             }}
             onStartTrussNodeDrag={(index) => {
               if (isFrame) {
-                setSelectedNode(index);
-                setSelectedElement(null);
+                dragHistoryCapturedRef.current = false;
+                setDraggingNode(index);
+                toggleDraftNode(index);
                 return;
               }
               dragHistoryCapturedRef.current = false;
@@ -7787,6 +8032,7 @@ export function Workbench() {
         planeElementModulusGpa={selectedPlaneElementData ? round((planeModel.elements[selectedPlaneElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
         planeElementPoissonRatio={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.poisson_ratio ?? 0.33 : 0.33}
         planeElementMaterialId={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
+        frameElementMaterialId={selectedFrameElementData ? frameModel.elements[selectedFrameElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
         materialOptions={materialOptions}
         materialLabel={t.material}
         onUpdateSelectedNode={updateSelectedNode}
@@ -7798,6 +8044,9 @@ export function Workbench() {
         onUpdateSelectedPlaneNode={updateSelectedPlaneNode}
         onUpdateSelectedPlaneElement={updateSelectedPlaneElement}
         onAssignSelectedPlaneElementMaterial={assignSelectedPlaneElementMaterial}
+        onUpdateSelectedFrameNode={updateSelectedFrameNode}
+        onUpdateSelectedFrameElement={updateSelectedFrameElement}
+        onAssignSelectedFrameElementMaterial={assignSelectedFrameElementMaterial}
         trussDiagnostics={trussDiagnostics}
         trussStability={trussStability}
         hotspotNodeLabels={(trussStability?.hotspotNodes ?? []).map((nodeIndex) => trussModel.nodes[nodeIndex]?.id ?? nodeIndex).join(", ")}
@@ -7816,6 +8065,8 @@ export function Workbench() {
         reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isFrame ? scientific(frameResult?.max_moment) : "--"}
         planeHotspotFieldLabel={isPlane ? planeResultFieldLabel : undefined}
         planeHotspotElements={isPlane ? planeHotspotElements : []}
+        frameHotspotFieldLabel={isFrame ? frameResultFieldLabel : undefined}
+        frameHotspotElements={isFrame ? frameHotspotElements : []}
         planeHotspotLimit={planeHotspotLimit}
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}
@@ -7827,11 +8078,18 @@ export function Workbench() {
         onDownloadJson={downloadResultJson}
         onDownloadCsv={downloadResultCsv}
         onDownloadPlaneHotspots={downloadPlaneHotspotSummary}
+        onDownloadFrameHotspots={downloadFrameHotspotSummary}
         onSelectPlaneHotspot={(index) => {
           setSidebarSection("model");
           setSelectedElement(index);
           setSelectedNode(null);
           setFocusedPlaneElement(index);
+        }}
+        onSelectFrameHotspot={(index) => {
+          setSidebarSection("model");
+          setSelectedElement(index);
+          setSelectedNode(null);
+          setFocusedFrameElement(index);
         }}
         onPlaneHotspotLimitChange={setPlaneHotspotLimit}
       />

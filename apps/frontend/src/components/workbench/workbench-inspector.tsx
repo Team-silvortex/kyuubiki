@@ -229,6 +229,7 @@ type WorkbenchInspectorProps = {
   planeElementModulusGpa: number;
   planeElementPoissonRatio: number;
   planeElementMaterialId: string;
+  frameElementMaterialId: string;
   materialOptions: Array<{ id: string; label: string }>;
   materialLabel: string;
   onUpdateSelectedNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y", value: number | boolean) => void;
@@ -240,6 +241,9 @@ type WorkbenchInspectorProps = {
   onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y", value: number | boolean) => void;
   onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio", value: number) => void;
   onAssignSelectedPlaneElementMaterial: (materialId: string) => void;
+  onUpdateSelectedFrameNode: (field: "x" | "y" | "load_x" | "load_y" | "moment_z" | "fix_x" | "fix_y" | "fix_rz", value: number | boolean) => void;
+  onUpdateSelectedFrameElement: (field: "area" | "youngs_modulus" | "moment_of_inertia" | "section_modulus", value: number) => void;
+  onAssignSelectedFrameElementMaterial: (materialId: string) => void;
   trussDiagnostics: TrussDiagnostics | null;
   trussStability: StabilitySummary | null;
   hotspotNodeLabels: string;
@@ -255,6 +259,8 @@ type WorkbenchInspectorProps = {
   reactionValue: string;
   planeHotspotFieldLabel?: string;
   planeHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
+  frameHotspotFieldLabel?: string;
+  frameHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
   planeHotspotLimit: number;
   createdAtValue: string;
   updatedAtValue: string;
@@ -266,7 +272,9 @@ type WorkbenchInspectorProps = {
   onDownloadJson: () => void;
   onDownloadCsv: () => void;
   onDownloadPlaneHotspots: () => void;
+  onDownloadFrameHotspots: () => void;
   onSelectPlaneHotspot: (index: number) => void;
+  onSelectFrameHotspot: (index: number) => void;
   onPlaneHotspotLimitChange: (limit: number) => void;
 };
 
@@ -295,6 +303,7 @@ function WorkbenchInspectorInner({
   planeElementModulusGpa,
   planeElementPoissonRatio,
   planeElementMaterialId,
+  frameElementMaterialId,
   materialOptions,
   materialLabel,
   onUpdateSelectedNode,
@@ -306,6 +315,9 @@ function WorkbenchInspectorInner({
   onUpdateSelectedPlaneNode,
   onUpdateSelectedPlaneElement,
   onAssignSelectedPlaneElementMaterial,
+  onUpdateSelectedFrameNode,
+  onUpdateSelectedFrameElement,
+  onAssignSelectedFrameElementMaterial,
   trussDiagnostics,
   trussStability,
   hotspotNodeLabels,
@@ -321,6 +333,8 @@ function WorkbenchInspectorInner({
   reactionValue,
   planeHotspotFieldLabel,
   planeHotspotElements,
+  frameHotspotFieldLabel,
+  frameHotspotElements,
   planeHotspotLimit,
   createdAtValue,
   updatedAtValue,
@@ -332,7 +346,9 @@ function WorkbenchInspectorInner({
   onDownloadJson,
   onDownloadCsv,
   onDownloadPlaneHotspots,
+  onDownloadFrameHotspots,
   onSelectPlaneHotspot,
+  onSelectFrameHotspot,
   onPlaneHotspotLimitChange,
 }: WorkbenchInspectorProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
@@ -451,26 +467,34 @@ function WorkbenchInspectorInner({
             ) : isFrame && selectedFrameNodeData ? (
               <div className="form-grid compact">
                 <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
-                <label><span>{t.nodeX}</span><input value={selectedFrameNodeData.x} readOnly /></label>
-                <label><span>{t.nodeY}</span><input value={selectedFrameNodeData.y} readOnly /></label>
-                <label><span>{t.loadX}</span><input value={selectedFrameNodeData.load_x} readOnly /></label>
-                <label><span>{t.loadY}</span><input value={selectedFrameNodeData.load_y} readOnly /></label>
-                <label><span>{t.momentZ}</span><input value={selectedFrameNodeData.moment_z} readOnly /></label>
+                <label><span>{t.nodeX}</span><input type="number" step={0.1} value={selectedFrameNodeData.x} onChange={(event) => onUpdateSelectedFrameNode("x", Number(event.target.value))} /></label>
+                <label><span>{t.nodeY}</span><input type="number" step={0.1} value={selectedFrameNodeData.y} onChange={(event) => onUpdateSelectedFrameNode("y", Number(event.target.value))} /></label>
+                <label><span>{t.loadX}</span><input type="number" step={100} value={selectedFrameNodeData.load_x} onChange={(event) => onUpdateSelectedFrameNode("load_x", Number(event.target.value))} /></label>
+                <label><span>{t.loadY}</span><input type="number" step={100} value={selectedFrameNodeData.load_y} onChange={(event) => onUpdateSelectedFrameNode("load_y", Number(event.target.value))} /></label>
+                <label><span>{t.momentZ}</span><input type="number" step={100} value={selectedFrameNodeData.moment_z} onChange={(event) => onUpdateSelectedFrameNode("moment_z", Number(event.target.value))} /></label>
                 <label><span>{t.displacementMagnitude}</span><input value={typeof selectedFrameNodeData.displacement_magnitude === "number" ? selectedFrameNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.rotationZ}</span><input value={typeof selectedFrameNodeData.rz === "number" ? selectedFrameNodeData.rz.toExponential(3) : "--"} readOnly /></label>
-                <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedFrameNodeData.fix_x} readOnly /></label>
-                <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} readOnly /></label>
-                <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedFrameNodeData.fix_x} onChange={(event) => onUpdateSelectedFrameNode("fix_x", event.target.checked)} /></label>
+                <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} onChange={(event) => onUpdateSelectedFrameNode("fix_y", event.target.checked)} /></label>
+                <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} onChange={(event) => onUpdateSelectedFrameNode("fix_rz", event.target.checked)} /></label>
               </div>
             ) : isFrame && selectedFrameElementData ? (
               <div className="form-grid compact">
                 <label><span>{t.memberSelection}</span><input value={selectedFrameElementData.id} readOnly /></label>
                 <label><span>{t.nodeI}</span><input value={selectedFrameElementData.node_i} readOnly /></label>
                 <label><span>{t.nodeJ}</span><input value={selectedFrameElementData.node_j} readOnly /></label>
-                <label><span>{t.area}</span><input value={selectedFrameElementData.area} readOnly /></label>
-                <label><span>{t.modulus}</span><input value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} readOnly /></label>
-                <label><span>{t.momentOfInertia}</span><input value={selectedFrameElementData.moment_of_inertia.toExponential(3)} readOnly /></label>
-                <label><span>{t.sectionModulus}</span><input value={selectedFrameElementData.section_modulus.toExponential(3)} readOnly /></label>
+                <label>
+                  <span>{materialLabel}</span>
+                  <select value={frameElementMaterialId} onChange={(event) => onAssignSelectedFrameElementMaterial(event.target.value)}>
+                    {materialOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label><span>{t.area}</span><input type="number" step={0.0001} value={selectedFrameElementData.area} onChange={(event) => onUpdateSelectedFrameElement("area", Number(event.target.value))} /></label>
+                <label><span>{t.modulus}</span><input type="number" step={0.1} value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} onChange={(event) => onUpdateSelectedFrameElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
+                <label><span>{t.momentOfInertia}</span><input type="number" step={0.000001} value={selectedFrameElementData.moment_of_inertia} onChange={(event) => onUpdateSelectedFrameElement("moment_of_inertia", Number(event.target.value))} /></label>
+                <label><span>{t.sectionModulus}</span><input type="number" step={0.000001} value={selectedFrameElementData.section_modulus} onChange={(event) => onUpdateSelectedFrameElement("section_modulus", Number(event.target.value))} /></label>
                 <label><span>{t.principalStress1}</span><input value={typeof selectedFrameElementData.axial_stress === "number" ? selectedFrameElementData.axial_stress.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.bendingStress}</span><input value={typeof selectedFrameElementData.max_bending_stress === "number" ? selectedFrameElementData.max_bending_stress.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.combinedStress}</span><input value={typeof selectedFrameElementData.max_combined_stress === "number" ? selectedFrameElementData.max_combined_stress.toExponential(3) : "--"} readOnly /></label>
@@ -604,6 +628,46 @@ function WorkbenchInspectorInner({
                       key={entry.id}
                       className={`history-item${entry.active ? " history-item--active" : ""}`}
                       onClick={() => onSelectPlaneHotspot(entry.index)}
+                      type="button"
+                    >
+                      <strong>{entry.id}</strong>
+                      <small>{entry.value}</small>
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <p className="card-copy">--</p>
+              )}
+            </div>
+          ) : isFrame ? (
+            <div className="diagnostic-list">
+              <div className="diagnostic-item">
+                <strong>{t.currentField}: {frameHotspotFieldLabel ?? "--"}</strong>
+              </div>
+              <div className="button-row">
+                <span className="card-copy">{t.topN}</span>
+                {[3, 5, 10].map((limit) => (
+                  <button
+                    key={limit}
+                    className={`ghost-button ghost-button--compact${planeHotspotLimit === limit ? " ghost-button--active" : ""}`}
+                    onClick={() => onPlaneHotspotLimitChange(limit)}
+                    type="button"
+                  >
+                    {limit}
+                  </button>
+                ))}
+                <button className="ghost-button ghost-button--compact" onClick={onDownloadFrameHotspots} type="button">
+                  {t.exportHotspots}
+                </button>
+              </div>
+              {frameHotspotElements.length > 0 ? (
+                <>
+                  <p className="card-copy">{t.frameElements}</p>
+                  {frameHotspotElements.map((entry) => (
+                    <button
+                      key={entry.id}
+                      className={`history-item${entry.active ? " history-item--active" : ""}`}
+                      onClick={() => onSelectFrameHotspot(entry.index)}
                       type="button"
                     >
                       <strong>{entry.id}</strong>
