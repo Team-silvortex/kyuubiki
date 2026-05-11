@@ -707,6 +707,7 @@ const copy = {
     bendingStress: "Max bending stress",
     combinedStress: "Combined stress",
     maxMoment: "Max moment",
+    maxRotation: "Max rotation",
     principalStress1: "Principal stress 1",
     principalStress2: "Principal stress 2",
     maxInPlaneShear: "Max in-plane shear",
@@ -1155,6 +1156,7 @@ const copy = {
     bendingStress: "最大弯曲应力",
     combinedStress: "组合应力",
     maxMoment: "最大弯矩",
+    maxRotation: "最大转角",
     principalStress1: "主应力 1",
     principalStress2: "主应力 2",
     maxInPlaneShear: "最大面内剪应力",
@@ -4376,6 +4378,16 @@ export function Workbench() {
 
     return () => window.clearTimeout(timeout);
   }, [focusedPlaneElement]);
+
+  useEffect(() => {
+    if (focusedFrameElement === null) return;
+
+    const timeout = window.setTimeout(() => {
+      setFocusedFrameElement(null);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [focusedFrameElement]);
 
   useEffect(() => {
     if (focusedFrameElement === null) return;
@@ -7992,6 +8004,7 @@ export function Workbench() {
           spanLabel={t.span}
           stressLabel={isPlane ? `${t.maxStress} / ${t.principalStress1}` : isFrame ? t.combinedStress : t.stress}
           axialForceLabel={isPlane ? t.maxInPlaneShear : isFrame ? t.maxMoment : t.axialForce}
+          isFrame={isFrame}
           elements={(isAxial ? axialElements : isTruss ? displayTrussElements : isTruss3d ? displayTruss3dElements : isFrame ? displayTrussElements : planeElements) as Array<{
             index: number;
             x1?: number;
@@ -8063,6 +8076,7 @@ export function Workbench() {
         tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : isFrame ? scientific(frameResult?.max_displacement) : scientific(planeResult?.max_displacement)}
         maxStressValue={scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : isFrame ? frameResult?.max_stress : planeResult?.max_stress)}
         reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isFrame ? scientific(frameResult?.max_moment) : "--"}
+        frameMaxRotationValue={isFrame ? scientific(frameResult?.max_rotation) : undefined}
         planeHotspotFieldLabel={isPlane ? planeResultFieldLabel : undefined}
         planeHotspotElements={isPlane ? planeHotspotElements : []}
         frameHotspotFieldLabel={isFrame ? frameResultFieldLabel : undefined}

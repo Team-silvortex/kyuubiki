@@ -18,6 +18,8 @@ type ConsoleElement = {
   von_mises?: number;
   principal_stress_1?: number;
   max_in_plane_shear?: number;
+  moment_i?: number;
+  moment_j?: number;
 };
 
 type WorkbenchConsoleProps = {
@@ -40,6 +42,7 @@ type WorkbenchConsoleProps = {
   spanLabel: string;
   stressLabel: string;
   axialForceLabel: string;
+  isFrame?: boolean;
   elements: ConsoleElement[];
 };
 
@@ -71,6 +74,7 @@ function WorkbenchConsoleInner({
   spanLabel,
   stressLabel,
   axialForceLabel,
+  isFrame,
   elements,
 }: WorkbenchConsoleProps) {
   return (
@@ -144,6 +148,8 @@ function WorkbenchConsoleInner({
                   <span>
                     {typeof element.max_in_plane_shear === "number"
                       ? scientific(element.max_in_plane_shear)
+                      : isFrame && (typeof element.moment_i === "number" || typeof element.moment_j === "number")
+                        ? `Mi ${scientific(element.moment_i)} / Mj ${scientific(element.moment_j)}`
                       : scientific(element.axial_force)}
                   </span>
                 </div>

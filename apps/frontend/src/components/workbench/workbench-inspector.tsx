@@ -160,6 +160,7 @@ type InspectorLabels = {
   bendingStress: string;
   combinedStress: string;
   maxMoment: string;
+  maxRotation: string;
   selectionHint: string;
   diagnostics: string;
   stabilityScore: string;
@@ -257,6 +258,7 @@ type WorkbenchInspectorProps = {
   tipDisplacement: string;
   maxStressValue: string;
   reactionValue: string;
+  frameMaxRotationValue?: string;
   planeHotspotFieldLabel?: string;
   planeHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
   frameHotspotFieldLabel?: string;
@@ -331,6 +333,7 @@ function WorkbenchInspectorInner({
   tipDisplacement,
   maxStressValue,
   reactionValue,
+  frameMaxRotationValue,
   planeHotspotFieldLabel,
   planeHotspotElements,
   frameHotspotFieldLabel,
@@ -592,6 +595,7 @@ function WorkbenchInspectorInner({
             <div><span>{t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
             <div><span>{t.maxStress}</span><strong>{maxStressValue}</strong></div>
             <div><span>{t.reaction}</span><strong>{reactionValue}</strong></div>
+            {isFrame ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
             <div><span>{t.createdAt}</span><strong>{createdAtValue}</strong></div>
             <div><span>{t.updatedAt}</span><strong>{updatedAtValue}</strong></div>
             <div><span>{t.lastHeartbeat}</span><strong>{updatedAtValue}</strong></div>
