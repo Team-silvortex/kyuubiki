@@ -303,7 +303,11 @@ type DisplayTrussElement = {
   axial_stress?: number;
   max_bending_stress?: number;
   max_combined_stress?: number;
+  axial_force_i?: number;
+  shear_force_i?: number;
   moment_i?: number;
+  axial_force_j?: number;
+  shear_force_j?: number;
   moment_j?: number;
   material_id?: string;
 };
@@ -702,12 +706,19 @@ const copy = {
     momentZ: "Moment Z",
     rotationZ: "Rotation Z",
     frameElements: "Frame members",
+    memberEndForces: "Member end forces",
     momentOfInertia: "Moment of inertia",
     sectionModulus: "Section modulus",
     bendingStress: "Max bending stress",
     combinedStress: "Combined stress",
     maxMoment: "Max moment",
     maxRotation: "Max rotation",
+    forceI: "Axial @ i",
+    shearI: "Shear @ i",
+    momentI: "Moment @ i",
+    forceJ: "Axial @ j",
+    shearJ: "Shear @ j",
+    momentJ: "Moment @ j",
     principalStress1: "Principal stress 1",
     principalStress2: "Principal stress 2",
     maxInPlaneShear: "Max in-plane shear",
@@ -715,6 +726,7 @@ const copy = {
     planeHotspots: "Top hot elements",
     topN: "Top N",
     exportHotspots: "Export hotspots",
+    memberForceTable: "Member force table",
     planeResultLegend: "Fill: von Mises · Overlay: deformed shape",
     planeViewVonMises: "von Mises",
     planeViewPrincipal1: "Principal 1",
@@ -1151,12 +1163,19 @@ const copy = {
     momentZ: "节点弯矩",
     rotationZ: "转角 Rz",
     frameElements: "刚架杆件",
+    memberEndForces: "杆端内力",
     momentOfInertia: "惯性矩",
     sectionModulus: "截面模量",
     bendingStress: "最大弯曲应力",
     combinedStress: "组合应力",
     maxMoment: "最大弯矩",
     maxRotation: "最大转角",
+    forceI: "i端轴力",
+    shearI: "i端剪力",
+    momentI: "i端弯矩",
+    forceJ: "j端轴力",
+    shearJ: "j端剪力",
+    momentJ: "j端弯矩",
     principalStress1: "主应力 1",
     principalStress2: "主应力 2",
     maxInPlaneShear: "最大面内剪应力",
@@ -1164,6 +1183,7 @@ const copy = {
     planeHotspots: "热点单元",
     topN: "热点数",
     exportHotspots: "导出热点",
+    memberForceTable: "杆端内力表",
     planeResultLegend: "填色：von Mises · 叠加：变形后形状",
     planeViewVonMises: "von Mises",
     planeViewPrincipal1: "主应力 1",
@@ -1725,7 +1745,11 @@ function buildDisplayFrameElements(
       axial_stress: element.axial_stress,
       max_bending_stress: element.max_bending_stress,
       max_combined_stress: element.max_combined_stress,
+      axial_force_i: element.axial_force_i,
+      shear_force_i: element.shear_force_i,
       moment_i: element.moment_i,
+      axial_force_j: element.axial_force_j,
+      shear_force_j: element.shear_force_j,
       moment_j: element.moment_j,
       material_id: model.elements[element.index]?.material_id,
     }));
@@ -3367,8 +3391,8 @@ export function Workbench() {
     }
 
     const lines = [
-      ["rank", "id", "field", "value"].join(","),
-      ...frameHotspotElements.map((entry, index) => [index + 1, entry.id, frameResultField, entry.value].join(",")),
+      ["rank", "id", "field", "value", "end_forces"].join(","),
+      ...frameHotspotElements.map((entry, index) => [index + 1, entry.id, frameResultField, entry.value, `"${entry.summary ?? ""}"`].join(",")),
     ];
 
     downloadTextFile(`${loadedModelName || "kyuubiki-study"}-${frameResultField}-hotspots.csv`, lines.join("\n"));
@@ -4357,6 +4381,7 @@ export function Workbench() {
           id: element.id,
           value: frameResultFieldValue(element, frameResultField),
           active: selectedElement === element.index,
+          summary: `Ai ${scientific(element.axial_force_i)} · Vi ${scientific(element.shear_force_i)} · Mi ${scientific(element.moment_i)} · Aj ${scientific(element.axial_force_j)} · Vj ${scientific(element.shear_force_j)} · Mj ${scientific(element.moment_j)}`,
         }))
         .sort((left, right) => right.value - left.value)
         .slice(0, planeHotspotLimit)
@@ -4365,8 +4390,24 @@ export function Workbench() {
           id: element.id,
           value: scientific(element.value),
           active: element.active,
+          summary: element.summary,
         })),
     [displayTrussElements, frameResultField, selectedElement, planeHotspotLimit],
+  );
+  const frameForceRows = useMemo(
+    () =>
+      displayTrussElements.map((element) => ({
+        id: element.id,
+        index: element.index,
+        active: selectedElement === element.index,
+        axialForceI: scientific(element.axial_force_i),
+        shearForceI: scientific(element.shear_force_i),
+        momentI: scientific(element.moment_i),
+        axialForceJ: scientific(element.axial_force_j),
+        shearForceJ: scientific(element.shear_force_j),
+        momentJ: scientific(element.moment_j),
+      })),
+    [displayTrussElements, selectedElement],
   );
 
   useEffect(() => {
@@ -8081,6 +8122,7 @@ export function Workbench() {
         planeHotspotElements={isPlane ? planeHotspotElements : []}
         frameHotspotFieldLabel={isFrame ? frameResultFieldLabel : undefined}
         frameHotspotElements={isFrame ? frameHotspotElements : []}
+        frameForceRows={isFrame ? frameForceRows : []}
         planeHotspotLimit={planeHotspotLimit}
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}

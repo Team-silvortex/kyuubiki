@@ -1428,6 +1428,11 @@ html[data-theme="graphite"] .guide {
   grid-template-columns: minmax(0, 1fr) repeat(3, minmax(0, 0.75fr));
 }
 
+.table-like__head--frame-forces,
+.table-like__row--frame-forces {
+  grid-template-columns: minmax(88px, 1fr) repeat(6, minmax(0, 0.8fr));
+}
+
 .table-like__head {
   padding: 0 12px 10px;
   color: var(--muted);

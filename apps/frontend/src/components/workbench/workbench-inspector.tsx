@@ -112,7 +112,11 @@ type FrameElementSelection = {
   axial_stress?: number;
   max_bending_stress?: number;
   max_combined_stress?: number;
+  axial_force_i?: number;
+  shear_force_i?: number;
   moment_i?: number;
+  axial_force_j?: number;
+  shear_force_j?: number;
   moment_j?: number;
 };
 
@@ -155,12 +159,19 @@ type InspectorLabels = {
   momentZ: string;
   rotationZ: string;
   frameElements: string;
+  memberEndForces: string;
   momentOfInertia: string;
   sectionModulus: string;
   bendingStress: string;
   combinedStress: string;
   maxMoment: string;
   maxRotation: string;
+  forceI: string;
+  shearI: string;
+  momentI: string;
+  forceJ: string;
+  shearJ: string;
+  momentJ: string;
   selectionHint: string;
   diagnostics: string;
   stabilityScore: string;
@@ -196,6 +207,7 @@ type InspectorLabels = {
   planeHotspots: string;
   topN: string;
   exportHotspots: string;
+  memberForceTable: string;
   createdAt: string;
   updatedAt: string;
   lastHeartbeat: string;
@@ -262,7 +274,18 @@ type WorkbenchInspectorProps = {
   planeHotspotFieldLabel?: string;
   planeHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
   frameHotspotFieldLabel?: string;
-  frameHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
+  frameHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean; summary?: string }>;
+  frameForceRows: Array<{
+    id: string;
+    index: number;
+    active?: boolean;
+    axialForceI: string;
+    shearForceI: string;
+    momentI: string;
+    axialForceJ: string;
+    shearForceJ: string;
+    momentJ: string;
+  }>;
   planeHotspotLimit: number;
   createdAtValue: string;
   updatedAtValue: string;
@@ -338,6 +361,7 @@ function WorkbenchInspectorInner({
   planeHotspotElements,
   frameHotspotFieldLabel,
   frameHotspotElements,
+  frameForceRows,
   planeHotspotLimit,
   createdAtValue,
   updatedAtValue,
@@ -501,6 +525,12 @@ function WorkbenchInspectorInner({
                 <label><span>{t.principalStress1}</span><input value={typeof selectedFrameElementData.axial_stress === "number" ? selectedFrameElementData.axial_stress.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.bendingStress}</span><input value={typeof selectedFrameElementData.max_bending_stress === "number" ? selectedFrameElementData.max_bending_stress.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.combinedStress}</span><input value={typeof selectedFrameElementData.max_combined_stress === "number" ? selectedFrameElementData.max_combined_stress.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.forceI}</span><input value={typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.shearI}</span><input value={typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.momentI}</span><input value={typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.forceJ}</span><input value={typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.shearJ}</span><input value={typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.momentJ}</span><input value={typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.maxMoment}</span><input value={Math.max(Math.abs(selectedFrameElementData.moment_i ?? 0), Math.abs(selectedFrameElementData.moment_j ?? 0)).toExponential(3)} readOnly /></label>
               </div>
             ) : (
@@ -676,12 +706,62 @@ function WorkbenchInspectorInner({
                     >
                       <strong>{entry.id}</strong>
                       <small>{entry.value}</small>
+                      {entry.summary ? <small>{entry.summary}</small> : null}
                     </button>
                   ))}
                 </>
               ) : (
                 <p className="card-copy">--</p>
               )}
+              {selectedFrameElementData ? (
+                <>
+                  <p className="card-copy">{t.memberEndForces}</p>
+                  <div className="metric-grid">
+                    <div><span>{t.forceI}</span><strong>{typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"}</strong></div>
+                    <div><span>{t.shearI}</span><strong>{typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"}</strong></div>
+                    <div><span>{t.momentI}</span><strong>{typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"}</strong></div>
+                    <div><span>{t.forceJ}</span><strong>{typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"}</strong></div>
+                    <div><span>{t.shearJ}</span><strong>{typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"}</strong></div>
+                    <div><span>{t.momentJ}</span><strong>{typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"}</strong></div>
+                  </div>
+                </>
+              ) : null}
+              {frameForceRows.length > 0 ? (
+                <div className="table-like table-like--console">
+                  <h4>{t.memberForceTable}</h4>
+                  <div className="table-like__head table-like__head--frame-forces">
+                    <span>#</span>
+                    <span>{t.forceI}</span>
+                    <span>{t.shearI}</span>
+                    <span>{t.momentI}</span>
+                    <span>{t.forceJ}</span>
+                    <span>{t.shearJ}</span>
+                    <span>{t.momentJ}</span>
+                  </div>
+                  <VirtualList
+                    className="table-like__body"
+                    items={frameForceRows}
+                    itemHeight={46}
+                    maxHeight={240}
+                    itemKey={(entry) => `${entry.id}-${entry.index}`}
+                    renderItem={(entry) => (
+                      <button
+                        className={`table-like__row table-like__row--frame-forces${entry.active ? " history-item--active" : ""}`}
+                        onClick={() => onSelectFrameHotspot(entry.index)}
+                        type="button"
+                      >
+                        <strong>{entry.id}</strong>
+                        <span>{entry.axialForceI}</span>
+                        <span>{entry.shearForceI}</span>
+                        <span>{entry.momentI}</span>
+                        <span>{entry.axialForceJ}</span>
+                        <span>{entry.shearForceJ}</span>
+                        <span>{entry.momentJ}</span>
+                      </button>
+                    )}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>
