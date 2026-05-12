@@ -713,6 +713,8 @@ const copy = {
     combinedStress: "Combined stress",
     maxMoment: "Max moment",
     maxRotation: "Max rotation",
+    sortBy: "Sort by",
+    shearForce: "Shear force",
     forceI: "Axial @ i",
     shearI: "Shear @ i",
     momentI: "Moment @ i",
@@ -727,6 +729,7 @@ const copy = {
     topN: "Top N",
     exportHotspots: "Export hotspots",
     memberForceTable: "Member force table",
+    exportMemberForces: "Export member forces",
     planeResultLegend: "Fill: von Mises · Overlay: deformed shape",
     planeViewVonMises: "von Mises",
     planeViewPrincipal1: "Principal 1",
@@ -1170,6 +1173,8 @@ const copy = {
     combinedStress: "组合应力",
     maxMoment: "最大弯矩",
     maxRotation: "最大转角",
+    sortBy: "排序方式",
+    shearForce: "剪力",
     forceI: "i端轴力",
     shearI: "i端剪力",
     momentI: "i端弯矩",
@@ -1184,6 +1189,7 @@ const copy = {
     topN: "热点数",
     exportHotspots: "导出热点",
     memberForceTable: "杆端内力表",
+    exportMemberForces: "导出杆端内力",
     planeResultLegend: "填色：von Mises · 叠加：变形后形状",
     planeViewVonMises: "von Mises",
     planeViewPrincipal1: "主应力 1",
@@ -3399,6 +3405,33 @@ export function Workbench() {
     setMessage(t.resultCsvDownloaded);
   };
 
+  const downloadFrameForceSummary = () => {
+    if (!isFrame || frameForceRows.length === 0) {
+      setMessage(t.noResultToExport);
+      return;
+    }
+
+    const lines = [
+      ["id", "node_i", "node_j", "axial_force_i", "shear_force_i", "moment_i", "axial_force_j", "shear_force_j", "moment_j"].join(","),
+      ...displayTrussElements.map((element) =>
+        [
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.axial_force_i ?? "",
+          element.shear_force_i ?? "",
+          element.moment_i ?? "",
+          element.axial_force_j ?? "",
+          element.shear_force_j ?? "",
+          element.moment_j ?? "",
+        ].join(","),
+      ),
+    ];
+
+    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-frame-member-forces.csv`, lines.join("\n"));
+    setMessage(t.resultCsvDownloaded);
+  };
+
   const buildProjectBundleJson = async () => {
     if (!selectedProject) {
       throw new Error(t.projectRequired);
@@ -4400,6 +4433,9 @@ export function Workbench() {
         id: element.id,
         index: element.index,
         active: selectedElement === element.index,
+        sortAxial: Math.max(Math.abs(element.axial_force_i ?? 0), Math.abs(element.axial_force_j ?? 0)),
+        sortShear: Math.max(Math.abs(element.shear_force_i ?? 0), Math.abs(element.shear_force_j ?? 0)),
+        sortMoment: Math.max(Math.abs(element.moment_i ?? 0), Math.abs(element.moment_j ?? 0)),
         axialForceI: scientific(element.axial_force_i),
         shearForceI: scientific(element.shear_force_i),
         momentI: scientific(element.moment_i),
@@ -8135,6 +8171,7 @@ export function Workbench() {
         onDownloadCsv={downloadResultCsv}
         onDownloadPlaneHotspots={downloadPlaneHotspotSummary}
         onDownloadFrameHotspots={downloadFrameHotspotSummary}
+        onDownloadFrameForces={downloadFrameForceSummary}
         onSelectPlaneHotspot={(index) => {
           setSidebarSection("model");
           setSelectedElement(index);

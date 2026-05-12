@@ -166,6 +166,8 @@ type InspectorLabels = {
   combinedStress: string;
   maxMoment: string;
   maxRotation: string;
+  sortBy: string;
+  shearForce: string;
   forceI: string;
   shearI: string;
   momentI: string;
@@ -198,6 +200,7 @@ type InspectorLabels = {
   exportCsv: string;
   tipDisp: string;
   maxStress: string;
+  axialForce: string;
   reaction: string;
   displacementMagnitude: string;
   principalStress1: string;
@@ -208,6 +211,7 @@ type InspectorLabels = {
   topN: string;
   exportHotspots: string;
   memberForceTable: string;
+  exportMemberForces: string;
   createdAt: string;
   updatedAt: string;
   lastHeartbeat: string;
@@ -279,6 +283,9 @@ type WorkbenchInspectorProps = {
     id: string;
     index: number;
     active?: boolean;
+    sortAxial: number;
+    sortShear: number;
+    sortMoment: number;
     axialForceI: string;
     shearForceI: string;
     momentI: string;
@@ -298,12 +305,14 @@ type WorkbenchInspectorProps = {
   onDownloadCsv: () => void;
   onDownloadPlaneHotspots: () => void;
   onDownloadFrameHotspots: () => void;
+  onDownloadFrameForces: () => void;
   onSelectPlaneHotspot: (index: number) => void;
   onSelectFrameHotspot: (index: number) => void;
   onPlaneHotspotLimitChange: (limit: number) => void;
 };
 
 type InspectorTab = "properties" | "diagnostics" | "history" | "report";
+type FrameForceSort = "index" | "axial" | "shear" | "moment";
 
 function WorkbenchInspectorInner({
   t,
@@ -374,11 +383,13 @@ function WorkbenchInspectorInner({
   onDownloadCsv,
   onDownloadPlaneHotspots,
   onDownloadFrameHotspots,
+  onDownloadFrameForces,
   onSelectPlaneHotspot,
   onSelectFrameHotspot,
   onPlaneHotspotLimitChange,
 }: WorkbenchInspectorProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
+  const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
@@ -387,6 +398,14 @@ function WorkbenchInspectorInner({
     ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
     ...redoStack.slice(-2).reverse().map((entry) => ({ key: `redo-${entry.label}`, label: entry.label, kind: t.redo })),
   ];
+  const sortedFrameForceRows =
+    frameForceSort === "axial"
+      ? [...frameForceRows].sort((left, right) => right.sortAxial - left.sortAxial)
+      : frameForceSort === "shear"
+        ? [...frameForceRows].sort((left, right) => right.sortShear - left.sortShear)
+        : frameForceSort === "moment"
+          ? [...frameForceRows].sort((left, right) => right.sortMoment - left.sortMoment)
+          : frameForceRows;
 
   return (
     <aside className="workspace-inspector panel">
@@ -729,6 +748,14 @@ function WorkbenchInspectorInner({
               {frameForceRows.length > 0 ? (
                 <div className="table-like table-like--console">
                   <h4>{t.memberForceTable}</h4>
+                  <div className="button-row">
+                    <span className="card-copy">{t.sortBy}</span>
+                    <button className={`ghost-button ghost-button--compact${frameForceSort === "index" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("index")} type="button">#</button>
+                    <button className={`ghost-button ghost-button--compact${frameForceSort === "axial" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("axial")} type="button">{t.axialForce}</button>
+                    <button className={`ghost-button ghost-button--compact${frameForceSort === "shear" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("shear")} type="button">{t.shearForce}</button>
+                    <button className={`ghost-button ghost-button--compact${frameForceSort === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("moment")} type="button">{t.maxMoment}</button>
+                    <button className="ghost-button ghost-button--compact" onClick={onDownloadFrameForces} type="button">{t.exportMemberForces}</button>
+                  </div>
                   <div className="table-like__head table-like__head--frame-forces">
                     <span>#</span>
                     <span>{t.forceI}</span>
@@ -740,7 +767,7 @@ function WorkbenchInspectorInner({
                   </div>
                   <VirtualList
                     className="table-like__body"
-                    items={frameForceRows}
+                    items={sortedFrameForceRows}
                     itemHeight={46}
                     maxHeight={240}
                     itemKey={(entry) => `${entry.id}-${entry.index}`}
