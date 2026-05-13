@@ -14,9 +14,11 @@ ENV_FILE="$ROOT_DIR/.env.local"
 ORCHESTRATOR_LOG="$RUN_DIR/orchestrator.log"
 FRONTEND_LOG="$RUN_DIR/frontend.log"
 AGENT_LOG="$RUN_DIR/agent.log"
+HOT_RUN_DIR="$RUN_DIR/hot"
 ORCHESTRATOR_SCREEN="kyuubiki_orchestrator"
 FRONTEND_SCREEN="kyuubiki_frontend"
 AGENT_SCREEN_PREFIX="kyuubiki_agent"
+HOT_STACK_SCREEN="kyuubiki_hot_stack"
 
 load_env_file() {
   if [[ -f "$ENV_FILE" ]]; then
@@ -77,6 +79,19 @@ Commands:
   installer-gui-build Build the Tauri installer GUI bundles
   workbench-gui-dev Run the Tauri desktop workbench shell in development mode
   workbench-gui-build Build the Tauri desktop workbench shell bundles
+  hot-local         Run the local full-stack dev loop with hot reload/watch
+  hot-cloud         Run the cloud/postgres full-stack dev loop with hot reload/watch
+  hot-distributed   Run the distributed control-plane dev loop with hot reload/watch
+  hot-web           Run the Elixir control plane with restart-on-change
+  hot-agent         Run the Rust solver agent with restart-on-change
+  hot-hub-gui       Run the Hub Tauri shell in dev/HMR mode
+  hot-installer-gui Run the installer Tauri shell in dev/HMR mode
+  hot-workbench-gui Run the workbench Tauri shell in dev/HMR mode
+  hot-start-local   Start the local full-stack hot-reload loop in the background
+  hot-start-cloud   Start the cloud/postgres hot-reload loop in the background
+  hot-start-distributed Start the distributed control-plane hot-reload loop in the background
+  hot-stop          Stop the managed hot-reload background loop
+  hot-status        Show the managed hot-reload background status
   test              Run all tests
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
@@ -122,6 +137,14 @@ Examples:
   ./scripts/kyuubiki desktop-build-host
   ./scripts/kyuubiki desktop-release
   ./scripts/kyuubiki desktop-verify all
+  ./scripts/kyuubiki hot-local
+  ./scripts/kyuubiki hot-cloud
+  ./scripts/kyuubiki hot-distributed
+  ./scripts/kyuubiki hot-web
+  ./scripts/kyuubiki hot-agent 5001
+  ./scripts/kyuubiki hot-hub-gui
+  ./scripts/kyuubiki hot-start-local
+  ./scripts/kyuubiki hot-status
   ./scripts/kyuubiki start-local
   ./scripts/kyuubiki start-cloud
   ./scripts/kyuubiki start-distributed
@@ -222,6 +245,10 @@ require_dir() {
 
 ensure_run_dir() {
   mkdir -p "$RUN_DIR"
+}
+
+ensure_hot_run_dir() {
+  mkdir -p "$HOT_RUN_DIR"
 }
 
 require_screen() {
@@ -414,6 +441,61 @@ run_frontend() {
     cd "$FRONTEND_DIR"
     echo "serving Next.js workbench at http://127.0.0.1:${port}"
     npm run dev
+  )
+}
+
+run_hot_stack() {
+  local mode="${1:-local}"
+  require_dir "$ROOT_DIR"
+  (
+    cd "$ROOT_DIR"
+    eval "$(storage_mode_exports "$mode") $(deployment_mode_exports "$mode")" \
+      KYUUBIKI_AGENT_ENDPOINTS="$(agent_endpoints_value)" \
+      node ./scripts/hot-dev.mjs stack --mode "$mode" --orchestrator-port 4000 --frontend-port 3000 --agent-endpoints "$(agent_endpoints_value)"
+  )
+}
+
+run_hot_web() {
+  local mode="${1:-local}"
+  require_dir "$ROOT_DIR"
+  (
+    cd "$ROOT_DIR"
+    eval "$(storage_mode_exports "$mode") $(deployment_mode_exports "$mode")" \
+      KYUUBIKI_AGENT_ENDPOINTS="$(agent_endpoints_value)" \
+      node ./scripts/hot-dev.mjs web --mode "$mode" --port 4000
+  )
+}
+
+run_hot_agent() {
+  local port="${1:-5001}"
+  require_dir "$ROOT_DIR"
+  (
+    cd "$ROOT_DIR"
+    node ./scripts/hot-dev.mjs agent --port "$port"
+  )
+}
+
+run_hot_hub_gui() {
+  require_dir "$ROOT_DIR"
+  (
+    cd "$ROOT_DIR"
+    node ./scripts/hot-dev.mjs hub-gui
+  )
+}
+
+run_hot_installer_gui() {
+  require_dir "$ROOT_DIR"
+  (
+    cd "$ROOT_DIR"
+    node ./scripts/hot-dev.mjs installer-gui
+  )
+}
+
+run_hot_workbench_gui() {
+  require_dir "$ROOT_DIR"
+  (
+    cd "$ROOT_DIR"
+    node ./scripts/hot-dev.mjs workbench-gui
   )
 }
 
@@ -939,6 +1021,85 @@ start_frontend_background() {
   echo "log: $FRONTEND_LOG"
 }
 
+hot_screen_running() {
+  screen -ls 2>/dev/null | grep -q "[[:space:]]${HOT_STACK_SCREEN}[[:space:]]"
+}
+
+hot_mode_label() {
+  local mode="${1:-local}"
+  case "$mode" in
+    cloud) echo "cloud" ;;
+    distributed) echo "distributed" ;;
+    *) echo "local" ;;
+  esac
+}
+
+start_hot_stack_background() {
+  local mode="${1:-local}"
+  ensure_run_dir
+  ensure_hot_run_dir
+  require_screen
+
+  if hot_screen_running; then
+    echo "managed hot-reload loop already running in screen session ${HOT_STACK_SCREEN}"
+    return 0
+  fi
+
+  screen -S "$HOT_STACK_SCREEN" -X quit >/dev/null 2>&1 || true
+  screen -dmS "$HOT_STACK_SCREEN" zsh -lc "cd \"$ROOT_DIR\" && $(storage_mode_exports "$mode") $(deployment_mode_exports "$mode") KYUUBIKI_AGENT_ENDPOINTS=\"$(agent_endpoints_value)\" KYUUBIKI_HOT_LOG_DIR=\"$HOT_RUN_DIR\" node ./scripts/hot-dev.mjs stack --mode \"$mode\" --orchestrator-port 4000 --frontend-port 3000 --agent-endpoints \"$(agent_endpoints_value)\" >> \"$HOT_RUN_DIR/stack.console.log\" 2>&1"
+
+  echo "started managed hot-reload loop (${mode}) in screen session ${HOT_STACK_SCREEN}"
+  echo "logs: $HOT_RUN_DIR"
+}
+
+stop_hot_stack_background() {
+  require_screen
+
+  if hot_screen_running; then
+    screen -S "$HOT_STACK_SCREEN" -X quit >/dev/null 2>&1 || true
+    echo "stopped managed hot-reload loop"
+  else
+    echo "managed hot-reload loop is not running"
+  fi
+}
+
+show_hot_status() {
+  local agent_ports=("${(@s:,:)$(agent_endpoints_value)}")
+  local agent_port_spec agent_port agent_pid
+
+  if hot_screen_running; then
+    echo "hot-loop: running (${HOT_STACK_SCREEN})"
+  else
+    echo "hot-loop: stopped"
+  fi
+
+  if port_in_use 4000; then
+    echo "hot-web: listening on http://127.0.0.1:4000 (pid $(pid_on_port 4000))"
+  else
+    echo "hot-web: stopped"
+  fi
+
+  if port_in_use 3000; then
+    echo "hot-frontend: listening on http://127.0.0.1:3000 (pid $(pid_on_port 3000))"
+  else
+    echo "hot-frontend: stopped"
+  fi
+
+  for agent_port_spec in "${agent_ports[@]}"; do
+    agent_port="${agent_port_spec##*:}"
+    agent_pid="$(pid_on_port "$agent_port")"
+    if [[ -n "${agent_pid:-}" ]]; then
+      echo "hot-agent[$agent_port]: listening on tcp://127.0.0.1:${agent_port} (pid $agent_pid)"
+    else
+      echo "hot-agent[$agent_port]: stopped"
+    fi
+  done
+
+  if [[ -d "$HOT_RUN_DIR" ]]; then
+    echo "hot-logs: $HOT_RUN_DIR"
+  fi
+}
+
 stop_services() {
   local agent_ports=("${(@s:,:)$(agent_endpoints_value)}")
   local agent_port_spec
@@ -1070,6 +1231,45 @@ case "$command" in
     ;;
   hub-gui-build)
     run_hub_gui_build "${1:-$(host_platform)}"
+    ;;
+  hot-local)
+    run_hot_stack local
+    ;;
+  hot-cloud)
+    run_hot_stack cloud
+    ;;
+  hot-distributed)
+    run_hot_stack distributed
+    ;;
+  hot-web)
+    run_hot_web "${1:-local}"
+    ;;
+  hot-agent)
+    run_hot_agent "${1:-5001}"
+    ;;
+  hot-hub-gui)
+    run_hot_hub_gui
+    ;;
+  hot-installer-gui)
+    run_hot_installer_gui
+    ;;
+  hot-workbench-gui)
+    run_hot_workbench_gui
+    ;;
+  hot-start-local)
+    start_hot_stack_background local
+    ;;
+  hot-start-cloud)
+    start_hot_stack_background cloud
+    ;;
+  hot-start-distributed)
+    start_hot_stack_background distributed
+    ;;
+  hot-stop)
+    stop_hot_stack_background
+    ;;
+  hot-status)
+    show_hot_status
     ;;
   installer-gui-dev)
     run_installer_gui_dev

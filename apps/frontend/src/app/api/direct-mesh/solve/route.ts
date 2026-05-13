@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 
 import {
   resolveAxialBarJobInput,
+  resolveBeam1dJobInput,
   resolveFrame2dJobInput,
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
   type AxialBarJobInput,
+  type Beam1dJobInput,
   type Frame2dJobInput,
   type PlaneQuad2dJobInput,
   type PlaneTriangle2dJobInput,
@@ -25,6 +27,7 @@ type DirectMeshSolveBody = {
   selection_mode?: "first_reachable" | "healthiest";
   study_kind:
     | "axial_bar_1d"
+    | "beam_1d"
     | "truss_2d"
     | "truss_3d"
     | "plane_triangle_2d"
@@ -37,6 +40,8 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
   switch (kind) {
     case "axial_bar_1d":
       return "solve_bar_1d" as const;
+    case "beam_1d":
+      return "solve_beam_1d" as const;
     case "truss_2d":
       return "solve_truss_2d" as const;
     case "truss_3d":
@@ -57,6 +62,8 @@ function normalizeInputForStudyKind(
   switch (kind) {
     case "axial_bar_1d":
       return resolveAxialBarJobInput(input as AxialBarJobInput);
+    case "beam_1d":
+      return resolveBeam1dJobInput(input as Beam1dJobInput);
     case "truss_2d":
       return resolveTruss2dJobInput(input as Truss2dJobInput);
     case "truss_3d":

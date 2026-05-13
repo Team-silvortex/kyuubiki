@@ -255,7 +255,7 @@ export function buildStudyControlsRows({
     frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  studyKind: "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;
@@ -293,6 +293,15 @@ export function buildStudyControlsRows({
     return [
       { label: labels.nodes, value: trussNodeCount },
       { label: labels.frameElements, value: trussElementCount },
+      { label: labels.material, value: materialLabel },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "beam_1d") {
+    return [
+      { label: labels.nodes, value: planeNodeCount },
+      { label: labels.frameElements, value: planeElementCount },
       { label: labels.material, value: materialLabel },
       { label: labels.sourceModel, value: loadedModelName },
     ];

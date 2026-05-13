@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -201,6 +201,8 @@ type InspectorLabels = {
   tipDisp: string;
   maxStress: string;
   axialForce: string;
+  maxAxialForce: string;
+  maxShearForce: string;
   reaction: string;
   displacementMagnitude: string;
   principalStress1: string;
@@ -273,6 +275,8 @@ type WorkbenchInspectorProps = {
   nodeCount: number;
   tipDisplacement: string;
   maxStressValue: string;
+  frameMaxAxialForceValue?: string;
+  frameMaxShearForceValue?: string;
   reactionValue: string;
   frameMaxRotationValue?: string;
   planeHotspotFieldLabel?: string;
@@ -364,6 +368,8 @@ function WorkbenchInspectorInner({
   nodeCount,
   tipDisplacement,
   maxStressValue,
+  frameMaxAxialForceValue,
+  frameMaxShearForceValue,
   reactionValue,
   frameMaxRotationValue,
   planeHotspotFieldLabel,
@@ -393,6 +399,7 @@ function WorkbenchInspectorInner({
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
+  const isBeam = studyKind === "beam_1d";
   const isFrame = studyKind === "frame_2d";
   const historyRows = [
     ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
@@ -510,6 +517,18 @@ function WorkbenchInspectorInner({
                 <label><span>{t.principalStress2}</span><input value={typeof selectedPlaneElementData.principal_stress_2 === "number" ? selectedPlaneElementData.principal_stress_2.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.maxInPlaneShear}</span><input value={typeof selectedPlaneElementData.max_in_plane_shear === "number" ? selectedPlaneElementData.max_in_plane_shear.toExponential(3) : "--"} readOnly /></label>
               </div>
+            ) : isBeam && selectedFrameNodeData ? (
+              <div className="form-grid compact">
+                <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
+                <label><span>{t.nodeX}</span><input value={selectedFrameNodeData.x} readOnly /></label>
+                <label><span>{t.nodeY}</span><input value={selectedFrameNodeData.y} readOnly /></label>
+                <label><span>{t.loadY}</span><input value={selectedFrameNodeData.load_y} readOnly /></label>
+                <label><span>{t.momentZ}</span><input value={selectedFrameNodeData.moment_z} readOnly /></label>
+                <label><span>{t.displacementMagnitude}</span><input value={typeof selectedFrameNodeData.displacement_magnitude === "number" ? selectedFrameNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.rotationZ}</span><input value={typeof selectedFrameNodeData.rz === "number" ? selectedFrameNodeData.rz.toExponential(3) : "--"} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} readOnly /></label>
+              </div>
             ) : isFrame && selectedFrameNodeData ? (
               <div className="form-grid compact">
                 <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
@@ -523,6 +542,21 @@ function WorkbenchInspectorInner({
                 <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedFrameNodeData.fix_x} onChange={(event) => onUpdateSelectedFrameNode("fix_x", event.target.checked)} /></label>
                 <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} onChange={(event) => onUpdateSelectedFrameNode("fix_y", event.target.checked)} /></label>
                 <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} onChange={(event) => onUpdateSelectedFrameNode("fix_rz", event.target.checked)} /></label>
+              </div>
+            ) : isBeam && selectedFrameElementData ? (
+              <div className="form-grid compact">
+                <label><span>{t.memberSelection}</span><input value={selectedFrameElementData.id} readOnly /></label>
+                <label><span>{t.nodeI}</span><input value={selectedFrameElementData.node_i} readOnly /></label>
+                <label><span>{t.nodeJ}</span><input value={selectedFrameElementData.node_j} readOnly /></label>
+                <label><span>{t.modulus}</span><input value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} readOnly /></label>
+                <label><span>{t.momentOfInertia}</span><input value={selectedFrameElementData.moment_of_inertia} readOnly /></label>
+                <label><span>{t.sectionModulus}</span><input value={selectedFrameElementData.section_modulus} readOnly /></label>
+                <label><span>{t.bendingStress}</span><input value={typeof selectedFrameElementData.max_bending_stress === "number" ? selectedFrameElementData.max_bending_stress.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.shearI}</span><input value={typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.momentI}</span><input value={typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.shearJ}</span><input value={typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.momentJ}</span><input value={typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.maxMoment}</span><input value={Math.max(Math.abs(selectedFrameElementData.moment_i ?? 0), Math.abs(selectedFrameElementData.moment_j ?? 0)).toExponential(3)} readOnly /></label>
               </div>
             ) : isFrame && selectedFrameElementData ? (
               <div className="form-grid compact">
@@ -643,8 +677,10 @@ function WorkbenchInspectorInner({
           <div className="metric-grid">
             <div><span>{t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
             <div><span>{t.maxStress}</span><strong>{maxStressValue}</strong></div>
+            {isFrame ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
+            {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
             <div><span>{t.reaction}</span><strong>{reactionValue}</strong></div>
-            {isFrame ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
+            {(isFrame || isBeam) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
             <div><span>{t.createdAt}</span><strong>{createdAtValue}</strong></div>
             <div><span>{t.updatedAt}</span><strong>{updatedAtValue}</strong></div>
             <div><span>{t.lastHeartbeat}</span><strong>{updatedAtValue}</strong></div>
@@ -692,7 +728,7 @@ function WorkbenchInspectorInner({
                 <p className="card-copy">--</p>
               )}
             </div>
-          ) : isFrame ? (
+          ) : isFrame || isBeam ? (
             <div className="diagnostic-list">
               <div className="diagnostic-item">
                 <strong>{t.currentField}: {frameHotspotFieldLabel ?? "--"}</strong>
@@ -736,10 +772,10 @@ function WorkbenchInspectorInner({
                 <>
                   <p className="card-copy">{t.memberEndForces}</p>
                   <div className="metric-grid">
-                    <div><span>{t.forceI}</span><strong>{typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"}</strong></div>
+                    {!isBeam ? <div><span>{t.forceI}</span><strong>{typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"}</strong></div> : null}
                     <div><span>{t.shearI}</span><strong>{typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"}</strong></div>
                     <div><span>{t.momentI}</span><strong>{typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"}</strong></div>
-                    <div><span>{t.forceJ}</span><strong>{typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"}</strong></div>
+                    {!isBeam ? <div><span>{t.forceJ}</span><strong>{typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"}</strong></div> : null}
                     <div><span>{t.shearJ}</span><strong>{typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"}</strong></div>
                     <div><span>{t.momentJ}</span><strong>{typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"}</strong></div>
                   </div>
@@ -751,17 +787,17 @@ function WorkbenchInspectorInner({
                   <div className="button-row">
                     <span className="card-copy">{t.sortBy}</span>
                     <button className={`ghost-button ghost-button--compact${frameForceSort === "index" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("index")} type="button">#</button>
-                    <button className={`ghost-button ghost-button--compact${frameForceSort === "axial" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("axial")} type="button">{t.axialForce}</button>
+                    {!isBeam ? <button className={`ghost-button ghost-button--compact${frameForceSort === "axial" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("axial")} type="button">{t.axialForce}</button> : null}
                     <button className={`ghost-button ghost-button--compact${frameForceSort === "shear" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("shear")} type="button">{t.shearForce}</button>
                     <button className={`ghost-button ghost-button--compact${frameForceSort === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("moment")} type="button">{t.maxMoment}</button>
                     <button className="ghost-button ghost-button--compact" onClick={onDownloadFrameForces} type="button">{t.exportMemberForces}</button>
                   </div>
                   <div className="table-like__head table-like__head--frame-forces">
                     <span>#</span>
-                    <span>{t.forceI}</span>
+                    {!isBeam ? <span>{t.forceI}</span> : null}
                     <span>{t.shearI}</span>
                     <span>{t.momentI}</span>
-                    <span>{t.forceJ}</span>
+                    {!isBeam ? <span>{t.forceJ}</span> : null}
                     <span>{t.shearJ}</span>
                     <span>{t.momentJ}</span>
                   </div>
@@ -778,10 +814,10 @@ function WorkbenchInspectorInner({
                         type="button"
                       >
                         <strong>{entry.id}</strong>
-                        <span>{entry.axialForceI}</span>
+                        {!isBeam ? <span>{entry.axialForceI}</span> : null}
                         <span>{entry.shearForceI}</span>
                         <span>{entry.momentI}</span>
-                        <span>{entry.axialForceJ}</span>
+                        {!isBeam ? <span>{entry.axialForceJ}</span> : null}
                         <span>{entry.shearForceJ}</span>
                         <span>{entry.momentJ}</span>
                       </button>

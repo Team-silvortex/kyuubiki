@@ -106,6 +106,32 @@ pub struct SolveBarRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Beam1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_y: bool,
+    pub fix_rz: bool,
+    pub load_y: f64,
+    pub moment_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Beam1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub youngs_modulus: f64,
+    pub moment_of_inertia: f64,
+    pub section_modulus: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBeam1dRequest {
+    pub nodes: Vec<Beam1dNodeInput>,
+    pub elements: Vec<Beam1dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeResult {
     pub index: usize,
     pub x: f64,
@@ -130,6 +156,41 @@ pub struct SolveBarResult {
     pub tip_displacement: f64,
     pub reaction_force: f64,
     pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Beam1dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub uy: f64,
+    pub rz: f64,
+    pub displacement_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Beam1dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub shear_force_i: f64,
+    pub moment_i: f64,
+    pub shear_force_j: f64,
+    pub moment_j: f64,
+    pub max_bending_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveBeam1dResult {
+    pub input: SolveBeam1dRequest,
+    pub nodes: Vec<Beam1dNodeResult>,
+    pub elements: Vec<Beam1dElementResult>,
+    pub max_displacement: f64,
+    pub max_rotation: f64,
+    pub max_moment: f64,
     pub max_stress: f64,
 }
 
@@ -193,6 +254,8 @@ pub enum RpcMethod {
     DescribeAgent,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
+    #[serde(rename = "solve_beam_1d")]
+    SolveBeam1d,
     #[serde(rename = "solve_truss_2d")]
     SolveTruss2d,
     #[serde(rename = "solve_truss_3d")]
@@ -306,6 +369,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::Ping,
                 RpcMethod::DescribeAgent,
                 RpcMethod::SolveBar1d,
+                RpcMethod::SolveBeam1d,
                 RpcMethod::SolveTruss2d,
                 RpcMethod::SolveTruss3d,
                 RpcMethod::SolvePlaneTriangle2d,
@@ -329,6 +393,17 @@ impl AgentDescriptor {
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveBar1d],
                     tags: vec!["bar".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "beam-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveBeam1d],
+                    tags: vec![
+                        "beam".to_string(),
+                        "bending".to_string(),
+                        "line".to_string(),
+                        "cpu".to_string(),
+                    ],
                 },
                 CapabilityDescriptor {
                     id: "truss-2d".to_string(),
@@ -708,6 +783,7 @@ pub struct SolveFrame2dResult {
 #[serde(untagged)]
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
+    Beam1d(SolveBeam1dResult),
     Truss2d(SolveTruss2dResult),
     Truss3d(SolveTruss3dResult),
     PlaneTriangle2d(SolvePlaneTriangle2dResult),
@@ -742,10 +818,11 @@ pub struct ResultChunkResponse {
 #[cfg(test)]
 mod tests {
     use super::{
-        AgentDescriptor, Frame2dElementInput, Frame2dNodeInput, Job, JobStatus,
-        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
-        RpcResponse, SolveBarRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
-        SolvePlaneTriangle2dRequest, SolveTruss3dRequest,
+        AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput,
+        Frame2dNodeInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION,
+        RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
+        SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+        SolveTruss3dRequest,
     };
 
     #[test]
@@ -893,6 +970,50 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveFrame2d);
         assert_eq!(decoded.id, "rpc-frame-2d");
+    }
+
+    #[test]
+    fn serializes_beam_1d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-beam-1d".to_string(),
+            method: RpcMethod::SolveBeam1d,
+            params: serde_json::to_value(SolveBeam1dRequest {
+                nodes: vec![
+                    Beam1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_y: true,
+                        fix_rz: true,
+                        load_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                    Beam1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 2.0,
+                        fix_y: false,
+                        fix_rz: false,
+                        load_y: -1000.0,
+                        moment_z: 0.0,
+                    },
+                ],
+                elements: vec![Beam1dElementInput {
+                    id: "b0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    youngs_modulus: 210.0e9,
+                    moment_of_inertia: 8.0e-6,
+                    section_modulus: 1.6e-4,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveBeam1d);
+        assert_eq!(decoded.id, "rpc-beam-1d");
     }
 
     #[test]

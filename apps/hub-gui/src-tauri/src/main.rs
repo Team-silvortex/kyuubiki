@@ -4,9 +4,16 @@ use std::process::Command;
 use std::process::Stdio;
 
 use kyuubiki_desktop_runtime::{
-    read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
-    service_start as desktop_service_start, service_status as desktop_service_status,
-    service_stop as desktop_service_stop, ServiceMode,
+    hot_service_start as desktop_hot_service_start,
+    hot_service_status as desktop_hot_service_status,
+    hot_service_stop as desktop_hot_service_stop,
+    read_runtime_log as read_shared_runtime_log,
+    service_restart as desktop_service_restart,
+    service_start as desktop_service_start,
+    service_status as desktop_service_status,
+    service_stop as desktop_service_stop,
+    HotServiceMode,
+    ServiceMode,
 };
 use kyuubiki_installer::{
     doctor_report as build_doctor_report, parse_platform, stage_release, validate_env_file, Platform,
@@ -79,6 +86,14 @@ fn resolve_service_mode(mode: Option<&str>) -> ServiceMode {
         Some("distributed") => ServiceMode::Distributed,
         Some("default") => ServiceMode::Default,
         _ => ServiceMode::Local,
+    }
+}
+
+fn resolve_hot_service_mode(mode: Option<&str>) -> HotServiceMode {
+    match mode {
+        Some("cloud") => HotServiceMode::Cloud,
+        Some("distributed") => HotServiceMode::Distributed,
+        _ => HotServiceMode::Local,
     }
 }
 
@@ -648,6 +663,23 @@ fn service_stop() -> Result<String, String> {
 }
 
 #[tauri::command]
+fn hot_service_status() -> Result<ServiceStatusPayload, String> {
+    Ok(ServiceStatusPayload {
+        rendered: desktop_hot_service_status()?,
+    })
+}
+
+#[tauri::command]
+fn hot_service_start(payload: ServicePayload) -> Result<String, String> {
+    desktop_hot_service_start(resolve_hot_service_mode(payload.mode.as_deref()))
+}
+
+#[tauri::command]
+fn hot_service_stop() -> Result<String, String> {
+    desktop_hot_service_stop()
+}
+
+#[tauri::command]
 fn read_runtime_log(payload: LogPayload) -> Result<RuntimeLogPayload, String> {
     Ok(RuntimeLogPayload {
         service: payload.service.clone(),
@@ -762,6 +794,9 @@ fn main() {
             service_start,
             service_restart,
             service_stop,
+            hot_service_status,
+            hot_service_start,
+            hot_service_stop,
             read_runtime_log,
             doctor_report,
             validate_env,

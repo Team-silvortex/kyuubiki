@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  kind: "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   href: string;
   summary: string;
 };
@@ -13,6 +13,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "axial_bar_1d",
     href: "/models/axial-steel-bar.json",
     summary: "Baseline 1D tensile bar for quick stiffness checks.",
+  },
+  {
+    id: "cantilever-beam-1d",
+    name: "Cantilever Beam 1D",
+    kind: "beam_1d",
+    href: "/models/cantilever-beam-1d.json",
+    summary: "Euler-Bernoulli cantilever beam with tip load and bending response.",
   },
   {
     id: "braced-truss-2d",

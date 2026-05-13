@@ -46,6 +46,11 @@ Use `./scripts/kyuubiki` as the top-level local launcher.
 - `./scripts/kyuubiki smoke` runs the current Elixir -> Rust integration flow
 - `./scripts/kyuubiki sdk-smoke` runs the Python / Elixir / Rust SDK smoke suite
 - `./scripts/kyuubiki frontend-test` runs frontend typecheck plus production build verification
+- `./scripts/kyuubiki hot-local` runs the full local dev stack with restart-on-change
+- `./scripts/kyuubiki hot-cloud` runs the full cloud/postgres dev stack with restart-on-change
+- `./scripts/kyuubiki hot-distributed` runs the distributed control-plane dev loop with restart-on-change
+- `./scripts/kyuubiki hot-web` watches and restarts the Elixir control plane
+- `./scripts/kyuubiki hot-agent` watches and restarts the Rust solver agent
 - `./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3`
   runs the Rust worker directly
 - `./scripts/kyuubiki playground` serves the in-browser FEM playground through the
@@ -56,6 +61,18 @@ Use `./scripts/kyuubiki` as the top-level local launcher.
 This is intentionally a host-native launcher rather than a container-first one.
 Right now the project is optimizing for local iteration, local IPC evolution,
 and mixed-platform development more than environment isolation.
+
+## Hot Reload
+
+The repository now has an explicit hot-reload development path:
+
+- `frontend`: uses native Next.js HMR
+- `hub-gui`, `installer-gui`, `workbench-gui`: use native `tauri dev`
+- `apps/web`: is not Phoenix, so `hot-web` restarts the control plane on source changes
+- `workers/rust`: `hot-agent` restarts solver agents on Rust source changes
+
+Use `make hot-local` as the default "whole system" dev loop when you want the
+browser workbench, orchestrator, and local agents to all stay warm together.
 
 ## Storage Modes
 

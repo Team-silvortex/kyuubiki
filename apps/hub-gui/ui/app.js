@@ -115,6 +115,9 @@ const elements = {
   operationOutput: document.getElementById("hub-operation-output"),
   runtimeStatusOutput: document.getElementById("runtime-status-output"),
   localRuntimeStatus: document.getElementById("local-runtime-status"),
+  hotRuntimeStatusOutput: document.getElementById("hot-runtime-status-output"),
+  hotRuntimeStatus: document.getElementById("hot-runtime-status"),
+  hotRuntimeMode: document.getElementById("hot-runtime-mode"),
   workbenchUrl: document.getElementById("local-workbench-url"),
   orchestratorUrl: document.getElementById("local-orchestrator-url"),
   currentRuntimeMode: document.getElementById("current-runtime-mode"),
@@ -1683,6 +1686,26 @@ function setRuntimeStatusOutput(value) {
   elements.runtimeStatusOutput.textContent = value;
 }
 
+function setHotRuntimeStatusOutput(value) {
+  if (elements.hotRuntimeStatusOutput) {
+    elements.hotRuntimeStatusOutput.textContent = value;
+  }
+}
+
+function inferHotRuntimeState(rendered) {
+  const text = String(rendered || "");
+  const running = /hot-loop:\s+running/i.test(text);
+  const stopped = /hot-loop:\s+stopped/i.test(text);
+  const modeMatch =
+    /started managed hot-reload loop \((cloud|distributed|local)\)/i.exec(text)
+    || /Mode\W*(cloud|distributed|local)/i.exec(text);
+
+  return {
+    status: running ? "running" : stopped ? "idle" : "unknown",
+    mode: modeMatch?.[1] || elements.hotRuntimeMode?.textContent?.trim() || "local",
+  };
+}
+
 function setProjectBundleOutput(value) {
   elements.projectBundleOutput.textContent = value;
 }
@@ -2299,6 +2322,20 @@ async function refreshRuntimeStatus() {
   renderHubAssistantLocalCards();
 }
 
+async function refreshHotRuntimeStatus() {
+  try {
+    const payload = await invokeTauri("hot_service_status");
+    setHotRuntimeStatusOutput(payload.rendered);
+    const inferred = inferHotRuntimeState(payload.rendered);
+    applyDesktopState(elements.hotRuntimeStatus, inferred.status, { kind: "activity" });
+    setText(elements.hotRuntimeMode, inferred.mode);
+  } catch (error) {
+    const message = String(error);
+    setHotRuntimeStatusOutput(message);
+    applyDesktopState(elements.hotRuntimeStatus, "failed", { kind: "activity" });
+  }
+}
+
 async function refreshDesktopStatusOutput() {
   try {
     setDesktopStatusOutput(
@@ -2406,6 +2443,31 @@ async function runAction(action) {
         setOperationOutput(await invokeTauri("service_start", { payload: { mode: "local" } }));
         await refreshRuntimeStatus();
         setBusy(false, "ready");
+        return;
+      case "hot-start-local":
+        setOperationOutput(await invokeTauri("hot_service_start", { payload: { mode: "local" } }));
+        await refreshHotRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "hot-start-cloud":
+        setOperationOutput(await invokeTauri("hot_service_start", { payload: { mode: "cloud" } }));
+        await refreshHotRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "hot-start-distributed":
+        setOperationOutput(await invokeTauri("hot_service_start", { payload: { mode: "distributed" } }));
+        await refreshHotRuntimeStatus();
+        setBusy(false, "ready");
+        return;
+      case "hot-refresh-status":
+        await refreshHotRuntimeStatus();
+        setOperationOutput("refreshed hot-reload runtime status");
+        setBusy(false, "ready");
+        return;
+      case "hot-stop":
+        setOperationOutput(await invokeTauri("hot_service_stop"));
+        await refreshHotRuntimeStatus();
+        setBusy(false, "idle");
         return;
       case "start-cloud":
         setOperationOutput(await invokeTauri("service_start", { payload: { mode: "cloud" } }));
@@ -2609,4 +2671,5 @@ applyAssistantSettings();
 setSection(state.activeSection);
 setBusy(false, "idle");
 await refreshRuntimeStatus();
+await refreshHotRuntimeStatus();
 await refreshDesktopStatusOutput();

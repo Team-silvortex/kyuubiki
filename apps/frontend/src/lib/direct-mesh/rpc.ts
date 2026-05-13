@@ -5,6 +5,7 @@ type RpcMethod =
   | "ping"
   | "describe_agent"
   | "solve_bar_1d"
+  | "solve_beam_1d"
   | "solve_truss_2d"
   | "solve_truss_3d"
   | "solve_plane_triangle_2d"

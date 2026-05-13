@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type NodeRow = {
@@ -15,20 +15,27 @@ type ElementRow = {
   node_i: number;
   node_j?: number;
   node_k?: number;
+  resultValue?: string;
+  resultMagnitude?: number;
 };
 
 type WorkbenchObjectTreeProps = {
   title: string;
   countLabel: string;
   hint: string;
+  geometryLabel?: string;
+  resultsLabel?: string;
+  sortByLabel?: string;
   diagnosticsLabel: string;
   loadCaseLabel: string;
   nodeJLabel: string;
   nodeKLabel: string;
+  elementValueLabel?: string;
   nodeRows: NodeRow[];
   elementRows: ElementRow[];
   isPlane: boolean;
   isTruss: boolean;
+  enableElementResultsMode?: boolean;
   selectedNode: number | null;
   selectedElement: number | null;
   nodeIssueCounts: Record<number, number>;
@@ -40,20 +47,33 @@ function WorkbenchObjectTreeInner({
   title,
   countLabel,
   hint,
+  geometryLabel,
+  resultsLabel,
+  sortByLabel,
   diagnosticsLabel,
   loadCaseLabel,
   nodeJLabel,
   nodeKLabel,
+  elementValueLabel,
   nodeRows,
   elementRows,
   isPlane,
   isTruss,
+  enableElementResultsMode,
   selectedNode,
   selectedElement,
   nodeIssueCounts,
   onSelectNode,
   onSelectElement,
 }: WorkbenchObjectTreeProps) {
+  const [elementTreeMode, setElementTreeMode] = useState<"geometry" | "results">("geometry");
+  const [resultSortMode, setResultSortMode] = useState<"index" | "value">("index");
+  const showElementResults = Boolean(enableElementResultsMode && elementValueLabel && elementTreeMode === "results");
+  const visibleElementRows =
+    showElementResults && resultSortMode === "value"
+      ? [...elementRows].sort((left, right) => (right.resultMagnitude ?? Number.NEGATIVE_INFINITY) - (left.resultMagnitude ?? Number.NEGATIVE_INFINITY))
+      : elementRows;
+
   return (
     <section className="sidebar-card">
       <div className="card-head">
@@ -103,26 +123,47 @@ function WorkbenchObjectTreeInner({
       </div>
 
       <div className="table-like model-tree-spacer">
-        <div className="table-like__head">
+        {enableElementResultsMode ? (
+          <div className="panel-tabs">
+            <button className={`panel-tab${elementTreeMode === "geometry" ? " panel-tab--active" : ""}`} onClick={() => setElementTreeMode("geometry")} type="button">
+              {geometryLabel ?? "Geometry"}
+            </button>
+            <button className={`panel-tab${elementTreeMode === "results" ? " panel-tab--active" : ""}`} onClick={() => setElementTreeMode("results")} type="button">
+              {resultsLabel ?? "Results"}
+            </button>
+          </div>
+        ) : null}
+        {showElementResults ? (
+          <div className="button-row">
+            <span className="card-copy">{sortByLabel ?? "Sort by"}</span>
+            <button className={`ghost-button ghost-button--compact${resultSortMode === "index" ? " ghost-button--active" : ""}`} onClick={() => setResultSortMode("index")} type="button">#</button>
+            <button className={`ghost-button ghost-button--compact${resultSortMode === "value" ? " ghost-button--active" : ""}`} onClick={() => setResultSortMode("value")} type="button">
+              {elementValueLabel}
+            </button>
+          </div>
+        ) : null}
+        <div className={`table-like__head${showElementResults ? " table-like__head--wide" : ""}`}>
           <span>ID</span>
           <span>i</span>
           <span>{isPlane ? nodeKLabel : nodeJLabel}</span>
+          {showElementResults ? <span>{elementValueLabel}</span> : null}
         </div>
         <VirtualList
           className="table-like__body"
-          items={elementRows}
+          items={visibleElementRows}
           itemHeight={44}
           maxHeight={240}
           itemKey={(element) => element.id}
           renderItem={(element, index) => (
             <button
-              className={`table-like__row${selectedElement === index ? " table-like__row--active" : ""}`}
+              className={`${showElementResults ? "table-like__row table-like__row--wide" : "table-like__row"}${selectedElement === index ? " table-like__row--active" : ""}`}
               onClick={() => onSelectElement(index)}
               type="button"
             >
               <strong>{element.id}</strong>
               <span>{element.node_i}</span>
               <span>{typeof element.node_k === "number" ? element.node_k : element.node_j}</span>
+              {showElementResults ? <span>{element.resultValue ?? "--"}</span> : null}
             </button>
           )}
         />

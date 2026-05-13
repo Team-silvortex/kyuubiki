@@ -9,12 +9,12 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
+    SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
     SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    MockSolver, solve_bar_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d,
-    solve_truss_2d, solve_truss_3d,
+    MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
+    solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
 };
 
 fn main() {
@@ -368,6 +368,64 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                         RpcResponse::success(
                             request.id,
                             serde_json::to_value(result).expect("bar result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveBeam1d => {
+            let params = match serde_json::from_value::<SolveBeam1dRequest>(request.params.clone())
+            {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_beam_1d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("1d beam", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("beam result should serialize"),
                         ),
                     )
                 }
@@ -1447,9 +1505,10 @@ mod tests {
         handle_request_bytes, normalize_peer_addresses, parse_http_url,
     };
     use kyuubiki_protocol::{
-        AgentDescriptor, ClusterPeerDescriptor, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
-        PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcRequest,
-        SolveBarRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
+        AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ClusterPeerDescriptor, JobStatus,
+        PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent,
+        RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
+        SolveFrame2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveTruss3dRequest, Truss3dElementInput,
         Truss3dNodeInput,
     };
@@ -1578,6 +1637,58 @@ mod tests {
             serde_json::from_value(final_response.result.expect("solver result"))
                 .expect("bar result");
         assert!((result.tip_displacement - 4.761904761904762e-7).abs() < 1.0e-12);
+    }
+
+    #[test]
+    fn handles_beam_1d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-beam".to_string(),
+            method: RpcMethod::SolveBeam1d,
+            params: serde_json::to_value(SolveBeam1dRequest {
+                nodes: vec![
+                    Beam1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_y: true,
+                        fix_rz: true,
+                        load_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                    Beam1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 2.0,
+                        fix_y: false,
+                        fix_rz: false,
+                        load_y: -1000.0,
+                        moment_z: 0.0,
+                    },
+                ],
+                elements: vec![Beam1dElementInput {
+                    id: "b0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    youngs_modulus: 210.0e9,
+                    moment_of_inertia: 8.0e-6,
+                    section_modulus: 1.6e-4,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveBeam1dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("beam result");
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!((result.max_moment - 2000.0).abs() < 1.0e-6);
     }
 
     #[test]

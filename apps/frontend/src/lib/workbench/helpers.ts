@@ -2,6 +2,8 @@ import { buildStudyModelPayload } from "@/lib/models";
 import type {
   AxialBarJobInput,
   AxialBarResult,
+  Beam1dJobInput,
+  Beam1dResult,
   Frame2dJobInput,
   Frame2dResult,
   FrontendRuntimeMode,
@@ -73,7 +75,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -203,6 +205,7 @@ export function serializeCurrentModel(
   truss3dModel: Truss3dJobInput,
   planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput,
   frameModel: Frame2dJobInput,
+  beamModel: Beam1dJobInput,
   parametric: ParametricLike,
   round: (value: number) => number,
 ): Record<string, unknown> {
@@ -216,6 +219,8 @@ export function serializeCurrentModel(
           ? parametric.youngsModulusGpa
           : studyKind === "truss_3d"
             ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
+            : studyKind === "beam_1d"
+              ? round((beamModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : studyKind === "frame_2d"
               ? round((frameModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
@@ -224,6 +229,8 @@ export function serializeCurrentModel(
         ? trussModel.materials
         : studyKind === "truss_3d"
           ? truss3dModel.materials
+          : studyKind === "beam_1d"
+            ? beamModel.materials
           : studyKind === "frame_2d"
             ? frameModel.materials
           : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
@@ -234,6 +241,7 @@ export function serializeCurrentModel(
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
     plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
     frame: studyKind === "frame_2d" ? frameModel : undefined,
+    beam: studyKind === "beam_1d" ? beamModel : undefined,
   });
 }
 
@@ -272,10 +280,23 @@ function isFrame2dResult(value: unknown): value is Frame2dResult {
   );
 }
 
+function isBeam1dResult(value: unknown): value is Beam1dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_rotation" in value &&
+    "max_moment" in value &&
+    "nodes" in value &&
+    "elements" in value &&
+    Array.isArray((value as Beam1dResult).nodes) &&
+    !(value as Beam1dResult).nodes.some((node) => "y" in node)
+  );
+}
+
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -375,6 +396,47 @@ export function serializeResultCsv(
           element.axial_stress,
           element.max_bending_stress,
           element.max_combined_stress,
+        ]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isBeam1dResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "uy", "rz", "displacement_magnitude"]));
+    result.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.uy, node.rz, node.displacement_magnitude])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "shear_force_i",
+        "moment_i",
+        "shear_force_j",
+        "moment_j",
+        "max_bending_stress",
+      ]),
+    );
+    result.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.length,
+          element.shear_force_i,
+          element.moment_i,
+          element.shear_force_j,
+          element.moment_j,
+          element.max_bending_stress,
         ]),
       ),
     );

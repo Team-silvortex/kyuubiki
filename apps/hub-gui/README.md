@@ -34,6 +34,7 @@ overview.
 - one-click CLI command copy from favorites so common bundle workflows can jump straight into shell automation
 - one-click Python stub copy from favorites so common bundle workflows can jump into the front-end DSL / Pyodide path
 - runtime lifecycle overview
+- managed hot-reload control for the local/cloud/distributed dev loop
 - local/cloud/distributed mode selection
 - diagnostics and health summary
 - integrated desktop readiness wall for `macos / linux / windows` staging, icons, manifests, and host bundles
@@ -59,6 +60,10 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 - `npm run sync:shared`
 - `make hub-gui-dev`
 - `make hub-gui-build`
+- `make hot-local`
+- `make hot-cloud`
+- `make hot-distributed`
+- `make hot-hub-gui`
 - `make test-hub-gui`
 - `make desktop-status PLATFORM=all`
 - `make package-desktop PLATFORM=all`
@@ -66,6 +71,7 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 - `make desktop-verify PLATFORM=macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
+- `zsh ./scripts/kyuubiki hot-status`
 
 ## Validation
 

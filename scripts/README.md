@@ -11,6 +11,7 @@ libraries or generated output.
 Typical responsibilities:
 
 - start/stop/restart orchestration
+- hot-reload/watch orchestration for local development
 - mode switching (`local`, `cloud`, `distributed`)
 - verification/test wrappers
 - component-scoped build entry points
@@ -28,6 +29,14 @@ Useful smoke wrappers:
 
 Examples now include:
 
+- `hot-local`
+- `hot-cloud`
+- `hot-distributed`
+- `hot-web`
+- `hot-agent`
+- `hot-hub-gui`
+- `hot-installer-gui`
+- `hot-workbench-gui`
 - `build-frontend`
 - `build-orchestrator`
 - `build-agent`
@@ -48,3 +57,10 @@ Examples now include:
 
 Keep these scripts thin. Product logic should live in the application/runtime
 code, not in shell branching.
+
+Hot-reload note:
+
+- Next.js and Tauri already provide their own dev/HMR loops.
+- `./scripts/kyuubiki hot-*` adds the missing restart-on-change layer for the
+  non-Phoenix Elixir control plane and Rust solver agents so the whole stack
+  can iterate under one operator command.

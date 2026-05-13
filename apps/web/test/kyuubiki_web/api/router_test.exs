@@ -1270,6 +1270,120 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert length(result_payload["result"]["elements"]) == 1
   end
 
+  test "runs a one dimensional beam job through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.55,
+            "iteration" => 3,
+            "message" => "assembling beam stiffness"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{
+                "index" => 0,
+                "id" => "n0",
+                "x" => 0.0,
+                "uy" => 0.0,
+                "rz" => 0.0,
+                "displacement_magnitude" => 0.0
+              },
+              %{
+                "index" => 1,
+                "id" => "n1",
+                "x" => 2.0,
+                "uy" => 0.0015873015873015873,
+                "rz" => 0.0011904761904761906,
+                "displacement_magnitude" => 0.0015873015873015873
+              }
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "b0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "length" => 2.0,
+                "shear_force_i" => 1000.0,
+                "moment_i" => 2000.0,
+                "shear_force_j" => -1000.0,
+                "moment_j" => 0.0,
+                "max_bending_stress" => 1.25e7
+              }
+            ],
+            "max_displacement" => 0.0015873015873015873,
+            "max_rotation" => 0.0011904761904761906,
+            "max_moment" => 2000.0,
+            "max_stress" => 1.25e7,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/beam-1d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "fix_y" => true,
+              "fix_rz" => true,
+              "load_y" => 0.0,
+              "moment_z" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 2.0,
+              "fix_y" => false,
+              "fix_rz" => false,
+              "load_y" => -1000.0,
+              "moment_z" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "b0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "youngs_modulus" => 2.1e11,
+              "moment_of_inertia" => 8.0e-6,
+              "section_modulus" => 1.6e-4
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["max_moment"] > 0
+    assert result_payload["result"]["max_stress"] > 0
+    assert length(result_payload["result"]["elements"]) == 1
+  end
+
   test "runs a three dimensional truss job through the orchestration API" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-type StudyKind = "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type StudyPanelTab = "summary" | "controls";
 
 type StudySidebarRow = {

@@ -155,6 +155,22 @@
           </article>
 
           <article class="hub-card desktop-shell-surface-card">
+            <h2>Hot reload loop</h2>
+            <div class="hub-metrics">
+              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-status">idle</strong></div>
+              <div class="desktop-shell-metric-row"><span>Mode</span><strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-mode">local</strong></div>
+            </div>
+            <div class="hub-stack desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" data-action="hot-start-local">Hot local</button>
+              <button data-action="hot-start-cloud">Hot cloud</button>
+              <button data-action="hot-start-distributed">Hot distributed</button>
+              <button data-action="hot-refresh-status">Refresh hot status</button>
+              <button data-action="hot-stop">Stop hot loop</button>
+            </div>
+            <pre class="hub-log hub-log--compact" id="hot-runtime-status-output">Hot-reload loop is ready.</pre>
+          </article>
+
+          <article class="hub-card desktop-shell-surface-card">
             <h2>Remote targets</h2>
             <div class="hub-list">
               <div class="hub-list__row">

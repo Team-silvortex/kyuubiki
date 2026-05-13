@@ -1,7 +1,8 @@
 use kyuubiki_protocol::{
-    ElementResult, Frame2dElementResult, Frame2dNodeResult, Job, JobStatus, NodeResult,
-    PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
-    PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult,
+    Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult,
+    Frame2dNodeResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput,
+    PlaneQuadElementResult, PlaneTriangleElementInput, PlaneTriangleElementResult,
+    ProgressEvent, SolveBarRequest, SolveBarResult, SolveBeam1dRequest, SolveBeam1dResult,
     SolveFrame2dRequest, SolveFrame2dResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
     SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveTruss2dRequest,
     SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Truss3dElementResult,
@@ -100,6 +101,152 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
         tip_displacement: *displacements.last().unwrap_or(&0.0),
         reaction_force,
         max_displacement,
+        max_stress,
+    })
+}
+
+pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, String> {
+    validate_beam_1d_request(request)?;
+
+    let dof_count = request.nodes.len() * 2;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 2] = node.load_y;
+        force_vector[index * 2 + 1] = node.moment_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        let local_stiffness =
+            beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
+        let map = [
+            element.node_i * 2,
+            element.node_i * 2 + 1,
+            element.node_j * 2,
+            element.node_j * 2 + 1,
+        ];
+
+        for row in 0..4 {
+            for column in 0..4 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    local_stiffness[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_y {
+                dofs.push(index * 2);
+            }
+            if node.fix_rz {
+                dofs.push(index * 2 + 1);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| {
+            let uy = displacements[index * 2];
+            let rz = displacements[index * 2 + 1];
+
+            Beam1dNodeResult {
+                index,
+                id: node.id.clone(),
+                x: node.x,
+                uy,
+                rz,
+                displacement_magnitude: uy.abs(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let length = (node_j.x - node_i.x).abs();
+            let local_stiffness =
+                beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
+            let local_displacements = [
+                displacements[element.node_i * 2],
+                displacements[element.node_i * 2 + 1],
+                displacements[element.node_j * 2],
+                displacements[element.node_j * 2 + 1],
+            ];
+            let local_forces = multiply_matrix_vector_4x4(&local_stiffness, &local_displacements);
+            let max_bending_stress = local_forces[1]
+                .abs()
+                .max(local_forces[3].abs())
+                / element.section_modulus;
+
+            Beam1dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                shear_force_i: local_forces[0],
+                moment_i: local_forces[1],
+                shear_force_j: local_forces[2],
+                moment_j: local_forces[3],
+                max_bending_stress,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| node.displacement_magnitude)
+        .fold(0.0_f64, f64::max);
+    let max_rotation = nodes
+        .iter()
+        .map(|node| node.rz.abs())
+        .fold(0.0_f64, f64::max);
+    let max_moment = elements
+        .iter()
+        .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.max_bending_stress)
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveBeam1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_rotation,
+        max_moment,
         max_stress,
     })
 }
@@ -1167,6 +1314,51 @@ fn validate_frame_2d_request(request: &SolveFrame2dRequest) -> Result<(), String
     Ok(())
 }
 
+fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("1d beam must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("1d beam must define at least one element".to_string());
+    }
+
+    let constrained_dofs = request
+        .nodes
+        .iter()
+        .fold(0, |sum, node| sum + usize::from(node.fix_y) + usize::from(node.fix_rz));
+    if constrained_dofs < 2 {
+        return Err("1d beam must restrain at least two degrees of freedom".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("1d beam element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("1d beam element must connect two distinct nodes".to_string());
+        }
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("1d beam element youngs_modulus must be positive".to_string());
+        }
+        if !(element.moment_of_inertia.is_finite() && element.moment_of_inertia > 0.0) {
+            return Err("1d beam element moment_of_inertia must be positive".to_string());
+        }
+        if !(element.section_modulus.is_finite() && element.section_modulus > 0.0) {
+            return Err("1d beam element section_modulus must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        if length <= 1.0e-12 {
+            return Err("1d beam element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String> {
     if request.nodes.len() < 3 {
         return Err("3d truss must define at least three nodes".to_string());
@@ -1520,6 +1712,43 @@ fn frame_local_stiffness(
     ]
 }
 
+fn beam_local_stiffness(
+    youngs_modulus: f64,
+    moment_of_inertia: f64,
+    length: f64,
+) -> [[f64; 4]; 4] {
+    let flexural = youngs_modulus * moment_of_inertia;
+    let l2 = length * length;
+    let l3 = l2 * length;
+
+    [
+        [
+            12.0 * flexural / l3,
+            6.0 * flexural / l2,
+            -12.0 * flexural / l3,
+            6.0 * flexural / l2,
+        ],
+        [
+            6.0 * flexural / l2,
+            4.0 * flexural / length,
+            -6.0 * flexural / l2,
+            2.0 * flexural / length,
+        ],
+        [
+            -12.0 * flexural / l3,
+            -6.0 * flexural / l2,
+            12.0 * flexural / l3,
+            -6.0 * flexural / l2,
+        ],
+        [
+            6.0 * flexural / l2,
+            2.0 * flexural / length,
+            -6.0 * flexural / l2,
+            4.0 * flexural / length,
+        ],
+    ]
+}
+
 fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
     [
         [c, s, 0.0, 0.0, 0.0, 0.0],
@@ -1564,6 +1793,14 @@ fn multiply_matrix_vector_6x6(matrix: &[[f64; 6]; 6], vector: &[f64; 6]) -> [f64
     let mut output = [0.0; 6];
     for row in 0..6 {
         output[row] = (0..6).map(|index| matrix[row][index] * vector[index]).sum();
+    }
+    output
+}
+
+fn multiply_matrix_vector_4x4(matrix: &[[f64; 4]; 4], vector: &[f64; 4]) -> [f64; 4] {
+    let mut output = [0.0; 4];
+    for row in 0..4 {
+        output[row] = (0..4).map(|index| matrix[row][index] * vector[index]).sum();
     }
     output
 }
@@ -2004,15 +2241,15 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_frame_2d, solve_plane_quad_2d,
+        MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
         solve_plane_triangle_2d, solve_truss_2d, solve_truss_3d,
     };
     use kyuubiki_protocol::{
-        Frame2dElementInput, Frame2dNodeInput, Job, JobStatus, PlaneNodeInput,
-        PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveFrame2dRequest,
-        SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
-        SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
-        TrussNodeInput,
+        Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Job,
+        JobStatus, PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput,
+        SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
+        SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+        Truss3dElementInput, Truss3dNodeInput, TrussElementInput, TrussNodeInput,
     };
 
     #[test]
@@ -2058,6 +2295,46 @@ mod tests {
         .expect_err("invalid request should fail");
 
         assert!(error.contains("length"));
+    }
+
+    #[test]
+    fn solves_a_small_beam_1d_cantilever() {
+        let result = solve_beam_1d(&SolveBeam1dRequest {
+            nodes: vec![
+                Beam1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_y: true,
+                    fix_rz: true,
+                    load_y: 0.0,
+                    moment_z: 0.0,
+                },
+                Beam1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 2.0,
+                    fix_y: false,
+                    fix_rz: false,
+                    load_y: -1000.0,
+                    moment_z: 0.0,
+                },
+            ],
+            elements: vec![Beam1dElementInput {
+                id: "b0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 8.0e-6,
+                section_modulus: 1.6e-4,
+            }],
+        })
+        .expect("1d beam should solve");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!((result.max_displacement - 0.0015873015873015873).abs() < 1.0e-12);
+        assert!((result.max_rotation - 0.0011904761904761906).abs() < 1.0e-12);
+        assert!((result.max_moment - 2000.0).abs() < 1.0e-6);
+        assert!((result.max_stress - 1.25e7).abs() < 1.0e-2);
     }
 
     #[test]

@@ -21,6 +21,16 @@ the Hub can start locally, connect to remotely, or switch between across
 targets.
 - `headless peer mesh`: Rust solver agents can run without a GUI or Phoenix on the same host, and can advertise LAN peer-cluster topology through the shared RPC descriptor
 
+For local iteration, `v0.7.4` also now has a repo-level hot-reload path:
+
+- `make hot-local`
+- `make hot-cloud`
+- `make hot-distributed`
+
+These commands keep Next.js/Tauri HMR where it already exists and add the
+missing restart-on-change loop for the non-Phoenix Elixir control plane and
+Rust solver agents.
+
 And the frontend direction is now explicitly split too:
 
 - `orchestrated_gui`

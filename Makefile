@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -22,6 +22,14 @@ help:
 	@echo "  make restart-local Restart services with SQLite forced for local development"
 	@echo "  make restart-cloud Restart services with PostgreSQL forced for cloud/distributed use"
 	@echo "  make restart-distributed Restart only the control plane for distributed deployments"
+	@echo "  make hot-local  Run the local full-stack dev loop with hot reload/watch"
+	@echo "  make hot-cloud  Run the cloud/postgres full-stack dev loop with hot reload/watch"
+	@echo "  make hot-distributed Run the distributed control-plane dev loop with hot reload/watch"
+	@echo "  make hot-web    Run the Elixir control plane with restart-on-change"
+	@echo "  make hot-agent  Run the Rust solver agent with restart-on-change (PORT=5001 by default)"
+	@echo "  make hot-hub-gui Run the Tauri Hub shell in dev/HMR mode"
+	@echo "  make hot-installer-gui Run the Tauri installer shell in dev/HMR mode"
+	@echo "  make hot-workbench-gui Run the Tauri workbench shell in dev/HMR mode"
 	@echo "  make export-db   Export the current database snapshot as JSON"
 	@echo "  make install     Run the cross-platform installer/bootstrap utility"
 	@echo "  make doctor      Check local prerequisites for this platform"
@@ -121,6 +129,30 @@ restart-cloud:
 
 restart-distributed:
 	@$(ENTRYPOINT) restart-distributed
+
+hot-local:
+	@$(ENTRYPOINT) hot-local
+
+hot-cloud:
+	@$(ENTRYPOINT) hot-cloud
+
+hot-distributed:
+	@$(ENTRYPOINT) hot-distributed
+
+hot-web:
+	@$(ENTRYPOINT) hot-web $(MODE)
+
+hot-agent:
+	@$(ENTRYPOINT) hot-agent $(PORT)
+
+hot-hub-gui:
+	@$(ENTRYPOINT) hot-hub-gui
+
+hot-installer-gui:
+	@$(ENTRYPOINT) hot-installer-gui
+
+hot-workbench-gui:
+	@$(ENTRYPOINT) hot-workbench-gui
 
 export-db:
 	@$(ENTRYPOINT) export-db

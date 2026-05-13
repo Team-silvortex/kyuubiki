@@ -1,17 +1,19 @@
 use kyuubiki_protocol::{
     AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
-    SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
+    SolvePlaneTriangle2dRequest,
     SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_truss_2d,
-    solve_truss_3d,
+    solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d,
+    solve_truss_2d, solve_truss_3d,
 };
 use serde_json::Value;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineSolveRequest {
     Bar1d(SolveBarRequest),
+    Beam1d(SolveBeam1dRequest),
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
@@ -22,6 +24,9 @@ pub enum EngineSolveRequest {
 pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
     match request {
         EngineSolveRequest::Bar1d(request) => solve_bar_1d(&request).map(AnalysisResult::Bar1d),
+        EngineSolveRequest::Beam1d(request) => {
+            solve_beam_1d(&request).map(AnalysisResult::Beam1d)
+        }
         EngineSolveRequest::Truss2d(request) => {
             solve_truss_2d(&request).map(AnalysisResult::Truss2d)
         }
@@ -47,6 +52,10 @@ pub fn chunk_result(
     let items = match (result, request.kind) {
         (AnalysisResult::Bar1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Bar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::Beam1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
+        (AnalysisResult::Beam1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::Truss2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,

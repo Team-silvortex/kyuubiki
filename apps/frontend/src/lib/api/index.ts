@@ -152,6 +152,33 @@ export type Frame2dJobInput = {
   model_version_id?: string;
 };
 
+export type Beam1dNodeInput = {
+  id: string;
+  x: number;
+  fix_y: boolean;
+  fix_rz: boolean;
+  load_y: number;
+  moment_z: number;
+};
+
+export type Beam1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  youngs_modulus: number;
+  moment_of_inertia: number;
+  section_modulus: number;
+  material_id?: string;
+};
+
+export type Beam1dJobInput = {
+  nodes: Beam1dNodeInput[];
+  elements: Beam1dElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type JobState = {
   job_id: string;
   status: string;
@@ -308,6 +335,34 @@ export type Frame2dResult = {
     max_combined_stress: number;
   }>;
   input: Frame2dJobInput;
+};
+
+export type Beam1dResult = {
+  max_displacement: number;
+  max_rotation: number;
+  max_moment: number;
+  max_stress: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    uy: number;
+    rz: number;
+    displacement_magnitude: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    shear_force_i: number;
+    moment_i: number;
+    shear_force_j: number;
+    moment_j: number;
+    max_bending_stress: number;
+  }>;
+  input: Beam1dJobInput;
 };
 
 export type JobEnvelope<TResult = unknown> = {
@@ -720,6 +775,25 @@ export function resolveFrame2dJobInput(
   };
 }
 
+export function resolveBeam1dJobInput(
+  input: Beam1dJobInput,
+): Omit<Beam1dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
@@ -957,6 +1031,16 @@ export function createFrame2dJob(
   });
 }
 
+export function createBeam1dJob(
+  input: Beam1dJobInput,
+): Promise<JobEnvelope<Beam1dResult>> {
+  return requestJson<JobEnvelope<Beam1dResult>>("/api/v1/fem/beam-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
   return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
     method: "GET",
@@ -1023,7 +1107,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

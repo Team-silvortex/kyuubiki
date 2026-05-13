@@ -30,6 +30,23 @@ impl ServiceMode {
     }
 }
 
+#[derive(Clone, Copy)]
+pub enum HotServiceMode {
+    Local,
+    Cloud,
+    Distributed,
+}
+
+impl HotServiceMode {
+    pub fn start_command(self) -> &'static str {
+        match self {
+            HotServiceMode::Local => "hot-start-local",
+            HotServiceMode::Cloud => "hot-start-cloud",
+            HotServiceMode::Distributed => "hot-start-distributed",
+        }
+    }
+}
+
 pub fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
@@ -84,6 +101,18 @@ pub fn service_stop() -> Result<String, String> {
     run_workspace_command(&["zsh", "./scripts/kyuubiki", "stop"])
 }
 
+pub fn hot_service_status() -> Result<String, String> {
+    run_workspace_command(&["zsh", "./scripts/kyuubiki", "hot-status"])
+}
+
+pub fn hot_service_start(mode: HotServiceMode) -> Result<String, String> {
+    run_workspace_command(&["zsh", "./scripts/kyuubiki", mode.start_command()])
+}
+
+pub fn hot_service_stop() -> Result<String, String> {
+    run_workspace_command(&["zsh", "./scripts/kyuubiki", "hot-stop"])
+}
+
 pub fn log_path_for(service: &str) -> Result<PathBuf, String> {
     let root = workspace_root();
     let filename = match service {
@@ -91,6 +120,11 @@ pub fn log_path_for(service: &str) -> Result<PathBuf, String> {
         "orchestrator" => "orchestrator.log",
         "agent-5001" => "agent-5001.log",
         "agent-5002" => "agent-5002.log",
+        "hot-stack" => return Ok(root.join("tmp").join("run").join("hot").join("stack.console.log")),
+        "hot-web" => return Ok(root.join("tmp").join("run").join("hot").join("web-4000.log")),
+        "hot-frontend" => return Ok(root.join("tmp").join("run").join("hot").join("frontend-3000.log")),
+        "hot-agent-5001" => return Ok(root.join("tmp").join("run").join("hot").join("agent-5001.log")),
+        "hot-agent-5002" => return Ok(root.join("tmp").join("run").join("hot").join("agent-5002.log")),
         other => return Err(format!("unknown service log: {other}")),
     };
 
