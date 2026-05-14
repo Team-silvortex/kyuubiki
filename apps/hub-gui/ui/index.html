@@ -192,8 +192,10 @@
               </label>
               <strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-log-follow-state">frozen</strong>
               <button data-action="hot-refresh-log">Refresh log</button>
+              <button data-action="hot-copy-log-view">Copy tail</button>
               <button data-action="hot-clear-log-view">Clear view</button>
             </div>
+            <p class="desktop-shell-note">Copy tail exports a sanitized view, not the raw log file.</p>
             <pre class="hub-log hub-log--compact" id="hot-runtime-status-output">Hot-reload loop is ready.</pre>
             <pre class="hub-log hub-log--compact" id="hot-runtime-log-output">Select a hot-reload service to inspect its latest tail.</pre>
           </article>
@@ -245,11 +247,46 @@
           </article>
 
           <article class="hub-card desktop-shell-surface-card">
-            <h2>Log tail</h2>
-            <pre class="hub-log">[frontend] ready
-[orchestrator] healthy
-[agent:5001] idle
-[agent:5002] idle</pre>
+            <div class="desktop-shell-section-header">
+              <h2>Runtime watch</h2>
+              <strong class="desktop-shell-state" data-desktop-state="activity" id="observe-hot-follow-state">frozen</strong>
+            </div>
+            <div class="hub-metrics">
+              <div class="desktop-shell-metric-row"><span>Local runtime</span><strong class="desktop-shell-state" data-desktop-state="health" id="observe-runtime-status">ready</strong></div>
+              <div class="desktop-shell-metric-row"><span>Hot loop</span><strong class="desktop-shell-state" data-desktop-state="activity" id="observe-hot-status">idle</strong></div>
+              <div class="desktop-shell-metric-row"><span>Mode</span><strong id="observe-hot-mode">local</strong></div>
+              <div class="desktop-shell-metric-row"><span>Log source</span><strong id="observe-hot-log-service">hot-stack</strong></div>
+            </div>
+            <div class="hub-stack desktop-shell-action-row">
+              <button data-target-section="runtimes">Open runtimes</button>
+              <button data-action="hot-refresh-log">Refresh tail</button>
+              <button data-action="hot-copy-log-view">Copy tail</button>
+            </div>
+            <pre class="hub-log hub-log--compact" id="observe-runtime-status-output">Runtime watch will appear here.</pre>
+            <pre class="hub-log hub-log--compact" id="observe-hot-log-output">Hot tail mirror will appear here.</pre>
+            <div class="desktop-shell-section-header hub-subsection-header">
+              <h2>Stack watch</h2>
+              <strong class="desktop-shell-state" data-desktop-state="activity" id="observe-runtime-log-follow-state">frozen</strong>
+            </div>
+            <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+              <label class="hub-field">
+                <span>Stack logs</span>
+                <select id="observe-runtime-log-service">
+                  <option value="frontend">frontend</option>
+                  <option value="orchestrator">orchestrator</option>
+                  <option value="agent-5001">agent 5001</option>
+                  <option value="agent-5002">agent 5002</option>
+                </select>
+              </label>
+              <label class="hub-inline-check">
+                <input id="observe-runtime-log-auto" type="checkbox" />
+                <span>Auto watch</span>
+              </label>
+              <button data-action="observe-refresh-runtime-log">Refresh tail</button>
+              <button data-action="observe-copy-runtime-log">Copy tail</button>
+            </div>
+            <p class="desktop-shell-note">Copy tail exports a sanitized view, not the raw log file.</p>
+            <pre class="hub-log hub-log--compact" id="observe-runtime-log-output">Stack tail mirror will appear here.</pre>
           </article>
         </section>
 

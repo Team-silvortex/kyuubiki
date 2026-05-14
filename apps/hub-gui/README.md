@@ -38,6 +38,7 @@ overview.
 - hot-reload log tail selection for `stack / web / frontend / agents` directly inside the runtime panel
 - remembered hot-log source plus automatic log polling while the runtime panel is open and the hot loop is running
 - lightweight hot-log polling controls for enabling/disabling auto refresh and choosing the tail interval
+- observe-mode runtime watch now mirrors both `hot loop` tails and normal `frontend / orchestrator / agent` stack logs in one dedicated watch surface
 - local/cloud/distributed mode selection
 - diagnostics and health summary
 - integrated desktop readiness wall for `macos / linux / windows` staging, icons, manifests, and host bundles

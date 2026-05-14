@@ -35,6 +35,7 @@ const HUB_ASSISTANT_SETTINGS_KEY = "kyuubiki.hub.assistant.settings.v1";
 const HUB_ASSISTANT_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
 const HUB_ASSISTANT_AUDIT_KEY = "kyuubiki.hub.assistant.audit.v1";
 const HUB_HOT_LOG_SETTINGS_KEY = "kyuubiki.hub.hot-log-settings.v1";
+const HUB_RUNTIME_LOG_SETTINGS_KEY = "kyuubiki.hub.runtime-log-settings.v1";
 const HUB_RECENTS_LIMIT = 6;
 const HUB_ACTION_HISTORY_LIMIT = 8;
 const HUB_ASSISTANT_AUDIT_LIMIT = 16;
@@ -92,9 +93,11 @@ const state = {
   assistantMode: "local",
   assistantPlan: null,
   hotLogRefreshInFlight: false,
+  runtimeLogRefreshInFlight: false,
 };
 
 let hotRuntimeLogPollHandle = null;
+let observeRuntimeLogPollHandle = null;
 
 const elements = {
   title: document.getElementById("section-title"),
@@ -120,6 +123,8 @@ const elements = {
   operationOutput: document.getElementById("hub-operation-output"),
   runtimeStatusOutput: document.getElementById("runtime-status-output"),
   localRuntimeStatus: document.getElementById("local-runtime-status"),
+  observeRuntimeStatusOutput: document.getElementById("observe-runtime-status-output"),
+  observeRuntimeStatus: document.getElementById("observe-runtime-status"),
   hotRuntimeStatusOutput: document.getElementById("hot-runtime-status-output"),
   hotRuntimeStatus: document.getElementById("hot-runtime-status"),
   hotRuntimeMode: document.getElementById("hot-runtime-mode"),
@@ -128,6 +133,15 @@ const elements = {
   hotRuntimeLogInterval: document.getElementById("hot-runtime-log-interval"),
   hotRuntimeLogFollowState: document.getElementById("hot-runtime-log-follow-state"),
   hotRuntimeLogOutput: document.getElementById("hot-runtime-log-output"),
+  observeHotStatus: document.getElementById("observe-hot-status"),
+  observeHotMode: document.getElementById("observe-hot-mode"),
+  observeHotFollowState: document.getElementById("observe-hot-follow-state"),
+  observeHotLogService: document.getElementById("observe-hot-log-service"),
+  observeHotLogOutput: document.getElementById("observe-hot-log-output"),
+  observeRuntimeLogService: document.getElementById("observe-runtime-log-service"),
+  observeRuntimeLogAuto: document.getElementById("observe-runtime-log-auto"),
+  observeRuntimeLogFollowState: document.getElementById("observe-runtime-log-follow-state"),
+  observeRuntimeLogOutput: document.getElementById("observe-runtime-log-output"),
   workbenchUrl: document.getElementById("local-workbench-url"),
   orchestratorUrl: document.getElementById("local-orchestrator-url"),
   currentRuntimeMode: document.getElementById("current-runtime-mode"),
@@ -352,6 +366,24 @@ function loadHubHotLogSettings() {
 
 function persistHubHotLogSettings(settings) {
   window.localStorage.setItem(HUB_HOT_LOG_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadHubRuntimeLogSettings() {
+  try {
+    const raw = window.localStorage.getItem(HUB_RUNTIME_LOG_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const service = String(parsed?.service || "frontend");
+    return {
+      service: ["frontend", "orchestrator", "agent-5001", "agent-5002"].includes(service) ? service : "frontend",
+      autoRefresh: parsed?.autoRefresh !== false,
+    };
+  } catch {
+    return { service: "frontend", autoRefresh: true };
+  }
+}
+
+function persistHubRuntimeLogSettings(settings) {
+  window.localStorage.setItem(HUB_RUNTIME_LOG_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function assistantRiskLevel(action) {
@@ -1700,8 +1732,12 @@ function setSection(section) {
   renderAssistantContext();
   renderHubAssistantLocalCards();
   syncHotRuntimeLogPolling();
+  syncObserveRuntimeLogPolling();
   if (section === "runtimes") {
     void refreshHotRuntimeLog({ silent: true });
+  }
+  if (section === "observe") {
+    void refreshObserveRuntimeLog({ silent: true });
   }
 }
 
@@ -1717,11 +1753,17 @@ function setDesktopStatusOutput(value) {
 
 function setRuntimeStatusOutput(value) {
   elements.runtimeStatusOutput.textContent = value;
+  if (elements.observeRuntimeStatusOutput) {
+    elements.observeRuntimeStatusOutput.textContent = value;
+  }
 }
 
 function setHotRuntimeStatusOutput(value) {
   if (elements.hotRuntimeStatusOutput) {
     elements.hotRuntimeStatusOutput.textContent = value;
+  }
+  if (elements.observeRuntimeStatusOutput) {
+    elements.observeRuntimeStatusOutput.textContent = value;
   }
 }
 
@@ -1729,15 +1771,46 @@ function setHotRuntimeLogOutput(value) {
   if (elements.hotRuntimeLogOutput) {
     elements.hotRuntimeLogOutput.textContent = value;
   }
+  if (elements.observeHotLogOutput) {
+    elements.observeHotLogOutput.textContent = value;
+  }
+}
+
+function setObserveRuntimeLogOutput(value) {
+  if (elements.observeRuntimeLogOutput) {
+    elements.observeRuntimeLogOutput.textContent = value;
+  }
 }
 
 function clearHotRuntimeLogView() {
   setHotRuntimeLogOutput(`Cleared local log view for ${currentHotRuntimeLogService()}. Background tail and log files are unchanged.`);
 }
 
+function sanitizeRuntimeLogForClipboard(text) {
+  return String(text || "")
+    .replace(/(authorization\s*[:=]\s*)(bearer\s+)?([^\s]+)/giu, "$1[redacted]")
+    .replace(/(api[_-]?key\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]")
+    .replace(/(token\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]")
+    .replace(/(password\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]")
+    .replace(/(secret\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]");
+}
+
+async function copyHotRuntimeLogView() {
+  const text = sanitizeRuntimeLogForClipboard(
+    String(elements.hotRuntimeLogOutput?.textContent || "").trim(),
+  );
+  await navigator.clipboard.writeText(text);
+}
+
 function renderHotRuntimeLogFollowState() {
   const label = shouldPollHotRuntimeLog() ? "following" : "frozen";
   applyDesktopState(elements.hotRuntimeLogFollowState, label, { kind: "activity" });
+  applyDesktopState(elements.observeHotFollowState, label, { kind: "activity" });
+}
+
+function renderObserveRuntimeLogFollowState() {
+  const label = shouldPollObserveRuntimeLog() ? "following" : "frozen";
+  applyDesktopState(elements.observeRuntimeLogFollowState, label, { kind: "activity" });
 }
 
 function inferHotRuntimeState(rendered) {
@@ -1762,8 +1835,23 @@ function currentHotRuntimeLogService() {
   return elements.hotRuntimeLogService?.value || "hot-stack";
 }
 
+function currentObserveRuntimeLogService() {
+  return elements.observeRuntimeLogService?.value || "frontend";
+}
+
+function renderHotRuntimeLogServiceLabel() {
+  const label = currentHotRuntimeLogService();
+  if (elements.observeHotLogService) {
+    elements.observeHotLogService.textContent = label;
+  }
+}
+
 function currentHotRuntimeLogAutoRefresh() {
   return elements.hotRuntimeLogAuto?.checked !== false;
+}
+
+function currentObserveRuntimeLogAutoRefresh() {
+  return elements.observeRuntimeLogAuto?.checked !== false;
 }
 
 function currentHotRuntimeLogInterval() {
@@ -1779,10 +1867,21 @@ function persistCurrentHotLogSettings() {
   });
 }
 
+function persistCurrentObserveRuntimeLogSettings() {
+  persistHubRuntimeLogSettings({
+    service: currentObserveRuntimeLogService(),
+    autoRefresh: currentObserveRuntimeLogAutoRefresh(),
+  });
+}
+
 function shouldPollHotRuntimeLog() {
   return state.activeSection === "runtimes"
     && currentHotRuntimeStatus() === "running"
     && currentHotRuntimeLogAutoRefresh();
+}
+
+function shouldPollObserveRuntimeLog() {
+  return state.activeSection === "observe" && currentObserveRuntimeLogAutoRefresh();
 }
 
 function stopHotRuntimeLogPolling() {
@@ -1791,6 +1890,14 @@ function stopHotRuntimeLogPolling() {
     hotRuntimeLogPollHandle = null;
   }
   renderHotRuntimeLogFollowState();
+}
+
+function stopObserveRuntimeLogPolling() {
+  if (observeRuntimeLogPollHandle) {
+    window.clearInterval(observeRuntimeLogPollHandle);
+    observeRuntimeLogPollHandle = null;
+  }
+  renderObserveRuntimeLogFollowState();
 }
 
 function syncHotRuntimeLogPolling() {
@@ -1808,6 +1915,23 @@ function syncHotRuntimeLogPolling() {
     void refreshHotRuntimeLog({ silent: true });
   }, currentHotRuntimeLogInterval() || HUB_HOT_LOG_POLL_MS);
   renderHotRuntimeLogFollowState();
+}
+
+function syncObserveRuntimeLogPolling() {
+  if (!shouldPollObserveRuntimeLog()) {
+    stopObserveRuntimeLogPolling();
+    return;
+  }
+
+  if (observeRuntimeLogPollHandle) {
+    renderObserveRuntimeLogFollowState();
+    return;
+  }
+
+  observeRuntimeLogPollHandle = window.setInterval(() => {
+    void refreshObserveRuntimeLog({ silent: true });
+  }, HUB_HOT_LOG_POLL_MS);
+  renderObserveRuntimeLogFollowState();
 }
 
 function setProjectBundleOutput(value) {
@@ -2417,10 +2541,12 @@ async function refreshRuntimeStatus() {
     const payload = await invokeTauri("service_status");
     setRuntimeStatusOutput(payload.rendered);
     applyDesktopState(elements.localRuntimeStatus, payload.rendered, { kind: "health" });
+    applyDesktopState(elements.observeRuntimeStatus, payload.rendered, { kind: "health" });
   } catch (error) {
     const message = String(error);
     setRuntimeStatusOutput(message);
     applyDesktopState(elements.localRuntimeStatus, message, { kind: "health" });
+    applyDesktopState(elements.observeRuntimeStatus, message, { kind: "health" });
   }
   renderAssistantContext();
   renderHubAssistantLocalCards();
@@ -2432,13 +2558,20 @@ async function refreshHotRuntimeStatus() {
     setHotRuntimeStatusOutput(payload.rendered);
     const inferred = inferHotRuntimeState(payload.rendered);
     applyDesktopState(elements.hotRuntimeStatus, inferred.status, { kind: "activity" });
-    setText(elements.hotRuntimeMode, inferred.mode);
+    applyDesktopState(elements.observeHotStatus, inferred.status, { kind: "activity" });
+    if (elements.hotRuntimeMode) {
+      elements.hotRuntimeMode.textContent = inferred.mode;
+    }
+    if (elements.observeHotMode) {
+      elements.observeHotMode.textContent = inferred.mode;
+    }
     syncHotRuntimeLogPolling();
     await refreshHotRuntimeLog({ silent: true });
   } catch (error) {
     const message = String(error);
     setHotRuntimeStatusOutput(message);
     applyDesktopState(elements.hotRuntimeStatus, "failed", { kind: "activity" });
+    applyDesktopState(elements.observeHotStatus, "failed", { kind: "activity" });
     syncHotRuntimeLogPolling();
   }
 }
@@ -2466,6 +2599,38 @@ async function refreshHotRuntimeLog(options = {}) {
   } finally {
     state.hotLogRefreshInFlight = false;
   }
+}
+
+async function refreshObserveRuntimeLog(options = {}) {
+  const silent = options?.silent === true;
+  const service = currentObserveRuntimeLogService();
+
+  if (state.runtimeLogRefreshInFlight) {
+    return;
+  }
+
+  state.runtimeLogRefreshInFlight = true;
+
+  try {
+    const payload = await invokeTauri("read_runtime_log", {
+      payload: { service },
+    });
+    const rendered = String(payload?.rendered || "").trim();
+    setObserveRuntimeLogOutput(rendered || `No log lines yet for ${service}.`);
+  } catch (error) {
+    if (!silent) {
+      setObserveRuntimeLogOutput(`failed to read ${service}: ${String(error)}`);
+    }
+  } finally {
+    state.runtimeLogRefreshInFlight = false;
+  }
+}
+
+async function copyObserveRuntimeLogView() {
+  const text = sanitizeRuntimeLogForClipboard(
+    String(elements.observeRuntimeLogOutput?.textContent || "").trim(),
+  );
+  await navigator.clipboard.writeText(text);
 }
 
 async function refreshDesktopStatusOutput() {
@@ -2601,6 +2766,21 @@ async function runAction(action) {
         setOperationOutput(`refreshed hot log: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
         setBusy(false, "ready");
         return;
+      case "hot-copy-log-view":
+        await copyHotRuntimeLogView();
+        setOperationOutput(`copied sanitized hot log tail: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
+        setBusy(false, "ready");
+        return;
+      case "observe-refresh-runtime-log":
+        await refreshObserveRuntimeLog();
+        setOperationOutput(`refreshed runtime log: ${elements.observeRuntimeLogService?.value || "frontend"}`);
+        setBusy(false, "ready");
+        return;
+      case "observe-copy-runtime-log":
+        await copyObserveRuntimeLogView();
+        setOperationOutput(`copied sanitized runtime log tail: ${elements.observeRuntimeLogService?.value || "frontend"}`);
+        setBusy(false, "ready");
+        return;
       case "hot-clear-log-view":
         clearHotRuntimeLogView();
         setOperationOutput(`cleared hot log view: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
@@ -2723,6 +2903,7 @@ elements.releasePlatform?.addEventListener("change", () => {
 });
 elements.hotRuntimeLogService?.addEventListener("change", () => {
   persistCurrentHotLogSettings();
+  renderHotRuntimeLogServiceLabel();
   void refreshHotRuntimeLog();
 });
 elements.hotRuntimeLogAuto?.addEventListener("change", () => {
@@ -2733,6 +2914,14 @@ elements.hotRuntimeLogInterval?.addEventListener("change", () => {
   persistCurrentHotLogSettings();
   stopHotRuntimeLogPolling();
   syncHotRuntimeLogPolling();
+});
+elements.observeRuntimeLogService?.addEventListener("change", () => {
+  persistCurrentObserveRuntimeLogSettings();
+  void refreshObserveRuntimeLog();
+});
+elements.observeRuntimeLogAuto?.addEventListener("change", () => {
+  persistCurrentObserveRuntimeLogSettings();
+  syncObserveRuntimeLogPolling();
 });
 elements.projectBundlePath?.addEventListener("input", () => {
   renderAssistantContext();
@@ -2821,6 +3010,7 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
 await applyBrand();
 await loadEnvironment();
 const hotLogSettings = loadHubHotLogSettings();
+const runtimeLogSettings = loadHubRuntimeLogSettings();
 if (elements.hotRuntimeLogService) {
   elements.hotRuntimeLogService.value = hotLogSettings.service;
 }
@@ -2830,6 +3020,13 @@ if (elements.hotRuntimeLogAuto) {
 if (elements.hotRuntimeLogInterval) {
   elements.hotRuntimeLogInterval.value = hotLogSettings.interval;
 }
+if (elements.observeRuntimeLogService) {
+  elements.observeRuntimeLogService.value = runtimeLogSettings.service;
+}
+if (elements.observeRuntimeLogAuto) {
+  elements.observeRuntimeLogAuto.checked = runtimeLogSettings.autoRefresh;
+}
+renderHotRuntimeLogServiceLabel();
 syncDesktopStates();
 renderHubRecents();
 applyAssistantSettings();

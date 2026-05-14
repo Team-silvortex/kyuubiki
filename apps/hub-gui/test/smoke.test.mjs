@@ -32,8 +32,23 @@ test("hub shell exposes the desktop information architecture", () => {
   assert.match(html, /hot-runtime-log-interval/);
   assert.match(html, /hot-runtime-log-follow-state/);
   assert.match(html, /hot-refresh-log/);
+  assert.match(html, /hot-copy-log-view/);
   assert.match(html, /hot-clear-log-view/);
   assert.match(html, /hot-runtime-log-output/);
+  assert.match(html, /Copy tail exports a sanitized view, not the raw log file\./);
+  assert.match(html, /observe-runtime-status-output/);
+  assert.match(html, /observe-runtime-status/);
+  assert.match(html, /observe-hot-status/);
+  assert.match(html, /observe-hot-mode/);
+  assert.match(html, /observe-hot-log-service/);
+  assert.match(html, /observe-hot-log-output/);
+  assert.match(html, /observe-hot-follow-state/);
+  assert.match(html, /observe-runtime-log-service/);
+  assert.match(html, /observe-runtime-log-auto/);
+  assert.match(html, /observe-runtime-log-follow-state/);
+  assert.match(html, /observe-refresh-runtime-log/);
+  assert.match(html, /observe-copy-runtime-log/);
+  assert.match(html, /observe-runtime-log-output/);
   assert.match(html, /assistant-engine-state/);
   assert.match(html, /assistant-mode-local/);
   assert.match(html, /assistant-mode-llm/);
@@ -236,7 +251,22 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /refreshDesktopStatusOutput/);
   assert.match(js, /setHotRuntimeLogOutput/);
   assert.match(js, /clearHotRuntimeLogView/);
+  assert.match(js, /copyHotRuntimeLogView/);
+  assert.match(js, /sanitizeRuntimeLogForClipboard/);
   assert.match(js, /refreshHotRuntimeLog/);
+  assert.match(js, /renderHotRuntimeLogServiceLabel/);
+  assert.match(js, /loadHubRuntimeLogSettings/);
+  assert.match(js, /persistHubRuntimeLogSettings/);
+  assert.match(js, /setObserveRuntimeLogOutput/);
+  assert.match(js, /renderObserveRuntimeLogFollowState/);
+  assert.match(js, /currentObserveRuntimeLogService/);
+  assert.match(js, /currentObserveRuntimeLogAutoRefresh/);
+  assert.match(js, /persistCurrentObserveRuntimeLogSettings/);
+  assert.match(js, /shouldPollObserveRuntimeLog/);
+  assert.match(js, /stopObserveRuntimeLogPolling/);
+  assert.match(js, /syncObserveRuntimeLogPolling/);
+  assert.match(js, /refreshObserveRuntimeLog/);
+  assert.match(js, /copyObserveRuntimeLogView/);
   assert.match(js, /loadHubHotLogSettings/);
   assert.match(js, /persistHubHotLogSettings/);
   assert.match(js, /persistCurrentHotLogSettings/);
@@ -249,7 +279,10 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /HUB_HOT_LOG_POLL_MS/);
   assert.match(js, /read_runtime_log/);
   assert.match(js, /hot-refresh-log/);
+  assert.match(js, /hot-copy-log-view/);
   assert.match(js, /hot-clear-log-view/);
+  assert.match(js, /copied sanitized hot log tail/);
+  assert.match(js, /copied sanitized runtime log tail/);
   assert.match(js, /project_bundle_inspect/);
   assert.match(js, /project_bundle_validate/);
   assert.match(js, /project_bundle_normalize/);
@@ -271,12 +304,14 @@ test("hub shell registers section switching behavior", () => {
 
 test("tauri backend exposes hub runtime commands", () => {
   const rust = read("src-tauri/src/main.rs");
+  const runtimeRust = read("../../workers/rust/crates/desktop-runtime/src/lib.rs");
 
   assert.match(rust, /service_status/);
   assert.match(rust, /service_start/);
   assert.match(rust, /service_restart/);
   assert.match(rust, /service_stop/);
   assert.match(rust, /read_runtime_log/);
+  assert.match(runtimeRust, /failed to read .* log:/);
   assert.match(rust, /doctor_report/);
   assert.match(rust, /validate_env/);
   assert.match(rust, /desktop_status/);

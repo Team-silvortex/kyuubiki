@@ -134,7 +134,7 @@ pub fn log_path_for(service: &str) -> Result<PathBuf, String> {
 pub fn read_runtime_log(service: &str, max_lines: usize) -> Result<String, String> {
     let log_path = log_path_for(service)?;
     let contents = fs::read_to_string(&log_path)
-        .map_err(|error| format!("failed to read {}: {error}", log_path.display()))?;
+        .map_err(|error| format!("failed to read {} log: {error}", service))?;
     let lines: Vec<&str> = contents.lines().collect();
     let start = lines.len().saturating_sub(max_lines);
     Ok(lines[start..].join("\n"))
