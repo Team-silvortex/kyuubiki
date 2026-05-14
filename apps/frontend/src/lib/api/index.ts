@@ -168,6 +168,7 @@ export type Beam1dElementInput = {
   youngs_modulus: number;
   moment_of_inertia: number;
   section_modulus: number;
+  distributed_load_y: number;
   material_id?: string;
 };
 
@@ -175,6 +176,27 @@ export type Beam1dJobInput = {
   nodes: Beam1dNodeInput[];
   elements: Beam1dElementInput[];
   materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type Spring1dNodeInput = {
+  id: string;
+  x: number;
+  fix_x: boolean;
+  load_x: number;
+};
+
+export type Spring1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  stiffness: number;
+};
+
+export type Spring1dJobInput = {
+  nodes: Spring1dNodeInput[];
+  elements: Spring1dElementInput[];
   project_id?: string;
   model_version_id?: string;
 };
@@ -363,6 +385,27 @@ export type Beam1dResult = {
     max_bending_stress: number;
   }>;
   input: Beam1dJobInput;
+};
+
+export type Spring1dResult = {
+  max_displacement: number;
+  max_force: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    ux: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    extension: number;
+    force: number;
+  }>;
+  input: Spring1dJobInput;
 };
 
 export type JobEnvelope<TResult = unknown> = {
@@ -794,6 +837,17 @@ export function resolveBeam1dJobInput(
   };
 }
 
+export function resolveSpring1dJobInput(
+  input: Spring1dJobInput,
+): Spring1dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
@@ -1041,6 +1095,16 @@ export function createBeam1dJob(
   });
 }
 
+export function createSpring1dJob(
+  input: Spring1dJobInput,
+): Promise<JobEnvelope<Spring1dResult>> {
+  return requestJson<JobEnvelope<Spring1dResult>>("/api/v1/fem/spring-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
   return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
     method: "GET",
@@ -1107,7 +1171,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

@@ -1,0 +1,39 @@
+{
+  "kind": "spring_1d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "spring-chain-1d",
+  "nodes": [
+    {
+      "id": "s0",
+      "x": 0,
+      "fix_x": true,
+      "load_x": 0
+    },
+    {
+      "id": "s1",
+      "x": 1.2,
+      "fix_x": false,
+      "load_x": 0
+    },
+    {
+      "id": "s2",
+      "x": 2.4,
+      "fix_x": false,
+      "load_x": 1200
+    }
+  ],
+  "elements": [
+    {
+      "id": "k0",
+      "node_i": 0,
+      "node_j": 1,
+      "stiffness": 35000
+    },
+    {
+      "id": "k1",
+      "node_i": 1,
+      "node_j": 2,
+      "stiffness": 20000
+    }
+  ]
+}

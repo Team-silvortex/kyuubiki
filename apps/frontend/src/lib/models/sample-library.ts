@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  kind: "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   href: string;
   summary: string;
 };
@@ -20,6 +20,20 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "beam_1d",
     href: "/models/cantilever-beam-1d.json",
     summary: "Euler-Bernoulli cantilever beam with tip load and bending response.",
+  },
+  {
+    id: "spring-chain-1d",
+    name: "Spring Chain 1D",
+    kind: "spring_1d",
+    href: "/models/spring-chain-1d.json",
+    summary: "Two inline axial springs with a fixed anchor and tip load for quick extension checks.",
+  },
+  {
+    id: "uniform-load-beam-1d",
+    name: "Uniform Load Beam 1D",
+    kind: "beam_1d",
+    href: "/models/uniform-load-beam-1d.json",
+    summary: "Cantilever beam driven by element-level distributed load for equivalent nodal load checks.",
   },
   {
     id: "braced-truss-2d",

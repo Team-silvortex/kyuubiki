@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -109,6 +109,7 @@ type FrameElementSelection = {
   youngs_modulus: number;
   moment_of_inertia: number;
   section_modulus: number;
+  distributed_load_y?: number;
   axial_stress?: number;
   max_bending_stress?: number;
   max_combined_stress?: number;
@@ -162,6 +163,7 @@ type InspectorLabels = {
   memberEndForces: string;
   momentOfInertia: string;
   sectionModulus: string;
+  distributedLoadY: string;
   bendingStress: string;
   combinedStress: string;
   maxMoment: string;
@@ -261,7 +263,10 @@ type WorkbenchInspectorProps = {
   onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio", value: number) => void;
   onAssignSelectedPlaneElementMaterial: (materialId: string) => void;
   onUpdateSelectedFrameNode: (field: "x" | "y" | "load_x" | "load_y" | "moment_z" | "fix_x" | "fix_y" | "fix_rz", value: number | boolean) => void;
-  onUpdateSelectedFrameElement: (field: "area" | "youngs_modulus" | "moment_of_inertia" | "section_modulus", value: number) => void;
+  onUpdateSelectedFrameElement: (
+    field: "area" | "youngs_modulus" | "moment_of_inertia" | "section_modulus" | "distributed_load_y",
+    value: number,
+  ) => void;
   onAssignSelectedFrameElementMaterial: (materialId: string) => void;
   trussDiagnostics: TrussDiagnostics | null;
   trussStability: StabilitySummary | null;
@@ -548,9 +553,10 @@ function WorkbenchInspectorInner({
                 <label><span>{t.memberSelection}</span><input value={selectedFrameElementData.id} readOnly /></label>
                 <label><span>{t.nodeI}</span><input value={selectedFrameElementData.node_i} readOnly /></label>
                 <label><span>{t.nodeJ}</span><input value={selectedFrameElementData.node_j} readOnly /></label>
-                <label><span>{t.modulus}</span><input value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} readOnly /></label>
-                <label><span>{t.momentOfInertia}</span><input value={selectedFrameElementData.moment_of_inertia} readOnly /></label>
-                <label><span>{t.sectionModulus}</span><input value={selectedFrameElementData.section_modulus} readOnly /></label>
+                <label><span>{t.modulus}</span><input type="number" step={0.1} value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} onChange={(event) => onUpdateSelectedFrameElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
+                <label><span>{t.momentOfInertia}</span><input type="number" step={0.000001} value={selectedFrameElementData.moment_of_inertia} onChange={(event) => onUpdateSelectedFrameElement("moment_of_inertia", Number(event.target.value))} /></label>
+                <label><span>{t.sectionModulus}</span><input type="number" step={0.000001} value={selectedFrameElementData.section_modulus} onChange={(event) => onUpdateSelectedFrameElement("section_modulus", Number(event.target.value))} /></label>
+                <label><span>{t.distributedLoadY}</span><input type="number" step={100} value={selectedFrameElementData.distributed_load_y ?? 0} onChange={(event) => onUpdateSelectedFrameElement("distributed_load_y", Number(event.target.value))} /></label>
                 <label><span>{t.bendingStress}</span><input value={typeof selectedFrameElementData.max_bending_stress === "number" ? selectedFrameElementData.max_bending_stress.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.shearI}</span><input value={typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.momentI}</span><input value={typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"} readOnly /></label>

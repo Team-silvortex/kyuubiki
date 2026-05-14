@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneResultField = "von_mises" | "principal_stress_1" | "max_in_plane_shear";
 type LineResultField = "axial_stress" | "max_bending_stress" | "max_combined_stress" | "moment" | "shear_force";
 
@@ -854,13 +854,21 @@ function WorkbenchViewportInner({
     );
   }
 
-  if (studyKind === "truss_2d" || studyKind === "frame_2d" || studyKind === "beam_1d") {
+  if (studyKind === "truss_2d" || studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "spring_1d") {
     return (
       <svg
         viewBox="0 0 980 460"
         className={`viewport-svg${boxSelectMode ? " viewport-svg--box-select" : ""}`}
         style={svgStyle}
-        aria-label={studyKind === "frame_2d" ? "2d frame response" : studyKind === "beam_1d" ? "1d beam response" : "2d truss response"}
+        aria-label={
+          studyKind === "frame_2d"
+            ? "2d frame response"
+            : studyKind === "beam_1d"
+              ? "1d beam response"
+              : studyKind === "spring_1d"
+                ? "1d spring response"
+                : "2d truss response"
+        }
         onPointerLeave={onStopDraggingNode}
         onPointerMove={onTrussPointerMove}
         onPointerUp={onStopDraggingNode}
@@ -900,7 +908,7 @@ function WorkbenchViewportInner({
                 className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}${focusedFrameElement === element.index ? " bar--focused" : ""}`}
                 style={{
                   stroke:
-                    (studyKind === "frame_2d" || studyKind === "beam_1d") && trussResult
+                    (studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "spring_1d") && trussResult
                         ? planeStressFill(
                           frameResultField === "axial_stress"
                             ? Math.abs(element.axial_stress ?? 0)

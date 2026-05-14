@@ -4,6 +4,7 @@ import type {
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  Spring1dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
@@ -68,8 +69,15 @@ export type ImportedBeam1dModel = {
   model: Beam1dJobInput;
 };
 
+export type ImportedSpring1dModel = {
+  kind: "spring_1d";
+  name: string;
+  model: Spring1dJobInput;
+};
+
 export type ImportedModel =
   | ImportedAxialBarModel
+  | ImportedSpring1dModel
   | ImportedTruss2dModel
   | ImportedPlaneTriangle2dModel
   | ImportedPlaneQuad2dModel
@@ -505,6 +513,7 @@ function parseBeam1dElement(raw: unknown, index: number): Beam1dJobInput["elemen
     youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
     moment_of_inertia: requiredNumber(element.moment_of_inertia, `elements[${index}].moment_of_inertia`),
     section_modulus: requiredNumber(element.section_modulus, `elements[${index}].section_modulus`),
+    distributed_load_y: numberOrZero(element.distributed_load_y),
     material_id: optionalString(element.material_id),
   };
 }
@@ -539,6 +548,45 @@ function parseBeam1dV1(raw: Record<string, unknown>): ImportedBeam1dModel {
   };
 }
 
+function parseSpring1dNode(raw: unknown, index: number): Spring1dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    fix_x: Boolean(node.fix_x),
+    load_x: numberOrZero(node.load_x),
+  };
+}
+
+function parseSpring1dElement(raw: unknown, index: number): Spring1dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    stiffness: requiredNumber(element.stiffness, `elements[${index}].stiffness`),
+  };
+}
+
+function parseSpring1dV1(raw: Record<string, unknown>): ImportedSpring1dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseSpring1dNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseSpring1dElement) : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "spring_1d",
+    name: typeof raw.name === "string" ? raw.name : "imported-spring-1d",
+    model: { nodes, elements },
+  };
+}
+
 export function parsePlaygroundModel(text: string): ImportedModel {
   const raw = JSON.parse(text) as Record<string, unknown>;
   assertSupportedVersion(raw);
@@ -568,6 +616,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "beam_1d") {
     return parseBeam1dV1(raw);
+  }
+
+  if (kind === "spring_1d") {
+    return parseSpring1dV1(raw);
   }
 
   if (kind === "truss_2d") {

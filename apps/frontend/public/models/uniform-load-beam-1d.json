@@ -1,7 +1,7 @@
 {
   "kind": "beam_1d",
   "model_schema_version": "kyuubiki.model/v1",
-  "name": "cantilever-beam-1d",
+  "name": "uniform-load-beam-1d",
   "material": "210",
   "youngs_modulus_gpa": 210,
   "materials": [
@@ -13,7 +13,7 @@
   ],
   "nodes": [
     { "id": "b0", "x": 0, "fix_y": true, "fix_rz": true, "load_y": 0, "moment_z": 0 },
-    { "id": "b1", "x": 2.4, "fix_y": false, "fix_rz": false, "load_y": -12000, "moment_z": 0 }
+    { "id": "b1", "x": 2.0, "fix_y": false, "fix_rz": false, "load_y": 0, "moment_z": 0 }
   ],
   "elements": [
     {
@@ -21,9 +21,9 @@
       "node_i": 0,
       "node_j": 1,
       "youngs_modulus": 210000000000,
-      "moment_of_inertia": 0.00012,
-      "section_modulus": 0.0011,
-      "distributed_load_y": 0,
+      "moment_of_inertia": 0.000008,
+      "section_modulus": 0.00016,
+      "distributed_load_y": -1000,
       "material_id": "mat-1"
     }
   ]
