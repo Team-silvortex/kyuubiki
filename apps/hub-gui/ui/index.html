@@ -167,7 +167,35 @@
               <button data-action="hot-refresh-status">Refresh hot status</button>
               <button data-action="hot-stop">Stop hot loop</button>
             </div>
+            <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+              <label class="hub-field">
+                <span>Hot logs</span>
+                <select id="hot-runtime-log-service">
+                  <option value="hot-stack">stack</option>
+                  <option value="hot-web">web</option>
+                  <option value="hot-frontend">frontend</option>
+                  <option value="hot-agent-5001">agent 5001</option>
+                  <option value="hot-agent-5002">agent 5002</option>
+                </select>
+              </label>
+              <label class="hub-inline-check">
+                <input id="hot-runtime-log-auto" type="checkbox" />
+                <span>Auto refresh</span>
+              </label>
+              <label class="hub-field">
+                <span>Interval</span>
+                <select id="hot-runtime-log-interval">
+                  <option value="2000">2s</option>
+                  <option value="4000">4s</option>
+                  <option value="8000">8s</option>
+                </select>
+              </label>
+              <strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-log-follow-state">frozen</strong>
+              <button data-action="hot-refresh-log">Refresh log</button>
+              <button data-action="hot-clear-log-view">Clear view</button>
+            </div>
             <pre class="hub-log hub-log--compact" id="hot-runtime-status-output">Hot-reload loop is ready.</pre>
+            <pre class="hub-log hub-log--compact" id="hot-runtime-log-output">Select a hot-reload service to inspect its latest tail.</pre>
           </article>
 
           <article class="hub-card desktop-shell-surface-card">

@@ -34,10 +34,12 @@ const HUB_WORKLOAD_LIBRARY_KEY = "kyuubiki.hub.workloads.v1";
 const HUB_ASSISTANT_SETTINGS_KEY = "kyuubiki.hub.assistant.settings.v1";
 const HUB_ASSISTANT_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
 const HUB_ASSISTANT_AUDIT_KEY = "kyuubiki.hub.assistant.audit.v1";
+const HUB_HOT_LOG_SETTINGS_KEY = "kyuubiki.hub.hot-log-settings.v1";
 const HUB_RECENTS_LIMIT = 6;
 const HUB_ACTION_HISTORY_LIMIT = 8;
 const HUB_ASSISTANT_AUDIT_LIMIT = 16;
 const HUB_WORKLOAD_LIBRARY_LIMIT = 32;
+const HUB_HOT_LOG_POLL_MS = 4000;
 const HUB_ASSISTANT_MODEL_PRESETS = ["gpt-5", "gpt-5-mini", "gpt-4.1", "custom"];
 const HUB_ASSISTANT_ACTION_RISK = {
   "hub/focusSection": "low",
@@ -89,7 +91,10 @@ const state = {
   historyFilter: "all",
   assistantMode: "local",
   assistantPlan: null,
+  hotLogRefreshInFlight: false,
 };
+
+let hotRuntimeLogPollHandle = null;
 
 const elements = {
   title: document.getElementById("section-title"),
@@ -118,6 +123,11 @@ const elements = {
   hotRuntimeStatusOutput: document.getElementById("hot-runtime-status-output"),
   hotRuntimeStatus: document.getElementById("hot-runtime-status"),
   hotRuntimeMode: document.getElementById("hot-runtime-mode"),
+  hotRuntimeLogService: document.getElementById("hot-runtime-log-service"),
+  hotRuntimeLogAuto: document.getElementById("hot-runtime-log-auto"),
+  hotRuntimeLogInterval: document.getElementById("hot-runtime-log-interval"),
+  hotRuntimeLogFollowState: document.getElementById("hot-runtime-log-follow-state"),
+  hotRuntimeLogOutput: document.getElementById("hot-runtime-log-output"),
   workbenchUrl: document.getElementById("local-workbench-url"),
   orchestratorUrl: document.getElementById("local-orchestrator-url"),
   currentRuntimeMode: document.getElementById("current-runtime-mode"),
@@ -323,6 +333,25 @@ function loadHubAssistantAudit() {
 
 function persistHubAssistantAudit(entries) {
   window.sessionStorage.setItem(HUB_ASSISTANT_AUDIT_KEY, JSON.stringify(entries.slice(0, HUB_ASSISTANT_AUDIT_LIMIT)));
+}
+
+function loadHubHotLogSettings() {
+  try {
+    const raw = window.localStorage.getItem(HUB_HOT_LOG_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    const interval = String(parsed?.interval || "4000");
+    return {
+      service: String(parsed?.service || "hot-stack"),
+      autoRefresh: parsed?.autoRefresh !== false,
+      interval: ["2000", "4000", "8000"].includes(interval) ? interval : "4000",
+    };
+  } catch {
+    return { service: "hot-stack", autoRefresh: true, interval: "4000" };
+  }
+}
+
+function persistHubHotLogSettings(settings) {
+  window.localStorage.setItem(HUB_HOT_LOG_SETTINGS_KEY, JSON.stringify(settings));
 }
 
 function assistantRiskLevel(action) {
@@ -1670,6 +1699,10 @@ function setSection(section) {
 
   renderAssistantContext();
   renderHubAssistantLocalCards();
+  syncHotRuntimeLogPolling();
+  if (section === "runtimes") {
+    void refreshHotRuntimeLog({ silent: true });
+  }
 }
 
 function setOperationOutput(value) {
@@ -1692,6 +1725,21 @@ function setHotRuntimeStatusOutput(value) {
   }
 }
 
+function setHotRuntimeLogOutput(value) {
+  if (elements.hotRuntimeLogOutput) {
+    elements.hotRuntimeLogOutput.textContent = value;
+  }
+}
+
+function clearHotRuntimeLogView() {
+  setHotRuntimeLogOutput(`Cleared local log view for ${currentHotRuntimeLogService()}. Background tail and log files are unchanged.`);
+}
+
+function renderHotRuntimeLogFollowState() {
+  const label = shouldPollHotRuntimeLog() ? "following" : "frozen";
+  applyDesktopState(elements.hotRuntimeLogFollowState, label, { kind: "activity" });
+}
+
 function inferHotRuntimeState(rendered) {
   const text = String(rendered || "");
   const running = /hot-loop:\s+running/i.test(text);
@@ -1704,6 +1752,62 @@ function inferHotRuntimeState(rendered) {
     status: running ? "running" : stopped ? "idle" : "unknown",
     mode: modeMatch?.[1] || elements.hotRuntimeMode?.textContent?.trim() || "local",
   };
+}
+
+function currentHotRuntimeStatus() {
+  return String(elements.hotRuntimeStatus?.textContent || "").trim().toLowerCase();
+}
+
+function currentHotRuntimeLogService() {
+  return elements.hotRuntimeLogService?.value || "hot-stack";
+}
+
+function currentHotRuntimeLogAutoRefresh() {
+  return elements.hotRuntimeLogAuto?.checked !== false;
+}
+
+function currentHotRuntimeLogInterval() {
+  const value = String(elements.hotRuntimeLogInterval?.value || "4000");
+  return ["2000", "4000", "8000"].includes(value) ? Number(value) : 4000;
+}
+
+function persistCurrentHotLogSettings() {
+  persistHubHotLogSettings({
+    service: currentHotRuntimeLogService(),
+    autoRefresh: currentHotRuntimeLogAutoRefresh(),
+    interval: String(currentHotRuntimeLogInterval()),
+  });
+}
+
+function shouldPollHotRuntimeLog() {
+  return state.activeSection === "runtimes"
+    && currentHotRuntimeStatus() === "running"
+    && currentHotRuntimeLogAutoRefresh();
+}
+
+function stopHotRuntimeLogPolling() {
+  if (hotRuntimeLogPollHandle) {
+    window.clearInterval(hotRuntimeLogPollHandle);
+    hotRuntimeLogPollHandle = null;
+  }
+  renderHotRuntimeLogFollowState();
+}
+
+function syncHotRuntimeLogPolling() {
+  if (!shouldPollHotRuntimeLog()) {
+    stopHotRuntimeLogPolling();
+    return;
+  }
+
+  if (hotRuntimeLogPollHandle) {
+    renderHotRuntimeLogFollowState();
+    return;
+  }
+
+  hotRuntimeLogPollHandle = window.setInterval(() => {
+    void refreshHotRuntimeLog({ silent: true });
+  }, currentHotRuntimeLogInterval() || HUB_HOT_LOG_POLL_MS);
+  renderHotRuntimeLogFollowState();
 }
 
 function setProjectBundleOutput(value) {
@@ -2329,10 +2433,38 @@ async function refreshHotRuntimeStatus() {
     const inferred = inferHotRuntimeState(payload.rendered);
     applyDesktopState(elements.hotRuntimeStatus, inferred.status, { kind: "activity" });
     setText(elements.hotRuntimeMode, inferred.mode);
+    syncHotRuntimeLogPolling();
+    await refreshHotRuntimeLog({ silent: true });
   } catch (error) {
     const message = String(error);
     setHotRuntimeStatusOutput(message);
     applyDesktopState(elements.hotRuntimeStatus, "failed", { kind: "activity" });
+    syncHotRuntimeLogPolling();
+  }
+}
+
+async function refreshHotRuntimeLog(options = {}) {
+  const silent = options?.silent === true;
+  const service = currentHotRuntimeLogService();
+
+  if (state.hotLogRefreshInFlight) {
+    return;
+  }
+
+  state.hotLogRefreshInFlight = true;
+
+  try {
+    const payload = await invokeTauri("read_runtime_log", {
+      payload: { service },
+    });
+    const rendered = String(payload?.rendered || "").trim();
+    setHotRuntimeLogOutput(rendered || `No log lines yet for ${service}.`);
+  } catch (error) {
+    if (!silent) {
+      setHotRuntimeLogOutput(`failed to read ${service}: ${String(error)}`);
+    }
+  } finally {
+    state.hotLogRefreshInFlight = false;
   }
 }
 
@@ -2464,6 +2596,16 @@ async function runAction(action) {
         setOperationOutput("refreshed hot-reload runtime status");
         setBusy(false, "ready");
         return;
+      case "hot-refresh-log":
+        await refreshHotRuntimeLog();
+        setOperationOutput(`refreshed hot log: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
+        setBusy(false, "ready");
+        return;
+      case "hot-clear-log-view":
+        clearHotRuntimeLogView();
+        setOperationOutput(`cleared hot log view: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
+        setBusy(false, "idle");
+        return;
       case "hot-stop":
         setOperationOutput(await invokeTauri("hot_service_stop"));
         await refreshHotRuntimeStatus();
@@ -2579,6 +2721,19 @@ elements.assistantModelName?.addEventListener("change", syncAssistantSettingsFro
 elements.releasePlatform?.addEventListener("change", () => {
   void refreshDesktopStatusOutput();
 });
+elements.hotRuntimeLogService?.addEventListener("change", () => {
+  persistCurrentHotLogSettings();
+  void refreshHotRuntimeLog();
+});
+elements.hotRuntimeLogAuto?.addEventListener("change", () => {
+  persistCurrentHotLogSettings();
+  syncHotRuntimeLogPolling();
+});
+elements.hotRuntimeLogInterval?.addEventListener("change", () => {
+  persistCurrentHotLogSettings();
+  stopHotRuntimeLogPolling();
+  syncHotRuntimeLogPolling();
+});
 elements.projectBundlePath?.addEventListener("input", () => {
   renderAssistantContext();
   renderHubAssistantLocalCards();
@@ -2665,6 +2820,16 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
 
 await applyBrand();
 await loadEnvironment();
+const hotLogSettings = loadHubHotLogSettings();
+if (elements.hotRuntimeLogService) {
+  elements.hotRuntimeLogService.value = hotLogSettings.service;
+}
+if (elements.hotRuntimeLogAuto) {
+  elements.hotRuntimeLogAuto.checked = hotLogSettings.autoRefresh;
+}
+if (elements.hotRuntimeLogInterval) {
+  elements.hotRuntimeLogInterval.value = hotLogSettings.interval;
+}
 syncDesktopStates();
 renderHubRecents();
 applyAssistantSettings();

@@ -160,6 +160,12 @@ button {
   justify-content: flex-start;
 }
 
+.hub-toolbar--dense {
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
 .hub-field {
   display: flex;
   align-items: center;

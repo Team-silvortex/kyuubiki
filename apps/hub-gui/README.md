@@ -35,6 +35,9 @@ overview.
 - one-click Python stub copy from favorites so common bundle workflows can jump into the front-end DSL / Pyodide path
 - runtime lifecycle overview
 - managed hot-reload control for the local/cloud/distributed dev loop
+- hot-reload log tail selection for `stack / web / frontend / agents` directly inside the runtime panel
+- remembered hot-log source plus automatic log polling while the runtime panel is open and the hot loop is running
+- lightweight hot-log polling controls for enabling/disabling auto refresh and choosing the tail interval
 - local/cloud/distributed mode selection
 - diagnostics and health summary
 - integrated desktop readiness wall for `macos / linux / windows` staging, icons, manifests, and host bundles
