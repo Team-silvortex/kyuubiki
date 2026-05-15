@@ -201,6 +201,57 @@ export type Spring1dJobInput = {
   model_version_id?: string;
 };
 
+export type Spring2dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  load_x: number;
+  load_y: number;
+};
+
+export type Spring2dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  stiffness: number;
+};
+
+export type Spring2dJobInput = {
+  nodes: Spring2dNodeInput[];
+  elements: Spring2dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type Spring3dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_z: boolean;
+  load_x: number;
+  load_y: number;
+  load_z: number;
+};
+
+export type Spring3dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  stiffness: number;
+};
+
+export type Spring3dJobInput = {
+  nodes: Spring3dNodeInput[];
+  elements: Spring3dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type JobState = {
   job_id: string;
   status: string;
@@ -406,6 +457,54 @@ export type Spring1dResult = {
     force: number;
   }>;
   input: Spring1dJobInput;
+};
+
+export type Spring2dResult = {
+  max_displacement: number;
+  max_force: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    ux: number;
+    uy: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    extension: number;
+    force: number;
+  }>;
+  input: Spring2dJobInput;
+};
+
+export type Spring3dResult = {
+  max_displacement: number;
+  max_force: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    ux: number;
+    uy: number;
+    uz: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    extension: number;
+    force: number;
+  }>;
+  input: Spring3dJobInput;
 };
 
 export type JobEnvelope<TResult = unknown> = {
@@ -848,6 +947,28 @@ export function resolveSpring1dJobInput(
   };
 }
 
+export function resolveSpring2dJobInput(
+  input: Spring2dJobInput,
+): Spring2dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveSpring3dJobInput(
+  input: Spring3dJobInput,
+): Spring3dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
@@ -1105,6 +1226,26 @@ export function createSpring1dJob(
   });
 }
 
+export function createSpring2dJob(
+  input: Spring2dJobInput,
+): Promise<JobEnvelope<Spring2dResult>> {
+  return requestJson<JobEnvelope<Spring2dResult>>("/api/v1/fem/spring-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createSpring3dJob(
+  input: Spring3dJobInput,
+): Promise<JobEnvelope<Spring3dResult>> {
+  return requestJson<JobEnvelope<Spring3dResult>>("/api/v1/fem/spring-3d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
   return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
     method: "GET",
@@ -1171,7 +1312,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

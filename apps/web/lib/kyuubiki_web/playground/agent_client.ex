@@ -22,6 +22,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_spring_1d", params, on_progress)
   end
 
+  @spec solve_spring_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_spring_2d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_spring_2d", params, on_progress)
+  end
+
+  @spec solve_spring_3d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_spring_3d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_spring_3d", params, on_progress)
+  end
+
   @spec solve_truss_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_truss_2d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_truss_2d", params, on_progress)

@@ -7,6 +7,8 @@ import {
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
   resolveSpring1dJobInput,
+  resolveSpring2dJobInput,
+  resolveSpring3dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
   type AxialBarJobInput,
@@ -15,6 +17,8 @@ import {
   type PlaneQuad2dJobInput,
   type PlaneTriangle2dJobInput,
   type Spring1dJobInput,
+  type Spring2dJobInput,
+  type Spring3dJobInput,
   type Truss2dJobInput,
   type Truss3dJobInput,
 } from "@/lib/api";
@@ -30,6 +34,8 @@ type DirectMeshSolveBody = {
   study_kind:
     | "axial_bar_1d"
     | "spring_1d"
+    | "spring_2d"
+    | "spring_3d"
     | "beam_1d"
     | "truss_2d"
     | "truss_3d"
@@ -45,6 +51,10 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
       return "solve_bar_1d" as const;
     case "spring_1d":
       return "solve_spring_1d" as const;
+    case "spring_2d":
+      return "solve_spring_2d" as const;
+    case "spring_3d":
+      return "solve_spring_3d" as const;
     case "beam_1d":
       return "solve_beam_1d" as const;
     case "truss_2d":
@@ -69,6 +79,10 @@ function normalizeInputForStudyKind(
       return resolveAxialBarJobInput(input as AxialBarJobInput);
     case "spring_1d":
       return resolveSpring1dJobInput(input as Spring1dJobInput);
+    case "spring_2d":
+      return resolveSpring2dJobInput(input as Spring2dJobInput);
+    case "spring_3d":
+      return resolveSpring3dJobInput(input as Spring3dJobInput);
     case "beam_1d":
       return resolveBeam1dJobInput(input as Beam1dJobInput);
     case "truss_2d":

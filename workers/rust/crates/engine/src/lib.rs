@@ -1,12 +1,12 @@
 use kyuubiki_protocol::{
     AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
-    SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest,
-    SolveSpring1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveTruss2dRequest,
+    SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d,
-    solve_spring_1d, solve_truss_2d, solve_truss_3d,
+    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_truss_2d, solve_truss_3d,
 };
 use serde_json::Value;
 
@@ -14,6 +14,8 @@ use serde_json::Value;
 pub enum EngineSolveRequest {
     Bar1d(SolveBarRequest),
     Spring1d(SolveSpring1dRequest),
+    Spring2d(SolveSpring2dRequest),
+    Spring3d(SolveSpring3dRequest),
     Beam1d(SolveBeam1dRequest),
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
@@ -28,9 +30,13 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         EngineSolveRequest::Spring1d(request) => {
             solve_spring_1d(&request).map(AnalysisResult::Spring1d)
         }
-        EngineSolveRequest::Beam1d(request) => {
-            solve_beam_1d(&request).map(AnalysisResult::Beam1d)
+        EngineSolveRequest::Spring2d(request) => {
+            solve_spring_2d(&request).map(AnalysisResult::Spring2d)
         }
+        EngineSolveRequest::Spring3d(request) => {
+            solve_spring_3d(&request).map(AnalysisResult::Spring3d)
+        }
+        EngineSolveRequest::Beam1d(request) => solve_beam_1d(&request).map(AnalysisResult::Beam1d),
         EngineSolveRequest::Truss2d(request) => {
             solve_truss_2d(&request).map(AnalysisResult::Truss2d)
         }
@@ -58,10 +64,16 @@ pub fn chunk_result(
         (AnalysisResult::Bar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
-        (AnalysisResult::Spring1d(result), ResultChunkKind::Nodes) => {
-            encode_slice(&result.nodes)?
-        }
+        (AnalysisResult::Spring1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Spring1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::Spring2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
+        (AnalysisResult::Spring2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::Spring3d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
+        (AnalysisResult::Spring3d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::Beam1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,

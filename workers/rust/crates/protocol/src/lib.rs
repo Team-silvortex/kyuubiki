@@ -128,6 +128,59 @@ pub struct SolveSpring1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring2dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring2dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub stiffness: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveSpring2dRequest {
+    pub nodes: Vec<Spring2dNodeInput>,
+    pub elements: Vec<Spring2dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring3dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_z: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub load_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring3dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub stiffness: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveSpring3dRequest {
+    pub nodes: Vec<Spring3dNodeInput>,
+    pub elements: Vec<Spring3dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Beam1dNodeInput {
     pub id: String,
     pub x: f64,
@@ -207,6 +260,68 @@ pub struct SolveSpring1dResult {
     pub input: SolveSpring1dRequest,
     pub nodes: Vec<Spring1dNodeResult>,
     pub elements: Vec<Spring1dElementResult>,
+    pub max_displacement: f64,
+    pub max_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring2dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub ux: f64,
+    pub uy: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring2dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub extension: f64,
+    pub force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveSpring2dResult {
+    pub input: SolveSpring2dRequest,
+    pub nodes: Vec<Spring2dNodeResult>,
+    pub elements: Vec<Spring2dElementResult>,
+    pub max_displacement: f64,
+    pub max_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring3dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub uz: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Spring3dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub extension: f64,
+    pub force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveSpring3dResult {
+    pub input: SolveSpring3dRequest,
+    pub nodes: Vec<Spring3dNodeResult>,
+    pub elements: Vec<Spring3dElementResult>,
     pub max_displacement: f64,
     pub max_force: f64,
 }
@@ -308,6 +423,10 @@ pub enum RpcMethod {
     SolveBar1d,
     #[serde(rename = "solve_spring_1d")]
     SolveSpring1d,
+    #[serde(rename = "solve_spring_2d")]
+    SolveSpring2d,
+    #[serde(rename = "solve_spring_3d")]
+    SolveSpring3d,
     #[serde(rename = "solve_beam_1d")]
     SolveBeam1d,
     #[serde(rename = "solve_truss_2d")]
@@ -424,6 +543,8 @@ impl RpcProtocolDescriptor {
                 RpcMethod::DescribeAgent,
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveSpring1d,
+                RpcMethod::SolveSpring2d,
+                RpcMethod::SolveSpring3d,
                 RpcMethod::SolveBeam1d,
                 RpcMethod::SolveTruss2d,
                 RpcMethod::SolveTruss3d,
@@ -456,6 +577,28 @@ impl AgentDescriptor {
                     tags: vec![
                         "spring".to_string(),
                         "line".to_string(),
+                        "support".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "spring-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveSpring2d],
+                    tags: vec![
+                        "spring".to_string(),
+                        "plane".to_string(),
+                        "support".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "spring-3d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveSpring3d],
+                    tags: vec![
+                        "spring".to_string(),
+                        "space".to_string(),
                         "support".to_string(),
                         "cpu".to_string(),
                     ],
@@ -850,6 +993,8 @@ pub struct SolveFrame2dResult {
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
     Spring1d(SolveSpring1dResult),
+    Spring2d(SolveSpring2dResult),
+    Spring3d(SolveSpring3dResult),
     Beam1d(SolveBeam1dResult),
     Truss2d(SolveTruss2dResult),
     Truss3d(SolveTruss3dResult),
@@ -889,7 +1034,9 @@ mod tests {
         Frame2dNodeInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION,
         RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-        SolveSpring1dRequest, SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput,
+        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveTruss3dRequest,
+        Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
+        Spring3dElementInput, Spring3dNodeInput,
     };
 
     #[test]
@@ -1120,6 +1267,100 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveSpring1d);
         assert_eq!(decoded.id, "rpc-spring-1d");
+    }
+
+    #[test]
+    fn serializes_spring_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-spring-2d".to_string(),
+            method: RpcMethod::SolveSpring2d,
+            params: serde_json::to_value(SolveSpring2dRequest {
+                nodes: vec![
+                    Spring2dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                    Spring2dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        fix_x: false,
+                        fix_y: false,
+                        load_x: 1000.0,
+                        load_y: -500.0,
+                    },
+                ],
+                elements: vec![Spring2dElementInput {
+                    id: "s0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    stiffness: 25_000.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveSpring2d);
+        assert_eq!(decoded.id, "rpc-spring-2d");
+    }
+
+    #[test]
+    fn serializes_spring_3d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-spring-3d".to_string(),
+            method: RpcMethod::SolveSpring3d,
+            params: serde_json::to_value(SolveSpring3dRequest {
+                nodes: vec![
+                    Spring3dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                    },
+                    Spring3dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        z: 1.0,
+                        fix_x: false,
+                        fix_y: false,
+                        fix_z: false,
+                        load_x: 1000.0,
+                        load_y: -500.0,
+                        load_z: 250.0,
+                    },
+                ],
+                elements: vec![Spring3dElementInput {
+                    id: "s0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    stiffness: 25_000.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveSpring3d);
+        assert_eq!(decoded.id, "rpc-spring-3d");
     }
 
     #[test]

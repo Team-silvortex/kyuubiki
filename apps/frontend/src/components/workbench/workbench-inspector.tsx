@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -404,6 +404,7 @@ function WorkbenchInspectorInner({
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
+  const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d";
   const isBeam = studyKind === "beam_1d";
   const isFrame = studyKind === "frame_2d";
   const historyRows = [
@@ -683,7 +684,7 @@ function WorkbenchInspectorInner({
           <div className="metric-grid">
             <div><span>{t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
             <div><span>{t.maxStress}</span><strong>{maxStressValue}</strong></div>
-            {isFrame ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
+            {isFrame || isSpring ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
             {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
             <div><span>{t.reaction}</span><strong>{reactionValue}</strong></div>
             {(isFrame || isBeam) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
@@ -734,7 +735,7 @@ function WorkbenchInspectorInner({
                 <p className="card-copy">--</p>
               )}
             </div>
-          ) : isFrame || isBeam ? (
+          ) : isFrame || isBeam || isSpring ? (
             <div className="diagnostic-list">
               <div className="diagnostic-item">
                 <strong>{t.currentField}: {frameHotspotFieldLabel ?? "--"}</strong>
@@ -779,11 +780,11 @@ function WorkbenchInspectorInner({
                   <p className="card-copy">{t.memberEndForces}</p>
                   <div className="metric-grid">
                     {!isBeam ? <div><span>{t.forceI}</span><strong>{typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"}</strong></div> : null}
-                    <div><span>{t.shearI}</span><strong>{typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"}</strong></div>
-                    <div><span>{t.momentI}</span><strong>{typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"}</strong></div>
+                    {!isSpring ? <div><span>{t.shearI}</span><strong>{typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"}</strong></div> : null}
+                    {!isSpring ? <div><span>{t.momentI}</span><strong>{typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"}</strong></div> : null}
                     {!isBeam ? <div><span>{t.forceJ}</span><strong>{typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"}</strong></div> : null}
-                    <div><span>{t.shearJ}</span><strong>{typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"}</strong></div>
-                    <div><span>{t.momentJ}</span><strong>{typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"}</strong></div>
+                    {!isSpring ? <div><span>{t.shearJ}</span><strong>{typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"}</strong></div> : null}
+                    {!isSpring ? <div><span>{t.momentJ}</span><strong>{typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"}</strong></div> : null}
                   </div>
                 </>
               ) : null}
@@ -794,18 +795,18 @@ function WorkbenchInspectorInner({
                     <span className="card-copy">{t.sortBy}</span>
                     <button className={`ghost-button ghost-button--compact${frameForceSort === "index" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("index")} type="button">#</button>
                     {!isBeam ? <button className={`ghost-button ghost-button--compact${frameForceSort === "axial" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("axial")} type="button">{t.axialForce}</button> : null}
-                    <button className={`ghost-button ghost-button--compact${frameForceSort === "shear" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("shear")} type="button">{t.shearForce}</button>
-                    <button className={`ghost-button ghost-button--compact${frameForceSort === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("moment")} type="button">{t.maxMoment}</button>
+                    {!isSpring ? <button className={`ghost-button ghost-button--compact${frameForceSort === "shear" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("shear")} type="button">{t.shearForce}</button> : null}
+                    {!isSpring ? <button className={`ghost-button ghost-button--compact${frameForceSort === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("moment")} type="button">{t.maxMoment}</button> : null}
                     <button className="ghost-button ghost-button--compact" onClick={onDownloadFrameForces} type="button">{t.exportMemberForces}</button>
                   </div>
                   <div className="table-like__head table-like__head--frame-forces">
                     <span>#</span>
                     {!isBeam ? <span>{t.forceI}</span> : null}
-                    <span>{t.shearI}</span>
-                    <span>{t.momentI}</span>
+                    {!isSpring ? <span>{t.shearI}</span> : null}
+                    {!isSpring ? <span>{t.momentI}</span> : null}
                     {!isBeam ? <span>{t.forceJ}</span> : null}
-                    <span>{t.shearJ}</span>
-                    <span>{t.momentJ}</span>
+                    {!isSpring ? <span>{t.shearJ}</span> : null}
+                    {!isSpring ? <span>{t.momentJ}</span> : null}
                   </div>
                   <VirtualList
                     className="table-like__body"
@@ -821,11 +822,11 @@ function WorkbenchInspectorInner({
                       >
                         <strong>{entry.id}</strong>
                         {!isBeam ? <span>{entry.axialForceI}</span> : null}
-                        <span>{entry.shearForceI}</span>
-                        <span>{entry.momentI}</span>
+                        {!isSpring ? <span>{entry.shearForceI}</span> : null}
+                        {!isSpring ? <span>{entry.momentI}</span> : null}
                         {!isBeam ? <span>{entry.axialForceJ}</span> : null}
-                        <span>{entry.shearForceJ}</span>
-                        <span>{entry.momentJ}</span>
+                        {!isSpring ? <span>{entry.shearForceJ}</span> : null}
+                        {!isSpring ? <span>{entry.momentJ}</span> : null}
                       </button>
                     )}
                   />

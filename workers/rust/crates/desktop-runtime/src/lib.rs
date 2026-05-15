@@ -120,11 +120,41 @@ pub fn log_path_for(service: &str) -> Result<PathBuf, String> {
         "orchestrator" => "orchestrator.log",
         "agent-5001" => "agent-5001.log",
         "agent-5002" => "agent-5002.log",
-        "hot-stack" => return Ok(root.join("tmp").join("run").join("hot").join("stack.console.log")),
-        "hot-web" => return Ok(root.join("tmp").join("run").join("hot").join("web-4000.log")),
-        "hot-frontend" => return Ok(root.join("tmp").join("run").join("hot").join("frontend-3000.log")),
-        "hot-agent-5001" => return Ok(root.join("tmp").join("run").join("hot").join("agent-5001.log")),
-        "hot-agent-5002" => return Ok(root.join("tmp").join("run").join("hot").join("agent-5002.log")),
+        "hot-stack" => {
+            return Ok(root
+                .join("tmp")
+                .join("run")
+                .join("hot")
+                .join("stack.console.log"));
+        }
+        "hot-web" => {
+            return Ok(root
+                .join("tmp")
+                .join("run")
+                .join("hot")
+                .join("web-4000.log"));
+        }
+        "hot-frontend" => {
+            return Ok(root
+                .join("tmp")
+                .join("run")
+                .join("hot")
+                .join("frontend-3000.log"));
+        }
+        "hot-agent-5001" => {
+            return Ok(root
+                .join("tmp")
+                .join("run")
+                .join("hot")
+                .join("agent-5001.log"));
+        }
+        "hot-agent-5002" => {
+            return Ok(root
+                .join("tmp")
+                .join("run")
+                .join("hot")
+                .join("agent-5002.log"));
+        }
         other => return Err(format!("unknown service log: {other}")),
     };
 

@@ -6,6 +6,8 @@ type RpcMethod =
   | "describe_agent"
   | "solve_bar_1d"
   | "solve_spring_1d"
+  | "solve_spring_2d"
+  | "solve_spring_3d"
   | "solve_beam_1d"
   | "solve_truss_2d"
   | "solve_truss_3d"

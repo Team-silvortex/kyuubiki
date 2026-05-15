@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  kind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   href: string;
   summary: string;
 };
@@ -27,6 +27,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "spring_1d",
     href: "/models/spring-chain-1d.json",
     summary: "Two inline axial springs with a fixed anchor and tip load for quick extension checks.",
+  },
+  {
+    id: "spring-grid-2d",
+    name: "Spring Grid 2D",
+    kind: "spring_2d",
+    href: "/models/spring-grid-2d.json",
+    summary: "Planar spring lattice with anchored supports and lateral load for quick force-distribution checks.",
   },
   {
     id: "uniform-load-beam-1d",

@@ -10,12 +10,13 @@ use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveTruss2dRequest,
-    SolveTruss3dRequest,
+    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
-    solve_plane_triangle_2d, solve_spring_1d, solve_truss_2d, solve_truss_3d,
+    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_truss_2d,
+    solve_truss_3d,
 };
 
 fn main() {
@@ -426,8 +427,125 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                         progress_frames,
                         RpcResponse::success(
                             request.id,
+                            serde_json::to_value(result).expect("spring result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveSpring2d => {
+            let params =
+                match serde_json::from_value::<SolveSpring2dRequest>(request.params.clone()) {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_spring_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d spring", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
                             serde_json::to_value(result)
-                                .expect("spring result should serialize"),
+                                .expect("spring 2d result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveSpring3d => {
+            let params =
+                match serde_json::from_value::<SolveSpring3dRequest>(request.params.clone()) {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_spring_3d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("3d spring", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("spring 3d result should serialize"),
                         ),
                     )
                 }
@@ -1569,8 +1687,9 @@ mod tests {
         PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent,
         RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-        SolveSpring1dRequest, SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput,
-        Truss3dElementInput, Truss3dNodeInput,
+        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveTruss3dRequest,
+        Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
+        Spring3dElementInput, Spring3dNodeInput, Truss3dElementInput, Truss3dNodeInput,
     };
 
     #[test]
@@ -1793,6 +1912,118 @@ mod tests {
         let result: kyuubiki_protocol::SolveSpring1dResult =
             serde_json::from_value(final_response.result.expect("solver result"))
                 .expect("spring result");
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!((result.max_displacement - 0.04).abs() < 1.0e-12);
+        assert!((result.max_force - 1000.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn handles_spring_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-spring-2d".to_string(),
+            method: RpcMethod::SolveSpring2d,
+            params: serde_json::to_value(SolveSpring2dRequest {
+                nodes: vec![
+                    Spring2dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                    },
+                    Spring2dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: false,
+                        fix_y: true,
+                        load_x: 1000.0,
+                        load_y: 0.0,
+                    },
+                ],
+                elements: vec![Spring2dElementInput {
+                    id: "s0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    stiffness: 25_000.0,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveSpring2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("spring 2d result");
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!((result.max_displacement - 0.04).abs() < 1.0e-12);
+        assert!((result.max_force - 1000.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn handles_spring_3d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-spring-3d".to_string(),
+            method: RpcMethod::SolveSpring3d,
+            params: serde_json::to_value(SolveSpring3dRequest {
+                nodes: vec![
+                    Spring3dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                    },
+                    Spring3dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: false,
+                        fix_y: true,
+                        fix_z: true,
+                        load_x: 1000.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                    },
+                ],
+                elements: vec![Spring3dElementInput {
+                    id: "s0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    stiffness: 25_000.0,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveSpring3dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("spring 3d result");
         assert_eq!(result.nodes.len(), 2);
         assert_eq!(result.elements.len(), 1);
         assert!((result.max_displacement - 0.04).abs() < 1.0e-12);

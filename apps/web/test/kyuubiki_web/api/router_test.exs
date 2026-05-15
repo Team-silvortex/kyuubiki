@@ -120,6 +120,100 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert is_map(Jason.decode!(conn.resp_body))
   end
 
+  test "submits a spring 2d job" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/spring-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "fix_x" => false,
+              "fix_y" => false,
+              "load_x" => 1000.0,
+              "load_y" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "s0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "stiffness" => 25_000.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["status"] in ["queued", "running", "completed"]
+  end
+
+  test "submits a spring 3d job" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/spring-3d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "z" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "fix_z" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "load_z" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "z" => 0.0,
+              "fix_x" => false,
+              "fix_y" => true,
+              "fix_z" => true,
+              "load_x" => 1000.0,
+              "load_y" => 0.0,
+              "load_z" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "s0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "stiffness" => 25_000.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["status"] in ["queued", "running", "completed"]
+  end
+
   test "protects cluster registration routes with a dedicated cluster token" do
     Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
       api_token: "cluster-secret",

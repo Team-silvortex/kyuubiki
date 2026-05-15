@@ -177,6 +177,7 @@ import {
   createAxialBarJob,
   createBeam1dJob,
   createSpring1dJob,
+  createSpring2dJob,
   createSecurityEvent,
   createDirectMeshSolve,
   createFrame2dJob,
@@ -238,8 +239,11 @@ import {
   type SecurityEventRecord,
   type Spring1dJobInput,
   type Spring1dResult,
+  type Spring2dJobInput,
+  type Spring2dResult,
   resolveBeam1dJobInput,
   resolveSpring1dJobInput,
+  resolveSpring2dJobInput,
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
   resolveFrame2dJobInput,
@@ -259,11 +263,12 @@ import {
 type Language = "en" | "zh";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
 type FrameStudyJobInput = Frame2dJobInput;
 type BeamStudyJobInput = Beam1dJobInput;
 type SpringStudyJobInput = Spring1dJobInput;
+type Spring2dStudyJobInput = Spring2dJobInput;
 type LineResultField = "axial_stress" | "max_bending_stress" | "max_combined_stress" | "moment" | "shear_force";
 type FrameResultField = Exclude<LineResultField, "shear_force">;
 type BeamResultField = Extract<LineResultField, "max_bending_stress" | "moment" | "shear_force">;
@@ -515,6 +520,22 @@ const defaultSpring1d: Spring1dJobInput = {
   ],
 };
 
+const defaultSpring2d: Spring2dJobInput = {
+  nodes: [
+    { id: "s0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
+    { id: "s1", x: 1.2, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
+    { id: "s2", x: 1.2, y: 1.2, fix_x: false, fix_y: false, load_x: 1200, load_y: -600 },
+    { id: "s3", x: 0, y: 1.2, fix_x: true, fix_y: false, load_x: 0, load_y: 0 },
+  ],
+  elements: [
+    { id: "k0", node_i: 0, node_j: 1, stiffness: 28000 },
+    { id: "k1", node_i: 1, node_j: 2, stiffness: 18000 },
+    { id: "k2", node_i: 2, node_j: 3, stiffness: 22000 },
+    { id: "k3", node_i: 3, node_j: 0, stiffness: 18000 },
+    { id: "k4", node_i: 0, node_j: 2, stiffness: 12000 },
+  ],
+};
+
 const defaultFrame2d: Frame2dJobInput = {
   materials: [createMaterialDefinition("210", 1, { id: "mat-1" })],
   nodes: [
@@ -540,6 +561,7 @@ const copy = {
     kinds: {
       axial_bar_1d: "1D axial bar",
       spring_1d: "1D spring",
+      spring_2d: "2D spring",
       beam_1d: "1D beam",
       truss_2d: "2D truss",
       truss_3d: "3D space truss",
@@ -1007,6 +1029,7 @@ const copy = {
     kinds: {
       axial_bar_1d: "一维轴向杆",
       spring_1d: "一维弹簧",
+      spring_2d: "二维弹簧",
       beam_1d: "一维梁",
       truss_2d: "二维桁架",
       truss_3d: "三维空间桁架",
@@ -1664,6 +1687,18 @@ function isSpring1dResult(value: unknown): value is Spring1dResult {
   );
 }
 
+function isSpring2dResult(value: unknown): value is Spring2dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_force" in value &&
+    "nodes" in value &&
+    "elements" in value &&
+    Array.isArray((value as Spring2dResult).nodes) &&
+    (value as Spring2dResult).nodes.some((node) => "y" in node)
+  );
+}
+
 function isFrame2dResult(value: unknown): value is Frame2dResult {
   return (
     typeof value === "object" &&
@@ -1965,6 +2000,8 @@ function buildDisplaySpringElements(
       stress: element.force,
       axial_force: element.force,
       axial_stress: element.force,
+      axial_force_i: element.force,
+      axial_force_j: element.force,
     }));
   }
 
@@ -1983,6 +2020,89 @@ function buildDisplaySpringElements(
       stress: 0,
       axial_force: 0,
       axial_stress: 0,
+      axial_force_i: 0,
+      axial_force_j: 0,
+    };
+  });
+}
+
+function buildDisplaySpring2dNodes(
+  model: Spring2dJobInput,
+  result: Spring2dResult | null,
+  windowNodes?: Spring2dResult["nodes"],
+): DisplayTrussNode[] {
+  const nodes = windowNodes ?? result?.nodes;
+
+  if (nodes) {
+    return nodes.map((node, index) => ({
+      index: typeof node.index === "number" ? node.index : index,
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      ux: node.ux,
+      uy: node.uy,
+      fix_x: model.nodes[node.index]?.fix_x ?? false,
+      fix_y: model.nodes[node.index]?.fix_y ?? false,
+      load_x: model.nodes[node.index]?.load_x ?? 0,
+      load_y: model.nodes[node.index]?.load_y ?? 0,
+    }));
+  }
+
+  return model.nodes.map((node, index) => ({
+    index,
+    id: node.id,
+    x: node.x,
+    y: node.y,
+    ux: 0,
+    uy: 0,
+    fix_x: node.fix_x,
+    fix_y: node.fix_y,
+    load_x: node.load_x,
+    load_y: node.load_y,
+  }));
+}
+
+function buildDisplaySpring2dElements(
+  model: Spring2dJobInput,
+  result: Spring2dResult | null,
+  windowElements?: Spring2dResult["elements"],
+): DisplayTrussElement[] {
+  const elements = windowElements ?? result?.elements;
+
+  if (elements) {
+    return elements.map((element) => ({
+      index: element.index,
+      id: element.id,
+      node_i: element.node_i,
+      node_j: element.node_j,
+      length: element.length,
+      strain: element.extension,
+      stress: element.force,
+      axial_force: element.force,
+      axial_stress: element.force,
+      axial_force_i: element.force,
+      axial_force_j: element.force,
+    }));
+  }
+
+  return model.elements.map((element, index) => {
+    const nodeI = model.nodes[element.node_i];
+    const nodeJ = model.nodes[element.node_j];
+    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
+    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
+
+    return {
+      index,
+      id: element.id,
+      node_i: element.node_i,
+      node_j: element.node_j,
+      length: Math.sqrt(dx * dx + dy * dy),
+      strain: 0,
+      stress: 0,
+      axial_force: 0,
+      axial_stress: 0,
+      axial_force_i: 0,
+      axial_force_j: 0,
     };
   });
 }
@@ -2438,6 +2558,7 @@ export function Workbench() {
   const [frameModel, setFrameModel] = useState<FrameStudyJobInput>(defaultFrame2d);
   const [beamModel, setBeamModel] = useState<BeamStudyJobInput>(defaultBeam1d);
   const [springModel, setSpringModel] = useState<SpringStudyJobInput>(defaultSpring1d);
+  const [spring2dModel, setSpring2dModel] = useState<Spring2dStudyJobInput>(defaultSpring2d);
   const [parametric, setParametric] = useState<ParametricTrussConfig>(defaultParametric);
   const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
   const [activeMaterial, setActiveMaterial] = useState("210");
@@ -2448,7 +2569,7 @@ export function Workbench() {
   const [focusedPlaneElement, setFocusedPlaneElement] = useState<number | null>(null);
   const [focusedFrameElement, setFocusedFrameElement] = useState<number | null>(null);
   const [result, setResult] = useState<
-    AxialBarResult | Spring1dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null
+    AxialBarResult | Spring1dResult | Spring2dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null
   >(null);
   const [resultWindow, setResultWindow] = useState<ResultWindowState | null>(null);
   const [resultWindowOffset, setResultWindowOffset] = useState(0);
@@ -2502,6 +2623,7 @@ export function Workbench() {
   const [hiddenMaterials, setHiddenMaterials] = useState<Record<StudyKind, string[]>>({
     axial_bar_1d: [],
     spring_1d: [],
+    spring_2d: [],
     beam_1d: [],
     truss_2d: [],
     truss_3d: [],
@@ -2642,6 +2764,8 @@ export function Workbench() {
         ? "truss_3d"
         : isSpring1dResult(result)
           ? "spring_1d"
+        : isSpring2dResult(result)
+          ? "spring_2d"
         : isBeam1dResult(result)
           ? "beam_1d"
         : isFrame2dResult(result)
@@ -3149,7 +3273,14 @@ export function Workbench() {
                     endpoints,
                     directMeshSelectionMode,
                   )
-              : studyKind === "beam_1d"
+                : studyKind === "spring_2d"
+                  ? await createDirectMeshSolve<Spring2dResult>(
+                      "spring_2d",
+                      resolveSpring2dJobInput(spring2dModel) as unknown as Record<string, unknown>,
+                      endpoints,
+                      directMeshSelectionMode,
+                    )
+                : studyKind === "beam_1d"
                 ? await createDirectMeshSolve<Beam1dResult>(
                     "beam_1d",
                     resolveBeam1dJobInput(beamModel) as unknown as Record<string, unknown>,
@@ -3214,6 +3345,8 @@ export function Workbench() {
             ? await createAxialBarJob({ ...toAxialInput(axialForm), ...jobContext })
             : studyKind === "spring_1d"
               ? await createSpring1dJob(resolveSpring1dJobInput({ ...springModel, ...jobContext }))
+            : studyKind === "spring_2d"
+              ? await createSpring2dJob(resolveSpring2dJobInput({ ...spring2dModel, ...jobContext }))
             : studyKind === "beam_1d"
               ? await createBeam1dJob(resolveBeam1dJobInput({ ...beamModel, ...jobContext }))
             : studyKind === "truss_2d"
@@ -3340,7 +3473,7 @@ export function Workbench() {
     startTransition(async () => {
       try {
         const payload = await fetchJobStatus<
-          AxialBarResult | Spring1dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult
+          AxialBarResult | Spring1dResult | Spring2dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult
         >(jobId);
         setJob(payload.job);
 
@@ -3364,6 +3497,13 @@ export function Workbench() {
             recordHistory(t.historyAction);
             setStudyKind("spring_1d");
             setSpringModel(payload.result.input);
+            setSidebarSection("study");
+          }
+
+          if (isSpring2dResult(payload.result)) {
+            recordHistory(t.historyAction);
+            setStudyKind("spring_2d");
+            setSpring2dModel(payload.result.input);
             setSidebarSection("study");
           }
 
@@ -3485,6 +3625,9 @@ export function Workbench() {
       } else if (imported.kind === "spring_1d") {
         setStudyKind("spring_1d");
         setSpringModel(imported.model);
+      } else if (imported.kind === "spring_2d") {
+        setStudyKind("spring_2d");
+        setSpring2dModel(imported.model);
       } else if (imported.kind === "truss_3d") {
         setStudyKind("truss_3d");
         setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
@@ -3535,6 +3678,9 @@ export function Workbench() {
         } else if (imported.kind === "spring_1d") {
           setStudyKind("spring_1d");
           setSpringModel(imported.model);
+        } else if (imported.kind === "spring_2d") {
+          setStudyKind("spring_2d");
+          setSpring2dModel(imported.model);
         } else if (imported.kind === "beam_1d") {
           setStudyKind("beam_1d");
           setBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
@@ -3656,6 +3802,7 @@ export function Workbench() {
         frameModel,
         beamModel,
         springModel,
+        spring2dModel,
         parametric,
         round,
       ),
@@ -3712,7 +3859,7 @@ export function Workbench() {
   };
 
   const downloadFrameHotspotSummary = () => {
-    if (!isFrame || frameHotspotElements.length === 0) {
+    if (!(isFrame || isBeam || isSpring) || frameHotspotElements.length === 0) {
       setMessage(t.noResultToExport);
       return;
     }
@@ -3727,7 +3874,7 @@ export function Workbench() {
   };
 
   const downloadFrameForceSummary = () => {
-    if (!isFrame || frameForceRows.length === 0) {
+    if (!(isFrame || isBeam || isSpring) || frameForceRows.length === 0) {
       setMessage(t.noResultToExport);
       return;
     }
@@ -3749,7 +3896,7 @@ export function Workbench() {
       ),
     ];
 
-    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-frame-member-forces.csv`, lines.join("\n"));
+    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-${isSpring ? "spring" : isBeam ? "beam" : "frame"}-member-forces.csv`, lines.join("\n"));
     setMessage(t.resultCsvDownloaded);
   };
 
@@ -3820,6 +3967,7 @@ export function Workbench() {
           frameModel,
           beamModel,
           springModel,
+          spring2dModel,
           parametric,
           round,
         ),
@@ -4076,6 +4224,9 @@ export function Workbench() {
     } else if (imported.kind === "spring_1d") {
       setStudyKind("spring_1d");
       setSpringModel(imported.model);
+    } else if (imported.kind === "spring_2d") {
+      setStudyKind("spring_2d");
+      setSpring2dModel(imported.model);
     } else if (imported.kind === "beam_1d") {
       setStudyKind("beam_1d");
       setBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
@@ -4172,6 +4323,7 @@ export function Workbench() {
       frameModel,
       beamModel,
       springModel,
+      spring2dModel,
       parametric,
       round,
     );
@@ -4590,7 +4742,9 @@ export function Workbench() {
   const selectedAdminResult = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
 
   const isAxial = studyKind === "axial_bar_1d";
-  const isSpring = studyKind === "spring_1d";
+  const isSpring1d = studyKind === "spring_1d";
+  const isSpring2d = studyKind === "spring_2d";
+  const isSpring = isSpring1d || isSpring2d;
   const isBeam = studyKind === "beam_1d";
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
@@ -4603,7 +4757,10 @@ export function Workbench() {
     job?.status === "solving" ||
     job?.status === "postprocessing";
   const axialResult = isAxial && isAxialResult(result) ? result : null;
-  const springResult = isSpring && isSpring1dResult(result) ? result : null;
+  const springResult = isSpring1d && isSpring1dResult(result) ? result : null;
+  const spring2dResult = isSpring2d && isSpring2dResult(result) ? result : null;
+  const activeSpringResult = isSpring1d ? springResult : spring2dResult;
+  const activeSpringModel = isSpring1d ? springModel : spring2dModel;
   const trussResult = isTruss && isTrussResult(result) ? result : null;
   const truss3dResult = isTruss3d && isTruss3dResult(result) ? result : null;
   const beamResult = isBeam && isBeam1dResult(result) ? result : null;
@@ -4641,6 +4798,10 @@ export function Workbench() {
     activeResultWindow?.studyKind === "spring_1d" ? (activeResultWindow.nodes as Spring1dResult["nodes"]) : undefined;
   const springWindowElements =
     activeResultWindow?.studyKind === "spring_1d" ? (activeResultWindow.elements as Spring1dResult["elements"]) : undefined;
+  const spring2dWindowNodes =
+    activeResultWindow?.studyKind === "spring_2d" ? (activeResultWindow.nodes as Spring2dResult["nodes"]) : undefined;
+  const spring2dWindowElements =
+    activeResultWindow?.studyKind === "spring_2d" ? (activeResultWindow.elements as Spring2dResult["elements"]) : undefined;
   const frameWindowNodes =
     activeResultWindow?.studyKind === "frame_2d" ? (activeResultWindow.nodes as Frame2dResult["nodes"]) : undefined;
   const frameWindowElements =
@@ -4648,15 +4809,19 @@ export function Workbench() {
   const { displayTrussNodes, displayTrussElements, trussBounds } = useMemo(() => {
     const nextDisplayTrussNodes = isFrame
       ? buildDisplayFrameNodes(frameModel, frameResult, frameWindowNodes)
-      : isSpring
+      : isSpring1d
         ? buildDisplaySpringNodes(springModel, springResult, springWindowNodes)
+      : isSpring2d
+        ? buildDisplaySpring2dNodes(spring2dModel, spring2dResult, spring2dWindowNodes)
       : isBeam
         ? buildDisplayBeamNodes(beamModel, beamResult, beamWindowNodes)
         : buildDisplayTrussNodes(trussModel, trussResult, trussWindowNodes);
     const nextDisplayTrussElements = isFrame
       ? buildDisplayFrameElements(frameModel, frameResult, frameWindowElements)
-      : isSpring
+      : isSpring1d
         ? buildDisplaySpringElements(springModel, springResult, springWindowElements)
+      : isSpring2d
+        ? buildDisplaySpring2dElements(spring2dModel, spring2dResult, spring2dWindowElements)
       : isBeam
         ? buildDisplayBeamElements(beamModel, beamResult, beamWindowElements)
         : buildDisplayTrussElements(trussModel, trussResult, trussWindowElements);
@@ -4666,7 +4831,7 @@ export function Workbench() {
       displayTrussElements: nextDisplayTrussElements,
       trussBounds: getTrussBounds(nextDisplayTrussNodes),
     };
-  }, [beamModel, beamResult, beamWindowElements, beamWindowNodes, frameModel, frameResult, frameWindowElements, frameWindowNodes, isBeam, isFrame, isSpring, springModel, springResult, springWindowElements, springWindowNodes, trussModel, trussResult, trussWindowNodes, trussWindowElements]);
+  }, [beamModel, beamResult, beamWindowElements, beamWindowNodes, frameModel, frameResult, frameWindowElements, frameWindowNodes, isBeam, isFrame, isSpring1d, isSpring2d, spring2dModel, spring2dResult, spring2dWindowElements, spring2dWindowNodes, springModel, springResult, springWindowElements, springWindowNodes, trussModel, trussResult, trussWindowNodes, trussWindowElements]);
   const { displayTruss3dNodes, displayTruss3dElements } = useMemo(() => ({
     displayTruss3dNodes: buildDisplayTruss3dNodes(truss3dModel, truss3dResult, truss3dWindowNodes),
     displayTruss3dElements: buildDisplayTruss3dElements(truss3dModel, truss3dResult, truss3dWindowElements),
@@ -4782,7 +4947,9 @@ export function Workbench() {
           id: element.id,
           value: lineResultFieldValue(element, activeLineResultField),
           active: selectedElement === element.index,
-          summary: isBeam
+          summary: isSpring
+            ? `Fi ${scientific(element.axial_force_i)} · Fj ${scientific(element.axial_force_j)}`
+            : isBeam
             ? `Vi ${scientific(element.shear_force_i)} · Mi ${scientific(element.moment_i)} · Vj ${scientific(element.shear_force_j)} · Mj ${scientific(element.moment_j)}`
             : `Ai ${scientific(element.axial_force_i)} · Vi ${scientific(element.shear_force_i)} · Mi ${scientific(element.moment_i)} · Aj ${scientific(element.axial_force_j)} · Vj ${scientific(element.shear_force_j)} · Mj ${scientific(element.moment_j)}`,
         }))
@@ -4795,7 +4962,7 @@ export function Workbench() {
           active: element.active,
           summary: element.summary,
         })),
-    [activeLineResultField, displayTrussElements, isBeam, selectedElement, planeHotspotLimit],
+    [activeLineResultField, displayTrussElements, isBeam, isSpring, selectedElement, planeHotspotLimit],
   );
   const frameForceRows = useMemo(
     () =>
@@ -4901,6 +5068,24 @@ export function Workbench() {
           ...beamResult?.elements[selectedElement],
         }
       : null;
+  const selectedSpringElementData =
+    selectedElement !== null && activeSpringModel.elements[selectedElement]
+      ? {
+          index: selectedElement,
+          ...activeSpringModel.elements[selectedElement],
+          area: 0,
+          youngs_modulus: 0,
+          moment_of_inertia: 0,
+          section_modulus: 0,
+          axial_stress: displayTrussElements[selectedElement]?.axial_stress,
+          axial_force_i: displayTrussElements[selectedElement]?.axial_force_i,
+          shear_force_i: 0,
+          moment_i: 0,
+          axial_force_j: displayTrussElements[selectedElement]?.axial_force_j,
+          shear_force_j: 0,
+          moment_j: 0,
+        }
+      : null;
   const selectedNodeIssues =
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
   const translatedFailureReason = humanizeSolverFailure(job?.message, t);
@@ -4942,7 +5127,7 @@ export function Workbench() {
         ? trussModel.materials ?? []
         : studyKind === "truss_3d"
           ? truss3dModel.materials ?? []
-          : studyKind === "spring_1d"
+          : studyKind === "spring_1d" || studyKind === "spring_2d"
             ? []
           : studyKind === "beam_1d"
             ? beamModel.materials ?? []
@@ -5383,8 +5568,8 @@ export function Workbench() {
     isAxial
       ? axialNodes.length
       : activeResultWindow?.totalNodes ??
-        (isTruss ? trussResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : isSpring ? springResult?.nodes.length : isBeam ? beamResult?.nodes.length : isFrame ? frameResult?.nodes.length : planeResult?.nodes.length) ??
-        (isTruss ? trussModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : isSpring ? springModel.nodes.length : isBeam ? beamModel.nodes.length : isFrame ? frameModel.nodes.length : planeModel.nodes.length);
+        (isTruss ? trussResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : isSpring ? activeSpringResult?.nodes.length : isBeam ? beamResult?.nodes.length : isFrame ? frameResult?.nodes.length : planeResult?.nodes.length) ??
+        (isTruss ? trussModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : isSpring ? activeSpringModel.nodes.length : isBeam ? beamModel.nodes.length : isFrame ? frameModel.nodes.length : planeModel.nodes.length);
   const resultWindowMaxTotal = activeResultWindow ? Math.max(activeResultWindow.totalNodes, activeResultWindow.totalElements) : 0;
   const activeResultWindowLimit = activeResultWindow?.limit ?? resultWindowLimit;
   const resultWindowStart = activeResultWindow ? Math.min(resultWindowOffset, Math.max(0, resultWindowMaxTotal - 1)) + 1 : 0;
@@ -5733,6 +5918,7 @@ export function Workbench() {
           if (
             nextStudyKind === "axial_bar_1d" ||
             nextStudyKind === "spring_1d" ||
+            nextStudyKind === "spring_2d" ||
             nextStudyKind === "beam_1d" ||
             nextStudyKind === "truss_2d" ||
             nextStudyKind === "truss_3d" ||
@@ -5747,6 +5933,8 @@ export function Workbench() {
               setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial));
             } else if (nextStudyKind === "spring_1d" && studyKind !== "spring_1d") {
               setSpringModel(defaultSpring1d);
+            } else if (nextStudyKind === "spring_2d" && studyKind !== "spring_2d") {
+              setSpring2dModel(defaultSpring2d);
             } else if (nextStudyKind === "beam_1d" && studyKind !== "beam_1d") {
               setBeamModel(ensureBeamModelMaterials(defaultBeam1d, activeMaterial));
             } else if (nextStudyKind === "frame_2d" && studyKind !== "frame_2d") {
@@ -5894,6 +6082,7 @@ export function Workbench() {
             frameModel,
             beamModel,
             springModel,
+            spring2dModel,
             parametric,
             round,
           );
@@ -6248,6 +6437,7 @@ export function Workbench() {
       frameModel,
       beamModel,
       springModel,
+      spring2dModel,
       parametric,
       panelParametric,
       activeMaterial,
@@ -6271,6 +6461,7 @@ export function Workbench() {
         setFrameModel,
         setBeamModel,
         setSpringModel,
+        setSpring2dModel,
         setParametric,
         setPanelParametric,
         setActiveMaterial,
@@ -6996,8 +7187,10 @@ export function Workbench() {
     materialLabel: localMaterialLabel(activeMaterial, language),
     meshValue: isAxial
       ? axialForm.elements
-      : isSpring
+      : isSpring1d
         ? springModel.elements.length
+      : isSpring2d
+        ? spring2dModel.elements.length
       : isBeam
         ? beamModel.elements.length
       : isTruss
@@ -7009,8 +7202,10 @@ export function Workbench() {
           : planeModel.elements.length,
     loadValue: isAxial
       ? `${fixed(axialForm.tipForce, 0)} N`
-      : isSpring
+      : isSpring1d
         ? `${fixed(springModel.nodes.reduce((sum, node) => sum + node.load_x, 0), 0)} N`
+      : isSpring2d
+        ? `${fixed(spring2dModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y), 0), 0)} N`
       : isBeam
         ? `${fixed(beamModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N · ${fixed(beamModel.nodes.reduce((sum, node) => sum + node.moment_z, 0), 0)} N·m · ${fixed(beamModel.elements.reduce((sum, element) => sum + Math.abs(element.distributed_load_y ?? 0), 0), 0)} N/m`
       : isTruss
@@ -7020,7 +7215,7 @@ export function Workbench() {
           : studyKind === "frame_2d"
             ? `${fixed(frameModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N · ${fixed(frameModel.nodes.reduce((sum, node) => sum + node.moment_z, 0), 0)} N·m`
           : `${fixed(planeModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`,
-    supportValue: isAxial ? "Node 0" : isSpring ? "Axial anchor" : isTruss3d ? "Fixed tripod" : isFrame || isBeam ? "Moment-resisting base" : "Pinned base",
+    supportValue: isAxial ? "Node 0" : isSpring1d ? "Axial anchor" : isSpring2d ? "Planar anchors" : isTruss3d ? "Fixed tripod" : isFrame || isBeam ? "Moment-resisting base" : "Pinned base",
   });
 
   const studyControlsRows = buildStudyControlsRows({
@@ -7050,6 +7245,8 @@ export function Workbench() {
           ? beamModel.nodes.length
           : studyKind === "spring_1d"
             ? springModel.nodes.length
+            : studyKind === "spring_2d"
+              ? spring2dModel.nodes.length
             : planeModel.nodes.length,
     planeElementCount:
       studyKind === "frame_2d"
@@ -7058,8 +7255,10 @@ export function Workbench() {
           ? beamModel.elements.length
           : studyKind === "spring_1d"
             ? springModel.elements.length
+            : studyKind === "spring_2d"
+              ? spring2dModel.elements.length
             : planeModel.elements.length,
-    planeThicknessValue: studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "spring_1d" ? "--" : fixed(planeModel.elements[0]?.thickness, 3),
+    planeThicknessValue: studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "spring_1d" || studyKind === "spring_2d" ? "--" : fixed(planeModel.elements[0]?.thickness, 3),
   });
   const truss3dTreeRows = buildTruss3dTreeRows({
     nodes: truss3dModel.nodes,
@@ -7296,8 +7495,10 @@ export function Workbench() {
           ? `${memberDraftNodes.length}/2`
           : isBeam
             ? String(beamModel.elements.length)
-            : isSpring
+            : isSpring1d
               ? String(springModel.elements.length)
+              : isSpring2d
+                ? String(spring2dModel.elements.length)
               : String(planeModel.elements.length)
       }
       hint={isPlane ? t.planeHint : isFrame ? t.frameEditorHint : isBeam || isSpring ? t.modelStudioHint : t.dragHint}
@@ -7309,7 +7510,7 @@ export function Workbench() {
       nodeJLabel={t.nodeJ}
       nodeKLabel={t.nodeK}
       elementValueLabel={isFrame || isSpring ? frameTreeValueLabel : isBeam ? t.bendingStress : undefined}
-      nodeRows={(isPlane ? planeModel.nodes : isFrame ? frameModel.nodes : isBeam ? beamModel.nodes : isSpring ? springModel.nodes : trussModel.nodes).map((node) => ({
+      nodeRows={(isPlane ? planeModel.nodes : isFrame ? frameModel.nodes : isBeam ? beamModel.nodes : isSpring1d ? springModel.nodes : isSpring2d ? spring2dModel.nodes : trussModel.nodes).map((node) => ({
         id: node.id,
         x: node.x,
         y: Number("y" in node ? node.y : 0),
@@ -7408,6 +7609,8 @@ export function Workbench() {
                 setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial));
               } else if (nextStudyKind === "spring_1d" && studyKind !== "spring_1d") {
                 setSpringModel(defaultSpring1d);
+              } else if (nextStudyKind === "spring_2d" && studyKind !== "spring_2d") {
+                setSpring2dModel(defaultSpring2d);
               } else if (nextStudyKind === "beam_1d" && studyKind !== "beam_1d") {
                 setBeamModel(ensureBeamModelMaterials(defaultBeam1d, activeMaterial));
               } else if (nextStudyKind === "frame_2d" && studyKind !== "frame_2d") {
@@ -8390,8 +8593,8 @@ export function Workbench() {
             sidebarSection={sidebarSection}
             title={t.sections.model}
             axialTitle={t.kinds.axial_bar_1d}
-            trussTitle={t.kinds[isSpring ? "spring_1d" : isBeam ? "beam_1d" : isFrame ? "frame_2d" : "truss_2d"]}
-            trussLegend={(isFrame && frameResult) || (isBeam && beamResult) || (isSpring && springResult) ? frameLegendText : undefined}
+            trussTitle={t.kinds[isSpring2d ? "spring_2d" : isSpring1d ? "spring_1d" : isBeam ? "beam_1d" : isFrame ? "frame_2d" : "truss_2d"]}
+            trussLegend={(isFrame && frameResult) || (isBeam && beamResult) || (isSpring1d && springResult) || (isSpring2d && spring2dResult) ? frameLegendText : undefined}
             truss3dTitle={t.kinds.truss_3d}
             planeTitle={t.kinds[studyKind === "plane_quad_2d" ? "plane_quad_2d" : "plane_triangle_2d"]}
             planeLegend={planeLegendText}
@@ -8403,7 +8606,7 @@ export function Workbench() {
             trussElementColors={trussElementColors}
             hiddenTrussMaterialIds={isTruss || isFrame || isBeam || isSpring ? hiddenMaterialIds : []}
             trussBounds={trussBounds}
-            trussResult={Boolean(trussResult || frameResult || beamResult || springResult)}
+            trussResult={Boolean(trussResult || frameResult || beamResult || springResult || spring2dResult)}
             frameResultField={activeLineResultField}
             frameResultFieldMax={frameResultFieldMax}
             focusedFrameElement={focusedFrameElement}
@@ -8601,8 +8804,8 @@ export function Workbench() {
           diagnosticsLabel={t.diagnostics}
           selectedNodeId={isPlane ? selectedPlaneNodeData?.id ?? null : isBeam ? selectedBeamNodeData?.id ?? null : isFrame ? selectedFrameNodeData?.id ?? null : selectedNodeData?.id ?? null}
           selectedNodeX={isPlane ? selectedPlaneNodeData?.x : isBeam ? selectedBeamNodeData?.x : isFrame ? selectedFrameNodeData?.x : selectedNodeData?.x}
-          selectedNodeY={isPlane ? selectedPlaneNodeData?.y : isBeam || isSpring ? 0 : isFrame ? selectedFrameNodeData?.y : selectedNodeData?.y}
-          selectedNodeLoadY={isPlane ? selectedPlaneNodeData?.load_y : isBeam ? selectedBeamNodeData?.load_y : isFrame ? selectedFrameNodeData?.load_y : isSpring ? selectedNodeData?.load_x : selectedNodeData?.load_y}
+          selectedNodeY={isPlane ? selectedPlaneNodeData?.y : isBeam || isSpring1d ? 0 : isFrame ? selectedFrameNodeData?.y : selectedNodeData?.y}
+          selectedNodeLoadY={isPlane ? selectedPlaneNodeData?.load_y : isBeam ? selectedBeamNodeData?.load_y : isFrame ? selectedFrameNodeData?.load_y : isSpring1d ? selectedNodeData?.load_x : isSpring2d ? selectedNodeData?.load_y : selectedNodeData?.load_y}
           selectedNodeIssueCount={isPlane ? null : selectedNodeIssues.length > 0 ? selectedNodeIssues.length : null}
           elementTitle={isAxial ? t.axialElements : isBeam || isSpring ? t.frameElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : isFrame ? t.frameElements : t.planeElements}
           spanLabel={t.span}
@@ -8638,7 +8841,7 @@ export function Workbench() {
         selectedPlaneNodeData={selectedPlaneNodeData ? { ...selectedPlaneNodeData } : null}
         selectedPlaneElementData={selectedPlaneElementData ? { ...selectedPlaneElementData } : null}
         selectedFrameNodeData={(isFrame ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : null) ? { ...(isFrame ? selectedFrameNodeData : selectedBeamNodeData)! } : null}
-        selectedFrameElementData={(isFrame ? selectedFrameElementData : isBeam ? selectedBeamElementData : null) ? { ...(isFrame ? selectedFrameElementData : selectedBeamElementData)! } : null}
+        selectedFrameElementData={(isFrame ? selectedFrameElementData : isBeam ? selectedBeamElementData : isSpring ? selectedSpringElementData : null) ? { ...(isFrame ? selectedFrameElementData : isBeam ? selectedBeamElementData : selectedSpringElementData)! } : null}
         trussElementArea={selectedElementData ? trussModel.elements[selectedElementData.index]?.area ?? 0 : 0}
         trussElementModulusGpa={selectedElementData ? round((trussModel.elements[selectedElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
         trussElementMaterialId={selectedElementData ? trussModel.elements[selectedElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
@@ -8677,17 +8880,17 @@ export function Workbench() {
         onRedo={handleRedo}
         job={job}
         nodeCount={nodeCount}
-        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : isBeam ? scientific(beamResult?.max_displacement) : isFrame ? scientific(frameResult?.max_displacement) : scientific(planeResult?.max_displacement)}
-        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : isBeam ? beamResult?.max_stress : isFrame ? frameResult?.max_stress : planeResult?.max_stress)}
-        frameMaxAxialForceValue={isFrame ? scientific(frameMaxAxialForce) : undefined}
+        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isTruss3d ? scientific(truss3dResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(beamResult?.max_displacement) : isFrame ? scientific(frameResult?.max_displacement) : scientific(planeResult?.max_displacement)}
+        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isTruss ? trussResult?.max_stress : isTruss3d ? truss3dResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? beamResult?.max_stress : isFrame ? frameResult?.max_stress : planeResult?.max_stress)}
+        frameMaxAxialForceValue={isFrame || isSpring ? scientific(frameMaxAxialForce) : undefined}
         frameMaxShearForceValue={isFrame || isBeam ? scientific(frameMaxShearForce) : undefined}
-        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isFrame ? scientific(frameResult?.max_moment) : isBeam ? scientific(beamResult?.max_moment) : "--"}
+        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isSpring ? scientific(activeSpringResult?.max_force) : isFrame ? scientific(frameResult?.max_moment) : isBeam ? scientific(beamResult?.max_moment) : "--"}
         frameMaxRotationValue={isFrame ? scientific(frameResult?.max_rotation) : isBeam ? scientific(beamResult?.max_rotation) : undefined}
         planeHotspotFieldLabel={isPlane ? planeResultFieldLabel : undefined}
         planeHotspotElements={isPlane ? planeHotspotElements : []}
-        frameHotspotFieldLabel={isFrame ? frameResultFieldLabel : isBeam ? t.bendingStress : undefined}
-        frameHotspotElements={isFrame || isBeam ? frameHotspotElements : []}
-        frameForceRows={isFrame || isBeam ? frameForceRows : []}
+        frameHotspotFieldLabel={isFrame || isSpring ? frameResultFieldLabel : isBeam ? t.bendingStress : undefined}
+        frameHotspotElements={isFrame || isBeam || isSpring ? frameHotspotElements : []}
+        frameForceRows={isFrame || isBeam || isSpring ? frameForceRows : []}
         planeHotspotLimit={planeHotspotLimit}
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}

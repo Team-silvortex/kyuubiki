@@ -6,6 +6,8 @@ export type DirectMeshCachedResult = {
     | "plane_quad_2d"
     | "axial_bar_1d"
     | "spring_1d"
+    | "spring_2d"
+    | "spring_3d"
     | "beam_1d"
     | "frame_2d";
   result: Record<string, unknown>;

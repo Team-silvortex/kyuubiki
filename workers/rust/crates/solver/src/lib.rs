@@ -1,13 +1,15 @@
 use kyuubiki_protocol::{
-    Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult,
-    Frame2dNodeResult, Job, JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput,
-    PlaneQuadElementResult, PlaneTriangleElementInput, PlaneTriangleElementResult,
-    ProgressEvent, SolveBarRequest, SolveBarResult, SolveBeam1dRequest, SolveBeam1dResult,
-    SolveFrame2dRequest, SolveFrame2dResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
-    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveSpring1dRequest,
-    SolveSpring1dResult, SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest,
-    SolveTruss3dResult, Spring1dElementResult, Spring1dNodeResult, Truss3dElementResult,
-    Truss3dNodeResult, TrussElementResult, TrussNodeResult,
+    Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
+    Job, JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult,
+    PlaneTriangleElementInput, PlaneTriangleElementResult, ProgressEvent, SolveBarRequest,
+    SolveBarResult, SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
+    SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
+    SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
+    SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveTruss2dRequest,
+    SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Spring1dElementResult,
+    Spring1dNodeResult, Spring2dElementResult, Spring2dNodeResult, Spring3dElementResult,
+    Spring3dNodeResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
+    TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -213,10 +215,8 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
                 &multiply_matrix_vector_4x4(&local_stiffness, &local_displacements),
                 &equivalent_load,
             );
-            let max_bending_stress = local_forces[1]
-                .abs()
-                .max(local_forces[3].abs())
-                / element.section_modulus;
+            let max_bending_stress =
+                local_forces[1].abs().max(local_forces[3].abs()) / element.section_modulus;
 
             Beam1dElementResult {
                 index,
@@ -351,6 +351,296 @@ pub fn solve_spring_1d(request: &SolveSpring1dRequest) -> Result<SolveSpring1dRe
         .fold(0.0_f64, f64::max);
 
     Ok(SolveSpring1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_force,
+    })
+}
+
+pub fn solve_spring_2d(request: &SolveSpring2dRequest) -> Result<SolveSpring2dResult, String> {
+    validate_spring_2d_request(request)?;
+
+    let dof_count = request.nodes.len() * 2;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 2] = node.load_x;
+        force_vector[index * 2 + 1] = node.load_y;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = (dx * dx + dy * dy).sqrt();
+        let c = dx / length;
+        let s = dy / length;
+        let k = element.stiffness;
+
+        let local = [
+            [c * c, c * s, -c * c, -c * s],
+            [c * s, s * s, -c * s, -s * s],
+            [-c * c, -c * s, c * c, c * s],
+            [-c * s, -s * s, c * s, s * s],
+        ];
+
+        let map = [
+            element.node_i * 2,
+            element.node_i * 2 + 1,
+            element.node_j * 2,
+            element.node_j * 2 + 1,
+        ];
+
+        for row in 0..4 {
+            for column in 0..4 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    k * local[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 2);
+            }
+            if node.fix_y {
+                dofs.push(index * 2 + 1);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| Spring2dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            ux: displacements[index * 2],
+            uy: displacements[index * 2 + 1],
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let length = (dx * dx + dy * dy).sqrt();
+            let c = dx / length;
+            let s = dy / length;
+
+            let ux_i = displacements[element.node_i * 2];
+            let uy_i = displacements[element.node_i * 2 + 1];
+            let ux_j = displacements[element.node_j * 2];
+            let uy_j = displacements[element.node_j * 2 + 1];
+            let extension = (ux_j - ux_i) * c + (uy_j - uy_i) * s;
+            let force = element.stiffness * extension;
+
+            Spring2dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                extension,
+                force,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_force = elements
+        .iter()
+        .map(|element| element.force.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveSpring2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_force,
+    })
+}
+
+pub fn solve_spring_3d(request: &SolveSpring3dRequest) -> Result<SolveSpring3dResult, String> {
+    validate_spring_3d_request(request)?;
+
+    let dof_count = request.nodes.len() * 3;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 3] = node.load_x;
+        force_vector[index * 3 + 1] = node.load_y;
+        force_vector[index * 3 + 2] = node.load_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        let l = dx / length;
+        let m = dy / length;
+        let n = dz / length;
+        let k = element.stiffness;
+
+        let local = [
+            [l * l, l * m, l * n, -l * l, -l * m, -l * n],
+            [l * m, m * m, m * n, -l * m, -m * m, -m * n],
+            [l * n, m * n, n * n, -l * n, -m * n, -n * n],
+            [-l * l, -l * m, -l * n, l * l, l * m, l * n],
+            [-l * m, -m * m, -m * n, l * m, m * m, m * n],
+            [-l * n, -m * n, -n * n, l * n, m * n, n * n],
+        ];
+
+        let map = [
+            element.node_i * 3,
+            element.node_i * 3 + 1,
+            element.node_i * 3 + 2,
+            element.node_j * 3,
+            element.node_j * 3 + 1,
+            element.node_j * 3 + 2,
+        ];
+
+        for row in 0..6 {
+            for column in 0..6 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    k * local[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 3);
+            }
+            if node.fix_y {
+                dofs.push(index * 3 + 1);
+            }
+            if node.fix_z {
+                dofs.push(index * 3 + 2);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| Spring3dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            z: node.z,
+            ux: displacements[index * 3],
+            uy: displacements[index * 3 + 1],
+            uz: displacements[index * 3 + 2],
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let dz = node_j.z - node_i.z;
+            let length = (dx * dx + dy * dy + dz * dz).sqrt();
+            let l = dx / length;
+            let m = dy / length;
+            let n = dz / length;
+
+            let ux_i = displacements[element.node_i * 3];
+            let uy_i = displacements[element.node_i * 3 + 1];
+            let uz_i = displacements[element.node_i * 3 + 2];
+            let ux_j = displacements[element.node_j * 3];
+            let uy_j = displacements[element.node_j * 3 + 1];
+            let uz_j = displacements[element.node_j * 3 + 2];
+            let extension = (ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n;
+            let force = element.stiffness * extension;
+
+            Spring3dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                extension,
+                force,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_force = elements
+        .iter()
+        .map(|element| element.force.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveSpring3dResult {
         input: request.clone(),
         nodes,
         elements,
@@ -1031,7 +1321,12 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
         let length = (dx * dx + dy * dy).sqrt();
         let c = dx / length;
         let s = dy / length;
-        let local_stiffness = frame_local_stiffness(element.area, element.youngs_modulus, element.moment_of_inertia, length);
+        let local_stiffness = frame_local_stiffness(
+            element.area,
+            element.youngs_modulus,
+            element.moment_of_inertia,
+            length,
+        );
         let transform = frame_transform(c, s);
         let global_element_stiffness = transform_frame_stiffness(&local_stiffness, &transform);
         let map = [
@@ -1135,10 +1430,8 @@ pub fn solve_frame_2d(request: &SolveFrame2dRequest) -> Result<SolveFrame2dResul
             let local_displacements = multiply_matrix_vector_6x6(&transform, &global_displacements);
             let local_forces = multiply_matrix_vector_6x6(&local_stiffness, &local_displacements);
             let axial_stress = local_forces[0].abs().max(local_forces[3].abs()) / element.area;
-            let bending_stress = local_forces[2]
-                .abs()
-                .max(local_forces[5].abs())
-                / element.section_modulus;
+            let bending_stress =
+                local_forces[2].abs().max(local_forces[5].abs()) / element.section_modulus;
             let max_combined_stress = axial_stress + bending_stress;
 
             Frame2dElementResult {
@@ -1431,10 +1724,9 @@ fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(), String> 
         return Err("1d beam must define at least one element".to_string());
     }
 
-    let constrained_dofs = request
-        .nodes
-        .iter()
-        .fold(0, |sum, node| sum + usize::from(node.fix_y) + usize::from(node.fix_rz));
+    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
+        sum + usize::from(node.fix_y) + usize::from(node.fix_rz)
+    });
     if constrained_dofs < 2 {
         return Err("1d beam must restrain at least two degrees of freedom".to_string());
     }
@@ -1496,6 +1788,85 @@ fn validate_spring_1d_request(request: &SolveSpring1dRequest) -> Result<(), Stri
         let length = (node_j.x - node_i.x).abs();
         if length <= 1.0e-12 {
             return Err("1d spring element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_spring_2d_request(request: &SolveSpring2dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("2d spring model must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("2d spring model must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
+        return Err("2d spring model must restrain at least one degree of freedom".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("2d spring element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("2d spring element must connect two distinct nodes".to_string());
+        }
+        if !(element.stiffness.is_finite() && element.stiffness > 0.0) {
+            return Err("2d spring element stiffness must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = (dx * dx + dy * dy).sqrt();
+        if length <= 1.0e-12 {
+            return Err("2d spring element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_spring_3d_request(request: &SolveSpring3dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("3d spring model must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("3d spring model must define at least one element".to_string());
+    }
+
+    if !request
+        .nodes
+        .iter()
+        .any(|node| node.fix_x || node.fix_y || node.fix_z)
+    {
+        return Err("3d spring model must restrain at least one degree of freedom".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("3d spring element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("3d spring element must connect two distinct nodes".to_string());
+        }
+        if !(element.stiffness.is_finite() && element.stiffness > 0.0) {
+            return Err("3d spring element stiffness must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        if length <= 1.0e-12 {
+            return Err("3d spring element length must be positive".to_string());
         }
     }
 
@@ -1855,11 +2226,7 @@ fn frame_local_stiffness(
     ]
 }
 
-fn beam_local_stiffness(
-    youngs_modulus: f64,
-    moment_of_inertia: f64,
-    length: f64,
-) -> [[f64; 4]; 4] {
+fn beam_local_stiffness(youngs_modulus: f64, moment_of_inertia: f64, length: f64) -> [[f64; 4]; 4] {
     let flexural = youngs_modulus * moment_of_inertia;
     let l2 = length * length;
     let l3 = l2 * length;
@@ -1937,7 +2304,9 @@ fn multiply_matrix_6x6_6x6(lhs: &[[f64; 6]; 6], rhs: &[[f64; 6]; 6]) -> [[f64; 6
     let mut output = [[0.0; 6]; 6];
     for row in 0..6 {
         for column in 0..6 {
-            output[row][column] = (0..6).map(|index| lhs[row][index] * rhs[index][column]).sum();
+            output[row][column] = (0..6)
+                .map(|index| lhs[row][index] * rhs[index][column])
+                .sum();
         }
     }
     output
@@ -2404,15 +2773,18 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 mod tests {
     use super::{
         MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
-        solve_plane_triangle_2d, solve_spring_1d, solve_truss_2d, solve_truss_3d,
+        solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_truss_2d,
+        solve_truss_3d,
     };
     use kyuubiki_protocol::{
-        Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Job,
-        JobStatus, PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput,
-        SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
-        SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveTruss2dRequest,
-        SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput, Truss3dElementInput,
-        Truss3dNodeInput, TrussElementInput, TrussNodeInput,
+        Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Job, JobStatus,
+        PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest,
+        SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
+        SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
+        SolveSpring3dRequest, SolveTruss2dRequest, SolveTruss3dRequest, Spring1dElementInput,
+        Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput,
+        Spring3dNodeInput, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
+        TrussNodeInput,
     };
 
     #[test]
@@ -2576,6 +2948,97 @@ mod tests {
         assert_eq!(result.elements.len(), 1);
         assert!((result.max_displacement - 0.04).abs() < 1.0e-12);
         assert!((result.max_force - 1000.0).abs() < 1.0e-9);
+        assert!((result.elements[0].extension - 0.04).abs() < 1.0e-12);
+        assert!((result.elements[0].force - 1000.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn solves_a_small_spring_2d_chain() {
+        let result = solve_spring_2d(&SolveSpring2dRequest {
+            nodes: vec![
+                Spring2dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                },
+                Spring2dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_x: false,
+                    fix_y: true,
+                    load_x: 1000.0,
+                    load_y: 0.0,
+                },
+            ],
+            elements: vec![Spring2dElementInput {
+                id: "s0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 25_000.0,
+            }],
+        })
+        .expect("2d spring should solve");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!((result.max_displacement - 0.04).abs() < 1.0e-12);
+        assert!((result.max_force - 1000.0).abs() < 1.0e-9);
+        assert!((result.nodes[1].ux - 0.04).abs() < 1.0e-12);
+        assert!(result.nodes[1].uy.abs() < 1.0e-12);
+        assert!((result.elements[0].extension - 0.04).abs() < 1.0e-12);
+        assert!((result.elements[0].force - 1000.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn solves_a_small_spring_3d_chain() {
+        let result = solve_spring_3d(&SolveSpring3dRequest {
+            nodes: vec![
+                Spring3dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                },
+                Spring3dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: false,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 1000.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                },
+            ],
+            elements: vec![Spring3dElementInput {
+                id: "s0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 25_000.0,
+            }],
+        })
+        .expect("3d spring should solve");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!((result.max_displacement - 0.04).abs() < 1.0e-12);
+        assert!((result.max_force - 1000.0).abs() < 1.0e-9);
+        assert!((result.nodes[1].ux - 0.04).abs() < 1.0e-12);
+        assert!(result.nodes[1].uy.abs() < 1.0e-12);
+        assert!(result.nodes[1].uz.abs() < 1.0e-12);
         assert!((result.elements[0].extension - 0.04).abs() < 1.0e-12);
         assert!((result.elements[0].force - 1000.0).abs() < 1.0e-9);
     }

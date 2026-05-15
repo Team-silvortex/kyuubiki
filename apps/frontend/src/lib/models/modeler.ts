@@ -11,6 +11,7 @@ import type {
   PlaneTriangle2dJobInput,
   ProjectRecord,
   Spring1dJobInput,
+  Spring2dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
   TrussElementInput,
@@ -231,7 +232,7 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
 }
 
 export function exportStudyModel(
-  kind: "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  kind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -244,6 +245,7 @@ export function exportStudyModel(
     frame?: Frame2dJobInput;
     beam?: Beam1dJobInput;
     spring?: Spring1dJobInput;
+    spring2d?: Spring2dJobInput;
   },
 ): string {
   if (kind === "spring_1d" && payload.spring) {
@@ -254,6 +256,20 @@ export function exportStudyModel(
         name: payload.name,
         nodes: payload.spring.nodes,
         elements: payload.spring.elements,
+      },
+      null,
+      2,
+    );
+  }
+
+  if (kind === "spring_2d" && payload.spring2d) {
+    return JSON.stringify(
+      {
+        kind,
+        model_schema_version: MODEL_SCHEMA_VERSION,
+        name: payload.name,
+        nodes: payload.spring2d.nodes,
+        elements: payload.spring2d.elements,
       },
       null,
       2,
@@ -367,7 +383,7 @@ export function exportStudyModel(
 }
 
 export function buildStudyModelPayload(
-  kind: "axial_bar_1d" | "spring_1d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  kind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -380,6 +396,7 @@ export function buildStudyModelPayload(
     frame?: Frame2dJobInput;
     beam?: Beam1dJobInput;
     spring?: Spring1dJobInput;
+    spring2d?: Spring2dJobInput;
   },
 ): Record<string, unknown> {
   return JSON.parse(exportStudyModel(kind, payload)) as Record<string, unknown>;
