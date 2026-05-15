@@ -6,6 +6,7 @@ import type {
   PlaneTriangle2dJobInput,
   Spring1dJobInput,
   Spring2dJobInput,
+  Spring3dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
@@ -82,10 +83,17 @@ export type ImportedSpring2dModel = {
   model: Spring2dJobInput;
 };
 
+export type ImportedSpring3dModel = {
+  kind: "spring_3d";
+  name: string;
+  model: Spring3dJobInput;
+};
+
 export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedSpring1dModel
   | ImportedSpring2dModel
+  | ImportedSpring3dModel
   | ImportedTruss2dModel
   | ImportedPlaneTriangle2dModel
   | ImportedPlaneQuad2dModel
@@ -637,6 +645,51 @@ function parseSpring2dV1(raw: Record<string, unknown>): ImportedSpring2dModel {
   };
 }
 
+function parseSpring3dNode(raw: unknown, index: number): Spring3dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    z: numberOrZero(node.z),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    fix_z: Boolean(node.fix_z),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+    load_z: numberOrZero(node.load_z),
+  };
+}
+
+function parseSpring3dElement(raw: unknown, index: number): Spring3dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    stiffness: requiredNumber(element.stiffness, `elements[${index}].stiffness`),
+  };
+}
+
+function parseSpring3dV1(raw: Record<string, unknown>): ImportedSpring3dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseSpring3dNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseSpring3dElement) : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "spring_3d",
+    name: typeof raw.name === "string" ? raw.name : "imported-spring-3d",
+    model: { nodes, elements },
+  };
+}
+
 export function parsePlaygroundModel(text: string): ImportedModel {
   const raw = JSON.parse(text) as Record<string, unknown>;
   assertSupportedVersion(raw);
@@ -674,6 +727,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "spring_2d") {
     return parseSpring2dV1(raw);
+  }
+
+  if (kind === "spring_3d") {
+    return parseSpring3dV1(raw);
   }
 
   if (kind === "truss_2d") {

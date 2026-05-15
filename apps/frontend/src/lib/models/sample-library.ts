@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  kind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   href: string;
   summary: string;
 };
@@ -34,6 +34,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "spring_2d",
     href: "/models/spring-grid-2d.json",
     summary: "Planar spring lattice with anchored supports and lateral load for quick force-distribution checks.",
+  },
+  {
+    id: "spring-cage-3d",
+    name: "Spring Cage 3D",
+    kind: "spring_3d",
+    href: "/models/spring-cage-3d.json",
+    summary: "Compact 3D spring cage with anchored base nodes and a loaded top node for spatial extension checks.",
   },
   {
     id: "uniform-load-beam-1d",

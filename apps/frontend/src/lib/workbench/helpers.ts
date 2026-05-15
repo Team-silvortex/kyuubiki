@@ -16,6 +16,8 @@ import type {
   Spring1dResult,
   Spring2dJobInput,
   Spring2dResult,
+  Spring3dJobInput,
+  Spring3dResult,
   Truss2dJobInput,
   Truss2dResult,
   Truss3dJobInput,
@@ -79,7 +81,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -212,6 +214,7 @@ export function serializeCurrentModel(
   beamModel: Beam1dJobInput,
   springModel: Spring1dJobInput,
   spring2dModel: Spring2dJobInput,
+  spring3dModel: Spring3dJobInput,
   parametric: ParametricLike,
   round: (value: number) => number,
 ): Record<string, unknown> {
@@ -235,7 +238,7 @@ export function serializeCurrentModel(
         ? trussModel.materials
         : studyKind === "truss_3d"
           ? truss3dModel.materials
-          : studyKind === "spring_1d" || studyKind === "spring_2d"
+          : studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d"
             ? undefined
           : studyKind === "beam_1d"
             ? beamModel.materials
@@ -252,6 +255,7 @@ export function serializeCurrentModel(
     beam: studyKind === "beam_1d" ? beamModel : undefined,
     spring: studyKind === "spring_1d" ? springModel : undefined,
     spring2d: studyKind === "spring_2d" ? spring2dModel : undefined,
+    spring3d: studyKind === "spring_3d" ? spring3dModel : undefined,
   });
 }
 
@@ -326,10 +330,22 @@ function isSpring2dResult(value: unknown): value is Spring2dResult {
   );
 }
 
+function isSpring3dResult(value: unknown): value is Spring3dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_force" in value &&
+    "nodes" in value &&
+    "elements" in value &&
+    Array.isArray((value as Spring3dResult).nodes) &&
+    (value as Spring3dResult).nodes.some((node) => "z" in node)
+  );
+}
+
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | Spring1dResult | Spring2dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -503,9 +519,26 @@ export function serializeResultCsv(
     return lines.join("\n");
   }
 
+  if (isSpring3dResult(result)) {
+    const spring3d = result as Spring3dResult;
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "z", "ux", "uy", "uz"]));
+    spring3d.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.z, node.ux, node.uy, node.uz])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(toCsvRow(["index", "id", "node_i", "node_j", "length", "extension", "force"]));
+    spring3d.elements.forEach((element) =>
+      lines.push(toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.extension, element.force])),
+    );
+    return lines.join("\n");
+  }
+
+  const plane = result as PlaneTriangle2dResult | PlaneQuad2dResult;
   lines.push("nodes");
   lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy", "displacement_magnitude"]));
-  result.nodes.forEach((node) =>
+  plane.nodes.forEach((node) =>
     lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy, node.displacement_magnitude])),
   );
   lines.push("");
@@ -530,7 +563,7 @@ export function serializeResultCsv(
       "von_mises",
     ]),
   );
-  result.elements.forEach((element) =>
+  plane.elements.forEach((element) =>
     lines.push(
       toCsvRow([
         element.index,

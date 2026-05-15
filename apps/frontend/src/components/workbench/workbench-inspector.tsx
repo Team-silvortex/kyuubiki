@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -403,8 +403,9 @@ function WorkbenchInspectorInner({
   const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
   const isTruss = studyKind === "truss_2d";
   const isTruss3d = studyKind === "truss_3d";
+  const isSpring3d = studyKind === "spring_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
-  const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d";
+  const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d";
   const isBeam = studyKind === "beam_1d";
   const isFrame = studyKind === "frame_2d";
   const historyRows = [
@@ -462,7 +463,7 @@ function WorkbenchInspectorInner({
                 <label><span>{t.area}</span><input type="number" step={0.0001} value={trussElementArea} onChange={(event) => onUpdateSelectedElement("area", Number(event.target.value))} /></label>
                 <label><span>{t.modulus}</span><input type="number" step={0.1} value={trussElementModulusGpa} onChange={(event) => onUpdateSelectedElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
               </div>
-            ) : isTruss3d && selectedTruss3dNodeData ? (
+            ) : (isTruss3d || isSpring3d) && selectedTruss3dNodeData ? (
               <div className="form-grid compact">
                 <label><span>{t.dragNode}</span><input value={selectedTruss3dNodeData.id} readOnly /></label>
                 <label><span>{t.nodeX}</span><input type="number" step={0.1} value={selectedTruss3dNodeData.x} onChange={(event) => onUpdateSelectedTruss3dNode("x", Number(event.target.value))} /></label>

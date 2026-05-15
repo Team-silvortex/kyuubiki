@@ -6,6 +6,7 @@ import type {
   PlaneTriangle2dJobInput,
   Spring1dJobInput,
   Spring2dJobInput,
+  Spring3dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
@@ -15,6 +16,7 @@ export type WorkbenchStudyKind =
   | "axial_bar_1d"
   | "spring_1d"
   | "spring_2d"
+  | "spring_3d"
   | "beam_1d"
   | "truss_2d"
   | "truss_3d"
@@ -42,6 +44,7 @@ export type WorkbenchSnapshot = {
   beamModel: Beam1dJobInput;
   springModel: Spring1dJobInput;
   spring2dModel: Spring2dJobInput;
+  spring3dModel: Spring3dJobInput;
   parametric: ParametricTrussConfig;
   panelParametric: ParametricPanelConfig;
   activeMaterial: string;
@@ -75,6 +78,7 @@ type SnapshotSetters = {
   setBeamModel: Dispatch<SetStateAction<Beam1dJobInput>>;
   setSpringModel: Dispatch<SetStateAction<Spring1dJobInput>>;
   setSpring2dModel: Dispatch<SetStateAction<Spring2dJobInput>>;
+  setSpring3dModel: Dispatch<SetStateAction<Spring3dJobInput>>;
   setParametric: Dispatch<SetStateAction<ParametricTrussConfig>>;
   setPanelParametric: Dispatch<SetStateAction<ParametricPanelConfig>>;
   setActiveMaterial: Dispatch<SetStateAction<string>>;
@@ -106,6 +110,7 @@ export function restoreWorkbenchSnapshot(
   setters.setBeamModel(snapshot.beamModel);
   setters.setSpringModel(snapshot.springModel);
   setters.setSpring2dModel(snapshot.spring2dModel);
+  setters.setSpring3dModel(snapshot.spring3dModel);
   setters.setParametric(snapshot.parametric);
   setters.setPanelParametric(snapshot.panelParametric);
   setters.setActiveMaterial(snapshot.activeMaterial);

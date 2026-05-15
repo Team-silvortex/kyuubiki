@@ -192,6 +192,7 @@ export function buildStudyKindOptions(kinds: {
   axial_bar_1d: string;
   spring_1d: string;
   spring_2d: string;
+  spring_3d: string;
   beam_1d: string;
   truss_2d: string;
   truss_3d: string;
@@ -203,6 +204,7 @@ export function buildStudyKindOptions(kinds: {
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
     { value: "spring_1d" as const, label: kinds.spring_1d },
     { value: "spring_2d" as const, label: kinds.spring_2d },
+    { value: "spring_3d" as const, label: kinds.spring_3d },
     { value: "beam_1d" as const, label: kinds.beam_1d },
     { value: "truss_2d" as const, label: kinds.truss_2d },
     { value: "truss_3d" as const, label: kinds.truss_3d },
@@ -261,7 +263,7 @@ export function buildStudyControlsRows({
     frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  studyKind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;
@@ -316,6 +318,15 @@ export function buildStudyControlsRows({
     return [
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "spring_3d") {
+    return [
+      { label: labels.nodes, value: truss3dNodeCount },
+      { label: labels.spatialTrussElements, value: truss3dElementCount },
+      { label: labels.load, value: truss3dLoadValue },
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
