@@ -1,0 +1,17 @@
+{
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "thermal_truss_2d",
+  "name": "thermal-truss-2d",
+  "material": "Aluminum",
+  "youngs_modulus_gpa": 70,
+  "nodes": [
+    { "id": "tt0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 40.0 },
+    { "id": "tt1", "x": 1.0, "y": 0.0, "fix_x": false, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 40.0 },
+    { "id": "tt2", "x": 0.5, "y": 0.8, "fix_x": false, "fix_y": false, "load_x": 0.0, "load_y": -400.0, "temperature_delta": 25.0 }
+  ],
+  "elements": [
+    { "id": "tte0", "node_i": 0, "node_j": 2, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte2", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 }
+  ]
+}

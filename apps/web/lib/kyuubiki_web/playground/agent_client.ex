@@ -17,6 +17,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_thermal_bar_1d", params, on_progress)
   end
 
+  @spec solve_thermal_truss_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_thermal_truss_2d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_thermal_truss_2d", params, on_progress)
+  end
+
+  @spec solve_thermal_truss_3d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_thermal_truss_3d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_thermal_truss_3d", params, on_progress)
+  end
+
   @spec solve_beam_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_beam_1d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_beam_1d", params, on_progress)

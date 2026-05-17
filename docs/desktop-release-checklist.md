@@ -21,10 +21,10 @@ Use a predictable versioned prefix for all desktop-facing outputs:
 
 Examples:
 
-- `kyuubiki-installer-v0.7.4-macos-dmg`
-- `kyuubiki-hub-v0.7.4-linux-appimage`
-- `kyuubiki-workbench-v0.7.4-linux-appimage`
-- `kyuubiki-installer-v0.7.4-windows-msi`
+- `kyuubiki-installer-v0.9.0-macos-dmg`
+- `kyuubiki-hub-v0.9.0-linux-appimage`
+- `kyuubiki-workbench-v0.9.0-linux-appimage`
+- `kyuubiki-installer-v0.9.0-windows-msi`
 
 Keep these names aligned with:
 

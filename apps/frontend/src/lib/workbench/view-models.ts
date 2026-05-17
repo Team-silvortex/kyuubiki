@@ -33,6 +33,8 @@ export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
       return "beamsAndFrames";
     case "truss_2d":
     case "truss_3d":
+    case "thermal_truss_2d":
+    case "thermal_truss_3d":
       return "trusses";
     case "plane_triangle_2d":
     case "plane_quad_2d":
@@ -219,6 +221,8 @@ export function buildProtocolAgentCards({
 type StudyKind =
   | "axial_bar_1d"
   | "thermal_bar_1d"
+  | "thermal_truss_2d"
+  | "thermal_truss_3d"
   | "spring_1d"
   | "spring_2d"
   | "spring_3d"
@@ -242,6 +246,8 @@ export function buildStudyKindOptionGroups({
   kinds: {
     axial_bar_1d: string;
     thermal_bar_1d: string;
+    thermal_truss_2d: string;
+    thermal_truss_3d: string;
     spring_1d: string;
     spring_2d: string;
     spring_3d: string;
@@ -284,6 +290,8 @@ export function buildStudyKindOptionGroups({
       options: [
         { value: "truss_2d" as const, label: kinds.truss_2d },
         { value: "truss_3d" as const, label: kinds.truss_3d },
+        { value: "thermal_truss_2d" as const, label: kinds.thermal_truss_2d },
+        { value: "thermal_truss_3d" as const, label: kinds.thermal_truss_3d },
       ],
     },
     {
@@ -299,6 +307,8 @@ export function buildStudyKindOptionGroups({
 export function buildStudyKindOptions(kinds: {
   axial_bar_1d: string;
   thermal_bar_1d: string;
+  thermal_truss_2d: string;
+  thermal_truss_3d: string;
   spring_1d: string;
   spring_2d: string;
   spring_3d: string;
@@ -313,6 +323,7 @@ export function buildStudyKindOptions(kinds: {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
     { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },
+    { value: "thermal_truss_2d" as const, label: kinds.thermal_truss_2d },
     { value: "spring_1d" as const, label: kinds.spring_1d },
     { value: "spring_2d" as const, label: kinds.spring_2d },
     { value: "spring_3d" as const, label: kinds.spring_3d },
@@ -320,6 +331,7 @@ export function buildStudyKindOptions(kinds: {
     { value: "torsion_1d" as const, label: kinds.torsion_1d },
     { value: "truss_2d" as const, label: kinds.truss_2d },
     { value: "truss_3d" as const, label: kinds.truss_3d },
+    { value: "thermal_truss_3d" as const, label: kinds.thermal_truss_3d },
     { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
     { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
     { value: "frame_2d" as const, label: kinds.frame_2d },
@@ -375,7 +387,7 @@ export function buildStudyControlsRows({
     frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;
@@ -400,6 +412,15 @@ export function buildStudyControlsRows({
     ];
   }
 
+  if (studyKind === "thermal_truss_2d") {
+    return [
+      { label: labels.nodes, value: trussNodeCount },
+      { label: labels.trussElements, value: trussElementCount },
+      { label: labels.material, value: materialLabel },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
   if (studyKind === "truss_2d") {
     return [
       { label: labels.nodes, value: trussNodeCount },
@@ -410,6 +431,15 @@ export function buildStudyControlsRows({
   }
 
   if (studyKind === "truss_3d") {
+    return [
+      { label: labels.nodes, value: truss3dNodeCount },
+      { label: labels.spatialTrussElements, value: truss3dElementCount },
+      { label: labels.load, value: truss3dLoadValue },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "thermal_truss_3d") {
     return [
       { label: labels.nodes, value: truss3dNodeCount },
       { label: labels.spatialTrussElements, value: truss3dElementCount },

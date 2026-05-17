@@ -11,13 +11,15 @@ use kyuubiki_protocol::{
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
     SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-    SolveSpring3dRequest, SolveThermalBar1dRequest, SolveTorsion1dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalTruss2dRequest,
+    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest,
+    SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
     solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-    solve_thermal_bar_1d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+    solve_thermal_bar_1d, solve_thermal_truss_2d, solve_thermal_truss_3d,
+    solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
 
 fn main() {
@@ -430,6 +432,126 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                             request.id,
                             serde_json::to_value(result)
                                 .expect("thermal bar result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveThermalTruss2d => {
+            let params =
+                match serde_json::from_value::<SolveThermalTruss2dRequest>(request.params.clone())
+                {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_thermal_truss_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d thermal truss", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("thermal truss 2d result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveThermalTruss3d => {
+            let params =
+                match serde_json::from_value::<SolveThermalTruss3dRequest>(request.params.clone())
+                {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_thermal_truss_3d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("3d thermal truss", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("thermal truss 3d result should serialize"),
                         ),
                     )
                 }
@@ -1807,7 +1929,8 @@ mod tests {
         RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-        SolveThermalBar1dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
+        SolveThermalBar1dRequest, SolveThermalTruss2dRequest, SolveTorsion1dRequest,
+        SolveTruss3dRequest, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
         Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
         ThermalBar1dNodeInput, Torsion1dElementInput, Torsion1dNodeInput, Truss3dElementInput,
@@ -1986,6 +2109,62 @@ mod tests {
             serde_json::from_value(final_response.result.expect("solver result"))
                 .expect("thermal bar result");
         assert!(result.max_stress > 1.0e8);
+        assert_eq!(result.max_temperature_delta, 40.0);
+    }
+
+    #[test]
+    fn handles_thermal_truss_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-truss-2d".to_string(),
+            method: RpcMethod::SolveThermalTruss2d,
+            params: serde_json::to_value(SolveThermalTruss2dRequest {
+                nodes: vec![
+                    ThermalTruss2dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                    ThermalTruss2dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                ],
+                elements: vec![ThermalTruss2dElementInput {
+                    id: "tt0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 210.0e9,
+                    thermal_expansion: 12.0e-6,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveThermalTruss2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("thermal truss 2d result");
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
         assert_eq!(result.max_temperature_delta, 40.0);
     }
 

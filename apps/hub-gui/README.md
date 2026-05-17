@@ -2,6 +2,15 @@
 
 This app is the unified desktop launcher and operator shell for `kyuubiki`.
 
+In the `0.9.0` product shape, Hub is no longer just a shell prototype. It now
+acts as the everyday desktop entrypoint for:
+
+- workload launch
+- runtime control
+- desktop packaging readiness
+- hot-reload orchestration
+- guided onboarding and assistant-assisted operator flow
+
 It sits above:
 
 - [installer-gui](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui)

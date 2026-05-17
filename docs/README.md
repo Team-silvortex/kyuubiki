@@ -13,6 +13,18 @@ If you are new to the repo, read these first:
 4. `repository-structure.md`
 5. `testing-and-ci.md`
 
+If you want the current release story first:
+
+- `release-support-matrix-0.9.0.md`
+- `release-study-coverage-0.9.0.md`
+- `release-smoke-matrix-0.9.0.md`
+- `release-first-run-0.9.0.md`
+- `release-troubleshooting-0.9.0.md`
+- `release-readiness-0.9.0.md`
+- `release-github-0.9.0.md`
+- `release-notes-0.9.0.md`
+- `release-summary-0.9.0.md`
+
 ## By Goal
 
 ### Understand the system
@@ -51,6 +63,31 @@ If you are new to the repo, read these first:
 
 ### Operate and deploy
 
+- `release-support-matrix-0.9.0.md`
+  Official first-release study-family support boundary for `v0.9.0`.
+- `release-study-coverage-0.9.0.md`
+  Per-study first-run path for samples, orchestrated/direct-mesh usage, and
+  report/export expectations.
+- `release-smoke-matrix-0.9.0.md`
+  Per-study release validation grid for sample open, orchestrated run,
+  direct-mesh support, report usability, and export usability.
+- `release-first-run-0.9.0.md`
+  Recommended first operator session through Hub, workload sync, sample open,
+  and orchestrated Workbench run.
+- `release-troubleshooting-0.9.0.md`
+  First-line “where to look” note for runtime watch, Workbench runtime checks,
+  and control-plane health during `v0.9.0` release validation.
+- `release-readiness-0.9.0.md`
+  Must/should/later checklist for deciding whether `v0.9.0` is ready for an
+  initial usable release.
+- `release-github-0.9.0.md`
+  GitHub Release-ready Markdown summary for `v0.9.0`.
+- `release-summary-0.9.0.md`
+  Short external-facing summary for `v0.9.0`, suitable for release copy or
+  public update notes.
+- `release-notes-0.9.0.md`
+  Current release baseline, shipped capability map, and recommended validation
+  pass for `v0.9.0`.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
 - `security.md`

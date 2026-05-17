@@ -3,6 +3,15 @@
 This document collects the current operational modes and the most important
 environment switches.
 
+It now reflects the `v0.9.0` product shape:
+
+- `Hub` as the desktop operator shell
+- `Workbench` as the focused modeling and analysis surface
+- `Installer` as the heavier bootstrap and deployment surface
+- `orchestrator/control plane` as one managed runtime target
+- a broader FEM operator family spanning axial, thermal, spring, beam, torsion,
+  truss, plane, and frame studies
+
 ## Main deployment modes
 
 ### Local workstation
@@ -90,6 +99,9 @@ These can now be written from the installer GUI Setup panel.
 - `make start-local`
 - `make start-cloud`
 - `make start-distributed`
+- `make hot-local`
+- `make hot-cloud`
+- `make hot-distributed`
 - `make build-frontend`
 - `make build-orchestrator`
 - `make build-agent`
@@ -107,6 +119,13 @@ These can now be written from the installer GUI Setup panel.
 - `make stop`
 - `make benchmark-compare PROFILE=medium`
 - `make benchmark-report PROFILE=10k`
+
+For operator-facing desktop control, Hub now mirrors several of these flows:
+
+- desktop readiness and release staging
+- local / cloud / distributed hot-reload loop control
+- runtime watch for stack and hot-loop logs
+- local workload-catalog sync against the control plane
 
 For the full component/output matrix, see:
 

@@ -132,6 +132,67 @@ pub struct SolveThermalBar1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss2dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    #[serde(default)]
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss2dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub thermal_expansion: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalTruss2dRequest {
+    pub nodes: Vec<ThermalTruss2dNodeInput>,
+    pub elements: Vec<ThermalTruss2dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss3dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_z: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub load_z: f64,
+    #[serde(default)]
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss3dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub thermal_expansion: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalTruss3dRequest {
+    pub nodes: Vec<ThermalTruss3dNodeInput>,
+    pub elements: Vec<ThermalTruss3dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Spring1dNodeInput {
     pub id: String,
     pub x: f64,
@@ -315,6 +376,82 @@ pub struct SolveThermalBar1dResult {
     pub input: SolveThermalBar1dRequest,
     pub nodes: Vec<ThermalBar1dNodeResult>,
     pub elements: Vec<ThermalBar1dElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+    pub max_axial_force: f64,
+    pub max_temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss2dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss2dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub average_temperature_delta: f64,
+    pub thermal_strain: f64,
+    pub mechanical_strain: f64,
+    pub total_strain: f64,
+    pub stress: f64,
+    pub axial_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalTruss2dResult {
+    pub input: SolveThermalTruss2dRequest,
+    pub nodes: Vec<ThermalTruss2dNodeResult>,
+    pub elements: Vec<ThermalTruss2dElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+    pub max_axial_force: f64,
+    pub max_temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss3dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub uz: f64,
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalTruss3dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub average_temperature_delta: f64,
+    pub thermal_strain: f64,
+    pub mechanical_strain: f64,
+    pub total_strain: f64,
+    pub stress: f64,
+    pub axial_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalTruss3dResult {
+    pub input: SolveThermalTruss3dRequest,
+    pub nodes: Vec<ThermalTruss3dNodeResult>,
+    pub elements: Vec<ThermalTruss3dElementResult>,
     pub max_displacement: f64,
     pub max_stress: f64,
     pub max_axial_force: f64,
@@ -538,6 +675,10 @@ pub enum RpcMethod {
     SolveBar1d,
     #[serde(rename = "solve_thermal_bar_1d")]
     SolveThermalBar1d,
+    #[serde(rename = "solve_thermal_truss_2d")]
+    SolveThermalTruss2d,
+    #[serde(rename = "solve_thermal_truss_3d")]
+    SolveThermalTruss3d,
     #[serde(rename = "solve_spring_1d")]
     SolveSpring1d,
     #[serde(rename = "solve_spring_2d")]
@@ -662,6 +803,8 @@ impl RpcProtocolDescriptor {
                 RpcMethod::DescribeAgent,
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveThermalBar1d,
+                RpcMethod::SolveThermalTruss2d,
+                RpcMethod::SolveThermalTruss3d,
                 RpcMethod::SolveSpring1d,
                 RpcMethod::SolveSpring2d,
                 RpcMethod::SolveSpring3d,
@@ -699,6 +842,28 @@ impl AgentDescriptor {
                         "bar".to_string(),
                         "thermal".to_string(),
                         "line".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "thermal-truss-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveThermalTruss2d],
+                    tags: vec![
+                        "truss".to_string(),
+                        "thermal".to_string(),
+                        "plane".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "thermal-truss-3d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveThermalTruss3d],
+                    tags: vec![
+                        "truss".to_string(),
+                        "thermal".to_string(),
+                        "space".to_string(),
                         "cpu".to_string(),
                     ],
                 },
@@ -1136,6 +1301,8 @@ pub struct SolveFrame2dResult {
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
     ThermalBar1d(SolveThermalBar1dResult),
+    ThermalTruss2d(SolveThermalTruss2dResult),
+    ThermalTruss3d(SolveThermalTruss3dResult),
     Spring1d(SolveSpring1dResult),
     Spring2d(SolveSpring2dResult),
     Spring3d(SolveSpring3dResult),
@@ -1180,10 +1347,12 @@ mod tests {
         RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-        SolveThermalBar1dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
+        SolveThermalBar1dRequest, SolveThermalTruss2dRequest, SolveTorsion1dRequest,
+        SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
         Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
-        ThermalBar1dNodeInput, Torsion1dElementInput, Torsion1dNodeInput,
+        ThermalBar1dNodeInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
+        Torsion1dElementInput, Torsion1dNodeInput,
     };
 
     #[test]
@@ -1273,6 +1442,54 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveThermalBar1d);
         assert_eq!(decoded.id, "rpc-thermal-bar");
+    }
+
+    #[test]
+    fn serializes_thermal_truss_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-truss-2d".to_string(),
+            method: RpcMethod::SolveThermalTruss2d,
+            params: serde_json::to_value(SolveThermalTruss2dRequest {
+                nodes: vec![
+                    ThermalTruss2dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 25.0,
+                    },
+                    ThermalTruss2dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: false,
+                        fix_y: false,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 25.0,
+                    },
+                ],
+                elements: vec![ThermalTruss2dElementInput {
+                    id: "tt0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 210.0e9,
+                    thermal_expansion: 12.0e-6,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveThermalTruss2d);
+        assert_eq!(decoded.id, "rpc-thermal-truss-2d");
     }
 
     #[test]

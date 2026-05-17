@@ -6,12 +6,15 @@ use kyuubiki_protocol::{
     SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
     SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
     SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveThermalBar1dRequest,
-    SolveThermalBar1dResult, SolveTorsion1dRequest, SolveTorsion1dResult, SolveTruss2dRequest,
-    SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Spring1dElementResult,
-    Spring1dNodeResult, Spring2dElementResult, Spring2dNodeResult, Spring3dElementResult,
-    Spring3dNodeResult, ThermalBar1dElementResult, ThermalBar1dNodeResult,
-    Torsion1dElementResult, Torsion1dNodeResult, Truss3dElementResult, Truss3dNodeResult,
-    TrussElementResult, TrussNodeResult,
+    SolveThermalBar1dResult, SolveThermalTruss2dRequest, SolveThermalTruss2dResult,
+    SolveThermalTruss3dRequest, SolveThermalTruss3dResult, SolveTorsion1dRequest,
+    SolveTorsion1dResult, SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest,
+    SolveTruss3dResult, Spring1dElementResult, Spring1dNodeResult, Spring2dElementResult,
+    Spring2dNodeResult, Spring3dElementResult, Spring3dNodeResult, ThermalBar1dElementResult,
+    ThermalBar1dNodeResult, ThermalTruss2dElementResult, ThermalTruss2dNodeResult,
+    ThermalTruss3dElementResult, ThermalTruss3dNodeResult, Torsion1dElementResult,
+    Torsion1dNodeResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
+    TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -220,6 +223,364 @@ pub fn solve_thermal_bar_1d(
         .fold(0.0_f64, f64::max);
 
     Ok(SolveThermalBar1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_stress,
+        max_axial_force,
+        max_temperature_delta,
+    })
+}
+
+pub fn solve_thermal_truss_2d(
+    request: &SolveThermalTruss2dRequest,
+) -> Result<SolveThermalTruss2dResult, String> {
+    validate_thermal_truss_2d_request(request)?;
+
+    let dof_count = request.nodes.len() * 2;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 2] = node.load_x;
+        force_vector[index * 2 + 1] = node.load_y;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = (dx * dx + dy * dy).sqrt();
+        let c = dx / length;
+        let s = dy / length;
+        let k = element.youngs_modulus * element.area / length;
+        let average_temperature_delta =
+            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let thermal_force =
+            element.youngs_modulus * element.area * element.thermal_expansion * average_temperature_delta;
+
+        let local = [
+            [c * c, c * s, -c * c, -c * s],
+            [c * s, s * s, -c * s, -s * s],
+            [-c * c, -c * s, c * c, c * s],
+            [-c * s, -s * s, c * s, s * s],
+        ];
+        let equivalent_load = [-thermal_force * c, -thermal_force * s, thermal_force * c, thermal_force * s];
+
+        let map = [
+            element.node_i * 2,
+            element.node_i * 2 + 1,
+            element.node_j * 2,
+            element.node_j * 2 + 1,
+        ];
+
+        for row in 0..4 {
+            force_vector[map[row]] += equivalent_load[row];
+
+            for column in 0..4 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    k * local[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 2);
+            }
+            if node.fix_y {
+                dofs.push(index * 2 + 1);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| ThermalTruss2dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            ux: displacements[index * 2],
+            uy: displacements[index * 2 + 1],
+            temperature_delta: node.temperature_delta,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let length = (dx * dx + dy * dy).sqrt();
+            let c = dx / length;
+            let s = dy / length;
+
+            let ux_i = displacements[element.node_i * 2];
+            let uy_i = displacements[element.node_i * 2 + 1];
+            let ux_j = displacements[element.node_j * 2];
+            let uy_j = displacements[element.node_j * 2 + 1];
+            let average_temperature_delta =
+                0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+            let total_strain = ((ux_j - ux_i) * c + (uy_j - uy_i) * s) / length;
+            let thermal_strain = element.thermal_expansion * average_temperature_delta;
+            let mechanical_strain = total_strain - thermal_strain;
+            let stress = element.youngs_modulus * mechanical_strain;
+
+            ThermalTruss2dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                average_temperature_delta,
+                thermal_strain,
+                mechanical_strain,
+                total_strain,
+                stress,
+                axial_force: stress * element.area,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
+    let max_axial_force = elements
+        .iter()
+        .map(|element| element.axial_force.abs())
+        .fold(0.0_f64, f64::max);
+    let max_temperature_delta = nodes
+        .iter()
+        .map(|node| node.temperature_delta.abs())
+        .fold(0.0_f64, f64::max);
+
+    validate_small_displacement_thermal_truss_2d(request, max_displacement)?;
+
+    Ok(SolveThermalTruss2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_stress,
+        max_axial_force,
+        max_temperature_delta,
+    })
+}
+
+pub fn solve_thermal_truss_3d(
+    request: &SolveThermalTruss3dRequest,
+) -> Result<SolveThermalTruss3dResult, String> {
+    validate_thermal_truss_3d_request(request)?;
+
+    let dof_count = request.nodes.len() * 3;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 3] = node.load_x;
+        force_vector[index * 3 + 1] = node.load_y;
+        force_vector[index * 3 + 2] = node.load_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        let l = dx / length;
+        let m = dy / length;
+        let n = dz / length;
+        let k = element.youngs_modulus * element.area / length;
+        let average_temperature_delta =
+            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let thermal_force =
+            element.youngs_modulus * element.area * element.thermal_expansion * average_temperature_delta;
+
+        let local = [
+            [l * l, l * m, l * n, -l * l, -l * m, -l * n],
+            [l * m, m * m, m * n, -l * m, -m * m, -m * n],
+            [l * n, m * n, n * n, -l * n, -m * n, -n * n],
+            [-l * l, -l * m, -l * n, l * l, l * m, l * n],
+            [-l * m, -m * m, -m * n, l * m, m * m, m * n],
+            [-l * n, -m * n, -n * n, l * n, m * n, n * n],
+        ];
+        let equivalent_load = [
+            -thermal_force * l,
+            -thermal_force * m,
+            -thermal_force * n,
+            thermal_force * l,
+            thermal_force * m,
+            thermal_force * n,
+        ];
+
+        let map = [
+            element.node_i * 3,
+            element.node_i * 3 + 1,
+            element.node_i * 3 + 2,
+            element.node_j * 3,
+            element.node_j * 3 + 1,
+            element.node_j * 3 + 2,
+        ];
+
+        for row in 0..6 {
+            force_vector[map[row]] += equivalent_load[row];
+
+            for column in 0..6 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    k * local[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 3);
+            }
+            if node.fix_y {
+                dofs.push(index * 3 + 1);
+            }
+            if node.fix_z {
+                dofs.push(index * 3 + 2);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| ThermalTruss3dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            z: node.z,
+            ux: displacements[index * 3],
+            uy: displacements[index * 3 + 1],
+            uz: displacements[index * 3 + 2],
+            temperature_delta: node.temperature_delta,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let dz = node_j.z - node_i.z;
+            let length = (dx * dx + dy * dy + dz * dz).sqrt();
+            let l = dx / length;
+            let m = dy / length;
+            let n = dz / length;
+
+            let ux_i = displacements[element.node_i * 3];
+            let uy_i = displacements[element.node_i * 3 + 1];
+            let uz_i = displacements[element.node_i * 3 + 2];
+            let ux_j = displacements[element.node_j * 3];
+            let uy_j = displacements[element.node_j * 3 + 1];
+            let uz_j = displacements[element.node_j * 3 + 2];
+            let average_temperature_delta =
+                0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+            let total_strain =
+                ((ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n) / length;
+            let thermal_strain = element.thermal_expansion * average_temperature_delta;
+            let mechanical_strain = total_strain - thermal_strain;
+            let stress = element.youngs_modulus * mechanical_strain;
+
+            ThermalTruss3dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                average_temperature_delta,
+                thermal_strain,
+                mechanical_strain,
+                total_strain,
+                stress,
+                axial_force: stress * element.area,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| (node.ux * node.ux + node.uy * node.uy + node.uz * node.uz).sqrt())
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
+    let max_axial_force = elements
+        .iter()
+        .map(|element| element.axial_force.abs())
+        .fold(0.0_f64, f64::max);
+    let max_temperature_delta = nodes
+        .iter()
+        .map(|node| node.temperature_delta.abs())
+        .fold(0.0_f64, f64::max);
+
+    validate_small_displacement_thermal_truss_3d(request, max_displacement)?;
+
+    Ok(SolveThermalTruss3dResult {
         input: request.clone(),
         nodes,
         elements,
@@ -1200,6 +1561,51 @@ fn validate_small_displacement_truss(
     Ok(())
 }
 
+fn validate_small_displacement_thermal_truss_2d(
+    request: &SolveThermalTruss2dRequest,
+    max_displacement: f64,
+) -> Result<(), String> {
+    let bounds = get_planar_bounds(
+        &request
+            .nodes
+            .iter()
+            .map(|node| (node.x, node.y))
+            .collect::<Vec<_>>(),
+    );
+    let characteristic_length = bounds.0.max(bounds.1).max(1.0e-9);
+
+    if max_displacement > characteristic_length * 0.25 {
+        return Err(
+            "thermal truss response exceeds the small-deformation limit; check supports or connectivity"
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+fn validate_small_displacement_thermal_truss_3d(
+    request: &SolveThermalTruss3dRequest,
+    max_displacement: f64,
+) -> Result<(), String> {
+    let characteristic_length = get_spatial_bounds(
+        &request
+            .nodes
+            .iter()
+            .map(|node| (node.x, node.y, node.z))
+            .collect::<Vec<_>>(),
+    );
+
+    if max_displacement > characteristic_length * 0.25 {
+        return Err(
+            "3d thermal truss response exceeds the small-deformation limit; check supports or connectivity"
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
 pub fn solve_plane_triangle_2d(
     request: &SolvePlaneTriangle2dRequest,
 ) -> Result<SolvePlaneTriangle2dResult, String> {
@@ -1753,6 +2159,57 @@ fn validate_truss_request(request: &SolveTruss2dRequest) -> Result<(), String> {
     Ok(())
 }
 
+fn validate_thermal_truss_2d_request(request: &SolveThermalTruss2dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("thermal truss must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("thermal truss must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_x || node.fix_y) {
+        return Err("thermal truss must include at least one support".to_string());
+    }
+
+    for node in &request.nodes {
+        if !node.temperature_delta.is_finite() {
+            return Err("thermal truss node temperature_delta must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("thermal truss element references an out-of-range node".to_string());
+        }
+
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("thermal truss element area must be positive".to_string());
+        }
+
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("thermal truss element youngs_modulus must be positive".to_string());
+        }
+
+        if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
+            return Err(
+                "thermal truss element thermal_expansion must be non-negative".to_string(),
+            );
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let length = (dx * dx + dy * dy).sqrt();
+        if length <= 1.0e-12 {
+            return Err("thermal truss element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_plane_request(request: &SolvePlaneTriangle2dRequest) -> Result<(), String> {
     if request.nodes.len() < 3 {
         return Err("plane model must define at least three nodes".to_string());
@@ -2207,6 +2664,57 @@ fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String
         .sqrt();
         if length <= 1.0e-12 {
             return Err("3d truss element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_thermal_truss_3d_request(request: &SolveThermalTruss3dRequest) -> Result<(), String> {
+    if request.nodes.len() < 3 {
+        return Err("3d thermal truss must define at least three nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("3d thermal truss must define at least one element".to_string());
+    }
+
+    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
+        sum + usize::from(node.fix_x) + usize::from(node.fix_y) + usize::from(node.fix_z)
+    });
+    if constrained_dofs < 6 {
+        return Err("3d thermal truss must restrain at least six degrees of freedom".to_string());
+    }
+
+    for node in &request.nodes {
+        if !node.temperature_delta.is_finite() {
+            return Err("3d thermal truss node temperature_delta must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("3d thermal truss element references an out-of-range node".to_string());
+        }
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("3d thermal truss element area must be positive".to_string());
+        }
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("3d thermal truss element youngs_modulus must be positive".to_string());
+        }
+        if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
+            return Err(
+                "3d thermal truss element thermal_expansion must be non-negative".to_string(),
+            );
+        }
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = ((node_j.x - node_i.x).powi(2)
+            + (node_j.y - node_i.y).powi(2)
+            + (node_j.z - node_i.z).powi(2))
+        .sqrt();
+        if length <= 1.0e-12 {
+            return Err("3d thermal truss element length must be positive".to_string());
         }
     }
 
@@ -3074,19 +3582,22 @@ mod tests {
     use super::{
         MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
         solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-        solve_thermal_bar_1d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+        solve_thermal_bar_1d, solve_thermal_truss_2d, solve_thermal_truss_3d,
+        solve_torsion_1d, solve_truss_2d, solve_truss_3d,
     };
     use kyuubiki_protocol::{
         Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Job, JobStatus,
         PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest,
         SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveTorsion1dRequest,
+        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalTruss2dRequest,
+        SolveThermalTruss3dRequest, SolveTorsion1dRequest,
         SolveTruss2dRequest, SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput,
         Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput,
         ThermalBar1dElementInput, ThermalBar1dNodeInput, Torsion1dElementInput,
-        Torsion1dNodeInput, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
-        TrussNodeInput,
+        Torsion1dNodeInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
+        ThermalTruss3dElementInput, ThermalTruss3dNodeInput, Truss3dElementInput,
+        Truss3dNodeInput, TrussElementInput, TrussNodeInput,
     };
 
     #[test]
@@ -3163,6 +3674,111 @@ mod tests {
             }],
         })
         .expect("thermal bar should solve");
+
+        assert!(result.max_displacement.abs() < 1.0e-12);
+        assert!(result.max_stress > 1.0e8);
+        assert!(result.max_axial_force > 1.0e6);
+        assert_eq!(result.max_temperature_delta, 40.0);
+        assert!(result.elements[0].stress < 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_thermal_truss_2d_with_restrained_expansion() {
+        let result = solve_thermal_truss_2d(&SolveThermalTruss2dRequest {
+            nodes: vec![
+                ThermalTruss2dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    temperature_delta: 40.0,
+                },
+                ThermalTruss2dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    temperature_delta: 40.0,
+                },
+            ],
+            elements: vec![ThermalTruss2dElementInput {
+                id: "tt0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                thermal_expansion: 12.0e-6,
+            }],
+        })
+        .expect("thermal truss 2d should solve");
+
+        assert!(result.max_displacement.abs() < 1.0e-12);
+        assert!(result.max_stress > 1.0e8);
+        assert!(result.max_axial_force > 1.0e6);
+        assert_eq!(result.max_temperature_delta, 40.0);
+        assert!(result.elements[0].stress < 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_thermal_truss_3d_with_restrained_expansion() {
+        let result = solve_thermal_truss_3d(&SolveThermalTruss3dRequest {
+            nodes: vec![
+                ThermalTruss3dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                    temperature_delta: 40.0,
+                },
+                ThermalTruss3dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                    temperature_delta: 40.0,
+                },
+                ThermalTruss3dNodeInput {
+                    id: "n2".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                    temperature_delta: 0.0,
+                },
+            ],
+            elements: vec![ThermalTruss3dElementInput {
+                id: "tt0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                thermal_expansion: 12.0e-6,
+            }],
+        })
+        .expect("thermal truss 3d should solve");
 
         assert!(result.max_displacement.abs() < 1.0e-12);
         assert!(result.max_stress > 1.0e8);

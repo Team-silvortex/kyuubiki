@@ -214,6 +214,121 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert payload["job"]["status"] in ["queued", "running", "completed"]
   end
 
+  test "submits a thermal truss 2d job" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/thermal-truss-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "temperature_delta" => 40.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "temperature_delta" => 40.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "tt0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "area" => 0.01,
+              "youngs_modulus" => 210.0e9,
+              "thermal_expansion" => 12.0e-6
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["status"] in ["queued", "running", "completed"]
+  end
+
+  test "submits a thermal truss 3d job" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/thermal-truss-3d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "z" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "fix_z" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "load_z" => 0.0,
+              "temperature_delta" => 40.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "z" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "fix_z" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "load_z" => 0.0,
+              "temperature_delta" => 40.0
+            },
+            %{
+              "id" => "n2",
+              "x" => 0.0,
+              "y" => 1.0,
+              "z" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "fix_z" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "load_z" => 0.0,
+              "temperature_delta" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "tt0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "area" => 0.01,
+              "youngs_modulus" => 210.0e9,
+              "thermal_expansion" => 12.0e-6
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["status"] in ["queued", "running", "completed"]
+  end
+
   test "protects cluster registration routes with a dedicated cluster token" do
     Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
       api_token: "cluster-secret",

@@ -32,6 +32,35 @@ export type ThermalBar1dJobInput = {
   model_version_id?: string;
 };
 
+export type ThermalTruss2dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  load_x: number;
+  load_y: number;
+  temperature_delta: number;
+};
+
+export type ThermalTruss2dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+  thermal_expansion: number;
+  material_id?: string;
+};
+
+export type ThermalTruss2dJobInput = {
+  nodes: ThermalTruss2dNodeInput[];
+  elements: ThermalTruss2dElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type TrussNodeInput = {
   id: string;
   x: number;
@@ -91,6 +120,38 @@ export type Truss3dElementInput = {
 export type Truss3dJobInput = {
   nodes: Truss3dNodeInput[];
   elements: Truss3dElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type ThermalTruss3dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_z: boolean;
+  load_x: number;
+  load_y: number;
+  load_z: number;
+  temperature_delta: number;
+};
+
+export type ThermalTruss3dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+  thermal_expansion: number;
+  material_id?: string;
+};
+
+export type ThermalTruss3dJobInput = {
+  nodes: ThermalTruss3dNodeInput[];
+  elements: ThermalTruss3dElementInput[];
   materials?: ModelMaterial[];
   project_id?: string;
   model_version_id?: string;
@@ -366,6 +427,36 @@ export type ThermalBar1dResult = {
   input: ThermalBar1dJobInput;
 };
 
+export type ThermalTruss2dResult = {
+  max_displacement: number;
+  max_stress: number;
+  max_axial_force: number;
+  max_temperature_delta: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    ux: number;
+    uy: number;
+    temperature_delta: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    average_temperature_delta: number;
+    thermal_strain: number;
+    mechanical_strain: number;
+    total_strain: number;
+    stress: number;
+    axial_force: number;
+  }>;
+  input: ThermalTruss2dJobInput;
+};
+
 export type Truss2dResult = {
   max_displacement: number;
   max_stress: number;
@@ -398,6 +489,38 @@ export type Truss3dResult = {
     axial_force: number;
   }>;
   input: Truss3dJobInput;
+};
+
+export type ThermalTruss3dResult = {
+  max_displacement: number;
+  max_stress: number;
+  max_axial_force: number;
+  max_temperature_delta: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    z: number;
+    ux: number;
+    uy: number;
+    uz: number;
+    temperature_delta: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    average_temperature_delta: number;
+    thermal_strain: number;
+    mechanical_strain: number;
+    total_strain: number;
+    stress: number;
+    axial_force: number;
+  }>;
+  input: ThermalTruss3dJobInput;
 };
 
 export type PlaneTriangle2dResult = {
@@ -923,6 +1046,25 @@ export function resolveThermalBar1dJobInput(
   };
 }
 
+export function resolveThermalTruss2dJobInput(
+  input: ThermalTruss2dJobInput,
+): Omit<ThermalTruss2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveTruss2dJobInput(
   input: Truss2dJobInput,
 ): Omit<Truss2dJobInput, "materials"> {
@@ -945,6 +1087,25 @@ export function resolveTruss2dJobInput(
 export function resolveTruss3dJobInput(
   input: Truss3dJobInput,
 ): Omit<Truss3dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveThermalTruss3dJobInput(
+  input: ThermalTruss3dJobInput,
+): Omit<ThermalTruss3dJobInput, "materials"> {
   const materials = resolveMaterialLookup(input.materials);
 
   return {
@@ -1290,6 +1451,16 @@ export function createThermalBar1dJob(
   });
 }
 
+export function createThermalTruss2dJob(
+  input: ThermalTruss2dJobInput,
+): Promise<JobEnvelope<ThermalTruss2dResult>> {
+  return requestJson<JobEnvelope<ThermalTruss2dResult>>("/api/v1/fem/thermal-truss-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createTruss2dJob(input: Truss2dJobInput): Promise<JobEnvelope<Truss2dResult>> {
   return requestJson<JobEnvelope<Truss2dResult>>("/api/v1/fem/truss-2d/jobs", {
     method: "POST",
@@ -1300,6 +1471,16 @@ export function createTruss2dJob(input: Truss2dJobInput): Promise<JobEnvelope<Tr
 
 export function createTruss3dJob(input: Truss3dJobInput): Promise<JobEnvelope<Truss3dResult>> {
   return requestJson<JobEnvelope<Truss3dResult>>("/api/v1/fem/truss-3d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createThermalTruss3dJob(
+  input: ThermalTruss3dJobInput,
+): Promise<JobEnvelope<ThermalTruss3dResult>> {
+  return requestJson<JobEnvelope<ThermalTruss3dResult>>("/api/v1/fem/thermal-truss-3d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -1452,7 +1633,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

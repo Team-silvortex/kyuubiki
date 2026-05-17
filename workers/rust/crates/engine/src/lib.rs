@@ -2,12 +2,14 @@ use kyuubiki_protocol::{
     AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
     SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d,
-    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d, solve_torsion_1d,
-    solve_truss_2d, solve_truss_3d,
+    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d,
+    solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
+    solve_truss_3d,
 };
 use serde_json::Value;
 
@@ -15,6 +17,8 @@ use serde_json::Value;
 pub enum EngineSolveRequest {
     Bar1d(SolveBarRequest),
     ThermalBar1d(SolveThermalBar1dRequest),
+    ThermalTruss2d(SolveThermalTruss2dRequest),
+    ThermalTruss3d(SolveThermalTruss3dRequest),
     Spring1d(SolveSpring1dRequest),
     Spring2d(SolveSpring2dRequest),
     Spring3d(SolveSpring3dRequest),
@@ -32,6 +36,12 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         EngineSolveRequest::Bar1d(request) => solve_bar_1d(&request).map(AnalysisResult::Bar1d),
         EngineSolveRequest::ThermalBar1d(request) => {
             solve_thermal_bar_1d(&request).map(AnalysisResult::ThermalBar1d)
+        }
+        EngineSolveRequest::ThermalTruss2d(request) => {
+            solve_thermal_truss_2d(&request).map(AnalysisResult::ThermalTruss2d)
+        }
+        EngineSolveRequest::ThermalTruss3d(request) => {
+            solve_thermal_truss_3d(&request).map(AnalysisResult::ThermalTruss3d)
         }
         EngineSolveRequest::Spring1d(request) => {
             solve_spring_1d(&request).map(AnalysisResult::Spring1d)
@@ -77,6 +87,18 @@ pub fn chunk_result(
             encode_slice(&result.nodes)?
         }
         (AnalysisResult::ThermalBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ThermalTruss2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ThermalTruss2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ThermalTruss3d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ThermalTruss3d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::Spring1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,

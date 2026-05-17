@@ -14,6 +14,10 @@ import type {
   PlaneTriangle2dResult,
   ThermalBar1dJobInput,
   ThermalBar1dResult,
+  ThermalTruss2dJobInput,
+  ThermalTruss2dResult,
+  ThermalTruss3dJobInput,
+  ThermalTruss3dResult,
   Spring1dJobInput,
   Spring1dResult,
   Spring2dJobInput,
@@ -85,7 +89,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -212,7 +216,9 @@ export function serializeCurrentModel(
   activeMaterial: string,
   axialForm: AxialFormLike,
   thermalBarModel: ThermalBar1dJobInput,
+  thermalTrussModel: ThermalTruss2dJobInput,
   trussModel: Truss2dJobInput,
+  thermalTruss3dModel: ThermalTruss3dJobInput,
   truss3dModel: Truss3dJobInput,
   planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput,
   frameModel: Frame2dJobInput,
@@ -232,8 +238,12 @@ export function serializeCurrentModel(
         ? axialForm.youngsModulusGpa
         : studyKind === "thermal_bar_1d"
           ? round((thermalBarModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
+        : studyKind === "thermal_truss_2d"
+          ? round((thermalTrussModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
         : studyKind === "truss_2d"
           ? parametric.youngsModulusGpa
+          : studyKind === "thermal_truss_3d"
+            ? round((thermalTruss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
           : studyKind === "truss_3d"
             ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : studyKind === "beam_1d"
@@ -246,8 +256,12 @@ export function serializeCurrentModel(
     materials:
       studyKind === "truss_2d"
         ? trussModel.materials
+        : studyKind === "thermal_truss_2d"
+          ? thermalTrussModel.materials
         : studyKind === "truss_3d"
           ? truss3dModel.materials
+          : studyKind === "thermal_truss_3d"
+            ? thermalTruss3dModel.materials
           : studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d"
             ? undefined
           : studyKind === "beam_1d"
@@ -261,7 +275,9 @@ export function serializeCurrentModel(
             : undefined,
     axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
     truss: studyKind === "truss_2d" ? trussModel : undefined,
+    thermalTruss: studyKind === "thermal_truss_2d" ? thermalTrussModel : undefined,
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
+    thermalTruss3d: studyKind === "thermal_truss_3d" ? thermalTruss3dModel : undefined,
     plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
     frame: studyKind === "frame_2d" ? frameModel : undefined,
     beam: studyKind === "beam_1d" ? beamModel : undefined,
@@ -297,6 +313,32 @@ function isThermalBar1dResult(value: unknown): value is ThermalBar1dResult {
     "max_axial_force" in value &&
     "nodes" in value &&
     "elements" in value
+  );
+}
+
+function isThermalTruss2dResult(value: unknown): value is ThermalTruss2dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_temperature_delta" in value &&
+    "max_axial_force" in value &&
+    "nodes" in value &&
+    "elements" in value &&
+    Array.isArray((value as ThermalTruss2dResult).nodes) &&
+    !(value as ThermalTruss2dResult).nodes.some((node) => "z" in node)
+  );
+}
+
+function isThermalTruss3dResult(value: unknown): value is ThermalTruss3dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_temperature_delta" in value &&
+    "max_axial_force" in value &&
+    "nodes" in value &&
+    "elements" in value &&
+    Array.isArray((value as ThermalTruss3dResult).nodes) &&
+    (value as ThermalTruss3dResult).nodes.some((node) => "z" in node)
   );
 }
 
@@ -382,7 +424,7 @@ function isTorsion1dResult(value: unknown): value is Torsion1dResult {
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | ThermalBar1dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | ThermalBar1dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -450,6 +492,50 @@ export function serializeResultCsv(
     return lines.join("\n");
   }
 
+  if (isThermalTruss3dResult(result)) {
+    const thermalResult = result as ThermalTruss3dResult;
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "z", "ux", "uy", "uz", "temperature_delta"]));
+    thermalResult.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.z, node.ux, node.uy, node.uz, node.temperature_delta])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "average_temperature_delta",
+        "thermal_strain",
+        "mechanical_strain",
+        "total_strain",
+        "stress",
+        "axial_force",
+      ]),
+    );
+    thermalResult.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.length,
+          element.average_temperature_delta,
+          element.thermal_strain,
+          element.mechanical_strain,
+          element.total_strain,
+          element.stress,
+          element.axial_force,
+        ]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
   if (isTruss3dResult(result)) {
     lines.push("nodes");
     lines.push(toCsvRow(["index", "id", "x", "y", "z", "ux", "uy", "uz"]));
@@ -462,6 +548,36 @@ export function serializeResultCsv(
     result.elements.forEach((element) =>
       lines.push(
         toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.strain, element.stress, element.axial_force]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isThermalTruss2dResult(result)) {
+    const thermalResult = result as ThermalTruss2dResult;
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy", "temperature_delta"]));
+    thermalResult.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy, node.temperature_delta])));
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "average_temperature_delta",
+        "thermal_strain",
+        "mechanical_strain",
+        "total_strain",
+        "stress",
+        "axial_force",
+      ]),
+    );
+    thermalResult.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.average_temperature_delta, element.thermal_strain, element.mechanical_strain, element.total_strain, element.stress, element.axial_force]),
       ),
     );
     return lines.join("\n");

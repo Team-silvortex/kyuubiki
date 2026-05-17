@@ -5,6 +5,8 @@ import type {
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   ThermalBar1dJobInput,
+  ThermalTruss2dJobInput,
+  ThermalTruss3dJobInput,
   Spring1dJobInput,
   Spring2dJobInput,
   Spring3dJobInput,
@@ -29,6 +31,14 @@ export type ImportedThermalBar1dModel = {
   kind: "thermal_bar_1d";
   name: string;
   model: ThermalBar1dJobInput;
+};
+
+export type ImportedThermalTruss2dModel = {
+  kind: "thermal_truss_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: ThermalTruss2dJobInput;
 };
 
 export type ImportedTruss2dModel = {
@@ -61,6 +71,14 @@ export type ImportedTruss3dModel = {
   material: string;
   youngsModulusGpa: number;
   model: Truss3dJobInput;
+};
+
+export type ImportedThermalTruss3dModel = {
+  kind: "thermal_truss_3d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: ThermalTruss3dJobInput;
 };
 
 export type ImportedFrame2dModel = {
@@ -106,6 +124,7 @@ export type ImportedSpring3dModel = {
 export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedThermalBar1dModel
+  | ImportedThermalTruss2dModel
   | ImportedSpring1dModel
   | ImportedSpring2dModel
   | ImportedSpring3dModel
@@ -113,6 +132,7 @@ export type ImportedModel =
   | ImportedPlaneTriangle2dModel
   | ImportedPlaneQuad2dModel
   | ImportedTruss3dModel
+  | ImportedThermalTruss3dModel
   | ImportedFrame2dModel
   | ImportedBeam1dModel
   | ImportedTorsion1dModel;
@@ -285,6 +305,36 @@ function parseTrussNode(raw: unknown, index: number): Truss2dJobInput["nodes"][n
   };
 }
 
+function parseThermalTruss2dNode(raw: unknown, index: number): ThermalTruss2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+    temperature_delta: numberOrZero(node.temperature_delta),
+  };
+}
+
+function parseThermalTruss2dElement(raw: unknown, index: number): ThermalTruss2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    youngs_modulus: requiredNumber(
+      element.youngs_modulus,
+      `elements[${index}].youngs_modulus`,
+    ),
+    thermal_expansion: numberOrZero(element.thermal_expansion),
+    material_id: optionalString(element.material_id),
+  };
+}
+
 function parseTrussElement(raw: unknown, index: number): Truss2dJobInput["elements"][number] {
   const element = (raw ?? {}) as Record<string, unknown>;
   return {
@@ -324,6 +374,36 @@ function parseTruss2dV1(raw: Record<string, unknown>): ImportedTruss2dModel {
   return {
     kind: "truss_2d",
     name: typeof raw.name === "string" ? raw.name : "imported-truss",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
+function parseThermalTruss2dV1(raw: Record<string, unknown>): ImportedThermalTruss2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalTruss2dNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseThermalTruss2dElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_truss_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-truss",
     material,
     youngsModulusGpa,
     model: { nodes, elements, materials },
@@ -465,6 +545,36 @@ function parseTruss3dNode(raw: unknown, index: number): Truss3dJobInput["nodes"]
   };
 }
 
+function parseThermalTruss3dNode(raw: unknown, index: number): ThermalTruss3dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    z: numberOrZero(node.z),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    fix_z: Boolean(node.fix_z),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+    load_z: numberOrZero(node.load_z),
+    temperature_delta: numberOrZero(node.temperature_delta),
+  };
+}
+
+function parseThermalTruss3dElement(raw: unknown, index: number): ThermalTruss3dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    thermal_expansion: numberOrZero(element.thermal_expansion),
+    material_id: optionalString(element.material_id),
+  };
+}
+
 function parseTruss3dElement(raw: unknown, index: number): Truss3dJobInput["elements"][number] {
   const element = (raw ?? {}) as Record<string, unknown>;
   return {
@@ -501,6 +611,36 @@ function parseTruss3dV1(raw: Record<string, unknown>): ImportedTruss3dModel {
   return {
     kind: "truss_3d",
     name: typeof raw.name === "string" ? raw.name : "imported-truss-3d",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
+function parseThermalTruss3dV1(raw: Record<string, unknown>): ImportedThermalTruss3dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalTruss3dNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseThermalTruss3dElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 3) {
+    throw new Error("nodes must contain at least three entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_truss_3d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-truss-3d",
     material,
     youngsModulusGpa,
     model: { nodes, elements, materials },
@@ -812,6 +952,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
     return parseTruss3dV1(raw);
   }
 
+  if (kind === "thermal_truss_3d") {
+    return parseThermalTruss3dV1(raw);
+  }
+
   if (kind === "frame_2d") {
     return parseFrame2dV1(raw);
   }
@@ -830,6 +974,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "thermal_bar_1d") {
     return parseThermalBar1dV1(raw);
+  }
+
+  if (kind === "thermal_truss_2d") {
+    return parseThermalTruss2dV1(raw);
   }
 
   if (kind === "spring_2d") {

@@ -6,6 +6,8 @@ export type DirectMeshCachedResult = {
     | "plane_quad_2d"
     | "axial_bar_1d"
     | "thermal_bar_1d"
+    | "thermal_truss_2d"
+    | "thermal_truss_3d"
     | "spring_1d"
     | "spring_2d"
     | "spring_3d"

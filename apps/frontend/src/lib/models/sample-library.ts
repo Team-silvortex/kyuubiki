@@ -1,7 +1,21 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  kind:
+    | "axial_bar_1d"
+    | "thermal_bar_1d"
+    | "thermal_truss_2d"
+    | "thermal_truss_3d"
+    | "spring_1d"
+    | "spring_2d"
+    | "spring_3d"
+    | "beam_1d"
+    | "torsion_1d"
+    | "truss_2d"
+    | "truss_3d"
+    | "plane_triangle_2d"
+    | "plane_quad_2d"
+    | "frame_2d";
   href: string;
   summary: string;
 };
@@ -20,6 +34,20 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "thermal_bar_1d",
     href: "/models/thermal-bar-1d.json",
     summary: "Restrained thermal-expansion bar for quick temperature-driven stress and axial-force checks.",
+  },
+  {
+    id: "thermal-truss-2d",
+    name: "Thermal Truss 2D",
+    kind: "thermal_truss_2d",
+    href: "/models/thermal-truss-2d.json",
+    summary: "Restrained 2D truss with uniform temperature rise for quick thermal stress-path checks.",
+  },
+  {
+    id: "thermal-truss-3d",
+    name: "Thermal Truss 3D",
+    kind: "thermal_truss_3d",
+    href: "/models/thermal-truss-3d.json",
+    summary: "Spatial truss sample with heated members for first-pass 3D thermal-force checks.",
   },
   {
     id: "cantilever-beam-1d",

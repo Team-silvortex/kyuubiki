@@ -14,8 +14,8 @@ Top-level application surfaces live here.
 - `installer-gui/`
   Tauri installer/operator console for local, cloud, and distributed setups.
 - `hub-gui/`
-  Emerging unified desktop launcher and runtime control shell for the whole
-  Kyuubiki workstation.
+  Unified desktop launcher and runtime control shell for the whole Kyuubiki
+  workstation.
 - `workbench-gui/`
   Tauri desktop shell that wraps the browser workbench for native use.
 
@@ -30,8 +30,10 @@ Top-level application surfaces live here.
 - `installer-gui/`
   Tauri desktop installer and deployment control GUI.
 - `hub-gui/`
-  Desktop orchestration shell intended to sit above installer and workbench
-  surfaces as the everyday GUI entrypoint. It is now scaffolded as a Tauri app.
+  Desktop orchestration shell that sits above installer and workbench surfaces
+  as the everyday GUI entrypoint. It now serves as the operator-facing desktop
+  entry shell for runtime control, workload launch, release readiness, and
+  hot-reload watch flows.
 - `workbench-gui/`
   Tauri desktop shell for the local engineering workbench. It embeds the
   browser workbench inside a native window and exposes local runtime controls.

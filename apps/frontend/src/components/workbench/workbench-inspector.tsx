@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -408,11 +408,11 @@ function WorkbenchInspectorInner({
 }: WorkbenchInspectorProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
   const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
-  const isTruss = studyKind === "truss_2d";
-  const isTruss3d = studyKind === "truss_3d";
+  const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
+  const isTruss3d = studyKind === "truss_3d" || studyKind === "thermal_truss_3d";
   const isSpring3d = studyKind === "spring_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
-  const isThermal = studyKind === "thermal_bar_1d";
+  const isThermal = studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d";
   const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d";
   const isBeam = studyKind === "beam_1d";
   const isTorsion = studyKind === "torsion_1d";

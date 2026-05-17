@@ -1,0 +1,21 @@
+{
+  "model_schema_version": "kyuubiki.model/v1",
+  "kind": "thermal_truss_3d",
+  "name": "thermal-truss-3d",
+  "material": "Aluminum",
+  "youngs_modulus_gpa": 70,
+  "nodes": [
+    { "id": "tb0", "x": 0.0, "y": 0.0, "z": 0.0, "fix_x": true, "fix_y": true, "fix_z": true, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0, "temperature_delta": 35.0 },
+    { "id": "tb1", "x": 1.2, "y": 0.0, "z": 0.0, "fix_x": true, "fix_y": true, "fix_z": true, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0, "temperature_delta": 35.0 },
+    { "id": "tb2", "x": 0.1, "y": 1.0, "z": 0.0, "fix_x": true, "fix_y": true, "fix_z": true, "load_x": 0.0, "load_y": 0.0, "load_z": 0.0, "temperature_delta": 35.0 },
+    { "id": "tb3", "x": 0.35, "y": 0.3, "z": 1.0, "fix_x": false, "fix_y": false, "fix_z": false, "load_x": 0.0, "load_y": 0.0, "load_z": -900.0, "temperature_delta": 15.0 }
+  ],
+  "elements": [
+    { "id": "tte0", "node_i": 0, "node_j": 1, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte1", "node_i": 1, "node_j": 2, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte2", "node_i": 2, "node_j": 0, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte3", "node_i": 0, "node_j": 3, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte4", "node_i": 1, "node_j": 3, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 },
+    { "id": "tte5", "node_i": 2, "node_j": 3, "area": 0.01, "youngs_modulus": 70000000000.0, "thermal_expansion": 0.000012 }
+  ]
+}

@@ -1,7 +1,7 @@
 # Testing And CI
 
 This document is the quick map for how Kyuubiki currently validates itself in
-`v0.7.4`.
+`v0.9.0`.
 
 ## Why the test stack is layered
 

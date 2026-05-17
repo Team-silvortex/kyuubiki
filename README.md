@@ -1,4 +1,4 @@
-# kyuubiki v0.7.4
+# kyuubiki v0.9.0
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -7,7 +7,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 - an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
-`v0.7.4` is the current repository-wide release baseline. At this point Kyuubiki has moved past being only a browser FEM workbench and now reads much more like a layered engineering platform: browser and desktop work surfaces, a Phoenix control plane, Rust solver agents, shared headless SDKs, standardized project bundles, and a real desktop operator entry path through `Kyuubiki Hub`.
+`v0.9.0` is the current repository-wide release baseline. At this point Kyuubiki has moved past being only a browser FEM workbench and now reads much more like a layered engineering platform: browser and desktop work surfaces, a Phoenix control plane, Rust solver agents, shared headless SDKs, standardized project bundles, a real desktop operator entry path through `Kyuubiki Hub`, and a much broader operator family inside the FEM engine itself.
 
 It also now has an explicit deployment split:
 
@@ -21,7 +21,7 @@ the Hub can start locally, connect to remotely, or switch between across
 targets.
 - `headless peer mesh`: Rust solver agents can run without a GUI or Phoenix on the same host, and can advertise LAN peer-cluster topology through the shared RPC descriptor
 
-For local iteration, `v0.7.4` also now has a repo-level hot-reload path:
+For local iteration, `v0.9.0` also now has a repo-level hot-reload path:
 
 - `make hot-local`
 - `make hot-cloud`
@@ -68,6 +68,15 @@ The monorepo is intentionally split by responsibility:
 Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
+- [docs/release-support-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-support-matrix-0.9.0.md)
+- [docs/release-study-coverage-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-study-coverage-0.9.0.md)
+- [docs/release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
+- [docs/release-first-run-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-first-run-0.9.0.md)
+- [docs/release-troubleshooting-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-troubleshooting-0.9.0.md)
+- [docs/release-readiness-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-readiness-0.9.0.md)
+- [docs/release-github-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-github-0.9.0.md)
+- [docs/release-summary-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-summary-0.9.0.md)
+- [docs/release-notes-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-notes-0.9.0.md)
 - [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
 - [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
 - [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
@@ -103,20 +112,31 @@ Start here if you need the repo map:
   [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md),
   [apps/frontend/README.md](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/README.md)
 
-## What v0.7.4 Can Do
+## What v0.9.0 Can Do
 
 ### Solvers
 
 - `1D axial bar`
+- `1D thermal bar`
+- `1D spring`
+- `2D spring`
+- `3D spring`
+- `1D beam`
+- `1D torsion shaft`
 - `2D truss`
+- `2D frame`
 - `2D plane triangle`
+- `2D plane quad`
 - `3D space truss`
 
 ### Modeling and workbench
 
 - parameterized study setup
+- family-aware study selection for `Axial & Springs`, `Beams & Frames`, `Trusses`, and `Planes`
+- family-grouped sample library
 - direct node drag editing in `2D truss`
 - direct node drag editing in `3D truss`
+- direct node drag editing in `2D frame`
 - link / unlink member editing
 - node duplication and axis mirror tools in `3D`
 - box selection, multi-selection, focus, frame selection, and nudge tools in `3D`
@@ -124,6 +144,8 @@ Start here if you need the repo map:
 - undo / redo for frontend modeling actions
 - editor-style compact UI with denser tabs, virtualized lists, and docked panels
 - lazy-rendered large-result windows with chunk-aware browsing for `10k+` scale review
+- line-study result field switching, hotspot ranking, and member-force export for `beam_1d`, `frame_2d`, `spring_1d`, `spring_2d`, `spring_3d`, and `thermal_bar_1d`
+- plane-study field switching and hotspot ranking for `plane_triangle_2d` and `plane_quad_2d`
 
 ### Materials
 
@@ -187,6 +209,9 @@ Start here if you need the repo map:
 - local guide and model-assisted onboarding in Hub
 - assistant action audit with control-plane security-event mirroring
 - shared desktop app family across `hub-gui`, `installer-gui`, and `workbench-gui`
+- Hub workload library with local attach, remote catalog sync, bundle download, and open-in-workbench flow
+- Hub runtime watch for stack logs and hot-reload logs
+- Hub-managed hot-reload loop control for `local`, `cloud`, and `distributed` dev shapes
 
 Packaging and deployment paths are now documented centrally in:
 
