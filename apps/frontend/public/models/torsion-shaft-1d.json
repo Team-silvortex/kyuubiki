@@ -1,0 +1,29 @@
+{
+  "kind": "torsion_1d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "Torsion Shaft 1D",
+  "nodes": [
+    {
+      "id": "t0",
+      "x": 0,
+      "fix_rz": true,
+      "torque_z": 0
+    },
+    {
+      "id": "t1",
+      "x": 1.5,
+      "fix_rz": false,
+      "torque_z": 2500
+    }
+  ],
+  "elements": [
+    {
+      "id": "s0",
+      "node_i": 0,
+      "node_j": 1,
+      "shear_modulus": 79000000000,
+      "polar_moment": 0.0000018,
+      "section_modulus": 0.00012
+    }
+  ]
+}

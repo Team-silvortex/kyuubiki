@@ -9,6 +9,8 @@ import {
   resolveSpring1dJobInput,
   resolveSpring2dJobInput,
   resolveSpring3dJobInput,
+  resolveThermalBar1dJobInput,
+  resolveTorsion1dJobInput,
   resolveTruss2dJobInput,
   resolveTruss3dJobInput,
   type AxialBarJobInput,
@@ -19,6 +21,8 @@ import {
   type Spring1dJobInput,
   type Spring2dJobInput,
   type Spring3dJobInput,
+  type ThermalBar1dJobInput,
+  type Torsion1dJobInput,
   type Truss2dJobInput,
   type Truss3dJobInput,
 } from "@/lib/api";
@@ -33,10 +37,12 @@ type DirectMeshSolveBody = {
   selection_mode?: "first_reachable" | "healthiest";
   study_kind:
     | "axial_bar_1d"
+    | "thermal_bar_1d"
     | "spring_1d"
     | "spring_2d"
     | "spring_3d"
     | "beam_1d"
+    | "torsion_1d"
     | "truss_2d"
     | "truss_3d"
     | "plane_triangle_2d"
@@ -49,6 +55,8 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
   switch (kind) {
     case "axial_bar_1d":
       return "solve_bar_1d" as const;
+    case "thermal_bar_1d":
+      return "solve_thermal_bar_1d" as const;
     case "spring_1d":
       return "solve_spring_1d" as const;
     case "spring_2d":
@@ -57,6 +65,8 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
       return "solve_spring_3d" as const;
     case "beam_1d":
       return "solve_beam_1d" as const;
+    case "torsion_1d":
+      return "solve_torsion_1d" as const;
     case "truss_2d":
       return "solve_truss_2d" as const;
     case "truss_3d":
@@ -77,6 +87,8 @@ function normalizeInputForStudyKind(
   switch (kind) {
     case "axial_bar_1d":
       return resolveAxialBarJobInput(input as AxialBarJobInput);
+    case "thermal_bar_1d":
+      return resolveThermalBar1dJobInput(input as ThermalBar1dJobInput);
     case "spring_1d":
       return resolveSpring1dJobInput(input as Spring1dJobInput);
     case "spring_2d":
@@ -85,6 +97,8 @@ function normalizeInputForStudyKind(
       return resolveSpring3dJobInput(input as Spring3dJobInput);
     case "beam_1d":
       return resolveBeam1dJobInput(input as Beam1dJobInput);
+    case "torsion_1d":
+      return resolveTorsion1dJobInput(input as Torsion1dJobInput);
     case "truss_2d":
       return resolveTruss2dJobInput(input as Truss2dJobInput);
     case "truss_3d":

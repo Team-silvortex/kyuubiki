@@ -1240,6 +1240,41 @@ html[data-theme="graphite"] .guide {
   min-width: 0;
 }
 
+.sample-group-list {
+  display: grid;
+  gap: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.sample-group {
+  display: grid;
+  gap: 10px;
+}
+
+.sample-group__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sample-group__head strong {
+  color: var(--ink);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.sample-group__items {
+  display: grid;
+  gap: 10px;
+}
+
 .virtual-list__viewport {
   overflow-y: auto;
   padding-right: 4px;

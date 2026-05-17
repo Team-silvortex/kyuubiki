@@ -1,0 +1,31 @@
+{
+  "kind": "thermal_bar_1d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "Thermal Bar 1D",
+  "nodes": [
+    {
+      "id": "n0",
+      "x": 0,
+      "fix_x": true,
+      "load_x": 0,
+      "temperature_delta": 40
+    },
+    {
+      "id": "n1",
+      "x": 1.5,
+      "fix_x": true,
+      "load_x": 0,
+      "temperature_delta": 40
+    }
+  ],
+  "elements": [
+    {
+      "id": "e0",
+      "node_i": 0,
+      "node_j": 1,
+      "area": 0.01,
+      "youngs_modulus": 210000000000,
+      "thermal_expansion": 0.000012
+    }
+  ]
+}

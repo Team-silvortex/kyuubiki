@@ -8,6 +8,30 @@ export type AxialBarJobInput = {
   model_version_id?: string;
 };
 
+export type ThermalBar1dNodeInput = {
+  id: string;
+  x: number;
+  fix_x: boolean;
+  load_x: number;
+  temperature_delta: number;
+};
+
+export type ThermalBar1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+  thermal_expansion: number;
+};
+
+export type ThermalBar1dJobInput = {
+  nodes: ThermalBar1dNodeInput[];
+  elements: ThermalBar1dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type TrussNodeInput = {
   id: string;
   x: number;
@@ -180,6 +204,29 @@ export type Beam1dJobInput = {
   model_version_id?: string;
 };
 
+export type Torsion1dNodeInput = {
+  id: string;
+  x: number;
+  fix_rz: boolean;
+  torque_z: number;
+};
+
+export type Torsion1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  shear_modulus: number;
+  polar_moment: number;
+  section_modulus: number;
+};
+
+export type Torsion1dJobInput = {
+  nodes: Torsion1dNodeInput[];
+  elements: Torsion1dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type Spring1dNodeInput = {
   id: string;
   x: number;
@@ -289,6 +336,34 @@ export type AxialBarResult = {
     tip_force: number;
     youngs_modulus: number;
   };
+};
+
+export type ThermalBar1dResult = {
+  max_displacement: number;
+  max_stress: number;
+  max_axial_force: number;
+  max_temperature_delta: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    ux: number;
+    temperature_delta: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    average_temperature_delta: number;
+    thermal_strain: number;
+    mechanical_strain: number;
+    total_strain: number;
+    stress: number;
+    axial_force: number;
+  }>;
+  input: ThermalBar1dJobInput;
 };
 
 export type Truss2dResult = {
@@ -436,6 +511,29 @@ export type Beam1dResult = {
     max_bending_stress: number;
   }>;
   input: Beam1dJobInput;
+};
+
+export type Torsion1dResult = {
+  max_rotation: number;
+  max_torque: number;
+  max_stress: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    rz: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    twist: number;
+    torque: number;
+    shear_stress: number;
+  }>;
+  input: Torsion1dJobInput;
 };
 
 export type Spring1dResult = {
@@ -814,6 +912,17 @@ export function resolveAxialBarJobInput(
   };
 }
 
+export function resolveThermalBar1dJobInput(
+  input: ThermalBar1dJobInput,
+): ThermalBar1dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveTruss2dJobInput(
   input: Truss2dJobInput,
 ): Omit<Truss2dJobInput, "materials"> {
@@ -931,6 +1040,17 @@ export function resolveBeam1dJobInput(
         youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
       };
     }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveTorsion1dJobInput(
+  input: Torsion1dJobInput,
+): Torsion1dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
     ...(input.project_id ? { project_id: input.project_id } : {}),
     ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
   };
@@ -1160,6 +1280,16 @@ export function createAxialBarJob(input: AxialBarJobInput): Promise<JobEnvelope<
   });
 }
 
+export function createThermalBar1dJob(
+  input: ThermalBar1dJobInput,
+): Promise<JobEnvelope<ThermalBar1dResult>> {
+  return requestJson<JobEnvelope<ThermalBar1dResult>>("/api/v1/fem/thermal-bar-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createTruss2dJob(input: Truss2dJobInput): Promise<JobEnvelope<Truss2dResult>> {
   return requestJson<JobEnvelope<Truss2dResult>>("/api/v1/fem/truss-2d/jobs", {
     method: "POST",
@@ -1210,6 +1340,16 @@ export function createBeam1dJob(
   input: Beam1dJobInput,
 ): Promise<JobEnvelope<Beam1dResult>> {
   return requestJson<JobEnvelope<Beam1dResult>>("/api/v1/fem/beam-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createTorsion1dJob(
+  input: Torsion1dJobInput,
+): Promise<JobEnvelope<Torsion1dResult>> {
+  return requestJson<JobEnvelope<Torsion1dResult>>("/api/v1/fem/torsion-1d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -1312,7 +1452,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

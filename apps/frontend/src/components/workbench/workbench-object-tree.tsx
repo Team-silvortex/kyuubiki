@@ -21,6 +21,7 @@ type ElementRow = {
 
 type WorkbenchObjectTreeProps = {
   title: string;
+  scopeLabel?: string;
   countLabel: string;
   hint: string;
   geometryLabel?: string;
@@ -45,6 +46,7 @@ type WorkbenchObjectTreeProps = {
 
 function WorkbenchObjectTreeInner({
   title,
+  scopeLabel,
   countLabel,
   hint,
   geometryLabel,
@@ -78,7 +80,7 @@ function WorkbenchObjectTreeInner({
     <section className="sidebar-card">
       <div className="card-head">
         <h2>{title}</h2>
-        <span>{countLabel}</span>
+        <span>{scopeLabel ? `${scopeLabel} · ${countLabel}` : countLabel}</span>
       </div>
       <p className="card-copy">{hint}</p>
 

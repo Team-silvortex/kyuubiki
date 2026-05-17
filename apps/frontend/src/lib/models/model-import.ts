@@ -4,9 +4,11 @@ import type {
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  ThermalBar1dJobInput,
   Spring1dJobInput,
   Spring2dJobInput,
   Spring3dJobInput,
+  Torsion1dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
@@ -21,6 +23,12 @@ export type ImportedAxialBarModel = {
   tipForce: number;
   material: string;
   youngsModulusGpa: number;
+};
+
+export type ImportedThermalBar1dModel = {
+  kind: "thermal_bar_1d";
+  name: string;
+  model: ThermalBar1dJobInput;
 };
 
 export type ImportedTruss2dModel = {
@@ -71,6 +79,12 @@ export type ImportedBeam1dModel = {
   model: Beam1dJobInput;
 };
 
+export type ImportedTorsion1dModel = {
+  kind: "torsion_1d";
+  name: string;
+  model: Torsion1dJobInput;
+};
+
 export type ImportedSpring1dModel = {
   kind: "spring_1d";
   name: string;
@@ -91,6 +105,7 @@ export type ImportedSpring3dModel = {
 
 export type ImportedModel =
   | ImportedAxialBarModel
+  | ImportedThermalBar1dModel
   | ImportedSpring1dModel
   | ImportedSpring2dModel
   | ImportedSpring3dModel
@@ -99,7 +114,8 @@ export type ImportedModel =
   | ImportedPlaneQuad2dModel
   | ImportedTruss3dModel
   | ImportedFrame2dModel
-  | ImportedBeam1dModel;
+  | ImportedBeam1dModel
+  | ImportedTorsion1dModel;
 
 const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 
@@ -211,6 +227,48 @@ function parseAxialBarV1(raw: Record<string, unknown>): ImportedAxialBarModel {
     tipForce: numberOrZero(raw.tip_force ?? raw.tipForce),
     material: normalizeMaterial(raw.material),
     youngsModulusGpa: requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa"),
+  };
+}
+
+function parseThermalBar1dNode(raw: unknown, index: number): ThermalBar1dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    fix_x: Boolean(node.fix_x),
+    load_x: numberOrZero(node.load_x),
+    temperature_delta: numberOrZero(node.temperature_delta),
+  };
+}
+
+function parseThermalBar1dElement(raw: unknown, index: number): ThermalBar1dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    thermal_expansion: numberOrZero(element.thermal_expansion),
+  };
+}
+
+function parseThermalBar1dV1(raw: Record<string, unknown>): ImportedThermalBar1dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalBar1dNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseThermalBar1dElement) : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_bar_1d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-bar-1d",
+    model: { nodes, elements },
   };
 }
 
@@ -690,6 +748,47 @@ function parseSpring3dV1(raw: Record<string, unknown>): ImportedSpring3dModel {
   };
 }
 
+function parseTorsion1dNode(raw: unknown, index: number): Torsion1dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    fix_rz: Boolean(node.fix_rz),
+    torque_z: numberOrZero(node.torque_z),
+  };
+}
+
+function parseTorsion1dElement(raw: unknown, index: number): Torsion1dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    shear_modulus: requiredNumber(element.shear_modulus, `elements[${index}].shear_modulus`),
+    polar_moment: requiredNumber(element.polar_moment, `elements[${index}].polar_moment`),
+    section_modulus: requiredNumber(element.section_modulus, `elements[${index}].section_modulus`),
+  };
+}
+
+function parseTorsion1dV1(raw: Record<string, unknown>): ImportedTorsion1dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseTorsion1dNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseTorsion1dElement) : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "torsion_1d",
+    name: typeof raw.name === "string" ? raw.name : "imported-torsion-1d",
+    model: { nodes, elements },
+  };
+}
+
 export function parsePlaygroundModel(text: string): ImportedModel {
   const raw = JSON.parse(text) as Record<string, unknown>;
   assertSupportedVersion(raw);
@@ -721,8 +820,16 @@ export function parsePlaygroundModel(text: string): ImportedModel {
     return parseBeam1dV1(raw);
   }
 
+  if (kind === "torsion_1d") {
+    return parseTorsion1dV1(raw);
+  }
+
   if (kind === "spring_1d") {
     return parseSpring1dV1(raw);
+  }
+
+  if (kind === "thermal_bar_1d") {
+    return parseThermalBar1dV1(raw);
   }
 
   if (kind === "spring_2d") {

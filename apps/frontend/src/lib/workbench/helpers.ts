@@ -12,12 +12,16 @@ import type {
   PlaneQuad2dResult,
   PlaneTriangle2dJobInput,
   PlaneTriangle2dResult,
+  ThermalBar1dJobInput,
+  ThermalBar1dResult,
   Spring1dJobInput,
   Spring1dResult,
   Spring2dJobInput,
   Spring2dResult,
   Spring3dJobInput,
   Spring3dResult,
+  Torsion1dJobInput,
+  Torsion1dResult,
   Truss2dJobInput,
   Truss2dResult,
   Truss3dJobInput,
@@ -81,7 +85,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -207,11 +211,13 @@ export function serializeCurrentModel(
   loadedModelName: string,
   activeMaterial: string,
   axialForm: AxialFormLike,
+  thermalBarModel: ThermalBar1dJobInput,
   trussModel: Truss2dJobInput,
   truss3dModel: Truss3dJobInput,
   planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput,
   frameModel: Frame2dJobInput,
   beamModel: Beam1dJobInput,
+  torsionModel: Torsion1dJobInput,
   springModel: Spring1dJobInput,
   spring2dModel: Spring2dJobInput,
   spring3dModel: Spring3dJobInput,
@@ -224,12 +230,16 @@ export function serializeCurrentModel(
     youngsModulusGpa:
       studyKind === "axial_bar_1d"
         ? axialForm.youngsModulusGpa
+        : studyKind === "thermal_bar_1d"
+          ? round((thermalBarModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
         : studyKind === "truss_2d"
           ? parametric.youngsModulusGpa
           : studyKind === "truss_3d"
             ? round((truss3dModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : studyKind === "beam_1d"
               ? round((beamModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
+            : studyKind === "torsion_1d"
+              ? 0
             : studyKind === "frame_2d"
               ? round((frameModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
@@ -242,6 +252,8 @@ export function serializeCurrentModel(
             ? undefined
           : studyKind === "beam_1d"
             ? beamModel.materials
+          : studyKind === "torsion_1d"
+            ? undefined
           : studyKind === "frame_2d"
             ? frameModel.materials
           : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
@@ -253,6 +265,8 @@ export function serializeCurrentModel(
     plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
     frame: studyKind === "frame_2d" ? frameModel : undefined,
     beam: studyKind === "beam_1d" ? beamModel : undefined,
+    torsion: studyKind === "torsion_1d" ? torsionModel : undefined,
+    thermalBar: studyKind === "thermal_bar_1d" ? thermalBarModel : undefined,
     spring: studyKind === "spring_1d" ? springModel : undefined,
     spring2d: studyKind === "spring_2d" ? spring2dModel : undefined,
     spring3d: studyKind === "spring_3d" ? spring3dModel : undefined,
@@ -273,6 +287,17 @@ function toCsvRow(values: Array<string | number | boolean | null | undefined>) {
 
 function isAxialResult(value: unknown): value is AxialBarResult {
   return typeof value === "object" && value !== null && "tip_displacement" in value;
+}
+
+function isThermalBar1dResult(value: unknown): value is ThermalBar1dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_temperature_delta" in value &&
+    "max_axial_force" in value &&
+    "nodes" in value &&
+    "elements" in value
+  );
 }
 
 function isTruss3dResult(value: unknown): value is Truss3dResult {
@@ -342,10 +367,22 @@ function isSpring3dResult(value: unknown): value is Spring3dResult {
   );
 }
 
+function isTorsion1dResult(value: unknown): value is Torsion1dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_torque" in value &&
+    "max_rotation" in value &&
+    "nodes" in value &&
+    "elements" in value &&
+    Array.isArray((value as Torsion1dResult).nodes)
+  );
+}
+
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | ThermalBar1dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -366,6 +403,49 @@ export function serializeResultCsv(
     lines.push(toCsvRow(["index", "x1", "x2", "strain", "stress", "axial_force"]));
     result.elements.forEach((element) =>
       lines.push(toCsvRow([element.index, element.x1, element.x2, element.strain, element.stress, element.axial_force])),
+    );
+    return lines.join("\n");
+  }
+
+  if (isThermalBar1dResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "ux", "temperature_delta"]));
+    result.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.ux, node.temperature_delta])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "average_temperature_delta",
+        "thermal_strain",
+        "mechanical_strain",
+        "total_strain",
+        "stress",
+        "axial_force",
+      ]),
+    );
+    result.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.length,
+          element.average_temperature_delta,
+          element.thermal_strain,
+          element.mechanical_strain,
+          element.total_strain,
+          element.stress,
+          element.axial_force,
+        ]),
+      ),
     );
     return lines.join("\n");
   }
@@ -488,6 +568,19 @@ export function serializeResultCsv(
           element.max_bending_stress,
         ]),
       ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isTorsion1dResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "rz"]));
+    result.nodes.forEach((node) => lines.push(toCsvRow([node.index, node.id, node.x, node.rz])));
+    lines.push("");
+    lines.push("elements");
+    lines.push(toCsvRow(["index", "id", "node_i", "node_j", "length", "twist", "torque", "shear_stress"]));
+    result.elements.forEach((element) =>
+      lines.push(toCsvRow([element.index, element.id, element.node_i, element.node_j, element.length, element.twist, element.torque, element.shear_stress])),
     );
     return lines.join("\n");
   }

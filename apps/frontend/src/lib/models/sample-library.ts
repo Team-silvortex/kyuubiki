@@ -1,7 +1,7 @@
 export type SampleEntry = {
   id: string;
   name: string;
-  kind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  kind: "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   href: string;
   summary: string;
 };
@@ -13,6 +13,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "axial_bar_1d",
     href: "/models/axial-steel-bar.json",
     summary: "Baseline 1D tensile bar for quick stiffness checks.",
+  },
+  {
+    id: "thermal-bar-1d",
+    name: "Thermal Bar 1D",
+    kind: "thermal_bar_1d",
+    href: "/models/thermal-bar-1d.json",
+    summary: "Restrained thermal-expansion bar for quick temperature-driven stress and axial-force checks.",
   },
   {
     id: "cantilever-beam-1d",
@@ -48,6 +55,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "beam_1d",
     href: "/models/uniform-load-beam-1d.json",
     summary: "Cantilever beam driven by element-level distributed load for equivalent nodal load checks.",
+  },
+  {
+    id: "torsion-shaft-1d",
+    name: "Torsion Shaft 1D",
+    kind: "torsion_1d",
+    href: "/models/torsion-shaft-1d.json",
+    summary: "Single-span shaft with end torque for quick torsional twist and stress checks.",
   },
   {
     id: "braced-truss-2d",

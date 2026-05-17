@@ -17,17 +17,45 @@ export type SampleLibraryEntry = {
   summary: string;
 };
 
+export type StudyFamilyKey = "axialAndSprings" | "beamsAndFrames" | "trusses" | "planes";
+
+export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
+  switch (kind) {
+    case "axial_bar_1d":
+    case "thermal_bar_1d":
+    case "spring_1d":
+    case "spring_2d":
+    case "spring_3d":
+      return "axialAndSprings";
+    case "beam_1d":
+    case "torsion_1d":
+    case "frame_2d":
+      return "beamsAndFrames";
+    case "truss_2d":
+    case "truss_3d":
+      return "trusses";
+    case "plane_triangle_2d":
+    case "plane_quad_2d":
+    default:
+      return "planes";
+  }
+}
+
 export function buildLibrarySampleRows({
   samples,
   kindLabel,
+  familyLabel,
 }: {
   samples: SampleLibraryEntry[];
   kindLabel: (kind: string) => string;
+  familyLabel: (family: StudyFamilyKey) => string;
 }) {
   return samples.map((sample) => ({
     id: sample.id,
     name: sample.name,
     kindLabel: kindLabel(sample.kind),
+    familyKey: classifyStudyKindFamily(sample.kind),
+    familyLabel: familyLabel(classifyStudyKindFamily(sample.kind)),
     href: sample.href,
     summary: sample.summary,
   }));
@@ -188,12 +216,94 @@ export function buildProtocolAgentCards({
   }));
 }
 
+type StudyKind =
+  | "axial_bar_1d"
+  | "thermal_bar_1d"
+  | "spring_1d"
+  | "spring_2d"
+  | "spring_3d"
+  | "beam_1d"
+  | "torsion_1d"
+  | "truss_2d"
+  | "truss_3d"
+  | "plane_triangle_2d"
+  | "plane_quad_2d"
+  | "frame_2d";
+
+export type StudyKindOptionGroup = {
+  label: string;
+  options: Array<{ value: StudyKind; label: string }>;
+};
+
+export function buildStudyKindOptionGroups({
+  kinds,
+  families,
+}: {
+  kinds: {
+    axial_bar_1d: string;
+    thermal_bar_1d: string;
+    spring_1d: string;
+    spring_2d: string;
+    spring_3d: string;
+    beam_1d: string;
+    torsion_1d: string;
+    truss_2d: string;
+    truss_3d: string;
+    plane_triangle_2d: string;
+    plane_quad_2d: string;
+    frame_2d: string;
+  };
+  families: {
+    axialAndSprings: string;
+    beamsAndFrames: string;
+    trusses: string;
+    planes: string;
+  };
+}) {
+  return [
+    {
+      label: families.axialAndSprings,
+      options: [
+        { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
+        { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },
+        { value: "spring_1d" as const, label: kinds.spring_1d },
+        { value: "spring_2d" as const, label: kinds.spring_2d },
+        { value: "spring_3d" as const, label: kinds.spring_3d },
+      ],
+    },
+    {
+      label: families.beamsAndFrames,
+      options: [
+        { value: "beam_1d" as const, label: kinds.beam_1d },
+        { value: "torsion_1d" as const, label: kinds.torsion_1d },
+        { value: "frame_2d" as const, label: kinds.frame_2d },
+      ],
+    },
+    {
+      label: families.trusses,
+      options: [
+        { value: "truss_2d" as const, label: kinds.truss_2d },
+        { value: "truss_3d" as const, label: kinds.truss_3d },
+      ],
+    },
+    {
+      label: families.planes,
+      options: [
+        { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
+        { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
+      ],
+    },
+  ] satisfies StudyKindOptionGroup[];
+}
+
 export function buildStudyKindOptions(kinds: {
   axial_bar_1d: string;
+  thermal_bar_1d: string;
   spring_1d: string;
   spring_2d: string;
   spring_3d: string;
   beam_1d: string;
+  torsion_1d: string;
   truss_2d: string;
   truss_3d: string;
   plane_triangle_2d: string;
@@ -202,10 +312,12 @@ export function buildStudyKindOptions(kinds: {
 }) {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
+    { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },
     { value: "spring_1d" as const, label: kinds.spring_1d },
     { value: "spring_2d" as const, label: kinds.spring_2d },
     { value: "spring_3d" as const, label: kinds.spring_3d },
     { value: "beam_1d" as const, label: kinds.beam_1d },
+    { value: "torsion_1d" as const, label: kinds.torsion_1d },
     { value: "truss_2d" as const, label: kinds.truss_2d },
     { value: "truss_3d" as const, label: kinds.truss_3d },
     { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
@@ -263,7 +375,7 @@ export function buildStudyControlsRows({
     frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;
@@ -277,6 +389,15 @@ export function buildStudyControlsRows({
 }) {
   if (studyKind === "axial_bar_1d") {
     return [];
+  }
+
+  if (studyKind === "thermal_bar_1d") {
+    return [
+      { label: labels.nodes, value: planeNodeCount },
+      { label: labels.frameElements, value: planeElementCount },
+      { label: labels.material, value: materialLabel },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
   }
 
   if (studyKind === "truss_2d") {
@@ -336,6 +457,14 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
       { label: labels.material, value: materialLabel },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "torsion_1d") {
+    return [
+      { label: labels.nodes, value: planeNodeCount },
+      { label: labels.frameElements, value: planeElementCount },
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }

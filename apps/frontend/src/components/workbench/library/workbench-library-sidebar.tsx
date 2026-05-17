@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 
 import { VirtualList } from "@/components/ui/virtual-list";
 import type { ProjectRecord } from "@/lib/api";
@@ -11,6 +11,8 @@ type SampleRow = {
   id: string;
   name: string;
   kindLabel: string;
+  familyKey: string;
+  familyLabel: string;
   href: string;
   summary: string;
 };
@@ -157,6 +159,19 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   onRefresh,
   onImportModel,
 }: WorkbenchLibrarySidebarProps) {
+  const groupedSampleRows = useMemo(() => {
+    const groups = new Map<string, { label: string; rows: SampleRow[] }>();
+    for (const sample of sampleRows) {
+      const existing = groups.get(sample.familyKey);
+      if (existing) {
+        existing.rows.push(sample);
+        continue;
+      }
+      groups.set(sample.familyKey, { label: sample.familyLabel, rows: [sample] });
+    }
+    return Array.from(groups.values());
+  }, [sampleRows]);
+
   return (
     <div className="sidebar-stack panel-scroll-window">
       <div className="panel-tabs panel-tabs--wide">
@@ -184,20 +199,25 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
               onChange={(event) => onImportModel(event.target.files?.[0])}
             />
           </label>
-          <VirtualList
-            className="history-list"
-            items={sampleRows}
-            itemHeight={102}
-            maxHeight={328}
-            itemKey={(sample) => sample.id}
-            renderItem={(sample) => (
-              <button className="history-item" onClick={() => onOpenSample(sample.href)} type="button">
-                <strong>{sample.name}</strong>
-                <span>{sample.kindLabel}</span>
-                <small>{sample.summary}</small>
-              </button>
-            )}
-          />
+          <div className="history-list sample-group-list">
+            {groupedSampleRows.map((group) => (
+              <div key={group.label} className="sample-group">
+                <div className="sample-group__head">
+                  <strong>{group.label}</strong>
+                  <span>{group.rows.length}</span>
+                </div>
+                <div className="sample-group__items">
+                  {group.rows.map((sample) => (
+                    <button key={sample.id} className="history-item" onClick={() => onOpenSample(sample.href)} type="button">
+                      <strong>{sample.name}</strong>
+                      <span>{sample.kindLabel}</span>
+                      <small>{sample.summary}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       ) : null}
 

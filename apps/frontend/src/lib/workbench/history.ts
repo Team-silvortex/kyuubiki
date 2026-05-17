@@ -4,9 +4,11 @@ import type {
   Frame2dJobInput,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  ThermalBar1dJobInput,
   Spring1dJobInput,
   Spring2dJobInput,
   Spring3dJobInput,
+  Torsion1dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
@@ -14,10 +16,12 @@ import type { ParametricPanelConfig, ParametricTrussConfig } from "@/lib/models"
 
 export type WorkbenchStudyKind =
   | "axial_bar_1d"
+  | "thermal_bar_1d"
   | "spring_1d"
   | "spring_2d"
   | "spring_3d"
   | "beam_1d"
+  | "torsion_1d"
   | "truss_2d"
   | "truss_3d"
   | "plane_triangle_2d"
@@ -37,11 +41,13 @@ export type WorkbenchAxialFormState = {
 export type WorkbenchSnapshot = {
   studyKind: WorkbenchStudyKind;
   axialForm: WorkbenchAxialFormState;
+  thermalBarModel: ThermalBar1dJobInput;
   trussModel: Truss2dJobInput;
   truss3dModel: Truss3dJobInput;
   planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
   frameModel: Frame2dJobInput;
   beamModel: Beam1dJobInput;
+  torsionModel: Torsion1dJobInput;
   springModel: Spring1dJobInput;
   spring2dModel: Spring2dJobInput;
   spring3dModel: Spring3dJobInput;
@@ -71,11 +77,13 @@ export type AssistantTransactionEntry = {
 type SnapshotSetters = {
   setStudyKind: Dispatch<SetStateAction<WorkbenchStudyKind>>;
   setAxialForm: Dispatch<SetStateAction<WorkbenchAxialFormState>>;
+  setThermalBarModel: Dispatch<SetStateAction<ThermalBar1dJobInput>>;
   setTrussModel: Dispatch<SetStateAction<Truss2dJobInput>>;
   setTruss3dModel: Dispatch<SetStateAction<Truss3dJobInput>>;
   setPlaneModel: Dispatch<SetStateAction<PlaneTriangle2dJobInput | PlaneQuad2dJobInput>>;
   setFrameModel: Dispatch<SetStateAction<Frame2dJobInput>>;
   setBeamModel: Dispatch<SetStateAction<Beam1dJobInput>>;
+  setTorsionModel: Dispatch<SetStateAction<Torsion1dJobInput>>;
   setSpringModel: Dispatch<SetStateAction<Spring1dJobInput>>;
   setSpring2dModel: Dispatch<SetStateAction<Spring2dJobInput>>;
   setSpring3dModel: Dispatch<SetStateAction<Spring3dJobInput>>;
@@ -103,11 +111,13 @@ export function restoreWorkbenchSnapshot(
 ) {
   setters.setStudyKind(snapshot.studyKind);
   setters.setAxialForm(snapshot.axialForm);
+  setters.setThermalBarModel(snapshot.thermalBarModel);
   setters.setTrussModel(snapshot.trussModel);
   setters.setTruss3dModel(snapshot.truss3dModel);
   setters.setPlaneModel(snapshot.planeModel);
   setters.setFrameModel(snapshot.frameModel);
   setters.setBeamModel(snapshot.beamModel);
+  setters.setTorsionModel(snapshot.torsionModel);
   setters.setSpringModel(snapshot.springModel);
   setters.setSpring2dModel(snapshot.spring2dModel);
   setters.setSpring3dModel(snapshot.spring3dModel);

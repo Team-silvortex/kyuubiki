@@ -106,6 +106,32 @@ pub struct SolveBarRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalBar1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_x: bool,
+    pub load_x: f64,
+    #[serde(default)]
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalBar1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub thermal_expansion: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalBar1dRequest {
+    pub nodes: Vec<ThermalBar1dNodeInput>,
+    pub elements: Vec<ThermalBar1dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Spring1dNodeInput {
     pub id: String,
     pub x: f64,
@@ -209,6 +235,30 @@ pub struct SolveBeam1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Torsion1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_rz: bool,
+    pub torque_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Torsion1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub shear_modulus: f64,
+    pub polar_moment: f64,
+    pub section_modulus: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTorsion1dRequest {
+    pub nodes: Vec<Torsion1dNodeInput>,
+    pub elements: Vec<Torsion1dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NodeResult {
     pub index: usize,
     pub x: f64,
@@ -234,6 +284,41 @@ pub struct SolveBarResult {
     pub reaction_force: f64,
     pub max_displacement: f64,
     pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalBar1dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub ux: f64,
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalBar1dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub average_temperature_delta: f64,
+    pub thermal_strain: f64,
+    pub mechanical_strain: f64,
+    pub total_strain: f64,
+    pub stress: f64,
+    pub axial_force: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalBar1dResult {
+    pub input: SolveThermalBar1dRequest,
+    pub nodes: Vec<ThermalBar1dNodeResult>,
+    pub elements: Vec<ThermalBar1dElementResult>,
+    pub max_displacement: f64,
+    pub max_stress: f64,
+    pub max_axial_force: f64,
+    pub max_temperature_delta: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -362,6 +447,36 @@ pub struct SolveBeam1dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Torsion1dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub rz: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Torsion1dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub twist: f64,
+    pub torque: f64,
+    pub shear_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveTorsion1dResult {
+    pub input: SolveTorsion1dRequest,
+    pub nodes: Vec<Torsion1dNodeResult>,
+    pub elements: Vec<Torsion1dElementResult>,
+    pub max_rotation: f64,
+    pub max_torque: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TransportDescriptor {
     pub kind: String,
     pub framing: Option<String>,
@@ -421,6 +536,8 @@ pub enum RpcMethod {
     DescribeAgent,
     #[serde(rename = "solve_bar_1d")]
     SolveBar1d,
+    #[serde(rename = "solve_thermal_bar_1d")]
+    SolveThermalBar1d,
     #[serde(rename = "solve_spring_1d")]
     SolveSpring1d,
     #[serde(rename = "solve_spring_2d")]
@@ -429,6 +546,8 @@ pub enum RpcMethod {
     SolveSpring3d,
     #[serde(rename = "solve_beam_1d")]
     SolveBeam1d,
+    #[serde(rename = "solve_torsion_1d")]
+    SolveTorsion1d,
     #[serde(rename = "solve_truss_2d")]
     SolveTruss2d,
     #[serde(rename = "solve_truss_3d")]
@@ -542,10 +661,12 @@ impl RpcProtocolDescriptor {
                 RpcMethod::Ping,
                 RpcMethod::DescribeAgent,
                 RpcMethod::SolveBar1d,
+                RpcMethod::SolveThermalBar1d,
                 RpcMethod::SolveSpring1d,
                 RpcMethod::SolveSpring2d,
                 RpcMethod::SolveSpring3d,
                 RpcMethod::SolveBeam1d,
+                RpcMethod::SolveTorsion1d,
                 RpcMethod::SolveTruss2d,
                 RpcMethod::SolveTruss3d,
                 RpcMethod::SolvePlaneTriangle2d,
@@ -569,6 +690,17 @@ impl AgentDescriptor {
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveBar1d],
                     tags: vec!["bar".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "thermal-bar-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveThermalBar1d],
+                    tags: vec![
+                        "bar".to_string(),
+                        "thermal".to_string(),
+                        "line".to_string(),
+                        "cpu".to_string(),
+                    ],
                 },
                 CapabilityDescriptor {
                     id: "spring-1d".to_string(),
@@ -610,6 +742,17 @@ impl AgentDescriptor {
                     tags: vec![
                         "beam".to_string(),
                         "bending".to_string(),
+                        "line".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "torsion-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveTorsion1d],
+                    tags: vec![
+                        "torsion".to_string(),
+                        "shaft".to_string(),
                         "line".to_string(),
                         "cpu".to_string(),
                     ],
@@ -992,10 +1135,12 @@ pub struct SolveFrame2dResult {
 #[serde(untagged)]
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
+    ThermalBar1d(SolveThermalBar1dResult),
     Spring1d(SolveSpring1dResult),
     Spring2d(SolveSpring2dResult),
     Spring3d(SolveSpring3dResult),
     Beam1d(SolveBeam1dResult),
+    Torsion1d(SolveTorsion1dResult),
     Truss2d(SolveTruss2dResult),
     Truss3d(SolveTruss3dResult),
     PlaneTriangle2d(SolvePlaneTriangle2dResult),
@@ -1034,9 +1179,11 @@ mod tests {
         Frame2dNodeInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION,
         RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveTruss3dRequest,
+        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+        SolveThermalBar1dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
-        Spring3dElementInput, Spring3dNodeInput,
+        Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
+        ThermalBar1dNodeInput, Torsion1dElementInput, Torsion1dNodeInput,
     };
 
     #[test]
@@ -1084,6 +1231,48 @@ mod tests {
         assert_eq!(decoded.id, "rpc-1");
         let params: SolveBarRequest = serde_json::from_value(decoded.params).expect("params");
         assert_eq!(params.elements, 3);
+    }
+
+    #[test]
+    fn serializes_thermal_bar_1d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-bar".to_string(),
+            method: RpcMethod::SolveThermalBar1d,
+            params: serde_json::to_value(SolveThermalBar1dRequest {
+                nodes: vec![
+                    ThermalBar1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_x: true,
+                        load_x: 0.0,
+                        temperature_delta: 30.0,
+                    },
+                    ThermalBar1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        fix_x: false,
+                        load_x: 0.0,
+                        temperature_delta: 30.0,
+                    },
+                ],
+                elements: vec![ThermalBar1dElementInput {
+                    id: "tb0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 210.0e9,
+                    thermal_expansion: 12.0e-6,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveThermalBar1d);
+        assert_eq!(decoded.id, "rpc-thermal-bar");
     }
 
     #[test]
@@ -1229,6 +1418,46 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveBeam1d);
         assert_eq!(decoded.id, "rpc-beam-1d");
+    }
+
+    #[test]
+    fn serializes_torsion_1d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-torsion-1d".to_string(),
+            method: RpcMethod::SolveTorsion1d,
+            params: serde_json::to_value(SolveTorsion1dRequest {
+                nodes: vec![
+                    Torsion1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_rz: true,
+                        torque_z: 0.0,
+                    },
+                    Torsion1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.5,
+                        fix_rz: false,
+                        torque_z: 500.0,
+                    },
+                ],
+                elements: vec![Torsion1dElementInput {
+                    id: "t0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    shear_modulus: 80.0e9,
+                    polar_moment: 3.0e-6,
+                    section_modulus: 2.0e-4,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveTorsion1d);
+        assert_eq!(decoded.id, "rpc-torsion-1d");
     }
 
     #[test]

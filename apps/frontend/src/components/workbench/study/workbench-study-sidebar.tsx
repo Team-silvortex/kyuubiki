@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { StudyKindOptionGroup } from "@/lib/workbench/view-models";
 
-type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type StudyPanelTab = "summary" | "controls";
 
 type StudySidebarRow = {
@@ -19,7 +20,7 @@ type WorkbenchStudySidebarProps = {
   loadedModelName: string;
   studyTypeLabel: string;
   studyKind: StudyKind;
-  studyKindOptions: Array<{ value: StudyKind; label: string }>;
+  studyKindOptionGroups: StudyKindOptionGroup[];
   onStudyKindChange: (kind: StudyKind) => void;
   summaryRows: StudySidebarRow[];
   controlsRows: StudySidebarRow[];
@@ -42,7 +43,7 @@ export function WorkbenchStudySidebar({
   loadedModelName,
   studyTypeLabel,
   studyKind,
-  studyKindOptions,
+  studyKindOptionGroups,
   onStudyKindChange,
   summaryRows,
   controlsRows,
@@ -84,10 +85,14 @@ export function WorkbenchStudySidebar({
             <label>
               <span>{studyTypeLabel}</span>
               <select value={studyKind} onChange={(event) => onStudyKindChange(event.target.value as StudyKind)}>
-                {studyKindOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
+                {studyKindOptionGroups.map((group) => (
+                  <optgroup key={group.label} label={group.label}>
+                    {group.options.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>

@@ -518,10 +518,12 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp normalize_health_score(_value), do: nil
 
   defp preferred_tags("solve_bar_1d"), do: ["bar"]
+  defp preferred_tags("solve_thermal_bar_1d"), do: ["bar", "thermal", "line"]
   defp preferred_tags("solve_spring_1d"), do: ["spring", "line", "support"]
   defp preferred_tags("solve_spring_2d"), do: ["spring", "plane", "support"]
   defp preferred_tags("solve_spring_3d"), do: ["spring", "space", "support"]
   defp preferred_tags("solve_beam_1d"), do: ["beam", "bending", "line"]
+  defp preferred_tags("solve_torsion_1d"), do: ["torsion", "shaft", "line"]
   defp preferred_tags("solve_truss_2d"), do: ["truss"]
   defp preferred_tags("solve_truss_3d"), do: ["truss", "space"]
   defp preferred_tags("solve_plane_triangle_2d"), do: ["plane", "mesh"]

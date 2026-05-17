@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -158,6 +158,7 @@ type InspectorLabels = {
   poissonRatio: string;
   fixRz: string;
   momentZ: string;
+  torqueZ: string;
   rotationZ: string;
   frameElements: string;
   memberEndForces: string;
@@ -167,6 +168,8 @@ type InspectorLabels = {
   bendingStress: string;
   combinedStress: string;
   maxMoment: string;
+  maxTorque: string;
+  torsionStress: string;
   maxRotation: string;
   sortBy: string;
   shearForce: string;
@@ -229,6 +232,8 @@ type InspectorLabels = {
 
 type WorkbenchInspectorProps = {
   t: InspectorLabels;
+  reportScopeLabel?: string;
+  reportScopeHint?: string;
   sidebarSection: SidebarSection;
   studyKind: StudyKind;
   isPending: boolean;
@@ -325,6 +330,8 @@ type FrameForceSort = "index" | "axial" | "shear" | "moment";
 
 function WorkbenchInspectorInner({
   t,
+  reportScopeLabel,
+  reportScopeHint,
   sidebarSection,
   studyKind,
   isPending,
@@ -405,8 +412,10 @@ function WorkbenchInspectorInner({
   const isTruss3d = studyKind === "truss_3d";
   const isSpring3d = studyKind === "spring_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
+  const isThermal = studyKind === "thermal_bar_1d";
   const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d";
   const isBeam = studyKind === "beam_1d";
+  const isTorsion = studyKind === "torsion_1d";
   const isFrame = studyKind === "frame_2d";
   const historyRows = [
     ...undoStack.slice(-4).reverse().map((entry) => ({ key: `undo-${entry.label}`, label: entry.label, kind: t.undo })),
@@ -536,6 +545,15 @@ function WorkbenchInspectorInner({
                 <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} readOnly /></label>
                 <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} readOnly /></label>
               </div>
+            ) : isTorsion && selectedFrameNodeData ? (
+              <div className="form-grid compact">
+                <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
+                <label><span>{t.nodeX}</span><input type="number" step={0.1} value={selectedFrameNodeData.x} onChange={(event) => onUpdateSelectedFrameNode("x", Number(event.target.value))} /></label>
+                <label><span>{t.torqueZ}</span><input type="number" step={100} value={selectedFrameNodeData.moment_z} onChange={(event) => onUpdateSelectedFrameNode("moment_z", Number(event.target.value))} /></label>
+                <label><span>{t.rotationZ}</span><input value={typeof selectedFrameNodeData.rz === "number" ? selectedFrameNodeData.rz.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.displacementMagnitude}</span><input value={typeof selectedFrameNodeData.displacement_magnitude === "number" ? selectedFrameNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} onChange={(event) => onUpdateSelectedFrameNode("fix_rz", event.target.checked)} /></label>
+              </div>
             ) : isFrame && selectedFrameNodeData ? (
               <div className="form-grid compact">
                 <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
@@ -565,6 +583,19 @@ function WorkbenchInspectorInner({
                 <label><span>{t.shearJ}</span><input value={typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.momentJ}</span><input value={typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.maxMoment}</span><input value={Math.max(Math.abs(selectedFrameElementData.moment_i ?? 0), Math.abs(selectedFrameElementData.moment_j ?? 0)).toExponential(3)} readOnly /></label>
+              </div>
+            ) : isTorsion && selectedFrameElementData ? (
+              <div className="form-grid compact">
+                <label><span>{t.memberSelection}</span><input value={selectedFrameElementData.id} readOnly /></label>
+                <label><span>{t.nodeI}</span><input value={selectedFrameElementData.node_i} readOnly /></label>
+                <label><span>{t.nodeJ}</span><input value={selectedFrameElementData.node_j} readOnly /></label>
+                <label><span>{t.modulus}</span><input type="number" step={0.1} value={(selectedFrameElementData.youngs_modulus / 1.0e9).toFixed(3)} onChange={(event) => onUpdateSelectedFrameElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
+                <label><span>{t.momentOfInertia}</span><input type="number" step={0.000001} value={selectedFrameElementData.moment_of_inertia} onChange={(event) => onUpdateSelectedFrameElement("moment_of_inertia", Number(event.target.value))} /></label>
+                <label><span>{t.sectionModulus}</span><input type="number" step={0.000001} value={selectedFrameElementData.section_modulus} onChange={(event) => onUpdateSelectedFrameElement("section_modulus", Number(event.target.value))} /></label>
+                <label><span>{t.torsionStress}</span><input value={typeof selectedFrameElementData.max_bending_stress === "number" ? selectedFrameElementData.max_bending_stress.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.momentI}</span><input value={typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.momentJ}</span><input value={typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.maxTorque}</span><input value={Math.max(Math.abs(selectedFrameElementData.moment_i ?? 0), Math.abs(selectedFrameElementData.moment_j ?? 0)).toExponential(3)} readOnly /></label>
               </div>
             ) : isFrame && selectedFrameElementData ? (
               <div className="form-grid compact">
@@ -677,6 +708,11 @@ function WorkbenchInspectorInner({
         {inspectorTab === "report" ? (
         <section className="info-card">
           <h3>{t.report}</h3>
+          {reportScopeLabel || reportScopeHint ? (
+            <p className="card-copy">
+              {[reportScopeLabel, reportScopeHint].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
           <div className="button-row">
             <button className="ghost-button" disabled={!canCancelJob} onClick={onCancelJob} type="button">{t.cancelJob}</button>
             <button className="ghost-button" onClick={onDownloadJson} type="button">{t.exportData} {t.exportJson}</button>
@@ -685,10 +721,10 @@ function WorkbenchInspectorInner({
           <div className="metric-grid">
             <div><span>{t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
             <div><span>{t.maxStress}</span><strong>{maxStressValue}</strong></div>
-            {isFrame || isSpring ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
+            {isFrame || isSpring || isThermal ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
             {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
             <div><span>{t.reaction}</span><strong>{reactionValue}</strong></div>
-            {(isFrame || isBeam) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
+            {(isFrame || isBeam || isTorsion) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
             <div><span>{t.createdAt}</span><strong>{createdAtValue}</strong></div>
             <div><span>{t.updatedAt}</span><strong>{updatedAtValue}</strong></div>
             <div><span>{t.lastHeartbeat}</span><strong>{updatedAtValue}</strong></div>
@@ -736,7 +772,7 @@ function WorkbenchInspectorInner({
                 <p className="card-copy">--</p>
               )}
             </div>
-          ) : isFrame || isBeam || isSpring ? (
+          ) : isFrame || isBeam || isTorsion || isSpring ? (
             <div className="diagnostic-list">
               <div className="diagnostic-item">
                 <strong>{t.currentField}: {frameHotspotFieldLabel ?? "--"}</strong>
@@ -780,12 +816,12 @@ function WorkbenchInspectorInner({
                 <>
                   <p className="card-copy">{t.memberEndForces}</p>
                   <div className="metric-grid">
-                    {!isBeam ? <div><span>{t.forceI}</span><strong>{typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"}</strong></div> : null}
-                    {!isSpring ? <div><span>{t.shearI}</span><strong>{typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"}</strong></div> : null}
-                    {!isSpring ? <div><span>{t.momentI}</span><strong>{typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"}</strong></div> : null}
-                    {!isBeam ? <div><span>{t.forceJ}</span><strong>{typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"}</strong></div> : null}
-                    {!isSpring ? <div><span>{t.shearJ}</span><strong>{typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"}</strong></div> : null}
-                    {!isSpring ? <div><span>{t.momentJ}</span><strong>{typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"}</strong></div> : null}
+                    {!isBeam && !isTorsion ? <div><span>{t.forceI}</span><strong>{typeof selectedFrameElementData.axial_force_i === "number" ? selectedFrameElementData.axial_force_i.toExponential(3) : "--"}</strong></div> : null}
+                    {!isSpring && !isThermal && !isTorsion ? <div><span>{t.shearI}</span><strong>{typeof selectedFrameElementData.shear_force_i === "number" ? selectedFrameElementData.shear_force_i.toExponential(3) : "--"}</strong></div> : null}
+                    {!isSpring && !isThermal ? <div><span>{t.momentI}</span><strong>{typeof selectedFrameElementData.moment_i === "number" ? selectedFrameElementData.moment_i.toExponential(3) : "--"}</strong></div> : null}
+                    {!isBeam && !isTorsion ? <div><span>{t.forceJ}</span><strong>{typeof selectedFrameElementData.axial_force_j === "number" ? selectedFrameElementData.axial_force_j.toExponential(3) : "--"}</strong></div> : null}
+                    {!isSpring && !isThermal && !isTorsion ? <div><span>{t.shearJ}</span><strong>{typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"}</strong></div> : null}
+                    {!isSpring && !isThermal ? <div><span>{t.momentJ}</span><strong>{typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"}</strong></div> : null}
                   </div>
                 </>
               ) : null}
@@ -795,18 +831,18 @@ function WorkbenchInspectorInner({
                   <div className="button-row">
                     <span className="card-copy">{t.sortBy}</span>
                     <button className={`ghost-button ghost-button--compact${frameForceSort === "index" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("index")} type="button">#</button>
-                    {!isBeam ? <button className={`ghost-button ghost-button--compact${frameForceSort === "axial" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("axial")} type="button">{t.axialForce}</button> : null}
-                    {!isSpring ? <button className={`ghost-button ghost-button--compact${frameForceSort === "shear" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("shear")} type="button">{t.shearForce}</button> : null}
+                    {!isBeam && !isTorsion ? <button className={`ghost-button ghost-button--compact${frameForceSort === "axial" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("axial")} type="button">{t.axialForce}</button> : null}
+                    {!isSpring && !isTorsion ? <button className={`ghost-button ghost-button--compact${frameForceSort === "shear" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("shear")} type="button">{t.shearForce}</button> : null}
                     {!isSpring ? <button className={`ghost-button ghost-button--compact${frameForceSort === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameForceSort("moment")} type="button">{t.maxMoment}</button> : null}
                     <button className="ghost-button ghost-button--compact" onClick={onDownloadFrameForces} type="button">{t.exportMemberForces}</button>
                   </div>
                   <div className="table-like__head table-like__head--frame-forces">
                     <span>#</span>
-                    {!isBeam ? <span>{t.forceI}</span> : null}
-                    {!isSpring ? <span>{t.shearI}</span> : null}
+                    {!isBeam && !isTorsion ? <span>{t.forceI}</span> : null}
+                    {!isSpring && !isTorsion ? <span>{t.shearI}</span> : null}
                     {!isSpring ? <span>{t.momentI}</span> : null}
-                    {!isBeam ? <span>{t.forceJ}</span> : null}
-                    {!isSpring ? <span>{t.shearJ}</span> : null}
+                    {!isBeam && !isTorsion ? <span>{t.forceJ}</span> : null}
+                    {!isSpring && !isTorsion ? <span>{t.shearJ}</span> : null}
                     {!isSpring ? <span>{t.momentJ}</span> : null}
                   </div>
                   <VirtualList
@@ -822,11 +858,11 @@ function WorkbenchInspectorInner({
                         type="button"
                       >
                         <strong>{entry.id}</strong>
-                        {!isBeam ? <span>{entry.axialForceI}</span> : null}
-                        {!isSpring ? <span>{entry.shearForceI}</span> : null}
+                        {!isBeam && !isTorsion ? <span>{entry.axialForceI}</span> : null}
+                        {!isSpring && !isTorsion ? <span>{entry.shearForceI}</span> : null}
                         {!isSpring ? <span>{entry.momentI}</span> : null}
-                        {!isBeam ? <span>{entry.axialForceJ}</span> : null}
-                        {!isSpring ? <span>{entry.shearForceJ}</span> : null}
+                        {!isBeam && !isTorsion ? <span>{entry.axialForceJ}</span> : null}
+                        {!isSpring && !isTorsion ? <span>{entry.shearForceJ}</span> : null}
                         {!isSpring ? <span>{entry.momentJ}</span> : null}
                       </button>
                     )}

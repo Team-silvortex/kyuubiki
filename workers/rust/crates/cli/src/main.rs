@@ -10,13 +10,14 @@ use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
+    SolveSpring3dRequest, SolveThermalBar1dRequest, SolveTorsion1dRequest,
     SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
-    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_truss_2d,
-    solve_truss_3d,
+    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+    solve_thermal_bar_1d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
 
 fn main() {
@@ -385,6 +386,65 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                 }
             }
         }
+        RpcMethod::SolveThermalBar1d => {
+            let params =
+                match serde_json::from_value::<SolveThermalBar1dRequest>(request.params.clone()) {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_thermal_bar_1d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("1d thermal bar", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("thermal bar result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
         RpcMethod::SolveSpring1d => {
             let params =
                 match serde_json::from_value::<SolveSpring1dRequest>(request.params.clone()) {
@@ -604,6 +664,65 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                         RpcResponse::success(
                             request.id,
                             serde_json::to_value(result).expect("beam result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveTorsion1d => {
+            let params =
+                match serde_json::from_value::<SolveTorsion1dRequest>(request.params.clone()) {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_torsion_1d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("1d torsion shaft", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("torsion result should serialize"),
                         ),
                     )
                 }
@@ -1687,9 +1806,12 @@ mod tests {
         PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent,
         RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveTruss3dRequest,
+        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+        SolveThermalBar1dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
-        Spring3dElementInput, Spring3dNodeInput, Truss3dElementInput, Truss3dNodeInput,
+        Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
+        ThermalBar1dNodeInput, Torsion1dElementInput, Torsion1dNodeInput, Truss3dElementInput,
+        Truss3dNodeInput,
     };
 
     #[test]
@@ -1819,6 +1941,55 @@ mod tests {
     }
 
     #[test]
+    fn handles_thermal_bar_1d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-bar".to_string(),
+            method: RpcMethod::SolveThermalBar1d,
+            params: serde_json::to_value(SolveThermalBar1dRequest {
+                nodes: vec![
+                    ThermalBar1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_x: true,
+                        load_x: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                    ThermalBar1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        fix_x: true,
+                        load_x: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                ],
+                elements: vec![ThermalBar1dElementInput {
+                    id: "tb0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 210.0e9,
+                    thermal_expansion: 12.0e-6,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveThermalBar1dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("thermal bar result");
+        assert!(result.max_stress > 1.0e8);
+        assert_eq!(result.max_temperature_delta, 40.0);
+    }
+
+    #[test]
     fn handles_beam_1d_rpc_requests() {
         let request = RpcRequest {
             rpc_version: RPC_VERSION,
@@ -1869,6 +2040,52 @@ mod tests {
         assert_eq!(result.nodes.len(), 2);
         assert_eq!(result.elements.len(), 1);
         assert!((result.max_moment - 2000.0).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn handles_torsion_1d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-torsion".to_string(),
+            method: RpcMethod::SolveTorsion1d,
+            params: serde_json::to_value(SolveTorsion1dRequest {
+                nodes: vec![
+                    Torsion1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_rz: true,
+                        torque_z: 0.0,
+                    },
+                    Torsion1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 2.0,
+                        fix_rz: false,
+                        torque_z: 1200.0,
+                    },
+                ],
+                elements: vec![Torsion1dElementInput {
+                    id: "t0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    shear_modulus: 80.0e9,
+                    polar_moment: 3.0e-6,
+                    section_modulus: 2.0e-4,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveTorsion1dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("torsion result");
+        assert!((result.max_torque - 1200.0).abs() < 1.0e-6);
     }
 
     #[test]

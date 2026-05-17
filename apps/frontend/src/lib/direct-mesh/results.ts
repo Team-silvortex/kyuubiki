@@ -5,10 +5,12 @@ export type DirectMeshCachedResult = {
     | "plane_triangle_2d"
     | "plane_quad_2d"
     | "axial_bar_1d"
+    | "thermal_bar_1d"
     | "spring_1d"
     | "spring_2d"
     | "spring_3d"
     | "beam_1d"
+    | "torsion_1d"
     | "frame_2d";
   result: Record<string, unknown>;
   endpoint: string;

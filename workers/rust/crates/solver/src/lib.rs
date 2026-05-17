@@ -5,11 +5,13 @@ use kyuubiki_protocol::{
     SolveBarResult, SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
     SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
     SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
-    SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveTruss2dRequest,
+    SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveThermalBar1dRequest,
+    SolveThermalBar1dResult, SolveTorsion1dRequest, SolveTorsion1dResult, SolveTruss2dRequest,
     SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Spring1dElementResult,
     Spring1dNodeResult, Spring2dElementResult, Spring2dNodeResult, Spring3dElementResult,
-    Spring3dNodeResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
-    TrussNodeResult,
+    Spring3dNodeResult, ThermalBar1dElementResult, ThermalBar1dNodeResult,
+    Torsion1dElementResult, Torsion1dNodeResult, Truss3dElementResult, Truss3dNodeResult,
+    TrussElementResult, TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -105,6 +107,126 @@ pub fn solve_bar_1d(request: &SolveBarRequest) -> Result<SolveBarResult, String>
         reaction_force,
         max_displacement,
         max_stress,
+    })
+}
+
+pub fn solve_thermal_bar_1d(
+    request: &SolveThermalBar1dRequest,
+) -> Result<SolveThermalBar1dResult, String> {
+    validate_thermal_bar_1d_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index] = node.load_x;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        let stiffness = element.youngs_modulus * element.area / length;
+        let average_temperature_delta =
+            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let thermal_force = element.youngs_modulus
+            * element.area
+            * element.thermal_expansion
+            * average_temperature_delta;
+        let map = [element.node_i, element.node_j];
+        let local_stiffness = [[stiffness, -stiffness], [-stiffness, stiffness]];
+        let equivalent_load = [-thermal_force, thermal_force];
+
+        for row in 0..2 {
+            force_vector[map[row]] += equivalent_load[row];
+
+            for column in 0..2 {
+                add_at(&mut global_stiffness, map[row], map[column], local_stiffness[row][column]);
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_x.then_some(index))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| ThermalBar1dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            ux: displacements[index],
+            temperature_delta: node.temperature_delta,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let length = (node_j.x - node_i.x).abs();
+            let average_temperature_delta =
+                0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+            let total_strain = (displacements[element.node_j] - displacements[element.node_i]) / length;
+            let thermal_strain = element.thermal_expansion * average_temperature_delta;
+            let mechanical_strain = total_strain - thermal_strain;
+            let stress = element.youngs_modulus * mechanical_strain;
+            let axial_force = stress * element.area;
+
+            ThermalBar1dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                average_temperature_delta,
+                thermal_strain,
+                mechanical_strain,
+                total_strain,
+                stress,
+                axial_force,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes.iter().map(|node| node.ux.abs()).fold(0.0_f64, f64::max);
+    let max_stress = elements.iter().map(|element| element.stress.abs()).fold(0.0_f64, f64::max);
+    let max_axial_force = elements
+        .iter()
+        .map(|element| element.axial_force.abs())
+        .fold(0.0_f64, f64::max);
+    let max_temperature_delta = nodes
+        .iter()
+        .map(|node| node.temperature_delta.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveThermalBar1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_stress,
+        max_axial_force,
+        max_temperature_delta,
     })
 }
 
@@ -257,6 +379,102 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
         max_displacement,
         max_rotation,
         max_moment,
+        max_stress,
+    })
+}
+
+pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1dResult, String> {
+    validate_torsion_1d_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut torque_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        torque_vector[index] = node.torque_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        let stiffness = element.shear_modulus * element.polar_moment / length;
+        let map = [element.node_i, element.node_j];
+        let local_stiffness = [[stiffness, -stiffness], [-stiffness, stiffness]];
+
+        for row in 0..2 {
+            for column in 0..2 {
+                add_at(&mut global_stiffness, map[row], map[column], local_stiffness[row][column]);
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_rz.then_some(index))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_torque, free) =
+        reduce_sparse_system(&global_stiffness, &torque_vector, &constrained);
+    let reduced_rotations = solve_spd_system(&reduced_stiffness, &reduced_torque)?;
+
+    let mut rotations = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        rotations[dof] = reduced_rotations[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| Torsion1dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            rz: rotations[index],
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let length = (node_j.x - node_i.x).abs();
+            let twist = rotations[element.node_j] - rotations[element.node_i];
+            let torque = element.shear_modulus * element.polar_moment * twist / length;
+            let shear_stress = torque.abs() / element.section_modulus;
+
+            Torsion1dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                twist,
+                torque,
+                shear_stress,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_rotation = nodes.iter().map(|node| node.rz.abs()).fold(0.0_f64, f64::max);
+    let max_torque = elements.iter().map(|element| element.torque.abs()).fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.shear_stress)
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveTorsion1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_rotation,
+        max_torque,
         max_stress,
     })
 }
@@ -1759,6 +1977,88 @@ fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(), String> 
     Ok(())
 }
 
+fn validate_torsion_1d_request(request: &SolveTorsion1dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("1d torsion model must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("1d torsion model must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_rz) {
+        return Err("1d torsion model must include at least one rotational support".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("1d torsion element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("1d torsion element must connect two distinct nodes".to_string());
+        }
+        if !(element.shear_modulus.is_finite() && element.shear_modulus > 0.0) {
+            return Err("1d torsion element shear_modulus must be positive".to_string());
+        }
+        if !(element.polar_moment.is_finite() && element.polar_moment > 0.0) {
+            return Err("1d torsion element polar_moment must be positive".to_string());
+        }
+        if !(element.section_modulus.is_finite() && element.section_modulus > 0.0) {
+            return Err("1d torsion element section_modulus must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        if length <= 1.0e-12 {
+            return Err("1d torsion element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_thermal_bar_1d_request(request: &SolveThermalBar1dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("1d thermal bar model must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("1d thermal bar model must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_x) {
+        return Err("1d thermal bar model must include at least one axial support".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("1d thermal bar element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("1d thermal bar element must connect two distinct nodes".to_string());
+        }
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("1d thermal bar element area must be positive".to_string());
+        }
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("1d thermal bar element youngs_modulus must be positive".to_string());
+        }
+        if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
+            return Err("1d thermal bar element thermal_expansion must be non-negative".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        if length <= 1.0e-12 {
+            return Err("1d thermal bar element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_spring_1d_request(request: &SolveSpring1dRequest) -> Result<(), String> {
     if request.nodes.len() < 2 {
         return Err("1d spring model must define at least two nodes".to_string());
@@ -2773,17 +3073,19 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 mod tests {
     use super::{
         MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
-        solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_truss_2d,
-        solve_truss_3d,
+        solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+        solve_thermal_bar_1d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
     };
     use kyuubiki_protocol::{
         Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Job, JobStatus,
         PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest,
         SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-        SolveSpring3dRequest, SolveTruss2dRequest, SolveTruss3dRequest, Spring1dElementInput,
-        Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput,
-        Spring3dNodeInput, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
+        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveTorsion1dRequest,
+        SolveTruss2dRequest, SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput,
+        Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput,
+        ThermalBar1dElementInput, ThermalBar1dNodeInput, Torsion1dElementInput,
+        Torsion1dNodeInput, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
         TrussNodeInput,
     };
 
@@ -2830,6 +3132,43 @@ mod tests {
         .expect_err("invalid request should fail");
 
         assert!(error.contains("length"));
+    }
+
+    #[test]
+    fn solves_a_small_thermal_bar_1d_with_restrained_expansion() {
+        let result = solve_thermal_bar_1d(&SolveThermalBar1dRequest {
+            nodes: vec![
+                ThermalBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_x: true,
+                    load_x: 0.0,
+                    temperature_delta: 40.0,
+                },
+                ThermalBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_x: true,
+                    load_x: 0.0,
+                    temperature_delta: 40.0,
+                },
+            ],
+            elements: vec![ThermalBar1dElementInput {
+                id: "tb0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                thermal_expansion: 12.0e-6,
+            }],
+        })
+        .expect("thermal bar should solve");
+
+        assert!(result.max_displacement.abs() < 1.0e-12);
+        assert!(result.max_stress > 1.0e8);
+        assert!(result.max_axial_force > 1.0e6);
+        assert_eq!(result.max_temperature_delta, 40.0);
+        assert!(result.elements[0].stress < 0.0);
     }
 
     #[test]
@@ -2916,6 +3255,42 @@ mod tests {
         assert!((result.elements[0].moment_i - 2000.0).abs() < 1.0e-6);
         assert!(result.elements[0].shear_force_j.abs() < 1.0e-6);
         assert!(result.elements[0].moment_j.abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn solves_a_small_torsion_1d_shaft() {
+        let result = solve_torsion_1d(&SolveTorsion1dRequest {
+            nodes: vec![
+                Torsion1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_rz: true,
+                    torque_z: 0.0,
+                },
+                Torsion1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 2.0,
+                    fix_rz: false,
+                    torque_z: 1200.0,
+                },
+            ],
+            elements: vec![Torsion1dElementInput {
+                id: "t0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                shear_modulus: 80.0e9,
+                polar_moment: 3.0e-6,
+                section_modulus: 2.0e-4,
+            }],
+        })
+        .expect("1d torsion shaft should solve");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.nodes[1].rz > 0.0);
+        assert!((result.max_torque - 1200.0).abs() < 1.0e-6);
+        assert!((result.elements[0].torque - 1200.0).abs() < 1.0e-6);
+        assert!((result.max_stress - 6.0e6).abs() < 1.0e-3);
     }
 
     #[test]
