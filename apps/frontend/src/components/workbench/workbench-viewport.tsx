@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneResultField = "von_mises" | "principal_stress_1" | "max_in_plane_shear";
 type LineResultField = "axial_stress" | "max_bending_stress" | "max_combined_stress" | "moment" | "shear_force";
 
@@ -854,7 +854,7 @@ function WorkbenchViewportInner({
     );
   }
 
-  if (studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "truss_2d" || studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "torsion_1d" || studyKind === "spring_1d" || studyKind === "spring_2d") {
+  if (studyKind === "thermal_bar_1d" || studyKind === "thermal_beam_1d" || studyKind === "thermal_truss_2d" || studyKind === "truss_2d" || studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "torsion_1d" || studyKind === "spring_1d" || studyKind === "spring_2d") {
     return (
       <svg
         viewBox="0 0 980 460"
@@ -865,6 +865,8 @@ function WorkbenchViewportInner({
             ? "2d frame response"
             : studyKind === "beam_1d"
               ? "1d beam response"
+              : studyKind === "thermal_beam_1d"
+                ? "1d thermal beam response"
               : studyKind === "torsion_1d"
                 ? "1d torsion shaft response"
               : studyKind === "spring_1d"
@@ -912,7 +914,7 @@ function WorkbenchViewportInner({
                 className={`bar bar--base${selectedElement === element.index ? " bar--selected" : ""}${focusedFrameElement === element.index ? " bar--focused" : ""}`}
                 style={{
                   stroke:
-                    (studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "torsion_1d" || studyKind === "spring_1d" || studyKind === "spring_2d") && trussResult
+                    (studyKind === "frame_2d" || studyKind === "beam_1d" || studyKind === "thermal_beam_1d" || studyKind === "torsion_1d" || studyKind === "spring_1d" || studyKind === "spring_2d") && trussResult
                         ? planeStressFill(
                           frameResultField === "axial_stress"
                             ? Math.abs(element.axial_stress ?? 0)

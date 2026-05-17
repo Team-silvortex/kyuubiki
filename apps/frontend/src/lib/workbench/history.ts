@@ -4,6 +4,7 @@ import type {
   Frame2dJobInput,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  ThermalBeam1dJobInput,
   ThermalBar1dJobInput,
   ThermalTruss2dJobInput,
   ThermalTruss3dJobInput,
@@ -19,6 +20,7 @@ import type { ParametricPanelConfig, ParametricTrussConfig } from "@/lib/models"
 export type WorkbenchStudyKind =
   | "axial_bar_1d"
   | "thermal_bar_1d"
+  | "thermal_beam_1d"
   | "thermal_truss_2d"
   | "thermal_truss_3d"
   | "spring_1d"
@@ -46,6 +48,7 @@ export type WorkbenchSnapshot = {
   studyKind: WorkbenchStudyKind;
   axialForm: WorkbenchAxialFormState;
   thermalBarModel: ThermalBar1dJobInput;
+  thermalBeamModel: ThermalBeam1dJobInput;
   thermalTrussModel: ThermalTruss2dJobInput;
   trussModel: Truss2dJobInput;
   thermalTruss3dModel: ThermalTruss3dJobInput;
@@ -84,6 +87,7 @@ type SnapshotSetters = {
   setStudyKind: Dispatch<SetStateAction<WorkbenchStudyKind>>;
   setAxialForm: Dispatch<SetStateAction<WorkbenchAxialFormState>>;
   setThermalBarModel: Dispatch<SetStateAction<ThermalBar1dJobInput>>;
+  setThermalBeamModel: Dispatch<SetStateAction<ThermalBeam1dJobInput>>;
   setThermalTrussModel: Dispatch<SetStateAction<ThermalTruss2dJobInput>>;
   setTrussModel: Dispatch<SetStateAction<Truss2dJobInput>>;
   setThermalTruss3dModel: Dispatch<SetStateAction<ThermalTruss3dJobInput>>;
@@ -120,6 +124,7 @@ export function restoreWorkbenchSnapshot(
   setters.setStudyKind(snapshot.studyKind);
   setters.setAxialForm(snapshot.axialForm);
   setters.setThermalBarModel(snapshot.thermalBarModel);
+  setters.setThermalBeamModel(snapshot.thermalBeamModel);
   setters.setThermalTrussModel(snapshot.thermalTrussModel);
   setters.setTrussModel(snapshot.trussModel);
   setters.setThermalTruss3dModel(snapshot.thermalTruss3dModel);

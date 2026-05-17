@@ -2,12 +2,12 @@ use kyuubiki_protocol::{
     AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
     SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolveThermalBeam1dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
     SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d,
-    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d,
+    solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d,
     solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
     solve_truss_3d,
 };
@@ -23,6 +23,7 @@ pub enum EngineSolveRequest {
     Spring2d(SolveSpring2dRequest),
     Spring3d(SolveSpring3dRequest),
     Beam1d(SolveBeam1dRequest),
+    ThermalBeam1d(SolveThermalBeam1dRequest),
     Torsion1d(SolveTorsion1dRequest),
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
@@ -53,6 +54,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
             solve_spring_3d(&request).map(AnalysisResult::Spring3d)
         }
         EngineSolveRequest::Beam1d(request) => solve_beam_1d(&request).map(AnalysisResult::Beam1d),
+        EngineSolveRequest::ThermalBeam1d(request) => {
+            solve_thermal_beam_1d(&request).map(AnalysisResult::ThermalBeam1d)
+        }
         EngineSolveRequest::Torsion1d(request) => {
             solve_torsion_1d(&request).map(AnalysisResult::Torsion1d)
         }
@@ -115,6 +119,12 @@ pub fn chunk_result(
         }
         (AnalysisResult::Beam1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Beam1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ThermalBeam1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ThermalBeam1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::Torsion1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,

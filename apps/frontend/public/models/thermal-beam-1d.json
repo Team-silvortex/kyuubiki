@@ -1,0 +1,33 @@
+{
+  "kind": "thermal_beam_1d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "thermal-beam-1d",
+  "material": "210",
+  "youngs_modulus_gpa": 210,
+  "materials": [
+    {
+      "id": "mat-1",
+      "name": "Thermal Beam Steel",
+      "youngs_modulus": 210000000000
+    }
+  ],
+  "nodes": [
+    { "id": "tb0", "x": 0, "fix_y": true, "fix_rz": true, "load_y": 0, "moment_z": 0 },
+    { "id": "tb1", "x": 2.4, "fix_y": false, "fix_rz": false, "load_y": 0, "moment_z": 0 }
+  ],
+  "elements": [
+    {
+      "id": "tm0",
+      "node_i": 0,
+      "node_j": 1,
+      "youngs_modulus": 210000000000,
+      "moment_of_inertia": 0.00012,
+      "section_modulus": 0.0011,
+      "thermal_expansion": 0.000012,
+      "section_depth": 0.3,
+      "distributed_load_y": 0,
+      "temperature_gradient_y": 45,
+      "material_id": "mat-1"
+    }
+  ]
+}

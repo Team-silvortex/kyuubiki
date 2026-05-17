@@ -10,6 +10,7 @@ import type {
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   ProjectRecord,
+  ThermalBeam1dJobInput,
   ThermalBar1dJobInput,
   ThermalTruss2dJobInput,
   ThermalTruss3dJobInput,
@@ -237,7 +238,7 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
 }
 
 export function exportStudyModel(
-  kind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  kind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -251,6 +252,7 @@ export function exportStudyModel(
     plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
     frame?: Frame2dJobInput;
     beam?: Beam1dJobInput;
+    thermalBeam?: ThermalBeam1dJobInput;
     torsion?: Torsion1dJobInput;
     thermalBar?: ThermalBar1dJobInput;
     spring?: Spring1dJobInput;
@@ -419,6 +421,23 @@ export function exportStudyModel(
     );
   }
 
+  if (kind === "thermal_beam_1d" && payload.thermalBeam) {
+    return JSON.stringify(
+      {
+        kind,
+        model_schema_version: MODEL_SCHEMA_VERSION,
+        name: payload.name,
+        material: payload.material,
+        youngs_modulus_gpa: payload.youngsModulusGpa,
+        materials: payload.thermalBeam.materials ?? payload.materials,
+        nodes: payload.thermalBeam.nodes,
+        elements: payload.thermalBeam.elements,
+      },
+      null,
+      2,
+    );
+  }
+
   if (kind === "torsion_1d" && payload.torsion) {
     return JSON.stringify(
       {
@@ -469,7 +488,7 @@ export function exportStudyModel(
 }
 
 export function buildStudyModelPayload(
-  kind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  kind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -483,6 +502,7 @@ export function buildStudyModelPayload(
     plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
     frame?: Frame2dJobInput;
     beam?: Beam1dJobInput;
+    thermalBeam?: ThermalBeam1dJobInput;
     torsion?: Torsion1dJobInput;
     thermalBar?: ThermalBar1dJobInput;
     spring?: Spring1dJobInput;

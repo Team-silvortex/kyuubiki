@@ -4,6 +4,7 @@ import type {
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  ThermalBeam1dJobInput,
   ThermalBar1dJobInput,
   ThermalTruss2dJobInput,
   ThermalTruss3dJobInput,
@@ -31,6 +32,14 @@ export type ImportedThermalBar1dModel = {
   kind: "thermal_bar_1d";
   name: string;
   model: ThermalBar1dJobInput;
+};
+
+export type ImportedThermalBeam1dModel = {
+  kind: "thermal_beam_1d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: ThermalBeam1dJobInput;
 };
 
 export type ImportedThermalTruss2dModel = {
@@ -124,6 +133,7 @@ export type ImportedSpring3dModel = {
 export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedThermalBar1dModel
+  | ImportedThermalBeam1dModel
   | ImportedThermalTruss2dModel
   | ImportedSpring1dModel
   | ImportedSpring2dModel
@@ -732,6 +742,65 @@ function parseBeam1dElement(raw: unknown, index: number): Beam1dJobInput["elemen
   };
 }
 
+function parseThermalBeam1dNode(raw: unknown, index: number): ThermalBeam1dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    fix_y: Boolean(node.fix_y),
+    fix_rz: Boolean(node.fix_rz),
+    load_y: numberOrZero(node.load_y),
+    moment_z: numberOrZero(node.moment_z),
+  };
+}
+
+function parseThermalBeam1dElement(raw: unknown, index: number): ThermalBeam1dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    moment_of_inertia: requiredNumber(element.moment_of_inertia, `elements[${index}].moment_of_inertia`),
+    section_modulus: requiredNumber(element.section_modulus, `elements[${index}].section_modulus`),
+    thermal_expansion: numberOrZero(element.thermal_expansion),
+    section_depth: requiredNumber(element.section_depth, `elements[${index}].section_depth`),
+    distributed_load_y: numberOrZero(element.distributed_load_y),
+    temperature_gradient_y: numberOrZero(element.temperature_gradient_y),
+    material_id: optionalString(element.material_id),
+  };
+}
+
+function parseThermalBeam1dV1(raw: Record<string, unknown>): ImportedThermalBeam1dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalBeam1dNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseThermalBeam1dElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_beam_1d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-beam-1d",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
 function parseBeam1dV1(raw: Record<string, unknown>): ImportedBeam1dModel {
   const material = normalizeMaterial(raw.material);
   const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
@@ -962,6 +1031,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "beam_1d") {
     return parseBeam1dV1(raw);
+  }
+
+  if (kind === "thermal_beam_1d") {
+    return parseThermalBeam1dV1(raw);
   }
 
   if (kind === "torsion_1d") {

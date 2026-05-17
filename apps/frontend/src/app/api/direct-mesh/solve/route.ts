@@ -10,6 +10,7 @@ import {
   resolveSpring2dJobInput,
   resolveSpring3dJobInput,
   resolveThermalBar1dJobInput,
+  resolveThermalBeam1dJobInput,
   resolveThermalTruss2dJobInput,
   resolveThermalTruss3dJobInput,
   resolveTorsion1dJobInput,
@@ -24,6 +25,7 @@ import {
   type Spring2dJobInput,
   type Spring3dJobInput,
   type ThermalBar1dJobInput,
+  type ThermalBeam1dJobInput,
   type ThermalTruss2dJobInput,
   type ThermalTruss3dJobInput,
   type Torsion1dJobInput,
@@ -48,6 +50,7 @@ type DirectMeshSolveBody = {
     | "spring_2d"
     | "spring_3d"
     | "beam_1d"
+    | "thermal_beam_1d"
     | "torsion_1d"
     | "truss_2d"
     | "truss_3d"
@@ -75,6 +78,8 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
       return "solve_spring_3d" as const;
     case "beam_1d":
       return "solve_beam_1d" as const;
+    case "thermal_beam_1d":
+      return "solve_thermal_beam_1d" as const;
     case "torsion_1d":
       return "solve_torsion_1d" as const;
     case "truss_2d":
@@ -111,6 +116,8 @@ function normalizeInputForStudyKind(
       return resolveSpring3dJobInput(input as Spring3dJobInput);
     case "beam_1d":
       return resolveBeam1dJobInput(input as Beam1dJobInput);
+    case "thermal_beam_1d":
+      return resolveThermalBeam1dJobInput(input as ThermalBeam1dJobInput);
     case "torsion_1d":
       return resolveTorsion1dJobInput(input as Torsion1dJobInput);
     case "truss_2d":

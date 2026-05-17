@@ -525,6 +525,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp preferred_tags("solve_spring_2d"), do: ["spring", "plane", "support"]
   defp preferred_tags("solve_spring_3d"), do: ["spring", "space", "support"]
   defp preferred_tags("solve_beam_1d"), do: ["beam", "bending", "line"]
+  defp preferred_tags("solve_thermal_beam_1d"), do: ["beam", "thermal", "bending", "line"]
   defp preferred_tags("solve_torsion_1d"), do: ["torsion", "shaft", "line"]
   defp preferred_tags("solve_truss_2d"), do: ["truss"]
   defp preferred_tags("solve_truss_3d"), do: ["truss", "space"]

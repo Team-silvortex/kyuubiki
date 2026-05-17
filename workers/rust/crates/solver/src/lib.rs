@@ -6,15 +6,16 @@ use kyuubiki_protocol::{
     SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
     SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
     SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveThermalBar1dRequest,
-    SolveThermalBar1dResult, SolveThermalTruss2dRequest, SolveThermalTruss2dResult,
-    SolveThermalTruss3dRequest, SolveThermalTruss3dResult, SolveTorsion1dRequest,
-    SolveTorsion1dResult, SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest,
-    SolveTruss3dResult, Spring1dElementResult, Spring1dNodeResult, Spring2dElementResult,
-    Spring2dNodeResult, Spring3dElementResult, Spring3dNodeResult, ThermalBar1dElementResult,
-    ThermalBar1dNodeResult, ThermalTruss2dElementResult, ThermalTruss2dNodeResult,
-    ThermalTruss3dElementResult, ThermalTruss3dNodeResult, Torsion1dElementResult,
-    Torsion1dNodeResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
-    TrussNodeResult,
+    SolveThermalBar1dResult, SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
+    SolveThermalTruss2dRequest, SolveThermalTruss2dResult, SolveThermalTruss3dRequest,
+    SolveThermalTruss3dResult, SolveTorsion1dRequest, SolveTorsion1dResult, SolveTruss2dRequest,
+    SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Spring1dElementResult,
+    Spring1dNodeResult, Spring2dElementResult, Spring2dNodeResult, Spring3dElementResult,
+    Spring3dNodeResult, ThermalBar1dElementResult, ThermalBar1dNodeResult,
+    ThermalBeam1dElementResult, ThermalBeam1dNodeResult, ThermalTruss2dElementResult,
+    ThermalTruss2dNodeResult, ThermalTruss3dElementResult, ThermalTruss3dNodeResult,
+    Torsion1dElementResult, Torsion1dNodeResult, Truss3dElementResult, Truss3dNodeResult,
+    TrussElementResult, TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -741,6 +742,187 @@ pub fn solve_beam_1d(request: &SolveBeam1dRequest) -> Result<SolveBeam1dResult, 
         max_rotation,
         max_moment,
         max_stress,
+    })
+}
+
+pub fn solve_thermal_beam_1d(
+    request: &SolveThermalBeam1dRequest,
+) -> Result<SolveThermalBeam1dResult, String> {
+    validate_thermal_beam_1d_request(request)?;
+
+    let dof_count = request.nodes.len() * 2;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 2] = node.load_y;
+        force_vector[index * 2 + 1] = node.moment_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        let local_stiffness =
+            beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
+        let equivalent_load = add_vector_4(
+            &beam_uniform_load_vector(length, element.distributed_load_y),
+            &beam_thermal_gradient_vector(
+                element.youngs_modulus,
+                element.moment_of_inertia,
+                element.thermal_expansion,
+                element.section_depth,
+                element.temperature_gradient_y,
+            ),
+        );
+        let map = [
+            element.node_i * 2,
+            element.node_i * 2 + 1,
+            element.node_j * 2,
+            element.node_j * 2 + 1,
+        ];
+
+        for row in 0..4 {
+            force_vector[map[row]] += equivalent_load[row];
+        }
+
+        for row in 0..4 {
+            for column in 0..4 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    local_stiffness[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_y {
+                dofs.push(index * 2);
+            }
+            if node.fix_rz {
+                dofs.push(index * 2 + 1);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| {
+            let uy = displacements[index * 2];
+            let rz = displacements[index * 2 + 1];
+
+            ThermalBeam1dNodeResult {
+                index,
+                id: node.id.clone(),
+                x: node.x,
+                uy,
+                rz,
+                displacement_magnitude: uy.abs(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let length = (node_j.x - node_i.x).abs();
+            let local_stiffness =
+                beam_local_stiffness(element.youngs_modulus, element.moment_of_inertia, length);
+            let local_displacements = [
+                displacements[element.node_i * 2],
+                displacements[element.node_i * 2 + 1],
+                displacements[element.node_j * 2],
+                displacements[element.node_j * 2 + 1],
+            ];
+            let equivalent_load = add_vector_4(
+                &beam_uniform_load_vector(length, element.distributed_load_y),
+                &beam_thermal_gradient_vector(
+                    element.youngs_modulus,
+                    element.moment_of_inertia,
+                    element.thermal_expansion,
+                    element.section_depth,
+                    element.temperature_gradient_y,
+                ),
+            );
+            let local_forces = subtract_vector_4(
+                &multiply_matrix_vector_4x4(&local_stiffness, &local_displacements),
+                &equivalent_load,
+            );
+            let max_bending_stress =
+                local_forces[1].abs().max(local_forces[3].abs()) / element.section_modulus;
+
+            ThermalBeam1dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                temperature_gradient_y: element.temperature_gradient_y,
+                thermal_curvature: element.thermal_expansion * element.temperature_gradient_y
+                    / element.section_depth,
+                shear_force_i: local_forces[0],
+                moment_i: local_forces[1],
+                shear_force_j: local_forces[2],
+                moment_j: local_forces[3],
+                max_bending_stress,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| node.displacement_magnitude)
+        .fold(0.0_f64, f64::max);
+    let max_rotation = nodes
+        .iter()
+        .map(|node| node.rz.abs())
+        .fold(0.0_f64, f64::max);
+    let max_moment = elements
+        .iter()
+        .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.max_bending_stress)
+        .fold(0.0_f64, f64::max);
+    let max_temperature_gradient = elements
+        .iter()
+        .map(|element| element.temperature_gradient_y.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveThermalBeam1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_rotation,
+        max_moment,
+        max_stress,
+        max_temperature_gradient,
     })
 }
 
@@ -2434,6 +2616,61 @@ fn validate_beam_1d_request(request: &SolveBeam1dRequest) -> Result<(), String> 
     Ok(())
 }
 
+fn validate_thermal_beam_1d_request(request: &SolveThermalBeam1dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("thermal beam requires at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("thermal beam requires at least one element".to_string());
+    }
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        if !node.x.is_finite() {
+            return Err(format!("thermal beam node {index} has invalid x"));
+        }
+        if !node.load_y.is_finite() || !node.moment_z.is_finite() {
+            return Err(format!("thermal beam node {index} has invalid load"));
+        }
+    }
+
+    for (index, element) in request.elements.iter().enumerate() {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err(format!("thermal beam element {index} references an unknown node"));
+        }
+
+        if element.node_i == element.node_j {
+            return Err(format!("thermal beam element {index} must connect two distinct nodes"));
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        if length <= f64::EPSILON {
+            return Err(format!("thermal beam element {index} has zero length"));
+        }
+
+        if element.youngs_modulus <= 0.0
+            || element.moment_of_inertia <= 0.0
+            || element.section_modulus <= 0.0
+            || element.section_depth <= 0.0
+        {
+            return Err(format!(
+                "thermal beam element {index} must have positive stiffness and section properties"
+            ));
+        }
+
+        if !element.thermal_expansion.is_finite()
+            || !element.distributed_load_y.is_finite()
+            || !element.temperature_gradient_y.is_finite()
+        {
+            return Err(format!("thermal beam element {index} has invalid thermal load data"));
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_torsion_1d_request(request: &SolveTorsion1dRequest) -> Result<(), String> {
     if request.nodes.len() < 2 {
         return Err("1d torsion model must define at least two nodes".to_string());
@@ -3078,6 +3315,19 @@ fn beam_uniform_load_vector(length: f64, distributed_load_y: f64) -> [f64; 4] {
     ]
 }
 
+fn beam_thermal_gradient_vector(
+    youngs_modulus: f64,
+    moment_of_inertia: f64,
+    thermal_expansion: f64,
+    section_depth: f64,
+    temperature_gradient_y: f64,
+) -> [f64; 4] {
+    let thermal_curvature = thermal_expansion * temperature_gradient_y / section_depth;
+    let thermal_moment = youngs_modulus * moment_of_inertia * thermal_curvature;
+
+    [0.0, -thermal_moment, 0.0, thermal_moment]
+}
+
 fn frame_transform(c: f64, s: f64) -> [[f64; 6]; 6] {
     [
         [c, s, 0.0, 0.0, 0.0, 0.0],
@@ -3140,6 +3390,14 @@ fn subtract_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {
     let mut output = [0.0; 4];
     for index in 0..4 {
         output[index] = lhs[index] - rhs[index];
+    }
+    output
+}
+
+fn add_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {
+    let mut output = [0.0; 4];
+    for index in 0..4 {
+        output[index] = lhs[index] + rhs[index];
     }
     output
 }
@@ -3582,7 +3840,7 @@ mod tests {
     use super::{
         MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
         solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-        solve_thermal_bar_1d, solve_thermal_truss_2d, solve_thermal_truss_3d,
+        solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_truss_2d, solve_thermal_truss_3d,
         solve_torsion_1d, solve_truss_2d, solve_truss_3d,
     };
     use kyuubiki_protocol::{
@@ -3590,11 +3848,11 @@ mod tests {
         PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest,
         SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalTruss2dRequest,
+        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalTruss2dRequest,
         SolveThermalTruss3dRequest, SolveTorsion1dRequest,
         SolveTruss2dRequest, SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput,
         Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput,
-        ThermalBar1dElementInput, ThermalBar1dNodeInput, Torsion1dElementInput,
+        ThermalBar1dElementInput, ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput, Torsion1dElementInput,
         Torsion1dNodeInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
         ThermalTruss3dElementInput, ThermalTruss3dNodeInput, Truss3dElementInput,
         Truss3dNodeInput, TrussElementInput, TrussNodeInput,
@@ -3826,6 +4084,49 @@ mod tests {
         assert!((result.max_rotation - 0.0011904761904761906).abs() < 1.0e-12);
         assert!((result.max_moment - 2000.0).abs() < 1.0e-6);
         assert!((result.max_stress - 1.25e7).abs() < 1.0e-2);
+    }
+
+    #[test]
+    fn solves_a_small_thermal_beam_1d_with_restrained_gradient() {
+        let result = solve_thermal_beam_1d(&SolveThermalBeam1dRequest {
+            nodes: vec![
+                ThermalBeam1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_y: true,
+                    fix_rz: true,
+                    load_y: 0.0,
+                    moment_z: 0.0,
+                },
+                ThermalBeam1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 2.0,
+                    fix_y: true,
+                    fix_rz: true,
+                    load_y: 0.0,
+                    moment_z: 0.0,
+                },
+            ],
+            elements: vec![ThermalBeam1dElementInput {
+                id: "tb0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 8.0e-6,
+                section_modulus: 1.6e-4,
+                thermal_expansion: 12.0e-6,
+                section_depth: 0.2,
+                distributed_load_y: 0.0,
+                temperature_gradient_y: 40.0,
+            }],
+        })
+        .expect("thermal beam should solve");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.max_moment > 0.0);
+        assert!(result.max_stress > 0.0);
+        assert_eq!(result.max_temperature_gradient, 40.0);
     }
 
     #[test]

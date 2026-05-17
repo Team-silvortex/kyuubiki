@@ -265,6 +265,37 @@ export type Beam1dJobInput = {
   model_version_id?: string;
 };
 
+export type ThermalBeam1dNodeInput = {
+  id: string;
+  x: number;
+  fix_y: boolean;
+  fix_rz: boolean;
+  load_y: number;
+  moment_z: number;
+};
+
+export type ThermalBeam1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  youngs_modulus: number;
+  moment_of_inertia: number;
+  section_modulus: number;
+  thermal_expansion: number;
+  section_depth: number;
+  distributed_load_y: number;
+  temperature_gradient_y: number;
+  material_id?: string;
+};
+
+export type ThermalBeam1dJobInput = {
+  nodes: ThermalBeam1dNodeInput[];
+  elements: ThermalBeam1dElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type Torsion1dNodeInput = {
   id: string;
   x: number;
@@ -634,6 +665,37 @@ export type Beam1dResult = {
     max_bending_stress: number;
   }>;
   input: Beam1dJobInput;
+};
+
+export type ThermalBeam1dResult = {
+  max_displacement: number;
+  max_rotation: number;
+  max_moment: number;
+  max_stress: number;
+  max_temperature_gradient: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    uy: number;
+    rz: number;
+    displacement_magnitude: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    temperature_gradient_y: number;
+    thermal_curvature: number;
+    shear_force_i: number;
+    moment_i: number;
+    shear_force_j: number;
+    moment_j: number;
+    max_bending_stress: number;
+  }>;
+  input: ThermalBeam1dJobInput;
 };
 
 export type Torsion1dResult = {
@@ -1206,6 +1268,25 @@ export function resolveBeam1dJobInput(
   };
 }
 
+export function resolveThermalBeam1dJobInput(
+  input: ThermalBeam1dJobInput,
+): Omit<ThermalBeam1dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveTorsion1dJobInput(
   input: Torsion1dJobInput,
 ): Torsion1dJobInput {
@@ -1527,6 +1608,16 @@ export function createBeam1dJob(
   });
 }
 
+export function createThermalBeam1dJob(
+  input: ThermalBeam1dJobInput,
+): Promise<JobEnvelope<ThermalBeam1dResult>> {
+  return requestJson<JobEnvelope<ThermalBeam1dResult>>("/api/v1/fem/thermal-beam-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createTorsion1dJob(
   input: Torsion1dJobInput,
 ): Promise<JobEnvelope<Torsion1dResult>> {
@@ -1633,7 +1724,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,
