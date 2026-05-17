@@ -377,6 +377,62 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert payload["job"]["status"] in ["queued", "running", "completed"]
   end
 
+  test "submits a thermal frame 2d job" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/thermal-frame-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "fix_rz" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "moment_z" => 0.0,
+              "temperature_delta" => 35.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 2.0,
+              "y" => 0.0,
+              "fix_x" => true,
+              "fix_y" => true,
+              "fix_rz" => true,
+              "load_x" => 0.0,
+              "load_y" => 0.0,
+              "moment_z" => 0.0,
+              "temperature_delta" => 35.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "tf0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "area" => 0.02,
+              "youngs_modulus" => 2.1e11,
+              "moment_of_inertia" => 8.0e-6,
+              "section_modulus" => 1.6e-4,
+              "thermal_expansion" => 1.2e-5,
+              "section_depth" => 0.2,
+              "temperature_gradient_y" => 30.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["job"]["status"] in ["queued", "running", "completed"]
+  end
+
   test "protects cluster registration routes with a dedicated cluster token" do
     Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
       api_token: "cluster-secret",

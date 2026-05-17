@@ -237,6 +237,41 @@ export type Frame2dJobInput = {
   model_version_id?: string;
 };
 
+export type ThermalFrame2dNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_x: boolean;
+  fix_y: boolean;
+  fix_rz: boolean;
+  load_x: number;
+  load_y: number;
+  moment_z: number;
+  temperature_delta: number;
+};
+
+export type ThermalFrame2dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  youngs_modulus: number;
+  moment_of_inertia: number;
+  section_modulus: number;
+  thermal_expansion: number;
+  section_depth: number;
+  temperature_gradient_y: number;
+  material_id?: string;
+};
+
+export type ThermalFrame2dJobInput = {
+  nodes: ThermalFrame2dNodeInput[];
+  elements: ThermalFrame2dElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type Beam1dNodeInput = {
   id: string;
   x: number;
@@ -637,6 +672,50 @@ export type Frame2dResult = {
     max_combined_stress: number;
   }>;
   input: Frame2dJobInput;
+};
+
+export type ThermalFrame2dResult = {
+  max_displacement: number;
+  max_rotation: number;
+  max_moment: number;
+  max_stress: number;
+  max_axial_force: number;
+  max_temperature_delta: number;
+  max_temperature_gradient: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    ux: number;
+    uy: number;
+    rz: number;
+    displacement_magnitude: number;
+    temperature_delta: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    average_temperature_delta: number;
+    thermal_strain: number;
+    mechanical_strain: number;
+    total_strain: number;
+    temperature_gradient_y: number;
+    thermal_curvature: number;
+    axial_force_i: number;
+    shear_force_i: number;
+    moment_i: number;
+    axial_force_j: number;
+    shear_force_j: number;
+    moment_j: number;
+    axial_stress: number;
+    max_bending_stress: number;
+    max_combined_stress: number;
+  }>;
+  input: ThermalFrame2dJobInput;
 };
 
 export type Beam1dResult = {
@@ -1249,6 +1328,25 @@ export function resolveFrame2dJobInput(
   };
 }
 
+export function resolveThermalFrame2dJobInput(
+  input: ThermalFrame2dJobInput,
+): Omit<ThermalFrame2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveBeam1dJobInput(
   input: Beam1dJobInput,
 ): Omit<Beam1dJobInput, "materials"> {
@@ -1598,6 +1696,16 @@ export function createFrame2dJob(
   });
 }
 
+export function createThermalFrame2dJob(
+  input: ThermalFrame2dJobInput,
+): Promise<JobEnvelope<ThermalFrame2dResult>> {
+  return requestJson<JobEnvelope<ThermalFrame2dResult>>("/api/v1/fem/thermal-frame-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createBeam1dJob(
   input: Beam1dJobInput,
 ): Promise<JobEnvelope<Beam1dResult>> {
@@ -1724,7 +1832,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

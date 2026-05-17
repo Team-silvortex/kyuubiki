@@ -16,6 +16,8 @@ import type {
   ThermalBeam1dResult,
   ThermalBar1dJobInput,
   ThermalBar1dResult,
+  ThermalFrame2dJobInput,
+  ThermalFrame2dResult,
   ThermalTruss2dJobInput,
   ThermalTruss2dResult,
   ThermalTruss3dJobInput,
@@ -91,7 +93,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -219,6 +221,7 @@ export function serializeCurrentModel(
   axialForm: AxialFormLike,
   thermalBarModel: ThermalBar1dJobInput,
   thermalBeamModel: ThermalBeam1dJobInput,
+  thermalFrameModel: ThermalFrame2dJobInput,
   thermalTrussModel: ThermalTruss2dJobInput,
   trussModel: Truss2dJobInput,
   thermalTruss3dModel: ThermalTruss3dJobInput,
@@ -243,6 +246,8 @@ export function serializeCurrentModel(
           ? round((thermalBarModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
         : studyKind === "thermal_beam_1d"
           ? round((thermalBeamModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
+        : studyKind === "thermal_frame_2d"
+          ? round((thermalFrameModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
         : studyKind === "thermal_truss_2d"
           ? round((thermalTrussModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
         : studyKind === "truss_2d"
@@ -265,6 +270,8 @@ export function serializeCurrentModel(
           ? thermalTrussModel.materials
         : studyKind === "thermal_beam_1d"
           ? thermalBeamModel.materials
+        : studyKind === "thermal_frame_2d"
+          ? thermalFrameModel.materials
         : studyKind === "truss_3d"
           ? truss3dModel.materials
           : studyKind === "thermal_truss_3d"
@@ -287,6 +294,7 @@ export function serializeCurrentModel(
     thermalTruss3d: studyKind === "thermal_truss_3d" ? thermalTruss3dModel : undefined,
     plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
     frame: studyKind === "frame_2d" ? frameModel : undefined,
+    thermalFrame: studyKind === "thermal_frame_2d" ? thermalFrameModel : undefined,
     beam: studyKind === "beam_1d" ? beamModel : undefined,
     thermalBeam: studyKind === "thermal_beam_1d" ? thermalBeamModel : undefined,
     torsion: studyKind === "torsion_1d" ? torsionModel : undefined,
@@ -331,6 +339,18 @@ function isThermalBeam1dResult(value: unknown): value is ThermalBeam1dResult {
     "max_temperature_gradient" in value &&
     "max_rotation" in value &&
     "max_moment" in value &&
+    "nodes" in value &&
+    "elements" in value
+  );
+}
+
+function isThermalFrame2dResult(value: unknown): value is ThermalFrame2dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_temperature_delta" in value &&
+    "max_temperature_gradient" in value &&
+    "max_rotation" in value &&
     "nodes" in value &&
     "elements" in value
   );
@@ -444,7 +464,7 @@ function isTorsion1dResult(value: unknown): value is Torsion1dResult {
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -652,6 +672,68 @@ export function serializeResultCsv(
           element.node_i,
           element.node_j,
           element.length,
+          element.axial_force_i,
+          element.shear_force_i,
+          element.moment_i,
+          element.axial_force_j,
+          element.shear_force_j,
+          element.moment_j,
+          element.axial_stress,
+          element.max_bending_stress,
+          element.max_combined_stress,
+        ]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isThermalFrame2dResult(result)) {
+    const thermalFrameResult = result as ThermalFrame2dResult;
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy", "rz", "displacement_magnitude", "temperature_delta"]));
+    thermalFrameResult.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.ux, node.uy, node.rz, node.displacement_magnitude, node.temperature_delta])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "average_temperature_delta",
+        "thermal_strain",
+        "mechanical_strain",
+        "total_strain",
+        "temperature_gradient_y",
+        "thermal_curvature",
+        "axial_force_i",
+        "shear_force_i",
+        "moment_i",
+        "axial_force_j",
+        "shear_force_j",
+        "moment_j",
+        "axial_stress",
+        "max_bending_stress",
+        "max_combined_stress",
+      ]),
+    );
+    thermalFrameResult.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.length,
+          element.average_temperature_delta,
+          element.thermal_strain,
+          element.mechanical_strain,
+          element.total_strain,
+          element.temperature_gradient_y,
+          element.thermal_curvature,
           element.axial_force_i,
           element.shear_force_i,
           element.moment_i,

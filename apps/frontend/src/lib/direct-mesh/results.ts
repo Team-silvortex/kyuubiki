@@ -13,6 +13,7 @@ export type DirectMeshCachedResult = {
     | "spring_3d"
     | "beam_1d"
     | "thermal_beam_1d"
+    | "thermal_frame_2d"
     | "torsion_1d"
     | "frame_2d";
   result: Record<string, unknown>;

@@ -12,14 +12,15 @@ use kyuubiki_protocol::{
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
     SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
     SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
-    SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveThermalFrame2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
     solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_truss_2d, solve_thermal_truss_3d,
-    solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+    solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
+    solve_truss_3d,
 };
 
 fn main() {
@@ -1211,6 +1212,66 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                 }
             }
         }
+        RpcMethod::SolveThermalFrame2d => {
+            let params =
+                match serde_json::from_value::<SolveThermalFrame2dRequest>(request.params.clone())
+                {
+                    Ok(params) => params,
+                    Err(error) => {
+                        return AgentReply::Stream(
+                            Vec::new(),
+                            RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                        );
+                    }
+                };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_thermal_frame_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d thermal frame", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("thermal frame result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
         RpcMethod::CancelJob => {
             let params = match serde_json::from_value::<CancelJobRequest>(request.params.clone()) {
                 Ok(params) => params,
@@ -1988,13 +2049,14 @@ mod tests {
         RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-        SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalTruss2dRequest,
-        SolveTorsion1dRequest, SolveTruss3dRequest, ThermalBeam1dElementInput,
-        ThermalBeam1dNodeInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
+        SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+        SolveThermalTruss2dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
         Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
-        ThermalBar1dNodeInput, Torsion1dElementInput, Torsion1dNodeInput, Truss3dElementInput,
-        Truss3dNodeInput,
+        ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
+        ThermalTruss2dElementInput,
+        ThermalTruss2dNodeInput, Torsion1dElementInput, Torsion1dNodeInput,
+        Truss3dElementInput, Truss3dNodeInput,
     };
 
     #[test]
@@ -2736,6 +2798,72 @@ mod tests {
         assert_eq!(result.nodes.len(), 2);
         assert_eq!(result.elements.len(), 1);
         assert!(result.max_moment > 0.0);
+    }
+
+    #[test]
+    fn handles_thermal_frame_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-frame-2d".to_string(),
+            method: RpcMethod::SolveThermalFrame2d,
+            params: serde_json::to_value(SolveThermalFrame2dRequest {
+                nodes: vec![
+                    kyuubiki_protocol::ThermalFrame2dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        moment_z: 0.0,
+                        temperature_delta: 35.0,
+                    },
+                    kyuubiki_protocol::ThermalFrame2dNodeInput {
+                        id: "n1".to_string(),
+                        x: 2.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        moment_z: 0.0,
+                        temperature_delta: 35.0,
+                    },
+                ],
+                elements: vec![kyuubiki_protocol::ThermalFrame2dElementInput {
+                    id: "tf0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.02,
+                    youngs_modulus: 210.0e9,
+                    moment_of_inertia: 8.0e-6,
+                    section_modulus: 1.6e-4,
+                    thermal_expansion: 12.0e-6,
+                    section_depth: 0.2,
+                    temperature_gradient_y: 30.0,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveThermalFrame2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("thermal frame result");
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.max_axial_force > 0.0);
+        assert_eq!(result.max_temperature_delta, 35.0);
+        assert_eq!(result.max_temperature_gradient, 30.0);
     }
 
     #[test]

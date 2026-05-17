@@ -5,6 +5,7 @@ export type SampleEntry = {
     | "axial_bar_1d"
     | "thermal_bar_1d"
     | "thermal_beam_1d"
+    | "thermal_frame_2d"
     | "thermal_truss_2d"
     | "thermal_truss_3d"
     | "spring_1d"
@@ -42,6 +43,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "thermal_beam_1d",
     href: "/models/thermal-beam-1d.json",
     summary: "Cantilever beam with through-depth temperature gradient for quick thermal-curvature and bending-stress checks.",
+  },
+  {
+    id: "thermal-frame-2d",
+    name: "Thermal Frame 2D",
+    kind: "thermal_frame_2d",
+    href: "/models/thermal-frame-2d.json",
+    summary: "Portal frame with heated beam-column members for quick restrained thermal-frame force and stress checks.",
   },
   {
     id: "thermal-truss-2d",

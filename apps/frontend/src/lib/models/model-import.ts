@@ -6,6 +6,7 @@ import type {
   PlaneTriangle2dJobInput,
   ThermalBeam1dJobInput,
   ThermalBar1dJobInput,
+  ThermalFrame2dJobInput,
   ThermalTruss2dJobInput,
   ThermalTruss3dJobInput,
   Spring1dJobInput,
@@ -40,6 +41,14 @@ export type ImportedThermalBeam1dModel = {
   material: string;
   youngsModulusGpa: number;
   model: ThermalBeam1dJobInput;
+};
+
+export type ImportedThermalFrame2dModel = {
+  kind: "thermal_frame_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: ThermalFrame2dJobInput;
 };
 
 export type ImportedThermalTruss2dModel = {
@@ -134,6 +143,7 @@ export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedThermalBar1dModel
   | ImportedThermalBeam1dModel
+  | ImportedThermalFrame2dModel
   | ImportedThermalTruss2dModel
   | ImportedSpring1dModel
   | ImportedSpring2dModel
@@ -672,6 +682,22 @@ function parseFrame2dNode(raw: unknown, index: number): Frame2dJobInput["nodes"]
   };
 }
 
+function parseThermalFrame2dNode(raw: unknown, index: number): ThermalFrame2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    fix_x: Boolean(node.fix_x),
+    fix_y: Boolean(node.fix_y),
+    fix_rz: Boolean(node.fix_rz),
+    load_x: numberOrZero(node.load_x),
+    load_y: numberOrZero(node.load_y),
+    moment_z: numberOrZero(node.moment_z),
+    temperature_delta: numberOrZero(node.temperature_delta),
+  };
+}
+
 function parseFrame2dElement(raw: unknown, index: number): Frame2dJobInput["elements"][number] {
   const element = (raw ?? {}) as Record<string, unknown>;
   return {
@@ -682,6 +708,23 @@ function parseFrame2dElement(raw: unknown, index: number): Frame2dJobInput["elem
     youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
     moment_of_inertia: requiredNumber(element.moment_of_inertia, `elements[${index}].moment_of_inertia`),
     section_modulus: requiredNumber(element.section_modulus, `elements[${index}].section_modulus`),
+    material_id: optionalString(element.material_id),
+  };
+}
+
+function parseThermalFrame2dElement(raw: unknown, index: number): ThermalFrame2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
+    moment_of_inertia: requiredNumber(element.moment_of_inertia, `elements[${index}].moment_of_inertia`),
+    section_modulus: requiredNumber(element.section_modulus, `elements[${index}].section_modulus`),
+    thermal_expansion: numberOrZero(element.thermal_expansion),
+    section_depth: requiredNumber(element.section_depth, `elements[${index}].section_depth`),
+    temperature_gradient_y: numberOrZero(element.temperature_gradient_y),
     material_id: optionalString(element.material_id),
   };
 }
@@ -710,6 +753,36 @@ function parseFrame2dV1(raw: Record<string, unknown>): ImportedFrame2dModel {
   return {
     kind: "frame_2d",
     name: typeof raw.name === "string" ? raw.name : "imported-frame-2d",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
+function parseThermalFrame2dV1(raw: Record<string, unknown>): ImportedThermalFrame2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(raw, material, youngsModulusGpa);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalFrame2dNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseThermalFrame2dElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_frame_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-frame-2d",
     material,
     youngsModulusGpa,
     model: { nodes, elements, materials },
@@ -1027,6 +1100,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "frame_2d") {
     return parseFrame2dV1(raw);
+  }
+
+  if (kind === "thermal_frame_2d") {
+    return parseThermalFrame2dV1(raw);
   }
 
   if (kind === "beam_1d") {

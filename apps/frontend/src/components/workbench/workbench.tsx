@@ -179,6 +179,7 @@ import {
   createBeam1dJob,
   createThermalBeam1dJob,
   createThermalBar1dJob,
+  createThermalFrame2dJob,
   createThermalTruss2dJob,
   createThermalTruss3dJob,
   createSpring1dJob,
@@ -252,6 +253,10 @@ import {
   type ThermalBar1dJobInput,
   type ThermalBar1dNodeInput,
   type ThermalBar1dResult,
+  type ThermalFrame2dElementInput,
+  type ThermalFrame2dJobInput,
+  type ThermalFrame2dNodeInput,
+  type ThermalFrame2dResult,
   type ThermalTruss2dElementInput,
   type ThermalTruss2dJobInput,
   type ThermalTruss2dNodeInput,
@@ -271,6 +276,7 @@ import {
   resolveBeam1dJobInput,
   resolveThermalBeam1dJobInput,
   resolveThermalBar1dJobInput,
+  resolveThermalFrame2dJobInput,
   resolveThermalTruss2dJobInput,
   resolveThermalTruss3dJobInput,
   resolveSpring1dJobInput,
@@ -296,9 +302,10 @@ import {
 type Language = "en" | "zh";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
 type FrameStudyJobInput = Frame2dJobInput;
+type ThermalFrameStudyJobInput = ThermalFrame2dJobInput;
 type BeamStudyJobInput = Beam1dJobInput;
 type ThermalBeamStudyJobInput = ThermalBeam1dJobInput;
 type ThermalBarStudyJobInput = ThermalBar1dJobInput;
@@ -688,6 +695,21 @@ const defaultFrame2d: Frame2dJobInput = {
   ],
 };
 
+const defaultThermalFrame2d: ThermalFrame2dJobInput = {
+  materials: [createMaterialDefinition("210", 1, { id: "mat-1" })],
+  nodes: [
+    { id: "tf0", x: 0, y: 0, fix_x: true, fix_y: true, fix_rz: true, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 20 },
+    { id: "tf1", x: 0, y: 2.4, fix_x: false, fix_y: false, fix_rz: false, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 40 },
+    { id: "tf2", x: 3.2, y: 2.4, fix_x: false, fix_y: false, fix_rz: false, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 40 },
+    { id: "tf3", x: 3.2, y: 0, fix_x: true, fix_y: true, fix_rz: true, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 20 },
+  ],
+  elements: [
+    { id: "tc0", node_i: 0, node_j: 1, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, thermal_expansion: 1.2e-5, section_depth: 0.32, temperature_gradient_y: 0, material_id: "mat-1" },
+    { id: "tb0", node_i: 1, node_j: 2, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.2e-4, section_modulus: 1.1e-3, thermal_expansion: 1.2e-5, section_depth: 0.28, temperature_gradient_y: 30, material_id: "mat-1" },
+    { id: "tc1", node_i: 2, node_j: 3, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, thermal_expansion: 1.2e-5, section_depth: 0.32, temperature_gradient_y: 0, material_id: "mat-1" },
+  ],
+};
+
 const copy = {
   en: {
     brand: brand.productName,
@@ -699,6 +721,7 @@ const copy = {
       axial_bar_1d: "1D axial bar",
       thermal_bar_1d: "1D thermal bar",
       thermal_beam_1d: "1D thermal beam",
+      thermal_frame_2d: "2D thermal frame",
       thermal_truss_2d: "2D thermal truss",
       thermal_truss_3d: "3D thermal space truss",
       spring_1d: "1D spring",
@@ -1189,6 +1212,7 @@ const copy = {
       axial_bar_1d: "一维轴向杆",
       thermal_bar_1d: "一维热轴杆",
       thermal_beam_1d: "一维热梁",
+      thermal_frame_2d: "二维热刚架",
       thermal_truss_2d: "二维热桁架",
       thermal_truss_3d: "三维热空间桁架",
       spring_1d: "一维弹簧",
@@ -1966,6 +1990,18 @@ function isFrame2dResult(value: unknown): value is Frame2dResult {
   );
 }
 
+function isThermalFrame2dResult(value: unknown): value is ThermalFrame2dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_temperature_delta" in value &&
+    "max_temperature_gradient" in value &&
+    "max_rotation" in value &&
+    "nodes" in value &&
+    "elements" in value
+  );
+}
+
 function isPlaneResult(value: unknown): value is PlaneTriangle2dResult | PlaneQuad2dResult {
   return (
     typeof value === "object" &&
@@ -2092,6 +2128,42 @@ function buildDisplayFrameNodes(
   model: Frame2dJobInput,
   result: Frame2dResult | null,
   windowNodes?: Frame2dResult["nodes"],
+): DisplayTrussNode[] {
+  const nodes = windowNodes ?? result?.nodes;
+
+  if (nodes) {
+    return nodes.map((node, index) => ({
+      index: typeof node.index === "number" ? node.index : index,
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      ux: node.ux,
+      uy: node.uy,
+      fix_x: model.nodes[node.index]?.fix_x ?? false,
+      fix_y: model.nodes[node.index]?.fix_y ?? false,
+      load_x: model.nodes[node.index]?.load_x ?? 0,
+      load_y: model.nodes[node.index]?.load_y ?? 0,
+    }));
+  }
+
+  return model.nodes.map((node, index) => ({
+    index,
+    id: node.id,
+    x: node.x,
+    y: node.y,
+    ux: 0,
+    uy: 0,
+    fix_x: node.fix_x,
+    fix_y: node.fix_y,
+    load_x: node.load_x,
+    load_y: node.load_y,
+  }));
+}
+
+function buildDisplayThermalFrameNodes(
+  model: ThermalFrame2dJobInput,
+  result: ThermalFrame2dResult | null,
+  windowNodes?: ThermalFrame2dResult["nodes"],
 ): DisplayTrussNode[] {
   const nodes = windowNodes ?? result?.nodes;
 
@@ -2874,6 +2946,56 @@ function buildDisplayFrameElements(
   });
 }
 
+function buildDisplayThermalFrameElements(
+  model: ThermalFrame2dJobInput,
+  result: ThermalFrame2dResult | null,
+  windowElements?: ThermalFrame2dResult["elements"],
+): DisplayTrussElement[] {
+  const elements = windowElements ?? result?.elements;
+
+  if (elements) {
+    return elements.map((element) => ({
+      index: element.index,
+      id: element.id,
+      node_i: element.node_i,
+      node_j: element.node_j,
+      length: element.length,
+      strain: element.thermal_curvature,
+      stress: element.max_combined_stress,
+      axial_force: Math.max(Math.abs(element.moment_i), Math.abs(element.moment_j)),
+      axial_stress: element.axial_stress,
+      max_bending_stress: element.max_bending_stress,
+      max_combined_stress: element.max_combined_stress,
+      axial_force_i: element.axial_force_i,
+      shear_force_i: element.shear_force_i,
+      moment_i: element.moment_i,
+      axial_force_j: element.axial_force_j,
+      shear_force_j: element.shear_force_j,
+      moment_j: element.moment_j,
+      material_id: model.elements[element.index]?.material_id,
+    }));
+  }
+
+  return model.elements.map((element, index) => {
+    const nodeI = model.nodes[element.node_i];
+    const nodeJ = model.nodes[element.node_j];
+    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
+    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
+
+    return {
+      index,
+      id: element.id,
+      node_i: element.node_i,
+      node_j: element.node_j,
+      length: Math.sqrt(dx * dx + dy * dy),
+      strain: 0,
+      stress: 0,
+      axial_force: 0,
+      material_id: element.material_id,
+    };
+  });
+}
+
 function getTrussBounds(nodes: Array<{ x: number; y: number }>) {
   const xs = nodes.map((node) => node.x);
   const ys = nodes.map((node) => node.y);
@@ -3277,6 +3399,7 @@ export function Workbench() {
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
   const [thermalBarModel, setThermalBarModel] = useState<ThermalBarStudyJobInput>(defaultThermalBar1d);
   const [thermalBeamModel, setThermalBeamModel] = useState<ThermalBeamStudyJobInput>(defaultThermalBeam1d);
+  const [thermalFrameModel, setThermalFrameModel] = useState<ThermalFrameStudyJobInput>(defaultThermalFrame2d);
   const [thermalTrussModel, setThermalTrussModel] = useState<ThermalTruss2dStudyJobInput>(defaultThermalTruss2d);
   const [trussModel, setTrussModel] = useState<Truss2dJobInput>(defaultTruss);
   const [thermalTruss3dModel, setThermalTruss3dModel] = useState<ThermalTruss3dStudyJobInput>(defaultThermalTruss3d);
@@ -3353,6 +3476,7 @@ export function Workbench() {
     axial_bar_1d: [],
     thermal_bar_1d: [],
     thermal_beam_1d: [],
+    thermal_frame_2d: [],
     thermal_truss_2d: [],
     thermal_truss_3d: [],
     spring_1d: [],
@@ -4035,6 +4159,13 @@ export function Workbench() {
                     endpoints,
                     directMeshSelectionMode,
                   )
+              : studyKind === "thermal_frame_2d"
+                ? await createDirectMeshSolve<ThermalFrame2dResult>(
+                    "thermal_frame_2d",
+                    resolveThermalFrame2dJobInput(thermalFrameModel) as unknown as Record<string, unknown>,
+                    endpoints,
+                    directMeshSelectionMode,
+                  )
               : studyKind === "thermal_truss_2d"
                 ? await createDirectMeshSolve<ThermalTruss2dResult>(
                     "thermal_truss_2d",
@@ -4144,6 +4275,8 @@ export function Workbench() {
               ? await createThermalBar1dJob(resolveThermalBar1dJobInput({ ...thermalBarModel, ...jobContext }))
             : studyKind === "thermal_beam_1d"
               ? await createThermalBeam1dJob(resolveThermalBeam1dJobInput({ ...thermalBeamModel, ...jobContext }))
+            : studyKind === "thermal_frame_2d"
+              ? await createThermalFrame2dJob(resolveThermalFrame2dJobInput({ ...thermalFrameModel, ...jobContext }))
             : studyKind === "thermal_truss_2d"
               ? await createThermalTruss2dJob(resolveThermalTruss2dJobInput({ ...thermalTrussModel, ...jobContext }))
             : studyKind === "thermal_truss_3d"
@@ -4402,6 +4535,13 @@ export function Workbench() {
             setSidebarSection("study");
           }
 
+          if (isThermalFrame2dResult(payload.result)) {
+            recordHistory(t.historyAction);
+            setStudyKind("thermal_frame_2d");
+            setThermalFrameModel(ensureFrameModelMaterials(payload.result.input, activeMaterial) as ThermalFrameStudyJobInput);
+            setSidebarSection("study");
+          }
+
           if (isPlaneResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind(
@@ -4499,6 +4639,10 @@ export function Workbench() {
         setStudyKind("thermal_beam_1d");
         setThermalBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
         setActiveMaterial(imported.material);
+      } else if (imported.kind === "thermal_frame_2d") {
+        setStudyKind("thermal_frame_2d");
+        setThermalFrameModel(ensureFrameModelMaterials(imported.model, imported.material) as ThermalFrameStudyJobInput);
+        setActiveMaterial(imported.material);
       } else if (imported.kind === "thermal_truss_2d") {
         setStudyKind("thermal_truss_2d");
         setThermalTrussModel(imported.model);
@@ -4567,6 +4711,10 @@ export function Workbench() {
         } else if (imported.kind === "thermal_beam_1d") {
           setStudyKind("thermal_beam_1d");
           setThermalBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
+          setActiveMaterial(imported.material);
+        } else if (imported.kind === "thermal_frame_2d") {
+          setStudyKind("thermal_frame_2d");
+          setThermalFrameModel(ensureFrameModelMaterials(imported.model, imported.material) as ThermalFrameStudyJobInput);
           setActiveMaterial(imported.material);
         } else if (imported.kind === "thermal_truss_2d") {
           setStudyKind("thermal_truss_2d");
@@ -4703,6 +4851,7 @@ export function Workbench() {
         axialForm,
         thermalBarModel,
         thermalBeamModel,
+        thermalFrameModel,
         thermalTrussModel,
         trussModel,
         thermalTruss3dModel,
@@ -4770,7 +4919,7 @@ export function Workbench() {
   };
 
   const downloadFrameHotspotSummary = () => {
-    if (!(isFrame || isBeam || isSpring || isThermal) || frameHotspotElements.length === 0) {
+    if (!(isFrameLike || isBeam || isSpring || isThermal) || frameHotspotElements.length === 0) {
       setMessage(t.noResultToExport);
       return;
     }
@@ -4785,7 +4934,7 @@ export function Workbench() {
   };
 
   const downloadFrameForceSummary = () => {
-    if (!(isFrame || isBeam || isSpring || isThermal) || frameForceRows.length === 0) {
+    if (!(isFrameLike || isBeam || isSpring || isThermal) || frameForceRows.length === 0) {
       setMessage(t.noResultToExport);
       return;
     }
@@ -4877,6 +5026,7 @@ export function Workbench() {
           axialForm,
           thermalBarModel,
           thermalBeamModel,
+          thermalFrameModel,
           thermalTrussModel,
           trussModel,
           thermalTruss3dModel,
@@ -5151,6 +5301,10 @@ export function Workbench() {
       setStudyKind("thermal_beam_1d");
       setThermalBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
       setActiveMaterial(imported.material);
+    } else if (imported.kind === "thermal_frame_2d") {
+      setStudyKind("thermal_frame_2d");
+      setThermalFrameModel(ensureFrameModelMaterials(imported.model, imported.material) as ThermalFrameStudyJobInput);
+      setActiveMaterial(imported.material);
     } else if (imported.kind === "thermal_truss_2d") {
       setStudyKind("thermal_truss_2d");
       setThermalTrussModel(imported.model);
@@ -5258,6 +5412,7 @@ export function Workbench() {
       axialForm,
       thermalBarModel,
       thermalBeamModel,
+      thermalFrameModel,
       thermalTrussModel,
       trussModel,
       thermalTruss3dModel,
@@ -5689,6 +5844,7 @@ export function Workbench() {
   const isAxial = studyKind === "axial_bar_1d";
   const isThermalBar = studyKind === "thermal_bar_1d";
   const isThermalBeam = studyKind === "thermal_beam_1d";
+  const isThermalFrame = studyKind === "thermal_frame_2d";
   const isThermalTruss2d = studyKind === "thermal_truss_2d";
   const isThermalTruss3d = studyKind === "thermal_truss_3d";
   const isThermal = isThermalBar || isThermalTruss2d || isThermalTruss3d;
@@ -5701,6 +5857,7 @@ export function Workbench() {
   const isTruss = studyKind === "truss_2d" || isThermalTruss2d;
   const isTruss3d = studyKind === "truss_3d" || isThermalTruss3d || isSpring3d;
   const isFrame = studyKind === "frame_2d";
+  const isFrameLike = isFrame || isThermalFrame;
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
   const jobIsActive =
     job?.status === "queued" ||
@@ -5711,6 +5868,7 @@ export function Workbench() {
   const axialResult = isAxial && isAxialResult(result) ? result : null;
   const thermalBarResult = isThermalBar && isThermalBar1dResult(result) ? result : null;
   const thermalBeamResult = isThermalBeam && isThermalBeam1dResult(result) ? result : null;
+  const thermalFrameResult = isThermalFrame && isThermalFrame2dResult(result) ? result : null;
   const thermalTrussResult = isThermalTruss2d && isThermalTruss2dResult(result) ? result : null;
   const thermalTruss3dResult = isThermalTruss3d && isThermalTruss3dResult(result) ? result : null;
   const springResult = isSpring1d && isSpring1dResult(result) ? result : null;
@@ -5725,6 +5883,8 @@ export function Workbench() {
   const activeBeamLikeModel = isThermalBeam ? thermalBeamModel : beamModel;
   const torsionResult = isTorsion && isTorsion1dResult(result) ? result : null;
   const frameResult = isFrame && isFrame2dResult(result) ? result : null;
+  const activeFrameLikeResult = isThermalFrame ? thermalFrameResult : frameResult;
+  const activeFrameLikeModel = isThermalFrame ? thermalFrameModel : frameModel;
   const planeResult = isPlane && isPlaneResult(result) ? result : null;
   const activeResultWindow =
     resultWindow && job?.job_id === resultWindow.jobId && studyKind === resultWindow.studyKind ? resultWindow : null;
@@ -5794,8 +5954,14 @@ export function Workbench() {
     activeResultWindow?.studyKind === "frame_2d" ? (activeResultWindow.nodes as Frame2dResult["nodes"]) : undefined;
   const frameWindowElements =
     activeResultWindow?.studyKind === "frame_2d" ? (activeResultWindow.elements as Frame2dResult["elements"]) : undefined;
+  const thermalFrameWindowNodes =
+    activeResultWindow?.studyKind === "thermal_frame_2d" ? (activeResultWindow.nodes as ThermalFrame2dResult["nodes"]) : undefined;
+  const thermalFrameWindowElements =
+    activeResultWindow?.studyKind === "thermal_frame_2d" ? (activeResultWindow.elements as ThermalFrame2dResult["elements"]) : undefined;
   const { displayTrussNodes, displayTrussElements, trussBounds } = useMemo(() => {
-    const nextDisplayTrussNodes = isFrame
+    const nextDisplayTrussNodes = isThermalFrame
+      ? buildDisplayThermalFrameNodes(thermalFrameModel, thermalFrameResult, thermalFrameWindowNodes)
+      : isFrame
       ? buildDisplayFrameNodes(frameModel, frameResult, frameWindowNodes)
       : isThermalBeam
         ? buildDisplayThermalBeamNodes(thermalBeamModel, thermalBeamResult, thermalBeamWindowNodes)
@@ -5812,7 +5978,9 @@ export function Workbench() {
       : isTorsion
         ? buildDisplayTorsionNodes(torsionModel, torsionResult, torsionWindowNodes)
         : buildDisplayTrussNodes(trussModel, trussResult, trussWindowNodes);
-    const nextDisplayTrussElements = isFrame
+    const nextDisplayTrussElements = isThermalFrame
+      ? buildDisplayThermalFrameElements(thermalFrameModel, thermalFrameResult, thermalFrameWindowElements)
+      : isFrame
       ? buildDisplayFrameElements(frameModel, frameResult, frameWindowElements)
       : isThermalBeam
         ? buildDisplayThermalBeamElements(thermalBeamModel, thermalBeamResult, thermalBeamWindowElements)
@@ -5835,7 +6003,7 @@ export function Workbench() {
       displayTrussElements: nextDisplayTrussElements,
       trussBounds: getTrussBounds(nextDisplayTrussNodes),
     };
-  }, [beamModel, beamResult, beamWindowElements, beamWindowNodes, frameModel, frameResult, frameWindowElements, frameWindowNodes, isBeam, isFrame, isSpring1d, isSpring2d, isThermalBar, isThermalBeam, isThermalTruss2d, isTorsion, spring2dModel, spring2dResult, spring2dWindowElements, spring2dWindowNodes, springModel, springResult, springWindowElements, springWindowNodes, thermalBarModel, thermalBarResult, thermalBeamModel, thermalBeamResult, thermalBeamWindowElements, thermalBeamWindowNodes, thermalTrussModel, thermalTrussResult, thermalTrussWindowElements, thermalTrussWindowNodes, thermalWindowElements, thermalWindowNodes, torsionModel, torsionResult, torsionWindowElements, torsionWindowNodes, trussModel, trussResult, trussWindowNodes, trussWindowElements]);
+  }, [beamModel, beamResult, beamWindowElements, beamWindowNodes, frameModel, frameResult, frameWindowElements, frameWindowNodes, isBeam, isFrame, isSpring1d, isSpring2d, isThermalBar, isThermalBeam, isThermalFrame, isThermalTruss2d, isTorsion, spring2dModel, spring2dResult, spring2dWindowElements, spring2dWindowNodes, springModel, springResult, springWindowElements, springWindowNodes, thermalBarModel, thermalBarResult, thermalBeamModel, thermalBeamResult, thermalBeamWindowElements, thermalBeamWindowNodes, thermalFrameModel, thermalFrameResult, thermalFrameWindowElements, thermalFrameWindowNodes, thermalTrussModel, thermalTrussResult, thermalTrussWindowElements, thermalTrussWindowNodes, thermalWindowElements, thermalWindowNodes, torsionModel, torsionResult, torsionWindowElements, torsionWindowNodes, trussModel, trussResult, trussWindowNodes, trussWindowElements]);
   const { displayTruss3dNodes, displayTruss3dElements } = useMemo(
     () => ({
       displayTruss3dNodes: isSpring3d
@@ -6054,19 +6222,19 @@ export function Workbench() {
   const selectedPlaneNodeData = selectedNode !== null ? planeNodes[selectedNode] : null;
   const selectedPlaneElementData = selectedElement !== null ? planeElements[selectedElement] : null;
   const selectedFrameNodeData =
-    selectedNode !== null && frameModel.nodes[selectedNode]
+    selectedNode !== null && (isThermalFrame ? thermalFrameModel.nodes[selectedNode] : frameModel.nodes[selectedNode])
       ? {
-          ...frameModel.nodes[selectedNode],
-          displacement_magnitude: frameResult?.nodes[selectedNode]?.displacement_magnitude,
-          rz: frameResult?.nodes[selectedNode]?.rz,
+          ...(isThermalFrame ? thermalFrameModel.nodes[selectedNode] : frameModel.nodes[selectedNode]),
+          displacement_magnitude: isThermalFrame ? thermalFrameResult?.nodes[selectedNode]?.displacement_magnitude : frameResult?.nodes[selectedNode]?.displacement_magnitude,
+          rz: isThermalFrame ? thermalFrameResult?.nodes[selectedNode]?.rz : frameResult?.nodes[selectedNode]?.rz,
         }
       : null;
   const selectedFrameElementData =
-    selectedElement !== null && frameModel.elements[selectedElement]
+    selectedElement !== null && (isThermalFrame ? thermalFrameModel.elements[selectedElement] : frameModel.elements[selectedElement])
       ? {
           index: selectedElement,
-          ...frameModel.elements[selectedElement],
-          ...frameResult?.elements[selectedElement],
+          ...(isThermalFrame ? thermalFrameModel.elements[selectedElement] : frameModel.elements[selectedElement]),
+          ...(isThermalFrame ? thermalFrameResult?.elements[selectedElement] : frameResult?.elements[selectedElement]),
         }
       : null;
   const selectedBeamNodeData =
@@ -6232,6 +6400,8 @@ export function Workbench() {
             ? []
           : studyKind === "thermal_beam_1d"
             ? thermalBeamModel.materials ?? []
+          : studyKind === "thermal_frame_2d"
+            ? thermalFrameModel.materials ?? []
           : studyKind === "spring_1d" || studyKind === "spring_2d"
             ? []
           : studyKind === "beam_1d"
@@ -6243,7 +6413,7 @@ export function Workbench() {
             : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
               ? planeModel.materials ?? []
               : [],
-    [beamModel.materials, frameModel.materials, planeModel.materials, studyKind, thermalBeamModel.materials, thermalTruss3dModel.materials, thermalTrussModel.materials, truss3dModel.materials, trussModel.materials],
+    [beamModel.materials, frameModel.materials, planeModel.materials, studyKind, thermalBeamModel.materials, thermalFrameModel.materials, thermalTruss3dModel.materials, thermalTrussModel.materials, truss3dModel.materials, trussModel.materials],
   );
   const hiddenMaterialIds = hiddenMaterials[studyKind] ?? [];
   const materialColorMap = useMemo(
@@ -6658,11 +6828,11 @@ export function Workbench() {
   const trussElementColors = useMemo(
     () =>
       displayTrussElements.map((element) =>
-        (isFrame && frameResult) || (isBeam && activeBeamLikeResult) || (isTorsion && torsionResult)
+        (isFrameLike && activeFrameLikeResult) || (isBeam && activeBeamLikeResult) || (isTorsion && torsionResult)
           ? planeStressFill(lineResultFieldValue(element, activeLineResultField), frameResultFieldMax)
           : materialColorMap.get(element.material_id ?? "") ?? "#1677a3",
       ),
-    [activeBeamLikeResult, activeLineResultField, displayTrussElements, frameResult, frameResultFieldMax, isBeam, isFrame, isTorsion, materialColorMap, torsionResult],
+    [activeBeamLikeResult, activeFrameLikeResult, activeLineResultField, displayTrussElements, frameResultFieldMax, isBeam, isFrameLike, isTorsion, materialColorMap, torsionResult],
   );
   const truss3dElementColors = useMemo(
     () => displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
@@ -6676,8 +6846,8 @@ export function Workbench() {
     isAxial
       ? axialNodes.length
       : activeResultWindow?.totalNodes ??
-        (isTruss ? trussResult?.nodes.length : isSpring3d ? spring3dResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : isSpring ? activeSpringResult?.nodes.length : isBeam ? activeBeamLikeResult?.nodes.length : isTorsion ? torsionResult?.nodes.length : isFrame ? frameResult?.nodes.length : planeResult?.nodes.length) ??
-        (isTruss ? trussModel.nodes.length : isSpring3d ? spring3dModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : isSpring ? activeSpringModel.nodes.length : isBeam ? activeBeamLikeModel.nodes.length : isTorsion ? torsionModel.nodes.length : isFrame ? frameModel.nodes.length : planeModel.nodes.length);
+        (isTruss ? trussResult?.nodes.length : isSpring3d ? spring3dResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : isSpring ? activeSpringResult?.nodes.length : isBeam ? activeBeamLikeResult?.nodes.length : isTorsion ? torsionResult?.nodes.length : isFrameLike ? activeFrameLikeResult?.nodes.length : planeResult?.nodes.length) ??
+        (isTruss ? trussModel.nodes.length : isSpring3d ? spring3dModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : isSpring ? activeSpringModel.nodes.length : isBeam ? activeBeamLikeModel.nodes.length : isTorsion ? torsionModel.nodes.length : isFrameLike ? activeFrameLikeModel.nodes.length : planeModel.nodes.length);
   const resultWindowMaxTotal = activeResultWindow ? Math.max(activeResultWindow.totalNodes, activeResultWindow.totalElements) : 0;
   const activeResultWindowLimit = activeResultWindow?.limit ?? resultWindowLimit;
   const resultWindowStart = activeResultWindow ? Math.min(resultWindowOffset, Math.max(0, resultWindowMaxTotal - 1)) + 1 : 0;
@@ -6709,7 +6879,7 @@ export function Workbench() {
           : undefined
         : 980;
   const directMeshEndpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
-  const hasAnyResult = Boolean(axialResult || thermalBarResult || thermalBeamResult || thermalTrussResult || thermalTruss3dResult || trussResult || truss3dResult || springResult || spring2dResult || spring3dResult || beamResult || torsionResult || frameResult || planeResult);
+  const hasAnyResult = Boolean(axialResult || thermalBarResult || thermalBeamResult || thermalFrameResult || thermalTrussResult || thermalTruss3dResult || trussResult || truss3dResult || springResult || spring2dResult || spring3dResult || beamResult || torsionResult || frameResult || planeResult);
   const assistantCards: Array<{
     id: string;
     title: string;
@@ -7027,6 +7197,7 @@ export function Workbench() {
             nextStudyKind === "axial_bar_1d" ||
             nextStudyKind === "thermal_bar_1d" ||
             nextStudyKind === "thermal_beam_1d" ||
+            nextStudyKind === "thermal_frame_2d" ||
             nextStudyKind === "thermal_truss_2d" ||
             nextStudyKind === "thermal_truss_3d" ||
             nextStudyKind === "spring_1d" ||
@@ -7049,6 +7220,8 @@ export function Workbench() {
               setThermalBarModel(defaultThermalBar1d);
             } else if (nextStudyKind === "thermal_beam_1d" && studyKind !== "thermal_beam_1d") {
               setThermalBeamModel(ensureBeamModelMaterials(defaultThermalBeam1d, activeMaterial));
+            } else if (nextStudyKind === "thermal_frame_2d" && studyKind !== "thermal_frame_2d") {
+              setThermalFrameModel(ensureFrameModelMaterials(defaultThermalFrame2d, activeMaterial) as ThermalFrameStudyJobInput);
             } else if (nextStudyKind === "thermal_truss_2d" && studyKind !== "thermal_truss_2d") {
               setThermalTrussModel(defaultThermalTruss2d);
             } else if (nextStudyKind === "thermal_truss_3d" && studyKind !== "thermal_truss_3d") {
@@ -7204,6 +7377,7 @@ export function Workbench() {
             axialForm,
             thermalBarModel,
             thermalBeamModel,
+            thermalFrameModel,
             thermalTrussModel,
             trussModel,
             thermalTruss3dModel,
@@ -7565,6 +7739,7 @@ export function Workbench() {
       axialForm,
       thermalBarModel,
       thermalBeamModel,
+      thermalFrameModel,
       thermalTrussModel,
       trussModel,
       thermalTruss3dModel,
@@ -7595,6 +7770,7 @@ export function Workbench() {
         setAxialForm,
         setThermalBarModel,
         setThermalBeamModel,
+        setThermalFrameModel,
         setThermalTrussModel,
         setTrussModel,
         setThermalTruss3dModel,
@@ -7938,6 +8114,16 @@ export function Workbench() {
       return;
     }
 
+    if (isThermalFrame) {
+      setThermalFrameModel((current) => ({
+        ...current,
+        nodes: current.nodes.map((node, index) =>
+          index === selectedNode ? { ...node, [key]: value } : node,
+        ),
+      }));
+      return;
+    }
+
     setFrameModel((current) => updateFrame2dNode(current, selectedNode, key, value));
   };
 
@@ -7978,6 +8164,16 @@ export function Workbench() {
       return;
     }
 
+    if (isThermalFrame) {
+      setThermalFrameModel((current) => ({
+        ...current,
+        elements: current.elements.map((element, index) =>
+          index === selectedElement ? { ...element, [key]: value } : element,
+        ),
+      }));
+      return;
+    }
+
     setFrameModel((current) =>
       updateFrame2dElement(current, selectedElement, key as keyof Frame2dJobInput["elements"][number], value),
     );
@@ -7988,6 +8184,15 @@ export function Workbench() {
     if (isTorsion) return;
     recordHistory(t.editMemberAction);
     resetActiveResult(setResult, setJob);
+    if (isThermalFrame) {
+      setThermalFrameModel((current) => ({
+        ...current,
+        elements: current.elements.map((element, index) =>
+          index === selectedElement ? { ...element, material_id: materialId } : element,
+        ),
+      }));
+      return;
+    }
     setFrameModel((current) => assignFrame2dElementMaterial(current, selectedElement, materialId));
   };
 
@@ -8006,8 +8211,12 @@ export function Workbench() {
       return;
     }
 
-    if (studyKind === "frame_2d") {
-      setFrameModel((current) => addPresetMaterialToFrameModel(current, activeMaterial));
+    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
+      if (studyKind === "thermal_frame_2d") {
+        setThermalFrameModel((current) => addPresetMaterialToFrameModel(current, activeMaterial) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => addPresetMaterialToFrameModel(current, activeMaterial));
+      }
       return;
     }
 
@@ -8029,8 +8238,12 @@ export function Workbench() {
       return;
     }
 
-    if (studyKind === "frame_2d") {
-      setFrameModel((current) => addCustomMaterialToFrameModel(current));
+    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
+      if (studyKind === "thermal_frame_2d") {
+        setThermalFrameModel((current) => addCustomMaterialToFrameModel(current) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => addCustomMaterialToFrameModel(current));
+      }
       return;
     }
 
@@ -8052,8 +8265,12 @@ export function Workbench() {
       return;
     }
 
-    if (studyKind === "frame_2d") {
-      setFrameModel((current) => applyMaterialToFrameModel(current, materialId, mode, selectedElement));
+    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
+      if (studyKind === "thermal_frame_2d") {
+        setThermalFrameModel((current) => applyMaterialToFrameModel(current, materialId, mode, selectedElement) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => applyMaterialToFrameModel(current, materialId, mode, selectedElement));
+      }
       return;
     }
 
@@ -8084,6 +8301,8 @@ export function Workbench() {
         setTruss3dModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       } else if (studyKind === "frame_2d") {
         setFrameModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
+      } else if (studyKind === "thermal_frame_2d") {
+        setThermalFrameModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       } else {
         setPlaneModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       }
@@ -8113,8 +8332,12 @@ export function Workbench() {
       return;
     }
 
-    if (studyKind === "frame_2d") {
-      setFrameModel((current) => updateMaterialInFrameModel(current, materialId, field, value));
+    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
+      if (studyKind === "thermal_frame_2d") {
+        setThermalFrameModel((current) => updateMaterialInFrameModel(current, materialId, field, value) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => updateMaterialInFrameModel(current, materialId, field, value));
+      }
       return;
     }
 
@@ -8136,8 +8359,12 @@ export function Workbench() {
       return;
     }
 
-    if (studyKind === "frame_2d") {
-      setFrameModel((current) => deleteMaterialFromFrameModel(current, materialId));
+    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
+      if (studyKind === "thermal_frame_2d") {
+        setThermalFrameModel((current) => deleteMaterialFromFrameModel(current, materialId) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => deleteMaterialFromFrameModel(current, materialId));
+      }
       return;
     }
 
@@ -8145,13 +8372,17 @@ export function Workbench() {
   };
 
   const addNode = (connectToSelected: boolean) => {
-    if (isFrame) {
+    if (isFrameLike) {
       recordHistory(t.addNodeAction);
-      setStudyKind("frame_2d");
+      setStudyKind(studyKind);
       setSidebarSection("model");
       resetActiveResult(setResult, setJob);
-      const nextState = addFrame2dNode(frameModel, connectToSelected, selectedNode, round);
-      setFrameModel(nextState.model);
+      const nextState = addFrame2dNode(activeFrameLikeModel, connectToSelected, selectedNode, round);
+      if (isThermalFrame) {
+        setThermalFrameModel(nextState.model as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel(nextState.model);
+      }
       setSelectedNode(nextState.nextSelectedNode);
       setSelectedElement(nextState.nextSelectedElement);
       setMemberDraftNodes([]);
@@ -8188,8 +8419,12 @@ export function Workbench() {
     if (selectedNode === null) return;
     recordHistory(t.deleteNodeAction);
     resetActiveResult(setResult, setJob);
-    if (isFrame) {
-      setFrameModel((current) => deleteFrame2dNode(current, selectedNode));
+    if (isFrameLike) {
+      if (isThermalFrame) {
+        setThermalFrameModel((current) => deleteFrame2dNode(current, selectedNode) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => deleteFrame2dNode(current, selectedNode));
+      }
       setSelectedNode(null);
       setSelectedTruss3dNodes([]);
       setSelectedElement(null);
@@ -8304,10 +8539,14 @@ export function Workbench() {
     recordHistory(t.toggleMemberAction);
 
     resetActiveResult(setResult, setJob);
-    if (isFrame) {
-      const nextState = toggleFrame2dMember(frameModel, memberDraftNodes);
+    if (isFrameLike) {
+      const nextState = toggleFrame2dMember(activeFrameLikeModel, memberDraftNodes);
       if (!nextState.valid) return;
-      setFrameModel(nextState.model);
+      if (isThermalFrame) {
+        setThermalFrameModel(nextState.model as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel(nextState.model);
+      }
       setSelectedElement(nextState.removedExisting ? null : nextState.nextSelectedElement);
       setSelectedTruss3dNodes([]);
       setMemberDraftNodes([]);
@@ -8336,8 +8575,12 @@ export function Workbench() {
     if (selectedElement === null) return;
     recordHistory(t.deleteMemberAction);
     resetActiveResult(setResult, setJob);
-    if (isFrame) {
-      setFrameModel((current) => deleteFrame2dElement(current, selectedElement));
+    if (isFrameLike) {
+      if (isThermalFrame) {
+        setThermalFrameModel((current) => deleteFrame2dElement(current, selectedElement) as ThermalFrameStudyJobInput);
+      } else {
+        setFrameModel((current) => deleteFrame2dElement(current, selectedElement));
+      }
       setSelectedElement(null);
       setMessage(t.memberDeleted);
       return;
@@ -8358,7 +8601,7 @@ export function Workbench() {
   };
 
   const handleTrussPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (draggingNode === null || (studyKind !== "truss_2d" && studyKind !== "frame_2d")) return;
+    if (draggingNode === null || (studyKind !== "truss_2d" && studyKind !== "frame_2d" && studyKind !== "thermal_frame_2d")) return;
     if (!dragHistoryCapturedRef.current) {
       recordHistory(t.dragNodeAction);
       dragHistoryCapturedRef.current = true;
@@ -8377,10 +8620,16 @@ export function Workbench() {
       if (!nextPoint) return;
 
       resetActiveResult(setResult, setJob);
-      if (studyKind === "frame_2d") {
-        setFrameModel((current) =>
-          updateFrame2dNode(updateFrame2dNode(current, draggingNode, "x", nextPoint.x), draggingNode, "y", nextPoint.y),
-        );
+      if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
+        if (studyKind === "thermal_frame_2d") {
+          setThermalFrameModel((current) =>
+            updateFrame2dNode(updateFrame2dNode(current, draggingNode, "x", nextPoint.x), draggingNode, "y", nextPoint.y) as ThermalFrameStudyJobInput,
+          );
+        } else {
+          setFrameModel((current) =>
+            updateFrame2dNode(updateFrame2dNode(current, draggingNode, "x", nextPoint.x), draggingNode, "y", nextPoint.y),
+          );
+        }
         return;
       }
 
@@ -8497,7 +8746,7 @@ export function Workbench() {
                 ? "Fixed tripod"
                 : isTorsion
                   ? "Fixed shaft end"
-                  : isFrame || isBeam
+                  : isFrameLike || isBeam
                     ? "Moment-resisting base"
                     : "Pinned base",
   });
@@ -8517,16 +8766,16 @@ export function Workbench() {
     studyKind,
     loadedModelName,
     materialLabel: localMaterialLabel(activeMaterial, language),
-    trussNodeCount: isFrame ? frameModel.nodes.length : trussModel.nodes.length,
-    trussElementCount: isFrame ? frameModel.elements.length : trussModel.elements.length,
+    trussNodeCount: isFrameLike ? activeFrameLikeModel.nodes.length : trussModel.nodes.length,
+    trussElementCount: isFrameLike ? activeFrameLikeModel.elements.length : trussModel.elements.length,
     truss3dNodeCount: isSpring3d ? spring3dModel.nodes.length : truss3dModel.nodes.length,
     truss3dElementCount: isSpring3d ? spring3dModel.elements.length : truss3dModel.elements.length,
     truss3dLoadValue: isSpring3d
       ? `${fixed(spring3dModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y, node.load_z), 0), 0)} N`
       : `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`,
     planeNodeCount:
-      studyKind === "frame_2d"
-        ? frameModel.nodes.length
+      studyKind === "frame_2d" || studyKind === "thermal_frame_2d"
+        ? activeFrameLikeModel.nodes.length
         : studyKind === "beam_1d"
           ? beamModel.nodes.length
           : studyKind === "thermal_beam_1d"
@@ -8543,8 +8792,8 @@ export function Workbench() {
                 ? spring3dModel.nodes.length
             : planeModel.nodes.length,
     planeElementCount:
-      studyKind === "frame_2d"
-        ? frameModel.elements.length
+      studyKind === "frame_2d" || studyKind === "thermal_frame_2d"
+        ? activeFrameLikeModel.elements.length
         : studyKind === "beam_1d"
           ? beamModel.elements.length
           : studyKind === "thermal_beam_1d"
@@ -8562,6 +8811,7 @@ export function Workbench() {
             : planeModel.elements.length,
     planeThicknessValue:
       studyKind === "frame_2d" ||
+      studyKind === "thermal_frame_2d" ||
       studyKind === "beam_1d" ||
       studyKind === "thermal_beam_1d" ||
       studyKind === "torsion_1d" ||
@@ -8650,8 +8900,8 @@ export function Workbench() {
     <>
       <WorkbenchModelToolsCard
         title={isTruss3d ? t.spaceStudio : t.sections.model}
-        status={isTruss3d ? t.orbitHint : isFrame ? t.ready : t.dragToEdit}
-        hint={isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : isFrame ? t.frameEditorHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : t.modelStudioHint}
+        status={isTruss3d ? t.orbitHint : isFrameLike ? t.ready : t.dragToEdit}
+        hint={isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : isFrameLike ? t.frameEditorHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : t.modelStudioHint}
         selectionHint={t.selectionHint}
         addNodeLabel={t.addNode}
         addBranchNodeLabel={t.addBranchNode}
@@ -8671,7 +8921,7 @@ export function Workbench() {
         canUndo={undoStack.length > 0}
         canRedo={redoStack.length > 0}
         isTruss={isTruss}
-        isFrame={isFrame}
+        isFrame={isFrameLike}
         isTruss3d={isTruss3d}
         truss3dLinkMode={truss3dLinkMode}
         onAddNode={() => {
@@ -8714,9 +8964,9 @@ export function Workbench() {
         onRedo={handleRedo}
         onDownload={downloadModel}
         onSaveForSolver={() => {
-          setStudyKind(isPlane || isBeam || isTorsion || isThermal ? studyKind : isTruss3d ? "truss_3d" : isFrame ? "frame_2d" : "truss_2d");
+          setStudyKind(isPlane || isBeam || isTorsion || isThermal ? studyKind : isTruss3d ? "truss_3d" : isFrameLike ? studyKind : "truss_2d");
           setSidebarSection("study");
-          setMessage(isPlane ? t.planeHint : isBeam ? t.modelStudioHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : isTruss3d ? t.switchedTo3dStudio : isFrame ? t.frameEditorHint : t.switchedTo2dStudio);
+          setMessage(isPlane ? t.planeHint : isBeam ? t.modelStudioHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : isTruss3d ? t.switchedTo3dStudio : isFrameLike ? t.frameEditorHint : t.switchedTo2dStudio);
         }}
       />
 
@@ -8745,7 +8995,7 @@ export function Workbench() {
         />
       ) : null}
 
-      {!isTruss3d && !isFrame && !isBeam && !isTorsion && !isThermal ? (
+      {!isTruss3d && !isFrameLike && !isBeam && !isTorsion && !isThermal ? (
         <WorkbenchParametricCard
           isPlane={isPlane}
           title={isPlane ? t.panelGenerator : t.parametric}
@@ -8804,7 +9054,7 @@ export function Workbench() {
       title={t.objectTree}
       scopeLabel={currentStudyFamilyLabel}
       countLabel={
-        isTruss || isFrame
+        isTruss || isFrameLike
           ? `${memberDraftNodes.length}/2`
           : isBeam
             ? String(beamModel.elements.length)
@@ -8828,8 +9078,8 @@ export function Workbench() {
       loadCaseLabel={t.loadCase}
       nodeJLabel={t.nodeJ}
       nodeKLabel={t.nodeK}
-      elementValueLabel={isFrame || isBeam || isTorsion || isSpring || isThermal ? frameTreeValueLabel : undefined}
-      nodeRows={(isPlane ? planeModel.nodes : isFrame ? frameModel.nodes : isBeam ? activeBeamLikeModel.nodes : isTorsion ? torsionModel.nodes : isThermalBar ? thermalBarModel.nodes : isThermalTruss2d ? thermalTrussModel.nodes : isSpring1d ? springModel.nodes : isSpring2d ? spring2dModel.nodes : isSpring3d ? spring3dModel.nodes : trussModel.nodes).map((node) => ({
+      elementValueLabel={isFrameLike || isBeam || isTorsion || isSpring || isThermal ? frameTreeValueLabel : undefined}
+      nodeRows={(isPlane ? planeModel.nodes : isFrameLike ? activeFrameLikeModel.nodes : isBeam ? activeBeamLikeModel.nodes : isTorsion ? torsionModel.nodes : isThermalBar ? thermalBarModel.nodes : isThermalTruss2d ? thermalTrussModel.nodes : isSpring1d ? springModel.nodes : isSpring2d ? spring2dModel.nodes : isSpring3d ? spring3dModel.nodes : trussModel.nodes).map((node) => ({
         id: node.id,
         x: node.x,
         y: Number("y" in node ? node.y : 0),
@@ -8847,13 +9097,13 @@ export function Workbench() {
               id: element.id,
               node_i: element.node_i,
               node_j: element.node_j,
-              resultMagnitude: isFrame || isBeam || isSpring || isThermal ? lineResultFieldValue(element, activeLineResultField) : undefined,
-              resultValue: isFrame || isBeam || isSpring || isThermal ? scientific(lineResultFieldValue(element, activeLineResultField)) : undefined,
+              resultMagnitude: isFrameLike || isBeam || isSpring || isThermal ? lineResultFieldValue(element, activeLineResultField) : undefined,
+              resultValue: isFrameLike || isBeam || isSpring || isThermal ? scientific(lineResultFieldValue(element, activeLineResultField)) : undefined,
             }))
       }
       isPlane={isPlane}
       isTruss={isTruss}
-      enableElementResultsMode={isFrame || isBeam || isTorsion || isSpring || isThermal}
+      enableElementResultsMode={isFrameLike || isBeam || isTorsion || isSpring || isThermal}
       selectedNode={selectedNode}
       selectedElement={selectedElement}
       nodeIssueCounts={Object.fromEntries(
@@ -8874,8 +9124,8 @@ export function Workbench() {
       onSelectElement={(index) => {
         setSelectedElement(index);
         setSelectedNode(null);
-        if (isTruss || isFrame || isBeam || isTorsion || isSpring || isThermal) setMemberDraftNodes([]);
-        if (isFrame || isBeam || isTorsion || isSpring || isThermal) setFocusedFrameElement(index);
+        if (isTruss || isFrameLike || isBeam || isTorsion || isSpring || isThermal) setMemberDraftNodes([]);
+        if (isFrameLike || isBeam || isTorsion || isSpring || isThermal) setFocusedFrameElement(index);
       }}
     />
   );
@@ -9818,7 +10068,7 @@ export function Workbench() {
                     </button>
                   </>
                 ) : null}
-                {isFrame && frameResult ? (
+                {isFrameLike && activeFrameLikeResult ? (
                   <>
                     <button
                       className={`ghost-button ghost-button--compact${frameResultField === "axial_stress" ? " ghost-button--active" : ""}`}
@@ -9942,8 +10192,8 @@ export function Workbench() {
             sidebarSection={sidebarSection}
             title={t.sections.model}
             axialTitle={t.kinds.axial_bar_1d}
-            trussTitle={t.kinds[isSpring2d ? "spring_2d" : isSpring1d ? "spring_1d" : isThermalBar ? "thermal_bar_1d" : isThermalBeam ? "thermal_beam_1d" : isThermalTruss2d ? "thermal_truss_2d" : studyKind === "beam_1d" ? "beam_1d" : isTorsion ? "torsion_1d" : isFrame ? "frame_2d" : "truss_2d"]}
-            trussLegend={(isFrame && frameResult) || (isBeam && activeBeamLikeResult) || (isTorsion && torsionResult) || (isThermalBar && thermalBarResult) || (isThermalTruss2d && thermalTrussResult) || (isThermalTruss3d && thermalTruss3dResult) || (isSpring1d && springResult) || (isSpring2d && spring2dResult) || (isSpring3d && spring3dResult) ? frameLegendText : undefined}
+            trussTitle={t.kinds[isSpring2d ? "spring_2d" : isSpring1d ? "spring_1d" : isThermalBar ? "thermal_bar_1d" : isThermalBeam ? "thermal_beam_1d" : isThermalFrame ? "thermal_frame_2d" : isThermalTruss2d ? "thermal_truss_2d" : studyKind === "beam_1d" ? "beam_1d" : isTorsion ? "torsion_1d" : isFrame ? "frame_2d" : "truss_2d"]}
+            trussLegend={(isFrameLike && activeFrameLikeResult) || (isBeam && activeBeamLikeResult) || (isTorsion && torsionResult) || (isThermalBar && thermalBarResult) || (isThermalTruss2d && thermalTrussResult) || (isThermalTruss3d && thermalTruss3dResult) || (isSpring1d && springResult) || (isSpring2d && spring2dResult) || (isSpring3d && spring3dResult) ? frameLegendText : undefined}
             truss3dTitle={t.kinds[isSpring3d ? "spring_3d" : isThermalTruss3d ? "thermal_truss_3d" : "truss_3d"]}
             planeTitle={t.kinds[studyKind === "plane_quad_2d" ? "plane_quad_2d" : "plane_triangle_2d"]}
             planeLegend={planeLegendText}
@@ -9953,9 +10203,9 @@ export function Workbench() {
             displayTrussNodes={displayTrussNodes}
             displayTrussElements={displayTrussElements}
             trussElementColors={trussElementColors}
-            hiddenTrussMaterialIds={isTruss || isFrame || isBeam || isSpring || isThermal ? hiddenMaterialIds : []}
+            hiddenTrussMaterialIds={isTruss || isFrameLike || isBeam || isSpring || isThermal ? hiddenMaterialIds : []}
             trussBounds={trussBounds}
-            trussResult={Boolean(trussResult || thermalTrussResult || frameResult || activeBeamLikeResult || torsionResult || thermalBarResult || thermalTruss3dResult || springResult || spring2dResult || spring3dResult)}
+            trussResult={Boolean(trussResult || thermalTrussResult || activeFrameLikeResult || activeBeamLikeResult || torsionResult || thermalBarResult || thermalTruss3dResult || springResult || spring2dResult || spring3dResult)}
             frameResultField={activeLineResultField}
             frameResultFieldMax={frameResultFieldMax}
             focusedFrameElement={focusedFrameElement}
@@ -9979,7 +10229,7 @@ export function Workbench() {
                 setMemberDraftNodes([]);
                 return;
               }
-              if (isFrame) {
+              if (isFrameLike) {
                 dragHistoryCapturedRef.current = false;
                 setDraggingNode(index);
                 toggleDraftNode(index);
@@ -10151,9 +10401,9 @@ export function Workbench() {
           noNodeSelectedLabel={t.noNodeSelected}
           loadCaseLabel={t.loadCase}
           diagnosticsLabel={t.diagnostics}
-          selectedNodeId={isPlane ? selectedPlaneNodeData?.id ?? null : isBeam ? selectedBeamNodeData?.id ?? null : isTorsion ? selectedTorsionNodeData?.id ?? null : isFrame ? selectedFrameNodeData?.id ?? null : isThermalBar ? selectedThermalNodeData?.id ?? null : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.id ?? null : selectedNodeData?.id ?? null}
-          selectedNodeX={isPlane ? selectedPlaneNodeData?.x : isBeam ? selectedBeamNodeData?.x : isTorsion ? selectedTorsionNodeData?.x : isFrame ? selectedFrameNodeData?.x : isThermalBar ? selectedThermalNodeData?.x : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.x : selectedNodeData?.x}
-          selectedNodeY={isPlane ? selectedPlaneNodeData?.y : isBeam || isTorsion || isThermalBar || isSpring1d ? 0 : isFrame ? selectedFrameNodeData?.y : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.y : selectedNodeData?.y}
+          selectedNodeId={isPlane ? selectedPlaneNodeData?.id ?? null : isBeam ? selectedBeamNodeData?.id ?? null : isTorsion ? selectedTorsionNodeData?.id ?? null : isFrameLike ? selectedFrameNodeData?.id ?? null : isThermalBar ? selectedThermalNodeData?.id ?? null : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.id ?? null : selectedNodeData?.id ?? null}
+          selectedNodeX={isPlane ? selectedPlaneNodeData?.x : isBeam ? selectedBeamNodeData?.x : isTorsion ? selectedTorsionNodeData?.x : isFrameLike ? selectedFrameNodeData?.x : isThermalBar ? selectedThermalNodeData?.x : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.x : selectedNodeData?.x}
+          selectedNodeY={isPlane ? selectedPlaneNodeData?.y : isBeam || isTorsion || isThermalBar || isSpring1d ? 0 : isFrameLike ? selectedFrameNodeData?.y : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.y : selectedNodeData?.y}
           selectedNodeLoadY={
             isPlane
               ? selectedPlaneNodeData?.load_y
@@ -10161,7 +10411,7 @@ export function Workbench() {
                 ? selectedBeamNodeData?.load_y
                 : isTorsion
                   ? selectedTorsionNodeData?.moment_z
-                : isFrame
+                : isFrameLike
                   ? selectedFrameNodeData?.load_y
                   : isThermalBar
                     ? selectedThermalNodeData?.load_x
@@ -10174,12 +10424,12 @@ export function Workbench() {
                         : selectedNodeData?.load_y
           }
           selectedNodeIssueCount={isPlane ? null : selectedNodeIssues.length > 0 ? selectedNodeIssues.length : null}
-          elementTitle={isAxial ? t.axialElements : isBeam || isTorsion || isSpring || isThermalBar ? t.frameElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : isFrame ? t.frameElements : t.planeElements}
+          elementTitle={isAxial ? t.axialElements : isBeam || isTorsion || isSpring || isThermalBar ? t.frameElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : isFrameLike ? t.frameElements : t.planeElements}
           spanLabel={t.span}
-          stressLabel={isPlane ? `${t.maxStress} / ${t.principalStress1}` : isFrame ? t.combinedStress : isBeam ? t.bendingStress : isTorsion ? t.torsionStress : isSpring || isThermalBar ? t.axialForce : t.stress}
-          axialForceLabel={isPlane ? t.maxInPlaneShear : isFrame || isBeam ? t.maxMoment : isTorsion ? t.maxTorque : isSpring || isThermalBar ? t.axialForce : t.axialForce}
-          isFrame={isFrame || isBeam || isTorsion}
-          elements={(isAxial ? axialElements : isSpring3d || isThermalTruss3d ? displayTruss3dElements : isTruss || isSpring || isThermal ? displayTrussElements : isTruss3d ? displayTruss3dElements : isFrame || isBeam ? displayTrussElements : planeElements) as Array<{
+          stressLabel={isPlane ? `${t.maxStress} / ${t.principalStress1}` : isFrameLike ? t.combinedStress : isBeam ? t.bendingStress : isTorsion ? t.torsionStress : isSpring || isThermalBar ? t.axialForce : t.stress}
+          axialForceLabel={isPlane ? t.maxInPlaneShear : isFrameLike || isBeam ? t.maxMoment : isTorsion ? t.maxTorque : isSpring || isThermalBar ? t.axialForce : t.axialForce}
+          isFrame={isFrameLike || isBeam || isTorsion}
+          elements={(isAxial ? axialElements : isSpring3d || isThermalTruss3d ? displayTruss3dElements : isTruss || isSpring || isThermal ? displayTrussElements : isTruss3d ? displayTruss3dElements : isFrameLike || isBeam ? displayTrussElements : planeElements) as Array<{
             index: number;
             x1?: number;
             x2?: number;
@@ -10209,8 +10459,8 @@ export function Workbench() {
         selectedTruss3dElementData={selectedTruss3dElementData ? { ...selectedTruss3dElementData } : null}
         selectedPlaneNodeData={selectedPlaneNodeData ? { ...selectedPlaneNodeData } : null}
         selectedPlaneElementData={selectedPlaneElementData ? { ...selectedPlaneElementData } : null}
-        selectedFrameNodeData={(isFrame ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : isTorsion ? selectedTorsionNodeData : isThermalBar ? selectedThermalNodeData : null) ? { ...(isFrame ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : isTorsion ? selectedTorsionNodeData : selectedThermalNodeData)! } : null}
-        selectedFrameElementData={(isFrame ? selectedFrameElementData : isBeam ? selectedBeamElementData : isTorsion ? selectedTorsionElementData : isThermalBar ? selectedThermalElementData : isSpring ? selectedSpringElementData : null) ? { ...(isFrame ? selectedFrameElementData : isBeam ? selectedBeamElementData : isTorsion ? selectedTorsionElementData : isThermalBar ? selectedThermalElementData : selectedSpringElementData)! } : null}
+        selectedFrameNodeData={(isFrameLike ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : isTorsion ? selectedTorsionNodeData : isThermalBar ? selectedThermalNodeData : null) ? { ...(isFrameLike ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : isTorsion ? selectedTorsionNodeData : selectedThermalNodeData)! } : null}
+        selectedFrameElementData={(isFrameLike ? selectedFrameElementData : isBeam ? selectedBeamElementData : isTorsion ? selectedTorsionElementData : isThermalBar ? selectedThermalElementData : isSpring ? selectedSpringElementData : null) ? { ...(isFrameLike ? selectedFrameElementData : isBeam ? selectedBeamElementData : isTorsion ? selectedTorsionElementData : isThermalBar ? selectedThermalElementData : selectedSpringElementData)! } : null}
         trussElementArea={selectedElementData ? (isThermalTruss2d ? thermalTrussModel.elements[selectedElementData.index]?.area : trussModel.elements[selectedElementData.index]?.area) ?? 0 : 0}
         trussElementModulusGpa={selectedElementData ? round((((isThermalTruss2d ? thermalTrussModel.elements[selectedElementData.index]?.youngs_modulus : trussModel.elements[selectedElementData.index]?.youngs_modulus) ?? 0) / 1.0e9)) : 0}
         trussElementMaterialId={selectedElementData ? (isThermalTruss2d ? thermalTrussModel.elements[selectedElementData.index]?.material_id : trussModel.elements[selectedElementData.index]?.material_id) ?? materialOptions[0]?.id ?? "" : ""}
@@ -10221,7 +10471,7 @@ export function Workbench() {
         planeElementModulusGpa={selectedPlaneElementData ? round((planeModel.elements[selectedPlaneElementData.index]?.youngs_modulus ?? 0) / 1.0e9) : 0}
         planeElementPoissonRatio={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.poisson_ratio ?? 0.33 : 0.33}
         planeElementMaterialId={selectedPlaneElementData ? planeModel.elements[selectedPlaneElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : ""}
-        frameElementMaterialId={isFrame ? selectedFrameElementData ? frameModel.elements[selectedFrameElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : "" : isBeam ? selectedBeamElementData ? activeBeamLikeModel.elements[selectedBeamElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : "" : ""}
+        frameElementMaterialId={isFrameLike ? selectedFrameElementData ? activeFrameLikeModel.elements[selectedFrameElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : "" : isBeam ? selectedBeamElementData ? activeBeamLikeModel.elements[selectedBeamElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : "" : ""}
         materialOptions={materialOptions}
         materialLabel={t.material}
         onUpdateSelectedNode={updateSelectedNode}
@@ -10249,17 +10499,17 @@ export function Workbench() {
         onRedo={handleRedo}
         job={job}
         nodeCount={nodeCount}
-        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isThermalTruss2d ? scientific(thermalTrussResult?.max_displacement) : studyKind === "thermal_truss_3d" ? scientific(thermalTruss3dResult?.max_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isSpring3d ? scientific(spring3dResult?.max_displacement) : studyKind === "truss_3d" ? scientific(truss3dResult?.max_displacement) : isThermalBar ? scientific(thermalBarResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(activeBeamLikeResult?.max_displacement) : isTorsion ? scientific(torsionResult?.max_rotation) : isFrame ? scientific(frameResult?.max_displacement) : scientific(planeResult?.max_displacement)}
-        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isThermalTruss2d ? thermalTrussResult?.max_stress : studyKind === "thermal_truss_3d" ? thermalTruss3dResult?.max_stress : isTruss ? trussResult?.max_stress : isSpring3d ? spring3dResult?.max_force : studyKind === "truss_3d" ? truss3dResult?.max_stress : isThermalBar ? thermalBarResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? activeBeamLikeResult?.max_stress : isTorsion ? torsionResult?.max_stress : isFrame ? frameResult?.max_stress : planeResult?.max_stress)}
-        frameMaxAxialForceValue={isFrame || isSpring || isThermal ? scientific(frameMaxAxialForce) : undefined}
-        frameMaxShearForceValue={isFrame || isBeam ? scientific(frameMaxShearForce) : undefined}
-        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isThermalBar ? scientific(thermalBarResult?.max_axial_force) : isThermalTruss2d ? scientific(thermalTrussResult?.max_axial_force) : isThermalTruss3d ? scientific(thermalTruss3dResult?.max_axial_force) : isSpring ? scientific(activeSpringResult?.max_force) : isTorsion ? scientific(torsionResult?.max_torque) : isFrame ? scientific(frameResult?.max_moment) : isBeam ? scientific(activeBeamLikeResult?.max_moment) : "--"}
-        frameMaxRotationValue={isFrame ? scientific(frameResult?.max_rotation) : isBeam ? scientific(activeBeamLikeResult?.max_rotation) : isTorsion ? scientific(torsionResult?.max_rotation) : undefined}
+        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isThermalTruss2d ? scientific(thermalTrussResult?.max_displacement) : studyKind === "thermal_truss_3d" ? scientific(thermalTruss3dResult?.max_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isSpring3d ? scientific(spring3dResult?.max_displacement) : studyKind === "truss_3d" ? scientific(truss3dResult?.max_displacement) : isThermalBar ? scientific(thermalBarResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(activeBeamLikeResult?.max_displacement) : isTorsion ? scientific(torsionResult?.max_rotation) : isFrameLike ? scientific(activeFrameLikeResult?.max_displacement) : scientific(planeResult?.max_displacement)}
+        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isThermalTruss2d ? thermalTrussResult?.max_stress : studyKind === "thermal_truss_3d" ? thermalTruss3dResult?.max_stress : isTruss ? trussResult?.max_stress : isSpring3d ? spring3dResult?.max_force : studyKind === "truss_3d" ? truss3dResult?.max_stress : isThermalBar ? thermalBarResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? activeBeamLikeResult?.max_stress : isTorsion ? torsionResult?.max_stress : isFrameLike ? activeFrameLikeResult?.max_stress : planeResult?.max_stress)}
+        frameMaxAxialForceValue={isFrameLike || isSpring || isThermal ? scientific(frameMaxAxialForce) : undefined}
+        frameMaxShearForceValue={isFrameLike || isBeam ? scientific(frameMaxShearForce) : undefined}
+        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isThermalBar ? scientific(thermalBarResult?.max_axial_force) : isThermalTruss2d ? scientific(thermalTrussResult?.max_axial_force) : isThermalTruss3d ? scientific(thermalTruss3dResult?.max_axial_force) : isSpring ? scientific(activeSpringResult?.max_force) : isTorsion ? scientific(torsionResult?.max_torque) : isFrameLike ? scientific(activeFrameLikeResult?.max_moment) : isBeam ? scientific(activeBeamLikeResult?.max_moment) : "--"}
+        frameMaxRotationValue={isFrameLike ? scientific(activeFrameLikeResult?.max_rotation) : isBeam ? scientific(activeBeamLikeResult?.max_rotation) : isTorsion ? scientific(torsionResult?.max_rotation) : undefined}
         planeHotspotFieldLabel={isPlane ? planeResultFieldLabel : undefined}
         planeHotspotElements={isPlane ? planeHotspotElements : []}
-        frameHotspotFieldLabel={isFrame || isBeam || isSpring || isThermal || isTorsion ? frameResultFieldLabel : undefined}
-        frameHotspotElements={isFrame || isBeam || isTorsion || isSpring || isThermal ? frameHotspotElements : []}
-        frameForceRows={isFrame || isBeam || isTorsion || isSpring || isThermal ? frameForceRows : []}
+        frameHotspotFieldLabel={isFrameLike || isBeam || isSpring || isThermal || isTorsion ? frameResultFieldLabel : undefined}
+        frameHotspotElements={isFrameLike || isBeam || isTorsion || isSpring || isThermal ? frameHotspotElements : []}
+        frameForceRows={isFrameLike || isBeam || isTorsion || isSpring || isThermal ? frameForceRows : []}
         planeHotspotLimit={planeHotspotLimit}
         createdAtValue={formatTime(job?.created_at, language)}
         updatedAtValue={formatTime(job?.updated_at, language)}

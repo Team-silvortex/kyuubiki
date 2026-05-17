@@ -28,6 +28,7 @@ export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
     case "spring_3d":
       return "axialAndSprings";
     case "thermal_beam_1d":
+    case "thermal_frame_2d":
     case "beam_1d":
     case "torsion_1d":
     case "frame_2d":
@@ -223,6 +224,7 @@ type StudyKind =
   | "axial_bar_1d"
   | "thermal_bar_1d"
   | "thermal_beam_1d"
+  | "thermal_frame_2d"
   | "thermal_truss_2d"
   | "thermal_truss_3d"
   | "spring_1d"
@@ -249,6 +251,7 @@ export function buildStudyKindOptionGroups({
     axial_bar_1d: string;
     thermal_bar_1d: string;
     thermal_beam_1d: string;
+    thermal_frame_2d: string;
     thermal_truss_2d: string;
     thermal_truss_3d: string;
     spring_1d: string;
@@ -285,6 +288,7 @@ export function buildStudyKindOptionGroups({
       options: [
         { value: "beam_1d" as const, label: kinds.beam_1d },
         { value: "thermal_beam_1d" as const, label: kinds.thermal_beam_1d },
+        { value: "thermal_frame_2d" as const, label: kinds.thermal_frame_2d },
         { value: "torsion_1d" as const, label: kinds.torsion_1d },
         { value: "frame_2d" as const, label: kinds.frame_2d },
       ],
@@ -312,6 +316,7 @@ export function buildStudyKindOptions(kinds: {
   axial_bar_1d: string;
   thermal_bar_1d: string;
   thermal_beam_1d: string;
+  thermal_frame_2d: string;
   thermal_truss_2d: string;
   thermal_truss_3d: string;
   spring_1d: string;
@@ -334,6 +339,7 @@ export function buildStudyKindOptions(kinds: {
     { value: "spring_3d" as const, label: kinds.spring_3d },
     { value: "beam_1d" as const, label: kinds.beam_1d },
     { value: "thermal_beam_1d" as const, label: kinds.thermal_beam_1d },
+    { value: "thermal_frame_2d" as const, label: kinds.thermal_frame_2d },
     { value: "torsion_1d" as const, label: kinds.torsion_1d },
     { value: "truss_2d" as const, label: kinds.truss_2d },
     { value: "truss_3d" as const, label: kinds.truss_3d },
@@ -393,7 +399,7 @@ export function buildStudyControlsRows({
     frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;
@@ -455,6 +461,15 @@ export function buildStudyControlsRows({
   }
 
   if (studyKind === "frame_2d") {
+    return [
+      { label: labels.nodes, value: trussNodeCount },
+      { label: labels.frameElements, value: trussElementCount },
+      { label: labels.material, value: materialLabel },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "thermal_frame_2d") {
     return [
       { label: labels.nodes, value: trussNodeCount },
       { label: labels.frameElements, value: trussElementCount },
