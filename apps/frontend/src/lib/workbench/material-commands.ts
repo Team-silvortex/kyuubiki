@@ -4,11 +4,17 @@ import type {
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  ThermalPlaneQuad2dJobInput,
+  ThermalPlaneTriangle2dJobInput,
   Truss2dJobInput,
   Truss3dJobInput,
 } from "@/lib/api";
 
-type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+type PlaneStudyJobInput =
+  | PlaneTriangle2dJobInput
+  | PlaneQuad2dJobInput
+  | ThermalPlaneTriangle2dJobInput
+  | ThermalPlaneQuad2dJobInput;
 
 export function nextMaterialId(materials: ModelMaterial[] | undefined) {
   return `mat-${(materials?.length ?? 0) + 1}`;

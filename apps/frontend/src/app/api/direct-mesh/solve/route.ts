@@ -12,6 +12,8 @@ import {
   resolveThermalBar1dJobInput,
   resolveThermalBeam1dJobInput,
   resolveThermalFrame2dJobInput,
+  resolveThermalPlaneQuad2dJobInput,
+  resolveThermalPlaneTriangle2dJobInput,
   resolveThermalTruss2dJobInput,
   resolveThermalTruss3dJobInput,
   resolveTorsion1dJobInput,
@@ -28,6 +30,8 @@ import {
   type ThermalBar1dJobInput,
   type ThermalBeam1dJobInput,
   type ThermalFrame2dJobInput,
+  type ThermalPlaneQuad2dJobInput,
+  type ThermalPlaneTriangle2dJobInput,
   type ThermalTruss2dJobInput,
   type ThermalTruss3dJobInput,
   type Torsion1dJobInput,
@@ -58,7 +62,9 @@ type DirectMeshSolveBody = {
     | "truss_2d"
     | "truss_3d"
     | "plane_triangle_2d"
+    | "thermal_plane_triangle_2d"
     | "plane_quad_2d"
+    | "thermal_plane_quad_2d"
     | "frame_2d";
   input: Record<string, unknown>;
 };
@@ -93,8 +99,12 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
       return "solve_truss_3d" as const;
     case "plane_triangle_2d":
       return "solve_plane_triangle_2d" as const;
+    case "thermal_plane_triangle_2d":
+      return "solve_thermal_plane_triangle_2d" as const;
     case "plane_quad_2d":
       return "solve_plane_quad_2d" as const;
+    case "thermal_plane_quad_2d":
+      return "solve_thermal_plane_quad_2d" as const;
     case "frame_2d":
       return "solve_frame_2d" as const;
   }
@@ -133,8 +143,12 @@ function normalizeInputForStudyKind(
       return resolveTruss3dJobInput(input as Truss3dJobInput);
     case "plane_triangle_2d":
       return resolvePlaneTriangle2dJobInput(input as PlaneTriangle2dJobInput);
+    case "thermal_plane_triangle_2d":
+      return resolveThermalPlaneTriangle2dJobInput(input as ThermalPlaneTriangle2dJobInput);
     case "plane_quad_2d":
       return resolvePlaneQuad2dJobInput(input as PlaneQuad2dJobInput);
+    case "thermal_plane_quad_2d":
+      return resolveThermalPlaneQuad2dJobInput(input as ThermalPlaneQuad2dJobInput);
     case "frame_2d":
       return resolveFrame2dJobInput(input as Frame2dJobInput);
   }

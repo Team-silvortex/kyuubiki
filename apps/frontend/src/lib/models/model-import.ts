@@ -4,6 +4,8 @@ import type {
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
+  ThermalPlaneQuad2dJobInput,
+  ThermalPlaneTriangle2dJobInput,
   ThermalBeam1dJobInput,
   ThermalBar1dJobInput,
   ThermalFrame2dJobInput,
@@ -75,12 +77,28 @@ export type ImportedPlaneTriangle2dModel = {
   model: PlaneTriangle2dJobInput;
 };
 
+export type ImportedThermalPlaneTriangle2dModel = {
+  kind: "thermal_plane_triangle_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: ThermalPlaneTriangle2dJobInput;
+};
+
 export type ImportedPlaneQuad2dModel = {
   kind: "plane_quad_2d";
   name: string;
   material: string;
   youngsModulusGpa: number;
   model: PlaneQuad2dJobInput;
+};
+
+export type ImportedThermalPlaneQuad2dModel = {
+  kind: "thermal_plane_quad_2d";
+  name: string;
+  material: string;
+  youngsModulusGpa: number;
+  model: ThermalPlaneQuad2dJobInput;
 };
 
 export type ImportedTruss3dModel = {
@@ -150,7 +168,9 @@ export type ImportedModel =
   | ImportedSpring3dModel
   | ImportedTruss2dModel
   | ImportedPlaneTriangle2dModel
+  | ImportedThermalPlaneTriangle2dModel
   | ImportedPlaneQuad2dModel
+  | ImportedThermalPlaneQuad2dModel
   | ImportedTruss3dModel
   | ImportedThermalTruss3dModel
   | ImportedFrame2dModel
@@ -443,6 +463,17 @@ function parsePlaneNode(raw: unknown, index: number): PlaneTriangle2dJobInput["n
   };
 }
 
+function parseThermalPlaneNode(
+  raw: unknown,
+  index: number,
+): ThermalPlaneTriangle2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    ...parsePlaneNode(raw, index),
+    temperature_delta: numberOrZero(node.temperature_delta),
+  };
+}
+
 function parsePlaneElement(
   raw: unknown,
   index: number,
@@ -478,6 +509,34 @@ function parsePlaneQuadElement(
     youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`),
     poisson_ratio: requiredNumber(element.poisson_ratio, `elements[${index}].poisson_ratio`),
     material_id: optionalString(element.material_id),
+  };
+}
+
+function parseThermalPlaneElement(
+  raw: unknown,
+  index: number,
+): ThermalPlaneTriangle2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    ...parsePlaneElement(raw, index),
+    thermal_expansion: requiredNumber(
+      element.thermal_expansion,
+      `elements[${index}].thermal_expansion`,
+    ),
+  };
+}
+
+function parseThermalPlaneQuadElement(
+  raw: unknown,
+  index: number,
+): ThermalPlaneQuad2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    ...parsePlaneQuadElement(raw, index),
+    thermal_expansion: requiredNumber(
+      element.thermal_expansion,
+      `elements[${index}].thermal_expansion`,
+    ),
   };
 }
 
@@ -543,6 +602,74 @@ function parsePlaneQuad2dV1(raw: Record<string, unknown>): ImportedPlaneQuad2dMo
   return {
     kind: "plane_quad_2d",
     name: typeof raw.name === "string" ? raw.name : "imported-plane-quad",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
+function parseThermalPlaneTriangle2dV1(raw: Record<string, unknown>): ImportedThermalPlaneTriangle2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const materials = parseMaterials(
+    raw,
+    material,
+    youngsModulusGpa,
+    Array.isArray(raw.elements) && raw.elements.length > 0
+      ? numberOrZero(((raw.elements[0] ?? {}) as Record<string, unknown>).poisson_ratio)
+      : 0.33,
+  );
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalPlaneNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseThermalPlaneElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 3) {
+    throw new Error("nodes must contain at least three entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_plane_triangle_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-plane",
+    material,
+    youngsModulusGpa,
+    model: { nodes, elements, materials },
+  };
+}
+
+function parseThermalPlaneQuad2dV1(raw: Record<string, unknown>): ImportedThermalPlaneQuad2dModel {
+  const material = normalizeMaterial(raw.material);
+  const youngsModulusGpa = requiredNumber(raw.youngs_modulus_gpa, "youngs_modulus_gpa");
+  const poissonRatio = requiredNumber(raw.poisson_ratio ?? 0.33, "poisson_ratio");
+  const materials = parseMaterials(raw, material, youngsModulusGpa, poissonRatio);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseThermalPlaneNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseThermalPlaneQuadElement).map((element) => ({
+        ...element,
+        material_id: element.material_id ?? defaultMaterialId,
+      }))
+    : [];
+
+  if (nodes.length < 4) {
+    throw new Error("nodes must contain at least four entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "thermal_plane_quad_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-thermal-plane-quad",
     material,
     youngsModulusGpa,
     model: { nodes, elements, materials },
@@ -1086,8 +1213,16 @@ export function parsePlaygroundModel(text: string): ImportedModel {
     return parsePlaneTriangle2dV1(raw);
   }
 
+  if (kind === "thermal_plane_triangle_2d") {
+    return parseThermalPlaneTriangle2dV1(raw);
+  }
+
   if (kind === "plane_quad_2d") {
     return parsePlaneQuad2dV1(raw);
+  }
+
+  if (kind === "thermal_plane_quad_2d") {
+    return parseThermalPlaneQuad2dV1(raw);
   }
 
   if (kind === "truss_3d") {

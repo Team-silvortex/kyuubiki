@@ -12,15 +12,17 @@ use kyuubiki_protocol::{
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
     SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
     SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
+    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest,
+    SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
     solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
     solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
-    solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
-    solve_truss_3d,
+    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
+    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
 
 fn main() {
@@ -1095,6 +1097,69 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                 }
             }
         }
+        RpcMethod::SolveThermalPlaneTriangle2d => {
+            let params = match serde_json::from_value::<SolveThermalPlaneTriangle2dRequest>(
+                request.params.clone(),
+            ) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_thermal_plane_triangle_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames = build_progress_frames(
+                        "2d thermal plane triangle",
+                        &request.id,
+                        params.nodes.len(),
+                    );
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("thermal plane result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
         RpcMethod::SolvePlaneQuad2d => {
             let params =
                 match serde_json::from_value::<SolvePlaneQuad2dRequest>(request.params.clone()) {
@@ -1139,6 +1204,66 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                             request.id,
                             serde_json::to_value(result)
                                 .expect("plane quad result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveThermalPlaneQuad2d => {
+            let params = match serde_json::from_value::<SolveThermalPlaneQuad2dRequest>(
+                request.params.clone(),
+            ) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_thermal_plane_quad_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d thermal plane quad", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("thermal plane quad result should serialize"),
                         ),
                     )
                 }
@@ -2050,10 +2175,12 @@ mod tests {
         SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+        SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
         SolveThermalTruss2dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
         Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
         ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
+        ThermalPlaneNodeInput, ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
         ThermalTruss2dElementInput,
         ThermalTruss2dNodeInput, Torsion1dElementInput, Torsion1dNodeInput,
         Truss3dElementInput, Truss3dNodeInput,
@@ -2739,6 +2866,153 @@ mod tests {
                 .expect("plane quad result");
         assert_eq!(result.nodes.len(), 4);
         assert_eq!(result.elements.len(), 1);
+    }
+
+    #[test]
+    fn handles_thermal_plane_triangle_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-plane-triangle".to_string(),
+            method: RpcMethod::SolveThermalPlaneTriangle2d,
+            params: serde_json::to_value(SolveThermalPlaneTriangle2dRequest {
+                nodes: vec![
+                    ThermalPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 40.0,
+                    },
+                ],
+                elements: vec![ThermalPlaneTriangleElementInput {
+                    id: "tp0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                    thermal_expansion: 12.0e-6,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveThermalPlaneTriangle2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("thermal plane triangle result");
+        assert_eq!(result.nodes.len(), 3);
+        assert_eq!(result.elements.len(), 1);
+        assert_eq!(result.max_temperature_delta, 40.0);
+    }
+
+    #[test]
+    fn handles_thermal_plane_quad_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-plane-quad".to_string(),
+            method: RpcMethod::SolveThermalPlaneQuad2d,
+            params: serde_json::to_value(SolveThermalPlaneQuad2dRequest {
+                nodes: vec![
+                    ThermalPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 30.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 30.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 30.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n3".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 30.0,
+                    },
+                ],
+                elements: vec![ThermalPlaneQuadElementInput {
+                    id: "tq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    node_l: 3,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                    thermal_expansion: 11.0e-6,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveThermalPlaneQuad2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("thermal plane quad result");
+        assert_eq!(result.nodes.len(), 4);
+        assert_eq!(result.elements.len(), 1);
+        assert_eq!(result.max_temperature_delta, 30.0);
     }
 
     #[test]

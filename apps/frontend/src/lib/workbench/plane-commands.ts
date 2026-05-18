@@ -1,11 +1,20 @@
-import type { PlaneQuad2dJobInput, PlaneTriangle2dJobInput } from "@/lib/api";
+import type {
+  PlaneQuad2dJobInput,
+  PlaneTriangle2dJobInput,
+  ThermalPlaneQuad2dJobInput,
+  ThermalPlaneTriangle2dJobInput,
+} from "@/lib/api";
 
-type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+type PlaneStudyJobInput =
+  | PlaneTriangle2dJobInput
+  | PlaneQuad2dJobInput
+  | ThermalPlaneTriangle2dJobInput
+  | ThermalPlaneQuad2dJobInput;
 
 export function updatePlaneNode(
   model: PlaneStudyJobInput,
   selectedNode: number | null,
-  key: keyof PlaneTriangle2dJobInput["nodes"][number],
+  key: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta",
   value: number | boolean,
 ) {
   if (selectedNode === null) return model;
@@ -20,7 +29,7 @@ export function updatePlaneNode(
 export function updatePlaneElement(
   model: PlaneStudyJobInput,
   selectedElement: number | null,
-  key: "thickness" | "youngs_modulus" | "poisson_ratio",
+  key: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion",
   value: number,
 ) {
   if (selectedElement === null) return model;

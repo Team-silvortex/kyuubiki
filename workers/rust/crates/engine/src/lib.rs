@@ -2,14 +2,16 @@ use kyuubiki_protocol::{
     AnalysisResult, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
     SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalTruss2dRequest,
-    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d, solve_plane_triangle_2d,
     solve_spring_1d, solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d,
-    solve_thermal_frame_2d, solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d,
-    solve_truss_2d, solve_truss_3d,
+    solve_thermal_frame_2d, solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
+    solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
+    solve_truss_3d,
 };
 use serde_json::Value;
 
@@ -29,7 +31,9 @@ pub enum EngineSolveRequest {
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
+    ThermalPlaneTriangle2d(SolveThermalPlaneTriangle2dRequest),
     PlaneQuad2d(SolvePlaneQuad2dRequest),
+    ThermalPlaneQuad2d(SolveThermalPlaneQuad2dRequest),
     Frame2d(SolveFrame2dRequest),
 }
 
@@ -73,8 +77,14 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         EngineSolveRequest::PlaneTriangle2d(request) => {
             solve_plane_triangle_2d(&request).map(AnalysisResult::PlaneTriangle2d)
         }
+        EngineSolveRequest::ThermalPlaneTriangle2d(request) => {
+            solve_thermal_plane_triangle_2d(&request).map(AnalysisResult::ThermalPlaneTriangle2d)
+        }
         EngineSolveRequest::PlaneQuad2d(request) => {
             solve_plane_quad_2d(&request).map(AnalysisResult::PlaneQuad2d)
+        }
+        EngineSolveRequest::ThermalPlaneQuad2d(request) => {
+            solve_thermal_plane_quad_2d(&request).map(AnalysisResult::ThermalPlaneQuad2d)
         }
         EngineSolveRequest::Frame2d(request) => {
             solve_frame_2d(&request).map(AnalysisResult::Frame2d)
@@ -155,10 +165,22 @@ pub fn chunk_result(
         (AnalysisResult::PlaneTriangle2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::ThermalPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ThermalPlaneTriangle2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::PlaneQuad2d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }
         (AnalysisResult::PlaneQuad2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ThermalPlaneQuad2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ThermalPlaneQuad2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::Frame2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,

@@ -8,6 +8,8 @@ export type SampleEntry = {
     | "thermal_frame_2d"
     | "thermal_truss_2d"
     | "thermal_truss_3d"
+    | "thermal_plane_triangle_2d"
+    | "thermal_plane_quad_2d"
     | "spring_1d"
     | "spring_2d"
     | "spring_3d"
@@ -64,6 +66,20 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "thermal_truss_3d",
     href: "/models/thermal-truss-3d.json",
     summary: "Spatial truss sample with heated members for first-pass 3D thermal-force checks.",
+  },
+  {
+    id: "thermal-plane-triangle-2d",
+    name: "Thermal Plane Triangle 2D",
+    kind: "thermal_plane_triangle_2d",
+    href: "/models/thermal-plane-triangle-2d.json",
+    summary: "Restrained CST patch with uniform temperature rise for quick plane thermoelastic stress checks.",
+  },
+  {
+    id: "thermal-plane-quad-2d",
+    name: "Thermal Plane Quad 2D",
+    kind: "thermal_plane_quad_2d",
+    href: "/models/thermal-plane-quad-2d.json",
+    summary: "Restrained quad patch with uniform temperature rise for quick thermoelastic stress-field checks.",
   },
   {
     id: "cantilever-beam-1d",

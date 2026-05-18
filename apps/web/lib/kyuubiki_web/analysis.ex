@@ -139,12 +139,32 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec submit_thermal_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_thermal_plane_triangle_2d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_thermal_plane_triangle_2d(params),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      start_background_job(job.job_id, "solve_thermal_plane_triangle_2d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
   @spec submit_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_quad_2d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_plane_quad_2d(params),
          {:ok, job_context} <- derive_job_context(params),
          {:ok, job} <- create_job(job_context) do
       start_background_job(job.job_id, "solve_plane_quad_2d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
+  @spec submit_thermal_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_thermal_plane_quad_2d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_thermal_plane_quad_2d(params),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      start_background_job(job.job_id, "solve_thermal_plane_quad_2d", normalized)
       {:ok, serialize_payload(job)}
     end
   end
@@ -717,6 +737,18 @@ defmodule KyuubikiWeb.Analysis do
 
   defp normalize_plane_triangle_2d(_params), do: {:error, :invalid_plane_model}
 
+  defp normalize_thermal_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_thermal_plane_triangle_2d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_thermal_plane_triangle_2d(_params), do: {:error, :invalid_thermal_plane_model}
+
   defp normalize_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
        when is_list(nodes) and is_list(elements) do
     {:ok, %{"nodes" => nodes, "elements" => elements}}
@@ -728,6 +760,18 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp normalize_plane_quad_2d(_params), do: {:error, :invalid_plane_quad_model}
+
+  defp normalize_thermal_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_thermal_plane_quad_2d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_thermal_plane_quad_2d(_params), do: {:error, :invalid_thermal_plane_quad_model}
 
   defp normalize_beam_1d(%{"nodes" => nodes, "elements" => elements})
        when is_list(nodes) and is_list(elements) do

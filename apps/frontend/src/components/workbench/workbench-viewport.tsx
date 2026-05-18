@@ -3,9 +3,23 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
-type PlaneResultField = "von_mises" | "principal_stress_1" | "max_in_plane_shear";
-type LineResultField = "axial_stress" | "max_bending_stress" | "max_combined_stress" | "moment" | "shear_force";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type PlaneResultField =
+  | "von_mises"
+  | "principal_stress_1"
+  | "max_in_plane_shear"
+  | "average_temperature_delta"
+  | "thermal_strain"
+  | "mechanical_strain";
+type LineResultField =
+  | "axial_stress"
+  | "max_bending_stress"
+  | "max_combined_stress"
+  | "moment"
+  | "shear_force"
+  | "average_temperature_delta"
+  | "temperature_gradient_y"
+  | "thermal_curvature";
 
 type DisplayTrussNode = {
   index: number;
@@ -36,6 +50,9 @@ type DisplayTrussElement = {
   moment_i?: number;
   shear_force_j?: number;
   moment_j?: number;
+  average_temperature_delta?: number;
+  temperature_gradient_y?: number;
+  thermal_curvature?: number;
   material_id?: string;
 };
 
@@ -85,6 +102,10 @@ type PlaneElement = {
   von_mises?: number;
   principal_stress_1?: number;
   max_in_plane_shear?: number;
+  average_temperature_delta?: number;
+  thermal_strain?: number;
+  mechanical_strain_x?: number;
+  mechanical_strain_y?: number;
   material_id?: string;
 };
 
@@ -926,7 +947,13 @@ function WorkbenchViewportInner({
                               ? Math.abs(element.max_bending_stress ?? 0)
                               : frameResultField === "moment"
                                 ? Math.max(Math.abs(element.moment_i ?? 0), Math.abs(element.moment_j ?? 0))
-                                : Math.abs(element.max_combined_stress ?? 0),
+                                : frameResultField === "average_temperature_delta"
+                                  ? Math.abs(element.average_temperature_delta ?? 0)
+                                  : frameResultField === "temperature_gradient_y"
+                                    ? Math.abs(element.temperature_gradient_y ?? 0)
+                                    : frameResultField === "thermal_curvature"
+                                      ? Math.abs(element.thermal_curvature ?? 0)
+                                      : Math.abs(element.max_combined_stress ?? 0),
                           frameResultFieldMax,
                         )
                       : trussElementColors[element.index],
@@ -1231,7 +1258,13 @@ function WorkbenchViewportInner({
               style={{
                 fill: planeResult
                   ? planeStressFill(
-                      planeResultField === "principal_stress_1"
+                      planeResultField === "average_temperature_delta"
+                        ? Math.abs(element.average_temperature_delta ?? 0)
+                        : planeResultField === "thermal_strain"
+                          ? Math.abs(element.thermal_strain ?? 0)
+                          : planeResultField === "mechanical_strain"
+                            ? Math.max(Math.abs(element.mechanical_strain_x ?? 0), Math.abs(element.mechanical_strain_y ?? 0))
+                      : planeResultField === "principal_stress_1"
                         ? Math.abs(element.principal_stress_1 ?? 0)
                         : planeResultField === "max_in_plane_shear"
                           ? Math.abs(element.max_in_plane_shear ?? 0)

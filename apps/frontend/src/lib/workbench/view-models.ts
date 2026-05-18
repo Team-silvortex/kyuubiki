@@ -38,6 +38,8 @@ export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
     case "thermal_truss_2d":
     case "thermal_truss_3d":
       return "trusses";
+    case "thermal_plane_triangle_2d":
+    case "thermal_plane_quad_2d":
     case "plane_triangle_2d":
     case "plane_quad_2d":
     default:
@@ -227,6 +229,8 @@ type StudyKind =
   | "thermal_frame_2d"
   | "thermal_truss_2d"
   | "thermal_truss_3d"
+  | "thermal_plane_triangle_2d"
+  | "thermal_plane_quad_2d"
   | "spring_1d"
   | "spring_2d"
   | "spring_3d"
@@ -254,6 +258,8 @@ export function buildStudyKindOptionGroups({
     thermal_frame_2d: string;
     thermal_truss_2d: string;
     thermal_truss_3d: string;
+    thermal_plane_triangle_2d: string;
+    thermal_plane_quad_2d: string;
     spring_1d: string;
     spring_2d: string;
     spring_3d: string;
@@ -306,7 +312,9 @@ export function buildStudyKindOptionGroups({
       label: families.planes,
       options: [
         { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
+        { value: "thermal_plane_triangle_2d" as const, label: kinds.thermal_plane_triangle_2d },
         { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
+        { value: "thermal_plane_quad_2d" as const, label: kinds.thermal_plane_quad_2d },
       ],
     },
   ] satisfies StudyKindOptionGroup[];
@@ -319,6 +327,8 @@ export function buildStudyKindOptions(kinds: {
   thermal_frame_2d: string;
   thermal_truss_2d: string;
   thermal_truss_3d: string;
+  thermal_plane_triangle_2d: string;
+  thermal_plane_quad_2d: string;
   spring_1d: string;
   spring_2d: string;
   spring_3d: string;
@@ -345,7 +355,9 @@ export function buildStudyKindOptions(kinds: {
     { value: "truss_3d" as const, label: kinds.truss_3d },
     { value: "thermal_truss_3d" as const, label: kinds.thermal_truss_3d },
     { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
+    { value: "thermal_plane_triangle_2d" as const, label: kinds.thermal_plane_triangle_2d },
     { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
+    { value: "thermal_plane_quad_2d" as const, label: kinds.thermal_plane_quad_2d },
     { value: "frame_2d" as const, label: kinds.frame_2d },
   ];
 }
@@ -399,7 +411,25 @@ export function buildStudyControlsRows({
     frameElements: string;
     thickness: string;
   };
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+  studyKind:
+    | "axial_bar_1d"
+    | "thermal_bar_1d"
+    | "thermal_beam_1d"
+    | "thermal_frame_2d"
+    | "thermal_truss_2d"
+    | "thermal_truss_3d"
+    | "thermal_plane_triangle_2d"
+    | "thermal_plane_quad_2d"
+    | "spring_1d"
+    | "spring_2d"
+    | "spring_3d"
+    | "beam_1d"
+    | "torsion_1d"
+    | "truss_2d"
+    | "truss_3d"
+    | "plane_triangle_2d"
+    | "plane_quad_2d"
+    | "frame_2d";
   loadedModelName: string;
   materialLabel: string;
   trussNodeCount: number;

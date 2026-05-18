@@ -25,6 +25,8 @@ export type WorkbenchStudyKind =
   | "thermal_frame_2d"
   | "thermal_truss_2d"
   | "thermal_truss_3d"
+  | "thermal_plane_triangle_2d"
+  | "thermal_plane_quad_2d"
   | "spring_1d"
   | "spring_2d"
   | "spring_3d"

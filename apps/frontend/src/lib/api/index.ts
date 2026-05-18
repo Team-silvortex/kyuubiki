@@ -167,6 +167,10 @@ export type PlaneNodeInput = {
   load_y: number;
 };
 
+export type ThermalPlaneNodeInput = PlaneNodeInput & {
+  temperature_delta?: number;
+};
+
 export type PlaneTriangleElementInput = {
   id: string;
   node_i: number;
@@ -198,9 +202,33 @@ export type PlaneTriangle2dJobInput = {
   model_version_id?: string;
 };
 
+export type ThermalPlaneTriangleElementInput = PlaneTriangleElementInput & {
+  thermal_expansion: number;
+};
+
+export type ThermalPlaneTriangle2dJobInput = {
+  nodes: ThermalPlaneNodeInput[];
+  elements: ThermalPlaneTriangleElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type PlaneQuad2dJobInput = {
   nodes: PlaneNodeInput[];
   elements: PlaneQuadElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type ThermalPlaneQuadElementInput = PlaneQuadElementInput & {
+  thermal_expansion: number;
+};
+
+export type ThermalPlaneQuad2dJobInput = {
+  nodes: ThermalPlaneNodeInput[];
+  elements: ThermalPlaneQuadElementInput[];
   materials?: ModelMaterial[];
   project_id?: string;
   model_version_id?: string;
@@ -614,6 +642,45 @@ export type PlaneTriangle2dResult = {
   input: PlaneTriangle2dJobInput;
 };
 
+export type ThermalPlaneTriangle2dResult = {
+  max_displacement: number;
+  max_stress: number;
+  max_temperature_delta: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    ux: number;
+    uy: number;
+    displacement_magnitude: number;
+    temperature_delta: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    area: number;
+    average_temperature_delta: number;
+    thermal_strain: number;
+    mechanical_strain_x: number;
+    mechanical_strain_y: number;
+    total_strain_x: number;
+    total_strain_y: number;
+    gamma_xy: number;
+    stress_x: number;
+    stress_y: number;
+    tau_xy: number;
+    principal_stress_1: number;
+    principal_stress_2: number;
+    max_in_plane_shear: number;
+    von_mises: number;
+  }>;
+  input: ThermalPlaneTriangle2dJobInput;
+};
+
 export type PlaneQuad2dResult = {
   max_displacement: number;
   max_stress: number;
@@ -638,6 +705,46 @@ export type PlaneQuad2dResult = {
     von_mises: number;
   }>;
   input: PlaneQuad2dJobInput;
+};
+
+export type ThermalPlaneQuad2dResult = {
+  max_displacement: number;
+  max_stress: number;
+  max_temperature_delta: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    y: number;
+    ux: number;
+    uy: number;
+    displacement_magnitude: number;
+    temperature_delta: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    node_l: number;
+    area: number;
+    average_temperature_delta: number;
+    thermal_strain: number;
+    mechanical_strain_x: number;
+    mechanical_strain_y: number;
+    total_strain_x: number;
+    total_strain_y: number;
+    gamma_xy: number;
+    stress_x: number;
+    stress_y: number;
+    tau_xy: number;
+    principal_stress_1: number;
+    principal_stress_2: number;
+    max_in_plane_shear: number;
+    von_mises: number;
+  }>;
+  input: ThermalPlaneQuad2dJobInput;
 };
 
 export type Frame2dResult = {
@@ -1286,6 +1393,29 @@ export function resolvePlaneTriangle2dJobInput(
   };
 }
 
+export function resolveThermalPlaneTriangle2dJobInput(
+  input: ThermalPlaneTriangle2dJobInput,
+): Omit<ThermalPlaneTriangle2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes.map((node) => ({ ...node, temperature_delta: node.temperature_delta ?? 0 })),
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+        poisson_ratio:
+          material?.poisson_ratio === null || material?.poisson_ratio === undefined
+            ? element.poisson_ratio
+            : material.poisson_ratio,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolvePlaneQuad2dJobInput(
   input: PlaneQuad2dJobInput,
 ): Omit<PlaneQuad2dJobInput, "materials"> {
@@ -1293,6 +1423,29 @@ export function resolvePlaneQuad2dJobInput(
 
   return {
     nodes: input.nodes,
+    elements: input.elements.map(({ material_id, ...element }) => {
+      const material = material_id ? materials.get(material_id) : null;
+      return {
+        ...element,
+        youngs_modulus: material?.youngs_modulus ?? element.youngs_modulus,
+        poisson_ratio:
+          material?.poisson_ratio === null || material?.poisson_ratio === undefined
+            ? element.poisson_ratio
+            : material.poisson_ratio,
+      };
+    }),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveThermalPlaneQuad2dJobInput(
+  input: ThermalPlaneQuad2dJobInput,
+): Omit<ThermalPlaneQuad2dJobInput, "materials"> {
+  const materials = resolveMaterialLookup(input.materials);
+
+  return {
+    nodes: input.nodes.map((node) => ({ ...node, temperature_delta: node.temperature_delta ?? 0 })),
     elements: input.elements.map(({ material_id, ...element }) => {
       const material = material_id ? materials.get(material_id) : null;
       return {
@@ -1676,10 +1829,30 @@ export function createPlaneTriangle2dJob(
   });
 }
 
+export function createThermalPlaneTriangle2dJob(
+  input: ThermalPlaneTriangle2dJobInput,
+): Promise<JobEnvelope<ThermalPlaneTriangle2dResult>> {
+  return requestJson<JobEnvelope<ThermalPlaneTriangle2dResult>>("/api/v1/fem/thermal-plane-triangle-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createPlaneQuad2dJob(
   input: PlaneQuad2dJobInput,
 ): Promise<JobEnvelope<PlaneQuad2dResult>> {
   return requestJson<JobEnvelope<PlaneQuad2dResult>>("/api/v1/fem/plane-quad-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createThermalPlaneQuad2dJob(
+  input: ThermalPlaneQuad2dJobInput,
+): Promise<JobEnvelope<ThermalPlaneQuad2dResult>> {
+  return requestJson<JobEnvelope<ThermalPlaneQuad2dResult>>("/api/v1/fem/thermal-plane-quad-2d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -1832,7 +2005,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "thermal_plane_triangle_2d" | "plane_quad_2d" | "thermal_plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

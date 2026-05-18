@@ -1,0 +1,24 @@
+{
+  "kind": "thermal_plane_quad_2d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "Thermal Plane Quad 2D",
+  "material": "aluminum",
+  "youngs_modulus_gpa": 70,
+  "materials": [
+    {
+      "id": "mat-1",
+      "name": "Aluminum 70 GPa",
+      "youngs_modulus": 70000000000,
+      "poisson_ratio": 0.33
+    }
+  ],
+  "nodes": [
+    { "id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 },
+    { "id": "n1", "x": 1.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 },
+    { "id": "n2", "x": 1.0, "y": 1.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 },
+    { "id": "n3", "x": 0.0, "y": 1.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 }
+  ],
+  "elements": [
+    { "id": "tq0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.02, "youngs_modulus": 70000000000, "poisson_ratio": 0.33, "thermal_expansion": 0.000011, "material_id": "mat-1" }
+  ]
+}

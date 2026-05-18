@@ -18,7 +18,9 @@ type RpcMethod =
   | "solve_truss_2d"
   | "solve_truss_3d"
   | "solve_plane_triangle_2d"
+  | "solve_thermal_plane_triangle_2d"
   | "solve_plane_quad_2d"
+  | "solve_thermal_plane_quad_2d"
   | "solve_frame_2d";
 
 type RpcFrame =

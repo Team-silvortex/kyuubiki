@@ -12,6 +12,10 @@ import type {
   PlaneQuad2dResult,
   PlaneTriangle2dJobInput,
   PlaneTriangle2dResult,
+  ThermalPlaneQuad2dJobInput,
+  ThermalPlaneQuad2dResult,
+  ThermalPlaneTriangle2dJobInput,
+  ThermalPlaneTriangle2dResult,
   ThermalBeam1dJobInput,
   ThermalBeam1dResult,
   ThermalBar1dJobInput,
@@ -93,7 +97,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -226,7 +230,11 @@ export function serializeCurrentModel(
   trussModel: Truss2dJobInput,
   thermalTruss3dModel: ThermalTruss3dJobInput,
   truss3dModel: Truss3dJobInput,
-  planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput,
+  planeModel:
+    | PlaneTriangle2dJobInput
+    | PlaneQuad2dJobInput
+    | ThermalPlaneTriangle2dJobInput
+    | ThermalPlaneQuad2dJobInput,
   frameModel: Frame2dJobInput,
   beamModel: Beam1dJobInput,
   torsionModel: Torsion1dJobInput,
@@ -284,7 +292,10 @@ export function serializeCurrentModel(
             ? undefined
           : studyKind === "frame_2d"
             ? frameModel.materials
-          : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
+          : studyKind === "plane_triangle_2d" ||
+            studyKind === "plane_quad_2d" ||
+            studyKind === "thermal_plane_triangle_2d" ||
+            studyKind === "thermal_plane_quad_2d"
             ? planeModel.materials
             : undefined,
     axial: studyKind === "axial_bar_1d" ? toAxialInput(axialForm) : undefined,
@@ -292,7 +303,13 @@ export function serializeCurrentModel(
     thermalTruss: studyKind === "thermal_truss_2d" ? thermalTrussModel : undefined,
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
     thermalTruss3d: studyKind === "thermal_truss_3d" ? thermalTruss3dModel : undefined,
-    plane: studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" ? planeModel : undefined,
+    plane:
+      studyKind === "plane_triangle_2d" ||
+      studyKind === "plane_quad_2d" ||
+      studyKind === "thermal_plane_triangle_2d" ||
+      studyKind === "thermal_plane_quad_2d"
+        ? planeModel
+        : undefined,
     frame: studyKind === "frame_2d" ? frameModel : undefined,
     thermalFrame: studyKind === "thermal_frame_2d" ? thermalFrameModel : undefined,
     beam: studyKind === "beam_1d" ? beamModel : undefined,
@@ -464,7 +481,7 @@ function isTorsion1dResult(value: unknown): value is Torsion1dResult {
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -891,7 +908,7 @@ export function serializeResultCsv(
     return lines.join("\n");
   }
 
-  const plane = result as PlaneTriangle2dResult | PlaneQuad2dResult;
+  const plane = result as PlaneTriangle2dResult | PlaneQuad2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult;
   lines.push("nodes");
   lines.push(toCsvRow(["index", "id", "x", "y", "ux", "uy", "displacement_magnitude"]));
   plane.nodes.forEach((node) =>
@@ -907,8 +924,8 @@ export function serializeResultCsv(
       "node_j",
       "node_k",
       "area",
-      "strain_x",
-      "strain_y",
+      "total_strain_x",
+      "total_strain_y",
       "gamma_xy",
       "stress_x",
       "stress_y",
@@ -928,8 +945,8 @@ export function serializeResultCsv(
         element.node_j,
         element.node_k,
         element.area,
-        element.strain_x,
-        element.strain_y,
+        "strain_x" in element ? element.strain_x : element.total_strain_x,
+        "strain_y" in element ? element.strain_y : element.total_strain_y,
         element.gamma_xy,
         element.stress_x,
         element.stress_y,
