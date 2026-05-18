@@ -519,6 +519,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   defp preferred_tags("solve_bar_1d"), do: ["bar"]
   defp preferred_tags("solve_thermal_bar_1d"), do: ["bar", "thermal", "line"]
+  defp preferred_tags("solve_heat_bar_1d"), do: ["heat", "bar", "line"]
   defp preferred_tags("solve_thermal_truss_2d"), do: ["truss", "thermal", "plane"]
   defp preferred_tags("solve_thermal_truss_3d"), do: ["truss", "thermal", "space"]
   defp preferred_tags("solve_spring_1d"), do: ["spring", "line", "support"]

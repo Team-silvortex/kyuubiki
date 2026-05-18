@@ -1,9 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { StudyKindOptionGroup } from "@/lib/workbench/view-models";
+import { useEffect, useMemo, useState } from "react";
+import type { StudyDomainOption, StudyKindOptionGroup } from "@/lib/workbench/view-models";
 
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type StudyPanelTab = "summary" | "controls";
 
 type StudySidebarRow = {
@@ -20,6 +21,9 @@ type WorkbenchStudySidebarProps = {
   loadedModelName: string;
   studyTypeLabel: string;
   studyKind: StudyKind;
+  studyDomainLabel: string;
+  studyDomainOptions: StudyDomainOption[];
+  noDomainStudiesLabel: string;
   studyKindOptionGroups: StudyKindOptionGroup[];
   onStudyKindChange: (kind: StudyKind) => void;
   summaryRows: StudySidebarRow[];
@@ -43,6 +47,9 @@ export function WorkbenchStudySidebar({
   loadedModelName,
   studyTypeLabel,
   studyKind,
+  studyDomainLabel,
+  studyDomainOptions,
+  noDomainStudiesLabel,
   studyKindOptionGroups,
   onStudyKindChange,
   summaryRows,
@@ -56,6 +63,18 @@ export function WorkbenchStudySidebar({
   runningLabel,
   onRun,
 }: WorkbenchStudySidebarProps) {
+  const [selectedDomain, setSelectedDomain] = useState<string>("mechanical");
+  useEffect(() => {
+    const matchingGroup = studyKindOptionGroups.find((group) => group.options.some((option) => option.value === studyKind));
+    if (matchingGroup && matchingGroup.domainKey !== selectedDomain) {
+      setSelectedDomain(matchingGroup.domainKey);
+    }
+  }, [selectedDomain, studyKind, studyKindOptionGroups]);
+  const visibleStudyKindOptionGroups = useMemo(
+    () => studyKindOptionGroups.filter((group) => group.domainKey === selectedDomain && group.options.length > 0),
+    [selectedDomain, studyKindOptionGroups],
+  );
+
   return (
     <div className="sidebar-stack panel-scroll-window">
       <div className="panel-tabs">
@@ -83,9 +102,24 @@ export function WorkbenchStudySidebar({
           </div>
           <div className="form-grid compact">
             <label>
+              <span>{studyDomainLabel}</span>
+              <div className="button-row">
+                {studyDomainOptions.map((option) => (
+                  <button
+                    key={option.key}
+                    className={`ghost-button ghost-button--compact${selectedDomain === option.key ? " ghost-button--active" : ""}`}
+                    onClick={() => setSelectedDomain(option.key)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </label>
+            <label>
               <span>{studyTypeLabel}</span>
               <select value={studyKind} onChange={(event) => onStudyKindChange(event.target.value as StudyKind)}>
-                {studyKindOptionGroups.map((group) => (
+                {visibleStudyKindOptionGroups.map((group) => (
                   <optgroup key={group.label} label={group.label}>
                     {group.options.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -95,6 +129,7 @@ export function WorkbenchStudySidebar({
                   </optgroup>
                 ))}
               </select>
+              {visibleStudyKindOptionGroups.length === 0 ? <small>{noDomainStudiesLabel}</small> : null}
             </label>
           </div>
           <div className="sidebar-list">

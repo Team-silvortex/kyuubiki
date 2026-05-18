@@ -7,6 +7,8 @@ import type {
   Frame2dJobInput,
   Frame2dResult,
   FrontendRuntimeMode,
+  HeatBar1dJobInput,
+  HeatBar1dResult,
   JobEnvelope,
   PlaneQuad2dJobInput,
   PlaneQuad2dResult,
@@ -97,7 +99,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -223,6 +225,7 @@ export function serializeCurrentModel(
   loadedModelName: string,
   activeMaterial: string,
   axialForm: AxialFormLike,
+  heatBarModel: HeatBar1dJobInput,
   thermalBarModel: ThermalBar1dJobInput,
   thermalBeamModel: ThermalBeam1dJobInput,
   thermalFrameModel: ThermalFrame2dJobInput,
@@ -250,6 +253,8 @@ export function serializeCurrentModel(
     youngsModulusGpa:
       studyKind === "axial_bar_1d"
         ? axialForm.youngsModulusGpa
+        : studyKind === "heat_bar_1d"
+          ? 0
         : studyKind === "thermal_bar_1d"
           ? round((thermalBarModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
         : studyKind === "thermal_beam_1d"
@@ -315,6 +320,7 @@ export function serializeCurrentModel(
     beam: studyKind === "beam_1d" ? beamModel : undefined,
     thermalBeam: studyKind === "thermal_beam_1d" ? thermalBeamModel : undefined,
     torsion: studyKind === "torsion_1d" ? torsionModel : undefined,
+    heatBar: studyKind === "heat_bar_1d" ? heatBarModel : undefined,
     thermalBar: studyKind === "thermal_bar_1d" ? thermalBarModel : undefined,
     spring: studyKind === "spring_1d" ? springModel : undefined,
     spring2d: studyKind === "spring_2d" ? spring2dModel : undefined,
@@ -344,6 +350,17 @@ function isThermalBar1dResult(value: unknown): value is ThermalBar1dResult {
     value !== null &&
     "max_temperature_delta" in value &&
     "max_axial_force" in value &&
+    "nodes" in value &&
+    "elements" in value
+  );
+}
+
+function isHeatBar1dResult(value: unknown): value is HeatBar1dResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "max_temperature" in value &&
+    "max_heat_flux" in value &&
     "nodes" in value &&
     "elements" in value
   );
@@ -481,7 +498,7 @@ function isTorsion1dResult(value: unknown): value is Torsion1dResult {
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | HeatBar1dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -543,6 +560,43 @@ export function serializeResultCsv(
           element.total_strain,
           element.stress,
           element.axial_force,
+        ]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (isHeatBar1dResult(result)) {
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "temperature", "heat_load"]));
+    result.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.temperature, node.heat_load])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "length",
+        "average_temperature",
+        "temperature_gradient",
+        "heat_flux",
+      ]),
+    );
+    result.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.length,
+          element.average_temperature,
+          element.temperature_gradient,
+          element.heat_flux,
         ]),
       ),
     );

@@ -17,11 +17,30 @@ export type SampleLibraryEntry = {
   summary: string;
 };
 
+export type StudyDomainKey = "mechanical" | "thermal" | "thermoMechanical";
 export type StudyFamilyKey = "axialAndSprings" | "beamsAndFrames" | "trusses" | "planes";
+
+export function classifyStudyKindDomain(kind: string): StudyDomainKey {
+  switch (kind) {
+    case "heat_bar_1d":
+      return "thermal";
+    case "thermal_bar_1d":
+    case "thermal_beam_1d":
+    case "thermal_frame_2d":
+    case "thermal_truss_2d":
+    case "thermal_truss_3d":
+    case "thermal_plane_triangle_2d":
+    case "thermal_plane_quad_2d":
+      return "thermoMechanical";
+    default:
+      return "mechanical";
+  }
+}
 
 export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
   switch (kind) {
     case "axial_bar_1d":
+    case "heat_bar_1d":
     case "thermal_bar_1d":
     case "spring_1d":
     case "spring_2d":
@@ -50,16 +69,20 @@ export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
 export function buildLibrarySampleRows({
   samples,
   kindLabel,
+  domainLabel,
   familyLabel,
 }: {
   samples: SampleLibraryEntry[];
   kindLabel: (kind: string) => string;
+  domainLabel: (domain: StudyDomainKey) => string;
   familyLabel: (family: StudyFamilyKey) => string;
 }) {
   return samples.map((sample) => ({
     id: sample.id,
     name: sample.name,
     kindLabel: kindLabel(sample.kind),
+    domainKey: classifyStudyKindDomain(sample.kind),
+    domainLabel: domainLabel(classifyStudyKindDomain(sample.kind)),
     familyKey: classifyStudyKindFamily(sample.kind),
     familyLabel: familyLabel(classifyStudyKindFamily(sample.kind)),
     href: sample.href,
@@ -224,6 +247,7 @@ export function buildProtocolAgentCards({
 
 type StudyKind =
   | "axial_bar_1d"
+  | "heat_bar_1d"
   | "thermal_bar_1d"
   | "thermal_beam_1d"
   | "thermal_frame_2d"
@@ -243,16 +267,24 @@ type StudyKind =
   | "frame_2d";
 
 export type StudyKindOptionGroup = {
+  domainKey: StudyDomainKey;
   label: string;
   options: Array<{ value: StudyKind; label: string }>;
 };
 
+export type StudyDomainOption = {
+  key: StudyDomainKey;
+  label: string;
+};
+
 export function buildStudyKindOptionGroups({
   kinds,
+  domains: _domains,
   families,
 }: {
   kinds: {
     axial_bar_1d: string;
+    heat_bar_1d: string;
     thermal_bar_1d: string;
     thermal_beam_1d: string;
     thermal_frame_2d: string;
@@ -271,6 +303,11 @@ export function buildStudyKindOptionGroups({
     plane_quad_2d: string;
     frame_2d: string;
   };
+  domains: {
+    mechanical: string;
+    thermal: string;
+    thermoMechanical: string;
+  };
   families: {
     axialAndSprings: string;
     beamsAndFrames: string;
@@ -280,48 +317,97 @@ export function buildStudyKindOptionGroups({
 }) {
   return [
     {
+      domainKey: "mechanical",
       label: families.axialAndSprings,
       options: [
         { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
-        { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },
         { value: "spring_1d" as const, label: kinds.spring_1d },
         { value: "spring_2d" as const, label: kinds.spring_2d },
         { value: "spring_3d" as const, label: kinds.spring_3d },
       ],
     },
     {
+      domainKey: "mechanical",
       label: families.beamsAndFrames,
       options: [
         { value: "beam_1d" as const, label: kinds.beam_1d },
-        { value: "thermal_beam_1d" as const, label: kinds.thermal_beam_1d },
-        { value: "thermal_frame_2d" as const, label: kinds.thermal_frame_2d },
         { value: "torsion_1d" as const, label: kinds.torsion_1d },
         { value: "frame_2d" as const, label: kinds.frame_2d },
       ],
     },
     {
+      domainKey: "mechanical",
       label: families.trusses,
       options: [
         { value: "truss_2d" as const, label: kinds.truss_2d },
         { value: "truss_3d" as const, label: kinds.truss_3d },
+      ],
+    },
+    {
+      domainKey: "mechanical",
+      label: families.planes,
+      options: [
+        { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
+        { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
+      ],
+    },
+    {
+      domainKey: "thermoMechanical",
+      label: families.axialAndSprings,
+      options: [{ value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d }],
+    },
+    {
+      domainKey: "thermoMechanical",
+      label: families.beamsAndFrames,
+      options: [
+        { value: "thermal_beam_1d" as const, label: kinds.thermal_beam_1d },
+        { value: "thermal_frame_2d" as const, label: kinds.thermal_frame_2d },
+      ],
+    },
+    {
+      domainKey: "thermoMechanical",
+      label: families.trusses,
+      options: [
         { value: "thermal_truss_2d" as const, label: kinds.thermal_truss_2d },
         { value: "thermal_truss_3d" as const, label: kinds.thermal_truss_3d },
       ],
     },
     {
+      domainKey: "thermoMechanical",
       label: families.planes,
       options: [
-        { value: "plane_triangle_2d" as const, label: kinds.plane_triangle_2d },
         { value: "thermal_plane_triangle_2d" as const, label: kinds.thermal_plane_triangle_2d },
-        { value: "plane_quad_2d" as const, label: kinds.plane_quad_2d },
         { value: "thermal_plane_quad_2d" as const, label: kinds.thermal_plane_quad_2d },
       ],
+    },
+    {
+      domainKey: "thermal",
+      label: families.axialAndSprings,
+      options: [{ value: "heat_bar_1d" as const, label: kinds.heat_bar_1d }],
+    },
+    {
+      domainKey: "thermal",
+      label: families.planes,
+      options: [],
     },
   ] satisfies StudyKindOptionGroup[];
 }
 
+export function buildStudyDomainOptions(domains: {
+  mechanical: string;
+  thermal: string;
+  thermoMechanical: string;
+}) {
+  return [
+    { key: "mechanical" as const, label: domains.mechanical },
+    { key: "thermal" as const, label: domains.thermal },
+    { key: "thermoMechanical" as const, label: domains.thermoMechanical },
+  ] satisfies StudyDomainOption[];
+}
+
 export function buildStudyKindOptions(kinds: {
   axial_bar_1d: string;
+  heat_bar_1d: string;
   thermal_bar_1d: string;
   thermal_beam_1d: string;
   thermal_frame_2d: string;
@@ -342,6 +428,7 @@ export function buildStudyKindOptions(kinds: {
 }) {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
+    { value: "heat_bar_1d" as const, label: kinds.heat_bar_1d },
     { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },
     { value: "thermal_truss_2d" as const, label: kinds.thermal_truss_2d },
     { value: "spring_1d" as const, label: kinds.spring_1d },
@@ -413,6 +500,7 @@ export function buildStudyControlsRows({
   };
   studyKind:
     | "axial_bar_1d"
+    | "heat_bar_1d"
     | "thermal_bar_1d"
     | "thermal_beam_1d"
     | "thermal_frame_2d"
@@ -450,6 +538,14 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
       { label: labels.material, value: materialLabel },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "heat_bar_1d") {
+    return [
+      { label: labels.nodes, value: planeNodeCount },
+      { label: labels.frameElements, value: planeElementCount },
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }

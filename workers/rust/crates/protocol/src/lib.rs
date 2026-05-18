@@ -132,6 +132,32 @@ pub struct SolveThermalBar1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatBar1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_temperature: bool,
+    #[serde(default)]
+    pub temperature: f64,
+    #[serde(default)]
+    pub heat_load: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatBar1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub conductivity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHeatBar1dRequest {
+    pub nodes: Vec<HeatBar1dNodeInput>,
+    pub elements: Vec<HeatBar1dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalTruss2dNodeInput {
     pub id: String,
     pub x: f64,
@@ -412,6 +438,36 @@ pub struct SolveThermalBar1dResult {
     pub max_stress: f64,
     pub max_axial_force: f64,
     pub max_temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatBar1dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub temperature: f64,
+    pub heat_load: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatBar1dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub average_temperature: f64,
+    pub temperature_gradient: f64,
+    pub heat_flux: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHeatBar1dResult {
+    pub input: SolveHeatBar1dRequest,
+    pub nodes: Vec<HeatBar1dNodeResult>,
+    pub elements: Vec<HeatBar1dElementResult>,
+    pub max_temperature: f64,
+    pub max_heat_flux: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -745,6 +801,8 @@ pub enum RpcMethod {
     SolveBar1d,
     #[serde(rename = "solve_thermal_bar_1d")]
     SolveThermalBar1d,
+    #[serde(rename = "solve_heat_bar_1d")]
+    SolveHeatBar1d,
     #[serde(rename = "solve_thermal_truss_2d")]
     SolveThermalTruss2d,
     #[serde(rename = "solve_thermal_truss_3d")]
@@ -881,6 +939,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::DescribeAgent,
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveThermalBar1d,
+                RpcMethod::SolveHeatBar1d,
                 RpcMethod::SolveThermalTruss2d,
                 RpcMethod::SolveThermalTruss3d,
                 RpcMethod::SolveSpring1d,
@@ -923,6 +982,17 @@ impl AgentDescriptor {
                     tags: vec![
                         "bar".to_string(),
                         "thermal".to_string(),
+                        "line".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "heat-bar-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveHeatBar1d],
+                    tags: vec![
+                        "heat".to_string(),
+                        "bar".to_string(),
                         "line".to_string(),
                         "cpu".to_string(),
                     ],
@@ -1648,6 +1718,7 @@ pub struct SolveThermalFrame2dResult {
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
     ThermalBar1d(SolveThermalBar1dResult),
+    HeatBar1d(SolveHeatBar1dResult),
     ThermalTruss2d(SolveThermalTruss2dResult),
     ThermalTruss3d(SolveThermalTruss3dResult),
     Spring1d(SolveSpring1dResult),
@@ -1694,9 +1765,10 @@ pub struct ResultChunkResponse {
 mod tests {
     use super::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput,
-        Frame2dNodeInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION,
-        RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
-        SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+        Frame2dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, Job, JobStatus,
+        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
+        RpcResponse, SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest,
+        SolveHeatBar1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
         SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
@@ -1797,6 +1869,47 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveThermalBar1d);
         assert_eq!(decoded.id, "rpc-thermal-bar");
+    }
+
+    #[test]
+    fn serializes_heat_bar_1d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-heat-bar".to_string(),
+            method: RpcMethod::SolveHeatBar1d,
+            params: serde_json::to_value(SolveHeatBar1dRequest {
+                nodes: vec![
+                    HeatBar1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_temperature: true,
+                        temperature: 100.0,
+                        heat_load: 0.0,
+                    },
+                    HeatBar1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        fix_temperature: true,
+                        temperature: 0.0,
+                        heat_load: 0.0,
+                    },
+                ],
+                elements: vec![HeatBar1dElementInput {
+                    id: "h0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    conductivity: 45.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveHeatBar1d);
+        assert_eq!(decoded.id, "rpc-heat-bar");
     }
 
     #[test]

@@ -16,6 +16,14 @@ export type ThermalBar1dNodeInput = {
   temperature_delta: number;
 };
 
+export type HeatBar1dNodeInput = {
+  id: string;
+  x: number;
+  fix_temperature: boolean;
+  temperature: number;
+  heat_load: number;
+};
+
 export type ThermalBar1dElementInput = {
   id: string;
   node_i: number;
@@ -28,6 +36,21 @@ export type ThermalBar1dElementInput = {
 export type ThermalBar1dJobInput = {
   nodes: ThermalBar1dNodeInput[];
   elements: ThermalBar1dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type HeatBar1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  conductivity: number;
+};
+
+export type HeatBar1dJobInput = {
+  nodes: HeatBar1dNodeInput[];
+  elements: HeatBar1dElementInput[];
   project_id?: string;
   model_version_id?: string;
 };
@@ -519,6 +542,29 @@ export type ThermalBar1dResult = {
     axial_force: number;
   }>;
   input: ThermalBar1dJobInput;
+};
+
+export type HeatBar1dResult = {
+  max_temperature: number;
+  max_heat_flux: number;
+  nodes: Array<{
+    index: number;
+    id: string;
+    x: number;
+    temperature: number;
+    heat_load: number;
+  }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    average_temperature: number;
+    temperature_gradient: number;
+    heat_flux: number;
+  }>;
+  input: HeatBar1dJobInput;
 };
 
 export type ThermalTruss2dResult = {
@@ -1294,6 +1340,17 @@ export function resolveThermalBar1dJobInput(
   };
 }
 
+export function resolveHeatBar1dJobInput(
+  input: HeatBar1dJobInput,
+): HeatBar1dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveThermalTruss2dJobInput(
   input: ThermalTruss2dJobInput,
 ): Omit<ThermalTruss2dJobInput, "materials"> {
@@ -1783,6 +1840,16 @@ export function createThermalBar1dJob(
   });
 }
 
+export function createHeatBar1dJob(
+  input: HeatBar1dJobInput,
+): Promise<JobEnvelope<HeatBar1dResult>> {
+  return requestJson<JobEnvelope<HeatBar1dResult>>("/api/v1/fem/heat-bar-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createThermalTruss2dJob(
   input: ThermalTruss2dJobInput,
 ): Promise<JobEnvelope<ThermalTruss2dResult>> {
@@ -2005,7 +2072,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "thermal_plane_triangle_2d" | "plane_quad_2d" | "thermal_plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "heat_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "thermal_plane_triangle_2d" | "plane_quad_2d" | "thermal_plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

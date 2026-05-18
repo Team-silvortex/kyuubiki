@@ -1078,6 +1078,99 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert length(result_payload["result"]["elements"]) == 1
   end
 
+  test "runs a heat bar job through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.5,
+            "iteration" => 1,
+            "message" => "solving heat bar"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{"index" => 0, "id" => "n0", "x" => 0.0, "temperature" => 100.0, "heat_load" => 0.0},
+              %{"index" => 1, "id" => "n1", "x" => 1.0, "temperature" => 0.0, "heat_load" => 0.0}
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "hb0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "length" => 1.0,
+                "average_temperature" => 50.0,
+                "temperature_gradient" => -100.0,
+                "heat_flux" => 5000.0
+              }
+            ],
+            "max_temperature" => 100.0,
+            "max_heat_flux" => 5000.0,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/heat-bar-1d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "fix_temperature" => true,
+              "temperature" => 100.0,
+              "heat_load" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "fix_temperature" => true,
+              "temperature" => 0.0,
+              "heat_load" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "hb0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "area" => 0.02,
+              "conductivity" => 50.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["max_temperature"] == 100.0
+    assert result_payload["result"]["max_heat_flux"] > 0
+    assert length(result_payload["result"]["elements"]) == 1
+  end
+
   test "binds a submitted job to the selected model version" do
     {:ok, project} = Library.create_project(%{"name" => "Version-bound study"})
 

@@ -1,0 +1,44 @@
+{
+  "kind": "heat_bar_1d",
+  "model_schema_version": "kyuubiki.model/v1",
+  "name": "Heat Bar 1D",
+  "nodes": [
+    {
+      "id": "h0",
+      "x": 0,
+      "fix_temperature": true,
+      "temperature": 100,
+      "heat_load": 0
+    },
+    {
+      "id": "h1",
+      "x": 1,
+      "fix_temperature": false,
+      "temperature": 0,
+      "heat_load": 0
+    },
+    {
+      "id": "h2",
+      "x": 2,
+      "fix_temperature": true,
+      "temperature": 20,
+      "heat_load": 0
+    }
+  ],
+  "elements": [
+    {
+      "id": "he0",
+      "node_i": 0,
+      "node_j": 1,
+      "area": 0.01,
+      "conductivity": 45
+    },
+    {
+      "id": "he1",
+      "node_i": 1,
+      "node_j": 2,
+      "area": 0.01,
+      "conductivity": 45
+    }
+  ]
+}

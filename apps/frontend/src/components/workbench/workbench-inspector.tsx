@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -178,7 +178,9 @@ type InspectorLabels = {
   sectionModulus: string;
   distributedLoadY: string;
   temperatureDelta: string;
+  maxTemperature: string;
   temperatureGradientY: string;
+  maxHeatFlux: string;
   thermalCurvature: string;
   thermalExpansion: string;
   bendingStress: string;
@@ -439,6 +441,7 @@ function WorkbenchInspectorInner({
   const isTruss3d = studyKind === "truss_3d" || studyKind === "thermal_truss_3d";
   const isSpring3d = studyKind === "spring_3d";
   const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
+  const isHeatBar = studyKind === "heat_bar_1d";
   const isThermal = studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d";
   const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d";
   const isBeam = studyKind === "beam_1d" || studyKind === "thermal_beam_1d";
@@ -777,12 +780,13 @@ function WorkbenchInspectorInner({
             <div><span>{t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
             <div><span>{t.maxStress}</span><strong>{maxStressValue}</strong></div>
             {(studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") ? <div><span>{t.temperatureDelta}</span><strong>{thermalPlaneMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
+            {isHeatBar ? <div><span>{t.maxTemperature}</span><strong>{tipDisplacement}</strong></div> : null}
             {isFrame || isSpring || studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d" ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
             {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
             {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureDelta}</span><strong>{thermalFrameMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
             {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalFrameMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
             {studyKind === "thermal_beam_1d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalBeamMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
-            <div><span>{t.reaction}</span><strong>{reactionValue}</strong></div>
+            <div><span>{isHeatBar ? t.maxHeatFlux : t.reaction}</span><strong>{reactionValue}</strong></div>
             {(isFrame || isBeam || isTorsion) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
             <div><span>{t.createdAt}</span><strong>{createdAtValue}</strong></div>
             <div><span>{t.updatedAt}</span><strong>{updatedAtValue}</strong></div>

@@ -1,12 +1,14 @@
 use kyuubiki_protocol::{
     Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
-    Job, JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult,
-    PlaneTriangleElementInput, PlaneTriangleElementResult, ProgressEvent, SolveBarRequest,
-    SolveBarResult, SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
-    SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
-    SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
-    SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveThermalBar1dRequest,
-    SolveThermalBar1dResult, SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
+    HeatBar1dElementResult, HeatBar1dNodeResult, Job, JobStatus, NodeResult, PlaneNodeResult,
+    PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
+    PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult,
+    SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
+    SolveHeatBar1dRequest, SolveHeatBar1dResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
+    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveSpring1dRequest,
+    SolveSpring1dResult, SolveSpring2dRequest, SolveSpring2dResult, SolveSpring3dRequest,
+    SolveSpring3dResult, SolveThermalBar1dRequest, SolveThermalBar1dResult,
+    SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
     SolveThermalFrame2dRequest, SolveThermalFrame2dResult, SolveThermalPlaneQuad2dRequest,
     SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dRequest,
     SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dRequest, SolveThermalTruss2dResult,
@@ -236,6 +238,107 @@ pub fn solve_thermal_bar_1d(
         max_stress,
         max_axial_force,
         max_temperature_delta,
+    })
+}
+
+pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar1dResult, String> {
+    validate_heat_bar_1d_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut heat_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        heat_vector[index] = node.heat_load;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        let conductance = element.conductivity * element.area / length;
+        let local = [[conductance, -conductance], [-conductance, conductance]];
+        let map = [element.node_i, element.node_j];
+
+        for row in 0..2 {
+            for column in 0..2 {
+                add_at(&mut global_stiffness, map[row], map[column], local[row][column]);
+            }
+        }
+    }
+
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_heat, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+    let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
+
+    let mut temperatures = vec![0.0; dof_count];
+    for &(index, value) in &prescribed {
+        temperatures[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        temperatures[dof] = reduced_temperatures[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| HeatBar1dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            temperature: temperatures[index],
+            heat_load: node.heat_load,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let length = (node_j.x - node_i.x).abs();
+            let average_temperature = 0.5 * (temperatures[element.node_i] + temperatures[element.node_j]);
+            let temperature_gradient = (temperatures[element.node_j] - temperatures[element.node_i]) / length;
+            let heat_flux = -element.conductivity * temperature_gradient;
+
+            HeatBar1dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                average_temperature,
+                temperature_gradient,
+                heat_flux,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_temperature = nodes
+        .iter()
+        .map(|node| node.temperature.abs())
+        .fold(0.0_f64, f64::max);
+    let max_heat_flux = elements
+        .iter()
+        .map(|element| element.heat_flux.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveHeatBar1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_temperature,
+        max_heat_flux,
     })
 }
 
@@ -3606,6 +3709,56 @@ fn validate_thermal_bar_1d_request(request: &SolveThermalBar1dRequest) -> Result
     Ok(())
 }
 
+fn validate_heat_bar_1d_request(request: &SolveHeatBar1dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("1d heat bar model must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("1d heat bar model must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_temperature) {
+        return Err("1d heat bar model must include at least one temperature support".to_string());
+    }
+
+    for node in &request.nodes {
+        if !node.x.is_finite() {
+            return Err("1d heat bar node x must be finite".to_string());
+        }
+        if !node.temperature.is_finite() {
+            return Err("1d heat bar node temperature must be finite".to_string());
+        }
+        if !node.heat_load.is_finite() {
+            return Err("1d heat bar node heat_load must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("1d heat bar element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("1d heat bar element must connect two distinct nodes".to_string());
+        }
+        if !element.area.is_finite() || element.area <= 0.0 {
+            return Err("1d heat bar element area must be positive".to_string());
+        }
+        if !element.conductivity.is_finite() || element.conductivity <= 0.0 {
+            return Err("1d heat bar element conductivity must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        if !length.is_finite() || length <= 0.0 {
+            return Err("1d heat bar element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_spring_1d_request(request: &SolveSpring1dRequest) -> Result<(), String> {
     if request.nodes.len() < 2 {
         return Err("1d spring model must define at least two nodes".to_string());
@@ -4627,6 +4780,48 @@ fn reduce_sparse_system(
     (reduced, reduced_force, free)
 }
 
+fn reduce_sparse_system_with_prescribed(
+    matrix: &SparseMatrix,
+    force: &[f64],
+    prescribed: &[(usize, f64)],
+) -> (SparseMatrix, Vec<f64>, Vec<usize>) {
+    let size = force.len();
+    let mut prescribed_values = vec![None; size];
+    for &(dof, value) in prescribed {
+        if dof < size {
+            prescribed_values[dof] = Some(value);
+        }
+    }
+
+    let free = (0..size)
+        .filter(|index| prescribed_values[*index].is_none())
+        .collect::<Vec<_>>();
+    let mut free_map = vec![usize::MAX; size];
+    for (reduced, &global) in free.iter().enumerate() {
+        free_map[global] = reduced;
+    }
+
+    let mut reduced = SparseMatrix::new(free.len());
+    let mut reduced_force = vec![0.0; free.len()];
+
+    for (reduced_row, &global_row) in free.iter().enumerate() {
+        let mut rhs = force[global_row];
+        for &(global_col, value) in &matrix.rows[global_row] {
+            if let Some(prescribed_value) = prescribed_values[global_col] {
+                rhs -= value * prescribed_value;
+            } else {
+                let reduced_col = free_map[global_col];
+                if reduced_col != usize::MAX {
+                    reduced.add_at(reduced_row, reduced_col, value);
+                }
+            }
+        }
+        reduced_force[reduced_row] = rhs;
+    }
+
+    (reduced, reduced_force, free)
+}
+
 fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, String> {
     let size = rhs.len();
     if matrix.size() != size {
@@ -4896,17 +5091,18 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
-        solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-        solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+        MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_heat_bar_1d,
+        solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
+        solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
         solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
         solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
         solve_truss_3d,
     };
     use kyuubiki_protocol::{
-        Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Job, JobStatus,
-        PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest,
-        SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
+        Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
+        HeatBar1dElementInput, HeatBar1dNodeInput, Job, JobStatus, PlaneNodeInput,
+        PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
+        SolveFrame2dRequest, SolveHeatBar1dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
         SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
         SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
@@ -5002,6 +5198,43 @@ mod tests {
         assert!(result.max_axial_force > 1.0e6);
         assert_eq!(result.max_temperature_delta, 40.0);
         assert!(result.elements[0].stress < 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_heat_bar_1d_gradient() {
+        let result = solve_heat_bar_1d(&SolveHeatBar1dRequest {
+            nodes: vec![
+                HeatBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_temperature: true,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                },
+                HeatBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_temperature: true,
+                    temperature: 0.0,
+                    heat_load: 0.0,
+                },
+            ],
+            elements: vec![HeatBar1dElementInput {
+                id: "hb0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                conductivity: 50.0,
+            }],
+        })
+        .expect("heat bar should solve");
+
+        assert_eq!(result.nodes[0].temperature, 100.0);
+        assert_eq!(result.nodes[1].temperature, 0.0);
+        assert!((result.elements[0].temperature_gradient + 100.0).abs() < 1.0e-9);
+        assert!((result.elements[0].heat_flux - 5_000.0).abs() < 1.0e-6);
+        assert_eq!(result.max_temperature, 100.0);
+        assert!((result.max_heat_flux - 5_000.0).abs() < 1.0e-6);
     }
 
     #[test]

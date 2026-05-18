@@ -1,6 +1,7 @@
 import type {
   Beam1dJobInput,
   Frame2dJobInput,
+  HeatBar1dJobInput,
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
@@ -35,6 +36,12 @@ export type ImportedThermalBar1dModel = {
   kind: "thermal_bar_1d";
   name: string;
   model: ThermalBar1dJobInput;
+};
+
+export type ImportedHeatBar1dModel = {
+  kind: "heat_bar_1d";
+  name: string;
+  model: HeatBar1dJobInput;
 };
 
 export type ImportedThermalBeam1dModel = {
@@ -159,6 +166,7 @@ export type ImportedSpring3dModel = {
 
 export type ImportedModel =
   | ImportedAxialBarModel
+  | ImportedHeatBar1dModel
   | ImportedThermalBar1dModel
   | ImportedThermalBeam1dModel
   | ImportedThermalFrame2dModel
@@ -328,6 +336,47 @@ function parseThermalBar1dV1(raw: Record<string, unknown>): ImportedThermalBar1d
   return {
     kind: "thermal_bar_1d",
     name: typeof raw.name === "string" ? raw.name : "imported-thermal-bar-1d",
+    model: { nodes, elements },
+  };
+}
+
+function parseHeatBar1dNode(raw: unknown, index: number): HeatBar1dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    fix_temperature: Boolean(node.fix_temperature),
+    temperature: numberOrZero(node.temperature),
+    heat_load: numberOrZero(node.heat_load),
+  };
+}
+
+function parseHeatBar1dElement(raw: unknown, index: number): HeatBar1dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    area: requiredNumber(element.area, `elements[${index}].area`),
+    conductivity: requiredNumber(element.conductivity, `elements[${index}].conductivity`),
+  };
+}
+
+function parseHeatBar1dV1(raw: Record<string, unknown>): ImportedHeatBar1dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseHeatBar1dNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseHeatBar1dElement) : [];
+
+  if (nodes.length < 2) {
+    throw new Error("nodes must contain at least two entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "heat_bar_1d",
+    name: typeof raw.name === "string" ? raw.name : "imported-heat-bar-1d",
     model: { nodes, elements },
   };
 }
@@ -1259,6 +1308,10 @@ export function parsePlaygroundModel(text: string): ImportedModel {
 
   if (kind === "thermal_bar_1d") {
     return parseThermalBar1dV1(raw);
+  }
+
+  if (kind === "heat_bar_1d") {
+    return parseHeatBar1dV1(raw);
   }
 
   if (kind === "thermal_truss_2d") {

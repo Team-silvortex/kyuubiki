@@ -3,6 +3,7 @@ export type SampleEntry = {
   name: string;
   kind:
     | "axial_bar_1d"
+    | "heat_bar_1d"
     | "thermal_bar_1d"
     | "thermal_beam_1d"
     | "thermal_frame_2d"
@@ -31,6 +32,13 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "axial_bar_1d",
     href: "/models/axial-steel-bar.json",
     summary: "Baseline 1D tensile bar for quick stiffness checks.",
+  },
+  {
+    id: "heat-bar-1d",
+    name: "Heat Bar 1D",
+    kind: "heat_bar_1d",
+    href: "/models/heat-bar-1d.json",
+    summary: "Steady 1D conduction bar with prescribed end temperature for quick temperature-gradient and heat-flux checks.",
   },
   {
     id: "thermal-bar-1d",

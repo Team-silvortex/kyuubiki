@@ -179,6 +179,18 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  post "/api/v1/fem/heat-bar-1d/jobs" do
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_heat_bar_1d(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
   post "/api/v1/fem/thermal-truss-2d/jobs" do
     with_auth(conn, :write, fn conn ->
       case Analysis.submit_thermal_truss_2d(conn.body_params) do

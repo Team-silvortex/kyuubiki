@@ -9,18 +9,17 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-    SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolveHeatBar1dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
+    SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
     SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
-    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest,
-    SolveTruss3dRequest,
+    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_plane_quad_2d,
-    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+    MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_heat_bar_1d,
+    solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
+    solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
     solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
@@ -435,6 +434,63 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                             request.id,
                             serde_json::to_value(result)
                                 .expect("thermal bar result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveHeatBar1d => {
+            let params = match serde_json::from_value::<SolveHeatBar1dRequest>(request.params.clone()) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_heat_bar_1d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("1d heat bar", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("heat bar result should serialize"),
                         ),
                     )
                 }
@@ -2169,10 +2225,11 @@ mod tests {
         handle_request_bytes, normalize_peer_addresses, parse_http_url,
     };
     use kyuubiki_protocol::{
-        AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ClusterPeerDescriptor, JobStatus,
-        PlaneNodeInput, PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent,
-        RPC_VERSION, RpcMethod, RpcRequest, SolveBarRequest, SolveBeam1dRequest,
-        SolveFrame2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+        AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ClusterPeerDescriptor,
+        HeatBar1dElementInput, HeatBar1dNodeInput, JobStatus, PlaneNodeInput,
+        PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
+        RpcRequest, SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest,
+        SolveHeatBar1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
         SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
@@ -2359,6 +2416,54 @@ mod tests {
                 .expect("thermal bar result");
         assert!(result.max_stress > 1.0e8);
         assert_eq!(result.max_temperature_delta, 40.0);
+    }
+
+    #[test]
+    fn handles_heat_bar_1d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-heat-bar".to_string(),
+            method: RpcMethod::SolveHeatBar1d,
+            params: serde_json::to_value(SolveHeatBar1dRequest {
+                nodes: vec![
+                    HeatBar1dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        fix_temperature: true,
+                        temperature: 100.0,
+                        heat_load: 0.0,
+                    },
+                    HeatBar1dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        fix_temperature: true,
+                        temperature: 0.0,
+                        heat_load: 0.0,
+                    },
+                ],
+                elements: vec![HeatBar1dElementInput {
+                    id: "hb0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.02,
+                    conductivity: 50.0,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveHeatBar1dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("heat bar result");
+        assert_eq!(result.max_temperature, 100.0);
+        assert!((result.max_heat_flux - 5_000.0).abs() < 1.0e-6);
     }
 
     #[test]

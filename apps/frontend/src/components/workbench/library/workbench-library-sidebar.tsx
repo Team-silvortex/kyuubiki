@@ -1,9 +1,10 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { VirtualList } from "@/components/ui/virtual-list";
 import type { ProjectRecord } from "@/lib/api";
+import type { StudyDomainKey } from "@/lib/workbench/view-models";
 
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
 
@@ -11,6 +12,8 @@ type SampleRow = {
   id: string;
   name: string;
   kindLabel: string;
+  domainKey: StudyDomainKey;
+  domainLabel: string;
   familyKey: string;
   familyLabel: string;
   href: string;
@@ -75,6 +78,8 @@ type LibraryLabels = {
   sections: { library: string };
   tabs: { samples: string; projects: string; models: string; jobs: string };
   kinds: Record<string, string>;
+  studyDomain: string;
+  noDomainStudies: string;
   none: string;
 };
 
@@ -159,9 +164,10 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   onRefresh,
   onImportModel,
 }: WorkbenchLibrarySidebarProps) {
+  const [selectedSampleDomain, setSelectedSampleDomain] = useState<StudyDomainKey>("mechanical");
   const groupedSampleRows = useMemo(() => {
     const groups = new Map<string, { label: string; rows: SampleRow[] }>();
-    for (const sample of sampleRows) {
+    for (const sample of sampleRows.filter((entry) => entry.domainKey === selectedSampleDomain)) {
       const existing = groups.get(sample.familyKey);
       if (existing) {
         existing.rows.push(sample);
@@ -170,7 +176,20 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
       groups.set(sample.familyKey, { label: sample.familyLabel, rows: [sample] });
     }
     return Array.from(groups.values());
-  }, [sampleRows]);
+  }, [sampleRows, selectedSampleDomain]);
+
+  const sampleDomainOptions = useMemo(
+    () =>
+      [
+        { key: "mechanical" as const, label: sampleRows.find((entry) => entry.domainKey === "mechanical")?.domainLabel ?? "Mechanical" },
+        { key: "thermal" as const, label: sampleRows.find((entry) => entry.domainKey === "thermal")?.domainLabel ?? "Thermal" },
+        {
+          key: "thermoMechanical" as const,
+          label: sampleRows.find((entry) => entry.domainKey === "thermoMechanical")?.domainLabel ?? "Thermo-mechanical",
+        },
+      ] satisfies Array<{ key: StudyDomainKey; label: string }>,
+    [sampleRows],
+  );
 
   return (
     <div className="sidebar-stack panel-scroll-window">
@@ -199,7 +218,25 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
               onChange={(event) => onImportModel(event.target.files?.[0])}
             />
           </label>
+          <div className="form-grid compact">
+            <label>
+              <span>{labels.studyDomain}</span>
+              <div className="button-row">
+                {sampleDomainOptions.map((option) => (
+                  <button
+                    key={option.key}
+                    className={`ghost-button ghost-button--compact${selectedSampleDomain === option.key ? " ghost-button--active" : ""}`}
+                    onClick={() => setSelectedSampleDomain(option.key)}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </label>
+          </div>
           <div className="history-list sample-group-list">
+            {groupedSampleRows.length === 0 ? <p className="card-copy">{labels.noDomainStudies}</p> : null}
             {groupedSampleRows.map((group) => (
               <div key={group.label} className="sample-group">
                 <div className="sample-group__head">
