@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {
   id: string;
@@ -69,6 +69,9 @@ type PlaneNodeSelection = {
   y: number;
   load_x: number;
   load_y: number;
+  fix_temperature?: boolean;
+  temperature?: number;
+  heat_load?: number;
   temperature_delta?: number;
   displacement_magnitude?: number;
   fix_x: boolean;
@@ -83,6 +86,13 @@ type PlaneElementSelection = {
   node_k: number;
   node_l?: number;
   thermal_expansion?: number;
+  conductivity?: number;
+  average_temperature?: number;
+  temperature_gradient_x?: number;
+  temperature_gradient_y?: number;
+  heat_flux_x?: number;
+  heat_flux_y?: number;
+  heat_flux_magnitude?: number;
   average_temperature_delta?: number;
   thermal_strain?: number;
   mechanical_strain_x?: number;
@@ -178,9 +188,17 @@ type InspectorLabels = {
   sectionModulus: string;
   distributedLoadY: string;
   temperatureDelta: string;
+  temperature: string;
+  averageTemperature: string;
   maxTemperature: string;
+  conductivity: string;
+  fixTemperature: string;
+  heatLoad: string;
+  temperatureGradientX: string;
   temperatureGradientY: string;
   maxHeatFlux: string;
+  heatFluxX: string;
+  heatFluxY: string;
   thermalCurvature: string;
   thermalExpansion: string;
   bendingStress: string;
@@ -285,8 +303,8 @@ type WorkbenchInspectorProps = {
   onUpdateSelectedTruss3dNode: (field: "x" | "y" | "z" | "load_x" | "load_y" | "load_z" | "fix_x" | "fix_y" | "fix_z", value: number | boolean) => void;
   onUpdateSelectedTruss3dElement: (field: "area" | "youngs_modulus", value: number) => void;
   onAssignSelectedTruss3dElementMaterial: (materialId: string) => void;
-  onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta", value: number | boolean) => void;
-  onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion", value: number) => void;
+  onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta" | "fix_temperature" | "temperature" | "heat_load", value: number | boolean) => void;
+  onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity", value: number) => void;
   onAssignSelectedPlaneElementMaterial: (materialId: string) => void;
   onUpdateSelectedFrameNode: (field: "x" | "y" | "load_x" | "load_y" | "moment_z" | "fix_x" | "fix_y" | "fix_rz" | "temperature_delta", value: number | boolean) => void;
   onUpdateSelectedFrameElement: (
@@ -440,7 +458,9 @@ function WorkbenchInspectorInner({
   const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
   const isTruss3d = studyKind === "truss_3d" || studyKind === "thermal_truss_3d";
   const isSpring3d = studyKind === "spring_3d";
-  const isPlane = studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d";
+  const isHeatPlane = studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d";
+  const isThermalPlane = studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d";
+  const isPlane = isHeatPlane || studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" || isThermalPlane;
   const isHeatBar = studyKind === "heat_bar_1d";
   const isThermal = studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d";
   const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d";
@@ -536,14 +556,24 @@ function WorkbenchInspectorInner({
                 <label><span>{t.dragNode}</span><input value={selectedPlaneNodeData.id} readOnly /></label>
                 <label><span>{t.nodeX}</span><input type="number" step={0.1} value={selectedPlaneNodeData.x} onChange={(event) => onUpdateSelectedPlaneNode("x", Number(event.target.value))} /></label>
                 <label><span>{t.nodeY}</span><input type="number" step={0.1} value={selectedPlaneNodeData.y} onChange={(event) => onUpdateSelectedPlaneNode("y", Number(event.target.value))} /></label>
-                <label><span>{t.loadX}</span><input type="number" step={100} value={selectedPlaneNodeData.load_x} onChange={(event) => onUpdateSelectedPlaneNode("load_x", Number(event.target.value))} /></label>
-                <label><span>{t.loadY}</span><input type="number" step={100} value={selectedPlaneNodeData.load_y} onChange={(event) => onUpdateSelectedPlaneNode("load_y", Number(event.target.value))} /></label>
-                {"temperature_delta" in selectedPlaneNodeData ? (
+                {isHeatPlane ? (
+                  <>
+                    <label><span>{t.temperature}</span><input type="number" step={1} value={selectedPlaneNodeData.temperature ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("temperature", Number(event.target.value))} /></label>
+                    <label><span>{t.heatLoad}</span><input type="number" step={1} value={selectedPlaneNodeData.heat_load ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("heat_load", Number(event.target.value))} /></label>
+                    <label className="toggle-row"><span>{t.fixTemperature}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_temperature ?? false} onChange={(event) => onUpdateSelectedPlaneNode("fix_temperature", event.target.checked)} /></label>
+                  </>
+                ) : (
+                  <>
+                    <label><span>{t.loadX}</span><input type="number" step={100} value={selectedPlaneNodeData.load_x} onChange={(event) => onUpdateSelectedPlaneNode("load_x", Number(event.target.value))} /></label>
+                    <label><span>{t.loadY}</span><input type="number" step={100} value={selectedPlaneNodeData.load_y} onChange={(event) => onUpdateSelectedPlaneNode("load_y", Number(event.target.value))} /></label>
+                  </>
+                )}
+                {!isHeatPlane && "temperature_delta" in selectedPlaneNodeData ? (
                   <label><span>{t.temperatureDelta}</span><input type="number" step={1} value={selectedPlaneNodeData.temperature_delta ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("temperature_delta", Number(event.target.value))} /></label>
                 ) : null}
-                <label><span>{t.displacementMagnitude}</span><input value={typeof selectedPlaneNodeData.displacement_magnitude === "number" ? selectedPlaneNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
-                <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_x} onChange={(event) => onUpdateSelectedPlaneNode("fix_x", event.target.checked)} /></label>
-                <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_y} onChange={(event) => onUpdateSelectedPlaneNode("fix_y", event.target.checked)} /></label>
+                {!isHeatPlane ? <label><span>{t.displacementMagnitude}</span><input value={typeof selectedPlaneNodeData.displacement_magnitude === "number" ? selectedPlaneNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label> : null}
+                {!isHeatPlane ? <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_x} onChange={(event) => onUpdateSelectedPlaneNode("fix_x", event.target.checked)} /></label> : null}
+                {!isHeatPlane ? <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_y} onChange={(event) => onUpdateSelectedPlaneNode("fix_y", event.target.checked)} /></label> : null}
               </div>
             ) : isPlane && selectedPlaneElementData ? (
               <div className="form-grid compact">
@@ -551,18 +581,32 @@ function WorkbenchInspectorInner({
                 <label><span>{t.nodeI}</span><input value={selectedPlaneElementData.node_i} readOnly /></label>
                 <label><span>{t.nodeJ}</span><input value={selectedPlaneElementData.node_j} readOnly /></label>
                 <label><span>{t.nodeK}</span><input value={selectedPlaneElementData.node_k} readOnly /></label>
-                <label>
-                  <span>{materialLabel}</span>
-                  <select value={planeElementMaterialId} onChange={(event) => onAssignSelectedPlaneElementMaterial(event.target.value)}>
-                    {materialOptions.map((option) => (
-                      <option key={option.id} value={option.id}>{option.label}</option>
-                    ))}
-                  </select>
-                </label>
                 <label><span>{t.planeThickness}</span><input type="number" step={0.001} value={planeElementThickness} onChange={(event) => onUpdateSelectedPlaneElement("thickness", Number(event.target.value))} /></label>
-                <label><span>{t.modulus}</span><input type="number" step={0.1} value={planeElementModulusGpa} onChange={(event) => onUpdateSelectedPlaneElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
-                <label><span>{t.poissonRatio}</span><input type="number" step={0.01} min={0.01} max={0.49} value={planeElementPoissonRatio} onChange={(event) => onUpdateSelectedPlaneElement("poisson_ratio", Number(event.target.value))} /></label>
-                {"thermal_expansion" in selectedPlaneElementData ? (
+                {isHeatPlane ? (
+                  <>
+                    <label><span>{t.conductivity}</span><input type="number" step={0.1} value={selectedPlaneElementData.conductivity ?? 0} onChange={(event) => onUpdateSelectedPlaneElement("conductivity", Number(event.target.value))} /></label>
+                    <label><span>{t.averageTemperature}</span><input value={typeof selectedPlaneElementData.average_temperature === "number" ? selectedPlaneElementData.average_temperature.toExponential(3) : "--"} readOnly /></label>
+                    <label><span>{t.temperatureGradientX}</span><input value={typeof selectedPlaneElementData.temperature_gradient_x === "number" ? selectedPlaneElementData.temperature_gradient_x.toExponential(3) : "--"} readOnly /></label>
+                    <label><span>{t.temperatureGradientY}</span><input value={typeof selectedPlaneElementData.temperature_gradient_y === "number" ? selectedPlaneElementData.temperature_gradient_y.toExponential(3) : "--"} readOnly /></label>
+                    <label><span>{t.heatFluxX}</span><input value={typeof selectedPlaneElementData.heat_flux_x === "number" ? selectedPlaneElementData.heat_flux_x.toExponential(3) : "--"} readOnly /></label>
+                    <label><span>{t.heatFluxY}</span><input value={typeof selectedPlaneElementData.heat_flux_y === "number" ? selectedPlaneElementData.heat_flux_y.toExponential(3) : "--"} readOnly /></label>
+                    <label><span>{t.maxHeatFlux}</span><input value={typeof selectedPlaneElementData.heat_flux_magnitude === "number" ? selectedPlaneElementData.heat_flux_magnitude.toExponential(3) : "--"} readOnly /></label>
+                  </>
+                ) : (
+                  <>
+                    <label>
+                      <span>{materialLabel}</span>
+                      <select value={planeElementMaterialId} onChange={(event) => onAssignSelectedPlaneElementMaterial(event.target.value)}>
+                        {materialOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label><span>{t.modulus}</span><input type="number" step={0.1} value={planeElementModulusGpa} onChange={(event) => onUpdateSelectedPlaneElement("youngs_modulus", Number(event.target.value) * 1.0e9)} /></label>
+                    <label><span>{t.poissonRatio}</span><input type="number" step={0.01} min={0.01} max={0.49} value={planeElementPoissonRatio} onChange={(event) => onUpdateSelectedPlaneElement("poisson_ratio", Number(event.target.value))} /></label>
+                  </>
+                )}
+                {!isHeatPlane && "thermal_expansion" in selectedPlaneElementData ? (
                   <>
                     <label><span>{t.thermalExpansion}</span><input type="number" step={0.000001} value={selectedPlaneElementData.thermal_expansion ?? 0} onChange={(event) => onUpdateSelectedPlaneElement("thermal_expansion", Number(event.target.value))} /></label>
                     <label><span>{t.temperatureDelta}</span><input value={typeof selectedPlaneElementData.average_temperature_delta === "number" ? selectedPlaneElementData.average_temperature_delta.toExponential(3) : "--"} readOnly /></label>
@@ -571,9 +615,9 @@ function WorkbenchInspectorInner({
                     <label><span>{t.totalStrain}</span><input value={typeof selectedPlaneElementData.total_strain_x === "number" || typeof selectedPlaneElementData.total_strain_y === "number" ? `${(selectedPlaneElementData.total_strain_x ?? 0).toExponential(3)} / ${(selectedPlaneElementData.total_strain_y ?? 0).toExponential(3)}` : "--"} readOnly /></label>
                   </>
                 ) : null}
-                <label><span>{t.principalStress1}</span><input value={typeof selectedPlaneElementData.principal_stress_1 === "number" ? selectedPlaneElementData.principal_stress_1.toExponential(3) : "--"} readOnly /></label>
-                <label><span>{t.principalStress2}</span><input value={typeof selectedPlaneElementData.principal_stress_2 === "number" ? selectedPlaneElementData.principal_stress_2.toExponential(3) : "--"} readOnly /></label>
-                <label><span>{t.maxInPlaneShear}</span><input value={typeof selectedPlaneElementData.max_in_plane_shear === "number" ? selectedPlaneElementData.max_in_plane_shear.toExponential(3) : "--"} readOnly /></label>
+                {!isHeatPlane ? <label><span>{t.principalStress1}</span><input value={typeof selectedPlaneElementData.principal_stress_1 === "number" ? selectedPlaneElementData.principal_stress_1.toExponential(3) : "--"} readOnly /></label> : null}
+                {!isHeatPlane ? <label><span>{t.principalStress2}</span><input value={typeof selectedPlaneElementData.principal_stress_2 === "number" ? selectedPlaneElementData.principal_stress_2.toExponential(3) : "--"} readOnly /></label> : null}
+                {!isHeatPlane ? <label><span>{t.maxInPlaneShear}</span><input value={typeof selectedPlaneElementData.max_in_plane_shear === "number" ? selectedPlaneElementData.max_in_plane_shear.toExponential(3) : "--"} readOnly /></label> : null}
               </div>
             ) : isBeam && selectedFrameNodeData ? (
               <div className="form-grid compact">
@@ -777,8 +821,8 @@ function WorkbenchInspectorInner({
             <button className="ghost-button" onClick={onDownloadCsv} type="button">{t.exportData} {t.exportCsv}</button>
           </div>
           <div className="metric-grid">
-            <div><span>{t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
-            <div><span>{t.maxStress}</span><strong>{maxStressValue}</strong></div>
+            <div><span>{isHeatPlane ? t.maxTemperature : t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
+            <div><span>{isHeatPlane ? t.maxHeatFlux : t.maxStress}</span><strong>{maxStressValue}</strong></div>
             {(studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") ? <div><span>{t.temperatureDelta}</span><strong>{thermalPlaneMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
             {isHeatBar ? <div><span>{t.maxTemperature}</span><strong>{tipDisplacement}</strong></div> : null}
             {isFrame || isSpring || studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d" ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}

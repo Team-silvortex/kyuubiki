@@ -1,11 +1,15 @@
 use kyuubiki_protocol::{
     Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
-    HeatBar1dElementResult, HeatBar1dNodeResult, Job, JobStatus, NodeResult, PlaneNodeResult,
+    HeatBar1dElementResult, HeatBar1dNodeResult, HeatPlaneNodeResult,
+    HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput,
+    HeatPlaneTriangleElementResult, Job, JobStatus, NodeResult, PlaneNodeResult,
     PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult,
     SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
-    SolveHeatBar1dRequest, SolveHeatBar1dResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
-    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveSpring1dRequest,
+    SolveHeatBar1dRequest, SolveHeatBar1dResult, SolveHeatPlaneQuad2dRequest,
+    SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
+    SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
+    SolvePlaneTriangle2dResult, SolveSpring1dRequest,
     SolveSpring1dResult, SolveSpring2dRequest, SolveSpring2dResult, SolveSpring3dRequest,
     SolveSpring3dResult, SolveThermalBar1dRequest, SolveThermalBar1dResult,
     SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
@@ -334,6 +338,259 @@ pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar
         .fold(0.0_f64, f64::max);
 
     Ok(SolveHeatBar1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_temperature,
+        max_heat_flux,
+    })
+}
+
+pub fn solve_heat_plane_triangle_2d(
+    request: &SolveHeatPlaneTriangle2dRequest,
+) -> Result<SolveHeatPlaneTriangle2dResult, String> {
+    validate_heat_plane_triangle_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut heat_vector = vec![0.0; dof_count];
+    let computed_elements = request
+        .elements
+        .iter()
+        .map(|element| precompute_heat_plane_triangle_element(request, element))
+        .collect::<Result<Vec<_>, String>>()?;
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        heat_vector[index] = node.heat_load;
+    }
+
+    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+        let map = [element.node_i, element.node_j, element.node_k];
+        for row in 0..3 {
+            for column in 0..3 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    computed.stiffness[row][column],
+                );
+            }
+        }
+    }
+
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_heat, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+    let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
+
+    let mut temperatures = vec![0.0; dof_count];
+    for &(index, value) in &prescribed {
+        temperatures[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        temperatures[dof] = reduced_temperatures[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| HeatPlaneNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            temperature: temperatures[index],
+            heat_load: node.heat_load,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+        .map(|(index, (element, computed))| {
+            let element_temperatures = [
+                temperatures[element.node_i],
+                temperatures[element.node_j],
+                temperatures[element.node_k],
+            ];
+            let gradient = heat_plane_triangle_gradient(&computed, &element_temperatures);
+            let heat_flux_x = -element.conductivity * gradient[0];
+            let heat_flux_y = -element.conductivity * gradient[1];
+
+            HeatPlaneTriangleElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                node_k: element.node_k,
+                area: computed.area,
+                average_temperature: element_temperatures.iter().sum::<f64>() / 3.0,
+                temperature_gradient_x: gradient[0],
+                temperature_gradient_y: gradient[1],
+                heat_flux_x,
+                heat_flux_y,
+                heat_flux_magnitude: (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_temperature = nodes
+        .iter()
+        .map(|node| node.temperature.abs())
+        .fold(0.0_f64, f64::max);
+    let max_heat_flux = elements
+        .iter()
+        .map(|element| element.heat_flux_magnitude.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveHeatPlaneTriangle2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_temperature,
+        max_heat_flux,
+    })
+}
+
+pub fn solve_heat_plane_quad_2d(
+    request: &SolveHeatPlaneQuad2dRequest,
+) -> Result<SolveHeatPlaneQuad2dResult, String> {
+    validate_heat_plane_quad_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut heat_vector = vec![0.0; dof_count];
+    let computed_elements = request
+        .elements
+        .iter()
+        .map(|element| precompute_heat_plane_quad_element(request, element))
+        .collect::<Result<Vec<_>, String>>()?;
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        heat_vector[index] = node.heat_load;
+    }
+
+    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+        let triangles = [
+            ([element.node_i, element.node_j, element.node_k], &computed.first),
+            ([element.node_i, element.node_k, element.node_l], &computed.second),
+        ];
+
+        for (nodes, triangle) in triangles {
+            let map = [nodes[0], nodes[1], nodes[2]];
+            for row in 0..3 {
+                for column in 0..3 {
+                    add_at(
+                        &mut global_stiffness,
+                        map[row],
+                        map[column],
+                        triangle.stiffness[row][column],
+                    );
+                }
+            }
+        }
+    }
+
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_heat, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+    let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
+
+    let mut temperatures = vec![0.0; dof_count];
+    for &(index, value) in &prescribed {
+        temperatures[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        temperatures[dof] = reduced_temperatures[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| HeatPlaneNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            temperature: temperatures[index],
+            heat_load: node.heat_load,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+        .map(|(index, (element, computed))| {
+            let first_temperatures = [
+                temperatures[element.node_i],
+                temperatures[element.node_j],
+                temperatures[element.node_k],
+            ];
+            let second_temperatures = [
+                temperatures[element.node_i],
+                temperatures[element.node_k],
+                temperatures[element.node_l],
+            ];
+            let first_gradient = heat_plane_triangle_gradient(&computed.first, &first_temperatures);
+            let second_gradient = heat_plane_triangle_gradient(&computed.second, &second_temperatures);
+            let total_area = computed.first.area + computed.second.area;
+            let weighted = |left: f64, right: f64| -> f64 {
+                ((left * computed.first.area) + (right * computed.second.area)) / total_area
+            };
+            let heat_flux_x = -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
+            let heat_flux_y = -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
+
+            HeatPlaneQuadElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                node_k: element.node_k,
+                node_l: element.node_l,
+                area: total_area,
+                average_temperature: (
+                    temperatures[element.node_i]
+                        + temperatures[element.node_j]
+                        + temperatures[element.node_k]
+                        + temperatures[element.node_l]
+                ) / 4.0,
+                temperature_gradient_x: weighted(first_gradient[0], second_gradient[0]),
+                temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
+                heat_flux_x,
+                heat_flux_y,
+                heat_flux_magnitude: (heat_flux_x * heat_flux_x + heat_flux_y * heat_flux_y).sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_temperature = nodes
+        .iter()
+        .map(|node| node.temperature.abs())
+        .fold(0.0_f64, f64::max);
+    let max_heat_flux = elements
+        .iter()
+        .map(|element| element.heat_flux_magnitude.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveHeatPlaneQuad2dResult {
         input: request.clone(),
         nodes,
         elements,
@@ -3759,6 +4016,143 @@ fn validate_heat_bar_1d_request(request: &SolveHeatBar1dRequest) -> Result<(), S
     Ok(())
 }
 
+fn validate_heat_plane_triangle_request(
+    request: &SolveHeatPlaneTriangle2dRequest,
+) -> Result<(), String> {
+    if request.nodes.len() < 3 {
+        return Err("heat plane triangle model must define at least three nodes".to_string());
+    }
+    if request.elements.is_empty() {
+        return Err("heat plane triangle model must define at least one element".to_string());
+    }
+    if !request.nodes.iter().any(|node| node.fix_temperature) {
+        return Err("heat plane triangle model must include at least one temperature support".to_string());
+    }
+
+    for node in &request.nodes {
+        if !(node.x.is_finite() && node.y.is_finite()) {
+            return Err("heat plane triangle node coordinates must be finite".to_string());
+        }
+        if !node.temperature.is_finite() {
+            return Err("heat plane triangle node temperature must be finite".to_string());
+        }
+        if !node.heat_load.is_finite() {
+            return Err("heat plane triangle node heat_load must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len()
+            || element.node_j >= request.nodes.len()
+            || element.node_k >= request.nodes.len()
+        {
+            return Err("heat plane triangle element references an out-of-range node".to_string());
+        }
+        if !element.thickness.is_finite() || element.thickness <= 0.0 {
+            return Err("heat plane triangle thickness must be positive".to_string());
+        }
+        if !element.conductivity.is_finite() || element.conductivity <= 0.0 {
+            return Err("heat plane triangle conductivity must be positive".to_string());
+        }
+        let ni = kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[element.node_i].id.clone(),
+            x: request.nodes[element.node_i].x,
+            y: request.nodes[element.node_i].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let nj = kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[element.node_j].id.clone(),
+            x: request.nodes[element.node_j].x,
+            y: request.nodes[element.node_j].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let nk = kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[element.node_k].id.clone(),
+            x: request.nodes[element.node_k].x,
+            y: request.nodes[element.node_k].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let area = signed_triangle_area(&ni, &nj, &nk).abs();
+        if area <= 1.0e-12 {
+            return Err("heat plane triangle element area must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_heat_plane_quad_request(
+    request: &SolveHeatPlaneQuad2dRequest,
+) -> Result<(), String> {
+    if request.nodes.len() < 4 {
+        return Err("heat plane quad model must define at least four nodes".to_string());
+    }
+    if request.elements.is_empty() {
+        return Err("heat plane quad model must define at least one element".to_string());
+    }
+    if !request.nodes.iter().any(|node| node.fix_temperature) {
+        return Err("heat plane quad model must include at least one temperature support".to_string());
+    }
+
+    for node in &request.nodes {
+        if !(node.x.is_finite() && node.y.is_finite()) {
+            return Err("heat plane quad node coordinates must be finite".to_string());
+        }
+        if !node.temperature.is_finite() {
+            return Err("heat plane quad node temperature must be finite".to_string());
+        }
+        if !node.heat_load.is_finite() {
+            return Err("heat plane quad node heat_load must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len()
+            || element.node_j >= request.nodes.len()
+            || element.node_k >= request.nodes.len()
+            || element.node_l >= request.nodes.len()
+        {
+            return Err("heat plane quad element references an out-of-range node".to_string());
+        }
+        if !element.thickness.is_finite() || element.thickness <= 0.0 {
+            return Err("heat plane quad thickness must be positive".to_string());
+        }
+        if !element.conductivity.is_finite() || element.conductivity <= 0.0 {
+            return Err("heat plane quad conductivity must be positive".to_string());
+        }
+
+        let to_node = |index: usize| kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[index].id.clone(),
+            x: request.nodes[index].x,
+            y: request.nodes[index].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let ni = to_node(element.node_i);
+        let nj = to_node(element.node_j);
+        let nk = to_node(element.node_k);
+        let nl = to_node(element.node_l);
+        let first_area = signed_triangle_area(&ni, &nj, &nk).abs();
+        let second_area = signed_triangle_area(&ni, &nk, &nl).abs();
+        if first_area <= 1.0e-12 || second_area <= 1.0e-12 {
+            return Err("heat plane quad triangles must have positive area".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_spring_1d_request(request: &SolveSpring1dRequest) -> Result<(), String> {
     if request.nodes.len() < 2 {
         return Err("1d spring model must define at least two nodes".to_string());
@@ -4052,6 +4446,20 @@ struct ThermalPlaneQuadComputed {
     second: ThermalPlaneTriangleComputed,
 }
 
+#[derive(Debug, Clone)]
+struct HeatPlaneTriangleComputed {
+    stiffness: [[f64; 3]; 3],
+    area: f64,
+    gradient_x: [f64; 3],
+    gradient_y: [f64; 3],
+}
+
+#[derive(Debug, Clone)]
+struct HeatPlaneQuadComputed {
+    first: HeatPlaneTriangleComputed,
+    second: HeatPlaneTriangleComputed,
+}
+
 fn precompute_plane_triangle_element(
     request: &SolvePlaneTriangle2dRequest,
     element: &kyuubiki_protocol::PlaneTriangleElementInput,
@@ -4108,6 +4516,50 @@ fn precompute_thermal_plane_triangle_element(
         b_matrix,
         d_matrix,
         average_temperature_delta,
+    })
+}
+
+fn precompute_heat_plane_triangle_element(
+    request: &SolveHeatPlaneTriangle2dRequest,
+    element: &HeatPlaneTriangleElementInput,
+) -> Result<HeatPlaneTriangleComputed, String> {
+    let node_i = &request.nodes[element.node_i];
+    let node_j = &request.nodes[element.node_j];
+    let node_k = &request.nodes[element.node_k];
+    let signed_area = 0.5
+        * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
+            - (node_k.x - node_i.x) * (node_j.y - node_i.y));
+    let area = signed_area.abs();
+    if area <= 1.0e-12 {
+        return Err("heat plane triangle element area must be positive".to_string());
+    }
+
+    let twice_area = signed_area * 2.0;
+    let gradient_x = [
+        (node_j.y - node_k.y) / twice_area,
+        (node_k.y - node_i.y) / twice_area,
+        (node_i.y - node_j.y) / twice_area,
+    ];
+    let gradient_y = [
+        (node_k.x - node_j.x) / twice_area,
+        (node_i.x - node_k.x) / twice_area,
+        (node_j.x - node_i.x) / twice_area,
+    ];
+
+    let scale = element.conductivity * element.thickness * area;
+    let mut stiffness = [[0.0; 3]; 3];
+    for row in 0..3 {
+        for column in 0..3 {
+            stiffness[row][column] =
+                scale * ((gradient_x[row] * gradient_x[column]) + (gradient_y[row] * gradient_y[column]));
+        }
+    }
+
+    Ok(HeatPlaneTriangleComputed {
+        stiffness,
+        area,
+        gradient_x,
+        gradient_y,
     })
 }
 
@@ -4178,6 +4630,51 @@ fn precompute_thermal_plane_quad_element(
         first: precompute_thermal_plane_triangle_element(&triangle_request, &first)?,
         second: precompute_thermal_plane_triangle_element(&triangle_request, &second)?,
     })
+}
+
+fn precompute_heat_plane_quad_element(
+    request: &SolveHeatPlaneQuad2dRequest,
+    element: &HeatPlaneQuadElementInput,
+) -> Result<HeatPlaneQuadComputed, String> {
+    let first = HeatPlaneTriangleElementInput {
+        id: format!("{}#0", element.id),
+        node_i: element.node_i,
+        node_j: element.node_j,
+        node_k: element.node_k,
+        thickness: element.thickness,
+        conductivity: element.conductivity,
+    };
+    let second = HeatPlaneTriangleElementInput {
+        id: format!("{}#1", element.id),
+        node_i: element.node_i,
+        node_j: element.node_k,
+        node_k: element.node_l,
+        thickness: element.thickness,
+        conductivity: element.conductivity,
+    };
+    let triangle_request = SolveHeatPlaneTriangle2dRequest {
+        nodes: request.nodes.clone(),
+        elements: vec![],
+    };
+
+    Ok(HeatPlaneQuadComputed {
+        first: precompute_heat_plane_triangle_element(&triangle_request, &first)?,
+        second: precompute_heat_plane_triangle_element(&triangle_request, &second)?,
+    })
+}
+
+fn heat_plane_triangle_gradient(
+    computed: &HeatPlaneTriangleComputed,
+    nodal_temperatures: &[f64; 3],
+) -> [f64; 2] {
+    [
+        (0..3)
+            .map(|index| computed.gradient_x[index] * nodal_temperatures[index])
+            .sum(),
+        (0..3)
+            .map(|index| computed.gradient_y[index] * nodal_temperatures[index])
+            .sum(),
+    ]
 }
 
 #[derive(Debug, Clone)]
@@ -5092,17 +5589,20 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 mod tests {
     use super::{
         MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_heat_bar_1d,
-        solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
-        solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+        solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+        solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+        solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
         solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
         solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
         solve_truss_3d,
     };
     use kyuubiki_protocol::{
         Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
-        HeatBar1dElementInput, HeatBar1dNodeInput, Job, JobStatus, PlaneNodeInput,
-        PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
-        SolveFrame2dRequest, SolveHeatBar1dRequest, SolvePlaneQuad2dRequest,
+        HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
+        HeatPlaneTriangleElementInput, Job, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
+        PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
+        SolveFrame2dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+        SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
         SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
         SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
@@ -5235,6 +5735,58 @@ mod tests {
         assert!((result.elements[0].heat_flux - 5_000.0).abs() < 1.0e-6);
         assert_eq!(result.max_temperature, 100.0);
         assert!((result.max_heat_flux - 5_000.0).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn solves_a_small_heat_plane_triangle_2d_patch() {
+        let result = solve_heat_plane_triangle_2d(&SolveHeatPlaneTriangle2dRequest {
+            nodes: vec![
+                HeatPlaneNodeInput { id: "n0".to_string(), x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
+                HeatPlaneNodeInput { id: "n1".to_string(), x: 1.0, y: 0.0, fix_temperature: true, temperature: 0.0, heat_load: 0.0 },
+                HeatPlaneNodeInput { id: "n2".to_string(), x: 0.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+            ],
+            elements: vec![HeatPlaneTriangleElementInput {
+                id: "hp0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                thickness: 0.02,
+                conductivity: 10.0,
+            }],
+        })
+        .expect("heat plane triangle should solve");
+
+        assert_eq!(result.nodes.len(), 3);
+        assert_eq!(result.elements.len(), 1);
+        assert_eq!(result.max_temperature, 100.0);
+        assert!(result.max_heat_flux > 0.0);
+    }
+
+    #[test]
+    fn solves_a_small_heat_plane_quad_2d_patch() {
+        let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
+            nodes: vec![
+                HeatPlaneNodeInput { id: "n0".to_string(), x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
+                HeatPlaneNodeInput { id: "n1".to_string(), x: 1.0, y: 0.0, fix_temperature: true, temperature: 0.0, heat_load: 0.0 },
+                HeatPlaneNodeInput { id: "n2".to_string(), x: 1.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+                HeatPlaneNodeInput { id: "n3".to_string(), x: 0.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+            ],
+            elements: vec![HeatPlaneQuadElementInput {
+                id: "hq0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                node_l: 3,
+                thickness: 0.02,
+                conductivity: 10.0,
+            }],
+        })
+        .expect("heat plane quad should solve");
+
+        assert_eq!(result.nodes.len(), 4);
+        assert_eq!(result.elements.len(), 1);
+        assert_eq!(result.max_temperature, 100.0);
+        assert!(result.max_heat_flux > 0.0);
     }
 
     #[test]

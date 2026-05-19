@@ -4,6 +4,8 @@ export type SampleEntry = {
   kind:
     | "axial_bar_1d"
     | "heat_bar_1d"
+    | "heat_plane_triangle_2d"
+    | "heat_plane_quad_2d"
     | "thermal_bar_1d"
     | "thermal_beam_1d"
     | "thermal_frame_2d"
@@ -39,6 +41,20 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "heat_bar_1d",
     href: "/models/heat-bar-1d.json",
     summary: "Steady 1D conduction bar with prescribed end temperature for quick temperature-gradient and heat-flux checks.",
+  },
+  {
+    id: "heat-plane-triangle-2d",
+    name: "Heat Plane Triangle 2D",
+    kind: "heat_plane_triangle_2d",
+    href: "/models/heat-plane-triangle-2d.json",
+    summary: "Steady CST conduction patch for quick temperature-field and heat-flux checks.",
+  },
+  {
+    id: "heat-plane-quad-2d",
+    name: "Heat Plane Quad 2D",
+    kind: "heat_plane_quad_2d",
+    href: "/models/heat-plane-quad-2d.json",
+    summary: "Single quad conduction patch for quick 2D temperature-gradient and heat-flux checks.",
   },
   {
     id: "thermal-bar-1d",

@@ -10,7 +10,8 @@ use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolveHeatBar1dRequest,
-    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
+    SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
     SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
     SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalPlaneQuad2dRequest,
     SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
@@ -18,8 +19,9 @@ use kyuubiki_protocol::{
 };
 use kyuubiki_solver::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_heat_bar_1d,
-    solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
-    solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
     solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
@@ -1153,6 +1155,65 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                 }
             }
         }
+        RpcMethod::SolveHeatPlaneTriangle2d => {
+            let params = match serde_json::from_value::<SolveHeatPlaneTriangle2dRequest>(
+                request.params.clone(),
+            ) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_heat_plane_triangle_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d heat plane triangle", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("heat plane triangle result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
         RpcMethod::SolveThermalPlaneTriangle2d => {
             let params = match serde_json::from_value::<SolveThermalPlaneTriangle2dRequest>(
                 request.params.clone(),
@@ -1201,6 +1262,65 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                             request.id,
                             serde_json::to_value(result)
                                 .expect("thermal plane result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveHeatPlaneQuad2d => {
+            let params = match serde_json::from_value::<SolveHeatPlaneQuad2dRequest>(
+                request.params.clone(),
+            ) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_heat_plane_quad_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames =
+                        build_progress_frames("2d heat plane quad", &request.id, params.nodes.len());
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result).expect("heat plane quad result should serialize"),
                         ),
                     )
                 }

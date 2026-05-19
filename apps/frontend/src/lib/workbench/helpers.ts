@@ -9,6 +9,10 @@ import type {
   FrontendRuntimeMode,
   HeatBar1dJobInput,
   HeatBar1dResult,
+  HeatPlaneQuad2dJobInput,
+  HeatPlaneQuad2dResult,
+  HeatPlaneTriangle2dJobInput,
+  HeatPlaneTriangle2dResult,
   JobEnvelope,
   PlaneQuad2dJobInput,
   PlaneQuad2dResult,
@@ -99,7 +103,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -226,6 +230,7 @@ export function serializeCurrentModel(
   activeMaterial: string,
   axialForm: AxialFormLike,
   heatBarModel: HeatBar1dJobInput,
+  heatPlaneModel: HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput,
   thermalBarModel: ThermalBar1dJobInput,
   thermalBeamModel: ThermalBeam1dJobInput,
   thermalFrameModel: ThermalFrame2dJobInput,
@@ -254,6 +259,8 @@ export function serializeCurrentModel(
       studyKind === "axial_bar_1d"
         ? axialForm.youngsModulusGpa
         : studyKind === "heat_bar_1d"
+          ? 0
+        : studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d"
           ? 0
         : studyKind === "thermal_bar_1d"
           ? round((thermalBarModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
@@ -297,6 +304,8 @@ export function serializeCurrentModel(
             ? undefined
           : studyKind === "frame_2d"
             ? frameModel.materials
+          : studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d"
+            ? heatPlaneModel.materials
           : studyKind === "plane_triangle_2d" ||
             studyKind === "plane_quad_2d" ||
             studyKind === "thermal_plane_triangle_2d" ||
@@ -309,7 +318,10 @@ export function serializeCurrentModel(
     truss3d: studyKind === "truss_3d" ? truss3dModel : undefined,
     thermalTruss3d: studyKind === "thermal_truss_3d" ? thermalTruss3dModel : undefined,
     plane:
-      studyKind === "plane_triangle_2d" ||
+      studyKind === "heat_plane_triangle_2d" ||
+      studyKind === "heat_plane_quad_2d"
+        ? heatPlaneModel
+      : studyKind === "plane_triangle_2d" ||
       studyKind === "plane_quad_2d" ||
       studyKind === "thermal_plane_triangle_2d" ||
       studyKind === "thermal_plane_quad_2d"
@@ -498,7 +510,7 @@ function isTorsion1dResult(value: unknown): value is Torsion1dResult {
 export function serializeResultCsv(
   studyKind: StudyKind,
   job: JobEnvelope["job"] | null,
-  result: AxialBarResult | HeatBar1dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
+  result: AxialBarResult | HeatBar1dResult | HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalFrame2dResult | ThermalTruss2dResult | ThermalTruss3dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | null,
 ) {
   if (!result) return "";
 
@@ -597,6 +609,57 @@ export function serializeResultCsv(
           element.average_temperature,
           element.temperature_gradient,
           element.heat_flux,
+        ]),
+      ),
+    );
+    return lines.join("\n");
+  }
+
+  if (
+    studyKind === "heat_plane_triangle_2d" ||
+    studyKind === "heat_plane_quad_2d"
+  ) {
+    const heatPlaneResult = result as HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult;
+    lines.push("nodes");
+    lines.push(toCsvRow(["index", "id", "x", "y", "temperature", "heat_load"]));
+    heatPlaneResult.nodes.forEach((node) =>
+      lines.push(toCsvRow([node.index, node.id, node.x, node.y, node.temperature, node.heat_load])),
+    );
+    lines.push("");
+    lines.push("elements");
+    lines.push(
+      toCsvRow([
+        "index",
+        "id",
+        "node_i",
+        "node_j",
+        "node_k",
+        "node_l",
+        "area",
+        "average_temperature",
+        "temperature_gradient_x",
+        "temperature_gradient_y",
+        "heat_flux_x",
+        "heat_flux_y",
+        "heat_flux_magnitude",
+      ]),
+    );
+    heatPlaneResult.elements.forEach((element) =>
+      lines.push(
+        toCsvRow([
+          element.index,
+          element.id,
+          element.node_i,
+          element.node_j,
+          element.node_k,
+          "node_l" in element && typeof element.node_l === "number" ? element.node_l : "",
+          element.area,
+          element.average_temperature,
+          element.temperature_gradient_x,
+          element.temperature_gradient_y,
+          element.heat_flux_x,
+          element.heat_flux_y,
+          element.heat_flux_magnitude,
         ]),
       ),
     );

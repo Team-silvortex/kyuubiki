@@ -23,6 +23,8 @@ export type StudyFamilyKey = "axialAndSprings" | "beamsAndFrames" | "trusses" | 
 export function classifyStudyKindDomain(kind: string): StudyDomainKey {
   switch (kind) {
     case "heat_bar_1d":
+    case "heat_plane_triangle_2d":
+    case "heat_plane_quad_2d":
       return "thermal";
     case "thermal_bar_1d":
     case "thermal_beam_1d":
@@ -59,6 +61,8 @@ export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
       return "trusses";
     case "thermal_plane_triangle_2d":
     case "thermal_plane_quad_2d":
+    case "heat_plane_triangle_2d":
+    case "heat_plane_quad_2d":
     case "plane_triangle_2d":
     case "plane_quad_2d":
     default:
@@ -248,6 +252,8 @@ export function buildProtocolAgentCards({
 type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "heat_plane_triangle_2d"
+  | "heat_plane_quad_2d"
   | "thermal_bar_1d"
   | "thermal_beam_1d"
   | "thermal_frame_2d"
@@ -285,6 +291,8 @@ export function buildStudyKindOptionGroups({
   kinds: {
     axial_bar_1d: string;
     heat_bar_1d: string;
+    heat_plane_triangle_2d: string;
+    heat_plane_quad_2d: string;
     thermal_bar_1d: string;
     thermal_beam_1d: string;
     thermal_frame_2d: string;
@@ -388,7 +396,10 @@ export function buildStudyKindOptionGroups({
     {
       domainKey: "thermal",
       label: families.planes,
-      options: [],
+      options: [
+        { value: "heat_plane_triangle_2d" as const, label: kinds.heat_plane_triangle_2d },
+        { value: "heat_plane_quad_2d" as const, label: kinds.heat_plane_quad_2d },
+      ],
     },
   ] satisfies StudyKindOptionGroup[];
 }
@@ -408,6 +419,8 @@ export function buildStudyDomainOptions(domains: {
 export function buildStudyKindOptions(kinds: {
   axial_bar_1d: string;
   heat_bar_1d: string;
+  heat_plane_triangle_2d: string;
+  heat_plane_quad_2d: string;
   thermal_bar_1d: string;
   thermal_beam_1d: string;
   thermal_frame_2d: string;
@@ -429,6 +442,8 @@ export function buildStudyKindOptions(kinds: {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
     { value: "heat_bar_1d" as const, label: kinds.heat_bar_1d },
+    { value: "heat_plane_triangle_2d" as const, label: kinds.heat_plane_triangle_2d },
+    { value: "heat_plane_quad_2d" as const, label: kinds.heat_plane_quad_2d },
     { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },
     { value: "thermal_truss_2d" as const, label: kinds.thermal_truss_2d },
     { value: "spring_1d" as const, label: kinds.spring_1d },
@@ -501,6 +516,8 @@ export function buildStudyControlsRows({
   studyKind:
     | "axial_bar_1d"
     | "heat_bar_1d"
+    | "heat_plane_triangle_2d"
+    | "heat_plane_quad_2d"
     | "thermal_bar_1d"
     | "thermal_beam_1d"
     | "thermal_frame_2d"
@@ -546,6 +563,14 @@ export function buildStudyControlsRows({
     return [
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
+      { label: labels.sourceModel, value: loadedModelName },
+    ];
+  }
+
+  if (studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d") {
+    return [
+      { label: labels.nodes, value: planeNodeCount },
+      { label: labels.planeElements, value: planeElementCount },
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }

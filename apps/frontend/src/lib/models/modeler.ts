@@ -3,6 +3,8 @@ import type {
   Beam1dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
+  HeatPlaneQuad2dJobInput,
+  HeatPlaneTriangle2dJobInput,
   JobResultRecord,
   JobState,
   ModelMaterial,
@@ -242,7 +244,7 @@ export function generatePrattTruss(config: ParametricTrussConfig): Truss2dJobInp
 }
 
 export function exportStudyModel(
-  kind: "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  kind: "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -253,7 +255,7 @@ export function exportStudyModel(
     truss3d?: Truss3dJobInput;
     thermalTruss?: ThermalTruss2dJobInput;
     thermalTruss3d?: ThermalTruss3dJobInput;
-    plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput;
+    plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput | HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput;
     frame?: Frame2dJobInput;
     thermalFrame?: ThermalFrame2dJobInput;
     beam?: Beam1dJobInput;
@@ -323,7 +325,9 @@ export function exportStudyModel(
   }
 
   if (
-    (kind === "plane_triangle_2d" ||
+    (kind === "heat_plane_triangle_2d" ||
+      kind === "heat_plane_quad_2d" ||
+      kind === "plane_triangle_2d" ||
       kind === "plane_quad_2d" ||
       kind === "thermal_plane_triangle_2d" ||
       kind === "thermal_plane_quad_2d") &&
@@ -334,9 +338,13 @@ export function exportStudyModel(
         kind,
         model_schema_version: MODEL_SCHEMA_VERSION,
         name: payload.name,
-        material: payload.material,
-        youngs_modulus_gpa: payload.youngsModulusGpa,
-        materials: payload.plane.materials ?? payload.materials,
+        ...((kind === "heat_plane_triangle_2d" || kind === "heat_plane_quad_2d")
+          ? {}
+          : {
+              material: payload.material,
+              youngs_modulus_gpa: payload.youngsModulusGpa,
+              materials: payload.plane.materials ?? payload.materials,
+            }),
         nodes: payload.plane.nodes,
         elements: payload.plane.elements,
       },
@@ -531,7 +539,7 @@ export function exportStudyModel(
 }
 
 export function buildStudyModelPayload(
-  kind: "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
+  kind: "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d",
   payload: {
     name: string;
     material: string;
@@ -542,7 +550,7 @@ export function buildStudyModelPayload(
     truss3d?: Truss3dJobInput;
     thermalTruss?: ThermalTruss2dJobInput;
     thermalTruss3d?: ThermalTruss3dJobInput;
-    plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+    plane?: PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput | HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput;
     frame?: Frame2dJobInput;
     thermalFrame?: ThermalFrame2dJobInput;
     beam?: Beam1dJobInput;

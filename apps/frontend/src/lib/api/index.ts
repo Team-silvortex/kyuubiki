@@ -55,6 +55,52 @@ export type HeatBar1dJobInput = {
   model_version_id?: string;
 };
 
+export type HeatPlaneNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_temperature: boolean;
+  temperature?: number;
+  heat_load?: number;
+};
+
+export type HeatPlaneTriangleElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  thickness: number;
+  conductivity: number;
+  material_id?: string;
+};
+
+export type HeatPlaneTriangle2dJobInput = {
+  nodes: HeatPlaneNodeInput[];
+  elements: HeatPlaneTriangleElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type HeatPlaneQuadElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  node_l: number;
+  thickness: number;
+  conductivity: number;
+  material_id?: string;
+};
+
+export type HeatPlaneQuad2dJobInput = {
+  nodes: HeatPlaneNodeInput[];
+  elements: HeatPlaneQuadElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type ThermalTruss2dNodeInput = {
   id: string;
   x: number;
@@ -565,6 +611,49 @@ export type HeatBar1dResult = {
     heat_flux: number;
   }>;
   input: HeatBar1dJobInput;
+};
+
+export type HeatPlaneTriangle2dResult = {
+  max_temperature: number;
+  max_heat_flux: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; temperature: number; heat_load: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    area: number;
+    average_temperature: number;
+    temperature_gradient_x: number;
+    temperature_gradient_y: number;
+    heat_flux_x: number;
+    heat_flux_y: number;
+    heat_flux_magnitude: number;
+  }>;
+  input: HeatPlaneTriangle2dJobInput;
+};
+
+export type HeatPlaneQuad2dResult = {
+  max_temperature: number;
+  max_heat_flux: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; temperature: number; heat_load: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    node_l: number;
+    area: number;
+    average_temperature: number;
+    temperature_gradient_x: number;
+    temperature_gradient_y: number;
+    heat_flux_x: number;
+    heat_flux_y: number;
+    heat_flux_magnitude: number;
+  }>;
+  input: HeatPlaneQuad2dJobInput;
 };
 
 export type ThermalTruss2dResult = {
@@ -1351,6 +1440,36 @@ export function resolveHeatBar1dJobInput(
   };
 }
 
+export function resolveHeatPlaneTriangle2dJobInput(
+  input: HeatPlaneTriangle2dJobInput,
+): Omit<HeatPlaneTriangle2dJobInput, "materials"> {
+  return {
+    nodes: input.nodes.map((node) => ({
+      ...node,
+      temperature: node.temperature ?? 0,
+      heat_load: node.heat_load ?? 0,
+    })),
+    elements: input.elements.map(({ material_id, ...element }) => ({ ...element })),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveHeatPlaneQuad2dJobInput(
+  input: HeatPlaneQuad2dJobInput,
+): Omit<HeatPlaneQuad2dJobInput, "materials"> {
+  return {
+    nodes: input.nodes.map((node) => ({
+      ...node,
+      temperature: node.temperature ?? 0,
+      heat_load: node.heat_load ?? 0,
+    })),
+    elements: input.elements.map(({ material_id, ...element }) => ({ ...element })),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveThermalTruss2dJobInput(
   input: ThermalTruss2dJobInput,
 ): Omit<ThermalTruss2dJobInput, "materials"> {
@@ -1906,6 +2025,16 @@ export function createThermalPlaneTriangle2dJob(
   });
 }
 
+export function createHeatPlaneTriangle2dJob(
+  input: HeatPlaneTriangle2dJobInput,
+): Promise<JobEnvelope<HeatPlaneTriangle2dResult>> {
+  return requestJson<JobEnvelope<HeatPlaneTriangle2dResult>>("/api/v1/fem/heat-plane-triangle-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
 export function createPlaneQuad2dJob(
   input: PlaneQuad2dJobInput,
 ): Promise<JobEnvelope<PlaneQuad2dResult>> {
@@ -1920,6 +2049,16 @@ export function createThermalPlaneQuad2dJob(
   input: ThermalPlaneQuad2dJobInput,
 ): Promise<JobEnvelope<ThermalPlaneQuad2dResult>> {
   return requestJson<JobEnvelope<ThermalPlaneQuad2dResult>>("/api/v1/fem/thermal-plane-quad-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createHeatPlaneQuad2dJob(
+  input: HeatPlaneQuad2dJobInput,
+): Promise<JobEnvelope<HeatPlaneQuad2dResult>> {
+  return requestJson<JobEnvelope<HeatPlaneQuad2dResult>>("/api/v1/fem/heat-plane-quad-2d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -2072,7 +2211,7 @@ export function fetchDirectMeshAgents(endpoints: string[]): Promise<DirectMeshAg
 }
 
 export function createDirectMeshSolve<TResult>(
-  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "heat_bar_1d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "thermal_plane_triangle_2d" | "plane_quad_2d" | "thermal_plane_quad_2d" | "frame_2d",
+  studyKind: "axial_bar_1d" | "thermal_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "thermal_plane_triangle_2d" | "plane_quad_2d" | "thermal_plane_quad_2d" | "frame_2d",
   input: Record<string, unknown>,
   endpoints: string[],
   selectionMode: DirectMeshSelectionMode,

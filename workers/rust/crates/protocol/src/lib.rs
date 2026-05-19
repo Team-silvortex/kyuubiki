@@ -158,6 +158,51 @@ pub struct SolveHeatBar1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatPlaneNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_temperature: bool,
+    #[serde(default)]
+    pub temperature: f64,
+    #[serde(default)]
+    pub heat_load: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatPlaneTriangleElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub thickness: f64,
+    pub conductivity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHeatPlaneTriangle2dRequest {
+    pub nodes: Vec<HeatPlaneNodeInput>,
+    pub elements: Vec<HeatPlaneTriangleElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatPlaneQuadElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub thickness: f64,
+    pub conductivity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHeatPlaneQuad2dRequest {
+    pub nodes: Vec<HeatPlaneNodeInput>,
+    pub elements: Vec<HeatPlaneQuadElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalTruss2dNodeInput {
     pub id: String,
     pub x: f64,
@@ -466,6 +511,67 @@ pub struct SolveHeatBar1dResult {
     pub input: SolveHeatBar1dRequest,
     pub nodes: Vec<HeatBar1dNodeResult>,
     pub elements: Vec<HeatBar1dElementResult>,
+    pub max_temperature: f64,
+    pub max_heat_flux: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatPlaneNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub temperature: f64,
+    pub heat_load: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatPlaneTriangleElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub area: f64,
+    pub average_temperature: f64,
+    pub temperature_gradient_x: f64,
+    pub temperature_gradient_y: f64,
+    pub heat_flux_x: f64,
+    pub heat_flux_y: f64,
+    pub heat_flux_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHeatPlaneTriangle2dResult {
+    pub input: SolveHeatPlaneTriangle2dRequest,
+    pub nodes: Vec<HeatPlaneNodeResult>,
+    pub elements: Vec<HeatPlaneTriangleElementResult>,
+    pub max_temperature: f64,
+    pub max_heat_flux: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatPlaneQuadElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub area: f64,
+    pub average_temperature: f64,
+    pub temperature_gradient_x: f64,
+    pub temperature_gradient_y: f64,
+    pub heat_flux_x: f64,
+    pub heat_flux_y: f64,
+    pub heat_flux_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveHeatPlaneQuad2dResult {
+    pub input: SolveHeatPlaneQuad2dRequest,
+    pub nodes: Vec<HeatPlaneNodeResult>,
+    pub elements: Vec<HeatPlaneQuadElementResult>,
     pub max_temperature: f64,
     pub max_heat_flux: f64,
 }
@@ -803,6 +909,10 @@ pub enum RpcMethod {
     SolveThermalBar1d,
     #[serde(rename = "solve_heat_bar_1d")]
     SolveHeatBar1d,
+    #[serde(rename = "solve_heat_plane_triangle_2d")]
+    SolveHeatPlaneTriangle2d,
+    #[serde(rename = "solve_heat_plane_quad_2d")]
+    SolveHeatPlaneQuad2d,
     #[serde(rename = "solve_thermal_truss_2d")]
     SolveThermalTruss2d,
     #[serde(rename = "solve_thermal_truss_3d")]
@@ -940,6 +1050,8 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveBar1d,
                 RpcMethod::SolveThermalBar1d,
                 RpcMethod::SolveHeatBar1d,
+                RpcMethod::SolveHeatPlaneTriangle2d,
+                RpcMethod::SolveHeatPlaneQuad2d,
                 RpcMethod::SolveThermalTruss2d,
                 RpcMethod::SolveThermalTruss3d,
                 RpcMethod::SolveSpring1d,
@@ -994,6 +1106,29 @@ impl AgentDescriptor {
                         "heat".to_string(),
                         "bar".to_string(),
                         "line".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "heat-plane-triangle-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveHeatPlaneTriangle2d],
+                    tags: vec![
+                        "heat".to_string(),
+                        "plane".to_string(),
+                        "mesh".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "heat-plane-quad-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveHeatPlaneQuad2d],
+                    tags: vec![
+                        "heat".to_string(),
+                        "plane".to_string(),
+                        "mesh".to_string(),
+                        "quad".to_string(),
                         "cpu".to_string(),
                     ],
                 },
@@ -1719,6 +1854,8 @@ pub enum AnalysisResult {
     Bar1d(SolveBarResult),
     ThermalBar1d(SolveThermalBar1dResult),
     HeatBar1d(SolveHeatBar1dResult),
+    HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dResult),
+    HeatPlaneQuad2d(SolveHeatPlaneQuad2dResult),
     ThermalTruss2d(SolveThermalTruss2dResult),
     ThermalTruss3d(SolveThermalTruss3dResult),
     Spring1d(SolveSpring1dResult),
@@ -1765,10 +1902,11 @@ pub struct ResultChunkResponse {
 mod tests {
     use super::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput,
-        Frame2dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, Job, JobStatus,
-        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
-        RpcResponse, SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest,
-        SolveHeatBar1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+        Frame2dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
+        HeatPlaneTriangleElementInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent,
+        RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
+        SolveBeam1dRequest, SolveFrame2dRequest, SolveHeatBar1dRequest,
+        SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
         SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
@@ -1910,6 +2048,70 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveHeatBar1d);
         assert_eq!(decoded.id, "rpc-heat-bar");
+    }
+
+    #[test]
+    fn serializes_heat_plane_triangle_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-heat-plane-triangle".to_string(),
+            method: RpcMethod::SolveHeatPlaneTriangle2d,
+            params: serde_json::to_value(SolveHeatPlaneTriangle2dRequest {
+                nodes: vec![
+                    HeatPlaneNodeInput { id: "n0".to_string(), x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
+                    HeatPlaneNodeInput { id: "n1".to_string(), x: 1.0, y: 0.0, fix_temperature: true, temperature: 20.0, heat_load: 0.0 },
+                    HeatPlaneNodeInput { id: "n2".to_string(), x: 0.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+                ],
+                elements: vec![HeatPlaneTriangleElementInput {
+                    id: "hpt0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    conductivity: 45.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveHeatPlaneTriangle2d);
+        assert_eq!(decoded.id, "rpc-heat-plane-triangle");
+    }
+
+    #[test]
+    fn serializes_heat_plane_quad_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-heat-plane-quad".to_string(),
+            method: RpcMethod::SolveHeatPlaneQuad2d,
+            params: serde_json::to_value(SolveHeatPlaneQuad2dRequest {
+                nodes: vec![
+                    HeatPlaneNodeInput { id: "n0".to_string(), x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
+                    HeatPlaneNodeInput { id: "n1".to_string(), x: 1.0, y: 0.0, fix_temperature: true, temperature: 20.0, heat_load: 0.0 },
+                    HeatPlaneNodeInput { id: "n2".to_string(), x: 1.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+                    HeatPlaneNodeInput { id: "n3".to_string(), x: 0.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+                ],
+                elements: vec![HeatPlaneQuadElementInput {
+                    id: "hpq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    node_l: 3,
+                    thickness: 0.02,
+                    conductivity: 45.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveHeatPlaneQuad2d);
+        assert_eq!(decoded.id, "rpc-heat-plane-quad");
     }
 
     #[test]

@@ -2,6 +2,8 @@ import type {
   Beam1dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
+  HeatPlaneQuad2dJobInput,
+  HeatPlaneTriangle2dJobInput,
   ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
@@ -42,6 +44,18 @@ export type ImportedHeatBar1dModel = {
   kind: "heat_bar_1d";
   name: string;
   model: HeatBar1dJobInput;
+};
+
+export type ImportedHeatPlaneTriangle2dModel = {
+  kind: "heat_plane_triangle_2d";
+  name: string;
+  model: HeatPlaneTriangle2dJobInput;
+};
+
+export type ImportedHeatPlaneQuad2dModel = {
+  kind: "heat_plane_quad_2d";
+  name: string;
+  model: HeatPlaneQuad2dJobInput;
 };
 
 export type ImportedThermalBeam1dModel = {
@@ -167,6 +181,8 @@ export type ImportedSpring3dModel = {
 export type ImportedModel =
   | ImportedAxialBarModel
   | ImportedHeatBar1dModel
+  | ImportedHeatPlaneTriangle2dModel
+  | ImportedHeatPlaneQuad2dModel
   | ImportedThermalBar1dModel
   | ImportedThermalBeam1dModel
   | ImportedThermalFrame2dModel
@@ -523,6 +539,21 @@ function parseThermalPlaneNode(
   };
 }
 
+function parseHeatPlaneNode(
+  raw: unknown,
+  index: number,
+): HeatPlaneTriangle2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(node.id, `nodes[${index}].id`),
+    x: numberOrZero(node.x),
+    y: numberOrZero(node.y),
+    fix_temperature: Boolean(node.fix_temperature),
+    temperature: numberOrZero(node.temperature),
+    heat_load: numberOrZero(node.heat_load),
+  };
+}
+
 function parsePlaneElement(
   raw: unknown,
   index: number,
@@ -722,6 +753,77 @@ function parseThermalPlaneQuad2dV1(raw: Record<string, unknown>): ImportedTherma
     material,
     youngsModulusGpa,
     model: { nodes, elements, materials },
+  };
+}
+
+function parseHeatPlaneTriangleElement(
+  raw: unknown,
+  index: number,
+): HeatPlaneTriangle2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`),
+    thickness: requiredNumber(element.thickness, `elements[${index}].thickness`),
+    conductivity: requiredNumber(element.conductivity, `elements[${index}].conductivity`),
+    material_id: optionalString(element.material_id),
+  };
+}
+
+function parseHeatPlaneQuadElement(
+  raw: unknown,
+  index: number,
+): HeatPlaneQuad2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return {
+    id: requiredString(element.id, `elements[${index}].id`),
+    node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`),
+    node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`),
+    node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`),
+    node_l: requiredNonNegativeInteger(element.node_l, `elements[${index}].node_l`),
+    thickness: requiredNumber(element.thickness, `elements[${index}].thickness`),
+    conductivity: requiredNumber(element.conductivity, `elements[${index}].conductivity`),
+    material_id: optionalString(element.material_id),
+  };
+}
+
+function parseHeatPlaneTriangle2dV1(raw: Record<string, unknown>): ImportedHeatPlaneTriangle2dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseHeatPlaneNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseHeatPlaneTriangleElement) : [];
+
+  if (nodes.length < 3) {
+    throw new Error("nodes must contain at least three entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "heat_plane_triangle_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-heat-plane",
+    model: { nodes, elements },
+  };
+}
+
+function parseHeatPlaneQuad2dV1(raw: Record<string, unknown>): ImportedHeatPlaneQuad2dModel {
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseHeatPlaneNode) : [];
+  const elements = Array.isArray(raw.elements) ? raw.elements.map(parseHeatPlaneQuadElement) : [];
+
+  if (nodes.length < 4) {
+    throw new Error("nodes must contain at least four entries");
+  }
+
+  if (elements.length < 1) {
+    throw new Error("elements must contain at least one entry");
+  }
+
+  return {
+    kind: "heat_plane_quad_2d",
+    name: typeof raw.name === "string" ? raw.name : "imported-heat-plane-quad",
+    model: { nodes, elements },
   };
 }
 
@@ -1262,12 +1364,20 @@ export function parsePlaygroundModel(text: string): ImportedModel {
     return parsePlaneTriangle2dV1(raw);
   }
 
+  if (kind === "heat_plane_triangle_2d") {
+    return parseHeatPlaneTriangle2dV1(raw);
+  }
+
   if (kind === "thermal_plane_triangle_2d") {
     return parseThermalPlaneTriangle2dV1(raw);
   }
 
   if (kind === "plane_quad_2d") {
     return parsePlaneQuad2dV1(raw);
+  }
+
+  if (kind === "heat_plane_quad_2d") {
+    return parseHeatPlaneQuad2dV1(raw);
   }
 
   if (kind === "thermal_plane_quad_2d") {

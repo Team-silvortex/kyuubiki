@@ -4,6 +4,8 @@ import {
   resolveAxialBarJobInput,
   resolveBeam1dJobInput,
   resolveHeatBar1dJobInput,
+  resolveHeatPlaneQuad2dJobInput,
+  resolveHeatPlaneTriangle2dJobInput,
   resolveFrame2dJobInput,
   resolvePlaneQuad2dJobInput,
   resolvePlaneTriangle2dJobInput,
@@ -23,6 +25,8 @@ import {
   type AxialBarJobInput,
   type Beam1dJobInput,
   type HeatBar1dJobInput,
+  type HeatPlaneQuad2dJobInput,
+  type HeatPlaneTriangle2dJobInput,
   type Frame2dJobInput,
   type PlaneQuad2dJobInput,
   type PlaneTriangle2dJobInput,
@@ -53,6 +57,8 @@ type DirectMeshSolveBody = {
     | "axial_bar_1d"
     | "thermal_bar_1d"
     | "heat_bar_1d"
+    | "heat_plane_triangle_2d"
+    | "heat_plane_quad_2d"
     | "thermal_truss_2d"
     | "thermal_truss_3d"
     | "spring_1d"
@@ -80,6 +86,10 @@ function methodForStudyKind(kind: DirectMeshSolveBody["study_kind"]) {
       return "solve_thermal_bar_1d" as const;
     case "heat_bar_1d":
       return "solve_heat_bar_1d" as const;
+    case "heat_plane_triangle_2d":
+      return "solve_heat_plane_triangle_2d" as const;
+    case "heat_plane_quad_2d":
+      return "solve_heat_plane_quad_2d" as const;
     case "thermal_truss_2d":
       return "solve_thermal_truss_2d" as const;
     case "thermal_truss_3d":
@@ -126,6 +136,10 @@ function normalizeInputForStudyKind(
       return resolveThermalBar1dJobInput(input as ThermalBar1dJobInput);
     case "heat_bar_1d":
       return resolveHeatBar1dJobInput(input as HeatBar1dJobInput);
+    case "heat_plane_triangle_2d":
+      return resolveHeatPlaneTriangle2dJobInput(input as HeatPlaneTriangle2dJobInput);
+    case "heat_plane_quad_2d":
+      return resolveHeatPlaneQuad2dJobInput(input as HeatPlaneQuad2dJobInput);
     case "thermal_truss_2d":
       return resolveThermalTruss2dJobInput(input as ThermalTruss2dJobInput);
     case "thermal_truss_3d":

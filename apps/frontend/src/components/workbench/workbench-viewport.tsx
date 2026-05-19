@@ -3,12 +3,15 @@
 import { memo, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 
 type SidebarSection = "study" | "model" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneResultField =
   | "von_mises"
   | "principal_stress_1"
   | "max_in_plane_shear"
+  | "average_temperature"
   | "average_temperature_delta"
+  | "temperature_gradient_y"
+  | "heat_flux_magnitude"
   | "thermal_strain"
   | "mechanical_strain";
 type LineResultField =
@@ -102,7 +105,10 @@ type PlaneElement = {
   von_mises?: number;
   principal_stress_1?: number;
   max_in_plane_shear?: number;
+  average_temperature?: number;
   average_temperature_delta?: number;
+  temperature_gradient_y?: number;
+  heat_flux_magnitude?: number;
   thermal_strain?: number;
   mechanical_strain_x?: number;
   mechanical_strain_y?: number;
@@ -1258,8 +1264,14 @@ function WorkbenchViewportInner({
               style={{
                 fill: planeResult
                   ? planeStressFill(
-                      planeResultField === "average_temperature_delta"
+                      planeResultField === "average_temperature"
+                        ? Math.abs(element.average_temperature ?? 0)
+                        : planeResultField === "average_temperature_delta"
                         ? Math.abs(element.average_temperature_delta ?? 0)
+                        : planeResultField === "temperature_gradient_y"
+                          ? Math.abs(element.temperature_gradient_y ?? 0)
+                          : planeResultField === "heat_flux_magnitude"
+                            ? Math.abs(element.heat_flux_magnitude ?? 0)
                         : planeResultField === "thermal_strain"
                           ? Math.abs(element.thermal_strain ?? 0)
                           : planeResultField === "mechanical_strain"
