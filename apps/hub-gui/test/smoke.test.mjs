@@ -225,11 +225,13 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /No non-pinned actions in this view\./);
   assert.match(js, /kept failed recent actions only/);
   assert.match(js, /imported .* recent actions from JSON/);
-  assert.match(js, /failed to import recent action history:/);
+  assert.match(js, /formatHubOperatorError/);
+  assert.match(js, /Importing recent action history/);
   assert.match(js, /exported .* recent actions as JSON/);
   assert.match(js, /copied CLI command for/);
   assert.match(js, /copied Python stub for/);
   assert.match(js, /assistant request failed/);
+  assert.match(js, /The assistant request/);
   assert.match(js, /localhost \/ 127\.0\.0\.1/);
   assert.match(js, /API key is sent directly to the configured base URL/);
   assert.match(js, /Sensitive/);
@@ -295,6 +297,8 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /hot-clear-log-view/);
   assert.match(js, /copied sanitized hot log tail/);
   assert.match(js, /copied sanitized runtime log tail/);
+  assert.match(js, /Couldn't read the .* log right now/);
+  assert.match(js, /Refreshing desktop packaging status/);
   assert.match(js, /project_bundle_inspect/);
   assert.match(js, /project_bundle_validate/);
   assert.match(js, /project_bundle_normalize/);

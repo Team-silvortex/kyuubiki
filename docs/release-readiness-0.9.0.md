@@ -97,7 +97,7 @@ Reference:
 - [x] `make test-workbench-gui`
 - [x] `make desktop-status PLATFORM=all`
 
-- [ ] release owners agree which failures block release and which only warn
+- [x] release owners agree which failures block release and which only warn
 
 Latest confirmed integration baseline:
 
@@ -142,16 +142,43 @@ Latest confirmed app/runtime baseline:
   - note: this suite required running outside the filesystem sandbox because
     the Python SDK smoke binds a localhost test server
 
+Agreed `v0.9.0` release gate:
+
+- `blockers`
+  - any failure in the validation baseline above
+  - any failure in an officially supported study row that removes
+    `sample opens`, `orchestrated run`, `report usable`, or `export usable`
+  - any regression that breaks the documented `heat -> thermo-mechanical`
+    bridge workflows
+  - missing or broken desktop manifests, icon inputs, or runtime scaffolds for
+    a supported platform target
+- `warnings`
+  - missing host bundle artifacts on a machine that has not yet run
+    `desktop-build-host`
+  - gaps in `minimal` study families that do not contradict the support matrix
+  - UI polish, copy, or layout issues that do not block first-run paths
+  - non-blocking diagnostic or observability rough edges when logs and status
+    remain discoverable
+
 ### Failure and support path is minimally usable
 
-- [ ] runtime logs are discoverable
-- [ ] Hub/runtime watch is good enough for first-line troubleshooting
-- [ ] common failure messages are understandable enough for non-authors
+- [x] runtime logs are discoverable
+- [x] Hub/runtime watch is good enough for first-line troubleshooting
+- [x] common failure messages are understandable enough for non-authors
 - [x] a short “where to look when things fail” operator note exists
 
 Reference:
 
 - [release-troubleshooting-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-troubleshooting-0.9.0.md)
+- Hub evidence:
+  - [apps/hub-gui/ui/index.html](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/ui/index.html)
+  - [apps/hub-gui/ui/app.js](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/ui/app.js)
+  - [apps/hub-gui/README.md](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/README.md)
+- latest operator-facing copy pass:
+  - runtime log read failures now explain what to check next
+  - desktop status failures now point back to local runtime tools
+  - workload, assistant, and import failures now use action-oriented wording
+  - Hub smoke still passes after the wording change
 
 ## Should
 
