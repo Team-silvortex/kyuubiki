@@ -3070,6 +3070,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
   end
 
   test "serves a Hub-facing workload catalog with project download URLs" do
+    previous_trust = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
+    Application.put_env(:kyuubiki_web, :trust_forwarded_headers, true)
+    on_exit(fn -> Application.put_env(:kyuubiki_web, :trust_forwarded_headers, previous_trust) end)
+
     {:ok, project} =
       Library.create_project(%{"name" => "Bridge Pack", "description" => "starter"})
 
@@ -3081,6 +3085,11 @@ defmodule KyuubikiWeb.Playground.RouterTest do
           "model_schema_version" => "kyuubiki.model/v1",
           "kind" => "truss_2d",
           "name" => "Bridge Truss",
+          "analysis_metadata" => %{
+            "domain" => "thermo_mechanical",
+            "family" => "trusses",
+            "thermal_intent" => ["nodal_temperature_rise", "truss_thermal_response"]
+          },
           "nodes" => [],
           "elements" => []
         }
@@ -3107,7 +3116,10 @@ defmodule KyuubikiWeb.Playground.RouterTest do
                "project_id" => ^project_id,
                "schema" => "kyuubiki.project/v2",
                "layout" => "kyuubiki.project-layout/v1",
-               "model_count" => 1
+               "model_count" => 1,
+               "analysis_domains" => ["thermo_mechanical"],
+               "analysis_families" => ["trusses"],
+               "thermal_intents" => ["nodal_temperature_rise", "truss_thermal_response"]
              } = workload
            ] = payload["workloads"]
 

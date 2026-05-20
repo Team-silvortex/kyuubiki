@@ -756,32 +756,46 @@ defmodule KyuubikiWeb.Router do
   end
 
   defp request_base_url(conn) do
+    trust_forwarded? = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
+
     scheme =
-      case Plug.Conn.get_req_header(conn, "x-forwarded-proto") do
-        [value | _] -> value
-        _ -> Atom.to_string(conn.scheme)
+      if trust_forwarded? do
+        case Plug.Conn.get_req_header(conn, "x-forwarded-proto") do
+          [value | _] -> value
+          _ -> Atom.to_string(conn.scheme)
+        end
+      else
+        Atom.to_string(conn.scheme)
       end
 
     host =
-      case Plug.Conn.get_req_header(conn, "x-forwarded-host") do
-        [value | _] -> value
-        _ -> conn.host
+      if trust_forwarded? do
+        case Plug.Conn.get_req_header(conn, "x-forwarded-host") do
+          [value | _] -> value
+          _ -> conn.host
+        end
+      else
+        conn.host
       end
 
     port =
-      case Plug.Conn.get_req_header(conn, "x-forwarded-port") do
-        [value | _] ->
-          case Integer.parse(value) do
-            {parsed, ""} -> parsed
-            _ -> conn.port
-          end
+      if trust_forwarded? do
+        case Plug.Conn.get_req_header(conn, "x-forwarded-port") do
+          [value | _] ->
+            case Integer.parse(value) do
+              {parsed, ""} -> parsed
+              _ -> conn.port
+            end
 
-        _ ->
-          case scheme do
-            "https" -> 443
-            "http" -> 80
-            _ -> conn.port
-          end
+          _ ->
+            case scheme do
+              "https" -> 443
+              "http" -> 80
+              _ -> conn.port
+            end
+        end
+      else
+        conn.port
       end
 
     default_port? =

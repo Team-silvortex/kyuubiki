@@ -9,23 +9,23 @@ import {
 const sectionModel = {
   projects: {
     title: "Projects",
-    copy: "Open recent engineering work, import standardized bundles, and jump into Workbench.",
+    copy: "Bring work in, inspect it once, and move into analysis.",
   },
   runtimes: {
     title: "Runtimes",
-    copy: "Monitor local and remote runtime targets, control stack lifecycle, and see which compute path is active.",
+    copy: "Start the right loop, check runtime health, and keep logs close.",
   },
   deploy: {
     title: "Deploy",
-    copy: "Move between local, cloud, distributed, and direct-mesh deployment flows from one desktop shell.",
+    copy: "Choose the target posture, validate the workstation, and prepare release paths.",
   },
   observe: {
     title: "Observe",
-    copy: "Use the Hub as the runtime overview wall for health, logs, watchdog state, and security-sensitive activity.",
+    copy: "Scan health, tails, and recent risk signals without leaving the desktop shell.",
   },
   tools: {
     title: "Tools",
-    copy: "Launch diagnostics, validation, packaging, and benchmark workflows without dropping to separate entrypoints.",
+    copy: "Run diagnostics, packaging, and verification from one operator surface.",
   },
 };
 
@@ -36,6 +36,7 @@ const HUB_ASSISTANT_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
 const HUB_ASSISTANT_AUDIT_KEY = "kyuubiki.hub.assistant.audit.v1";
 const HUB_HOT_LOG_SETTINGS_KEY = "kyuubiki.hub.hot-log-settings.v1";
 const HUB_RUNTIME_LOG_SETTINGS_KEY = "kyuubiki.hub.runtime-log-settings.v1";
+const HUB_DENSITY_SETTINGS_KEY = "kyuubiki.hub.density-settings.v1";
 const HUB_RECENTS_LIMIT = 6;
 const HUB_ACTION_HISTORY_LIMIT = 8;
 const HUB_ASSISTANT_AUDIT_LIMIT = 16;
@@ -84,16 +85,26 @@ const HUB_ASSISTANT_ACTIONS = [
   { id: "hub/projectPack", summary: "Pack a project directory into a bundle.", payloadExample: { path: "", out: "" } },
   { id: "hub/projectDiff", summary: "Diff two project bundles.", payloadExample: { leftPath: "", rightPath: "" } },
 ];
+const HUB_DENSITY_DEFAULTS = {
+  "projects-workflow": false,
+  "runtimes-remote-targets": false,
+  "deploy-suggested-flow": false,
+  "tools-output": false,
+  "side-current-mode": false,
+};
 
 const state = {
   hostPlatform: "macos",
   activeSection: "projects",
   isBusy: false,
   historyFilter: "all",
+  workloadFilter: "all",
+  workloadFamilyFilter: "all",
   assistantMode: "local",
   assistantPlan: null,
   hotLogRefreshInFlight: false,
   runtimeLogRefreshInFlight: false,
+  density: { ...HUB_DENSITY_DEFAULTS },
 };
 
 let hotRuntimeLogPollHandle = null;
@@ -114,6 +125,8 @@ const elements = {
   workloadImportInput: document.getElementById("workload-import-input"),
   workloadLibraryList: document.getElementById("workload-library-list"),
   workloadLibraryOutput: document.getElementById("workload-library-output"),
+  workloadFilterButtons: Array.from(document.querySelectorAll("[data-workload-filter]")),
+  workloadFamilyFilterButtons: Array.from(document.querySelectorAll("[data-workload-family-filter]")),
   historyImportInput: document.getElementById("history-import-input"),
   recentBundleList: document.getElementById("recent-bundle-list"),
   recentCompareList: document.getElementById("recent-compare-list"),
@@ -172,6 +185,8 @@ const elements = {
   assistantPlanActions: document.getElementById("assistant-plan-actions"),
   assistantOutput: document.getElementById("assistant-output"),
   assistantAuditList: document.getElementById("assistant-audit-list"),
+  densityToggleButtons: Array.from(document.querySelectorAll("[data-density-toggle]")),
+  densityPanels: Array.from(document.querySelectorAll("[data-density-panel]")),
 };
 
 function loadHubRecents() {
@@ -270,6 +285,21 @@ function normalizeHubWorkloadEntry(entry) {
     versionCount: Number.isFinite(Number(entry?.versionCount)) ? Number(entry.versionCount) : 0,
     jobCount: Number.isFinite(Number(entry?.jobCount)) ? Number(entry.jobCount) : 0,
     resultCount: Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0,
+    analysisDomains: Array.isArray(entry?.analysisDomains)
+      ? entry.analysisDomains.filter((value) => typeof value === "string")
+      : Array.isArray(entry?.analysis_domains)
+        ? entry.analysis_domains.filter((value) => typeof value === "string")
+        : [],
+    analysisFamilies: Array.isArray(entry?.analysisFamilies)
+      ? entry.analysisFamilies.filter((value) => typeof value === "string")
+      : Array.isArray(entry?.analysis_families)
+        ? entry.analysis_families.filter((value) => typeof value === "string")
+        : [],
+    thermalIntents: Array.isArray(entry?.thermalIntents)
+      ? entry.thermalIntents.filter((value) => typeof value === "string")
+      : Array.isArray(entry?.thermal_intents)
+        ? entry.thermal_intents.filter((value) => typeof value === "string")
+        : [],
     downloadedAt: String(entry?.downloadedAt || "").trim(),
     attachedAt: String(entry?.attachedAt || "").trim(),
     addedAt: String(entry?.addedAt || "").trim() || new Date().toISOString(),
@@ -384,6 +414,25 @@ function loadHubRuntimeLogSettings() {
 
 function persistHubRuntimeLogSettings(settings) {
   window.localStorage.setItem(HUB_RUNTIME_LOG_SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function loadHubDensitySettings() {
+  try {
+    const raw = window.localStorage.getItem(HUB_DENSITY_SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return Object.fromEntries(
+      Object.entries(HUB_DENSITY_DEFAULTS).map(([key, defaultExpanded]) => [
+        key,
+        typeof parsed?.[key] === "boolean" ? parsed[key] : defaultExpanded,
+      ]),
+    );
+  } catch {
+    return { ...HUB_DENSITY_DEFAULTS };
+  }
+}
+
+function persistHubDensitySettings() {
+  window.localStorage.setItem(HUB_DENSITY_SETTINGS_KEY, JSON.stringify(state.density));
 }
 
 function assistantRiskLevel(action) {
@@ -640,6 +689,70 @@ function workloadSourceBadge(entry) {
   }
 }
 
+function workloadProvenanceLabel(entry) {
+  if (entry.sourceKind === "remote-catalog") {
+    if (entry.sourceLabel === "Kyuubiki Control Plane") {
+      return "first-party control plane catalog";
+    }
+    const hostHint = workloadProvenanceHost(entry.sourceLabel || entry.downloadUrl || "");
+    if (hostHint) {
+      return `custom remote catalog · ${hostHint}`;
+    }
+    return `custom remote catalog${entry.sourceLabel ? ` · ${entry.sourceLabel}` : ""}`;
+  }
+
+  if (entry.sourceKind === "imported-library") {
+    return "imported library snapshot";
+  }
+
+  if (entry.sourceLabel) {
+    return entry.sourceLabel;
+  }
+
+  return "Hub local registration";
+}
+
+function workloadProvenanceHost(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    return new URL(normalized).host;
+  } catch {
+    return "";
+  }
+}
+
+function workloadDomainLabel(domain) {
+  switch (domain) {
+    case "mechanical":
+      return "Mechanical";
+    case "thermal":
+      return "Thermal";
+    case "thermo_mechanical":
+      return "Thermo-mechanical";
+    default:
+      return String(domain || "").trim();
+  }
+}
+
+function workloadFamilyLabel(family) {
+  switch (family) {
+    case "axial_and_springs":
+      return "Axial & Springs";
+    case "beams_and_frames":
+      return "Beams & Frames";
+    case "trusses":
+      return "Trusses";
+    case "planes":
+      return "Planes";
+    default:
+      return String(family || "").trim();
+  }
+}
+
 function markHubWorkloadDownloaded(entry) {
   const next = loadHubWorkloadLibrary().map((candidate) => {
     if (workloadIdentity(candidate) !== workloadIdentity(entry)) {
@@ -721,6 +834,9 @@ async function attachCurrentBundleToWorkload(entry) {
     versionCount: summary.versionCount,
     jobCount: summary.jobCount,
     resultCount: summary.resultCount,
+    analysisDomains: summary.analysisDomains,
+    analysisFamilies: summary.analysisFamilies,
+    thermalIntents: summary.thermalIntents,
     attachedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }));
@@ -732,11 +848,39 @@ function saveHubWorkloadLibrary(entries) {
   renderHubWorkloadLibrary(entries);
 }
 
+function matchesWorkloadFilter(entry) {
+  if (state.workloadFilter === "all") {
+    return matchesWorkloadFamilyFilter(entry);
+  }
+  return entry.analysisDomains.includes(state.workloadFilter) && matchesWorkloadFamilyFilter(entry);
+}
+
+function matchesWorkloadFamilyFilter(entry) {
+  if (state.workloadFamilyFilter === "all") {
+    return true;
+  }
+  return entry.analysisFamilies.includes(state.workloadFamilyFilter);
+}
+
+function renderWorkloadFilters() {
+  elements.workloadFilterButtons.forEach((button) => {
+    const matches = button.dataset.workloadFilter === state.workloadFilter;
+    button.classList.toggle("desktop-shell-button-primary", matches);
+    button.classList.toggle("desktop-shell-button-ghost", !matches);
+  });
+  elements.workloadFamilyFilterButtons.forEach((button) => {
+    const matches = button.dataset.workloadFamilyFilter === state.workloadFamilyFilter;
+    button.classList.toggle("desktop-shell-button-primary", matches);
+    button.classList.toggle("desktop-shell-button-ghost", !matches);
+  });
+}
+
 function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
   if (!elements.workloadLibraryList) {
     return;
   }
 
+  renderWorkloadFilters();
   elements.workloadLibraryList.innerHTML = "";
   if (!entries.length) {
     renderEmptyHistoryState(
@@ -746,7 +890,18 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     return;
   }
 
-  entries.forEach((entry) => {
+  const filteredEntries = entries.filter((entry) => matchesWorkloadFilter(entry));
+  if (!filteredEntries.length) {
+    const domainLabel = state.workloadFilter === "all" ? "all domains" : state.workloadFilter;
+    const familyLabel = state.workloadFamilyFilter === "all" ? "all families" : state.workloadFamilyFilter;
+    renderEmptyHistoryState(
+      elements.workloadLibraryList,
+      `No workloads match ${domainLabel} / ${familyLabel}.`,
+    );
+    return;
+  }
+
+  filteredEntries.forEach((entry) => {
     const shell = document.createElement("div");
     shell.className = "hub-history-item";
 
@@ -767,10 +922,20 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const meta = document.createElement("div");
     meta.className = "hub-history-item__meta";
     appendTextElement(meta, "span", sourceLabel, sourceClass);
+    entry.analysisDomains.forEach((domain) => {
+      appendTextElement(meta, "span", workloadDomainLabel(domain), "desktop-shell-chip");
+    });
+    entry.analysisFamilies.forEach((family) => {
+      appendTextElement(meta, "span", workloadFamilyLabel(family), "desktop-shell-chip");
+    });
     heading.appendChild(meta);
     summary.appendChild(heading);
     appendTextElement(summary, "span", metaBits.join(" · ") || "workload entry", "hub-history-item__alias");
     appendTextElement(summary, "span", entry.note || entry.bundlePath || entry.downloadUrl || "--");
+    appendTextElement(summary, "span", workloadProvenanceLabel(entry), "hub-history-item__provenance");
+    if (entry.thermalIntents.length) {
+      appendTextElement(summary, "span", `thermal: ${entry.thermalIntents.join(", ")}`, "desktop-shell-note");
+    }
     summary.addEventListener("click", () => {
       if (entry.bundlePath) {
         elements.projectBundlePath.value = entry.bundlePath;
@@ -882,6 +1047,9 @@ function projectSummaryFromInspectPayload(raw) {
     versionCount: Number(parsed?.version_count || 0),
     jobCount: Number(parsed?.job_count || 0),
     resultCount: Number(parsed?.result_count || 0),
+    analysisDomains: Array.isArray(parsed?.analysis_domains) ? parsed.analysis_domains.filter((value) => typeof value === "string") : [],
+    analysisFamilies: Array.isArray(parsed?.analysis_families) ? parsed.analysis_families.filter((value) => typeof value === "string") : [],
+    thermalIntents: Array.isArray(parsed?.thermal_intents) ? parsed.thermal_intents.filter((value) => typeof value === "string") : [],
   };
 }
 
@@ -908,6 +1076,9 @@ async function registerCurrentBundleAsWorkload() {
     versionCount: summary.versionCount,
     jobCount: summary.jobCount,
     resultCount: summary.resultCount,
+    analysisDomains: summary.analysisDomains,
+    analysisFamilies: summary.analysisFamilies,
+    thermalIntents: summary.thermalIntents,
   });
 
   const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), [entry]);
@@ -969,9 +1140,50 @@ function validateRemoteWorkloadCatalogPayload(payload) {
       String(workload.bundle_path || "").trim() ||
       String(workload.project_id || "").trim();
     if (!hasRequiredLocator) {
+    return {
+      ok: false,
+      reason: `Workload ${index + 1} must define download_url, bundle_path, or project_id.`,
+    };
+  }
+
+    if (
+      workload.analysis_domains !== undefined &&
+      (!Array.isArray(workload.analysis_domains) ||
+        workload.analysis_domains.some(
+          (value) =>
+            typeof value !== "string" ||
+            !["mechanical", "thermal", "thermo_mechanical"].includes(value),
+        ))
+    ) {
       return {
         ok: false,
-        reason: `Workload ${index + 1} must define download_url, bundle_path, or project_id.`,
+        reason: `Workload ${index + 1} has invalid analysis_domains.`,
+      };
+    }
+
+    if (
+      workload.analysis_families !== undefined &&
+      (!Array.isArray(workload.analysis_families) ||
+        workload.analysis_families.some(
+          (value) =>
+            typeof value !== "string" ||
+            !["axial_and_springs", "beams_and_frames", "trusses", "planes"].includes(value),
+        ))
+    ) {
+      return {
+        ok: false,
+        reason: `Workload ${index + 1} has invalid analysis_families.`,
+      };
+    }
+
+    if (
+      workload.thermal_intents !== undefined &&
+      (!Array.isArray(workload.thermal_intents) ||
+        workload.thermal_intents.some((value) => typeof value !== "string"))
+    ) {
+      return {
+        ok: false,
+        reason: `Workload ${index + 1} has invalid thermal_intents.`,
       };
     }
   }
@@ -1005,6 +1217,9 @@ function normalizeRemoteWorkloadCatalogPayload(payload, catalogUrl) {
         versionCount: entry?.versionCount || entry?.version_count || 0,
         jobCount: entry?.jobCount || entry?.job_count || 0,
         resultCount: entry?.resultCount || entry?.result_count || 0,
+        analysisDomains: entry?.analysisDomains || entry?.analysis_domains || [],
+        analysisFamilies: entry?.analysisFamilies || entry?.analysis_families || [],
+        thermalIntents: entry?.thermalIntents || entry?.thermal_intents || [],
       }),
     )
     .filter(Boolean);
@@ -1717,11 +1932,15 @@ function setSection(section) {
   elements.copy.textContent = next.copy;
 
   elements.navItems.forEach((item) => {
-    item.classList.toggle("hub-nav__item--active", item.dataset.target === section);
+    const active = item.dataset.target === section;
+    item.classList.toggle("hub-nav__item--active", active);
+    item.setAttribute("aria-current", active ? "page" : "false");
   });
 
   elements.panels.forEach((panel) => {
-    panel.classList.toggle("hidden", panel.id !== `${section}-panel`);
+    const hidden = panel.id !== `${section}-panel`;
+    panel.classList.toggle("hidden", hidden);
+    panel.setAttribute("aria-hidden", String(hidden));
   });
 
   const defaultProjectsPanel = document.getElementById("projects-panel");
@@ -1739,6 +1958,33 @@ function setSection(section) {
   if (section === "observe") {
     void refreshObserveRuntimeLog({ silent: true });
   }
+}
+
+function enhanceHubAccessibility() {
+  elements.title?.setAttribute("tabindex", "-1");
+
+  elements.navItems.forEach((item) => {
+    const target = item.dataset.target || "";
+    item.setAttribute("aria-controls", `${target}-panel`);
+  });
+
+  elements.sectionJumpButtons.forEach((button) => {
+    const target = button.dataset.targetSection || "";
+    button.setAttribute("aria-controls", `${target}-panel`);
+  });
+
+  elements.densityToggleButtons.forEach((button) => {
+    const densityId = button.dataset.densityToggle || "";
+    const panel = elements.densityPanels.find((candidate) => candidate.dataset.densityPanel === densityId);
+    if (!panel) {
+      return;
+    }
+
+    if (!panel.id) {
+      panel.id = `density-panel-${densityId}`;
+    }
+    button.setAttribute("aria-controls", panel.id);
+  });
 }
 
 function setOperationOutput(value) {
@@ -2001,6 +2247,31 @@ function setAssistantMode(mode) {
     modelPreset: elements.assistantModelPreset?.value || "gpt-5",
     model: elements.assistantModelName?.value || "gpt-5",
   });
+}
+
+function renderHubDensityToggles() {
+  elements.densityPanels.forEach((panel) => {
+    const densityId = panel.dataset.densityPanel || "";
+    const expanded = state.density[densityId] !== false;
+    panel.classList.toggle("hidden", !expanded);
+  });
+
+  elements.densityToggleButtons.forEach((button) => {
+    const densityId = button.dataset.densityToggle || "";
+    const expanded = state.density[densityId] !== false;
+    button.textContent = expanded ? "Collapse" : "Expand";
+    button.setAttribute("aria-expanded", String(expanded));
+  });
+}
+
+function toggleHubDensityPanel(id) {
+  if (!(id in HUB_DENSITY_DEFAULTS)) {
+    return;
+  }
+
+  state.density[id] = !(state.density[id] !== false);
+  persistHubDensitySettings();
+  renderHubDensityToggles();
 }
 
 function buildHubAssistantLocalCards() {
@@ -2971,9 +3242,31 @@ elements.historyFilterButtons.forEach((button) => {
   });
 });
 
+elements.workloadFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.workloadFilter = button.dataset.workloadFilter || "all";
+    renderHubWorkloadLibrary();
+    setWorkloadLibraryOutput(`filtered workloads: ${state.workloadFilter} / ${state.workloadFamilyFilter}`);
+  });
+});
+
+elements.workloadFamilyFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.workloadFamilyFilter = button.dataset.workloadFamilyFilter || "all";
+    renderHubWorkloadLibrary();
+    setWorkloadLibraryOutput(`filtered workloads: ${state.workloadFilter} / ${state.workloadFamilyFilter}`);
+  });
+});
+
 elements.historyManageButtons.forEach((button) => {
   button.addEventListener("click", () => {
     manageRecentActionHistory(button.dataset.historyManage || "");
+  });
+});
+
+elements.densityToggleButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    toggleHubDensityPanel(button.dataset.densityToggle || "");
   });
 });
 
@@ -3009,6 +3302,8 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
 
 await applyBrand();
 await loadEnvironment();
+enhanceHubAccessibility();
+state.density = loadHubDensitySettings();
 const hotLogSettings = loadHubHotLogSettings();
 const runtimeLogSettings = loadHubRuntimeLogSettings();
 if (elements.hotRuntimeLogService) {
@@ -3028,6 +3323,7 @@ if (elements.observeRuntimeLogAuto) {
 }
 renderHotRuntimeLogServiceLabel();
 syncDesktopStates();
+renderHubDensityToggles();
 renderHubRecents();
 applyAssistantSettings();
 setSection(state.activeSection);

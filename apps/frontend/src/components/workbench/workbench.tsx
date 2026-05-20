@@ -10195,7 +10195,7 @@ export function Workbench() {
       <aside className="app-rail panel">
         <div className="rail-brand">
           <strong>{t.brand}</strong>
-          <span>v0.3</span>
+          <span>v0.9.0</span>
         </div>
         <div className="rail-nav">
           {railItems.map((item) => (

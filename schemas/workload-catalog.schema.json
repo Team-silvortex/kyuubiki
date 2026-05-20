@@ -75,6 +75,29 @@
           "type": "integer",
           "minimum": 0
         },
+        "analysis_domains": {
+          "type": "array",
+          "description": "Optional high-level physics domains recognized by Hub and Workbench.",
+          "items": {
+            "type": "string",
+            "enum": ["mechanical", "thermal", "thermo_mechanical"]
+          }
+        },
+        "analysis_families": {
+          "type": "array",
+          "description": "Optional study families recognized by Hub and Workbench.",
+          "items": {
+            "type": "string",
+            "enum": ["axial_and_springs", "beams_and_frames", "trusses", "planes"]
+          }
+        },
+        "thermal_intents": {
+          "type": "array",
+          "description": "Optional thermal workflow hints such as conduction_field or member_temperature_gradient.",
+          "items": {
+            "type": "string"
+          }
+        },
         "tags": {
           "type": "array",
           "items": {

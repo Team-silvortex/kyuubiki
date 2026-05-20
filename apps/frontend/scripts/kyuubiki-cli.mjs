@@ -158,6 +158,28 @@ function stableAssetGuid(seed) {
   return `${first}-${second.slice(0, 4)}-${second.slice(4, 8)}-${third.slice(0, 4)}-${third.slice(4, 8)}${fourth.slice(0, 4)}`;
 }
 
+function extractAnalysisMetadata(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  const metadata = value.analysis_metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return {};
+  }
+  return {
+    analysis_domain:
+      metadata.domain === "mechanical" || metadata.domain === "thermal" || metadata.domain === "thermo_mechanical" ? metadata.domain : undefined,
+    analysis_family:
+      metadata.family === "axial_and_springs" ||
+      metadata.family === "beams_and_frames" ||
+      metadata.family === "trusses" ||
+      metadata.family === "planes"
+        ? metadata.family
+        : undefined,
+    thermal_intent: Array.isArray(metadata.thermal_intent) ? metadata.thermal_intent.filter((item) => typeof item === "string") : undefined,
+  };
+}
+
 function buildProjectAssetCatalog(bundle, fileManifest) {
   const catalog = [
     {
@@ -193,6 +215,7 @@ function buildProjectAssetCatalog(bundle, fileManifest) {
   }
 
   for (const model of bundle.models) {
+    const analysisMetadata = extractAnalysisMetadata(model.payload);
     catalog.push({
       guid: stableAssetGuid(`model:${model.model_id}`),
       meta_version: "kyuubiki.asset-meta/v1",
@@ -201,10 +224,12 @@ function buildProjectAssetCatalog(bundle, fileManifest) {
       source_id: model.model_id,
       name: model.name,
       updated_at: model.updated_at ?? bundle.exported_at ?? null,
+      ...analysisMetadata,
     });
   }
 
   for (const version of bundle.model_versions) {
+    const analysisMetadata = extractAnalysisMetadata(version.payload);
     catalog.push({
       guid: stableAssetGuid(`version:${version.version_id}`),
       meta_version: "kyuubiki.asset-meta/v1",
@@ -213,6 +238,7 @@ function buildProjectAssetCatalog(bundle, fileManifest) {
       source_id: version.version_id,
       name: version.name ?? `${version.kind} v${version.version_number}`,
       updated_at: version.updated_at ?? bundle.exported_at ?? null,
+      ...analysisMetadata,
     });
   }
 
@@ -634,6 +660,10 @@ async function writeProjectDirectory(bundle, outputDirectory) {
 }
 
 function projectInspectSummary(bundle) {
+  const modelAssets = (bundle.asset_catalog ?? []).filter((entry) => entry.kind === "model");
+  const analysisDomains = Array.from(new Set(modelAssets.map((entry) => entry.analysis_domain).filter(Boolean))).sort();
+  const analysisFamilies = Array.from(new Set(modelAssets.map((entry) => entry.analysis_family).filter(Boolean))).sort();
+  const thermalIntents = Array.from(new Set(modelAssets.flatMap((entry) => (Array.isArray(entry.thermal_intent) ? entry.thermal_intent : [])).filter(Boolean))).sort();
   return {
     schema: bundle.project_schema_version,
     layout: bundle.project_file_manifest?.layout_version ?? null,
@@ -649,6 +679,9 @@ function projectInspectSummary(bundle) {
     active_model_id: bundle.active_model_id ?? null,
     active_version_id: bundle.active_version_id ?? null,
     has_workspace_snapshot: Boolean(bundle.workspace_snapshot),
+    analysis_domains: analysisDomains,
+    analysis_families: analysisFamilies,
+    thermal_intents: thermalIntents,
   };
 }
 
@@ -672,6 +705,9 @@ async function handleProjectInspect(inputPath, flags) {
   console.log(`Active model: ${summary.active_model_id ?? "--"}`);
   console.log(`Active version: ${summary.active_version_id ?? "--"}`);
   console.log(`Workspace snapshot: ${summary.has_workspace_snapshot ? "yes" : "no"}`);
+  console.log(`Analysis domains: ${summary.analysis_domains.length > 0 ? summary.analysis_domains.join(", ") : "--"}`);
+  console.log(`Analysis families: ${summary.analysis_families.length > 0 ? summary.analysis_families.join(", ") : "--"}`);
+  console.log(`Thermal intents: ${summary.thermal_intents.length > 0 ? summary.thermal_intents.join(", ") : "--"}`);
 }
 
 async function handleProjectValidate(inputPath, flags) {

@@ -59,7 +59,41 @@ export type ProjectAssetMetaRecord = {
   source_id: string;
   name?: string;
   updated_at?: string | null;
+  analysis_domain?: "mechanical" | "thermal" | "thermo_mechanical";
+  analysis_family?: "axial_and_springs" | "beams_and_frames" | "trusses" | "planes";
+  thermal_intent?: string[];
 };
+
+function extractAnalysisMetadata(value: unknown): {
+  analysis_domain?: "mechanical" | "thermal" | "thermo_mechanical";
+  analysis_family?: "axial_and_springs" | "beams_and_frames" | "trusses" | "planes";
+  thermal_intent?: string[];
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  const metadata = (value as { analysis_metadata?: unknown }).analysis_metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return {};
+  }
+  const record = metadata as {
+    domain?: unknown;
+    family?: unknown;
+    thermal_intent?: unknown;
+  };
+  return {
+    analysis_domain:
+      record.domain === "mechanical" || record.domain === "thermal" || record.domain === "thermo_mechanical" ? record.domain : undefined,
+    analysis_family:
+      record.family === "axial_and_springs" ||
+      record.family === "beams_and_frames" ||
+      record.family === "trusses" ||
+      record.family === "planes"
+        ? record.family
+        : undefined,
+    thermal_intent: Array.isArray(record.thermal_intent) ? record.thermal_intent.filter((item): item is string => typeof item === "string") : undefined,
+  };
+}
 
 export type ProjectAssetReferenceRecord = {
   from_guid: string;
@@ -191,6 +225,7 @@ function buildProjectAssetCatalog(bundle: ProjectBundle, fileManifest: ProjectFi
   }
 
   bundle.models.forEach((model) => {
+    const analysisMetadata = extractAnalysisMetadata(model.payload);
     catalog.push({
       guid: stableAssetGuid(`model:${model.model_id}`),
       meta_version: "kyuubiki.asset-meta/v1",
@@ -199,10 +234,12 @@ function buildProjectAssetCatalog(bundle: ProjectBundle, fileManifest: ProjectFi
       source_id: model.model_id,
       name: model.name,
       updated_at: model.updated_at,
+      ...analysisMetadata,
     });
   });
 
   bundle.model_versions.forEach((version) => {
+    const analysisMetadata = extractAnalysisMetadata(version.payload);
     catalog.push({
       guid: stableAssetGuid(`version:${version.version_id}`),
       meta_version: "kyuubiki.asset-meta/v1",
@@ -211,6 +248,7 @@ function buildProjectAssetCatalog(bundle: ProjectBundle, fileManifest: ProjectFi
       source_id: version.version_id,
       name: version.name ?? `${version.kind} v${version.version_number}`,
       updated_at: version.updated_at,
+      ...analysisMetadata,
     });
   });
 

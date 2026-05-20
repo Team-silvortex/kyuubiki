@@ -12,7 +12,9 @@ README.
   sidecars plus guid reference graphs
 - `agent-manifest.schema.json` is for local/distributed solver node manifests
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
-  future central-server downloadable project catalogs
+  future central-server downloadable project catalogs, including optional
+  `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
+  classify workloads before opening them
 - `deploy/workload-catalog.example.json` is a concrete sample payload for local
   testing, Hub mockups, and future center-server rollout
 

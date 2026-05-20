@@ -76,6 +76,11 @@ test("hub shell exposes the desktop information architecture", () => {
   assert.match(html, /Export library JSON/);
   assert.match(html, /Import library JSON/);
   assert.match(html, /Clear library/);
+  assert.match(html, /data-workload-family-filter="all"/);
+  assert.match(html, /data-workload-family-filter="axial_and_springs"/);
+  assert.match(html, /data-workload-family-filter="beams_and_frames"/);
+  assert.match(html, /data-workload-family-filter="trusses"/);
+  assert.match(html, /data-workload-family-filter="planes"/);
   assert.match(html, /project-bundle-path/);
   assert.match(html, /project-bundle-compare-path/);
   assert.match(html, /project-bundle-out-path/);
@@ -149,6 +154,9 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /normalizeHubWorkloadEntry/);
   assert.match(js, /mergeHubWorkloadLibrary/);
   assert.match(js, /workloadIdentity/);
+  assert.match(js, /matchesWorkloadFamilyFilter/);
+  assert.match(js, /workloadProvenanceLabel/);
+  assert.match(js, /workloadProvenanceHost/);
   assert.match(js, /currentLocalWorkloadCatalogUrl/);
   assert.match(js, /ensureDefaultWorkloadCatalogUrl/);
   assert.match(js, /inferDownloadFilename/);
@@ -167,6 +175,7 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /validateRemoteWorkloadCatalogPayload/);
   assert.match(js, /normalizeRemoteWorkloadCatalogPayload/);
   assert.match(js, /projectSummaryFromInspectPayload/);
+  assert.match(js, /analysisFamilies/);
   assert.match(js, /rememberProjectBundleAction/);
   assert.match(js, /summarizeProjectActionResult/);
   assert.match(js, /formatProjectActionTime/);
@@ -248,6 +257,9 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /Attach current bundle/);
   assert.match(js, /Reattach bundle/);
   assert.match(js, /attached local/);
+  assert.match(js, /first-party control plane catalog/);
+  assert.match(js, /custom remote catalog/);
+  assert.match(js, /new URL\(normalized\)\.host/);
   assert.match(js, /refreshDesktopStatusOutput/);
   assert.match(js, /setHotRuntimeLogOutput/);
   assert.match(js, /clearHotRuntimeLogView/);

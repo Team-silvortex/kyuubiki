@@ -27,6 +27,9 @@ overview.
 - project bundle inspect / validate / normalize / unpack / pack / diff entrypoint
 - Hub-managed workload library for local bundles, imported bundle packs, and future remote catalog delivery
 - remote workload catalog sync backed by a formal schema contract
+- remote workload catalogs can now carry `analysis_domains` and
+  `thermal_intents`, so Hub can classify Mechanical / Thermal /
+  Thermo-mechanical entries before opening them
 - one-click sync from the local control plane workload catalog, with the Hub pre-filling the current local catalog endpoint
 - downloaded remote workloads can be attached back to a local `.kyuubiki` path for unified Hub management
 - remote catalog sync now rejects payloads that do not match `kyuubiki.workload-catalog/v1`

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -57,6 +58,10 @@ function directMeshHeaders() {
     "content-type": "application/json",
     "x-kyuubiki-token": DIRECT_MESH_TOKEN,
   };
+}
+
+function loadSampleModel(filename) {
+  return JSON.parse(readFileSync(`${ROOT}/apps/frontend/public/models/${filename}`, "utf8"));
 }
 
 test("direct mesh gui can inspect LAN agents, solve directly, and fetch result chunks", async () => {
@@ -150,6 +155,79 @@ test("direct mesh gui can inspect LAN agents, solve directly, and fetch result c
     assert.equal(elementsChunk.returned, 8);
     assert.equal(elementsChunk.total, 60);
     assert.equal(elementsChunk.items.length, 8);
+  } finally {
+    try {
+      runKyuubiki(["stop"]);
+    } catch {
+      // keep cleanup best-effort for local integration runs
+    }
+  }
+}, { timeout: 120_000 });
+
+test("direct mesh gui can solve official spring samples for 2d and 3d studies", async () => {
+  try {
+    runKyuubiki(["restart-local"]);
+
+    const agentsReady = await waitFor(
+      `${FRONTEND_URL}/api/direct-mesh/agents`,
+      (response, payload) =>
+        response.status === 200 &&
+        payload?.mode === "direct_mesh_gui" &&
+        payload?.endpoint_count >= 1 &&
+        Array.isArray(payload?.agents) &&
+        payload.agents.length >= 1,
+      {
+        method: "POST",
+        headers: directMeshHeaders(),
+        body: JSON.stringify({
+          endpoints: DIRECT_MESH_ENDPOINTS,
+        }),
+      },
+      60_000,
+    );
+
+    assert.equal(agentsReady.response.status, 200);
+    assert.ok(agentsReady.payload.agents.some((agent) => !agent.descriptor_error));
+
+    const spring2dResponse = await fetch(`${FRONTEND_URL}/api/direct-mesh/solve`, {
+      method: "POST",
+      headers: directMeshHeaders(),
+      body: JSON.stringify({
+        endpoints: DIRECT_MESH_ENDPOINTS,
+        selection_mode: "healthiest",
+        study_kind: "spring_2d",
+        input: loadSampleModel("spring-grid-2d.json"),
+      }),
+    });
+
+    assert.equal(spring2dResponse.status, 200);
+    const spring2dSolved = await spring2dResponse.json();
+    assert.equal(spring2dSolved.job.status, "completed");
+    assert.equal(spring2dSolved.job.worker_id, "direct-mesh@127.0.0.1:5001");
+    assert.equal(spring2dSolved.result.nodes.length, 4);
+    assert.equal(spring2dSolved.result.elements.length, 5);
+    assert.ok(Math.abs(spring2dSolved.result.max_displacement - 0.06339734949589224) < 1e-12);
+    assert.ok(Math.abs(spring2dSolved.result.max_force - 1120.754716981132) < 1e-9);
+
+    const spring3dResponse = await fetch(`${FRONTEND_URL}/api/direct-mesh/solve`, {
+      method: "POST",
+      headers: directMeshHeaders(),
+      body: JSON.stringify({
+        endpoints: DIRECT_MESH_ENDPOINTS,
+        selection_mode: "healthiest",
+        study_kind: "spring_3d",
+        input: loadSampleModel("spring-cage-3d.json"),
+      }),
+    });
+
+    assert.equal(spring3dResponse.status, 200);
+    const spring3dSolved = await spring3dResponse.json();
+    assert.equal(spring3dSolved.job.status, "completed");
+    assert.equal(spring3dSolved.job.worker_id, "direct-mesh@127.0.0.1:5001");
+    assert.equal(spring3dSolved.result.nodes.length, 4);
+    assert.equal(spring3dSolved.result.elements.length, 6);
+    assert.ok(Math.abs(spring3dSolved.result.max_displacement - 0.05955868626521211) < 1e-12);
+    assert.ok(Math.abs(spring3dSolved.result.max_force - 803.0108273796119) < 1e-9);
   } finally {
     try {
       runKyuubiki(["stop"]);

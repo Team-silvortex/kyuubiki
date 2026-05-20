@@ -41,6 +41,9 @@ defmodule KyuubikiWeb.Workloads do
             "version_count" => length(versions),
             "job_count" => length(project_jobs),
             "result_count" => length(project_results),
+            "analysis_domains" => workload_analysis_domains(models),
+            "analysis_families" => workload_analysis_families(models),
+            "thermal_intents" => workload_thermal_intents(models),
             "tags" => workload_tags(models)
           }
         end)
@@ -104,6 +107,43 @@ defmodule KyuubikiWeb.Workloads do
     |> Enum.reject(&is_nil/1)
     |> Enum.map(&to_string/1)
     |> Enum.uniq()
+  end
+
+  defp workload_analysis_domains(models) do
+    models
+    |> Enum.map(&extract_analysis_metadata/1)
+    |> Enum.map(&Map.get(&1, "domain"))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  defp workload_thermal_intents(models) do
+    models
+    |> Enum.map(&extract_analysis_metadata/1)
+    |> Enum.flat_map(fn metadata ->
+      case Map.get(metadata, "thermal_intent") do
+        intents when is_list(intents) -> Enum.filter(intents, &is_binary/1)
+        _ -> []
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  defp workload_analysis_families(models) do
+    models
+    |> Enum.map(&extract_analysis_metadata/1)
+    |> Enum.map(&Map.get(&1, "family"))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+  end
+
+  defp extract_analysis_metadata(model) do
+    payload = Map.get(model, "payload")
+
+    case payload do
+      %{"analysis_metadata" => metadata} when is_map(metadata) -> metadata
+      _ -> %{}
+    end
   end
 
   defp active_model_id([]), do: nil

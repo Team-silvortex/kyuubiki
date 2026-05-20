@@ -15,6 +15,8 @@
       "version_count": 2,
       "job_count": 3,
       "result_count": 3,
+      "analysis_domains": ["mechanical"],
+      "analysis_families": ["trusses"],
       "tags": ["starter", "2d", "bridge"]
     },
     {
@@ -29,6 +31,9 @@
       "version_count": 4,
       "job_count": 6,
       "result_count": 6,
+      "analysis_domains": ["thermal", "thermo_mechanical"],
+      "analysis_families": ["planes"],
+      "thermal_intents": ["conduction_field", "heat_source_field", "thermoelastic_plane_response"],
       "tags": ["local", "sample", "3d"]
     }
   ]

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
+    <a class="hub-skip-link" href="#hub-main">Skip to main content</a>
     <div class="hub-shell">
       <aside class="hub-rail">
         <div class="brand">
@@ -26,303 +27,617 @@
         </nav>
       </aside>
 
-      <main class="hub-main">
+      <main class="hub-main" id="hub-main">
         <header class="hub-head">
-          <div>
+          <div class="hub-head__main">
+            <div class="hub-card__eyebrow">Operator shell</div>
             <h1 id="section-title">Projects</h1>
             <p id="section-copy" class="desktop-shell-note">Open recent engineering work, import standardized bundles, and jump into Workbench.</p>
+            <div class="hub-head__signals">
+              <div class="hub-signal-card">
+                <span class="hub-signal-card__label">Workload intake</span>
+                <strong>local + remote</strong>
+                <span class="desktop-shell-note">Register bundles, sync catalogs, and keep one shelf in view.</span>
+              </div>
+              <div class="hub-signal-card">
+                <span class="hub-signal-card__label">Analysis domains</span>
+                <strong>mechanical / thermal / thermo</strong>
+                <span class="desktop-shell-note">The same study language now flows through Hub, CLI, and Workbench.</span>
+              </div>
+              <div class="hub-signal-card">
+                <span class="hub-signal-card__label">Recommended first move</span>
+                <strong>sync, inspect, open</strong>
+                <span class="desktop-shell-note">Sync first, inspect once, then open Workbench.</span>
+              </div>
+            </div>
           </div>
-          <div class="hub-head__status">
-            <div class="desktop-shell-note">Action status</div>
-            <strong class="desktop-shell-state" data-desktop-state="activity" id="hub-action-state">idle</strong>
-          </div>
-          <div class="hub-actions desktop-shell-action-row">
-            <button class="desktop-shell-button-primary" data-action="open-workbench">Open workbench</button>
-            <button class="desktop-shell-button-primary" data-action="start-local">Start local stack</button>
-            <button data-action="validate-env">Validate env</button>
+          <div class="hub-head__aside">
+            <div class="hub-head__status">
+              <div class="desktop-shell-note">Action status</div>
+              <strong class="desktop-shell-state" data-desktop-state="activity" id="hub-action-state">idle</strong>
+            </div>
+            <div class="hub-actions desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" data-action="open-workbench">Open workbench</button>
+              <button class="desktop-shell-button-primary" data-action="start-local">Start local stack</button>
+              <button data-action="validate-env">Validate env</button>
+            </div>
           </div>
         </header>
 
-        <section class="hub-grid" id="projects-panel">
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Workload library</h2>
-            <p class="desktop-shell-note">
-              Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.
-            </p>
-            <div class="hub-toolbar hub-toolbar--left">
-              <label class="hub-field hub-field--stacked">
-                <span>Catalog URL</span>
-                <input id="workload-catalog-url" placeholder="https://hub.example.com/catalog/workloads.json" type="text" />
-              </label>
-              <label class="hub-field hub-field--stacked">
-                <span>Label or note</span>
-                <input id="workload-label" placeholder="Bridge starter pack / downloaded from release note" type="text" />
-              </label>
-            </div>
-            <div class="hub-stack desktop-shell-action-row">
-              <button class="desktop-shell-button-primary" data-action="workload-register-local">Register current bundle</button>
-              <button data-action="workload-sync-local">Sync local control plane</button>
-              <button data-action="workload-sync-remote">Sync remote catalog</button>
-              <button data-action="workload-export-library">Export library JSON</button>
-              <button data-action="workload-import-library">Import library JSON</button>
-              <button data-action="workload-clear-library">Clear library</button>
-            </div>
-            <input accept="application/json" class="hidden" id="workload-import-input" type="file" />
-            <div class="hub-history-section">
-              <div class="desktop-shell-note">Managed workloads</div>
-              <div class="hub-history-list" id="workload-library-list"></div>
-            </div>
-            <pre class="hub-log hub-log--compact" id="workload-library-output">Workload library is ready.</pre>
-          </article>
+        <section class="hub-panel hub-panel--projects" id="projects-panel">
+          <div class="hub-overview-strip">
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Library</div>
+              <h2>One place for workload intake</h2>
+              <p class="desktop-shell-note">Local bundle registration, first-party control-plane sync, and custom remote catalogs now land in one managed shelf.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Bundles</div>
+              <h2>Project bundle operations stay close</h2>
+              <p class="desktop-shell-note">Inspect, validate, normalize, unpack, pack, and diff sit next to recents, so repeated archive work stays quick.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Launch path</div>
+              <h2>Hub leads into Workbench</h2>
+              <p class="desktop-shell-note">Use the same context for library curation, project inspection, and the jump into analysis without hopping across tools.</p>
+            </article>
+          </div>
 
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Project bundle tools</h2>
-            <div class="hub-toolbar hub-toolbar--left">
-              <label class="hub-field hub-field--stacked">
-                <span>Bundle path</span>
-                <input id="project-bundle-path" placeholder="/path/to/project.kyuubiki" type="text" />
-              </label>
-              <label class="hub-field hub-field--stacked">
-                <span>Compare path</span>
-                <input id="project-bundle-compare-path" placeholder="/path/to/other-project.kyuubiki" type="text" />
-              </label>
-              <label class="hub-field hub-field--stacked">
-                <span>Output path</span>
-                <input id="project-bundle-out-path" placeholder="/path/to/output.kyuubiki or /path/to/project-dir" type="text" />
-              </label>
-            </div>
-            <div class="hub-stack desktop-shell-action-row">
-              <button class="desktop-shell-button-primary" data-action="project-inspect">Inspect .kyuubiki</button>
-              <button data-action="project-validate">Validate .kyuubiki</button>
-              <button data-action="project-normalize">Normalize bundle</button>
-              <button data-action="project-unpack">Unpack bundle</button>
-              <button data-action="project-pack">Pack project</button>
-              <button data-action="project-diff">Diff bundles</button>
-              <button data-action="open-workbench">Open workbench</button>
-              <button data-target-section="tools">Desktop tools</button>
-            </div>
-            <div class="hub-recent-grid">
-              <section class="hub-recent-panel">
-                <div class="desktop-shell-note">Recent bundles</div>
-                <div class="hub-recent-list" id="recent-bundle-list"></div>
-              </section>
-              <section class="hub-recent-panel">
-                <div class="desktop-shell-note">Recent compare paths</div>
-                <div class="hub-recent-list" id="recent-compare-list"></div>
-              </section>
-              <section class="hub-recent-panel">
-                <div class="desktop-shell-note">Recent outputs</div>
-                <div class="hub-recent-list" id="recent-output-list"></div>
-              </section>
-            </div>
-            <section class="hub-recent-panel hub-recent-panel--wide">
-              <div class="desktop-shell-note">Recent bundle actions</div>
-              <div class="hub-history-filters desktop-shell-action-row">
-                <button class="desktop-shell-button-primary" data-history-filter="all">All</button>
-                <button data-history-filter="failed">Failed</button>
-                <button data-history-filter="inspect">Inspect</button>
-                <button data-history-filter="normalize">Normalize</button>
-                <button data-history-filter="diff">Diff</button>
-                <button data-history-manage="keep-failed">Keep failed only</button>
-                <button data-history-manage="import-json">Import JSON</button>
-                <button data-history-manage="export-json">Export JSON</button>
-                <button data-history-manage="clear">Clear history</button>
+          <div class="hub-projects-layout">
+            <article class="hub-card desktop-shell-surface-card hub-card--library">
+              <div class="hub-card__intro">
+                <div>
+                  <div class="hub-card__eyebrow">Managed intake</div>
+                  <h2>Workload library</h2>
+                </div>
+                <p class="desktop-shell-note">
+                  Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.
+                </p>
               </div>
-              <input accept="application/json" class="hidden" id="history-import-input" type="file" />
-              <section class="hub-history-section">
-                <div class="desktop-shell-note">Favorites</div>
-                <div class="hub-history-list" id="favorite-action-list"></div>
-              </section>
-              <section class="hub-history-section">
-                <div class="desktop-shell-note">Recent</div>
-                <div class="hub-history-list" id="recent-action-list"></div>
-              </section>
-            </section>
-            <pre class="hub-log hub-log--compact" id="project-bundle-output">Project bundle tools are ready.</pre>
-          </article>
-        </section>
-
-        <section class="hub-grid hub-panel hidden" id="runtimes-panel">
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Local runtime</h2>
-            <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="health" id="local-runtime-status">ready</strong></div>
-              <div class="desktop-shell-metric-row"><span>Frontend</span><strong id="local-workbench-url">127.0.0.1:3000</strong></div>
-              <div class="desktop-shell-metric-row"><span>Control plane</span><strong id="local-orchestrator-url">127.0.0.1:4000</strong></div>
-              <div class="desktop-shell-metric-row"><span>Agents</span><strong class="desktop-shell-state" data-desktop-state="activity">2 online</strong></div>
-            </div>
-            <pre class="hub-log hub-log--compact" id="runtime-status-output">Loading runtime status…</pre>
-          </article>
-
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Hot reload loop</h2>
-            <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-status">idle</strong></div>
-              <div class="desktop-shell-metric-row"><span>Mode</span><strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-mode">local</strong></div>
-            </div>
-            <div class="hub-stack desktop-shell-action-row">
-              <button class="desktop-shell-button-primary" data-action="hot-start-local">Hot local</button>
-              <button data-action="hot-start-cloud">Hot cloud</button>
-              <button data-action="hot-start-distributed">Hot distributed</button>
-              <button data-action="hot-refresh-status">Refresh hot status</button>
-              <button data-action="hot-stop">Stop hot loop</button>
-            </div>
-            <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
-              <label class="hub-field">
-                <span>Hot logs</span>
-                <select id="hot-runtime-log-service">
-                  <option value="hot-stack">stack</option>
-                  <option value="hot-web">web</option>
-                  <option value="hot-frontend">frontend</option>
-                  <option value="hot-agent-5001">agent 5001</option>
-                  <option value="hot-agent-5002">agent 5002</option>
-                </select>
-              </label>
-              <label class="hub-inline-check">
-                <input id="hot-runtime-log-auto" type="checkbox" />
-                <span>Auto refresh</span>
-              </label>
-              <label class="hub-field">
-                <span>Interval</span>
-                <select id="hot-runtime-log-interval">
-                  <option value="2000">2s</option>
-                  <option value="4000">4s</option>
-                  <option value="8000">8s</option>
-                </select>
-              </label>
-              <strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-log-follow-state">frozen</strong>
-              <button data-action="hot-refresh-log">Refresh log</button>
-              <button data-action="hot-copy-log-view">Copy tail</button>
-              <button data-action="hot-clear-log-view">Clear view</button>
-            </div>
-            <p class="desktop-shell-note">Copy tail exports a sanitized view, not the raw log file.</p>
-            <pre class="hub-log hub-log--compact" id="hot-runtime-status-output">Hot-reload loop is ready.</pre>
-            <pre class="hub-log hub-log--compact" id="hot-runtime-log-output">Select a hot-reload service to inspect its latest tail.</pre>
-          </article>
-
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Remote targets</h2>
-            <div class="hub-list">
-              <div class="hub-list__row">
-                <strong>cluster-a</strong>
-                <span>distributed</span>
+              <div class="hub-control-grid">
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                  <label class="hub-field hub-field--stacked">
+                    <span>Catalog URL</span>
+                    <input id="workload-catalog-url" placeholder="https://hub.example.com/catalog/workloads.json" type="text" />
+                  </label>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                  <label class="hub-field hub-field--stacked">
+                    <span>Label or note</span>
+                    <input id="workload-label" placeholder="Bridge starter pack / downloaded from release note" type="text" />
+                  </label>
+                </div>
               </div>
-              <div class="hub-list__row">
-                <strong>mesh-lab</strong>
-                <span>direct mesh</span>
+              <div class="hub-stack desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" data-action="workload-register-local">Register current bundle</button>
+                <button data-action="workload-sync-local">Sync local control plane</button>
+                <button data-action="workload-sync-remote">Sync remote catalog</button>
+                <button data-action="workload-export-library">Export library JSON</button>
+                <button data-action="workload-import-library">Import library JSON</button>
+                <button data-action="workload-clear-library">Clear library</button>
               </div>
+              <input accept="application/json" class="hidden" id="workload-import-input" type="file" />
+              <div class="hub-history-section">
+                <div class="desktop-shell-note">Managed workloads</div>
+                <div class="hub-filter-stack">
+                  <div class="hub-history-filters desktop-shell-action-row">
+                    <button class="desktop-shell-button-primary" data-workload-filter="all">All</button>
+                    <button data-workload-filter="mechanical">Mechanical</button>
+                    <button data-workload-filter="thermal">Thermal</button>
+                    <button data-workload-filter="thermo_mechanical">Thermo-mechanical</button>
+                  </div>
+                  <div class="hub-history-filters desktop-shell-action-row">
+                    <button class="desktop-shell-button-primary" data-workload-family-filter="all">All families</button>
+                    <button data-workload-family-filter="axial_and_springs">Axial &amp; Springs</button>
+                    <button data-workload-family-filter="beams_and_frames">Beams &amp; Frames</button>
+                    <button data-workload-family-filter="trusses">Trusses</button>
+                    <button data-workload-family-filter="planes">Planes</button>
+                  </div>
+                </div>
+                <div class="hub-history-list" id="workload-library-list"></div>
+              </div>
+              <pre class="hub-log hub-log--compact" id="workload-library-output">Workload library is ready.</pre>
+            </article>
+
+            <div class="hub-projects-side">
+              <article class="hub-card desktop-shell-surface-card hub-card--bundle">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Bundle operations</div>
+                    <h2>Project bundle tools</h2>
+                  </div>
+                  <p class="desktop-shell-note">Keep the repetitive archive work in one place, then move straight into analysis.</p>
+                </div>
+                <div class="hub-control-grid hub-control-grid--stacked">
+                  <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                    <label class="hub-field hub-field--stacked">
+                      <span>Bundle path</span>
+                      <input id="project-bundle-path" placeholder="/path/to/project.kyuubiki" type="text" />
+                    </label>
+                  </div>
+                  <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                    <label class="hub-field hub-field--stacked">
+                      <span>Compare path</span>
+                      <input id="project-bundle-compare-path" placeholder="/path/to/other-project.kyuubiki" type="text" />
+                    </label>
+                  </div>
+                  <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
+                    <label class="hub-field hub-field--stacked">
+                      <span>Output path</span>
+                      <input id="project-bundle-out-path" placeholder="/path/to/output.kyuubiki or /path/to/project-dir" type="text" />
+                    </label>
+                  </div>
+                </div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button class="desktop-shell-button-primary" data-action="project-inspect">Inspect .kyuubiki</button>
+                  <button data-action="project-validate">Validate .kyuubiki</button>
+                  <button data-action="project-normalize">Normalize bundle</button>
+                  <button data-action="project-unpack">Unpack bundle</button>
+                  <button data-action="project-pack">Pack project</button>
+                  <button data-action="project-diff">Diff bundles</button>
+                  <button data-action="open-workbench">Open workbench</button>
+                  <button data-target-section="tools">Desktop tools</button>
+                </div>
+                <div class="hub-recent-grid">
+                  <section class="hub-recent-panel">
+                    <div class="desktop-shell-note">Recent bundles</div>
+                    <div class="hub-recent-list" id="recent-bundle-list"></div>
+                  </section>
+                  <section class="hub-recent-panel">
+                    <div class="desktop-shell-note">Recent compare paths</div>
+                    <div class="hub-recent-list" id="recent-compare-list"></div>
+                  </section>
+                  <section class="hub-recent-panel">
+                    <div class="desktop-shell-note">Recent outputs</div>
+                    <div class="hub-recent-list" id="recent-output-list"></div>
+                  </section>
+                </div>
+                <section class="hub-recent-panel hub-recent-panel--wide">
+                  <div class="desktop-shell-note">Recent bundle actions</div>
+                  <div class="hub-history-filters desktop-shell-action-row">
+                    <button class="desktop-shell-button-primary" data-history-filter="all">All</button>
+                    <button data-history-filter="failed">Failed</button>
+                    <button data-history-filter="inspect">Inspect</button>
+                    <button data-history-filter="normalize">Normalize</button>
+                    <button data-history-filter="diff">Diff</button>
+                    <button data-history-manage="keep-failed">Keep failed only</button>
+                    <button data-history-manage="import-json">Import JSON</button>
+                    <button data-history-manage="export-json">Export JSON</button>
+                    <button data-history-manage="clear">Clear history</button>
+                  </div>
+                  <input accept="application/json" class="hidden" id="history-import-input" type="file" />
+                  <section class="hub-history-section">
+                    <div class="desktop-shell-note">Favorites</div>
+                    <div class="hub-history-list" id="favorite-action-list"></div>
+                  </section>
+                  <section class="hub-history-section">
+                    <div class="desktop-shell-note">Recent</div>
+                    <div class="hub-history-list" id="recent-action-list"></div>
+                  </section>
+                </section>
+                <pre class="hub-log hub-log--compact" id="project-bundle-output">Project bundle tools are ready.</pre>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card hub-card--workflow">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Suggested flow</div>
+                    <h2>From intake to analysis</h2>
+                  </div>
+                  <p class="desktop-shell-note">Use Hub as a short operational runway: pull context in, inspect it once, then move into Workbench with fewer surprises.</p>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+                  <button class="hub-density-toggle" data-density-toggle="projects-workflow">Collapse</button>
+                </div>
+                <div class="hub-density-panel" data-density-panel="projects-workflow">
+                <ol class="hub-flow-list">
+                  <li class="hub-flow-step">
+                    <strong>Sync or register</strong>
+                    <span class="desktop-shell-note">Bring a workload in from the local control plane, a remote catalog, or a standalone bundle path.</span>
+                  </li>
+                  <li class="hub-flow-step">
+                    <strong>Inspect before launch</strong>
+                    <span class="desktop-shell-note">Use `.kyuubiki` inspection to confirm schema, layout, and analysis intent before opening deeper tools.</span>
+                  </li>
+                  <li class="hub-flow-step">
+                    <strong>Open Workbench with context</strong>
+                    <span class="desktop-shell-note">Keep the active bundle path loaded and carry that into the next analysis surface.</span>
+                  </li>
+                </ol>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button class="desktop-shell-button-primary" data-action="workload-sync-local">Sync local control plane</button>
+                  <button data-action="project-inspect">Inspect current bundle</button>
+                  <button data-action="open-workbench">Open workbench</button>
+                </div>
+                </div>
+              </article>
             </div>
-          </article>
+          </div>
         </section>
 
-        <section class="hub-grid hub-panel hidden" id="deploy-panel">
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Deployment modes</h2>
-            <div class="hub-stack desktop-shell-action-row">
-              <button class="desktop-shell-button-primary" data-action="start-local">Local workstation</button>
-              <button data-action="start-cloud">Cloud control plane</button>
-              <button data-action="start-distributed">Distributed control plane</button>
-              <button data-action="restart-local">Restart local stack</button>
-            </div>
-          </article>
+        <section class="hub-panel hidden" id="runtimes-panel">
+          <div class="hub-overview-strip">
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Runtime posture</div>
+              <h2>See the local stack first</h2>
+              <p class="desktop-shell-note">Frontend, control plane, and agents stay visible before you dive into logs or hot-reload details.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Hot loop</div>
+              <h2>Develop without leaving Hub</h2>
+              <p class="desktop-shell-note">Start the mode you need, then watch the current tail from one stable control surface.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Targets</div>
+              <h2>Keep expansion visible</h2>
+              <p class="desktop-shell-note">Remote clusters and mesh labs stay in the same runtime map, even when your daily path is local.</p>
+            </article>
+          </div>
 
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Bootstrap</h2>
-            <div class="hub-stack desktop-shell-action-row">
-              <button data-action="validate-env">Validate env</button>
-              <button data-action="desktop-stage">Prepare manifests</button>
-              <button data-action="run-doctor">Run doctor</button>
+          <div class="hub-runtime-layout">
+            <article class="hub-card desktop-shell-surface-card">
+              <div class="hub-card__intro">
+                <div>
+                  <div class="hub-card__eyebrow">Managed local loop</div>
+                  <h2>Local runtime</h2>
+                </div>
+                <p class="desktop-shell-note">Keep the workstation path readable: status first, URLs second, diagnostics close by.</p>
+              </div>
+              <div class="hub-metrics">
+                <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="health" id="local-runtime-status">ready</strong></div>
+                <div class="desktop-shell-metric-row"><span>Frontend</span><strong id="local-workbench-url">127.0.0.1:3000</strong></div>
+                <div class="desktop-shell-metric-row"><span>Control plane</span><strong id="local-orchestrator-url">127.0.0.1:4000</strong></div>
+                <div class="desktop-shell-metric-row"><span>Agents</span><strong class="desktop-shell-state" data-desktop-state="activity">2 online</strong></div>
+              </div>
+              <pre class="hub-log hub-log--compact" id="runtime-status-output">Loading runtime status…</pre>
+            </article>
+
+            <div class="hub-runtime-side">
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Developer runtime</div>
+                    <h2>Hot reload loop</h2>
+                  </div>
+                  <p class="desktop-shell-note">Launch the right dev mode, then keep status, follow-state, and tail output in one place.</p>
+                </div>
+                <div class="hub-metrics">
+                  <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-status">idle</strong></div>
+                  <div class="desktop-shell-metric-row"><span>Mode</span><strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-mode">local</strong></div>
+                </div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button class="desktop-shell-button-primary" data-action="hot-start-local">Hot local</button>
+                  <button data-action="hot-start-cloud">Hot cloud</button>
+                  <button data-action="hot-start-distributed">Hot distributed</button>
+                  <button data-action="hot-refresh-status">Refresh hot status</button>
+                  <button data-action="hot-stop">Stop hot loop</button>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+                  <label class="hub-field">
+                    <span>Hot logs</span>
+                    <select id="hot-runtime-log-service">
+                      <option value="hot-stack">stack</option>
+                      <option value="hot-web">web</option>
+                      <option value="hot-frontend">frontend</option>
+                      <option value="hot-agent-5001">agent 5001</option>
+                      <option value="hot-agent-5002">agent 5002</option>
+                    </select>
+                  </label>
+                  <label class="hub-inline-check">
+                    <input id="hot-runtime-log-auto" type="checkbox" />
+                    <span>Auto refresh</span>
+                  </label>
+                  <label class="hub-field">
+                    <span>Interval</span>
+                    <select id="hot-runtime-log-interval">
+                      <option value="2000">2s</option>
+                      <option value="4000">4s</option>
+                      <option value="8000">8s</option>
+                    </select>
+                  </label>
+                  <strong class="desktop-shell-state" data-desktop-state="activity" id="hot-runtime-log-follow-state">frozen</strong>
+                  <button data-action="hot-refresh-log">Refresh log</button>
+                  <button data-action="hot-copy-log-view">Copy tail</button>
+                  <button data-action="hot-clear-log-view">Clear view</button>
+                </div>
+                <p class="desktop-shell-note">Copy tail exports a sanitized view, not the raw log file.</p>
+                <div class="hub-log-stack">
+                  <pre class="hub-log hub-log--compact" id="hot-runtime-status-output">Hot-reload loop is ready.</pre>
+                  <pre class="hub-log hub-log--compact" id="hot-runtime-log-output">Select a hot-reload service to inspect its latest tail.</pre>
+                </div>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Runtime map</div>
+                    <h2>Remote targets</h2>
+                  </div>
+                  <p class="desktop-shell-note">Keep the distributed picture visible even if your main release path stays on one workstation.</p>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+                  <button class="hub-density-toggle" data-density-toggle="runtimes-remote-targets">Collapse</button>
+                </div>
+                <div class="hub-density-panel" data-density-panel="runtimes-remote-targets">
+                <div class="hub-list">
+                  <div class="hub-list__row">
+                    <strong>cluster-a</strong>
+                    <span>distributed</span>
+                  </div>
+                  <div class="hub-list__row">
+                    <strong>mesh-lab</strong>
+                    <span>direct mesh</span>
+                  </div>
+                </div>
+                </div>
+              </article>
             </div>
-          </article>
+          </div>
         </section>
 
-        <section class="hub-grid hub-panel hidden" id="observe-panel">
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Health and watchdog</h2>
-            <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Watchdog</span><strong class="desktop-shell-state" data-desktop-state="health">stable</strong></div>
-              <div class="desktop-shell-metric-row"><span>Security events</span><strong class="desktop-shell-state" data-desktop-state="health">2 recent</strong></div>
-              <div class="desktop-shell-metric-row"><span>Failed jobs</span><strong class="desktop-shell-state" data-desktop-state="health" data-state-value="0 failed">0</strong></div>
-            </div>
-          </article>
+        <section class="hub-panel hidden" id="deploy-panel">
+          <div class="hub-overview-strip">
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Runtime posture</div>
+              <h2>Pick the deployment path first</h2>
+              <p class="desktop-shell-note">Choose whether this workstation is leading locally, talking to cloud control, or coordinating a distributed plane.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Bootstrap</div>
+              <h2>Validate before packaging</h2>
+              <p class="desktop-shell-note">Environment checks and doctor steps stay close to manifest preparation, so release paths feel safer by default.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Release runway</div>
+              <h2>Move from mode to package</h2>
+              <p class="desktop-shell-note">Deploy is the short runway from selecting a runtime posture to validating the package path you intend to ship.</p>
+            </article>
+          </div>
 
-          <article class="hub-card desktop-shell-surface-card">
-            <div class="desktop-shell-section-header">
-              <h2>Runtime watch</h2>
-              <strong class="desktop-shell-state" data-desktop-state="activity" id="observe-hot-follow-state">frozen</strong>
+          <div class="hub-runtime-layout">
+            <article class="hub-card desktop-shell-surface-card">
+              <div class="hub-card__intro">
+                <div>
+                  <div class="hub-card__eyebrow">Runtime targeting</div>
+                  <h2>Deployment modes</h2>
+                </div>
+                <p class="desktop-shell-note">Choose the operating posture that matches the current environment, then restart or pivot without leaving Hub.</p>
+              </div>
+              <div class="hub-stack desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" data-action="start-local">Local workstation</button>
+                <button data-action="start-cloud">Cloud control plane</button>
+                <button data-action="start-distributed">Distributed control plane</button>
+                <button data-action="restart-local">Restart local stack</button>
+              </div>
+            </article>
+
+            <div class="hub-runtime-side">
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Release prep</div>
+                    <h2>Bootstrap</h2>
+                  </div>
+                  <p class="desktop-shell-note">Use the same panel for validation, doctor passes, and package staging so preflight work is easy to repeat.</p>
+                </div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button data-action="validate-env">Validate env</button>
+                  <button data-action="desktop-stage">Prepare manifests</button>
+                  <button data-action="run-doctor">Run doctor</button>
+                </div>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Suggested deploy path</div>
+                    <h2>Mode, verify, package</h2>
+                  </div>
+                  <p class="desktop-shell-note">Switch posture first, validate next, then move into desktop packaging and verification from the Tools section.</p>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+                  <button class="hub-density-toggle" data-density-toggle="deploy-suggested-flow">Collapse</button>
+                </div>
+                <div class="hub-density-panel" data-density-panel="deploy-suggested-flow">
+                <ol class="hub-flow-list">
+                  <li class="hub-flow-step">
+                    <strong>Choose the runtime mode</strong>
+                    <span class="desktop-shell-note">Start with the local, cloud, or distributed control-plane posture that matches the release target.</span>
+                  </li>
+                  <li class="hub-flow-step">
+                    <strong>Run the checks</strong>
+                    <span class="desktop-shell-note">Use env validation and doctor output to confirm the workstation is ready before package work begins.</span>
+                  </li>
+                  <li class="hub-flow-step">
+                    <strong>Move into package tools</strong>
+                    <span class="desktop-shell-note">Continue in Tools for desktop status, host builds, and final verification.</span>
+                  </li>
+                </ol>
+                <div class="hub-stack desktop-shell-action-row">
+                  <button class="desktop-shell-button-primary" data-action="validate-env">Validate env</button>
+                  <button data-action="run-doctor">Run doctor</button>
+                  <button data-target-section="tools">Open tools</button>
+                </div>
+                </div>
+              </article>
             </div>
-            <div class="hub-metrics">
-              <div class="desktop-shell-metric-row"><span>Local runtime</span><strong class="desktop-shell-state" data-desktop-state="health" id="observe-runtime-status">ready</strong></div>
-              <div class="desktop-shell-metric-row"><span>Hot loop</span><strong class="desktop-shell-state" data-desktop-state="activity" id="observe-hot-status">idle</strong></div>
-              <div class="desktop-shell-metric-row"><span>Mode</span><strong id="observe-hot-mode">local</strong></div>
-              <div class="desktop-shell-metric-row"><span>Log source</span><strong id="observe-hot-log-service">hot-stack</strong></div>
-            </div>
-            <div class="hub-stack desktop-shell-action-row">
-              <button data-target-section="runtimes">Open runtimes</button>
-              <button data-action="hot-refresh-log">Refresh tail</button>
-              <button data-action="hot-copy-log-view">Copy tail</button>
-            </div>
-            <pre class="hub-log hub-log--compact" id="observe-runtime-status-output">Runtime watch will appear here.</pre>
-            <pre class="hub-log hub-log--compact" id="observe-hot-log-output">Hot tail mirror will appear here.</pre>
-            <div class="desktop-shell-section-header hub-subsection-header">
-              <h2>Stack watch</h2>
-              <strong class="desktop-shell-state" data-desktop-state="activity" id="observe-runtime-log-follow-state">frozen</strong>
-            </div>
-            <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
-              <label class="hub-field">
-                <span>Stack logs</span>
-                <select id="observe-runtime-log-service">
-                  <option value="frontend">frontend</option>
-                  <option value="orchestrator">orchestrator</option>
-                  <option value="agent-5001">agent 5001</option>
-                  <option value="agent-5002">agent 5002</option>
-                </select>
-              </label>
-              <label class="hub-inline-check">
-                <input id="observe-runtime-log-auto" type="checkbox" />
-                <span>Auto watch</span>
-              </label>
-              <button data-action="observe-refresh-runtime-log">Refresh tail</button>
-              <button data-action="observe-copy-runtime-log">Copy tail</button>
-            </div>
-            <p class="desktop-shell-note">Copy tail exports a sanitized view, not the raw log file.</p>
-            <pre class="hub-log hub-log--compact" id="observe-runtime-log-output">Stack tail mirror will appear here.</pre>
-          </article>
+          </div>
         </section>
 
-        <section class="hub-grid hub-panel hidden" id="tools-panel">
-          <article class="hub-card desktop-shell-surface-card">
-            <h2>Diagnostics and packaging</h2>
-            <div class="hub-toolbar">
-              <label class="hub-field">
-                <span>Target platform</span>
-                <select id="release-platform">
-                  <option value="all">All platforms</option>
-                  <option value="macos">macOS</option>
-                  <option value="linux">Linux</option>
-                  <option value="windows">Windows</option>
-                </select>
-              </label>
+        <section class="hub-panel hidden" id="observe-panel">
+          <div class="hub-overview-strip">
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Signal quality</div>
+              <h2>Health first, then detail</h2>
+              <p class="desktop-shell-note">Keep watchdog, recent security events, and job failures readable before you move into tail output.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Live watch</div>
+              <h2>Mirror what the runtimes see</h2>
+              <p class="desktop-shell-note">Observe mirrors stay close to the live runtime loop, so watch surfaces stay consistent across sections.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Operator flow</div>
+              <h2>Refresh, copy, move on</h2>
+              <p class="desktop-shell-note">Use Observe for scanning and copying; use Runtimes when you need to change the underlying loop.</p>
+            </article>
+          </div>
+
+          <div class="hub-observe-layout">
+            <article class="hub-card desktop-shell-surface-card">
+              <div class="hub-card__intro">
+                <div>
+                  <div class="hub-card__eyebrow">Stability</div>
+                  <h2>Health and watchdog</h2>
+                </div>
+                <p class="desktop-shell-note">Keep the short health story compact: stable runtime, recent security signal, and whether failures are actually accumulating.</p>
+              </div>
+              <div class="hub-metrics">
+                <div class="desktop-shell-metric-row"><span>Watchdog</span><strong class="desktop-shell-state" data-desktop-state="health">stable</strong></div>
+                <div class="desktop-shell-metric-row"><span>Security events</span><strong class="desktop-shell-state" data-desktop-state="health">2 recent</strong></div>
+                <div class="desktop-shell-metric-row"><span>Failed jobs</span><strong class="desktop-shell-state" data-desktop-state="health" data-state-value="0 failed">0</strong></div>
+              </div>
+            </article>
+
+            <article class="hub-card desktop-shell-surface-card">
+              <div class="desktop-shell-section-header">
+                <h2>Runtime watch</h2>
+                <strong class="desktop-shell-state" data-desktop-state="activity" id="observe-hot-follow-state">frozen</strong>
+              </div>
+              <div class="hub-metrics">
+                <div class="desktop-shell-metric-row"><span>Local runtime</span><strong class="desktop-shell-state" data-desktop-state="health" id="observe-runtime-status">ready</strong></div>
+                <div class="desktop-shell-metric-row"><span>Hot loop</span><strong class="desktop-shell-state" data-desktop-state="activity" id="observe-hot-status">idle</strong></div>
+                <div class="desktop-shell-metric-row"><span>Mode</span><strong id="observe-hot-mode">local</strong></div>
+                <div class="desktop-shell-metric-row"><span>Log source</span><strong id="observe-hot-log-service">hot-stack</strong></div>
+              </div>
+              <div class="hub-stack desktop-shell-action-row">
+                <button data-target-section="runtimes">Open runtimes</button>
+                <button data-action="hot-refresh-log">Refresh tail</button>
+                <button data-action="hot-copy-log-view">Copy tail</button>
+              </div>
+              <div class="hub-log-stack">
+                <pre class="hub-log hub-log--compact" id="observe-runtime-status-output">Runtime watch will appear here.</pre>
+                <pre class="hub-log hub-log--compact" id="observe-hot-log-output">Hot tail mirror will appear here.</pre>
+              </div>
+              <div class="desktop-shell-section-header hub-subsection-header">
+                <h2>Stack watch</h2>
+                <strong class="desktop-shell-state" data-desktop-state="activity" id="observe-runtime-log-follow-state">frozen</strong>
+              </div>
+              <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+                <label class="hub-field">
+                  <span>Stack logs</span>
+                  <select id="observe-runtime-log-service">
+                    <option value="frontend">frontend</option>
+                    <option value="orchestrator">orchestrator</option>
+                    <option value="agent-5001">agent 5001</option>
+                    <option value="agent-5002">agent 5002</option>
+                  </select>
+                </label>
+                <label class="hub-inline-check">
+                  <input id="observe-runtime-log-auto" type="checkbox" />
+                  <span>Auto watch</span>
+                </label>
+                <button data-action="observe-refresh-runtime-log">Refresh tail</button>
+                <button data-action="observe-copy-runtime-log">Copy tail</button>
+              </div>
+              <p class="desktop-shell-note">Copy tail exports a sanitized view, not the raw log file.</p>
+              <pre class="hub-log hub-log--compact" id="observe-runtime-log-output">Stack tail mirror will appear here.</pre>
+            </article>
+          </div>
+        </section>
+
+        <section class="hub-panel hidden" id="tools-panel">
+          <div class="hub-overview-strip">
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Diagnostics</div>
+              <h2>Read the platform first</h2>
+              <p class="desktop-shell-note">Desktop readiness, benchmarks, and bundle validation sit next to packaging so the release story stays connected.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Packaging</div>
+              <h2>One platform selector, one path</h2>
+              <p class="desktop-shell-note">Use one target selector for status, staging, host builds, and verification instead of jumping across disconnected surfaces.</p>
+            </article>
+            <article class="hub-overview-card desktop-shell-surface-card">
+              <div class="hub-card__eyebrow">Operational outputs</div>
+              <h2>Keep logs and results nearby</h2>
+              <p class="desktop-shell-note">Status and operation output stay together so packaging work is easier to audit while you iterate.</p>
+            </article>
+          </div>
+
+          <div class="hub-runtime-layout">
+            <article class="hub-card desktop-shell-surface-card">
+              <div class="hub-card__intro">
+                <div>
+                  <div class="hub-card__eyebrow">Platform actions</div>
+                  <h2>Diagnostics and packaging</h2>
+                </div>
+                <p class="desktop-shell-note">Use the same tool surface for local diagnostics, bundle validation, and platform-specific desktop packaging.</p>
+              </div>
+              <div class="hub-toolbar hub-toolbar--left">
+                <label class="hub-field">
+                  <span>Target platform</span>
+                  <select id="release-platform">
+                    <option value="all">All platforms</option>
+                    <option value="macos">macOS</option>
+                    <option value="linux">Linux</option>
+                    <option value="windows">Windows</option>
+                  </select>
+                </label>
+              </div>
+              <div class="hub-stack desktop-shell-action-row">
+                <button>Run benchmark</button>
+                <button>Validate project bundle</button>
+                <button>Export database</button>
+                <button data-action="desktop-status">Desktop status</button>
+                <button data-action="desktop-stage">Stage desktop package</button>
+                <button data-action="desktop-build-host">Build host bundles</button>
+                <button data-action="desktop-verify">Verify desktop release</button>
+                <button data-action="stop-stack">Stop local stack</button>
+              </div>
+            </article>
+
+            <div class="hub-runtime-side">
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Readiness</div>
+                    <h2>Desktop status</h2>
+                  </div>
+                  <p class="desktop-shell-note">Use this output as the short readiness wall before you stage, build, or verify host bundles.</p>
+                </div>
+                <pre class="hub-log hub-log--compact" id="hub-desktop-status-output">Desktop release readiness will appear here.</pre>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Operations</div>
+                    <h2>Tool output</h2>
+                  </div>
+                  <p class="desktop-shell-note">Keep packaging and diagnostics output close by so release work remains inspectable while it runs.</p>
+                </div>
+                <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+                  <button class="hub-density-toggle" data-density-toggle="tools-output">Collapse</button>
+                </div>
+                <div class="hub-density-panel" data-density-panel="tools-output">
+                <pre class="hub-log" id="hub-operation-output">Hub desktop release actions are ready.</pre>
+                </div>
+              </article>
             </div>
-            <div class="hub-stack desktop-shell-action-row">
-              <button>Run benchmark</button>
-              <button>Validate project bundle</button>
-              <button>Export database</button>
-              <button data-action="desktop-status">Desktop status</button>
-              <button data-action="desktop-stage">Stage desktop package</button>
-              <button data-action="desktop-build-host">Build host bundles</button>
-              <button data-action="desktop-verify">Verify desktop release</button>
-              <button data-action="stop-stack">Stop local stack</button>
-            </div>
-            <pre class="hub-log hub-log--compact" id="hub-desktop-status-output">Desktop release readiness will appear here.</pre>
-            <pre class="hub-log" id="hub-operation-output">Hub desktop release actions are ready.</pre>
-          </article>
+          </div>
         </section>
       </main>
 
       <aside class="hub-side">
         <article class="hub-card desktop-shell-surface-card">
-          <h2>Quick launch</h2>
+          <div class="hub-card__intro">
+            <div>
+              <div class="hub-card__eyebrow">Fast path</div>
+              <h2>Quick launch</h2>
+            </div>
+            <p class="desktop-shell-note">Keep the common jumps close, without pulling attention away from the active section.</p>
+          </div>
           <div class="hub-stack desktop-shell-action-row">
             <button class="desktop-shell-button-primary" data-action="open-workbench">Workbench</button>
             <button data-action="open-installer">Installer</button>
@@ -331,9 +646,18 @@
         </article>
 
         <article class="hub-card desktop-shell-surface-card">
+          <div class="hub-card__intro">
+            <div>
+              <div class="hub-card__eyebrow">Onboarding and guidance</div>
+              <h2>Assistant</h2>
+            </div>
+            <p class="desktop-shell-note">Use the light local guide first, then reach for a model only when you need a longer plan.</p>
+          </div>
           <div class="desktop-shell-section-header">
-            <h2>Assistant</h2>
-            <strong class="desktop-shell-state" data-desktop-state="activity" id="assistant-engine-state">local</strong>
+            <div class="hub-inline-heading">
+              <span class="desktop-shell-note">Engine</span>
+              <strong class="desktop-shell-state" data-desktop-state="activity" id="assistant-engine-state">local</strong>
+            </div>
           </div>
           <div class="hub-stack desktop-shell-action-row">
             <button class="desktop-shell-button-primary" data-assistant-mode="local" id="assistant-mode-local">Local guide</button>
@@ -400,11 +724,22 @@
         </article>
 
         <article class="hub-card desktop-shell-surface-card">
-          <h2>Current mode</h2>
-            <div class="hub-metrics">
+          <div class="hub-card__intro">
+            <div>
+              <div class="hub-card__eyebrow">Active posture</div>
+              <h2>Current mode</h2>
+            </div>
+            <p class="desktop-shell-note">A compact snapshot of the runtime and storage posture the rest of Hub is currently reflecting.</p>
+          </div>
+          <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
+            <button class="hub-density-toggle" data-density-toggle="side-current-mode">Collapse</button>
+          </div>
+          <div class="hub-density-panel" data-density-panel="side-current-mode">
+          <div class="hub-metrics">
             <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state" data-desktop-state="activity" id="current-runtime-mode">orchestrated_gui</strong></div>
             <div class="desktop-shell-metric-row"><span>Storage</span><strong class="desktop-shell-state" data-desktop-state="activity">sqlite</strong></div>
             <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state" data-desktop-state="activity" id="current-profile">local workstation</strong></div>
+          </div>
           </div>
         </article>
       </aside>
