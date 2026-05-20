@@ -87,15 +87,15 @@ Reference:
 
 ### Release validation baseline exists
 
-- [ ] `make test-web`
-- [ ] `make test-rust`
-- [ ] `make test-frontend`
-- [ ] `make test-sdk`
+- [x] `make test-web`
+- [x] `make test-rust`
+- [x] `make test-frontend`
+- [x] `make test-sdk`
 - [x] `make test-integration`
-- [ ] `make test-hub-gui`
-- [ ] `make test-installer-gui`
-- [ ] `make test-workbench-gui`
-- [ ] `make desktop-status PLATFORM=all`
+- [x] `make test-hub-gui`
+- [x] `make test-installer-gui`
+- [x] `make test-workbench-gui`
+- [x] `make desktop-status PLATFORM=all`
 
 - [ ] release owners agree which failures block release and which only warn
 
@@ -111,6 +111,36 @@ Latest confirmed integration baseline:
     studies
 - detailed per-study evidence is tracked in
   [release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
+
+Latest confirmed desktop baseline:
+
+- `make test-hub-gui` passed on `2026-05-20`
+- `make test-installer-gui` passed on `2026-05-20`
+- `make test-workbench-gui` passed on `2026-05-20`
+- `make desktop-status PLATFORM=all` passed on `2026-05-20`
+- desktop status currently reports:
+  - macOS, Linux, and Windows scaffolds are present
+  - manifests and icon inputs are ready across all three desktop shells
+  - macOS host bundles are not yet built on this machine
+
+Latest confirmed app/runtime baseline:
+
+- `make test-frontend` passed on `2026-05-20`
+  - `typecheck` passed
+  - `next build` passed
+- `make test-web` passed on `2026-05-20`
+  - ExUnit result: `74 tests, 0 failures`
+  - note: this suite required running outside the filesystem sandbox because
+    Mix local PubSub opens a TCP socket during test startup
+- `make test-rust` passed on `2026-05-20`
+  - Rust workspace tests passed across protocol, solver, engine, CLI,
+    installer, desktop runtime, and benchmark crates
+- `make test-sdk` passed on `2026-05-20`
+  - Python SDK smoke passed
+  - Elixir SDK smoke passed: `1 test, 0 failures`
+  - Rust SDK smoke passed: `1 passed; 0 failed`
+  - note: this suite required running outside the filesystem sandbox because
+    the Python SDK smoke binds a localhost test server
 
 ### Failure and support path is minimally usable
 
