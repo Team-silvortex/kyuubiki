@@ -24,6 +24,7 @@ type WorkbenchAssistantPanelProps = {
   currentJobLabel: string;
   currentResultLabel: string;
   localCards: AssistantCard[];
+  promptPresets: Array<{ id: string; label: string; prompt: string }>;
   llmBaseUrl: string;
   llmApiKey: string;
   llmModel: string;
@@ -61,6 +62,8 @@ const copy = {
     rationale: "Rationale",
     suggestedActions: "Suggested actions",
     noSuggestedActions: "The model returned no executable actions.",
+    starterPrompts: "Starter prompts",
+    usePrompt: "Use prompt",
     runAction: "Run action",
     localEngine: "Rules engine",
     llmEngine: "Remote model",
@@ -96,6 +99,8 @@ const copy = {
     rationale: "理由",
     suggestedActions: "建议动作",
     noSuggestedActions: "模型没有返回可执行动作。",
+    starterPrompts: "入门提问",
+    usePrompt: "使用这条",
     runAction: "执行动作",
     localEngine: "规则引擎",
     llmEngine: "远程模型",
@@ -119,6 +124,7 @@ export function WorkbenchAssistantPanel({
   currentJobLabel,
   currentResultLabel,
   localCards,
+  promptPresets,
   llmBaseUrl,
   llmApiKey,
   llmModel,
@@ -233,6 +239,23 @@ export function WorkbenchAssistantPanel({
               <span>{t.llmEngine}</span>
             </div>
             <p className="card-copy">{t.llmHint}</p>
+            {promptPresets.length ? (
+              <div className="script-panel__payload">
+                <span>{t.starterPrompts}</span>
+                <div className="button-row">
+                  {promptPresets.map((preset) => (
+                    <button
+                      className="ghost-button ghost-button--compact"
+                      key={preset.id}
+                      onClick={() => setPrompt(preset.prompt)}
+                      type="button"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="form-grid compact">
               <label className="field-span-2">
                 <span>{t.baseUrl}</span>

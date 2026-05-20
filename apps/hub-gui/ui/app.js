@@ -106,6 +106,7 @@ const state = {
   runtimeLogRefreshInFlight: false,
   density: { ...HUB_DENSITY_DEFAULTS },
   releaseVersion: "",
+  releaseCodename: "",
 };
 
 let hotRuntimeLogPollHandle = null;
@@ -1960,20 +1961,25 @@ async function applyBrand() {
     return;
   }
 
+  const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
+  const releaseCodename = String(brand.releaseCodename || "").trim();
+  const releaseTag = [releaseCodename, releaseVersion].filter(Boolean).join(" ");
+
   if (brand.hubName) {
-    const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
     state.releaseVersion = releaseVersion;
-    document.title = releaseVersion ? `${brand.hubName} v${releaseVersion}` : brand.hubName;
+    state.releaseCodename = releaseCodename;
+    document.title = releaseTag ? `${brand.hubName} · ${releaseTag}` : brand.hubName;
   }
 
   setText("brand-hub-title", brand.hubName);
-  if (brand.releaseVersion) {
-    setText("brand-hub-version", `v${brand.releaseVersion.replace(/^v/u, "")}`);
+  if (releaseTag) {
+    setText("brand-hub-version", releaseTag);
   }
 }
 
 function releaseLabel() {
-  return state.releaseVersion ? `Kyuubiki Hub v${state.releaseVersion}` : "Kyuubiki Hub";
+  const releaseTag = [state.releaseCodename, state.releaseVersion].filter(Boolean).join(" ");
+  return releaseTag ? `Kyuubiki Hub · ${releaseTag}` : "Kyuubiki Hub";
 }
 
 function formatRuntimeReport(value) {

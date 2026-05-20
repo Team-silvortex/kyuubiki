@@ -33,7 +33,9 @@ import {
 
   function releaseLabel() {
     const releaseVersion = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
-    return releaseVersion ? `Kyuubiki Installer v${releaseVersion}` : "Kyuubiki Installer";
+    const releaseCodename = String(brandConfig?.releaseCodename || "").trim();
+    const releaseTag = [releaseCodename, releaseVersion].filter(Boolean).join(" ");
+    return releaseTag ? `Kyuubiki Installer · ${releaseTag}` : "Kyuubiki Installer";
   }
 
   function formatServiceReport(rendered) {
@@ -45,9 +47,9 @@ import {
     brandConfig = brand;
     if (brand?.installerName) {
       const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
-      document.title = releaseVersion
-        ? `${brand.installerName} v${releaseVersion}`
-        : brand.installerName;
+      const releaseCodename = String(brand.releaseCodename || "").trim();
+      const releaseTag = [releaseCodename, releaseVersion].filter(Boolean).join(" ");
+      document.title = releaseTag ? `${brand.installerName} · ${releaseTag}` : brand.installerName;
     }
 
     setText("brand-page-title", brand?.installerName);
@@ -57,8 +59,14 @@ import {
     setText("brand-installer-description", brand?.installerDescription);
     setText("brand-product-name", brand?.productName);
     setText("brand-installer-console", brand?.installerConsoleName);
-    if (brand?.releaseVersion) {
-      setText("brand-installer-version", `v${String(brand.releaseVersion).replace(/^v/u, "")}`);
+    if (brand?.releaseVersion || brand?.releaseCodename) {
+      const releaseTag = [
+        String(brand.releaseCodename || "").trim(),
+        String(brand.releaseVersion || "").replace(/^v/u, ""),
+      ]
+        .filter(Boolean)
+        .join(" ");
+      setText("brand-installer-version", releaseTag);
     }
   }
 

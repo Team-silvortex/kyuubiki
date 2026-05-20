@@ -1,6 +1,6 @@
-# Accuracy Baselines: v1.0.0 Seed Set
+# Accuracy Baselines: v1.x Seed Set
 
-This is the first concrete baseline set for `v1.0.0` numerical trust work.
+This is the first concrete baseline set for `v1.x` numerical trust work.
 
 These cases are intentionally small, hand-checkable, and fast. They exist to
 turn the accuracy plan into something that will fail loudly if we regress core
@@ -32,7 +32,7 @@ cargo test -p kyuubiki-solver --test accuracy_baselines
 
 ## Why these three first
 
-They are the best first return for `v1.0.0` accuracy work:
+They are the best first return for `v1.x` accuracy work:
 
 - `axial_bar_1d`
   validates the most basic stiffness/force/reaction path
@@ -65,5 +65,5 @@ After this seed set, the next best families are:
 
 ## Related docs
 
-- [accuracy-plan-1.0.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan-1.0.0.md)
+- [accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
 - [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)

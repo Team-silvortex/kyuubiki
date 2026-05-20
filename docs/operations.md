@@ -3,7 +3,7 @@
 This document collects the current operational modes and the most important
 environment switches.
 
-It now reflects the `v0.9.0` product shape:
+It now reflects the `tamamono 1.x` product shape:
 
 - `Hub` as the desktop operator shell
 - `Workbench` as the focused modeling and analysis surface
@@ -68,33 +68,34 @@ Remote agents can:
 
 The orchestrator watchdog protects long-running jobs.
 
-Environment variables:
+The main knobs cover:
 
-- `KYUUBIKI_WATCHDOG_SCAN_INTERVAL_MS`
-- `KYUUBIKI_WATCHDOG_STALE_JOB_MS`
-- `KYUUBIKI_WATCHDOG_JOB_TIMEOUT_MS`
-- `KYUUBIKI_AGENT_CONNECT_TIMEOUT_MS`
-- `KYUUBIKI_AGENT_RECV_TIMEOUT_MS`
+- scan interval
+- stale-job timeout
+- hard job timeout
+- agent connect timeout
+- agent receive timeout
+
+The concrete variable names remain the `KYUUBIKI_WATCHDOG_*` and
+`KYUUBIKI_AGENT_*` controls already used by the runtime.
 
 ## Security controls
 
-Common environment switches:
+Security controls currently group into:
 
-- `KYUUBIKI_API_TOKEN`
-- `KYUUBIKI_CLUSTER_API_TOKEN`
-- `KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS`
-- `KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS`
-- `KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT=true|false`
-- `KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS`
-- `KYUUBIKI_PROTECT_READS=true|false`
-- `KYUUBIKI_DIRECT_MESH_ENABLED=true|false`
-- `KYUUBIKI_DIRECT_MESH_TOKEN`
-- `KYUUBIKI_DIRECT_MESH_ENDPOINTS`
-- `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true|false`
+- API access tokens
+- cluster registration allowlists and replay/fingerprint checks
+- protected read surfaces
+- direct-mesh enablement and endpoint/token policy
 
-These can now be written from the installer GUI Setup panel.
+These can now be written from the installer GUI Setup panel. For the current
+guardrails and exact switch names, use:
+
+- [security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
 
 ## Useful entry points
+
+Common operator-facing entry points:
 
 - `make start-local`
 - `make start-cloud`
@@ -102,23 +103,15 @@ These can now be written from the installer GUI Setup panel.
 - `make hot-local`
 - `make hot-cloud`
 - `make hot-distributed`
-- `make build-frontend`
-- `make build-orchestrator`
-- `make build-agent`
-- `make build-hub-gui`
-- `make build-installer-gui`
-- `make build-workbench-gui`
-- `make package-runtime`
-- `make package-desktop PLATFORM=all`
-- `make desktop-status PLATFORM=all`
-- `make desktop-stage PLATFORM=all`
-- `make desktop-build-host`
-- `make desktop-release`
-- `make desktop-verify PLATFORM=all`
 - `make status`
 - `make stop`
-- `make benchmark-compare PROFILE=medium`
-- `make benchmark-report PROFILE=10k`
+- `make desktop-status PLATFORM=all`
+
+Build, packaging, desktop-release, and benchmark command matrices are kept in:
+
+- [packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
+- [desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
+- [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
 
 For operator-facing desktop control, Hub now mirrors several of these flows:
 
@@ -126,10 +119,6 @@ For operator-facing desktop control, Hub now mirrors several of these flows:
 - local / cloud / distributed hot-reload loop control
 - runtime watch for stack and hot-loop logs
 - local workload-catalog sync against the control plane
-
-For the full component/output matrix, see:
-
-- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 
 ## Health and descriptors
 

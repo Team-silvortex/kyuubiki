@@ -19,12 +19,12 @@ Use a predictable versioned prefix for all desktop-facing outputs:
 - `kyuubiki-hub-v<version>-<platform>-<bundle>`
 - `kyuubiki-workbench-v<version>-<platform>-<bundle>`
 
-Examples:
+Examples from the opening `1.0.0` release:
 
-- `kyuubiki-installer-v0.9.0-macos-dmg`
-- `kyuubiki-hub-v0.9.0-linux-appimage`
-- `kyuubiki-workbench-v0.9.0-linux-appimage`
-- `kyuubiki-installer-v0.9.0-windows-msi`
+- `kyuubiki-installer-v1.0.0-macos-dmg`
+- `kyuubiki-hub-v1.0.0-linux-appimage`
+- `kyuubiki-workbench-v1.0.0-linux-appimage`
+- `kyuubiki-installer-v1.0.0-windows-msi`
 
 Keep these names aligned with:
 

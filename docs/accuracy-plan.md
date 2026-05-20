@@ -1,18 +1,18 @@
-# Accuracy Plan: v1.0.0
+# Accuracy Plan: v1.x
 
-This document defines the accuracy-validation path for `v1.0.0`.
+This document defines the accuracy-validation path for `v1.x`.
 
 The goal is simple:
 
 - `v0.9.0` proved that Kyuubiki is broadly usable
-- `v1.0.0` should prove that its supported simulation results are trustworthy
+- `v1.x` should prove that its supported simulation results are trustworthy
 
 This is not a performance plan and not a UI plan. It is the verification plan
 for numerical confidence.
 
 ## Principles
 
-For `v1.0.0`, a study should not be treated as fully trustworthy only because:
+For `v1.x`, a study should not be treated as fully trustworthy only because:
 
 - it runs
 - it has a sample
@@ -70,7 +70,7 @@ define a trusted range.
 
 ## Accuracy status labels
 
-Use these labels for `v1.0.0` planning:
+Use these labels for `v1.x` planning:
 
 - `verified`
   benchmark case exists, tolerances are defined, and the case is automated
@@ -102,7 +102,7 @@ than pretending one global number is honest.
 
 ## Family plan
 
-| Study family | Current `v0.9.0` support | Accuracy target for `v1.0.0` | Benchmark shape | Automation target |
+| Study family | Current `v0.9.0` support | Accuracy target for `v1.x` | Benchmark shape | Automation target |
 | --- | --- | --- | --- | --- |
 | `axial_bar_1d` | fully supported | `verified` | closed-form tensile bar and restrained bar | unit test + release fixture |
 | `thermal_bar_1d` | fully supported | `verified` | restrained thermal expansion bar | unit test + workflow fixture |
@@ -155,14 +155,14 @@ Use the smallest honest layer first:
   [workers/rust/crates/cli/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
 - sample and workflow regression:
   release smoke and Workbench UI smoke in
-  [docs/release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
+  [docs/release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)
   and
   [tests/integration](/Users/Shared/chroot/dev/kyuubiki/tests/integration)
 - performance-only baselines:
   benchmark tooling in
   [workers/rust/benchmarks/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/README.md)
 
-## First v1.0.0 priorities
+## First 1.x priorities
 
 Prioritize these first:
 
@@ -177,16 +177,16 @@ Prioritize these first:
 9. `heat_plane_quad_2d`
 10. `heat -> thermo-mechanical` bridge workflows
 
-This ordering matches the current support matrix and gives `v1.0.0` the best
+This ordering matches the current support matrix and gives `v1.x` the best
 accuracy-to-effort return.
 
 The first concrete baseline seed set is tracked in:
 
-- [accuracy-baselines-1.0.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines-1.0.0.md)
+- [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
 
-## Exit rule for v1.0.0 accuracy
+## Exit rule for 1.x accuracy
 
-Treat a family as accuracy-ready for `v1.0.0` when:
+Treat a family as accuracy-ready for `v1.x` when:
 
 - its benchmark case exists
 - its reference metrics are documented
@@ -196,8 +196,7 @@ Treat a family as accuracy-ready for `v1.0.0` when:
 
 ## Related docs
 
-- [release-support-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-support-matrix-0.9.0.md)
-- [release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
+- [release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)
 - [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
-- [accuracy-baselines-1.0.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines-1.0.0.md)
+- [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
 - [workers/rust/benchmarks/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/README.md)

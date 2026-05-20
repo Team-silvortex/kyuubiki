@@ -12,6 +12,7 @@ const state = {
   consoleTab: "status",
   logService: "frontend",
   releaseVersion: "",
+  releaseCodename: "",
 };
 
 const elements = {
@@ -60,7 +61,8 @@ function isShortcutModifier(event) {
 }
 
 function releaseLabel() {
-  return state.releaseVersion ? `Kyuubiki Workbench v${state.releaseVersion}` : "Kyuubiki Workbench";
+  const releaseTag = [state.releaseCodename, state.releaseVersion].filter(Boolean).join(" ");
+  return releaseTag ? `Kyuubiki Workbench · ${releaseTag}` : "Kyuubiki Workbench";
 }
 
 function formatStatusReport(rendered) {
@@ -216,15 +218,22 @@ async function boot() {
   if (brand) {
     if (brand.applicationName) {
       const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
+      const releaseCodename = String(brand.releaseCodename || "").trim();
+      const releaseTag = [releaseCodename, releaseVersion].filter(Boolean).join(" ");
       state.releaseVersion = releaseVersion;
-      document.title = releaseVersion
-        ? `${brand.applicationName} v${releaseVersion}`
-        : brand.applicationName;
+      state.releaseCodename = releaseCodename;
+      document.title = releaseTag ? `${brand.applicationName} · ${releaseTag}` : brand.applicationName;
       setText("brand-workbench-name", brand.applicationName);
     }
 
-    if (brand.releaseVersion) {
-      setText("brand-workbench-version", `v${brand.releaseVersion.replace(/^v/u, "")}`);
+    if (brand.releaseVersion || brand.releaseCodename) {
+      const releaseTag = [
+        String(brand.releaseCodename || "").trim(),
+        String(brand.releaseVersion || "").replace(/^v/u, ""),
+      ]
+        .filter(Boolean)
+        .join(" ");
+      setText("brand-workbench-version", releaseTag);
     }
 
     setText("brand-workbench-description", brand.workbenchShellDescription);

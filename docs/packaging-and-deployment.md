@@ -1,6 +1,6 @@
 # Packaging And Deployment
 
-This document is the packaging map for `kyuubiki v0.9.0`.
+This document is the packaging map for `kyuubiki tamamono 1.x`.
 
 Use it when you need to answer:
 

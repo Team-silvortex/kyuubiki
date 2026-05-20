@@ -1,7 +1,7 @@
 # Protocols
 
-Kyuubiki `v0.3` treats the GUI, control plane, and solver agents as three
-independent programs.
+Kyuubiki now treats the GUI, control plane, and solver agents as three
+independent programs joined by explicit public contracts.
 
 ## Program split
 

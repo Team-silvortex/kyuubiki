@@ -1,7 +1,7 @@
 # Testing And CI
 
 This document is the quick map for how Kyuubiki currently validates itself in
-`v0.9.0`.
+the `tamamono 1.x` line.
 
 ## Why the test stack is layered
 
@@ -31,7 +31,6 @@ The repository now keeps validation split by responsibility.
 ### SDK checks
 
 - `make test-sdk`
-- `./scripts/kyuubiki sdk-smoke`
 
 This runs:
 
@@ -47,14 +46,19 @@ These tests use small local loopback fixtures and focus on:
 
 ### Cross-process integration checks
 
-- `make test-integration-api`
-  local orchestrator + Rust agents + HTTP solve flow
-- `make test-integration-cluster`
-  protected cluster register / heartbeat / unregister flow
-- `make test-integration-direct-mesh`
-  frontend direct-mesh LAN agent solve and chunk flow
 - `make test-integration`
-  all integration smoke tests
+  top-level cross-process smoke suite
+
+The current integration family covers:
+
+- orchestrator + Rust agents + HTTP solve flow
+- protected cluster register / heartbeat / unregister flow
+- frontend direct-mesh LAN agent solve and chunk flow
+- Workbench UI smoke split by `Mechanical` and `Thermal / Thermo-mechanical`
+
+The full integration entrypoint list stays in:
+
+- [tests/integration/README.md](/Users/Shared/chroot/dev/kyuubiki/tests/integration/README.md)
 
 ### Desktop shell checks
 
@@ -72,8 +76,9 @@ Use these when you want the repo to choose the right lower-level commands:
 - `./scripts/kyuubiki test`
 - `./scripts/kyuubiki verify`
 - `./scripts/kyuubiki smoke`
-- `./scripts/kyuubiki sdk-smoke`
-- `./scripts/kyuubiki frontend-test`
+
+For narrower SDK or frontend-only entrypoints, use the package or Make targets
+listed above.
 
 ## CI structure
 

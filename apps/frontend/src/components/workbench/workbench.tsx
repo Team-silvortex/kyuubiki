@@ -76,6 +76,7 @@ import {
   buildLibraryVersionRows,
   buildProtocolAgentCards,
   buildStudyDomainOptions,
+  classifyStudyKindDomain,
   classifyStudyKindFamily,
   buildStudyControlsRows,
   buildStudyKindOptionGroups,
@@ -938,6 +939,18 @@ const copy = {
     assistantApplyFixHint: "The 2D truss precheck found a blocking issue and already prepared a safe first repair.",
     assistantEnterImmersive: "Open immersive 3D viewport",
     assistantEnterImmersiveHint: "Switch the 3D study into fullscreen editing when you want more room for picking and navigation.",
+    assistantOpenSample: "Open the official sample for this study",
+    assistantOpenSampleHint: "If you are still learning this study family, start with the closest official sample before editing your own model.",
+    assistantReviewControls: "Review supports, loads, and materials",
+    assistantReviewControlsHint: "Before the first run, check the study controls and confirm the basic physical story makes sense.",
+    assistantReviewReport: "Review the current result report",
+    assistantReviewReportHint: "Open the report first, then read hotspots, summary metrics, and result-field meaning before changing the model.",
+    assistantExportResult: "Export the current result data",
+    assistantExportResultHint: "Export CSV once the result looks plausible so you have a stable trail for comparison and review.",
+    assistantPromptExplain: "Explain this study to a beginner",
+    assistantPromptMaterial: "Help me choose starter material values",
+    assistantPromptBoundary: "Help me choose supports and loads",
+    assistantPromptResults: "Help me read these result fields",
     backend: "Backend",
     protocols: "Protocols",
     controlPlaneProtocol: "Control plane",
@@ -1479,6 +1492,18 @@ const copy = {
     assistantApplyFixHint: "二维桁架预检查发现了阻塞问题，而且已经准备好一个安全的首个修复动作。",
     assistantEnterImmersive: "打开沉浸式三维视图",
     assistantEnterImmersiveHint: "编辑三维模型时切到全屏，会更适合选点、导航和建模。",
+    assistantOpenSample: "打开这个研究的官方样板",
+    assistantOpenSampleHint: "如果你还在熟悉这个研究家族，先从最接近的官方样板开始，再改成自己的模型会更稳。",
+    assistantReviewControls: "先检查约束、载荷和材料",
+    assistantReviewControlsHint: "第一次运行前，先确认 study controls 里的物理设定讲得通，再去求解。",
+    assistantReviewReport: "先看当前结果报告",
+    assistantReviewReportHint: "先看 summary、热点和结果场含义，再决定要不要继续改模型。",
+    assistantExportResult: "导出当前结果数据",
+    assistantExportResultHint: "如果这次结果基本可信，先导出一份 CSV，后面更方便对比和复查。",
+    assistantPromptExplain: "用小白能懂的话解释这个研究",
+    assistantPromptMaterial: "帮我选一套起步材料参数",
+    assistantPromptBoundary: "帮我判断支撑和载荷怎么设",
+    assistantPromptResults: "帮我解释这些结果字段怎么读",
     backend: "后端",
     protocols: "协议",
     controlPlaneProtocol: "调度面协议",
@@ -7778,6 +7803,14 @@ export function Workbench() {
         : 980;
   const directMeshEndpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
   const hasAnyResult = Boolean(axialResult || heatBarResult || thermalBarResult || thermalBeamResult || thermalFrameResult || thermalTrussResult || thermalTruss3dResult || trussResult || truss3dResult || springResult || spring2dResult || spring3dResult || beamResult || torsionResult || frameResult || planeResult);
+  const currentStudyDomain = classifyStudyKindDomain(studyKind);
+  const assistantStudyFamily = classifyStudyKindFamily(studyKind);
+  const currentStudySample =
+    SAMPLE_LIBRARY.find((sample) => sample.kind === studyKind) ??
+    SAMPLE_LIBRARY.find(
+      (sample) => classifyStudyKindDomain(sample.kind) === currentStudyDomain && classifyStudyKindFamily(sample.kind) === assistantStudyFamily,
+    ) ??
+    null;
   const assistantCards: Array<{
     id: string;
     title: string;
@@ -7847,6 +7880,29 @@ export function Workbench() {
       onAction: () => applyTrussSuggestion(trussDiagnostics.suggestions[0]),
     });
   } else if (!hasAnyResult) {
+    if (currentStudySample) {
+      assistantCards.push({
+        id: "sample",
+        title: t.assistantOpenSample,
+        summary: `${t.assistantOpenSampleHint} ${currentStudySample.name}.`,
+        actionLabel: currentStudySample.name,
+        tone: "good",
+        onAction: () => {
+          openSample(currentStudySample.href);
+        },
+      });
+    }
+    assistantCards.push({
+      id: "controls",
+      title: t.assistantReviewControls,
+      summary: t.assistantReviewControlsHint,
+      actionLabel: t.controls,
+      tone: "watch",
+      onAction: () => {
+        setSidebarSection("study");
+        setStudyTab("controls");
+      },
+    });
     assistantCards.push({
       id: "run",
       title: t.assistantRunStudy,
@@ -7854,6 +7910,26 @@ export function Workbench() {
       actionLabel: t.run,
       tone: "good",
       onAction: runAnalysis,
+    });
+  } else {
+    assistantCards.push({
+      id: "report",
+      title: t.assistantReviewReport,
+      summary: t.assistantReviewReportHint,
+      actionLabel: t.overview,
+      tone: "good",
+      onAction: () => {
+        setSidebarSection("study");
+        setStudyTab("summary");
+      },
+    });
+    assistantCards.push({
+      id: "export",
+      title: t.assistantExportResult,
+      summary: t.assistantExportResultHint,
+      actionLabel: t.exportCsv,
+      tone: "watch",
+      onAction: downloadResultCsv,
     });
   }
 
@@ -7884,6 +7960,41 @@ export function Workbench() {
         actionLabel: card.actionLabel,
       })),
     });
+
+  const assistantPromptPresets = [
+    {
+      id: "explain",
+      label: t.assistantPromptExplain,
+      prompt:
+        language === "zh"
+          ? `我现在在做 ${t.kinds[studyKind]}。请用小白能懂的话解释这个 study 是算什么的、最重要的输入是什么、我第一次运行前应该先检查哪三件事。`
+          : `I am working on ${t.kinds[studyKind]}. Explain this study in beginner-friendly language, name the most important inputs, and tell me the first three things to check before my first run.`,
+    },
+    {
+      id: "materials",
+      label: t.assistantPromptMaterial,
+      prompt:
+        language === "zh"
+          ? `我不是材料专业的。针对 ${t.kinds[studyKind]}，请给我一套保守的起步材料参数建议，并说明哪些参数最值得先保持默认。`
+          : `I am not a materials specialist. For ${t.kinds[studyKind]}, suggest a conservative starter set of material values and explain which parameters are safest to leave near defaults first.`,
+    },
+    {
+      id: "boundary",
+      label: t.assistantPromptBoundary,
+      prompt:
+        language === "zh"
+          ? `请根据当前 ${t.kinds[studyKind]} 的上下文，帮我检查支撑和载荷应该怎么设才更像一个合理的第一轮仿真，并提醒我常见过约束或漏约束风险。`
+          : `Given the current ${t.kinds[studyKind]} context, help me choose a sensible first-pass set of supports and loads, and warn me about common under-constrained or over-constrained mistakes.`,
+    },
+    {
+      id: "results",
+      label: t.assistantPromptResults,
+      prompt:
+        language === "zh"
+          ? `请按 ${t.kinds[studyKind]} 的结果语义，告诉我当前最应该先看哪些结果字段，以及看到什么数量级时应该保持警惕。`
+          : `For ${t.kinds[studyKind]}, tell me which result fields I should read first and what kinds of magnitudes or patterns should make me cautious.`,
+    },
+  ];
 
   const scriptSnapshot: WorkbenchScriptSnapshot = {
     studyKind,
@@ -10195,7 +10306,7 @@ export function Workbench() {
       <aside className="app-rail panel">
         <div className="rail-brand">
           <strong>{t.brand}</strong>
-          <span>v0.9.0</span>
+          <span>tamamono 1.0.0</span>
         </div>
         <div className="rail-nav">
           {railItems.map((item) => (
@@ -10448,6 +10559,7 @@ export function Workbench() {
                 llmModel={assistantModel}
                 localCards={assistantCards}
                 mode={assistantMode}
+                promptPresets={assistantPromptPresets}
                 onExecuteLlmAction={async (action, payload, reason) => {
                   await executeAssistantPlan([{ action, payload, reason }], reason ?? action);
                 }}

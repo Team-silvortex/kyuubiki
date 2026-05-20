@@ -10,8 +10,8 @@ contract surface:
 - `Solver data plane`
   Rust engine crates and headless Rust agents.
 
-At the `0.9.0` stage, those programs now carry a broader operator family than
-the early truss-only baseline. The shared stack spans:
+In the `tamamono 1.x` line, those programs now carry a broader operator
+family than the early truss-only baseline. The shared stack spans:
 
 - axial and thermal bars
 - spring studies in `1D / 2D / 3D`

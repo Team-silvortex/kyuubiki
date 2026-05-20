@@ -13,23 +13,21 @@ If you are new to the repo, read these first:
 4. `repository-structure.md`
 5. `testing-and-ci.md`
 
-If you want the current release story first:
+If you want the current version-line story first:
 
-- `release-support-matrix-0.9.0.md`
-- `release-study-coverage-0.9.0.md`
-- `release-smoke-matrix-0.9.0.md`
-- `release-first-run-0.9.0.md`
-- `release-troubleshooting-0.9.0.md`
-- `release-readiness-0.9.0.md`
-- `release-decision-0.9.0.md`
-- `release-github-0.9.0.md`
-- `release-notes-0.9.0.md`
-- `release-summary-0.9.0.md`
+- `current-line.md`
 
-If you want the `v1.0.0` quality direction first:
+If you want the preserved initial usable release pack:
 
-- `accuracy-plan-1.0.0.md`
-- `accuracy-baselines-1.0.0.md`
+- `release-archive-0.9.0.md`
+
+If you want the `v1.x` quality direction first:
+
+- `current-line.md`
+- `tamamono-minor-lines.md`
+- `accuracy-plan.md`
+- `accuracy-baselines.md`
+- `version-line.md`
 
 ## By Goal
 
@@ -55,13 +53,24 @@ If you want the `v1.0.0` quality direction first:
 
 ### Verify changes
 
+- `current-line.md`
+  Single-entry current-line guide for `tamamono 1.x`.
+- `version-line.md`
+  Current version-line note for `tamamono 1.x`, including codename, major
+  version policy, and how the line relates to the preserved `0.9.0` release
+  pack.
+- `tamamono-minor-lines.md`
+  Suggested long-range grouping for the `tamamono 1.x` minor releases.
+- `release-archive-0.9.0.md`
+  Single-entry archive for the full `0.9.0` initial usable release evidence
+  pack.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
-- `accuracy-plan-1.0.0.md`
-  Accuracy-validation plan for `v1.0.0`, with benchmark targets, tolerances,
+- `accuracy-plan.md`
+  Accuracy-validation plan for `v1.x`, with benchmark targets, tolerances,
   and automation priorities by study family.
-- `accuracy-baselines-1.0.0.md`
-  First concrete numerical baseline set for `v1.0.0`, starting with axial,
+- `accuracy-baselines.md`
+  First concrete numerical baseline set for `v1.x`, starting with axial,
   thermal-bar, and beam seed cases.
 - `tdd.md`
   Test-first expectations across Elixir, Rust, and shared contract work.
@@ -75,34 +84,12 @@ If you want the `v1.0.0` quality direction first:
 
 ### Operate and deploy
 
-- `release-support-matrix-0.9.0.md`
-  Official first-release study-family support boundary for `v0.9.0`.
-- `release-study-coverage-0.9.0.md`
-  Per-study first-run path for samples, orchestrated/direct-mesh usage, and
-  report/export expectations.
-- `release-smoke-matrix-0.9.0.md`
-  Per-study release validation grid for sample open, orchestrated run,
-  direct-mesh support, report usability, and export usability.
-- `release-first-run-0.9.0.md`
-  Recommended first operator session through Hub, workload sync, sample open,
-  and orchestrated Workbench run.
-- `release-troubleshooting-0.9.0.md`
-  First-line “where to look” note for runtime watch, Workbench runtime checks,
-  and control-plane health during `v0.9.0` release validation.
-- `release-readiness-0.9.0.md`
-  Must/should/later checklist for deciding whether `v0.9.0` is ready for an
-  initial usable release.
-- `release-decision-0.9.0.md`
-  Short release-call summary for `v0.9.0`, including current status,
-  warnings, blockers, and the recommended ship call.
-- `release-github-0.9.0.md`
-  GitHub Release-ready Markdown summary for `v0.9.0`.
-- `release-summary-0.9.0.md`
-  Short external-facing summary for `v0.9.0`, suitable for release copy or
-  public update notes.
-- `release-notes-0.9.0.md`
-  Current release baseline, shipped capability map, and recommended validation
-  pass for `v0.9.0`.
+- `current-line.md`
+  Current product-line starting point before drilling into accuracy or archive details.
+- `version-line.md`
+  Current product-line anchor before dropping into the preserved release pack.
+- `release-archive-0.9.0.md`
+  Single-entry archive for the full preserved `v0.9.0` release pack.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
 - `security.md`
@@ -114,6 +101,9 @@ If you want the `v1.0.0` quality direction first:
 - `desktop-release-checklist.md`
   Platform-specific desktop bundle targets, icon requirements, and release
   checks.
+- `ubuntu24-hub-pilot.md`
+  A practical first remote-target pilot guide for using one Ubuntu 24 machine
+  as a real Hub runtime and workload test server.
 
 ## Suggested Reading Paths
 

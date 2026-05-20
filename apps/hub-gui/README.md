@@ -2,7 +2,7 @@
 
 This app is the unified desktop launcher and operator shell for `kyuubiki`.
 
-In the `0.9.0` product shape, Hub is no longer just a shell prototype. It now
+In the `tamamono 1.0.0` product shape, Hub is no longer just a shell prototype. It now
 acts as the everyday desktop entrypoint for:
 
 - workload launch

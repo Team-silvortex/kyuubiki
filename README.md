@@ -1,4 +1,4 @@
-# kyuubiki v0.9.0
+# kyuubiki tamamono 1.0.0
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -7,7 +7,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 - an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
-`v0.9.0` is the current repository-wide release baseline. At this point Kyuubiki has moved past being only a browser FEM workbench and now reads much more like a layered engineering platform: browser and desktop work surfaces, a Phoenix control plane, Rust solver agents, shared headless SDKs, standardized project bundles, a real desktop operator entry path through `Kyuubiki Hub`, and a much broader operator family inside the FEM engine itself.
+`tamamono 1.0.0` is the current repository-wide version line.
 
 It also now has an explicit deployment split:
 
@@ -21,7 +21,7 @@ the Hub can start locally, connect to remotely, or switch between across
 targets.
 - `headless peer mesh`: Rust solver agents can run without a GUI or Phoenix on the same host, and can advertise LAN peer-cluster topology through the shared RPC descriptor
 
-For local iteration, `v0.9.0` also now has a repo-level hot-reload path:
+For local iteration, the repo-level hot-reload entrypoints are:
 
 - `make hot-local`
 - `make hot-cloud`
@@ -31,7 +31,7 @@ These commands keep Next.js/Tauri HMR where it already exists and add the
 missing restart-on-change loop for the non-Phoenix Elixir control plane and
 Rust solver agents.
 
-And the frontend direction is now explicitly split too:
+Frontend runtime modes are explicitly split:
 
 - `orchestrated_gui`
   the current workbench mode, where the editor talks to Phoenix and Phoenix
@@ -40,7 +40,7 @@ And the frontend direction is now explicitly split too:
   a future mode where the editor can operate directly against a LAN peer mesh
   of headless Rust agents without requiring Phoenix on the solver hot path
 
-And it now has an explicit protocol split:
+Protocol boundaries are explicit:
 
 - `kyuubiki.control-plane/http-v1`
 - `kyuubiki.solver-rpc/v1`
@@ -68,16 +68,8 @@ The monorepo is intentionally split by responsibility:
 Start here if you need the repo map:
 
 - [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
-- [docs/release-support-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-support-matrix-0.9.0.md)
-- [docs/release-study-coverage-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-study-coverage-0.9.0.md)
-- [docs/release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
-- [docs/release-first-run-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-first-run-0.9.0.md)
-- [docs/release-troubleshooting-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-troubleshooting-0.9.0.md)
-- [docs/release-readiness-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-readiness-0.9.0.md)
-- [docs/release-decision-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-decision-0.9.0.md)
-- [docs/release-github-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-github-0.9.0.md)
-- [docs/release-summary-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-summary-0.9.0.md)
-- [docs/release-notes-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-notes-0.9.0.md)
+- [docs/current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
+- [docs/release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)
 - [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
 - [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
 - [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
@@ -85,14 +77,17 @@ Start here if you need the repo map:
 - [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
 - [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
 - [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
-- [docs/accuracy-plan-1.0.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan-1.0.0.md)
-- [docs/accuracy-baselines-1.0.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines-1.0.0.md)
+- [docs/accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
+- [docs/accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
 - [docs/frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
 - [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
 - [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
 - [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 - [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
+
+If you want the shortest current-line explanation first, start with
+[docs/current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md).
 
 ## Read By Intent
 
@@ -115,303 +110,123 @@ Start here if you need the repo map:
   [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md),
   [apps/frontend/README.md](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/README.md)
 
-## What v0.9.0 Can Do
+## What tamamono 1.0.0 Can Do
 
-### Solvers
+### Supported analysis domains
 
-- `1D axial bar`
-- `1D thermal bar`
-- `1D spring`
-- `2D spring`
-- `3D spring`
-- `1D beam`
-- `1D torsion shaft`
-- `2D truss`
-- `2D frame`
-- `2D plane triangle`
-- `2D plane quad`
-- `3D space truss`
+- `Mechanical`
+  axial, spring, beam, torsion, truss, frame, and plane studies
+- `Thermal`
+  heat-bar and heat-plane studies with temperature and flux review
+- `Thermo-mechanical`
+  thermal bar, beam, frame, truss, and plane response paths
 
-### Modeling and workbench
+### Supported study families
 
-- parameterized study setup
-- family-aware study selection for `Axial & Springs`, `Beams & Frames`, `Trusses`, and `Planes`
-- family-grouped sample library
-- direct node drag editing in `2D truss`
-- direct node drag editing in `3D truss`
-- direct node drag editing in `2D frame`
-- link / unlink member editing
-- node duplication and axis mirror tools in `3D`
-- box selection, multi-selection, focus, frame selection, and nudge tools in `3D`
-- immersive 3D workspace mode
-- undo / redo for frontend modeling actions
-- editor-style compact UI with denser tabs, virtualized lists, and docked panels
-- lazy-rendered large-result windows with chunk-aware browsing for `10k+` scale review
-- line-study result field switching, hotspot ranking, and member-force export for `beam_1d`, `frame_2d`, `spring_1d`, `spring_2d`, `spring_3d`, and `thermal_bar_1d`
-- plane-study field switching and hotspot ranking for `plane_triangle_2d` and `plane_quad_2d`
+Verified baseline:
 
-### Materials
+- `Axial & Springs`
+  `axial_bar_1d`, `thermal_bar_1d`, `spring_1d`
+- `Beams & Frames`
+  `beam_1d`, `torsion_1d`, `frame_2d`
+- `Trusses`
+  `truss_2d`, `truss_3d`
+- `Planes`
+  `plane_triangle_2d`, `plane_quad_2d`
 
-- multi-material support inside a single `2D truss`, `3D truss`, or `2D plane triangle` model
-- material library in the workbench
-- apply material to selected entities
-- apply material to whole model
-- material color visualization in the viewport
-- material legend and hide/show filtering
-- custom material authoring
-- material import from external `JSON` and `CSV`
+Current line coverage:
 
-### Projects and persistence
+- `Thermal`
+  `heat_bar_1d`, `heat_plane_triangle_2d`, `heat_plane_quad_2d`
+- `Thermo-mechanical`
+  `thermal_beam_1d`, `thermal_frame_2d`, `thermal_truss_2d`,
+  `thermal_truss_3d`, `thermal_plane_triangle_2d`,
+  `thermal_plane_quad_2d`
 
-- project CRUD
-- model CRUD
-- model version CRUD
-- job CRUD
-- result CRUD
-- database snapshot export
-- persistent job history
-- project bundle import/export
-- Hub workload library plus remote workload catalog sync
-- one-click Hub sync against the local control-plane workload catalog
-- formal `kyuubiki.workload-catalog/v1` schema plus example catalog payload
-- control-plane workload distribution endpoints for Hub catalog sync and per-project bundle download
+Lighter operator families:
 
-### Installer and packaging
+- `spring_2d`
+- `spring_3d`
 
-- Rust installer CLI
-- Tauri Hub GUI shell
-- Tauri installer GUI
-- Tauri desktop workbench shell
-- component-scoped build and packaging entry points
-- environment validation
-- local SQLite mode
-- cloud PostgreSQL mode
-- release scaffold generation under `dist/`
-- desktop icon assets wired from `assets/icons`
-- frontend browser/app icons wired from `assets/icons/app`
-- unified desktop readiness/status reporting for `macos / linux / windows`
-- host-aware desktop build/stage/verify flow through both CLI and Hub
+### Industrial work surfaces
 
-### Headless SDKs and automation
+- family-aware Workbench study selection across `Mechanical`, `Thermal`, and
+  `Thermo-mechanical`
+- official sample library grouped by domain and family
+- result-aware `Report`, `Tree`, hotspot, and export paths across line and
+  plane studies
+- direct editing paths for representative `2D truss`, `3D truss`, and `2D frame`
+- immersive `3D` workspace tools, large-result chunk browsing, and undo/redo
+- material library, multi-material assignment, and viewport material filtering
 
-- Python headless SDK
-- Elixir headless SDK
-- Rust headless SDK
-- shared `ControlPlaneClient`, `SolverRpcClient`, `Session`, and `AgentClient` layers
-- SDK smoke coverage across all three language targets
-- AI-friendly run-study, retry, failure classification, and chunk-browse helpers
-- frontend DSL / Pyodide automation path
-- macro recording, JSON import/export, and project-scoped automation presets
+### Operator and runtime workflow
 
-### Hub and operator workflow
-
-- `Kyuubiki Hub` desktop entry shell
+- `Kyuubiki Hub` as the desktop entry shell
 - project bundle inspect / validate / normalize / unpack / pack / diff
-- recent bundle workflow history with restore / re-run / pin / export / import
-- favorite workflow shortcuts with CLI and Python stub copy
-- local guide and model-assisted onboarding in Hub
-- assistant action audit with control-plane security-event mirroring
-- shared desktop app family across `hub-gui`, `installer-gui`, and `workbench-gui`
-- Hub workload library with local attach, remote catalog sync, bundle download, and open-in-workbench flow
-- Hub runtime watch for stack logs and hot-reload logs
-- Hub-managed hot-reload loop control for `local`, `cloud`, and `distributed` dev shapes
+- workload library with local attach, remote catalog sync, and open-in-workbench
+- runtime watch for stack logs and hot-reload logs
+- managed hot-reload loops for `local`, `cloud`, and `distributed` dev shapes
+- desktop readiness, staging, host build, and verification flow through CLI and Hub
+
+### Persistence and automation
+
+- project / model / version / job / result persistence
+- project bundle import / export and control-plane bundle download
+- Python, Elixir, and Rust headless SDKs
+- frontend DSL, macro recording, JSON import / export, and project-scoped automation presets
+- formal `kyuubiki.workload-catalog/v1` workload schema and catalog-backed distribution
+
+### Current validated workflows
+
+- Workbench sample open, report, and export coverage across `Mechanical`,
+  `Thermal`, and `Thermo-mechanical`
+- orchestrated and direct-mesh smoke for supported study families
+- `heat -> thermo-mechanical` bridge workflows for supported bar and plane paths
+- repo-level validation through web, Rust, frontend, SDK, integration, desktop,
+  and desktop-status baselines
+
+For the current product-line posture, major-version policy, and quality
+direction, use:
+
+- [docs/current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
+- [docs/version-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/version-line.md)
+- [docs/tamamono-minor-lines.md](/Users/Shared/chroot/dev/kyuubiki/docs/tamamono-minor-lines.md)
+- [docs/accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
+- [docs/accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+- [docs/release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)
 
 Packaging and deployment paths are now documented centrally in:
 
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
 - [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
 
-Desktop release planning now includes:
+Desktop release planning and platform bundle checks now live in the two docs
+above rather than in the repo root.
 
-- explicit `macos / linux / windows` bundle expectations
-- checked icon-format requirements by platform
-- staged desktop manifests under `dist/<platform>/desktop/...`
-- a fixed release ordering and artifact naming convention
-- unified desktop operator entry points:
-  - `make desktop-status PLATFORM=all`
-  - `make desktop-stage PLATFORM=all`
-  - `make desktop-build-host`
-  - `make desktop-release`
-  - `make desktop-verify PLATFORM=all`
+## Architecture and Validation
 
-## Current Architecture
+Current architecture, runtime splits, and contract edges live in:
 
-```text
-Next.js workbench (3000)
-  -> Elixir orchestrator API (4000)
-    -> Rust TCP solver agent pool (5001, 5002, ...)
-      -> Rust engine + solver kernels
+- [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
+- [docs/architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/architecture.md)
+- [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
 
-SQLite or PostgreSQL
-  <- projects / models / model_versions / jobs / results
-```
-
-Distributed deployments can now discover agents in two independent ways:
-
-- `static`: `KYUUBIKI_AGENT_ENDPOINTS=host:port,...`
-- `manifest`: [agent-manifest.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/agent-manifest.schema.json) via `KYUUBIKI_AGENT_MANIFEST_PATH`
-- `registry`: remote Rust agents register and heartbeat into the orchestrator over HTTP
-
-The direction is engine-first:
-
-- Rust `engine` owns reusable solving and result-window helpers
-- Phoenix/Plug orchestration owns jobs, storage, and HTTP APIs
-- frontend consumes stable APIs instead of solver internals
-
-The next layer of decoupling is now explicit too:
-
-- the frontend speaks the control-plane HTTP protocol
-- the orchestrator speaks the solver RPC protocol
-- solver agents can self-describe over RPC and the orchestrator can expose those descriptors over HTTP
-- the frontend is being prepared to support both orchestrated and direct-mesh runtime modes as separate programs sharing common contracts
-
-## Integration Coverage
-
-Current cross-process smoke coverage lives under [tests/integration](/Users/Shared/chroot/dev/kyuubiki/tests/integration) and can be run with:
-
-- `make test-integration`
-- `make test-integration-api`
-- `make test-integration-cluster`
-- `make test-integration-direct-mesh`
-- `make test-integration-ui-mechanical`
-- `make test-integration-ui-thermal`
-- `make test-sdk`
-- `make test-frontend`
-
-The current suite verifies:
-
-- local orchestrator + solver agent + API solve flow
-- protected cluster register / heartbeat / unregister flow
-- `direct_mesh_gui` LAN agent discovery, direct solve, and result chunk retrieval
-- Python / Elixir / Rust headless SDK run-study + chunk-browse smoke coverage
-- frontend production build and type validation as a first-class test layer
-
-The broader validation map now lives in:
+Current validation layers and smoke entrypoints live in:
 
 - [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+- [tests/integration/README.md](/Users/Shared/chroot/dev/kyuubiki/tests/integration/README.md)
 
-## Current Capabilities by Layer
+The main repo-level verification entrypoints are:
 
-### Frontend workbench
-
-Main entry points:
-
-- [page.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/app/page.tsx)
-- [workbench.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench/workbench.tsx)
-- [workbench-viewport.tsx](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/components/workbench/workbench-viewport.tsx)
-
-The workbench currently supports:
-
-- sample library browsing
-- project and model library management
-- model versioning
-- result export as `JSON` and `CSV`
-- database snapshot export as `JSON`
-- `.kyuubiki.json` export/import
-- `.kyuubiki` archive export/import
-- chunked browsing of large result sets
-- immersive 3D workspace with externalized tools/help panels
-- local settings persistence for theme, language, and shortcut hints
-- a frontend runtime switch between:
-  - `orchestrated_gui`
-  - `direct_mesh_gui`
-- direct-mesh frontend routes for LAN solver access:
-  - `/api/direct-mesh/agents`
-  - `/api/direct-mesh/solve`
-  - `/api/direct-mesh/results/:job_id/chunks/:kind`
-
-Frontend validation notes:
-
-- use `npm run build` for full production validation
-- use `npm run typecheck` for a stable TypeScript-only check
-- `typecheck` will prepare missing Next route type artifacts before running `tsc`
-
-Frontend CLI notes:
-
-- `./scripts/kyuubiki project inspect <bundle>`
-- `./scripts/kyuubiki project validate <input> [--json]`
-- `./scripts/kyuubiki project normalize <input> --out <output>`
-- `./scripts/kyuubiki project unpack <bundle> --out <directory>`
-- `./scripts/kyuubiki project pack <input> --out <bundle>`
-- `./scripts/kyuubiki project diff <left> <right>`
-- `./scripts/kyuubiki macro inspect <macro.json>`
-- `./scripts/kyuubiki macro validate <input> [--json]`
-- `./scripts/kyuubiki macro normalize <input> --out <output>`
-- the frontend package also exposes a `kyuubiki` bin via
-  [apps/frontend/package.json](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/package.json)
-
-### Orchestrator API
-
-Main router:
-
-- [router.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/router.ex)
-
-Core orchestration:
-
-- [analysis.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/analysis.ex)
-- [library.ex](/Users/Shared/chroot/dev/kyuubiki/apps/web/lib/kyuubiki_web/library.ex)
-
-The orchestrator currently provides:
-
-- health endpoint
-- protocol descriptor endpoints
-- FEM job submission
-- job lookup and job history
-- project/model/model-version CRUD
-- result CRUD
-- full database export
-- chunked result APIs for large result windows
-- round-robin dispatch across multiple Rust RPC agents
-- failover when an agent endpoint is unavailable
-- deployment-aware health reporting
-- manifest-based remote agent discovery for distributed control-plane setups
-- runtime agent registration, heartbeat, and removal APIs for remote solver nodes
-- watchdog timeouts, stale-job detection, heartbeat surfacing, and cancel support for long-running jobs
-- dedicated cluster token, allowlist, fingerprint, and replay-window guardrails for remote agent routes
-
-### Rust engine and agents
-
-Main crates:
-
-- [protocol](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/protocol/src/lib.rs)
-- [engine](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/engine/src/lib.rs)
-- [solver](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/solver/src/lib.rs)
-- [cli](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
-- [benchmark](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/benchmark/src/main.rs)
-
-The Rust side currently provides:
-
-- framed TCP RPC transport
-- agent self-description via `describe_agent`
-- generic runtime `ping` and `cancel_job` methods
-- headless standalone agent mode
-- peer-mesh runtime metadata (`runtime_mode`, `cluster_id`, `peers`)
-- gossip-lite peer discovery between solver agents via `describe_agent`
-- progress events
-- multi-agent execution
-- benchmark profiles
-- dedicated `10k`, `15k`, and `20k` benchmark profiles for single-machine scale targets
-- mixed dense/sparse and specialized solver paths
-- result chunk helpers used by the engine/orchestrator split
-- checked-in performance baselines and compare reports with regression gates
-- shared desktop runtime used by both Tauri shells
-
-### Desktop shells
-
-- Tauri installer GUI
-- Tauri desktop workbench shell
-- shared desktop runtime crate for local stack control and log access
-- smoke-tested desktop workbench shell entry points
-
-## Component Build And Package Entry Points
-
-Use these commands when managing artifacts component-by-component:
-
-- `make build-frontend`
-- `make build-orchestrator`
-- `make build-agent`
-- `make build-hub-gui`
-- `make build-installer-gui`
+- `make test-web`
+- `make test-rust`
+- `make test-frontend`
+- `make test-sdk`
+- `make test-integration`
+- `make test-hub-gui`
+- `make test-installer-gui`
+- `make test-workbench-gui`
+- `make desktop-status PLATFORM=all`
 - `make build-workbench-gui`
 - `make package-runtime`
 - `make package-desktop`
@@ -788,45 +603,3 @@ Main endpoints:
 - workbench: [http://127.0.0.1:3000](http://127.0.0.1:3000)
 - orchestrator: [http://127.0.0.1:4000](http://127.0.0.1:4000)
 - solver agents: `tcp://127.0.0.1:5001`, `tcp://127.0.0.1:5002`
-
-## Verification
-
-Run the verification suite:
-
-```bash
-make verify
-```
-
-This currently covers:
-
-- Elixir tests
-- Rust tests
-- frontend build/type checks
-- browser FEM tests
-- formatting checks
-
-## v0.3 Direction
-
-`v0.3` is about making Kyuubiki feel cohesive under load, not just feature-complete:
-
-- engine-oriented separation between UI, orchestration, and solving
-- stronger editor-style frontend ergonomics for 2D and 3D work
-- viewport-aware large-result handling with chunking and progressive rendering
-- stronger distributed-control-plane behavior with remote agents and runtime health
-- benchmarked single-machine scaling with checked-in baselines and regression gates
-
-The next scale target after `v0.3` is clear: keep `10k` as the comfort zone, treat `15k` as a stable upper tier, and use `20k` as the single-machine stretch band on an `M2 + 16GB` class machine while continuing to shift the browser toward viewport-driven data loading.
-
-Recent single-machine scaling probes on the current Rust solver stack show:
-
-- `15k` `2D truss`: `14884` nodes, `29768` DOF, about `9.19 s`, `61 MiB` peak RSS
-- `20k` `2D truss`: `19881` nodes, `39762` DOF, about `14.72 s`, `78 MiB` peak RSS
-- `15k` `2D plane triangle`: `14884` nodes, `29768` DOF, about `9.73 s`, `74 MiB` peak RSS
-- `20k` `2D plane triangle`: `19881` nodes, `39762` DOF, about `15.36 s`, `78 MiB` peak RSS
-- `15k` `3D truss`: `15138` nodes, `45414` DOF, about `228 ms`, `53 MiB` peak RSS
-- `20k` `3D truss`: `20000` nodes, `60000` DOF, about `301 ms`, `60 MiB` peak RSS
-
-Checked-in repeat-based baselines now also exist for:
-
-- [15k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/15k-baseline.json)
-- [20k-baseline.json](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/20k-baseline.json)
