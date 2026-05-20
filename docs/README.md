@@ -21,9 +21,15 @@ If you want the current release story first:
 - `release-first-run-0.9.0.md`
 - `release-troubleshooting-0.9.0.md`
 - `release-readiness-0.9.0.md`
+- `release-decision-0.9.0.md`
 - `release-github-0.9.0.md`
 - `release-notes-0.9.0.md`
 - `release-summary-0.9.0.md`
+
+If you want the `v1.0.0` quality direction first:
+
+- `accuracy-plan-1.0.0.md`
+- `accuracy-baselines-1.0.0.md`
 
 ## By Goal
 
@@ -51,6 +57,12 @@ If you want the current release story first:
 
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
+- `accuracy-plan-1.0.0.md`
+  Accuracy-validation plan for `v1.0.0`, with benchmark targets, tolerances,
+  and automation priorities by study family.
+- `accuracy-baselines-1.0.0.md`
+  First concrete numerical baseline set for `v1.0.0`, starting with axial,
+  thermal-bar, and beam seed cases.
 - `tdd.md`
   Test-first expectations across Elixir, Rust, and shared contract work.
 - `development.md`
@@ -80,6 +92,9 @@ If you want the current release story first:
 - `release-readiness-0.9.0.md`
   Must/should/later checklist for deciding whether `v0.9.0` is ready for an
   initial usable release.
+- `release-decision-0.9.0.md`
+  Short release-call summary for `v0.9.0`, including current status,
+  warnings, blockers, and the recommended ship call.
 - `release-github-0.9.0.md`
   GitHub Release-ready Markdown summary for `v0.9.0`.
 - `release-summary-0.9.0.md`
