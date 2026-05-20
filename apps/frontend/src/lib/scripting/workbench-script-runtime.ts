@@ -335,6 +335,15 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
     },
   },
   {
+    id: "state/projectHeatToThermo",
+    category: "state",
+    risk: "normal",
+    summary: {
+      en: "Map the current pure-thermal result into the matching thermo-mechanical study.",
+      zh: "把当前纯热结果映射到对应的力-热研究。",
+    },
+  },
+  {
     id: "selection/set",
     category: "selection",
     risk: "normal",
@@ -491,6 +500,16 @@ export const WORKBENCH_SCRIPT_ACTIONS: WorkbenchScriptActionDefinition[] = [
 ];
 
 export const WORKBENCH_SCRIPT_MACROS: WorkbenchScriptMacroDefinition[] = [
+  {
+    id: "macro/projectHeatToThermo",
+    category: "macro",
+    risk: "normal",
+    summary: {
+      en: "Project the current thermal result into the matching thermo-mechanical study.",
+      zh: "将当前热结果映射到对应的力-热研究。",
+    },
+    steps: [{ action: "state/projectHeatToThermo" }],
+  },
   {
     id: "macro/openDataResults",
     category: "macro",

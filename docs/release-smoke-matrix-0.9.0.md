@@ -43,6 +43,16 @@ References:
 | `plane_triangle_2d` | [x] | [x] | [ ] | [x] | [x] | Official sample: `Cantilever Plate 2D` or `Aluminum Panel`. Sample open in Workbench verified on `2026-05-17`. Report/export path in Workbench verified on `2026-05-17`. Local orchestrated smoke passed on `2026-05-17`; `max_stress≈77475.40`, `max_displacement≈1.12e-6`, `elements=2`. |
 | `plane_quad_2d` | [x] | [x] | [ ] | [x] | [x] | Official sample: `Quad Plate Patch 2D`. Sample open in Workbench verified on `2026-05-17`. Report/export path in Workbench verified on `2026-05-17`. Local orchestrated smoke passed on `2026-05-17`; `max_stress≈60221.34`, `elements=1`. |
 
+## Workflow smoke
+
+Use this table for supported first-release flows that span more than one study.
+
+| Workflow | Entry sample | Bridge step | Target study | Status | Notes |
+| --- | --- | --- | --- | --- | --- |
+| `heat_bar_1d -> thermal_bar_1d` | `Heat Bar 1D` | `Use temperatures in thermo study` | `Thermal Bar 1D` | [x] | Verified on `2026-05-20`. The pure thermal sample solved, the bridge action appeared in `Inspector > Report`, projection landed in `Study > Controls`, and the projected thermo-mechanical rerun completed with `max_stress≈1.512e+8` and `max_axial_force≈1.512e+6`. |
+| `heat_plane_triangle_2d -> thermal_plane_triangle_2d` | `Heat Plane Triangle 2D` | `Use temperatures in thermo study` | `Thermal Plane Triangle 2D` | [x] | Verified on `2026-05-20`. The pure thermal triangle sample solved, the bridge action appeared in `Inspector > Report`, projection landed in `Study > Controls`, and the projected thermoelastic rerun completed with `max_stress≈5.621e+6` and `temperature_delta=100`. |
+| `heat_plane_quad_2d -> thermal_plane_quad_2d` | `Heat Plane Quad 2D` | `Use temperatures in thermo study` | `Thermal Plane Quad 2D` | [x] | Verified on `2026-05-20`. The pure thermal quad sample solved, the bridge action appeared in `Inspector > Report`, projection landed in `Study > Controls`, and the projected thermoelastic rerun completed with `max_stress≈4.992e+7` and `temperature_delta=100`. |
+
 ## Exit expectation
 
 Treat a study row as release-ready when:
@@ -50,6 +60,13 @@ Treat a study row as release-ready when:
 - every non-`n/a` column is checked
 - any deviations are written down in `Notes`
 - the result matches the support level claimed in the support matrix
+
+Treat a workflow row as release-ready when:
+
+- the source sample opens and solves
+- the bridge action appears in `Inspector > Report`
+- the projection lands in the documented thermo-mechanical target
+- the target study is ready to rerun from `Study > Controls`
 
 ## Related docs
 

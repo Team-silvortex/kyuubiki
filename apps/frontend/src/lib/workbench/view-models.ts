@@ -501,6 +501,8 @@ export function buildStudyControlsRows({
   planeNodeCount,
   planeElementCount,
   planeThicknessValue,
+  thermalIntentValue,
+  thermalBoundaryValue,
 }: {
   labels: {
     nodes: string;
@@ -512,6 +514,8 @@ export function buildStudyControlsRows({
     planeElements: string;
     frameElements: string;
     thickness: string;
+    thermalIntent: string;
+    thermalBoundary: string;
   };
   studyKind:
     | "axial_bar_1d"
@@ -545,7 +549,17 @@ export function buildStudyControlsRows({
   planeNodeCount: number;
   planeElementCount: number;
   planeThicknessValue: string;
+  thermalIntentValue?: string;
+  thermalBoundaryValue?: string;
 }) {
+  const thermalRows =
+    thermalIntentValue || thermalBoundaryValue
+      ? [
+          ...(thermalIntentValue ? [{ label: labels.thermalIntent, value: thermalIntentValue }] : []),
+          ...(thermalBoundaryValue ? [{ label: labels.thermalBoundary, value: thermalBoundaryValue }] : []),
+        ]
+      : [];
+
   if (studyKind === "axial_bar_1d") {
     return [];
   }
@@ -555,6 +569,7 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
       { label: labels.material, value: materialLabel },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -563,6 +578,7 @@ export function buildStudyControlsRows({
     return [
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -571,6 +587,7 @@ export function buildStudyControlsRows({
     return [
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.planeElements, value: planeElementCount },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -580,6 +597,7 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: trussNodeCount },
       { label: labels.trussElements, value: trussElementCount },
       { label: labels.material, value: materialLabel },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -607,6 +625,7 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: truss3dNodeCount },
       { label: labels.spatialTrussElements, value: truss3dElementCount },
       { label: labels.load, value: truss3dLoadValue },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -625,6 +644,7 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: trussNodeCount },
       { label: labels.frameElements, value: trussElementCount },
       { label: labels.material, value: materialLabel },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -668,6 +688,7 @@ export function buildStudyControlsRows({
       { label: labels.nodes, value: planeNodeCount },
       { label: labels.frameElements, value: planeElementCount },
       { label: labels.material, value: materialLabel },
+      ...thermalRows,
       { label: labels.sourceModel, value: loadedModelName },
     ];
   }
@@ -684,6 +705,7 @@ export function buildStudyControlsRows({
     { label: labels.nodes, value: planeNodeCount },
     { label: labels.planeElements, value: planeElementCount },
     { label: labels.thickness, value: planeThicknessValue },
+    ...thermalRows,
     { label: labels.sourceModel, value: loadedModelName },
   ];
 }

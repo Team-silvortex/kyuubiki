@@ -57,6 +57,10 @@ Release coverage table:
 - [release-study-coverage-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-study-coverage-0.9.0.md)
 - [release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
 
+Sequential workflow smoke:
+
+- [x] supported thermal -> thermo-mechanical bridge workflows are listed and smoke-tracked
+
 Static evidence for official sample presence:
 
 - [apps/frontend/src/lib/models/sample-library.ts](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/src/lib/models/sample-library.ts)

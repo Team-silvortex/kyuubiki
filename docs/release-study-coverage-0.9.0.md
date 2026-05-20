@@ -36,12 +36,28 @@ first-run path for each study?”
 | `plane_triangle_2d` | fully supported | `Cantilever Plate 2D` or `Aluminum Panel` | yes | yes | yes | Open a triangle plane sample, run, switch field view, inspect hotspots. |
 | `plane_quad_2d` | fully supported | `Quad Plate Patch 2D` | yes | yes | yes | Open `Quad Plate Patch 2D`, run, switch field view, inspect hotspots. |
 
+## Supported sequential thermal -> structural bridges
+
+These are workflow bridges rather than standalone first-release studies. They
+are part of the recommended `Thermal -> Thermo-mechanical` operator path when
+the user wants to reuse a solved temperature field.
+
+| Thermal study | Thermo-mechanical target | Supported path |
+| --- | --- | --- |
+| `heat_bar_1d` | `thermal_bar_1d` | Run the heat study, open `Inspector > Report`, then use `Use temperatures in thermo study` before reviewing supports and material settings. |
+| `heat_plane_triangle_2d` | `thermal_plane_triangle_2d` | Run the heat study, open `Inspector > Report`, then project temperatures into the thermo-mechanical triangle study before solving again. |
+| `heat_plane_quad_2d` | `thermal_plane_quad_2d` | Run the heat study, open `Inspector > Report`, then project temperatures into the thermo-mechanical quad study before solving again. |
+
 ## Notes
 
 - `spring_2d` and `spring_3d` are intentionally shipped as `minimal` operator
   families in `v0.9.0`, not as full editing-parity studies.
 - `axial_bar_1d` and `truss_2d` are still part of the first-release support
   boundary even though direct-mesh is not part of their initial supported path.
+- The sequential thermal bridge is intentionally limited to like-for-like
+  topology mappings in `v0.9.0`. Cross-topology shortcuts such as
+  `heat_bar_1d -> thermal_beam_1d` or `heat_plane_2d -> thermal_frame_2d` are
+  not part of the supported path.
 - If the official sample for a study changes, update this table together with:
   - [release-support-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-support-matrix-0.9.0.md)
   - [release-readiness-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-readiness-0.9.0.md)

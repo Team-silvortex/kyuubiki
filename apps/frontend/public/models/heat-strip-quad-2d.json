@@ -1,0 +1,16 @@
+{
+  "kind": "heat_plane_quad_2d",
+  "name": "Heat Strip Quad 2D",
+  "nodes": [
+    { "id": "h0", "x": 0, "y": 0, "fix_temperature": true, "temperature": 100, "heat_load": 0 },
+    { "id": "h1", "x": 1, "y": 0, "fix_temperature": false, "temperature": 0, "heat_load": 0 },
+    { "id": "h2", "x": 2, "y": 0, "fix_temperature": true, "temperature": 0, "heat_load": 0 },
+    { "id": "h3", "x": 0, "y": 1, "fix_temperature": true, "temperature": 100, "heat_load": 0 },
+    { "id": "h4", "x": 1, "y": 1, "fix_temperature": false, "temperature": 0, "heat_load": 0 },
+    { "id": "h5", "x": 2, "y": 1, "fix_temperature": true, "temperature": 0, "heat_load": 0 }
+  ],
+  "elements": [
+    { "id": "hq0", "node_i": 0, "node_j": 1, "node_k": 4, "node_l": 3, "thickness": 0.02, "conductivity": 45 },
+    { "id": "hq1", "node_i": 1, "node_j": 2, "node_k": 5, "node_l": 4, "thickness": 0.02, "conductivity": 45 }
+  ]
+}

@@ -108,6 +108,28 @@ Before trying deeper editing paths, confirm the release path works by checking:
 
 That is enough to consider the first-run path healthy.
 
+## Optional thermo-mechanical follow-up
+
+After the pure thermal path is healthy, `v0.9.0` also supports a first-pass
+sequential bridge into thermo-mechanical studies for matching topologies.
+
+Supported bridges:
+
+- `heat_bar_1d -> thermal_bar_1d`
+- `heat_plane_triangle_2d -> thermal_plane_triangle_2d`
+- `heat_plane_quad_2d -> thermal_plane_quad_2d`
+
+Recommended path:
+
+1. run the pure thermal study first
+2. open `Inspector > Report`
+3. choose `Use temperatures in thermo study`
+4. review supports and material settings in `Study > Controls`
+5. run the thermo-mechanical study
+
+This is the supported first-release bridge. Cross-topology shortcuts are not
+part of the recommended `v0.9.0` path.
+
 ## First-run success criteria
 
 Treat the first-run path as successful when all of these are true:

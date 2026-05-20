@@ -117,6 +117,9 @@ type FrameNodeSelection = {
   displacement_magnitude?: number;
   rz?: number;
   temperature_delta?: number;
+  temperature?: number;
+  heat_load?: number;
+  fix_temperature?: boolean;
 };
 
 type FrameElementSelection = {
@@ -130,6 +133,11 @@ type FrameElementSelection = {
   section_modulus: number;
   distributed_load_y?: number;
   temperature_gradient_y?: number;
+  average_temperature?: number;
+  temperature_gradient_x?: number;
+  heat_flux_x?: number;
+  heat_flux_y?: number;
+  heat_flux_magnitude?: number;
   average_temperature_delta?: number;
   thermal_curvature?: number;
   axial_stress?: number;
@@ -257,6 +265,7 @@ type InspectorLabels = {
   topN: string;
   exportHotspots: string;
   memberForceTable: string;
+  elementHeatTable: string;
   exportMemberForces: string;
   createdAt: string;
   updatedAt: string;
@@ -333,7 +342,21 @@ type WorkbenchInspectorProps = {
   thermalBeamMaxTemperatureGradientValue?: string;
   thermalPlaneMaxTemperatureDeltaValue?: string;
   planeHotspotFieldLabel?: string;
-  planeHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean }>;
+  planeHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean; summary?: string }>;
+  planeThermalRows: Array<{
+    id: string;
+    index: number;
+    active?: boolean;
+    sortTemperature: number;
+    sortGradient: number;
+    sortFlux: number;
+    averageTemperature: string;
+    temperatureGradientX: string;
+    temperatureGradientY: string;
+    heatFluxX: string;
+    heatFluxY: string;
+    heatFluxMagnitude: string;
+  }>;
   frameHotspotFieldLabel?: string;
   frameHotspotElements: Array<{ id: string; value: string; index: number; active?: boolean; summary?: string }>;
   frameForceRows: Array<{
@@ -360,6 +383,9 @@ type WorkbenchInspectorProps = {
   onCancelJob: () => void;
   onDownloadJson: () => void;
   onDownloadCsv: () => void;
+  canProjectHeatToThermo?: boolean;
+  projectHeatToThermoLabel?: string;
+  onProjectHeatToThermo?: () => void;
   onDownloadPlaneHotspots: () => void;
   onDownloadFrameHotspots: () => void;
   onDownloadFrameForces: () => void;
@@ -370,6 +396,7 @@ type WorkbenchInspectorProps = {
 
 type InspectorTab = "properties" | "diagnostics" | "history" | "report";
 type FrameForceSort = "index" | "axial" | "shear" | "moment";
+type PlaneHeatSort = "index" | "temperature" | "gradient" | "flux";
 
 function WorkbenchInspectorInner({
   t,
@@ -433,6 +460,7 @@ function WorkbenchInspectorInner({
   thermalPlaneMaxTemperatureDeltaValue,
   planeHotspotFieldLabel,
   planeHotspotElements,
+  planeThermalRows,
   frameHotspotFieldLabel,
   frameHotspotElements,
   frameForceRows,
@@ -446,6 +474,9 @@ function WorkbenchInspectorInner({
   onCancelJob,
   onDownloadJson,
   onDownloadCsv,
+  canProjectHeatToThermo,
+  projectHeatToThermoLabel,
+  onProjectHeatToThermo,
   onDownloadPlaneHotspots,
   onDownloadFrameHotspots,
   onDownloadFrameForces,
@@ -455,6 +486,7 @@ function WorkbenchInspectorInner({
 }: WorkbenchInspectorProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
   const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
+  const [planeHeatSort, setPlaneHeatSort] = useState<PlaneHeatSort>("index");
   const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
   const isTruss3d = studyKind === "truss_3d" || studyKind === "thermal_truss_3d";
   const isSpring3d = studyKind === "spring_3d";
@@ -479,6 +511,14 @@ function WorkbenchInspectorInner({
         : frameForceSort === "moment"
           ? [...frameForceRows].sort((left, right) => right.sortMoment - left.sortMoment)
           : frameForceRows;
+  const sortedPlaneThermalRows =
+    planeHeatSort === "temperature"
+      ? [...planeThermalRows].sort((left, right) => right.sortTemperature - left.sortTemperature)
+      : planeHeatSort === "gradient"
+        ? [...planeThermalRows].sort((left, right) => right.sortGradient - left.sortGradient)
+        : planeHeatSort === "flux"
+          ? [...planeThermalRows].sort((left, right) => right.sortFlux - left.sortFlux)
+          : planeThermalRows;
 
   return (
     <aside className="workspace-inspector panel">
@@ -631,6 +671,15 @@ function WorkbenchInspectorInner({
                 <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedFrameNodeData.fix_y} readOnly /></label>
                 <label className="toggle-row"><span>{t.fixRz}</span><input type="checkbox" checked={selectedFrameNodeData.fix_rz} readOnly /></label>
               </div>
+            ) : isHeatBar && selectedFrameNodeData ? (
+              <div className="form-grid compact">
+                <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
+                <label><span>{t.nodeX}</span><input type="number" step={0.1} value={selectedFrameNodeData.x} onChange={(event) => onUpdateSelectedFrameNode("x", Number(event.target.value))} /></label>
+                <label><span>{t.temperature}</span><input type="number" step={1} value={selectedFrameNodeData.temperature ?? 0} onChange={(event) => onUpdateSelectedFrameNode("temperature_delta", Number(event.target.value))} /></label>
+                <label><span>{t.heatLoad}</span><input type="number" step={1} value={selectedFrameNodeData.heat_load ?? selectedFrameNodeData.load_x ?? 0} onChange={(event) => onUpdateSelectedFrameNode("load_x", Number(event.target.value))} /></label>
+                <label><span>{t.maxTemperature}</span><input value={typeof selectedFrameNodeData.displacement_magnitude === "number" ? selectedFrameNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label>
+                <label className="toggle-row"><span>{t.fixTemperature}</span><input type="checkbox" checked={selectedFrameNodeData.fix_temperature ?? selectedFrameNodeData.fix_x} onChange={(event) => onUpdateSelectedFrameNode("fix_x", event.target.checked)} /></label>
+              </div>
             ) : isTorsion && selectedFrameNodeData ? (
               <div className="form-grid compact">
                 <label><span>{t.dragNode}</span><input value={selectedFrameNodeData.id} readOnly /></label>
@@ -678,6 +727,18 @@ function WorkbenchInspectorInner({
                 <label><span>{t.shearJ}</span><input value={typeof selectedFrameElementData.shear_force_j === "number" ? selectedFrameElementData.shear_force_j.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.momentJ}</span><input value={typeof selectedFrameElementData.moment_j === "number" ? selectedFrameElementData.moment_j.toExponential(3) : "--"} readOnly /></label>
                 <label><span>{t.maxMoment}</span><input value={Math.max(Math.abs(selectedFrameElementData.moment_i ?? 0), Math.abs(selectedFrameElementData.moment_j ?? 0)).toExponential(3)} readOnly /></label>
+              </div>
+            ) : isHeatBar && selectedFrameElementData ? (
+              <div className="form-grid compact">
+                <label><span>{t.memberSelection}</span><input value={selectedFrameElementData.id} readOnly /></label>
+                <label><span>{t.nodeI}</span><input value={selectedFrameElementData.node_i} readOnly /></label>
+                <label><span>{t.nodeJ}</span><input value={selectedFrameElementData.node_j} readOnly /></label>
+                <label><span>{t.area}</span><input type="number" step={0.0001} value={selectedFrameElementData.area} onChange={(event) => onUpdateSelectedFrameElement("area", Number(event.target.value))} /></label>
+                <label><span>{t.conductivity}</span><input type="number" step={0.1} value={selectedFrameElementData.youngs_modulus ?? 0} onChange={(event) => onUpdateSelectedFrameElement("youngs_modulus", Number(event.target.value))} /></label>
+                <label><span>{t.averageTemperature}</span><input value={typeof selectedFrameElementData.average_temperature === "number" ? selectedFrameElementData.average_temperature.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.temperatureGradientX}</span><input value={typeof selectedFrameElementData.temperature_gradient_x === "number" ? selectedFrameElementData.temperature_gradient_x.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.heatFluxX}</span><input value={typeof selectedFrameElementData.heat_flux_x === "number" ? selectedFrameElementData.heat_flux_x.toExponential(3) : "--"} readOnly /></label>
+                <label><span>{t.maxHeatFlux}</span><input value={typeof selectedFrameElementData.heat_flux_magnitude === "number" ? selectedFrameElementData.heat_flux_magnitude.toExponential(3) : "--"} readOnly /></label>
               </div>
             ) : isTorsion && selectedFrameElementData ? (
               <div className="form-grid compact">
@@ -819,6 +880,9 @@ function WorkbenchInspectorInner({
             <button className="ghost-button" disabled={!canCancelJob} onClick={onCancelJob} type="button">{t.cancelJob}</button>
             <button className="ghost-button" onClick={onDownloadJson} type="button">{t.exportData} {t.exportJson}</button>
             <button className="ghost-button" onClick={onDownloadCsv} type="button">{t.exportData} {t.exportCsv}</button>
+            {canProjectHeatToThermo && onProjectHeatToThermo && projectHeatToThermoLabel ? (
+              <button className="ghost-button" onClick={onProjectHeatToThermo} type="button">{projectHeatToThermoLabel}</button>
+            ) : null}
           </div>
           <div className="metric-grid">
             <div><span>{isHeatPlane ? t.maxTemperature : t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
@@ -872,12 +936,56 @@ function WorkbenchInspectorInner({
                     >
                       <strong>{entry.id}</strong>
                       <small>{entry.value}</small>
+                      {entry.summary ? <small>{entry.summary}</small> : null}
                     </button>
                   ))}
                 </>
               ) : (
                 <p className="card-copy">--</p>
               )}
+              {isHeatPlane && planeThermalRows.length > 0 ? (
+                <div className="table-like table-like--console">
+                  <h4>{t.elementHeatTable}</h4>
+                  <div className="button-row">
+                    <span className="card-copy">{t.sortBy}</span>
+                    <button className={`ghost-button ghost-button--compact${planeHeatSort === "index" ? " ghost-button--active" : ""}`} onClick={() => setPlaneHeatSort("index")} type="button">#</button>
+                    <button className={`ghost-button ghost-button--compact${planeHeatSort === "temperature" ? " ghost-button--active" : ""}`} onClick={() => setPlaneHeatSort("temperature")} type="button">{t.averageTemperature}</button>
+                    <button className={`ghost-button ghost-button--compact${planeHeatSort === "gradient" ? " ghost-button--active" : ""}`} onClick={() => setPlaneHeatSort("gradient")} type="button">{t.temperatureGradientY}</button>
+                    <button className={`ghost-button ghost-button--compact${planeHeatSort === "flux" ? " ghost-button--active" : ""}`} onClick={() => setPlaneHeatSort("flux")} type="button">{t.maxHeatFlux}</button>
+                  </div>
+                  <div className="table-like__head table-like__head--frame-forces">
+                    <span>#</span>
+                    <span>{t.averageTemperature}</span>
+                    <span>{t.temperatureGradientX}</span>
+                    <span>{t.temperatureGradientY}</span>
+                    <span>{t.heatFluxX}</span>
+                    <span>{t.heatFluxY}</span>
+                    <span>{t.maxHeatFlux}</span>
+                  </div>
+                  <VirtualList
+                    className="table-like__body"
+                    items={sortedPlaneThermalRows}
+                    itemHeight={46}
+                    maxHeight={240}
+                    itemKey={(entry) => `${entry.id}-${entry.index}`}
+                    renderItem={(entry) => (
+                      <button
+                        className={`table-like__row table-like__row--frame-forces${entry.active ? " history-item--active" : ""}`}
+                        onClick={() => onSelectPlaneHotspot(entry.index)}
+                        type="button"
+                      >
+                        <strong>{entry.id}</strong>
+                        <span>{entry.averageTemperature}</span>
+                        <span>{entry.temperatureGradientX}</span>
+                        <span>{entry.temperatureGradientY}</span>
+                        <span>{entry.heatFluxX}</span>
+                        <span>{entry.heatFluxY}</span>
+                        <span>{entry.heatFluxMagnitude}</span>
+                      </button>
+                    )}
+                  />
+                </div>
+              ) : null}
             </div>
           ) : isFrame || isBeam || isTorsion || isSpring ? (
             <div className="diagnostic-list">

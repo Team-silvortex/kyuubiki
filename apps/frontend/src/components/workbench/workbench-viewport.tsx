@@ -10,7 +10,10 @@ type PlaneResultField =
   | "max_in_plane_shear"
   | "average_temperature"
   | "average_temperature_delta"
+  | "temperature_gradient_x"
   | "temperature_gradient_y"
+  | "heat_flux_x"
+  | "heat_flux_y"
   | "heat_flux_magnitude"
   | "thermal_strain"
   | "mechanical_strain";
@@ -107,7 +110,10 @@ type PlaneElement = {
   max_in_plane_shear?: number;
   average_temperature?: number;
   average_temperature_delta?: number;
+  temperature_gradient_x?: number;
   temperature_gradient_y?: number;
+  heat_flux_x?: number;
+  heat_flux_y?: number;
   heat_flux_magnitude?: number;
   thermal_strain?: number;
   mechanical_strain_x?: number;
@@ -1268,8 +1274,14 @@ function WorkbenchViewportInner({
                         ? Math.abs(element.average_temperature ?? 0)
                         : planeResultField === "average_temperature_delta"
                         ? Math.abs(element.average_temperature_delta ?? 0)
+                        : planeResultField === "temperature_gradient_x"
+                          ? Math.abs(element.temperature_gradient_x ?? 0)
                         : planeResultField === "temperature_gradient_y"
                           ? Math.abs(element.temperature_gradient_y ?? 0)
+                          : planeResultField === "heat_flux_x"
+                            ? Math.abs(element.heat_flux_x ?? 0)
+                            : planeResultField === "heat_flux_y"
+                              ? Math.abs(element.heat_flux_y ?? 0)
                           : planeResultField === "heat_flux_magnitude"
                             ? Math.abs(element.heat_flux_magnitude ?? 0)
                         : planeResultField === "thermal_strain"
