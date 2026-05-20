@@ -16,3 +16,10 @@ Run with:
 - `make test-integration-api`
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
+- `make test-integration-ui-mechanical`
+- `make test-integration-ui-thermal`
+
+The Workbench UI smoke suite is split by domain so failures are easier to triage:
+
+- `workbench-ui-mechanical-smoke.test.mjs`
+- `workbench-ui-thermal-smoke.test.mjs`

@@ -31,10 +31,23 @@ import {
   let latestLogSnapshot = "";
   let brandConfig = null;
 
+  function releaseLabel() {
+    const releaseVersion = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
+    return releaseVersion ? `Kyuubiki Installer v${releaseVersion}` : "Kyuubiki Installer";
+  }
+
+  function formatServiceReport(rendered) {
+    const body = String(rendered || "").trim();
+    return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
+  }
+
   function applyBrandConfig(brand) {
     brandConfig = brand;
     if (brand?.installerName) {
-      document.title = brand.installerName;
+      const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
+      document.title = releaseVersion
+        ? `${brand.installerName} v${releaseVersion}`
+        : brand.installerName;
     }
 
     setText("brand-page-title", brand?.installerName);
@@ -44,6 +57,9 @@ import {
     setText("brand-installer-description", brand?.installerDescription);
     setText("brand-product-name", brand?.productName);
     setText("brand-installer-console", brand?.installerConsoleName);
+    if (brand?.releaseVersion) {
+      setText("brand-installer-version", `v${String(brand.releaseVersion).replace(/^v/u, "")}`);
+    }
   }
 
   function setOutput(value) {
@@ -211,7 +227,7 @@ import {
   }
 
   function renderServiceStatus(rendered) {
-    serviceStatus.textContent = rendered;
+    serviceStatus.textContent = formatServiceReport(rendered);
   }
 
   function renderRuntimeLog(rendered) {

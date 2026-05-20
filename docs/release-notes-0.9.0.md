@@ -160,6 +160,12 @@ For a broad pre-release confidence pass, start with:
 - `make test-workbench-gui`
 - `make desktop-status PLATFORM=all`
 
+Current validation note:
+
+- `make test-integration` is now a stronger first-pass gate because it includes
+  API smoke, cluster smoke, direct-mesh smoke, and split Workbench UI smoke for
+  representative `Mechanical`, `Thermal`, and `Thermo-mechanical` samples.
+
 Then confirm the current release scaffolding path through:
 
 - [packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)

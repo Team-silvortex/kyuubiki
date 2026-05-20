@@ -11,6 +11,7 @@ const state = {
   orchestratorUrl: "http://127.0.0.1:4000",
   consoleTab: "status",
   logService: "frontend",
+  releaseVersion: "",
 };
 
 const elements = {
@@ -58,12 +59,21 @@ function isShortcutModifier(event) {
   return event.metaKey || event.ctrlKey;
 }
 
+function releaseLabel() {
+  return state.releaseVersion ? `Kyuubiki Workbench v${state.releaseVersion}` : "Kyuubiki Workbench";
+}
+
+function formatStatusReport(rendered) {
+  const body = String(rendered || "").trim();
+  return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
+}
+
 async function refreshStatus() {
   try {
     const payload = await invokeTauri("service_status");
-    elements.statusOutput.textContent = payload.rendered;
+    elements.statusOutput.textContent = formatStatusReport(payload.rendered);
   } catch (error) {
-    elements.statusOutput.textContent = String(error);
+    elements.statusOutput.textContent = formatStatusReport(String(error));
   }
 }
 
@@ -106,7 +116,7 @@ async function runAction(action) {
     }
 
     if (action === "stop") {
-      elements.statusOutput.textContent = await invokeTauri("service_stop");
+      elements.statusOutput.textContent = formatStatusReport(await invokeTauri("service_stop"));
       if (state.consoleTab === "logs") {
         await refreshLog();
       }
@@ -114,7 +124,9 @@ async function runAction(action) {
     }
 
     if (action === "start-local") {
-      elements.statusOutput.textContent = await invokeTauri("service_start", { payload: { mode: "local" } });
+      elements.statusOutput.textContent = formatStatusReport(
+        await invokeTauri("service_start", { payload: { mode: "local" } }),
+      );
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
         await refreshLog();
@@ -123,7 +135,9 @@ async function runAction(action) {
     }
 
     if (action === "restart-local") {
-      elements.statusOutput.textContent = await invokeTauri("service_restart", { payload: { mode: "local" } });
+      elements.statusOutput.textContent = formatStatusReport(
+        await invokeTauri("service_restart", { payload: { mode: "local" } }),
+      );
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
         await refreshLog();
@@ -201,8 +215,16 @@ async function boot() {
   const brand = await loadDesktopBrand();
   if (brand) {
     if (brand.applicationName) {
-      document.title = brand.applicationName;
+      const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
+      state.releaseVersion = releaseVersion;
+      document.title = releaseVersion
+        ? `${brand.applicationName} v${releaseVersion}`
+        : brand.applicationName;
       setText("brand-workbench-name", brand.applicationName);
+    }
+
+    if (brand.releaseVersion) {
+      setText("brand-workbench-version", `v${brand.releaseVersion.replace(/^v/u, "")}`);
     }
 
     setText("brand-workbench-description", brand.workbenchShellDescription);
@@ -223,5 +245,5 @@ async function boot() {
 }
 
 boot().catch((error) => {
-  elements.statusOutput.textContent = String(error);
+  elements.statusOutput.textContent = formatStatusReport(String(error));
 });

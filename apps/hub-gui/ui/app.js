@@ -105,6 +105,7 @@ const state = {
   hotLogRefreshInFlight: false,
   runtimeLogRefreshInFlight: false,
   density: { ...HUB_DENSITY_DEFAULTS },
+  releaseVersion: "",
 };
 
 let hotRuntimeLogPollHandle = null;
@@ -1917,10 +1918,24 @@ async function applyBrand() {
   }
 
   if (brand.hubName) {
-    document.title = brand.hubName;
+    const releaseVersion = String(brand.releaseVersion || "").replace(/^v/u, "");
+    state.releaseVersion = releaseVersion;
+    document.title = releaseVersion ? `${brand.hubName} v${releaseVersion}` : brand.hubName;
   }
 
   setText("brand-hub-title", brand.hubName);
+  if (brand.releaseVersion) {
+    setText("brand-hub-version", `v${brand.releaseVersion.replace(/^v/u, "")}`);
+  }
+}
+
+function releaseLabel() {
+  return state.releaseVersion ? `Kyuubiki Hub v${state.releaseVersion}` : "Kyuubiki Hub";
+}
+
+function formatRuntimeReport(value) {
+  const body = String(value || "").trim();
+  return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
 }
 
 function setSection(section) {
@@ -1993,23 +2008,23 @@ function setOperationOutput(value) {
 
 function setDesktopStatusOutput(value) {
   if (elements.desktopStatusOutput) {
-    elements.desktopStatusOutput.textContent = value;
+    elements.desktopStatusOutput.textContent = formatRuntimeReport(value);
   }
 }
 
 function setRuntimeStatusOutput(value) {
-  elements.runtimeStatusOutput.textContent = value;
+  elements.runtimeStatusOutput.textContent = formatRuntimeReport(value);
   if (elements.observeRuntimeStatusOutput) {
-    elements.observeRuntimeStatusOutput.textContent = value;
+    elements.observeRuntimeStatusOutput.textContent = formatRuntimeReport(value);
   }
 }
 
 function setHotRuntimeStatusOutput(value) {
   if (elements.hotRuntimeStatusOutput) {
-    elements.hotRuntimeStatusOutput.textContent = value;
+    elements.hotRuntimeStatusOutput.textContent = formatRuntimeReport(value);
   }
   if (elements.observeRuntimeStatusOutput) {
-    elements.observeRuntimeStatusOutput.textContent = value;
+    elements.observeRuntimeStatusOutput.textContent = formatRuntimeReport(value);
   }
 }
 

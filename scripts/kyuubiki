@@ -97,6 +97,8 @@ Commands:
   web-test          Run Elixir tests
   rust-test         Run Rust tests
   frontend-test     Run frontend typecheck and production build
+  integration-ui-mechanical Run the Playwright Workbench UI smoke for representative mechanical samples
+  integration-ui-thermal Run the Playwright Workbench UI smoke for representative thermal and thermo-mechanical samples
   sdk-smoke         Run the Python / Elixir / Rust headless SDK smoke suite
   playground-test   Run browser FEM tests
   agent             Run the Rust FEM TCP agent
@@ -1307,6 +1309,12 @@ case "$command" in
       npm run typecheck
       npm run build
     )
+    ;;
+  integration-ui-mechanical)
+    node --test "$ROOT_DIR/tests/integration/workbench-ui-mechanical-smoke.test.mjs"
+    ;;
+  integration-ui-thermal)
+    node --test "$ROOT_DIR/tests/integration/workbench-ui-thermal-smoke.test.mjs"
     ;;
   sdk-smoke)
     run_sdk_smoke

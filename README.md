@@ -270,6 +270,8 @@ Current cross-process smoke coverage lives under [tests/integration](/Users/Shar
 - `make test-integration-api`
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
+- `make test-integration-ui-mechanical`
+- `make test-integration-ui-thermal`
 - `make test-sdk`
 - `make test-frontend`
 

@@ -1,5 +1,6 @@
 {
   "productName": "Kyuubiki",
+  "releaseVersion": "0.9.0",
   "hubName": "Kyuubiki Hub",
   "hubDescription": "Unified desktop launcher and operator shell for the Kyuubiki workstation.",
   "applicationName": "Kyuubiki Workbench",

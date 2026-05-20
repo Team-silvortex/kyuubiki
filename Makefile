@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -61,6 +61,8 @@ help:
 	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
 	@echo "  make test-integration-cluster Run the protected cluster registration/heartbeat integration smoke test"
 	@echo "  make test-integration-direct-mesh Run the direct_mesh_gui LAN agent solve + chunk smoke test"
+	@echo "  make test-integration-ui-mechanical Run the Playwright Workbench UI smoke for representative mechanical samples"
+	@echo "  make test-integration-ui-thermal Run the Playwright Workbench UI smoke for representative thermal and thermo-mechanical samples"
 	@echo "  make verify      Run formatting checks and tests"
 	@echo "  make format      Format all code"
 	@echo "  make smoke       Run the Elixir -> Rust smoke flow"
@@ -237,7 +239,7 @@ test-installer-gui:
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke
 
-test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh
+test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal
 
 test-integration-api:
 	@node --test tests/integration/orchestrator-agent-api-smoke.test.mjs
@@ -247,6 +249,12 @@ test-integration-cluster:
 
 test-integration-direct-mesh:
 	@node --test tests/integration/direct-mesh-gui-smoke.test.mjs
+
+test-integration-ui-mechanical:
+	@node --test tests/integration/workbench-ui-mechanical-smoke.test.mjs
+
+test-integration-ui-thermal:
+	@node --test tests/integration/workbench-ui-thermal-smoke.test.mjs
 
 format: format-web format-rust
 

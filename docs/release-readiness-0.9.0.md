@@ -91,13 +91,26 @@ Reference:
 - [ ] `make test-rust`
 - [ ] `make test-frontend`
 - [ ] `make test-sdk`
-- [ ] `make test-integration`
+- [x] `make test-integration`
 - [ ] `make test-hub-gui`
 - [ ] `make test-installer-gui`
 - [ ] `make test-workbench-gui`
 - [ ] `make desktop-status PLATFORM=all`
 
 - [ ] release owners agree which failures block release and which only warn
+
+Latest confirmed integration baseline:
+
+- `make test-integration` passed on `2026-05-20`
+- the suite now includes:
+  - API smoke
+  - cluster smoke
+  - direct-mesh smoke
+  - Workbench UI smoke for representative `Mechanical` studies
+  - Workbench UI smoke for representative `Thermal` and `Thermo-mechanical`
+    studies
+- detailed per-study evidence is tracked in
+  [release-smoke-matrix-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-smoke-matrix-0.9.0.md)
 
 ### Failure and support path is minimally usable
 
