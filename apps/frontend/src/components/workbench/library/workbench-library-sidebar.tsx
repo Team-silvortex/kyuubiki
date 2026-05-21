@@ -7,6 +7,9 @@ import type { ProjectRecord } from "@/lib/api";
 import type { StudyDomainKey } from "@/lib/workbench/view-models";
 
 type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
+type SamplePage = "catalog" | "import";
+type ProjectPage = "manage" | "exchange";
+type ModelPage = "saved" | "versions";
 
 type SampleRow = {
   id: string;
@@ -77,6 +80,12 @@ type LibraryLabels = {
   no: string;
   sections: { library: string };
   tabs: { samples: string; projects: string; models: string; jobs: string };
+  sampleCatalogPage: string;
+  sampleImportPage: string;
+  projectManagePage: string;
+  projectExchangePage: string;
+  modelSavedPage: string;
+  modelVersionsPage: string;
   kinds: Record<string, string>;
   studyDomain: string;
   noDomainStudies: string;
@@ -165,6 +174,9 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   onImportModel,
 }: WorkbenchLibrarySidebarProps) {
   const [selectedSampleDomain, setSelectedSampleDomain] = useState<StudyDomainKey>("mechanical");
+  const [samplePage, setSamplePage] = useState<SamplePage>("catalog");
+  const [projectPage, setProjectPage] = useState<ProjectPage>("manage");
+  const [modelPage, setModelPage] = useState<ModelPage>("saved");
   const groupedSampleRows = useMemo(() => {
     const groups = new Map<string, { label: string; rows: SampleRow[] }>();
     for (const sample of sampleRows.filter((entry) => entry.domainKey === selectedSampleDomain)) {
@@ -208,53 +220,75 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
               {labels.refresh}
             </button>
           </div>
-          <p className="card-copy">{labels.historyHint}</p>
-          <label className="import-box">
-            <span>{labels.importModel}</span>
-            <small>{labels.importHint}</small>
-            <input
-              type="file"
-              accept=".json,application/json"
-              onChange={(event) => onImportModel(event.target.files?.[0])}
-            />
-          </label>
-          <div className="form-grid compact">
-            <label>
-              <span>{labels.studyDomain}</span>
-              <div className="button-row">
-                {sampleDomainOptions.map((option) => (
-                  <button
-                    key={option.key}
-                    className={`ghost-button ghost-button--compact${selectedSampleDomain === option.key ? " ghost-button--active" : ""}`}
-                    onClick={() => setSelectedSampleDomain(option.key)}
-                    type="button"
-                  >
-                    {option.label}
-                  </button>
+          <div className="panel-tabs panel-tabs--wide">
+            <button
+              className={`panel-tab${samplePage === "catalog" ? " panel-tab--active" : ""}`}
+              onClick={() => setSamplePage("catalog")}
+              type="button"
+            >
+              {labels.sampleCatalogPage}
+            </button>
+            <button
+              className={`panel-tab${samplePage === "import" ? " panel-tab--active" : ""}`}
+              onClick={() => setSamplePage("import")}
+              type="button"
+            >
+              {labels.sampleImportPage}
+            </button>
+          </div>
+          {samplePage === "catalog" ? (
+            <>
+              <p className="card-copy">{labels.historyHint}</p>
+              <div className="form-grid compact">
+                <label>
+                  <span>{labels.studyDomain}</span>
+                  <div className="button-row">
+                    {sampleDomainOptions.map((option) => (
+                      <button
+                        key={option.key}
+                        className={`ghost-button ghost-button--compact${selectedSampleDomain === option.key ? " ghost-button--active" : ""}`}
+                        onClick={() => setSelectedSampleDomain(option.key)}
+                        type="button"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </label>
+              </div>
+              <div className="history-list sample-group-list">
+                {groupedSampleRows.length === 0 ? <p className="card-copy">{labels.noDomainStudies}</p> : null}
+                {groupedSampleRows.map((group) => (
+                  <div key={group.label} className="sample-group">
+                    <div className="sample-group__head">
+                      <strong>{group.label}</strong>
+                      <span>{group.rows.length}</span>
+                    </div>
+                    <div className="sample-group__items">
+                      {group.rows.map((sample) => (
+                        <button key={sample.id} className="history-item" onClick={() => onOpenSample(sample.href)} type="button">
+                          <strong>{sample.name}</strong>
+                          <span>{sample.kindLabel}</span>
+                          <small>{sample.summary}</small>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
+            </>
+          ) : null}
+          {samplePage === "import" ? (
+            <label className="import-box">
+              <span>{labels.importModel}</span>
+              <small>{labels.importHint}</small>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={(event) => onImportModel(event.target.files?.[0])}
+              />
             </label>
-          </div>
-          <div className="history-list sample-group-list">
-            {groupedSampleRows.length === 0 ? <p className="card-copy">{labels.noDomainStudies}</p> : null}
-            {groupedSampleRows.map((group) => (
-              <div key={group.label} className="sample-group">
-                <div className="sample-group__head">
-                  <strong>{group.label}</strong>
-                  <span>{group.rows.length}</span>
-                </div>
-                <div className="sample-group__items">
-                  {group.rows.map((sample) => (
-                    <button key={sample.id} className="history-item" onClick={() => onOpenSample(sample.href)} type="button">
-                      <strong>{sample.name}</strong>
-                      <span>{sample.kindLabel}</span>
-                      <small>{sample.summary}</small>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -264,59 +298,83 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
             <h2>{labels.projectLibrary}</h2>
             <span>{projects.length}</span>
           </div>
-          <div className="form-grid compact">
-            <label>
-              <span>{labels.projectNameField}</span>
-              <input value={projectNameDraft} onChange={(event) => onProjectNameDraftChange(event.target.value)} />
-            </label>
-            <label>
-              <span>{labels.projectDescriptionField}</span>
-              <input value={projectDescriptionDraft} onChange={(event) => onProjectDescriptionDraftChange(event.target.value)} />
-            </label>
-            <label>
-              <span>{labels.projectLibrary}</span>
-              <select
-                value={selectedProjectId ?? ""}
-                onChange={(event) => onSelectedProjectChange(event.target.value || null)}
-              >
-                <option value="">{labels.none}</option>
-                {projects.map((project) => (
-                  <option key={project.project_id} value={project.project_id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <div className="button-row">
-            <button className="ghost-button" onClick={onCreateProject} type="button">
-              {labels.createProject}
+          <div className="panel-tabs panel-tabs--wide">
+            <button
+              className={`panel-tab${projectPage === "manage" ? " panel-tab--active" : ""}`}
+              onClick={() => setProjectPage("manage")}
+              type="button"
+            >
+              {labels.projectManagePage}
             </button>
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onUpdateProject} type="button">
-              {labels.updateProject}
-            </button>
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onDeleteProject} type="button">
-              {labels.deleteProject}
+            <button
+              className={`panel-tab${projectPage === "exchange" ? " panel-tab--active" : ""}`}
+              onClick={() => setProjectPage("exchange")}
+              type="button"
+            >
+              {labels.projectExchangePage}
             </button>
           </div>
-          <div className="button-row">
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectJson} type="button">
-              {labels.exportProjectJson}
-            </button>
-            <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectZip} type="button">
-              {labels.exportProjectZip}
-            </button>
-          </div>
-          <label className="import-box">
-            <span>{labels.importProject}</span>
-            <small>{labels.importProjectHint}</small>
-            <input
-              type="file"
-              accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
-              onChange={(event) => void onImportProjectBundle(event.target.files?.[0])}
-            />
-          </label>
-          {projects.length === 0 ? <p className="card-copy">{labels.projectEmpty}</p> : null}
+          {projectPage === "manage" ? (
+            <>
+              <div className="form-grid compact">
+                <label>
+                  <span>{labels.projectNameField}</span>
+                  <input value={projectNameDraft} onChange={(event) => onProjectNameDraftChange(event.target.value)} />
+                </label>
+                <label>
+                  <span>{labels.projectDescriptionField}</span>
+                  <input value={projectDescriptionDraft} onChange={(event) => onProjectDescriptionDraftChange(event.target.value)} />
+                </label>
+                <label>
+                  <span>{labels.projectLibrary}</span>
+                  <select
+                    value={selectedProjectId ?? ""}
+                    onChange={(event) => onSelectedProjectChange(event.target.value || null)}
+                  >
+                    <option value="">{labels.none}</option>
+                    {projects.map((project) => (
+                      <option key={project.project_id} value={project.project_id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" onClick={onCreateProject} type="button">
+                  {labels.createProject}
+                </button>
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={onUpdateProject} type="button">
+                  {labels.updateProject}
+                </button>
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={onDeleteProject} type="button">
+                  {labels.deleteProject}
+                </button>
+              </div>
+              {projects.length === 0 ? <p className="card-copy">{labels.projectEmpty}</p> : null}
+            </>
+          ) : null}
+          {projectPage === "exchange" ? (
+            <>
+              <div className="button-row">
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectJson} type="button">
+                  {labels.exportProjectJson}
+                </button>
+                <button className="ghost-button" disabled={!selectedProjectId} onClick={onExportProjectZip} type="button">
+                  {labels.exportProjectZip}
+                </button>
+              </div>
+              <label className="import-box">
+                <span>{labels.importProject}</span>
+                <small>{labels.importProjectHint}</small>
+                <input
+                  type="file"
+                  accept=".kyuubiki,.kyuubiki.json,application/json,application/zip"
+                  onChange={(event) => void onImportProjectBundle(event.target.files?.[0])}
+                />
+              </label>
+            </>
+          ) : null}
         </section>
       ) : null}
 
@@ -326,83 +384,102 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
             <h2>{labels.savedModels}</h2>
             <span>{selectedProjectModelCount}</span>
           </div>
-          <div className="form-grid compact">
-            <label>
-              <span>{labels.modelName}</span>
-              <input value={loadedModelName} onChange={(event) => onLoadedModelNameChange(event.target.value)} />
-            </label>
-          </div>
-          <div className="button-row">
-            <button className="ghost-button" onClick={() => onSaveModel(false)} type="button">
-              {labels.save}
+          <div className="panel-tabs panel-tabs--wide">
+            <button
+              className={`panel-tab${modelPage === "saved" ? " panel-tab--active" : ""}`}
+              onClick={() => setModelPage("saved")}
+              type="button"
+            >
+              {labels.modelSavedPage}
             </button>
-            <button className="ghost-button" onClick={() => onSaveModel(true)} type="button">
-              {labels.saveAs}
-            </button>
-            <button className="ghost-button" disabled={!selectedModelId} onClick={onDeleteSavedModel} type="button">
-              {labels.deleteSavedModel}
-            </button>
-          </div>
-          <VirtualList
-            className="history-list"
-            items={modelRows}
-            itemHeight={112}
-            maxHeight={344}
-            emptyState={<p className="card-copy">{labels.noSavedModels}</p>}
-            itemKey={(model) => model.id}
-            renderItem={(model) => (
-              <button
-                className={`history-item${selectedModelId === model.id ? " history-item--active" : ""}`}
-                onClick={() => onOpenSavedModel(model.id)}
-                type="button"
-              >
-                <strong>{model.name}</strong>
-                <span>{model.kindLabel}</span>
-                <small>
-                  {labels.updatedAt}: {model.updatedAt}
-                </small>
-                <small>{model.versionLabel}</small>
-              </button>
-            )}
-          />
-        </section>
-      ) : null}
-
-      {libraryTab === "models" ? (
-        <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.versions}</h2>
-            <span>{modelVersionCount}</span>
-          </div>
-          <div className="button-row">
-            <button className="ghost-button" disabled={!selectedVersionId} onClick={onRenameSelectedVersion} type="button">
-              {labels.renameVersion}
-            </button>
-            <button className="ghost-button" disabled={!selectedVersionId} onClick={onDeleteSelectedVersion} type="button">
-              {labels.deleteVersion}
+            <button
+              className={`panel-tab${modelPage === "versions" ? " panel-tab--active" : ""}`}
+              onClick={() => setModelPage("versions")}
+              type="button"
+            >
+              {labels.modelVersionsPage}
             </button>
           </div>
-          <VirtualList
-            className="history-list"
-            items={versionRows}
-            itemHeight={100}
-            maxHeight={320}
-            emptyState={<p className="card-copy">{labels.noVersions}</p>}
-            itemKey={(version) => version.id}
-            renderItem={(version) => (
-              <button
-                className={`history-item${selectedVersionId === version.id ? " history-item--active" : ""}`}
-                onClick={() => onOpenSavedVersion(version.id)}
-                type="button"
-              >
-                <strong>{version.name}</strong>
-                <span>{version.versionLabel}</span>
-                <small>
-                  {labels.updatedAt}: {version.updatedAt}
-                </small>
-              </button>
-            )}
-          />
+          {modelPage === "saved" ? (
+            <>
+              <div className="form-grid compact">
+                <label>
+                  <span>{labels.modelName}</span>
+                  <input value={loadedModelName} onChange={(event) => onLoadedModelNameChange(event.target.value)} />
+                </label>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" onClick={() => onSaveModel(false)} type="button">
+                  {labels.save}
+                </button>
+                <button className="ghost-button" onClick={() => onSaveModel(true)} type="button">
+                  {labels.saveAs}
+                </button>
+                <button className="ghost-button" disabled={!selectedModelId} onClick={onDeleteSavedModel} type="button">
+                  {labels.deleteSavedModel}
+                </button>
+              </div>
+              <VirtualList
+                className="history-list"
+                items={modelRows}
+                itemHeight={112}
+                maxHeight={344}
+                emptyState={<p className="card-copy">{labels.noSavedModels}</p>}
+                itemKey={(model) => model.id}
+                renderItem={(model) => (
+                  <button
+                    className={`history-item${selectedModelId === model.id ? " history-item--active" : ""}`}
+                    onClick={() => onOpenSavedModel(model.id)}
+                    type="button"
+                  >
+                    <strong>{model.name}</strong>
+                    <span>{model.kindLabel}</span>
+                    <small>
+                      {labels.updatedAt}: {model.updatedAt}
+                    </small>
+                    <small>{model.versionLabel}</small>
+                  </button>
+                )}
+              />
+            </>
+          ) : null}
+          {modelPage === "versions" ? (
+            <>
+              <div className="card-head">
+                <h2>{labels.versions}</h2>
+                <span>{modelVersionCount}</span>
+              </div>
+              <div className="button-row">
+                <button className="ghost-button" disabled={!selectedVersionId} onClick={onRenameSelectedVersion} type="button">
+                  {labels.renameVersion}
+                </button>
+                <button className="ghost-button" disabled={!selectedVersionId} onClick={onDeleteSelectedVersion} type="button">
+                  {labels.deleteVersion}
+                </button>
+              </div>
+              <VirtualList
+                className="history-list"
+                items={versionRows}
+                itemHeight={100}
+                maxHeight={320}
+                emptyState={<p className="card-copy">{labels.noVersions}</p>}
+                itemKey={(version) => version.id}
+                renderItem={(version) => (
+                  <button
+                    className={`history-item${selectedVersionId === version.id ? " history-item--active" : ""}`}
+                    onClick={() => onOpenSavedVersion(version.id)}
+                    type="button"
+                  >
+                    <strong>{version.name}</strong>
+                    <span>{version.versionLabel}</span>
+                    <small>
+                      {labels.updatedAt}: {version.updatedAt}
+                    </small>
+                  </button>
+                )}
+              />
+            </>
+          ) : null}
         </section>
       ) : null}
 

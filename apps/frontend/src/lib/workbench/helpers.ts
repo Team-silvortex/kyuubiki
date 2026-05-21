@@ -48,6 +48,8 @@ import type {
 
 export const WORKBENCH_SETTINGS_KEY = "kyuubiki-workbench-settings";
 export const WORKBENCH_SECRETS_KEY = "kyuubiki-workbench-secrets";
+export const WORKBENCH_LANGUAGE_PACKS_KEY = "kyuubiki-workbench-language-packs";
+export const WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
 
 export type StoredWorkbenchSettings = {
   theme?: string;
@@ -64,6 +66,18 @@ export type StoredWorkbenchSettings = {
   clusterApiToken?: string;
   directMeshApiToken?: string;
   assistantApiKey?: string;
+};
+
+export type WorkbenchLanguagePack = {
+  schema_version: string;
+  id: string;
+  language: string;
+  name: string;
+  version: string;
+  source: "imported" | "downloaded";
+  updatedAt: string;
+  description?: string;
+  overrides: Record<string, unknown>;
 };
 
 type PersistedWorkbenchSettings = {
@@ -208,6 +222,69 @@ export function persistWorkbenchSettings(input: WorkbenchSettingsInput) {
     WORKBENCH_SECRETS_KEY,
     JSON.stringify(sanitizeWorkbenchSecrets(input)),
   );
+}
+
+export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(WORKBENCH_LANGUAGE_PACKS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((entry): entry is WorkbenchLanguagePack => {
+      return (
+        entry &&
+        typeof entry === "object" &&
+        typeof entry.id === "string" &&
+        typeof entry.schema_version === "string" &&
+        typeof entry.language === "string" &&
+        typeof entry.name === "string" &&
+        typeof entry.version === "string" &&
+        (entry.source === "imported" || entry.source === "downloaded") &&
+        typeof entry.updatedAt === "string" &&
+        entry.overrides &&
+        typeof entry.overrides === "object" &&
+        !Array.isArray(entry.overrides)
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+export function persistWorkbenchLanguagePacks(packs: WorkbenchLanguagePack[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(WORKBENCH_LANGUAGE_PACKS_KEY, JSON.stringify(packs));
+}
+
+export function mergeLanguagePack<T extends Record<string, unknown>>(
+  base: T,
+  overrides?: Record<string, unknown> | null,
+): T {
+  if (!overrides) return base;
+
+  const mergeValue = (left: unknown, right: unknown): unknown => {
+    if (right === undefined) return left;
+    if (Array.isArray(right)) return right.slice();
+    if (
+      left &&
+      right &&
+      typeof left === "object" &&
+      typeof right === "object" &&
+      !Array.isArray(left) &&
+      !Array.isArray(right)
+    ) {
+      const result: Record<string, unknown> = { ...(left as Record<string, unknown>) };
+      for (const [key, value] of Object.entries(right as Record<string, unknown>)) {
+        result[key] = mergeValue(result[key], value);
+      }
+      return result;
+    }
+    return right;
+  };
+
+  return mergeValue(base, overrides) as T;
 }
 
 export function parseDirectMeshEndpoints(value: string) {
@@ -1090,7 +1167,8 @@ export function formatTime(value: string | undefined, language: string): string 
   if (!value) return "--";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(language === "zh" ? "zh-CN" : "en-US", {
+  const locale = language === "zh" ? "zh-CN" : language === "ja" ? "ja-JP" : "en-US";
+  return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",
     hour: "2-digit",

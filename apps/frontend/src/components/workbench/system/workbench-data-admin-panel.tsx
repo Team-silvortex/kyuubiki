@@ -1,10 +1,11 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type DataTab = "jobs" | "results";
+type DataPage = "browse" | "edit";
 
 type AdminJobRow = {
   id: string;
@@ -29,6 +30,8 @@ type WorkbenchDataAdminPanelProps = {
   recordCountLabel: string;
   jobsTabLabel: string;
   resultsTabLabel: string;
+  browsePageLabel: string;
+  editPageLabel: string;
   historyEmptyLabel: string;
   selectRecordLabel: string;
   cancelJobLabel: string;
@@ -103,6 +106,8 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   recordCountLabel,
   jobsTabLabel,
   resultsTabLabel,
+  browsePageLabel,
+  editPageLabel,
   historyEmptyLabel,
   selectRecordLabel,
   cancelJobLabel,
@@ -171,6 +176,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   onExportAdminResult,
   onDeleteAdminResult,
 }: WorkbenchDataAdminPanelProps) {
+  const [dataPage, setDataPage] = useState<DataPage>("browse");
   return (
     <section className="sidebar-card sidebar-card--compact">
       <div className="card-head">
@@ -185,53 +191,67 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           {resultsTabLabel}
         </button>
       </div>
-      <div className="form-grid compact">
-        <label>
-          <span>{filterProjectLabel}</span>
-          <input value={filterProjectValue} onChange={(event) => onFilterProjectChange(event.target.value)} />
-        </label>
-        <label>
-          <span>{filterVersionLabel}</span>
-          <input value={filterVersionValue} onChange={(event) => onFilterVersionChange(event.target.value)} />
-        </label>
-      </div>
-      <div className="button-row">
-        <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentProject} onClick={onUseCurrentProject} type="button">
-          {useCurrentProjectLabel}
+      <div className="panel-tabs panel-tabs--wide">
+        <button className={`panel-tab${dataPage === "browse" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("browse")} type="button">
+          {browsePageLabel}
         </button>
-        <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentVersion} onClick={onUseCurrentVersion} type="button">
-          {useCurrentVersionLabel}
-        </button>
-        <button className="ghost-button ghost-button--compact" onClick={onClearFilters} type="button">
-          {clearFiltersLabel}
+        <button className={`panel-tab${dataPage === "edit" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("edit")} type="button">
+          {editPageLabel}
         </button>
       </div>
+      {dataPage === "browse" ? (
+        <>
+          <div className="form-grid compact">
+            <label>
+              <span>{filterProjectLabel}</span>
+              <input value={filterProjectValue} onChange={(event) => onFilterProjectChange(event.target.value)} />
+            </label>
+            <label>
+              <span>{filterVersionLabel}</span>
+              <input value={filterVersionValue} onChange={(event) => onFilterVersionChange(event.target.value)} />
+            </label>
+          </div>
+          <div className="button-row">
+            <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentProject} onClick={onUseCurrentProject} type="button">
+              {useCurrentProjectLabel}
+            </button>
+            <button className="ghost-button ghost-button--compact" disabled={!canUseCurrentVersion} onClick={onUseCurrentVersion} type="button">
+              {useCurrentVersionLabel}
+            </button>
+            <button className="ghost-button ghost-button--compact" onClick={onClearFilters} type="button">
+              {clearFiltersLabel}
+            </button>
+          </div>
+        </>
+      ) : null}
       {activeTab === "jobs" ? (
         <>
-          <VirtualList
-            className="history-list"
-            items={jobRows}
-            itemHeight={112}
-            maxHeight={220}
-            emptyState={<p className="card-copy">{historyEmptyLabel}</p>}
-            itemKey={(entry) => entry.id}
-            renderItem={(entry) => (
-              <button
-                className={`history-item${selectedAdminJobId === entry.id ? " history-item--active" : ""}`}
-                onClick={() => onSelectAdminJob(entry.id)}
-                type="button"
-              >
-                <strong>{entry.id.slice(0, 8)}</strong>
-                <span>{entry.status}</span>
-                <small>{entry.projectId}</small>
-                <small>
-                  <span className={`heartbeat-badge heartbeat-badge--${entry.heartbeatTone}`}>{entry.heartbeatLabel}</span>
-                </small>
-                <small>{entry.detail}</small>
-              </button>
-            )}
-          />
-          {selectedAdminJob ? (
+          {dataPage === "browse" ? (
+            <VirtualList
+              className="history-list"
+              items={jobRows}
+              itemHeight={112}
+              maxHeight={220}
+              emptyState={<p className="card-copy">{historyEmptyLabel}</p>}
+              itemKey={(entry) => entry.id}
+              renderItem={(entry) => (
+                <button
+                  className={`history-item${selectedAdminJobId === entry.id ? " history-item--active" : ""}`}
+                  onClick={() => onSelectAdminJob(entry.id)}
+                  type="button"
+                >
+                  <strong>{entry.id.slice(0, 8)}</strong>
+                  <span>{entry.status}</span>
+                  <small>{entry.projectId}</small>
+                  <small>
+                    <span className={`heartbeat-badge heartbeat-badge--${entry.heartbeatTone}`}>{entry.heartbeatLabel}</span>
+                  </small>
+                  <small>{entry.detail}</small>
+                </button>
+              )}
+            />
+          ) : null}
+          {dataPage === "edit" && selectedAdminJob ? (
             <>
               <div className="button-row">
                 <button className="ghost-button" disabled={!canCancelSelectedJob} onClick={onCancelSelectedJob} type="button">
@@ -289,35 +309,37 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </button>
               </div>
             </>
-          ) : (
+          ) : dataPage === "edit" ? (
             <p className="card-copy">{selectRecordLabel}</p>
-          )}
+          ) : null}
         </>
       ) : (
         <>
-          <VirtualList
-            className="history-list"
-            items={resultRows}
-            itemHeight={88}
-            maxHeight={220}
-            emptyState={<p className="card-copy">{historyEmptyLabel}</p>}
-            itemKey={(entry) => entry.id}
-            renderItem={(entry) => (
-              <button
-                className={`history-item${selectedAdminResultJobId === entry.id ? " history-item--active" : ""}`}
-                onClick={() => onSelectAdminResult(entry.id)}
-                type="button"
-              >
-                <strong>{entry.id.slice(0, 8)}</strong>
-                <span>{entry.updatedAt}</span>
-                <small>{entry.status}</small>
-                <small>{entry.projectId}</small>
-                <small>{entry.modelVersionId}</small>
-                <small>{entry.summary}</small>
-              </button>
-            )}
-          />
-          {selectedAdminResult ? (
+          {dataPage === "browse" ? (
+            <VirtualList
+              className="history-list"
+              items={resultRows}
+              itemHeight={88}
+              maxHeight={220}
+              emptyState={<p className="card-copy">{historyEmptyLabel}</p>}
+              itemKey={(entry) => entry.id}
+              renderItem={(entry) => (
+                <button
+                  className={`history-item${selectedAdminResultJobId === entry.id ? " history-item--active" : ""}`}
+                  onClick={() => onSelectAdminResult(entry.id)}
+                  type="button"
+                >
+                  <strong>{entry.id.slice(0, 8)}</strong>
+                  <span>{entry.updatedAt}</span>
+                  <small>{entry.status}</small>
+                  <small>{entry.projectId}</small>
+                  <small>{entry.modelVersionId}</small>
+                  <small>{entry.summary}</small>
+                </button>
+              )}
+            />
+          ) : null}
+          {dataPage === "edit" && selectedAdminResult ? (
             <>
               <div className="form-grid compact">
                 <label>
@@ -366,9 +388,9 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                 </button>
               </div>
             </>
-          ) : (
+          ) : dataPage === "edit" ? (
             <p className="card-copy">{selectRecordLabel}</p>
-          )}
+          ) : null}
         </>
       )}
     </section>

@@ -16,7 +16,8 @@ type AssistantCard = {
 };
 
 type WorkbenchAssistantPanelProps = {
-  language: "en" | "zh";
+  variant?: "sidebar" | "floating";
+  language: "en" | "zh" | "ja";
   mode: AssistantMode;
   onModeChange: (mode: AssistantMode) => void;
   currentStudyLabel: string;
@@ -48,6 +49,8 @@ const copy = {
     currentRuntime: "Runtime",
     currentJob: "Job",
     currentResult: "Result",
+    floatingWelcomeTitle: "Start with one simple question",
+    floatingWelcomeBody: "You do not need material intuition yet. Ask for a safe first sample, starter values, boundary conditions, or help reading the current result fields.",
     localEmpty: "The local assistant does not see an urgent action right now.",
     llmTitle: "Model Assist",
     llmHint: "Connect an OpenAI-compatible endpoint to get higher-level operational plans.",
@@ -85,6 +88,8 @@ const copy = {
     currentRuntime: "运行模式",
     currentJob: "当前任务",
     currentResult: "当前结果",
+    floatingWelcomeTitle: "先从一个简单问题开始",
+    floatingWelcomeBody: "你还不用先有材料背景。可以直接问我该开哪个样板、起步参数怎么填、支撑载荷怎么设，或者当前结果字段该怎么看。",
     localEmpty: "本地助手当前没有识别到紧急动作。",
     llmTitle: "模型辅助",
     llmHint: "接入 OpenAI 兼容接口后，可以拿到更高层的操作计划。",
@@ -113,9 +118,49 @@ const copy = {
     confirmationRequired: "需要确认",
     highRiskHint: "这个动作在真正执行前，还会额外弹出一次操作员确认。",
   },
+  ja: {
+    mode: "モード",
+    localMode: "ローカル",
+    llmMode: "LLM",
+    context: "コンテキスト",
+    currentStudy: "解析",
+    currentRuntime: "実行モード",
+    currentJob: "ジョブ",
+    currentResult: "結果",
+    floatingWelcomeTitle: "まずは一つだけ聞いてみましょう",
+    floatingWelcomeBody: "材料の直感がなくても大丈夫です。最初のサンプル、初期値、境界条件、結果の読み方をそのまま聞けます。",
+    localEmpty: "今すぐ必要なローカル支援アクションは見つかりませんでした。",
+    llmTitle: "モデル支援",
+    llmHint: "OpenAI 互換エンドポイントをつなぐと、より高レベルな作業プランを返せます。",
+    baseUrl: "Base URL",
+    apiKey: "API キー",
+    model: "モデル",
+    prompt: "依頼",
+    promptPlaceholder: "例: このモデルを安全に安定化して実行する次の手順を提案してください。",
+    requestPlan: "プラン生成",
+    requesting: "計画中...",
+    summary: "概要",
+    rationale: "理由",
+    suggestedActions: "提案アクション",
+    noSuggestedActions: "実行可能なアクションは返されませんでした。",
+    starterPrompts: "スタータープロンプト",
+    usePrompt: "使う",
+    runAction: "実行",
+    localEngine: "ルールエンジン",
+    llmEngine: "リモートモデル",
+    notConfigured: "LLM プランを要求する前に、エンドポイントとモデル名を入力してください。",
+    approveExecution: "このプランを確認し、実行を許可します。",
+    executePlan: "プランを実行",
+    transactions: "トランザクション",
+    noTransactions: "まだアシスタントのトランザクションはありません。",
+    rollback: "ロールバック",
+    confirmationRequired: "確認が必要",
+    highRiskHint: "このアクションは実行前に追加のオペレーター確認が入ります。",
+  },
 } as const;
 
 export function WorkbenchAssistantPanel({
+  variant = "sidebar",
   language,
   mode,
   onModeChange,
@@ -138,6 +183,7 @@ export function WorkbenchAssistantPanel({
   onRollbackTransaction,
 }: WorkbenchAssistantPanelProps) {
   const t = copy[language];
+  const floating = variant === "floating";
   const [prompt, setPrompt] = useState("");
   const [plan, setPlan] = useState<AssistantPlan | null>(null);
   const [pending, setPending] = useState(false);
@@ -164,22 +210,42 @@ export function WorkbenchAssistantPanel({
     }
   };
 
+  const handlePromptKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey) return;
+    event.preventDefault();
+    if (pending) return;
+    void requestPlan();
+  };
+
   return (
     <>
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{language === "zh" ? "助手" : "Assistant"}</h2>
-          <span>{mode === "local" ? t.localEngine : t.llmEngine}</span>
-        </div>
-        <div className="panel-tabs">
-          <button className={`panel-tab${mode === "local" ? " panel-tab--active" : ""}`} onClick={() => onModeChange("local")} type="button">
-            {t.localMode}
-          </button>
-          <button className={`panel-tab${mode === "llm" ? " panel-tab--active" : ""}`} onClick={() => onModeChange("llm")} type="button">
-            {t.llmMode}
-          </button>
-        </div>
-      </section>
+      {floating ? (
+        <section className="assistant-panel__modebar">
+          <div className="panel-tabs">
+            <button className={`panel-tab${mode === "local" ? " panel-tab--active" : ""}`} onClick={() => onModeChange("local")} type="button">
+              {t.localMode}
+            </button>
+            <button className={`panel-tab${mode === "llm" ? " panel-tab--active" : ""}`} onClick={() => onModeChange("llm")} type="button">
+              {t.llmMode}
+            </button>
+          </div>
+        </section>
+      ) : (
+        <section className="sidebar-card sidebar-card--compact">
+          <div className="card-head">
+            <h2>{language === "zh" ? "助手" : language === "ja" ? "アシスタント" : "Assistant"}</h2>
+            <span>{mode === "local" ? t.localEngine : t.llmEngine}</span>
+          </div>
+          <div className="panel-tabs">
+            <button className={`panel-tab${mode === "local" ? " panel-tab--active" : ""}`} onClick={() => onModeChange("local")} type="button">
+              {t.localMode}
+            </button>
+            <button className={`panel-tab${mode === "llm" ? " panel-tab--active" : ""}`} onClick={() => onModeChange("llm")} type="button">
+              {t.llmMode}
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
@@ -205,6 +271,16 @@ export function WorkbenchAssistantPanel({
           </div>
         </div>
       </section>
+
+      {floating ? (
+        <section className="sidebar-card sidebar-card--compact assistant-panel__welcome">
+          <div className="card-head">
+            <h2>{t.floatingWelcomeTitle}</h2>
+            <span>{currentStudyLabel}</span>
+          </div>
+          <p className="card-copy">{t.floatingWelcomeBody}</p>
+        </section>
+      ) : null}
 
       {mode === "local" ? (
         localCards.length === 0 ? (
@@ -271,7 +347,13 @@ export function WorkbenchAssistantPanel({
               </label>
               <label className="field-span-2">
                 <span>{t.prompt}</span>
-                <textarea rows={4} value={prompt} placeholder={t.promptPlaceholder} onChange={(event) => setPrompt(event.target.value)} />
+                <textarea
+                  rows={4}
+                  value={prompt}
+                  placeholder={t.promptPlaceholder}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  onKeyDown={handlePromptKeyDown}
+                />
               </label>
             </div>
             {error ? <p className="card-copy">{error}</p> : null}
@@ -309,7 +391,9 @@ export function WorkbenchAssistantPanel({
                           <strong>{entry.action}</strong>
                           <span>{highRisk ? t.confirmationRequired : t.llmMode}</span>
                         </div>
-                        {actionDefinition ? <p className="card-copy">{actionDefinition.summary[language]}</p> : null}
+                        {actionDefinition ? (
+                          <p className="card-copy">{language === "zh" ? actionDefinition.summary.zh : actionDefinition.summary.en}</p>
+                        ) : null}
                         <p className="card-copy">{entry.reason}</p>
                         {highRisk ? <p className="card-copy">{t.highRiskHint}</p> : null}
                         <div className="script-panel__payload">

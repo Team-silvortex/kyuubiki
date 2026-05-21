@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 
 import { WorkbenchProtocolAgentsCard } from "@/components/workbench/system/workbench-protocol-agents-card";
 import { WorkbenchSecurityAuditCard } from "@/components/workbench/system/workbench-security-audit-card";
@@ -33,6 +33,11 @@ type ProtocolAgentCardRow = {
 };
 
 type WorkbenchSystemRuntimePanelProps = {
+  stackTabLabel: string;
+  securityTabLabel: string;
+  agentsTabLabel: string;
+  auditTabLabel: string;
+  watchdogTabLabel: string;
   backendTitle: string;
   backendStatus: ReactNode;
   backendRows: MetricRow[];
@@ -106,6 +111,11 @@ type WorkbenchSystemRuntimePanelProps = {
 };
 
 export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimePanel({
+  stackTabLabel,
+  securityTabLabel,
+  agentsTabLabel,
+  auditTabLabel,
+  watchdogTabLabel,
   backendTitle,
   backendStatus,
   backendRows,
@@ -169,84 +179,113 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   watchdogStatus,
   watchdogRows,
 }: WorkbenchSystemRuntimePanelProps) {
+  const [page, setPage] = useState<"stack" | "security" | "agents" | "audit" | "watchdog">("stack");
+
   return (
     <>
-      <WorkbenchSystemMetricsCard title={backendTitle} status={backendStatus} rows={backendRows} />
-      <WorkbenchSystemMetricsCard
-        title={protocolsTitle}
-        status={protocolsStatus}
-        rows={protocolRows}
-        extra={
-          protocolMethods?.length ? (
-            <div className="protocol-chip-row">
-              {protocolMethods.map((method) => (
-                <span className="protocol-chip" key={method}>
-                  {method}
-                </span>
-              ))}
-            </div>
-          ) : null
-        }
-      />
-      <WorkbenchSystemMetricsCard
-        title={securityTitle}
-        status={securityStatus}
-        rows={securityRows}
-        footer={securityFooter}
-      />
-      <WorkbenchSecurityAuditCard
-        title={auditTitle}
-        countLabel={auditCountLabel}
-        emptyLabel={auditEmptyLabel}
-        sessionLabel={auditSessionLabel}
-        windowLabel={auditWindowLabel}
-        sourceLabel={auditSourceLabel}
-        riskLabel={auditRiskLabel}
-        statusLabel={auditStatusLabel}
-        actionLabel={auditActionLabel}
-        summaryTitle={auditSummaryTitle}
-        summaryRows={auditSummaryRows}
-        trendTitle={auditTrendTitle}
-        trendEmptyLabel={auditTrendEmptyLabel}
-        trendBars={auditTrendBars}
-        sourceStatusTitle={auditSourceStatusTitle}
-        sourceStatusFacets={auditSourceStatusFacets}
-        studyFacetTitle={auditStudyFacetTitle}
-        projectFacetTitle={auditProjectFacetTitle}
-        modelVersionFacetTitle={auditModelVersionFacetTitle}
-        facetEmptyLabel={auditFacetEmptyLabel}
-        studyFacets={auditStudyFacets}
-        projectFacets={auditProjectFacets}
-        modelVersionFacets={auditModelVersionFacets}
-        refreshLabel={auditRefreshLabel}
-        exportLabel={auditExportLabel}
-        exportCsvLabel={auditExportCsvLabel}
-        windowValue={auditWindowValue}
-        sourceValue={auditSourceValue}
-        riskValue={auditRiskValue}
-        statusValue={auditStatusValue}
-        actionValue={auditActionValue}
-        windowOptions={auditWindowOptions}
-        sourceOptions={auditSourceOptions}
-        riskOptions={auditRiskOptions}
-        statusOptions={auditStatusOptions}
-        onWindowChange={onAuditWindowChange}
-        onSourceChange={onAuditSourceChange}
-        onRiskChange={onAuditRiskChange}
-        onStatusChange={onAuditStatusChange}
-        onActionChange={onAuditActionChange}
-        onRefresh={onAuditRefresh}
-        onExport={onAuditExport}
-        onExportCsv={onAuditExportCsv}
-        entries={auditEntries}
-      />
-      <WorkbenchProtocolAgentsCard
-        title={protocolAgentsTitle}
-        countLabel={protocolAgentsCountLabel}
-        emptyLabel={protocolAgentsEmptyLabel}
-        agents={protocolAgents}
-      />
-      <WorkbenchSystemMetricsCard title={watchdogTitle} status={watchdogStatus} rows={watchdogRows} />
+      <div className="panel-tabs panel-tabs--wide">
+        <button className={`panel-tab${page === "stack" ? " panel-tab--active" : ""}`} onClick={() => setPage("stack")} type="button">
+          {stackTabLabel}
+        </button>
+        <button className={`panel-tab${page === "security" ? " panel-tab--active" : ""}`} onClick={() => setPage("security")} type="button">
+          {securityTabLabel}
+        </button>
+        <button className={`panel-tab${page === "agents" ? " panel-tab--active" : ""}`} onClick={() => setPage("agents")} type="button">
+          {agentsTabLabel}
+        </button>
+        <button className={`panel-tab${page === "audit" ? " panel-tab--active" : ""}`} onClick={() => setPage("audit")} type="button">
+          {auditTabLabel}
+        </button>
+        <button className={`panel-tab${page === "watchdog" ? " panel-tab--active" : ""}`} onClick={() => setPage("watchdog")} type="button">
+          {watchdogTabLabel}
+        </button>
+      </div>
+      {page === "stack" ? (
+        <>
+          <WorkbenchSystemMetricsCard title={backendTitle} status={backendStatus} rows={backendRows} />
+          <WorkbenchSystemMetricsCard
+            title={protocolsTitle}
+            status={protocolsStatus}
+            rows={protocolRows}
+            extra={
+              protocolMethods?.length ? (
+                <div className="protocol-chip-row">
+                  {protocolMethods.map((method) => (
+                    <span className="protocol-chip" key={method}>
+                      {method}
+                    </span>
+                  ))}
+                </div>
+              ) : null
+            }
+          />
+        </>
+      ) : null}
+      {page === "security" ? (
+        <WorkbenchSystemMetricsCard
+          title={securityTitle}
+          status={securityStatus}
+          rows={securityRows}
+          footer={securityFooter}
+        />
+      ) : null}
+      {page === "audit" ? (
+        <WorkbenchSecurityAuditCard
+          title={auditTitle}
+          countLabel={auditCountLabel}
+          emptyLabel={auditEmptyLabel}
+          sessionLabel={auditSessionLabel}
+          windowLabel={auditWindowLabel}
+          sourceLabel={auditSourceLabel}
+          riskLabel={auditRiskLabel}
+          statusLabel={auditStatusLabel}
+          actionLabel={auditActionLabel}
+          summaryTitle={auditSummaryTitle}
+          summaryRows={auditSummaryRows}
+          trendTitle={auditTrendTitle}
+          trendEmptyLabel={auditTrendEmptyLabel}
+          trendBars={auditTrendBars}
+          sourceStatusTitle={auditSourceStatusTitle}
+          sourceStatusFacets={auditSourceStatusFacets}
+          studyFacetTitle={auditStudyFacetTitle}
+          projectFacetTitle={auditProjectFacetTitle}
+          modelVersionFacetTitle={auditModelVersionFacetTitle}
+          facetEmptyLabel={auditFacetEmptyLabel}
+          studyFacets={auditStudyFacets}
+          projectFacets={auditProjectFacets}
+          modelVersionFacets={auditModelVersionFacets}
+          refreshLabel={auditRefreshLabel}
+          exportLabel={auditExportLabel}
+          exportCsvLabel={auditExportCsvLabel}
+          windowValue={auditWindowValue}
+          sourceValue={auditSourceValue}
+          riskValue={auditRiskValue}
+          statusValue={auditStatusValue}
+          actionValue={auditActionValue}
+          windowOptions={auditWindowOptions}
+          sourceOptions={auditSourceOptions}
+          riskOptions={auditRiskOptions}
+          statusOptions={auditStatusOptions}
+          onWindowChange={onAuditWindowChange}
+          onSourceChange={onAuditSourceChange}
+          onRiskChange={onAuditRiskChange}
+          onStatusChange={onAuditStatusChange}
+          onActionChange={onAuditActionChange}
+          onRefresh={onAuditRefresh}
+          onExport={onAuditExport}
+          onExportCsv={onAuditExportCsv}
+          entries={auditEntries}
+        />
+      ) : null}
+      {page === "agents" ? (
+        <WorkbenchProtocolAgentsCard
+          title={protocolAgentsTitle}
+          countLabel={protocolAgentsCountLabel}
+          emptyLabel={protocolAgentsEmptyLabel}
+          agents={protocolAgents}
+        />
+      ) : null}
+      {page === "watchdog" ? <WorkbenchSystemMetricsCard title={watchdogTitle} status={watchdogStatus} rows={watchdogRows} /> : null}
     </>
   );
 });

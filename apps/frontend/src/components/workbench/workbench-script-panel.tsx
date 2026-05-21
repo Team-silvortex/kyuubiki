@@ -181,6 +181,78 @@ const copy = {
       macro: "宏动作",
     },
   },
+  ja: {
+    title: "WASM Python",
+    subtitle: "Pyodide ブリッジとアクションカタログを使って、フロントエンド作業を自動化します。",
+    runtime: "ランタイム",
+    loading: "読込中",
+    ready: "準備完了",
+    idle: "待機",
+    running: "実行中",
+    error: "エラー",
+    firstRun: "初回実行では Pyodide ランタイムをブラウザキャッシュへダウンロードします。",
+    loadRuntime: "ランタイムを読み込む",
+    resetScript: "テンプレートに戻す",
+    runScript: "スクリプトを実行",
+    clearOutput: "出力をクリア",
+    startRecording: "記録開始",
+    stopRecording: "記録停止",
+    recordingActive: "手動 UI 操作を DSL イベントとして記録中です。",
+    exportMacroJson: "マクロ JSON を書き出す",
+    importMacroJson: "マクロ JSON を読み込む",
+    macroJsonExported: "現在の記録マクロを JSON で書き出しました。",
+    macroJsonImported: "マクロ JSON 下書きをエディタへ読み込みました。",
+    projectPresets: "プロジェクトプリセット",
+    presetName: "プリセット名",
+    presetNamePlaceholder: "現在の結果コンテキストを確認",
+    savePreset: "プリセット保存",
+    insertPreset: "プリセット挿入",
+    exportPresetJson: "プリセット JSON 書き出し",
+    deletePreset: "プリセット削除",
+    noProjectSelected: "プリセットを保存するには先にプロジェクトを選択してください。",
+    noPresetDraft: "先にマクロ下書きを作成または読み込んでください。",
+    noPresets: "このプロジェクトにはまだ保存済みプリセットがありません。",
+    presetSaved: "現在のマクロ下書きをプロジェクトプリセットに保存しました。",
+    presetDeleted: "選択したプリセットを削除しました。",
+    presetInserted: "選択したプリセットをエディタに挿入しました。",
+    snapshot: "スナップショット",
+    actionCatalog: "アクションカタログ",
+    macroCatalog: "マクロカタログ",
+    editor: "Python スクリプト",
+    output: "出力",
+    noOutput: "スクリプト出力がここに表示されます。",
+    lineCount: "行数",
+    stateKeys: "状態キー",
+    actionCount: "アクション数",
+    payload: "ペイロード",
+    actionLog: "アクションログ",
+    noActionLog: "まだスクリプトアクションはありません。",
+    insertMacroDraft: "マクロ下書きを挿入",
+    macroDraftInserted: "最近のアクションログからマクロ下書きを挿入しました。",
+    noMacroDraftSource: "先にいくつかのアクションを実行すると、下書きを組み立てられます。",
+    actionSource: "ソース",
+    actionPayload: "ペイロード",
+    actionResult: "結果",
+    actionNote: "メモ",
+    riskNormal: "通常",
+    riskSensitive: "注意",
+    riskDestructive: "高リスク",
+    confirmationRequired: "実行前に確認が必要です。",
+    categories: {
+      navigation: "ナビゲーション",
+      settings: "設定",
+      runtime: "ランタイム",
+      project: "プロジェクト",
+      model: "モデル",
+      state: "状態",
+      selection: "選択",
+      job: "ジョブ",
+      history: "履歴",
+      viewport: "ビュー",
+      data: "データ",
+      macro: "マクロ",
+    },
+  },
 } as const;
 
 function safeStorageGet() {
@@ -636,7 +708,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
                       : ` · ${t.riskNormal}`}
                 </span>
               </div>
-              <p className="card-copy">{action.summary[language]}</p>
+              <p className="card-copy">{language === "zh" ? action.summary.zh : action.summary.en}</p>
               {isWorkbenchScriptActionHighRisk(action.id) ? <p className="card-copy">{t.confirmationRequired}</p> : null}
               <div className="script-panel__payload">
                 <span>{t.payload}</span>
@@ -644,7 +716,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
               </div>
               <div className="button-row">
                 <button className="ghost-button ghost-button--compact" onClick={() => insertAction(action)} type="button">
-                  {language === "zh" ? "插入" : "Insert"}
+                  {language === "zh" ? "插入" : language === "ja" ? "挿入" : "Insert"}
                 </button>
               </div>
             </article>
@@ -671,14 +743,14 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
                       : ` · ${t.riskNormal}`}
                 </span>
               </div>
-              <p className="card-copy">{macro.summary[language]}</p>
+              <p className="card-copy">{language === "zh" ? macro.summary.zh : macro.summary.en}</p>
               {macro.requiresConfirmation ? <p className="card-copy">{t.confirmationRequired}</p> : null}
               <div className="script-panel__payload">
                 <span>{t.payload}</span>
                 <code>{stringifyPayload(macro.payloadExample)}</code>
               </div>
               <div className="script-panel__payload">
-                <span>{language === "zh" ? "步骤" : "Steps"}</span>
+                <span>{language === "zh" ? "步骤" : language === "ja" ? "ステップ" : "Steps"}</span>
                 <code>{macro.steps.map((step) => step.action).join(" -> ")}</code>
               </div>
               {macro.payloadExample ? (
@@ -690,7 +762,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
               ) : null}
               <div className="button-row">
                 <button className="ghost-button ghost-button--compact" onClick={() => insertMacro(macro.id, macro.payloadExample)} type="button">
-                  {language === "zh" ? "插入" : "Insert"}
+                  {language === "zh" ? "插入" : language === "ja" ? "挿入" : "Insert"}
                 </button>
               </div>
             </article>

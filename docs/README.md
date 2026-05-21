@@ -81,6 +81,9 @@ If you want the `v1.x` quality direction first:
 - `frontend-implementation.md`
   Component boundaries, state placement, naming, and performance rules for the
   workbench codebase.
+- `language-packs.md`
+  Local-first language-pack format, override behavior, and the future remote
+  delivery shape for Workbench UI translation packs.
 
 ### Operate and deploy
 

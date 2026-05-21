@@ -41,6 +41,9 @@ true across later `1.x` releases too.
    Accuracy roadmap, benchmark targets, and verification priorities.
 4. [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
+5. [language-packs.md](/Users/Shared/chroot/dev/kyuubiki/docs/language-packs.md)
+   Local-first multilingual extension path for the Workbench UI, with a stable
+   schema ready before remote delivery lands.
 
 ## Historical handoff
 

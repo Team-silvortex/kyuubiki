@@ -11,6 +11,8 @@ README.
   standardized `.kyuubiki` archive manifests, including asset catalogs and meta
   sidecars plus guid reference graphs
 - `agent-manifest.schema.json` is for local/distributed solver node manifests
+- `language-pack.schema.json` is for Workbench-local and future remotely
+  downloadable UI language packs
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench

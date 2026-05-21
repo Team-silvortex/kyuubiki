@@ -6,6 +6,7 @@ import type { StudyDomainOption, StudyKindOptionGroup } from "@/lib/workbench/vi
 
 type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type StudyPanelTab = "summary" | "controls";
+type ControlsPage = "setup" | "review";
 
 type StudySidebarRow = {
   label: string;
@@ -30,6 +31,8 @@ type WorkbenchStudySidebarProps = {
   controlsRows: StudySidebarRow[];
   controlsContent?: ReactNode;
   controlsTitle: string;
+  controlsSetupPageLabel: string;
+  controlsReviewPageLabel: string;
   readyLabel: string;
   busyLabel: string;
   isPending: boolean;
@@ -56,6 +59,8 @@ export function WorkbenchStudySidebar({
   controlsRows,
   controlsContent,
   controlsTitle,
+  controlsSetupPageLabel,
+  controlsReviewPageLabel,
   readyLabel,
   busyLabel,
   isPending,
@@ -64,6 +69,7 @@ export function WorkbenchStudySidebar({
   onRun,
 }: WorkbenchStudySidebarProps) {
   const [selectedDomain, setSelectedDomain] = useState<string>("mechanical");
+  const [controlsPage, setControlsPage] = useState<ControlsPage>("setup");
   useEffect(() => {
     const matchingGroup = studyKindOptionGroups.find((group) => group.options.some((option) => option.value === studyKind));
     if (matchingGroup && matchingGroup.domainKey !== selectedDomain) {
@@ -149,8 +155,24 @@ export function WorkbenchStudySidebar({
             <h2>{controlsTitle}</h2>
             <span>{isPending ? busyLabel : readyLabel}</span>
           </div>
-          {controlsContent ? controlsContent : null}
-          {controlsRows.length > 0 ? (
+          <div className="panel-tabs panel-tabs--wide">
+            <button
+              className={`panel-tab${controlsPage === "setup" ? " panel-tab--active" : ""}`}
+              onClick={() => setControlsPage("setup")}
+              type="button"
+            >
+              {controlsSetupPageLabel}
+            </button>
+            <button
+              className={`panel-tab${controlsPage === "review" ? " panel-tab--active" : ""}`}
+              onClick={() => setControlsPage("review")}
+              type="button"
+            >
+              {controlsReviewPageLabel}
+            </button>
+          </div>
+          {controlsPage === "setup" ? (controlsContent ? controlsContent : null) : null}
+          {controlsPage === "review" && controlsRows.length > 0 ? (
             <div className="sidebar-list">
               {controlsRows.map((row) => (
                 <div key={row.label}>

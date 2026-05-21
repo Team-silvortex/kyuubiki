@@ -43,11 +43,16 @@ import {
   formatMilliseconds,
   formatTime,
   parseDirectMeshEndpoints,
+  readWorkbenchLanguagePacks,
+  persistWorkbenchLanguagePacks,
   safeStorageGet,
   scientific,
   serializeCurrentModel,
   serializeResultCsv,
   toAxialInput,
+  mergeLanguagePack,
+  WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
+  type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
 import {
   buildWorkbenchSnapshot,
@@ -324,7 +329,7 @@ import {
   updateResultRecord,
 } from "@/lib/api";
 
-type Language = "en" | "zh";
+type Language = "en" | "zh" | "ja";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
@@ -824,8 +829,7 @@ const defaultThermalFrame2d: ThermalFrame2dJobInput = {
   ],
 };
 
-const copy = {
-  en: {
+const copyEn = {
     brand: brand.productName,
     shortTitle: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
     roleLabel: brand.workbenchRoleLabel ?? "Analysis shell",
@@ -875,6 +879,12 @@ const copy = {
     },
     importModel: "Import model",
     importHint: "Load a JSON model for 1D or 2D studies.",
+    sampleCatalogPage: "Catalog",
+    sampleImportPage: "Import",
+    projectManagePage: "Manage",
+    projectExchangePage: "Exchange",
+    modelSavedPage: "Saved",
+    modelVersionsPage: "Versions",
     studyDomain: "Physics domain",
     noDomainStudies: "No studies are published in this domain yet.",
     axialSample: "Open 1D sample",
@@ -916,9 +926,26 @@ const copy = {
     editMemberAction: "Edited member properties",
     overview: "Overview",
     controls: "Controls",
+    controlsSetupPage: "Setup",
+    controlsReviewPage: "Review",
+    studyTypeLabel: "Study Type",
+    modelStudioPage: "Studio",
+    modelMaterialsPage: "Materials",
+    modelGeneratePage: "Generate",
     settings: "Settings",
     scripts: "Scripts",
     assistant: "Assistant",
+    config: "Config",
+    runtime: "Runtime",
+    data: "Data",
+    packs: "Language packs",
+    workspace: "Workspace",
+    routing: "Routing",
+    access: "Access",
+    stack: "Stack",
+    security: "Security",
+    agents: "Agents",
+    audit: "Audit",
     assistantSummary: "Context",
     assistantStatusReady: "Ready",
     assistantCurrentStudy: "Study",
@@ -953,6 +980,11 @@ const copy = {
     assistantPromptMaterial: "Help me choose starter material values",
     assistantPromptBoundary: "Help me choose supports and loads",
     assistantPromptResults: "Help me read these result fields",
+    assistantLauncherHint: "Need a guide?",
+    assistantFloatingTitle: "Ask the workbench",
+    assistantFloatingSubtitle: "Keep the main workspace clear, then pull a guide in only when you need one.",
+    assistantOpen: "Open assistant",
+    assistantClose: "Close assistant",
     backend: "Backend",
     protocols: "Protocols",
     controlPlaneProtocol: "Control plane",
@@ -985,6 +1017,20 @@ const copy = {
     ui: "Next.js UI",
     theme: "Theme",
     language: "Language",
+    languagePacksTitle: "Installed language packs",
+    languagePacksHint: "Import local JSON packs now, and keep this page ready for future remote pack delivery.",
+    languagePacksEmptyLabel: "No custom language packs are installed yet.",
+    languagePackName: "Name",
+    languagePackVersion: "Version",
+    languagePackSourceImported: "Imported",
+    languagePackSourceDownloaded: "Downloaded",
+    languagePackDownloadTemplate: "Download template",
+    languagePackExportInstalled: "Export installed pack",
+    languagePackImport: "Import pack",
+    languagePackRemove: "Remove",
+    languagePackCatalogTitle: "Future catalog",
+    languagePackCatalogHint: "These slots stay visible now so future remote pack download can plug into the same surface.",
+    languagePackCatalogAction: "Coming soon",
     frontendMode: "Frontend mode",
     directMeshEndpoints: "Direct mesh endpoints",
     directMeshEndpointsHelp: "Comma or newline separated host:port agents for the LAN mesh GUI path.",
@@ -1001,8 +1047,45 @@ const copy = {
     immersiveModeEnabled: "Immersive viewport enabled.",
     immersiveModeDisabled: "Immersive viewport closed.",
     browserLimitsNote: "Browser extensions cannot be fully disabled from the page, but the viewport can reduce selection and copy interactions.",
+    controlPlaneTokenHelp:
+      "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests.",
+    controlPlaneTokenPlaceholder: "Optional control-plane token",
+    clusterTokenHelp:
+      "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty.",
+    clusterTokenPlaceholder: "Optional cluster-only token",
+    directMeshTokenHelp:
+      "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests.",
+    directMeshTokenPlaceholder: "Optional direct-mesh token",
+    exportDatabase: "Export database snapshot",
+    runtimeSecurityFooter:
+      "Runtime security state comes from /api/health; frontend tokens stay only in the current browser session.",
+    securityAudit: "Security audit",
+    auditSessionLabel:
+      "Shows the control-plane persisted automation and assistant event stream, including Workbench assistant, scripting, and Hub assistant actions.",
+    auditWindow: "Window",
+    auditSource: "Source",
+    auditRisk: "Risk",
+    auditStatus: "Status",
+    auditAction: "Action",
+    auditSummaryTitle: "Event summary",
+    auditTrendTitle: "Event trend",
+    auditTrendEmptyLabel: "No trend data is available for the current window.",
+    auditSourceStatusTitle: "Source × status",
+    auditStudyFacetTitle: "Study facets",
+    auditProjectFacetTitle: "Project facets",
+    auditModelVersionFacetTitle: "Version facets",
+    auditFacetEmptyLabel: "No facets are available for the current window.",
+    auditRefreshLabel: "Refresh events",
+    auditExportLabel: "Export bundle",
+    auditExportCsvLabel: "Export CSV",
+    auditWindowOptions: { all: "All time", h1: "Last 1 hour", h24: "Last 24 hours", d7: "Last 7 days", d30: "Last 30 days" },
+    auditSourceOptions: { all: "All", assistant: "Assistant", hubAssistant: "Hub assistant", script: "Script" },
+    auditRiskOptions: { all: "All", low: "Low", sensitive: "Sensitive", high: "High", destructive: "Destructive" },
+    auditStatusOptions: { all: "All", prompted: "Prompted", confirmed: "Confirmed", cancelled: "Cancelled", completed: "Completed", failed: "Failed" },
     adminJobs: "Jobs",
     adminResults: "Results",
+    adminBrowsePage: "Browse",
+    adminEditPage: "Edit",
     selectRecord: "Select a record to inspect or edit.",
     adminMessage: "Message",
     adminProjectId: "Project ID",
@@ -1058,7 +1141,7 @@ const copy = {
     immersiveEmptyModels: "No saved models in this project yet.",
     immersiveEmptyJobs: "No jobs yet.",
     themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
-    languages: { en: "English", zh: "中文" },
+    languages: { en: "English", zh: "中文", ja: "日本語" },
     frontendModes: {
       orchestrated_gui: "Orchestrated GUI",
       direct_mesh_gui: "Direct mesh GUI",
@@ -1379,8 +1462,9 @@ const copy = {
     spaceMemberDeleted: "3D member deleted.",
     switchedTo2dStudio: "Switched to the 2D workbench.",
     switchedTo3dStudio: "Switched to the 3D space studio.",
-  },
-  zh: {
+  };
+
+const copyZh = {
     brand: brand.productName,
     shortTitle: brand.workbenchShortName ?? "Workbench",
     roleLabel: "分析工作台",
@@ -1430,6 +1514,12 @@ const copy = {
     },
     importModel: "导入模型",
     importHint: "导入 1D 或 2D 研究 JSON 模型。",
+    sampleCatalogPage: "目录",
+    sampleImportPage: "导入",
+    projectManagePage: "管理",
+    projectExchangePage: "交换",
+    modelSavedPage: "已保存",
+    modelVersionsPage: "版本",
     studyDomain: "物理类别",
     noDomainStudies: "这个大类里的研究还没正式开放。",
     axialSample: "打开 1D 样例",
@@ -1471,9 +1561,26 @@ const copy = {
     editMemberAction: "编辑杆件属性",
     overview: "概览",
     controls: "控制",
+    controlsSetupPage: "设置",
+    controlsReviewPage: "复查",
+    studyTypeLabel: "研究类型",
+    modelStudioPage: "工作区",
+    modelMaterialsPage: "材料",
+    modelGeneratePage: "生成",
     settings: "设置",
     scripts: "脚本",
     assistant: "助手",
+    config: "配置",
+    runtime: "运行时",
+    data: "数据",
+    packs: "语言包",
+    workspace: "工作区",
+    routing: "路由",
+    access: "访问",
+    stack: "栈",
+    security: "安全",
+    agents: "代理",
+    audit: "审计",
     assistantSummary: "上下文",
     assistantStatusReady: "就绪",
     assistantCurrentStudy: "当前研究",
@@ -1508,6 +1615,11 @@ const copy = {
     assistantPromptMaterial: "帮我选一套起步材料参数",
     assistantPromptBoundary: "帮我判断支撑和载荷怎么设",
     assistantPromptResults: "帮我解释这些结果字段怎么读",
+    assistantLauncherHint: "需要带路吗？",
+    assistantFloatingTitle: "问问工作台",
+    assistantFloatingSubtitle: "先把主工作面留干净，需要时再把助手拉出来。",
+    assistantOpen: "打开助手",
+    assistantClose: "关闭助手",
     backend: "后端",
     protocols: "协议",
     controlPlaneProtocol: "调度面协议",
@@ -1540,6 +1652,20 @@ const copy = {
     ui: "Next.js 界面",
     theme: "主题",
     language: "语言",
+    languagePacksTitle: "已安装语言包",
+    languagePacksHint: "现在先支持导入本地 JSON 语言包，这个页面也会为将来的远程下载入口保留位置。",
+    languagePacksEmptyLabel: "当前还没有安装自定义语言包。",
+    languagePackName: "名称",
+    languagePackVersion: "版本",
+    languagePackSourceImported: "本地导入",
+    languagePackSourceDownloaded: "远程下载",
+    languagePackDownloadTemplate: "下载模板",
+    languagePackExportInstalled: "导出当前语言包",
+    languagePackImport: "导入语言包",
+    languagePackRemove: "移除",
+    languagePackCatalogTitle: "未来目录",
+    languagePackCatalogHint: "这些槽位现在先作为预留，后面接远程语言包下载时会复用同一块界面。",
+    languagePackCatalogAction: "即将支持",
     frontendMode: "前端模式",
     directMeshEndpoints: "直连集群节点",
     directMeshEndpointsHelp: "用逗号或换行分隔的 host:port，供局域网直连 mesh GUI 使用。",
@@ -1556,8 +1682,40 @@ const copy = {
     immersiveModeEnabled: "已进入沉浸式视图区。",
     immersiveModeDisabled: "已退出沉浸式视图区。",
     browserLimitsNote: "网页无法彻底关闭浏览器插件，但可以显著减少选择文本和复制类交互。",
+    controlPlaneTokenHelp: "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。",
+    controlPlaneTokenPlaceholder: "可选的控制面令牌",
+    clusterTokenHelp: "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。",
+    clusterTokenPlaceholder: "可选的集群专用令牌",
+    directMeshTokenHelp: "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。",
+    directMeshTokenPlaceholder: "可选的直连网格令牌",
+    exportDatabase: "导出数据库快照",
+    runtimeSecurityFooter: "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器会话里。",
+    securityAudit: "安全审计",
+    auditSessionLabel: "这里展示控制面持久化的自动化与助手事件流，包括 Workbench 助手、脚本和 Hub 助手的高风险动作。",
+    auditWindow: "时间窗",
+    auditSource: "来源",
+    auditRisk: "风险",
+    auditStatus: "状态",
+    auditAction: "动作",
+    auditSummaryTitle: "事件摘要",
+    auditTrendTitle: "时间趋势",
+    auditTrendEmptyLabel: "当前窗口下还没有趋势数据。",
+    auditSourceStatusTitle: "来源 × 状态",
+    auditStudyFacetTitle: "Study 分面",
+    auditProjectFacetTitle: "Project 分面",
+    auditModelVersionFacetTitle: "Version 分面",
+    auditFacetEmptyLabel: "当前窗口下没有可用分面。",
+    auditRefreshLabel: "刷新事件",
+    auditExportLabel: "导出分析包",
+    auditExportCsvLabel: "导出 CSV",
+    auditWindowOptions: { all: "全部时间", h1: "最近 1 小时", h24: "最近 24 小时", d7: "最近 7 天", d30: "最近 30 天" },
+    auditSourceOptions: { all: "全部", assistant: "助手", hubAssistant: "Hub 助手", script: "脚本" },
+    auditRiskOptions: { all: "全部", low: "低", sensitive: "敏感", high: "高", destructive: "高风险" },
+    auditStatusOptions: { all: "全部", prompted: "待确认", confirmed: "已确认", cancelled: "已取消", completed: "已执行", failed: "失败" },
     adminJobs: "任务",
     adminResults: "结果",
+    adminBrowsePage: "浏览",
+    adminEditPage: "编辑",
     selectRecord: "选择一条记录后即可查看或编辑。",
     adminMessage: "消息",
     adminProjectId: "项目 ID",
@@ -1613,7 +1771,7 @@ const copy = {
     immersiveEmptyModels: "当前项目还没有保存模型。",
     immersiveEmptyJobs: "当前还没有任务记录。",
     themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
-    languages: { en: "English", zh: "中文" },
+    languages: { en: "English", zh: "中文", ja: "日本語" },
     frontendModes: {
       orchestrated_gui: "中心调度 GUI",
       direct_mesh_gui: "直连 Mesh GUI",
@@ -1927,8 +2085,152 @@ const copy = {
     spaceMemberDeleted: "三维杆件已删除。",
     switchedTo2dStudio: "已切换到二维工作区。",
     switchedTo3dStudio: "已切换到三维空间工作区。",
+  };
+
+const copy = {
+  en: copyEn,
+  zh: copyZh,
+  ja: {
+    ...copyEn,
+    roleLabel: "解析シェル",
+    title: "構造解析ワークベンチ",
+    subtitle: "モデリング、オーケストレーション、結果レビューを一つにまとめた作業面です。",
+    rail: { study: "解析", model: "モデル", library: "履歴", system: "システム" },
+    sections: { study: "解析設定", model: "モデルスタジオ", library: "ジョブ履歴", system: "システム" },
+    studyFamilies: {
+      axialAndSprings: "軸・ばね",
+      beamsAndFrames: "梁・フレーム",
+      trusses: "トラス",
+      planes: "平面要素",
+    },
+    studyDomains: {
+      mechanical: "力学",
+      thermal: "熱",
+      thermoMechanical: "熱応力",
+    },
+    importModel: "モデルを読み込む",
+    importHint: "1D / 2D 解析用の JSON モデルを読み込みます。",
+    sampleCatalogPage: "カタログ",
+    sampleImportPage: "インポート",
+    projectManagePage: "管理",
+    projectExchangePage: "入出力",
+    modelSavedPage: "保存済み",
+    modelVersionsPage: "バージョン",
+    studyDomain: "物理ドメイン",
+    noDomainStudies: "このドメインにはまだ公開済み study がありません。",
+    overview: "概要",
+    controls: "設定",
+    controlsSetupPage: "編集",
+    controlsReviewPage: "確認",
+    studyTypeLabel: "解析タイプ",
+    modelStudioPage: "スタジオ",
+    modelMaterialsPage: "材料",
+    modelGeneratePage: "生成",
+    settings: "設定",
+    scripts: "スクリプト",
+    assistant: "アシスタント",
+    config: "構成",
+    runtime: "ランタイム",
+    data: "データ",
+    packs: "言語パック",
+    workspace: "ワークスペース",
+    routing: "ルーティング",
+    access: "アクセス",
+    stack: "スタック",
+    security: "セキュリティ",
+    agents: "エージェント",
+    audit: "監査",
+    backend: "バックエンド",
+    protocols: "プロトコル",
+    dataAdmin: "データ管理",
+    languagePacksTitle: "インストール済み言語パック",
+    languagePacksHint: "今はローカル JSON パックの取り込みを先にサポートし、この画面を将来のリモート配布入口として残しておきます。",
+    languagePacksEmptyLabel: "まだカスタム言語パックはありません。",
+    languagePackName: "名称",
+    languagePackVersion: "バージョン",
+    languagePackSourceImported: "ローカル取込",
+    languagePackSourceDownloaded: "リモート取得",
+    languagePackDownloadTemplate: "テンプレートを出力",
+    languagePackExportInstalled: "現在の言語パックを出力",
+    languagePackImport: "言語パックを取込",
+    languagePackRemove: "削除",
+    languagePackCatalogTitle: "将来のカタログ",
+    languagePackCatalogHint: "この欄は将来のリモート言語パック配布を同じ画面で扱えるように先に用意しています。",
+    languagePackCatalogAction: "今後対応",
+    adminJobs: "ジョブ",
+    adminResults: "結果",
+    adminBrowsePage: "参照",
+    adminEditPage: "編集",
+    themes: { linen: "リネン", marine: "マリン", graphite: "グラファイト" },
+    languages: { en: "English", zh: "中文", ja: "日本語" },
+    frontendModes: {
+      orchestrated_gui: "オーケストレーション GUI",
+      direct_mesh_gui: "ダイレクトメッシュ GUI",
+    },
+    directMeshStrategies: {
+      healthiest: "最も健全なノード",
+      first_reachable: "最初に到達可能なノード",
+    },
+    tabs: { summary: "概要", controls: "設定", tools: "ツール", tree: "ツリー", samples: "サンプル", projects: "プロジェクト", models: "モデル", jobs: "ジョブ" },
+    ready: "準備完了",
+    busy: "処理中",
+    run: "解析を実行",
+    running: "実行中...",
+    historyEmpty: "まだジョブはありません。",
+    refresh: "更新",
+    online: "オンライン",
+    offline: "オフライン",
+    controlPlaneTokenHelp:
+      "トークン保護された control-plane 配備向けです。/api/v1 リクエストに x-kyuubiki-token として送信されます。",
+    controlPlaneTokenPlaceholder: "任意の control-plane トークン",
+    clusterTokenHelp:
+      "agent の登録・heartbeat・削除などの cluster ルートに使います。未入力なら control-plane token を使います。",
+    clusterTokenPlaceholder: "任意の cluster 専用トークン",
+    directMeshTokenHelp:
+      "トークン保護された direct mesh ルート向けです。/api/direct-mesh リクエストに送信されます。",
+    directMeshTokenPlaceholder: "任意の direct-mesh トークン",
+    exportDatabase: "データベーススナップショットを出力",
+    runtimeSecurityFooter:
+      "実行中のセキュリティ状態は /api/health から取得され、フロントエンドのトークンは現在のブラウザセッションにのみ保持されます。",
+    securityAudit: "セキュリティ監査",
+    auditSessionLabel:
+      "Workbench アシスタント、スクリプト、Hub アシスタントを含む control-plane 永続化イベント列を表示します。",
+    auditWindow: "期間",
+    auditSource: "ソース",
+    auditRisk: "リスク",
+    auditStatus: "状態",
+    auditAction: "操作",
+    auditSummaryTitle: "イベント要約",
+    auditTrendTitle: "時間推移",
+    auditTrendEmptyLabel: "現在の期間ではトレンドデータがありません。",
+    auditSourceStatusTitle: "ソース × 状態",
+    auditStudyFacetTitle: "Study ファセット",
+    auditProjectFacetTitle: "Project ファセット",
+    auditModelVersionFacetTitle: "Version ファセット",
+    auditFacetEmptyLabel: "現在の期間では利用できるファセットがありません。",
+    auditRefreshLabel: "イベントを更新",
+    auditExportLabel: "分析バンドルを出力",
+    auditExportCsvLabel: "CSV を出力",
+    auditWindowOptions: { all: "全期間", h1: "直近 1 時間", h24: "直近 24 時間", d7: "直近 7 日", d30: "直近 30 日" },
+    auditSourceOptions: { all: "すべて", assistant: "アシスタント", hubAssistant: "Hub アシスタント", script: "スクリプト" },
+    auditRiskOptions: { all: "すべて", low: "低", sensitive: "機微", high: "高", destructive: "破壊的" },
+    auditStatusOptions: { all: "すべて", prompted: "確認待ち", confirmed: "確認済み", cancelled: "取消済み", completed: "完了", failed: "失敗" },
+    assistantLauncherHint: "ガイドが必要ですか？",
+    assistantFloatingTitle: "ワークベンチに質問",
+    assistantFloatingSubtitle: "作業面は軽く保ち、必要なときだけガイドを開きます。",
+    assistantOpen: "アシスタントを開く",
+    assistantClose: "アシスタントを閉じる",
+    modelName: "モデル",
+    material: "材料",
+    load: "荷重",
+    support: "拘束",
+    viewport: "ビュー",
+    report: "レポート",
+    messages: "メッセージ",
   },
 } as const;
+
+type WorkbenchCopy = typeof copyEn;
 
 function humanizeSolverFailure(message: string | null | undefined, languageCopy: (typeof copy)[Language]) {
   if (!message) return null;
@@ -2086,7 +2388,8 @@ function localMaterialLabel(value: string, language: Language): string {
     },
   } as const;
 
-  return labels[language][value as keyof (typeof labels)[Language]] ?? labels[language].custom;
+  const localized = language === "zh" ? labels.zh : labels.en;
+  return localized[value as keyof typeof localized] ?? localized.custom;
 }
 
 const MATERIAL_COLOR_STOPS = [
@@ -3993,6 +4296,7 @@ export function Workbench() {
   const [loadedModelName, setLoadedModelName] = useState<string>(copy.en.defaultModel);
   const [message, setMessage] = useState<string>(copy.en.initialLoaded);
   const [language, setLanguage] = useState<Language>("en");
+  const [languagePacks, setLanguagePacks] = useState<WorkbenchLanguagePack[]>([]);
   const [theme, setTheme] = useState<Theme>("linen");
   const [frontendRuntimeMode, setFrontendRuntimeMode] = useState<FrontendRuntimeMode>("orchestrated_gui");
   const [directMeshEndpointsText, setDirectMeshEndpointsText] = useState("127.0.0.1:5001,127.0.0.1:5002");
@@ -4004,6 +4308,7 @@ export function Workbench() {
   const [assistantApiBaseUrl, setAssistantApiBaseUrl] = useState("https://api.openai.com/v1");
   const [assistantApiKey, setAssistantApiKey] = useState("");
   const [assistantModel, setAssistantModel] = useState("gpt-4.1-mini");
+  const [assistantWindowOpen, setAssistantWindowOpen] = useState(false);
   const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);
   const [showShortcutHints, setShowShortcutHints] = useState(true);
   const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
@@ -4076,6 +4381,13 @@ export function Workbench() {
   const [securityEventActionFilter, setSecurityEventActionFilter] = useState("");
   const [adminJobMessage, setAdminJobMessage] = useState("");
   const [adminJobProjectId, setAdminJobProjectId] = useState("");
+
+  useEffect(() => {
+    if (systemPanelTab === "assistant") {
+      setAssistantWindowOpen(true);
+      setSystemPanelTab("config");
+    }
+  }, [systemPanelTab]);
   const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
   const [adminJobCaseId, setAdminJobCaseId] = useState("");
   const [adminResultDraft, setAdminResultDraft] = useState("{}");
@@ -4098,7 +4410,21 @@ export function Workbench() {
   const securityEventsRefreshSeqRef = useRef(0);
   const versionsRefreshSeqRef = useRef(0);
   const jobPollTokenRef = useRef(0);
-  const t = copy[language];
+  const activeLanguagePack = useMemo(
+    () => languagePacks.find((pack) => pack.language === language) ?? null,
+    [language, languagePacks],
+  );
+  const t = useMemo(
+    () => mergeLanguagePack<WorkbenchCopy>(copy[language], activeLanguagePack?.overrides ?? null),
+    [activeLanguagePack?.overrides, language],
+  );
+  const languagePackCatalogRows = useMemo(
+    () => [
+      { id: "fr-preview", language: "fr", name: "French preview", status: language === "zh" ? "预留远程下载入口" : language === "ja" ? "将来のリモート配布枠" : "Reserved for future remote delivery" },
+      { id: "de-preview", language: "de", name: "German preview", status: language === "zh" ? "预留远程下载入口" : language === "ja" ? "将来のリモート配布枠" : "Reserved for future remote delivery" },
+    ],
+    [language],
+  );
 
   useEffect(() => {
     setResultWindowOffset(0);
@@ -4325,11 +4651,12 @@ export function Workbench() {
     if (typeof stored.assistantModel === "string" && stored.assistantModel.trim()) {
       setAssistantModel(stored.assistantModel);
     }
-    if (stored.language === "en" || stored.language === "zh") {
+    if (stored.language === "en" || stored.language === "zh" || stored.language === "ja") {
       setLanguage(stored.language);
       setLoadedModelName(copy[stored.language].defaultModel);
       setMessage(copy[stored.language].initialLoaded);
     }
+    setLanguagePacks(readWorkbenchLanguagePacks());
     setSecurityAuditLog(readSecurityAuditLog());
   }, []);
 
@@ -4381,6 +4708,10 @@ export function Workbench() {
       });
     }
   }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode, controlPlaneApiToken, clusterApiToken, directMeshApiToken, assistantMode, assistantApiBaseUrl, assistantApiKey, assistantModel]);
+
+  useEffect(() => {
+    persistWorkbenchLanguagePacks(languagePacks);
+  }, [languagePacks]);
 
   useEffect(() => {
     return () => {
@@ -5465,9 +5796,124 @@ export function Workbench() {
   const handleLanguageChange = (nextLanguage: Language) => {
     setLanguage(nextLanguage);
     setLoadedModelName((current) =>
-      current === copy.en.defaultModel || current === copy.zh.defaultModel
+      current === copy.en.defaultModel || current === copy.zh.defaultModel || current === copy.ja.defaultModel
         ? copy[nextLanguage].defaultModel
         : current,
+    );
+  };
+
+  const triggerJsonDownload = (filename: string, payload: Record<string, unknown>) => {
+    if (typeof window === "undefined") return;
+    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadLanguagePackTemplate = () => {
+    triggerJsonDownload(`workbench-language-pack-${language}.json`, {
+      schema_version: WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
+      id: `${language}-custom-pack`,
+      language,
+      name: `${t.languages[language]} custom pack`,
+      version: "1.0.0",
+      source: "imported",
+      description:
+        language === "zh"
+          ? "从这个模板开始覆盖 Workbench 文案。"
+          : language === "ja"
+            ? "このテンプレートから Workbench 文言を上書きします。"
+            : "Start from this template to override Workbench copy.",
+      overrides: {},
+    });
+    setMessage(
+      language === "zh"
+        ? "语言包模板已下载。"
+        : language === "ja"
+          ? "言語パックのテンプレートを出力しました。"
+          : "Language pack template downloaded.",
+    );
+  };
+
+  const handleExportInstalledLanguagePack = () => {
+    const pack = activeLanguagePack;
+    if (!pack) {
+      setMessage(
+        language === "zh"
+          ? "当前语言还没有安装自定义语言包。"
+          : language === "ja"
+            ? "現在の言語にはまだカスタム言語パックがありません。"
+            : "No custom language pack is installed for the current language yet.",
+      );
+      return;
+    }
+
+    triggerJsonDownload(`workbench-language-pack-${pack.language}-${pack.id}.json`, pack);
+    setMessage(
+      language === "zh"
+        ? "当前语言包已导出。"
+        : language === "ja"
+          ? "現在の言語パックを出力しました。"
+          : "Exported the current language pack.",
+    );
+  };
+
+  const handleImportLanguagePack = async (file: File) => {
+    try {
+      const raw = JSON.parse(await file.text()) as Partial<WorkbenchLanguagePack> & { overrides?: Record<string, unknown> };
+      if (!raw || typeof raw !== "object" || typeof raw.language !== "string" || typeof raw.name !== "string") {
+        throw new Error("invalid-pack");
+      }
+
+      const nextPack: WorkbenchLanguagePack = {
+        schema_version:
+          typeof raw.schema_version === "string" && raw.schema_version.trim()
+            ? raw.schema_version.trim()
+            : WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
+        id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${raw.language}-${Date.now()}`,
+        language: raw.language,
+        name: raw.name,
+        version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.0.0",
+        source: raw.source === "downloaded" ? "downloaded" : "imported",
+        updatedAt: new Date().toISOString(),
+        description: typeof raw.description === "string" ? raw.description : undefined,
+        overrides: raw.overrides && typeof raw.overrides === "object" && !Array.isArray(raw.overrides) ? raw.overrides : {},
+      };
+
+      setLanguagePacks((current) => {
+        const next = current.filter((pack) => !(pack.id === nextPack.id || (pack.language === nextPack.language && pack.name === nextPack.name)));
+        return [nextPack, ...next];
+      });
+
+      setMessage(
+        language === "zh"
+          ? "语言包已导入。"
+          : language === "ja"
+            ? "言語パックを取り込みました。"
+            : "Language pack imported.",
+      );
+    } catch {
+      setMessage(
+        language === "zh"
+          ? "语言包 JSON 无效。"
+          : language === "ja"
+            ? "言語パック JSON が無効です。"
+            : "Invalid language pack JSON.",
+      );
+    }
+  };
+
+  const handleRemoveLanguagePack = (packId: string) => {
+    setLanguagePacks((current) => current.filter((pack) => pack.id !== packId));
+    setMessage(
+      language === "zh"
+        ? "语言包已移除。"
+        : language === "ja"
+          ? "言語パックを削除しました。"
+          : "Language pack removed.",
     );
   };
 
@@ -5778,7 +6224,7 @@ export function Workbench() {
       });
       const timestamp = snapshot.exported_at.replaceAll(":", "-");
       downloadTextFile(`kyuubiki-security-events-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
-      setMessage(language === "zh" ? "安全事件分析包已下载。" : "Security event export downloaded.");
+      setMessage(language === "zh" ? "安全事件分析包已下载。" : language === "ja" ? "セキュリティイベント分析バンドルを出力しました。" : "Security event export downloaded.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.initialFailed);
     }
@@ -5800,7 +6246,7 @@ export function Workbench() {
       });
       const timestamp = new Date().toISOString().replaceAll(":", "-");
       downloadTextFile(`kyuubiki-security-events-${timestamp}.csv`, csv);
-      setMessage(language === "zh" ? "安全事件 CSV 已下载。" : "Security event CSV downloaded.");
+      setMessage(language === "zh" ? "安全事件 CSV 已下载。" : language === "ja" ? "セキュリティイベント CSV を出力しました。" : "Security event CSV downloaded.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.initialFailed);
     }
@@ -6244,7 +6690,7 @@ export function Workbench() {
 
   const openSelectedAdminJobVersion = () => {
     if (!selectedAdminJob?.model_version_id) {
-      setMessage(language === "zh" ? "这个任务还没有关联模型版本。" : "This job does not have a linked model version.");
+      setMessage(language === "zh" ? "这个任务还没有关联模型版本。" : language === "ja" ? "このジョブには関連するモデルバージョンがまだありません。" : "This job does not have a linked model version.");
       return;
     }
 
@@ -6255,7 +6701,7 @@ export function Workbench() {
     const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
 
     if (!linkedJob?.model_version_id) {
-      setMessage(language === "zh" ? "这个结果还没有关联模型版本。" : "This result does not have a linked model version.");
+      setMessage(language === "zh" ? "这个结果还没有关联模型版本。" : language === "ja" ? "この結果には関連するモデルバージョンがまだありません。" : "This result does not have a linked model version.");
       return;
     }
 
@@ -6278,14 +6724,14 @@ export function Workbench() {
       return;
     }
 
-    setMessage(language === "zh" ? "这条记录还没有可应用的项目或版本上下文。" : "This record does not have a linked project or version context yet.");
+    setMessage(language === "zh" ? "这条记录还没有可应用的项目或版本上下文。" : language === "ja" ? "このレコードには適用できる project / version の文脈がまだありません。" : "This record does not have a linked project or version context yet.");
   };
 
   const openProjectContextById = (projectId: string) => {
     const project = projects.find((entry) => entry.project_id === projectId);
 
     if (!project) {
-      setMessage(language === "zh" ? "找不到关联项目。" : "Could not find the linked project.");
+      setMessage(language === "zh" ? "找不到关联项目。" : language === "ja" ? "関連プロジェクトが見つかりませんでした。" : "Could not find the linked project.");
       return;
     }
 
@@ -6308,7 +6754,7 @@ export function Workbench() {
 
   const openSelectedAdminJobProject = () => {
     if (!selectedAdminJob?.project_id) {
-      setMessage(language === "zh" ? "这个任务还没有关联项目。" : "This job does not have a linked project.");
+      setMessage(language === "zh" ? "这个任务还没有关联项目。" : language === "ja" ? "このジョブには関連プロジェクトがまだありません。" : "This job does not have a linked project.");
       return;
     }
 
@@ -6319,7 +6765,7 @@ export function Workbench() {
     const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
 
     if (!linkedJob?.project_id) {
-      setMessage(language === "zh" ? "这个结果还没有关联项目。" : "This result does not have a linked project.");
+      setMessage(language === "zh" ? "这个结果还没有关联项目。" : language === "ja" ? "この結果には関連プロジェクトがまだありません。" : "This result does not have a linked project.");
       return;
     }
 
@@ -6328,7 +6774,7 @@ export function Workbench() {
 
   const applySelectedAdminJobContext = () => {
     if (!selectedAdminJob) {
-      setMessage(language === "zh" ? "请先选择一条任务记录。" : "Select a job record first.");
+      setMessage(language === "zh" ? "请先选择一条任务记录。" : language === "ja" ? "先にジョブレコードを選択してください。" : "Select a job record first.");
       return;
     }
 
@@ -6343,7 +6789,7 @@ export function Workbench() {
     const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
 
     if (!linkedJob) {
-      setMessage(language === "zh" ? "找不到这条结果对应的任务记录。" : "Could not find the job record linked to this result.");
+      setMessage(language === "zh" ? "找不到这条结果对应的任务记录。" : language === "ja" ? "この結果に対応するジョブレコードが見つかりませんでした。" : "Could not find the job record linked to this result.");
       return;
     }
 
@@ -7499,19 +7945,19 @@ export function Workbench() {
         value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
       },
       {
-        label: language === "zh" ? "Agent 白名单" : "Agent allowlist",
+        label: language === "zh" ? "Agent 白名单" : language === "ja" ? "Agent 許可リスト" : "Agent allowlist",
         value: health?.security?.cluster_agent_allowlist_enabled
           ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
           : securityUi.disabled,
       },
       {
-        label: language === "zh" ? "Cluster 白名单" : "Cluster allowlist",
+        label: language === "zh" ? "Cluster 白名单" : language === "ja" ? "Cluster 許可リスト" : "Cluster allowlist",
         value: health?.security?.cluster_cluster_allowlist_enabled
           ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
           : securityUi.disabled,
       },
       {
-        label: language === "zh" ? "Fingerprint 绑定" : "Fingerprint binding",
+        label: language === "zh" ? "Fingerprint 绑定" : language === "ja" ? "Fingerprint バインディング" : "Fingerprint binding",
         value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
       },
       {
@@ -7543,34 +7989,50 @@ export function Workbench() {
           entry.source === "assistant"
             ? language === "zh"
               ? "助手"
-              : "Assistant"
+              : language === "ja"
+                ? "アシスタント"
+                : "Assistant"
             : language === "zh"
               ? "脚本"
-              : "Script",
+              : language === "ja"
+                ? "スクリプト"
+                : "Script",
         risk:
           entry.risk === "destructive"
             ? language === "zh"
               ? "高风险"
-              : "Destructive"
+              : language === "ja"
+                ? "破壊的"
+                : "Destructive"
             : language === "zh"
               ? "敏感"
-              : "Sensitive",
+              : language === "ja"
+                ? "機微"
+                : "Sensitive",
         status:
           entry.status === "prompted"
             ? language === "zh"
               ? "待确认"
-              : "Prompted"
+              : language === "ja"
+                ? "確認待ち"
+                : "Prompted"
             : entry.status === "cancelled"
               ? language === "zh"
                 ? "已取消"
-                : "Cancelled"
+                : language === "ja"
+                  ? "取消済み"
+                  : "Cancelled"
               : entry.status === "completed"
                 ? language === "zh"
                   ? "已执行"
-                  : "Completed"
+                  : language === "ja"
+                    ? "完了"
+                    : "Completed"
                 : language === "zh"
                   ? "失败"
-                  : "Failed",
+                  : language === "ja"
+                    ? "失敗"
+                    : "Failed",
         note: entry.note ?? "--",
       })),
     [formatTime, language, securityEventRecords],
@@ -7587,27 +8049,27 @@ export function Workbench() {
 
     return [
       {
-        label: language === "zh" ? "敏感" : "Sensitive",
+        label: language === "zh" ? "敏感" : language === "ja" ? "機微" : "Sensitive",
         value: String(countByRisk.sensitive ?? 0),
       },
       {
-        label: language === "zh" ? "高风险" : "Destructive",
+        label: language === "zh" ? "高风险" : language === "ja" ? "破壊的" : "Destructive",
         value: String(countByRisk.destructive ?? 0),
       },
       {
-        label: language === "zh" ? "已执行" : "Completed",
+        label: language === "zh" ? "已执行" : language === "ja" ? "完了" : "Completed",
         value: String(countByStatus.completed ?? 0),
       },
       {
-        label: language === "zh" ? "已取消" : "Cancelled",
+        label: language === "zh" ? "已取消" : language === "ja" ? "取消済み" : "Cancelled",
         value: String(countByStatus.cancelled ?? 0),
       },
       {
-        label: language === "zh" ? "失败" : "Failed",
+        label: language === "zh" ? "失败" : language === "ja" ? "失敗" : "Failed",
         value: String(countByStatus.failed ?? 0),
       },
       {
-        label: language === "zh" ? "待确认" : "Prompted",
+        label: language === "zh" ? "待确认" : language === "ja" ? "確認待ち" : "Prompted",
         value: String(countByStatus.prompted ?? 0),
       },
     ];
@@ -7629,18 +8091,18 @@ export function Workbench() {
               : 24 * 60 * 60 * 1_000;
     const bucketLabels = Array.from({ length: bucketCount }, (_, index) => {
       if (securityEventWindowFilter === "1h") {
-        return language === "zh" ? `${(bucketCount - index) * 10} 分内` : `${(bucketCount - index) * 10}m`;
+        return language === "zh" ? `${(bucketCount - index) * 10} 分内` : language === "ja" ? `${(bucketCount - index) * 10}分以内` : `${(bucketCount - index) * 10}m`;
       }
       if (securityEventWindowFilter === "24h") {
-        return language === "zh" ? `${(bucketCount - index) * 3} 小时内` : `${(bucketCount - index) * 3}h`;
+        return language === "zh" ? `${(bucketCount - index) * 3} 小时内` : language === "ja" ? `${(bucketCount - index) * 3}時間以内` : `${(bucketCount - index) * 3}h`;
       }
       if (securityEventWindowFilter === "7d") {
-        return language === "zh" ? `${bucketCount - index} 天内` : `${bucketCount - index}d`;
+        return language === "zh" ? `${bucketCount - index} 天内` : language === "ja" ? `${bucketCount - index}日以内` : `${bucketCount - index}d`;
       }
       if (securityEventWindowFilter === "30d") {
-        return language === "zh" ? `${(bucketCount - index) * 5} 天内` : `${(bucketCount - index) * 5}d`;
+        return language === "zh" ? `${(bucketCount - index) * 5} 天内` : language === "ja" ? `${(bucketCount - index) * 5}日以内` : `${(bucketCount - index) * 5}d`;
       }
-      return language === "zh" ? `${bucketCount - index} 天内` : `${bucketCount - index}d`;
+      return language === "zh" ? `${bucketCount - index} 天内` : language === "ja" ? `${bucketCount - index}日以内` : `${bucketCount - index}d`;
     });
     const now = Date.now();
     const counts = new Array(bucketCount).fill(0);
@@ -7674,23 +8136,41 @@ export function Workbench() {
       .map(([key, value]) => {
         const [source, status] = key.split(":");
         const sourceLabel =
-          source === "assistant" ? (language === "zh" ? "助手" : "Assistant") : language === "zh" ? "脚本" : "Script";
+          source === "assistant"
+            ? language === "zh"
+              ? "助手"
+              : language === "ja"
+                ? "アシスタント"
+                : "Assistant"
+            : language === "zh"
+              ? "脚本"
+              : language === "ja"
+                ? "スクリプト"
+                : "Script";
         const statusLabel =
           status === "prompted"
             ? language === "zh"
               ? "待确认"
-              : "Prompted"
+              : language === "ja"
+                ? "確認待ち"
+                : "Prompted"
             : status === "cancelled"
               ? language === "zh"
                 ? "已取消"
-                : "Cancelled"
+                : language === "ja"
+                  ? "取消済み"
+                  : "Cancelled"
               : status === "completed"
                 ? language === "zh"
                   ? "已执行"
-                  : "Completed"
+                  : language === "ja"
+                    ? "完了"
+                    : "Completed"
                 : language === "zh"
                   ? "失败"
-                  : "Failed";
+                  : language === "ja"
+                    ? "失敗"
+                    : "Failed";
 
         return {
           key,
@@ -7972,6 +8452,8 @@ export function Workbench() {
       prompt:
         language === "zh"
           ? `我现在在做 ${t.kinds[studyKind]}。请用小白能懂的话解释这个 study 是算什么的、最重要的输入是什么、我第一次运行前应该先检查哪三件事。`
+          : language === "ja"
+            ? `今は ${t.kinds[studyKind]} を扱っています。初心者にも分かる言葉で、この study が何を解くのか、重要な入力は何か、最初の実行前に確認すべき三つのことを教えてください。`
           : `I am working on ${t.kinds[studyKind]}. Explain this study in beginner-friendly language, name the most important inputs, and tell me the first three things to check before my first run.`,
     },
     {
@@ -7980,6 +8462,8 @@ export function Workbench() {
       prompt:
         language === "zh"
           ? `我不是材料专业的。针对 ${t.kinds[studyKind]}，请给我一套保守的起步材料参数建议，并说明哪些参数最值得先保持默认。`
+          : language === "ja"
+            ? `私は材料の専門家ではありません。${t.kinds[studyKind]} に対して、保守的な初期材料値の組み合わせを提案し、まずはどのパラメータを既定値に近いままにしておくのが安全か教えてください。`
           : `I am not a materials specialist. For ${t.kinds[studyKind]}, suggest a conservative starter set of material values and explain which parameters are safest to leave near defaults first.`,
     },
     {
@@ -7988,6 +8472,8 @@ export function Workbench() {
       prompt:
         language === "zh"
           ? `请根据当前 ${t.kinds[studyKind]} 的上下文，帮我检查支撑和载荷应该怎么设才更像一个合理的第一轮仿真，并提醒我常见过约束或漏约束风险。`
+          : language === "ja"
+            ? `現在の ${t.kinds[studyKind]} の文脈に基づいて、最初の試行として妥当な支持条件と荷重の置き方を一緒に確認し、拘束不足や過拘束のよくある失敗も教えてください。`
           : `Given the current ${t.kinds[studyKind]} context, help me choose a sensible first-pass set of supports and loads, and warn me about common under-constrained or over-constrained mistakes.`,
     },
     {
@@ -7996,6 +8482,8 @@ export function Workbench() {
       prompt:
         language === "zh"
           ? `请按 ${t.kinds[studyKind]} 的结果语义，告诉我当前最应该先看哪些结果字段，以及看到什么数量级时应该保持警惕。`
+          : language === "ja"
+            ? `${t.kinds[studyKind]} の結果の意味に沿って、まずどの結果フィールドを見るべきか、そしてどんな桁や傾向が出たら注意すべきか教えてください。`
           : `For ${t.kinds[studyKind]}, tell me which result fields I should read first and what kinds of magnitudes or patterns should make me cautious.`,
     },
   ];
@@ -8061,7 +8549,7 @@ export function Workbench() {
       status: "completed",
       summary: JSON.stringify(payload),
       payload,
-      note: language === "zh" ? "手动 UI 录制" : "Recorded from manual UI interaction",
+      note: language === "zh" ? "手动 UI 录制" : language === "ja" ? "手動 UI 操作から記録" : "Recorded from manual UI interaction",
     });
   };
 
@@ -8152,14 +8640,16 @@ export function Workbench() {
         source,
         risk: auditRisk,
         status: "prompted",
-        note: note ?? (language === "zh" ? "等待操作员确认。" : "Waiting for operator confirmation."),
+        note: note ?? (language === "zh" ? "等待操作员确认。" : language === "ja" ? "オペレーター確認待ちです。" : "Waiting for operator confirmation."),
       });
       const confirmationMessage =
         language === "zh"
           ? `动作 ${action} 属于高风险操作，可能修改、删除或导出敏感数据。\n\n请确认是否继续执行。`
+          : language === "ja"
+            ? `操作 ${action} は高リスクで、機微データの変更・削除・出力を行う可能性があります。\n\n実行を続けますか。`
           : `The action ${action} is high risk and may modify, delete, or export sensitive data.\n\nConfirm execution?`;
       if (typeof window !== "undefined" && !window.confirm(confirmationMessage)) {
-        const summary = language === "zh" ? "已被操作员取消确认。" : "Cancelled by operator confirmation.";
+        const summary = language === "zh" ? "已被操作员取消确认。" : language === "ja" ? "オペレーター確認で取り消されました。" : "Cancelled by operator confirmation.";
         recordSecurityAuditEvent({
           action,
           source,
@@ -8182,7 +8672,7 @@ export function Workbench() {
           const macro = macroId ? getWorkbenchScriptMacroDefinition(macroId) : null;
 
           if (!macro) {
-            throw new Error(language === "zh" ? "找不到指定的宏动作。" : "Could not find the requested macro.");
+            throw new Error(language === "zh" ? "找不到指定的宏动作。" : language === "ja" ? "指定されたマクロが見つかりませんでした。" : "Could not find the requested macro.");
           }
 
           const macroPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "macroId"));
@@ -8190,7 +8680,7 @@ export function Workbench() {
 
           for (const step of macro.steps) {
             const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
-            await invokeScriptAction(step.action, nextPayload, source, note ?? macro.summary[language]);
+            await invokeScriptAction(step.action, nextPayload, source, note ?? (language === "zh" ? macro.summary.zh : macro.summary.en));
           }
 
           resultPayload = { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };
@@ -8296,7 +8786,12 @@ export function Workbench() {
             payload.systemPanelTab === "runtime" ||
             payload.systemPanelTab === "data"
           ) {
-            setSystemPanelTab(payload.systemPanelTab);
+            if (payload.systemPanelTab === "assistant") {
+              setAssistantWindowOpen(true);
+              setSystemPanelTab("config");
+            } else {
+              setSystemPanelTab(payload.systemPanelTab);
+            }
           }
           if (payload.systemDataTab === "jobs" || payload.systemDataTab === "results") {
             setSystemDataTab(payload.systemDataTab);
@@ -8305,7 +8800,7 @@ export function Workbench() {
           break;
         }
         case "settings/patch": {
-          if (payload.language === "en" || payload.language === "zh") {
+          if (payload.language === "en" || payload.language === "zh" || payload.language === "ja") {
             handleLanguageChange(payload.language);
           }
           if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
@@ -8557,7 +9052,9 @@ export function Workbench() {
             throw new Error(
               language === "zh"
                 ? "当前研究没有可映射的热结果，或暂不支持映射到力-热研究。"
-                : "The current study does not have a usable thermal result, or this thermo-mechanical projection is not supported yet.",
+                : language === "ja"
+                  ? "現在の study には投影できる熱結果がないか、この熱→熱応力マッピングはまだ未対応です。"
+                  : "The current study does not have a usable thermal result, or this thermo-mechanical projection is not supported yet.",
             );
           }
           resultPayload = { ok: true, action, studyKind: projectedStudyKind };
@@ -8714,17 +9211,17 @@ export function Workbench() {
           const linkedJob = resolveScriptLinkedJob(payload);
 
           if (!linkedJob) {
-            throw new Error(language === "zh" ? "找不到关联的数据记录上下文。" : "Could not resolve the linked data record context.");
+            throw new Error(language === "zh" ? "找不到关联的数据记录上下文。" : language === "ja" ? "関連するデータレコード文脈を解決できませんでした。" : "Could not resolve the linked data record context.");
           }
 
           if (mode === "version") {
             if (!linkedJob.model_version_id) {
-              throw new Error(language === "zh" ? "这条记录没有关联模型版本。" : "This record does not have a linked model version.");
+              throw new Error(language === "zh" ? "这条记录没有关联模型版本。" : language === "ja" ? "このレコードには関連モデルバージョンがありません。" : "This record does not have a linked model version.");
             }
             openModelVersionById(linkedJob.model_version_id);
           } else if (mode === "project") {
             if (!linkedJob.project_id) {
-              throw new Error(language === "zh" ? "这条记录没有关联项目。" : "This record does not have a linked project.");
+              throw new Error(language === "zh" ? "这条记录没有关联项目。" : language === "ja" ? "このレコードには関連プロジェクトがありません。" : "This record does not have a linked project.");
             }
             openProjectContextById(linkedJob.project_id);
           } else {
@@ -8757,7 +9254,7 @@ export function Workbench() {
           source,
           risk: actionDefinition.risk as WorkbenchSecurityAuditRisk,
           status: "completed",
-          note: note ?? (language === "zh" ? "高风险动作已执行完成。" : "High-risk action completed."),
+          note: note ?? (language === "zh" ? "高风险动作已执行完成。" : language === "ja" ? "高リスク操作の実行が完了しました。" : "High-risk action completed."),
         });
       }
       return resultPayload;
@@ -8858,7 +9355,7 @@ export function Workbench() {
     if (!entry) return;
     restoreSnapshot(entry.snapshot);
     setAssistantTransactions((current) => current.filter((transaction) => transaction.id !== transactionId));
-    setMessage(language === "zh" ? "已回滚上一轮助手事务。" : "Rolled back the last assistant transaction.");
+    setMessage(language === "zh" ? "已回滚上一轮助手事务。" : language === "ja" ? "直前のアシスタント操作をロールバックしました。" : "Rolled back the last assistant transaction.");
   };
 
   const executeAssistantPlan = async (
@@ -8870,7 +9367,7 @@ export function Workbench() {
       for (const entry of actions) {
         await invokeScriptAction(entry.action, entry.payload ?? {}, "assistant", entry.reason);
       }
-      setMessage(language === "zh" ? "助手计划已执行。" : "Assistant plan executed.");
+      setMessage(language === "zh" ? "助手计划已执行。" : language === "ja" ? "アシスタントのプランを実行しました。" : "Assistant plan executed.");
       return transactionId;
     } catch (error) {
       rollbackAssistantTransaction(transactionId);
@@ -9399,7 +9896,7 @@ export function Workbench() {
         setPlaneModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
       }
 
-      setMessage(language === "zh" ? "外部材料库已导入。" : "Imported external material library.");
+      setMessage(language === "zh" ? "外部材料库已导入。" : language === "ja" ? "外部材料ライブラリを取り込みました。" : "Imported external material library.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : t.initialFailed);
     }
@@ -10069,130 +10566,128 @@ export function Workbench() {
     </div>
   ) : null;
 
-  const modelToolsContent: ReactNode = (
-    <>
-      <WorkbenchModelToolsCard
-        title={isTruss3d ? t.spaceStudio : t.sections.model}
-        status={isTruss3d ? t.orbitHint : isFrameLike ? t.ready : t.dragToEdit}
-        hint={isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : isFrameLike ? t.frameEditorHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : t.modelStudioHint}
-        selectionHint={t.selectionHint}
-        addNodeLabel={t.addNode}
-        addBranchNodeLabel={t.addBranchNode}
-        deleteNodeLabel={t.deleteNode}
-        toggleMemberLabel={t.toggleMember}
-        deleteMemberLabel={t.deleteMember}
-        linkModeLabel={t.linkMode}
-        linkModeActiveLabel={t.linkModeActive}
-        linkModeHint={t.linkModeIdle}
-        undoLabel={t.undo}
-        redoLabel={t.redo}
-        downloadLabel={t.download}
-        saveForSolverLabel={t.saveForSolver}
-        canAddBranchNode={selectedNode !== null}
-        canDeleteNode={selectedNode !== null}
-        canDeleteMember={selectedElement !== null}
-        canUndo={undoStack.length > 0}
-        canRedo={redoStack.length > 0}
-        isTruss={isTruss}
-        isFrame={isFrameLike}
-        isTruss3d={isTruss3d}
-        truss3dLinkMode={truss3dLinkMode}
-        onAddNode={() => {
-          if (isTruss3d) {
-            addTruss3dNode(false);
-            return;
-          }
-          addNode(false);
-        }}
-        onAddBranchNode={() => {
-          if (isTruss3d) {
-            addTruss3dNode(true);
-            return;
-          }
-          addNode(true);
-        }}
-        onDeleteNode={() => {
-          if (isTruss3d) {
-            deleteSelectedTruss3dNode();
-            return;
-          }
-          deleteSelectedNode();
-        }}
-        onToggleMember={() => {
-          if (isTruss3d) {
-            toggleTruss3dMemberFromDraft();
-            return;
-          }
-          toggleMemberFromDraft();
-        }}
-        onDeleteMember={() => {
-          if (isTruss3d) {
-            deleteSelectedTruss3dElement();
-            return;
-          }
-          deleteSelectedElement();
-        }}
-        onToggleLinkMode={toggleTruss3dLinkMode}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        onDownload={downloadModel}
-        onSaveForSolver={() => {
-          setStudyKind(isPlane || isBeam || isTorsion || isThermal ? studyKind : isTruss3d ? "truss_3d" : isFrameLike ? studyKind : "truss_2d");
-          setSidebarSection("study");
-          setMessage(isPlane ? t.planeHint : isBeam ? t.modelStudioHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : isTruss3d ? t.switchedTo3dStudio : isFrameLike ? t.frameEditorHint : t.switchedTo2dStudio);
-        }}
-      />
-
-      {!isAxial && !isBeam && !isTorsion && !isHeatBar && !isThermalBar ? (
-        <WorkbenchMaterialLibraryCard
-          language={language}
-          materialLabel={t.material}
-          modulusLabel={t.modulus}
-          poissonRatioLabel={t.poissonRatio}
-          activeMaterial={activeMaterial}
-          currentMaterials={currentMaterials}
-          hiddenMaterialIds={hiddenMaterialIds}
-          isPlane={isPlane}
-          selectedElement={selectedElement}
-          localMaterialLabel={localMaterialLabel}
-          getMaterialColor={(materialId) => materialColorMap.get(materialId) ?? "#1677a3"}
-          onActiveMaterialChange={setActiveMaterial}
-          onAddMaterial={addMaterialToCurrentModel}
-          onAddCustomMaterial={addCustomMaterialToCurrentModel}
-          onImportMaterials={(file) => void importMaterials(file)}
-          onUpdateMaterial={updateCurrentMaterial}
-          onToggleMaterialVisibility={toggleMaterialVisibility}
-          onApplyMaterial={applyMaterialToCurrentModel}
-          onDeleteMaterial={deleteCurrentMaterial}
-          round={round}
-        />
-      ) : null}
-
-      {!isTruss3d && !isFrameLike && !isBeam && !isTorsion && !isThermal ? (
-        <WorkbenchParametricCard
-          isPlane={isPlane}
-          title={isPlane ? t.panelGenerator : t.parametric}
-          subtitle={t.modelTools}
-          lengthLabel={t.length}
-          heightLabel={t.height}
-          divisionsXLabel={t.divisionsX}
-          divisionsYLabel={t.divisionsY}
-          thicknessLabel={t.planeThickness}
-          modulusLabel={t.modulus}
-          poissonRatioLabel={t.poissonRatio}
-          loadCaseLabel={t.loadCase}
-          baysLabel={t.bays}
-          areaLabel={t.area}
-          generateLabel={isPlane ? t.generatePanel : t.generate}
-          panelParametric={panelParametric}
-          parametric={parametric}
-          onPanelParametricChange={handlePanelParametricChange}
-          onParametricChange={handleParametricChange}
-          onGenerate={isPlane ? generatePanelModel : generateModel}
-        />
-      ) : null}
-    </>
+  const modelStudioContent: ReactNode = (
+    <WorkbenchModelToolsCard
+      title={isTruss3d ? t.spaceStudio : t.sections.model}
+      status={isTruss3d ? t.orbitHint : isFrameLike ? t.ready : t.dragToEdit}
+      hint={isTruss3d ? t.spaceStudioHint : isPlane ? t.planeHint : isFrameLike ? t.frameEditorHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : t.modelStudioHint}
+      selectionHint={t.selectionHint}
+      addNodeLabel={t.addNode}
+      addBranchNodeLabel={t.addBranchNode}
+      deleteNodeLabel={t.deleteNode}
+      toggleMemberLabel={t.toggleMember}
+      deleteMemberLabel={t.deleteMember}
+      linkModeLabel={t.linkMode}
+      linkModeActiveLabel={t.linkModeActive}
+      linkModeHint={t.linkModeIdle}
+      undoLabel={t.undo}
+      redoLabel={t.redo}
+      downloadLabel={t.download}
+      saveForSolverLabel={t.saveForSolver}
+      canAddBranchNode={selectedNode !== null}
+      canDeleteNode={selectedNode !== null}
+      canDeleteMember={selectedElement !== null}
+      canUndo={undoStack.length > 0}
+      canRedo={redoStack.length > 0}
+      isTruss={isTruss}
+      isFrame={isFrameLike}
+      isTruss3d={isTruss3d}
+      truss3dLinkMode={truss3dLinkMode}
+      onAddNode={() => {
+        if (isTruss3d) {
+          addTruss3dNode(false);
+          return;
+        }
+        addNode(false);
+      }}
+      onAddBranchNode={() => {
+        if (isTruss3d) {
+          addTruss3dNode(true);
+          return;
+        }
+        addNode(true);
+      }}
+      onDeleteNode={() => {
+        if (isTruss3d) {
+          deleteSelectedTruss3dNode();
+          return;
+        }
+        deleteSelectedNode();
+      }}
+      onToggleMember={() => {
+        if (isTruss3d) {
+          toggleTruss3dMemberFromDraft();
+          return;
+        }
+        toggleMemberFromDraft();
+      }}
+      onDeleteMember={() => {
+        if (isTruss3d) {
+          deleteSelectedTruss3dElement();
+          return;
+        }
+        deleteSelectedElement();
+      }}
+      onToggleLinkMode={toggleTruss3dLinkMode}
+      onUndo={handleUndo}
+      onRedo={handleRedo}
+      onDownload={downloadModel}
+      onSaveForSolver={() => {
+        setStudyKind(isPlane || isBeam || isTorsion || isThermal ? studyKind : isTruss3d ? "truss_3d" : isFrameLike ? studyKind : "truss_2d");
+        setSidebarSection("study");
+        setMessage(isPlane ? t.planeHint : isBeam ? t.modelStudioHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : isTruss3d ? t.switchedTo3dStudio : isFrameLike ? t.frameEditorHint : t.switchedTo2dStudio);
+      }}
+    />
   );
+
+  const modelMaterialsContent: ReactNode = !isAxial && !isBeam && !isTorsion && !isHeatBar && !isThermalBar ? (
+    <WorkbenchMaterialLibraryCard
+      language={language}
+      materialLabel={t.material}
+      modulusLabel={t.modulus}
+      poissonRatioLabel={t.poissonRatio}
+      activeMaterial={activeMaterial}
+      currentMaterials={currentMaterials}
+      hiddenMaterialIds={hiddenMaterialIds}
+      isPlane={isPlane}
+      selectedElement={selectedElement}
+      localMaterialLabel={localMaterialLabel}
+      getMaterialColor={(materialId) => materialColorMap.get(materialId) ?? "#1677a3"}
+      onActiveMaterialChange={setActiveMaterial}
+      onAddMaterial={addMaterialToCurrentModel}
+      onAddCustomMaterial={addCustomMaterialToCurrentModel}
+      onImportMaterials={(file) => void importMaterials(file)}
+      onUpdateMaterial={updateCurrentMaterial}
+      onToggleMaterialVisibility={toggleMaterialVisibility}
+      onApplyMaterial={applyMaterialToCurrentModel}
+      onDeleteMaterial={deleteCurrentMaterial}
+      round={round}
+    />
+  ) : null;
+
+  const modelGenerateContent: ReactNode = !isTruss3d && !isFrameLike && !isBeam && !isTorsion && !isThermal ? (
+    <WorkbenchParametricCard
+      isPlane={isPlane}
+      title={isPlane ? t.panelGenerator : t.parametric}
+      subtitle={t.modelTools}
+      lengthLabel={t.length}
+      heightLabel={t.height}
+      divisionsXLabel={t.divisionsX}
+      divisionsYLabel={t.divisionsY}
+      thicknessLabel={t.planeThickness}
+      modulusLabel={t.modulus}
+      poissonRatioLabel={t.poissonRatio}
+      loadCaseLabel={t.loadCase}
+      baysLabel={t.bays}
+      areaLabel={t.area}
+      generateLabel={isPlane ? t.generatePanel : t.generate}
+      panelParametric={panelParametric}
+      parametric={parametric}
+      onPanelParametricChange={handlePanelParametricChange}
+      onParametricChange={handleParametricChange}
+      onGenerate={isPlane ? generatePanelModel : generateModel}
+    />
+  ) : null;
 
   const modelTreeContent: ReactNode = isTruss3d ? (
     <WorkbenchTruss3dTreeCard
@@ -10346,7 +10841,7 @@ export function Workbench() {
             summaryTabLabel={t.tabs.summary}
             controlsTabLabel={t.tabs.controls}
             loadedModelName={loadedModelName}
-            studyTypeLabel={language === "zh" ? "研究类型" : "Study Type"}
+            studyTypeLabel={t.studyTypeLabel}
             studyKind={studyKind}
             studyDomainLabel={t.studyDomain}
             studyDomainOptions={studyDomainOptions}
@@ -10393,6 +10888,8 @@ export function Workbench() {
             controlsRows={studyControlsRows}
             controlsContent={studyControlsContent}
             controlsTitle={t.controls}
+            controlsSetupPageLabel={t.controlsSetupPage}
+            controlsReviewPageLabel={t.controlsReviewPage}
             readyLabel={t.ready}
             busyLabel={t.busy}
             isPending={isPending}
@@ -10409,7 +10906,12 @@ export function Workbench() {
             isTruss3d={isTruss3d}
             toolsTabLabel={t.tabs.tools}
             treeTabLabel={t.tabs.tree}
-            toolsContent={modelToolsContent}
+            toolsPageStudioLabel={t.modelStudioPage}
+            toolsPageMaterialsLabel={t.modelMaterialsPage}
+            toolsPageGenerateLabel={t.modelGeneratePage}
+            studioContent={modelStudioContent}
+            materialsContent={modelMaterialsContent}
+            generateContent={modelGenerateContent}
             treeContent={modelTreeContent}
           />
         ) : null}
@@ -10471,50 +10973,55 @@ export function Workbench() {
 
         {sidebarSection === "system" ? (
           <WorkbenchSystemSidebar
-            systemPanelTab={systemPanelTab}
+            systemPanelTab={systemPanelTab === "assistant" ? "config" : systemPanelTab}
             onSystemPanelTabChange={handleSystemPanelTabChange}
-            configTabLabel={language === "zh" ? "配置" : "Config"}
-            assistantTabLabel={t.assistant}
+            configTabLabel={t.config}
             scriptsTabLabel={t.scripts}
-            runtimeTabLabel={language === "zh" ? "运行时" : "Runtime"}
-            dataTabLabel={language === "zh" ? "数据" : "Data"}
+            runtimeTabLabel={t.runtime}
+            dataTabLabel={t.data}
             configContent={
               <WorkbenchSystemConfigCard
                 title={t.settings}
                 status={health?.status === "ok" ? t.online : t.offline}
+                workspacePageLabel={t.workspace}
+                routingPageLabel={t.routing}
+                accessPageLabel={t.access}
+                packsPageLabel={t.packs}
                 themeLabel={t.theme}
                 languageLabel={t.language}
+                languagePacksTitle={t.languagePacksTitle}
+                languagePacksHint={t.languagePacksHint}
+                languagePacksEmptyLabel={t.languagePacksEmptyLabel}
+                languagePackNameLabel={t.languagePackName}
+                languagePackVersionLabel={t.languagePackVersion}
+                languagePackSourceImportedLabel={t.languagePackSourceImported}
+                languagePackSourceDownloadedLabel={t.languagePackSourceDownloaded}
+                languagePackDownloadTemplateLabel={t.languagePackDownloadTemplate}
+                languagePackExportInstalledLabel={t.languagePackExportInstalled}
+                languagePackImportLabel={t.languagePackImport}
+                languagePackRemoveLabel={t.languagePackRemove}
+                languagePackCatalogTitle={t.languagePackCatalogTitle}
+                languagePackCatalogHint={t.languagePackCatalogHint}
+                languagePackCatalogActionLabel={t.languagePackCatalogAction}
                 frontendModeLabel={t.frontendMode}
                 directMeshStrategyLabel={t.directMeshStrategy}
                 directMeshEndpointsLabel={t.directMeshEndpoints}
                 directMeshEndpointsHelp={t.directMeshEndpointsHelp}
                 controlPlaneTokenLabel={securityUi.controlPlaneToken}
-                controlPlaneTokenHelp={
-                  language === "zh"
-                    ? "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。"
-                    : "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests."
-                }
-                controlPlaneTokenPlaceholder={language === "zh" ? "可选的控制面令牌" : "Optional control-plane token"}
+                controlPlaneTokenHelp={t.controlPlaneTokenHelp}
+                controlPlaneTokenPlaceholder={t.controlPlaneTokenPlaceholder}
                 clusterTokenLabel={securityUi.clusterToken}
-                clusterTokenHelp={
-                  language === "zh"
-                    ? "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。"
-                    : "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty."
-                }
-                clusterTokenPlaceholder={language === "zh" ? "可选的集群专用令牌" : "Optional cluster-only token"}
+                clusterTokenHelp={t.clusterTokenHelp}
+                clusterTokenPlaceholder={t.clusterTokenPlaceholder}
                 directMeshTokenLabel={securityUi.directMeshToken}
-                directMeshTokenHelp={
-                  language === "zh"
-                    ? "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。"
-                    : "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests."
-                }
-                directMeshTokenPlaceholder={language === "zh" ? "可选的直连网格令牌" : "Optional direct-mesh token"}
+                directMeshTokenHelp={t.directMeshTokenHelp}
+                directMeshTokenPlaceholder={t.directMeshTokenPlaceholder}
                 shortcutHintsLabel={t.shortcutHints}
                 shortcutHintsHelp={t.shortcutHintsHelp}
                 immersiveGuardLabel={t.immersiveGuard}
                 immersiveGuardHelp={t.immersiveGuardHelp}
                 browserLimitsNote={t.browserLimitsNote}
-                exportDatabaseLabel={language === "zh" ? "导出数据库快照" : "Export database snapshot"}
+                exportDatabaseLabel={t.exportDatabase}
                 theme={theme}
                 language={language}
                 frontendRuntimeMode={frontendRuntimeMode}
@@ -10533,7 +11040,10 @@ export function Workbench() {
                 languageOptions={[
                   { value: "en", label: t.languages.en },
                   { value: "zh", label: t.languages.zh },
+                  { value: "ja", label: t.languages.ja },
                 ]}
+                installedLanguagePacks={languagePacks}
+                catalogLanguagePacks={languagePackCatalogRows}
                 frontendModeOptions={[
                   { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
                   { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
@@ -10544,6 +11054,10 @@ export function Workbench() {
                 ]}
                 onThemeChange={setTheme}
                 onLanguageChange={handleLanguageChange}
+                onDownloadLanguagePackTemplate={handleDownloadLanguagePackTemplate}
+                onExportInstalledLanguagePack={handleExportInstalledLanguagePack}
+                onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
+                onRemoveLanguagePack={handleRemoveLanguagePack}
                 onFrontendRuntimeModeChange={setFrontendRuntimeMode}
                 onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
                 onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
@@ -10553,39 +11067,6 @@ export function Workbench() {
                 onShowShortcutHintsChange={setShowShortcutHints}
                 onImmersiveGuardrailsChange={setImmersiveGuardrails}
                 onExportDatabase={() => void downloadDatabaseSnapshot()}
-              />
-            }
-            assistantContent={
-              <WorkbenchAssistantPanel
-                currentJobLabel={job?.status ?? t.none}
-                currentResultLabel={hasAnyResult ? t.yes : t.no}
-                currentRuntimeLabel={t.frontendModes[frontendRuntimeMode]}
-                currentStudyLabel={t.kinds[studyKind]}
-                language={language}
-                llmApiKey={assistantApiKey}
-                llmBaseUrl={assistantApiBaseUrl}
-                llmModel={assistantModel}
-                localCards={assistantCards}
-                mode={assistantMode}
-                promptPresets={assistantPromptPresets}
-                onExecuteLlmAction={async (action, payload, reason) => {
-                  await executeAssistantPlan([{ action, payload, reason }], reason ?? action);
-                }}
-                onExecuteLlmPlan={async (actions, summary) => {
-                  await executeAssistantPlan(actions, summary);
-                }}
-                onLlmApiKeyChange={setAssistantApiKey}
-                onLlmBaseUrlChange={setAssistantApiBaseUrl}
-                onLlmModelChange={setAssistantModel}
-                onModeChange={setAssistantMode}
-                onRequestPlan={requestLlmAssistantPlan}
-                onRollbackTransaction={rollbackAssistantTransaction}
-                transactions={assistantTransactions.map((entry) => ({
-                  id: entry.id,
-                  summary: entry.summary,
-                  createdAt: entry.createdAt,
-                  executedActions: entry.executedActions,
-                }))}
               />
             }
             scriptsContent={
@@ -10601,6 +11082,11 @@ export function Workbench() {
             }
             runtimeContent={
               <WorkbenchSystemRuntimePanel
+                stackTabLabel={t.stack}
+                securityTabLabel={t.security}
+                agentsTabLabel={t.agents}
+                auditTabLabel={t.audit}
+                watchdogTabLabel={t.watchdog}
                 backendTitle={t.backend}
                 backendStatus={health?.status ?? t.offline}
                 backendRows={runtimeBackendRows}
@@ -10611,75 +11097,65 @@ export function Workbench() {
                 securityTitle={securityUi.security}
                 securityStatus={health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
                 securityRows={runtimeSecurityRows}
-                securityFooter={
-                  <p className="card-copy">
-                    {language === "zh"
-                      ? "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器会话里。"
-                      : "Runtime security state comes from /api/health; frontend tokens stay only in the current browser session."}
-                  </p>
-                }
-                auditTitle={language === "zh" ? "安全审计" : "Security audit"}
+                securityFooter={<p className="card-copy">{t.runtimeSecurityFooter}</p>}
+                auditTitle={t.securityAudit}
                 auditCountLabel={String(securityEventRecords.length)}
-                auditEmptyLabel={language === "zh" ? "当前筛选下还没有安全事件。" : "No security events match the current filters."}
-                auditSessionLabel={
-                  language === "zh"
-                    ? "这里展示控制面持久化的自动化与助手事件流，包括 Workbench 助手、脚本和 Hub 助手的高风险动作。"
-                    : "Shows the control-plane persisted automation and assistant event stream, including Workbench assistant, scripting, and Hub assistant actions."
-                }
-                auditWindowLabel={language === "zh" ? "时间窗" : "Window"}
-                auditSourceLabel={language === "zh" ? "来源" : "Source"}
-                auditRiskLabel={language === "zh" ? "风险" : "Risk"}
-                auditStatusLabel={language === "zh" ? "状态" : "Status"}
-                auditActionLabel={language === "zh" ? "动作" : "Action"}
-                auditSummaryTitle={language === "zh" ? "事件摘要" : "Event summary"}
+                auditEmptyLabel={language === "zh" ? "当前筛选下还没有安全事件。" : language === "ja" ? "現在のフィルターに一致するセキュリティイベントはありません。" : "No security events match the current filters."}
+                auditSessionLabel={t.auditSessionLabel}
+                auditWindowLabel={t.auditWindow}
+                auditSourceLabel={t.auditSource}
+                auditRiskLabel={t.auditRisk}
+                auditStatusLabel={t.auditStatus}
+                auditActionLabel={t.auditAction}
+                auditSummaryTitle={t.auditSummaryTitle}
                 auditSummaryRows={runtimeAuditSummaryRows}
-                auditTrendTitle={language === "zh" ? "时间趋势" : "Event trend"}
-                auditTrendEmptyLabel={language === "zh" ? "当前窗口下还没有趋势数据。" : "No trend data is available for the current window."}
+                auditTrendTitle={t.auditTrendTitle}
+                auditTrendEmptyLabel={t.auditTrendEmptyLabel}
                 auditTrendBars={runtimeAuditTrendBars}
-                auditSourceStatusTitle={language === "zh" ? "来源 × 状态" : "Source × status"}
+                auditSourceStatusTitle={t.auditSourceStatusTitle}
                 auditSourceStatusFacets={runtimeAuditSourceStatusFacets}
-                auditStudyFacetTitle={language === "zh" ? "Study 分面" : "Study facets"}
-                auditProjectFacetTitle={language === "zh" ? "Project 分面" : "Project facets"}
-                auditModelVersionFacetTitle={language === "zh" ? "Version 分面" : "Version facets"}
-                auditFacetEmptyLabel={language === "zh" ? "当前窗口下没有可用分面。" : "No facets are available for the current window."}
+                auditStudyFacetTitle={t.auditStudyFacetTitle}
+                auditProjectFacetTitle={t.auditProjectFacetTitle}
+                auditModelVersionFacetTitle={t.auditModelVersionFacetTitle}
+                auditFacetEmptyLabel={t.auditFacetEmptyLabel}
                 auditStudyFacets={runtimeAuditStudyFacets}
                 auditProjectFacets={runtimeAuditProjectFacets}
                 auditModelVersionFacets={runtimeAuditModelVersionFacets}
-                auditRefreshLabel={language === "zh" ? "刷新事件" : "Refresh events"}
-                auditExportLabel={language === "zh" ? "导出分析包" : "Export bundle"}
-                auditExportCsvLabel={language === "zh" ? "导出 CSV" : "Export CSV"}
+                auditRefreshLabel={t.auditRefreshLabel}
+                auditExportLabel={t.auditExportLabel}
+                auditExportCsvLabel={t.auditExportCsvLabel}
                 auditWindowValue={securityEventWindowFilter}
                 auditSourceValue={securityEventSourceFilter}
                 auditRiskValue={securityEventRiskFilter}
                 auditStatusValue={securityEventStatusFilter}
                 auditActionValue={securityEventActionFilter}
                 auditWindowOptions={[
-                  { value: "", label: language === "zh" ? "全部时间" : "All time" },
-                  { value: "1h", label: language === "zh" ? "最近 1 小时" : "Last 1 hour" },
-                  { value: "24h", label: language === "zh" ? "最近 24 小时" : "Last 24 hours" },
-                  { value: "7d", label: language === "zh" ? "最近 7 天" : "Last 7 days" },
-                  { value: "30d", label: language === "zh" ? "最近 30 天" : "Last 30 days" },
+                  { value: "", label: t.auditWindowOptions.all },
+                  { value: "1h", label: t.auditWindowOptions.h1 },
+                  { value: "24h", label: t.auditWindowOptions.h24 },
+                  { value: "7d", label: t.auditWindowOptions.d7 },
+                  { value: "30d", label: t.auditWindowOptions.d30 },
                 ]}
                 auditSourceOptions={[
-                  { value: "", label: language === "zh" ? "全部" : "All" },
-                  { value: "assistant", label: language === "zh" ? "助手" : "Assistant" },
-                  { value: "hub-assistant", label: language === "zh" ? "Hub 助手" : "Hub assistant" },
-                  { value: "script", label: language === "zh" ? "脚本" : "Script" },
+                  { value: "", label: t.auditSourceOptions.all },
+                  { value: "assistant", label: t.auditSourceOptions.assistant },
+                  { value: "hub-assistant", label: t.auditSourceOptions.hubAssistant },
+                  { value: "script", label: t.auditSourceOptions.script },
                 ]}
                 auditRiskOptions={[
-                  { value: "", label: language === "zh" ? "全部" : "All" },
-                  { value: "low", label: language === "zh" ? "低" : "Low" },
-                  { value: "sensitive", label: language === "zh" ? "敏感" : "Sensitive" },
-                  { value: "high", label: language === "zh" ? "高" : "High" },
-                  { value: "destructive", label: language === "zh" ? "高风险" : "Destructive" },
+                  { value: "", label: t.auditRiskOptions.all },
+                  { value: "low", label: t.auditRiskOptions.low },
+                  { value: "sensitive", label: t.auditRiskOptions.sensitive },
+                  { value: "high", label: t.auditRiskOptions.high },
+                  { value: "destructive", label: t.auditRiskOptions.destructive },
                 ]}
                 auditStatusOptions={[
-                  { value: "", label: language === "zh" ? "全部" : "All" },
-                  { value: "prompted", label: language === "zh" ? "待确认" : "Prompted" },
-                  { value: "confirmed", label: language === "zh" ? "已确认" : "Confirmed" },
-                  { value: "cancelled", label: language === "zh" ? "已取消" : "Cancelled" },
-                  { value: "completed", label: language === "zh" ? "已执行" : "Completed" },
-                  { value: "failed", label: language === "zh" ? "失败" : "Failed" },
+                  { value: "", label: t.auditStatusOptions.all },
+                  { value: "prompted", label: t.auditStatusOptions.prompted },
+                  { value: "confirmed", label: t.auditStatusOptions.confirmed },
+                  { value: "cancelled", label: t.auditStatusOptions.cancelled },
+                  { value: "completed", label: t.auditStatusOptions.completed },
+                  { value: "failed", label: t.auditStatusOptions.failed },
                 ]}
                 onAuditWindowChange={(value) => setSecurityEventWindowFilter(value as SecurityEventWindow)}
                 onAuditSourceChange={setSecurityEventSourceFilter}
@@ -10705,6 +11181,8 @@ export function Workbench() {
                 recordCountLabel={`${t.databaseRecordCount}: ${jobHistory.length + resultRecords.length}`}
                 jobsTabLabel={t.adminJobs}
                 resultsTabLabel={t.adminResults}
+                browsePageLabel={t.adminBrowsePage}
+                editPageLabel={t.adminEditPage}
                 historyEmptyLabel={t.historyEmpty}
                 selectRecordLabel={t.selectRecord}
                 cancelJobLabel={t.cancelJob}
@@ -10804,6 +11282,71 @@ export function Workbench() {
           />
         ) : null}
       </aside>
+
+      <button
+        aria-expanded={assistantWindowOpen}
+        aria-label={assistantWindowOpen ? t.assistantClose : t.assistantOpen}
+        className={`assistant-float-launcher${assistantWindowOpen ? " assistant-float-launcher--open" : ""}`}
+        onClick={() => setAssistantWindowOpen((current) => !current)}
+        type="button"
+      >
+        <img alt="" className="assistant-float-launcher__mark" src="/kyuubiki.png" />
+        <span className="assistant-float-launcher__copy">
+          <strong>{t.assistant}</strong>
+          <small>{assistantWindowOpen ? t.assistantClose : t.assistantLauncherHint}</small>
+        </span>
+      </button>
+
+      {assistantWindowOpen ? (
+        <aside aria-label={t.assistant} className="assistant-float-panel panel" role="dialog">
+          <div className="assistant-float-panel__header">
+            <div className="assistant-float-panel__headline">
+              <img alt="" className="assistant-float-panel__mark" src="/kyuubiki.png" />
+              <div>
+                <strong>{t.assistantFloatingTitle}</strong>
+                <p>{t.assistantFloatingSubtitle}</p>
+              </div>
+            </div>
+            <button className="ghost-button ghost-button--compact" onClick={() => setAssistantWindowOpen(false)} type="button">
+              {t.assistantClose}
+            </button>
+          </div>
+          <div className="assistant-float-panel__body panel-scroll-window">
+            <WorkbenchAssistantPanel
+              currentJobLabel={job?.status ?? t.none}
+              currentResultLabel={hasAnyResult ? t.yes : t.no}
+              currentRuntimeLabel={t.frontendModes[frontendRuntimeMode]}
+              currentStudyLabel={t.kinds[studyKind]}
+              language={language}
+              llmApiKey={assistantApiKey}
+              llmBaseUrl={assistantApiBaseUrl}
+              llmModel={assistantModel}
+              localCards={assistantCards}
+              mode={assistantMode}
+              promptPresets={assistantPromptPresets}
+              transactions={assistantTransactions.map((entry) => ({
+                id: entry.id,
+                summary: entry.summary,
+                createdAt: entry.createdAt,
+                executedActions: entry.executedActions,
+              }))}
+              variant="floating"
+              onExecuteLlmAction={async (action, payload, reason) => {
+                await executeAssistantPlan([{ action, payload, reason }], reason ?? action);
+              }}
+              onExecuteLlmPlan={async (actions, summary) => {
+                await executeAssistantPlan(actions, summary);
+              }}
+              onLlmApiKeyChange={setAssistantApiKey}
+              onLlmBaseUrlChange={setAssistantApiBaseUrl}
+              onLlmModelChange={setAssistantModel}
+              onModeChange={setAssistantMode}
+              onRequestPlan={requestLlmAssistantPlan}
+              onRollbackTransaction={rollbackAssistantTransaction}
+            />
+          </div>
+        </aside>
+      ) : null}
 
       <main className="workspace-main">
         <WorkbenchViewportPanel
