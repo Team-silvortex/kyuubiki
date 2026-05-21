@@ -165,6 +165,7 @@ type JobLike = {
 
 type InspectorLabels = {
   overview: string;
+  summary: string;
   busy: string;
   ready: string;
   properties: string;
@@ -395,6 +396,7 @@ type WorkbenchInspectorProps = {
 };
 
 type InspectorTab = "properties" | "diagnostics" | "history" | "report";
+type ReportPage = "summary" | "exports";
 type FrameForceSort = "index" | "axial" | "shear" | "moment";
 type PlaneHeatSort = "index" | "temperature" | "gradient" | "flux";
 
@@ -485,6 +487,7 @@ function WorkbenchInspectorInner({
   onPlaneHotspotLimitChange,
 }: WorkbenchInspectorProps) {
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
+  const [reportPage, setReportPage] = useState<ReportPage>("summary");
   const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
   const [planeHeatSort, setPlaneHeatSort] = useState<PlaneHeatSort>("index");
   const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
@@ -856,6 +859,15 @@ function WorkbenchInspectorInner({
 
         {inspectorTab === "report" ? (
         <section className="info-card">
+          <div className="panel-tabs panel-tabs--wide">
+            <button className={`panel-tab${reportPage === "summary" ? " panel-tab--active" : ""}`} onClick={() => setReportPage("summary")} type="button">{t.summary}</button>
+            <button className={`panel-tab${reportPage === "exports" ? " panel-tab--active" : ""}`} onClick={() => setReportPage("exports")} type="button">{t.exportData}</button>
+          </div>
+        </section>
+        ) : null}
+
+        {inspectorTab === "report" && reportPage === "summary" ? (
+        <section className="info-card">
           <h3>{t.metrics}</h3>
           <div className="metric-grid">
             <div><span>{t.status}</span><strong>{job?.status ?? "--"}</strong></div>
@@ -868,9 +880,9 @@ function WorkbenchInspectorInner({
         </section>
         ) : null}
 
-        {inspectorTab === "report" ? (
+        {inspectorTab === "report" && reportPage === "exports" ? (
         <section className="info-card">
-          <h3>{t.report}</h3>
+          <h3>{t.exportData}</h3>
           {reportScopeLabel || reportScopeHint ? (
             <p className="card-copy">
               {[reportScopeLabel, reportScopeHint].filter(Boolean).join(" · ")}
@@ -885,6 +897,8 @@ function WorkbenchInspectorInner({
             ) : null}
           </div>
           <div className="metric-grid">
+            <div><span>{t.status}</span><strong>{job?.status ?? "--"}</strong></div>
+            <div><span>{t.worker}</span><strong>{job?.worker_id ?? "--"}</strong></div>
             <div><span>{isHeatPlane ? t.maxTemperature : t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
             <div><span>{isHeatPlane ? t.maxHeatFlux : t.maxStress}</span><strong>{maxStressValue}</strong></div>
             {(studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") ? <div><span>{t.temperatureDelta}</span><strong>{thermalPlaneMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
@@ -1086,6 +1100,30 @@ function WorkbenchInspectorInner({
               ) : null}
             </div>
           ) : null}
+        </section>
+        ) : null}
+
+        {inspectorTab === "report" && reportPage === "summary" ? (
+        <section className="info-card">
+          <h3>{t.report}</h3>
+          {reportScopeLabel || reportScopeHint ? (
+            <p className="card-copy">
+              {[reportScopeLabel, reportScopeHint].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
+          <div className="metric-grid">
+            <div><span>{isHeatPlane ? t.maxTemperature : t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
+            <div><span>{isHeatPlane ? t.maxHeatFlux : t.maxStress}</span><strong>{maxStressValue}</strong></div>
+            {(studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") ? <div><span>{t.temperatureDelta}</span><strong>{thermalPlaneMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
+            {isHeatBar ? <div><span>{t.maxTemperature}</span><strong>{tipDisplacement}</strong></div> : null}
+            {isFrame || isSpring || studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d" ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
+            {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
+            {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureDelta}</span><strong>{thermalFrameMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
+            {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalFrameMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
+            {studyKind === "thermal_beam_1d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalBeamMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
+            <div><span>{isHeatBar ? t.maxHeatFlux : t.reaction}</span><strong>{reactionValue}</strong></div>
+            {(isFrame || isBeam || isTorsion) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
+          </div>
         </section>
         ) : null}
       </div>

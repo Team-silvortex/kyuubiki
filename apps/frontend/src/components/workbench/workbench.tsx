@@ -23,7 +23,7 @@ import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewpor
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
 import { WorkbenchMaterialLibraryCard } from "@/components/workbench/model/workbench-material-library-card";
-import { WorkbenchModelSidebar } from "@/components/workbench/model/workbench-model-sidebar";
+import { WorkbenchModelSidebar, type ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
 import { WorkbenchModelToolsCard } from "@/components/workbench/model/workbench-model-tools-card";
 import { WorkbenchParametricCard } from "@/components/workbench/model/workbench-parametric-card";
 import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench-truss3d-tree-card";
@@ -359,7 +359,7 @@ type FrameResultField = Exclude<LineResultField, "shear_force">;
 type BeamResultField = Extract<LineResultField, "max_bending_stress" | "moment" | "shear_force" | "temperature_gradient_y" | "thermal_curvature">;
 type StudyPanelTab = "summary" | "controls";
 type ModelPanelTab = "tools" | "tree";
-type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
+type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samples";
 type ImmersiveToolTab = "node" | "props";
 type SystemDataTab = "jobs" | "results";
 type SystemPanelTab = "config" | "assistant" | "scripts" | "runtime" | "data";
@@ -835,8 +835,8 @@ const copyEn = {
     roleLabel: brand.workbenchRoleLabel ?? "Analysis shell",
     title: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
     subtitle: brand.workbenchDescription,
-    rail: { study: "Study", model: "Model", library: "History", system: "System" },
-    sections: { study: "Study Setup", model: "Model Studio", library: "Job History", system: "System" },
+    rail: { study: "Study", model: "Workspace", library: "History", system: "System" },
+    sections: { study: "Study Setup", model: "Workspace", library: "Job History", system: "System" },
     kinds: {
       axial_bar_1d: "1D axial bar",
       heat_bar_1d: "1D heat bar",
@@ -929,6 +929,7 @@ const copyEn = {
     controlsSetupPage: "Setup",
     controlsReviewPage: "Review",
     studyTypeLabel: "Study Type",
+    modelStudyPage: "Study",
     modelStudioPage: "Studio",
     modelMaterialsPage: "Materials",
     modelGeneratePage: "Generate",
@@ -1335,7 +1336,7 @@ const copyEn = {
     parametric: "Parametric Generator",
     panelGenerator: "Panel Generator",
     spaceStudio: "3D Space Studio",
-    tabs: { summary: "Summary", controls: "Controls", tools: "Tools", tree: "Tree", samples: "Samples", projects: "Projects", models: "Models", jobs: "Jobs" },
+    tabs: { summary: "Summary", controls: "Controls", tools: "Tools", tree: "Browse", jobs: "Jobs", results: "Results", models: "Models", projects: "Projects", samples: "Samples" },
     generate: "Generate",
     generatePanel: "Generate Panel",
     download: "Download JSON",
@@ -1344,7 +1345,7 @@ const copyEn = {
     height: "Height (m)",
     divisionsX: "Divisions X",
     divisionsY: "Divisions Y",
-    nodeTable: "Nodes",
+    nodeTable: "Object browser",
     dragNode: "Selected node",
     noNodeSelected: "No node selected",
     loadCase: "Load case",
@@ -1357,6 +1358,19 @@ const copyEn = {
     hasResult: "Result",
     yes: "Yes",
     no: "No",
+    jobWorkspaceTitle: "Job Workspace",
+    jobWorkspaceHint: "Track solver runs first, then drill into a specific record only when you need the details.",
+    resultWorkspaceTitle: "Results Workspace",
+    resultWorkspaceHint: "Open the newest solved run here, then move into reports, exports, and linked records.",
+    modelWorkspaceTitle: "Model Workspace",
+    modelWorkspaceHint: "Keep saved studies and reusable versions together so you can reopen or branch them quickly.",
+    openLatestJob: "Open latest job",
+    openLatestResult: "Open latest result",
+    openLatestModel: "Open latest model",
+    waitingJobs: "Waiting result",
+    readyResults: "Ready results",
+    savedCount: "Saved models",
+    versionCount: "Versions",
     dragToEdit: "Drag to edit",
     historyLoaded: "Loaded a persisted study from history.",
     modelDownloaded: "Model JSON downloaded.",
@@ -1366,9 +1380,10 @@ const copyEn = {
     poisson: "Poisson ratio",
     poissonRatio: "Poisson ratio",
     sampleLibrary: "Sample Library",
-    objectTree: "Object Tree",
+    objectTree: "Objects",
     geometry: "Geometry",
     results: "Results",
+    summary: "Summary",
     properties: "Properties",
     diagnostics: "Diagnostics",
     diagnosticsClear: "No blocking issues detected.",
@@ -1470,8 +1485,8 @@ const copyZh = {
     roleLabel: "分析工作台",
     title: "结构分析工作台",
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
-    rail: { study: "研究", model: "建模", library: "历史", system: "系统" },
-    sections: { study: "研究设置", model: "建模工作室", library: "任务历史", system: "系统" },
+    rail: { study: "研究", model: "工作区", library: "历史", system: "系统" },
+    sections: { study: "研究设置", model: "工作区", library: "任务历史", system: "系统" },
     kinds: {
       axial_bar_1d: "一维轴向杆",
       heat_bar_1d: "一维导热杆",
@@ -1564,6 +1579,7 @@ const copyZh = {
     controlsSetupPage: "设置",
     controlsReviewPage: "复查",
     studyTypeLabel: "研究类型",
+    modelStudyPage: "研究",
     modelStudioPage: "工作区",
     modelMaterialsPage: "材料",
     modelGeneratePage: "生成",
@@ -1965,7 +1981,7 @@ const copyZh = {
     parametric: "参数化生成",
     panelGenerator: "面板生成器",
     spaceStudio: "三维空间工作室",
-    tabs: { summary: "概览", controls: "控制", tools: "工具", tree: "对象", samples: "样板", projects: "项目", models: "模型", jobs: "任务" },
+    tabs: { summary: "概览", controls: "控制", tools: "工具", tree: "浏览", jobs: "任务", results: "结果", models: "模型", projects: "项目", samples: "样板" },
     generate: "生成模型",
     generatePanel: "生成面板",
     download: "下载 JSON",
@@ -1974,7 +1990,7 @@ const copyZh = {
     height: "高度 (m)",
     divisionsX: "X 分段",
     divisionsY: "Y 分段",
-    nodeTable: "节点列表",
+    nodeTable: "对象浏览",
     dragNode: "当前节点",
     noNodeSelected: "未选择节点",
     loadCase: "载荷工况",
@@ -1987,6 +2003,19 @@ const copyZh = {
     hasResult: "结果",
     yes: "是",
     no: "否",
+    jobWorkspaceTitle: "任务工作台",
+    jobWorkspaceHint: "先盯 solver 运行，再在需要时钻进某一条任务记录看细节。",
+    resultWorkspaceTitle: "结果工作台",
+    resultWorkspaceHint: "这里先打开最新已完成结果，再继续进入报告、导出和关联记录。",
+    modelWorkspaceTitle: "模型工作台",
+    modelWorkspaceHint: "把保存过的研究和可复用版本放在一起，方便快速重开或分支。",
+    openLatestJob: "打开最新任务",
+    openLatestResult: "打开最新结果",
+    openLatestModel: "打开最新模型",
+    waitingJobs: "待出结果",
+    readyResults: "已就绪结果",
+    savedCount: "已存模型",
+    versionCount: "版本数",
     dragToEdit: "拖拽编辑",
     historyLoaded: "已从历史记录加载持久化任务。",
     modelDownloaded: "模型 JSON 已下载。",
@@ -1996,9 +2025,10 @@ const copyZh = {
     poisson: "泊松比",
     poissonRatio: "泊松比",
     sampleLibrary: "样板库",
-    objectTree: "对象树",
+    objectTree: "对象",
     geometry: "几何",
     results: "结果",
+    summary: "概览",
     properties: "属性",
     diagnostics: "诊断",
     diagnosticsClear: "当前没有阻塞性的预检查问题。",
@@ -2095,8 +2125,8 @@ const copy = {
     roleLabel: "解析シェル",
     title: "構造解析ワークベンチ",
     subtitle: "モデリング、オーケストレーション、結果レビューを一つにまとめた作業面です。",
-    rail: { study: "解析", model: "モデル", library: "履歴", system: "システム" },
-    sections: { study: "解析設定", model: "モデルスタジオ", library: "ジョブ履歴", system: "システム" },
+    rail: { study: "解析", model: "ワークスペース", library: "履歴", system: "システム" },
+    sections: { study: "解析設定", model: "ワークスペース", library: "ジョブ履歴", system: "システム" },
     studyFamilies: {
       axialAndSprings: "軸・ばね",
       beamsAndFrames: "梁・フレーム",
@@ -2118,11 +2148,25 @@ const copy = {
     modelVersionsPage: "バージョン",
     studyDomain: "物理ドメイン",
     noDomainStudies: "このドメインにはまだ公開済み study がありません。",
+    jobWorkspaceTitle: "ジョブ作業面",
+    jobWorkspaceHint: "まずは solver 実行を追い、必要になった時だけ個別ジョブに掘り下げます。",
+    resultWorkspaceTitle: "結果作業面",
+    resultWorkspaceHint: "ここでは最新の完了結果を開き、そこからレポートやエクスポートに進みます。",
+    modelWorkspaceTitle: "モデル作業面",
+    modelWorkspaceHint: "保存済み study と再利用用バージョンをまとめて、すぐに再開や分岐ができるようにします。",
+    openLatestJob: "最新ジョブを開く",
+    openLatestResult: "最新結果を開く",
+    openLatestModel: "最新モデルを開く",
+    waitingJobs: "結果待ち",
+    readyResults: "利用可能な結果",
+    savedCount: "保存済みモデル",
+    versionCount: "バージョン数",
     overview: "概要",
     controls: "設定",
     controlsSetupPage: "編集",
     controlsReviewPage: "確認",
     studyTypeLabel: "解析タイプ",
+    modelStudyPage: "解析",
     modelStudioPage: "スタジオ",
     modelMaterialsPage: "材料",
     modelGeneratePage: "生成",
@@ -2171,7 +2215,7 @@ const copy = {
       healthiest: "最も健全なノード",
       first_reachable: "最初に到達可能なノード",
     },
-    tabs: { summary: "概要", controls: "設定", tools: "ツール", tree: "ツリー", samples: "サンプル", projects: "プロジェクト", models: "モデル", jobs: "ジョブ" },
+    tabs: { summary: "概要", controls: "設定", tools: "ツール", tree: "参照", jobs: "ジョブ", results: "結果", models: "モデル", projects: "プロジェクト", samples: "サンプル" },
     ready: "準備完了",
     busy: "処理中",
     run: "解析を実行",
@@ -2226,7 +2270,10 @@ const copy = {
     support: "拘束",
     viewport: "ビュー",
     report: "レポート",
+    summary: "概要",
     messages: "メッセージ",
+    nodeTable: "オブジェクト参照",
+    objectTree: "オブジェクト",
   },
 } as const;
 
@@ -4359,10 +4406,11 @@ export function Workbench() {
     plane_quad_2d: [],
     frame_2d: [],
   });
-  const [sidebarSection, setSidebarSection] = useState<SidebarSection>("study");
+  const [sidebarSection, setSidebarSection] = useState<SidebarSection>("model");
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
-  const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("samples");
+  const [modelToolsPage, setModelToolsPage] = useState<ModelToolsPage>("study");
+  const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("jobs");
   const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
   const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("config");
   const [draggingNode, setDraggingNode] = useState<number | null>(null);
@@ -5452,14 +5500,14 @@ export function Workbench() {
             recordHistory(t.historyAction);
             setStudyKind("thermal_bar_1d");
             setThermalBarModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isHeatBar1dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("heat_bar_1d");
             setHeatBarModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isHeatPlaneTriangle2dResult(payload.result)) {
@@ -5467,7 +5515,7 @@ export function Workbench() {
             setStudyKind("heat_plane_triangle_2d");
             setHeatPlaneModel(payload.result.input);
             setPlaneResultField("average_temperature");
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isHeatPlaneQuad2dResult(payload.result)) {
@@ -5475,91 +5523,91 @@ export function Workbench() {
             setStudyKind("heat_plane_quad_2d");
             setHeatPlaneModel(payload.result.input);
             setPlaneResultField("average_temperature");
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isThermalBeam1dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_beam_1d");
             setThermalBeamModel(ensureBeamModelMaterials(payload.result.input, activeMaterial));
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isThermalTruss2dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_truss_2d");
             setThermalTrussModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isThermalTruss3dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_truss_3d");
             setThermalTruss3dModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isSpring1dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("spring_1d");
             setSpringModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isSpring2dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("spring_2d");
             setSpring2dModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isSpring3dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("spring_3d");
             setSpring3dModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isBeam1dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("beam_1d");
             setBeamModel(ensureBeamModelMaterials(payload.result.input, activeMaterial));
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isTorsion1dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("torsion_1d");
             setTorsionModel(payload.result.input);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isTrussResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("truss_2d");
             setTrussModel(ensureTrussModelMaterials(payload.result.input, activeMaterial));
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isTruss3dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("truss_3d");
             setTruss3dModel(ensureTruss3dModelMaterials(payload.result.input, activeMaterial));
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isFrame2dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("frame_2d");
             setFrameModel(ensureFrameModelMaterials(payload.result.input, activeMaterial));
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isThermalFrame2dResult(payload.result)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_frame_2d");
             setThermalFrameModel(ensureFrameModelMaterials(payload.result.input, activeMaterial) as ThermalFrameStudyJobInput);
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
 
           if (isPlaneResult(payload.result)) {
@@ -5570,7 +5618,7 @@ export function Workbench() {
                 : "plane_triangle_2d",
             );
             setPlaneModel(ensurePlaneModelMaterials(payload.result.input, activeMaterial));
-            setSidebarSection("study");
+            openWorkspaceStudy("controls");
           }
         }
 
@@ -6846,8 +6894,12 @@ export function Workbench() {
   };
 
   const handleSidebarSectionChange = (section: SidebarSection) => {
-    setSidebarSection(section);
-    recordManualDslAction("nav/setSidebarSection", { section });
+    const nextSection = section === "study" ? "model" : section;
+    setSidebarSection(nextSection);
+    if (nextSection === "model") {
+      setModelTab("tools");
+    }
+    recordManualDslAction("nav/setSidebarSection", { section: nextSection });
   };
 
   const handleStudyTabChange = (tab: StudyPanelTab) => {
@@ -6858,6 +6910,11 @@ export function Workbench() {
   const handleModelTabChange = (tab: ModelPanelTab) => {
     setModelTab(tab);
     recordManualDslAction("nav/setTabs", { modelTab: tab });
+  };
+
+  const handleModelToolsPageChange = (page: ModelToolsPage) => {
+    setModelToolsPage(page);
+    recordManualDslAction("nav/setTabs", { modelTab, modelToolsPage: page });
   };
 
   const handleLibraryTabChange = (tab: LibraryPanelTab) => {
@@ -7003,7 +7060,6 @@ export function Workbench() {
   };
 
   const railItems: Array<{ key: SidebarSection; label: string; symbol: string }> = [
-    { key: "study", label: t.rail.study, symbol: "S" },
     { key: "model", label: t.rail.model, symbol: "M" },
     { key: "library", label: t.rail.library, symbol: "H" },
     { key: "system", label: t.rail.system, symbol: "Y" },
@@ -7419,8 +7475,7 @@ export function Workbench() {
       resetActiveResult(setResult, setJob);
       setThermalBarModel(buildThermalBarFromHeatResult(heatBarModel, heatBarResult, thermalBarModel));
       setStudyKind("thermal_bar_1d");
-      setSidebarSection("study");
-      setStudyTab("controls");
+      openWorkspaceStudy("controls");
       setMessage(t.projectedHeatToThermo);
       return "thermal_bar_1d" as const;
     }
@@ -7438,8 +7493,7 @@ export function Workbench() {
       );
       setPlaneResultField("average_temperature_delta");
       setStudyKind("thermal_plane_triangle_2d");
-      setSidebarSection("study");
-      setStudyTab("controls");
+      openWorkspaceStudy("controls");
       setMessage(t.projectedHeatToThermo);
       return "thermal_plane_triangle_2d" as const;
     }
@@ -7457,8 +7511,7 @@ export function Workbench() {
       );
       setPlaneResultField("average_temperature_delta");
       setStudyKind("thermal_plane_quad_2d");
-      setSidebarSection("study");
-      setStudyTab("controls");
+      openWorkspaceStudy("controls");
       setMessage(t.projectedHeatToThermo);
       return "thermal_plane_quad_2d" as const;
     }
@@ -8414,8 +8467,7 @@ export function Workbench() {
       actionLabel: t.controls,
       tone: "watch",
       onAction: () => {
-        setSidebarSection("study");
-        setStudyTab("controls");
+        openWorkspaceStudy("controls");
       },
     });
     assistantCards.push({
@@ -8434,8 +8486,7 @@ export function Workbench() {
       actionLabel: t.overview,
       tone: "good",
       onAction: () => {
-        setSidebarSection("study");
-        setStudyTab("summary");
+        openWorkspaceStudy("summary");
       },
     });
     assistantCards.push({
@@ -8720,7 +8771,7 @@ export function Workbench() {
         case "nav/setSidebarSection": {
           const section = payload.section;
           if (section === "study" || section === "model" || section === "library" || section === "system") {
-            setSidebarSection(section);
+            handleSidebarSectionChange(section);
           }
           resultPayload = { ok: true, action, section };
           break;
@@ -8803,6 +8854,15 @@ export function Workbench() {
             setModelTab(payload.modelTab);
           }
           if (
+            payload.modelToolsPage === "study" ||
+            payload.modelToolsPage === "studio" ||
+            payload.modelToolsPage === "materials" ||
+            payload.modelToolsPage === "generate"
+          ) {
+            setModelToolsPage(payload.modelToolsPage);
+          }
+          if (
+            payload.libraryTab === "results" ||
             payload.libraryTab === "samples" ||
             payload.libraryTab === "projects" ||
             payload.libraryTab === "models" ||
@@ -10532,6 +10592,51 @@ export function Workbench() {
     fixed,
   });
 
+  const selectStudyKind = (nextStudyKind: typeof studyKind) => {
+    recordHistory(t.changeStudyType);
+    if (nextStudyKind === "plane_quad_2d" && studyKind !== "plane_quad_2d") {
+      setPlaneModel(ensurePlaneModelMaterials(defaultPlaneQuad, activeMaterial));
+    } else if (nextStudyKind === "plane_triangle_2d" && studyKind !== "plane_triangle_2d") {
+      setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial));
+    } else if (nextStudyKind === "heat_bar_1d" && studyKind !== "heat_bar_1d") {
+      setHeatBarModel(defaultHeatBar1d);
+    } else if (nextStudyKind === "heat_plane_quad_2d" && studyKind !== "heat_plane_quad_2d") {
+      setHeatPlaneModel(defaultHeatPlaneQuad);
+      setPlaneResultField("average_temperature");
+    } else if (nextStudyKind === "heat_plane_triangle_2d" && studyKind !== "heat_plane_triangle_2d") {
+      setHeatPlaneModel(defaultHeatPlaneTriangle);
+      setPlaneResultField("average_temperature");
+    } else if (nextStudyKind === "thermal_bar_1d" && studyKind !== "thermal_bar_1d") {
+      setThermalBarModel(defaultThermalBar1d);
+    } else if (nextStudyKind === "thermal_beam_1d" && studyKind !== "thermal_beam_1d") {
+      setThermalBeamModel(ensureBeamModelMaterials(defaultThermalBeam1d, activeMaterial));
+    } else if (nextStudyKind === "thermal_truss_2d" && studyKind !== "thermal_truss_2d") {
+      setThermalTrussModel(defaultThermalTruss2d);
+    } else if (nextStudyKind === "thermal_truss_3d" && studyKind !== "thermal_truss_3d") {
+      setThermalTruss3dModel(defaultThermalTruss3d);
+    } else if (nextStudyKind === "spring_1d" && studyKind !== "spring_1d") {
+      setSpringModel(defaultSpring1d);
+    } else if (nextStudyKind === "spring_2d" && studyKind !== "spring_2d") {
+      setSpring2dModel(defaultSpring2d);
+    } else if (nextStudyKind === "spring_3d" && studyKind !== "spring_3d") {
+      setSpring3dModel(defaultSpring3d);
+    } else if (nextStudyKind === "beam_1d" && studyKind !== "beam_1d") {
+      setBeamModel(ensureBeamModelMaterials(defaultBeam1d, activeMaterial));
+    } else if (nextStudyKind === "torsion_1d" && studyKind !== "torsion_1d") {
+      setTorsionModel(defaultTorsion1d);
+    } else if (nextStudyKind === "frame_2d" && studyKind !== "frame_2d") {
+      setFrameModel(ensureFrameModelMaterials(defaultFrame2d, activeMaterial));
+    }
+    setStudyKind(nextStudyKind);
+  };
+
+  const openWorkspaceStudy = (tab: StudyPanelTab = "controls") => {
+    setSidebarSection("model");
+    setModelTab("tools");
+    setModelToolsPage("study");
+    setStudyTab(tab);
+  };
+
   const studyControlsContent = isAxial ? (
     <div className="form-grid compact">
       <label>
@@ -10596,6 +10701,70 @@ export function Workbench() {
       </label>
     </div>
   ) : null;
+
+  const modelStudyContent: ReactNode = (
+    <section className="sidebar-card">
+      <div className="card-head">
+        <h2>{t.sections.study}</h2>
+        <span>{loadedModelName}</span>
+      </div>
+      <div className="form-grid compact">
+        <label>
+          <span>{t.studyDomain}</span>
+          <div className="button-row">
+            {studyDomainOptions.map((option) => (
+              <button
+                key={option.key}
+                className={`ghost-button ghost-button--compact${classifyStudyKindDomain(studyKind) === option.key ? " ghost-button--active" : ""}`}
+                onClick={() => {
+                  const fallback = studyKindOptionGroups.find((group) => group.domainKey === option.key)?.options[0]?.value;
+                  if (fallback && fallback !== studyKind) {
+                    selectStudyKind(fallback);
+                  }
+                }}
+                type="button"
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </label>
+        <label>
+          <span>{t.studyTypeLabel}</span>
+          <select
+            value={studyKind}
+            onChange={(event) => {
+              selectStudyKind(event.target.value as typeof studyKind);
+            }}
+          >
+            {studyKindOptionGroups
+              .filter((group) => group.options.length > 0)
+              .map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+          </select>
+        </label>
+      </div>
+      {studyControlsContent}
+      <div className="sidebar-list">
+        {studyControlsRows.slice(0, 4).map((row) => (
+          <div key={row.label}>
+            <span>{row.label}</span>
+            <strong>{row.value}</strong>
+          </div>
+        ))}
+      </div>
+      <button className="solve-button" disabled={isPending} onClick={runAnalysis} type="button">
+        {isPending ? t.running : t.run}
+      </button>
+    </section>
+  );
 
   const modelStudioContent: ReactNode = (
     <WorkbenchModelToolsCard
@@ -10665,7 +10834,7 @@ export function Workbench() {
       onDownload={downloadModel}
       onSaveForSolver={() => {
         setStudyKind(isPlane || isBeam || isTorsion || isThermal ? studyKind : isTruss3d ? "truss_3d" : isFrameLike ? studyKind : "truss_2d");
-        setSidebarSection("study");
+        setSidebarSection("model");
         setMessage(isPlane ? t.planeHint : isBeam ? t.modelStudioHint : isTorsion ? t.torsionHint : isThermal ? currentStudyFamilyHint : isTruss3d ? t.switchedTo3dStudio : isFrameLike ? t.frameEditorHint : t.switchedTo2dStudio);
       }}
     />
@@ -10878,43 +11047,7 @@ export function Workbench() {
             studyDomainOptions={studyDomainOptions}
             noDomainStudiesLabel={t.noDomainStudies}
             studyKindOptionGroups={studyKindOptionGroups}
-            onStudyKindChange={(nextStudyKind) => {
-              recordHistory(t.changeStudyType);
-              if (nextStudyKind === "plane_quad_2d" && studyKind !== "plane_quad_2d") {
-                setPlaneModel(ensurePlaneModelMaterials(defaultPlaneQuad, activeMaterial));
-              } else if (nextStudyKind === "plane_triangle_2d" && studyKind !== "plane_triangle_2d") {
-                setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial));
-              } else if (nextStudyKind === "heat_bar_1d" && studyKind !== "heat_bar_1d") {
-                setHeatBarModel(defaultHeatBar1d);
-              } else if (nextStudyKind === "heat_plane_quad_2d" && studyKind !== "heat_plane_quad_2d") {
-                setHeatPlaneModel(defaultHeatPlaneQuad);
-                setPlaneResultField("average_temperature");
-              } else if (nextStudyKind === "heat_plane_triangle_2d" && studyKind !== "heat_plane_triangle_2d") {
-                setHeatPlaneModel(defaultHeatPlaneTriangle);
-                setPlaneResultField("average_temperature");
-              } else if (nextStudyKind === "thermal_bar_1d" && studyKind !== "thermal_bar_1d") {
-                setThermalBarModel(defaultThermalBar1d);
-              } else if (nextStudyKind === "thermal_beam_1d" && studyKind !== "thermal_beam_1d") {
-                setThermalBeamModel(ensureBeamModelMaterials(defaultThermalBeam1d, activeMaterial));
-              } else if (nextStudyKind === "thermal_truss_2d" && studyKind !== "thermal_truss_2d") {
-                setThermalTrussModel(defaultThermalTruss2d);
-              } else if (nextStudyKind === "thermal_truss_3d" && studyKind !== "thermal_truss_3d") {
-                setThermalTruss3dModel(defaultThermalTruss3d);
-              } else if (nextStudyKind === "spring_1d" && studyKind !== "spring_1d") {
-                setSpringModel(defaultSpring1d);
-              } else if (nextStudyKind === "spring_2d" && studyKind !== "spring_2d") {
-                setSpring2dModel(defaultSpring2d);
-              } else if (nextStudyKind === "spring_3d" && studyKind !== "spring_3d") {
-                setSpring3dModel(defaultSpring3d);
-              } else if (nextStudyKind === "beam_1d" && studyKind !== "beam_1d") {
-                setBeamModel(ensureBeamModelMaterials(defaultBeam1d, activeMaterial));
-              } else if (nextStudyKind === "torsion_1d" && studyKind !== "torsion_1d") {
-                setTorsionModel(defaultTorsion1d);
-              } else if (nextStudyKind === "frame_2d" && studyKind !== "frame_2d") {
-                setFrameModel(ensureFrameModelMaterials(defaultFrame2d, activeMaterial));
-              }
-              setStudyKind(nextStudyKind);
-            }}
+            onStudyKindChange={selectStudyKind}
             summaryRows={studySummaryRows}
             controlsRows={studyControlsRows}
             controlsContent={studyControlsContent}
@@ -10934,12 +11067,16 @@ export function Workbench() {
           <WorkbenchModelSidebar
             modelTab={modelTab}
             onModelTabChange={handleModelTabChange}
+            toolsPage={modelToolsPage}
+            onToolsPageChange={handleModelToolsPageChange}
             isTruss3d={isTruss3d}
             toolsTabLabel={t.tabs.tools}
             treeTabLabel={t.tabs.tree}
+            toolsPageStudyLabel={t.modelStudyPage}
             toolsPageStudioLabel={t.modelStudioPage}
             toolsPageMaterialsLabel={t.modelMaterialsPage}
             toolsPageGenerateLabel={t.modelGeneratePage}
+            studyContent={modelStudyContent}
             studioContent={modelStudioContent}
             materialsContent={modelMaterialsContent}
             generateContent={modelGenerateContent}
@@ -11389,15 +11526,25 @@ export function Workbench() {
               {isTruss3d && immersiveViewport ? (
                 <div className="immersive-switches">
                   <button
-                    className={`ghost-button ghost-button--compact${sidebarSection === "study" ? " ghost-button--active" : ""}`}
-                    onClick={() => handleSidebarSectionChange("study")}
+                    className={`ghost-button ghost-button--compact${sidebarSection === "model" && modelTab === "tools" && modelToolsPage === "study" ? " ghost-button--active" : ""}`}
+                    onClick={() => {
+                      handleSidebarSectionChange("model");
+                      setModelTab("tools");
+                      setModelToolsPage("study");
+                    }}
                     type="button"
                   >
                     {t.immersiveStudy}
                   </button>
                   <button
-                    className={`ghost-button ghost-button--compact${sidebarSection === "model" ? " ghost-button--active" : ""}`}
-                    onClick={() => handleSidebarSectionChange("model")}
+                    className={`ghost-button ghost-button--compact${sidebarSection === "model" && modelTab === "tools" && modelToolsPage !== "study" ? " ghost-button--active" : ""}`}
+                    onClick={() => {
+                      handleSidebarSectionChange("model");
+                      setModelTab("tools");
+                      if (modelToolsPage === "study") {
+                        setModelToolsPage("studio");
+                      }
+                    }}
                     type="button"
                   >
                     {t.immersiveModel}
@@ -12431,12 +12578,14 @@ export function Workbench() {
         onDownloadFrameForces={downloadFrameForceSummary}
         onSelectPlaneHotspot={(index) => {
           setSidebarSection("model");
+          setModelTab("tree");
           setSelectedElement(index);
           setSelectedNode(null);
           setFocusedPlaneElement(index);
         }}
         onSelectFrameHotspot={(index) => {
           setSidebarSection("model");
+          setModelTab("tree");
           setSelectedElement(index);
           setSelectedNode(null);
           setFocusedFrameElement(index);

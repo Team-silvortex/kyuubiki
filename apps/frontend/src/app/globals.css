@@ -808,6 +808,21 @@ html[data-theme="graphite"] .immersive-switches {
   margin-top: 10px;
 }
 
+.sidebar-list--metrics {
+  gap: 10px;
+}
+
+.sidebar-list__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sidebar-list__row strong {
+  font-size: 0.95rem;
+}
+
 .sidebar-list div,
 .metric-grid div {
   display: grid;

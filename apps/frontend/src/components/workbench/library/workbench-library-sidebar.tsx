@@ -6,7 +6,7 @@ import { VirtualList } from "@/components/ui/virtual-list";
 import type { ProjectRecord } from "@/lib/api";
 import type { StudyDomainKey } from "@/lib/workbench/view-models";
 
-type LibraryPanelTab = "samples" | "projects" | "models" | "jobs";
+type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samples";
 type SamplePage = "catalog" | "import";
 type ProjectPage = "manage" | "exchange";
 type ModelPage = "saved" | "versions";
@@ -78,8 +78,21 @@ type LibraryLabels = {
   hasResult: string;
   yes: string;
   no: string;
+  jobWorkspaceTitle: string;
+  jobWorkspaceHint: string;
+  resultWorkspaceTitle: string;
+  resultWorkspaceHint: string;
+  modelWorkspaceTitle: string;
+  modelWorkspaceHint: string;
+  openLatestJob: string;
+  openLatestResult: string;
+  openLatestModel: string;
+  waitingJobs: string;
+  readyResults: string;
+  savedCount: string;
+  versionCount: string;
   sections: { library: string };
-  tabs: { samples: string; projects: string; models: string; jobs: string };
+  tabs: { jobs: string; results: string; models: string; projects: string; samples: string };
   sampleCatalogPage: string;
   sampleImportPage: string;
   projectManagePage: string;
@@ -132,6 +145,39 @@ type WorkbenchLibrarySidebarProps = {
   onRefresh: () => void;
   onImportModel: (file: File | undefined) => void;
 };
+
+type HistoryWorkspaceCardProps = {
+  title: string;
+  hint: string;
+  actionLabel: string;
+  actionDisabled: boolean;
+  onAction: () => void;
+  metrics: Array<{ label: string; value: string | number }>;
+};
+
+function HistoryWorkspaceCard({ title, hint, actionLabel, actionDisabled, onAction, metrics }: HistoryWorkspaceCardProps) {
+  return (
+    <section className="sidebar-card sidebar-card--compact">
+      <div className="card-head">
+        <h2>{title}</h2>
+      </div>
+      <p className="card-copy">{hint}</p>
+      <div className="sidebar-list sidebar-list--metrics">
+        {metrics.map((metric) => (
+          <div key={metric.label} className="sidebar-list__row">
+            <span>{metric.label}</span>
+            <strong>{metric.value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className="button-row">
+        <button className="ghost-button" disabled={actionDisabled} onClick={onAction} type="button">
+          {actionLabel}
+        </button>
+      </div>
+    </section>
+  );
+}
 
 export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   libraryTab,
@@ -202,15 +248,113 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
       ] satisfies Array<{ key: StudyDomainKey; label: string }>,
     [sampleRows],
   );
+  const resultRows = useMemo(() => jobRows.filter((row) => row.hasResult === labels.yes), [jobRows, labels.yes]);
+  const latestJobRow = jobRows[0] ?? null;
+  const latestResultRow = resultRows[0] ?? null;
+  const latestModelRow = modelRows[0] ?? null;
+  const waitingJobsCount = useMemo(() => jobRows.filter((row) => row.hasResult === labels.no).length, [jobRows, labels.no]);
 
   return (
     <div className="sidebar-stack panel-scroll-window">
       <div className="panel-tabs panel-tabs--wide">
-        <button className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
-        <button className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
-        <button className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
         <button className={`panel-tab panel-tab--icon${libraryTab === "jobs" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("jobs")} type="button"><span className="panel-tab__glyph">J</span><span>{labels.tabs.jobs}</span></button>
+        <button className={`panel-tab panel-tab--icon${libraryTab === "results" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("results")} type="button"><span className="panel-tab__glyph">R</span><span>{labels.tabs.results}</span></button>
+        <button className={`panel-tab panel-tab--icon${libraryTab === "models" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("models")} type="button"><span className="panel-tab__glyph">M</span><span>{labels.tabs.models}</span></button>
+        <button className={`panel-tab panel-tab--icon${libraryTab === "projects" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("projects")} type="button"><span className="panel-tab__glyph">P</span><span>{labels.tabs.projects}</span></button>
+        <button className={`panel-tab panel-tab--icon${libraryTab === "samples" ? " panel-tab--active" : ""}`} onClick={() => onLibraryTabChange("samples")} type="button"><span className="panel-tab__glyph">S</span><span>{labels.tabs.samples}</span></button>
       </div>
+
+      {libraryTab === "jobs" ? (
+        <>
+          <HistoryWorkspaceCard
+            title={labels.jobWorkspaceTitle}
+            hint={labels.jobWorkspaceHint}
+            actionLabel={labels.openLatestJob}
+            actionDisabled={!latestJobRow}
+            onAction={() => latestJobRow && onOpenHistoryJob(latestJobRow.id)}
+            metrics={[
+              { label: labels.tabs.jobs, value: jobCount },
+              { label: labels.waitingJobs, value: waitingJobsCount },
+            ]}
+          />
+          <section className="sidebar-card">
+          <div className="card-head">
+            <h2>{labels.tabs.jobs}</h2>
+            <span>{jobCount}</span>
+          </div>
+          <VirtualList
+            className="history-list"
+            items={jobRows}
+            itemHeight={112}
+            maxHeight={360}
+            emptyState={<p className="card-copy">{labels.historyEmpty}</p>}
+            itemKey={(historyJob) => historyJob.id}
+            renderItem={(historyJob) => (
+              <button
+                className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
+                onClick={() => onOpenHistoryJob(historyJob.id)}
+                type="button"
+              >
+                <strong>{historyJob.shortId}</strong>
+                <span>{historyJob.status}</span>
+                <small>
+                  {labels.updatedAt}: {historyJob.updatedAt}
+                </small>
+                <small>
+                  {labels.hasResult}: {historyJob.hasResult}
+                </small>
+              </button>
+            )}
+          />
+          </section>
+        </>
+      ) : null}
+
+      {libraryTab === "results" ? (
+        <>
+          <HistoryWorkspaceCard
+            title={labels.resultWorkspaceTitle}
+            hint={labels.resultWorkspaceHint}
+            actionLabel={labels.openLatestResult}
+            actionDisabled={!latestResultRow}
+            onAction={() => latestResultRow && onOpenHistoryJob(latestResultRow.id)}
+            metrics={[
+              { label: labels.readyResults, value: resultRows.length },
+              { label: labels.tabs.jobs, value: jobCount },
+            ]}
+          />
+          <section className="sidebar-card">
+          <div className="card-head">
+            <h2>{labels.tabs.results}</h2>
+            <span>{resultRows.length}</span>
+          </div>
+          <VirtualList
+            className="history-list"
+            items={resultRows}
+            itemHeight={112}
+            maxHeight={360}
+            emptyState={<p className="card-copy">{labels.historyEmpty}</p>}
+            itemKey={(historyJob) => historyJob.id}
+            renderItem={(historyJob) => (
+              <button
+                className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
+                onClick={() => onOpenHistoryJob(historyJob.id)}
+                type="button"
+              >
+                <strong>{historyJob.shortId}</strong>
+                <span>{historyJob.status}</span>
+                <small>
+                  {labels.updatedAt}: {historyJob.updatedAt}
+                </small>
+                <small>
+                  {labels.hasResult}: {historyJob.hasResult}
+                </small>
+              </button>
+            )}
+          />
+          </section>
+        </>
+      ) : null}
 
       {libraryTab === "samples" ? (
         <section className="sidebar-card">
@@ -379,7 +523,19 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
       ) : null}
 
       {libraryTab === "models" ? (
-        <section className="sidebar-card">
+        <>
+          <HistoryWorkspaceCard
+            title={labels.modelWorkspaceTitle}
+            hint={labels.modelWorkspaceHint}
+            actionLabel={labels.openLatestModel}
+            actionDisabled={!latestModelRow}
+            onAction={() => latestModelRow && onOpenSavedModel(latestModelRow.id)}
+            metrics={[
+              { label: labels.savedCount, value: modelRows.length },
+              { label: labels.versionCount, value: modelVersionCount },
+            ]}
+          />
+          <section className="sidebar-card">
           <div className="card-head">
             <h2>{labels.savedModels}</h2>
             <span>{selectedProjectModelCount}</span>
@@ -480,41 +636,10 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
               />
             </>
           ) : null}
-        </section>
+          </section>
+        </>
       ) : null}
 
-      {libraryTab === "jobs" ? (
-        <section className="sidebar-card">
-          <div className="card-head">
-            <h2>{labels.sections.library}</h2>
-            <span>{jobCount}</span>
-          </div>
-          <VirtualList
-            className="history-list"
-            items={jobRows}
-            itemHeight={112}
-            maxHeight={360}
-            emptyState={<p className="card-copy">{labels.historyEmpty}</p>}
-            itemKey={(historyJob) => historyJob.id}
-            renderItem={(historyJob) => (
-              <button
-                className={`history-item${activeJobId === historyJob.id ? " history-item--active" : ""}`}
-                onClick={() => onOpenHistoryJob(historyJob.id)}
-                type="button"
-              >
-                <strong>{historyJob.shortId}</strong>
-                <span>{historyJob.status}</span>
-                <small>
-                  {labels.updatedAt}: {historyJob.updatedAt}
-                </small>
-                <small>
-                  {labels.hasResult}: {historyJob.hasResult}
-                </small>
-              </button>
-            )}
-          />
-        </section>
-      ) : null}
     </div>
   );
 });

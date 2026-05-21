@@ -47,6 +47,7 @@ export async function waitForFrontend(timeoutMs = 60_000, intervalMs = 500) {
 
 export async function assertWorkbenchSampleUi(page, domainLabel, sampleLabel, importedModelLabel, studyLabel) {
   await page.getByRole("button", { name: "H History" }).click();
+  await page.getByRole("button", { name: /^S\s+Samples$/ }).click();
   if (domainLabel) {
     await page
       .locator("button")
@@ -69,10 +70,13 @@ export async function assertWorkbenchSampleUi(page, domainLabel, sampleLabel, im
   );
 
   const reportButton = page.getByRole("button", { name: "Report" }).first();
+  assert.equal(await reportButton.isVisible(), true, `${sampleLabel} should expose Report`);
+  await reportButton.click();
+  await page.getByRole("button", { name: "Export Data" }).first().click();
+
   const exportJsonButton = page.getByRole("button", { name: "Export Data JSON" }).first();
   const exportCsvButton = page.getByRole("button", { name: "Export Data CSV" }).first();
 
-  assert.equal(await reportButton.isVisible(), true, `${sampleLabel} should expose Report`);
   assert.equal(await exportJsonButton.isVisible(), true, `${sampleLabel} should expose Export Data JSON`);
   assert.equal(await exportCsvButton.isVisible(), true, `${sampleLabel} should expose Export Data CSV`);
 }

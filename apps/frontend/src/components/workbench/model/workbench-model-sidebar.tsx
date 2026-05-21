@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 type ModelPanelTab = "tools" | "tree";
-type ModelToolsPage = "studio" | "materials" | "generate";
+export type ModelToolsPage = "study" | "studio" | "materials" | "generate";
 
 type WorkbenchModelSidebarProps = {
   modelTab: ModelPanelTab;
   onModelTabChange: (tab: ModelPanelTab) => void;
+  toolsPage: ModelToolsPage;
+  onToolsPageChange: (page: ModelToolsPage) => void;
   isTruss3d: boolean;
   toolsTabLabel: string;
   treeTabLabel: string;
+  toolsPageStudyLabel: string;
   toolsPageStudioLabel: string;
   toolsPageMaterialsLabel: string;
   toolsPageGenerateLabel: string;
+  studyContent?: ReactNode;
   studioContent?: ReactNode;
   materialsContent?: ReactNode;
   generateContent?: ReactNode;
@@ -23,18 +27,21 @@ type WorkbenchModelSidebarProps = {
 export function WorkbenchModelSidebar({
   modelTab,
   onModelTabChange,
+  toolsPage,
+  onToolsPageChange,
   isTruss3d,
   toolsTabLabel,
   treeTabLabel,
+  toolsPageStudyLabel,
   toolsPageStudioLabel,
   toolsPageMaterialsLabel,
   toolsPageGenerateLabel,
+  studyContent,
   studioContent,
   materialsContent,
   generateContent,
   treeContent,
 }: WorkbenchModelSidebarProps) {
-  const [toolsPage, setToolsPage] = useState<ModelToolsPage>("studio");
   return (
     <div className={`sidebar-stack panel-scroll-window${isTruss3d ? " sidebar-stack--space" : ""}`}>
       <div className="panel-tabs">
@@ -57,9 +64,18 @@ export function WorkbenchModelSidebar({
       {modelTab === "tools" ? (
         <>
           <div className="panel-tabs panel-tabs--wide">
+            {studyContent ? (
+              <button
+                className={`panel-tab${toolsPage === "study" ? " panel-tab--active" : ""}`}
+                onClick={() => onToolsPageChange("study")}
+                type="button"
+              >
+                {toolsPageStudyLabel}
+              </button>
+            ) : null}
             <button
               className={`panel-tab${toolsPage === "studio" ? " panel-tab--active" : ""}`}
-              onClick={() => setToolsPage("studio")}
+              onClick={() => onToolsPageChange("studio")}
               type="button"
             >
               {toolsPageStudioLabel}
@@ -67,7 +83,7 @@ export function WorkbenchModelSidebar({
             {materialsContent ? (
               <button
                 className={`panel-tab${toolsPage === "materials" ? " panel-tab--active" : ""}`}
-                onClick={() => setToolsPage("materials")}
+                onClick={() => onToolsPageChange("materials")}
                 type="button"
               >
                 {toolsPageMaterialsLabel}
@@ -76,13 +92,14 @@ export function WorkbenchModelSidebar({
             {generateContent ? (
               <button
                 className={`panel-tab${toolsPage === "generate" ? " panel-tab--active" : ""}`}
-                onClick={() => setToolsPage("generate")}
+                onClick={() => onToolsPageChange("generate")}
                 type="button"
               >
                 {toolsPageGenerateLabel}
               </button>
             ) : null}
           </div>
+          {toolsPage === "study" ? studyContent : null}
           {toolsPage === "studio" ? studioContent : null}
           {toolsPage === "materials" ? materialsContent : null}
           {toolsPage === "generate" ? generateContent : null}
