@@ -55,9 +55,10 @@ import {
     setText("brand-page-title", brand?.installerName);
     setText("brand-desktop-setup", brand?.desktopSetupLabel);
     setText("brand-engine-tagline", brand?.engineTagline);
-    setText("brand-installer-name", brand?.installerName);
+    setText("brand-installer-role-chip", brand?.shellRoleLabel);
+    setText("brand-installer-name", brand?.installerShortName || "Installer");
     setText("brand-installer-description", brand?.installerDescription);
-    setText("brand-product-name", brand?.productName);
+    setText("brand-product-name", brand?.installerShortName || "Installer");
     setText("brand-installer-console", brand?.installerConsoleName);
     if (brand?.releaseVersion || brand?.releaseCodename) {
       const releaseTag = [

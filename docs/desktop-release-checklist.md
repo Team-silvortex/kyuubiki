@@ -159,8 +159,20 @@ When preparing a release, keep the order stable:
    - `zsh ./scripts/kyuubiki desktop-build-host`
 6. Run the host release wrapper:
    - `zsh ./scripts/kyuubiki desktop-release <host-platform>`
-7. Verify icon inputs and manifest bundle targets for all three supported platforms.
-8. Publish artifacts using the naming convention above.
+7. Review staged host artifacts:
+   - `dist/<host-platform>/desktop/<app>/artifacts`
+   - `dist/<host-platform>/desktop/<app>/artifacts.json`
+   - `dist/<host-platform>/desktop/artifacts-summary.json`
+   - `dist/<host-platform>/desktop/build-summary.json`
+   - interpret `build-summary.json` as:
+     - `built`: expected bundle kinds are all present
+     - `partial`: some host bundle kinds staged, but not the full expected set
+     - `failed`: no host bundle staged
+   - on macOS, distinguish:
+     - `automated session result`: good for validating `.app` bundling and artifact indexing
+     - `full desktop terminal result`: the authoritative confirmation that `.dmg` creation also works
+8. Verify icon inputs and manifest bundle targets for all three supported platforms.
+9. Publish artifacts using the naming convention above.
 
 ## Notes
 

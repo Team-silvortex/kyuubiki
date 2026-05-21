@@ -17,3 +17,8 @@ Source artwork lives under:
 
 - [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
 - [assets/icons/dock](/Users/Shared/chroot/dev/kyuubiki/assets/icons/dock)
+
+This shell now uses the Installer-specific badge variant generated from:
+
+- [/Users/Shared/chroot/dev/kyuubiki/assets/icons/app/kyuubiki-installer.png](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app/kyuubiki-installer.png)
+- [/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants](/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants)

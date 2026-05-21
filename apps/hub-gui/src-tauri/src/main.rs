@@ -331,6 +331,7 @@ fn desktop_status_text(target: Option<String>) -> String {
         lines.push("  - Stage every platform scaffold: zsh ./scripts/kyuubiki desktop-stage all".to_string());
         lines.push("  - Build this host's desktop bundles: zsh ./scripts/kyuubiki desktop-build-host".to_string());
         lines.push("  - Verify manifests and icon inputs: zsh ./scripts/kyuubiki desktop-verify all".to_string());
+        lines.push("  - Review staged bundle manifests under: dist/<host>/desktop/*/artifacts.json".to_string());
         return lines.join("\n");
     }
 
@@ -351,6 +352,10 @@ fn desktop_status_text(target: Option<String>) -> String {
         lines.push(format!(
             "  - Run the full host release pass: zsh ./scripts/kyuubiki desktop-release {}",
             platform.as_str()
+        ));
+        lines.push(format!(
+            "  - Review staged bundle manifests under: dist/{}/desktop/*/artifacts.json",
+            host.as_str()
         ));
     } else {
         lines.push(format!(

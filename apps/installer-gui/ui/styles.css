@@ -8,9 +8,9 @@
   --line: rgba(17, 37, 53, 0.12);
   --text: #132434;
   --muted: #60788f;
-  --accent: #2d6f9e;
-  --accent-soft: rgba(45, 111, 158, 0.12);
-  --accent-strong: rgba(45, 111, 158, 0.2);
+  --accent: #f5a623;
+  --accent-soft: rgba(245, 166, 35, 0.14);
+  --accent-strong: rgba(181, 117, 13, 0.24);
   --ok: #1f7a4c;
   --warn: #bf6b18;
   --shadow: var(--desktop-shadow-strong);
@@ -22,8 +22,8 @@ body {
   font-family: var(--desktop-font-family);
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(45, 111, 158, 0.16), transparent 30%),
-    radial-gradient(circle at bottom right, rgba(45, 111, 158, 0.08), transparent 28%),
+    radial-gradient(circle at top left, rgba(245, 166, 35, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(245, 166, 35, 0.08), transparent 28%),
     linear-gradient(180deg, #f7fafc 0%, var(--bg) 100%);
 }
 
@@ -74,6 +74,7 @@ body {
   height: 66px;
   border-radius: var(--desktop-radius-card);
   border: 1px solid rgba(45, 111, 158, 0.18);
+  border: 1px solid rgba(181, 117, 13, 0.2);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 28px rgba(24, 55, 85, 0.12);
 }
@@ -90,7 +91,7 @@ body {
   border: 1px solid var(--line);
   border-radius: calc(var(--desktop-radius-shell) - 2px);
   background:
-    radial-gradient(circle at center, rgba(45, 111, 158, 0.16), transparent 58%),
+    radial-gradient(circle at center, rgba(245, 166, 35, 0.18), transparent 58%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 250, 253, 0.92));
   overflow: hidden;
 }
@@ -101,7 +102,7 @@ body {
   z-index: 2;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(45, 111, 158, 0.16);
+  border: 1px solid rgba(181, 117, 13, 0.18);
   box-shadow: 0 16px 32px rgba(24, 55, 85, 0.12);
 }
 
@@ -123,7 +124,7 @@ body {
 .hero-orbit {
   position: absolute;
   inset: 50% auto auto 50%;
-  border: 1px dashed rgba(45, 111, 158, 0.24);
+  border: 1px dashed rgba(181, 117, 13, 0.24);
   border-radius: 999px;
   transform: translate(-50%, -50%);
 }
@@ -153,7 +154,7 @@ body {
   height: 14px;
   border-radius: 999px;
   background: var(--accent);
-  box-shadow: 0 0 0 6px rgba(45, 111, 158, 0.12);
+  box-shadow: 0 0 0 6px rgba(245, 166, 35, 0.14);
 }
 
 .hero-node--core {
@@ -209,6 +210,12 @@ body {
   text-transform: uppercase;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.desktop-shell-chip--shell {
+  background: linear-gradient(180deg, rgba(245, 166, 35, 0.18), rgba(255, 255, 255, 0.94));
+  border-color: rgba(181, 117, 13, 0.24);
+  color: #8d5f10;
 }
 
 h1,

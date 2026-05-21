@@ -827,7 +827,9 @@ const defaultThermalFrame2d: ThermalFrame2dJobInput = {
 const copy = {
   en: {
     brand: brand.productName,
-    title: brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
+    shortTitle: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
+    roleLabel: brand.workbenchRoleLabel ?? "Analysis shell",
+    title: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
     subtitle: brand.workbenchDescription,
     rail: { study: "Study", model: "Model", library: "History", system: "System" },
     sections: { study: "Study Setup", model: "Model Studio", library: "Job History", system: "System" },
@@ -1380,6 +1382,8 @@ const copy = {
   },
   zh: {
     brand: brand.productName,
+    shortTitle: brand.workbenchShortName ?? "Workbench",
+    roleLabel: "分析工作台",
     title: "结构分析工作台",
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
     rail: { study: "研究", model: "建模", library: "历史", system: "系统" },
@@ -10305,7 +10309,8 @@ export function Workbench() {
     <div className="workbench-shell">
       <aside className="app-rail panel">
         <div className="rail-brand">
-          <strong>{t.brand}</strong>
+          <img alt={`${t.shortTitle} mark`} className="rail-brand__mark" src="/kyuubiki.png" />
+          <strong>{t.shortTitle}</strong>
           <span>tamamono 1.0.0</span>
         </div>
         <div className="rail-nav">
@@ -10325,7 +10330,10 @@ export function Workbench() {
 
       <aside className="workspace-sidebar panel">
         <div className="sidebar-header">
-          <p className="eyebrow">{t.brand}</p>
+          <div className="sidebar-header__brand">
+            <img alt={`${t.shortTitle} mark`} className="sidebar-header__mark" src="/kyuubiki.png" />
+            <p className="eyebrow">{t.roleLabel}</p>
+          </div>
           <h1>{t.title}</h1>
           <p>{t.subtitle}</p>
         </div>

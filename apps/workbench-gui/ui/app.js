@@ -223,8 +223,9 @@ async function boot() {
       state.releaseVersion = releaseVersion;
       state.releaseCodename = releaseCodename;
       document.title = releaseTag ? `${brand.applicationName} · ${releaseTag}` : brand.applicationName;
-      setText("brand-workbench-name", brand.applicationName);
+      setText("brand-workbench-name", brand.workbenchShortName || "Workbench");
     }
+    setText("brand-workbench-role-chip", brand?.shellRoleLabel);
 
     if (brand.releaseVersion || brand.releaseCodename) {
       const releaseTag = [
@@ -237,6 +238,7 @@ async function boot() {
     }
 
     setText("brand-workbench-description", brand.workbenchShellDescription);
+    setText("brand-workbench-focus", brand.shellFocusLabel);
   }
 
   await loadEnvironment();

@@ -1971,7 +1971,10 @@ async function applyBrand() {
     document.title = releaseTag ? `${brand.hubName} · ${releaseTag}` : brand.hubName;
   }
 
-  setText("brand-hub-title", brand.hubName);
+  setText("brand-hub-title", brand.hubShortName || "Hub");
+  setText("brand-hub-role", brand.shellRoleLabel);
+  setText("brand-hub-role-chip", brand.shellRoleLabel);
+  setText("brand-hub-focus", brand.shellFocusLabel);
   if (releaseTag) {
     setText("brand-hub-version", releaseTag);
   }

@@ -81,6 +81,10 @@ Current staged runtime layout:
 - `dist/<platform>/desktop/hub-gui`
 - `dist/<platform>/desktop/installer-gui`
 - `dist/<platform>/desktop/workbench-gui`
+- `dist/<platform>/desktop/<app>/artifacts`
+- `dist/<platform>/desktop/<app>/artifacts.json`
+- `dist/<platform>/desktop/artifacts-summary.json`
+- `dist/<platform>/desktop/build-summary.json`
 - `dist/<platform>/logs`
 - `dist/<platform>/manifests`
 - `dist/<platform>/scripts`
@@ -216,7 +220,60 @@ Use one of these two operator-facing flows:
 
 1. stage `dist/<platform>` layout and desktop manifests
 2. build the host-native `hub-gui`, `installer-gui`, and `workbench-gui` bundles
-3. verify desktop manifests plus platform-specific icon inputs
+3. collect host-native desktop bundle artifacts back into `dist/<host>/desktop`
+4. verify desktop manifests plus platform-specific icon inputs
+
+After a successful host build or host release pass, operators should expect:
+
+- copied desktop deliverables under:
+  - `dist/<host>/desktop/hub-gui/artifacts`
+  - `dist/<host>/desktop/installer-gui/artifacts`
+  - `dist/<host>/desktop/workbench-gui/artifacts`
+- one per-app artifact manifest:
+  - `dist/<host>/desktop/<app>/artifacts.json`
+- one platform summary:
+  - `dist/<host>/desktop/artifacts-summary.json`
+- one host build status summary:
+  - `dist/<host>/desktop/build-summary.json`
+
+If one desktop shell fails but others succeed, `desktop-build-host` now keeps
+the successful artifacts staged under `dist/` and writes the partial result to
+`build-summary.json` before returning a non-zero exit code.
+
+`build-summary.json` uses a small operator-facing status vocabulary:
+
+- `built`
+  every expected host bundle kind for that app is present
+- `partial`
+  at least one host bundle kind was staged, but the full expected set is not present
+- `failed`
+  no host bundle was staged for that app
+
+On macOS, a common `partial` shape is:
+
+- `.app` present
+- `.dmg` missing
+
+That usually means the host session could compile and bundle the application,
+but the disk-image step could not run to completion. In headless, restricted,
+or sandboxed macOS sessions, `hdiutil` itself may be unavailable for full DMG
+creation even when `.app` bundling succeeds.
+
+For tamamono 1.x, treat these as two different validation modes:
+
+- `automated session result`
+  the packaging command was run from an automated, sandboxed, or otherwise
+  controlled execution context. This is enough to validate manifest staging,
+  `.app` bundling, artifact collection, and summary generation.
+- `full desktop terminal result`
+  the same command was run from a normal macOS desktop terminal session. This
+  is the authoritative place to confirm whether `.dmg` output can be produced
+  on the real host.
+
+If an automated session reports `partial` on macOS, but a normal Terminal.app
+ session can create DMGs with `hdiutil`, treat that as an execution-context
+ limitation, not as evidence that the Mac host itself is incapable of building
+ the release image.
 
 This keeps the current host honest while still preserving all three rollout
 paths inside `dist/`.
