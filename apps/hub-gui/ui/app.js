@@ -8,8 +8,8 @@ import {
 
 const sectionModel = {
   projects: {
-    title: "Projects",
-    copy: "Bring work in, inspect it once, and move into analysis.",
+    title: "Home",
+    copy: "Start with one clear path: bring work in, inspect it once, then move into Workbench.",
   },
   runtimes: {
     title: "Runtimes",
@@ -96,6 +96,12 @@ const HUB_DENSITY_DEFAULTS = {
 const state = {
   hostPlatform: "macos",
   activeSection: "projects",
+  projectsPage: "start",
+  panelPages: {
+    runtimes: "local",
+    observe: "health",
+    tools: "packages",
+  },
   isBusy: false,
   historyFilter: "all",
   workloadFilter: "all",
@@ -117,6 +123,11 @@ const elements = {
   copy: document.getElementById("section-copy"),
   navItems: Array.from(document.querySelectorAll(".hub-nav__item")),
   panels: Array.from(document.querySelectorAll(".hub-panel")),
+  projectsPageButtons: Array.from(document.querySelectorAll("[data-projects-page]")),
+  projectsTargetButtons: Array.from(document.querySelectorAll("[data-projects-target]")),
+  projectsPanes: Array.from(document.querySelectorAll("[data-projects-pane]")),
+  panelPageButtons: Array.from(document.querySelectorAll("[data-panel-page-group][data-panel-page]")),
+  panelPanes: Array.from(document.querySelectorAll("[data-panel-pane-group][data-panel-pane]")),
   releasePlatform: document.getElementById("release-platform"),
   projectBundlePath: document.getElementById("project-bundle-path"),
   projectBundleComparePath: document.getElementById("project-bundle-compare-path"),
@@ -2014,6 +2025,11 @@ function setSection(section) {
   if (defaultProjectsPanel) {
     defaultProjectsPanel.classList.toggle("hidden", section !== "projects");
   }
+  if (section === "projects") {
+    renderProjectsPages();
+  } else if (section in state.panelPages) {
+    renderPanelPages(section);
+  }
 
   renderAssistantContext();
   renderHubAssistantLocalCards();
@@ -2038,6 +2054,35 @@ function enhanceHubAccessibility() {
   elements.sectionJumpButtons.forEach((button) => {
     const target = button.dataset.targetSection || "";
     button.setAttribute("aria-controls", `${target}-panel`);
+  });
+
+  elements.projectsPageButtons.forEach((button) => {
+    const target = button.dataset.projectsPage || "";
+    const pane = elements.projectsPanes.find((candidate) => candidate.dataset.projectsPane === target);
+    if (!pane) {
+      return;
+    }
+
+    if (!pane.id) {
+      pane.id = `projects-pane-${target}`;
+    }
+    button.setAttribute("aria-controls", pane.id);
+  });
+
+  elements.panelPageButtons.forEach((button) => {
+    const group = button.dataset.panelPageGroup || "";
+    const target = button.dataset.panelPage || "";
+    const pane = elements.panelPanes.find(
+      (candidate) => candidate.dataset.panelPaneGroup === group && candidate.dataset.panelPane === target,
+    );
+    if (!pane) {
+      return;
+    }
+
+    if (!pane.id) {
+      pane.id = `panel-pane-${group}-${target}`;
+    }
+    button.setAttribute("aria-controls", pane.id);
   });
 
   elements.densityToggleButtons.forEach((button) => {
@@ -2257,6 +2302,52 @@ function setAssistantOutput(value) {
   }
 }
 
+function renderProjectsPages() {
+  elements.projectsPageButtons.forEach((button) => {
+    const active = button.dataset.projectsPage === state.projectsPage;
+    button.classList.toggle("hub-panel-tab--active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  elements.projectsPanes.forEach((pane) => {
+    const active = pane.dataset.projectsPane === state.projectsPage;
+    pane.classList.toggle("hidden", !active);
+    pane.setAttribute("aria-hidden", String(!active));
+  });
+}
+
+function setProjectsPage(page) {
+  state.projectsPage = page === "library" || page === "bundles" ? page : "start";
+  renderProjectsPages();
+}
+
+function renderPanelPages(group) {
+  const activePage = state.panelPages[group];
+  elements.panelPageButtons
+    .filter((button) => button.dataset.panelPageGroup === group)
+    .forEach((button) => {
+      const active = button.dataset.panelPage === activePage;
+      button.classList.toggle("hub-panel-tab--active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+
+  elements.panelPanes
+    .filter((pane) => pane.dataset.panelPaneGroup === group)
+    .forEach((pane) => {
+      const active = pane.dataset.panelPane === activePage;
+      pane.classList.toggle("hidden", !active);
+      pane.setAttribute("aria-hidden", String(!active));
+    });
+}
+
+function setPanelPage(group, page) {
+  if (!(group in state.panelPages)) {
+    return;
+  }
+  state.panelPages[group] = page || state.panelPages[group];
+  renderPanelPages(group);
+}
+
 function currentProjectBundlePayload() {
   return { path: elements.projectBundlePath?.value || "" };
 }
@@ -2350,10 +2441,11 @@ function buildHubAssistantLocalCards() {
       id: "bundle-path",
       title: "Start with a bundle path",
       summary: "Paste a .kyuubiki path first so the Hub can inspect, validate, or normalize it safely.",
-      actionLabel: "Focus Projects",
+      actionLabel: "Open Bundle tools",
       tone: "watch",
       onAction: () => {
         setSection("projects");
+        setProjectsPage("bundles");
         elements.projectBundlePath?.focus();
         setProjectBundleOutput("focused the bundle path field");
       },
@@ -3214,6 +3306,32 @@ elements.navItems.forEach((item) => {
   item.addEventListener("click", () => setSection(item.dataset.target));
 });
 
+elements.projectsPageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setProjectsPage(button.dataset.projectsPage || "start");
+    applyDesktopState(elements.actionState, "active", { kind: "activity" });
+    setOperationOutput(`focused ${button.dataset.projectsPage || "start"} home page`);
+  });
+});
+
+elements.projectsTargetButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setProjectsPage(button.dataset.projectsTarget || "start");
+    applyDesktopState(elements.actionState, "active", { kind: "activity" });
+    setOperationOutput(`opened ${button.dataset.projectsTarget || "start"} from home`);
+  });
+});
+
+elements.panelPageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const group = button.dataset.panelPageGroup || "";
+    const page = button.dataset.panelPage || "";
+    setPanelPage(group, page);
+    applyDesktopState(elements.actionState, "active", { kind: "activity" });
+    setOperationOutput(`focused ${page} ${group} page`);
+  });
+});
+
 for (const button of document.querySelectorAll("[data-action]")) {
   button.addEventListener("click", async () => {
     await runAction(button.dataset.action);
@@ -3412,6 +3530,9 @@ if (elements.observeRuntimeLogAuto) {
 renderHotRuntimeLogServiceLabel();
 syncDesktopStates();
 renderHubDensityToggles();
+renderPanelPages("runtimes");
+renderPanelPages("observe");
+renderPanelPages("tools");
 renderHubRecents();
 applyAssistantSettings();
 setSection(state.activeSection);

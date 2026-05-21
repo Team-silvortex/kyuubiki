@@ -345,6 +345,45 @@ button:focus-visible,
   gap: 1.1rem;
 }
 
+.hub-panel-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.hub-panel-tab {
+  appearance: none;
+  border: 1px solid rgba(47, 111, 150, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.7rem 1rem;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.hub-panel-tab:hover {
+  border-color: rgba(47, 111, 150, 0.3);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.hub-panel-tab--active {
+  background: rgba(42, 172, 199, 0.14);
+  border-color: rgba(42, 172, 199, 0.3);
+  color: var(--text);
+}
+
+.hub-projects-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .hub-runtime-layout,
 .hub-observe-layout {
   display: grid;
@@ -396,6 +435,61 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.hub-start-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.hub-primary-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.hub-action-clusters {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.hub-side-shortcuts {
+  margin: 0.2rem 0 0.75rem;
+}
+
+.hub-side-shortcuts > * {
+  flex: 1 1 10rem;
+}
+
+.hub-cluster-card {
+  appearance: none;
+  text-align: left;
+  width: 100%;
+  border: 1px solid rgba(47, 111, 150, 0.18);
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 251, 252, 0.92));
+  color: var(--text);
+  cursor: pointer;
+  padding: 1rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: var(--panel-shadow-soft);
+  transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.hub-cluster-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(42, 172, 199, 0.28);
+  box-shadow: 0 18px 40px rgba(31, 71, 94, 0.12);
+}
+
+.hub-cluster-card strong {
+  font-size: 1rem;
 }
 
 .hub-card__intro {
@@ -705,7 +799,8 @@ button.is-busy {
   }
 
   .hub-runtime-layout,
-  .hub-observe-layout {
+  .hub-observe-layout,
+  .hub-start-layout {
     grid-template-columns: 1fr;
   }
 }
@@ -718,6 +813,10 @@ button.is-busy {
   }
 
   .hub-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-primary-actions {
     grid-template-columns: 1fr;
   }
 
