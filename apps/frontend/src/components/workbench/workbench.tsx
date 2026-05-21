@@ -11143,8 +11143,9 @@ export function Workbench() {
           <WorkbenchSystemSidebar
             systemPanelTab={systemPanelTab === "assistant" ? "config" : systemPanelTab}
             onSystemPanelTabChange={handleSystemPanelTabChange}
-            configTabLabel={t.config}
-            scriptsTabLabel={t.scripts}
+            settingsTabLabel={t.settings}
+            configPageLabel={t.config}
+            scriptsPageLabel={t.scripts}
             runtimeTabLabel={t.runtime}
             dataTabLabel={t.data}
             configContent={

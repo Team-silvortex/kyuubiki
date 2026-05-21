@@ -1,14 +1,16 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 type SystemPanelTab = "config" | "scripts" | "runtime" | "data";
+type SystemSurfaceTab = "settings" | "runtime" | "data";
 
 type WorkbenchSystemSidebarProps = {
   systemPanelTab: SystemPanelTab;
   onSystemPanelTabChange: (tab: SystemPanelTab) => void;
-  configTabLabel: string;
-  scriptsTabLabel: string;
+  settingsTabLabel: string;
+  configPageLabel: string;
+  scriptsPageLabel: string;
   runtimeTabLabel: string;
   dataTabLabel: string;
   configContent?: ReactNode;
@@ -20,8 +22,9 @@ type WorkbenchSystemSidebarProps = {
 export function WorkbenchSystemSidebar({
   systemPanelTab,
   onSystemPanelTabChange,
-  configTabLabel,
-  scriptsTabLabel,
+  settingsTabLabel,
+  configPageLabel,
+  scriptsPageLabel,
   runtimeTabLabel,
   dataTabLabel,
   configContent,
@@ -29,43 +32,78 @@ export function WorkbenchSystemSidebar({
   runtimeContent,
   dataContent,
 }: WorkbenchSystemSidebarProps) {
+  const [surfaceTab, setSurfaceTab] = useState<SystemSurfaceTab>(
+    systemPanelTab === "runtime" || systemPanelTab === "data" ? systemPanelTab : "settings",
+  );
+
+  useEffect(() => {
+    if (systemPanelTab === "runtime" || systemPanelTab === "data") {
+      setSurfaceTab(systemPanelTab);
+      return;
+    }
+    setSurfaceTab("settings");
+  }, [systemPanelTab]);
+
   return (
     <div className="sidebar-stack panel-scroll-window">
       <div className="panel-tabs panel-tabs--editor">
         <button
-          className={`panel-tab${systemPanelTab === "config" ? " panel-tab--active" : ""}`}
-          onClick={() => onSystemPanelTabChange("config")}
+          className={`panel-tab${surfaceTab === "settings" ? " panel-tab--active" : ""}`}
+          onClick={() => {
+            setSurfaceTab("settings");
+            onSystemPanelTabChange(systemPanelTab === "scripts" ? "scripts" : "config");
+          }}
           type="button"
         >
-          {configTabLabel}
+          {settingsTabLabel}
         </button>
         <button
-          className={`panel-tab${systemPanelTab === "scripts" ? " panel-tab--active" : ""}`}
-          onClick={() => onSystemPanelTabChange("scripts")}
-          type="button"
-        >
-          {scriptsTabLabel}
-        </button>
-        <button
-          className={`panel-tab${systemPanelTab === "runtime" ? " panel-tab--active" : ""}`}
-          onClick={() => onSystemPanelTabChange("runtime")}
+          className={`panel-tab${surfaceTab === "runtime" ? " panel-tab--active" : ""}`}
+          onClick={() => {
+            setSurfaceTab("runtime");
+            onSystemPanelTabChange("runtime");
+          }}
           type="button"
         >
           {runtimeTabLabel}
         </button>
         <button
-          className={`panel-tab${systemPanelTab === "data" ? " panel-tab--active" : ""}`}
-          onClick={() => onSystemPanelTabChange("data")}
+          className={`panel-tab${surfaceTab === "data" ? " panel-tab--active" : ""}`}
+          onClick={() => {
+            setSurfaceTab("data");
+            onSystemPanelTabChange("data");
+          }}
           type="button"
         >
           {dataTabLabel}
         </button>
       </div>
 
-      {systemPanelTab === "config" ? configContent : null}
-      {systemPanelTab === "scripts" ? scriptsContent : null}
-      {systemPanelTab === "runtime" ? runtimeContent : null}
-      {systemPanelTab === "data" ? dataContent : null}
+      {surfaceTab === "settings" ? (
+        <section className="sidebar-card sidebar-card--compact">
+          <div className="panel-tabs panel-tabs--wide">
+            <button
+              className={`panel-tab${systemPanelTab === "config" ? " panel-tab--active" : ""}`}
+              onClick={() => onSystemPanelTabChange("config")}
+              type="button"
+            >
+              {configPageLabel}
+            </button>
+            <button
+              className={`panel-tab${systemPanelTab === "scripts" ? " panel-tab--active" : ""}`}
+              onClick={() => onSystemPanelTabChange("scripts")}
+              type="button"
+            >
+              {scriptsPageLabel}
+            </button>
+          </div>
+          {systemPanelTab === "config" ? configContent : null}
+          {systemPanelTab === "scripts" ? scriptsContent : null}
+        </section>
+      ) : null}
+
+      {surfaceTab === "runtime" ? runtimeContent : null}
+      {surfaceTab === "data" ? dataContent : null}
     </div>
   );
 }
