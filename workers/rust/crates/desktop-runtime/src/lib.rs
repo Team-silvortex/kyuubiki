@@ -2,6 +2,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
+
 #[derive(Clone, Copy)]
 pub enum ServiceMode {
     Default,
@@ -49,9 +51,71 @@ impl HotServiceMode {
 
 pub fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../..")
+        .join("../../../..")
         .canonicalize()
         .expect("failed to resolve workspace root")
+}
+
+fn normalize_language(value: &str) -> Option<&'static str> {
+    match value.trim() {
+        "en" => Some("en"),
+        "zh" => Some("zh"),
+        "ja" => Some("ja"),
+        _ => None,
+    }
+}
+
+fn desktop_preferences_dir() -> Result<PathBuf, String> {
+    #[cfg(target_os = "macos")]
+    {
+        let home = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or_else(|| "HOME is not available".to_string())?;
+        return Ok(home.join("Library").join("Application Support").join("kyuubiki"));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let appdata = std::env::var_os("APPDATA")
+            .map(PathBuf::from)
+            .ok_or_else(|| "APPDATA is not available".to_string())?;
+        return Ok(appdata.join("kyuubiki"));
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    {
+        if let Some(config_home) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
+            return Ok(config_home.join("kyuubiki"));
+        }
+
+        let home = std::env::var_os("HOME")
+            .map(PathBuf::from)
+            .ok_or_else(|| "HOME is not available".to_string())?;
+        Ok(home.join(".config").join("kyuubiki"))
+    }
+}
+
+fn global_language_path() -> Result<PathBuf, String> {
+    Ok(desktop_preferences_dir()?.join(GLOBAL_LANGUAGE_FILE))
+}
+
+pub fn read_global_language_preference() -> Option<String> {
+    let path = global_language_path().ok()?;
+    let raw = fs::read_to_string(path).ok()?;
+    normalize_language(raw.trim()).map(str::to_string)
+}
+
+pub fn write_global_language_preference(language: &str) -> Result<String, String> {
+    let normalized = normalize_language(language)
+        .ok_or_else(|| format!("unsupported language preference: {language}"))?;
+    let directory = desktop_preferences_dir()?;
+    fs::create_dir_all(&directory)
+        .map_err(|error| format!("failed to create {}: {error}", directory.display()))?;
+
+    let path = directory.join(GLOBAL_LANGUAGE_FILE);
+    fs::write(&path, normalized.as_bytes())
+        .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
+    Ok(normalized.to_string())
 }
 
 pub fn run_workspace_command(args: &[&str]) -> Result<String, String> {
@@ -168,4 +232,19 @@ pub fn read_runtime_log(service: &str, max_lines: usize) -> Result<String, Strin
     let lines: Vec<&str> = contents.lines().collect();
     let start = lines.len().saturating_sub(max_lines);
     Ok(lines[start..].join("\n"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::workspace_root;
+
+    #[test]
+    fn workspace_root_points_to_repo_root() {
+        let root = workspace_root();
+        assert!(
+            root.join("scripts").join("kyuubiki").is_file(),
+            "workspace root should resolve to repo root, got {}",
+            root.display()
+        );
+    }
 }

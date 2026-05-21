@@ -17,6 +17,10 @@ test("desktop shell exposes runtime and log panels", () => {
   assert.match(html, /data-console-tab="logs"/);
   assert.match(html, /data-log-service="frontend"/);
   assert.match(html, /data-log-service="orchestrator"/);
+  assert.match(html, /data-shell-page="control"/);
+  assert.match(html, /data-shell-page="workbench"/);
+  assert.match(html, /data-shell-pane="control"/);
+  assert.match(html, /data-shell-pane="workbench"/);
   assert.match(html, /id="workbench-frame"/);
 });
 
@@ -31,6 +35,8 @@ test("desktop shell registers local runtime actions and shortcuts", () => {
   assert.match(js, /service_restart/);
   assert.match(js, /service_stop/);
   assert.match(js, /read_runtime_log/);
+  assert.match(js, /setShellPage/);
+  assert.match(js, /renderShellPages/);
   assert.match(js, /keydown/);
   assert.match(bridge, /invokeTauri/);
   assert.match(bridge, /loadDesktopBrand/);

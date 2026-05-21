@@ -8,7 +8,8 @@
   </head>
   <body>
     <div class="shell">
-      <aside class="sidebar">
+      <div class="shell-shell" id="shell-root">
+      <header class="shell-head desktop-shell-surface-card">
         <div class="brand">
           <img alt="Kyuubiki" class="brand__icon" src="./assets/kyuubiki-app.png" />
           <div>
@@ -22,85 +23,108 @@
             <p class="brand__copy brand__copy--focus" id="brand-workbench-focus">study execution</p>
           </div>
         </div>
+        <div class="shell-tabs" aria-label="Workbench shell pages">
+          <label class="shell-language">
+            <span id="shell-language-label">Language</span>
+            <select id="shell-language-select">
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+              <option value="ja">日本語</option>
+            </select>
+          </label>
+          <button class="shell-tab is-active" data-shell-page="control" type="button">Control</button>
+          <button class="shell-tab" data-shell-page="workbench" type="button">Workbench</button>
+        </div>
+      </header>
 
-        <section class="panel desktop-shell-surface-card">
-          <div class="panel__title desktop-shell-card-title">Runtime</div>
-          <div class="status-grid">
-            <div>
-              <div class="status-grid__label desktop-shell-stat-label">Workbench</div>
-              <div class="status-grid__value" id="workbench-url">--</div>
-            </div>
-            <div>
-              <div class="status-grid__label desktop-shell-stat-label">Orchestrator</div>
-              <div class="status-grid__value" id="orchestrator-url">--</div>
-            </div>
-            <div>
-              <div class="status-grid__label desktop-shell-stat-label">Mode</div>
-              <div class="status-grid__value desktop-shell-state" data-desktop-state="activity" id="deployment-mode">--</div>
-            </div>
-            <div>
-              <div class="status-grid__label desktop-shell-stat-label">Shell</div>
-              <div class="status-grid__value desktop-shell-state" data-desktop-state="activity">Tauri</div>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel desktop-shell-surface-card">
-          <div class="panel__title desktop-shell-card-title">Runtime Console</div>
-          <div class="segmented-tabs">
-            <button class="segmented-tabs__tab is-active" data-console-tab="status" type="button">Status</button>
-            <button class="segmented-tabs__tab" data-console-tab="logs" type="button">Logs</button>
-          </div>
-          <div class="button-row desktop-shell-action-row">
-            <button class="desktop-shell-button-primary" data-action="start-local">Start local</button>
-            <button class="desktop-shell-button-primary" data-action="restart-local">Restart local</button>
-            <button data-action="refresh">Refresh</button>
-            <button class="button--danger desktop-shell-button-danger" data-action="stop">Stop</button>
-          </div>
-          <pre class="status-output" id="status-output">Loading status…</pre>
-          <div class="logs-panel is-hidden" id="logs-panel">
-            <div class="logs-panel__toolbar desktop-shell-console-toolbar">
-              <div class="segmented-tabs segmented-tabs--tight">
-                <button class="segmented-tabs__tab is-active" data-log-service="frontend" type="button">Frontend</button>
-                <button class="segmented-tabs__tab" data-log-service="orchestrator" type="button">API</button>
-                <button class="segmented-tabs__tab" data-log-service="agent-5001" type="button">Agent A</button>
-                <button class="segmented-tabs__tab" data-log-service="agent-5002" type="button">Agent B</button>
+      <section class="shell-page" data-shell-pane="control">
+        <div class="control-grid">
+          <section class="panel desktop-shell-surface-card">
+            <div class="panel__title desktop-shell-card-title">Runtime</div>
+            <div class="status-grid">
+              <div>
+                <div class="status-grid__label desktop-shell-stat-label">Workbench</div>
+                <div class="status-grid__value" id="workbench-url">--</div>
               </div>
-              <button class="ghost-button desktop-shell-button-ghost" data-action="refresh-log" type="button">Refresh log</button>
+              <div>
+                <div class="status-grid__label desktop-shell-stat-label">Orchestrator</div>
+                <div class="status-grid__value" id="orchestrator-url">--</div>
+              </div>
+              <div>
+                <div class="status-grid__label desktop-shell-stat-label">Mode</div>
+                <div class="status-grid__value desktop-shell-state" data-desktop-state="activity" id="deployment-mode">--</div>
+              </div>
+              <div>
+                <div class="status-grid__label desktop-shell-stat-label">Shell</div>
+                <div class="status-grid__value desktop-shell-state" data-desktop-state="activity">Tauri</div>
+              </div>
             </div>
-            <pre class="status-output" id="log-output">Select a service log…</pre>
-          </div>
-        </section>
+          </section>
 
-        <section class="panel desktop-shell-surface-card">
-          <div class="panel__title desktop-shell-card-title">Workbench</div>
-          <div class="button-row desktop-shell-action-row">
-            <button data-action="reload-frame">Reload frame</button>
-            <button class="desktop-shell-button-primary" data-action="open-local">Load local UI</button>
-          </div>
-          <div class="shortcut-list">
-            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>R</kbd> reload embedded workbench</span></div>
-            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>1</kbd> status console</span></div>
-            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>2</kbd> runtime logs</span></div>
-            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>L</kbd> refresh current log</span></div>
-            <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>Shift</kbd> + <kbd>R</kbd> restart local stack</span></div>
-          </div>
-          <p class="panel__note desktop-shell-note">
-            This shell keeps the web workbench isolated as its own program while giving you a native desktop entrypoint.
-          </p>
-        </section>
-      </aside>
+          <section class="panel desktop-shell-surface-card">
+            <div class="panel__title desktop-shell-card-title">Runtime Console</div>
+            <div class="segmented-tabs">
+              <button class="segmented-tabs__tab is-active" data-console-tab="status" type="button">Status</button>
+              <button class="segmented-tabs__tab" data-console-tab="logs" type="button">Logs</button>
+            </div>
+            <div class="button-row desktop-shell-action-row">
+              <button class="desktop-shell-button-primary" data-action="start-local">Start local</button>
+              <button class="desktop-shell-button-primary" data-action="restart-local">Restart local</button>
+              <button data-action="refresh">Refresh</button>
+              <button class="button--danger desktop-shell-button-danger" data-action="stop">Stop</button>
+            </div>
+            <pre class="status-output" id="status-output">Loading status…</pre>
+            <div class="logs-panel is-hidden" id="logs-panel">
+              <div class="logs-panel__toolbar desktop-shell-console-toolbar">
+                <div class="segmented-tabs segmented-tabs--tight">
+                  <button class="segmented-tabs__tab is-active" data-log-service="frontend" type="button">Frontend</button>
+                  <button class="segmented-tabs__tab" data-log-service="orchestrator" type="button">API</button>
+                  <button class="segmented-tabs__tab" data-log-service="agent-5001" type="button">Agent A</button>
+                  <button class="segmented-tabs__tab" data-log-service="agent-5002" type="button">Agent B</button>
+                </div>
+                <button class="ghost-button desktop-shell-button-ghost" data-action="refresh-log" type="button">Refresh log</button>
+              </div>
+              <pre class="status-output" id="log-output">Select a service log…</pre>
+            </div>
+          </section>
 
-      <main class="viewer">
+          <section class="panel desktop-shell-surface-card panel--controls">
+            <div class="panel__title desktop-shell-card-title">Viewer controls</div>
+            <div class="button-row desktop-shell-action-row">
+              <button data-action="reload-frame">Reload frame</button>
+              <button class="desktop-shell-button-primary" data-action="open-local">Load local UI</button>
+              <button class="desktop-shell-button-primary" data-shell-target="workbench" type="button">Open Workbench page</button>
+            </div>
+            <div class="shortcut-list">
+              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>R</kbd> reload embedded workbench</span></div>
+              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>1</kbd> status console</span></div>
+              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>2</kbd> runtime logs</span></div>
+              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>L</kbd> refresh current log</span></div>
+              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>Shift</kbd> + <kbd>R</kbd> restart local stack</span></div>
+              <div><kbd>⌘/Ctrl</kbd><span>+ <kbd>3</kbd> open workbench page</span></div>
+            </div>
+            <p class="panel__note desktop-shell-note">
+              Keep control work here, then jump into the Workbench page when you want the analysis surface to be the only thing on stage.
+            </p>
+          </section>
+        </div>
+      </section>
+
+      <main class="viewer shell-page hidden" data-shell-pane="workbench">
         <div class="viewer__toolbar">
           <img alt="Dock" class="viewer__dock-icon" src="./assets/kyuubiki-dock.png" />
           <div class="viewer__headline">
             <strong>Embedded workbench</strong>
             <span id="viewer-caption">Waiting for local UI…</span>
           </div>
+          <div class="viewer__toolbar-actions desktop-shell-action-row">
+            <button class="viewer__back-button" data-shell-target="control" type="button">Back</button>
+            <button class="viewer__reload-button" data-action="reload-frame">Reload frame</button>
+          </div>
         </div>
         <iframe id="workbench-frame" title="Kyuubiki Workbench"></iframe>
       </main>
+      </div>
     </div>
 
     <script type="module" src="./app.js"></script>

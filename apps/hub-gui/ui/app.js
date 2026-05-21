@@ -2,6 +2,9 @@ import {
   applyDesktopState,
   invokeTauri,
   loadDesktopBrand,
+  loadDesktopLanguagePreference,
+  normalizeDesktopLanguage,
+  saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
@@ -47,6 +50,10 @@ const HUB_ASSISTANT_ACTION_RISK = {
   "hub/focusSection": "low",
   "hub/openWorkbench": "low",
   "hub/openInstaller": "sensitive",
+  "hub/openDocsIndex": "low",
+  "hub/openCurrentLineDoc": "low",
+  "hub/openOperationsDoc": "low",
+  "hub/openTroubleshootingDoc": "low",
   "hub/startLocal": "sensitive",
   "hub/validateEnv": "low",
   "hub/desktopStage": "sensitive",
@@ -72,6 +79,10 @@ const HUB_ASSISTANT_ACTIONS = [
   { id: "hub/focusSection", summary: "Focus a Hub section.", payloadExample: { section: "projects" } },
   { id: "hub/openWorkbench", summary: "Open the Workbench desktop shell.", payloadExample: {} },
   { id: "hub/openInstaller", summary: "Open the Installer desktop shell.", payloadExample: {} },
+  { id: "hub/openDocsIndex", summary: "Open the Hub documentation index.", payloadExample: {} },
+  { id: "hub/openCurrentLineDoc", summary: "Open the current-line document.", payloadExample: {} },
+  { id: "hub/openOperationsDoc", summary: "Open the operations guide.", payloadExample: {} },
+  { id: "hub/openTroubleshootingDoc", summary: "Open the troubleshooting guide.", payloadExample: {} },
   { id: "hub/startLocal", summary: "Start the local stack.", payloadExample: {} },
   { id: "hub/validateEnv", summary: "Validate the desktop environment.", payloadExample: {} },
   { id: "hub/desktopStage", summary: "Prepare desktop manifests for the selected platform.", payloadExample: {} },
@@ -99,9 +110,11 @@ const state = {
   projectsPage: "start",
   panelPages: {
     runtimes: "local",
+    deploy: "modes",
     observe: "health",
     tools: "packages",
   },
+  assistantOpen: false,
   isBusy: false,
   historyFilter: "all",
   workloadFilter: "all",
@@ -113,6 +126,7 @@ const state = {
   density: { ...HUB_DENSITY_DEFAULTS },
   releaseVersion: "",
   releaseCodename: "",
+  language: "en",
 };
 
 let hotRuntimeLogPollHandle = null;
@@ -121,6 +135,8 @@ let observeRuntimeLogPollHandle = null;
 const elements = {
   title: document.getElementById("section-title"),
   copy: document.getElementById("section-copy"),
+  languageLabel: document.getElementById("shell-language-label"),
+  languageSelect: document.getElementById("shell-language-select"),
   navItems: Array.from(document.querySelectorAll(".hub-nav__item")),
   panels: Array.from(document.querySelectorAll(".hub-panel")),
   projectsPageButtons: Array.from(document.querySelectorAll("[data-projects-page]")),
@@ -128,6 +144,9 @@ const elements = {
   projectsPanes: Array.from(document.querySelectorAll("[data-projects-pane]")),
   panelPageButtons: Array.from(document.querySelectorAll("[data-panel-page-group][data-panel-page]")),
   panelPanes: Array.from(document.querySelectorAll("[data-panel-pane-group][data-panel-pane]")),
+  assistantFab: document.getElementById("hub-assistant-fab"),
+  assistantClose: document.getElementById("hub-assistant-close"),
+  assistantPanel: document.getElementById("hub-assistant-panel"),
   releasePlatform: document.getElementById("release-platform"),
   projectBundlePath: document.getElementById("project-bundle-path"),
   projectBundleComparePath: document.getElementById("project-bundle-compare-path"),
@@ -185,6 +204,9 @@ const elements = {
   assistantContextBundle: document.getElementById("assistant-context-bundle"),
   assistantLocalPanel: document.getElementById("assistant-local-panel"),
   assistantLocalCards: document.getElementById("assistant-local-cards"),
+  assistantLocalPrompt: document.getElementById("assistant-local-prompt"),
+  assistantLocalAsk: document.getElementById("assistant-local-ask"),
+  assistantLocalOutput: document.getElementById("assistant-local-output"),
   assistantLlmPanel: document.getElementById("assistant-llm-panel"),
   assistantBaseUrl: document.getElementById("assistant-base-url"),
   assistantApiKey: document.getElementById("assistant-api-key"),
@@ -201,6 +223,17 @@ const elements = {
   densityToggleButtons: Array.from(document.querySelectorAll("[data-density-toggle]")),
   densityPanels: Array.from(document.querySelectorAll("[data-density-panel]")),
 };
+
+function renderDesktopLanguagePreference() {
+  document.documentElement.lang = state.language;
+  if (elements.languageLabel) {
+    elements.languageLabel.textContent =
+      state.language === "zh" ? "语言" : state.language === "ja" ? "言語" : "Language";
+  }
+  if (elements.languageSelect) {
+    elements.languageSelect.value = state.language;
+  }
+}
 
 function loadHubRecents() {
   try {
@@ -2085,6 +2118,13 @@ function enhanceHubAccessibility() {
     button.setAttribute("aria-controls", pane.id);
   });
 
+  if (elements.assistantPanel && !elements.assistantPanel.id) {
+    elements.assistantPanel.id = "hub-assistant-panel";
+  }
+  if (elements.assistantFab && elements.assistantPanel) {
+    elements.assistantFab.setAttribute("aria-controls", elements.assistantPanel.id);
+  }
+
   elements.densityToggleButtons.forEach((button) => {
     const densityId = button.dataset.densityToggle || "";
     const panel = elements.densityPanels.find((candidate) => candidate.dataset.densityPanel === densityId);
@@ -2302,6 +2342,12 @@ function setAssistantOutput(value) {
   }
 }
 
+function setAssistantLocalOutput(value) {
+  if (elements.assistantLocalOutput) {
+    elements.assistantLocalOutput.textContent = value;
+  }
+}
+
 function renderProjectsPages() {
   elements.projectsPageButtons.forEach((button) => {
     const active = button.dataset.projectsPage === state.projectsPage;
@@ -2317,7 +2363,8 @@ function renderProjectsPages() {
 }
 
 function setProjectsPage(page) {
-  state.projectsPage = page === "library" || page === "bundles" ? page : "start";
+  state.projectsPage =
+    page === "library" || page === "bundles" || page === "guides" ? page : "start";
   renderProjectsPages();
 }
 
@@ -2346,6 +2393,18 @@ function setPanelPage(group, page) {
   }
   state.panelPages[group] = page || state.panelPages[group];
   renderPanelPages(group);
+}
+
+function renderAssistantPanel() {
+  const open = state.assistantOpen === true;
+  elements.assistantPanel?.classList.toggle("hidden", !open);
+  elements.assistantPanel?.setAttribute("aria-hidden", String(!open));
+  elements.assistantFab?.setAttribute("aria-expanded", String(open));
+}
+
+function setAssistantPanelOpen(open) {
+  state.assistantOpen = open === true;
+  renderAssistantPanel();
 }
 
 function currentProjectBundlePayload() {
@@ -2505,6 +2564,19 @@ function buildHubAssistantLocalCards() {
   }
 
   cards.push({
+    id: "open-guides",
+    title: "Keep the docs shelf nearby",
+    summary: "If you are still orienting yourself, the Guides page is the cleanest single entry to current-line, operations, troubleshooting, and accuracy notes.",
+    actionLabel: "Open guides",
+    tone: "watch",
+    onAction: () => {
+      setSection("projects");
+      setProjectsPage("guides");
+      setProjectBundleOutput("focused the guides page");
+    },
+  });
+
+  cards.push({
     id: "open-workbench",
     title: "Jump into Workbench",
     summary: "Open the modeling and analysis surface when you are ready to move past bundle-level prep.",
@@ -2553,6 +2625,81 @@ function renderHubAssistantLocalCards() {
     article.appendChild(buttonRow);
     elements.assistantLocalCards.appendChild(article);
   });
+}
+
+function buildLocalGuideContext() {
+  const snapshot = currentAssistantSnapshot();
+  return {
+    section: snapshot.activeSection,
+    runtimeReady: /ready|healthy/i.test(snapshot.runtimeStatus),
+    hasBundle: Boolean(snapshot.bundlePath),
+    hasCompare: Boolean(snapshot.comparePath),
+    hasOutput: Boolean(snapshot.outputPath),
+    bundlePath: snapshot.bundlePath,
+  };
+}
+
+function buildLocalGuideResponse(query) {
+  const normalized = String(query || "").trim().toLowerCase();
+  const context = buildLocalGuideContext();
+
+  if (!normalized) {
+    return "Ask something short, like: what should I do first, how do I inspect a bundle, how do I open Workbench, or why is packaging still partial.";
+  }
+
+  if (/first|start|begin|fresh|what should i do/.test(normalized)) {
+    if (!context.runtimeReady) {
+      return "Start with the local stack, then sync or register work, inspect once, and only then open Workbench. Right now the local runtime does not look ready, so `Start local stack` is the safest first move.";
+    }
+    if (!context.hasBundle) {
+      return "Start with the local stack if needed, then open `Bundle tools` and paste a `.kyuubiki` path. After that, inspect once and move into Workbench.";
+    }
+    return "You already have a runtime and bundle context. The safe path now is: inspect the current bundle, confirm the result looks sane, then open Workbench.";
+  }
+
+  if (/inspect|bundle|validate|normalize|diff|pack|unpack/.test(normalized)) {
+    if (!context.hasBundle) {
+      return "Bundle operations live under `Home > Bundle tools`. Paste a `.kyuubiki` bundle path first. Then use `Inspect` for a quick read, `Validate` for schema checks, and `Normalize` only when you also have an output path.";
+    }
+    if (/normalize/.test(normalized) && !context.hasOutput) {
+      return "Normalization needs both a bundle path and an output path. You already have the bundle, so the missing piece is the output destination in `Bundle tools`.";
+    }
+    if (/diff/.test(normalized) && !context.hasCompare) {
+      return "Bundle diff needs both the current bundle and a compare path. Fill the compare field in `Bundle tools`, then run `Diff bundles`.";
+    }
+    return "Use `Inspect` first for a safe structural read. Use `Validate` when you want schema confidence, `Normalize` when you want a cleaned output bundle, and `Diff` only after both bundle paths are filled.";
+  }
+
+  if (/workbench|analysis|open/.test(normalized)) {
+    return "Open Workbench only after the runtime is healthy and the bundle context looks sane. In Hub, the short path is: `Home > Start here`, then `Open workbench`.";
+  }
+
+  if (/docs|guide|read|document|manual|help/.test(normalized)) {
+    return "Use `Home > Guides` as the single documentation shelf. Start with `Docs index`, then open `Current line`, `Operations`, or `Troubleshooting` only when you know which kind of question you are answering.";
+  }
+
+  if (/runtime|stack|agent|hot|observe|log/.test(normalized)) {
+    return "Use `Runtimes` when you want to change the loop, and `Observe` when you only want to scan or copy state. `Local runtime` is the short health read, `Hot loop` is for dev tails, and `Stack watch` is for sanitized runtime logs.";
+  }
+
+  if (/catalog|library|workload|remote/.test(normalized)) {
+    return "Use `Home > Library` for workload intake. `Sync local control plane` pulls first-party work in, `Sync remote catalog` brings remote entries in, and the domain/family filters help you narrow the shelf before opening Workbench.";
+  }
+
+  if (/installer|package|packaging|desktop|dmg|build/.test(normalized)) {
+    return "Use `Installer` when you need release layout or workstation bootstrap. In Hub, `Tools > Packages` is for build actions, `Status` is the readiness wall, and `Output` is where the packaging logs land. In this automation session, `.app` bundles are reliable, while `.dmg` can still show as partial because `hdiutil` is session-sensitive.";
+  }
+
+  if (/partial|failed|error|warning/.test(normalized)) {
+    return "If something looks partial, read the shortest surface first: `Observe > Health` for runtime issues, `Tools > Status` for desktop packaging readiness, and `Bundle tools > Inspect` for project bundle shape. Then decide whether the problem is runtime, bundle, or packaging.";
+  }
+
+  return "The local guide can help with first steps, bundle inspection, runtime health, Workbench launch, workload library intake, and desktop packaging. Try asking one of those directly.";
+}
+
+function answerWithLocalGuide() {
+  const query = elements.assistantLocalPrompt?.value || "";
+  setAssistantLocalOutput(buildLocalGuideResponse(query));
 }
 
 function extractAssistantJsonBlock(value) {
@@ -2807,6 +2954,22 @@ async function executeHubAssistantAction(action, payload = {}, source = "assista
     case "hub/openInstaller":
       await runAction("open-installer");
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer shell" });
+      return;
+    case "hub/openDocsIndex":
+      await runAction("open-docs-index");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened docs index" });
+      return;
+    case "hub/openCurrentLineDoc":
+      await runAction("open-current-line-doc");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened current-line document" });
+      return;
+    case "hub/openOperationsDoc":
+      await runAction("open-operations-doc");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened operations guide" });
+      return;
+    case "hub/openTroubleshootingDoc":
+      await runAction("open-troubleshooting-doc");
+      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened troubleshooting guide" });
       return;
     case "hub/startLocal":
       await runAction("start-local");
@@ -3105,6 +3268,30 @@ async function runAction(action) {
         setSection("deploy");
         setBusy(false, "ready");
         return;
+      case "open-docs-index":
+        setOperationOutput(await invokeTauri("open_docs_index"));
+        setSection("projects");
+        setProjectsPage("guides");
+        setBusy(false, "ready");
+        return;
+      case "open-current-line-doc":
+        setOperationOutput(await invokeTauri("open_current_line_doc"));
+        setSection("projects");
+        setProjectsPage("guides");
+        setBusy(false, "ready");
+        return;
+      case "open-operations-doc":
+        setOperationOutput(await invokeTauri("open_operations_doc"));
+        setSection("projects");
+        setProjectsPage("guides");
+        setBusy(false, "ready");
+        return;
+      case "open-troubleshooting-doc":
+        setOperationOutput(await invokeTauri("open_troubleshooting_doc"));
+        setSection("projects");
+        setProjectsPage("guides");
+        setBusy(false, "ready");
+        return;
       case "project-inspect":
         await runProjectBundleAction({
           action: "project inspect",
@@ -3332,6 +3519,39 @@ elements.panelPageButtons.forEach((button) => {
   });
 });
 
+elements.assistantFab?.addEventListener("click", () => {
+  setAssistantPanelOpen(!state.assistantOpen);
+  applyDesktopState(elements.actionState, "active", { kind: "activity" });
+  setOperationOutput(state.assistantOpen ? "opened assistant panel" : "closed assistant panel");
+});
+
+elements.assistantClose?.addEventListener("click", () => {
+  setAssistantPanelOpen(false);
+  applyDesktopState(elements.actionState, "idle", { kind: "activity" });
+  setOperationOutput("closed assistant panel");
+});
+
+elements.assistantPanel?.addEventListener("click", (event) => {
+  if (event.target !== elements.assistantPanel) {
+    return;
+  }
+  setAssistantPanelOpen(false);
+  applyDesktopState(elements.actionState, "idle", { kind: "activity" });
+  setOperationOutput("closed assistant panel");
+});
+
+elements.assistantLocalAsk?.addEventListener("click", () => {
+  answerWithLocalGuide();
+});
+
+elements.assistantLocalPrompt?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || event.shiftKey) {
+    return;
+  }
+  event.preventDefault();
+  answerWithLocalGuide();
+});
+
 for (const button of document.querySelectorAll("[data-action]")) {
   button.addEventListener("click", async () => {
     await runAction(button.dataset.action);
@@ -3506,6 +3726,13 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
   }
 });
 
+elements.languageSelect?.addEventListener("change", async (event) => {
+  state.language = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
+  renderDesktopLanguagePreference();
+});
+
+state.language = await loadDesktopLanguagePreference();
+renderDesktopLanguagePreference();
 await applyBrand();
 await loadEnvironment();
 enhanceHubAccessibility();
@@ -3531,10 +3758,12 @@ renderHotRuntimeLogServiceLabel();
 syncDesktopStates();
 renderHubDensityToggles();
 renderPanelPages("runtimes");
+renderPanelPages("deploy");
 renderPanelPages("observe");
 renderPanelPages("tools");
 renderHubRecents();
 applyAssistantSettings();
+renderAssistantPanel();
 setSection(state.activeSection);
 setBusy(false, "idle");
 await refreshRuntimeStatus();

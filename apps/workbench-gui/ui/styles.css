@@ -12,45 +12,55 @@
   --shadow: var(--desktop-shadow-soft);
 }
 
-body {
-  margin: 0;
-  font-family: var(--desktop-font-family);
+.shell {
+  min-height: 100vh;
   background:
     radial-gradient(circle at top left, rgba(255, 107, 87, 0.16), transparent 32%),
     linear-gradient(180deg, #f4f7f9, var(--bg));
   color: var(--text);
 }
 
-.shell {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  min-height: 100vh;
+body {
+  margin: 0;
+  font-family: var(--desktop-font-family);
 }
 
-.sidebar {
-  border-right: 1px solid var(--line);
-  background: rgba(247, 250, 252, 0.9);
-  padding: 20px;
+.shell-shell {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+  min-height: 100vh;
+  padding: 18px;
+}
+
+.shell-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 16px;
+  align-items: center;
+  padding: 18px 20px;
 }
 
 .brand {
   display: flex;
   gap: 14px;
-  align-items: center;
+  align-items: flex-start;
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--desktop-radius-card);
   background: var(--panel);
   box-shadow: var(--shadow);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .brand__icon {
-  width: 68px;
-  height: 68px;
-  border-radius: 18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
 }
 
 .brand__eyebrow {
@@ -62,7 +72,7 @@ body {
 
 .brand__title {
   margin: 4px 0;
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1.05;
 }
 
@@ -111,6 +121,60 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
+  height: 100%;
+}
+
+.shell-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.shell-language {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.shell-language select {
+  min-width: 112px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 12px;
+}
+
+.shell-tab {
+  min-width: 132px;
+}
+
+.shell-tab.is-active {
+  background: var(--accent-soft);
+  border-color: rgba(255, 107, 87, 0.32);
+}
+
+.shell-page.hidden {
+  display: none !important;
+}
+
+.shell-shell--workbench {
+  padding: 0;
+  gap: 0;
+}
+
+.control-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(240px, 1fr) minmax(280px, 1.15fr);
+  gap: 16px;
+  align-items: start;
 }
 
 .panel__title {
@@ -185,8 +249,8 @@ button:hover {
 
 .status-output {
   margin: 0;
-  min-height: 180px;
-  max-height: 320px;
+  min-height: 132px;
+  max-height: 220px;
   overflow: auto;
   padding: 14px;
   border-radius: 14px;
@@ -221,8 +285,10 @@ button:hover {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: 18px;
-  gap: 14px;
+  padding: 0;
+  gap: 12px;
+  flex: 1;
+  position: relative;
 }
 
 .viewer__toolbar {
@@ -234,6 +300,16 @@ button:hover {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.viewer__toolbar-actions {
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+.viewer__back-button,
+.viewer__reload-button {
+  min-width: 0;
 }
 
 .viewer__dock-icon {
@@ -269,20 +345,95 @@ button:hover {
 #workbench-frame {
   flex: 1;
   width: 100%;
-  min-height: 780px;
+  min-height: calc(100vh - 300px);
   border: 1px solid var(--line);
   border-radius: 24px;
   background: white;
   box-shadow: var(--shadow);
 }
 
+.shell-shell--workbench .shell-head {
+  display: none;
+}
+
+.shell-shell--workbench .viewer {
+  min-height: 100vh;
+  gap: 0;
+}
+
+.shell-shell--workbench .viewer__toolbar {
+  position: absolute;
+  left: 18px;
+  bottom: 26px;
+  z-index: 3;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.shell-shell--workbench .viewer__dock-icon,
+.shell-shell--workbench .viewer__headline,
+.shell-shell--workbench .viewer__reload-button {
+  display: none;
+}
+
+.shell-shell--workbench .viewer__back-button {
+  min-width: 84px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(193, 79, 61, 0.96), rgba(167, 57, 42, 0.98));
+  border-color: rgba(132, 38, 26, 0.42);
+  box-shadow: 0 14px 30px rgba(119, 42, 31, 0.26);
+  color: #fff8f6;
+  font-size: 13px;
+}
+
+.shell-shell--workbench .viewer__back-button:hover {
+  background: linear-gradient(180deg, rgba(205, 88, 70, 0.98), rgba(176, 62, 46, 1));
+}
+
+.shell-shell--workbench #workbench-frame {
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 @media (max-width: 1100px) {
-  .shell {
+  .shell-head,
+  .control-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .brand {
+    grid-column: 1 / -1;
+  }
+
+  .shell-tabs {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .shell-language {
+    width: 100%;
+  }
+}
+
+@media (max-width: 820px) {
+  .shell-head,
+  .control-grid {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+  #workbench-frame {
+    min-height: calc(100vh - 420px);
+  }
+
+  .shell-shell--workbench .viewer__toolbar {
+    left: 10px;
+    bottom: 18px;
   }
 }

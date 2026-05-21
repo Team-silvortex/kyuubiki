@@ -7,11 +7,13 @@ use kyuubiki_desktop_runtime::{
     hot_service_start as desktop_hot_service_start,
     hot_service_status as desktop_hot_service_status,
     hot_service_stop as desktop_hot_service_stop,
+    read_global_language_preference as desktop_read_global_language_preference,
     read_runtime_log as read_shared_runtime_log,
     service_restart as desktop_service_restart,
     service_start as desktop_service_start,
     service_status as desktop_service_status,
     service_stop as desktop_service_stop,
+    write_global_language_preference as desktop_write_global_language_preference,
     HotServiceMode,
     ServiceMode,
 };
@@ -42,6 +44,11 @@ struct RuntimeLogPayload {
     rendered: String,
 }
 
+#[derive(Serialize)]
+struct DesktopPreferencesPayload {
+    language: String,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ServicePayload {
@@ -52,6 +59,12 @@ struct ServicePayload {
 #[serde(rename_all = "camelCase")]
 struct LogPayload {
     service: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DesktopPreferencesInputPayload {
+    language: String,
 }
 
 #[derive(Deserialize)]
@@ -550,6 +563,28 @@ fn launch_desktop_app_with_fallback(
     }
 }
 
+fn open_host_path(path: &Path) -> Result<String, String> {
+    if cfg!(target_os = "macos") {
+        let mut command = Command::new("open");
+        command.arg(path);
+        spawn_background_command(command, &format!("open {}", path.display()))?;
+    } else if cfg!(target_os = "windows") {
+        let mut command = Command::new("cmd");
+        command.arg("/C").arg("start").arg("").arg(path);
+        spawn_background_command(command, &format!("open {}", path.display()))?;
+    } else {
+        let mut command = Command::new("xdg-open");
+        command.arg(path);
+        spawn_background_command(command, &format!("open {}", path.display()))?;
+    }
+
+    Ok(format!("opened {}", path.display()))
+}
+
+fn docs_file(relative: &str) -> PathBuf {
+    workspace_root().join("docs").join(relative)
+}
+
 fn node_command() -> &'static str {
     if cfg!(target_os = "windows") {
         "node.exe"
@@ -649,6 +684,20 @@ fn run_project_cli_compare(command: &str, left_path: &str, right_path: &str) -> 
 fn service_status() -> Result<ServiceStatusPayload, String> {
     Ok(ServiceStatusPayload {
         rendered: desktop_service_status()?,
+    })
+}
+
+#[tauri::command]
+fn get_global_language_preference() -> DesktopPreferencesPayload {
+    DesktopPreferencesPayload {
+        language: desktop_read_global_language_preference().unwrap_or_else(|| "en".to_string()),
+    }
+}
+
+#[tauri::command]
+fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Result<DesktopPreferencesPayload, String> {
+    Ok(DesktopPreferencesPayload {
+        language: desktop_write_global_language_preference(&payload.language)?,
     })
 }
 
@@ -777,6 +826,26 @@ fn launch_installer_gui() -> Result<String, String> {
 }
 
 #[tauri::command]
+fn open_docs_index() -> Result<String, String> {
+    open_host_path(&docs_file("README.md"))
+}
+
+#[tauri::command]
+fn open_current_line_doc() -> Result<String, String> {
+    open_host_path(&docs_file("current-line.md"))
+}
+
+#[tauri::command]
+fn open_operations_doc() -> Result<String, String> {
+    open_host_path(&docs_file("operations.md"))
+}
+
+#[tauri::command]
+fn open_troubleshooting_doc() -> Result<String, String> {
+    open_host_path(&docs_file("release-troubleshooting-0.9.0.md"))
+}
+
+#[tauri::command]
 fn hub_environment() -> HubEnvironmentPayload {
     HubEnvironmentPayload {
         hub_role: "desktop-orchestration-shell".to_string(),
@@ -817,6 +886,12 @@ fn main() {
             project_bundle_diff,
             launch_workbench_gui,
             launch_installer_gui,
+            get_global_language_preference,
+            set_global_language_preference,
+            open_docs_index,
+            open_current_line_doc,
+            open_operations_doc,
+            open_troubleshooting_doc,
             hub_environment
         ])
         .run(tauri::generate_context!())

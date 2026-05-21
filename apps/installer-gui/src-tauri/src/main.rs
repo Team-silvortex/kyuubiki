@@ -8,9 +8,11 @@ use std::thread;
 use std::time::Duration;
 
 use kyuubiki_desktop_runtime::{
-    log_path_for, read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
+    log_path_for, read_global_language_preference as desktop_read_global_language_preference,
+    read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
     service_start as desktop_service_start, service_status as desktop_service_status,
-    service_stop as desktop_service_stop, ServiceMode,
+    service_stop as desktop_service_stop, write_global_language_preference as desktop_write_global_language_preference,
+    ServiceMode,
 };
 use kyuubiki_installer::{
     doctor_report as build_doctor_report, export_launch_config, init_env as installer_init_env,
@@ -102,6 +104,12 @@ struct LogPayload {
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct DesktopPreferencesInputPayload {
+    language: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct BuildPayload {
     bundle_mode: Option<String>,
 }
@@ -131,6 +139,11 @@ struct RemoteAgentPayload {
 #[derive(Serialize)]
 struct ServiceStatusPayload {
     rendered: String,
+}
+
+#[derive(Serialize)]
+struct DesktopPreferencesPayload {
+    language: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -404,6 +417,20 @@ fn service_status() -> Result<ServiceStatusPayload, String> {
 }
 
 #[tauri::command]
+fn get_global_language_preference() -> DesktopPreferencesPayload {
+    DesktopPreferencesPayload {
+        language: desktop_read_global_language_preference().unwrap_or_else(|| "en".to_string()),
+    }
+}
+
+#[tauri::command]
+fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Result<DesktopPreferencesPayload, String> {
+    Ok(DesktopPreferencesPayload {
+        language: desktop_write_global_language_preference(&payload.language)?,
+    })
+}
+
+#[tauri::command]
 fn service_start(payload: ServicePayload) -> Result<String, String> {
     let mode = match payload.mode.as_deref() {
         Some("local") => ServiceMode::Local,
@@ -616,6 +643,8 @@ fn main() {
             read_env_file,
             write_env_file,
             service_status,
+            get_global_language_preference,
+            set_global_language_preference,
             service_start,
             service_restart,
             service_stop,

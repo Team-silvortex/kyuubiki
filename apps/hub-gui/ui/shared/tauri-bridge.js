@@ -29,6 +29,26 @@ export async function loadDesktopBrand() {
   }
 }
 
+export function normalizeDesktopLanguage(value) {
+  return value === "zh" || value === "ja" ? value : "en";
+}
+
+export async function loadDesktopLanguagePreference() {
+  try {
+    const payload = await invokeTauri("get_global_language_preference");
+    return normalizeDesktopLanguage(payload?.language);
+  } catch (_error) {
+    return "en";
+  }
+}
+
+export async function saveDesktopLanguagePreference(language) {
+  const payload = await invokeTauri("set_global_language_preference", {
+    payload: { language: normalizeDesktopLanguage(language) },
+  });
+  return normalizeDesktopLanguage(payload?.language);
+}
+
 export function setText(id, value) {
   const element = document.getElementById(id);
   if (element && value) {

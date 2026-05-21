@@ -57,6 +57,14 @@
           </div>
           <div class="hub-head__aside">
             <div class="hub-head__status">
+              <label class="hub-field hub-field--stacked">
+                <span id="shell-language-label">Language</span>
+                <select id="shell-language-select">
+                  <option value="en">English</option>
+                  <option value="zh">中文</option>
+                  <option value="ja">日本語</option>
+                </select>
+              </label>
               <div class="desktop-shell-note">Action status</div>
               <strong class="desktop-shell-state" data-desktop-state="activity" id="hub-action-state">idle</strong>
             </div>
@@ -73,6 +81,7 @@
             <button class="hub-panel-tab hub-panel-tab--active" data-projects-page="start" type="button">Start here</button>
             <button class="hub-panel-tab" data-projects-page="library" type="button">Library</button>
             <button class="hub-panel-tab" data-projects-page="bundles" type="button">Bundle tools</button>
+            <button class="hub-panel-tab" data-projects-page="guides" type="button">Guides</button>
           </div>
 
           <div class="hub-projects-pane" data-projects-pane="start">
@@ -140,6 +149,14 @@
                   <button class="hub-cluster-card" data-projects-target="bundles" type="button">
                     <strong>Open Bundle tools</strong>
                     <span class="desktop-shell-note">Inspect, validate, normalize, pack, unpack, and diff project bundles.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-projects-target="guides" type="button">
+                    <strong>Open docs &amp; guides</strong>
+                    <span class="desktop-shell-note">Go to one clear documentation shelf for current-line, operations, troubleshooting, and accuracy notes.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-installer" type="button">
+                    <strong>Open Installer</strong>
+                    <span class="desktop-shell-note">Bootstrap release layouts, desktop packaging, and workstation setup from one shell.</span>
                   </button>
                   <button class="hub-cluster-card" data-target-section="runtimes" type="button">
                     <strong>Open Runtimes</strong>
@@ -288,6 +305,76 @@
               </article>
             </div>
           </div>
+
+          <div class="hub-projects-pane hidden" data-projects-pane="guides">
+            <div class="hub-overview-strip">
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow">Docs hub</div>
+                <h2>One readable shelf</h2>
+                <p class="desktop-shell-note">Use one place for orientation first, then branch into operations, accuracy, or troubleshooting only when needed.</p>
+              </article>
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow">Current line</div>
+                <h2>tamamono 1.x</h2>
+                <p class="desktop-shell-note">Read the current product posture, version line, and what this generation is trying to harden.</p>
+              </article>
+              <article class="hub-overview-card desktop-shell-surface-card">
+                <div class="hub-card__eyebrow">Troubleshooting</div>
+                <h2>Find the shortest path</h2>
+                <p class="desktop-shell-note">Use the first-line support notes before you dive into deeper runtime or packaging details.</p>
+              </article>
+            </div>
+
+            <div class="hub-start-layout">
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Primary docs</div>
+                    <h2>Open the right guide</h2>
+                  </div>
+                  <p class="desktop-shell-note">Start with the docs index, then branch into only the guide that matches the job you are doing now.</p>
+                </div>
+                <div class="hub-action-clusters">
+                  <button class="hub-cluster-card" data-action="open-docs-index" type="button">
+                    <strong>Docs index</strong>
+                    <span class="desktop-shell-note">The single entry to current-line, operations, testing, accuracy, and archived release notes.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
+                    <strong>Current line</strong>
+                    <span class="desktop-shell-note">Read what tamamono 1.x is optimizing for before you make deeper product decisions.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
+                    <strong>Operations</strong>
+                    <span class="desktop-shell-note">Use this when you need the runtime, stack, or operator path explained as a coherent workflow.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-troubleshooting-doc" type="button">
+                    <strong>Troubleshooting</strong>
+                    <span class="desktop-shell-note">Use the shortest failure path before you dig into full logs or packaging output.</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow">Accuracy and confidence</div>
+                    <h2>Read the trust story</h2>
+                  </div>
+                  <p class="desktop-shell-note">These are the documents that explain what the current line is trying to verify and why that matters before moxi.</p>
+                </div>
+                <div class="hub-action-clusters">
+                  <button class="hub-cluster-card" data-action="open-accuracy-plan-doc" type="button">
+                    <strong>Accuracy plan</strong>
+                    <span class="desktop-shell-note">See the long-line plan for verified baselines, benchmark expansion, and solver trust.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-accuracy-baselines-doc" type="button">
+                    <strong>Accuracy baselines</strong>
+                    <span class="desktop-shell-note">Read which benchmark families are already locked into regression and which are still next.</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
         </section>
 
         <section class="hub-panel hidden" id="runtimes-panel">
@@ -418,25 +505,13 @@
         </section>
 
         <section class="hub-panel hidden" id="deploy-panel">
-          <div class="hub-overview-strip">
-            <article class="hub-overview-card desktop-shell-surface-card">
-              <div class="hub-card__eyebrow">Runtime posture</div>
-              <h2>Pick the deployment path first</h2>
-              <p class="desktop-shell-note">Choose whether this workstation is leading locally, talking to cloud control, or coordinating a distributed plane.</p>
-            </article>
-            <article class="hub-overview-card desktop-shell-surface-card">
-              <div class="hub-card__eyebrow">Bootstrap</div>
-              <h2>Validate before packaging</h2>
-              <p class="desktop-shell-note">Environment checks and doctor steps stay close to manifest preparation, so release paths feel safer by default.</p>
-            </article>
-            <article class="hub-overview-card desktop-shell-surface-card">
-              <div class="hub-card__eyebrow">Release runway</div>
-              <h2>Move from mode to package</h2>
-              <p class="desktop-shell-note">Deploy is the short runway from selecting a runtime posture to validating the package path you intend to ship.</p>
-            </article>
+          <div class="hub-panel-tabs" aria-label="Deploy pages">
+            <button class="hub-panel-tab hub-panel-tab--active" data-panel-page-group="deploy" data-panel-page="modes" type="button">Modes</button>
+            <button class="hub-panel-tab" data-panel-page-group="deploy" data-panel-page="bootstrap" type="button">Bootstrap</button>
+            <button class="hub-panel-tab" data-panel-page-group="deploy" data-panel-page="release" type="button">Release path</button>
           </div>
 
-          <div class="hub-runtime-layout">
+          <div class="hub-runtime-layout hub-panel-pane" data-panel-pane-group="deploy" data-panel-pane="modes">
             <article class="hub-card desktop-shell-surface-card">
               <div class="hub-card__intro">
                 <div>
@@ -452,9 +527,10 @@
                 <button data-action="restart-local">Restart local stack</button>
               </div>
             </article>
+          </div>
 
-            <div class="hub-runtime-side">
-              <article class="hub-card desktop-shell-surface-card">
+          <div class="hub-runtime-layout hub-panel-pane hidden" data-panel-pane-group="deploy" data-panel-pane="bootstrap">
+            <article class="hub-card desktop-shell-surface-card">
                 <div class="hub-card__intro">
                   <div>
                     <div class="hub-card__eyebrow">Release prep</div>
@@ -468,8 +544,10 @@
                   <button data-action="run-doctor">Run doctor</button>
                 </div>
               </article>
+          </div>
 
-              <article class="hub-card desktop-shell-surface-card">
+          <div class="hub-runtime-layout hub-panel-pane hidden" data-panel-pane-group="deploy" data-panel-pane="release">
+            <article class="hub-card desktop-shell-surface-card">
                 <div class="hub-card__intro">
                   <div>
                     <div class="hub-card__eyebrow">Suggested deploy path</div>
@@ -501,8 +579,7 @@
                   <button data-target-section="tools">Open tools</button>
                 </div>
                 </div>
-              </article>
-            </div>
+            </article>
           </div>
         </section>
 
@@ -692,30 +769,20 @@
         </section>
       </main>
 
-      <aside class="hub-side">
-        <article class="hub-card desktop-shell-surface-card">
-          <div class="hub-card__intro">
-            <div>
-              <div class="hub-card__eyebrow">Main surfaces</div>
-              <h2>Open the right shell</h2>
-            </div>
-            <p class="desktop-shell-note">Use Hub as the front door, then jump only to the surface you actually need next.</p>
-          </div>
-          <div class="hub-stack desktop-shell-action-row">
-            <button class="desktop-shell-button-primary" data-action="open-workbench">Workbench</button>
-            <button data-action="open-installer">Installer</button>
-            <button data-target-section="tools">CLI tools</button>
-          </div>
-        </article>
+      <button aria-controls="hub-assistant-panel" aria-expanded="false" class="hub-assistant-fab" id="hub-assistant-fab" type="button">
+        <img alt="Assistant mark" class="hub-assistant-fab__mark" src="./assets/kyuubiki-app.png" />
+      </button>
 
-        <article class="hub-card desktop-shell-surface-card">
+      <section aria-hidden="true" class="hub-assistant-overlay hidden" id="hub-assistant-panel">
+        <article class="hub-assistant-sheet hub-card desktop-shell-surface-card">
           <div class="hub-card__intro">
             <div>
               <div class="hub-card__eyebrow">Need help?</div>
               <h2>Pick the next safe step</h2>
             </div>
-            <p class="desktop-shell-note">Start with the local guide. Reach for a model only when the built-in path is not enough.</p>
+            <button class="hub-assistant-close" id="hub-assistant-close" type="button">Close</button>
           </div>
+          <p class="desktop-shell-note">Start with the local guide. Reach for a model only when the built-in path is not enough.</p>
           <div class="desktop-shell-section-header">
             <div class="hub-inline-heading">
               <span class="desktop-shell-note">Engine</span>
@@ -733,18 +800,61 @@
           </div>
 
           <section id="assistant-local-panel">
-            <p class="desktop-shell-note">Use the local guide to surface the safest next steps from the current Hub context.</p>
-            <div class="hub-side-shortcuts desktop-shell-action-row">
-              <button class="desktop-shell-button-primary" data-action="start-local">Start local stack</button>
-              <button data-projects-target="library" type="button">Open library</button>
-              <button data-projects-target="bundles" type="button">Inspect bundle</button>
-            </div>
-            <div class="hub-list" id="assistant-local-cards"></div>
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow">Quick actions</div>
+              <div class="hub-side-shortcuts desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" data-action="start-local">Start local stack</button>
+                <button data-projects-target="library" type="button">Open library</button>
+                <button data-projects-target="bundles" type="button">Inspect bundle</button>
+                <button data-projects-target="guides" type="button">Open guides</button>
+              </div>
+            </section>
+
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow">Ask</div>
+              <div class="hub-assistant-form hub-assistant-form--local">
+                <label class="hub-field hub-field--stacked">
+                  <span>Ask the local guide</span>
+                  <textarea id="assistant-local-prompt" placeholder="Example: what should I do first, or how do I inspect a bundle safely?" rows="3"></textarea>
+                </label>
+              </div>
+              <div class="hub-stack desktop-shell-action-row">
+                <button class="desktop-shell-button-primary" id="assistant-local-ask">Ask local guide</button>
+              </div>
+              <pre class="hub-log hub-log--compact" id="assistant-local-output">Ask about the next step, bundle inspection, runtime health, documentation, or packaging.</pre>
+            </section>
+
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow">Docs &amp; guides</div>
+              <div class="hub-assistant-doc-grid">
+                <button class="hub-cluster-card" data-action="open-docs-index" type="button">
+                  <strong>Docs index</strong>
+                  <span class="desktop-shell-note">Open the full documentation entry point.</span>
+                </button>
+                <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
+                  <strong>Current line</strong>
+                  <span class="desktop-shell-note">Read the current tamamono 1.x posture.</span>
+                </button>
+                <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
+                  <strong>Operations</strong>
+                  <span class="desktop-shell-note">Read the runtime and operator workflow.</span>
+                </button>
+                <button class="hub-cluster-card" data-action="open-troubleshooting-doc" type="button">
+                  <strong>Troubleshooting</strong>
+                  <span class="desktop-shell-note">Jump to the first-line support notes.</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="hub-assistant-section">
+              <div class="hub-card__eyebrow">Suggested next steps</div>
+              <div class="hub-list" id="assistant-local-cards"></div>
+            </section>
           </section>
 
           <section class="hidden" id="assistant-llm-panel">
             <p class="desktop-shell-note">Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.</p>
-            <div class="hub-toolbar hub-toolbar--left">
+            <div class="hub-assistant-form">
               <label class="hub-field hub-field--stacked">
                 <span>Base URL</span>
                 <input id="assistant-base-url" placeholder="https://api.openai.com/v1" type="text" />
@@ -790,27 +900,7 @@
             </section>
           </section>
         </article>
-
-        <article class="hub-card desktop-shell-surface-card">
-          <div class="hub-card__intro">
-            <div>
-              <div class="hub-card__eyebrow">Status snapshot</div>
-              <h2>Current posture</h2>
-            </div>
-            <p class="desktop-shell-note">Keep one short read on runtime, storage, and profile while the main work stays in the center.</p>
-          </div>
-          <div class="hub-toolbar hub-toolbar--left hub-toolbar--dense">
-            <button class="hub-density-toggle" data-density-toggle="side-current-mode">Collapse</button>
-          </div>
-          <div class="hub-density-panel" data-density-panel="side-current-mode">
-          <div class="hub-metrics">
-            <div class="desktop-shell-metric-row"><span>Runtime</span><strong class="desktop-shell-state" data-desktop-state="activity" id="current-runtime-mode">orchestrated_gui</strong></div>
-            <div class="desktop-shell-metric-row"><span>Storage</span><strong class="desktop-shell-state" data-desktop-state="activity">sqlite</strong></div>
-            <div class="desktop-shell-metric-row"><span>Profile</span><strong class="desktop-shell-state" data-desktop-state="activity" id="current-profile">local workstation</strong></div>
-          </div>
-          </div>
-        </article>
-      </aside>
+      </section>
     </div>
 
     <script type="module" src="./app.js"></script>

@@ -20,6 +20,11 @@ test("hub shell exposes the desktop information architecture", () => {
   assert.match(html, /data-target="tools"/);
   assert.match(html, /Open workbench/);
   assert.match(html, /data-action="open-installer"/);
+  assert.match(html, /data-projects-page="guides"/);
+  assert.match(html, /data-action="open-docs-index"/);
+  assert.match(html, /data-action="open-current-line-doc"/);
+  assert.match(html, /data-action="open-operations-doc"/);
+  assert.match(html, /data-action="open-troubleshooting-doc"/);
   assert.match(html, /Start local stack/);
   assert.match(html, /Stage desktop package/);
   assert.match(html, /Desktop status/);
@@ -53,6 +58,7 @@ test("hub shell exposes the desktop information architecture", () => {
   assert.match(html, /assistant-mode-local/);
   assert.match(html, /assistant-mode-llm/);
   assert.match(html, /assistant-local-cards/);
+  assert.match(html, /Docs &amp; guides/);
   assert.match(html, /assistant-llm-panel/);
   assert.match(html, /assistant-base-url/);
   assert.match(html, /assistant-api-key/);
@@ -307,6 +313,10 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /project_bundle_diff/);
   assert.match(js, /launch_workbench_gui/);
   assert.match(js, /launch_installer_gui/);
+  assert.match(js, /open-docs-index/);
+  assert.match(js, /open-current-line-doc/);
+  assert.match(js, /open-operations-doc/);
+  assert.match(js, /open-troubleshooting-doc/);
   assert.match(js, /data-target-section/);
   assert.match(js, /desktop_status/);
   assert.match(js, /desktop_build_host/);
@@ -349,5 +359,9 @@ test("tauri backend exposes hub runtime commands", () => {
   assert.match(rust, /launch_built_desktop_app/);
   assert.match(rust, /launch_workbench_gui/);
   assert.match(rust, /launch_installer_gui/);
+  assert.match(rust, /open_docs_index/);
+  assert.match(rust, /open_current_line_doc/);
+  assert.match(rust, /open_operations_doc/);
+  assert.match(rust, /open_troubleshooting_doc/);
   assert.match(rust, /hub_environment/);
 });

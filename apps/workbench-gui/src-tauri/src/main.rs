@@ -1,7 +1,9 @@
 use kyuubiki_desktop_runtime::{
+    read_global_language_preference as desktop_read_global_language_preference,
     read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
     service_start as desktop_service_start, service_status as desktop_service_status,
-    service_stop as desktop_service_stop, ServiceMode,
+    service_stop as desktop_service_stop, write_global_language_preference as desktop_write_global_language_preference,
+    ServiceMode,
 };
 use serde::Serialize;
 
@@ -21,6 +23,11 @@ struct WorkbenchEnvironmentPayload {
 struct RuntimeLogPayload {
     service: String,
     rendered: String,
+}
+
+#[derive(Serialize)]
+struct DesktopPreferencesPayload {
+    language: String,
 }
 
 #[derive(serde::Deserialize)]
@@ -71,6 +78,12 @@ struct LogPayload {
     service: String,
 }
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DesktopPreferencesInputPayload {
+    language: String,
+}
+
 #[tauri::command]
 fn read_runtime_log(payload: LogPayload) -> Result<RuntimeLogPayload, String> {
     Ok(RuntimeLogPayload {
@@ -88,6 +101,20 @@ fn workbench_environment() -> WorkbenchEnvironmentPayload {
     }
 }
 
+#[tauri::command]
+fn get_global_language_preference() -> DesktopPreferencesPayload {
+    DesktopPreferencesPayload {
+        language: desktop_read_global_language_preference().unwrap_or_else(|| "en".to_string()),
+    }
+}
+
+#[tauri::command]
+fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Result<DesktopPreferencesPayload, String> {
+    Ok(DesktopPreferencesPayload {
+        language: desktop_write_global_language_preference(&payload.language)?,
+    })
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -96,7 +123,9 @@ fn main() {
             service_restart,
             service_stop,
             read_runtime_log,
-            workbench_environment
+            workbench_environment,
+            get_global_language_preference,
+            set_global_language_preference
         ])
         .run(tauri::generate_context!())
         .expect("failed to run kyuubiki workbench gui");

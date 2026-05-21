@@ -3,6 +3,9 @@ import {
   invokeTauri as invoke,
   listenTauri as listen,
   loadDesktopBrand,
+  loadDesktopLanguagePreference,
+  normalizeDesktopLanguage,
+  saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
@@ -21,6 +24,8 @@ import {
   const platformLabel = document.getElementById("platform-label");
   const workspaceLabel = document.getElementById("workspace-label");
   const currentModeLabel = document.getElementById("current-mode-label");
+  const languageLabel = document.getElementById("shell-language-label");
+  const languageSelect = document.getElementById("shell-language-select");
   const serviceModePill = document.getElementById("service-mode-pill");
   const completionGuide = document.getElementById("completion-guide");
   const liveTailToggle = document.getElementById("log-autorefresh");
@@ -30,6 +35,7 @@ import {
   let streamedService = null;
   let latestLogSnapshot = "";
   let brandConfig = null;
+  let currentLanguage = "en";
 
   function releaseLabel() {
     const releaseVersion = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
@@ -41,6 +47,17 @@ import {
   function formatServiceReport(rendered) {
     const body = String(rendered || "").trim();
     return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
+  }
+
+  function renderDesktopLanguagePreference() {
+    document.documentElement.lang = currentLanguage;
+    if (languageLabel) {
+      languageLabel.textContent =
+        currentLanguage === "zh" ? "语言" : currentLanguage === "ja" ? "言語" : "Language";
+    }
+    if (languageSelect) {
+      languageSelect.value = currentLanguage;
+    }
   }
 
   function applyBrandConfig(brand) {
@@ -70,6 +87,11 @@ import {
       setText("brand-installer-version", releaseTag);
     }
   }
+
+  languageSelect?.addEventListener("change", async (event) => {
+    currentLanguage = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
+    renderDesktopLanguagePreference();
+  });
 
   function setOutput(value) {
     output.textContent = value;
@@ -535,12 +557,16 @@ import {
   runAction(
     "startup",
     async () => {
-      const [doctor, envForm, status, brand] = await Promise.all([
+      const [doctor, envForm, status, language, brand] = await Promise.all([
         invoke("doctor_report"),
         invoke("read_env_file").catch(() => null),
         invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
+        loadDesktopLanguagePreference().catch(() => "en"),
         loadDesktopBrand().catch(() => null),
       ]);
+
+      currentLanguage = language || currentLanguage;
+      renderDesktopLanguagePreference();
 
       if (brand) {
         applyBrandConfig(brand);

@@ -4308,6 +4308,14 @@ export function Workbench() {
   const [assistantApiBaseUrl, setAssistantApiBaseUrl] = useState("https://api.openai.com/v1");
   const [assistantApiKey, setAssistantApiKey] = useState("");
   const [assistantModel, setAssistantModel] = useState("gpt-4.1-mini");
+  const applyLanguagePreference = (nextLanguage: Language) => {
+    setLanguage(nextLanguage);
+    setLoadedModelName((current) =>
+      current === copy.en.defaultModel || current === copy.zh.defaultModel || current === copy.ja.defaultModel
+        ? copy[nextLanguage].defaultModel
+        : current,
+    );
+  };
   const [assistantWindowOpen, setAssistantWindowOpen] = useState(false);
   const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);
   const [showShortcutHints, setShowShortcutHints] = useState(true);
@@ -4628,6 +4636,10 @@ export function Workbench() {
 
   useEffect(() => {
     const stored = safeStorageGet();
+    const desktopLanguage =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("desktopLanguage")
+        : null;
     if (stored.theme === "linen" || stored.theme === "marine" || stored.theme === "graphite") {
       setTheme(stored.theme);
     }
@@ -4651,13 +4663,36 @@ export function Workbench() {
     if (typeof stored.assistantModel === "string" && stored.assistantModel.trim()) {
       setAssistantModel(stored.assistantModel);
     }
-    if (stored.language === "en" || stored.language === "zh" || stored.language === "ja") {
-      setLanguage(stored.language);
-      setLoadedModelName(copy[stored.language].defaultModel);
-      setMessage(copy[stored.language].initialLoaded);
+    const bootLanguage =
+      desktopLanguage === "en" || desktopLanguage === "zh" || desktopLanguage === "ja"
+        ? desktopLanguage
+        : stored.language === "en" || stored.language === "zh" || stored.language === "ja"
+          ? stored.language
+          : null;
+
+    if (bootLanguage) {
+      applyLanguagePreference(bootLanguage);
+      setMessage(copy[bootLanguage].initialLoaded);
     }
     setLanguagePacks(readWorkbenchLanguagePacks());
     setSecurityAuditLog(readSecurityAuditLog());
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleDesktopLanguage = (event: MessageEvent) => {
+      if (event.data?.type !== "kyuubiki:set-language") return;
+      const nextLanguage = event.data.language;
+      if (nextLanguage === "en" || nextLanguage === "zh" || nextLanguage === "ja") {
+        applyLanguagePreference(nextLanguage);
+      }
+    };
+
+    window.addEventListener("message", handleDesktopLanguage);
+    return () => {
+      window.removeEventListener("message", handleDesktopLanguage);
+    };
   }, []);
 
   useEffect(() => {
@@ -4690,6 +4725,7 @@ export function Workbench() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     if (typeof window !== "undefined") {
+      window.parent?.postMessage({ type: "kyuubiki:language-changed", language }, "*");
       persistWorkbenchSettings({
         theme,
         language,
@@ -5794,12 +5830,7 @@ export function Workbench() {
   };
 
   const handleLanguageChange = (nextLanguage: Language) => {
-    setLanguage(nextLanguage);
-    setLoadedModelName((current) =>
-      current === copy.en.defaultModel || current === copy.zh.defaultModel || current === copy.ja.defaultModel
-        ? copy[nextLanguage].defaultModel
-        : current,
-    );
+    applyLanguagePreference(nextLanguage);
   };
 
   const triggerJsonDownload = (filename: string, payload: Record<string, unknown>) => {
