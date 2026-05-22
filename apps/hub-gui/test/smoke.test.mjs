@@ -118,7 +118,7 @@ test("hub shell registers section switching behavior", () => {
   const js = read("ui/app.js");
   const bridge = read("ui/shared/tauri-bridge.js");
 
-  assert.match(js, /sectionModel/);
+  assert.match(js, /HUB_I18N/);
   assert.match(js, /setSection/);
   assert.match(js, /runAction/);
   assert.match(js, /setBusy/);

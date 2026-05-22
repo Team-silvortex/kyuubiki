@@ -9,26 +9,747 @@ import {
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
 
-const sectionModel = {
-  projects: {
-    title: "Home",
-    copy: "Start with one clear path: bring work in, inspect it once, then move into Workbench.",
+const HUB_I18N = {
+  en: {
+    nav: {
+      projects: "Home",
+      runtimes: "Runtimes",
+      deploy: "Deploy",
+      observe: "Observe",
+      tools: "Tools",
+    },
+    sections: {
+      projects: {
+        title: "Home",
+        copy: "Start with one clear path: bring work in, inspect it once, then move into Workbench.",
+      },
+      runtimes: {
+        title: "Runtimes",
+        copy: "Start the right loop, check runtime health, and keep logs close.",
+      },
+      deploy: {
+        title: "Deploy",
+        copy: "Choose the target posture, validate the workstation, and prepare release paths.",
+      },
+      observe: {
+        title: "Observe",
+        copy: "Scan health, tails, and recent risk signals without leaving the desktop shell.",
+      },
+      tools: {
+        title: "Tools",
+        copy: "Run diagnostics, packaging, and verification from one operator surface.",
+      },
+    },
+    shell: {
+      language: "Language",
+      actionStatus: "Action status",
+      idle: "idle",
+      openWorkbench: "Open workbench",
+      startLocal: "Start local stack",
+      validateEnv: "Validate env",
+      focus: "runtime orchestration",
+    },
+    signals: {
+      intakeLabel: "Workload intake",
+      intakeTitle: "local + remote",
+      intakeCopy: "Register bundles, sync catalogs, and keep one shelf in view.",
+      domainsLabel: "Analysis domains",
+      domainsTitle: "mechanical / thermal / thermo",
+      domainsCopy: "The same study language now flows through Hub, CLI, and Workbench.",
+      firstMoveLabel: "Recommended first move",
+      firstMoveTitle: "sync, inspect, open",
+      firstMoveCopy: "Sync first, inspect once, then open Workbench.",
+    },
+    home: {
+      tabs: {
+        start: "Start here",
+        library: "Library",
+        bundles: "Bundle tools",
+        guides: "Guides",
+      },
+      steps: {
+        step1Label: "Step 1",
+        step1Title: "Bring work in",
+        step1Copy: "Register the current bundle, sync the local control plane, or pull a remote catalog into one shelf.",
+        step2Label: "Step 2",
+        step2Title: "Inspect once",
+        step2Copy: "Validate the bundle shape and analysis intent before you go deeper.",
+        step3Label: "Step 3",
+        step3Title: "Open Workbench",
+        step3Copy: "Move into analysis only after the active bundle and runtime path look safe.",
+      },
+      path: {
+        label: "Recommended path",
+        title: "Use Hub as a short runway",
+        copy: "If this is a fresh session, follow one short path instead of bouncing across all sections.",
+      },
+      flow: {
+        title1: "Start the local stack if needed",
+        copy1: "Bring the local runtime online before you inspect or open anything that depends on it.",
+        title2: "Sync or register work",
+        copy2: "Pull from the local control plane, a remote catalog, or the current bundle path.",
+        title3: "Inspect once, then open",
+        copy3: "Run one quick bundle check, then move into Workbench with fewer surprises.",
+      },
+      actions: {
+        start: "Start local stack",
+        sync: "Sync local control plane",
+        open: "Open workbench",
+      },
+    },
+    panels: {
+      runtimes: {
+        tabs: ["Local runtime", "Hot loop", "Remote targets"],
+        overview: [
+          { label: "Runtime posture", title: "See the local stack first", copy: "Frontend, control plane, and agents stay visible before you dive into logs or hot-reload details." },
+          { label: "Hot loop", title: "Develop without leaving Hub", copy: "Start the mode you need, then watch the current tail from one stable control surface." },
+          { label: "Targets", title: "Keep expansion visible", copy: "Remote clusters and mesh labs stay in the same runtime map, even when your daily path is local." },
+        ],
+        local: {
+          label: "Managed local loop",
+          title: "Local runtime",
+          copy: "Keep the workstation path readable: status first, URLs second, diagnostics close by.",
+          status: "Status",
+          frontend: "Frontend",
+          controlPlane: "Control plane",
+          agents: "Agents",
+        },
+        hot: {
+          label: "Developer runtime",
+          title: "Hot reload loop",
+          copy: "Launch the right dev mode, then keep status, follow-state, and tail output in one place.",
+          status: "Status",
+          mode: "Mode",
+          local: "Hot local",
+          cloud: "Hot cloud",
+          distributed: "Hot distributed",
+          refreshStatus: "Refresh hot status",
+          stop: "Stop hot loop",
+          logs: "Hot logs",
+          autoRefresh: "Auto refresh",
+          interval: "Interval",
+          refreshLog: "Refresh log",
+          copyTail: "Copy tail",
+          clearView: "Clear view",
+          note: "Copy tail exports a sanitized view, not the raw log file.",
+        },
+        targets: {
+          label: "Runtime map",
+          title: "Remote targets",
+          copy: "Keep the distributed picture visible even if your main release path stays on one workstation.",
+        },
+      },
+      deploy: {
+        tabs: ["Modes", "Bootstrap", "Release path"],
+        modes: {
+          label: "Runtime targeting",
+          title: "Deployment modes",
+          copy: "Choose the operating posture that matches the current environment, then restart or pivot without leaving Hub.",
+          local: "Local workstation",
+          cloud: "Cloud control plane",
+          distributed: "Distributed control plane",
+          restart: "Restart local stack",
+        },
+        bootstrap: {
+          label: "Release prep",
+          title: "Bootstrap",
+          copy: "Use the same panel for validation, doctor passes, and package staging so preflight work is easy to repeat.",
+          validate: "Validate env",
+          stage: "Prepare manifests",
+          doctor: "Run doctor",
+        },
+        release: {
+          label: "Suggested deploy path",
+          title: "Mode, verify, package",
+          copy: "Switch posture first, validate next, then move into desktop packaging and verification from the Tools section.",
+        },
+      },
+      observe: {
+        tabs: ["Health", "Runtime watch", "Stack watch"],
+        overview: [
+          { label: "Signal quality", title: "Health first, then detail", copy: "Keep watchdog, recent security events, and job failures readable before you move into tail output." },
+          { label: "Live watch", title: "Mirror what the runtimes see", copy: "Observe mirrors stay close to the live runtime loop, so watch surfaces stay consistent across sections." },
+          { label: "Operator flow", title: "Refresh, copy, move on", copy: "Use Observe for scanning and copying; use Runtimes when you need to change the underlying loop." },
+        ],
+        health: {
+          label: "Stability",
+          title: "Health and watchdog",
+          copy: "Keep the short health story compact: stable runtime, recent security signal, and whether failures are actually accumulating.",
+          watchdog: "Watchdog",
+          security: "Security events",
+          failures: "Failed jobs",
+        },
+        runtime: {
+          title: "Runtime watch",
+          localRuntime: "Local runtime",
+          hotLoop: "Hot loop",
+          mode: "Mode",
+          logSource: "Log source",
+          open: "Open runtimes",
+          refresh: "Refresh tail",
+          copy: "Copy tail",
+        },
+        stack: {
+          title: "Stack watch",
+          logs: "Stack logs",
+          auto: "Auto watch",
+          refresh: "Refresh tail",
+          copy: "Copy tail",
+          note: "Copy tail exports a sanitized view, not the raw log file.",
+        },
+      },
+      tools: {
+        tabs: ["Packages", "Status", "Output"],
+        overview: [
+          { label: "Diagnostics", title: "Read the platform first", copy: "Desktop readiness, benchmarks, and bundle validation sit next to packaging so the release story stays connected." },
+          { label: "Packaging", title: "One platform selector, one path", copy: "Use one target selector for status, staging, host builds, and verification instead of jumping across disconnected surfaces." },
+          { label: "Operational outputs", title: "Keep logs and results nearby", copy: "Status and operation output stay together so packaging work is easier to audit while you iterate." },
+        ],
+        packages: {
+          label: "Platform actions",
+          title: "Diagnostics and packaging",
+          copy: "Use the same tool surface for local diagnostics, bundle validation, and platform-specific desktop packaging.",
+          platform: "Target platform",
+          benchmark: "Run benchmark",
+          validate: "Validate project bundle",
+          export: "Export database",
+          status: "Desktop status",
+          stage: "Stage desktop package",
+          build: "Build host bundles",
+          verify: "Verify desktop release",
+          stop: "Stop local stack",
+        },
+        status: {
+          label: "Readiness",
+          title: "Desktop status",
+          copy: "Use this output as the short readiness wall before you stage, build, or verify host bundles.",
+        },
+        output: {
+          label: "Operations",
+          title: "Tool output",
+          copy: "Keep packaging and diagnostics output close by so release work remains inspectable while it runs.",
+        },
+      },
+    },
+    library: {
+      introLabel: "Managed intake",
+      introTitle: "Workload library",
+      introCopy: "Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.",
+      register: "Register current bundle",
+      syncLocal: "Sync local control plane",
+      syncRemote: "Sync remote catalog",
+    },
+    bundles: {
+      introLabel: "Bundle operations",
+      introTitle: "Project bundle tools",
+      introCopy: "Keep the repetitive archive work in one place, then move straight into analysis.",
+      inspect: "Inspect .kyuubiki",
+      validate: "Validate .kyuubiki",
+      normalize: "Normalize bundle",
+    },
+    guides: {
+      primaryLabel: "Primary docs",
+      primaryTitle: "Open the right guide",
+      primaryCopy: "Start with the docs index, then branch into only the guide that matches the job you are doing now.",
+      docsTitle: "Docs index",
+      docsCopy: "The single entry to current-line, operations, testing, accuracy, and archived release notes.",
+      currentTitle: "Current line",
+      currentCopy: "Read what tamamono 1.x is optimizing for before you make deeper product decisions.",
+    },
   },
-  runtimes: {
-    title: "Runtimes",
-    copy: "Start the right loop, check runtime health, and keep logs close.",
+  zh: {
+    nav: {
+      projects: "首页",
+      runtimes: "运行时",
+      deploy: "部署",
+      observe: "观察",
+      tools: "工具",
+    },
+    sections: {
+      projects: {
+        title: "首页",
+        copy: "先走一条清晰路径：把工作带进来，检查一次，再进入 Workbench。",
+      },
+      runtimes: {
+        title: "运行时",
+        copy: "启动正确的 loop，确认运行时健康，并把日志放在手边。",
+      },
+      deploy: {
+        title: "部署",
+        copy: "选择目标姿态，验证工作站，并准备发布路径。",
+      },
+      observe: {
+        title: "观察",
+        copy: "不用离开桌面壳，就能浏览健康状态、日志尾部和最近风险信号。",
+      },
+      tools: {
+        title: "工具",
+        copy: "从一个操作面完成诊断、打包和验证。",
+      },
+    },
+    shell: {
+      language: "语言",
+      actionStatus: "动作状态",
+      idle: "空闲",
+      openWorkbench: "打开 Workbench",
+      startLocal: "启动本地栈",
+      validateEnv: "验证环境",
+      focus: "运行时编排",
+    },
+    signals: {
+      intakeLabel: "工作入口",
+      intakeTitle: "本地 + 远端",
+      intakeCopy: "注册 bundle、同步 catalog，并把工作统一放在一个架子上。",
+      domainsLabel: "分析域",
+      domainsTitle: "力学 / 热 / 力热",
+      domainsCopy: "同一套 study 语言现在贯穿 Hub、CLI 和 Workbench。",
+      firstMoveLabel: "推荐起手",
+      firstMoveTitle: "同步、检查、打开",
+      firstMoveCopy: "先同步，再检查一次，然后再打开 Workbench。",
+    },
+    home: {
+      tabs: {
+        start: "从这里开始",
+        library: "库",
+        bundles: "Bundle 工具",
+        guides: "文档",
+      },
+      steps: {
+        step1Label: "步骤 1",
+        step1Title: "先把工作带进来",
+        step1Copy: "注册当前 bundle、同步本地 control plane，或者把远端 catalog 拉进同一个工作架。",
+        step2Label: "步骤 2",
+        step2Title: "先检查一次",
+        step2Copy: "在继续深入前，先验证 bundle 结构和分析意图。",
+        step3Label: "步骤 3",
+        step3Title: "打开 Workbench",
+        step3Copy: "只有在当前 bundle 和运行时路径看起来安全时，再进入分析界面。",
+      },
+      path: {
+        label: "推荐路径",
+        title: "把 Hub 当成短跑道",
+        copy: "如果这是一次新会话，先走一条短路径，而不是在所有 section 之间来回跳。",
+      },
+      flow: {
+        title1: "需要时先启动本地栈",
+        copy1: "在检查或打开依赖本地运行时的内容前，先把本地 loop 带起来。",
+        title2: "同步或注册工作",
+        copy2: "从本地 control plane、远端 catalog，或当前 bundle path 拉工作进来。",
+        title3: "检查一次，再打开",
+        copy3: "先做一次快速 bundle 检查，再进入 Workbench，减少意外。",
+      },
+      actions: {
+        start: "启动本地栈",
+        sync: "同步本地 control plane",
+        open: "打开 Workbench",
+      },
+    },
+    panels: {
+      runtimes: {
+        tabs: ["本地运行时", "热重载", "远端目标"],
+        overview: [
+          { label: "运行时姿态", title: "先看本地栈", copy: "在深入日志或热重载细节前，先把 frontend、control plane 和 agents 放在眼前。" },
+          { label: "热重载", title: "不离开 Hub 做开发", copy: "启动需要的模式，然后在同一个稳定控制面查看当前日志尾部。" },
+          { label: "目标", title: "保持扩展视野", copy: "即使日常路径是单机，远端集群和 mesh lab 也仍然留在同一张 runtime 地图里。" },
+        ],
+        local: {
+          label: "本地托管 loop",
+          title: "本地运行时",
+          copy: "让工作站路径保持可读：先看状态，再看 URL，诊断信息放在附近。",
+          status: "状态",
+          frontend: "前端",
+          controlPlane: "控制面",
+          agents: "代理",
+        },
+        hot: {
+          label: "开发运行时",
+          title: "热重载 loop",
+          copy: "启动需要的开发模式，然后把状态、跟随状态和 tail 输出放在同一个地方。",
+          status: "状态",
+          mode: "模式",
+          local: "本地热重载",
+          cloud: "云端热重载",
+          distributed: "分布式热重载",
+          refreshStatus: "刷新热重载状态",
+          stop: "停止热重载 loop",
+          logs: "热重载日志",
+          autoRefresh: "自动刷新",
+          interval: "间隔",
+          refreshLog: "刷新日志",
+          copyTail: "复制 tail",
+          clearView: "清空视图",
+          note: "复制 tail 会导出净化后的视图，而不是原始日志文件。",
+        },
+        targets: {
+          label: "运行时地图",
+          title: "远端目标",
+          copy: "即使主要发布路径仍在单机上，也要把分布式全景保持可见。",
+        },
+      },
+      deploy: {
+        tabs: ["模式", "预备", "发布路径"],
+        modes: {
+          label: "运行时定位",
+          title: "部署模式",
+          copy: "选择与当前环境匹配的运行姿态，然后无需离开 Hub 就能重启或切换。",
+          local: "本地工作站",
+          cloud: "云 control plane",
+          distributed: "分布式 control plane",
+          restart: "重启本地栈",
+        },
+        bootstrap: {
+          label: "发布预备",
+          title: "预备",
+          copy: "把验证、doctor 检查和包 staging 放在同一个面板里，让 preflight 工作更容易重复。",
+          validate: "验证环境",
+          stage: "准备 manifest",
+          doctor: "运行 doctor",
+        },
+        release: {
+          label: "推荐部署路径",
+          title: "模式、验证、打包",
+          copy: "先切运行姿态，再验证，然后从 Tools 进入桌面打包和校验。",
+        },
+      },
+      observe: {
+        tabs: ["健康", "运行时观察", "栈观察"],
+        overview: [
+          { label: "信号质量", title: "先看健康，再看细节", copy: "在进入 tail 输出前，先让 watchdog、最近安全事件和失败任务保持可读。" },
+          { label: "实时观察", title: "镜像运行时所见", copy: "Observe 镜像会贴着 live runtime loop，这样各个 section 的观察面就能保持一致。" },
+          { label: "操作员路径", title: "刷新、复制、继续前进", copy: "Observe 用来浏览和复制；真正要改 loop 时，再去 Runtimes。" },
+        ],
+        health: {
+          label: "稳定性",
+          title: "健康与 watchdog",
+          copy: "把短健康故事保持紧凑：运行时是否稳定、最近安全信号、失败是否真的在累积。",
+          watchdog: "Watchdog",
+          security: "安全事件",
+          failures: "失败任务",
+        },
+        runtime: {
+          title: "运行时观察",
+          localRuntime: "本地运行时",
+          hotLoop: "热重载 loop",
+          mode: "模式",
+          logSource: "日志来源",
+          open: "打开运行时",
+          refresh: "刷新 tail",
+          copy: "复制 tail",
+        },
+        stack: {
+          title: "栈观察",
+          logs: "栈日志",
+          auto: "自动观察",
+          refresh: "刷新 tail",
+          copy: "复制 tail",
+          note: "复制 tail 会导出净化后的视图，而不是原始日志文件。",
+        },
+      },
+      tools: {
+        tabs: ["打包", "状态", "输出"],
+        overview: [
+          { label: "诊断", title: "先读平台状态", copy: "桌面就绪度、benchmark 和 bundle 验证放在打包旁边，让发布故事保持连贯。" },
+          { label: "打包", title: "一个平台选择器，一条路径", copy: "状态、staging、host build 和 verify 共用同一套目标选择，不再在断裂的面板间跳转。" },
+          { label: "操作输出", title: "让日志和结果留在手边", copy: "状态和操作输出放在一起，让打包工作在迭代时更容易审阅。" },
+        ],
+        packages: {
+          label: "平台动作",
+          title: "诊断与打包",
+          copy: "把本地诊断、bundle 验证和按平台桌面打包放在同一个工具面里。",
+          platform: "目标平台",
+          benchmark: "运行 benchmark",
+          validate: "验证项目 bundle",
+          export: "导出数据库",
+          status: "桌面状态",
+          stage: "staging 桌面包",
+          build: "构建 host bundles",
+          verify: "验证桌面发布",
+          stop: "停止本地栈",
+        },
+        status: {
+          label: "就绪度",
+          title: "桌面状态",
+          copy: "把这份输出当成短就绪墙，再决定是否做 stage、build 或 verify。",
+        },
+        output: {
+          label: "操作输出",
+          title: "工具输出",
+          copy: "让打包和诊断输出留在手边，这样发布工作在运行时也可检查。",
+        },
+      },
+    },
+    library: {
+      introLabel: "统一入口",
+      introTitle: "工作负载库",
+      introCopy: "把下载的 bundle、单独导入项以及未来服务端分发的工作负载统一放进 Hub 管理的库里。",
+      register: "注册当前 bundle",
+      syncLocal: "同步本地 control plane",
+      syncRemote: "同步远端 catalog",
+    },
+    bundles: {
+      introLabel: "Bundle 操作",
+      introTitle: "项目 bundle 工具",
+      introCopy: "把重复的归档操作收在一个地方，然后直接继续分析。",
+      inspect: "检查 .kyuubiki",
+      validate: "验证 .kyuubiki",
+      normalize: "规范化 bundle",
+    },
+    guides: {
+      primaryLabel: "主文档",
+      primaryTitle: "打开正确的指南",
+      primaryCopy: "先从 docs index 开始，再只进入和当前工作匹配的那份指南。",
+      docsTitle: "文档索引",
+      docsCopy: "current-line、operations、testing、accuracy 和历史 release notes 的统一入口。",
+      currentTitle: "当前版本线",
+      currentCopy: "先读 tamamono 1.x 现在到底在强化什么，再做更深的产品判断。",
+    },
   },
-  deploy: {
-    title: "Deploy",
-    copy: "Choose the target posture, validate the workstation, and prepare release paths.",
-  },
-  observe: {
-    title: "Observe",
-    copy: "Scan health, tails, and recent risk signals without leaving the desktop shell.",
-  },
-  tools: {
-    title: "Tools",
-    copy: "Run diagnostics, packaging, and verification from one operator surface.",
+  ja: {
+    nav: {
+      projects: "ホーム",
+      runtimes: "ランタイム",
+      deploy: "デプロイ",
+      observe: "観察",
+      tools: "ツール",
+    },
+    sections: {
+      projects: {
+        title: "ホーム",
+        copy: "まずは一本のわかりやすい流れで進みます。作業を取り込み、一度確認してから Workbench に入ります。",
+      },
+      runtimes: {
+        title: "ランタイム",
+        copy: "適切な loop を起動し、状態を確認し、ログを近くに置きます。",
+      },
+      deploy: {
+        title: "デプロイ",
+        copy: "対象の姿勢を選び、ワークステーションを検証し、リリース経路を整えます。",
+      },
+      observe: {
+        title: "観察",
+        copy: "デスクトップシェルから離れずに、ヘルス、ログの末尾、最近のリスク信号を確認します。",
+      },
+      tools: {
+        title: "ツール",
+        copy: "診断、パッケージング、検証を一つの操作面から行います。",
+      },
+    },
+    shell: {
+      language: "言語",
+      actionStatus: "動作状態",
+      idle: "待機",
+      openWorkbench: "Workbench を開く",
+      startLocal: "ローカルスタックを起動",
+      validateEnv: "環境を確認",
+      focus: "ランタイム運用",
+    },
+    signals: {
+      intakeLabel: "作業の取り込み",
+      intakeTitle: "ローカル + リモート",
+      intakeCopy: "bundle を登録し、catalog を同期し、作業を一つの棚にまとめます。",
+      domainsLabel: "解析ドメイン",
+      domainsTitle: "mechanical / thermal / thermo",
+      domainsCopy: "同じ study の言語が Hub、CLI、Workbench を通して流れます。",
+      firstMoveLabel: "推奨の最初の一手",
+      firstMoveTitle: "同期、確認、起動",
+      firstMoveCopy: "まず同期し、一度確認してから Workbench を開きます。",
+    },
+    home: {
+      tabs: {
+        start: "ここから開始",
+        library: "ライブラリ",
+        bundles: "Bundle ツール",
+        guides: "ガイド",
+      },
+      steps: {
+        step1Label: "ステップ 1",
+        step1Title: "作業を取り込む",
+        step1Copy: "現在の bundle を登録し、ローカル control plane を同期するか、リモート catalog を同じ棚に取り込みます。",
+        step2Label: "ステップ 2",
+        step2Title: "一度確認する",
+        step2Copy: "深く進む前に、bundle の形と分析意図を確認します。",
+        step3Label: "ステップ 3",
+        step3Title: "Workbench を開く",
+        step3Copy: "現在の bundle と runtime が安全に見えてから解析に入ります。",
+      },
+      path: {
+        label: "推奨パス",
+        title: "Hub を短い滑走路として使う",
+        copy: "新しいセッションなら、すべての section を行き来する前に一本の短い流れで進みます。",
+      },
+      flow: {
+        title1: "必要なら先にローカルスタックを起動",
+        copy1: "ローカル runtime に依存するものを確認したり開いたりする前に、先に loop を起こします。",
+        title2: "作業を同期または登録",
+        copy2: "ローカル control plane、リモート catalog、または現在の bundle path から取り込みます。",
+        title3: "一度確認してから開く",
+        copy3: "まず短い bundle チェックを行い、その後 Workbench に入って surprises を減らします。",
+      },
+      actions: {
+        start: "ローカルスタックを起動",
+        sync: "ローカル control plane を同期",
+        open: "Workbench を開く",
+      },
+    },
+    panels: {
+      runtimes: {
+        tabs: ["ローカル runtime", "ホット loop", "リモート targets"],
+        overview: [
+          { label: "ランタイム姿勢", title: "まずローカルスタックを見る", copy: "ログや hot-reload の細部に入る前に、frontend、control plane、agents を見える状態にします。" },
+          { label: "ホット loop", title: "Hub を離れずに開発", copy: "必要なモードを起動し、同じ安定した操作面から現在の tail を確認します。" },
+          { label: "ターゲット", title: "拡張先を見失わない", copy: "日常の経路がローカルでも、リモート cluster と mesh lab は同じ runtime map に残ります。" },
+        ],
+        local: {
+          label: "ローカル管理 loop",
+          title: "ローカル runtime",
+          copy: "ワークステーションの経路を読みやすく保ちます。まず状態、その次に URL、診断は近くに。",
+          status: "状態",
+          frontend: "フロントエンド",
+          controlPlane: "コントロールプレーン",
+          agents: "エージェント",
+        },
+        hot: {
+          label: "開発 runtime",
+          title: "ホットリロード loop",
+          copy: "必要な開発モードを起動し、状態、追従状態、tail 出力を一か所にまとめます。",
+          status: "状態",
+          mode: "モード",
+          local: "ローカル hot",
+          cloud: "クラウド hot",
+          distributed: "分散 hot",
+          refreshStatus: "hot 状態を更新",
+          stop: "hot loop を停止",
+          logs: "hot ログ",
+          autoRefresh: "自動更新",
+          interval: "間隔",
+          refreshLog: "ログ更新",
+          copyTail: "tail をコピー",
+          clearView: "表示をクリア",
+          note: "Copy tail は生ログではなく、整えたビューを書き出します。",
+        },
+        targets: {
+          label: "ランタイムマップ",
+          title: "リモート targets",
+          copy: "主要なリリース経路が一台のワークステーションでも、分散の全体像を見失わないようにします。",
+        },
+      },
+      deploy: {
+        tabs: ["モード", "ブートストラップ", "リリース経路"],
+        modes: {
+          label: "ランタイム選定",
+          title: "デプロイモード",
+          copy: "現在の環境に合う運用姿勢を選び、Hub を離れずに再起動や切り替えを行います。",
+          local: "ローカル workstation",
+          cloud: "クラウド control plane",
+          distributed: "分散 control plane",
+          restart: "ローカル stack を再起動",
+        },
+        bootstrap: {
+          label: "リリース準備",
+          title: "ブートストラップ",
+          copy: "検証、doctor、パッケージ staging を同じ面に集め、preflight を繰り返しやすくします。",
+          validate: "環境を確認",
+          stage: "manifest を準備",
+          doctor: "doctor を実行",
+        },
+        release: {
+          label: "推奨デプロイ経路",
+          title: "モード、検証、パッケージ",
+          copy: "まず姿勢を切り替え、次に確認し、その後 Tools からデスクトップ packaging と verification に進みます。",
+        },
+      },
+      observe: {
+        tabs: ["ヘルス", "ランタイム監視", "スタック監視"],
+        overview: [
+          { label: "信号品質", title: "まずヘルス、次に詳細", copy: "tail 出力に入る前に、watchdog、最近の security event、失敗ジョブを読みやすく保ちます。" },
+          { label: "ライブ監視", title: "ランタイムが見ているものを映す", copy: "Observe のミラーは live runtime loop に寄り添い、各 section の監視面を揃えます。" },
+          { label: "オペレータの流れ", title: "更新して、コピーして、次へ進む", copy: "Observe は確認とコピー用、loop を変えるときは Runtimes に戻ります。" },
+        ],
+        health: {
+          label: "安定性",
+          title: "ヘルスと watchdog",
+          copy: "短いヘルスの物語を保ちます。runtime の安定性、最近の security signal、失敗の蓄積が一目でわかるようにします。",
+          watchdog: "Watchdog",
+          security: "セキュリティイベント",
+          failures: "失敗ジョブ",
+        },
+        runtime: {
+          title: "ランタイム監視",
+          localRuntime: "ローカル runtime",
+          hotLoop: "ホット loop",
+          mode: "モード",
+          logSource: "ログソース",
+          open: "Runtimes を開く",
+          refresh: "tail を更新",
+          copy: "tail をコピー",
+        },
+        stack: {
+          title: "スタック監視",
+          logs: "スタックログ",
+          auto: "自動監視",
+          refresh: "tail を更新",
+          copy: "tail をコピー",
+          note: "Copy tail は生ログではなく、整えたビューを書き出します。",
+        },
+      },
+      tools: {
+        tabs: ["パッケージ", "状態", "出力"],
+        overview: [
+          { label: "診断", title: "まずプラットフォームを読む", copy: "desktop readiness、benchmark、bundle validation を packaging の横に置き、リリースの流れをつなげます。" },
+          { label: "パッケージング", title: "一つの platform selector、一つの経路", copy: "status、staging、host build、verify を一つの target selector で進め、断片化した面を行き来しません。" },
+          { label: "操作出力", title: "ログと結果を近くに置く", copy: "status と operation output を近くに置き、パッケージ作業を監査しやすくします。" },
+        ],
+        packages: {
+          label: "プラットフォーム操作",
+          title: "診断とパッケージング",
+          copy: "ローカル診断、bundle validation、プラットフォーム別の desktop packaging を同じツール面で扱います。",
+          platform: "対象プラットフォーム",
+          benchmark: "benchmark を実行",
+          validate: "project bundle を検証",
+          export: "データベースを出力",
+          status: "desktop status",
+          stage: "desktop package を stage",
+          build: "host bundles を build",
+          verify: "desktop release を verify",
+          stop: "ローカル stack を停止",
+        },
+        status: {
+          label: "準備状況",
+          title: "Desktop status",
+          copy: "stage、build、verify の前に、この出力を短い readiness wall として使います。",
+        },
+        output: {
+          label: "操作出力",
+          title: "Tool output",
+          copy: "packaging と diagnostics の出力を近くに置き、リリース作業を実行中でも確認できるようにします。",
+        },
+      },
+    },
+    library: {
+      introLabel: "取り込みの管理",
+      introTitle: "ワークロードライブラリ",
+      introCopy: "ダウンロード済み bundle、単独インポート、将来のサーバ配信 workload を Hub 管理の一つのライブラリにまとめます。",
+      register: "現在の bundle を登録",
+      syncLocal: "ローカル control plane を同期",
+      syncRemote: "リモート catalog を同期",
+    },
+    bundles: {
+      introLabel: "Bundle 操作",
+      introTitle: "プロジェクト bundle ツール",
+      introCopy: "繰り返しのアーカイブ作業を一か所に集め、そのまま解析へ進みます。",
+      inspect: ".kyuubiki を確認",
+      validate: ".kyuubiki を検証",
+      normalize: "bundle を正規化",
+    },
+    guides: {
+      primaryLabel: "主要ドキュメント",
+      primaryTitle: "正しいガイドを開く",
+      primaryCopy: "まず docs index から入り、今の作業に合うガイドだけに進みます。",
+      docsTitle: "Docs index",
+      docsCopy: "current-line、operations、testing、accuracy、archive をまとめた入口です。",
+      currentTitle: "Current line",
+      currentCopy: "より深い判断の前に、tamamono 1.x が何を強化しているかを確認します。",
+    },
   },
 };
 
@@ -132,16 +853,163 @@ const state = {
 let hotRuntimeLogPollHandle = null;
 let observeRuntimeLogPollHandle = null;
 
+function hubCopy() {
+  return HUB_I18N[state.language] || HUB_I18N.en;
+}
+
 const elements = {
   title: document.getElementById("section-title"),
   copy: document.getElementById("section-copy"),
   languageLabel: document.getElementById("shell-language-label"),
   languageSelect: document.getElementById("shell-language-select"),
+  actionStatusLabel: document.getElementById("shell-action-status-label"),
+  navProjects: document.getElementById("nav-projects"),
+  navRuntimes: document.getElementById("nav-runtimes"),
+  navDeploy: document.getElementById("nav-deploy"),
+  navObserve: document.getElementById("nav-observe"),
+  navTools: document.getElementById("nav-tools"),
   navItems: Array.from(document.querySelectorAll(".hub-nav__item")),
   panels: Array.from(document.querySelectorAll(".hub-panel")),
+  heroOpenWorkbench: document.getElementById("hero-open-workbench"),
+  heroStartLocal: document.getElementById("hero-start-local"),
+  heroValidateEnv: document.getElementById("hero-validate-env"),
+  signalIntakeLabel: document.getElementById("signal-intake-label"),
+  signalIntakeTitle: document.getElementById("signal-intake-title"),
+  signalIntakeCopy: document.getElementById("signal-intake-copy"),
+  signalDomainsLabel: document.getElementById("signal-domains-label"),
+  signalDomainsTitle: document.getElementById("signal-domains-title"),
+  signalDomainsCopy: document.getElementById("signal-domains-copy"),
+  signalFirstMoveLabel: document.getElementById("signal-firstmove-label"),
+  signalFirstMoveTitle: document.getElementById("signal-firstmove-title"),
+  signalFirstMoveCopy: document.getElementById("signal-firstmove-copy"),
   projectsPageButtons: Array.from(document.querySelectorAll("[data-projects-page]")),
+  projectsTabStart: document.getElementById("projects-tab-start"),
+  projectsTabLibrary: document.getElementById("projects-tab-library"),
+  projectsTabBundles: document.getElementById("projects-tab-bundles"),
+  projectsTabGuides: document.getElementById("projects-tab-guides"),
   projectsTargetButtons: Array.from(document.querySelectorAll("[data-projects-target]")),
   projectsPanes: Array.from(document.querySelectorAll("[data-projects-pane]")),
+  homeStep1Label: document.getElementById("home-step1-label"),
+  homeStep1Title: document.getElementById("home-step1-title"),
+  homeStep1Copy: document.getElementById("home-step1-copy"),
+  homeStep2Label: document.getElementById("home-step2-label"),
+  homeStep2Title: document.getElementById("home-step2-title"),
+  homeStep2Copy: document.getElementById("home-step2-copy"),
+  homeStep3Label: document.getElementById("home-step3-label"),
+  homeStep3Title: document.getElementById("home-step3-title"),
+  homeStep3Copy: document.getElementById("home-step3-copy"),
+  homePathLabel: document.getElementById("home-path-label"),
+  homePathTitle: document.getElementById("home-path-title"),
+  homePathCopy: document.getElementById("home-path-copy"),
+  homeFlow1Title: document.getElementById("home-flow1-title"),
+  homeFlow1Copy: document.getElementById("home-flow1-copy"),
+  homeFlow2Title: document.getElementById("home-flow2-title"),
+  homeFlow2Copy: document.getElementById("home-flow2-copy"),
+  homeFlow3Title: document.getElementById("home-flow3-title"),
+  homeFlow3Copy: document.getElementById("home-flow3-copy"),
+  homeActionStart: document.getElementById("home-action-start"),
+  homeActionSync: document.getElementById("home-action-sync"),
+  homeActionOpen: document.getElementById("home-action-open"),
+  libraryIntroLabel: document.getElementById("library-intro-label"),
+  libraryIntroTitle: document.getElementById("library-intro-title"),
+  libraryIntroCopy: document.getElementById("library-intro-copy"),
+  libraryActionRegister: document.getElementById("library-action-register"),
+  libraryActionSyncLocal: document.getElementById("library-action-sync-local"),
+  libraryActionSyncRemote: document.getElementById("library-action-sync-remote"),
+  bundlesIntroLabel: document.getElementById("bundles-intro-label"),
+  bundlesIntroTitle: document.getElementById("bundles-intro-title"),
+  bundlesIntroCopy: document.getElementById("bundles-intro-copy"),
+  bundlesActionInspect: document.getElementById("bundles-action-inspect"),
+  bundlesActionValidate: document.getElementById("bundles-action-validate"),
+  bundlesActionNormalize: document.getElementById("bundles-action-normalize"),
+  guidesPrimaryLabel: document.getElementById("guides-primary-label"),
+  guidesPrimaryTitle: document.getElementById("guides-primary-title"),
+  guidesPrimaryCopy: document.getElementById("guides-primary-copy"),
+  guidesDocsTitle: document.getElementById("guides-docs-title"),
+  guidesDocsCopy: document.getElementById("guides-docs-copy"),
+  guidesCurrentTitle: document.getElementById("guides-current-title"),
+  guidesCurrentCopy: document.getElementById("guides-current-copy"),
+  runtimeLocalLabel: document.getElementById("runtime-local-label"),
+  runtimeLocalTitle: document.getElementById("runtime-local-title"),
+  runtimeLocalCopy: document.getElementById("runtime-local-copy"),
+  runtimeLocalStatusLabel: document.getElementById("runtime-local-status-label"),
+  runtimeLocalFrontendLabel: document.getElementById("runtime-local-frontend-label"),
+  runtimeLocalControlLabel: document.getElementById("runtime-local-control-label"),
+  runtimeLocalAgentsLabel: document.getElementById("runtime-local-agents-label"),
+  runtimeHotLabel: document.getElementById("runtime-hot-label"),
+  runtimeHotTitle: document.getElementById("runtime-hot-title"),
+  runtimeHotCopy: document.getElementById("runtime-hot-copy"),
+  runtimeHotStatusLabel: document.getElementById("runtime-hot-status-label"),
+  runtimeHotModeLabel: document.getElementById("runtime-hot-mode-label"),
+  runtimeHotActionLocal: document.getElementById("runtime-hot-action-local"),
+  runtimeHotActionCloud: document.getElementById("runtime-hot-action-cloud"),
+  runtimeHotActionDistributed: document.getElementById("runtime-hot-action-distributed"),
+  runtimeHotActionRefresh: document.getElementById("runtime-hot-action-refresh"),
+  runtimeHotActionStop: document.getElementById("runtime-hot-action-stop"),
+  runtimeHotLogsLabel: document.getElementById("runtime-hot-logs-label"),
+  runtimeHotAutoLabel: document.getElementById("runtime-hot-auto-label"),
+  runtimeHotIntervalLabel: document.getElementById("runtime-hot-interval-label"),
+  runtimeHotRefreshLog: document.getElementById("runtime-hot-refresh-log"),
+  runtimeHotCopyTail: document.getElementById("runtime-hot-copy-tail"),
+  runtimeHotClearView: document.getElementById("runtime-hot-clear-view"),
+  runtimeHotNote: document.getElementById("runtime-hot-note"),
+  runtimeTargetsLabel: document.getElementById("runtime-targets-label"),
+  runtimeTargetsTitle: document.getElementById("runtime-targets-title"),
+  runtimeTargetsCopy: document.getElementById("runtime-targets-copy"),
+  deployModesLabel: document.getElementById("deploy-modes-label"),
+  deployModesTitle: document.getElementById("deploy-modes-title"),
+  deployModesCopy: document.getElementById("deploy-modes-copy"),
+  deployActionLocal: document.getElementById("deploy-action-local"),
+  deployActionCloud: document.getElementById("deploy-action-cloud"),
+  deployActionDistributed: document.getElementById("deploy-action-distributed"),
+  deployActionRestart: document.getElementById("deploy-action-restart"),
+  deployBootstrapLabel: document.getElementById("deploy-bootstrap-label"),
+  deployBootstrapTitle: document.getElementById("deploy-bootstrap-title"),
+  deployBootstrapCopy: document.getElementById("deploy-bootstrap-copy"),
+  deployBootstrapValidate: document.getElementById("deploy-bootstrap-validate"),
+  deployBootstrapStage: document.getElementById("deploy-bootstrap-stage"),
+  deployBootstrapDoctor: document.getElementById("deploy-bootstrap-doctor"),
+  deployReleaseLabel: document.getElementById("deploy-release-label"),
+  deployReleaseTitle: document.getElementById("deploy-release-title"),
+  deployReleaseCopy: document.getElementById("deploy-release-copy"),
+  observeHealthLabel: document.getElementById("observe-health-label"),
+  observeHealthTitle: document.getElementById("observe-health-title"),
+  observeHealthCopy: document.getElementById("observe-health-copy"),
+  observeHealthWatchdogLabel: document.getElementById("observe-health-watchdog-label"),
+  observeHealthSecurityLabel: document.getElementById("observe-health-security-label"),
+  observeHealthFailuresLabel: document.getElementById("observe-health-failures-label"),
+  observeRuntimeTitle: document.getElementById("observe-runtime-title"),
+  observeRuntimeStatusLabel: document.getElementById("observe-runtime-status-label"),
+  observeRuntimeHotLabel: document.getElementById("observe-runtime-hot-label"),
+  observeRuntimeModeLabel: document.getElementById("observe-runtime-mode-label"),
+  observeRuntimeSourceLabel: document.getElementById("observe-runtime-source-label"),
+  observeRuntimeOpen: document.getElementById("observe-runtime-open"),
+  observeRuntimeRefresh: document.getElementById("observe-runtime-refresh"),
+  observeRuntimeCopy: document.getElementById("observe-runtime-copy"),
+  observeStackTitle: document.getElementById("observe-stack-title"),
+  observeStackLogsLabel: document.getElementById("observe-stack-logs-label"),
+  observeStackAutoLabel: document.getElementById("observe-stack-auto-label"),
+  observeStackRefresh: document.getElementById("observe-stack-refresh"),
+  observeStackCopy: document.getElementById("observe-stack-copy"),
+  observeStackNote: document.getElementById("observe-stack-note"),
+  toolsPackagesLabel: document.getElementById("tools-packages-label"),
+  toolsPackagesTitle: document.getElementById("tools-packages-title"),
+  toolsPackagesCopy: document.getElementById("tools-packages-copy"),
+  toolsPackagesPlatformLabel: document.getElementById("tools-packages-platform-label"),
+  toolsPackagesBenchmark: document.getElementById("tools-packages-benchmark"),
+  toolsPackagesValidate: document.getElementById("tools-packages-validate"),
+  toolsPackagesExport: document.getElementById("tools-packages-export"),
+  toolsPackagesStatus: document.getElementById("tools-packages-status"),
+  toolsPackagesStage: document.getElementById("tools-packages-stage"),
+  toolsPackagesBuild: document.getElementById("tools-packages-build"),
+  toolsPackagesVerify: document.getElementById("tools-packages-verify"),
+  toolsPackagesStop: document.getElementById("tools-packages-stop"),
+  toolsStatusLabel: document.getElementById("tools-status-label"),
+  toolsStatusTitle: document.getElementById("tools-status-title"),
+  toolsStatusCopy: document.getElementById("tools-status-copy"),
+  toolsOutputLabel: document.getElementById("tools-output-label"),
+  toolsOutputTitle: document.getElementById("tools-output-title"),
+  toolsOutputCopy: document.getElementById("tools-output-copy"),
   panelPageButtons: Array.from(document.querySelectorAll("[data-panel-page-group][data-panel-page]")),
   panelPanes: Array.from(document.querySelectorAll("[data-panel-pane-group][data-panel-pane]")),
   assistantFab: document.getElementById("hub-assistant-fab"),
@@ -225,14 +1093,221 @@ const elements = {
 };
 
 function renderDesktopLanguagePreference() {
+  const copy = hubCopy();
   document.documentElement.lang = state.language;
   if (elements.languageLabel) {
-    elements.languageLabel.textContent =
-      state.language === "zh" ? "语言" : state.language === "ja" ? "言語" : "Language";
+    elements.languageLabel.textContent = copy.shell.language;
   }
   if (elements.languageSelect) {
     elements.languageSelect.value = state.language;
   }
+  if (elements.actionStatusLabel) {
+    elements.actionStatusLabel.textContent = copy.shell.actionStatus;
+  }
+  if (elements.navProjects) {
+    elements.navProjects.textContent = copy.nav.projects;
+  }
+  if (elements.navRuntimes) {
+    elements.navRuntimes.textContent = copy.nav.runtimes;
+  }
+  if (elements.navDeploy) {
+    elements.navDeploy.textContent = copy.nav.deploy;
+  }
+  if (elements.navObserve) {
+    elements.navObserve.textContent = copy.nav.observe;
+  }
+  if (elements.navTools) {
+    elements.navTools.textContent = copy.nav.tools;
+  }
+  setText("brand-hub-focus", copy.shell.focus);
+  if (elements.heroOpenWorkbench) {
+    elements.heroOpenWorkbench.textContent = copy.shell.openWorkbench;
+  }
+  if (elements.heroStartLocal) {
+    elements.heroStartLocal.textContent = copy.shell.startLocal;
+  }
+  if (elements.heroValidateEnv) {
+    elements.heroValidateEnv.textContent = copy.shell.validateEnv;
+  }
+  setText(elements.signalIntakeLabel, copy.signals.intakeLabel);
+  setText(elements.signalIntakeTitle, copy.signals.intakeTitle);
+  setText(elements.signalIntakeCopy, copy.signals.intakeCopy);
+  setText(elements.signalDomainsLabel, copy.signals.domainsLabel);
+  setText(elements.signalDomainsTitle, copy.signals.domainsTitle);
+  setText(elements.signalDomainsCopy, copy.signals.domainsCopy);
+  setText(elements.signalFirstMoveLabel, copy.signals.firstMoveLabel);
+  setText(elements.signalFirstMoveTitle, copy.signals.firstMoveTitle);
+  setText(elements.signalFirstMoveCopy, copy.signals.firstMoveCopy);
+  if (!state.isBusy && elements.actionState) {
+    elements.actionState.textContent = copy.shell.idle;
+  }
+  if (elements.projectsTabStart) {
+    elements.projectsTabStart.textContent = copy.home.tabs.start;
+  }
+  if (elements.projectsTabLibrary) {
+    elements.projectsTabLibrary.textContent = copy.home.tabs.library;
+  }
+  if (elements.projectsTabBundles) {
+    elements.projectsTabBundles.textContent = copy.home.tabs.bundles;
+  }
+  if (elements.projectsTabGuides) {
+    elements.projectsTabGuides.textContent = copy.home.tabs.guides;
+  }
+  setText(elements.homeStep1Label, copy.home.steps.step1Label);
+  setText(elements.homeStep1Title, copy.home.steps.step1Title);
+  setText(elements.homeStep1Copy, copy.home.steps.step1Copy);
+  setText(elements.homeStep2Label, copy.home.steps.step2Label);
+  setText(elements.homeStep2Title, copy.home.steps.step2Title);
+  setText(elements.homeStep2Copy, copy.home.steps.step2Copy);
+  setText(elements.homeStep3Label, copy.home.steps.step3Label);
+  setText(elements.homeStep3Title, copy.home.steps.step3Title);
+  setText(elements.homeStep3Copy, copy.home.steps.step3Copy);
+  setText(elements.homePathLabel, copy.home.path.label);
+  setText(elements.homePathTitle, copy.home.path.title);
+  setText(elements.homePathCopy, copy.home.path.copy);
+  setText(elements.homeFlow1Title, copy.home.flow.title1);
+  setText(elements.homeFlow1Copy, copy.home.flow.copy1);
+  setText(elements.homeFlow2Title, copy.home.flow.title2);
+  setText(elements.homeFlow2Copy, copy.home.flow.copy2);
+  setText(elements.homeFlow3Title, copy.home.flow.title3);
+  setText(elements.homeFlow3Copy, copy.home.flow.copy3);
+  setText(elements.homeActionStart, copy.home.actions.start);
+  setText(elements.homeActionSync, copy.home.actions.sync);
+  setText(elements.homeActionOpen, copy.home.actions.open);
+  setText(elements.libraryIntroLabel, copy.library.introLabel);
+  setText(elements.libraryIntroTitle, copy.library.introTitle);
+  setText(elements.libraryIntroCopy, copy.library.introCopy);
+  setText(elements.libraryActionRegister, copy.library.register);
+  setText(elements.libraryActionSyncLocal, copy.library.syncLocal);
+  setText(elements.libraryActionSyncRemote, copy.library.syncRemote);
+  setText(elements.bundlesIntroLabel, copy.bundles.introLabel);
+  setText(elements.bundlesIntroTitle, copy.bundles.introTitle);
+  setText(elements.bundlesIntroCopy, copy.bundles.introCopy);
+  setText(elements.bundlesActionInspect, copy.bundles.inspect);
+  setText(elements.bundlesActionValidate, copy.bundles.validate);
+  setText(elements.bundlesActionNormalize, copy.bundles.normalize);
+  setText(elements.guidesPrimaryLabel, copy.guides.primaryLabel);
+  setText(elements.guidesPrimaryTitle, copy.guides.primaryTitle);
+  setText(elements.guidesPrimaryCopy, copy.guides.primaryCopy);
+  setText(elements.guidesDocsTitle, copy.guides.docsTitle);
+  setText(elements.guidesDocsCopy, copy.guides.docsCopy);
+  setText(elements.guidesCurrentTitle, copy.guides.currentTitle);
+  setText(elements.guidesCurrentCopy, copy.guides.currentCopy);
+  renderPanelLanguage(copy);
+  setSection(state.activeSection);
+}
+
+function renderOverviewStrip(section, items) {
+  const cards = document.querySelectorAll(`#${section}-panel .hub-overview-card`);
+  items?.forEach((item, index) => {
+    const card = cards[index];
+    if (!card) return;
+    const eyebrow = card.querySelector(".hub-card__eyebrow");
+    const title = card.querySelector("h2");
+    const copy = card.querySelector(".desktop-shell-note");
+    if (eyebrow) eyebrow.textContent = item.label;
+    if (title) title.textContent = item.title;
+    if (copy) copy.textContent = item.copy;
+  });
+}
+
+function renderPanelTabGroup(group, labels) {
+  const buttons = document.querySelectorAll(`[data-panel-page-group="${group}"]`);
+  labels?.forEach((label, index) => {
+    const button = buttons[index];
+    if (button) button.textContent = label;
+  });
+}
+
+function renderPanelLanguage(copy) {
+  renderPanelTabGroup("runtimes", copy.panels.runtimes.tabs);
+  renderPanelTabGroup("deploy", copy.panels.deploy.tabs);
+  renderPanelTabGroup("observe", copy.panels.observe.tabs);
+  renderPanelTabGroup("tools", copy.panels.tools.tabs);
+  renderOverviewStrip("runtimes", copy.panels.runtimes.overview);
+  renderOverviewStrip("observe", copy.panels.observe.overview);
+  renderOverviewStrip("tools", copy.panels.tools.overview);
+  setText(elements.runtimeLocalLabel, copy.panels.runtimes.local.label);
+  setText(elements.runtimeLocalTitle, copy.panels.runtimes.local.title);
+  setText(elements.runtimeLocalCopy, copy.panels.runtimes.local.copy);
+  setText(elements.runtimeLocalStatusLabel, copy.panels.runtimes.local.status);
+  setText(elements.runtimeLocalFrontendLabel, copy.panels.runtimes.local.frontend);
+  setText(elements.runtimeLocalControlLabel, copy.panels.runtimes.local.controlPlane);
+  setText(elements.runtimeLocalAgentsLabel, copy.panels.runtimes.local.agents);
+  setText(elements.runtimeHotLabel, copy.panels.runtimes.hot.label);
+  setText(elements.runtimeHotTitle, copy.panels.runtimes.hot.title);
+  setText(elements.runtimeHotCopy, copy.panels.runtimes.hot.copy);
+  setText(elements.runtimeHotStatusLabel, copy.panels.runtimes.hot.status);
+  setText(elements.runtimeHotModeLabel, copy.panels.runtimes.hot.mode);
+  setText(elements.runtimeHotActionLocal, copy.panels.runtimes.hot.local);
+  setText(elements.runtimeHotActionCloud, copy.panels.runtimes.hot.cloud);
+  setText(elements.runtimeHotActionDistributed, copy.panels.runtimes.hot.distributed);
+  setText(elements.runtimeHotActionRefresh, copy.panels.runtimes.hot.refreshStatus);
+  setText(elements.runtimeHotActionStop, copy.panels.runtimes.hot.stop);
+  setText(elements.runtimeHotLogsLabel, copy.panels.runtimes.hot.logs);
+  setText(elements.runtimeHotAutoLabel, copy.panels.runtimes.hot.autoRefresh);
+  setText(elements.runtimeHotIntervalLabel, copy.panels.runtimes.hot.interval);
+  setText(elements.runtimeHotRefreshLog, copy.panels.runtimes.hot.refreshLog);
+  setText(elements.runtimeHotCopyTail, copy.panels.runtimes.hot.copyTail);
+  setText(elements.runtimeHotClearView, copy.panels.runtimes.hot.clearView);
+  setText(elements.runtimeHotNote, copy.panels.runtimes.hot.note);
+  setText(elements.runtimeTargetsLabel, copy.panels.runtimes.targets.label);
+  setText(elements.runtimeTargetsTitle, copy.panels.runtimes.targets.title);
+  setText(elements.runtimeTargetsCopy, copy.panels.runtimes.targets.copy);
+  setText(elements.deployModesLabel, copy.panels.deploy.modes.label);
+  setText(elements.deployModesTitle, copy.panels.deploy.modes.title);
+  setText(elements.deployModesCopy, copy.panels.deploy.modes.copy);
+  setText(elements.deployActionLocal, copy.panels.deploy.modes.local);
+  setText(elements.deployActionCloud, copy.panels.deploy.modes.cloud);
+  setText(elements.deployActionDistributed, copy.panels.deploy.modes.distributed);
+  setText(elements.deployActionRestart, copy.panels.deploy.modes.restart);
+  setText(elements.deployBootstrapLabel, copy.panels.deploy.bootstrap.label);
+  setText(elements.deployBootstrapTitle, copy.panels.deploy.bootstrap.title);
+  setText(elements.deployBootstrapCopy, copy.panels.deploy.bootstrap.copy);
+  setText(elements.deployBootstrapValidate, copy.panels.deploy.bootstrap.validate);
+  setText(elements.deployBootstrapStage, copy.panels.deploy.bootstrap.stage);
+  setText(elements.deployBootstrapDoctor, copy.panels.deploy.bootstrap.doctor);
+  setText(elements.deployReleaseLabel, copy.panels.deploy.release.label);
+  setText(elements.deployReleaseTitle, copy.panels.deploy.release.title);
+  setText(elements.deployReleaseCopy, copy.panels.deploy.release.copy);
+  setText(elements.observeHealthLabel, copy.panels.observe.health.label);
+  setText(elements.observeHealthTitle, copy.panels.observe.health.title);
+  setText(elements.observeHealthCopy, copy.panels.observe.health.copy);
+  setText(elements.observeHealthWatchdogLabel, copy.panels.observe.health.watchdog);
+  setText(elements.observeHealthSecurityLabel, copy.panels.observe.health.security);
+  setText(elements.observeHealthFailuresLabel, copy.panels.observe.health.failures);
+  setText(elements.observeRuntimeTitle, copy.panels.observe.runtime.title);
+  setText(elements.observeRuntimeStatusLabel, copy.panels.observe.runtime.localRuntime);
+  setText(elements.observeRuntimeHotLabel, copy.panels.observe.runtime.hotLoop);
+  setText(elements.observeRuntimeModeLabel, copy.panels.observe.runtime.mode);
+  setText(elements.observeRuntimeSourceLabel, copy.panels.observe.runtime.logSource);
+  setText(elements.observeRuntimeOpen, copy.panels.observe.runtime.open);
+  setText(elements.observeRuntimeRefresh, copy.panels.observe.runtime.refresh);
+  setText(elements.observeRuntimeCopy, copy.panels.observe.runtime.copy);
+  setText(elements.observeStackTitle, copy.panels.observe.stack.title);
+  setText(elements.observeStackLogsLabel, copy.panels.observe.stack.logs);
+  setText(elements.observeStackAutoLabel, copy.panels.observe.stack.auto);
+  setText(elements.observeStackRefresh, copy.panels.observe.stack.refresh);
+  setText(elements.observeStackCopy, copy.panels.observe.stack.copy);
+  setText(elements.observeStackNote, copy.panels.observe.stack.note);
+  setText(elements.toolsPackagesLabel, copy.panels.tools.packages.label);
+  setText(elements.toolsPackagesTitle, copy.panels.tools.packages.title);
+  setText(elements.toolsPackagesCopy, copy.panels.tools.packages.copy);
+  setText(elements.toolsPackagesPlatformLabel, copy.panels.tools.packages.platform);
+  setText(elements.toolsPackagesBenchmark, copy.panels.tools.packages.benchmark);
+  setText(elements.toolsPackagesValidate, copy.panels.tools.packages.validate);
+  setText(elements.toolsPackagesExport, copy.panels.tools.packages.export);
+  setText(elements.toolsPackagesStatus, copy.panels.tools.packages.status);
+  setText(elements.toolsPackagesStage, copy.panels.tools.packages.stage);
+  setText(elements.toolsPackagesBuild, copy.panels.tools.packages.build);
+  setText(elements.toolsPackagesVerify, copy.panels.tools.packages.verify);
+  setText(elements.toolsPackagesStop, copy.panels.tools.packages.stop);
+  setText(elements.toolsStatusLabel, copy.panels.tools.status.label);
+  setText(elements.toolsStatusTitle, copy.panels.tools.status.title);
+  setText(elements.toolsStatusCopy, copy.panels.tools.status.copy);
+  setText(elements.toolsOutputLabel, copy.panels.tools.output.label);
+  setText(elements.toolsOutputTitle, copy.panels.tools.output.title);
+  setText(elements.toolsOutputCopy, copy.panels.tools.output.copy);
 }
 
 function loadHubRecents() {
@@ -2035,7 +3110,7 @@ function formatRuntimeReport(value) {
 }
 
 function setSection(section) {
-  const next = sectionModel[section];
+  const next = hubCopy().sections[section];
   if (!next) return;
 
   state.activeSection = section;
