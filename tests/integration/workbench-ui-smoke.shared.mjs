@@ -69,9 +69,10 @@ export async function assertWorkbenchSampleUi(page, domainLabel, sampleLabel, im
     { timeout: 30_000 },
   );
 
-  const reportButton = page.getByRole("button", { name: "Report" }).first();
-  assert.equal(await reportButton.isVisible(), true, `${sampleLabel} should expose Report`);
-  await reportButton.click();
+  const resultButton = page.getByRole("button", { name: "Result" }).first();
+  assert.equal(await resultButton.isVisible(), true, `${sampleLabel} should expose Result`);
+  await resultButton.click();
+  await page.getByRole("button", { name: "Actions" }).first().click();
   await page.getByRole("button", { name: "Export Data" }).first().click();
 
   const exportJsonButton = page.getByRole("button", { name: "Export Data JSON" }).first();

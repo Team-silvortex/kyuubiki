@@ -823,6 +823,26 @@ html[data-theme="graphite"] .immersive-switches {
   font-size: 0.95rem;
 }
 
+.runtime-overview-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.runtime-overview-card .button-row {
+  margin-top: 12px;
+}
+
+.runtime-overview-card .button-row button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(247, 250, 252, 0.82);
+  color: var(--ink);
+  padding: 8px 12px;
+  font-weight: 700;
+  min-height: 34px;
+}
+
 .sidebar-list div,
 .metric-grid div {
   display: grid;

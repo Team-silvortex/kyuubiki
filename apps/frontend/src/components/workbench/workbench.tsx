@@ -925,16 +925,27 @@ const copyEn = {
     editNodeAction: "Edited node properties",
     editMemberAction: "Edited member properties",
     overview: "Overview",
+    result: "Result",
+    actions: "Actions",
+    details: "Details",
     controls: "Controls",
     controlsSetupPage: "Setup",
     controlsReviewPage: "Review",
     studyTypeLabel: "Study Type",
     modelStudyPage: "Study",
+    modelOverviewPage: "Overview",
     modelStudioPage: "Studio",
     modelMaterialsPage: "Materials",
     modelGeneratePage: "Generate",
+    workspaceStudyHint: "Choose the study family, physics domain, and solver-ready setup here.",
+    workspaceStudioHint: "Build and edit nodes, members, boundaries, and geometry here.",
+    workspaceMaterialsHint: "Keep starter material values and reusable material choices together here.",
+    workspaceGenerateHint: "Use generators and parametric helpers to create repeatable models here.",
+    workspaceBrowseHint: "Browse objects, highlights, and result-linked selections here.",
     settings: "Settings",
     scripts: "Scripts",
+    settingsConfigHint: "Theme, language, routing, access tokens, and language packs stay here.",
+    settingsScriptsHint: "WASM Python, macro recording, and action catalogs stay here.",
     assistant: "Assistant",
     config: "Config",
     runtime: "Runtime",
@@ -1575,16 +1586,27 @@ const copyZh = {
     editNodeAction: "编辑节点属性",
     editMemberAction: "编辑杆件属性",
     overview: "概览",
+    result: "结果",
+    actions: "动作",
+    details: "细节",
     controls: "控制",
     controlsSetupPage: "设置",
     controlsReviewPage: "复查",
     studyTypeLabel: "研究类型",
     modelStudyPage: "研究",
+    modelOverviewPage: "概览",
     modelStudioPage: "工作区",
     modelMaterialsPage: "材料",
     modelGeneratePage: "生成",
+    workspaceStudyHint: "在这里选择研究族、物理域和可直接求解的 setup。",
+    workspaceStudioHint: "在这里建模和编辑节点、单元、边界与几何。",
+    workspaceMaterialsHint: "把起步材料参数和可复用材料选择集中放在这里。",
+    workspaceGenerateHint: "在这里用生成器和参数化助手快速生成可重复模型。",
+    workspaceBrowseHint: "在这里浏览对象、热点以及与结果联动的选择。",
     settings: "设置",
     scripts: "脚本",
+    settingsConfigHint: "主题、语言、路由、访问令牌和语言包都放在这里。",
+    settingsScriptsHint: "WASM Python、宏录制和动作目录都放在这里。",
     assistant: "助手",
     config: "配置",
     runtime: "运行时",
@@ -2162,16 +2184,27 @@ const copy = {
     savedCount: "保存済みモデル",
     versionCount: "バージョン数",
     overview: "概要",
+    result: "結果",
+    actions: "操作",
+    details: "詳細",
     controls: "設定",
     controlsSetupPage: "編集",
     controlsReviewPage: "確認",
     studyTypeLabel: "解析タイプ",
     modelStudyPage: "解析",
+    modelOverviewPage: "概要",
     modelStudioPage: "スタジオ",
     modelMaterialsPage: "材料",
     modelGeneratePage: "生成",
+    workspaceStudyHint: "Study ファミリー、物理ドメイン、solver 向け setup をここで整えます。",
+    workspaceStudioHint: "ノード、部材、境界、幾何の編集はここで行います。",
+    workspaceMaterialsHint: "初期材料値と再利用する材料選択をここにまとめます。",
+    workspaceGenerateHint: "ジェネレーターとパラメトリック補助で再現可能なモデルを作ります。",
+    workspaceBrowseHint: "オブジェクト、ハイライト、結果に結び付く選択をここで参照します。",
     settings: "設定",
     scripts: "スクリプト",
+    settingsConfigHint: "テーマ、言語、ルーティング、アクセストークン、言語パックをここで管理します。",
+    settingsScriptsHint: "WASM Python、マクロ記録、アクションカタログをここで扱います。",
     assistant: "アシスタント",
     config: "構成",
     runtime: "ランタイム",
@@ -4409,7 +4442,7 @@ export function Workbench() {
   const [sidebarSection, setSidebarSection] = useState<SidebarSection>("model");
   const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
   const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
-  const [modelToolsPage, setModelToolsPage] = useState<ModelToolsPage>("study");
+  const [modelToolsPage, setModelToolsPage] = useState<ModelToolsPage>("overview");
   const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("jobs");
   const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
   const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("config");
@@ -8854,6 +8887,7 @@ export function Workbench() {
             setModelTab(payload.modelTab);
           }
           if (
+            payload.modelToolsPage === "overview" ||
             payload.modelToolsPage === "study" ||
             payload.modelToolsPage === "studio" ||
             payload.modelToolsPage === "materials" ||
@@ -11072,10 +11106,16 @@ export function Workbench() {
             isTruss3d={isTruss3d}
             toolsTabLabel={t.tabs.tools}
             treeTabLabel={t.tabs.tree}
+            toolsPageOverviewLabel={t.modelOverviewPage}
             toolsPageStudyLabel={t.modelStudyPage}
             toolsPageStudioLabel={t.modelStudioPage}
             toolsPageMaterialsLabel={t.modelMaterialsPage}
             toolsPageGenerateLabel={t.modelGeneratePage}
+            studyOverviewHint={t.workspaceStudyHint}
+            studioOverviewHint={t.workspaceStudioHint}
+            materialsOverviewHint={t.workspaceMaterialsHint}
+            generateOverviewHint={t.workspaceGenerateHint}
+            browseOverviewHint={t.workspaceBrowseHint}
             studyContent={modelStudyContent}
             studioContent={modelStudioContent}
             materialsContent={modelMaterialsContent}
@@ -11144,10 +11184,13 @@ export function Workbench() {
             systemPanelTab={systemPanelTab === "assistant" ? "config" : systemPanelTab}
             onSystemPanelTabChange={handleSystemPanelTabChange}
             settingsTabLabel={t.settings}
+            overviewPageLabel={t.overview}
             configPageLabel={t.config}
             scriptsPageLabel={t.scripts}
             runtimeTabLabel={t.runtime}
             dataTabLabel={t.data}
+            configOverviewHint={t.settingsConfigHint}
+            scriptsOverviewHint={t.settingsScriptsHint}
             configContent={
               <WorkbenchSystemConfigCard
                 title={t.settings}
@@ -11251,6 +11294,7 @@ export function Workbench() {
             }
             runtimeContent={
               <WorkbenchSystemRuntimePanel
+                overviewTabLabel={t.overview}
                 stackTabLabel={t.stack}
                 securityTabLabel={t.security}
                 agentsTabLabel={t.agents}
@@ -11348,6 +11392,7 @@ export function Workbench() {
               <WorkbenchDataAdminPanel
                 title={t.dataAdmin}
                 recordCountLabel={`${t.databaseRecordCount}: ${jobHistory.length + resultRecords.length}`}
+                overviewTabLabel={t.overview}
                 jobsTabLabel={t.adminJobs}
                 resultsTabLabel={t.adminResults}
                 browsePageLabel={t.adminBrowsePage}

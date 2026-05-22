@@ -33,6 +33,7 @@ type ProtocolAgentCardRow = {
 };
 
 type WorkbenchSystemRuntimePanelProps = {
+  overviewTabLabel: string;
   stackTabLabel: string;
   securityTabLabel: string;
   agentsTabLabel: string;
@@ -111,6 +112,7 @@ type WorkbenchSystemRuntimePanelProps = {
 };
 
 export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimePanel({
+  overviewTabLabel,
   stackTabLabel,
   securityTabLabel,
   agentsTabLabel,
@@ -179,11 +181,14 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   watchdogStatus,
   watchdogRows,
 }: WorkbenchSystemRuntimePanelProps) {
-  const [page, setPage] = useState<"stack" | "security" | "agents" | "audit" | "watchdog">("stack");
+  const [page, setPage] = useState<"overview" | "stack" | "security" | "agents" | "audit" | "watchdog">("overview");
 
   return (
     <>
       <div className="panel-tabs panel-tabs--wide">
+        <button className={`panel-tab${page === "overview" ? " panel-tab--active" : ""}`} onClick={() => setPage("overview")} type="button">
+          {overviewTabLabel}
+        </button>
         <button className={`panel-tab${page === "stack" ? " panel-tab--active" : ""}`} onClick={() => setPage("stack")} type="button">
           {stackTabLabel}
         </button>
@@ -200,6 +205,113 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
           {watchdogTabLabel}
         </button>
       </div>
+      {page === "overview" ? (
+        <div className="runtime-overview-grid">
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{stackTabLabel}</h2>
+              <span>{backendStatus}</span>
+            </div>
+            <div className="sidebar-list sidebar-list--metrics">
+              {backendRows.slice(0, 3).map((row) => (
+                <div className="sidebar-list__row" key={`backend-${row.label}`}>
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="button-row">
+              <button onClick={() => setPage("stack")} type="button">
+                {stackTabLabel}
+              </button>
+            </div>
+          </section>
+
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{securityTabLabel}</h2>
+              <span>{securityStatus}</span>
+            </div>
+            <div className="sidebar-list sidebar-list--metrics">
+              {securityRows.slice(0, 3).map((row) => (
+                <div className="sidebar-list__row" key={`security-${row.label}`}>
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="button-row">
+              <button onClick={() => setPage("security")} type="button">
+                {securityTabLabel}
+              </button>
+            </div>
+          </section>
+
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{agentsTabLabel}</h2>
+              <span>{protocolAgentsCountLabel}</span>
+            </div>
+            {protocolAgents.length > 0 ? (
+              <div className="sidebar-list sidebar-list--metrics">
+                {protocolAgents.slice(0, 2).map((agent) => (
+                  <div className="sidebar-list__row" key={`agent-${agent.id}`}>
+                    <span>{agent.id}</span>
+                    <strong>{agent.endpoint}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="card-copy">{protocolAgentsEmptyLabel}</p>
+            )}
+            <div className="button-row">
+              <button onClick={() => setPage("agents")} type="button">
+                {agentsTabLabel}
+              </button>
+            </div>
+          </section>
+
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{auditTabLabel}</h2>
+              <span>{auditCountLabel}</span>
+            </div>
+            <div className="sidebar-list sidebar-list--metrics">
+              {auditSummaryRows.slice(0, 3).map((row) => (
+                <div className="sidebar-list__row" key={`audit-${row.label}`}>
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="button-row">
+              <button onClick={() => setPage("audit")} type="button">
+                {auditTabLabel}
+              </button>
+            </div>
+          </section>
+
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{watchdogTabLabel}</h2>
+              <span>{watchdogStatus}</span>
+            </div>
+            <div className="sidebar-list sidebar-list--metrics">
+              {watchdogRows.slice(0, 3).map((row) => (
+                <div className="sidebar-list__row" key={`watchdog-${row.label}`}>
+                  <span>{row.label}</span>
+                  <strong>{row.value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="button-row">
+              <button onClick={() => setPage("watchdog")} type="button">
+                {watchdogTabLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {page === "stack" ? (
         <>
           <WorkbenchSystemMetricsCard title={backendTitle} status={backendStatus} rows={backendRows} />

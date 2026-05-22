@@ -165,7 +165,10 @@ type JobLike = {
 
 type InspectorLabels = {
   overview: string;
+  result: string;
+  actions: string;
   summary: string;
+  details: string;
   busy: string;
   ready: string;
   properties: string;
@@ -395,8 +398,10 @@ type WorkbenchInspectorProps = {
   onPlaneHotspotLimitChange: (limit: number) => void;
 };
 
-type InspectorTab = "properties" | "diagnostics" | "history" | "report";
-type ReportPage = "summary" | "exports";
+type InspectorTab = "status" | "result" | "actions";
+type StatusPage = "properties" | "diagnostics";
+type ActionsPage = "history" | "exports";
+type ResultPage = "summary" | "details";
 type FrameForceSort = "index" | "axial" | "shear" | "moment";
 type PlaneHeatSort = "index" | "temperature" | "gradient" | "flux";
 
@@ -486,8 +491,10 @@ function WorkbenchInspectorInner({
   onSelectFrameHotspot,
   onPlaneHotspotLimitChange,
 }: WorkbenchInspectorProps) {
-  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("report");
-  const [reportPage, setReportPage] = useState<ReportPage>("summary");
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("status");
+  const [statusPage, setStatusPage] = useState<StatusPage>("properties");
+  const [actionsPage, setActionsPage] = useState<ActionsPage>("exports");
+  const [resultPage, setResultPage] = useState<ResultPage>("summary");
   const [frameForceSort, setFrameForceSort] = useState<FrameForceSort>("index");
   const [planeHeatSort, setPlaneHeatSort] = useState<PlaneHeatSort>("index");
   const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
@@ -531,12 +538,19 @@ function WorkbenchInspectorInner({
       </div>
       <div className="inspector-stack panel-scroll-window">
         <div className="panel-tabs panel-tabs--wide">
-          <button className={`panel-tab${inspectorTab === "properties" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("properties")} type="button">{t.properties}</button>
-          <button className={`panel-tab${inspectorTab === "diagnostics" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("diagnostics")} type="button">{t.diagnostics}</button>
-          <button className={`panel-tab${inspectorTab === "history" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("history")} type="button">{t.historyPanel}</button>
-          <button className={`panel-tab${inspectorTab === "report" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("report")} type="button">{t.report}</button>
+          <button className={`panel-tab${inspectorTab === "status" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("status")} type="button">{t.status}</button>
+          <button className={`panel-tab${inspectorTab === "result" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("result")} type="button">{t.result}</button>
+          <button className={`panel-tab${inspectorTab === "actions" ? " panel-tab--active" : ""}`} onClick={() => setInspectorTab("actions")} type="button">{t.actions}</button>
         </div>
-        {sidebarSection === "model" && inspectorTab === "properties" ? (
+        {inspectorTab === "status" ? (
+        <section className="info-card">
+          <div className="panel-tabs panel-tabs--wide">
+            <button className={`panel-tab${statusPage === "properties" ? " panel-tab--active" : ""}`} onClick={() => setStatusPage("properties")} type="button">{t.properties}</button>
+            <button className={`panel-tab${statusPage === "diagnostics" ? " panel-tab--active" : ""}`} onClick={() => setStatusPage("diagnostics")} type="button">{t.diagnostics}</button>
+          </div>
+        </section>
+        ) : null}
+        {sidebarSection === "model" && inspectorTab === "status" && statusPage === "properties" ? (
           <section className="info-card">
             <h3>{t.properties}</h3>
             {isTruss && selectedNodeData ? (
@@ -797,10 +811,10 @@ function WorkbenchInspectorInner({
           </section>
         ) : null}
 
-        {sidebarSection === "model" && isTruss && inspectorTab === "diagnostics" ? (
+        {sidebarSection === "model" && inspectorTab === "status" && statusPage === "diagnostics" ? (
           <section className="info-card">
             <h3>{t.diagnostics}</h3>
-            {trussDiagnostics && trussDiagnostics.blockingMessages.length > 0 ? (
+            {isTruss && trussDiagnostics && trussDiagnostics.blockingMessages.length > 0 ? (
               <div className="diagnostic-list">
                 {trussStability ? (
                   <div className={`stability-badge stability-badge--${trussStability.tone}`}>
@@ -824,13 +838,24 @@ function WorkbenchInspectorInner({
                   ))}
                 </div>
               </div>
-            ) : (
+            ) : isTruss ? (
               <p className="card-copy">{t.diagnosticsClear}</p>
+            ) : (
+              <p className="card-copy">{t.selectionHint}</p>
             )}
           </section>
         ) : null}
 
-        {inspectorTab === "history" ? (
+        {inspectorTab === "actions" ? (
+        <section className="info-card">
+          <div className="panel-tabs panel-tabs--wide">
+            <button className={`panel-tab${actionsPage === "history" ? " panel-tab--active" : ""}`} onClick={() => setActionsPage("history")} type="button">{t.historyPanel}</button>
+            <button className={`panel-tab${actionsPage === "exports" ? " panel-tab--active" : ""}`} onClick={() => setActionsPage("exports")} type="button">{t.exportData}</button>
+          </div>
+        </section>
+        ) : null}
+
+        {inspectorTab === "actions" && actionsPage === "history" ? (
         <section className="info-card">
           <h3>{t.historyPanel}</h3>
           <div className="button-row">
@@ -857,18 +882,17 @@ function WorkbenchInspectorInner({
         </section>
         ) : null}
 
-        {inspectorTab === "report" ? (
+        {inspectorTab === "result" ? (
+        <>
         <section className="info-card">
           <div className="panel-tabs panel-tabs--wide">
-            <button className={`panel-tab${reportPage === "summary" ? " panel-tab--active" : ""}`} onClick={() => setReportPage("summary")} type="button">{t.summary}</button>
-            <button className={`panel-tab${reportPage === "exports" ? " panel-tab--active" : ""}`} onClick={() => setReportPage("exports")} type="button">{t.exportData}</button>
+            <button className={`panel-tab${resultPage === "summary" ? " panel-tab--active" : ""}`} onClick={() => setResultPage("summary")} type="button">{t.summary}</button>
+            <button className={`panel-tab${resultPage === "details" ? " panel-tab--active" : ""}`} onClick={() => setResultPage("details")} type="button">{t.details}</button>
           </div>
         </section>
-        ) : null}
-
-        {inspectorTab === "report" && reportPage === "summary" ? (
+        {resultPage === "summary" ? (
         <section className="info-card">
-          <h3>{t.metrics}</h3>
+          <h3>{t.status}</h3>
           <div className="metric-grid">
             <div><span>{t.status}</span><strong>{job?.status ?? "--"}</strong></div>
             <div><span>{t.worker}</span><strong>{job?.worker_id ?? "--"}</strong></div>
@@ -880,9 +904,35 @@ function WorkbenchInspectorInner({
         </section>
         ) : null}
 
-        {inspectorTab === "report" && reportPage === "exports" ? (
+        {resultPage === "details" ? (
         <section className="info-card">
-          <h3>{t.exportData}</h3>
+          <h3>{t.result}</h3>
+          {reportScopeLabel || reportScopeHint ? (
+            <p className="card-copy">
+              {[reportScopeLabel, reportScopeHint].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
+          <div className="metric-grid">
+            <div><span>{isHeatPlane ? t.maxTemperature : t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
+            <div><span>{isHeatPlane ? t.maxHeatFlux : t.maxStress}</span><strong>{maxStressValue}</strong></div>
+            {(studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") ? <div><span>{t.temperatureDelta}</span><strong>{thermalPlaneMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
+            {isHeatBar ? <div><span>{t.maxTemperature}</span><strong>{tipDisplacement}</strong></div> : null}
+            {isFrame || isSpring || studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d" ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
+            {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
+            {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureDelta}</span><strong>{thermalFrameMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
+            {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalFrameMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
+            {studyKind === "thermal_beam_1d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalBeamMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
+            <div><span>{isHeatBar ? t.maxHeatFlux : t.reaction}</span><strong>{reactionValue}</strong></div>
+            {(isFrame || isBeam || isTorsion) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
+          </div>
+        </section>
+        ) : null}
+        </>
+        ) : null}
+
+        {inspectorTab === "actions" && actionsPage === "exports" ? (
+        <section className="info-card">
+          <h3>{t.actions}</h3>
           {reportScopeLabel || reportScopeHint ? (
             <p className="card-copy">
               {[reportScopeLabel, reportScopeHint].filter(Boolean).join(" · ")}
@@ -1100,30 +1150,6 @@ function WorkbenchInspectorInner({
               ) : null}
             </div>
           ) : null}
-        </section>
-        ) : null}
-
-        {inspectorTab === "report" && reportPage === "summary" ? (
-        <section className="info-card">
-          <h3>{t.report}</h3>
-          {reportScopeLabel || reportScopeHint ? (
-            <p className="card-copy">
-              {[reportScopeLabel, reportScopeHint].filter(Boolean).join(" · ")}
-            </p>
-          ) : null}
-          <div className="metric-grid">
-            <div><span>{isHeatPlane ? t.maxTemperature : t.tipDisp}</span><strong>{tipDisplacement}</strong></div>
-            <div><span>{isHeatPlane ? t.maxHeatFlux : t.maxStress}</span><strong>{maxStressValue}</strong></div>
-            {(studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") ? <div><span>{t.temperatureDelta}</span><strong>{thermalPlaneMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
-            {isHeatBar ? <div><span>{t.maxTemperature}</span><strong>{tipDisplacement}</strong></div> : null}
-            {isFrame || isSpring || studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d" ? <div><span>{t.maxAxialForce}</span><strong>{frameMaxAxialForceValue ?? "--"}</strong></div> : null}
-            {(isFrame || isBeam) ? <div><span>{t.maxShearForce}</span><strong>{frameMaxShearForceValue ?? "--"}</strong></div> : null}
-            {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureDelta}</span><strong>{thermalFrameMaxTemperatureDeltaValue ?? "--"}</strong></div> : null}
-            {studyKind === "thermal_frame_2d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalFrameMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
-            {studyKind === "thermal_beam_1d" ? <div><span>{t.temperatureGradientY}</span><strong>{thermalBeamMaxTemperatureGradientValue ?? "--"}</strong></div> : null}
-            <div><span>{isHeatBar ? t.maxHeatFlux : t.reaction}</span><strong>{reactionValue}</strong></div>
-            {(isFrame || isBeam || isTorsion) ? <div><span>{t.maxRotation}</span><strong>{frameMaxRotationValue ?? "--"}</strong></div> : null}
-          </div>
         </section>
         ) : null}
       </div>

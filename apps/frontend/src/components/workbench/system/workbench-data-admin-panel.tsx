@@ -5,7 +5,7 @@ import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type DataTab = "jobs" | "results";
-type DataPage = "browse" | "edit";
+type DataPage = "overview" | "browse" | "edit";
 
 type AdminJobRow = {
   id: string;
@@ -28,6 +28,7 @@ type AdminResultRow = {
 type WorkbenchDataAdminPanelProps = {
   title: string;
   recordCountLabel: string;
+  overviewTabLabel: string;
   jobsTabLabel: string;
   resultsTabLabel: string;
   browsePageLabel: string;
@@ -104,6 +105,7 @@ type WorkbenchDataAdminPanelProps = {
 export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   title,
   recordCountLabel,
+  overviewTabLabel,
   jobsTabLabel,
   resultsTabLabel,
   browsePageLabel,
@@ -176,7 +178,10 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
   onExportAdminResult,
   onDeleteAdminResult,
 }: WorkbenchDataAdminPanelProps) {
-  const [dataPage, setDataPage] = useState<DataPage>("browse");
+  const [dataPage, setDataPage] = useState<DataPage>("overview");
+  const latestJob = jobRows[0];
+  const waitingJobsCount = jobRows.filter((row) => row.status !== "completed").length;
+  const latestResult = resultRows[0];
   return (
     <section className="sidebar-card sidebar-card--compact">
       <div className="card-head">
@@ -192,6 +197,9 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
         </button>
       </div>
       <div className="panel-tabs panel-tabs--wide">
+        <button className={`panel-tab${dataPage === "overview" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("overview")} type="button">
+          {overviewTabLabel}
+        </button>
         <button className={`panel-tab${dataPage === "browse" ? " panel-tab--active" : ""}`} onClick={() => setDataPage("browse")} type="button">
           {browsePageLabel}
         </button>
@@ -199,6 +207,73 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
           {editPageLabel}
         </button>
       </div>
+      {dataPage === "overview" ? (
+        <div className="runtime-overview-grid">
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{jobsTabLabel}</h2>
+              <span>{String(jobRows.length)}</span>
+            </div>
+            <div className="sidebar-list sidebar-list--metrics">
+              <div className="sidebar-list__row">
+                <span>{recordCountLabel}</span>
+                <strong>{jobRows.length}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{jobsTabLabel}</span>
+                <strong>{latestJob?.status ?? "--"}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{browsePageLabel}</span>
+                <strong>{waitingJobsCount}</strong>
+              </div>
+            </div>
+            <div className="button-row">
+              <button
+                onClick={() => {
+                  onTabChange("jobs");
+                  setDataPage("browse");
+                }}
+                type="button"
+              >
+                {jobsTabLabel}
+              </button>
+            </div>
+          </section>
+
+          <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+            <div className="card-head">
+              <h2>{resultsTabLabel}</h2>
+              <span>{String(resultRows.length)}</span>
+            </div>
+            <div className="sidebar-list sidebar-list--metrics">
+              <div className="sidebar-list__row">
+                <span>{recordCountLabel}</span>
+                <strong>{resultRows.length}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{resultsTabLabel}</span>
+                <strong>{latestResult?.status ?? "--"}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{filterVersionLabel}</span>
+                <strong>{latestResult?.modelVersionId ?? "--"}</strong>
+              </div>
+            </div>
+            <div className="button-row">
+              <button
+                onClick={() => {
+                  onTabChange("results");
+                  setDataPage("browse");
+                }}
+                type="button"
+              >
+                {resultsTabLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {dataPage === "browse" ? (
         <>
           <div className="form-grid compact">
