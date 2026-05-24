@@ -30,7 +30,7 @@ export async function loadDesktopBrand() {
 }
 
 export function normalizeDesktopLanguage(value) {
-  return value === "zh" || value === "ja" ? value : "en";
+  return value === "zh" || value === "ja" || value === "es" ? value : "en";
 }
 
 export async function loadDesktopLanguagePreference() {
@@ -49,9 +49,10 @@ export async function saveDesktopLanguagePreference(language) {
   return normalizeDesktopLanguage(payload?.language);
 }
 
-export function setText(id, value) {
-  const element = document.getElementById(id);
-  if (element && value) {
+export function setText(target, value) {
+  const element =
+    typeof target === "string" ? document.getElementById(target) : target;
+  if (element && value !== undefined && value !== null) {
     element.textContent = value;
   }
 }

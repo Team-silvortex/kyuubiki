@@ -1167,7 +1167,7 @@ export function formatTime(value: string | undefined, language: string): string 
   if (!value) return "--";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  const locale = language === "zh" ? "zh-CN" : language === "ja" ? "ja-JP" : "en-US";
+  const locale = language === "zh" ? "zh-CN" : language === "ja" ? "ja-JP" : language === "es" ? "es-ES" : "en-US";
   return new Intl.DateTimeFormat(locale, {
     month: "short",
     day: "numeric",

@@ -67,6 +67,25 @@ const shellCopy = {
     embeddedWorkbench: "埋め込み Workbench",
     back: "戻る",
   },
+  es: {
+    language: "Idioma",
+    shellPages: { control: "Control", workbench: "Análisis" },
+    runtime: "Runtime",
+    runtimeConsole: "Consola de runtime",
+    viewerControls: "Controles de vista",
+    status: "Estado",
+    logs: "Registros",
+    startLocal: "Iniciar local",
+    restartLocal: "Reiniciar local",
+    refresh: "Actualizar",
+    stop: "Detener",
+    refreshLog: "Actualizar registro",
+    reloadFrame: "Recargar interfaz",
+    loadLocalUi: "Abrir UI local",
+    openWorkbenchPage: "Abrir análisis",
+    embeddedWorkbench: "Workbench incrustado",
+    back: "Volver",
+  },
 };
 
 const state = {

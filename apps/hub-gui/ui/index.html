@@ -63,6 +63,7 @@
                   <option value="en">English</option>
                   <option value="zh">中文</option>
                   <option value="ja">日本語</option>
+                  <option value="es">Español</option>
                 </select>
               </label>
               <div class="desktop-shell-note" id="shell-action-status-label">Action status</div>
@@ -136,31 +137,31 @@
               <article class="hub-card desktop-shell-surface-card">
                 <div class="hub-card__intro">
                   <div>
-                    <div class="hub-card__eyebrow">Quick orientation</div>
-                    <h2>Choose the right next move</h2>
+                    <div class="hub-card__eyebrow" id="home-quick-label">Quick orientation</div>
+                    <h2 id="home-quick-title">Choose the right next move</h2>
                   </div>
-                  <p class="desktop-shell-note">Open the deeper pages only when you know which job you are doing.</p>
+                  <p class="desktop-shell-note" id="home-quick-copy">Open the deeper pages only when you know which job you are doing.</p>
                 </div>
                 <div class="hub-action-clusters">
                   <button class="hub-cluster-card" data-projects-target="library" type="button">
-                    <strong>Open Library</strong>
-                    <span class="desktop-shell-note">Curate workloads, sync catalogs, and filter by domain or family.</span>
+                    <strong id="home-cluster-library-title">Open Library</strong>
+                    <span class="desktop-shell-note" id="home-cluster-library-copy">Curate workloads, sync catalogs, and filter by domain or family.</span>
                   </button>
                   <button class="hub-cluster-card" data-projects-target="bundles" type="button">
-                    <strong>Open Bundle tools</strong>
-                    <span class="desktop-shell-note">Inspect, validate, normalize, pack, unpack, and diff project bundles.</span>
+                    <strong id="home-cluster-bundles-title">Open Bundle tools</strong>
+                    <span class="desktop-shell-note" id="home-cluster-bundles-copy">Inspect, validate, normalize, pack, unpack, and diff project bundles.</span>
                   </button>
                   <button class="hub-cluster-card" data-projects-target="guides" type="button">
-                    <strong>Open docs &amp; guides</strong>
-                    <span class="desktop-shell-note">Go to one clear documentation shelf for current-line, operations, troubleshooting, and accuracy notes.</span>
+                    <strong id="home-cluster-guides-title">Open docs &amp; guides</strong>
+                    <span class="desktop-shell-note" id="home-cluster-guides-copy">Go to one clear documentation shelf for current-line, operations, troubleshooting, and accuracy notes.</span>
                   </button>
                   <button class="hub-cluster-card" data-action="open-installer" type="button">
-                    <strong>Open Installer</strong>
-                    <span class="desktop-shell-note">Bootstrap release layouts, desktop packaging, and workstation setup from one shell.</span>
+                    <strong id="home-cluster-installer-title">Open Installer</strong>
+                    <span class="desktop-shell-note" id="home-cluster-installer-copy">Bootstrap release layouts, desktop packaging, and workstation setup from one shell.</span>
                   </button>
                   <button class="hub-cluster-card" data-target-section="runtimes" type="button">
-                    <strong>Open Runtimes</strong>
-                    <span class="desktop-shell-note">Check stack health, hot-reload status, and runtime tails.</span>
+                    <strong id="home-cluster-runtimes-title">Open Runtimes</strong>
+                    <span class="desktop-shell-note" id="home-cluster-runtimes-copy">Check stack health, hot-reload status, and runtime tails.</span>
                   </button>
                 </div>
               </article>
@@ -181,13 +182,13 @@
               <div class="hub-control-grid">
                 <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                   <label class="hub-field hub-field--stacked">
-                    <span>Catalog URL</span>
+                    <span id="library-catalog-url-label">Catalog URL</span>
                     <input id="workload-catalog-url" placeholder="https://hub.example.com/catalog/workloads.json" type="text" />
                   </label>
                 </div>
                 <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                   <label class="hub-field hub-field--stacked">
-                    <span>Label or note</span>
+                    <span id="library-label-note-label">Label or note</span>
                     <input id="workload-label" placeholder="Bridge starter pack / downloaded from release note" type="text" />
                   </label>
                 </div>
@@ -196,26 +197,26 @@
                 <button class="desktop-shell-button-primary" data-action="workload-register-local" id="library-action-register">Register current bundle</button>
                 <button data-action="workload-sync-local" id="library-action-sync-local">Sync local control plane</button>
                 <button data-action="workload-sync-remote" id="library-action-sync-remote">Sync remote catalog</button>
-                <button data-action="workload-export-library">Export library JSON</button>
-                <button data-action="workload-import-library">Import library JSON</button>
-                <button data-action="workload-clear-library">Clear library</button>
+                <button data-action="workload-export-library" id="library-action-export">Export library JSON</button>
+                <button data-action="workload-import-library" id="library-action-import">Import library JSON</button>
+                <button data-action="workload-clear-library" id="library-action-clear">Clear library</button>
               </div>
               <input accept="application/json" class="hidden" id="workload-import-input" type="file" />
               <div class="hub-history-section">
-                <div class="desktop-shell-note">Managed workloads</div>
+                <div class="desktop-shell-note" id="library-managed-workloads-label">Managed workloads</div>
                 <div class="hub-filter-stack">
                   <div class="hub-history-filters desktop-shell-action-row">
-                    <button class="desktop-shell-button-primary" data-workload-filter="all">All</button>
-                    <button data-workload-filter="mechanical">Mechanical</button>
-                    <button data-workload-filter="thermal">Thermal</button>
-                    <button data-workload-filter="thermo_mechanical">Thermo-mechanical</button>
+                    <button class="desktop-shell-button-primary" data-workload-filter="all" id="library-filter-all">All</button>
+                    <button data-workload-filter="mechanical" id="library-filter-mechanical">Mechanical</button>
+                    <button data-workload-filter="thermal" id="library-filter-thermal">Thermal</button>
+                    <button data-workload-filter="thermo_mechanical" id="library-filter-thermo">Thermo-mechanical</button>
                   </div>
                   <div class="hub-history-filters desktop-shell-action-row">
-                    <button class="desktop-shell-button-primary" data-workload-family-filter="all">All families</button>
-                    <button data-workload-family-filter="axial_and_springs">Axial &amp; Springs</button>
-                    <button data-workload-family-filter="beams_and_frames">Beams &amp; Frames</button>
-                    <button data-workload-family-filter="trusses">Trusses</button>
-                    <button data-workload-family-filter="planes">Planes</button>
+                    <button class="desktop-shell-button-primary" data-workload-family-filter="all" id="library-family-all">All families</button>
+                    <button data-workload-family-filter="axial_and_springs" id="library-family-axial">Axial &amp; Springs</button>
+                    <button data-workload-family-filter="beams_and_frames" id="library-family-beams">Beams &amp; Frames</button>
+                    <button data-workload-family-filter="trusses" id="library-family-trusses">Trusses</button>
+                    <button data-workload-family-filter="planes" id="library-family-planes">Planes</button>
                   </div>
                 </div>
                 <div class="hub-history-list" id="workload-library-list"></div>
@@ -237,19 +238,19 @@
                 <div class="hub-control-grid hub-control-grid--stacked">
                   <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                     <label class="hub-field hub-field--stacked">
-                      <span>Bundle path</span>
+                      <span id="bundles-bundle-path-label">Bundle path</span>
                       <input id="project-bundle-path" placeholder="/path/to/project.kyuubiki" type="text" />
                     </label>
                   </div>
                   <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                     <label class="hub-field hub-field--stacked">
-                      <span>Compare path</span>
+                      <span id="bundles-compare-path-label">Compare path</span>
                       <input id="project-bundle-compare-path" placeholder="/path/to/other-project.kyuubiki" type="text" />
                     </label>
                   </div>
                   <div class="hub-toolbar hub-toolbar--left hub-toolbar--block">
                     <label class="hub-field hub-field--stacked">
-                      <span>Output path</span>
+                      <span id="bundles-output-path-label">Output path</span>
                       <input id="project-bundle-out-path" placeholder="/path/to/output.kyuubiki or /path/to/project-dir" type="text" />
                     </label>
                   </div>
@@ -258,46 +259,46 @@
                   <button class="desktop-shell-button-primary" data-action="project-inspect" id="bundles-action-inspect">Inspect .kyuubiki</button>
                   <button data-action="project-validate" id="bundles-action-validate">Validate .kyuubiki</button>
                   <button data-action="project-normalize" id="bundles-action-normalize">Normalize bundle</button>
-                  <button data-action="project-unpack">Unpack bundle</button>
-                  <button data-action="project-pack">Pack project</button>
-                  <button data-action="project-diff">Diff bundles</button>
-                  <button data-action="open-workbench">Open workbench</button>
-                  <button data-target-section="tools">Desktop tools</button>
+                  <button data-action="project-unpack" id="bundles-action-unpack">Unpack bundle</button>
+                  <button data-action="project-pack" id="bundles-action-pack">Pack project</button>
+                  <button data-action="project-diff" id="bundles-action-diff">Diff bundles</button>
+                  <button data-action="open-workbench" id="bundles-action-open-workbench">Open workbench</button>
+                  <button data-target-section="tools" id="bundles-action-desktop-tools">Desktop tools</button>
                 </div>
                 <div class="hub-recent-grid">
                   <section class="hub-recent-panel">
-                    <div class="desktop-shell-note">Recent bundles</div>
+                    <div class="desktop-shell-note" id="bundles-recent-bundles-label">Recent bundles</div>
                     <div class="hub-recent-list" id="recent-bundle-list"></div>
                   </section>
                   <section class="hub-recent-panel">
-                    <div class="desktop-shell-note">Recent compare paths</div>
+                    <div class="desktop-shell-note" id="bundles-recent-compare-label">Recent compare paths</div>
                     <div class="hub-recent-list" id="recent-compare-list"></div>
                   </section>
                   <section class="hub-recent-panel">
-                    <div class="desktop-shell-note">Recent outputs</div>
+                    <div class="desktop-shell-note" id="bundles-recent-outputs-label">Recent outputs</div>
                     <div class="hub-recent-list" id="recent-output-list"></div>
                   </section>
                 </div>
                 <section class="hub-recent-panel hub-recent-panel--wide">
-                  <div class="desktop-shell-note">Recent bundle actions</div>
+                  <div class="desktop-shell-note" id="bundles-recent-actions-label">Recent bundle actions</div>
                   <div class="hub-history-filters desktop-shell-action-row">
-                    <button class="desktop-shell-button-primary" data-history-filter="all">All</button>
-                    <button data-history-filter="failed">Failed</button>
-                    <button data-history-filter="inspect">Inspect</button>
-                    <button data-history-filter="normalize">Normalize</button>
-                    <button data-history-filter="diff">Diff</button>
-                    <button data-history-manage="keep-failed">Keep failed only</button>
-                    <button data-history-manage="import-json">Import JSON</button>
-                    <button data-history-manage="export-json">Export JSON</button>
-                    <button data-history-manage="clear">Clear history</button>
+                    <button class="desktop-shell-button-primary" data-history-filter="all" id="bundles-history-all">All</button>
+                    <button data-history-filter="failed" id="bundles-history-failed">Failed</button>
+                    <button data-history-filter="inspect" id="bundles-history-inspect">Inspect</button>
+                    <button data-history-filter="normalize" id="bundles-history-normalize">Normalize</button>
+                    <button data-history-filter="diff" id="bundles-history-diff">Diff</button>
+                    <button data-history-manage="keep-failed" id="bundles-history-keep-failed">Keep failed only</button>
+                    <button data-history-manage="import-json" id="bundles-history-import">Import JSON</button>
+                    <button data-history-manage="export-json" id="bundles-history-export">Export JSON</button>
+                    <button data-history-manage="clear" id="bundles-history-clear">Clear history</button>
                   </div>
                   <input accept="application/json" class="hidden" id="history-import-input" type="file" />
                   <section class="hub-history-section">
-                    <div class="desktop-shell-note">Favorites</div>
+                    <div class="desktop-shell-note" id="bundles-favorites-label">Favorites</div>
                     <div class="hub-history-list" id="favorite-action-list"></div>
                   </section>
                   <section class="hub-history-section">
-                    <div class="desktop-shell-note">Recent</div>
+                    <div class="desktop-shell-note" id="bundles-recent-label">Recent</div>
                     <div class="hub-history-list" id="recent-action-list"></div>
                   </section>
                 </section>
@@ -309,19 +310,19 @@
           <div class="hub-projects-pane hidden" data-projects-pane="guides">
             <div class="hub-overview-strip">
               <article class="hub-overview-card desktop-shell-surface-card">
-                <div class="hub-card__eyebrow">Docs hub</div>
-                <h2>One readable shelf</h2>
-                <p class="desktop-shell-note">Use one place for orientation first, then branch into operations, accuracy, or troubleshooting only when needed.</p>
+                <div class="hub-card__eyebrow" id="guides-overview-docs-label">Docs hub</div>
+                <h2 id="guides-overview-docs-title">One readable shelf</h2>
+                <p class="desktop-shell-note" id="guides-overview-docs-copy">Use one place for orientation first, then branch into operations, accuracy, or troubleshooting only when needed.</p>
               </article>
               <article class="hub-overview-card desktop-shell-surface-card">
-                <div class="hub-card__eyebrow">Current line</div>
-                <h2>tamamono 1.x</h2>
-                <p class="desktop-shell-note">Read the current product posture, version line, and what this generation is trying to harden.</p>
+                <div class="hub-card__eyebrow" id="guides-overview-current-label">Current line</div>
+                <h2 id="guides-overview-current-title">tamamono 1.x</h2>
+                <p class="desktop-shell-note" id="guides-overview-current-copy">Read the current product posture, version line, and what this generation is trying to harden.</p>
               </article>
               <article class="hub-overview-card desktop-shell-surface-card">
-                <div class="hub-card__eyebrow">Troubleshooting</div>
-                <h2>Find the shortest path</h2>
-                <p class="desktop-shell-note">Use the first-line support notes before you dive into deeper runtime or packaging details.</p>
+                <div class="hub-card__eyebrow" id="guides-overview-troubleshooting-label">Troubleshooting</div>
+                <h2 id="guides-overview-troubleshooting-title">Find the shortest path</h2>
+                <p class="desktop-shell-note" id="guides-overview-troubleshooting-copy">Use the first-line support notes before you dive into deeper runtime or packaging details.</p>
               </article>
             </div>
 
@@ -344,12 +345,12 @@
                     <span class="desktop-shell-note" id="guides-current-copy">Read what tamamono 1.x is optimizing for before you make deeper product decisions.</span>
                   </button>
                   <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
-                    <strong>Operations</strong>
-                    <span class="desktop-shell-note">Use this when you need the runtime, stack, or operator path explained as a coherent workflow.</span>
+                    <strong id="guides-operations-title">Operations</strong>
+                    <span class="desktop-shell-note" id="guides-operations-copy">Use this when you need the runtime, stack, or operator path explained as a coherent workflow.</span>
                   </button>
                   <button class="hub-cluster-card" data-action="open-troubleshooting-doc" type="button">
-                    <strong>Troubleshooting</strong>
-                    <span class="desktop-shell-note">Use the shortest failure path before you dig into full logs or packaging output.</span>
+                    <strong id="guides-troubleshooting-title">Troubleshooting</strong>
+                    <span class="desktop-shell-note" id="guides-troubleshooting-copy">Use the shortest failure path before you dig into full logs or packaging output.</span>
                   </button>
                 </div>
               </article>
@@ -357,19 +358,19 @@
               <article class="hub-card desktop-shell-surface-card">
                 <div class="hub-card__intro">
                   <div>
-                    <div class="hub-card__eyebrow">Accuracy and confidence</div>
-                    <h2>Read the trust story</h2>
+                    <div class="hub-card__eyebrow" id="guides-accuracy-label">Accuracy and confidence</div>
+                    <h2 id="guides-accuracy-title">Read the trust story</h2>
                   </div>
-                  <p class="desktop-shell-note">These are the documents that explain what the current line is trying to verify and why that matters before moxi.</p>
+                  <p class="desktop-shell-note" id="guides-accuracy-copy">These are the documents that explain what the current line is trying to verify and why that matters before moxi.</p>
                 </div>
                 <div class="hub-action-clusters">
                   <button class="hub-cluster-card" data-action="open-accuracy-plan-doc" type="button">
-                    <strong>Accuracy plan</strong>
-                    <span class="desktop-shell-note">See the long-line plan for verified baselines, benchmark expansion, and solver trust.</span>
+                    <strong id="guides-accuracy-plan-title">Accuracy plan</strong>
+                    <span class="desktop-shell-note" id="guides-accuracy-plan-copy">See the long-line plan for verified baselines, benchmark expansion, and solver trust.</span>
                   </button>
                   <button class="hub-cluster-card" data-action="open-accuracy-baselines-doc" type="button">
-                    <strong>Accuracy baselines</strong>
-                    <span class="desktop-shell-note">Read which benchmark families are already locked into regression and which are still next.</span>
+                    <strong id="guides-accuracy-baselines-title">Accuracy baselines</strong>
+                    <span class="desktop-shell-note" id="guides-accuracy-baselines-copy">Read which benchmark families are already locked into regression and which are still next.</span>
                   </button>
                 </div>
               </article>
@@ -777,15 +778,15 @@
         <article class="hub-assistant-sheet hub-card desktop-shell-surface-card">
           <div class="hub-card__intro">
             <div>
-              <div class="hub-card__eyebrow">Need help?</div>
-              <h2>Pick the next safe step</h2>
+              <div class="hub-card__eyebrow" id="assistant-intro-label">Need help?</div>
+              <h2 id="assistant-intro-title">Pick the next safe step</h2>
             </div>
             <button class="hub-assistant-close" id="hub-assistant-close" type="button">Close</button>
           </div>
-          <p class="desktop-shell-note">Start with the local guide. Reach for a model only when the built-in path is not enough.</p>
+          <p class="desktop-shell-note" id="assistant-intro-copy">Start with the local guide. Reach for a model only when the built-in path is not enough.</p>
           <div class="desktop-shell-section-header">
             <div class="hub-inline-heading">
-              <span class="desktop-shell-note">Engine</span>
+              <span class="desktop-shell-note" id="assistant-engine-label">Engine</span>
               <strong class="desktop-shell-state" data-desktop-state="activity" id="assistant-engine-state">local</strong>
             </div>
           </div>
@@ -794,27 +795,27 @@
             <button data-assistant-mode="llm" id="assistant-mode-llm">Model assist</button>
           </div>
           <div class="hub-metrics">
-            <div class="desktop-shell-metric-row"><span>Section</span><strong id="assistant-context-section">projects</strong></div>
-            <div class="desktop-shell-metric-row"><span>Runtime</span><strong id="assistant-context-runtime">ready</strong></div>
-            <div class="desktop-shell-metric-row"><span>Bundle</span><strong id="assistant-context-bundle">--</strong></div>
+            <div class="desktop-shell-metric-row"><span id="assistant-context-section-label">Section</span><strong id="assistant-context-section">projects</strong></div>
+            <div class="desktop-shell-metric-row"><span id="assistant-context-runtime-label">Runtime</span><strong id="assistant-context-runtime">ready</strong></div>
+            <div class="desktop-shell-metric-row"><span id="assistant-context-bundle-label">Bundle</span><strong id="assistant-context-bundle">--</strong></div>
           </div>
 
           <section id="assistant-local-panel">
             <section class="hub-assistant-section">
-              <div class="hub-card__eyebrow">Quick actions</div>
+              <div class="hub-card__eyebrow" id="assistant-local-actions-label">Quick actions</div>
               <div class="hub-side-shortcuts desktop-shell-action-row">
-                <button class="desktop-shell-button-primary" data-action="start-local">Start local stack</button>
-                <button data-projects-target="library" type="button">Open library</button>
-                <button data-projects-target="bundles" type="button">Inspect bundle</button>
-                <button data-projects-target="guides" type="button">Open guides</button>
+                <button class="desktop-shell-button-primary" data-action="start-local" id="assistant-local-action-start">Start local stack</button>
+                <button data-projects-target="library" type="button" id="assistant-local-action-library">Open library</button>
+                <button data-projects-target="bundles" type="button" id="assistant-local-action-bundles">Inspect bundle</button>
+                <button data-projects-target="guides" type="button" id="assistant-local-action-guides">Open guides</button>
               </div>
             </section>
 
             <section class="hub-assistant-section">
-              <div class="hub-card__eyebrow">Ask</div>
+              <div class="hub-card__eyebrow" id="assistant-local-ask-label">Ask</div>
               <div class="hub-assistant-form hub-assistant-form--local">
                 <label class="hub-field hub-field--stacked">
-                  <span>Ask the local guide</span>
+                  <span id="assistant-local-prompt-label">Ask the local guide</span>
                   <textarea id="assistant-local-prompt" placeholder="Example: what should I do first, or how do I inspect a bundle safely?" rows="3"></textarea>
                 </label>
               </div>
@@ -825,46 +826,46 @@
             </section>
 
             <section class="hub-assistant-section">
-              <div class="hub-card__eyebrow">Docs &amp; guides</div>
+              <div class="hub-card__eyebrow" id="assistant-docs-label">Docs &amp; guides</div>
               <div class="hub-assistant-doc-grid">
                 <button class="hub-cluster-card" data-action="open-docs-index" type="button">
-                  <strong>Docs index</strong>
-                  <span class="desktop-shell-note">Open the full documentation entry point.</span>
+                  <strong id="assistant-docs-index-title">Docs index</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-index-copy">Open the full documentation entry point.</span>
                 </button>
                 <button class="hub-cluster-card" data-action="open-current-line-doc" type="button">
-                  <strong>Current line</strong>
-                  <span class="desktop-shell-note">Read the current tamamono 1.x posture.</span>
+                  <strong id="assistant-docs-current-title">Current line</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-current-copy">Read the current tamamono 1.x posture.</span>
                 </button>
                 <button class="hub-cluster-card" data-action="open-operations-doc" type="button">
-                  <strong>Operations</strong>
-                  <span class="desktop-shell-note">Read the runtime and operator workflow.</span>
+                  <strong id="assistant-docs-operations-title">Operations</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-operations-copy">Read the runtime and operator workflow.</span>
                 </button>
                 <button class="hub-cluster-card" data-action="open-troubleshooting-doc" type="button">
-                  <strong>Troubleshooting</strong>
-                  <span class="desktop-shell-note">Jump to the first-line support notes.</span>
+                  <strong id="assistant-docs-troubleshooting-title">Troubleshooting</strong>
+                  <span class="desktop-shell-note" id="assistant-docs-troubleshooting-copy">Jump to the first-line support notes.</span>
                 </button>
               </div>
             </section>
 
             <section class="hub-assistant-section">
-              <div class="hub-card__eyebrow">Suggested next steps</div>
+              <div class="hub-card__eyebrow" id="assistant-suggested-label">Suggested next steps</div>
               <div class="hub-list" id="assistant-local-cards"></div>
             </section>
           </section>
 
           <section class="hidden" id="assistant-llm-panel">
-            <p class="desktop-shell-note">Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.</p>
+            <p class="desktop-shell-note" id="assistant-llm-intro-copy">Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.</p>
             <div class="hub-assistant-form">
               <label class="hub-field hub-field--stacked">
-                <span>Base URL</span>
+                <span id="assistant-base-url-label">Base URL</span>
                 <input id="assistant-base-url" placeholder="https://api.openai.com/v1" type="text" />
               </label>
               <label class="hub-field hub-field--stacked">
-                <span>API key</span>
+                <span id="assistant-api-key-label">API key</span>
                 <input id="assistant-api-key" placeholder="sk-..." type="password" />
               </label>
               <label class="hub-field">
-                <span>Preset</span>
+                <span id="assistant-preset-label">Preset</span>
                 <select id="assistant-model-preset">
                   <option value="gpt-5">gpt-5</option>
                   <option value="gpt-5-mini">gpt-5-mini</option>
@@ -873,11 +874,11 @@
                 </select>
               </label>
               <label class="hub-field hub-field--stacked">
-                <span>Model</span>
+                <span id="assistant-model-label">Model</span>
                 <input id="assistant-model-name" placeholder="gpt-5" type="text" />
               </label>
               <label class="hub-field hub-field--stacked">
-                <span>Request</span>
+                <span id="assistant-request-label">Request</span>
                 <textarea id="assistant-prompt" placeholder="Example: help me get from a fresh Hub session to a safe first project inspection." rows="4"></textarea>
               </label>
             </div>
@@ -888,14 +889,14 @@
               <button class="desktop-shell-button-primary" id="assistant-request-plan">Generate plan</button>
               <label class="hub-inline-check">
                 <input id="assistant-approve-plan" type="checkbox" />
-                <span>I reviewed this plan and allow execution.</span>
+                <span id="assistant-approve-label">I reviewed this plan and allow execution.</span>
               </label>
               <button id="assistant-execute-plan">Execute plan</button>
             </div>
             <div class="hub-list" id="assistant-plan-actions"></div>
             <pre class="hub-log hub-log--compact" id="assistant-output">Assistant is ready.</pre>
             <section class="hub-recent-panel hub-recent-panel--wide">
-              <div class="desktop-shell-note">Assistant audit</div>
+              <div class="desktop-shell-note" id="assistant-audit-label">Assistant audit</div>
               <div class="hub-list" id="assistant-audit-list"></div>
             </section>
           </section>

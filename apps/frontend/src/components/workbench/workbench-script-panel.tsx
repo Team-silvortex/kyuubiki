@@ -280,7 +280,7 @@ function downloadTextFile(filename: string, contents: string) {
 }
 
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
-  const t = copy[language];
+  const t = copy[language as keyof typeof copy] ?? copy.en;
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [output, setOutput] = useState<string[]>([]);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");

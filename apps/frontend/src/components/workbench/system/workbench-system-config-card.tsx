@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 type Theme = "linen" | "marine" | "graphite";
-type Language = "en" | "zh" | "ja";
+type Language = "en" | "zh" | "ja" | "es";
 type FrontendRuntimeMode = "orchestrated_gui" | "direct_mesh_gui";
 type DirectMeshSelectionMode = "healthiest" | "first_reachable";
 type ConfigPage = "workspace" | "routing" | "access" | "packs";

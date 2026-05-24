@@ -329,7 +329,7 @@ import {
   updateResultRecord,
 } from "@/lib/api";
 
-type Language = "en" | "zh" | "ja";
+type Language = "en" | "zh" | "ja" | "es";
 type Theme = "linen" | "marine" | "graphite";
 type SidebarSection = "study" | "model" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
@@ -1153,7 +1153,7 @@ const copyEn = {
     immersiveEmptyModels: "No saved models in this project yet.",
     immersiveEmptyJobs: "No jobs yet.",
     themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
-    languages: { en: "English", zh: "中文", ja: "日本語" },
+    languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
     frontendModes: {
       orchestrated_gui: "Orchestrated GUI",
       direct_mesh_gui: "Direct mesh GUI",
@@ -1809,7 +1809,7 @@ const copyZh = {
     immersiveEmptyModels: "当前项目还没有保存模型。",
     immersiveEmptyJobs: "当前还没有任务记录。",
     themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
-    languages: { en: "English", zh: "中文", ja: "日本語" },
+    languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
     frontendModes: {
       orchestrated_gui: "中心调度 GUI",
       direct_mesh_gui: "直连 Mesh GUI",
@@ -2239,7 +2239,7 @@ const copy = {
     adminBrowsePage: "参照",
     adminEditPage: "編集",
     themes: { linen: "リネン", marine: "マリン", graphite: "グラファイト" },
-    languages: { en: "English", zh: "中文", ja: "日本語" },
+    languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
     frontendModes: {
       orchestrated_gui: "オーケストレーション GUI",
       direct_mesh_gui: "ダイレクトメッシュ GUI",
@@ -2311,8 +2311,21 @@ const copy = {
 } as const;
 
 type WorkbenchCopy = typeof copyEn;
+const copyByLanguage: Record<Language, WorkbenchCopy> = {
+  en: copy.en,
+  zh: copy.zh,
+  ja: copy.ja,
+  es: {
+    ...copy.en,
+    language: "Idioma",
+    languages: {
+      ...copy.en.languages,
+      es: "Español",
+    },
+  },
+};
 
-function humanizeSolverFailure(message: string | null | undefined, languageCopy: (typeof copy)[Language]) {
+function humanizeSolverFailure(message: string | null | undefined, languageCopy: WorkbenchCopy) {
   if (!message) return null;
 
   if (message.includes("watchdog marked job stalled")) {
@@ -2346,7 +2359,7 @@ function humanizeSolverFailure(message: string | null | undefined, languageCopy:
   return message;
 }
 
-function formatJobMessage(job: JobEnvelope["job"] | null, fallback: string, languageCopy: (typeof copy)[Language]) {
+function formatJobMessage(job: JobEnvelope["job"] | null, fallback: string, languageCopy: WorkbenchCopy) {
   if (!job) return fallback;
   if (job.status === "failed" && job.message) {
     return `${job.job_id} failed: ${humanizeSolverFailure(job.message, languageCopy) ?? job.message}`;
@@ -3978,7 +3991,7 @@ function pushNodeIssue(nodeIssues: Record<number, string[]>, nodeIndex: number, 
 
 function heartbeatStatus(
   job: JobEnvelope["job"] | null,
-  languageCopy: (typeof copy)[Language],
+  languageCopy: WorkbenchCopy,
 ) {
   if (!job?.updated_at) return "--";
 
@@ -4052,7 +4065,7 @@ function findNearestConnectableNode(model: Truss2dJobInput, nodeIndex: number): 
 
 function analyzeTrussModel(
   model: Truss2dJobInput,
-  languageCopy: (typeof copy)[Language],
+  languageCopy: WorkbenchCopy,
   selectedNode: number | null,
 ): TrussDiagnostics {
   const nodeCount = model.nodes.length;
@@ -4310,7 +4323,7 @@ function clusterHealthTone(score: number | null | undefined) {
   return "stale";
 }
 
-function formatPeerStatus(status: string | undefined, languageCopy: (typeof copy)[Language]) {
+function formatPeerStatus(status: string | undefined, languageCopy: WorkbenchCopy) {
   if (!status) return "--";
   switch (status) {
     case "healthy":
@@ -4392,7 +4405,7 @@ export function Workbench() {
     setLanguage(nextLanguage);
     setLoadedModelName((current) =>
       current === copy.en.defaultModel || current === copy.zh.defaultModel || current === copy.ja.defaultModel
-        ? copy[nextLanguage].defaultModel
+        ? copyByLanguage[nextLanguage].defaultModel
         : current,
     );
   };
@@ -4504,7 +4517,7 @@ export function Workbench() {
     [language, languagePacks],
   );
   const t = useMemo(
-    () => mergeLanguagePack<WorkbenchCopy>(copy[language], activeLanguagePack?.overrides ?? null),
+    () => mergeLanguagePack<WorkbenchCopy>(copyByLanguage[language], activeLanguagePack?.overrides ?? null),
     [activeLanguagePack?.overrides, language],
   );
   const languagePackCatalogRows = useMemo(
@@ -4745,15 +4758,15 @@ export function Workbench() {
       setAssistantModel(stored.assistantModel);
     }
     const bootLanguage =
-      desktopLanguage === "en" || desktopLanguage === "zh" || desktopLanguage === "ja"
+      desktopLanguage === "en" || desktopLanguage === "zh" || desktopLanguage === "ja" || desktopLanguage === "es"
         ? desktopLanguage
-        : stored.language === "en" || stored.language === "zh" || stored.language === "ja"
+        : stored.language === "en" || stored.language === "zh" || stored.language === "ja" || stored.language === "es"
           ? stored.language
           : null;
 
     if (bootLanguage) {
       applyLanguagePreference(bootLanguage);
-      setMessage(copy[bootLanguage].initialLoaded);
+      setMessage(copyByLanguage[bootLanguage].initialLoaded);
     }
     setLanguagePacks(readWorkbenchLanguagePacks());
     setSecurityAuditLog(readSecurityAuditLog());
@@ -4765,7 +4778,7 @@ export function Workbench() {
     const handleDesktopLanguage = (event: MessageEvent) => {
       if (event.data?.type !== "kyuubiki:set-language") return;
       const nextLanguage = event.data.language;
-      if (nextLanguage === "en" || nextLanguage === "zh" || nextLanguage === "ja") {
+      if (nextLanguage === "en" || nextLanguage === "zh" || nextLanguage === "ja" || nextLanguage === "es") {
         applyLanguagePreference(nextLanguage);
       }
     };
@@ -8925,7 +8938,7 @@ export function Workbench() {
           break;
         }
         case "settings/patch": {
-          if (payload.language === "en" || payload.language === "zh" || payload.language === "ja") {
+          if (payload.language === "en" || payload.language === "zh" || payload.language === "ja" || payload.language === "es") {
             handleLanguageChange(payload.language);
           }
           if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
@@ -11253,6 +11266,7 @@ export function Workbench() {
                   { value: "en", label: t.languages.en },
                   { value: "zh", label: t.languages.zh },
                   { value: "ja", label: t.languages.ja },
+                  { value: "es", label: t.languages.es },
                 ]}
                 installedLanguagePacks={languagePacks}
                 catalogLanguagePacks={languagePackCatalogRows}

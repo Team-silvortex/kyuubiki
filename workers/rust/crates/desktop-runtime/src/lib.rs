@@ -61,6 +61,7 @@ fn normalize_language(value: &str) -> Option<&'static str> {
         "en" => Some("en"),
         "zh" => Some("zh"),
         "ja" => Some("ja"),
+        "es" => Some("es"),
         _ => None,
     }
 }

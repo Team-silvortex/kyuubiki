@@ -4,7 +4,7 @@ import { MATERIAL_PRESETS } from "@/lib/materials";
 import type { ModelMaterial } from "@/lib/api";
 
 type WorkbenchMaterialLibraryCardProps = {
-  language: "en" | "zh" | "ja";
+  language: "en" | "zh" | "ja" | "es";
   materialLabel: string;
   modulusLabel: string;
   poissonRatioLabel: string;
@@ -13,7 +13,7 @@ type WorkbenchMaterialLibraryCardProps = {
   hiddenMaterialIds: string[];
   isPlane: boolean;
   selectedElement: number | null;
-  localMaterialLabel: (value: string, language: "en" | "zh" | "ja") => string;
+  localMaterialLabel: (value: string, language: "en" | "zh" | "ja" | "es") => string;
   getMaterialColor: (materialId: string) => string;
   onActiveMaterialChange: (materialId: string) => void;
   onAddMaterial: () => void;

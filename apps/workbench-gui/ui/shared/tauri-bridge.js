@@ -30,7 +30,7 @@ export async function loadDesktopBrand() {
 }
 
 export function normalizeDesktopLanguage(value) {
-  return value === "zh" || value === "ja" ? value : "en";
+  return value === "zh" || value === "ja" || value === "es" ? value : "en";
 }
 
 export async function loadDesktopLanguagePreference() {

@@ -53,7 +53,7 @@ import {
     document.documentElement.lang = currentLanguage;
     if (languageLabel) {
       languageLabel.textContent =
-        currentLanguage === "zh" ? "语言" : currentLanguage === "ja" ? "言語" : "Language";
+        currentLanguage === "zh" ? "语言" : currentLanguage === "ja" ? "言語" : currentLanguage === "es" ? "Idioma" : "Language";
     }
     if (languageSelect) {
       languageSelect.value = currentLanguage;

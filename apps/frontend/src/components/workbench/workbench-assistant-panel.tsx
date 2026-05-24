@@ -17,7 +17,7 @@ type AssistantCard = {
 
 type WorkbenchAssistantPanelProps = {
   variant?: "sidebar" | "floating";
-  language: "en" | "zh" | "ja";
+  language: "en" | "zh" | "ja" | "es";
   mode: AssistantMode;
   onModeChange: (mode: AssistantMode) => void;
   currentStudyLabel: string;
@@ -182,7 +182,7 @@ export function WorkbenchAssistantPanel({
   onExecuteLlmPlan,
   onRollbackTransaction,
 }: WorkbenchAssistantPanelProps) {
-  const t = copy[language];
+  const t = copy[language as keyof typeof copy] ?? copy.en;
   const floating = variant === "floating";
   const [prompt, setPrompt] = useState("");
   const [plan, setPlan] = useState<AssistantPlan | null>(null);

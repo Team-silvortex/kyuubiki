@@ -91,6 +91,21 @@ const HUB_I18N = {
         title3: "Inspect once, then open",
         copy3: "Run one quick bundle check, then move into Workbench with fewer surprises.",
       },
+      quick: {
+        label: "Quick orientation",
+        title: "Choose the right next move",
+        copy: "Open the deeper pages only when you know which job you are doing.",
+        libraryTitle: "Open Library",
+        libraryCopy: "Curate workloads, sync catalogs, and filter by domain or family.",
+        bundlesTitle: "Open Bundle tools",
+        bundlesCopy: "Inspect, validate, normalize, pack, unpack, and diff project bundles.",
+        guidesTitle: "Open docs & guides",
+        guidesCopy: "Go to one clear documentation shelf for current-line, operations, troubleshooting, and accuracy notes.",
+        installerTitle: "Open Installer",
+        installerCopy: "Bootstrap release layouts, desktop packaging, and workstation setup from one shell.",
+        runtimesTitle: "Open Runtimes",
+        runtimesCopy: "Check stack health, hot-reload status, and runtime tails.",
+      },
       actions: {
         start: "Start local stack",
         sync: "Sync local control plane",
@@ -235,17 +250,54 @@ const HUB_I18N = {
       introLabel: "Managed intake",
       introTitle: "Workload library",
       introCopy: "Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.",
+      catalogUrl: "Catalog URL",
+      labelOrNote: "Label or note",
       register: "Register current bundle",
       syncLocal: "Sync local control plane",
       syncRemote: "Sync remote catalog",
+      export: "Export library JSON",
+      import: "Import library JSON",
+      clear: "Clear library",
+      managedWorkloads: "Managed workloads",
+      all: "All",
+      mechanical: "Mechanical",
+      thermal: "Thermal",
+      thermo: "Thermo-mechanical",
+      allFamilies: "All families",
+      axial: "Axial & Springs",
+      beams: "Beams & Frames",
+      trusses: "Trusses",
+      planes: "Planes",
+      ready: "Workload library is ready.",
     },
     bundles: {
       introLabel: "Bundle operations",
       introTitle: "Project bundle tools",
       introCopy: "Keep the repetitive archive work in one place, then move straight into analysis.",
+      bundlePath: "Bundle path",
+      comparePath: "Compare path",
+      outputPath: "Output path",
       inspect: "Inspect .kyuubiki",
       validate: "Validate .kyuubiki",
       normalize: "Normalize bundle",
+      unpack: "Unpack bundle",
+      pack: "Pack project",
+      diff: "Diff bundles",
+      openWorkbench: "Open workbench",
+      desktopTools: "Desktop tools",
+      recentBundles: "Recent bundles",
+      recentCompare: "Recent compare paths",
+      recentOutputs: "Recent outputs",
+      recentActions: "Recent bundle actions",
+      all: "All",
+      failed: "Failed",
+      keepFailed: "Keep failed only",
+      import: "Import JSON",
+      export: "Export JSON",
+      clear: "Clear history",
+      favorites: "Favorites",
+      recent: "Recent",
+      ready: "Project bundle tools are ready.",
     },
     guides: {
       primaryLabel: "Primary docs",
@@ -255,6 +307,129 @@ const HUB_I18N = {
       docsCopy: "The single entry to current-line, operations, testing, accuracy, and archived release notes.",
       currentTitle: "Current line",
       currentCopy: "Read what tamamono 1.x is optimizing for before you make deeper product decisions.",
+      overviewDocsLabel: "Docs hub",
+      overviewDocsTitle: "One readable shelf",
+      overviewDocsCopy: "Use one place for orientation first, then branch into operations, accuracy, or troubleshooting only when needed.",
+      overviewCurrentLabel: "Current line",
+      overviewCurrentTitle: "tamamono 1.x",
+      overviewCurrentCopy: "Read the current product posture, version line, and what this generation is trying to harden.",
+      overviewTroubleshootingLabel: "Troubleshooting",
+      overviewTroubleshootingTitle: "Find the shortest path",
+      overviewTroubleshootingCopy: "Use the first-line support notes before you dive into deeper runtime or packaging details.",
+      operationsTitle: "Operations",
+      operationsCopy: "Use this when you need the runtime, stack, or operator path explained as a coherent workflow.",
+      troubleshootingTitle: "Troubleshooting",
+      troubleshootingCopy: "Use the shortest failure path before you dig into full logs or packaging output.",
+      accuracyLabel: "Accuracy and confidence",
+      accuracyTitle: "Read the trust story",
+      accuracyCopy: "These are the documents that explain what the current line is trying to verify and why that matters before moxi.",
+      accuracyPlanTitle: "Accuracy plan",
+      accuracyPlanCopy: "See the long-line plan for verified baselines, benchmark expansion, and solver trust.",
+      accuracyBaselinesTitle: "Accuracy baselines",
+      accuracyBaselinesCopy: "Read which benchmark families are already locked into regression and which are still next.",
+    },
+    assistant: {
+      introLabel: "Need help?",
+      introTitle: "Pick the next safe step",
+      introCopy: "Start with the local guide. Reach for a model only when the built-in path is not enough.",
+      close: "Close",
+      engine: "Engine",
+      localMode: "Local guide",
+      llmMode: "Model assist",
+      section: "Section",
+      runtime: "Runtime",
+      bundle: "Bundle",
+      quickActions: "Quick actions",
+      quickStart: "Start local stack",
+      quickLibrary: "Open library",
+      quickBundles: "Inspect bundle",
+      quickGuides: "Open guides",
+      ask: "Ask",
+      askLabel: "Ask the local guide",
+      askButton: "Ask local guide",
+      askEmpty: "Ask about the next step, bundle inspection, runtime health, documentation, or packaging.",
+      docs: "Docs & guides",
+      docsIndexTitle: "Docs index",
+      docsIndexCopy: "Open the full documentation entry point.",
+      docsCurrentTitle: "Current line",
+      docsCurrentCopy: "Read the current tamamono 1.x posture.",
+      docsOperationsTitle: "Operations",
+      docsOperationsCopy: "Read the runtime and operator workflow.",
+      docsTroubleshootingTitle: "Troubleshooting",
+      docsTroubleshootingCopy: "Jump to the first-line support notes.",
+      suggested: "Suggested next steps",
+      llmIntro: "Connect an OpenAI-compatible model only when you want a longer onboarding or operations plan.",
+      baseUrl: "Base URL",
+      apiKey: "API key",
+      preset: "Preset",
+      model: "Model",
+      request: "Request",
+      generate: "Generate plan",
+      approve: "I reviewed this plan and allow execution.",
+      execute: "Execute plan",
+      ready: "Assistant is ready.",
+      audit: "Assistant audit",
+    },
+    dynamic: {
+      assistantPromptEmpty: "Ask something short, like: what should I do first, how do I inspect a bundle, how do I open Workbench, or why is packaging still partial.",
+      assistantNoUrgent: "The local guide does not see an urgent next step right now.",
+      assistantNoPlan: "No model plan yet.",
+      assistantNoExecutable: "The model returned no executable Hub actions.",
+      assistantCancelled: "Cancelled {action}.",
+      assistantFocusedSection: "Focused {section} section.",
+      assistantUpdatedBundle: "Updated bundle context in the Hub.",
+      assistantExecuteCount: "Executed {count} assistant actions.",
+      assistantNoPlanToExecute: "No assistant plan is available to execute.",
+      assistantReviewFirst: "Review the generated plan and confirm execution first.",
+      focusedBundleField: "focused the bundle path field",
+      focusedGuidesPage: "focused the guides page",
+      noLogLines: "No log lines yet for {service}.",
+      hotStatusRefreshed: "refreshed hot-reload runtime status",
+      hotLogRefreshed: "refreshed hot log: {service}",
+      hotLogCopied: "copied sanitized hot log tail: {service}",
+      runtimeLogRefreshed: "refreshed runtime log: {service}",
+      runtimeLogCopied: "copied sanitized runtime log tail: {service}",
+      hotLogCleared: "cleared hot log view: {service}",
+      packagingRefreshed: "refreshed desktop packaging readiness",
+      focusedHomePage: "focused {page} home page",
+      openedHomeTarget: "opened {page} from home",
+      focusedPanelPage: "focused {page} {group} page",
+      assistantPanelOpened: "opened assistant panel",
+      assistantPanelClosed: "closed assistant panel",
+      runtimeWatchPlaceholder: "Runtime watch will appear here.",
+      endpointPolicyDefault: "Use https:// for remote providers, or http://localhost / 127.0.0.1 for local gateways. The API key is sent directly to the configured base URL.",
+      endpointPolicyAllowed: "Assistant endpoint looks allowed. The API key is sent directly to the configured base URL for plan generation.",
+      guideFirstNoRuntime: "Start with the local stack, then sync or register work, inspect once, and only then open Workbench. Right now the local runtime does not look ready, so `Start local stack` is the safest first move.",
+      guideFirstNoBundle: "Start with the local stack if needed, then open `Bundle tools` and paste a `.kyuubiki` path. After that, inspect once and move into Workbench.",
+      guideFirstReady: "You already have a runtime and bundle context. The safe path now is: inspect the current bundle, confirm the result looks sane, then open Workbench.",
+      guideBundleNoPath: "Bundle operations live under `Home > Bundle tools`. Paste a `.kyuubiki` bundle path first. Then use `Inspect` for a quick read, `Validate` for schema checks, and `Normalize` only when you also have an output path.",
+      guideNormalizeNoOutput: "Normalization needs both a bundle path and an output path. You already have the bundle, so the missing piece is the output destination in `Bundle tools`.",
+      guideDiffNoCompare: "Bundle diff needs both the current bundle and a compare path. Fill the compare field in `Bundle tools`, then run `Diff bundles`.",
+      guideBundleGeneral: "Use `Inspect` first for a safe structural read. Use `Validate` when you want schema confidence, `Normalize` when you want a cleaned output bundle, and `Diff` only after both bundle paths are filled.",
+      guideWorkbench: "Open Workbench only after the runtime is healthy and the bundle context looks sane. In Hub, the short path is: `Home > Start here`, then `Open workbench`.",
+      guideDocs: "Use `Home > Guides` as the single documentation shelf. Start with `Docs index`, then open `Current line`, `Operations`, or `Troubleshooting` only when you know which kind of question you are answering.",
+      guideRuntime: "Use `Runtimes` when you want to change the loop, and `Observe` when you only want to scan or copy state. `Local runtime` is the short health read, `Hot loop` is for dev tails, and `Stack watch` is for sanitized runtime logs.",
+      guideLibrary: "Use `Home > Library` for workload intake. `Sync local control plane` pulls first-party work in, `Sync remote catalog` brings remote entries in, and the domain/family filters help you narrow the shelf before opening Workbench.",
+      guidePackaging: "Use `Installer` when you need release layout or workstation bootstrap. In Hub, `Tools > Packages` is for build actions, `Status` is the readiness wall, and `Output` is where the packaging logs land. In this automation session, `.app` bundles are reliable, while `.dmg` can still show as partial because `hdiutil` is session-sensitive.",
+      guideFailure: "If something looks partial, read the shortest surface first: `Observe > Health` for runtime issues, `Tools > Status` for desktop packaging readiness, and `Bundle tools > Inspect` for project bundle shape. Then decide whether the problem is runtime, bundle, or packaging.",
+      guideFallback: "The local guide can help with first steps, bundle inspection, runtime health, Workbench launch, workload library intake, and desktop packaging. Try asking one of those directly.",
+      cardBundlePathTitle: "Start with a bundle path",
+      cardBundlePathSummary: "Paste a .kyuubiki path first so the Hub can inspect, validate, or normalize it safely.",
+      cardStartLocalTitle: "Bring the local stack online",
+      cardStartLocalSummary: "The Hub does not currently see a healthy local runtime, so starting the local stack is the safest next step.",
+      cardInspectTitle: "Inspect the selected bundle",
+      cardInspectSummary: "Inspecting first gives a quick structural read before we normalize, unpack, or diff anything.",
+      cardNormalizeTitle: "Normalize into the target path",
+      cardNormalizeSummary: "You already have both the source and output path, so normalization is ready to run.",
+      cardDiffTitle: "Compare the current pair",
+      cardDiffSummary: "Both bundle inputs are present, so the Hub can run a safe diff without more setup.",
+      cardGuidesTitle: "Keep the docs shelf nearby",
+      cardGuidesSummary: "If you are still orienting yourself, the Guides page is the cleanest single entry to current-line, operations, troubleshooting, and accuracy notes.",
+      cardWorkbenchTitle: "Jump into Workbench",
+      cardWorkbenchSummary: "Open the modeling and analysis surface when you are ready to move past bundle-level prep.",
+      actionRun: "Run action",
+      noRationale: "No rationale supplied.",
+      modelPlanTitle: "Model plan",
     },
   },
   zh: {
@@ -337,6 +512,21 @@ const HUB_I18N = {
         copy2: "从本地 control plane、远端 catalog，或当前 bundle path 拉工作进来。",
         title3: "检查一次，再打开",
         copy3: "先做一次快速 bundle 检查，再进入 Workbench，减少意外。",
+      },
+      quick: {
+        label: "快速导览",
+        title: "选对下一步",
+        copy: "只有在你知道当前要处理哪类工作时，再打开更深的页面。",
+        libraryTitle: "打开库",
+        libraryCopy: "整理工作负载、同步 catalog，并按域或 family 过滤。",
+        bundlesTitle: "打开 Bundle 工具",
+        bundlesCopy: "检查、验证、规范化、打包、解包并 diff 项目 bundle。",
+        guidesTitle: "打开文档与指南",
+        guidesCopy: "进入一个清晰的文档架，查看 current-line、operations、troubleshooting 和 accuracy 说明。",
+        installerTitle: "打开 Installer",
+        installerCopy: "从一个壳里完成发布布局、桌面打包和工作站 setup。",
+        runtimesTitle: "打开运行时",
+        runtimesCopy: "检查栈健康、热重载状态和运行时 tail。",
       },
       actions: {
         start: "启动本地栈",
@@ -482,17 +672,54 @@ const HUB_I18N = {
       introLabel: "统一入口",
       introTitle: "工作负载库",
       introCopy: "把下载的 bundle、单独导入项以及未来服务端分发的工作负载统一放进 Hub 管理的库里。",
+      catalogUrl: "Catalog 地址",
+      labelOrNote: "标签或备注",
       register: "注册当前 bundle",
       syncLocal: "同步本地 control plane",
       syncRemote: "同步远端 catalog",
+      export: "导出库 JSON",
+      import: "导入库 JSON",
+      clear: "清空库",
+      managedWorkloads: "已管理工作负载",
+      all: "全部",
+      mechanical: "力学",
+      thermal: "热",
+      thermo: "力热",
+      allFamilies: "全部 family",
+      axial: "轴向与弹簧",
+      beams: "梁与刚架",
+      trusses: "桁架",
+      planes: "平面",
+      ready: "工作负载库已就绪。",
     },
     bundles: {
       introLabel: "Bundle 操作",
       introTitle: "项目 bundle 工具",
       introCopy: "把重复的归档操作收在一个地方，然后直接继续分析。",
+      bundlePath: "Bundle 路径",
+      comparePath: "对比路径",
+      outputPath: "输出路径",
       inspect: "检查 .kyuubiki",
       validate: "验证 .kyuubiki",
       normalize: "规范化 bundle",
+      unpack: "解包 bundle",
+      pack: "打包项目",
+      diff: "对比 bundle",
+      openWorkbench: "打开 Workbench",
+      desktopTools: "桌面工具",
+      recentBundles: "最近 bundles",
+      recentCompare: "最近对比路径",
+      recentOutputs: "最近输出",
+      recentActions: "最近 bundle 动作",
+      all: "全部",
+      failed: "失败",
+      keepFailed: "只保留失败项",
+      import: "导入 JSON",
+      export: "导出 JSON",
+      clear: "清空历史",
+      favorites: "收藏",
+      recent: "最近",
+      ready: "项目 bundle 工具已就绪。",
     },
     guides: {
       primaryLabel: "主文档",
@@ -502,6 +729,129 @@ const HUB_I18N = {
       docsCopy: "current-line、operations、testing、accuracy 和历史 release notes 的统一入口。",
       currentTitle: "当前版本线",
       currentCopy: "先读 tamamono 1.x 现在到底在强化什么，再做更深的产品判断。",
+      overviewDocsLabel: "文档中枢",
+      overviewDocsTitle: "一个清晰的文档架",
+      overviewDocsCopy: "先在一个地方完成定向，再按需要进入 operations、accuracy 或 troubleshooting。",
+      overviewCurrentLabel: "当前版本线",
+      overviewCurrentTitle: "tamamono 1.x",
+      overviewCurrentCopy: "先读当前产品姿态、版本线和这一代在重点加固什么。",
+      overviewTroubleshootingLabel: "故障排查",
+      overviewTroubleshootingTitle: "找到最短路径",
+      overviewTroubleshootingCopy: "先走第一线支持说明，再决定是否深入 runtime 或打包细节。",
+      operationsTitle: "Operations",
+      operationsCopy: "当你需要把 runtime、stack 或 operator 路径看成一条完整工作流时，用这份文档。",
+      troubleshootingTitle: "故障排查",
+      troubleshootingCopy: "先走最短的失败路径，再决定是否深挖完整日志或打包输出。",
+      accuracyLabel: "精度与可信度",
+      accuracyTitle: "阅读信任路径",
+      accuracyCopy: "这些文档解释当前版本线正在验证什么，以及为什么这在 moxi 之前很重要。",
+      accuracyPlanTitle: "精度计划",
+      accuracyPlanCopy: "看 verified baselines、benchmark 扩展和 solver 信任链的长期计划。",
+      accuracyBaselinesTitle: "精度基线",
+      accuracyBaselinesCopy: "查看哪些 benchmark family 已经锁进回归，哪些还在下一步。",
+    },
+    assistant: {
+      introLabel: "需要帮助？",
+      introTitle: "选择更安全的下一步",
+      introCopy: "先用本地向导。只有当内建路径不够时，再接模型。",
+      close: "关闭",
+      engine: "引擎",
+      localMode: "本地向导",
+      llmMode: "模型助手",
+      section: "页面",
+      runtime: "运行时",
+      bundle: "Bundle",
+      quickActions: "快捷动作",
+      quickStart: "启动本地栈",
+      quickLibrary: "打开库",
+      quickBundles: "检查 bundle",
+      quickGuides: "打开指南",
+      ask: "提问",
+      askLabel: "询问本地向导",
+      askButton: "询问本地向导",
+      askEmpty: "可以问下一步该做什么、如何检查 bundle、运行时健康、文档入口或打包路径。",
+      docs: "文档与指南",
+      docsIndexTitle: "文档索引",
+      docsIndexCopy: "打开完整的文档总入口。",
+      docsCurrentTitle: "当前版本线",
+      docsCurrentCopy: "查看 tamamono 1.x 当前的产品姿态。",
+      docsOperationsTitle: "Operations",
+      docsOperationsCopy: "查看运行时和 operator 工作流。",
+      docsTroubleshootingTitle: "故障排查",
+      docsTroubleshootingCopy: "跳到第一线支持说明。",
+      suggested: "建议的下一步",
+      llmIntro: "只有在你想要更长的 onboarding 或运维计划时，才连接 OpenAI-compatible 模型。",
+      baseUrl: "Base URL",
+      apiKey: "API key",
+      preset: "预设",
+      model: "模型",
+      request: "请求",
+      generate: "生成计划",
+      approve: "我已阅读此计划并允许执行。",
+      execute: "执行计划",
+      ready: "助手已就绪。",
+      audit: "助手审计",
+    },
+    dynamic: {
+      assistantPromptEmpty: "可以直接问：第一步该做什么、如何检查 bundle、怎么打开 Workbench，或者为什么打包还是 partial。",
+      assistantNoUrgent: "本地向导暂时没有看到特别紧急的下一步。",
+      assistantNoPlan: "还没有模型计划。",
+      assistantNoExecutable: "模型没有返回可执行的 Hub 动作。",
+      assistantCancelled: "已取消 {action}。",
+      assistantFocusedSection: "已聚焦到 {section} 页面。",
+      assistantUpdatedBundle: "已更新 Hub 里的 bundle 上下文。",
+      assistantExecuteCount: "已执行 {count} 个助手动作。",
+      assistantNoPlanToExecute: "当前没有可执行的助手计划。",
+      assistantReviewFirst: "请先阅读生成的计划并确认执行。",
+      focusedBundleField: "已聚焦到 bundle 路径输入框",
+      focusedGuidesPage: "已打开指南页面",
+      noLogLines: "{service} 目前还没有日志。",
+      hotStatusRefreshed: "已刷新热重载运行时状态",
+      hotLogRefreshed: "已刷新热日志：{service}",
+      hotLogCopied: "已复制热日志尾部（脱敏）：{service}",
+      runtimeLogRefreshed: "已刷新运行时日志：{service}",
+      runtimeLogCopied: "已复制运行时日志尾部（脱敏）：{service}",
+      hotLogCleared: "已清空热日志视图：{service}",
+      packagingRefreshed: "已刷新桌面打包就绪状态",
+      focusedHomePage: "已聚焦到首页子页：{page}",
+      openedHomeTarget: "已从首页打开：{page}",
+      focusedPanelPage: "已聚焦到 {group} / {page} 页面",
+      assistantPanelOpened: "已打开助手面板",
+      assistantPanelClosed: "已关闭助手面板",
+      runtimeWatchPlaceholder: "运行时监视会显示在这里。",
+      endpointPolicyDefault: "远程提供方请使用 https://，本地网关可使用 http://localhost / 127.0.0.1。API key 会直接发送到配置的 Base URL。",
+      endpointPolicyAllowed: "当前助手端点看起来可用。API key 会直接发送到配置的 Base URL 以生成计划。",
+      guideFirstNoRuntime: "先启动本地栈，再同步或注册工作，检查一次，然后再打开 Workbench。当前本地运行时看起来还没准备好，所以 `启动本地栈` 是最安全的第一步。",
+      guideFirstNoBundle: "如果需要，先启动本地栈，然后打开 `Bundle 工具`，填入 `.kyuubiki` 路径。之后先检查一次，再进入 Workbench。",
+      guideFirstReady: "你现在已经有运行时和 bundle 上下文了。更安全的下一步是：先检查当前 bundle，确认结果正常，再打开 Workbench。",
+      guideBundleNoPath: "Bundle 相关操作都在 `首页 > Bundle 工具`。先填入 `.kyuubiki` 路径。然后用 `检查` 做快速结构读取，用 `验证` 做 schema 检查；只有填了输出路径时再做 `规范化`。",
+      guideNormalizeNoOutput: "规范化需要同时提供 bundle 路径和输出路径。你现在已经有 bundle 了，缺的是 `Bundle 工具` 里的输出目标。",
+      guideDiffNoCompare: "Bundle 对比需要当前 bundle 和 compare path。先在 `Bundle 工具` 里填 compare path，然后运行 `对比 bundle`。",
+      guideBundleGeneral: "更稳的顺序是先 `检查` 做结构读取，再用 `验证` 看 schema，只有在两边路径都填好后再 `规范化` 或 `对比`。",
+      guideWorkbench: "只有在运行时健康、bundle 上下文也看起来正常时，再打开 Workbench。Hub 里的短路径是：`首页 > 从这里开始`，然后点 `打开 Workbench`。",
+      guideDocs: "把 `首页 > 文档` 当成单一文档入口。先看 `文档索引`，只有在明确问题类型后，再进入 `当前版本线`、`Operations` 或 `故障排查`。",
+      guideRuntime: "当你需要改变 loop 时去 `运行时`；当你只是想扫一眼或复制状态时去 `观察`。`本地运行时` 负责短健康读，`Hot loop` 看开发 tail，`Stack watch` 看脱敏后的运行时日志。",
+      guideLibrary: "工作负载入口在 `首页 > 库`。`同步本地控制平面` 会拉入第一方工作，`同步远程目录` 会带入远端条目，domain/family 筛选则帮助你在进入 Workbench 前先把 shelf 收窄。",
+      guidePackaging: "当你需要发布布局或工作站 bootstrap 时去 `Installer`。在 Hub 里，`工具 > Packages` 用来执行构建动作，`Status` 是 readiness 墙，`Output` 看打包输出。在当前自动化会话里，`.app` 一般可靠，而 `.dmg` 仍可能因为 `hdiutil` 的会话敏感性而显示 partial。",
+      guideFailure: "如果某件事看起来是 partial，先走最短路径：`观察 > 健康` 看运行时问题，`工具 > Status` 看桌面打包就绪度，`Bundle 工具 > 检查` 看项目 bundle 结构。然后再判断问题属于 runtime、bundle 还是 packaging。",
+      guideFallback: "本地向导可以帮你处理第一步、bundle 检查、运行时健康、Workbench 打开、工作负载导入和桌面打包这些问题。可以直接围绕这些提问。",
+      cardBundlePathTitle: "先填入 bundle 路径",
+      cardBundlePathSummary: "先粘贴一个 .kyuubiki 路径，这样 Hub 才能安全地检查、验证或规范化它。",
+      cardStartLocalTitle: "先让本地栈上线",
+      cardStartLocalSummary: "Hub 当前还没有看到健康的本地运行时，所以启动本地栈是最安全的下一步。",
+      cardInspectTitle: "检查当前 bundle",
+      cardInspectSummary: "先做一次检查，可以在规范化、解包或对比之前拿到一个快速结构读取。",
+      cardNormalizeTitle: "规范化到目标路径",
+      cardNormalizeSummary: "你现在已经同时有源路径和输出路径了，所以可以直接做规范化。",
+      cardDiffTitle: "对比当前这一对 bundle",
+      cardDiffSummary: "两个 bundle 输入都已经具备，所以 Hub 可以直接执行一次安全 diff。",
+      cardGuidesTitle: "把文档架放在手边",
+      cardGuidesSummary: "如果你还在找方向，Guides 是 current-line、operations、troubleshooting 和 accuracy notes 最清晰的单一入口。",
+      cardWorkbenchTitle: "进入 Workbench",
+      cardWorkbenchSummary: "当你准备从 bundle 层面的准备进入建模和分析时，就打开 Workbench。",
+      actionRun: "执行动作",
+      noRationale: "没有附带说明。",
+      modelPlanTitle: "模型计划",
     },
   },
   ja: {
@@ -584,6 +934,21 @@ const HUB_I18N = {
         copy2: "ローカル control plane、リモート catalog、または現在の bundle path から取り込みます。",
         title3: "一度確認してから開く",
         copy3: "まず短い bundle チェックを行い、その後 Workbench に入って surprises を減らします。",
+      },
+      quick: {
+        label: "クイック案内",
+        title: "次の一手を選ぶ",
+        copy: "今どの仕事をしているかが見えたときだけ、より深いページを開きます。",
+        libraryTitle: "ライブラリを開く",
+        libraryCopy: "workload を整理し、catalog を同期し、ドメインや family で絞り込みます。",
+        bundlesTitle: "Bundle ツールを開く",
+        bundlesCopy: "project bundle の inspect、validate、normalize、pack、unpack、diff を行います。",
+        guidesTitle: "ドキュメントとガイドを開く",
+        guidesCopy: "current-line、operations、troubleshooting、accuracy の文書棚へ進みます。",
+        installerTitle: "Installer を開く",
+        installerCopy: "一つの shell から release layout、desktop packaging、workstation setup を進めます。",
+        runtimesTitle: "Runtimes を開く",
+        runtimesCopy: "stack の健康、hot-reload 状態、runtime tail を確認します。",
       },
       actions: {
         start: "ローカルスタックを起動",
@@ -729,17 +1094,54 @@ const HUB_I18N = {
       introLabel: "取り込みの管理",
       introTitle: "ワークロードライブラリ",
       introCopy: "ダウンロード済み bundle、単独インポート、将来のサーバ配信 workload を Hub 管理の一つのライブラリにまとめます。",
+      catalogUrl: "Catalog URL",
+      labelOrNote: "ラベルまたはメモ",
       register: "現在の bundle を登録",
       syncLocal: "ローカル control plane を同期",
       syncRemote: "リモート catalog を同期",
+      export: "ライブラリ JSON を出力",
+      import: "ライブラリ JSON を読み込み",
+      clear: "ライブラリをクリア",
+      managedWorkloads: "管理された workloads",
+      all: "すべて",
+      mechanical: "力学",
+      thermal: "熱",
+      thermo: "熱・構造",
+      allFamilies: "全 family",
+      axial: "軸・ばね",
+      beams: "梁・フレーム",
+      trusses: "トラス",
+      planes: "平面",
+      ready: "ワークロードライブラリの準備ができました。",
     },
     bundles: {
       introLabel: "Bundle 操作",
       introTitle: "プロジェクト bundle ツール",
       introCopy: "繰り返しのアーカイブ作業を一か所に集め、そのまま解析へ進みます。",
+      bundlePath: "Bundle パス",
+      comparePath: "比較パス",
+      outputPath: "出力パス",
       inspect: ".kyuubiki を確認",
       validate: ".kyuubiki を検証",
       normalize: "bundle を正規化",
+      unpack: "bundle を展開",
+      pack: "project を pack",
+      diff: "bundle を diff",
+      openWorkbench: "Workbench を開く",
+      desktopTools: "Desktop tools",
+      recentBundles: "最近の bundles",
+      recentCompare: "最近の比較パス",
+      recentOutputs: "最近の出力",
+      recentActions: "最近の bundle 操作",
+      all: "すべて",
+      failed: "失敗",
+      keepFailed: "失敗だけ残す",
+      import: "JSON を読み込み",
+      export: "JSON を出力",
+      clear: "履歴をクリア",
+      favorites: "お気に入り",
+      recent: "最近",
+      ready: "プロジェクト bundle ツールの準備ができました。",
     },
     guides: {
       primaryLabel: "主要ドキュメント",
@@ -749,7 +1151,376 @@ const HUB_I18N = {
       docsCopy: "current-line、operations、testing、accuracy、archive をまとめた入口です。",
       currentTitle: "Current line",
       currentCopy: "より深い判断の前に、tamamono 1.x が何を強化しているかを確認します。",
+      overviewDocsLabel: "Docs hub",
+      overviewDocsTitle: "読みやすい一つの棚",
+      overviewDocsCopy: "まず一か所で向きを合わせ、その後必要に応じて operations、accuracy、troubleshooting に分岐します。",
+      overviewCurrentLabel: "Current line",
+      overviewCurrentTitle: "tamamono 1.x",
+      overviewCurrentCopy: "現在のプロダクト姿勢、version line、この世代が何を硬くしているかを確認します。",
+      overviewTroubleshootingLabel: "Troubleshooting",
+      overviewTroubleshootingTitle: "最短経路を見つける",
+      overviewTroubleshootingCopy: "より深い runtime や packaging の詳細に入る前に、第一線のサポートノートを使います。",
+      operationsTitle: "Operations",
+      operationsCopy: "runtime、stack、operator path を一つの流れとして理解したいときに使います。",
+      troubleshootingTitle: "Troubleshooting",
+      troubleshootingCopy: "完全なログや packaging 出力へ潜る前に、最短の失敗経路を使います。",
+      accuracyLabel: "精度と信頼性",
+      accuracyTitle: "信頼の筋道を読む",
+      accuracyCopy: "これらの文書は、現在のバージョンラインが何を検証しようとしているのか、そしてそれが moxi の前に重要である理由を説明します。",
+      accuracyPlanTitle: "Accuracy plan",
+      accuracyPlanCopy: "verified baseline、benchmark 拡張、solver trust の長期計画を確認します。",
+      accuracyBaselinesTitle: "Accuracy baselines",
+      accuracyBaselinesCopy: "どの benchmark family が回帰に固定され、どれが次なのかを確認します。",
     },
+    assistant: {
+      introLabel: "困ったら",
+      introTitle: "安全な次の一手を選ぶ",
+      introCopy: "まずはローカルガイドを使います。組み込みの道筋で足りないときだけモデルを使います。",
+      close: "閉じる",
+      engine: "エンジン",
+      localMode: "ローカルガイド",
+      llmMode: "モデル補助",
+      section: "セクション",
+      runtime: "ランタイム",
+      bundle: "Bundle",
+      quickActions: "クイック操作",
+      quickStart: "ローカルスタックを起動",
+      quickLibrary: "ライブラリを開く",
+      quickBundles: "bundle を確認",
+      quickGuides: "ガイドを開く",
+      ask: "質問",
+      askLabel: "ローカルガイドに聞く",
+      askButton: "ローカルガイドに聞く",
+      askEmpty: "次の一手、bundle の確認、runtime の健康、ドキュメント、パッケージングについて聞けます。",
+      docs: "Docs とガイド",
+      docsIndexTitle: "Docs index",
+      docsIndexCopy: "完全なドキュメント入口を開きます。",
+      docsCurrentTitle: "Current line",
+      docsCurrentCopy: "tamamono 1.x の現在の姿勢を読みます。",
+      docsOperationsTitle: "Operations",
+      docsOperationsCopy: "runtime と operator workflow を読みます。",
+      docsTroubleshootingTitle: "Troubleshooting",
+      docsTroubleshootingCopy: "第一線のサポートノートへ進みます。",
+      suggested: "おすすめの次の一手",
+      llmIntro: "より長い onboarding や運用計画が必要なときだけ OpenAI-compatible モデルを接続します。",
+      baseUrl: "Base URL",
+      apiKey: "API key",
+      preset: "プリセット",
+      model: "モデル",
+      request: "リクエスト",
+      generate: "計画を生成",
+      approve: "この計画を確認し、実行を許可します。",
+      execute: "計画を実行",
+      ready: "アシスタントは準備完了です。",
+      audit: "アシスタント監査",
+    },
+    dynamic: {
+      assistantPromptEmpty: "短く聞けます。たとえば、最初に何をすべきか、bundle をどう確認するか、Workbench をどう開くか、なぜ packaging が partial のままなのか、などです。",
+      assistantNoUrgent: "ローカルガイドは今のところ緊急の次の一手を見つけていません。",
+      assistantNoPlan: "モデル計画はまだありません。",
+      assistantNoExecutable: "モデルは実行可能な Hub アクションを返しませんでした。",
+      assistantCancelled: "{action} を取り消しました。",
+      assistantFocusedSection: "{section} セクションに移動しました。",
+      assistantUpdatedBundle: "Hub 内の bundle コンテキストを更新しました。",
+      assistantExecuteCount: "{count} 件のアシスタントアクションを実行しました。",
+      assistantNoPlanToExecute: "実行できるアシスタント計画がありません。",
+      assistantReviewFirst: "まず生成された計画を確認してから実行してください。",
+      focusedBundleField: "bundle パス入力欄に移動しました",
+      focusedGuidesPage: "ガイドページを開きました",
+      noLogLines: "{service} にはまだログ行がありません。",
+      hotStatusRefreshed: "ホットリロードのランタイム状態を更新しました",
+      hotLogRefreshed: "ホットログを更新しました: {service}",
+      hotLogCopied: "サニタイズ済みホットログ末尾をコピーしました: {service}",
+      runtimeLogRefreshed: "ランタイムログを更新しました: {service}",
+      runtimeLogCopied: "サニタイズ済みランタイムログ末尾をコピーしました: {service}",
+      hotLogCleared: "ホットログ表示をクリアしました: {service}",
+      packagingRefreshed: "デスクトップ packaging readiness を更新しました",
+      focusedHomePage: "ホームの {page} ページに移動しました",
+      openedHomeTarget: "ホームから {page} を開きました",
+      focusedPanelPage: "{group} / {page} ページに移動しました",
+      assistantPanelOpened: "アシスタントパネルを開きました",
+      assistantPanelClosed: "アシスタントパネルを閉じました",
+      runtimeWatchPlaceholder: "ランタイム監視はここに表示されます。",
+      endpointPolicyDefault: "リモートプロバイダーには https:// を使い、ローカルゲートウェイには http://localhost / 127.0.0.1 を使ってください。API key は設定された Base URL に直接送信されます。",
+      endpointPolicyAllowed: "現在のアシスタント endpoint は許可された形に見えます。API key は計画生成のために設定された Base URL に直接送信されます。",
+      guideFirstNoRuntime: "まずローカルスタックを起動し、その後で作業を同期または登録し、一度確認してから Workbench を開いてください。今はローカルランタイムがまだ準備完了に見えないため、`ローカルスタックを起動` が最も安全な第一歩です。",
+      guideFirstNoBundle: "必要なら先にローカルスタックを起動し、その後 `Bundle tools` を開いて `.kyuubiki` パスを貼り付けてください。そのあと一度確認してから Workbench に進みます。",
+      guideFirstReady: "すでにランタイムと bundle コンテキストがあります。安全な次の一手は、現在の bundle を確認し、結果が妥当に見えることを確認してから Workbench を開くことです。",
+      guideBundleNoPath: "bundle 操作は `ホーム > Bundle tools` にあります。まず `.kyuubiki` パスを入力してください。その後 `Inspect` で短い構造確認、`Validate` で schema 確認、出力先があるときだけ `Normalize` を使います。",
+      guideNormalizeNoOutput: "Normalize には bundle パスと出力パスの両方が必要です。bundle はすでにあるので、足りないのは `Bundle tools` の出力先です。",
+      guideDiffNoCompare: "bundle diff には現在の bundle と compare path の両方が必要です。`Bundle tools` の compare フィールドを埋めてから `Diff bundles` を実行してください。",
+      guideBundleGeneral: "まず `Inspect` で安全に構造を読み、`Validate` で schema の確信を取り、両方のパスが埋まっているときだけ `Normalize` や `Diff` を使うのがよい流れです。",
+      guideWorkbench: "Workbench はランタイムが健全で、bundle コンテキストも妥当に見えるときにだけ開いてください。Hub の短い流れは `ホーム > Start here` から `Open workbench` です。",
+      guideDocs: "`ホーム > Guides` を単一のドキュメント棚として使ってください。まず `Docs index` を見て、質問の種類が分かってから `Current line`、`Operations`、`Troubleshooting` に進みます。",
+      guideRuntime: "loop を変えたいなら `Runtimes`、状態を見たりコピーしたりするだけなら `Observe` を使います。`Local runtime` は短い health 読み、`Hot loop` は開発 tail、`Stack watch` はサニタイズ済み runtime ログです。",
+      guideLibrary: "workload の取り込みは `ホーム > Library` です。`Sync local control plane` は第一者の作業を取り込み、`Sync remote catalog` はリモート項目を取り込み、domain/family filter で Workbench を開く前に棚を絞れます。",
+      guidePackaging: "`Installer` は release layout や workstation bootstrap が必要なときに使います。Hub では `Tools > Packages` が build アクション、`Status` が readiness wall、`Output` が packaging ログです。この自動化セッションでは `.app` は信頼しやすい一方、`.dmg` は `hdiutil` のセッション依存で partial のままになることがあります。",
+      guideFailure: "何かが partial に見えるなら、まず最短面を見てください。`Observe > Health` で runtime、`Tools > Status` で desktop packaging readiness、`Bundle tools > Inspect` で project bundle の形を見て、それが runtime・bundle・packaging のどれかを判断します。",
+      guideFallback: "ローカルガイドは、最初の一歩、bundle 確認、runtime の健康、Workbench 起動、workload library の取り込み、desktop packaging について手伝えます。そのあたりを直接聞いてください。",
+      cardBundlePathTitle: "まず bundle パスを入れる",
+      cardBundlePathSummary: "まず .kyuubiki パスを貼り付けると、Hub が安全に inspect・validate・normalize できます。",
+      cardStartLocalTitle: "ローカルスタックを先に起動",
+      cardStartLocalSummary: "Hub はまだ健全なローカルランタイムを見ていないため、ローカルスタックの起動が最も安全な次の一手です。",
+      cardInspectTitle: "選択中の bundle を確認",
+      cardInspectSummary: "まず inspect すると、normalize・unpack・diff の前に短い構造読みができます。",
+      cardNormalizeTitle: "目標パスへ normalize",
+      cardNormalizeSummary: "入力パスと出力パスの両方がそろっているので、そのまま normalize を実行できます。",
+      cardDiffTitle: "現在のペアを比較",
+      cardDiffSummary: "bundle 入力が両方そろっているため、Hub は追加設定なしで安全な diff を実行できます。",
+      cardGuidesTitle: "ドキュメント棚を近くに置く",
+      cardGuidesSummary: "まだ方向付けの途中なら、Guides が current-line、operations、troubleshooting、accuracy notes への最も読みやすい単一入口です。",
+      cardWorkbenchTitle: "Workbench に入る",
+      cardWorkbenchSummary: "bundle レベルの準備から先へ進む準備ができたら、モデリングと解析の面へ移動します。",
+      actionRun: "実行",
+      noRationale: "理由は添えられていません。",
+      modelPlanTitle: "モデル計画",
+    },
+  },
+};
+
+HUB_I18N.es = {
+  ...HUB_I18N.en,
+  nav: {
+    projects: "Inicio",
+    runtimes: "Runtimes",
+    deploy: "Despliegue",
+    observe: "Observación",
+    tools: "Herramientas",
+  },
+  sections: {
+    projects: {
+      title: "Inicio",
+      copy: "Sigue una sola ruta clara: trae trabajo, revísalo una vez y luego entra en Workbench.",
+    },
+    runtimes: {
+      title: "Runtimes",
+      copy: "Inicia el bucle correcto, revisa la salud del runtime y mantén los registros cerca.",
+    },
+    deploy: {
+      title: "Despliegue",
+      copy: "Elige la postura objetivo, valida la estación y prepara la ruta de publicación.",
+    },
+    observe: {
+      title: "Observación",
+      copy: "Revisa salud, colas y señales recientes sin salir del shell de escritorio.",
+    },
+    tools: {
+      title: "Herramientas",
+      copy: "Ejecuta diagnósticos, empaquetado y verificación desde una sola superficie.",
+    },
+  },
+  shell: {
+    ...HUB_I18N.en.shell,
+    language: "Idioma",
+    actionStatus: "Estado de acción",
+    idle: "inactivo",
+    openWorkbench: "Abrir Workbench",
+    startLocal: "Iniciar pila local",
+    validateEnv: "Validar entorno",
+    focus: "orquestación del runtime",
+  },
+  signals: {
+    intakeLabel: "Entrada de cargas",
+    intakeTitle: "local + remota",
+    intakeCopy: "Registra bundles, sincroniza catálogos y mantén una sola biblioteca a la vista.",
+    domainsLabel: "Dominios de análisis",
+    domainsTitle: "mecánico / térmico / termo",
+    domainsCopy: "El mismo lenguaje de estudios ahora fluye por Hub, CLI y Workbench.",
+    firstMoveLabel: "Primer movimiento recomendado",
+    firstMoveTitle: "sincronizar, revisar, abrir",
+    firstMoveCopy: "Sincroniza primero, revisa una vez y luego abre Workbench.",
+  },
+  home: {
+    ...HUB_I18N.en.home,
+    tabs: {
+      start: "Empezar aquí",
+      library: "Biblioteca",
+      bundles: "Herramientas de bundle",
+      guides: "Guías",
+    },
+    steps: {
+      step1Label: "PASO 1",
+      step1Title: "Traer trabajo",
+      step1Copy: "Registra el bundle actual, sincroniza el plano de control local o importa un catálogo remoto.",
+      step2Label: "PASO 2",
+      step2Title: "Revisar una vez",
+      step2Copy: "Valida la forma del bundle y la intención del análisis antes de profundizar.",
+      step3Label: "PASO 3",
+      step3Title: "Abrir Workbench",
+      step3Copy: "Entra al análisis solo cuando el bundle activo y la ruta de runtime se vean seguros.",
+    },
+    path: {
+      label: "Ruta recomendada",
+      title: "Usa Hub como pista corta",
+      copy: "Si esta es una sesión nueva, sigue una ruta corta en vez de saltar entre secciones.",
+    },
+    flow: {
+      title1: "Inicia la pila local si hace falta",
+      copy1: "Pon en línea el runtime local antes de revisar o abrir algo que dependa de él.",
+      title2: "Sincroniza o registra trabajo",
+      copy2: "Tira desde el plano de control local, un catálogo remoto o la ruta del bundle actual.",
+      title3: "Revisa y luego abre",
+      copy3: "Haz una revisión rápida del bundle y entra en Workbench con menos sorpresas.",
+    },
+    quick: {
+      label: "Orientación rápida",
+      title: "Elige el siguiente paso correcto",
+      copy: "Abre páginas más profundas solo cuando sepas qué trabajo estás haciendo.",
+      libraryTitle: "Abrir Biblioteca",
+      libraryCopy: "Organiza cargas, sincroniza catálogos y filtra por dominio o familia.",
+      bundlesTitle: "Abrir herramientas de bundle",
+      bundlesCopy: "Inspecciona, valida, normaliza, empaqueta, desempaqueta y compara bundles de proyecto.",
+      guidesTitle: "Abrir docs y guías",
+      guidesCopy: "Ve a una sola estantería de documentación para línea actual, operaciones, troubleshooting y exactitud.",
+      installerTitle: "Abrir Installer",
+      installerCopy: "Prepara layouts de release, empaquetado de escritorio y setup de estación desde un solo shell.",
+      runtimesTitle: "Abrir Runtimes",
+      runtimesCopy: "Revisa la salud de la pila, el estado hot-reload y los tails del runtime.",
+    },
+    actions: {
+      start: "Iniciar pila local",
+      sync: "Sincronizar plano de control local",
+      open: "Abrir Workbench",
+    },
+  },
+  library: {
+    ...HUB_I18N.en.library,
+    introLabel: "Entrada gestionada",
+    introTitle: "Biblioteca de cargas",
+    introCopy: "Mantén bundles descargados, importaciones sueltas y cargas futuras del servidor en una sola biblioteca gestionada por Hub.",
+    catalogUrl: "URL del catálogo",
+    labelOrNote: "Etiqueta o nota",
+    register: "Registrar bundle actual",
+    syncLocal: "Sincronizar control local",
+    syncRemote: "Sincronizar catálogo remoto",
+    export: "Exportar biblioteca JSON",
+    import: "Importar biblioteca JSON",
+    clear: "Vaciar biblioteca",
+    managedWorkloads: "Cargas gestionadas",
+  },
+  bundles: {
+    ...HUB_I18N.en.bundles,
+    introLabel: "Herramientas de bundle",
+    introTitle: "Trabajar con bundles",
+    introCopy: "Inspecciona, valida y compara bundles de proyecto sin salir de Hub.",
+    bundlePath: "Ruta del bundle",
+    comparePath: "Ruta a comparar",
+    outputPath: "Ruta de salida",
+  },
+  guides: {
+    ...HUB_I18N.en.guides,
+    primaryLabel: "Biblioteca principal",
+    primaryTitle: "Centro de documentación",
+    primaryCopy: "Usa una sola estantería clara para la línea actual, operaciones, troubleshooting y exactitud.",
+    docsTitle: "Índice de docs",
+    docsCopy: "Abre el índice principal de documentación.",
+    currentTitle: "Línea actual",
+    currentCopy: "Lee la postura actual de tamamono 1.x.",
+  },
+  assistant: {
+    ...HUB_I18N.en.assistant,
+    introLabel: "¿Necesitas ayuda?",
+    introTitle: "Elige el siguiente paso seguro",
+    introCopy: "Empieza con la guía local. Recurre a un modelo solo cuando la ruta integrada no sea suficiente.",
+    close: "Cerrar",
+    engine: "Motor",
+    title: "Asistente",
+    localGuide: "Guía local",
+    modelAssist: "Asistencia con modelo",
+    section: "Sección",
+    runtime: "Runtime",
+    bundle: "Bundle",
+    quickActions: "Acciones rápidas",
+    quickStart: "Iniciar pila local",
+    quickLibrary: "Abrir biblioteca",
+    quickBundles: "Inspeccionar bundle",
+    quickGuides: "Abrir guías",
+    ask: "Preguntar",
+    askLocal: "Preguntar a la guía local",
+    askLabel: "Pregunta a la guía local",
+    askButton: "Preguntar a la guía local",
+    askEmpty: "Pregunta por el siguiente paso, la inspección de bundles, la salud del runtime, la documentación o el empaquetado.",
+    docsGuides: "Docs y guías",
+    docsIndexTitle: "Índice de docs",
+    docsIndexCopy: "Abre la entrada completa de documentación.",
+    docsCurrentTitle: "Línea actual",
+    docsCurrentCopy: "Lee la postura actual de tamamono 1.x.",
+    docsOperationsTitle: "Operaciones",
+    docsOperationsCopy: "Lee el flujo de runtime y operador.",
+    docsTroubleshootingTitle: "Troubleshooting",
+    docsTroubleshootingCopy: "Salta a las notas de soporte de primera línea.",
+    suggested: "Siguientes pasos sugeridos",
+    llmIntro: "Conecta un modelo compatible con OpenAI solo cuando quieras un plan de onboarding u operaciones más largo.",
+    baseUrl: "URL base",
+    apiKey: "Clave API",
+    preset: "Preajuste",
+    model: "Modelo",
+    request: "Solicitud",
+    generate: "Generar plan",
+    approve: "He revisado este plan y permito su ejecución.",
+    execute: "Ejecutar plan",
+    ready: "El asistente está listo.",
+    audit: "Auditoría del asistente",
+  },
+  dynamic: {
+    ...HUB_I18N.en.dynamic,
+    assistantPromptEmpty: "Pregunta algo corto, por ejemplo: qué debo hacer primero, cómo inspecciono un bundle, cómo abro Workbench o por qué el empaquetado sigue en partial.",
+    assistantNoUrgent: "La guía local no ve un siguiente paso urgente ahora mismo.",
+    assistantNoPlan: "Todavía no hay plan del modelo.",
+    assistantNoExecutable: "El modelo no devolvió acciones ejecutables para Hub.",
+    assistantCancelled: "Se canceló {action}.",
+    assistantFocusedSection: "Se enfocó la sección {section}.",
+    assistantUpdatedBundle: "Se actualizó el contexto del bundle en Hub.",
+    assistantExecuteCount: "Se ejecutaron {count} acciones del asistente.",
+    assistantNoPlanToExecute: "No hay un plan del asistente disponible para ejecutar.",
+    assistantReviewFirst: "Revisa primero el plan generado y confirma la ejecución.",
+    focusedBundleField: "se enfocó el campo de ruta del bundle",
+    focusedGuidesPage: "se enfocó la página de guías",
+    noLogLines: "Todavía no hay líneas de log para {service}.",
+    hotStatusRefreshed: "se actualizó el estado del runtime hot-reload",
+    hotLogRefreshed: "se actualizó el log hot: {service}",
+    hotLogCopied: "se copió la cola saneada del log hot: {service}",
+    runtimeLogRefreshed: "se actualizó el log del runtime: {service}",
+    runtimeLogCopied: "se copió la cola saneada del log del runtime: {service}",
+    hotLogCleared: "se limpió la vista del log hot: {service}",
+    packagingRefreshed: "se actualizó la disponibilidad del empaquetado de escritorio",
+    focusedHomePage: "se enfocó la página de inicio {page}",
+    openedHomeTarget: "se abrió {page} desde inicio",
+    focusedPanelPage: "se enfocó la página {page} de {group}",
+    assistantPanelOpened: "se abrió el panel del asistente",
+    assistantPanelClosed: "se cerró el panel del asistente",
+    runtimeWatchPlaceholder: "La observación del runtime aparecerá aquí.",
+    endpointPolicyDefault: "Usa https:// para proveedores remotos, o http://localhost / 127.0.0.1 para pasarelas locales. La API key se envía directamente a la URL base configurada.",
+    endpointPolicyAllowed: "El endpoint del asistente parece permitido. La API key se envía directamente a la URL base configurada para generar el plan.",
+    guideFirstNoRuntime: "Empieza por la pila local, luego sincroniza o registra trabajo, inspecciónalo una vez y solo entonces abre Workbench. Ahora mismo el runtime local no parece listo, así que `Iniciar pila local` es el primer paso más seguro.",
+    guideFirstNoBundle: "Empieza por la pila local si hace falta, luego abre `Bundle tools` y pega una ruta `.kyuubiki`. Después inspecciona una vez y pasa a Workbench.",
+    guideFirstReady: "Ya tienes runtime y contexto de bundle. La ruta segura ahora es: inspecciona el bundle actual, confirma que el resultado parece razonable y después abre Workbench.",
+    guideBundleNoPath: "Las operaciones con bundles viven en `Inicio > Bundle tools`. Pega primero una ruta de bundle `.kyuubiki`. Luego usa `Inspect` para una lectura rápida, `Validate` para comprobaciones de esquema y `Normalize` solo cuando también tengas una ruta de salida.",
+    guideNormalizeNoOutput: "La normalización necesita tanto la ruta del bundle como la ruta de salida. Ya tienes el bundle; lo que falta es el destino de salida en `Bundle tools`.",
+    guideDiffNoCompare: "El diff de bundles necesita tanto el bundle actual como una ruta de comparación. Rellena el campo compare en `Bundle tools` y luego ejecuta `Diff bundles`.",
+    guideBundleGeneral: "Usa `Inspect` primero para una lectura estructural segura. Usa `Validate` cuando quieras confianza de esquema, `Normalize` cuando quieras un bundle de salida limpio y `Diff` solo cuando ambas rutas de bundle estén completas.",
+    guideWorkbench: "Abre Workbench solo cuando el runtime esté sano y el contexto del bundle parezca coherente. En Hub, la ruta corta es: `Inicio > Empezar aquí`, luego `Abrir Workbench`.",
+    guideDocs: "Usa `Inicio > Guías` como estantería única de documentación. Empieza por `Índice de docs` y abre `Línea actual`, `Operaciones` o `Troubleshooting` solo cuando sepas qué clase de pregunta estás respondiendo.",
+    guideRuntime: "Usa `Runtimes` cuando quieras cambiar el bucle, y `Observe` cuando solo quieras escanear o copiar estado. `Local runtime` es la lectura corta de salud, `Hot loop` es para tails de desarrollo y `Stack watch` es para logs saneados del runtime.",
+    guideLibrary: "Usa `Inicio > Biblioteca` para la entrada de workloads. `Sincronizar control local` trae trabajo de primera parte, `Sincronizar catálogo remoto` trae entradas remotas, y los filtros de dominio/familia ayudan a estrechar la estantería antes de abrir Workbench.",
+    guidePackaging: "Usa `Installer` cuando necesites layout de release o bootstrap de estación. En Hub, `Tools > Packages` es para acciones de build, `Status` es el muro de readiness y `Output` es donde cae el log de empaquetado. En esta sesión automática, los `.app` son fiables, mientras que los `.dmg` pueden seguir apareciendo como partial porque `hdiutil` es sensible a la sesión.",
+    guideFailure: "Si algo parece partial, lee primero la superficie más corta: `Observe > Health` para problemas de runtime, `Tools > Status` para readiness del empaquetado de escritorio y `Bundle tools > Inspect` para la forma del bundle. Luego decide si el problema es runtime, bundle o packaging.",
+    guideFallback: "La guía local puede ayudarte con los primeros pasos, la inspección de bundles, la salud del runtime, el arranque de Workbench, la entrada a la biblioteca de workloads y el empaquetado de escritorio. Prueba a preguntar directamente por una de esas cosas.",
+    cardBundlePathTitle: "Empieza con una ruta de bundle",
+    cardBundlePathSummary: "Pega primero una ruta .kyuubiki para que Hub pueda inspeccionarla, validarla o normalizarla con seguridad.",
+    cardStartLocalTitle: "Poner en línea la pila local",
+    cardStartLocalSummary: "Hub no ve ahora mismo un runtime local sano, así que iniciar la pila local es el siguiente paso más seguro.",
+    cardInspectTitle: "Inspeccionar el bundle seleccionado",
+    cardInspectSummary: "Inspeccionar primero da una lectura estructural rápida antes de normalizar, desempaquetar o comparar nada.",
+    cardNormalizeTitle: "Normalizar hacia la ruta de destino",
+    cardNormalizeSummary: "Ya tienes tanto la ruta de origen como la de salida, así que la normalización está lista para ejecutarse.",
+    cardDiffTitle: "Comparar el par actual",
+    cardDiffSummary: "Ambas entradas de bundle están presentes, así que Hub puede ejecutar un diff seguro sin más preparación.",
+    cardGuidesTitle: "Mantén cerca la estantería de docs",
+    cardGuidesSummary: "Si todavía te estás orientando, la página Guides es la entrada única más limpia para línea actual, operaciones, troubleshooting y notas de exactitud.",
+    cardWorkbenchTitle: "Entrar en Workbench",
+    cardWorkbenchSummary: "Abre la superficie de modelado y análisis cuando ya estés listo para dejar atrás la preparación a nivel de bundle.",
+    actionRun: "Ejecutar acción",
   },
 };
 
@@ -857,6 +1628,13 @@ function hubCopy() {
   return HUB_I18N[state.language] || HUB_I18N.en;
 }
 
+function hubMessage(template, replacements = {}) {
+  return Object.entries(replacements).reduce(
+    (value, [key, replacement]) => value.replaceAll(`{${key}}`, String(replacement)),
+    String(template ?? ""),
+  );
+}
+
 const elements = {
   title: document.getElementById("section-title"),
   copy: document.getElementById("section-copy"),
@@ -907,21 +1685,72 @@ const elements = {
   homeFlow2Copy: document.getElementById("home-flow2-copy"),
   homeFlow3Title: document.getElementById("home-flow3-title"),
   homeFlow3Copy: document.getElementById("home-flow3-copy"),
+  homeQuickLabel: document.getElementById("home-quick-label"),
+  homeQuickTitle: document.getElementById("home-quick-title"),
+  homeQuickCopy: document.getElementById("home-quick-copy"),
+  homeClusterLibraryTitle: document.getElementById("home-cluster-library-title"),
+  homeClusterLibraryCopy: document.getElementById("home-cluster-library-copy"),
+  homeClusterBundlesTitle: document.getElementById("home-cluster-bundles-title"),
+  homeClusterBundlesCopy: document.getElementById("home-cluster-bundles-copy"),
+  homeClusterGuidesTitle: document.getElementById("home-cluster-guides-title"),
+  homeClusterGuidesCopy: document.getElementById("home-cluster-guides-copy"),
+  homeClusterInstallerTitle: document.getElementById("home-cluster-installer-title"),
+  homeClusterInstallerCopy: document.getElementById("home-cluster-installer-copy"),
+  homeClusterRuntimesTitle: document.getElementById("home-cluster-runtimes-title"),
+  homeClusterRuntimesCopy: document.getElementById("home-cluster-runtimes-copy"),
   homeActionStart: document.getElementById("home-action-start"),
   homeActionSync: document.getElementById("home-action-sync"),
   homeActionOpen: document.getElementById("home-action-open"),
   libraryIntroLabel: document.getElementById("library-intro-label"),
   libraryIntroTitle: document.getElementById("library-intro-title"),
   libraryIntroCopy: document.getElementById("library-intro-copy"),
+  libraryCatalogUrlLabel: document.getElementById("library-catalog-url-label"),
+  libraryLabelNoteLabel: document.getElementById("library-label-note-label"),
   libraryActionRegister: document.getElementById("library-action-register"),
   libraryActionSyncLocal: document.getElementById("library-action-sync-local"),
   libraryActionSyncRemote: document.getElementById("library-action-sync-remote"),
+  libraryActionExport: document.getElementById("library-action-export"),
+  libraryActionImport: document.getElementById("library-action-import"),
+  libraryActionClear: document.getElementById("library-action-clear"),
+  libraryManagedWorkloadsLabel: document.getElementById("library-managed-workloads-label"),
+  libraryFilterAll: document.getElementById("library-filter-all"),
+  libraryFilterMechanical: document.getElementById("library-filter-mechanical"),
+  libraryFilterThermal: document.getElementById("library-filter-thermal"),
+  libraryFilterThermo: document.getElementById("library-filter-thermo"),
+  libraryFamilyAll: document.getElementById("library-family-all"),
+  libraryFamilyAxial: document.getElementById("library-family-axial"),
+  libraryFamilyBeams: document.getElementById("library-family-beams"),
+  libraryFamilyTrusses: document.getElementById("library-family-trusses"),
+  libraryFamilyPlanes: document.getElementById("library-family-planes"),
   bundlesIntroLabel: document.getElementById("bundles-intro-label"),
   bundlesIntroTitle: document.getElementById("bundles-intro-title"),
   bundlesIntroCopy: document.getElementById("bundles-intro-copy"),
+  bundlesBundlePathLabel: document.getElementById("bundles-bundle-path-label"),
+  bundlesComparePathLabel: document.getElementById("bundles-compare-path-label"),
+  bundlesOutputPathLabel: document.getElementById("bundles-output-path-label"),
   bundlesActionInspect: document.getElementById("bundles-action-inspect"),
   bundlesActionValidate: document.getElementById("bundles-action-validate"),
   bundlesActionNormalize: document.getElementById("bundles-action-normalize"),
+  bundlesActionUnpack: document.getElementById("bundles-action-unpack"),
+  bundlesActionPack: document.getElementById("bundles-action-pack"),
+  bundlesActionDiff: document.getElementById("bundles-action-diff"),
+  bundlesActionOpenWorkbench: document.getElementById("bundles-action-open-workbench"),
+  bundlesActionDesktopTools: document.getElementById("bundles-action-desktop-tools"),
+  bundlesRecentBundlesLabel: document.getElementById("bundles-recent-bundles-label"),
+  bundlesRecentCompareLabel: document.getElementById("bundles-recent-compare-label"),
+  bundlesRecentOutputsLabel: document.getElementById("bundles-recent-outputs-label"),
+  bundlesRecentActionsLabel: document.getElementById("bundles-recent-actions-label"),
+  bundlesHistoryAll: document.getElementById("bundles-history-all"),
+  bundlesHistoryFailed: document.getElementById("bundles-history-failed"),
+  bundlesHistoryInspect: document.getElementById("bundles-history-inspect"),
+  bundlesHistoryNormalize: document.getElementById("bundles-history-normalize"),
+  bundlesHistoryDiff: document.getElementById("bundles-history-diff"),
+  bundlesHistoryKeepFailed: document.getElementById("bundles-history-keep-failed"),
+  bundlesHistoryImport: document.getElementById("bundles-history-import"),
+  bundlesHistoryExport: document.getElementById("bundles-history-export"),
+  bundlesHistoryClear: document.getElementById("bundles-history-clear"),
+  bundlesFavoritesLabel: document.getElementById("bundles-favorites-label"),
+  bundlesRecentLabel: document.getElementById("bundles-recent-label"),
   guidesPrimaryLabel: document.getElementById("guides-primary-label"),
   guidesPrimaryTitle: document.getElementById("guides-primary-title"),
   guidesPrimaryCopy: document.getElementById("guides-primary-copy"),
@@ -929,6 +1758,26 @@ const elements = {
   guidesDocsCopy: document.getElementById("guides-docs-copy"),
   guidesCurrentTitle: document.getElementById("guides-current-title"),
   guidesCurrentCopy: document.getElementById("guides-current-copy"),
+  guidesOverviewDocsLabel: document.getElementById("guides-overview-docs-label"),
+  guidesOverviewDocsTitle: document.getElementById("guides-overview-docs-title"),
+  guidesOverviewDocsCopy: document.getElementById("guides-overview-docs-copy"),
+  guidesOverviewCurrentLabel: document.getElementById("guides-overview-current-label"),
+  guidesOverviewCurrentTitle: document.getElementById("guides-overview-current-title"),
+  guidesOverviewCurrentCopy: document.getElementById("guides-overview-current-copy"),
+  guidesOverviewTroubleshootingLabel: document.getElementById("guides-overview-troubleshooting-label"),
+  guidesOverviewTroubleshootingTitle: document.getElementById("guides-overview-troubleshooting-title"),
+  guidesOverviewTroubleshootingCopy: document.getElementById("guides-overview-troubleshooting-copy"),
+  guidesOperationsTitle: document.getElementById("guides-operations-title"),
+  guidesOperationsCopy: document.getElementById("guides-operations-copy"),
+  guidesTroubleshootingTitle: document.getElementById("guides-troubleshooting-title"),
+  guidesTroubleshootingCopy: document.getElementById("guides-troubleshooting-copy"),
+  guidesAccuracyLabel: document.getElementById("guides-accuracy-label"),
+  guidesAccuracyTitle: document.getElementById("guides-accuracy-title"),
+  guidesAccuracyCopy: document.getElementById("guides-accuracy-copy"),
+  guidesAccuracyPlanTitle: document.getElementById("guides-accuracy-plan-title"),
+  guidesAccuracyPlanCopy: document.getElementById("guides-accuracy-plan-copy"),
+  guidesAccuracyBaselinesTitle: document.getElementById("guides-accuracy-baselines-title"),
+  guidesAccuracyBaselinesCopy: document.getElementById("guides-accuracy-baselines-copy"),
   runtimeLocalLabel: document.getElementById("runtime-local-label"),
   runtimeLocalTitle: document.getElementById("runtime-local-title"),
   runtimeLocalCopy: document.getElementById("runtime-local-copy"),
@@ -1066,6 +1915,20 @@ const elements = {
   historyFilterButtons: Array.from(document.querySelectorAll("[data-history-filter]")),
   historyManageButtons: Array.from(document.querySelectorAll("[data-history-manage]")),
   assistantModeButtons: Array.from(document.querySelectorAll("[data-assistant-mode]")),
+  assistantIntroLabel: document.getElementById("assistant-intro-label"),
+  assistantIntroTitle: document.getElementById("assistant-intro-title"),
+  assistantIntroCopy: document.getElementById("assistant-intro-copy"),
+  assistantEngineLabel: document.getElementById("assistant-engine-label"),
+  assistantContextSectionLabel: document.getElementById("assistant-context-section-label"),
+  assistantContextRuntimeLabel: document.getElementById("assistant-context-runtime-label"),
+  assistantContextBundleLabel: document.getElementById("assistant-context-bundle-label"),
+  assistantLocalActionsLabel: document.getElementById("assistant-local-actions-label"),
+  assistantLocalActionStart: document.getElementById("assistant-local-action-start"),
+  assistantLocalActionLibrary: document.getElementById("assistant-local-action-library"),
+  assistantLocalActionBundles: document.getElementById("assistant-local-action-bundles"),
+  assistantLocalActionGuides: document.getElementById("assistant-local-action-guides"),
+  assistantLocalAskLabel: document.getElementById("assistant-local-ask-label"),
+  assistantLocalPromptLabel: document.getElementById("assistant-local-prompt-label"),
   assistantEngineState: document.getElementById("assistant-engine-state"),
   assistantContextSection: document.getElementById("assistant-context-section"),
   assistantContextRuntime: document.getElementById("assistant-context-runtime"),
@@ -1075,7 +1938,23 @@ const elements = {
   assistantLocalPrompt: document.getElementById("assistant-local-prompt"),
   assistantLocalAsk: document.getElementById("assistant-local-ask"),
   assistantLocalOutput: document.getElementById("assistant-local-output"),
+  assistantDocsLabel: document.getElementById("assistant-docs-label"),
+  assistantDocsIndexTitle: document.getElementById("assistant-docs-index-title"),
+  assistantDocsIndexCopy: document.getElementById("assistant-docs-index-copy"),
+  assistantDocsCurrentTitle: document.getElementById("assistant-docs-current-title"),
+  assistantDocsCurrentCopy: document.getElementById("assistant-docs-current-copy"),
+  assistantDocsOperationsTitle: document.getElementById("assistant-docs-operations-title"),
+  assistantDocsOperationsCopy: document.getElementById("assistant-docs-operations-copy"),
+  assistantDocsTroubleshootingTitle: document.getElementById("assistant-docs-troubleshooting-title"),
+  assistantDocsTroubleshootingCopy: document.getElementById("assistant-docs-troubleshooting-copy"),
+  assistantSuggestedLabel: document.getElementById("assistant-suggested-label"),
   assistantLlmPanel: document.getElementById("assistant-llm-panel"),
+  assistantLlmIntroCopy: document.getElementById("assistant-llm-intro-copy"),
+  assistantBaseUrlLabel: document.getElementById("assistant-base-url-label"),
+  assistantApiKeyLabel: document.getElementById("assistant-api-key-label"),
+  assistantPresetLabel: document.getElementById("assistant-preset-label"),
+  assistantModelLabel: document.getElementById("assistant-model-label"),
+  assistantRequestLabel: document.getElementById("assistant-request-label"),
   assistantBaseUrl: document.getElementById("assistant-base-url"),
   assistantApiKey: document.getElementById("assistant-api-key"),
   assistantModelPreset: document.getElementById("assistant-model-preset"),
@@ -1084,9 +1963,11 @@ const elements = {
   assistantEndpointPolicy: document.getElementById("assistant-endpoint-policy"),
   assistantRequestPlan: document.getElementById("assistant-request-plan"),
   assistantApprovePlan: document.getElementById("assistant-approve-plan"),
+  assistantApproveLabel: document.getElementById("assistant-approve-label"),
   assistantExecutePlan: document.getElementById("assistant-execute-plan"),
   assistantPlanActions: document.getElementById("assistant-plan-actions"),
   assistantOutput: document.getElementById("assistant-output"),
+  assistantAuditLabel: document.getElementById("assistant-audit-label"),
   assistantAuditList: document.getElementById("assistant-audit-list"),
   densityToggleButtons: Array.from(document.querySelectorAll("[data-density-toggle]")),
   densityPanels: Array.from(document.querySelectorAll("[data-density-panel]")),
@@ -1171,21 +2052,78 @@ function renderDesktopLanguagePreference() {
   setText(elements.homeFlow2Copy, copy.home.flow.copy2);
   setText(elements.homeFlow3Title, copy.home.flow.title3);
   setText(elements.homeFlow3Copy, copy.home.flow.copy3);
+  setText(elements.homeQuickLabel, copy.home.quick.label);
+  setText(elements.homeQuickTitle, copy.home.quick.title);
+  setText(elements.homeQuickCopy, copy.home.quick.copy);
+  setText(elements.homeClusterLibraryTitle, copy.home.quick.libraryTitle);
+  setText(elements.homeClusterLibraryCopy, copy.home.quick.libraryCopy);
+  setText(elements.homeClusterBundlesTitle, copy.home.quick.bundlesTitle);
+  setText(elements.homeClusterBundlesCopy, copy.home.quick.bundlesCopy);
+  setText(elements.homeClusterGuidesTitle, copy.home.quick.guidesTitle);
+  setText(elements.homeClusterGuidesCopy, copy.home.quick.guidesCopy);
+  setText(elements.homeClusterInstallerTitle, copy.home.quick.installerTitle);
+  setText(elements.homeClusterInstallerCopy, copy.home.quick.installerCopy);
+  setText(elements.homeClusterRuntimesTitle, copy.home.quick.runtimesTitle);
+  setText(elements.homeClusterRuntimesCopy, copy.home.quick.runtimesCopy);
   setText(elements.homeActionStart, copy.home.actions.start);
   setText(elements.homeActionSync, copy.home.actions.sync);
   setText(elements.homeActionOpen, copy.home.actions.open);
   setText(elements.libraryIntroLabel, copy.library.introLabel);
   setText(elements.libraryIntroTitle, copy.library.introTitle);
   setText(elements.libraryIntroCopy, copy.library.introCopy);
+  setText(elements.libraryCatalogUrlLabel, copy.library.catalogUrl);
+  setText(elements.libraryLabelNoteLabel, copy.library.labelOrNote);
   setText(elements.libraryActionRegister, copy.library.register);
   setText(elements.libraryActionSyncLocal, copy.library.syncLocal);
   setText(elements.libraryActionSyncRemote, copy.library.syncRemote);
+  setText(elements.libraryActionExport, copy.library.export);
+  setText(elements.libraryActionImport, copy.library.import);
+  setText(elements.libraryActionClear, copy.library.clear);
+  setText(elements.libraryManagedWorkloadsLabel, copy.library.managedWorkloads);
+  setText(elements.libraryFilterAll, copy.library.all);
+  setText(elements.libraryFilterMechanical, copy.library.mechanical);
+  setText(elements.libraryFilterThermal, copy.library.thermal);
+  setText(elements.libraryFilterThermo, copy.library.thermo);
+  setText(elements.libraryFamilyAll, copy.library.allFamilies);
+  setText(elements.libraryFamilyAxial, copy.library.axial);
+  setText(elements.libraryFamilyBeams, copy.library.beams);
+  setText(elements.libraryFamilyTrusses, copy.library.trusses);
+  setText(elements.libraryFamilyPlanes, copy.library.planes);
+  if (elements.workloadLibraryOutput && !state.isBusy) {
+    elements.workloadLibraryOutput.textContent = copy.library.ready;
+  }
   setText(elements.bundlesIntroLabel, copy.bundles.introLabel);
   setText(elements.bundlesIntroTitle, copy.bundles.introTitle);
   setText(elements.bundlesIntroCopy, copy.bundles.introCopy);
+  setText(elements.bundlesBundlePathLabel, copy.bundles.bundlePath);
+  setText(elements.bundlesComparePathLabel, copy.bundles.comparePath);
+  setText(elements.bundlesOutputPathLabel, copy.bundles.outputPath);
   setText(elements.bundlesActionInspect, copy.bundles.inspect);
   setText(elements.bundlesActionValidate, copy.bundles.validate);
   setText(elements.bundlesActionNormalize, copy.bundles.normalize);
+  setText(elements.bundlesActionUnpack, copy.bundles.unpack);
+  setText(elements.bundlesActionPack, copy.bundles.pack);
+  setText(elements.bundlesActionDiff, copy.bundles.diff);
+  setText(elements.bundlesActionOpenWorkbench, copy.bundles.openWorkbench);
+  setText(elements.bundlesActionDesktopTools, copy.bundles.desktopTools);
+  setText(elements.bundlesRecentBundlesLabel, copy.bundles.recentBundles);
+  setText(elements.bundlesRecentCompareLabel, copy.bundles.recentCompare);
+  setText(elements.bundlesRecentOutputsLabel, copy.bundles.recentOutputs);
+  setText(elements.bundlesRecentActionsLabel, copy.bundles.recentActions);
+  setText(elements.bundlesHistoryAll, copy.bundles.all);
+  setText(elements.bundlesHistoryFailed, copy.bundles.failed);
+  setText(elements.bundlesHistoryInspect, copy.bundles.inspect);
+  setText(elements.bundlesHistoryNormalize, copy.bundles.normalize);
+  setText(elements.bundlesHistoryDiff, copy.bundles.diff);
+  setText(elements.bundlesHistoryKeepFailed, copy.bundles.keepFailed);
+  setText(elements.bundlesHistoryImport, copy.bundles.import);
+  setText(elements.bundlesHistoryExport, copy.bundles.export);
+  setText(elements.bundlesHistoryClear, copy.bundles.clear);
+  setText(elements.bundlesFavoritesLabel, copy.bundles.favorites);
+  setText(elements.bundlesRecentLabel, copy.bundles.recent);
+  if (elements.projectBundleOutput && !state.isBusy) {
+    elements.projectBundleOutput.textContent = copy.bundles.ready;
+  }
   setText(elements.guidesPrimaryLabel, copy.guides.primaryLabel);
   setText(elements.guidesPrimaryTitle, copy.guides.primaryTitle);
   setText(elements.guidesPrimaryCopy, copy.guides.primaryCopy);
@@ -1193,6 +2131,69 @@ function renderDesktopLanguagePreference() {
   setText(elements.guidesDocsCopy, copy.guides.docsCopy);
   setText(elements.guidesCurrentTitle, copy.guides.currentTitle);
   setText(elements.guidesCurrentCopy, copy.guides.currentCopy);
+  setText(elements.guidesOverviewDocsLabel, copy.guides.overviewDocsLabel);
+  setText(elements.guidesOverviewDocsTitle, copy.guides.overviewDocsTitle);
+  setText(elements.guidesOverviewDocsCopy, copy.guides.overviewDocsCopy);
+  setText(elements.guidesOverviewCurrentLabel, copy.guides.overviewCurrentLabel);
+  setText(elements.guidesOverviewCurrentTitle, copy.guides.overviewCurrentTitle);
+  setText(elements.guidesOverviewCurrentCopy, copy.guides.overviewCurrentCopy);
+  setText(elements.guidesOverviewTroubleshootingLabel, copy.guides.overviewTroubleshootingLabel);
+  setText(elements.guidesOverviewTroubleshootingTitle, copy.guides.overviewTroubleshootingTitle);
+  setText(elements.guidesOverviewTroubleshootingCopy, copy.guides.overviewTroubleshootingCopy);
+  setText(elements.guidesOperationsTitle, copy.guides.operationsTitle);
+  setText(elements.guidesOperationsCopy, copy.guides.operationsCopy);
+  setText(elements.guidesTroubleshootingTitle, copy.guides.troubleshootingTitle);
+  setText(elements.guidesTroubleshootingCopy, copy.guides.troubleshootingCopy);
+  setText(elements.guidesAccuracyLabel, copy.guides.accuracyLabel);
+  setText(elements.guidesAccuracyTitle, copy.guides.accuracyTitle);
+  setText(elements.guidesAccuracyCopy, copy.guides.accuracyCopy);
+  setText(elements.guidesAccuracyPlanTitle, copy.guides.accuracyPlanTitle);
+  setText(elements.guidesAccuracyPlanCopy, copy.guides.accuracyPlanCopy);
+  setText(elements.guidesAccuracyBaselinesTitle, copy.guides.accuracyBaselinesTitle);
+  setText(elements.guidesAccuracyBaselinesCopy, copy.guides.accuracyBaselinesCopy);
+  setText(elements.assistantIntroLabel, copy.assistant.introLabel);
+  setText(elements.assistantIntroTitle, copy.assistant.introTitle);
+  setText(elements.assistantIntroCopy, copy.assistant.introCopy);
+  setText(elements.assistantClose, copy.assistant.close);
+  setText(elements.assistantEngineLabel, copy.assistant.engine);
+  setText(elements.assistantContextSectionLabel, copy.assistant.section);
+  setText(elements.assistantContextRuntimeLabel, copy.assistant.runtime);
+  setText(elements.assistantContextBundleLabel, copy.assistant.bundle);
+  setText(elements.assistantLocalActionsLabel, copy.assistant.quickActions);
+  setText(elements.assistantLocalActionStart, copy.assistant.quickStart);
+  setText(elements.assistantLocalActionLibrary, copy.assistant.quickLibrary);
+  setText(elements.assistantLocalActionBundles, copy.assistant.quickBundles);
+  setText(elements.assistantLocalActionGuides, copy.assistant.quickGuides);
+  setText(elements.assistantLocalAskLabel, copy.assistant.ask);
+  setText(elements.assistantLocalPromptLabel, copy.assistant.askLabel);
+  setText(elements.assistantLocalAsk, copy.assistant.askButton);
+  if (elements.assistantLocalOutput && !state.isBusy) {
+    elements.assistantLocalOutput.textContent = copy.assistant.askEmpty;
+  }
+  setText(elements.assistantDocsLabel, copy.assistant.docs);
+  setText(elements.assistantDocsIndexTitle, copy.assistant.docsIndexTitle);
+  setText(elements.assistantDocsIndexCopy, copy.assistant.docsIndexCopy);
+  setText(elements.assistantDocsCurrentTitle, copy.assistant.docsCurrentTitle);
+  setText(elements.assistantDocsCurrentCopy, copy.assistant.docsCurrentCopy);
+  setText(elements.assistantDocsOperationsTitle, copy.assistant.docsOperationsTitle);
+  setText(elements.assistantDocsOperationsCopy, copy.assistant.docsOperationsCopy);
+  setText(elements.assistantDocsTroubleshootingTitle, copy.assistant.docsTroubleshootingTitle);
+  setText(elements.assistantDocsTroubleshootingCopy, copy.assistant.docsTroubleshootingCopy);
+  setText(elements.assistantSuggestedLabel, copy.assistant.suggested);
+  setText(elements.assistantLlmIntroCopy, copy.assistant.llmIntro);
+  setText(elements.assistantBaseUrlLabel, copy.assistant.baseUrl);
+  setText(elements.assistantApiKeyLabel, copy.assistant.apiKey);
+  setText(elements.assistantPresetLabel, copy.assistant.preset);
+  setText(elements.assistantModelLabel, copy.assistant.model);
+  setText(elements.assistantRequestLabel, copy.assistant.request);
+  setText(elements.assistantRequestPlan, copy.assistant.generate);
+  setText(elements.assistantApproveLabel, copy.assistant.approve);
+  setText(elements.assistantExecutePlan, copy.assistant.execute);
+  setText(elements.assistantEndpointPolicy, copy.dynamic.endpointPolicyDefault);
+  if (elements.assistantOutput && !state.isBusy) {
+    elements.assistantOutput.textContent = copy.assistant.ready;
+  }
+  setText(elements.assistantAuditLabel, copy.assistant.audit);
   renderPanelLanguage(copy);
   setSection(state.activeSection);
 }
@@ -3556,6 +4557,10 @@ function renderHubDensityToggles() {
   });
 }
 
+function hubDynamic(key, replacements = {}) {
+  return hubMessage(hubCopy().dynamic?.[key] || HUB_I18N.en.dynamic?.[key] || "", replacements);
+}
+
 function toggleHubDensityPanel(id) {
   if (!(id in HUB_DENSITY_DEFAULTS)) {
     return;
@@ -3573,15 +4578,15 @@ function buildHubAssistantLocalCards() {
   if (!snapshot.bundlePath) {
     cards.push({
       id: "bundle-path",
-      title: "Start with a bundle path",
-      summary: "Paste a .kyuubiki path first so the Hub can inspect, validate, or normalize it safely.",
-      actionLabel: "Open Bundle tools",
+      title: hubDynamic("cardBundlePathTitle"),
+      summary: hubDynamic("cardBundlePathSummary"),
+      actionLabel: hubCopy().home.quick.bundlesTitle,
       tone: "watch",
       onAction: () => {
         setSection("projects");
         setProjectsPage("bundles");
         elements.projectBundlePath?.focus();
-        setProjectBundleOutput("focused the bundle path field");
+        setProjectBundleOutput(hubDynamic("focusedBundleField"));
       },
     });
   }
@@ -3589,9 +4594,9 @@ function buildHubAssistantLocalCards() {
   if (!/ready|healthy/i.test(snapshot.runtimeStatus)) {
     cards.push({
       id: "start-local",
-      title: "Bring the local stack online",
-      summary: "The Hub does not currently see a healthy local runtime, so starting the local stack is the safest next step.",
-      actionLabel: "Start local stack",
+      title: hubDynamic("cardStartLocalTitle"),
+      summary: hubDynamic("cardStartLocalSummary"),
+      actionLabel: hubCopy().shell.startLocal,
       tone: "risk",
       onAction: () => {
         void runAction("start-local");
@@ -3602,9 +4607,9 @@ function buildHubAssistantLocalCards() {
   if (snapshot.bundlePath) {
     cards.push({
       id: "inspect-bundle",
-      title: "Inspect the selected bundle",
-      summary: "Inspecting first gives a quick structural read before we normalize, unpack, or diff anything.",
-      actionLabel: "Inspect bundle",
+      title: hubDynamic("cardInspectTitle"),
+      summary: hubDynamic("cardInspectSummary"),
+      actionLabel: hubCopy().bundles.inspect,
       tone: "good",
       onAction: () => {
         void runAction("project-inspect");
@@ -3615,9 +4620,9 @@ function buildHubAssistantLocalCards() {
   if (snapshot.bundlePath && snapshot.outputPath) {
     cards.push({
       id: "normalize-bundle",
-      title: "Normalize into the target path",
-      summary: "You already have both the source and output path, so normalization is ready to run.",
-      actionLabel: "Normalize bundle",
+      title: hubDynamic("cardNormalizeTitle"),
+      summary: hubDynamic("cardNormalizeSummary"),
+      actionLabel: hubCopy().bundles.normalize,
       tone: "good",
       onAction: () => {
         void runAction("project-normalize");
@@ -3628,9 +4633,9 @@ function buildHubAssistantLocalCards() {
   if (snapshot.bundlePath && snapshot.comparePath) {
     cards.push({
       id: "diff-bundles",
-      title: "Compare the current pair",
-      summary: "Both bundle inputs are present, so the Hub can run a safe diff without more setup.",
-      actionLabel: "Diff bundles",
+      title: hubDynamic("cardDiffTitle"),
+      summary: hubDynamic("cardDiffSummary"),
+      actionLabel: hubCopy().bundles.diff,
       tone: "watch",
       onAction: () => {
         void runAction("project-diff");
@@ -3640,22 +4645,22 @@ function buildHubAssistantLocalCards() {
 
   cards.push({
     id: "open-guides",
-    title: "Keep the docs shelf nearby",
-    summary: "If you are still orienting yourself, the Guides page is the cleanest single entry to current-line, operations, troubleshooting, and accuracy notes.",
-    actionLabel: "Open guides",
+    title: hubDynamic("cardGuidesTitle"),
+    summary: hubDynamic("cardGuidesSummary"),
+    actionLabel: hubCopy().home.tabs.guides,
     tone: "watch",
     onAction: () => {
       setSection("projects");
       setProjectsPage("guides");
-      setProjectBundleOutput("focused the guides page");
+      setProjectBundleOutput(hubDynamic("focusedGuidesPage"));
     },
   });
 
   cards.push({
     id: "open-workbench",
-    title: "Jump into Workbench",
-    summary: "Open the modeling and analysis surface when you are ready to move past bundle-level prep.",
-    actionLabel: "Open Workbench",
+    title: hubDynamic("cardWorkbenchTitle"),
+    summary: hubDynamic("cardWorkbenchSummary"),
+    actionLabel: hubCopy().shell.openWorkbench,
     tone: "good",
     onAction: () => {
       void runAction("open-workbench");
@@ -3673,7 +4678,7 @@ function renderHubAssistantLocalCards() {
   const cards = buildHubAssistantLocalCards();
   elements.assistantLocalCards.innerHTML = "";
   if (!cards.length) {
-    renderEmptyHistoryState(elements.assistantLocalCards, "The local guide does not see an urgent next step right now.");
+    renderEmptyHistoryState(elements.assistantLocalCards, hubDynamic("assistantNoUrgent"));
     return;
   }
 
@@ -3719,57 +4724,57 @@ function buildLocalGuideResponse(query) {
   const context = buildLocalGuideContext();
 
   if (!normalized) {
-    return "Ask something short, like: what should I do first, how do I inspect a bundle, how do I open Workbench, or why is packaging still partial.";
+    return hubDynamic("assistantPromptEmpty");
   }
 
   if (/first|start|begin|fresh|what should i do/.test(normalized)) {
     if (!context.runtimeReady) {
-      return "Start with the local stack, then sync or register work, inspect once, and only then open Workbench. Right now the local runtime does not look ready, so `Start local stack` is the safest first move.";
+      return hubDynamic("guideFirstNoRuntime");
     }
     if (!context.hasBundle) {
-      return "Start with the local stack if needed, then open `Bundle tools` and paste a `.kyuubiki` path. After that, inspect once and move into Workbench.";
+      return hubDynamic("guideFirstNoBundle");
     }
-    return "You already have a runtime and bundle context. The safe path now is: inspect the current bundle, confirm the result looks sane, then open Workbench.";
+    return hubDynamic("guideFirstReady");
   }
 
   if (/inspect|bundle|validate|normalize|diff|pack|unpack/.test(normalized)) {
     if (!context.hasBundle) {
-      return "Bundle operations live under `Home > Bundle tools`. Paste a `.kyuubiki` bundle path first. Then use `Inspect` for a quick read, `Validate` for schema checks, and `Normalize` only when you also have an output path.";
+      return hubDynamic("guideBundleNoPath");
     }
     if (/normalize/.test(normalized) && !context.hasOutput) {
-      return "Normalization needs both a bundle path and an output path. You already have the bundle, so the missing piece is the output destination in `Bundle tools`.";
+      return hubDynamic("guideNormalizeNoOutput");
     }
     if (/diff/.test(normalized) && !context.hasCompare) {
-      return "Bundle diff needs both the current bundle and a compare path. Fill the compare field in `Bundle tools`, then run `Diff bundles`.";
+      return hubDynamic("guideDiffNoCompare");
     }
-    return "Use `Inspect` first for a safe structural read. Use `Validate` when you want schema confidence, `Normalize` when you want a cleaned output bundle, and `Diff` only after both bundle paths are filled.";
+    return hubDynamic("guideBundleGeneral");
   }
 
   if (/workbench|analysis|open/.test(normalized)) {
-    return "Open Workbench only after the runtime is healthy and the bundle context looks sane. In Hub, the short path is: `Home > Start here`, then `Open workbench`.";
+    return hubDynamic("guideWorkbench");
   }
 
   if (/docs|guide|read|document|manual|help/.test(normalized)) {
-    return "Use `Home > Guides` as the single documentation shelf. Start with `Docs index`, then open `Current line`, `Operations`, or `Troubleshooting` only when you know which kind of question you are answering.";
+    return hubDynamic("guideDocs");
   }
 
   if (/runtime|stack|agent|hot|observe|log/.test(normalized)) {
-    return "Use `Runtimes` when you want to change the loop, and `Observe` when you only want to scan or copy state. `Local runtime` is the short health read, `Hot loop` is for dev tails, and `Stack watch` is for sanitized runtime logs.";
+    return hubDynamic("guideRuntime");
   }
 
   if (/catalog|library|workload|remote/.test(normalized)) {
-    return "Use `Home > Library` for workload intake. `Sync local control plane` pulls first-party work in, `Sync remote catalog` brings remote entries in, and the domain/family filters help you narrow the shelf before opening Workbench.";
+    return hubDynamic("guideLibrary");
   }
 
   if (/installer|package|packaging|desktop|dmg|build/.test(normalized)) {
-    return "Use `Installer` when you need release layout or workstation bootstrap. In Hub, `Tools > Packages` is for build actions, `Status` is the readiness wall, and `Output` is where the packaging logs land. In this automation session, `.app` bundles are reliable, while `.dmg` can still show as partial because `hdiutil` is session-sensitive.";
+    return hubDynamic("guidePackaging");
   }
 
   if (/partial|failed|error|warning/.test(normalized)) {
-    return "If something looks partial, read the shortest surface first: `Observe > Health` for runtime issues, `Tools > Status` for desktop packaging readiness, and `Bundle tools > Inspect` for project bundle shape. Then decide whether the problem is runtime, bundle, or packaging.";
+    return hubDynamic("guideFailure");
   }
 
-  return "The local guide can help with first steps, bundle inspection, runtime health, Workbench launch, workload library intake, and desktop packaging. Try asking one of those directly.";
+  return hubDynamic("guideFallback");
 }
 
 function answerWithLocalGuide() {
@@ -3831,8 +4836,7 @@ function updateAssistantEndpointPolicy() {
 
   const baseUrl = elements.assistantBaseUrl.value.trim();
   if (!baseUrl) {
-    elements.assistantEndpointPolicy.textContent =
-      "Use https:// for remote providers, or http://localhost / 127.0.0.1 for local gateways. The API key is sent directly to the configured base URL.";
+    elements.assistantEndpointPolicy.textContent = hubDynamic("endpointPolicyDefault");
     return;
   }
 
@@ -3842,8 +4846,7 @@ function updateAssistantEndpointPolicy() {
     return;
   }
 
-  elements.assistantEndpointPolicy.textContent =
-    "Assistant endpoint looks allowed. The API key is sent directly to the configured base URL for plan generation.";
+  elements.assistantEndpointPolicy.textContent = hubDynamic("endpointPolicyAllowed");
 }
 
 async function requestHubAssistantPlan() {
@@ -3928,23 +4931,23 @@ function renderHubAssistantPlan() {
   const plan = state.assistantPlan;
   elements.assistantPlanActions.innerHTML = "";
   if (!plan) {
-    renderEmptyHistoryState(elements.assistantPlanActions, "No model plan yet.");
+    renderEmptyHistoryState(elements.assistantPlanActions, hubDynamic("assistantNoPlan"));
     return;
   }
 
   const summaryCard = document.createElement("article");
   summaryCard.className = "hub-list__card";
-  appendAssistantCardHeader(summaryCard, plan.summary || "Model plan", `${plan.suggested_actions.length} actions`);
+  appendAssistantCardHeader(summaryCard, plan.summary || hubDynamic("modelPlanTitle"), `${plan.suggested_actions.length} actions`);
   appendTextElement(
     summaryCard,
     "p",
-    plan.rationale || "The connected model returned a concise operational plan.",
+    plan.rationale || hubDynamic("noRationale"),
     "desktop-shell-note",
   );
   elements.assistantPlanActions.appendChild(summaryCard);
 
   if (!plan.suggested_actions.length) {
-    renderEmptyHistoryState(elements.assistantPlanActions, "The model returned no executable Hub actions.");
+    renderEmptyHistoryState(elements.assistantPlanActions, hubDynamic("assistantNoExecutable"));
     return;
   }
 
@@ -3957,14 +4960,14 @@ function renderHubAssistantPlan() {
       assistantRiskLevel(entry.action),
       assistantRiskStateClass(assistantRiskLevel(entry.action)),
     );
-    appendTextElement(article, "p", entry.reason || "No rationale supplied.", "desktop-shell-note");
+    appendTextElement(article, "p", entry.reason || hubDynamic("noRationale"), "desktop-shell-note");
     appendTextElement(article, "code", JSON.stringify(entry.payload || {}, null, 2));
     const row = document.createElement("div");
     row.className = "desktop-shell-action-row";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "desktop-shell-button-ghost";
-    button.textContent = "Run action";
+    button.textContent = hubDynamic("actionRun");
     button.addEventListener("click", () => {
       void executeHubAssistantAction(entry.action, entry.payload || {});
     });
@@ -4012,14 +5015,18 @@ function applyAssistantBundlePayload(payload) {
 async function executeHubAssistantAction(action, payload = {}, source = "assistant") {
   const risk = assistantRiskLevel(action);
   if (!confirmHubAssistantAction(action, source)) {
-    setAssistantOutput(`Cancelled ${action}.`);
+    setAssistantOutput(hubDynamic("assistantCancelled", { action }));
     return;
   }
 
   switch (action) {
     case "hub/focusSection":
       setSection(typeof payload.section === "string" ? payload.section : "projects");
-      setAssistantOutput(`Focused ${typeof payload.section === "string" ? payload.section : "projects"} section.`);
+      setAssistantOutput(
+        hubDynamic("assistantFocusedSection", {
+          section: typeof payload.section === "string" ? payload.section : "projects",
+        }),
+      );
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "focused Hub section" });
       return;
     case "hub/openWorkbench":
@@ -4069,7 +5076,7 @@ async function executeHubAssistantAction(action, payload = {}, source = "assista
     case "hub/setBundleContext":
       applyAssistantBundlePayload(payload);
       renderAssistantContext();
-      setAssistantOutput("Updated bundle context in the Hub.");
+      setAssistantOutput(hubDynamic("assistantUpdatedBundle"));
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "updated bundle inputs" });
       return;
     case "hub/projectInspect":
@@ -4110,12 +5117,12 @@ async function executeHubAssistantAction(action, payload = {}, source = "assista
 
 async function executeHubAssistantPlan() {
   if (!state.assistantPlan?.suggested_actions?.length) {
-    setAssistantOutput("No assistant plan is available to execute.");
+    setAssistantOutput(hubDynamic("assistantNoPlanToExecute"));
     return;
   }
 
   if (!elements.assistantApprovePlan?.checked) {
-    setAssistantOutput("Review the generated plan and confirm execution first.");
+    setAssistantOutput(hubDynamic("assistantReviewFirst"));
     return;
   }
 
@@ -4133,7 +5140,7 @@ async function executeHubAssistantPlan() {
       throw error;
     }
   }
-  setAssistantOutput(`Executed ${state.assistantPlan.suggested_actions.length} assistant actions.`);
+  setAssistantOutput(hubDynamic("assistantExecuteCount", { count: state.assistantPlan.suggested_actions.length }));
 }
 
 function setBusy(isBusy, label = "idle") {
@@ -4259,7 +5266,7 @@ async function refreshHotRuntimeLog(options = {}) {
       payload: { service },
     });
     const rendered = String(payload?.rendered || "").trim();
-    setHotRuntimeLogOutput(rendered || `No log lines yet for ${service}.`);
+    setHotRuntimeLogOutput(rendered || hubDynamic("noLogLines", { service }));
   } catch (error) {
     if (!silent) {
       setHotRuntimeLogOutput(formatHubOperatorError(error, {
@@ -4288,7 +5295,7 @@ async function refreshObserveRuntimeLog(options = {}) {
       payload: { service },
     });
     const rendered = String(payload?.rendered || "").trim();
-    setObserveRuntimeLogOutput(rendered || `No log lines yet for ${service}.`);
+    setObserveRuntimeLogOutput(rendered || hubDynamic("noLogLines", { service }));
   } catch (error) {
     if (!silent) {
       setObserveRuntimeLogOutput(formatHubOperatorError(error, {
@@ -4461,32 +5468,32 @@ async function runAction(action) {
         return;
       case "hot-refresh-status":
         await refreshHotRuntimeStatus();
-        setOperationOutput("refreshed hot-reload runtime status");
+        setOperationOutput(hubDynamic("hotStatusRefreshed"));
         setBusy(false, "ready");
         return;
       case "hot-refresh-log":
         await refreshHotRuntimeLog();
-        setOperationOutput(`refreshed hot log: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
+        setOperationOutput(hubDynamic("hotLogRefreshed", { service: elements.hotRuntimeLogService?.value || "hot-stack" }));
         setBusy(false, "ready");
         return;
       case "hot-copy-log-view":
         await copyHotRuntimeLogView();
-        setOperationOutput(`copied sanitized hot log tail: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
+        setOperationOutput(hubDynamic("hotLogCopied", { service: elements.hotRuntimeLogService?.value || "hot-stack" }));
         setBusy(false, "ready");
         return;
       case "observe-refresh-runtime-log":
         await refreshObserveRuntimeLog();
-        setOperationOutput(`refreshed runtime log: ${elements.observeRuntimeLogService?.value || "frontend"}`);
+        setOperationOutput(hubDynamic("runtimeLogRefreshed", { service: elements.observeRuntimeLogService?.value || "frontend" }));
         setBusy(false, "ready");
         return;
       case "observe-copy-runtime-log":
         await copyObserveRuntimeLogView();
-        setOperationOutput(`copied sanitized runtime log tail: ${elements.observeRuntimeLogService?.value || "frontend"}`);
+        setOperationOutput(hubDynamic("runtimeLogCopied", { service: elements.observeRuntimeLogService?.value || "frontend" }));
         setBusy(false, "ready");
         return;
       case "hot-clear-log-view":
         clearHotRuntimeLogView();
-        setOperationOutput(`cleared hot log view: ${elements.hotRuntimeLogService?.value || "hot-stack"}`);
+        setOperationOutput(hubDynamic("hotLogCleared", { service: elements.hotRuntimeLogService?.value || "hot-stack" }));
         setBusy(false, "idle");
         return;
       case "hot-stop":
@@ -4535,7 +5542,7 @@ async function runAction(action) {
         return;
       case "desktop-status":
         await refreshDesktopStatusOutput();
-        setOperationOutput("refreshed desktop packaging readiness");
+        setOperationOutput(hubDynamic("packagingRefreshed"));
         setBusy(false, "ready");
         return;
       case "desktop-verify":
@@ -4572,7 +5579,7 @@ elements.projectsPageButtons.forEach((button) => {
   button.addEventListener("click", () => {
     setProjectsPage(button.dataset.projectsPage || "start");
     applyDesktopState(elements.actionState, "active", { kind: "activity" });
-    setOperationOutput(`focused ${button.dataset.projectsPage || "start"} home page`);
+    setOperationOutput(hubDynamic("focusedHomePage", { page: button.dataset.projectsPage || "start" }));
   });
 });
 
@@ -4580,7 +5587,7 @@ elements.projectsTargetButtons.forEach((button) => {
   button.addEventListener("click", () => {
     setProjectsPage(button.dataset.projectsTarget || "start");
     applyDesktopState(elements.actionState, "active", { kind: "activity" });
-    setOperationOutput(`opened ${button.dataset.projectsTarget || "start"} from home`);
+    setOperationOutput(hubDynamic("openedHomeTarget", { page: button.dataset.projectsTarget || "start" }));
   });
 });
 
@@ -4590,20 +5597,20 @@ elements.panelPageButtons.forEach((button) => {
     const page = button.dataset.panelPage || "";
     setPanelPage(group, page);
     applyDesktopState(elements.actionState, "active", { kind: "activity" });
-    setOperationOutput(`focused ${page} ${group} page`);
+    setOperationOutput(hubDynamic("focusedPanelPage", { page, group }));
   });
 });
 
 elements.assistantFab?.addEventListener("click", () => {
   setAssistantPanelOpen(!state.assistantOpen);
   applyDesktopState(elements.actionState, "active", { kind: "activity" });
-  setOperationOutput(state.assistantOpen ? "opened assistant panel" : "closed assistant panel");
+  setOperationOutput(state.assistantOpen ? hubDynamic("assistantPanelOpened") : hubDynamic("assistantPanelClosed"));
 });
 
 elements.assistantClose?.addEventListener("click", () => {
   setAssistantPanelOpen(false);
   applyDesktopState(elements.actionState, "idle", { kind: "activity" });
-  setOperationOutput("closed assistant panel");
+  setOperationOutput(hubDynamic("assistantPanelClosed"));
 });
 
 elements.assistantPanel?.addEventListener("click", (event) => {
@@ -4612,7 +5619,7 @@ elements.assistantPanel?.addEventListener("click", (event) => {
   }
   setAssistantPanelOpen(false);
   applyDesktopState(elements.actionState, "idle", { kind: "activity" });
-  setOperationOutput("closed assistant panel");
+  setOperationOutput(hubDynamic("assistantPanelClosed"));
 });
 
 elements.assistantLocalAsk?.addEventListener("click", () => {
