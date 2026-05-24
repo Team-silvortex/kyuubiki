@@ -428,6 +428,34 @@ const HUB_I18N = {
       cardWorkbenchTitle: "Jump into Workbench",
       cardWorkbenchSummary: "Open the modeling and analysis surface when you are ready to move past bundle-level prep.",
       actionRun: "Run action",
+      actionRestore: "Restore",
+      actionRerun: "Re-run",
+      actionPinned: "Pinned",
+      actionPin: "Pin",
+      actionLabel: "Label",
+      actionCopyCli: "Copy CLI",
+      actionCopyPython: "Copy Python",
+      recentEntriesEmpty: "No recent entries yet.",
+      favoritesEmpty: "No favorite actions yet.",
+      recentActionsEmpty: "No recent project actions yet.",
+      favoritesFilterEmpty: "No favorites match the {filter} filter.",
+      actionsFilterEmpty: "No actions match the {filter} filter.",
+      pinnedFavoritesEmpty: "No pinned favorites yet.",
+      nonPinnedEmpty: "No non-pinned actions in this view.",
+      managedWorkloadsEmpty: "No managed workloads yet. Register a current bundle or sync a remote catalog.",
+      managedWorkloadsFilterEmpty: "No workloads match {domain} / {family}.",
+      restoredActionContext: "restored {action} context",
+      restoredWorkloadContext: "restored workload context for {label}",
+      loadedWorkloadContext: "loaded {label} into the bundle path",
+      removedWorkload: "removed {label} from the workload library",
+      workloadUse: "Use",
+      workloadOpenWorkbench: "Open in Workbench",
+      workloadInspect: "Inspect",
+      workloadValidate: "Validate",
+      workloadDownload: "Download",
+      workloadReattach: "Reattach bundle",
+      workloadAttach: "Attach current bundle",
+      workloadRemove: "Remove",
       noRationale: "No rationale supplied.",
       modelPlanTitle: "Model plan",
     },
@@ -850,6 +878,34 @@ const HUB_I18N = {
       cardWorkbenchTitle: "进入 Workbench",
       cardWorkbenchSummary: "当你准备从 bundle 层面的准备进入建模和分析时，就打开 Workbench。",
       actionRun: "执行动作",
+      actionRestore: "恢复",
+      actionRerun: "重新运行",
+      actionPinned: "已置顶",
+      actionPin: "置顶",
+      actionLabel: "命名",
+      actionCopyCli: "复制 CLI",
+      actionCopyPython: "复制 Python",
+      recentEntriesEmpty: "还没有最近记录。",
+      favoritesEmpty: "还没有收藏动作。",
+      recentActionsEmpty: "还没有最近的项目动作。",
+      favoritesFilterEmpty: "没有收藏动作符合 {filter} 筛选。",
+      actionsFilterEmpty: "没有动作符合 {filter} 筛选。",
+      pinnedFavoritesEmpty: "还没有置顶收藏。",
+      nonPinnedEmpty: "当前视图里没有未置顶动作。",
+      managedWorkloadsEmpty: "还没有已管理工作负载。先注册当前 bundle，或同步远端 catalog。",
+      managedWorkloadsFilterEmpty: "没有工作负载匹配 {domain} / {family}。",
+      restoredActionContext: "已恢复 {action} 上下文",
+      restoredWorkloadContext: "已恢复 {label} 的工作负载上下文",
+      loadedWorkloadContext: "已把 {label} 载入 bundle 路径",
+      removedWorkload: "已从工作负载库移除 {label}",
+      workloadUse: "使用",
+      workloadOpenWorkbench: "在 Workbench 中打开",
+      workloadInspect: "检查",
+      workloadValidate: "验证",
+      workloadDownload: "下载",
+      workloadReattach: "重新关联 bundle",
+      workloadAttach: "关联当前 bundle",
+      workloadRemove: "移除",
       noRationale: "没有附带说明。",
       modelPlanTitle: "模型计划",
     },
@@ -1527,8 +1583,10 @@ HUB_I18N.es = {
 const HUB_RECENTS_KEY = "kyuubiki.hub.recents.v1";
 const HUB_WORKLOAD_LIBRARY_KEY = "kyuubiki.hub.workloads.v1";
 const HUB_ASSISTANT_SETTINGS_KEY = "kyuubiki.hub.assistant.settings.v1";
-const HUB_ASSISTANT_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
+const HUB_ASSISTANT_LEGACY_SECRETS_KEY = "kyuubiki.hub.assistant.secrets.v1";
 const HUB_ASSISTANT_AUDIT_KEY = "kyuubiki.hub.assistant.audit.v1";
+const HUB_ASSISTANT_TRUSTED_HOSTS_KEY = "kyuubiki.hub.assistant.trusted-hosts.v1";
+const HUB_REMOTE_TRUSTED_HOSTS_KEY = "kyuubiki.hub.remote-trusted-hosts.v1";
 const HUB_HOT_LOG_SETTINGS_KEY = "kyuubiki.hub.hot-log-settings.v1";
 const HUB_RUNTIME_LOG_SETTINGS_KEY = "kyuubiki.hub.runtime-log-settings.v1";
 const HUB_DENSITY_SETTINGS_KEY = "kyuubiki.hub.density-settings.v1";
@@ -1566,6 +1624,25 @@ const PROJECT_ACTION_LABELS = {
   "project unpack": "project-unpack",
   "project pack": "project-pack",
   "project diff": "project-diff",
+};
+const HUB_DIRECT_ACTION_RISK = {
+  "open-installer": "sensitive",
+  "workload-clear-library": "sensitive",
+  "start-local": "sensitive",
+  "start-cloud": "sensitive",
+  "start-distributed": "sensitive",
+  "restart-local": "sensitive",
+  "stop-stack": "sensitive",
+  "hot-start-local": "sensitive",
+  "hot-start-cloud": "sensitive",
+  "hot-start-distributed": "sensitive",
+  "hot-stop": "sensitive",
+  "desktop-stage": "sensitive",
+  "desktop-verify": "sensitive",
+  "desktop-build-host": "high",
+  "project-normalize": "sensitive",
+  "project-unpack": "sensitive",
+  "project-pack": "high",
 };
 const HUB_ASSISTANT_ACTIONS = [
   { id: "hub/focusSection", summary: "Focus a Hub section.", payloadExample: { section: "projects" } },
@@ -1619,6 +1696,9 @@ const state = {
   releaseVersion: "",
   releaseCodename: "",
   language: "en",
+  assistantApiKey: "",
+  assistantTrustedHosts: loadHubAssistantTrustedHosts(),
+  remoteTrustedHosts: loadHubTrustedHosts(HUB_REMOTE_TRUSTED_HOSTS_KEY),
 };
 
 let hotRuntimeLogPollHandle = null;
@@ -1633,6 +1713,58 @@ function hubMessage(template, replacements = {}) {
     (value, [key, replacement]) => value.replaceAll(`{${key}}`, String(replacement)),
     String(template ?? ""),
   );
+}
+
+function localizedHistoryFilterLabel(filter) {
+  const copy = hubCopy();
+  switch (filter) {
+    case "all":
+      return copy.bundles.all;
+    case "failed":
+      return copy.bundles.failed;
+    case "inspect":
+      return copy.bundles.inspect;
+    case "normalize":
+      return copy.bundles.normalize;
+    case "diff":
+      return copy.bundles.diff;
+    default:
+      return filter;
+  }
+}
+
+function localizedWorkloadFilterLabel(filter) {
+  const copy = hubCopy();
+  switch (filter) {
+    case "all":
+      return copy.library.all;
+    case "mechanical":
+      return copy.library.mechanical;
+    case "thermal":
+      return copy.library.thermal;
+    case "thermo_mechanical":
+      return copy.library.thermo;
+    default:
+      return filter;
+  }
+}
+
+function localizedWorkloadFamilyFilterLabel(filter) {
+  const copy = hubCopy();
+  switch (filter) {
+    case "all":
+      return copy.library.allFamilies;
+    case "axial_and_springs":
+      return copy.library.axial;
+    case "beams_and_frames":
+      return copy.library.beams;
+    case "trusses":
+      return copy.library.trusses;
+    case "planes":
+      return copy.library.planes;
+    default:
+      return filter;
+  }
 }
 
 const elements = {
@@ -2198,6 +2330,16 @@ function renderDesktopLanguagePreference() {
   setSection(state.activeSection);
 }
 
+function rerenderLocalizedHubShell() {
+  renderDesktopLanguagePreference();
+  renderHubRecents();
+  renderHubAssistantAudit();
+  renderAssistantContext();
+  renderHubAssistantLocalCards();
+  renderAssistantPanel();
+  setSection(state.activeSection);
+}
+
 function renderOverviewStrip(section, items) {
   const cards = document.querySelectorAll(`#${section}-panel .hub-overview-card`);
   items?.forEach((item, index) => {
@@ -2471,20 +2613,34 @@ function persistHubAssistantSettings(settings) {
   window.localStorage.setItem(HUB_ASSISTANT_SETTINGS_KEY, JSON.stringify(settings));
 }
 
-function loadHubAssistantSecrets() {
+function loadHubAssistantTrustedHosts() {
+  return loadHubTrustedHosts(HUB_ASSISTANT_TRUSTED_HOSTS_KEY);
+}
+
+function loadHubTrustedHosts(storageKey) {
   try {
-    const raw = window.sessionStorage.getItem(HUB_ASSISTANT_SECRETS_KEY);
-    const parsed = raw ? JSON.parse(raw) : {};
-    return {
-      apiKey: String(parsed?.apiKey || ""),
-    };
+    const raw = window.localStorage.getItem(storageKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : []);
   } catch {
-    return { apiKey: "" };
+    return new Set();
   }
 }
 
-function persistHubAssistantSecrets(secrets) {
-  window.sessionStorage.setItem(HUB_ASSISTANT_SECRETS_KEY, JSON.stringify(secrets));
+function persistHubAssistantTrustedHosts(hosts) {
+  persistHubTrustedHosts(HUB_ASSISTANT_TRUSTED_HOSTS_KEY, hosts);
+}
+
+function persistHubTrustedHosts(storageKey, hosts) {
+  window.localStorage.setItem(storageKey, JSON.stringify(Array.from(hosts)));
+}
+
+function clearLegacyHubAssistantSecrets() {
+  try {
+    window.sessionStorage.removeItem(HUB_ASSISTANT_LEGACY_SECRETS_KEY);
+  } catch {
+    // Ignore cleanup failures for best-effort legacy secret removal.
+  }
 }
 
 function loadHubAssistantAudit() {
@@ -2950,6 +3106,10 @@ async function downloadRemoteWorkloadBundle(entry) {
     throw new Error(validation.reason);
   }
 
+  if (!ensureRemoteHostTrust(validation.normalized, "This workload download")) {
+    throw new Error("workload download cancelled before contacting the remote host");
+  }
+
   const response = await fetch(validation.normalized);
   if (!response.ok) {
     throw new Error(`bundle download failed (${response.status})`);
@@ -3044,18 +3204,25 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
   if (!entries.length) {
     renderEmptyHistoryState(
       elements.workloadLibraryList,
-      "No managed workloads yet. Register a current bundle or sync a remote catalog.",
+      hubCopy().dynamic?.managedWorkloadsEmpty
+        || HUB_I18N.en.dynamic?.managedWorkloadsEmpty
+        || "No managed workloads yet. Register a current bundle or sync a remote catalog.",
     );
     return;
   }
 
   const filteredEntries = entries.filter((entry) => matchesWorkloadFilter(entry));
   if (!filteredEntries.length) {
-    const domainLabel = state.workloadFilter === "all" ? "all domains" : state.workloadFilter;
-    const familyLabel = state.workloadFamilyFilter === "all" ? "all families" : state.workloadFamilyFilter;
+    const domainLabel = localizedWorkloadFilterLabel(state.workloadFilter);
+    const familyLabel = localizedWorkloadFamilyFilterLabel(state.workloadFamilyFilter);
     renderEmptyHistoryState(
       elements.workloadLibraryList,
-      `No workloads match ${domainLabel} / ${familyLabel}.`,
+      hubMessage(
+        hubCopy().dynamic?.managedWorkloadsFilterEmpty
+          || HUB_I18N.en.dynamic?.managedWorkloadsFilterEmpty
+          || "No workloads match {domain} / {family}.",
+        { domain: domainLabel, family: familyLabel },
+      ),
     );
     return;
   }
@@ -3102,7 +3269,14 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
       if (entry.downloadUrl && elements.workloadCatalogUrl) {
         elements.workloadCatalogUrl.value = entry.downloadUrl;
       }
-      setWorkloadLibraryOutput(`restored workload context for ${entry.label}`);
+      setWorkloadLibraryOutput(
+        hubMessage(
+          hubCopy().dynamic?.restoredWorkloadContext
+            || HUB_I18N.en.dynamic?.restoredWorkloadContext
+            || "restored workload context for {label}",
+          { label: entry.label },
+        ),
+      );
       renderAssistantContext();
       renderHubAssistantLocalCards();
     });
@@ -3113,12 +3287,19 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const useButton = document.createElement("button");
     useButton.type = "button";
     useButton.className = "desktop-shell-button-ghost";
-    useButton.textContent = "Use";
+    useButton.textContent = hubCopy().dynamic?.workloadUse || HUB_I18N.en.dynamic?.workloadUse || "Use";
     useButton.addEventListener("click", () => {
       if (entry.bundlePath) {
         elements.projectBundlePath.value = entry.bundlePath;
       }
-      setWorkloadLibraryOutput(`loaded ${entry.label} into the bundle path`);
+      setWorkloadLibraryOutput(
+        hubMessage(
+          hubCopy().dynamic?.loadedWorkloadContext
+            || HUB_I18N.en.dynamic?.loadedWorkloadContext
+            || "loaded {label} into the bundle path",
+          { label: entry.label },
+        ),
+      );
       renderAssistantContext();
       renderHubAssistantLocalCards();
     });
@@ -3126,7 +3307,7 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const workbenchButton = document.createElement("button");
     workbenchButton.type = "button";
     workbenchButton.className = "desktop-shell-button-ghost";
-    workbenchButton.textContent = "Open in Workbench";
+    workbenchButton.textContent = hubCopy().dynamic?.workloadOpenWorkbench || HUB_I18N.en.dynamic?.workloadOpenWorkbench || "Open in Workbench";
     workbenchButton.disabled = !entry.bundlePath;
     workbenchButton.addEventListener("click", () => {
       void openWorkloadInWorkbench(entry).catch((error) => {
@@ -3139,7 +3320,7 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const inspectButton = document.createElement("button");
     inspectButton.type = "button";
     inspectButton.className = "desktop-shell-button-ghost";
-    inspectButton.textContent = "Inspect";
+    inspectButton.textContent = hubCopy().dynamic?.workloadInspect || HUB_I18N.en.dynamic?.workloadInspect || "Inspect";
     inspectButton.disabled = !entry.bundlePath;
     inspectButton.addEventListener("click", () => {
       if (entry.bundlePath) {
@@ -3151,7 +3332,7 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const validateButton = document.createElement("button");
     validateButton.type = "button";
     validateButton.className = "desktop-shell-button-ghost";
-    validateButton.textContent = "Validate";
+    validateButton.textContent = hubCopy().dynamic?.workloadValidate || HUB_I18N.en.dynamic?.workloadValidate || "Validate";
     validateButton.disabled = !entry.bundlePath;
     validateButton.addEventListener("click", () => {
       if (entry.bundlePath) {
@@ -3163,7 +3344,7 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const downloadButton = document.createElement("button");
     downloadButton.type = "button";
     downloadButton.className = "desktop-shell-button-ghost";
-    downloadButton.textContent = "Download";
+    downloadButton.textContent = hubCopy().dynamic?.workloadDownload || HUB_I18N.en.dynamic?.workloadDownload || "Download";
     downloadButton.disabled = !entry.downloadUrl;
     downloadButton.addEventListener("click", () => {
       void downloadRemoteWorkloadBundle(entry).catch((error) => {
@@ -3176,7 +3357,9 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const attachButton = document.createElement("button");
     attachButton.type = "button";
     attachButton.className = "desktop-shell-button-ghost";
-    attachButton.textContent = entry.bundlePath ? "Reattach bundle" : "Attach current bundle";
+    attachButton.textContent = entry.bundlePath
+      ? hubCopy().dynamic?.workloadReattach || HUB_I18N.en.dynamic?.workloadReattach || "Reattach bundle"
+      : hubCopy().dynamic?.workloadAttach || HUB_I18N.en.dynamic?.workloadAttach || "Attach current bundle";
     attachButton.addEventListener("click", () => {
       void attachCurrentBundleToWorkload(entry).catch((error) => {
         setWorkloadLibraryOutput(formatHubOperatorError(error, {
@@ -3188,11 +3371,18 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "desktop-shell-button-ghost";
-    removeButton.textContent = "Remove";
+    removeButton.textContent = hubCopy().dynamic?.workloadRemove || HUB_I18N.en.dynamic?.workloadRemove || "Remove";
     removeButton.addEventListener("click", () => {
       const next = loadHubWorkloadLibrary().filter((candidate) => workloadIdentity(candidate) !== workloadIdentity(entry));
       saveHubWorkloadLibrary(next);
-      setWorkloadLibraryOutput(`removed ${entry.label} from the workload library`);
+      setWorkloadLibraryOutput(
+        hubMessage(
+          hubCopy().dynamic?.removedWorkload
+            || HUB_I18N.en.dynamic?.removedWorkload
+            || "removed {label} from the workload library",
+          { label: entry.label },
+        ),
+      );
     });
 
     controls.append(useButton, workbenchButton, inspectButton, validateButton, downloadButton, attachButton, removeButton);
@@ -3400,6 +3590,10 @@ async function syncRemoteWorkloadCatalog(urlOverride = "") {
 
   if (elements.workloadCatalogUrl) {
     elements.workloadCatalogUrl.value = validation.normalized;
+  }
+
+  if (!ensureRemoteHostTrust(validation.normalized, "This remote catalog sync")) {
+    throw new Error("remote catalog sync cancelled before contacting the remote host");
   }
 
   const response = await fetch(validation.normalized);
@@ -3727,7 +3921,7 @@ function renderRecentPathList(container, values, input) {
   if (!values.length) {
     const empty = document.createElement("div");
     empty.className = "hub-recent-empty";
-    empty.textContent = "No recent entries yet.";
+    empty.textContent = hubCopy().dynamic?.recentEntriesEmpty || HUB_I18N.en.dynamic?.recentEntriesEmpty || "No recent entries yet.";
     container.appendChild(empty);
     return;
   }
@@ -3768,25 +3962,49 @@ function renderRecentActionHistory(actions) {
   elements.favoriteActionList.innerHTML = "";
   elements.recentActionList.innerHTML = "";
   if (!actions.length) {
-    renderEmptyHistoryState(elements.favoriteActionList, "No favorite actions yet.");
-    renderEmptyHistoryState(elements.recentActionList, "No recent project actions yet.");
+    renderEmptyHistoryState(
+      elements.favoriteActionList,
+      hubCopy().dynamic?.favoritesEmpty || HUB_I18N.en.dynamic?.favoritesEmpty || "No favorite actions yet.",
+    );
+    renderEmptyHistoryState(
+      elements.recentActionList,
+      hubCopy().dynamic?.recentActionsEmpty || HUB_I18N.en.dynamic?.recentActionsEmpty || "No recent project actions yet.",
+    );
     return;
   }
 
   if (!filteredActions.length) {
-    renderEmptyHistoryState(elements.favoriteActionList, `No favorites match the ${state.historyFilter} filter.`);
-    renderEmptyHistoryState(elements.recentActionList, `No actions match the ${state.historyFilter} filter.`);
+    renderEmptyHistoryState(
+      elements.favoriteActionList,
+      hubMessage(
+        hubCopy().dynamic?.favoritesFilterEmpty || HUB_I18N.en.dynamic?.favoritesFilterEmpty || "No favorites match the {filter} filter.",
+        { filter: localizedHistoryFilterLabel(state.historyFilter) },
+      ),
+    );
+    renderEmptyHistoryState(
+      elements.recentActionList,
+      hubMessage(
+        hubCopy().dynamic?.actionsFilterEmpty || HUB_I18N.en.dynamic?.actionsFilterEmpty || "No actions match the {filter} filter.",
+        { filter: localizedHistoryFilterLabel(state.historyFilter) },
+      ),
+    );
     return;
   }
 
   if (!favoriteActions.length) {
-    renderEmptyHistoryState(elements.favoriteActionList, "No pinned favorites yet.");
+    renderEmptyHistoryState(
+      elements.favoriteActionList,
+      hubCopy().dynamic?.pinnedFavoritesEmpty || HUB_I18N.en.dynamic?.pinnedFavoritesEmpty || "No pinned favorites yet.",
+    );
   } else {
     renderProjectActionEntries(elements.favoriteActionList, favoriteActions);
   }
 
   if (!recentActions.length) {
-    renderEmptyHistoryState(elements.recentActionList, "No non-pinned actions in this view.");
+    renderEmptyHistoryState(
+      elements.recentActionList,
+      hubCopy().dynamic?.nonPinnedEmpty || HUB_I18N.en.dynamic?.nonPinnedEmpty || "No non-pinned actions in this view.",
+    );
   } else {
     renderProjectActionEntries(elements.recentActionList, recentActions);
   }
@@ -3823,7 +4041,12 @@ function renderProjectActionEntries(container, actions) {
     `;
     button.addEventListener("click", () => {
       restoreProjectActionContext(entry);
-      setProjectBundleOutput(`restored ${entry.action} context`);
+      setProjectBundleOutput(
+        hubMessage(
+          hubCopy().dynamic?.restoredActionContext || HUB_I18N.en.dynamic?.restoredActionContext || "restored {action} context",
+          { action: entry.action },
+        ),
+      );
     });
 
     const controls = document.createElement("div");
@@ -3832,16 +4055,21 @@ function renderProjectActionEntries(container, actions) {
     const restoreButton = document.createElement("button");
     restoreButton.type = "button";
     restoreButton.className = "desktop-shell-button-ghost";
-    restoreButton.textContent = "Restore";
+    restoreButton.textContent = hubCopy().dynamic?.actionRestore || HUB_I18N.en.dynamic?.actionRestore || "Restore";
     restoreButton.addEventListener("click", () => {
       restoreProjectActionContext(entry);
-      setProjectBundleOutput(`restored ${entry.action} context`);
+      setProjectBundleOutput(
+        hubMessage(
+          hubCopy().dynamic?.restoredActionContext || HUB_I18N.en.dynamic?.restoredActionContext || "restored {action} context",
+          { action: entry.action },
+        ),
+      );
     });
 
     const rerunButton = document.createElement("button");
     rerunButton.type = "button";
     rerunButton.className = "desktop-shell-button-primary";
-    rerunButton.textContent = "Re-run";
+    rerunButton.textContent = hubCopy().dynamic?.actionRerun || HUB_I18N.en.dynamic?.actionRerun || "Re-run";
     rerunButton.addEventListener("click", () => {
       restoreProjectActionContext(entry);
       void rerunProjectActionEntry(entry);
@@ -3850,7 +4078,9 @@ function renderProjectActionEntries(container, actions) {
     const pinButton = document.createElement("button");
     pinButton.type = "button";
     pinButton.className = entry.pinned ? "desktop-shell-button-primary" : "desktop-shell-button-ghost";
-    pinButton.textContent = entry.pinned ? "Pinned" : "Pin";
+    pinButton.textContent = entry.pinned
+      ? hubCopy().dynamic?.actionPinned || HUB_I18N.en.dynamic?.actionPinned || "Pinned"
+      : hubCopy().dynamic?.actionPin || HUB_I18N.en.dynamic?.actionPin || "Pin";
     pinButton.addEventListener("click", () => {
       togglePinnedProjectAction(entry);
     });
@@ -3861,7 +4091,7 @@ function renderProjectActionEntries(container, actions) {
       const renameButton = document.createElement("button");
       renameButton.type = "button";
       renameButton.className = "desktop-shell-button-ghost";
-      renameButton.textContent = "Label";
+      renameButton.textContent = hubCopy().dynamic?.actionLabel || HUB_I18N.en.dynamic?.actionLabel || "Label";
       renameButton.addEventListener("click", () => {
         renamePinnedProjectAction(entry);
       });
@@ -3870,7 +4100,7 @@ function renderProjectActionEntries(container, actions) {
       const copyButton = document.createElement("button");
       copyButton.type = "button";
       copyButton.className = "desktop-shell-button-ghost";
-      copyButton.textContent = "Copy CLI";
+      copyButton.textContent = hubCopy().dynamic?.actionCopyCli || HUB_I18N.en.dynamic?.actionCopyCli || "Copy CLI";
       copyButton.addEventListener("click", () => {
         void copyProjectCliCommand(entry);
       });
@@ -3879,7 +4109,7 @@ function renderProjectActionEntries(container, actions) {
       const pythonButton = document.createElement("button");
       pythonButton.type = "button";
       pythonButton.className = "desktop-shell-button-ghost";
-      pythonButton.textContent = "Copy Python";
+      pythonButton.textContent = hubCopy().dynamic?.actionCopyPython || HUB_I18N.en.dynamic?.actionCopyPython || "Copy Python";
       pythonButton.addEventListener("click", () => {
         void copyPythonMacroStub(entry);
       });
@@ -4849,6 +5079,79 @@ function updateAssistantEndpointPolicy() {
   elements.assistantEndpointPolicy.textContent = hubDynamic("endpointPolicyAllowed");
 }
 
+function assistantTrustHostOrigin(baseUrl) {
+  try {
+    return new URL(baseUrl).origin.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function assistantHostRequiresTrust(baseUrl) {
+  try {
+    const parsed = new URL(baseUrl);
+    const protocol = parsed.protocol.toLowerCase();
+    const hostname = parsed.hostname.toLowerCase();
+    const isLoopback =
+      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+    return protocol === "https:" && !isLoopback;
+  } catch {
+    return false;
+  }
+}
+
+function ensureAssistantHostTrust(baseUrl, apiKey) {
+  if (!assistantHostRequiresTrust(baseUrl)) {
+    return true;
+  }
+
+  const origin = assistantTrustHostOrigin(baseUrl);
+  if (!origin) {
+    return false;
+  }
+
+  if (state.assistantTrustedHosts.has(origin)) {
+    return true;
+  }
+
+  const approved = window.confirm(
+    `This assistant request will send${apiKey ? " your API key and" : ""} the prompt directly to ${origin}.\n\nOnly continue if you trust this host.`,
+  );
+  if (!approved) {
+    return false;
+  }
+
+  state.assistantTrustedHosts.add(origin);
+  persistHubAssistantTrustedHosts(state.assistantTrustedHosts);
+  return true;
+}
+
+function ensureRemoteHostTrust(baseUrl, label) {
+  if (!assistantHostRequiresTrust(baseUrl)) {
+    return true;
+  }
+
+  const origin = assistantTrustHostOrigin(baseUrl);
+  if (!origin) {
+    return false;
+  }
+
+  if (state.remoteTrustedHosts.has(origin)) {
+    return true;
+  }
+
+  const approved = window.confirm(
+    `${label} will contact ${origin} directly.\n\nOnly continue if you trust this remote host.`,
+  );
+  if (!approved) {
+    return false;
+  }
+
+  state.remoteTrustedHosts.add(origin);
+  persistHubTrustedHosts(HUB_REMOTE_TRUSTED_HOSTS_KEY, state.remoteTrustedHosts);
+  return true;
+}
+
 async function requestHubAssistantPlan() {
   const baseUrl = elements.assistantBaseUrl?.value?.trim() || "";
   const model = elements.assistantModelName?.value?.trim() || "";
@@ -4858,6 +5161,10 @@ async function requestHubAssistantPlan() {
 
   if (!baseUrlValidation.ok || !model) {
     throw new Error(baseUrlValidation.reason || "Fill in the assistant base URL and model before requesting a plan.");
+  }
+
+  if (!ensureAssistantHostTrust(baseUrlValidation.normalized, apiKey)) {
+    throw new Error("assistant request cancelled before contacting the configured host");
   }
 
   const response = await fetch(`${baseUrlValidation.normalized.replace(/\/+$/, "")}/chat/completions`, {
@@ -5030,47 +5337,47 @@ async function executeHubAssistantAction(action, payload = {}, source = "assista
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "focused Hub section" });
       return;
     case "hub/openWorkbench":
-      await runAction("open-workbench");
+      await runActionWithOptions("open-workbench", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Workbench shell" });
       return;
     case "hub/openInstaller":
-      await runAction("open-installer");
+      await runActionWithOptions("open-installer", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer shell" });
       return;
     case "hub/openDocsIndex":
-      await runAction("open-docs-index");
+      await runActionWithOptions("open-docs-index", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened docs index" });
       return;
     case "hub/openCurrentLineDoc":
-      await runAction("open-current-line-doc");
+      await runActionWithOptions("open-current-line-doc", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened current-line document" });
       return;
     case "hub/openOperationsDoc":
-      await runAction("open-operations-doc");
+      await runActionWithOptions("open-operations-doc", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened operations guide" });
       return;
     case "hub/openTroubleshootingDoc":
-      await runAction("open-troubleshooting-doc");
+      await runActionWithOptions("open-troubleshooting-doc", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened troubleshooting guide" });
       return;
     case "hub/startLocal":
-      await runAction("start-local");
+      await runActionWithOptions("start-local", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "started local stack" });
       return;
     case "hub/validateEnv":
-      await runAction("validate-env");
+      await runActionWithOptions("validate-env", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated environment" });
       return;
     case "hub/desktopStage":
-      await runAction("desktop-stage");
+      await runActionWithOptions("desktop-stage", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "staged desktop release" });
       return;
     case "hub/desktopBuildHost":
-      await runAction("desktop-build-host");
+      await runActionWithOptions("desktop-build-host", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "built host desktop bundles" });
       return;
     case "hub/desktopVerify":
-      await runAction("desktop-verify");
+      await runActionWithOptions("desktop-verify", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "verified desktop release" });
       return;
     case "hub/setBundleContext":
@@ -5081,32 +5388,32 @@ async function executeHubAssistantAction(action, payload = {}, source = "assista
       return;
     case "hub/projectInspect":
       applyAssistantBundlePayload(payload);
-      await runAction("project-inspect");
+      await runActionWithOptions("project-inspect", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "inspected project bundle" });
       return;
     case "hub/projectValidate":
       applyAssistantBundlePayload(payload);
-      await runAction("project-validate");
+      await runActionWithOptions("project-validate", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated project bundle" });
       return;
     case "hub/projectNormalize":
       applyAssistantBundlePayload(payload);
-      await runAction("project-normalize");
+      await runActionWithOptions("project-normalize", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "normalized project bundle" });
       return;
     case "hub/projectUnpack":
       applyAssistantBundlePayload(payload);
-      await runAction("project-unpack");
+      await runActionWithOptions("project-unpack", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "unpacked project bundle" });
       return;
     case "hub/projectPack":
       applyAssistantBundlePayload(payload);
-      await runAction("project-pack");
+      await runActionWithOptions("project-pack", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "packed project bundle" });
       return;
     case "hub/projectDiff":
       applyAssistantBundlePayload(payload);
-      await runAction("project-diff");
+      await runActionWithOptions("project-diff", { skipConfirmation: true });
       rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "diffed project bundles" });
       return;
     default:
@@ -5153,20 +5460,18 @@ function setBusy(isBusy, label = "idle") {
 }
 
 function syncAssistantSettingsFromInputs() {
+  state.assistantApiKey = elements.assistantApiKey?.value || "";
   persistHubAssistantSettings({
     mode: state.assistantMode,
     baseUrl: elements.assistantBaseUrl?.value || "",
     modelPreset: elements.assistantModelPreset?.value || "gpt-5",
     model: elements.assistantModelName?.value || "gpt-5",
   });
-  persistHubAssistantSecrets({
-    apiKey: elements.assistantApiKey?.value || "",
-  });
 }
 
 function applyAssistantSettings() {
+  clearLegacyHubAssistantSecrets();
   const settings = loadHubAssistantSettings();
-  const secrets = loadHubAssistantSecrets();
   state.assistantMode = settings.mode;
   if (elements.assistantBaseUrl) {
     elements.assistantBaseUrl.value = settings.baseUrl;
@@ -5178,7 +5483,7 @@ function applyAssistantSettings() {
     elements.assistantModelName.value = settings.model;
   }
   if (elements.assistantApiKey) {
-    elements.assistantApiKey.value = secrets.apiKey;
+    elements.assistantApiKey.value = state.assistantApiKey || "";
   }
   setAssistantMode(settings.mode);
   updateAssistantEndpointPolicy();
@@ -5332,7 +5637,30 @@ async function refreshDesktopStatusOutput() {
 }
 
 async function runAction(action) {
+  return runActionWithOptions(action, {});
+}
+
+function confirmHubDesktopAction(action) {
+  const risk = HUB_DIRECT_ACTION_RISK[action] || "low";
+  if (risk === "low") {
+    return true;
+  }
+
+  const message =
+    risk === "high"
+      ? `High-risk desktop action: ${action}\n\nThis can build packages or rewrite bundle outputs.\n\nContinue?`
+      : `Sensitive desktop action: ${action}\n\nPlease confirm before the Hub continues.\n\nContinue?`;
+  return window.confirm(message);
+}
+
+async function runActionWithOptions(action, options = {}) {
   if (state.isBusy) {
+    return;
+  }
+
+  if (!options.skipConfirmation && !confirmHubDesktopAction(action)) {
+    setOperationOutput(`cancelled desktop action: ${action}`);
+    applyDesktopState(elements.actionState, "cancelled", { kind: "activity" });
     return;
   }
 
@@ -5810,11 +6138,14 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
 
 elements.languageSelect?.addEventListener("change", async (event) => {
   state.language = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
-  renderDesktopLanguagePreference();
+  rerenderLocalizedHubShell();
+  window.requestAnimationFrame(() => {
+    rerenderLocalizedHubShell();
+  });
 });
 
 state.language = await loadDesktopLanguagePreference();
-renderDesktopLanguagePreference();
+rerenderLocalizedHubShell();
 await applyBrand();
 await loadEnvironment();
 enhanceHubAccessibility();
@@ -5851,3 +6182,4 @@ setBusy(false, "idle");
 await refreshRuntimeStatus();
 await refreshHotRuntimeStatus();
 await refreshDesktopStatusOutput();
+rerenderLocalizedHubShell();

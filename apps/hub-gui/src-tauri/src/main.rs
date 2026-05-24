@@ -593,10 +593,81 @@ fn node_command() -> &'static str {
     }
 }
 
-fn run_project_cli(command: &str, input_path: &str) -> Result<String, String> {
-    if input_path.trim().is_empty() {
-        return Err("project bundle path is required".to_string());
+fn nonempty_trimmed_path<'a>(value: &'a str, label: &str) -> Result<&'a str, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        Err(format!("{label} is required"))
+    } else {
+        Ok(trimmed)
     }
+}
+
+fn normalize_existing_path(value: &str, label: &str) -> Result<PathBuf, String> {
+    let trimmed = nonempty_trimmed_path(value, label)?;
+    let candidate = PathBuf::from(trimmed);
+    if !candidate.exists() {
+        return Err(format!("{label} does not exist: {}", candidate.display()));
+    }
+    candidate
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve {label} {}: {error}", candidate.display()))
+}
+
+fn path_has_extension(path: &Path, extension: &str) -> bool {
+    path.extension()
+        .and_then(|value| value.to_str())
+        .map(|value| value.eq_ignore_ascii_case(extension))
+        .unwrap_or(false)
+}
+
+fn normalize_existing_bundle_path(value: &str, label: &str) -> Result<PathBuf, String> {
+    let path = normalize_existing_path(value, label)?;
+    if !path.is_file() {
+        return Err(format!("{label} must point to a project bundle file"));
+    }
+    if !path_has_extension(&path, "kyuubiki") {
+        return Err(format!("{label} must end with .kyuubiki"));
+    }
+    Ok(path)
+}
+
+fn normalize_existing_directory_path(value: &str, label: &str) -> Result<PathBuf, String> {
+    let path = normalize_existing_path(value, label)?;
+    if !path.is_dir() {
+        return Err(format!("{label} must point to a directory"));
+    }
+    Ok(path)
+}
+
+fn normalize_output_path(value: &str, label: &str) -> Result<PathBuf, String> {
+    let trimmed = nonempty_trimmed_path(value, label)?;
+    let candidate = PathBuf::from(trimmed);
+    let parent = candidate
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_else(|| workspace_root());
+    if !parent.exists() {
+        return Err(format!(
+            "{label} parent directory does not exist: {}",
+            parent.display()
+        ));
+    }
+    parent
+        .canonicalize()
+        .map_err(|error| format!("failed to resolve {label} parent {}: {error}", parent.display()))?;
+    Ok(candidate)
+}
+
+fn ensure_distinct_paths(left: &Path, right: &Path, message: &str) -> Result<(), String> {
+    if left == right {
+        Err(message.to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn run_project_cli(command: &str, input_path: &str) -> Result<String, String> {
+    let normalized_input = normalize_existing_bundle_path(input_path, "project bundle path")?;
 
     let root = workspace_root();
     let script = root.join("apps").join("frontend").join("scripts").join("kyuubiki-cli.mjs");
@@ -605,7 +676,7 @@ fn run_project_cli(command: &str, input_path: &str) -> Result<String, String> {
         .arg(script)
         .arg("project")
         .arg(command)
-        .arg(input_path.trim())
+        .arg(&normalized_input)
         .arg("--json")
         .output()
         .map_err(|error| format!("failed to run project {}: {error}", command))?;
@@ -621,12 +692,34 @@ fn run_project_cli(command: &str, input_path: &str) -> Result<String, String> {
 }
 
 fn run_project_cli_with_output(command: &str, input_path: &str, output_path: &str) -> Result<String, String> {
-    if input_path.trim().is_empty() {
-        return Err("project bundle path is required".to_string());
-    }
+    let normalized_input = match command {
+        "pack" => normalize_existing_directory_path(input_path, "project directory path")?,
+        _ => normalize_existing_bundle_path(input_path, "project bundle path")?,
+    };
+    let normalized_output = normalize_output_path(output_path, "output path")?;
 
-    if output_path.trim().is_empty() {
-        return Err("output path is required".to_string());
+    match command {
+        "normalize" => {
+            if !path_has_extension(&normalized_output, "kyuubiki") {
+                return Err("output path for project normalize must end with .kyuubiki".to_string());
+            }
+            ensure_distinct_paths(
+                &normalized_input,
+                &normalized_output,
+                "output path must be different from the input bundle path",
+            )?;
+        }
+        "unpack" => {
+            if path_has_extension(&normalized_output, "kyuubiki") {
+                return Err("output path for project unpack must be a directory path, not a .kyuubiki bundle".to_string());
+            }
+        }
+        "pack" => {
+            if !path_has_extension(&normalized_output, "kyuubiki") {
+                return Err("output path for project pack must end with .kyuubiki".to_string());
+            }
+        }
+        _ => {}
     }
 
     let root = workspace_root();
@@ -636,9 +729,9 @@ fn run_project_cli_with_output(command: &str, input_path: &str, output_path: &st
         .arg(script)
         .arg("project")
         .arg(command)
-        .arg(input_path.trim())
+        .arg(&normalized_input)
         .arg("--out")
-        .arg(output_path.trim())
+        .arg(&normalized_output)
         .output()
         .map_err(|error| format!("failed to run project {}: {error}", command))?;
 
@@ -653,9 +746,13 @@ fn run_project_cli_with_output(command: &str, input_path: &str, output_path: &st
 }
 
 fn run_project_cli_compare(command: &str, left_path: &str, right_path: &str) -> Result<String, String> {
-    if left_path.trim().is_empty() || right_path.trim().is_empty() {
-        return Err("both project bundle paths are required".to_string());
-    }
+    let normalized_left = normalize_existing_bundle_path(left_path, "left project bundle path")?;
+    let normalized_right = normalize_existing_bundle_path(right_path, "right project bundle path")?;
+    ensure_distinct_paths(
+        &normalized_left,
+        &normalized_right,
+        "left and right project bundle paths must be different",
+    )?;
 
     let root = workspace_root();
     let script = root.join("apps").join("frontend").join("scripts").join("kyuubiki-cli.mjs");
@@ -664,8 +761,8 @@ fn run_project_cli_compare(command: &str, left_path: &str, right_path: &str) -> 
         .arg(script)
         .arg("project")
         .arg(command)
-        .arg(left_path.trim())
-        .arg(right_path.trim())
+        .arg(&normalized_left)
+        .arg(&normalized_right)
         .arg("--json")
         .output()
         .map_err(|error| format!("failed to run project {}: {error}", command))?;
@@ -842,7 +939,7 @@ fn open_operations_doc() -> Result<String, String> {
 
 #[tauri::command]
 fn open_troubleshooting_doc() -> Result<String, String> {
-    open_host_path(&docs_file("release-troubleshooting-0.9.0.md"))
+    open_host_path(&docs_file("troubleshooting.md"))
 }
 
 #[tauri::command]

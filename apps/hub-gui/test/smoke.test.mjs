@@ -152,8 +152,10 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /persistHubWorkloadLibrary/);
   assert.match(js, /loadHubAssistantSettings/);
   assert.match(js, /persistHubAssistantSettings/);
-  assert.match(js, /loadHubAssistantSecrets/);
-  assert.match(js, /persistHubAssistantSecrets/);
+  assert.match(js, /loadHubAssistantTrustedHosts/);
+  assert.match(js, /persistHubAssistantTrustedHosts/);
+  assert.match(js, /ensureAssistantHostTrust/);
+  assert.match(js, /confirmHubDesktopAction/);
   assert.match(js, /saveProjectBundleRecents/);
   assert.match(js, /saveHubWorkloadLibrary/);
   assert.match(js, /renderHubWorkloadLibrary/);
