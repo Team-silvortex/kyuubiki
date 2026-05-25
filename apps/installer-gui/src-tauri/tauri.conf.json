@@ -10,6 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Kyuubiki Installer",
         "width": 1320,
         "height": 920,

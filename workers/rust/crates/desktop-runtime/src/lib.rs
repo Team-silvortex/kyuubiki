@@ -1,6 +1,8 @@
 use std::fs;
+use std::fs::OpenOptions;
 use std::path::PathBuf;
 use std::process::Command;
+use std::io::Write;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
 
@@ -100,6 +102,10 @@ fn global_language_path() -> Result<PathBuf, String> {
     Ok(desktop_preferences_dir()?.join(GLOBAL_LANGUAGE_FILE))
 }
 
+fn desktop_audit_path(file_name: &str) -> Result<PathBuf, String> {
+    Ok(desktop_preferences_dir()?.join(file_name))
+}
+
 pub fn read_global_language_preference() -> Option<String> {
     let path = global_language_path().ok()?;
     let raw = fs::read_to_string(path).ok()?;
@@ -117,6 +123,22 @@ pub fn write_global_language_preference(language: &str) -> Result<String, String
     fs::write(&path, normalized.as_bytes())
         .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
     Ok(normalized.to_string())
+}
+
+pub fn append_desktop_audit_line(file_name: &str, line: &str) -> Result<(), String> {
+    let directory = desktop_preferences_dir()?;
+    fs::create_dir_all(&directory)
+        .map_err(|error| format!("failed to create {}: {error}", directory.display()))?;
+
+    let path = desktop_audit_path(file_name)?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|error| format!("failed to open {}: {error}", path.display()))?;
+    writeln!(file, "{line}")
+        .map_err(|error| format!("failed to append {}: {error}", path.display()))?;
+    Ok(())
 }
 
 pub fn run_workspace_command(args: &[&str]) -> Result<String, String> {

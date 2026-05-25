@@ -10,6 +10,25 @@ function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
+test("hub shell defines a least-privilege main-window capability", () => {
+  const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json"));
+  const capability = JSON.parse(read("src-tauri/capabilities/main.json"));
+  const permissions = read("src-tauri/permissions/hub.toml");
+
+  assert.equal(tauriConfig.app.windows[0]?.label, "main");
+  assert.equal(capability.identifier, "main");
+  assert.deepEqual(capability.windows, ["main"]);
+  assert.ok(Array.isArray(capability.permissions));
+  assert.ok(capability.permissions.includes("core:default"));
+  assert.ok(capability.permissions.includes("allow-guarded-mutation-action"));
+  assert.ok(capability.permissions.includes("allow-service-status"));
+  assert.ok(capability.permissions.includes("allow-project-bundle-inspect"));
+  assert.ok(capability.permissions.includes("allow-hub-environment"));
+  assert.match(permissions, /identifier = "allow-service-status"/);
+  assert.match(permissions, /commands\.allow = \["service_status"\]/);
+  assert.match(permissions, /identifier = "allow-guarded-mutation-action"/);
+});
+
 test("hub shell exposes the desktop information architecture", () => {
   const html = read("ui/index.html");
 
@@ -199,6 +218,11 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /sortProjectActionHistory/);
   assert.match(js, /renamePinnedProjectAction/);
   assert.match(js, /renderHubRecents/);
+  assert.match(js, /renderDesktopLanguagePreference/);
+  assert.match(js, /setText\(elements\.homePathTitle,\s*copy\.home\.path\.title\)/);
+  assert.match(js, /setText\(elements\.homeQuickTitle,\s*copy\.home\.quick\.title\)/);
+  assert.match(js, /setText\(elements\.homeClusterLibraryTitle,\s*copy\.home\.quick\.libraryTitle\)/);
+  assert.match(js, /renderAssistantPanel\(\);\s*rere?nderLocalizedHubShell\(\);\s*syncDesktopStates\(\);/);
   assert.match(js, /renderRecentActionHistory/);
   assert.match(js, /renderEmptyHistoryState/);
   assert.match(js, /renderProjectActionEntries/);
@@ -309,9 +333,8 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /Refreshing desktop packaging status/);
   assert.match(js, /project_bundle_inspect/);
   assert.match(js, /project_bundle_validate/);
-  assert.match(js, /project_bundle_normalize/);
-  assert.match(js, /project_bundle_unpack/);
-  assert.match(js, /project_bundle_pack/);
+  assert.match(js, /guarded_mutation_action/);
+  assert.match(js, /invokeGuardedMutation/);
   assert.match(js, /project_bundle_diff/);
   assert.match(js, /launch_workbench_gui/);
   assert.match(js, /launch_installer_gui/);
@@ -338,6 +361,7 @@ test("tauri backend exposes hub runtime commands", () => {
   assert.match(rust, /service_start/);
   assert.match(rust, /service_restart/);
   assert.match(rust, /service_stop/);
+  assert.match(rust, /guarded_mutation_action/);
   assert.match(rust, /read_runtime_log/);
   assert.match(runtimeRust, /failed to read .* log:/);
   assert.match(rust, /doctor_report/);

@@ -4,6 +4,7 @@ use std::process::Command;
 use std::process::Stdio;
 
 use kyuubiki_desktop_runtime::{
+    append_desktop_audit_line as desktop_append_audit_line,
     hot_service_start as desktop_hot_service_start,
     hot_service_status as desktop_hot_service_status,
     hot_service_stop as desktop_hot_service_stop,
@@ -21,6 +22,10 @@ use kyuubiki_installer::{
     doctor_report as build_doctor_report, parse_platform, stage_release, validate_env_file, Platform,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+const HUB_GUARDED_MUTATION_AUDIT_FILE: &str = "hub-guarded-mutations.jsonl";
 
 #[derive(Serialize)]
 struct ServiceStatusPayload {
@@ -51,12 +56,6 @@ struct DesktopPreferencesPayload {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ServicePayload {
-    mode: Option<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct LogPayload {
     service: String,
 }
@@ -81,16 +80,49 @@ struct ProjectBundlePayload {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ProjectBundleOutputPayload {
-    path: String,
-    out: String,
+struct ProjectBundleComparePayload {
+    left_path: String,
+    right_path: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ProjectBundleComparePayload {
-    left_path: String,
-    right_path: String,
+struct GuardedMutationPayload {
+    action: String,
+    mode: Option<String>,
+    platform: Option<String>,
+    path: Option<String>,
+    out: Option<String>,
+    left_path: Option<String>,
+    right_path: Option<String>,
+}
+
+fn audit_timestamp() -> String {
+    match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => format!("{}.{}", duration.as_secs(), duration.subsec_nanos()),
+        Err(_) => "0.0".to_string(),
+    }
+}
+
+fn append_guarded_mutation_audit(
+    payload: &GuardedMutationPayload,
+    status: &str,
+    detail: &str,
+) -> Result<(), String> {
+    let line = json!({
+        "timestamp": audit_timestamp(),
+        "action": payload.action,
+        "status": status,
+        "detail": detail,
+        "mode": payload.mode,
+        "platform": payload.platform,
+        "path": payload.path,
+        "out": payload.out,
+        "left_path": payload.left_path,
+        "right_path": payload.right_path,
+    })
+    .to_string();
+    desktop_append_audit_line(HUB_GUARDED_MUTATION_AUDIT_FILE, &line)
 }
 
 fn resolve_service_mode(mode: Option<&str>) -> ServiceMode {
@@ -799,35 +831,10 @@ fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Re
 }
 
 #[tauri::command]
-fn service_start(payload: ServicePayload) -> Result<String, String> {
-    desktop_service_start(resolve_service_mode(payload.mode.as_deref()))
-}
-
-#[tauri::command]
-fn service_restart(payload: ServicePayload) -> Result<String, String> {
-    desktop_service_restart(resolve_service_mode(payload.mode.as_deref()))
-}
-
-#[tauri::command]
-fn service_stop() -> Result<String, String> {
-    desktop_service_stop()
-}
-
-#[tauri::command]
 fn hot_service_status() -> Result<ServiceStatusPayload, String> {
     Ok(ServiceStatusPayload {
         rendered: desktop_hot_service_status()?,
     })
-}
-
-#[tauri::command]
-fn hot_service_start(payload: ServicePayload) -> Result<String, String> {
-    desktop_hot_service_start(resolve_hot_service_mode(payload.mode.as_deref()))
-}
-
-#[tauri::command]
-fn hot_service_stop() -> Result<String, String> {
-    desktop_hot_service_stop()
 }
 
 #[tauri::command]
@@ -846,25 +853,45 @@ fn doctor_report() -> Result<ServiceStatusPayload, String> {
 }
 
 #[tauri::command]
-fn validate_env() -> Result<String, String> {
-    validate_env_file()
-}
+fn guarded_mutation_action(payload: GuardedMutationPayload) -> Result<String, String> {
+    let result = match payload.action.as_str() {
+        "service_start" => desktop_service_start(resolve_service_mode(payload.mode.as_deref())),
+        "service_restart" => desktop_service_restart(resolve_service_mode(payload.mode.as_deref())),
+        "service_stop" => desktop_service_stop(),
+        "hot_service_start" => desktop_hot_service_start(resolve_hot_service_mode(payload.mode.as_deref())),
+        "hot_service_stop" => desktop_hot_service_stop(),
+        "validate_env" => validate_env_file(),
+        "desktop_stage" => stage_release(parse_platform(payload.platform.clone()), None),
+        "desktop_verify" => verify_desktop_platform(parse_platform(payload.platform.clone())),
+        "desktop_build_host" => build_host_desktop_bundles(),
+        "project_bundle_normalize" => run_project_cli_with_output(
+            "normalize",
+            payload.path.as_deref().unwrap_or(""),
+            payload.out.as_deref().unwrap_or(""),
+        ),
+        "project_bundle_unpack" => run_project_cli_with_output(
+            "unpack",
+            payload.path.as_deref().unwrap_or(""),
+            payload.out.as_deref().unwrap_or(""),
+        ),
+        "project_bundle_pack" => run_project_cli_with_output(
+            "pack",
+            payload.path.as_deref().unwrap_or(""),
+            payload.out.as_deref().unwrap_or(""),
+        ),
+        _ => Err(format!("unsupported guarded mutation action: {}", payload.action)),
+    };
 
-#[tauri::command]
-fn desktop_stage(payload: PlatformPayload) -> Result<String, String> {
-    let platform = parse_platform(payload.platform);
-    stage_release(platform, None)
-}
+    match &result {
+        Ok(message) => {
+            let _ = append_guarded_mutation_audit(&payload, "ok", message);
+        }
+        Err(error) => {
+            let _ = append_guarded_mutation_audit(&payload, "failed", error);
+        }
+    }
 
-#[tauri::command]
-fn desktop_verify(payload: PlatformPayload) -> Result<String, String> {
-    let platform = parse_platform(payload.platform);
-    verify_desktop_platform(platform)
-}
-
-#[tauri::command]
-fn desktop_build_host() -> Result<String, String> {
-    build_host_desktop_bundles()
+    result
 }
 
 #[tauri::command]
@@ -880,21 +907,6 @@ fn project_bundle_inspect(payload: ProjectBundlePayload) -> Result<String, Strin
 #[tauri::command]
 fn project_bundle_validate(payload: ProjectBundlePayload) -> Result<String, String> {
     run_project_cli("validate", &payload.path)
-}
-
-#[tauri::command]
-fn project_bundle_normalize(payload: ProjectBundleOutputPayload) -> Result<String, String> {
-    run_project_cli_with_output("normalize", &payload.path, &payload.out)
-}
-
-#[tauri::command]
-fn project_bundle_unpack(payload: ProjectBundleOutputPayload) -> Result<String, String> {
-    run_project_cli_with_output("unpack", &payload.path, &payload.out)
-}
-
-#[tauri::command]
-fn project_bundle_pack(payload: ProjectBundleOutputPayload) -> Result<String, String> {
-    run_project_cli_with_output("pack", &payload.path, &payload.out)
 }
 
 #[tauri::command]
@@ -962,24 +974,13 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             service_status,
-            service_start,
-            service_restart,
-            service_stop,
             hot_service_status,
-            hot_service_start,
-            hot_service_stop,
             read_runtime_log,
             doctor_report,
-            validate_env,
             desktop_status,
-            desktop_stage,
-            desktop_verify,
-            desktop_build_host,
+            guarded_mutation_action,
             project_bundle_inspect,
             project_bundle_validate,
-            project_bundle_normalize,
-            project_bundle_unpack,
-            project_bundle_pack,
             project_bundle_diff,
             launch_workbench_gui,
             launch_installer_gui,

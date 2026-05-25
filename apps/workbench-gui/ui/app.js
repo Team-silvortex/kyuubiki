@@ -230,6 +230,15 @@ function formatStatusReport(rendered) {
   return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
 }
 
+function invokeGuardedMutation(action, payload = {}) {
+  return invokeTauri("guarded_mutation_action", {
+    payload: {
+      action,
+      ...payload,
+    },
+  });
+}
+
 async function refreshStatus() {
   try {
     const payload = await invokeTauri("service_status");
@@ -278,7 +287,7 @@ async function runAction(action) {
     }
 
     if (action === "stop") {
-      elements.statusOutput.textContent = formatStatusReport(await invokeTauri("service_stop"));
+      elements.statusOutput.textContent = formatStatusReport(await invokeGuardedMutation("service_stop"));
       if (state.consoleTab === "logs") {
         await refreshLog();
       }
@@ -287,7 +296,7 @@ async function runAction(action) {
 
     if (action === "start-local") {
       elements.statusOutput.textContent = formatStatusReport(
-        await invokeTauri("service_start", { payload: { mode: "local" } }),
+        await invokeGuardedMutation("service_start", { mode: "local" }),
       );
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
@@ -298,7 +307,7 @@ async function runAction(action) {
 
     if (action === "restart-local") {
       elements.statusOutput.textContent = formatStatusReport(
-        await invokeTauri("service_restart", { payload: { mode: "local" } }),
+        await invokeGuardedMutation("service_restart", { mode: "local" }),
       );
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {

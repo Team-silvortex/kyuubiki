@@ -10,6 +10,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
+        "label": "main",
         "title": "Kyuubiki Hub",
         "width": 1540,
         "height": 960,

@@ -10,6 +10,22 @@ function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 }
 
+test("installer shell defines a least-privilege main-window capability", () => {
+  const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json"));
+  const capability = JSON.parse(read("src-tauri/capabilities/main.json"));
+  const permissions = read("src-tauri/permissions/installer.toml");
+
+  assert.equal(tauriConfig.app.windows[0]?.label, "main");
+  assert.equal(capability.identifier, "main");
+  assert.deepEqual(capability.windows, ["main"]);
+  assert.ok(capability.permissions.includes("core:default"));
+  assert.ok(capability.permissions.includes("allow-guarded-mutation-action"));
+  assert.ok(capability.permissions.includes("allow-service-status"));
+  assert.ok(capability.permissions.includes("allow-read-env-file"));
+  assert.match(permissions, /identifier = "allow-guarded-mutation-action"/);
+  assert.match(permissions, /commands\.allow = \["guarded_mutation_action"\]/);
+});
+
 test("installer shell exposes setup, services, remote, and release surfaces", () => {
   const html = read("ui/index.html");
 
@@ -26,14 +42,8 @@ test("installer shell wires core install and runtime actions", () => {
   const bridge = read("ui/shared/tauri-bridge.js");
 
   assert.match(js, /doctor_report/);
-  assert.match(js, /bootstrap/);
-  assert.match(js, /write_env_file/);
-  assert.match(js, /service_start/);
-  assert.match(js, /service_restart/);
-  assert.match(js, /service_stop/);
-  assert.match(js, /remote_bootstrap/);
-  assert.match(js, /remote_start_agent/);
-  assert.match(js, /build_installer_bundle/);
+  assert.match(js, /guarded_mutation_action/);
+  assert.match(js, /invokeGuardedMutation/);
   assert.match(bridge, /invokeTauri/);
   assert.match(bridge, /listenTauri/);
   assert.match(bridge, /loadDesktopBrand/);
@@ -43,12 +53,8 @@ test("tauri backend exposes installer command surface", () => {
   const rust = read("src-tauri/src/main.rs");
 
   assert.match(rust, /doctor_report/);
-  assert.match(rust, /validate_env/);
-  assert.match(rust, /prepare_layout/);
-  assert.match(rust, /bootstrap/);
+  assert.match(rust, /guarded_mutation_action/);
   assert.match(rust, /service_status/);
   assert.match(rust, /start_log_stream/);
-  assert.match(rust, /remote_bootstrap/);
-  assert.match(rust, /remote_start_agent/);
-  assert.match(rust, /build_installer_bundle/);
+  assert.match(rust, /read_env_file/);
 });

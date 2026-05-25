@@ -177,6 +177,114 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the desktop_status command.",
+          "type": "string",
+          "const": "allow-desktop-status",
+          "markdownDescription": "Enables the desktop_status command."
+        },
+        {
+          "description": "Enables the doctor_report command.",
+          "type": "string",
+          "const": "allow-doctor-report",
+          "markdownDescription": "Enables the doctor_report command."
+        },
+        {
+          "description": "Enables the get_global_language_preference command.",
+          "type": "string",
+          "const": "allow-get-global-language-preference",
+          "markdownDescription": "Enables the get_global_language_preference command."
+        },
+        {
+          "description": "Enables the guarded_mutation_action command.",
+          "type": "string",
+          "const": "allow-guarded-mutation-action",
+          "markdownDescription": "Enables the guarded_mutation_action command."
+        },
+        {
+          "description": "Enables the hot_service_status command.",
+          "type": "string",
+          "const": "allow-hot-service-status",
+          "markdownDescription": "Enables the hot_service_status command."
+        },
+        {
+          "description": "Enables the hub_environment command.",
+          "type": "string",
+          "const": "allow-hub-environment",
+          "markdownDescription": "Enables the hub_environment command."
+        },
+        {
+          "description": "Enables the launch_installer_gui command.",
+          "type": "string",
+          "const": "allow-launch-installer-gui",
+          "markdownDescription": "Enables the launch_installer_gui command."
+        },
+        {
+          "description": "Enables the launch_workbench_gui command.",
+          "type": "string",
+          "const": "allow-launch-workbench-gui",
+          "markdownDescription": "Enables the launch_workbench_gui command."
+        },
+        {
+          "description": "Enables the open_current_line_doc command.",
+          "type": "string",
+          "const": "allow-open-current-line-doc",
+          "markdownDescription": "Enables the open_current_line_doc command."
+        },
+        {
+          "description": "Enables the open_docs_index command.",
+          "type": "string",
+          "const": "allow-open-docs-index",
+          "markdownDescription": "Enables the open_docs_index command."
+        },
+        {
+          "description": "Enables the open_operations_doc command.",
+          "type": "string",
+          "const": "allow-open-operations-doc",
+          "markdownDescription": "Enables the open_operations_doc command."
+        },
+        {
+          "description": "Enables the open_troubleshooting_doc command.",
+          "type": "string",
+          "const": "allow-open-troubleshooting-doc",
+          "markdownDescription": "Enables the open_troubleshooting_doc command."
+        },
+        {
+          "description": "Enables the project_bundle_diff command.",
+          "type": "string",
+          "const": "allow-project-bundle-diff",
+          "markdownDescription": "Enables the project_bundle_diff command."
+        },
+        {
+          "description": "Enables the project_bundle_inspect command.",
+          "type": "string",
+          "const": "allow-project-bundle-inspect",
+          "markdownDescription": "Enables the project_bundle_inspect command."
+        },
+        {
+          "description": "Enables the project_bundle_validate command.",
+          "type": "string",
+          "const": "allow-project-bundle-validate",
+          "markdownDescription": "Enables the project_bundle_validate command."
+        },
+        {
+          "description": "Enables the read_runtime_log command.",
+          "type": "string",
+          "const": "allow-read-runtime-log",
+          "markdownDescription": "Enables the read_runtime_log command."
+        },
+        {
+          "description": "Enables the service_status command.",
+          "type": "string",
+          "const": "allow-service-status",
+          "markdownDescription": "Enables the service_status command."
+        },
+        {
+          "description": "Enables the set_global_language_preference command.",
+          "type": "string",
+          "const": "allow-set-global-language-preference",
+          "markdownDescription": "Enables the set_global_language_preference command."
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",

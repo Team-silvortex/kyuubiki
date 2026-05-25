@@ -1,1 +1,1 @@
-{}
+{"main":{"identifier":"main","description":"Least-privilege IPC surface for the Kyuubiki Workbench main window.","local":true,"windows":["main"],"permissions":["core:default","allow-service-status","allow-read-runtime-log","allow-guarded-mutation-action","allow-workbench-environment","allow-get-global-language-preference","allow-set-global-language-preference"]}}

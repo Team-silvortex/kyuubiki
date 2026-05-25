@@ -1,4 +1,5 @@
 use kyuubiki_desktop_runtime::{
+    append_desktop_audit_line as desktop_append_audit_line,
     read_global_language_preference as desktop_read_global_language_preference,
     read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
     service_start as desktop_service_start, service_status as desktop_service_status,
@@ -6,6 +7,8 @@ use kyuubiki_desktop_runtime::{
     ServiceMode,
 };
 use serde::Serialize;
+use serde_json::json;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize)]
 struct ServiceStatusPayload {
@@ -32,7 +35,8 @@ struct DesktopPreferencesPayload {
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ServicePayload {
+struct WorkbenchGuardedMutationPayload {
+    action: String,
     mode: Option<String>,
 }
 
@@ -43,33 +47,54 @@ fn service_status() -> Result<ServiceStatusPayload, String> {
     })
 }
 
-#[tauri::command]
-fn service_start(payload: ServicePayload) -> Result<String, String> {
-    let mode = match payload.mode.as_deref() {
+fn parse_service_mode(mode: Option<&str>) -> ServiceMode {
+    match mode {
         Some("cloud") => ServiceMode::Cloud,
         Some("distributed") => ServiceMode::Distributed,
         Some("default") => ServiceMode::Default,
         _ => ServiceMode::Local,
-    };
+    }
+}
 
-    desktop_service_start(mode)
+const WORKBENCH_GUARDED_MUTATION_AUDIT_FILE: &str = "workbench-guarded-mutations.jsonl";
+
+fn audit_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn append_workbench_guarded_mutation_audit(
+    payload: &WorkbenchGuardedMutationPayload,
+    status: &str,
+    detail: &str,
+) {
+    let record = json!({
+        "ts": audit_timestamp(),
+        "action": payload.action,
+        "mode": payload.mode,
+        "status": status,
+        "detail": detail,
+    });
+    let _ = desktop_append_audit_line(WORKBENCH_GUARDED_MUTATION_AUDIT_FILE, &record.to_string());
 }
 
 #[tauri::command]
-fn service_restart(payload: ServicePayload) -> Result<String, String> {
-    let mode = match payload.mode.as_deref() {
-        Some("cloud") => ServiceMode::Cloud,
-        Some("distributed") => ServiceMode::Distributed,
-        Some("default") => ServiceMode::Default,
-        _ => ServiceMode::Local,
+fn guarded_mutation_action(payload: WorkbenchGuardedMutationPayload) -> Result<String, String> {
+    let result = match payload.action.as_str() {
+        "service_start" => desktop_service_start(parse_service_mode(payload.mode.as_deref())),
+        "service_restart" => desktop_service_restart(parse_service_mode(payload.mode.as_deref())),
+        "service_stop" => desktop_service_stop(),
+        other => Err(format!("unsupported guarded workbench action: {other}")),
     };
 
-    desktop_service_restart(mode)
-}
+    match &result {
+        Ok(detail) => append_workbench_guarded_mutation_audit(&payload, "ok", detail),
+        Err(detail) => append_workbench_guarded_mutation_audit(&payload, "failed", detail),
+    }
 
-#[tauri::command]
-fn service_stop() -> Result<String, String> {
-    desktop_service_stop()
+    result
 }
 
 #[derive(serde::Deserialize)]
@@ -119,13 +144,11 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             service_status,
-            service_start,
-            service_restart,
-            service_stop,
             read_runtime_log,
             workbench_environment,
             get_global_language_preference,
-            set_global_language_preference
+            set_global_language_preference,
+            guarded_mutation_action
         ])
         .run(tauri::generate_context!())
         .expect("failed to run kyuubiki workbench gui");

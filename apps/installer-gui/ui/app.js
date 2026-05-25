@@ -97,6 +97,15 @@ import {
     output.textContent = value;
   }
 
+  function invokeGuardedMutation(action, payload = {}) {
+    return invoke("guarded_mutation_action", {
+      payload: {
+        action,
+        ...payload,
+      },
+    });
+  }
+
   function appendOutput(title, value) {
     const chunks = [output.textContent.trim(), `## ${title}\n${value}`].filter(Boolean);
     output.textContent = chunks.join("\n\n");
@@ -386,11 +395,11 @@ import {
           await runAction("doctor", refreshDoctor);
           break;
         case "prepare-layout":
-          await runAction("prepare-layout", () => invoke("prepare_layout"));
+          await runAction("prepare-layout", () => invokeGuardedMutation("prepare_layout"));
           break;
         case "bootstrap":
           await runAction("bootstrap", async () => {
-            const result = await invoke("bootstrap");
+            const result = await invokeGuardedMutation("bootstrap");
             await refreshDoctor();
             showCompletion("Bootstrap complete. You can validate env or start services next.");
             return result;
@@ -398,17 +407,19 @@ import {
           break;
         case "init-env":
           await runAction("init-env", async () => {
-            const result = await invoke("init_env", { force: false });
+            const result = await invokeGuardedMutation("init_env", { force: false });
             hydrateEnv(await invoke("read_env_file"));
             return result;
           });
           break;
         case "validate-env":
-          await runAction("validate-env", () => invoke("validate_env"));
+          await runAction("validate-env", () => invokeGuardedMutation("validate_env"));
           break;
         case "write-env":
           await runAction("write-env", async () => {
-            const result = await invoke("write_env_file", currentEnvPayload());
+            const result = await invokeGuardedMutation("write_env_file", {
+              envPayload: currentEnvPayload(),
+            });
             hydrateEnv(await invoke("read_env_file"));
             showCompletion("Environment saved. Next step: validate and start the active profile.");
             return result;
@@ -440,7 +451,7 @@ import {
           break;
         case "service-start-local":
           await runAction("service-start-local", async () => {
-            const result = await invoke("service_start", { mode: "local" });
+            const result = await invokeGuardedMutation("service_start", { mode: "local" });
             await refreshServiceStatus();
             showCompletion("Local services started.");
             return result;
@@ -448,7 +459,7 @@ import {
           break;
         case "service-restart-local":
           await runAction("service-restart-local", async () => {
-            const result = await invoke("service_restart", { mode: "local" });
+            const result = await invokeGuardedMutation("service_restart", { mode: "local" });
             await refreshServiceStatus();
             showCompletion("Local services restarted.");
             return result;
@@ -456,7 +467,7 @@ import {
           break;
         case "service-start-cloud":
           await runAction("service-start-cloud", async () => {
-            const result = await invoke("service_start", { mode: "cloud" });
+            const result = await invokeGuardedMutation("service_start", { mode: "cloud" });
             await refreshServiceStatus();
             showCompletion("Cloud services started.");
             return result;
@@ -464,7 +475,7 @@ import {
           break;
         case "service-start-distributed":
           await runAction("service-start-distributed", async () => {
-            const result = await invoke("service_start", { mode: "distributed" });
+            const result = await invokeGuardedMutation("service_start", { mode: "distributed" });
             await refreshServiceStatus();
             showCompletion("Distributed control plane started.");
             return result;
@@ -472,7 +483,7 @@ import {
           break;
         case "service-restart-cloud":
           await runAction("service-restart-cloud", async () => {
-            const result = await invoke("service_restart", { mode: "cloud" });
+            const result = await invokeGuardedMutation("service_restart", { mode: "cloud" });
             await refreshServiceStatus();
             showCompletion("Cloud services restarted.");
             return result;
@@ -480,7 +491,7 @@ import {
           break;
         case "service-stop":
           await runAction("service-stop", async () => {
-            const result = await invoke("service_stop");
+            const result = await invokeGuardedMutation("service_stop");
             await refreshServiceStatus();
             showCompletion("All services stopped.");
             return result;
@@ -498,7 +509,7 @@ import {
         case "wizard-start-active":
           await runAction("wizard-start-active", async () => {
             const mode = currentMode() === "distributed" ? "distributed" : currentMode() === "cloud" ? "cloud" : "local";
-            const result = await invoke("service_start", { mode });
+            const result = await invokeGuardedMutation("service_start", { mode });
             await refreshServiceStatus();
             showCompletion(`Started ${mode} profile.`);
             return result;
@@ -506,21 +517,25 @@ import {
           break;
         case "remote-bootstrap":
           await runAction("remote-bootstrap", async () => {
-            const result = await invoke("remote_bootstrap", currentRemoteBootstrapPayload());
+            const result = await invokeGuardedMutation("remote_bootstrap", {
+              remoteBootstrap: currentRemoteBootstrapPayload(),
+            });
             showCompletion("Remote workspace bootstrapped.");
             return result;
           });
           break;
         case "remote-start-agent":
           await runAction("remote-start-agent", async () => {
-            const result = await invoke("remote_start_agent", currentRemoteAgentPayload());
+            const result = await invokeGuardedMutation("remote_start_agent", {
+              remoteAgent: currentRemoteAgentPayload(),
+            });
             showCompletion("Remote solver agent started.");
             return result;
           });
           break;
         case "stage-release":
           await runAction("stage-release", () =>
-            invoke("stage_release", {
+            invokeGuardedMutation("stage_release", {
               platform: document.getElementById("release-platform").value,
               targetDir: document.getElementById("release-target").value.trim() || null,
             }),
@@ -529,7 +544,7 @@ import {
           break;
         case "build-installer":
           await runAction("build-installer", () =>
-            invoke("build_installer_bundle", {
+            invokeGuardedMutation("build_installer_bundle", {
               bundleMode:
                 document.getElementById("release-build-mode")?.value ||
                 document.getElementById("build-mode")?.value ||

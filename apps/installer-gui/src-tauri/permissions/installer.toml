@@ -1,0 +1,49 @@
+[[permission]]
+identifier = "allow-doctor-report"
+description = "Enables the doctor_report command."
+commands.allow = ["doctor_report"]
+
+[[permission]]
+identifier = "allow-export-launch"
+description = "Enables the export_launch command."
+commands.allow = ["export_launch"]
+
+[[permission]]
+identifier = "allow-read-env-file"
+description = "Enables the read_env_file command."
+commands.allow = ["read_env_file"]
+
+[[permission]]
+identifier = "allow-service-status"
+description = "Enables the service_status command."
+commands.allow = ["service_status"]
+
+[[permission]]
+identifier = "allow-get-global-language-preference"
+description = "Enables the get_global_language_preference command."
+commands.allow = ["get_global_language_preference"]
+
+[[permission]]
+identifier = "allow-set-global-language-preference"
+description = "Enables the set_global_language_preference command."
+commands.allow = ["set_global_language_preference"]
+
+[[permission]]
+identifier = "allow-read-runtime-log"
+description = "Enables the read_runtime_log command."
+commands.allow = ["read_runtime_log"]
+
+[[permission]]
+identifier = "allow-guarded-mutation-action"
+description = "Enables the guarded_mutation_action command."
+commands.allow = ["guarded_mutation_action"]
+
+[[permission]]
+identifier = "allow-start-log-stream"
+description = "Enables the start_log_stream command."
+commands.allow = ["start_log_stream"]
+
+[[permission]]
+identifier = "allow-stop-log-stream"
+description = "Enables the stop_log_stream command."
+commands.allow = ["stop_log_stream"]

@@ -1,0 +1,89 @@
+[[permission]]
+identifier = "allow-service-status"
+description = "Enables the service_status command."
+commands.allow = ["service_status"]
+
+[[permission]]
+identifier = "allow-hot-service-status"
+description = "Enables the hot_service_status command."
+commands.allow = ["hot_service_status"]
+
+[[permission]]
+identifier = "allow-read-runtime-log"
+description = "Enables the read_runtime_log command."
+commands.allow = ["read_runtime_log"]
+
+[[permission]]
+identifier = "allow-doctor-report"
+description = "Enables the doctor_report command."
+commands.allow = ["doctor_report"]
+
+[[permission]]
+identifier = "allow-desktop-status"
+description = "Enables the desktop_status command."
+commands.allow = ["desktop_status"]
+
+[[permission]]
+identifier = "allow-guarded-mutation-action"
+description = "Enables the guarded_mutation_action command."
+commands.allow = ["guarded_mutation_action"]
+
+[[permission]]
+identifier = "allow-project-bundle-inspect"
+description = "Enables the project_bundle_inspect command."
+commands.allow = ["project_bundle_inspect"]
+
+[[permission]]
+identifier = "allow-project-bundle-validate"
+description = "Enables the project_bundle_validate command."
+commands.allow = ["project_bundle_validate"]
+
+[[permission]]
+identifier = "allow-project-bundle-diff"
+description = "Enables the project_bundle_diff command."
+commands.allow = ["project_bundle_diff"]
+
+[[permission]]
+identifier = "allow-launch-workbench-gui"
+description = "Enables the launch_workbench_gui command."
+commands.allow = ["launch_workbench_gui"]
+
+[[permission]]
+identifier = "allow-launch-installer-gui"
+description = "Enables the launch_installer_gui command."
+commands.allow = ["launch_installer_gui"]
+
+[[permission]]
+identifier = "allow-get-global-language-preference"
+description = "Enables the get_global_language_preference command."
+commands.allow = ["get_global_language_preference"]
+
+[[permission]]
+identifier = "allow-set-global-language-preference"
+description = "Enables the set_global_language_preference command."
+commands.allow = ["set_global_language_preference"]
+
+[[permission]]
+identifier = "allow-open-docs-index"
+description = "Enables the open_docs_index command."
+commands.allow = ["open_docs_index"]
+
+[[permission]]
+identifier = "allow-open-current-line-doc"
+description = "Enables the open_current_line_doc command."
+commands.allow = ["open_current_line_doc"]
+
+[[permission]]
+identifier = "allow-open-operations-doc"
+description = "Enables the open_operations_doc command."
+commands.allow = ["open_operations_doc"]
+
+[[permission]]
+identifier = "allow-open-troubleshooting-doc"
+description = "Enables the open_troubleshooting_doc command."
+commands.allow = ["open_troubleshooting_doc"]
+
+[[permission]]
+identifier = "allow-hub-environment"
+description = "Enables the hub_environment command."
+commands.allow = ["hub_environment"]

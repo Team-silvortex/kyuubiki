@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main",
+  "description": "Least-privilege IPC surface for the Kyuubiki Installer main window.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "allow-doctor-report",
+    "allow-export-launch",
+    "allow-read-env-file",
+    "allow-service-status",
+    "allow-get-global-language-preference",
+    "allow-set-global-language-preference",
+    "allow-read-runtime-log",
+    "allow-guarded-mutation-action",
+    "allow-start-log-stream",
+    "allow-stop-log-stream"
+  ]
+}

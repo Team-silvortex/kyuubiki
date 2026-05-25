@@ -8,6 +8,7 @@ use std::thread;
 use std::time::Duration;
 
 use kyuubiki_desktop_runtime::{
+    append_desktop_audit_line as desktop_append_audit_line,
     log_path_for, read_global_language_preference as desktop_read_global_language_preference,
     read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
     service_start as desktop_service_start, service_status as desktop_service_status,
@@ -20,7 +21,9 @@ use kyuubiki_installer::{
     validate_env_file, workspace_root,
 };
 use serde::Serialize;
+use serde_json::json;
 use tauri::{AppHandle, Emitter};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize)]
 struct DoctorReportPayload {
@@ -56,7 +59,7 @@ struct EnvFormPayload {
     kyuubiki_direct_mesh_token: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WriteEnvPayload {
     deployment_mode: String,
@@ -77,44 +80,38 @@ struct WriteEnvPayload {
     kyuubiki_direct_mesh_token: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ReleasePayload {
     platform: String,
     target_dir: Option<String>,
 }
 
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ServicePayload {
-    mode: Option<String>,
-}
-
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PlatformPayload {
     platform: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct LogPayload {
     service: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct DesktopPreferencesInputPayload {
     language: String,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct BuildPayload {
     bundle_mode: Option<String>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RemoteBootstrapPayload {
     target_host: String,
@@ -123,7 +120,7 @@ struct RemoteBootstrapPayload {
     ssh_port: Option<u16>,
 }
 
-#[derive(serde::Deserialize)]
+#[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RemoteAgentPayload {
     target_host: String,
@@ -134,6 +131,20 @@ struct RemoteAgentPayload {
     advertise_host: String,
     agent_port: u16,
     ssh_port: Option<u16>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct InstallerGuardedMutationPayload {
+    action: String,
+    mode: Option<String>,
+    force: Option<bool>,
+    platform: Option<String>,
+    target_dir: Option<String>,
+    bundle_mode: Option<String>,
+    env_payload: Option<WriteEnvPayload>,
+    remote_bootstrap: Option<RemoteBootstrapPayload>,
+    remote_agent: Option<RemoteAgentPayload>,
 }
 
 #[derive(Serialize)]
@@ -174,8 +185,34 @@ fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
 
 static LOG_STREAMS: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
 
+const INSTALLER_GUARDED_MUTATION_AUDIT_FILE: &str = "installer-guarded-mutations.jsonl";
+
 fn log_streams() -> &'static Mutex<HashMap<String, Arc<AtomicBool>>> {
     LOG_STREAMS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn audit_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+fn append_installer_guarded_mutation_audit(
+    payload: &InstallerGuardedMutationPayload,
+    status: &str,
+    detail: &str,
+) {
+    let record = json!({
+        "ts": audit_timestamp(),
+        "action": payload.action,
+        "mode": payload.mode,
+        "platform": payload.platform,
+        "bundleMode": payload.bundle_mode,
+        "status": status,
+        "detail": detail,
+    });
+    let _ = desktop_append_audit_line(INSTALLER_GUARDED_MUTATION_AUDIT_FILE, &record.to_string());
 }
 
 #[tauri::command]
@@ -194,28 +231,6 @@ fn doctor_report() -> Result<DoctorReportPayload, String> {
             })
             .collect(),
     })
-}
-
-#[tauri::command]
-fn validate_env() -> Result<String, String> {
-    validate_env_file()
-}
-
-#[tauri::command]
-fn init_env(force: bool) -> Result<String, String> {
-    installer_init_env(force)
-}
-
-#[tauri::command]
-fn prepare_layout() -> Result<String, String> {
-    installer_prepare_layout()
-}
-
-#[tauri::command]
-fn bootstrap() -> Result<String, String> {
-    installer_prepare_layout()?;
-    installer_init_env(false)?;
-    validate_env_file()
 }
 
 #[tauri::command]
@@ -430,28 +445,13 @@ fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Re
     })
 }
 
-#[tauri::command]
-fn service_start(payload: ServicePayload) -> Result<String, String> {
-    let mode = match payload.mode.as_deref() {
+fn parse_service_mode(mode: Option<&str>) -> ServiceMode {
+    match mode {
         Some("local") => ServiceMode::Local,
         Some("cloud") => ServiceMode::Cloud,
         Some("distributed") => ServiceMode::Distributed,
         _ => ServiceMode::Default,
-    };
-
-    desktop_service_start(mode)
-}
-
-#[tauri::command]
-fn service_restart(payload: ServicePayload) -> Result<String, String> {
-    let mode = match payload.mode.as_deref() {
-        Some("local") => ServiceMode::Local,
-        Some("cloud") => ServiceMode::Cloud,
-        Some("distributed") => ServiceMode::Distributed,
-        _ => ServiceMode::Default,
-    };
-
-    desktop_service_restart(mode)
+    }
 }
 
 #[tauri::command]
@@ -484,11 +484,6 @@ fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String> {
     );
 
     run_remote_ssh(payload.ssh_port, &target, &remote_command)
-}
-
-#[tauri::command]
-fn service_stop() -> Result<String, String> {
-    desktop_service_stop()
 }
 
 #[tauri::command]
@@ -600,6 +595,65 @@ fn build_installer_bundle(payload: BuildPayload) -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<String, String> {
+    let result = match payload.action.as_str() {
+        "validate_env" => validate_env_file(),
+        "init_env" => installer_init_env(payload.force.unwrap_or(false)),
+        "prepare_layout" => installer_prepare_layout(),
+        "bootstrap" => {
+            installer_prepare_layout()?;
+            installer_init_env(false)?;
+            validate_env_file()
+        }
+        "write_env_file" => {
+            let env = payload
+                .env_payload
+                .clone()
+                .ok_or_else(|| "env payload is required".to_string())?;
+            write_env_file(env)
+        }
+        "service_start" => desktop_service_start(parse_service_mode(payload.mode.as_deref())),
+        "service_restart" => desktop_service_restart(parse_service_mode(payload.mode.as_deref())),
+        "service_stop" => desktop_service_stop(),
+        "remote_bootstrap" => {
+            let remote = payload
+                .remote_bootstrap
+                .clone()
+                .ok_or_else(|| "remote bootstrap payload is required".to_string())?;
+            remote_bootstrap(remote)
+        }
+        "remote_start_agent" => {
+            let remote = payload
+                .remote_agent
+                .clone()
+                .ok_or_else(|| "remote agent payload is required".to_string())?;
+            remote_start_agent(remote)
+        }
+        "stage_release" => {
+            let platform = payload
+                .platform
+                .clone()
+                .ok_or_else(|| "platform is required".to_string())?;
+            stage_release(ReleasePayload {
+                platform,
+                target_dir: payload.target_dir.clone(),
+            })
+        }
+        "build_installer_bundle" => build_installer_bundle(BuildPayload {
+            bundle_mode: payload.bundle_mode.clone(),
+        }),
+        other => Err(format!("unsupported guarded installer action: {other}")),
+    };
+
+    match &result {
+        Ok(detail) => append_installer_guarded_mutation_audit(&payload, "ok", detail),
+        Err(detail) => append_installer_guarded_mutation_audit(&payload, "failed", detail),
+    }
+
+    result
+}
+
 fn run_remote_ssh(ssh_port: Option<u16>, target: &str, remote_command: &str) -> Result<String, String> {
     let mut command = Command::new("ssh");
     if let Some(port) = ssh_port {
@@ -634,26 +688,15 @@ fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             doctor_report,
-            validate_env,
-            init_env,
-            prepare_layout,
-            bootstrap,
             export_launch,
-            stage_release,
             read_env_file,
-            write_env_file,
             service_status,
             get_global_language_preference,
             set_global_language_preference,
-            service_start,
-            service_restart,
-            service_stop,
-            remote_bootstrap,
-            remote_start_agent,
             read_runtime_log,
             start_log_stream,
             stop_log_stream,
-            build_installer_bundle
+            guarded_mutation_action
         ])
         .run(tauri::generate_context!())
         .expect("failed to run kyuubiki installer gui");

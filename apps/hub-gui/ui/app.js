@@ -4275,9 +4275,16 @@ async function rerunProjectActionEntry(entry) {
 
 async function runProjectBundleAction({ action, command, payload, outputTarget, successOutput }) {
   const executedAt = new Date().toISOString();
+  const tauriPayload =
+    command === "guarded_mutation_action"
+      ? {
+          action: PROJECT_ACTION_LABELS[action] ? `project_bundle_${action.split(" ").at(-1)}` : "",
+          ...payload,
+        }
+      : payload;
 
   try {
-    const result = await invokeTauri(command, { payload });
+    const result = await invokeTauri(command, { payload: tauriPayload });
     saveProjectBundleRecents({
       action,
       bundlePath: elements.projectBundlePath?.value,
@@ -4303,6 +4310,15 @@ async function runProjectBundleAction({ action, command, payload, outputTarget, 
     outputTarget(message);
     setBusy(false, "failed");
   }
+}
+
+async function invokeGuardedMutation(action, payload = {}) {
+  return invokeTauri("guarded_mutation_action", {
+    payload: {
+      action,
+      ...payload,
+    },
+  });
 }
 
 async function applyBrand() {
@@ -5721,7 +5737,7 @@ async function runActionWithOptions(action, options = {}) {
       case "project-normalize":
         await runProjectBundleAction({
           action: "project normalize",
-          command: "project_bundle_normalize",
+          command: "guarded_mutation_action",
           payload: currentProjectBundleOutputPayload(),
           outputTarget: setProjectBundleOutput,
         });
@@ -5729,7 +5745,7 @@ async function runActionWithOptions(action, options = {}) {
       case "project-unpack":
         await runProjectBundleAction({
           action: "project unpack",
-          command: "project_bundle_unpack",
+          command: "guarded_mutation_action",
           payload: currentProjectBundleOutputPayload(),
           outputTarget: setProjectBundleOutput,
         });
@@ -5737,7 +5753,7 @@ async function runActionWithOptions(action, options = {}) {
       case "project-pack":
         await runProjectBundleAction({
           action: "project pack",
-          command: "project_bundle_pack",
+          command: "guarded_mutation_action",
           payload: currentProjectBundleOutputPayload(),
           outputTarget: setProjectBundleOutput,
         });
@@ -5775,22 +5791,22 @@ async function runActionWithOptions(action, options = {}) {
         setBusy(false, "ready");
         return;
       case "start-local":
-        setOperationOutput(await invokeTauri("service_start", { payload: { mode: "local" } }));
+        setOperationOutput(await invokeGuardedMutation("service_start", { mode: "local" }));
         await refreshRuntimeStatus();
         setBusy(false, "ready");
         return;
       case "hot-start-local":
-        setOperationOutput(await invokeTauri("hot_service_start", { payload: { mode: "local" } }));
+        setOperationOutput(await invokeGuardedMutation("hot_service_start", { mode: "local" }));
         await refreshHotRuntimeStatus();
         setBusy(false, "ready");
         return;
       case "hot-start-cloud":
-        setOperationOutput(await invokeTauri("hot_service_start", { payload: { mode: "cloud" } }));
+        setOperationOutput(await invokeGuardedMutation("hot_service_start", { mode: "cloud" }));
         await refreshHotRuntimeStatus();
         setBusy(false, "ready");
         return;
       case "hot-start-distributed":
-        setOperationOutput(await invokeTauri("hot_service_start", { payload: { mode: "distributed" } }));
+        setOperationOutput(await invokeGuardedMutation("hot_service_start", { mode: "distributed" }));
         await refreshHotRuntimeStatus();
         setBusy(false, "ready");
         return;
@@ -5825,32 +5841,32 @@ async function runActionWithOptions(action, options = {}) {
         setBusy(false, "idle");
         return;
       case "hot-stop":
-        setOperationOutput(await invokeTauri("hot_service_stop"));
+        setOperationOutput(await invokeGuardedMutation("hot_service_stop"));
         await refreshHotRuntimeStatus();
         setBusy(false, "idle");
         return;
       case "start-cloud":
-        setOperationOutput(await invokeTauri("service_start", { payload: { mode: "cloud" } }));
+        setOperationOutput(await invokeGuardedMutation("service_start", { mode: "cloud" }));
         await refreshRuntimeStatus();
         setBusy(false, "ready");
         return;
       case "start-distributed":
-        setOperationOutput(await invokeTauri("service_start", { payload: { mode: "distributed" } }));
+        setOperationOutput(await invokeGuardedMutation("service_start", { mode: "distributed" }));
         await refreshRuntimeStatus();
         setBusy(false, "ready");
         return;
       case "restart-local":
-        setOperationOutput(await invokeTauri("service_restart", { payload: { mode: "local" } }));
+        setOperationOutput(await invokeGuardedMutation("service_restart", { mode: "local" }));
         await refreshRuntimeStatus();
         setBusy(false, "ready");
         return;
       case "stop-stack":
-        setOperationOutput(await invokeTauri("service_stop"));
+        setOperationOutput(await invokeGuardedMutation("service_stop"));
         await refreshRuntimeStatus();
         setBusy(false, "idle");
         return;
       case "validate-env":
-        setOperationOutput(await invokeTauri("validate_env"));
+        setOperationOutput(await invokeGuardedMutation("validate_env"));
         setBusy(false, "ready");
         return;
       case "run-doctor": {
@@ -5861,8 +5877,8 @@ async function runActionWithOptions(action, options = {}) {
       }
       case "desktop-stage":
         setOperationOutput(
-          await invokeTauri("desktop_stage", {
-            payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
+          await invokeGuardedMutation("desktop_stage", {
+            platform: elements.releasePlatform?.value || state.hostPlatform,
           }),
         );
         await refreshDesktopStatusOutput();
@@ -5875,15 +5891,15 @@ async function runActionWithOptions(action, options = {}) {
         return;
       case "desktop-verify":
         setOperationOutput(
-          await invokeTauri("desktop_verify", {
-            payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
+          await invokeGuardedMutation("desktop_verify", {
+            platform: elements.releasePlatform?.value || state.hostPlatform,
           }),
         );
         await refreshDesktopStatusOutput();
         setBusy(false, "ready");
         return;
       case "desktop-build-host":
-        setOperationOutput(await invokeTauri("desktop_build_host"));
+        setOperationOutput(await invokeGuardedMutation("desktop_build_host"));
         await refreshDesktopStatusOutput();
         setBusy(false, "ready");
         return;
@@ -6177,6 +6193,8 @@ renderPanelPages("tools");
 renderHubRecents();
 applyAssistantSettings();
 renderAssistantPanel();
+rerenderLocalizedHubShell();
+syncDesktopStates();
 setSection(state.activeSection);
 setBusy(false, "idle");
 await refreshRuntimeStatus();
