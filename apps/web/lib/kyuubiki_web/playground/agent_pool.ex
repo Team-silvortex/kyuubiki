@@ -538,5 +538,6 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp preferred_tags("solve_plane_quad_2d"), do: ["plane", "mesh", "quad"]
   defp preferred_tags("solve_thermal_plane_quad_2d"), do: ["plane", "thermal", "mesh", "quad"]
   defp preferred_tags("solve_frame_2d"), do: ["frame", "beam", "bending"]
+  defp preferred_tags("solve_frame_3d"), do: ["frame", "space", "beam", "bending"]
   defp preferred_tags(_method), do: ["general", "cpu"]
 end

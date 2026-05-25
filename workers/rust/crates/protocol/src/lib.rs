@@ -933,6 +933,8 @@ pub enum RpcMethod {
     SolveTruss2d,
     #[serde(rename = "solve_truss_3d")]
     SolveTruss3d,
+    #[serde(rename = "solve_frame_3d")]
+    SolveFrame3d,
     #[serde(rename = "solve_plane_triangle_2d")]
     SolvePlaneTriangle2d,
     #[serde(rename = "solve_thermal_plane_triangle_2d")]
@@ -1062,6 +1064,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveTorsion1d,
                 RpcMethod::SolveTruss2d,
                 RpcMethod::SolveTruss3d,
+                RpcMethod::SolveFrame3d,
                 RpcMethod::SolvePlaneTriangle2d,
                 RpcMethod::SolveThermalPlaneTriangle2d,
                 RpcMethod::SolvePlaneQuad2d,
@@ -1244,6 +1247,18 @@ impl AgentDescriptor {
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveTruss3d],
                     tags: vec!["truss".to_string(), "space".to_string(), "cpu".to_string()],
+                },
+                CapabilityDescriptor {
+                    id: "frame-3d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveFrame3d],
+                    tags: vec![
+                        "frame".to_string(),
+                        "space".to_string(),
+                        "beam".to_string(),
+                        "bending".to_string(),
+                        "cpu".to_string(),
+                    ],
                 },
                 CapabilityDescriptor {
                     id: "plane-triangle-2d".to_string(),
@@ -1440,6 +1455,99 @@ pub struct SolveTruss3dResult {
     pub nodes: Vec<Truss3dNodeResult>,
     pub elements: Vec<Truss3dElementResult>,
     pub max_displacement: f64,
+    pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame3dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_z: bool,
+    pub fix_rx: bool,
+    pub fix_ry: bool,
+    pub fix_rz: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub load_z: f64,
+    pub moment_x: f64,
+    pub moment_y: f64,
+    pub moment_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame3dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub shear_modulus: f64,
+    pub torsion_constant: f64,
+    pub moment_of_inertia_y: f64,
+    pub moment_of_inertia_z: f64,
+    pub section_modulus_y: f64,
+    pub section_modulus_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame3dRequest {
+    pub nodes: Vec<Frame3dNodeInput>,
+    pub elements: Vec<Frame3dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame3dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub uz: f64,
+    pub rx: f64,
+    pub ry: f64,
+    pub rz: f64,
+    pub displacement_magnitude: f64,
+    pub rotation_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Frame3dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub axial_force_i: f64,
+    pub shear_force_y_i: f64,
+    pub shear_force_z_i: f64,
+    pub torsion_i: f64,
+    pub moment_y_i: f64,
+    pub moment_z_i: f64,
+    pub axial_force_j: f64,
+    pub shear_force_y_j: f64,
+    pub shear_force_z_j: f64,
+    pub torsion_j: f64,
+    pub moment_y_j: f64,
+    pub moment_z_j: f64,
+    pub axial_stress: f64,
+    pub max_bending_stress: f64,
+    pub max_combined_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveFrame3dResult {
+    pub input: SolveFrame3dRequest,
+    pub nodes: Vec<Frame3dNodeResult>,
+    pub elements: Vec<Frame3dElementResult>,
+    pub max_displacement: f64,
+    pub max_rotation: f64,
+    pub max_moment: f64,
     pub max_stress: f64,
 }
 
@@ -1866,6 +1974,7 @@ pub enum AnalysisResult {
     Torsion1d(SolveTorsion1dResult),
     Truss2d(SolveTruss2dResult),
     Truss3d(SolveTruss3dResult),
+    Frame3d(SolveFrame3dResult),
     PlaneTriangle2d(SolvePlaneTriangle2dResult),
     ThermalPlaneTriangle2d(SolveThermalPlaneTriangle2dResult),
     PlaneQuad2d(SolvePlaneQuad2dResult),
@@ -1902,10 +2011,10 @@ pub struct ResultChunkResponse {
 mod tests {
     use super::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput,
-        Frame2dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
+        Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
         HeatPlaneTriangleElementInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent,
         RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
-        SolveBeam1dRequest, SolveFrame2dRequest, SolveHeatBar1dRequest,
+        SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
         SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
@@ -2391,6 +2500,75 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveFrame2d);
         assert_eq!(decoded.id, "rpc-frame-2d");
+    }
+
+    #[test]
+    fn serializes_frame_3d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-frame-3d".to_string(),
+            method: RpcMethod::SolveFrame3d,
+            params: serde_json::to_value(SolveFrame3dRequest {
+                nodes: vec![
+                    Frame3dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        fix_rx: true,
+                        fix_ry: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                        moment_x: 0.0,
+                        moment_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                    Frame3dNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: false,
+                        fix_y: false,
+                        fix_z: false,
+                        fix_rx: false,
+                        fix_ry: false,
+                        fix_rz: false,
+                        load_x: 0.0,
+                        load_y: -1000.0,
+                        load_z: 0.0,
+                        moment_x: 0.0,
+                        moment_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                ],
+                elements: vec![Frame3dElementInput {
+                    id: "f0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.01,
+                    youngs_modulus: 210.0e9,
+                    shear_modulus: 80.0e9,
+                    torsion_constant: 2.0e-6,
+                    moment_of_inertia_y: 8.0e-6,
+                    moment_of_inertia_z: 6.0e-6,
+                    section_modulus_y: 1.6e-4,
+                    section_modulus_z: 1.3e-4,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveFrame3d);
+        assert_eq!(decoded.id, "rpc-frame-3d");
     }
 
     #[test]

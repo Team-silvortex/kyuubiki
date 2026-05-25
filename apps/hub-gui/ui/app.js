@@ -4682,6 +4682,8 @@ function renderProjectsPages() {
     pane.classList.toggle("hidden", !active);
     pane.setAttribute("aria-hidden", String(!active));
   });
+
+  rerenderLocalizedHubShell();
 }
 
 function setProjectsPage(page) {
@@ -4707,6 +4709,8 @@ function renderPanelPages(group) {
       pane.classList.toggle("hidden", !active);
       pane.setAttribute("aria-hidden", String(!active));
     });
+
+  rerenderLocalizedHubShell();
 }
 
 function setPanelPage(group, page) {

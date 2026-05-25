@@ -1,11 +1,13 @@
 use kyuubiki_protocol::{
     Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
+    Frame3dElementResult, Frame3dNodeResult,
     HeatBar1dElementResult, HeatBar1dNodeResult, HeatPlaneNodeResult,
     HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput,
     HeatPlaneTriangleElementResult, Job, JobStatus, NodeResult, PlaneNodeResult,
     PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
     PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult,
     SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
+    SolveFrame3dRequest, SolveFrame3dResult,
     SolveHeatBar1dRequest, SolveHeatBar1dResult, SolveHeatPlaneQuad2dRequest,
     SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
     SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
@@ -2081,6 +2083,234 @@ pub fn solve_truss_3d(request: &SolveTruss3dRequest) -> Result<SolveTruss3dResul
         nodes,
         elements,
         max_displacement,
+        max_stress,
+    })
+}
+
+pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResult, String> {
+    validate_frame_3d_request(request)?;
+
+    let dof_count = request.nodes.len() * 6;
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut force_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        force_vector[index * 6] = node.load_x;
+        force_vector[index * 6 + 1] = node.load_y;
+        force_vector[index * 6 + 2] = node.load_z;
+        force_vector[index * 6 + 3] = node.moment_x;
+        force_vector[index * 6 + 4] = node.moment_y;
+        force_vector[index * 6 + 5] = node.moment_z;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        let rotation = frame3d_rotation(dx, dy, dz, length)?;
+        let local_stiffness = frame3d_local_stiffness(
+            element.area,
+            element.youngs_modulus,
+            element.shear_modulus,
+            element.torsion_constant,
+            element.moment_of_inertia_y,
+            element.moment_of_inertia_z,
+            length,
+        );
+        let transform = frame3d_transform(&rotation);
+        let global_element_stiffness = transform_frame3d_stiffness(&local_stiffness, &transform);
+        let map = frame3d_dof_map(element.node_i, element.node_j);
+
+        for row in 0..12 {
+            for column in 0..12 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    global_element_stiffness[row][column],
+                );
+            }
+        }
+    }
+
+    let constrained = request
+        .nodes
+        .iter()
+        .enumerate()
+        .flat_map(|(index, node)| {
+            let mut dofs = Vec::new();
+            if node.fix_x {
+                dofs.push(index * 6);
+            }
+            if node.fix_y {
+                dofs.push(index * 6 + 1);
+            }
+            if node.fix_z {
+                dofs.push(index * 6 + 2);
+            }
+            if node.fix_rx {
+                dofs.push(index * 6 + 3);
+            }
+            if node.fix_ry {
+                dofs.push(index * 6 + 4);
+            }
+            if node.fix_rz {
+                dofs.push(index * 6 + 5);
+            }
+            dofs
+        })
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_force, free) =
+        reduce_sparse_system(&global_stiffness, &force_vector, &constrained);
+    let reduced_displacements = solve_spd_system(&reduced_stiffness, &reduced_force)?;
+
+    let mut displacements = vec![0.0; dof_count];
+    for (index, &dof) in free.iter().enumerate() {
+        displacements[dof] = reduced_displacements[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| {
+            let ux = displacements[index * 6];
+            let uy = displacements[index * 6 + 1];
+            let uz = displacements[index * 6 + 2];
+            let rx = displacements[index * 6 + 3];
+            let ry = displacements[index * 6 + 4];
+            let rz = displacements[index * 6 + 5];
+
+            Frame3dNodeResult {
+                index,
+                id: node.id.clone(),
+                x: node.x,
+                y: node.y,
+                z: node.z,
+                ux,
+                uy,
+                uz,
+                rx,
+                ry,
+                rz,
+                displacement_magnitude: (ux * ux + uy * uy + uz * uz).sqrt(),
+                rotation_magnitude: (rx * rx + ry * ry + rz * rz).sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let dx = node_j.x - node_i.x;
+            let dy = node_j.y - node_i.y;
+            let dz = node_j.z - node_i.z;
+            let length = (dx * dx + dy * dy + dz * dz).sqrt();
+            let rotation = frame3d_rotation(dx, dy, dz, length)
+                .expect("validated 3d frame element should define a stable local axis");
+            let local_stiffness = frame3d_local_stiffness(
+                element.area,
+                element.youngs_modulus,
+                element.shear_modulus,
+                element.torsion_constant,
+                element.moment_of_inertia_y,
+                element.moment_of_inertia_z,
+                length,
+            );
+            let transform = frame3d_transform(&rotation);
+            let map = frame3d_dof_map(element.node_i, element.node_j);
+            let global_displacements = [
+                displacements[map[0]],
+                displacements[map[1]],
+                displacements[map[2]],
+                displacements[map[3]],
+                displacements[map[4]],
+                displacements[map[5]],
+                displacements[map[6]],
+                displacements[map[7]],
+                displacements[map[8]],
+                displacements[map[9]],
+                displacements[map[10]],
+                displacements[map[11]],
+            ];
+            let local_displacements = multiply_matrix_vector_12x12(&transform, &global_displacements);
+            let local_forces = multiply_matrix_vector_12x12(&local_stiffness, &local_displacements);
+            let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
+            let bending_stress_y = local_forces[4]
+                .abs()
+                .max(local_forces[10].abs())
+                / element.section_modulus_y;
+            let bending_stress_z = local_forces[5]
+                .abs()
+                .max(local_forces[11].abs())
+                / element.section_modulus_z;
+            let max_bending_stress = bending_stress_y + bending_stress_z;
+            let max_combined_stress = axial_stress + max_bending_stress;
+
+            Frame3dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                axial_force_i: local_forces[0],
+                shear_force_y_i: local_forces[1],
+                shear_force_z_i: local_forces[2],
+                torsion_i: local_forces[3],
+                moment_y_i: local_forces[4],
+                moment_z_i: local_forces[5],
+                axial_force_j: local_forces[6],
+                shear_force_y_j: local_forces[7],
+                shear_force_z_j: local_forces[8],
+                torsion_j: local_forces[9],
+                moment_y_j: local_forces[10],
+                moment_z_j: local_forces[11],
+                axial_stress,
+                max_bending_stress,
+                max_combined_stress,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_displacement = nodes
+        .iter()
+        .map(|node| node.displacement_magnitude)
+        .fold(0.0_f64, f64::max);
+    let max_rotation = nodes
+        .iter()
+        .map(|node| node.rotation_magnitude)
+        .fold(0.0_f64, f64::max);
+    let max_moment = elements
+        .iter()
+        .flat_map(|element| {
+            [
+                element.moment_y_i.abs(),
+                element.moment_z_i.abs(),
+                element.moment_y_j.abs(),
+                element.moment_z_j.abs(),
+            ]
+        })
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.max_combined_stress)
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveFrame3dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_displacement,
+        max_rotation,
+        max_moment,
         max_stress,
     })
 }
@@ -4307,6 +4537,76 @@ fn validate_truss_3d_request(request: &SolveTruss3dRequest) -> Result<(), String
     Ok(())
 }
 
+fn validate_frame_3d_request(request: &SolveFrame3dRequest) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("3d frame must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("3d frame must define at least one element".to_string());
+    }
+
+    let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
+        sum
+        + usize::from(node.fix_x)
+        + usize::from(node.fix_y)
+        + usize::from(node.fix_z)
+        + usize::from(node.fix_rx)
+        + usize::from(node.fix_ry)
+        + usize::from(node.fix_rz)
+    });
+    if constrained_dofs < 6 {
+        return Err("3d frame must restrain at least six degrees of freedom".to_string());
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("3d frame element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("3d frame element must connect two distinct nodes".to_string());
+        }
+        if !(element.area.is_finite() && element.area > 0.0) {
+            return Err("3d frame element area must be positive".to_string());
+        }
+        if !(element.youngs_modulus.is_finite() && element.youngs_modulus > 0.0) {
+            return Err("3d frame element youngs_modulus must be positive".to_string());
+        }
+        if !(element.shear_modulus.is_finite() && element.shear_modulus > 0.0) {
+            return Err("3d frame element shear_modulus must be positive".to_string());
+        }
+        if !(element.torsion_constant.is_finite() && element.torsion_constant > 0.0) {
+            return Err("3d frame element torsion_constant must be positive".to_string());
+        }
+        if !(element.moment_of_inertia_y.is_finite() && element.moment_of_inertia_y > 0.0) {
+            return Err("3d frame element moment_of_inertia_y must be positive".to_string());
+        }
+        if !(element.moment_of_inertia_z.is_finite() && element.moment_of_inertia_z > 0.0) {
+            return Err("3d frame element moment_of_inertia_z must be positive".to_string());
+        }
+        if !(element.section_modulus_y.is_finite() && element.section_modulus_y > 0.0) {
+            return Err("3d frame element section_modulus_y must be positive".to_string());
+        }
+        if !(element.section_modulus_z.is_finite() && element.section_modulus_z > 0.0) {
+            return Err("3d frame element section_modulus_z must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let dx = node_j.x - node_i.x;
+        let dy = node_j.y - node_i.y;
+        let dz = node_j.z - node_i.z;
+        let length = (dx * dx + dy * dy + dz * dz).sqrt();
+        if length <= 1.0e-12 {
+            return Err("3d frame element length must be positive".to_string());
+        }
+
+        frame3d_rotation(dx, dy, dz, length)?;
+    }
+
+    Ok(())
+}
+
 fn validate_thermal_truss_3d_request(request: &SolveThermalTruss3dRequest) -> Result<(), String> {
     if request.nodes.len() < 3 {
         return Err("3d thermal truss must define at least three nodes".to_string());
@@ -5040,10 +5340,145 @@ fn transform_frame_stiffness(
     multiply_matrix_6x6_6x6(&left, transform)
 }
 
+fn frame3d_rotation(dx: f64, dy: f64, dz: f64, length: f64) -> Result<[[f64; 3]; 3], String> {
+    if length <= 1.0e-12 {
+        return Err("3d frame element length must be positive".to_string());
+    }
+
+    let local_x = [dx / length, dy / length, dz / length];
+    let reference = if local_x[2].abs() < 0.9 {
+        [0.0, 0.0, 1.0]
+    } else {
+        [0.0, 1.0, 0.0]
+    };
+
+    let mut local_y = cross3(reference, local_x);
+    let local_y_norm = norm3(local_y);
+    if local_y_norm <= 1.0e-12 {
+        return Err("3d frame element orientation is ill-defined".to_string());
+    }
+    local_y = scale3(local_y, 1.0 / local_y_norm);
+    let local_z = cross3(local_x, local_y);
+
+    Ok([local_x, local_y, local_z])
+}
+
+fn frame3d_local_stiffness(
+    area: f64,
+    youngs_modulus: f64,
+    shear_modulus: f64,
+    torsion_constant: f64,
+    moment_of_inertia_y: f64,
+    moment_of_inertia_z: f64,
+    length: f64,
+) -> [[f64; 12]; 12] {
+    let axial = youngs_modulus * area / length;
+    let torsion = shear_modulus * torsion_constant / length;
+
+    let by1 = 12.0 * youngs_modulus * moment_of_inertia_y / length.powi(3);
+    let by2 = 6.0 * youngs_modulus * moment_of_inertia_y / length.powi(2);
+    let by3 = 4.0 * youngs_modulus * moment_of_inertia_y / length;
+    let by4 = 2.0 * youngs_modulus * moment_of_inertia_y / length;
+
+    let bz1 = 12.0 * youngs_modulus * moment_of_inertia_z / length.powi(3);
+    let bz2 = 6.0 * youngs_modulus * moment_of_inertia_z / length.powi(2);
+    let bz3 = 4.0 * youngs_modulus * moment_of_inertia_z / length;
+    let bz4 = 2.0 * youngs_modulus * moment_of_inertia_z / length;
+
+    let mut k = [[0.0; 12]; 12];
+
+    k[0][0] = axial;
+    k[0][6] = -axial;
+    k[6][0] = -axial;
+    k[6][6] = axial;
+
+    k[3][3] = torsion;
+    k[3][9] = -torsion;
+    k[9][3] = -torsion;
+    k[9][9] = torsion;
+
+    let yz_idx = [1usize, 5usize, 7usize, 11usize];
+    let yz_vals = [
+        [bz1, bz2, -bz1, bz2],
+        [bz2, bz3, -bz2, bz4],
+        [-bz1, -bz2, bz1, -bz2],
+        [bz2, bz4, -bz2, bz3],
+    ];
+    for row in 0..4 {
+        for column in 0..4 {
+            k[yz_idx[row]][yz_idx[column]] = yz_vals[row][column];
+        }
+    }
+
+    let zy_idx = [2usize, 4usize, 8usize, 10usize];
+    let zy_vals = [
+        [by1, -by2, -by1, -by2],
+        [-by2, by3, by2, by4],
+        [-by1, by2, by1, by2],
+        [-by2, by4, by2, by3],
+    ];
+    for row in 0..4 {
+        for column in 0..4 {
+            k[zy_idx[row]][zy_idx[column]] = zy_vals[row][column];
+        }
+    }
+
+    k
+}
+
+fn frame3d_transform(rotation: &[[f64; 3]; 3]) -> [[f64; 12]; 12] {
+    let mut transform = [[0.0; 12]; 12];
+    for block in 0..4 {
+        let offset = block * 3;
+        for row in 0..3 {
+            for column in 0..3 {
+                transform[offset + row][offset + column] = rotation[row][column];
+            }
+        }
+    }
+    transform
+}
+
+fn transform_frame3d_stiffness(
+    local_stiffness: &[[f64; 12]; 12],
+    transform: &[[f64; 12]; 12],
+) -> [[f64; 12]; 12] {
+    let transform_t = transpose_12x12(transform);
+    let left = multiply_matrix_12x12_12x12(&transform_t, local_stiffness);
+    multiply_matrix_12x12_12x12(&left, transform)
+}
+
+fn frame3d_dof_map(node_i: usize, node_j: usize) -> [usize; 12] {
+    [
+        node_i * 6,
+        node_i * 6 + 1,
+        node_i * 6 + 2,
+        node_i * 6 + 3,
+        node_i * 6 + 4,
+        node_i * 6 + 5,
+        node_j * 6,
+        node_j * 6 + 1,
+        node_j * 6 + 2,
+        node_j * 6 + 3,
+        node_j * 6 + 4,
+        node_j * 6 + 5,
+    ]
+}
+
 fn transpose_6x6(input: &[[f64; 6]; 6]) -> [[f64; 6]; 6] {
     let mut output = [[0.0; 6]; 6];
     for row in 0..6 {
         for column in 0..6 {
+            output[column][row] = input[row][column];
+        }
+    }
+    output
+}
+
+fn transpose_12x12(input: &[[f64; 12]; 12]) -> [[f64; 12]; 12] {
+    let mut output = [[0.0; 12]; 12];
+    for row in 0..12 {
+        for column in 0..12 {
             output[column][row] = input[row][column];
         }
     }
@@ -5062,10 +5497,30 @@ fn multiply_matrix_6x6_6x6(lhs: &[[f64; 6]; 6], rhs: &[[f64; 6]; 6]) -> [[f64; 6
     output
 }
 
+fn multiply_matrix_12x12_12x12(lhs: &[[f64; 12]; 12], rhs: &[[f64; 12]; 12]) -> [[f64; 12]; 12] {
+    let mut output = [[0.0; 12]; 12];
+    for row in 0..12 {
+        for column in 0..12 {
+            output[row][column] = (0..12)
+                .map(|index| lhs[row][index] * rhs[index][column])
+                .sum();
+        }
+    }
+    output
+}
+
 fn multiply_matrix_vector_6x6(matrix: &[[f64; 6]; 6], vector: &[f64; 6]) -> [f64; 6] {
     let mut output = [0.0; 6];
     for row in 0..6 {
         output[row] = (0..6).map(|index| matrix[row][index] * vector[index]).sum();
+    }
+    output
+}
+
+fn multiply_matrix_vector_12x12(matrix: &[[f64; 12]; 12], vector: &[f64; 12]) -> [f64; 12] {
+    let mut output = [0.0; 12];
+    for row in 0..12 {
+        output[row] = (0..12).map(|index| matrix[row][index] * vector[index]).sum();
     }
     output
 }
@@ -5076,6 +5531,22 @@ fn multiply_matrix_vector_4x4(matrix: &[[f64; 4]; 4], vector: &[f64; 4]) -> [f64
         output[row] = (0..4).map(|index| matrix[row][index] * vector[index]).sum();
     }
     output
+}
+
+fn cross3(lhs: [f64; 3], rhs: [f64; 3]) -> [f64; 3] {
+    [
+        lhs[1] * rhs[2] - lhs[2] * rhs[1],
+        lhs[2] * rhs[0] - lhs[0] * rhs[2],
+        lhs[0] * rhs[1] - lhs[1] * rhs[0],
+    ]
+}
+
+fn norm3(vector: [f64; 3]) -> f64 {
+    (vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]).sqrt()
+}
+
+fn scale3(vector: [f64; 3], scalar: f64) -> [f64; 3] {
+    [vector[0] * scalar, vector[1] * scalar, vector[2] * scalar]
 }
 
 fn subtract_vector_4(lhs: &[f64; 4], rhs: &[f64; 4]) -> [f64; 4] {
@@ -5588,7 +6059,7 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_heat_bar_1d,
+        MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
         solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
         solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
         solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
@@ -5598,10 +6069,11 @@ mod tests {
     };
     use kyuubiki_protocol::{
         Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
+        Frame3dElementInput, Frame3dNodeInput,
         HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
         HeatPlaneTriangleElementInput, Job, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
         PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
-        SolveFrame2dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+        SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
         SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
         SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
@@ -6665,6 +7137,79 @@ mod tests {
         };
 
         let result = solve_frame_2d(&request).expect("frame solve should succeed");
+
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.max_displacement > 0.0);
+        assert!(result.max_rotation > 0.0);
+        assert!(result.max_moment > 0.0);
+        assert!(result.max_stress > 0.0);
+
+        let tip = &result.nodes[1];
+        let expected_tip_uy = (1000.0 * 2.0_f64.powi(3)) / (3.0 * 210.0e9 * 8.0e-6);
+        let expected_tip_rz = (1000.0 * 2.0_f64.powi(2)) / (2.0 * 210.0e9 * 8.0e-6);
+
+        assert!((tip.uy.abs() - expected_tip_uy).abs() / expected_tip_uy < 1.0e-6);
+        assert!((tip.rz.abs() - expected_tip_rz).abs() / expected_tip_rz < 1.0e-6);
+    }
+
+    #[test]
+    fn solves_a_small_frame_3d_cantilever() {
+        let request = SolveFrame3dRequest {
+            nodes: vec![
+                Frame3dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    fix_z: true,
+                    fix_rx: true,
+                    fix_ry: true,
+                    fix_rz: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    load_z: 0.0,
+                    moment_x: 0.0,
+                    moment_y: 0.0,
+                    moment_z: 0.0,
+                },
+                Frame3dNodeInput {
+                    id: "n1".to_string(),
+                    x: 2.0,
+                    y: 0.0,
+                    z: 0.0,
+                    fix_x: false,
+                    fix_y: false,
+                    fix_z: false,
+                    fix_rx: false,
+                    fix_ry: false,
+                    fix_rz: false,
+                    load_x: 0.0,
+                    load_y: -1000.0,
+                    load_z: 0.0,
+                    moment_x: 0.0,
+                    moment_y: 0.0,
+                    moment_z: 0.0,
+                },
+            ],
+            elements: vec![Frame3dElementInput {
+                id: "f0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                youngs_modulus: 210.0e9,
+                shear_modulus: 80.0e9,
+                torsion_constant: 5.0e-6,
+                moment_of_inertia_y: 8.0e-6,
+                moment_of_inertia_z: 8.0e-6,
+                section_modulus_y: 1.6e-4,
+                section_modulus_z: 1.6e-4,
+            }],
+        };
+
+        let result = solve_frame_3d(&request).expect("3d frame solve should succeed");
 
         assert_eq!(result.nodes.len(), 2);
         assert_eq!(result.elements.len(), 1);
