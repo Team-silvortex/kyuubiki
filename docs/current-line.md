@@ -40,12 +40,12 @@ Recent operator work is following the `tamamono 1.x` rule in the right order:
 - add sample-backed orchestrated smoke
 - then decide whether wider UI exposure is worth it
 
-The current example is the new `frame_3d` / `thermal_frame_3d` backend line:
+The current example is the new `frame_3d` / `thermal_frame_3d` / `thermal_truss_3d` backend line:
 
 - Rust solver support exists
 - protocol and engine paths exist
 - agent RPC handling is now wired through
-- orchestrated API smoke exists for both studies
+- orchestrated API smoke exists for all three studies
 
 That is the kind of operator growth this line should prefer: narrower, more
 verified, and less speculative.

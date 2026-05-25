@@ -74,7 +74,7 @@ If you want the `v1.x` quality direction first:
   thermal-bar, and beam seed cases.
 - `tests/integration/README.md`
   Cross-process smoke map, including the current orchestrated API path for
-  `axial_bar_1d`, `frame_3d`, and `thermal_frame_3d`.
+  `axial_bar_1d`, `frame_3d`, `thermal_frame_3d`, and `thermal_truss_3d`.
 - `tdd.md`
   Test-first expectations across Elixir, Rust, and shared contract work.
 - `development.md`

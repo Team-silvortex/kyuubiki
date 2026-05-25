@@ -3,12 +3,13 @@ use kyuubiki_protocol::{
     Frame3dElementInput, Frame3dNodeInput, PlaneNodeInput, PlaneTriangleElementInput,
     SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
     SolvePlaneTriangle2dRequest, SolveThermalBar1dRequest, SolveThermalFrame3dRequest,
-    SolveTruss2dRequest, ThermalBar1dElementInput, ThermalBar1dNodeInput,
-    ThermalFrame3dElementInput, ThermalFrame3dNodeInput, TrussElementInput, TrussNodeInput,
+    SolveThermalTruss3dRequest, SolveTruss2dRequest, ThermalBar1dElementInput,
+    ThermalBar1dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
+    ThermalTruss3dElementInput, ThermalTruss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_plane_triangle_2d,
-    solve_thermal_bar_1d, solve_thermal_frame_3d, solve_truss_2d,
+    solve_thermal_bar_1d, solve_thermal_frame_3d, solve_thermal_truss_3d, solve_truss_2d,
 };
 
 fn assert_close_abs(actual: f64, expected: f64, tolerance: f64, label: &str) {
@@ -459,6 +460,109 @@ fn accuracy_baseline_thermal_frame_3d_restrained_uniform_rise_and_gradients() {
         30.0,
         1.0e-12,
         "thermal_frame_3d max temperature gradient",
+    );
+}
+
+#[test]
+fn accuracy_baseline_thermal_truss_3d_restrained_uniform_rise() {
+    let result = solve_thermal_truss_3d(&SolveThermalTruss3dRequest {
+        nodes: vec![
+            ThermalTruss3dNodeInput {
+                id: "n0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalTruss3dNodeInput {
+                id: "n1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalTruss3dNodeInput {
+                id: "n2".to_string(),
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+                temperature_delta: 40.0,
+            },
+        ],
+        elements: vec![
+            ThermalTruss3dElementInput {
+                id: "tt3-0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                thermal_expansion: 12.0e-6,
+            },
+            ThermalTruss3dElementInput {
+                id: "tt3-1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                thermal_expansion: 12.0e-6,
+            },
+            ThermalTruss3dElementInput {
+                id: "tt3-2".to_string(),
+                node_i: 2,
+                node_j: 0,
+                area: 0.01,
+                youngs_modulus: 210.0e9,
+                thermal_expansion: 12.0e-6,
+            },
+        ],
+    })
+    .expect("thermal_truss_3d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.0,
+        1.0e-12,
+        "thermal_truss_3d max displacement",
+    );
+    assert_close_rel(
+        result.max_stress,
+        100_800_000.0,
+        1.0e-9,
+        "thermal_truss_3d max stress magnitude",
+    );
+    assert_close_rel(
+        result.max_axial_force,
+        1_008_000.0,
+        1.0e-9,
+        "thermal_truss_3d max axial force magnitude",
+    );
+    assert_close_abs(
+        result.max_temperature_delta,
+        40.0,
+        1.0e-12,
+        "thermal_truss_3d max temperature delta",
+    );
+    assert!(
+        result.elements[0].stress < 0.0,
+        "thermal_truss_3d stress sign should indicate compression"
     );
 }
 
