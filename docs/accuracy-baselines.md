@@ -62,6 +62,7 @@ After this seed set, the next best families are:
 3. `heat_plane_quad_2d`
 4. `thermal_truss_2d`
 5. `thermal_plane_triangle_2d`
+6. `thermal_frame_3d`
 
 ## Related docs
 

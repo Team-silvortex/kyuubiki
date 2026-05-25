@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,6 +15,10 @@ function runKyuubiki(...args) {
     stdio: "pipe",
     encoding: "utf8",
   });
+}
+
+function loadSampleModel(filename) {
+  return JSON.parse(readFileSync(`${ROOT}/apps/frontend/public/models/${filename}`, "utf8"));
 }
 
 async function waitFor(url, predicate, timeoutMs = 30_000, intervalMs = 500) {
@@ -84,6 +89,62 @@ test("local workstation stack can solve an axial-bar job end-to-end", async () =
     assert.ok(finalPayload.result.max_displacement > 0);
     assert.ok(Array.isArray(finalPayload.result.nodes));
     assert.ok(Array.isArray(finalPayload.result.elements));
+  } finally {
+    try {
+      runKyuubiki("stop");
+    } catch {
+      // keep cleanup best-effort for local integration runs
+    }
+  }
+}, { timeout: 120_000 });
+
+test("local workstation stack can solve a thermal-frame-3d sample end-to-end", async () => {
+  try {
+    runKyuubiki("restart-local");
+
+    const health = await waitFor(
+      `${ORCHESTRATOR_URL}/api/health`,
+      (payload) =>
+        payload?.status === "ok" &&
+        Array.isArray(payload?.solver_agents) &&
+        payload.solver_agents.length >= 1,
+      60_000,
+    );
+
+    assert.equal(health.status, "ok");
+
+    const submitResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/fem/thermal-frame-3d/jobs`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(loadSampleModel("thermal-frame-3d.json")),
+    });
+
+    assert.equal(submitResponse.status, 202);
+    const submitted = await submitResponse.json();
+    const jobId = submitted?.job?.job_id;
+    assert.ok(jobId, "expected a thermal frame 3d job_id from the orchestrator");
+
+    const finalPayload = await waitFor(
+      `${ORCHESTRATOR_URL}/api/v1/jobs/${jobId}`,
+      (payload) => payload?.job?.status === "completed",
+      60_000,
+      750,
+    );
+
+    assert.equal(finalPayload.job.status, "completed");
+    assert.match(finalPayload.job.worker_id, /rust-agent-rpc/);
+    assert.ok(finalPayload.result.max_displacement <= 1.0e-9);
+    assert.ok(finalPayload.result.max_axial_force > 0);
+    assert.ok(finalPayload.result.max_moment > 0);
+    assert.ok(finalPayload.result.max_stress > 0);
+    assert.equal(finalPayload.result.max_temperature_delta, 35);
+    assert.equal(finalPayload.result.max_temperature_gradient, 30);
+    assert.ok(Array.isArray(finalPayload.result.nodes));
+    assert.equal(finalPayload.result.nodes.length, 2);
+    assert.ok(Array.isArray(finalPayload.result.elements));
+    assert.equal(finalPayload.result.elements.length, 1);
   } finally {
     try {
       runKyuubiki("stop");

@@ -2327,7 +2327,12 @@ function renderDesktopLanguagePreference() {
   }
   setText(elements.assistantAuditLabel, copy.assistant.audit);
   renderPanelLanguage(copy);
-  setSection(state.activeSection);
+
+  const activeSectionCopy = copy.sections[state.activeSection];
+  if (activeSectionCopy) {
+    elements.title.textContent = activeSectionCopy.title;
+    elements.copy.textContent = activeSectionCopy.copy;
+  }
 }
 
 function rerenderLocalizedHubShell() {
@@ -2337,7 +2342,6 @@ function rerenderLocalizedHubShell() {
   renderAssistantContext();
   renderHubAssistantLocalCards();
   renderAssistantPanel();
-  setSection(state.activeSection);
 }
 
 function renderOverviewStrip(section, items) {
@@ -4682,8 +4686,6 @@ function renderProjectsPages() {
     pane.classList.toggle("hidden", !active);
     pane.setAttribute("aria-hidden", String(!active));
   });
-
-  rerenderLocalizedHubShell();
 }
 
 function setProjectsPage(page) {
@@ -4709,8 +4711,6 @@ function renderPanelPages(group) {
       pane.classList.toggle("hidden", !active);
       pane.setAttribute("aria-hidden", String(!active));
     });
-
-  rerenderLocalizedHubShell();
 }
 
 function setPanelPage(group, page) {

@@ -947,6 +947,8 @@ pub enum RpcMethod {
     SolveFrame2d,
     #[serde(rename = "solve_thermal_frame_2d")]
     SolveThermalFrame2d,
+    #[serde(rename = "solve_thermal_frame_3d")]
+    SolveThermalFrame3d,
     #[serde(rename = "cancel_job")]
     CancelJob,
 }
@@ -1071,6 +1073,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveThermalPlaneQuad2d,
                 RpcMethod::SolveFrame2d,
                 RpcMethod::SolveThermalFrame2d,
+                RpcMethod::SolveThermalFrame3d,
                 RpcMethod::CancelJob,
             ],
         }
@@ -1219,6 +1222,19 @@ impl AgentDescriptor {
                     methods: vec![RpcMethod::SolveThermalFrame2d],
                     tags: vec![
                         "frame".to_string(),
+                        "thermal".to_string(),
+                        "beam".to_string(),
+                        "bending".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "thermal-frame-3d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveThermalFrame3d],
+                    tags: vec![
+                        "frame".to_string(),
+                        "space".to_string(),
                         "thermal".to_string(),
                         "beam".to_string(),
                         "bending".to_string(),
@@ -1714,6 +1730,56 @@ pub struct SolveThermalFrame2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub fix_x: bool,
+    pub fix_y: bool,
+    pub fix_z: bool,
+    pub fix_rx: bool,
+    pub fix_ry: bool,
+    pub fix_rz: bool,
+    pub load_x: f64,
+    pub load_y: f64,
+    pub load_z: f64,
+    pub moment_x: f64,
+    pub moment_y: f64,
+    pub moment_z: f64,
+    #[serde(default)]
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub shear_modulus: f64,
+    pub torsion_constant: f64,
+    pub moment_of_inertia_y: f64,
+    pub moment_of_inertia_z: f64,
+    pub section_modulus_y: f64,
+    pub section_modulus_z: f64,
+    pub thermal_expansion: f64,
+    pub section_depth_y: f64,
+    pub section_depth_z: f64,
+    #[serde(default)]
+    pub temperature_gradient_y: f64,
+    #[serde(default)]
+    pub temperature_gradient_z: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalFrame3dRequest {
+    pub nodes: Vec<ThermalFrame3dNodeInput>,
+    pub elements: Vec<ThermalFrame3dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PlaneNodeResult {
     pub index: usize,
     pub id: String,
@@ -1957,6 +2023,70 @@ pub struct SolveThermalFrame2dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub ux: f64,
+    pub uy: f64,
+    pub uz: f64,
+    pub rx: f64,
+    pub ry: f64,
+    pub rz: f64,
+    pub displacement_magnitude: f64,
+    pub rotation_magnitude: f64,
+    pub temperature_delta: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ThermalFrame3dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub average_temperature_delta: f64,
+    pub thermal_strain: f64,
+    pub mechanical_strain: f64,
+    pub total_strain: f64,
+    pub temperature_gradient_y: f64,
+    pub temperature_gradient_z: f64,
+    pub thermal_curvature_y: f64,
+    pub thermal_curvature_z: f64,
+    pub axial_force_i: f64,
+    pub shear_force_y_i: f64,
+    pub shear_force_z_i: f64,
+    pub torsion_i: f64,
+    pub moment_y_i: f64,
+    pub moment_z_i: f64,
+    pub axial_force_j: f64,
+    pub shear_force_y_j: f64,
+    pub shear_force_z_j: f64,
+    pub torsion_j: f64,
+    pub moment_y_j: f64,
+    pub moment_z_j: f64,
+    pub axial_stress: f64,
+    pub max_bending_stress: f64,
+    pub max_combined_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveThermalFrame3dResult {
+    pub input: SolveThermalFrame3dRequest,
+    pub nodes: Vec<ThermalFrame3dNodeResult>,
+    pub elements: Vec<ThermalFrame3dElementResult>,
+    pub max_displacement: f64,
+    pub max_rotation: f64,
+    pub max_moment: f64,
+    pub max_stress: f64,
+    pub max_axial_force: f64,
+    pub max_temperature_delta: f64,
+    pub max_temperature_gradient: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum AnalysisResult {
     Bar1d(SolveBarResult),
@@ -1981,6 +2111,7 @@ pub enum AnalysisResult {
     ThermalPlaneQuad2d(SolveThermalPlaneQuad2dResult),
     Frame2d(SolveFrame2dResult),
     ThermalFrame2d(SolveThermalFrame2dResult),
+    ThermalFrame3d(SolveThermalFrame3dResult),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -2018,12 +2149,13 @@ mod tests {
         SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+        SolveThermalFrame3dRequest,
         SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
         SolveThermalTruss2dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
         Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
         ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
-        ThermalFrame2dElementInput, ThermalFrame2dNodeInput, ThermalPlaneNodeInput,
+        ThermalFrame2dElementInput, ThermalFrame2dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput, ThermalPlaneNodeInput,
         ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
         ThermalTruss2dElementInput, ThermalTruss2dNodeInput, Torsion1dElementInput,
         Torsion1dNodeInput,
@@ -2625,6 +2757,82 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveThermalFrame2d);
         assert_eq!(decoded.id, "rpc-thermal-frame-2d");
+    }
+
+    #[test]
+    fn serializes_thermal_frame_3d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-thermal-frame-3d".to_string(),
+            method: RpcMethod::SolveThermalFrame3d,
+            params: serde_json::to_value(SolveThermalFrame3dRequest {
+                nodes: vec![
+                    ThermalFrame3dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        fix_rx: true,
+                        fix_ry: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                        moment_x: 0.0,
+                        moment_y: 0.0,
+                        moment_z: 0.0,
+                        temperature_delta: 35.0,
+                    },
+                    ThermalFrame3dNodeInput {
+                        id: "n1".to_string(),
+                        x: 2.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        fix_rx: true,
+                        fix_ry: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                        moment_x: 0.0,
+                        moment_y: 0.0,
+                        moment_z: 0.0,
+                        temperature_delta: 35.0,
+                    },
+                ],
+                elements: vec![ThermalFrame3dElementInput {
+                    id: "tf0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.02,
+                    youngs_modulus: 210.0e9,
+                    shear_modulus: 80.0e9,
+                    torsion_constant: 5.0e-6,
+                    moment_of_inertia_y: 8.0e-6,
+                    moment_of_inertia_z: 8.0e-6,
+                    section_modulus_y: 1.6e-4,
+                    section_modulus_z: 1.6e-4,
+                    thermal_expansion: 12.0e-6,
+                    section_depth_y: 0.2,
+                    section_depth_z: 0.2,
+                    temperature_gradient_y: 30.0,
+                    temperature_gradient_z: 25.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveThermalFrame3d);
+        assert_eq!(decoded.id, "rpc-thermal-frame-3d");
     }
 
     #[test]

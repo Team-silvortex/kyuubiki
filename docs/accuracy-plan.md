@@ -121,7 +121,7 @@ than pretending one global number is honest.
 | `heat_plane_quad_2d` | shipping in thermal domain | `partially verified` | quad conduction patch | unit test + sample fixture |
 | `thermal_truss_2d / 3d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermal truss response | unit test first |
 | `thermal_beam_1d` | shipping in thermo-mechanical domain | `partially verified` | restrained gradient beam | unit test first |
-| `thermal_frame_2d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermal frame | unit test first |
+| `thermal_frame_2d / 3d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermal frame and restrained space-frame thermal response | unit test + sample fixture |
 | `thermal_plane_triangle_2d / quad_2d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermoelastic plane patch | unit test + workflow fixture |
 
 ## Required benchmark artifacts

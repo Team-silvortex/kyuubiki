@@ -57,6 +57,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_thermal_frame_2d", params, on_progress)
   end
 
+  @spec solve_thermal_frame_3d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_thermal_frame_3d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_thermal_frame_3d", params, on_progress)
+  end
+
   @spec solve_torsion_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_torsion_1d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_torsion_1d", params, on_progress)
