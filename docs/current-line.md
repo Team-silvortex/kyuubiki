@@ -31,6 +31,25 @@ The default posture is:
 The line opens at `tamamono 1.0.0`, but these expectations are meant to remain
 true across later `1.x` releases too.
 
+## Current backend momentum
+
+Recent operator work is following the `tamamono 1.x` rule in the right order:
+
+- add the solver and protocol path
+- add agent/runtime support
+- add sample-backed orchestrated smoke
+- then decide whether wider UI exposure is worth it
+
+The current example is the new `frame_3d` / `thermal_frame_3d` backend line:
+
+- Rust solver support exists
+- protocol and engine paths exist
+- agent RPC handling is now wired through
+- orchestrated API smoke exists for both studies
+
+That is the kind of operator growth this line should prefer: narrower, more
+verified, and less speculative.
+
 ## Current reading path
 
 1. [version-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/version-line.md)

@@ -10,6 +10,12 @@ The first target focuses on the local workstation stack:
 - Rust solver agents
 - real HTTP job submission and polling
 
+Current orchestrated API smoke now includes:
+
+- `axial_bar_1d`
+- `frame_3d`
+- `thermal_frame_3d`
+
 Run with:
 
 - `make test-integration`

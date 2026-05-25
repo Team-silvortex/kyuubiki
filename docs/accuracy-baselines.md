@@ -14,8 +14,10 @@ mechanics.
 | `thermal_bar_1d` | restrained uniform temperature rise | max displacement `0`, max stress magnitude `100800000`, max axial force magnitude `1008000`, max temperature delta `40` | relative tolerance `1e-9` on force/stress magnitudes | automated |
 | `beam_1d` | tip-loaded cantilever beam | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
 | `frame_2d` | tip-loaded cantilever frame member | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
+| `frame_3d` | tip-loaded cantilever space-frame member | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
 | `truss_2d` | three-bar triangular truss | max displacement `1.114463950892853e-6`, max stress `60092.52125773316`, tip `ux=2.380952380952381e-7`, tip `uy=-1.088733463909362e-6` | absolute tolerances from solver unit baseline | automated |
 | `plane_triangle_2d` | two-triangle square patch | max displacement `1.504347441414315e-6`, max stress `100000`, node-2 `ux=4.714285714285715e-7`, node-2 `uy=-1.428571428571429e-6` | absolute tolerances from solver unit baseline | automated |
+| `thermal_frame_3d` | restrained thermal space frame with dual gradients | max displacement `0`, max axial force `1.764e6`, max moment `2688`, max stress `1.239e8`, max temperature delta `35`, max temperature gradient `30` | relative tolerance `1e-9` on force/moment/stress magnitudes | automated |
 
 ## Source of truth
 
@@ -50,6 +52,7 @@ Together they cover:
 The second wave extends that trust envelope to:
 
 - frame bending with axial-capable line elements
+- space-frame bending and restrained thermal space-frame response
 - triangulated truss load paths
 - constant-strain plane triangle response
 
@@ -62,7 +65,6 @@ After this seed set, the next best families are:
 3. `heat_plane_quad_2d`
 4. `thermal_truss_2d`
 5. `thermal_plane_triangle_2d`
-6. `thermal_frame_3d`
 
 ## Related docs
 

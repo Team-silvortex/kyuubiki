@@ -98,6 +98,60 @@ test("local workstation stack can solve an axial-bar job end-to-end", async () =
   }
 }, { timeout: 120_000 });
 
+test("local workstation stack can solve a frame-3d sample end-to-end", async () => {
+  try {
+    runKyuubiki("restart-local");
+
+    const health = await waitFor(
+      `${ORCHESTRATOR_URL}/api/health`,
+      (payload) =>
+        payload?.status === "ok" &&
+        Array.isArray(payload?.solver_agents) &&
+        payload.solver_agents.length >= 1,
+      60_000,
+    );
+
+    assert.equal(health.status, "ok");
+
+    const submitResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/fem/frame-3d/jobs`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(loadSampleModel("frame-3d-cantilever.json")),
+    });
+
+    assert.equal(submitResponse.status, 202);
+    const submitted = await submitResponse.json();
+    const jobId = submitted?.job?.job_id;
+    assert.ok(jobId, "expected a frame 3d job_id from the orchestrator");
+
+    const finalPayload = await waitFor(
+      `${ORCHESTRATOR_URL}/api/v1/jobs/${jobId}`,
+      (payload) => payload?.job?.status === "completed",
+      60_000,
+      750,
+    );
+
+    assert.equal(finalPayload.job.status, "completed");
+    assert.match(finalPayload.job.worker_id, /rust-agent-rpc/);
+    assert.ok(finalPayload.result.max_displacement > 0);
+    assert.ok(finalPayload.result.max_rotation > 0);
+    assert.ok(finalPayload.result.max_moment > 0);
+    assert.ok(finalPayload.result.max_stress > 0);
+    assert.ok(Array.isArray(finalPayload.result.nodes));
+    assert.equal(finalPayload.result.nodes.length, 2);
+    assert.ok(Array.isArray(finalPayload.result.elements));
+    assert.equal(finalPayload.result.elements.length, 1);
+  } finally {
+    try {
+      runKyuubiki("stop");
+    } catch {
+      // keep cleanup best-effort for local integration runs
+    }
+  }
+}, { timeout: 120_000 });
+
 test("local workstation stack can solve a thermal-frame-3d sample end-to-end", async () => {
   try {
     runKyuubiki("restart-local");

@@ -2472,6 +2472,7 @@ mod tests {
         HeatBar1dElementInput, HeatBar1dNodeInput, JobStatus, PlaneNodeInput,
         PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
         RpcRequest, SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest,
+        SolveFrame3dRequest,
         SolveHeatBar1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
         SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
@@ -3487,6 +3488,86 @@ mod tests {
         assert!(result.max_axial_force > 0.0);
         assert_eq!(result.max_temperature_delta, 35.0);
         assert_eq!(result.max_temperature_gradient, 30.0);
+    }
+
+    #[test]
+    fn handles_frame_3d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-frame-3d".to_string(),
+            method: RpcMethod::SolveFrame3d,
+            params: serde_json::to_value(SolveFrame3dRequest {
+                nodes: vec![
+                    kyuubiki_protocol::Frame3dNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        fix_z: true,
+                        fix_rx: true,
+                        fix_ry: true,
+                        fix_rz: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        load_z: 0.0,
+                        moment_x: 0.0,
+                        moment_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                    kyuubiki_protocol::Frame3dNodeInput {
+                        id: "n1".to_string(),
+                        x: 2.0,
+                        y: 0.0,
+                        z: 0.0,
+                        fix_x: false,
+                        fix_y: false,
+                        fix_z: false,
+                        fix_rx: false,
+                        fix_ry: false,
+                        fix_rz: false,
+                        load_x: 0.0,
+                        load_y: -1000.0,
+                        load_z: 0.0,
+                        moment_x: 0.0,
+                        moment_y: 0.0,
+                        moment_z: 0.0,
+                    },
+                ],
+                elements: vec![kyuubiki_protocol::Frame3dElementInput {
+                    id: "f0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    area: 0.02,
+                    youngs_modulus: 210.0e9,
+                    shear_modulus: 80.0e9,
+                    torsion_constant: 5.0e-6,
+                    moment_of_inertia_y: 8.0e-6,
+                    moment_of_inertia_z: 8.0e-6,
+                    section_modulus_y: 1.6e-4,
+                    section_modulus_z: 1.6e-4,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveFrame3dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("frame 3d result");
+        assert_eq!(result.nodes.len(), 2);
+        assert_eq!(result.elements.len(), 1);
+        assert!(result.max_displacement > 0.0);
+        assert!(result.max_rotation > 0.0);
+        assert!(result.max_moment > 0.0);
+        assert!(result.max_stress > 0.0);
     }
 
     #[test]

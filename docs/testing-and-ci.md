@@ -52,6 +52,7 @@ These tests use small local loopback fixtures and focus on:
 The current integration family covers:
 
 - orchestrator + Rust agents + HTTP solve flow
+- sample-backed `frame_3d` and `thermal_frame_3d` orchestrated API smoke
 - protected cluster register / heartbeat / unregister flow
 - frontend direct-mesh LAN agent solve and chunk flow
 - Workbench UI smoke split by `Mechanical` and `Thermal / Thermo-mechanical`
