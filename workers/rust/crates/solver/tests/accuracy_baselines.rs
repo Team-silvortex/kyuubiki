@@ -10,13 +10,13 @@ use kyuubiki_protocol::{
     SolveThermalFrame2dRequest,
     SolveThermalFrame3dRequest,
     SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTruss2dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
     ThermalBar1dElementInput, ThermalBar1dNodeInput, ThermalBeam1dElementInput,
     ThermalBeam1dNodeInput, ThermalFrame3dElementInput,
     ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
     ThermalPlaneTriangleElementInput,
     ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
-    ThermalTruss3dElementInput, ThermalTruss3dNodeInput, TrussElementInput, TrussNodeInput,
+    ThermalTruss3dElementInput, ThermalTruss3dNodeInput, Truss3dElementInput, Truss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
@@ -24,7 +24,7 @@ use kyuubiki_solver::{
     solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d,
     solve_thermal_plane_triangle_2d, solve_thermal_truss_2d, solve_thermal_truss_3d,
-    solve_truss_2d,
+    solve_truss_2d, solve_truss_3d,
 };
 
 fn assert_close_abs(actual: f64, expected: f64, tolerance: f64, label: &str) {
@@ -1483,6 +1483,156 @@ fn accuracy_baseline_truss_2d_small_triangular_patch() {
         -6.009252125773316e2,
         1.0e-9,
         "truss_2d leading element axial force",
+    );
+}
+
+#[test]
+fn accuracy_baseline_truss_3d_space_frame_pyramid_fixture() {
+    let result = solve_truss_3d(&SolveTruss3dRequest {
+        nodes: vec![
+            Truss3dNodeInput {
+                id: "b0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+            },
+            Truss3dNodeInput {
+                id: "b1".to_string(),
+                x: 1.2,
+                y: 0.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+            },
+            Truss3dNodeInput {
+                id: "b2".to_string(),
+                x: 0.0,
+                y: 1.2,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+            },
+            Truss3dNodeInput {
+                id: "top".to_string(),
+                x: 0.35,
+                y: 0.35,
+                z: 1.0,
+                fix_x: false,
+                fix_y: false,
+                fix_z: false,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: -1600.0,
+            },
+        ],
+        elements: vec![
+            Truss3dElementInput {
+                id: "e0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+            },
+            Truss3dElementInput {
+                id: "e1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+            },
+            Truss3dElementInput {
+                id: "e2".to_string(),
+                node_i: 2,
+                node_j: 0,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+            },
+            Truss3dElementInput {
+                id: "e3".to_string(),
+                node_i: 0,
+                node_j: 3,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+            },
+            Truss3dElementInput {
+                id: "e4".to_string(),
+                node_i: 1,
+                node_j: 3,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+            },
+            Truss3dElementInput {
+                id: "e5".to_string(),
+                node_i: 2,
+                node_j: 3,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+            },
+        ],
+    })
+    .expect("truss_3d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.0000015799074540869988,
+        1.0e-18,
+        "truss_3d max displacement",
+    );
+    assert_close_abs(
+        result.max_stress,
+        74386.37868140468,
+        1.0e-9,
+        "truss_3d max stress",
+    );
+    assert_close_abs(
+        result.nodes[3].ux,
+        2.897530666749509e-7,
+        1.0e-18,
+        "truss_3d top ux",
+    );
+    assert_close_abs(
+        result.nodes[3].uy,
+        2.897530666749509e-7,
+        1.0e-18,
+        "truss_3d top uy",
+    );
+    assert_close_abs(
+        result.nodes[3].uz,
+        -0.0000015258420246488773,
+        1.0e-18,
+        "truss_3d top uz",
+    );
+    assert_close_abs(
+        result.elements[3].stress,
+        -74386.37868140468,
+        1.0e-9,
+        "truss_3d element-3 stress",
+    );
+    assert_close_abs(
+        result.elements[4].stress,
+        -63387.6959669619,
+        1.0e-9,
+        "truss_3d element-4 stress",
+    );
+    assert_close_abs(
+        result.elements[5].stress,
+        -63387.6959669619,
+        1.0e-9,
+        "truss_3d element-5 stress",
     );
 }
 

@@ -114,7 +114,7 @@ than pretending one global number is honest.
 | `frame_2d` | fully supported | `verified` | portal frame and restrained thermal frame | unit test + sample fixture |
 | `frame_3d` | backend operator shipping | `partially verified` | cantilever space frame with bending and rotation response | unit test + sample fixture |
 | `truss_2d` | fully supported | `verified` | small planar truss benchmark | unit test + sample fixture |
-| `truss_3d` | fully supported | `partially verified` | stable 3D truss benchmark with known response | sample fixture first |
+| `truss_3d` | fully supported | `verified` | stable 3D truss benchmark with known response | sample fixture + orchestrated smoke |
 | `plane_triangle_2d` | fully supported | `partially verified` | constant-strain patch and cantilever plate | unit test + sample fixture |
 | `plane_quad_2d` | fully supported | `partially verified` | quad patch and cantilever plate | unit test + sample fixture |
 | `heat_bar_1d` | shipping in thermal domain | `partially verified` | 1D conduction gradient and source case | unit test + sample fixture |

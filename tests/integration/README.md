@@ -18,6 +18,7 @@ Current orchestrated API smoke now includes:
 - `heat_plane_triangle_2d`
 - `heat_plane_quad_2d`
 - `frame_3d`
+- `truss_3d`
 - `plane_quad_2d`
 - `thermal_frame_2d`
 - `thermal_plane_quad_2d`
