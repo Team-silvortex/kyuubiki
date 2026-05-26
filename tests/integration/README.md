@@ -13,6 +13,7 @@ The first target focuses on the local workstation stack:
 Current orchestrated API smoke now includes:
 
 - `axial_bar_1d`
+- `heat_bar_1d`
 - `frame_3d`
 - `thermal_frame_3d`
 - `thermal_truss_3d`

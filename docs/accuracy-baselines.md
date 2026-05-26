@@ -12,6 +12,7 @@ mechanics.
 | --- | --- | --- | --- | --- |
 | `axial_bar_1d` | one-element tensile bar | tip displacement `4.761904761904762e-7`, max stress `100000`, reaction `-1000` | absolute tolerances from solver unit baseline | automated |
 | `thermal_bar_1d` | restrained uniform temperature rise | max displacement `0`, max stress magnitude `100800000`, max axial force magnitude `1008000`, max temperature delta `40` | relative tolerance `1e-9` on force/stress magnitudes | automated |
+| `heat_bar_1d` | two-element conduction gradient with fixed end temperatures | max temperature `100`, max heat flux `1800`, middle-node temperature `60`, element gradient `-40` | absolute tolerances from solver unit baseline | automated |
 | `beam_1d` | tip-loaded cantilever beam | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
 | `frame_2d` | tip-loaded cantilever frame member | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
 | `frame_3d` | tip-loaded cantilever space-frame member | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
@@ -48,6 +49,7 @@ Together they cover:
 
 - direct structural displacement/stress
 - restrained thermal expansion
+- pure heat conduction with fixed-temperature interpolation
 - bending kinematics and moment/stress response
 
 The second wave extends that trust envelope to:
@@ -63,10 +65,9 @@ The second wave extends that trust envelope to:
 After this seed set, the next best families are:
 
 1. `plane_quad_2d`
-2. `heat_bar_1d`
-3. `heat_plane_quad_2d`
-4. `thermal_truss_2d`
-5. `thermal_plane_triangle_2d`
+2. `heat_plane_quad_2d`
+3. `thermal_truss_2d`
+4. `thermal_plane_triangle_2d`
 
 ## Related docs
 

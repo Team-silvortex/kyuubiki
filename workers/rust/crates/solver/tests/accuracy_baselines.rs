@@ -1,15 +1,17 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
     Frame3dElementInput, Frame3dNodeInput, PlaneNodeInput, PlaneTriangleElementInput,
-    SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+    HeatBar1dElementInput, HeatBar1dNodeInput, SolveBarRequest, SolveBeam1dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
     SolvePlaneTriangle2dRequest, SolveThermalBar1dRequest, SolveThermalFrame3dRequest,
     SolveThermalTruss3dRequest, SolveTruss2dRequest, ThermalBar1dElementInput,
     ThermalBar1dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
     ThermalTruss3dElementInput, ThermalTruss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_plane_triangle_2d,
-    solve_thermal_bar_1d, solve_thermal_frame_3d, solve_thermal_truss_3d, solve_truss_2d,
+    solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
+    solve_plane_triangle_2d, solve_thermal_bar_1d, solve_thermal_frame_3d,
+    solve_thermal_truss_3d, solve_truss_2d,
 };
 
 fn assert_close_abs(actual: f64, expected: f64, tolerance: f64, label: &str) {
@@ -118,6 +120,83 @@ fn accuracy_baseline_thermal_bar_1d_restrained_uniform_rise() {
     assert!(
         result.elements[0].stress < 0.0,
         "thermal_bar_1d stress sign should indicate compression"
+    );
+}
+
+#[test]
+fn accuracy_baseline_heat_bar_1d_two_element_gradient() {
+    let result = solve_heat_bar_1d(&SolveHeatBar1dRequest {
+        nodes: vec![
+            HeatBar1dNodeInput {
+                id: "h0".to_string(),
+                x: 0.0,
+                fix_temperature: true,
+                temperature: 100.0,
+                heat_load: 0.0,
+            },
+            HeatBar1dNodeInput {
+                id: "h1".to_string(),
+                x: 1.0,
+                fix_temperature: false,
+                temperature: 0.0,
+                heat_load: 0.0,
+            },
+            HeatBar1dNodeInput {
+                id: "h2".to_string(),
+                x: 2.0,
+                fix_temperature: true,
+                temperature: 20.0,
+                heat_load: 0.0,
+            },
+        ],
+        elements: vec![
+            HeatBar1dElementInput {
+                id: "he0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                conductivity: 45.0,
+            },
+            HeatBar1dElementInput {
+                id: "he1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                area: 0.01,
+                conductivity: 45.0,
+            },
+        ],
+    })
+    .expect("heat_bar_1d baseline should solve");
+
+    assert_close_abs(
+        result.max_temperature,
+        100.0,
+        1.0e-12,
+        "heat_bar_1d max temperature",
+    );
+    assert_close_abs(
+        result.max_heat_flux,
+        1800.0,
+        1.0e-9,
+        "heat_bar_1d max heat flux",
+    );
+    assert_close_abs(
+        result.nodes[1].temperature,
+        60.0,
+        1.0e-12,
+        "heat_bar_1d middle node temperature",
+    );
+    assert_close_abs(
+        result.elements[0].temperature_gradient,
+        -40.0,
+        1.0e-12,
+        "heat_bar_1d first element temperature gradient",
+    );
+    assert_close_abs(
+        result.elements[1].temperature_gradient,
+        -40.0,
+        1.0e-12,
+        "heat_bar_1d second element temperature gradient",
     );
 }
 
