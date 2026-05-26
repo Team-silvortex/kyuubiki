@@ -26,6 +26,7 @@
       "youngs_modulus": 210000000000,
       "moment_of_inertia": 0.00014,
       "section_modulus": 0.0012,
+      "section_depth": 0.2,
       "thermal_expansion": 0.000012,
       "temperature_gradient_y": 0,
       "material_id": "mat-1"
@@ -38,6 +39,7 @@
       "youngs_modulus": 210000000000,
       "moment_of_inertia": 0.00014,
       "section_modulus": 0.0012,
+      "section_depth": 0.2,
       "thermal_expansion": 0.000012,
       "temperature_gradient_y": 30,
       "material_id": "mat-1"
@@ -50,6 +52,7 @@
       "youngs_modulus": 210000000000,
       "moment_of_inertia": 0.00014,
       "section_modulus": 0.0012,
+      "section_depth": 0.2,
       "thermal_expansion": 0.000012,
       "temperature_gradient_y": 0,
       "material_id": "mat-1"

@@ -118,7 +118,7 @@ than pretending one global number is honest.
 | `plane_triangle_2d` | fully supported | `partially verified` | constant-strain patch and cantilever plate | unit test + sample fixture |
 | `plane_quad_2d` | fully supported | `partially verified` | quad patch and cantilever plate | unit test + sample fixture |
 | `heat_bar_1d` | shipping in thermal domain | `partially verified` | 1D conduction gradient and source case | unit test + sample fixture |
-| `heat_plane_triangle_2d` | shipping in thermal domain | `partially verified` | triangular conduction patch | unit test + sample fixture |
+| `heat_plane_triangle_2d` | shipping in thermal domain | `verified` | triangular conduction patch | unit test + sample fixture + orchestrated smoke |
 | `heat_plane_quad_2d` | shipping in thermal domain | `partially verified` | quad conduction patch | unit test + sample fixture |
 | `thermal_truss_2d / 3d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermal truss response | unit test + sample fixture |
 | `thermal_beam_1d` | shipping in thermo-mechanical domain | `partially verified` | restrained gradient beam | unit test first |

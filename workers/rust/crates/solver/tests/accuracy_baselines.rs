@@ -1,17 +1,30 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
-    Frame3dElementInput, Frame3dNodeInput, PlaneNodeInput, PlaneTriangleElementInput,
+    Frame3dElementInput, Frame3dNodeInput, PlaneNodeInput, PlaneQuadElementInput,
+    PlaneTriangleElementInput,
     HeatBar1dElementInput, HeatBar1dNodeInput, SolveBarRequest, SolveBeam1dRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
-    SolvePlaneTriangle2dRequest, SolveThermalBar1dRequest, SolveThermalFrame3dRequest,
-    SolveThermalTruss3dRequest, SolveTruss2dRequest, ThermalBar1dElementInput,
-    ThermalBar1dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
+    HeatPlaneNodeInput, HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput,
+    SolveFrame2dRequest, SolveFrame3dRequest,
+    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
+    SolvePlaneTriangle2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+    SolveThermalFrame2dRequest,
+    SolveThermalFrame3dRequest,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTruss2dRequest,
+    ThermalBar1dElementInput, ThermalBar1dNodeInput, ThermalBeam1dElementInput,
+    ThermalBeam1dNodeInput, ThermalFrame3dElementInput,
+    ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
+    ThermalPlaneTriangleElementInput,
+    ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
     ThermalTruss3dElementInput, ThermalTruss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
-    solve_plane_triangle_2d, solve_thermal_bar_1d, solve_thermal_frame_3d,
-    solve_thermal_truss_3d, solve_truss_2d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_thermal_bar_1d,
+    solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
+    solve_thermal_plane_quad_2d,
+    solve_thermal_plane_triangle_2d, solve_thermal_truss_2d, solve_thermal_truss_3d,
+    solve_truss_2d,
 };
 
 fn assert_close_abs(actual: f64, expected: f64, tolerance: f64, label: &str) {
@@ -124,6 +137,86 @@ fn accuracy_baseline_thermal_bar_1d_restrained_uniform_rise() {
 }
 
 #[test]
+fn accuracy_baseline_thermal_beam_1d_free_gradient_response() {
+    let result = solve_thermal_beam_1d(&SolveThermalBeam1dRequest {
+        nodes: vec![
+            ThermalBeam1dNodeInput {
+                id: "tb0".to_string(),
+                x: 0.0,
+                fix_y: true,
+                fix_rz: true,
+                load_y: 0.0,
+                moment_z: 0.0,
+            },
+            ThermalBeam1dNodeInput {
+                id: "tb1".to_string(),
+                x: 2.4,
+                fix_y: false,
+                fix_rz: false,
+                load_y: 0.0,
+                moment_z: 0.0,
+            },
+        ],
+        elements: vec![ThermalBeam1dElementInput {
+            id: "tm0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            youngs_modulus: 210.0e9,
+            moment_of_inertia: 0.00012,
+            section_modulus: 0.0011,
+            thermal_expansion: 12.0e-6,
+            section_depth: 0.3,
+            distributed_load_y: 0.0,
+            temperature_gradient_y: 45.0,
+        }],
+    })
+    .expect("thermal_beam_1d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.005184000000000001,
+        1.0e-15,
+        "thermal_beam_1d max displacement",
+    );
+    assert_close_abs(
+        result.max_rotation,
+        0.004320000000000001,
+        1.0e-15,
+        "thermal_beam_1d max rotation",
+    );
+    assert_close_abs(
+        result.max_temperature_gradient,
+        45.0,
+        1.0e-12,
+        "thermal_beam_1d max temperature gradient",
+    );
+    assert_close_abs(
+        result.nodes[1].uy,
+        0.005184000000000001,
+        1.0e-15,
+        "thermal_beam_1d tip uy",
+    );
+    assert_close_abs(
+        result.nodes[1].rz,
+        0.004320000000000001,
+        1.0e-15,
+        "thermal_beam_1d tip rotation",
+    );
+    assert_close_abs(
+        result.max_moment,
+        7.275957614183426e-12,
+        1.0e-18,
+        "thermal_beam_1d max moment",
+    );
+    assert_close_abs(
+        result.max_stress,
+        6.614506921984932e-9,
+        1.0e-15,
+        "thermal_beam_1d max stress",
+    );
+}
+
+#[test]
 fn accuracy_baseline_heat_bar_1d_two_element_gradient() {
     let result = solve_heat_bar_1d(&SolveHeatBar1dRequest {
         nodes: vec![
@@ -197,6 +290,189 @@ fn accuracy_baseline_heat_bar_1d_two_element_gradient() {
         -40.0,
         1.0e-12,
         "heat_bar_1d second element temperature gradient",
+    );
+}
+
+#[test]
+fn accuracy_baseline_heat_plane_quad_2d_single_patch() {
+    let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
+        nodes: vec![
+            HeatPlaneNodeInput {
+                id: "h0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_temperature: true,
+                temperature: 100.0,
+                heat_load: 0.0,
+            },
+            HeatPlaneNodeInput {
+                id: "h1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_temperature: false,
+                temperature: 0.0,
+                heat_load: 0.0,
+            },
+            HeatPlaneNodeInput {
+                id: "h2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_temperature: true,
+                temperature: 20.0,
+                heat_load: 0.0,
+            },
+            HeatPlaneNodeInput {
+                id: "h3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_temperature: true,
+                temperature: 20.0,
+                heat_load: 0.0,
+            },
+        ],
+        elements: vec![HeatPlaneQuadElementInput {
+            id: "hq0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.02,
+            conductivity: 45.0,
+        }],
+    })
+    .expect("heat_plane_quad_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_temperature,
+        100.0,
+        1.0e-12,
+        "heat_plane_quad_2d max temperature",
+    );
+    assert_close_abs(
+        result.max_heat_flux,
+        2846.0498941515416,
+        1.0e-9,
+        "heat_plane_quad_2d max heat flux",
+    );
+    assert_close_abs(
+        result.nodes[1].temperature,
+        60.0,
+        1.0e-12,
+        "heat_plane_quad_2d node-1 temperature",
+    );
+    assert_close_abs(
+        result.elements[0].temperature_gradient_x,
+        -20.0,
+        1.0e-12,
+        "heat_plane_quad_2d gradient x",
+    );
+    assert_close_abs(
+        result.elements[0].temperature_gradient_y,
+        -60.0,
+        1.0e-12,
+        "heat_plane_quad_2d gradient y",
+    );
+}
+
+#[test]
+fn accuracy_baseline_heat_plane_triangle_2d_sample_fixture() {
+    let result = solve_heat_plane_triangle_2d(&SolveHeatPlaneTriangle2dRequest {
+        nodes: vec![
+            HeatPlaneNodeInput {
+                id: "h0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_temperature: true,
+                temperature: 100.0,
+                heat_load: 0.0,
+            },
+            HeatPlaneNodeInput {
+                id: "h1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_temperature: false,
+                temperature: 0.0,
+                heat_load: 0.0,
+            },
+            HeatPlaneNodeInput {
+                id: "h2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_temperature: true,
+                temperature: 20.0,
+                heat_load: 0.0,
+            },
+            HeatPlaneNodeInput {
+                id: "h3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_temperature: true,
+                temperature: 20.0,
+                heat_load: 0.0,
+            },
+        ],
+        elements: vec![
+            HeatPlaneTriangleElementInput {
+                id: "hp0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                thickness: 0.02,
+                conductivity: 45.0,
+            },
+            HeatPlaneTriangleElementInput {
+                id: "hp1".to_string(),
+                node_i: 0,
+                node_j: 2,
+                node_k: 3,
+                thickness: 0.02,
+                conductivity: 45.0,
+            },
+        ],
+    })
+    .expect("heat_plane_triangle_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_temperature,
+        100.0,
+        1.0e-12,
+        "heat_plane_triangle_2d max temperature",
+    );
+    assert_close_abs(
+        result.max_heat_flux,
+        3600.0,
+        1.0e-9,
+        "heat_plane_triangle_2d max heat flux",
+    );
+    assert_close_abs(
+        result.nodes[1].temperature,
+        60.0,
+        1.0e-12,
+        "heat_plane_triangle_2d node-1 temperature",
+    );
+    assert_close_abs(
+        result.elements[0].temperature_gradient_x,
+        -40.0,
+        1.0e-12,
+        "heat_plane_triangle_2d element-0 gradient x",
+    );
+    assert_close_abs(
+        result.elements[0].temperature_gradient_y,
+        -40.0,
+        1.0e-12,
+        "heat_plane_triangle_2d element-0 gradient y",
+    );
+    assert_close_abs(
+        result.elements[1].temperature_gradient_x,
+        0.0,
+        1.0e-12,
+        "heat_plane_triangle_2d element-1 gradient x",
+    );
+    assert_close_abs(
+        result.elements[1].temperature_gradient_y,
+        -80.0,
+        1.0e-12,
+        "heat_plane_triangle_2d element-1 gradient y",
     );
 }
 
@@ -543,6 +819,168 @@ fn accuracy_baseline_thermal_frame_3d_restrained_uniform_rise_and_gradients() {
 }
 
 #[test]
+fn accuracy_baseline_thermal_frame_2d_sample_fixture() {
+    let result = solve_thermal_frame_2d(&SolveThermalFrame2dRequest {
+        nodes: vec![
+            kyuubiki_protocol::ThermalFrame2dNodeInput {
+                id: "tf0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_rz: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                moment_z: 0.0,
+                temperature_delta: 0.0,
+            },
+            kyuubiki_protocol::ThermalFrame2dNodeInput {
+                id: "tf1".to_string(),
+                x: 0.0,
+                y: 3.0,
+                fix_x: false,
+                fix_y: false,
+                fix_rz: false,
+                load_x: 0.0,
+                load_y: 0.0,
+                moment_z: 0.0,
+                temperature_delta: 35.0,
+            },
+            kyuubiki_protocol::ThermalFrame2dNodeInput {
+                id: "tf2".to_string(),
+                x: 4.0,
+                y: 3.0,
+                fix_x: false,
+                fix_y: false,
+                fix_rz: false,
+                load_x: 0.0,
+                load_y: 0.0,
+                moment_z: 0.0,
+                temperature_delta: 35.0,
+            },
+            kyuubiki_protocol::ThermalFrame2dNodeInput {
+                id: "tf3".to_string(),
+                x: 4.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_rz: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                moment_z: 0.0,
+                temperature_delta: 0.0,
+            },
+        ],
+        elements: vec![
+            kyuubiki_protocol::ThermalFrame2dElementInput {
+                id: "te0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 0.00014,
+                section_modulus: 0.0012,
+                thermal_expansion: 12.0e-6,
+                section_depth: 0.2,
+                temperature_gradient_y: 0.0,
+            },
+            kyuubiki_protocol::ThermalFrame2dElementInput {
+                id: "te1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                area: 0.02,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 0.00014,
+                section_modulus: 0.0012,
+                thermal_expansion: 12.0e-6,
+                section_depth: 0.2,
+                temperature_gradient_y: 30.0,
+            },
+            kyuubiki_protocol::ThermalFrame2dElementInput {
+                id: "te2".to_string(),
+                node_i: 2,
+                node_j: 3,
+                area: 0.02,
+                youngs_modulus: 210.0e9,
+                moment_of_inertia: 0.00014,
+                section_modulus: 0.0012,
+                thermal_expansion: 12.0e-6,
+                section_depth: 0.2,
+                temperature_gradient_y: 0.0,
+            },
+        ],
+    })
+    .expect("thermal_frame_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.0010408174194986581,
+        1.0e-12,
+        "thermal_frame_2d max displacement",
+    );
+    assert_close_abs(
+        result.max_rotation,
+        0.0006805479452054797,
+        1.0e-12,
+        "thermal_frame_2d max rotation",
+    );
+    assert_close_abs(
+        result.max_axial_force,
+        24164.383561644005,
+        1.0e-9,
+        "thermal_frame_2d max axial force",
+    );
+    assert_close_abs(
+        result.max_moment,
+        42915.94520547945,
+        1.0e-9,
+        "thermal_frame_2d max moment",
+    );
+    assert_close_abs(
+        result.max_stress,
+        36971506.84931508,
+        1.0e-6,
+        "thermal_frame_2d max stress",
+    );
+    assert_close_abs(
+        result.max_temperature_delta,
+        35.0,
+        1.0e-12,
+        "thermal_frame_2d max temperature delta",
+    );
+    assert_close_abs(
+        result.max_temperature_gradient,
+        30.0,
+        1.0e-12,
+        "thermal_frame_2d max temperature gradient",
+    );
+    assert_close_abs(
+        result.nodes[1].ux,
+        -0.0008284931506849309,
+        1.0e-12,
+        "thermal_frame_2d node 1 ux",
+    );
+    assert_close_abs(
+        result.nodes[1].uy,
+        0.00063,
+        1.0e-12,
+        "thermal_frame_2d node 1 uy",
+    );
+    assert_close_abs(
+        result.elements[1].axial_stress,
+        1208219.1780822002,
+        1.0e-6,
+        "thermal_frame_2d beam axial stress",
+    );
+    assert_close_abs(
+        result.elements[1].max_combined_stress,
+        36971506.84931508,
+        1.0e-6,
+        "thermal_frame_2d beam combined stress",
+    );
+}
+
+#[test]
 fn accuracy_baseline_thermal_truss_3d_restrained_uniform_rise() {
     let result = solve_thermal_truss_3d(&SolveThermalTruss3dRequest {
         nodes: vec![
@@ -642,6 +1080,319 @@ fn accuracy_baseline_thermal_truss_3d_restrained_uniform_rise() {
     assert!(
         result.elements[0].stress < 0.0,
         "thermal_truss_3d stress sign should indicate compression"
+    );
+}
+
+#[test]
+fn accuracy_baseline_thermal_truss_2d_sample_fixture() {
+    let result = solve_thermal_truss_2d(&SolveThermalTruss2dRequest {
+        nodes: vec![
+            ThermalTruss2dNodeInput {
+                id: "tt0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalTruss2dNodeInput {
+                id: "tt1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_x: false,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalTruss2dNodeInput {
+                id: "tt2".to_string(),
+                x: 0.5,
+                y: 0.8,
+                fix_x: false,
+                fix_y: false,
+                load_x: 0.0,
+                load_y: -400.0,
+                temperature_delta: 25.0,
+            },
+        ],
+        elements: vec![
+            ThermalTruss2dElementInput {
+                id: "tte0".to_string(),
+                node_i: 0,
+                node_j: 2,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+                thermal_expansion: 12.0e-6,
+            },
+            ThermalTruss2dElementInput {
+                id: "tte1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+                thermal_expansion: 12.0e-6,
+            },
+            ThermalTruss2dElementInput {
+                id: "tte2".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                youngs_modulus: 70.0e9,
+                thermal_expansion: 12.0e-6,
+            },
+        ],
+    })
+    .expect("thermal_truss_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        4.801785714285713e-4,
+        1.0e-12,
+        "thermal_truss_2d max displacement",
+    );
+    assert_close_abs(
+        result.max_axial_force,
+        235.84952830143558,
+        1.0e-9,
+        "thermal_truss_2d max axial force",
+    );
+    assert_close_abs(
+        result.max_stress,
+        23584.952830143557,
+        1.0e-6,
+        "thermal_truss_2d max stress",
+    );
+    assert_close_abs(
+        result.max_temperature_delta,
+        40.0,
+        1.0e-12,
+        "thermal_truss_2d max temperature delta",
+    );
+    assert_close_abs(
+        result.nodes[1].ux,
+        4.801785714285713e-4,
+        1.0e-12,
+        "thermal_truss_2d node-1 ux",
+    );
+    assert_close_abs(
+        result.nodes[2].uy,
+        2.834443641425211e-4,
+        1.0e-12,
+        "thermal_truss_2d node-2 uy",
+    );
+}
+
+#[test]
+fn accuracy_baseline_thermal_plane_triangle_2d_restrained_patch() {
+    let result = solve_thermal_plane_triangle_2d(&SolveThermalPlaneTriangle2dRequest {
+        nodes: vec![
+            ThermalPlaneNodeInput {
+                id: "n0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalPlaneNodeInput {
+                id: "n1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalPlaneNodeInput {
+                id: "n2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 40.0,
+            },
+            ThermalPlaneNodeInput {
+                id: "n3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 40.0,
+            },
+        ],
+        elements: vec![
+            ThermalPlaneTriangleElementInput {
+                id: "tp0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                thickness: 0.02,
+                youngs_modulus: 70.0e9,
+                poisson_ratio: 0.33,
+                thermal_expansion: 12.0e-6,
+            },
+            ThermalPlaneTriangleElementInput {
+                id: "tp1".to_string(),
+                node_i: 0,
+                node_j: 2,
+                node_k: 3,
+                thickness: 0.02,
+                youngs_modulus: 70.0e9,
+                poisson_ratio: 0.33,
+                thermal_expansion: 12.0e-6,
+            },
+        ],
+    })
+    .expect("thermal_plane_triangle_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.0,
+        1.0e-12,
+        "thermal_plane_triangle_2d max displacement",
+    );
+    assert_close_abs(
+        result.max_stress,
+        50149253.731343284,
+        1.0e-6,
+        "thermal_plane_triangle_2d max stress",
+    );
+    assert_close_abs(
+        result.max_temperature_delta,
+        40.0,
+        1.0e-12,
+        "thermal_plane_triangle_2d max temperature delta",
+    );
+    assert_close_abs(
+        result.elements[0].stress_x,
+        -50149253.731343284,
+        1.0e-6,
+        "thermal_plane_triangle_2d first element stress x",
+    );
+    assert_close_abs(
+        result.elements[1].stress_y,
+        -50149253.731343284,
+        1.0e-6,
+        "thermal_plane_triangle_2d second element stress y",
+    );
+}
+
+#[test]
+fn accuracy_baseline_thermal_plane_quad_2d_restrained_patch() {
+    let result = solve_thermal_plane_quad_2d(&SolveThermalPlaneQuad2dRequest {
+        nodes: vec![
+            ThermalPlaneNodeInput {
+                id: "n0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 30.0,
+            },
+            ThermalPlaneNodeInput {
+                id: "n1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 30.0,
+            },
+            ThermalPlaneNodeInput {
+                id: "n2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 30.0,
+            },
+            ThermalPlaneNodeInput {
+                id: "n3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                temperature_delta: 30.0,
+            },
+        ],
+        elements: vec![ThermalPlaneQuadElementInput {
+            id: "tq0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.02,
+            youngs_modulus: 70.0e9,
+            poisson_ratio: 0.33,
+            thermal_expansion: 11.0e-6,
+        }],
+    })
+    .expect("thermal_plane_quad_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.0,
+        1.0e-12,
+        "thermal_plane_quad_2d max displacement",
+    );
+    assert_close_abs(
+        result.max_stress,
+        34477611.940298505,
+        1.0e-6,
+        "thermal_plane_quad_2d max stress",
+    );
+    assert_close_abs(
+        result.max_temperature_delta,
+        30.0,
+        1.0e-12,
+        "thermal_plane_quad_2d max temperature delta",
+    );
+    assert_close_abs(
+        result.elements[0].stress_x,
+        -34477611.940298505,
+        1.0e-6,
+        "thermal_plane_quad_2d stress_x",
+    );
+    assert_close_abs(
+        result.elements[0].stress_y,
+        -34477611.940298505,
+        1.0e-6,
+        "thermal_plane_quad_2d stress_y",
+    );
+    assert_close_abs(
+        result.elements[0].average_temperature_delta,
+        30.0,
+        1.0e-12,
+        "thermal_plane_quad_2d average temperature delta",
+    );
+    assert_close_abs(
+        result.elements[0].mechanical_strain_x,
+        -3.3e-4,
+        1.0e-12,
+        "thermal_plane_quad_2d mechanical_strain_x",
+    );
+    assert_close_abs(
+        result.elements[0].mechanical_strain_y,
+        -3.3e-4,
+        1.0e-12,
+        "thermal_plane_quad_2d mechanical_strain_y",
     );
 }
 
@@ -828,5 +1579,103 @@ fn accuracy_baseline_plane_triangle_2d_small_patch() {
         1.0e5,
         1.0e-6,
         "plane_triangle_2d element 0 von mises",
+    );
+}
+
+#[test]
+fn accuracy_baseline_plane_quad_2d_sample_fixture() {
+    let result = solve_plane_quad_2d(&SolvePlaneQuad2dRequest {
+        nodes: vec![
+            PlaneNodeInput {
+                id: "n0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+            },
+            PlaneNodeInput {
+                id: "n1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_x: false,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+            },
+            PlaneNodeInput {
+                id: "n2".to_string(),
+                x: 1.0,
+                y: 0.8,
+                fix_x: false,
+                fix_y: false,
+                load_x: 200.0,
+                load_y: -1200.0,
+            },
+            PlaneNodeInput {
+                id: "n3".to_string(),
+                x: 0.0,
+                y: 0.8,
+                fix_x: true,
+                fix_y: false,
+                load_x: 200.0,
+                load_y: -1200.0,
+            },
+        ],
+        elements: vec![PlaneQuadElementInput {
+            id: "q0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.02,
+            youngs_modulus: 210.0e9,
+            poisson_ratio: 0.3,
+        }],
+    })
+    .expect("plane_quad_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        5.333507749004975e-7,
+        1.0e-12,
+        "plane_quad_2d max displacement",
+    );
+    assert_close_abs(
+        result.max_stress,
+        126981.38527836032,
+        1.0e-6,
+        "plane_quad_2d max stress",
+    );
+    assert_close_abs(
+        result.nodes[2].ux,
+        2.576145151695419e-7,
+        1.0e-12,
+        "plane_quad_2d node 2 ux",
+    );
+    assert_close_abs(
+        result.nodes[2].uy,
+        -4.6700943316053366e-7,
+        1.0e-12,
+        "plane_quad_2d node 2 uy",
+    );
+    assert_close_abs(
+        result.elements[0].stress_x,
+        12500.0,
+        1.0e-6,
+        "plane_quad_2d stress_x",
+    );
+    assert_close_abs(
+        result.elements[0].stress_y,
+        -120000.0,
+        1.0e-6,
+        "plane_quad_2d stress_y",
+    );
+    assert_close_abs(
+        result.elements[0].tau_xy,
+        3048.7804878048746,
+        1.0e-9,
+        "plane_quad_2d tau_xy",
     );
 }
