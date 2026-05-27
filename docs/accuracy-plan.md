@@ -105,7 +105,7 @@ than pretending one global number is honest.
 | Study family | Current `v0.9.0` support | Accuracy target for `v1.x` | Benchmark shape | Automation target |
 | --- | --- | --- | --- | --- |
 | `axial_bar_1d` | fully supported | `verified` | closed-form tensile bar and restrained bar | unit test + release fixture |
-| `thermal_bar_1d` | fully supported | `verified` | restrained thermal expansion bar | unit test + workflow fixture |
+| `thermal_bar_1d` | fully supported | `verified` | restrained thermal expansion bar | unit test + workflow fixture + orchestrated smoke |
 | `spring_1d` | fully supported | `verified` | 1D chain with hand-checkable extension and force | unit test |
 | `spring_2d` | minimal | `verified` | small planar spring grid | unit test + direct-mesh + orchestrated fixture |
 | `spring_3d` | minimal | `verified` | small spatial spring cage | unit test + direct-mesh + orchestrated fixture |

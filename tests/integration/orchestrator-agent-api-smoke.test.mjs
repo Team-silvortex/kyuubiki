@@ -98,6 +98,65 @@ test("local workstation stack can solve an axial-bar job end-to-end", async () =
   }
 }, { timeout: 120_000 });
 
+test("local workstation stack can solve a thermal-bar-1d sample end-to-end", async () => {
+  try {
+    runKyuubiki("restart-local");
+
+    const health = await waitFor(
+      `${ORCHESTRATOR_URL}/api/health`,
+      (payload) =>
+        payload?.status === "ok" &&
+        Array.isArray(payload?.solver_agents) &&
+        payload.solver_agents.length >= 1,
+      60_000,
+    );
+
+    assert.equal(health.status, "ok");
+
+    const submitResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/fem/thermal-bar-1d/jobs`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(loadSampleModel("thermal-bar-1d.json")),
+    });
+
+    assert.equal(submitResponse.status, 202);
+    const submitted = await submitResponse.json();
+    const jobId = submitted?.job?.job_id;
+    assert.ok(jobId, "expected a thermal bar job_id from the orchestrator");
+
+    const finalPayload = await waitFor(
+      `${ORCHESTRATOR_URL}/api/v1/jobs/${jobId}`,
+      (payload) => payload?.job?.status === "completed",
+      60_000,
+      750,
+    );
+
+    assert.equal(finalPayload.job.status, "completed");
+    assert.match(finalPayload.job.worker_id, /rust-agent-rpc/);
+    assert.ok(Math.abs(finalPayload.result.max_displacement - 0.0) < 1.0e-12);
+    assert.ok(Math.abs(finalPayload.result.max_stress - 100800000.0) < 1.0e-6);
+    assert.ok(Math.abs(finalPayload.result.max_axial_force - 1008000.0) < 1.0e-6);
+    assert.equal(finalPayload.result.max_temperature_delta, 40);
+    assert.ok(Array.isArray(finalPayload.result.nodes));
+    assert.equal(finalPayload.result.nodes.length, 2);
+    assert.ok(Math.abs(finalPayload.result.nodes[0].ux - 0.0) < 1.0e-12);
+    assert.ok(Math.abs(finalPayload.result.nodes[1].ux - 0.0) < 1.0e-12);
+    assert.ok(Array.isArray(finalPayload.result.elements));
+    assert.equal(finalPayload.result.elements.length, 1);
+    assert.ok(Math.abs(finalPayload.result.elements[0].stress + 100800000.0) < 1.0e-6);
+    assert.ok(Math.abs(finalPayload.result.elements[0].axial_force + 1008000.0) < 1.0e-6);
+    assert.ok(Math.abs(finalPayload.result.elements[0].average_temperature_delta - 40.0) < 1.0e-12);
+  } finally {
+    try {
+      runKyuubiki("stop");
+    } catch {
+      // keep cleanup best-effort for local integration runs
+    }
+  }
+}, { timeout: 120_000 });
+
 test("local workstation stack can solve a heat-bar-1d sample end-to-end", async () => {
   try {
     runKyuubiki("restart-local");

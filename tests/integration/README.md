@@ -13,6 +13,7 @@ The first target focuses on the local workstation stack:
 Current orchestrated API smoke now includes:
 
 - `axial_bar_1d`
+- `thermal_bar_1d`
 - `spring_1d`
 - `spring_2d`
 - `spring_3d`

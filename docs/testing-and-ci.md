@@ -52,7 +52,7 @@ These tests use small local loopback fixtures and focus on:
 The current integration family covers:
 
 - orchestrator + Rust agents + HTTP solve flow
-- sample-backed `spring_1d`, `spring_2d`, `spring_3d`, `thermal_beam_1d`, `torsion_1d`, `heat_bar_1d`, `heat_plane_triangle_2d`, `heat_plane_quad_2d`, `frame_2d`, `frame_3d`, `truss_2d`, `truss_3d`, `plane_triangle_2d`, `plane_quad_2d`, `thermal_frame_2d`, `thermal_plane_triangle_2d`, `thermal_plane_quad_2d`, `thermal_truss_2d`, `thermal_frame_3d`, and `thermal_truss_3d` orchestrated API smoke
+- sample-backed `thermal_bar_1d`, `spring_1d`, `spring_2d`, `spring_3d`, `thermal_beam_1d`, `torsion_1d`, `heat_bar_1d`, `heat_plane_triangle_2d`, `heat_plane_quad_2d`, `frame_2d`, `frame_3d`, `truss_2d`, `truss_3d`, `plane_triangle_2d`, `plane_quad_2d`, `thermal_frame_2d`, `thermal_plane_triangle_2d`, `thermal_plane_quad_2d`, `thermal_truss_2d`, `thermal_frame_3d`, and `thermal_truss_3d` orchestrated API smoke
 - protected cluster register / heartbeat / unregister flow
 - frontend direct-mesh LAN agent solve and chunk flow
 - Workbench UI smoke split by `Mechanical` and `Thermal / Thermo-mechanical`
