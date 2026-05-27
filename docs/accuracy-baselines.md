@@ -12,11 +12,15 @@ mechanics.
 | --- | --- | --- | --- | --- |
 | `axial_bar_1d` | one-element tensile bar | tip displacement `4.761904761904762e-7`, max stress `100000`, reaction `-1000` | absolute tolerances from solver unit baseline | automated |
 | `thermal_bar_1d` | restrained uniform temperature rise | max displacement `0`, max stress magnitude `100800000`, max axial force magnitude `1008000`, max temperature delta `40` | relative tolerance `1e-9` on force/stress magnitudes | automated |
+| `spring_1d` | one-dimensional spring chain sample fixture | max displacement `0.09428571428571428`, max force `1200`, node displacements `(0.03428571428571429, 0.09428571428571428)`, element forces `(1200, 1199.9999999999998)` | absolute tolerances from solver unit baseline | automated |
+| `spring_2d` | planar spring grid sample fixture | max displacement `0.06339734949589224`, max force `1120.754716981132`, node-2 `(ux, uy)=(0.0509433962264151, -0.03773584905660377)`, element forces `(1120.754716981132, -679.2452830188679, 112.06975399937737)` | absolute tolerances from solver unit baseline | automated |
+| `spring_3d` | spatial spring cage sample fixture | max displacement `0.05955868626521211`, max force `803.0108273796119`, top-node `(ux, uy, uz)=(0.037134189113355795, 0.03445543981481482, -0.03132270383761861)`, loaded member forces `(-803.0108273796119, -474.11760144504234, -82.59674462242567)` | absolute tolerances from solver unit baseline | automated |
 | `thermal_beam_1d` | free gradient beam sample fixture | max displacement `0.005184000000000001`, max rotation `0.004320000000000001`, max moment `7.275957614183426e-12`, max stress `6.614506921984932e-9`, max temperature gradient `45` | absolute tolerances from solver unit baseline | automated |
 | `heat_bar_1d` | two-element conduction gradient with fixed end temperatures | max temperature `100`, max heat flux `1800`, middle-node temperature `60`, element gradient `-40` | absolute tolerances from solver unit baseline | automated |
 | `heat_plane_triangle_2d` | two-triangle conduction patch with three fixed temperatures | max temperature `100`, max heat flux `3600`, node-1 temperature `60`, element gradients `(-40, -40)` and `(0, -80)` | absolute tolerances from solver unit baseline | automated |
 | `heat_plane_quad_2d` | single quad conduction patch with three fixed temperatures | max temperature `100`, max heat flux `2846.0498941515416`, node-1 temperature `60`, gradient `(-20, -60)` | absolute tolerances from solver unit baseline | automated |
 | `beam_1d` | tip-loaded cantilever beam | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
+| `torsion_1d` | torsion shaft sample fixture | max rotation `0.026371308016877638`, max torque `2500`, max stress `20833333.333333332`, tip rotation `0.026371308016877638` | absolute tolerances from solver unit baseline | automated |
 | `frame_2d` | tip-loaded cantilever frame member | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
 | `frame_3d` | tip-loaded cantilever space-frame member | max displacement `0.0015873015873015873`, max rotation `0.0011904761904761906`, max moment `2000`, max stress `1.25e7` | absolute tolerances from solver unit baseline | automated |
 | `truss_2d` | three-bar triangular truss | max displacement `1.114463950892853e-6`, max stress `60092.52125773316`, tip `ux=2.380952380952381e-7`, tip `uy=-1.088733463909362e-6` | absolute tolerances from solver unit baseline | automated |
@@ -57,6 +61,9 @@ They are the best first return for `v1.x` accuracy work:
 Together they cover:
 
 - direct structural displacement/stress
+- one-dimensional spring chain extension/force response
+- planar spring extension/force distribution
+- spatial spring extension/force distribution
 - restrained thermal expansion
 - free thermal bending from a through-depth temperature gradient
 - pure heat conduction with fixed-temperature interpolation
@@ -82,7 +89,7 @@ The second wave extends that trust envelope to:
 
 After this seed set, the next best families are:
 
-1. `spring_2d`
+1. newly introduced families beyond the current seed set
 
 ## Related docs
 

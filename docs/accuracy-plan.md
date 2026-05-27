@@ -107,23 +107,23 @@ than pretending one global number is honest.
 | `axial_bar_1d` | fully supported | `verified` | closed-form tensile bar and restrained bar | unit test + release fixture |
 | `thermal_bar_1d` | fully supported | `verified` | restrained thermal expansion bar | unit test + workflow fixture |
 | `spring_1d` | fully supported | `verified` | 1D chain with hand-checkable extension and force | unit test |
-| `spring_2d` | minimal | `partially verified` | small planar spring grid | direct-mesh + orchestrated fixture |
-| `spring_3d` | minimal | `partially verified` | small spatial spring cage | direct-mesh + orchestrated fixture |
+| `spring_2d` | minimal | `verified` | small planar spring grid | unit test + direct-mesh + orchestrated fixture |
+| `spring_3d` | minimal | `verified` | small spatial spring cage | unit test + direct-mesh + orchestrated fixture |
 | `beam_1d` | fully supported | `verified` | cantilever and distributed-load beam | unit test + sample fixture |
-| `torsion_1d` | fully supported | `verified` | shaft twist and shear-stress case | unit test |
-| `frame_2d` | fully supported | `verified` | portal frame and restrained thermal frame | unit test + sample fixture |
-| `frame_3d` | backend operator shipping | `partially verified` | cantilever space frame with bending and rotation response | unit test + sample fixture |
-| `truss_2d` | fully supported | `verified` | small planar truss benchmark | unit test + sample fixture |
+| `torsion_1d` | fully supported | `verified` | shaft twist and shear-stress case | unit test + sample fixture + orchestrated smoke |
+| `frame_2d` | fully supported | `verified` | portal frame and restrained thermal frame | unit test + sample fixture + orchestrated smoke |
+| `frame_3d` | backend operator shipping | `verified` | cantilever space frame with bending and rotation response | unit test + sample fixture + orchestrated smoke |
+| `truss_2d` | fully supported | `verified` | small planar truss benchmark | unit test + sample fixture + orchestrated smoke |
 | `truss_3d` | fully supported | `verified` | stable 3D truss benchmark with known response | sample fixture + orchestrated smoke |
-| `plane_triangle_2d` | fully supported | `partially verified` | constant-strain patch and cantilever plate | unit test + sample fixture |
-| `plane_quad_2d` | fully supported | `partially verified` | quad patch and cantilever plate | unit test + sample fixture |
-| `heat_bar_1d` | shipping in thermal domain | `partially verified` | 1D conduction gradient and source case | unit test + sample fixture |
+| `plane_triangle_2d` | fully supported | `verified` | constant-strain patch and cantilever plate | unit test + sample fixture + orchestrated smoke |
+| `plane_quad_2d` | fully supported | `verified` | quad patch and cantilever plate | unit test + sample fixture + orchestrated smoke |
+| `heat_bar_1d` | shipping in thermal domain | `verified` | 1D conduction gradient and source case | unit test + sample fixture + orchestrated smoke |
 | `heat_plane_triangle_2d` | shipping in thermal domain | `verified` | triangular conduction patch | unit test + sample fixture + orchestrated smoke |
-| `heat_plane_quad_2d` | shipping in thermal domain | `partially verified` | quad conduction patch | unit test + sample fixture |
-| `thermal_truss_2d / 3d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermal truss response | unit test + sample fixture |
-| `thermal_beam_1d` | shipping in thermo-mechanical domain | `partially verified` | restrained gradient beam | unit test first |
-| `thermal_frame_2d / 3d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermal frame and restrained space-frame thermal response | unit test + sample fixture |
-| `thermal_plane_triangle_2d / quad_2d` | shipping in thermo-mechanical domain | `partially verified` | restrained thermoelastic plane patch | unit test + workflow fixture |
+| `heat_plane_quad_2d` | shipping in thermal domain | `verified` | quad conduction patch | unit test + sample fixture + orchestrated smoke |
+| `thermal_truss_2d / 3d` | shipping in thermo-mechanical domain | `verified` | restrained thermal truss response | unit test + sample fixture + orchestrated smoke |
+| `thermal_beam_1d` | shipping in thermo-mechanical domain | `verified` | restrained gradient beam | unit test + sample fixture + orchestrated smoke |
+| `thermal_frame_2d / 3d` | shipping in thermo-mechanical domain | `verified` | restrained thermal frame and restrained space-frame thermal response | unit test + sample fixture + orchestrated smoke |
+| `thermal_plane_triangle_2d / quad_2d` | shipping in thermo-mechanical domain | `verified` | restrained thermoelastic plane patch | unit test + workflow fixture + orchestrated smoke |
 
 ## Required benchmark artifacts
 

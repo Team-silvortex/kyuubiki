@@ -10,7 +10,14 @@ use kyuubiki_protocol::{
     SolveThermalFrame2dRequest,
     SolveThermalFrame3dRequest,
     SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveSpring1dRequest,
+    Spring1dElementInput, Spring1dNodeInput,
+    SolveSpring2dRequest,
+    Spring2dElementInput, Spring2dNodeInput,
+    SolveSpring3dRequest,
+    Spring3dElementInput, Spring3dNodeInput,
+    Torsion1dElementInput, Torsion1dNodeInput,
     ThermalBar1dElementInput, ThermalBar1dNodeInput, ThermalBeam1dElementInput,
     ThermalBeam1dNodeInput, ThermalFrame3dElementInput,
     ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
@@ -24,7 +31,7 @@ use kyuubiki_solver::{
     solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d,
     solve_thermal_plane_triangle_2d, solve_thermal_truss_2d, solve_thermal_truss_3d,
-    solve_truss_2d, solve_truss_3d,
+    solve_torsion_1d, solve_truss_2d, solve_truss_3d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
 };
 
 fn assert_close_abs(actual: f64, expected: f64, tolerance: f64, label: &str) {
@@ -73,6 +80,84 @@ fn accuracy_baseline_axial_bar_1d_closed_form() {
         -1000.0,
         1.0e-6,
         "axial_bar_1d reaction force",
+    );
+}
+
+#[test]
+fn accuracy_baseline_spring_1d_chain_fixture() {
+    let result = solve_spring_1d(&SolveSpring1dRequest {
+        nodes: vec![
+            Spring1dNodeInput {
+                id: "s0".to_string(),
+                x: 0.0,
+                fix_x: true,
+                load_x: 0.0,
+            },
+            Spring1dNodeInput {
+                id: "s1".to_string(),
+                x: 1.2,
+                fix_x: false,
+                load_x: 0.0,
+            },
+            Spring1dNodeInput {
+                id: "s2".to_string(),
+                x: 2.4,
+                fix_x: false,
+                load_x: 1200.0,
+            },
+        ],
+        elements: vec![
+            Spring1dElementInput {
+                id: "k0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 35000.0,
+            },
+            Spring1dElementInput {
+                id: "k1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                stiffness: 20000.0,
+            },
+        ],
+    })
+    .expect("spring_1d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.09428571428571428,
+        1.0e-15,
+        "spring_1d max displacement",
+    );
+    assert_close_abs(
+        result.max_force,
+        1200.0,
+        1.0e-12,
+        "spring_1d max force",
+    );
+    assert_close_abs(
+        result.nodes[1].ux,
+        0.03428571428571429,
+        1.0e-15,
+        "spring_1d node-1 ux",
+    );
+    assert_close_abs(
+        result.nodes[2].ux,
+        0.09428571428571428,
+        1.0e-15,
+        "spring_1d node-2 ux",
+    );
+    assert_close_abs(
+        result.elements[0].force,
+        1200.0,
+        1.0e-12,
+        "spring_1d element-0 force",
+    );
+    assert_close_abs(
+        result.elements[1].force,
+        1199.9999999999998,
+        1.0e-12,
+        "spring_1d element-1 force",
     );
 }
 
@@ -532,6 +617,78 @@ fn accuracy_baseline_beam_1d_tip_loaded_cantilever() {
         1.25e7,
         1.0e-2,
         "beam_1d max bending stress",
+    );
+}
+
+#[test]
+fn accuracy_baseline_torsion_1d_sample_fixture() {
+    let result = solve_torsion_1d(&SolveTorsion1dRequest {
+        nodes: vec![
+            Torsion1dNodeInput {
+                id: "t0".to_string(),
+                x: 0.0,
+                fix_rz: true,
+                torque_z: 0.0,
+            },
+            Torsion1dNodeInput {
+                id: "t1".to_string(),
+                x: 1.5,
+                fix_rz: false,
+                torque_z: 2500.0,
+            },
+        ],
+        elements: vec![Torsion1dElementInput {
+            id: "s0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            shear_modulus: 79.0e9,
+            polar_moment: 1.8e-6,
+            section_modulus: 1.2e-4,
+        }],
+    })
+    .expect("torsion_1d baseline should solve");
+
+    assert_close_abs(
+        result.max_rotation,
+        0.026371308016877638,
+        1.0e-15,
+        "torsion_1d max rotation",
+    );
+    assert_close_abs(
+        result.max_torque,
+        2500.0,
+        1.0e-12,
+        "torsion_1d max torque",
+    );
+    assert_close_abs(
+        result.max_stress,
+        20833333.333333332,
+        1.0e-9,
+        "torsion_1d max stress",
+    );
+    assert_close_abs(
+        result.nodes[1].rz,
+        0.026371308016877638,
+        1.0e-15,
+        "torsion_1d tip rotation",
+    );
+    assert_close_abs(
+        result.elements[0].torque,
+        2500.0,
+        1.0e-12,
+        "torsion_1d element torque",
+    );
+    assert_close_abs(
+        result.elements[0].twist,
+        0.026371308016877638,
+        1.0e-15,
+        "torsion_1d element twist",
+    );
+    assert_close_abs(
+        result.elements[0].shear_stress,
+        20833333.333333332,
+        1.0e-9,
+        "torsion_1d element shear stress",
     );
 }
 
@@ -1633,6 +1790,270 @@ fn accuracy_baseline_truss_3d_space_frame_pyramid_fixture() {
         -63387.6959669619,
         1.0e-9,
         "truss_3d element-5 stress",
+    );
+}
+
+#[test]
+fn accuracy_baseline_spring_2d_grid_fixture() {
+    let result = solve_spring_2d(&SolveSpring2dRequest {
+        nodes: vec![
+            Spring2dNodeInput {
+                id: "s0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_x: true,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+            },
+            Spring2dNodeInput {
+                id: "s1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_x: false,
+                fix_y: true,
+                load_x: 0.0,
+                load_y: 0.0,
+            },
+            Spring2dNodeInput {
+                id: "s2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_x: false,
+                fix_y: false,
+                load_x: 1200.0,
+                load_y: -600.0,
+            },
+            Spring2dNodeInput {
+                id: "s3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_x: true,
+                fix_y: false,
+                load_x: 0.0,
+                load_y: 0.0,
+            },
+        ],
+        elements: vec![
+            Spring2dElementInput {
+                id: "sp0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 25000.0,
+            },
+            Spring2dElementInput {
+                id: "sp1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                stiffness: 18000.0,
+            },
+            Spring2dElementInput {
+                id: "sp2".to_string(),
+                node_i: 2,
+                node_j: 3,
+                stiffness: 22000.0,
+            },
+            Spring2dElementInput {
+                id: "sp3".to_string(),
+                node_i: 3,
+                node_j: 0,
+                stiffness: 18000.0,
+            },
+            Spring2dElementInput {
+                id: "sp4".to_string(),
+                node_i: 0,
+                node_j: 2,
+                stiffness: 12000.0,
+            },
+        ],
+    })
+    .expect("spring_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.06339734949589224,
+        1.0e-15,
+        "spring_2d max displacement",
+    );
+    assert_close_abs(
+        result.max_force,
+        1120.754716981132,
+        1.0e-12,
+        "spring_2d max force",
+    );
+    assert_close_abs(
+        result.nodes[2].ux,
+        0.0509433962264151,
+        1.0e-15,
+        "spring_2d node-2 ux",
+    );
+    assert_close_abs(
+        result.nodes[2].uy,
+        -0.03773584905660377,
+        1.0e-15,
+        "spring_2d node-2 uy",
+    );
+    assert_close_abs(
+        result.elements[2].force,
+        1120.754716981132,
+        1.0e-12,
+        "spring_2d element-2 force",
+    );
+    assert_close_abs(
+        result.elements[1].force,
+        -679.2452830188679,
+        1.0e-12,
+        "spring_2d element-1 force",
+    );
+    assert_close_abs(
+        result.elements[4].force,
+        112.06975399937737,
+        1.0e-12,
+        "spring_2d diagonal force",
+    );
+}
+
+#[test]
+fn accuracy_baseline_spring_3d_cage_fixture() {
+    let result = solve_spring_3d(&SolveSpring3dRequest {
+        nodes: vec![
+            Spring3dNodeInput {
+                id: "s0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+            },
+            Spring3dNodeInput {
+                id: "s1".to_string(),
+                x: 1.2,
+                y: 0.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+            },
+            Spring3dNodeInput {
+                id: "s2".to_string(),
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+                fix_x: true,
+                fix_y: true,
+                fix_z: true,
+                load_x: 0.0,
+                load_y: 0.0,
+                load_z: 0.0,
+            },
+            Spring3dNodeInput {
+                id: "top".to_string(),
+                x: 0.45,
+                y: 0.35,
+                z: 1.1,
+                fix_x: false,
+                fix_y: false,
+                fix_z: false,
+                load_x: 250.0,
+                load_y: 0.0,
+                load_z: -1100.0,
+            },
+        ],
+        elements: vec![
+            Spring3dElementInput {
+                id: "k0".to_string(),
+                node_i: 0,
+                node_j: 3,
+                stiffness: 18000.0,
+            },
+            Spring3dElementInput {
+                id: "k1".to_string(),
+                node_i: 1,
+                node_j: 3,
+                stiffness: 22000.0,
+            },
+            Spring3dElementInput {
+                id: "k2".to_string(),
+                node_i: 2,
+                node_j: 3,
+                stiffness: 16000.0,
+            },
+            Spring3dElementInput {
+                id: "k3".to_string(),
+                node_i: 0,
+                node_j: 1,
+                stiffness: 9000.0,
+            },
+            Spring3dElementInput {
+                id: "k4".to_string(),
+                node_i: 1,
+                node_j: 2,
+                stiffness: 9000.0,
+            },
+            Spring3dElementInput {
+                id: "k5".to_string(),
+                node_i: 2,
+                node_j: 0,
+                stiffness: 9000.0,
+            },
+        ],
+    })
+    .expect("spring_3d baseline should solve");
+
+    assert_close_abs(
+        result.max_displacement,
+        0.05955868626521211,
+        1.0e-15,
+        "spring_3d max displacement",
+    );
+    assert_close_abs(
+        result.max_force,
+        803.0108273796119,
+        1.0e-12,
+        "spring_3d max force",
+    );
+    assert_close_abs(
+        result.nodes[3].ux,
+        0.037134189113355795,
+        1.0e-15,
+        "spring_3d top ux",
+    );
+    assert_close_abs(
+        result.nodes[3].uy,
+        0.03445543981481482,
+        1.0e-15,
+        "spring_3d top uy",
+    );
+    assert_close_abs(
+        result.nodes[3].uz,
+        -0.03132270383761861,
+        1.0e-15,
+        "spring_3d top uz",
+    );
+    assert_close_abs(
+        result.elements[1].force,
+        -803.0108273796119,
+        1.0e-12,
+        "spring_3d element-1 force",
+    );
+    assert_close_abs(
+        result.elements[2].force,
+        -474.11760144504234,
+        1.0e-12,
+        "spring_3d element-2 force",
+    );
+    assert_close_abs(
+        result.elements[0].force,
+        -82.59674462242567,
+        1.0e-12,
+        "spring_3d element-0 force",
     );
 }
 
