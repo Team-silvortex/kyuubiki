@@ -112,7 +112,7 @@ than pretending one global number is honest.
 | `beam_1d` | fully supported | `verified` | cantilever and distributed-load beam | unit test + sample fixture |
 | `torsion_1d` | fully supported | `verified` | shaft twist and shear-stress case | unit test + sample fixture + orchestrated smoke |
 | `frame_2d` | fully supported | `verified` | portal frame and restrained thermal frame | unit test + sample fixture + orchestrated smoke |
-| `frame_3d` | backend operator shipping | `verified` | cantilever space frame with bending and rotation response | unit test + sample fixture + orchestrated smoke |
+| `frame_3d` | fully supported | `verified` | cantilever space frame with bending and rotation response | unit test + sample fixture + orchestrated smoke |
 | `truss_2d` | fully supported | `verified` | small planar truss benchmark | unit test + sample fixture + orchestrated smoke |
 | `truss_3d` | fully supported | `verified` | stable 3D truss benchmark with known response | sample fixture + orchestrated smoke |
 | `plane_triangle_2d` | fully supported | `verified` | constant-strain patch and cantilever plate | unit test + sample fixture + orchestrated smoke |

@@ -128,7 +128,7 @@ Verified baseline:
 - `Axial & Springs`
   `axial_bar_1d`, `thermal_bar_1d`, `spring_1d`
 - `Beams & Frames`
-  `beam_1d`, `torsion_1d`, `frame_2d`
+  `beam_1d`, `torsion_1d`, `frame_2d`, `frame_3d`
 - `Trusses`
   `truss_2d`, `truss_3d`
 - `Planes`
@@ -139,7 +139,7 @@ Current line coverage:
 - `Thermal`
   `heat_bar_1d`, `heat_plane_triangle_2d`, `heat_plane_quad_2d`
 - `Thermo-mechanical`
-  `thermal_beam_1d`, `thermal_frame_2d`, `thermal_truss_2d`,
+  `thermal_beam_1d`, `thermal_frame_2d`, `thermal_frame_3d`, `thermal_truss_2d`,
   `thermal_truss_3d`, `thermal_plane_triangle_2d`,
   `thermal_plane_quad_2d`
 
