@@ -54,9 +54,6 @@ generate_variant "hub" "H" "#15C4D8" "$ROOT_DIR/apps/hub-gui/src-tauri/icons"
 generate_variant "installer" "I" "#F5A623" "$ROOT_DIR/apps/installer-gui/src-tauri/icons"
 generate_variant "workbench" "W" "#FF6B57" "$ROOT_DIR/apps/workbench-gui/src-tauri/icons"
 
-cp "$ASSET_DIR/kyuubiki-installer.png"  "$ROOT_DIR/apps/installer-gui/src-tauri/icons/kyuubiki-dock.png"
-cp "$ASSET_DIR/kyuubiki-installer.icns" "$ROOT_DIR/apps/installer-gui/src-tauri/icons/kyuubiki-dock.icns"
-
 echo "generated desktop icon variants:"
 echo "  - $ASSET_DIR/kyuubiki-hub.png"
 echo "  - $ASSET_DIR/kyuubiki-installer.png"

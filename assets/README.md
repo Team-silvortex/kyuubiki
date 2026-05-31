@@ -6,10 +6,8 @@ useful to the repository.
 - `brand/`
   Shared brand metadata and product naming copy.
 - `icons/app/`
-  Main application icon assets (`.png`, `.icns`, `.ico`), including the shared
-  brand mark and per-shell variants for Hub, Installer, and Workbench.
-- `icons/dock/`
-  Dock-oriented icon assets (`.png`, `.icns`) for future macOS-specific polish.
+  Main application icon assets, including the shared base `kyuubiki.png` mark
+  and the per-shell variants for Hub, Installer, and Workbench.
 
 Design-source files such as `.xcf` and intermediate iconset build trees are not
 kept here anymore. This directory is for repository-ready deliverables only.

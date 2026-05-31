@@ -38,7 +38,6 @@ Keep these names aligned with:
   - `zsh ./scripts/kyuubiki desktop-status all`
 - Confirm brand assets exist under:
   - [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
-  - [assets/icons/dock](/Users/Shared/chroot/dev/kyuubiki/assets/icons/dock)
 - Confirm desktop icon copies exist under:
   - [apps/hub-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/src-tauri/icons)
   - [apps/installer-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/icons)

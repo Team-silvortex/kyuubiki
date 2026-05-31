@@ -12,7 +12,6 @@ These are the packaged desktop icons for the Tauri Hub shell.
 Canonical source assets live in:
 
 - [/Users/Shared/chroot/dev/kyuubiki/assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
-- [/Users/Shared/chroot/dev/kyuubiki/assets/icons/dock](/Users/Shared/chroot/dev/kyuubiki/assets/icons/dock)
 
 This shell now uses the Hub-specific badge variant generated from:
 

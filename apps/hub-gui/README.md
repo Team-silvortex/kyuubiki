@@ -2,60 +2,24 @@
 
 This app is the unified desktop launcher and operator shell for `kyuubiki`.
 
-In the `tamamono 1.0.0` product shape, Hub is no longer just a shell prototype. It now
-acts as the everyday desktop entrypoint for:
-
-- workload launch
-- runtime control
-- desktop packaging readiness
-- hot-reload orchestration
-- guided onboarding and assistant-assisted operator flow
+In the `tamamono 1.x` product shape, Hub is the everyday desktop entrypoint
+for launch, runtime control, bundle operations, and operator guidance.
 
 It sits above:
 
 - [installer-gui](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui)
 - [workbench-gui](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui)
 
-Its job is not to replace the modeling workbench. Its job is to become the
-everyday desktop entrypoint for project launch, runtime control, and system
-overview.
+Its job is not to replace the modeling workbench. Its job is to sit above the
+runtime surfaces and give one short runway into the right next shell.
 
 ## Responsibilities
 
-- project launcher
-- guided assistant entrypoint with local hints and optional OpenAI-compatible model planning
-- project bundle inspect / validate / normalize / unpack / pack / diff entrypoint
-- Hub-managed workload library for local bundles, imported bundle packs, and future remote catalog delivery
-- remote workload catalog sync backed by a formal schema contract
-- remote workload catalogs can now carry `analysis_domains` and
-  `thermal_intents`, so Hub can classify Mechanical / Thermal /
-  Thermo-mechanical entries before opening them
-- one-click sync from the local control plane workload catalog, with the Hub pre-filling the current local catalog endpoint
-- downloaded remote workloads can be attached back to a local `.kyuubiki` path for unified Hub management
-- remote catalog sync now rejects payloads that do not match `kyuubiki.workload-catalog/v1`
-- the control plane can now serve `/api/v1/workloads/catalog` plus `/api/v1/projects/:project_id/bundle` for first-party Hub distribution
-- recent bundle / compare / output path recall for repeat project operations
-- recent project-bundle action history with restore / re-run controls and outcome-aware summaries
-- lightweight recent-action filters for failed, inspect, normalize, and diff flows
-- recent-action cleanup controls for keeping failed items only or clearing the history
-- filtered recent-action JSON export for lightweight local analysis handoff
-- local recent-action JSON import with lightweight merge semantics for cross-machine handoff
-- lightweight pinning for favorite recent actions so common project flows stay at the top
-- dedicated Favorites view above recent history so pinned flows stay immediately visible
-- lightweight favorite labels for pinned flows so common routines can read like named shortcuts
-- one-click CLI command copy from favorites so common bundle workflows can jump straight into shell automation
-- one-click Python stub copy from favorites so common bundle workflows can jump into the front-end DSL / Pyodide path
-- runtime lifecycle overview
-- managed hot-reload control for the local/cloud/distributed dev loop
-- hot-reload log tail selection for `stack / web / frontend / agents` directly inside the runtime panel
-- remembered hot-log source plus automatic log polling while the runtime panel is open and the hot loop is running
-- lightweight hot-log polling controls for enabling/disabling auto refresh and choosing the tail interval
-- observe-mode runtime watch now mirrors both `hot loop` tails and normal `frontend / orchestrator / agent` stack logs in one dedicated watch surface
-- local/cloud/distributed mode selection
-- diagnostics and health summary
-- integrated desktop readiness wall for `macos / linux / windows` staging, icons, manifests, and host bundles
-- desktop release stage / verify / host-build control
-- quick launch into `Workbench`, `Installer`, and future admin tools
+- desktop entry shell for `Workbench`, `Installer`, and runtime-facing tools
+- local and remote workload intake through bundle tools and workload catalogs
+- runtime lifecycle control, health overview, and operator-facing diagnostics
+- guided assistant entrypoint with local hints and optional model-backed plans
+- desktop packaging readiness, stage/verify flows, and host-build checks
 
 Quick launch behavior now prefers an already-built host desktop bundle when one
 exists, and falls back to the repo-local `tauri:dev` shell during development.
@@ -79,15 +43,12 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 - `make hot-local`
 - `make hot-cloud`
 - `make hot-distributed`
-- `make hot-hub-gui`
 - `make test-hub-gui`
 - `make desktop-status PLATFORM=all`
-- `make package-desktop PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-verify PLATFORM=macos|linux|windows`
 - `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`
 - `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
-- `zsh ./scripts/kyuubiki hot-status`
 
 ## Validation
 
@@ -114,6 +75,5 @@ Do not treat that directory as source-owned. The source of truth is:
 - the shared desktop runtime crate
 - the repository-level desktop packaging flow
 - [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
-- example workload catalog:
-  [deploy/workload-catalog.example.json](/Users/Shared/chroot/dev/kyuubiki/deploy/workload-catalog.example.json)
+- [deploy/workload-catalog.example.json](/Users/Shared/chroot/dev/kyuubiki/deploy/workload-catalog.example.json)
 - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)

@@ -4,7 +4,7 @@ This document defines the accuracy-validation path for `v1.x`.
 
 The goal is simple:
 
-- `v0.9.0` proved that Kyuubiki is broadly usable
+- the earlier release line proved that Kyuubiki is broadly usable
 - `v1.x` should prove that its supported simulation results are trustworthy
 
 This is not a performance plan and not a UI plan. It is the verification plan
@@ -102,7 +102,7 @@ than pretending one global number is honest.
 
 ## Family plan
 
-| Study family | Current `v0.9.0` support | Accuracy target for `v1.x` | Benchmark shape | Automation target |
+| Study family | Current support | Accuracy target for `v1.x` | Benchmark shape | Automation target |
 | --- | --- | --- | --- | --- |
 | `axial_bar_1d` | fully supported | `verified` | closed-form tensile bar and restrained bar | unit test + release fixture |
 | `thermal_bar_1d` | fully supported | `verified` | restrained thermal expansion bar | unit test + workflow fixture + orchestrated smoke |
