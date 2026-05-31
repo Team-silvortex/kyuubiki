@@ -139,7 +139,7 @@ Benchmark profiles for medium, large, v2, and 10k-scale targets.
 Cross-platform CLI for doctor, env validation, release staging, and deployment
 setup.
 
-See [crates/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/README.md)
+See [workers/rust/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/README.md)
 for the crate-by-crate map.
 
 Rust tests remain colocated with crates or under crate-local `tests/`

@@ -1,0 +1,143 @@
+{
+  "schema_version": "kyuubiki.workflow-graph/v1",
+  "id": "workflow.heat-to-thermo-quad-2d",
+  "name": "Heat to thermo-mechanical quad",
+  "version": "1.0.0",
+  "description": "Solve a heat quad model, bridge the temperature field, then solve the thermo-mechanical quad model.",
+  "entry_nodes": ["heat_model"],
+  "output_nodes": ["thermo_summary"],
+  "defaults": {
+    "cache_policy": "cached",
+    "orchestrated": true
+  },
+  "nodes": [
+    {
+      "id": "heat_model",
+      "kind": "input",
+      "name": "Heat model input",
+      "outputs": [
+        {
+          "id": "model",
+          "artifact_type": "study_model/heat_plane_quad_2d"
+        }
+      ],
+      "inputs": []
+    },
+    {
+      "id": "solve_heat",
+      "kind": "solve",
+      "operator_id": "solve.heat_plane_quad_2d",
+      "name": "Solve heat quad",
+      "inputs": [
+        {
+          "id": "model",
+          "artifact_type": "study_model/heat_plane_quad_2d"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "result",
+          "artifact_type": "result/heat_plane_quad_2d"
+        }
+      ]
+    },
+    {
+      "id": "bridge_temperature",
+      "kind": "transform",
+      "operator_id": "bridge.temperature_field_to_thermo_quad_2d",
+      "name": "Bridge temperature field",
+      "inputs": [
+        {
+          "id": "heat_result",
+          "artifact_type": "result/heat_plane_quad_2d"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "thermo_model",
+          "artifact_type": "study_model/thermal_plane_quad_2d"
+        }
+      ]
+    },
+    {
+      "id": "solve_thermo",
+      "kind": "solve",
+      "operator_id": "solve.thermal_plane_quad_2d",
+      "name": "Solve thermo-mechanical quad",
+      "inputs": [
+        {
+          "id": "model",
+          "artifact_type": "study_model/thermal_plane_quad_2d"
+        }
+      ],
+      "outputs": [
+        {
+          "id": "result",
+          "artifact_type": "result/thermal_plane_quad_2d"
+        }
+      ]
+    },
+    {
+      "id": "thermo_summary",
+      "kind": "output",
+      "name": "Thermo result summary",
+      "inputs": [
+        {
+          "id": "result",
+          "artifact_type": "result/thermal_plane_quad_2d"
+        }
+      ],
+      "outputs": []
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-heat-input",
+      "from": {
+        "node": "heat_model",
+        "port": "model"
+      },
+      "to": {
+        "node": "solve_heat",
+        "port": "model"
+      },
+      "artifact_type": "study_model/heat_plane_quad_2d"
+    },
+    {
+      "id": "edge-heat-result",
+      "from": {
+        "node": "solve_heat",
+        "port": "result"
+      },
+      "to": {
+        "node": "bridge_temperature",
+        "port": "heat_result"
+      },
+      "artifact_type": "result/heat_plane_quad_2d"
+    },
+    {
+      "id": "edge-thermo-model",
+      "from": {
+        "node": "bridge_temperature",
+        "port": "thermo_model"
+      },
+      "to": {
+        "node": "solve_thermo",
+        "port": "model"
+      },
+      "artifact_type": "study_model/thermal_plane_quad_2d"
+    },
+    {
+      "id": "edge-thermo-result",
+      "from": {
+        "node": "solve_thermo",
+        "port": "result"
+      },
+      "to": {
+        "node": "thermo_summary",
+        "port": "result"
+      },
+      "artifact_type": "result/thermal_plane_quad_2d"
+    }
+  ]
+}

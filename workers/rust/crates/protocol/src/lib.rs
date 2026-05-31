@@ -7,6 +7,89 @@ pub const CONTROL_PLANE_PROTOCOL: &str = "kyuubiki.control-plane/http-v1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum OperatorKind {
+    Solver,
+    Transform,
+    Extract,
+    Export,
+    WorkflowBridge,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OperatorOrigin {
+    BuiltIn,
+    ExternalLocal,
+    ExternalRemote,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OperatorSchemaRef {
+    pub schema: String,
+    pub version: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OperatorDescriptor {
+    pub id: String,
+    pub version: String,
+    pub domain: String,
+    pub family: String,
+    pub kind: OperatorKind,
+    pub summary: String,
+    pub capability_tags: Vec<String>,
+    pub origin: OperatorOrigin,
+    pub input_schema: OperatorSchemaRef,
+    pub output_schema: OperatorSchemaRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct OperatorRunContext {
+    pub orchestrated: bool,
+    pub project_id: Option<String>,
+    pub model_id: Option<String>,
+    pub workflow_run_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OperatorRunRequest {
+    pub operator_id: String,
+    pub input: Value,
+    #[serde(default)]
+    pub context: OperatorRunContext,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OperatorArtifactRef {
+    pub kind: String,
+    pub id: String,
+    pub label: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct OperatorRunResult {
+    pub operator_id: String,
+    pub summary: Value,
+    #[serde(default)]
+    pub artifacts: Vec<OperatorArtifactRef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatToThermoPlaneQuad2dWorkflowRequest {
+    pub heat_model: SolveHeatPlaneQuad2dRequest,
+    pub thermo_seed_model: SolveThermalPlaneQuad2dRequest,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatToThermoPlaneQuad2dWorkflowResult {
+    pub workflow_id: String,
+    pub heat_result: SolveHeatPlaneQuad2dResult,
+    pub bridged_model: SolveThermalPlaneQuad2dRequest,
+    pub thermo_result: SolveThermalPlaneQuad2dResult,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum JobStatus {
     Queued,
     Preprocessing,
@@ -2142,21 +2225,27 @@ pub struct ResultChunkResponse {
 mod tests {
     use super::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput,
-        Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
-        HeatPlaneTriangleElementInput, Job, JobStatus, PlaneQuadElementInput, ProgressEvent,
-        RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
-        SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
-        SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
-        SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
-        SolveThermalFrame3dRequest,
-        SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+        Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput, HeatBar1dElementInput,
+        HeatBar1dNodeInput, HeatToThermoPlaneQuad2dWorkflowRequest,
+        HeatToThermoPlaneQuad2dWorkflowResult, HeatPlaneNodeInput,
+        HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneNodeResult,
+        HeatPlaneTriangleElementInput, Job, JobStatus, OperatorArtifactRef, OperatorDescriptor,
+        OperatorKind, OperatorOrigin, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
+        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
+        RpcResponse, SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest,
+        SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+        SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
+        SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
+        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+        SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+        SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dRequest,
         SolveThermalTruss2dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
         Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
         ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
-        ThermalFrame2dElementInput, ThermalFrame2dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput, ThermalPlaneNodeInput,
-        ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
+        ThermalFrame2dElementInput, ThermalFrame2dNodeInput, ThermalFrame3dElementInput,
+        ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
+        ThermalPlaneQuadElementResult, ThermalPlaneNodeResult, ThermalPlaneTriangleElementInput,
         ThermalTruss2dElementInput, ThermalTruss2dNodeInput, Torsion1dElementInput,
         Torsion1dNodeInput,
     };
@@ -2206,6 +2295,235 @@ mod tests {
         assert_eq!(decoded.id, "rpc-1");
         let params: SolveBarRequest = serde_json::from_value(decoded.params).expect("params");
         assert_eq!(params.elements, 3);
+    }
+
+    #[test]
+    fn serializes_operator_descriptor_round_trip() {
+        let descriptor = OperatorDescriptor {
+            id: "solve.frame_3d".to_string(),
+            version: "1.0.0".to_string(),
+            domain: "mechanical".to_string(),
+            family: "frame_3d".to_string(),
+            kind: OperatorKind::Solver,
+            summary: "Solve a 3D frame model with six-DOF nodes.".to_string(),
+            capability_tags: vec![
+                "verified".to_string(),
+                "mechanical".to_string(),
+                "frame".to_string(),
+            ],
+            origin: OperatorOrigin::BuiltIn,
+            input_schema: OperatorSchemaRef {
+                schema: "kyuubiki.operator.solve.frame_3d.input".to_string(),
+                version: "1".to_string(),
+            },
+            output_schema: OperatorSchemaRef {
+                schema: "kyuubiki.operator.solve.frame_3d.output".to_string(),
+                version: "1".to_string(),
+            },
+        };
+
+        let json = serde_json::to_string(&descriptor).expect("descriptor should serialize");
+        let decoded: OperatorDescriptor =
+            serde_json::from_str(&json).expect("descriptor should decode");
+
+        assert_eq!(decoded.id, "solve.frame_3d");
+        assert_eq!(decoded.kind, OperatorKind::Solver);
+        assert_eq!(decoded.origin, OperatorOrigin::BuiltIn);
+    }
+
+    #[test]
+    fn serializes_operator_run_request_and_result_round_trip() {
+        let request = OperatorRunRequest {
+            operator_id: "extract.result_summary".to_string(),
+            input: serde_json::json!({
+                "job_id": "job-42",
+                "result_kind": "frame_3d"
+            }),
+            context: super::OperatorRunContext {
+                orchestrated: true,
+                project_id: Some("project-1".to_string()),
+                model_id: Some("model-7".to_string()),
+                workflow_run_id: Some("run-9".to_string()),
+            },
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: OperatorRunRequest =
+            serde_json::from_str(&json).expect("request should decode");
+        assert_eq!(decoded.operator_id, "extract.result_summary");
+        assert_eq!(decoded.context.project_id.as_deref(), Some("project-1"));
+
+        let result = OperatorRunResult {
+            operator_id: decoded.operator_id,
+            summary: serde_json::json!({
+                "max_stress": 1.26e5,
+                "max_displacement": 5.3e-7
+            }),
+            artifacts: vec![OperatorArtifactRef {
+                kind: "result_chunk".to_string(),
+                id: "chunk-1".to_string(),
+                label: "Primary summary".to_string(),
+            }],
+        };
+
+        let json = serde_json::to_string(&result).expect("result should serialize");
+        let decoded: OperatorRunResult =
+            serde_json::from_str(&json).expect("result should decode");
+        assert_eq!(decoded.artifacts.len(), 1);
+        assert_eq!(decoded.artifacts[0].kind, "result_chunk");
+    }
+
+    #[test]
+    fn serializes_heat_to_thermo_plane_quad_workflow_round_trip() {
+        let request = HeatToThermoPlaneQuad2dWorkflowRequest {
+            heat_model: SolveHeatPlaneQuad2dRequest {
+                nodes: vec![
+                    HeatPlaneNodeInput {
+                        id: "h0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_temperature: true,
+                        temperature: 100.0,
+                        heat_load: 0.0,
+                    },
+                    HeatPlaneNodeInput {
+                        id: "h1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_temperature: true,
+                        temperature: 20.0,
+                        heat_load: 0.0,
+                    },
+                ],
+                elements: vec![HeatPlaneQuadElementInput {
+                    id: "hq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 1,
+                    node_l: 0,
+                    thickness: 0.02,
+                    conductivity: 45.0,
+                }],
+            },
+            thermo_seed_model: SolveThermalPlaneQuad2dRequest {
+                nodes: vec![
+                    ThermalPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 0.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 0.0,
+                    },
+                ],
+                elements: vec![ThermalPlaneQuadElementInput {
+                    id: "tq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 1,
+                    node_l: 0,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                    thermal_expansion: 11.0e-6,
+                }],
+            },
+        };
+
+        let json = serde_json::to_string(&request).expect("workflow request should serialize");
+        let decoded: HeatToThermoPlaneQuad2dWorkflowRequest =
+            serde_json::from_str(&json).expect("workflow request should decode");
+        assert_eq!(decoded.heat_model.nodes.len(), 2);
+
+        let result = HeatToThermoPlaneQuad2dWorkflowResult {
+            workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
+            heat_result: SolveHeatPlaneQuad2dResult {
+                input: decoded.heat_model.clone(),
+                nodes: vec![HeatPlaneNodeResult {
+                    index: 0,
+                    id: "h0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                }],
+                elements: vec![HeatPlaneQuadElementResult {
+                    index: 0,
+                    id: "hq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 1,
+                    node_l: 0,
+                    area: 0.02,
+                    average_temperature: 60.0,
+                    temperature_gradient_x: -40.0,
+                    temperature_gradient_y: 0.0,
+                    heat_flux_x: 1800.0,
+                    heat_flux_y: 0.0,
+                    heat_flux_magnitude: 1800.0,
+                }],
+                max_temperature: 100.0,
+                max_heat_flux: 1800.0,
+            },
+            bridged_model: decoded.thermo_seed_model.clone(),
+            thermo_result: SolveThermalPlaneQuad2dResult {
+                input: decoded.thermo_seed_model,
+                nodes: vec![ThermalPlaneNodeResult {
+                    index: 0,
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    ux: 0.0,
+                    uy: 0.0,
+                    displacement_magnitude: 0.0,
+                    temperature_delta: 80.0,
+                }],
+                elements: vec![ThermalPlaneQuadElementResult {
+                    index: 0,
+                    id: "tq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 1,
+                    node_l: 0,
+                    area: 0.02,
+                    average_temperature_delta: 80.0,
+                    thermal_strain: 8.8e-4,
+                    mechanical_strain_x: 0.0,
+                    mechanical_strain_y: 0.0,
+                    total_strain_x: 0.0,
+                    total_strain_y: 0.0,
+                    gamma_xy: 0.0,
+                    stress_x: -1.0,
+                    stress_y: -1.0,
+                    tau_xy: 0.0,
+                    principal_stress_1: -1.0,
+                    principal_stress_2: -1.0,
+                    max_in_plane_shear: 0.0,
+                    von_mises: 1.0,
+                }],
+                max_displacement: 0.0,
+                max_stress: 1.0,
+                max_temperature_delta: 80.0,
+            },
+        };
+
+        let json = serde_json::to_string(&result).expect("workflow result should serialize");
+        let decoded: HeatToThermoPlaneQuad2dWorkflowResult =
+            serde_json::from_str(&json).expect("workflow result should decode");
+        assert_eq!(decoded.workflow_id, "workflow.heat-to-thermo-quad-2d");
+        assert_eq!(decoded.thermo_result.max_temperature_delta, 80.0);
     }
 
     #[test]

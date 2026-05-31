@@ -21,6 +21,10 @@ Then branch by intent:
   Quality direction and verification policy.
 - `accuracy-baselines.md`
   Current numerical baselines.
+- `operator-sdk.md`
+  Current extension-contract direction for new operator capabilities.
+- `workflow-graph.md`
+  Multi-operator composition model for shader-like workflow growth.
 
 ## By Goal
 
@@ -46,6 +50,12 @@ Then branch by intent:
 - `headless-sdks.md`
   Protocol-first Rust, Elixir, and Python SDK layer for headless AI and
   automation clients.
+- `operator-sdk.md`
+  Proposed operator descriptor, runtime contract, and validation shape for
+  future extensible solver and transform capabilities.
+- `workflow-graph.md`
+  Proposed graph/runtime model for chaining multiple operators into stable
+  headless workflows.
 
 ### Verify changes
 
@@ -108,8 +118,8 @@ Then branch by intent:
 - `/Users/Shared/chroot/dev/kyuubiki/tmp/README.md`
   Disposable local runtime state, working data, and dev-only paths.
 - `/Users/Shared/chroot/dev/kyuubiki/schemas/README.md`
-  Shared JSON contract map for jobs, projects, materials, catalogs, and
-  language packs.
+  Shared JSON contract map for jobs, projects, materials, catalogs, language
+  packs, and workflow graphs.
 
 ## Suggested Reading Paths
 

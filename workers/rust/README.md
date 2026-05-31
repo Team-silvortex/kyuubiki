@@ -21,3 +21,13 @@ It currently contains:
 
 This workspace should remain frontend-agnostic and Phoenix-agnostic. The Rust
 side is the reusable computation/runtime layer, not the control plane.
+
+Crate-level test expectations stay close to the code:
+
+- `crates/solver/tests/`
+  solver behavior, numerical baselines, and progress/result validation
+- other crate-local `tests/`
+  engine, CLI agent, benchmark, and installer/runtime checks
+
+Prefer colocated crate tests so runtime behavior stays near the code it
+validates.

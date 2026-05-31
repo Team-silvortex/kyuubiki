@@ -61,6 +61,13 @@ verified, and less speculative.
    Accuracy roadmap, benchmark targets, and verification priorities.
 4. [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
-5. [language-packs.md](/Users/Shared/chroot/dev/kyuubiki/docs/language-packs.md)
+5. [operator-sdk.md](/Users/Shared/chroot/dev/kyuubiki/docs/operator-sdk.md)
+   Current extension-contract direction for growing operator capabilities
+   without turning every family into a one-off vertical slice.
+6. [workflow-graph.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-graph.md)
+   Multi-operator composition direction for shader-like workflow growth.
+   The first headless reference runner now exists for
+   `heat_plane_quad_2d -> thermal_plane_quad_2d`.
+7. [language-packs.md](/Users/Shared/chroot/dev/kyuubiki/docs/language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.
