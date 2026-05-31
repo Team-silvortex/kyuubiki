@@ -155,9 +155,7 @@ Use the smallest honest layer first:
   and
   [workers/rust/crates/cli/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
 - sample and workflow regression:
-  release smoke and Workbench UI smoke in
-  [docs/release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)
-  and
+  Workbench UI smoke and orchestrated/direct-mesh integration tests in
   [tests/integration](/Users/Shared/chroot/dev/kyuubiki/tests/integration)
 - performance-only baselines:
   benchmark tooling in
@@ -197,7 +195,6 @@ Treat a family as accuracy-ready for `v1.x` when:
 
 ## Related docs
 
-- [release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)
 - [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
 - [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
 - [workers/rust/benchmarks/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/README.md)

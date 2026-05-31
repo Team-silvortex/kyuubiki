@@ -64,10 +64,3 @@ verified, and less speculative.
 5. [language-packs.md](/Users/Shared/chroot/dev/kyuubiki/docs/language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.
-
-## Historical handoff
-
-If you need the last release-hardening pack instead of the current product
-line, use:
-
-- [release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)

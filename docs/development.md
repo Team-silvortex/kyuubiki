@@ -1,26 +1,33 @@
 # Development Notes
 
-## Current State
+Use this document for the day-to-day contributor workflow: where to start,
+which launcher to reach for, and how to keep changes aligned with the current
+repo shape.
 
-This repository is no longer a thin scaffold. It contains:
+Use these companion docs when you need deeper detail:
 
-- a Next.js workbench
-- an Elixir orchestrator API
-- a Rust engine/solver workspace
-- a Tauri Hub GUI
-- a Tauri installer GUI
-- a Tauri workbench GUI
-- local, cloud, and distributed deployment modes
+- [repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+  directory ownership and generated-path boundaries
+- [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+  verification entrypoints and smoke layout
+- [operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
+  deployment modes, runtime switches, and operator flows
+- [frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
+  visual/UI language
+- [frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
+  frontend component, state, and helper boundaries
+
+## Working posture
 
 The default development style remains TDD-first. New behavior should start with
-a test before production code changes.
+a failing test before production code changes.
 
-The repository also now has an explicit style baseline:
+Use these baseline docs to stay aligned:
 
 - [philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
-- [frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
+- [current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
 
-## Repository Conventions
+## Repository conventions
 
 - Put BEAM application code under `apps/web`
 - Put browser UI code under `apps/frontend`
@@ -36,10 +43,10 @@ The repository also now has an explicit style baseline:
 - Treat `tmp/` and `dist/` as generated/runtime directories
 - Reach first for `make tdd-web` or `make tdd-rust` instead of editing code
   without a failing test
-- prefer extending existing tokens, contracts, and module boundaries before
+- Prefer extending existing tokens, contracts, and module boundaries before
   inventing parallel patterns
 
-## Unified Entry Point
+## Unified entry point
 
 Use `./scripts/kyuubiki` as the top-level local launcher.
 
@@ -62,70 +69,23 @@ This is intentionally a host-native launcher rather than a container-first one.
 Right now the project is optimizing for local iteration, local IPC evolution,
 and mixed-platform development more than environment isolation.
 
-## Hot Reload
+## Default loops
 
-The repository now has an explicit hot-reload development path:
+The shortest useful loops are:
 
-- `frontend`: uses native Next.js HMR
-- `hub-gui`, `installer-gui`, `workbench-gui`: use native `tauri dev`
-- `apps/web`: is not Phoenix, so `hot-web` restarts the control plane on source changes
-- `workers/rust`: `hot-agent` restarts solver agents on Rust source changes
+- `make hot-local`
+  full local workstation loop
+- `make hot-cloud`
+  full PostgreSQL-backed cloud loop
+- `make hot-distributed`
+  distributed control-plane loop
+- `./scripts/kyuubiki test`
+  broad repository test pass
+- `./scripts/kyuubiki verify`
+  higher-confidence pre-merge check
 
-Use `make hot-local` as the default "whole system" dev loop when you want the
-browser workbench, orchestrator, and local agents to all stay warm together.
-
-## Storage Modes
-
-The orchestrator supports dual SQL-backed persistence:
-
-- default local mode: `sqlite`
-- shared/cloud/distributed mode: `postgres`
-
-Example:
-
-```bash
-cd <repo>
-make start-local
-```
-
-For cloud/distributed:
-
-```bash
-KYUUBIKI_STORAGE_BACKEND=postgres \
-DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev \
-make start-cloud
-```
-
-In distributed mode:
-
-```bash
-KYUUBIKI_DEPLOYMENT_MODE=distributed \
-KYUUBIKI_AGENT_DISCOVERY=registry \
-make start-distributed
-```
-
-The control plane can then accept remote agent registration and heartbeat.
-
-## Containerization Fit
-
-Containerization is useful here, but not as the default local development mode
-yet.
-
-Good fits:
-
-- CI
-- Linux-based remote workers
-- future distributed execution nodes
-- reproducible deployment packaging
-
-Less ideal right now:
-
-- macOS/Windows local IPC experiments
-- frontend visualization work that may want direct host graphics/browser access
-- early-stage debugging where Elixir and Rust processes are evolving quickly
-
-The current recommendation is host-native development first, containers later
-for worker deployment boundaries.
+For exact runtime/storage mode details, use
+[operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md).
 
 ## TDD Workflow
 
@@ -134,7 +94,7 @@ for worker deployment boundaries.
 3. Refactor with the test suite still green
 4. Run `make verify` before wrapping the change
 
-## Active Development Priorities
+## Active development priorities
 
 1. Push the Rust solver path toward stable `10k`-node single-machine targets
 2. Expand distributed orchestration and remote solver deployment flows

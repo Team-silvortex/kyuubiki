@@ -1,44 +1,40 @@
 # Documentation Map
 
-Use this directory as the source of truth for repository shape, protocol
-boundaries, deployment modes, and day-to-day engineering workflow.
+Use this directory as the current source of truth for product shape, protocol
+boundaries, deployment modes, and engineering workflow.
 
 ## Start Here
 
-If you are new to the repo, read these first:
+Read these first, in order:
 
-1. `system-overview.md`
-2. `architecture.md`
+1. `current-line.md`
+2. `system-overview.md`
 3. `protocols.md`
 4. `repository-structure.md`
 5. `testing-and-ci.md`
 
-If you want the current version-line story first:
+Then branch by intent:
 
-- `current-line.md`
-
-If you want the preserved initial usable release pack:
-
-- `release-archive-0.9.0.md`
-
-If you want the `v1.x` quality direction first:
-
-- `current-line.md`
 - `tamamono-minor-lines.md`
+  Long-range `tamamono 1.x` roadmap.
 - `accuracy-plan.md`
+  Quality direction and verification policy.
 - `accuracy-baselines.md`
-- `version-line.md`
+  Current numerical baselines.
 
 ## By Goal
 
 ### Understand the system
 
+- `current-line.md`
+  Single-entry explanation of the current product line, boundaries, and
+  release posture.
 - `system-overview.md`
   Full runtime map across GUI, control plane, and solver data plane.
-- `architecture.md`
-  Runtime-layer split across frontend, orchestrator, and Rust data plane.
 - `philosophy.md`
   Shared product, engineering, and review principles across all layers.
+- `hub-architecture.md`
+  Hub-specific entrypoint and operator-shell rationale.
 - `repository-structure.md`
   Directory ownership, generated-path boundaries, and source-of-truth rules.
 
@@ -53,17 +49,11 @@ If you want the `v1.x` quality direction first:
 
 ### Verify changes
 
-- `current-line.md`
-  Single-entry current-line guide for `tamamono 1.x`.
 - `version-line.md`
-  Current version-line note for `tamamono 1.x`, including codename, major
-  version policy, and how the line relates to the preserved `0.9.0` release
-  pack.
+  Current version-line note for `tamamono 1.x`, including codename and major
+  version policy.
 - `tamamono-minor-lines.md`
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
-- `release-archive-0.9.0.md`
-  Single-entry archive for the full `0.9.0` initial usable release evidence
-  pack.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
 - `accuracy-plan.md`
@@ -79,24 +69,19 @@ If you want the `v1.x` quality direction first:
 - `tdd.md`
   Test-first expectations across Elixir, Rust, and shared contract work.
 - `development.md`
-  Day-to-day development conventions, launch modes, and current priorities.
+  Day-to-day contributor workflow, launcher choices, and current priorities.
 - `frontend-style.md`
-  Workbench UI direction, layout rules, and implementation guidance.
+  Workbench visual language, layout rules, and interaction feel.
 - `frontend-implementation.md`
-  Component boundaries, state placement, naming, and performance rules for the
-  workbench codebase.
+  Frontend component boundaries, state placement, naming, and performance rules.
 - `language-packs.md`
   Local-first language-pack format, override behavior, and the future remote
   delivery shape for Workbench UI translation packs.
 
 ### Operate and deploy
 
-- `current-line.md`
-  Current product-line starting point before drilling into accuracy or archive details.
 - `version-line.md`
-  Current product-line anchor before dropping into the preserved release pack.
-- `release-archive-0.9.0.md`
-  Single-entry archive for the full preserved `v0.9.0` release pack.
+  Current product-line anchor and version policy.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
 - `security.md`
@@ -112,13 +97,27 @@ If you want the `v1.x` quality direction first:
   A practical first remote-target pilot guide for using one Ubuntu 24 machine
   as a real Hub runtime and workload test server.
 
+### Directory entrypoints
+
+- `/Users/Shared/chroot/dev/kyuubiki/scripts/README.md`
+  Unified launcher, host-side workflow commands, and packaging entrypoints.
+- `/Users/Shared/chroot/dev/kyuubiki/deploy/README.md`
+  Deployment descriptors, agent manifests, and workload-catalog examples.
+- `/Users/Shared/chroot/dev/kyuubiki/dist/README.md`
+  Generated desktop artifacts, build summaries, and release-output layout.
+- `/Users/Shared/chroot/dev/kyuubiki/tmp/README.md`
+  Disposable local runtime state, working data, and dev-only paths.
+- `/Users/Shared/chroot/dev/kyuubiki/schemas/README.md`
+  Shared JSON contract map for jobs, projects, materials, catalogs, and
+  language packs.
+
 ## Suggested Reading Paths
 
 - Browser/frontend work:
   `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md`
 - Orchestrator/control-plane work:
-  `philosophy.md` -> `architecture.md` -> `operations.md`
+  `philosophy.md` -> `system-overview.md` -> `operations.md`
 - Rust solver/agent work:
-  `philosophy.md` -> `architecture.md` -> `protocols.md`
+  `philosophy.md` -> `system-overview.md` -> `protocols.md`
 - Packaging/release work:
   `packaging-and-deployment.md` -> `desktop-release-checklist.md`

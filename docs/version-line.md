@@ -23,20 +23,6 @@ That means future releases should usually look like:
 - `tamamono 1.2.0`
 - `tamamono 1.2.1`
 
-## Relationship to the 0.9.0 release pack
-
-The `0.9.0` release documents remain important. They are the preserved record
-of the initial usable release baseline:
-
-- support matrix
-- study coverage
-- smoke matrix
-- first-run path
-- troubleshooting note
-- readiness and decision notes
-
-The `1.x` line builds on that evidence rather than replacing it.
-
 ## Current emphasis
 
 For `tamamono 1.x`, the priority order is:
@@ -50,4 +36,3 @@ For `tamamono 1.x`, the priority order is:
 
 - [accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
 - [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
-- [release-archive-0.9.0.md](/Users/Shared/chroot/dev/kyuubiki/docs/release-archive-0.9.0.md)

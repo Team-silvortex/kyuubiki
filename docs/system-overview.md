@@ -29,6 +29,20 @@ surfaces:
 - `Installer`
   bootstrap and heavier deployment setup surface
 
+## Repository anchor
+
+Those runtime layers map cleanly onto the monorepo:
+
+- `apps/frontend`
+  browser workbench and UI state
+- `apps/web`
+  control-plane API and persistence
+- `workers/rust`
+  solver kernels, engine crates, agents, and CLI runtime
+
+See [repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+for the fuller directory map.
+
 The relationship between `Hub` and `control plane` is intentional:
 
 - the Hub is not the control plane
