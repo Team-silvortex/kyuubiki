@@ -239,6 +239,27 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec run_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
+  def run_workflow_graph(params) when is_map(params) do
+    normalized = stringify_keys(params)
+
+    with %{} = graph <- Map.get(normalized, "graph"),
+         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
+         {:ok, completed_nodes, artifacts} <- execute_workflow_graph(graph, input_artifacts) do
+      {:ok,
+       %{
+         "workflow_id" => Map.get(graph, "id"),
+         "completed_nodes" => completed_nodes,
+         "artifacts" => artifacts
+       }}
+    else
+      nil -> {:error, :invalid_workflow_graph_request}
+      [] -> {:error, :invalid_workflow_graph_request}
+      {:error, _reason} = error -> error
+      _ -> {:error, :invalid_workflow_graph_request}
+    end
+  end
+
   @spec fetch_job(String.t()) :: {:ok, map()} | {:error, term()}
   def fetch_job(job_id) when is_binary(job_id) do
     case Store.get(job_id) do
@@ -518,6 +539,337 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp csv_escape(value), do: value |> to_string() |> csv_escape()
+
+  defp execute_workflow_graph(%{"nodes" => nodes} = graph, input_artifacts)
+       when is_list(nodes) and is_map(input_artifacts) do
+    edges = Map.get(graph, "edges", [])
+
+    do_execute_workflow_graph(
+      nodes,
+      edges,
+      input_artifacts,
+      MapSet.new(),
+      [],
+      %{}
+    )
+  end
+
+  defp execute_workflow_graph(_graph, _input_artifacts), do: {:error, :invalid_workflow_graph}
+
+  defp do_execute_workflow_graph(nodes, edges, input_artifacts, completed, ordered, artifacts) do
+    {next_completed, next_ordered, next_artifacts, progressed?} =
+      Enum.reduce(nodes, {completed, ordered, artifacts, false}, fn node,
+                                                                   {done, order, acc, moved?} ->
+        node_id = Map.get(node, "id")
+
+        cond do
+          MapSet.member?(done, node_id) ->
+            {done, order, acc, moved?}
+
+          true ->
+            incoming = Enum.filter(edges, &(get_in(&1, ["to", "node"]) == node_id))
+            kind = Map.get(node, "kind")
+            ready? = kind == "input" or Enum.all?(incoming, &Map.has_key?(acc, edge_from_key(&1)))
+
+            if ready? do
+              case execute_workflow_node(node, incoming, input_artifacts, acc) do
+                {:ok, updated_artifacts} ->
+                  {
+                    MapSet.put(done, node_id),
+                    order ++ [node_id],
+                    updated_artifacts,
+                    true
+                  }
+
+                {:error, reason} ->
+                  throw({:workflow_node_error, node_id, reason})
+              end
+            else
+              {done, order, acc, moved?}
+            end
+        end
+      end)
+
+    if MapSet.size(next_completed) == length(nodes) do
+      {:ok, next_ordered, next_artifacts}
+    else
+      if progressed? do
+        do_execute_workflow_graph(
+          nodes,
+          edges,
+          input_artifacts,
+          next_completed,
+          next_ordered,
+          next_artifacts
+        )
+      else
+        pending =
+          nodes
+          |> Enum.map(&Map.get(&1, "id"))
+          |> Enum.reject(&MapSet.member?(next_completed, &1))
+
+        {:error, {:workflow_stalled, pending}}
+      end
+    end
+  catch
+    {:workflow_node_error, node_id, reason} ->
+      {:error, {:workflow_node_error, node_id, reason}}
+  end
+
+  defp execute_workflow_node(%{"kind" => "input", "id" => node_id} = node, _incoming, inputs, artifacts) do
+    case Map.fetch(inputs, node_id) do
+      {:ok, value} ->
+        updated =
+          Enum.reduce(Map.get(node, "outputs", []), artifacts, fn output, acc ->
+            Map.put(acc, artifact_key(node_id, Map.get(output, "id")), value)
+          end)
+
+        {:ok, updated}
+
+      :error ->
+        {:error, :missing_input_artifact}
+    end
+  end
+
+  defp execute_workflow_node(%{"kind" => "solve"} = node, incoming, _inputs, artifacts) do
+    with {:ok, operator_id} <- fetch_operator_id(node),
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
+         {:ok, result} <- run_workflow_solve_operator(operator_id, payload) do
+      {:ok, publish_node_outputs(node, result, artifacts)}
+    end
+  end
+
+  defp execute_workflow_node(%{"kind" => "transform"} = node, incoming, _inputs, artifacts) do
+    with {:ok, operator_id} <- fetch_operator_id(node),
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
+         {:ok, result} <-
+           run_workflow_transform_operator(operator_id, payload, Map.get(node, "config")) do
+      {:ok, publish_node_outputs(node, result, artifacts)}
+    end
+  end
+
+  defp execute_workflow_node(%{"kind" => "extract"} = node, incoming, _inputs, artifacts) do
+    with {:ok, operator_id} <- fetch_operator_id(node),
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
+         {:ok, result} <-
+           run_workflow_extract_operator(operator_id, payload, Map.get(node, "config")) do
+      {:ok, publish_node_outputs(node, result, artifacts)}
+    end
+  end
+
+  defp execute_workflow_node(%{"kind" => "export"} = node, incoming, _inputs, artifacts) do
+    with {:ok, operator_id} <- fetch_operator_id(node),
+         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
+         {:ok, result} <-
+           run_workflow_export_operator(operator_id, payload, Map.get(node, "config")) do
+      {:ok, publish_node_outputs(node, result, artifacts)}
+    end
+  end
+
+  defp execute_workflow_node(%{"kind" => "output"} = node, incoming, _inputs, artifacts) do
+    updated =
+      Enum.reduce(incoming, artifacts, fn edge, acc ->
+        Map.put(acc, artifact_key(Map.get(node, "id"), get_in(edge, ["to", "port"])), Map.fetch!(acc, edge_from_key(edge)))
+      end)
+
+    {:ok, updated}
+  end
+
+  defp execute_workflow_node(%{"kind" => kind}, _incoming, _inputs, _artifacts),
+    do: {:error, {:unsupported_workflow_node_kind, kind}}
+
+  defp fetch_operator_id(%{"operator_id" => operator_id}) when is_binary(operator_id) and operator_id != "",
+    do: {:ok, operator_id}
+
+  defp fetch_operator_id(_node), do: {:error, :missing_operator_id}
+
+  defp resolve_single_input_payload(%{"id" => node_id}, incoming, artifacts) do
+    case incoming do
+      [first | _] ->
+        key = edge_from_key(first)
+
+        case Map.fetch(artifacts, key) do
+          {:ok, value} -> {:ok, value}
+          :error -> {:error, {:missing_upstream_artifact, key}}
+        end
+
+      [] ->
+        {:error, {:missing_workflow_input, node_id}}
+    end
+  end
+
+  defp publish_node_outputs(node, value, artifacts) do
+    Enum.reduce(Map.get(node, "outputs", []), artifacts, fn output, acc ->
+      Map.put(acc, artifact_key(Map.get(node, "id"), Map.get(output, "id")), value)
+    end)
+  end
+
+  defp run_workflow_solve_operator("solve.heat_plane_quad_2d", payload) when is_map(payload) do
+    AgentClient.solve_heat_plane_quad_2d(payload)
+  end
+
+  defp run_workflow_solve_operator("solve.thermal_plane_quad_2d", payload) when is_map(payload) do
+    AgentClient.solve_thermal_plane_quad_2d(payload)
+  end
+
+  defp run_workflow_solve_operator(operator_id, _payload),
+    do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
+
+  defp run_workflow_transform_operator(
+         "bridge.temperature_field_to_thermo_quad_2d",
+         heat_result,
+         thermo_seed_model
+       )
+       when is_map(heat_result) and is_map(thermo_seed_model) do
+    bridge_heat_result_to_thermal_plane_quad_model(heat_result, thermo_seed_model)
+  end
+
+  defp run_workflow_transform_operator(operator_id, _payload, _config),
+    do: {:error, {:unsupported_workflow_transform_operator, operator_id}}
+
+  defp run_workflow_extract_operator("extract.result_summary", payload, config)
+       when is_map(payload) do
+    extract_result_summary(payload, config || %{})
+  end
+
+  defp run_workflow_extract_operator(operator_id, _payload, _config),
+    do: {:error, {:unsupported_workflow_extract_operator, operator_id}}
+
+  defp run_workflow_export_operator("export.summary_json", payload, _config) when is_map(payload) do
+    export_summary_json(payload)
+  end
+
+  defp run_workflow_export_operator("export.summary_csv", payload, config) when is_map(payload) do
+    export_summary_csv(payload, config || %{})
+  end
+
+  defp run_workflow_export_operator(operator_id, _payload, _config),
+    do: {:error, {:unsupported_workflow_export_operator, operator_id}}
+
+  defp extract_result_summary(payload, config) when is_map(payload) and is_map(config) do
+    requested_fields =
+      case Map.get(config, "fields") do
+        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
+        _ -> nil
+      end
+
+    summary =
+      cond do
+        is_list(requested_fields) ->
+          Enum.reduce(requested_fields, %{}, fn field, acc ->
+            case Map.fetch(payload, field) do
+              {:ok, value} -> Map.put(acc, field, value)
+              :error -> acc
+            end
+          end)
+
+        true ->
+          payload
+          |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "max_") end)
+          |> Map.new()
+      end
+
+    if map_size(summary) == 0 do
+      {:error, :empty_summary}
+    else
+      {:ok, summary}
+    end
+  end
+
+  defp export_summary_json(payload) when is_map(payload) do
+    {:ok,
+     %{
+       "format" => "json",
+       "content_type" => "application/json",
+       "content" => Jason.encode!(payload)
+     }}
+  end
+
+  defp export_summary_csv(payload, config) when is_map(payload) and is_map(config) do
+    requested_fields =
+      case Map.get(config, "fields") do
+        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
+        _ -> nil
+      end
+
+    rows =
+      if is_list(requested_fields) do
+        Enum.reduce(requested_fields, [["key", "value"]], fn field, acc ->
+          case Map.fetch(payload, field) do
+            {:ok, value} -> acc ++ [[field, value]]
+            :error -> acc
+          end
+        end)
+      else
+        [["key", "value"]] ++ Enum.map(payload, fn {key, value} -> [key, value] end)
+      end
+
+    if length(rows) == 1 do
+      {:error, :empty_export}
+    else
+      content =
+        rows
+        |> Enum.map_join("\n", fn row -> Enum.map_join(row, ",", &csv_escape/1) end)
+        |> Kernel.<>("\n")
+
+      {:ok,
+       %{
+         "format" => "csv",
+         "content_type" => "text/csv",
+         "content" => content
+       }}
+    end
+  end
+
+  defp bridge_heat_result_to_thermal_plane_quad_model(
+         %{"nodes" => heat_nodes, "input" => %{"elements" => heat_elements}},
+         %{"nodes" => thermo_nodes, "elements" => thermo_elements} = thermo_seed_model
+       )
+       when is_list(heat_nodes) and is_list(heat_elements) and is_list(thermo_nodes) and
+              is_list(thermo_elements) do
+    cond do
+      length(heat_nodes) != length(thermo_nodes) ->
+        {:error, :node_count_mismatch}
+
+      length(heat_elements) != length(thermo_elements) ->
+        {:error, :element_count_mismatch}
+
+      true ->
+        bridged_nodes =
+          Enum.zip(heat_nodes, thermo_nodes)
+          |> Enum.reduce_while([], fn {heat_node, thermo_node}, acc ->
+            if close_enough?(Map.get(heat_node, "x"), Map.get(thermo_node, "x")) and
+                 close_enough?(Map.get(heat_node, "y"), Map.get(thermo_node, "y")) do
+              {:cont,
+               acc ++
+                 [
+                   Map.put(thermo_node, "temperature_delta", Map.get(heat_node, "temperature"))
+                 ]}
+            else
+              {:halt, :mismatch}
+            end
+          end)
+
+        case bridged_nodes do
+          :mismatch -> {:error, :node_alignment_mismatch}
+          nodes -> {:ok, Map.put(thermo_seed_model, "nodes", nodes)}
+        end
+    end
+  end
+
+  defp bridge_heat_result_to_thermal_plane_quad_model(_heat_result, _thermo_seed_model),
+    do: {:error, :invalid_bridge_payload}
+
+  defp close_enough?(left, right) when is_number(left) and is_number(right),
+    do: abs(left - right) <= 1.0e-9
+
+  defp close_enough?(_, _), do: false
+
+  defp edge_from_key(edge),
+    do: artifact_key(get_in(edge, ["from", "node"]), get_in(edge, ["from", "port"]))
+
+  defp artifact_key(node_id, port_id) when is_binary(node_id) and is_binary(port_id),
+    do: "#{node_id}.#{port_id}"
 
   defp start_background_job(job_id, method, params) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
@@ -1029,4 +1381,14 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp cast_number(_value), do: {:error, :invalid_parameter}
+
+  defp stringify_keys(value) when is_list(value), do: Enum.map(value, &stringify_keys/1)
+
+  defp stringify_keys(value) when is_map(value) do
+    value
+    |> Enum.map(fn {key, nested} -> {to_string(key), stringify_keys(nested)} end)
+    |> Map.new()
+  end
+
+  defp stringify_keys(value), do: value
 end

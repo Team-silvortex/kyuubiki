@@ -431,6 +431,18 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  post "/api/v1/workflows/graph/run" do
+    with_auth(conn, :write, fn conn ->
+      case Analysis.run_workflow_graph(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 200, payload)
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
   get "/api/v1/jobs" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, Analysis.list_jobs())

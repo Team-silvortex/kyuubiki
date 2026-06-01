@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 pub const RPC_VERSION: u8 = 1;
 pub const SOLVER_RPC_PROTOCOL: &str = "kyuubiki.solver-rpc/v1";
@@ -86,6 +87,98 @@ pub struct HeatToThermoPlaneQuad2dWorkflowResult {
     pub heat_result: SolveHeatPlaneQuad2dResult,
     pub bridged_model: SolveThermalPlaneQuad2dRequest,
     pub thermo_result: SolveThermalPlaneQuad2dResult,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowCachePolicy {
+    Ephemeral,
+    Cached,
+    Persisted,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowNodeKind {
+    Input,
+    Solve,
+    Transform,
+    Extract,
+    Export,
+    Condition,
+    Output,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WorkflowDefaults {
+    pub cache_policy: Option<WorkflowCachePolicy>,
+    pub orchestrated: Option<bool>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowPort {
+    pub id: String,
+    pub artifact_type: String,
+    pub name: Option<String>,
+    pub required: Option<bool>,
+    pub cardinality: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowNode {
+    pub id: String,
+    pub kind: WorkflowNodeKind,
+    pub operator_id: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub config: Option<Value>,
+    pub cache_policy: Option<WorkflowCachePolicy>,
+    pub inputs: Vec<WorkflowPort>,
+    pub outputs: Vec<WorkflowPort>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowNodePortRef {
+    pub node: String,
+    pub port: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowEdge {
+    pub id: String,
+    pub from: WorkflowNodePortRef,
+    pub to: WorkflowNodePortRef,
+    pub artifact_type: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowGraph {
+    pub schema_version: String,
+    pub id: String,
+    pub name: String,
+    pub version: String,
+    pub description: Option<String>,
+    pub entry_nodes: Vec<String>,
+    #[serde(default)]
+    pub output_nodes: Vec<String>,
+    #[serde(default)]
+    pub defaults: WorkflowDefaults,
+    pub nodes: Vec<WorkflowNode>,
+    pub edges: Vec<WorkflowEdge>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowGraphRunRequest {
+    pub graph: WorkflowGraph,
+    #[serde(default)]
+    pub input_artifacts: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowGraphRunResult {
+    pub workflow_id: String,
+    pub completed_nodes: Vec<String>,
+    pub artifacts: BTreeMap<String, Value>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -2229,15 +2322,16 @@ mod tests {
         HeatBar1dNodeInput, HeatToThermoPlaneQuad2dWorkflowRequest,
         HeatToThermoPlaneQuad2dWorkflowResult, HeatPlaneNodeInput,
         HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneNodeResult,
-        HeatPlaneTriangleElementInput, Job, JobStatus, OperatorArtifactRef, OperatorDescriptor,
-        OperatorKind, OperatorOrigin, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
-        PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest,
-        RpcResponse, SolveBarRequest, SolveBeam1dRequest, SolveFrame2dRequest,
-        SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-        SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
-        SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-        SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+        HeatPlaneTriangleElementInput, Job, JobStatus, OperatorArtifactRef,
+        OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorRunRequest,
+        OperatorRunResult, OperatorSchemaRef, PlaneQuadElementInput, ProgressEvent,
+        RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
+        SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
+        SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
+        SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+        SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+        SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
         SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dRequest,
         SolveThermalTruss2dRequest, SolveTorsion1dRequest, SolveTruss3dRequest,
         Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
@@ -2247,7 +2341,9 @@ mod tests {
         ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
         ThermalPlaneQuadElementResult, ThermalPlaneNodeResult, ThermalPlaneTriangleElementInput,
         ThermalTruss2dElementInput, ThermalTruss2dNodeInput, Torsion1dElementInput,
-        Torsion1dNodeInput,
+        Torsion1dNodeInput, WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
+        WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind,
+        WorkflowNodePortRef, WorkflowPort,
     };
 
     #[test]
@@ -2524,6 +2620,98 @@ mod tests {
             serde_json::from_str(&json).expect("workflow result should decode");
         assert_eq!(decoded.workflow_id, "workflow.heat-to-thermo-quad-2d");
         assert_eq!(decoded.thermo_result.max_temperature_delta, 80.0);
+    }
+
+    #[test]
+    fn serializes_workflow_graph_run_request_round_trip() {
+        let graph = WorkflowGraph {
+            schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+            id: "workflow.heat-to-thermo-quad-2d".to_string(),
+            name: "Heat to thermo-mechanical quad".to_string(),
+            version: "1.0.0".to_string(),
+            description: Some("Reference headless graph".to_string()),
+            entry_nodes: vec!["heat_model".to_string()],
+            output_nodes: vec!["thermo_summary".to_string()],
+            defaults: WorkflowDefaults {
+                cache_policy: Some(WorkflowCachePolicy::Cached),
+                orchestrated: Some(true),
+            },
+            nodes: vec![
+                WorkflowNode {
+                    id: "heat_model".to_string(),
+                    kind: WorkflowNodeKind::Input,
+                    operator_id: None,
+                    name: Some("Heat input".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![],
+                    outputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "thermo_summary".to_string(),
+                    kind: WorkflowNodeKind::Output,
+                    operator_id: None,
+                    name: Some("Thermo summary".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/thermal_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![],
+                },
+            ],
+            edges: vec![WorkflowEdge {
+                id: "edge-1".to_string(),
+                from: WorkflowNodePortRef {
+                    node: "heat_model".to_string(),
+                    port: "model".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "thermo_summary".to_string(),
+                    port: "result".to_string(),
+                },
+                artifact_type: "result/thermal_plane_quad_2d".to_string(),
+            }],
+        };
+
+        let request = WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: std::collections::BTreeMap::from([(
+                "heat_model".to_string(),
+                serde_json::json!({"kind": "heat_plane_quad_2d"}),
+            )]),
+        };
+
+        let json = serde_json::to_string(&request).expect("workflow graph request should serialize");
+        let decoded: WorkflowGraphRunRequest =
+            serde_json::from_str(&json).expect("workflow graph request should decode");
+        assert_eq!(decoded.graph.id, "workflow.heat-to-thermo-quad-2d");
+        assert_eq!(decoded.input_artifacts.len(), 1);
+
+        let result = WorkflowGraphRunResult {
+            workflow_id: decoded.graph.id,
+            completed_nodes: vec!["heat_model".to_string(), "thermo_summary".to_string()],
+            artifacts: std::collections::BTreeMap::from([(
+                "thermo_summary.result".to_string(),
+                serde_json::json!({"max_stress": 123.0}),
+            )]),
+        };
+        let json = serde_json::to_string(&result).expect("workflow graph result should serialize");
+        let decoded: WorkflowGraphRunResult =
+            serde_json::from_str(&json).expect("workflow graph result should decode");
+        assert_eq!(decoded.completed_nodes.len(), 2);
     }
 
     #[test]

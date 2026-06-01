@@ -8,8 +8,10 @@ use kyuubiki_protocol::{
     SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
     SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
     SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest, WorkflowGraphRunRequest,
+    WorkflowGraphRunResult, WorkflowNodeKind,
 };
+use std::collections::{BTreeMap, HashMap, HashSet};
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
     solve_heat_plane_triangle_2d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d,
@@ -82,6 +84,27 @@ pub fn built_in_operator_descriptors() -> Vec<OperatorDescriptor> {
             "thermal_plane_quad_2d",
             "Bridge a heat quad temperature field into a thermal quad structural model.",
             &["workflow_bridge", "temperature_field", "quad", "2d"],
+        ),
+        built_in_extract_descriptor(
+            "extract.result_summary",
+            "multi_domain",
+            "result_summary",
+            "Extract a compact summary from a solver result artifact.",
+            &["extract", "summary", "headless_safe"],
+        ),
+        built_in_export_descriptor(
+            "export.summary_json",
+            "multi_domain",
+            "summary_json",
+            "Export a compact summary artifact as structured JSON content.",
+            &["export", "json", "summary", "headless_safe"],
+        ),
+        built_in_export_descriptor(
+            "export.summary_csv",
+            "multi_domain",
+            "summary_csv",
+            "Export a compact summary artifact as CSV text for downstream delivery.",
+            &["export", "csv", "summary", "headless_safe"],
         ),
     ]
 }
@@ -217,6 +240,161 @@ pub fn run_heat_to_thermo_plane_quad_2d_workflow(
     })
 }
 
+pub fn run_workflow_graph(
+    request: WorkflowGraphRunRequest,
+) -> Result<WorkflowGraphRunResult, String> {
+    let graph = request.graph;
+    let node_map = graph
+        .nodes
+        .iter()
+        .map(|node| (node.id.clone(), node))
+        .collect::<HashMap<_, _>>();
+    let mut completed = HashSet::new();
+    let mut ordered_completed = Vec::new();
+    let mut artifacts = BTreeMap::new();
+
+    loop {
+        let mut progressed = false;
+
+        for node in &graph.nodes {
+            if completed.contains(&node.id) {
+                continue;
+            }
+
+            let incoming = graph
+                .edges
+                .iter()
+                .filter(|edge| edge.to.node == node.id)
+                .collect::<Vec<_>>();
+            let ready = incoming.iter().all(|edge| {
+                artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port))
+            });
+
+            if node.kind != WorkflowNodeKind::Input && !ready {
+                continue;
+            }
+
+            match node.kind {
+                WorkflowNodeKind::Input => {
+                    let value = request
+                        .input_artifacts
+                        .get(&node.id)
+                        .cloned()
+                        .ok_or_else(|| format!("missing workflow input artifact for node {}", node.id))?;
+                    for output in &node.outputs {
+                        artifacts.insert(artifact_key(&node.id, &output.id), value.clone());
+                    }
+                }
+                WorkflowNodeKind::Solve => {
+                    let operator_id = node
+                        .operator_id
+                        .as_deref()
+                        .ok_or_else(|| format!("workflow solve node {} is missing operator_id", node.id))?;
+                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                    let output_value = run_solve_operator(operator_id, payload)?;
+                    for output in &node.outputs {
+                        artifacts.insert(artifact_key(&node.id, &output.id), output_value.clone());
+                    }
+                }
+                WorkflowNodeKind::Transform => {
+                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                        format!("workflow transform node {} is missing operator_id", node.id)
+                    })?;
+                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                    let output_value = run_transform_operator(
+                        operator_id,
+                        payload,
+                        node.config.clone().unwrap_or(Value::Null),
+                    )?;
+                    for output in &node.outputs {
+                        artifacts.insert(artifact_key(&node.id, &output.id), output_value.clone());
+                    }
+                }
+                WorkflowNodeKind::Extract => {
+                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                        format!("workflow extract node {} is missing operator_id", node.id)
+                    })?;
+                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                    let output_value = run_extract_operator(
+                        operator_id,
+                        payload,
+                        node.config.clone().unwrap_or(Value::Null),
+                    )?;
+                    for output in &node.outputs {
+                        artifacts.insert(artifact_key(&node.id, &output.id), output_value.clone());
+                    }
+                }
+                WorkflowNodeKind::Export => {
+                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                        format!("workflow export node {} is missing operator_id", node.id)
+                    })?;
+                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                    let output_value = run_export_operator(
+                        operator_id,
+                        payload,
+                        node.config.clone().unwrap_or(Value::Null),
+                    )?;
+                    for output in &node.outputs {
+                        artifacts.insert(artifact_key(&node.id, &output.id), output_value.clone());
+                    }
+                }
+                WorkflowNodeKind::Output => {
+                    for edge in incoming {
+                        let value = artifacts
+                            .get(&artifact_key(&edge.from.node, &edge.from.port))
+                            .cloned()
+                            .ok_or_else(|| {
+                                format!(
+                                    "workflow output node {} could not read {}.{}",
+                                    node.id, edge.from.node, edge.from.port
+                                )
+                            })?;
+                        artifacts.insert(artifact_key(&node.id, &edge.to.port), value);
+                    }
+                }
+                _ => {
+                    return Err(format!(
+                        "workflow node kind {:?} is not supported by the first headless executor",
+                        node.kind
+                    ))
+                }
+            }
+
+            completed.insert(node.id.clone());
+            ordered_completed.push(node.id.clone());
+            progressed = true;
+        }
+
+        if completed.len() == graph.nodes.len() {
+            break;
+        }
+        if !progressed {
+            let pending = graph
+                .nodes
+                .iter()
+                .filter(|node| !completed.contains(&node.id))
+                .map(|node| node.id.clone())
+                .collect::<Vec<_>>();
+            return Err(format!(
+                "workflow graph could not make progress; pending nodes: {}",
+                pending.join(", ")
+            ));
+        }
+    }
+
+    for node_id in &graph.output_nodes {
+        if !node_map.contains_key(node_id) {
+            return Err(format!("workflow output node {} is not defined", node_id));
+        }
+    }
+
+    Ok(WorkflowGraphRunResult {
+        workflow_id: graph.id,
+        completed_nodes: ordered_completed,
+        artifacts,
+    })
+}
+
 fn built_in_solver_descriptor(
     id: &str,
     domain: &str,
@@ -268,6 +446,251 @@ fn built_in_bridge_descriptor(
             schema: format!("kyuubiki.operator.{family}.bridge_output"),
             version: "1".to_string(),
         },
+    }
+}
+
+fn built_in_extract_descriptor(
+    id: &str,
+    domain: &str,
+    family: &str,
+    summary: &str,
+    capability_tags: &[&str],
+) -> OperatorDescriptor {
+    OperatorDescriptor {
+        id: id.to_string(),
+        version: "1.0.0".to_string(),
+        domain: domain.to_string(),
+        family: family.to_string(),
+        kind: OperatorKind::Extract,
+        summary: summary.to_string(),
+        capability_tags: capability_tags.iter().map(|tag| (*tag).to_string()).collect(),
+        origin: OperatorOrigin::BuiltIn,
+        input_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.extract_input"),
+            version: "1".to_string(),
+        },
+        output_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.extract_output"),
+            version: "1".to_string(),
+        },
+    }
+}
+
+fn built_in_export_descriptor(
+    id: &str,
+    domain: &str,
+    family: &str,
+    summary: &str,
+    capability_tags: &[&str],
+) -> OperatorDescriptor {
+    OperatorDescriptor {
+        id: id.to_string(),
+        version: "1.0.0".to_string(),
+        domain: domain.to_string(),
+        family: family.to_string(),
+        kind: OperatorKind::Export,
+        summary: summary.to_string(),
+        capability_tags: capability_tags.iter().map(|tag| (*tag).to_string()).collect(),
+        origin: OperatorOrigin::BuiltIn,
+        input_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.export_input"),
+            version: "1".to_string(),
+        },
+        output_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.export_output"),
+            version: "1".to_string(),
+        },
+    }
+}
+
+fn artifact_key(node_id: &str, port_id: &str) -> String {
+    format!("{node_id}.{port_id}")
+}
+
+fn resolve_single_input_payload(
+    node: &kyuubiki_protocol::WorkflowNode,
+    incoming: &[&kyuubiki_protocol::WorkflowEdge],
+    artifacts: &BTreeMap<String, Value>,
+) -> Result<Value, String> {
+    let first = incoming.first().ok_or_else(|| {
+        format!(
+            "workflow node {} requires at least one input artifact in the first executor",
+            node.id
+        )
+    })?;
+    artifacts
+        .get(&artifact_key(&first.from.node, &first.from.port))
+        .cloned()
+        .ok_or_else(|| {
+            format!(
+                "workflow node {} could not resolve input from {}.{}",
+                node.id, first.from.node, first.from.port
+            )
+        })
+}
+
+fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, String> {
+    match operator_id {
+        "solve.heat_plane_quad_2d" => {
+            let request: SolveHeatPlaneQuad2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::HeatPlaneQuad2d(request))? {
+                AnalysisResult::HeatPlaneQuad2d(result) => result,
+                _ => unreachable!("solve.heat_plane_quad_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.thermal_plane_quad_2d" => {
+            let request: SolveThermalPlaneQuad2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::ThermalPlaneQuad2d(request))? {
+                AnalysisResult::ThermalPlaneQuad2d(result) => result,
+                _ => unreachable!("solve.thermal_plane_quad_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        _ => Err(format!("unsupported solve operator in first executor: {operator_id}")),
+    }
+}
+
+fn run_transform_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+    match operator_id {
+        "bridge.temperature_field_to_thermo_quad_2d" => {
+            let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let thermo_seed_model: SolveThermalPlaneQuad2dRequest =
+                serde_json::from_value(config).map_err(|err| err.to_string())?;
+            let bridged =
+                bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &thermo_seed_model)?;
+            serde_json::to_value(bridged).map_err(|err| err.to_string())
+        }
+        _ => Err(format!(
+            "unsupported transform operator in first executor: {operator_id}"
+        )),
+    }
+}
+
+fn run_extract_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+    match operator_id {
+        "extract.result_summary" => extract_result_summary(payload, config),
+        _ => Err(format!(
+            "unsupported extract operator in first executor: {operator_id}"
+        )),
+    }
+}
+
+fn run_export_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+    match operator_id {
+        "export.summary_json" => export_summary_json(payload),
+        "export.summary_csv" => export_summary_csv(payload, config),
+        _ => Err(format!(
+            "unsupported export operator in first executor: {operator_id}"
+        )),
+    }
+}
+
+fn extract_result_summary(payload: Value, config: Value) -> Result<Value, String> {
+    let object = payload
+        .as_object()
+        .ok_or_else(|| "extract.result_summary expects an object payload".to_string())?;
+
+    let requested_fields = config
+        .get("fields")
+        .and_then(Value::as_array)
+        .map(|fields| {
+            fields
+                .iter()
+                .filter_map(Value::as_str)
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        });
+
+    let mut summary = serde_json::Map::new();
+    if let Some(fields) = requested_fields {
+        for field in fields {
+            if let Some(value) = object.get(&field) {
+                summary.insert(field, value.clone());
+            }
+        }
+    } else {
+        for (key, value) in object {
+            if key.starts_with("max_") {
+                summary.insert(key.clone(), value.clone());
+            }
+        }
+    }
+
+    if summary.is_empty() {
+        return Err("extract.result_summary did not find any summary fields".to_string());
+    }
+
+    Ok(Value::Object(summary))
+}
+
+fn export_summary_json(payload: Value) -> Result<Value, String> {
+    if !payload.is_object() {
+        return Err("export.summary_json expects an object payload".to_string());
+    }
+    let content = serde_json::to_string_pretty(&payload).map_err(|err| err.to_string())?;
+    Ok(serde_json::json!({
+        "format": "json",
+        "content_type": "application/json",
+        "content": content
+    }))
+}
+
+fn export_summary_csv(payload: Value, config: Value) -> Result<Value, String> {
+    let object = payload
+        .as_object()
+        .ok_or_else(|| "export.summary_csv expects an object payload".to_string())?;
+
+    let requested_fields = config
+        .get("fields")
+        .and_then(Value::as_array)
+        .map(|fields| {
+            fields
+                .iter()
+                .filter_map(Value::as_str)
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+        });
+
+    let mut rows = vec!["key,value".to_string()];
+    if let Some(fields) = requested_fields {
+        for field in fields {
+            if let Some(value) = object.get(&field) {
+                rows.push(format!("{},{}", field, csv_cell(value)));
+            }
+        }
+    } else {
+        for (key, value) in object {
+            rows.push(format!("{},{}", key, csv_cell(value)));
+        }
+    }
+
+    if rows.len() == 1 {
+        return Err("export.summary_csv did not find any exportable fields".to_string());
+    }
+
+    Ok(serde_json::json!({
+        "format": "csv",
+        "content_type": "text/csv",
+        "content": rows.join("\n")
+    }))
+}
+
+fn csv_cell(value: &Value) -> String {
+    match value {
+        Value::Null => "".to_string(),
+        Value::Bool(boolean) => boolean.to_string(),
+        Value::Number(number) => number.to_string(),
+        Value::String(string) => {
+            if string.contains([',', '"', '\n']) {
+                format!("\"{}\"", string.replace('"', "\"\""))
+            } else {
+                string.clone()
+            }
+        }
+        other => serde_json::to_string(other).unwrap_or_else(|_| "\"<invalid>\"".to_string()),
     }
 }
 
@@ -426,15 +849,18 @@ mod tests {
     use super::{
         EngineSolveRequest, bridge_heat_result_to_thermal_plane_quad_model,
         built_in_operator_descriptors, chunk_result, describe_built_in_operator,
-        run_heat_to_thermo_plane_quad_2d_workflow, solve,
+        run_heat_to_thermo_plane_quad_2d_workflow, run_workflow_graph, solve,
     };
     use kyuubiki_protocol::{
         AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest, HeatPlaneNodeInput,
         HeatPlaneQuadElementInput, OperatorKind, ResultChunkKind, ResultChunkRequest,
         SolveBarRequest, SolveHeatPlaneQuad2dRequest, SolveThermalPlaneQuad2dRequest,
+        WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
+        WorkflowGraphRunRequest, WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort,
         SolveTruss2dRequest, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
         TrussElementInput, TrussNodeInput,
     };
+    use std::collections::BTreeMap;
 
     #[test]
     fn solves_through_engine_facade() {
@@ -774,5 +1200,598 @@ mod tests {
         assert_eq!(result.bridged_model.nodes[1].temperature_delta, 60.0);
         assert_eq!(result.thermo_result.max_temperature_delta, 100.0);
         assert!(result.thermo_result.max_stress > 0.0);
+    }
+
+    #[test]
+    fn runs_minimal_generic_workflow_graph() {
+        let graph = WorkflowGraph {
+            schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+            id: "workflow.heat-to-thermo-quad-2d".to_string(),
+            name: "Heat to thermo-mechanical quad".to_string(),
+            version: "1.0.0".to_string(),
+            description: Some("Reference graph".to_string()),
+            entry_nodes: vec!["heat_model".to_string()],
+            output_nodes: vec!["thermo_summary".to_string()],
+            defaults: WorkflowDefaults {
+                cache_policy: Some(WorkflowCachePolicy::Cached),
+                orchestrated: Some(true),
+            },
+            nodes: vec![
+                WorkflowNode {
+                    id: "heat_model".to_string(),
+                    kind: WorkflowNodeKind::Input,
+                    operator_id: None,
+                    name: Some("Heat model input".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![],
+                    outputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "solve_heat".to_string(),
+                    kind: WorkflowNodeKind::Solve,
+                    operator_id: Some("solve.heat_plane_quad_2d".to_string()),
+                    name: Some("Solve heat".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "bridge_temperature".to_string(),
+                    kind: WorkflowNodeKind::Transform,
+                    operator_id: Some("bridge.temperature_field_to_thermo_quad_2d".to_string()),
+                    name: Some("Bridge temperature field".to_string()),
+                    description: None,
+                    config: Some(serde_json::json!({
+                        "nodes": [
+                            { "id": "n0", "x": 0.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 },
+                            { "id": "n1", "x": 1.0, "y": 0.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 },
+                            { "id": "n2", "x": 1.0, "y": 1.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 },
+                            { "id": "n3", "x": 0.0, "y": 1.0, "fix_x": true, "fix_y": true, "load_x": 0.0, "load_y": 0.0, "temperature_delta": 30.0 }
+                        ],
+                        "elements": [
+                            { "id": "tq0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.02, "youngs_modulus": 70000000000.0, "poisson_ratio": 0.33, "thermal_expansion": 0.000011 }
+                        ]
+                    })),
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "heat_result".to_string(),
+                        artifact_type: "result/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "thermo_model".to_string(),
+                        artifact_type: "study_model/thermal_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "solve_thermo".to_string(),
+                    kind: WorkflowNodeKind::Solve,
+                    operator_id: Some("solve.thermal_plane_quad_2d".to_string()),
+                    name: Some("Solve thermo".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/thermal_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/thermal_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "thermo_summary".to_string(),
+                    kind: WorkflowNodeKind::Output,
+                    operator_id: None,
+                    name: Some("Thermo summary".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/thermal_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![],
+                },
+            ],
+            edges: vec![
+                WorkflowEdge {
+                    id: "edge-heat-input".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "heat_model".to_string(),
+                        port: "model".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "solve_heat".to_string(),
+                        port: "model".to_string(),
+                    },
+                    artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-heat-result".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "solve_heat".to_string(),
+                        port: "result".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "bridge_temperature".to_string(),
+                        port: "heat_result".to_string(),
+                    },
+                    artifact_type: "result/heat_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-thermo-model".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "bridge_temperature".to_string(),
+                        port: "thermo_model".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "solve_thermo".to_string(),
+                        port: "model".to_string(),
+                    },
+                    artifact_type: "study_model/thermal_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-thermo-result".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "solve_thermo".to_string(),
+                        port: "result".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "thermo_summary".to_string(),
+                        port: "result".to_string(),
+                    },
+                    artifact_type: "result/thermal_plane_quad_2d".to_string(),
+                },
+            ],
+        };
+
+        let run = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([(
+                "heat_model".to_string(),
+                serde_json::json!({
+                    "nodes": [
+                        { "id": "h0", "x": 0, "y": 0, "fix_temperature": true, "temperature": 100, "heat_load": 0 },
+                        { "id": "h1", "x": 1, "y": 0, "fix_temperature": false, "temperature": 0, "heat_load": 0 },
+                        { "id": "h2", "x": 1, "y": 1, "fix_temperature": true, "temperature": 20, "heat_load": 0 },
+                        { "id": "h3", "x": 0, "y": 1, "fix_temperature": true, "temperature": 20, "heat_load": 0 }
+                    ],
+                    "elements": [
+                        { "id": "hq0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.02, "conductivity": 45 }
+                    ]
+                }),
+            )]),
+        })
+        .expect("generic workflow graph should run");
+
+        assert_eq!(run.workflow_id, "workflow.heat-to-thermo-quad-2d");
+        assert_eq!(run.completed_nodes.len(), 5);
+        let summary = run
+            .artifacts
+            .get("thermo_summary.result")
+            .expect("output artifact");
+        let thermo_result: SolveThermalPlaneQuad2dRequest = serde_json::from_value(
+            run.artifacts
+                .get("bridge_temperature.thermo_model")
+                .cloned()
+                .expect("bridged thermo model"),
+        )
+        .expect("bridged model should decode");
+        assert_eq!(thermo_result.nodes[1].temperature_delta, 60.0);
+        assert!(summary.is_object());
+    }
+
+    #[test]
+    fn runs_solve_extract_output_graph() {
+        let graph = WorkflowGraph {
+            schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+            id: "workflow.heat-summary-quad-2d".to_string(),
+            name: "Heat summary quad".to_string(),
+            version: "1.0.0".to_string(),
+            description: Some("Solve then extract summary".to_string()),
+            entry_nodes: vec!["heat_model".to_string()],
+            output_nodes: vec!["summary_output".to_string()],
+            defaults: WorkflowDefaults {
+                cache_policy: Some(WorkflowCachePolicy::Cached),
+                orchestrated: Some(true),
+            },
+            nodes: vec![
+                WorkflowNode {
+                    id: "heat_model".to_string(),
+                    kind: WorkflowNodeKind::Input,
+                    operator_id: None,
+                    name: Some("Heat input".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![],
+                    outputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "solve_heat".to_string(),
+                    kind: WorkflowNodeKind::Solve,
+                    operator_id: Some("solve.heat_plane_quad_2d".to_string()),
+                    name: Some("Solve heat".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "extract_summary".to_string(),
+                    kind: WorkflowNodeKind::Extract,
+                    operator_id: Some("extract.result_summary".to_string()),
+                    name: Some("Extract result summary".to_string()),
+                    description: None,
+                    config: Some(serde_json::json!({
+                        "fields": ["max_temperature", "max_heat_flux"]
+                    })),
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "summary".to_string(),
+                        artifact_type: "report/summary".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "summary_output".to_string(),
+                    kind: WorkflowNodeKind::Output,
+                    operator_id: None,
+                    name: Some("Summary output".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "summary".to_string(),
+                        artifact_type: "report/summary".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![],
+                },
+            ],
+            edges: vec![
+                WorkflowEdge {
+                    id: "edge-heat-input".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "heat_model".to_string(),
+                        port: "model".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "solve_heat".to_string(),
+                        port: "model".to_string(),
+                    },
+                    artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-heat-result".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "solve_heat".to_string(),
+                        port: "result".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "extract_summary".to_string(),
+                        port: "result".to_string(),
+                    },
+                    artifact_type: "result/heat_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-summary".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "extract_summary".to_string(),
+                        port: "summary".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "summary_output".to_string(),
+                        port: "summary".to_string(),
+                    },
+                    artifact_type: "report/summary".to_string(),
+                },
+            ],
+        };
+
+        let run = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([(
+                "heat_model".to_string(),
+                serde_json::json!({
+                    "nodes": [
+                        { "id": "h0", "x": 0, "y": 0, "fix_temperature": true, "temperature": 100, "heat_load": 0 },
+                        { "id": "h1", "x": 1, "y": 0, "fix_temperature": false, "temperature": 0, "heat_load": 0 },
+                        { "id": "h2", "x": 1, "y": 1, "fix_temperature": true, "temperature": 20, "heat_load": 0 },
+                        { "id": "h3", "x": 0, "y": 1, "fix_temperature": true, "temperature": 20, "heat_load": 0 }
+                    ],
+                    "elements": [
+                        { "id": "hq0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.02, "conductivity": 45 }
+                    ]
+                }),
+            )]),
+        })
+        .expect("solve -> extract -> output graph should run");
+
+        let summary = run
+            .artifacts
+            .get("summary_output.summary")
+            .cloned()
+            .expect("summary artifact should exist");
+        assert_eq!(run.completed_nodes.len(), 4);
+        assert_eq!(summary["max_temperature"], serde_json::json!(100.0));
+        assert!(summary.get("max_heat_flux").is_some());
+    }
+
+    #[test]
+    fn runs_solve_extract_export_output_graph() {
+        let graph = WorkflowGraph {
+            schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+            id: "workflow.heat-summary-export-csv".to_string(),
+            name: "Heat summary export csv".to_string(),
+            version: "1.0.0".to_string(),
+            description: Some("Solve then extract summary and export CSV".to_string()),
+            entry_nodes: vec!["heat_model".to_string()],
+            output_nodes: vec!["csv_output".to_string()],
+            defaults: WorkflowDefaults {
+                cache_policy: Some(WorkflowCachePolicy::Cached),
+                orchestrated: Some(true),
+            },
+            nodes: vec![
+                WorkflowNode {
+                    id: "heat_model".to_string(),
+                    kind: WorkflowNodeKind::Input,
+                    operator_id: None,
+                    name: Some("Heat input".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![],
+                    outputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "solve_heat".to_string(),
+                    kind: WorkflowNodeKind::Solve,
+                    operator_id: Some("solve.heat_plane_quad_2d".to_string()),
+                    name: Some("Solve heat".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "model".to_string(),
+                        artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "extract_summary".to_string(),
+                    kind: WorkflowNodeKind::Extract,
+                    operator_id: Some("extract.result_summary".to_string()),
+                    name: Some("Extract result summary".to_string()),
+                    description: None,
+                    config: Some(serde_json::json!({
+                        "fields": ["max_temperature", "max_heat_flux"]
+                    })),
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "result".to_string(),
+                        artifact_type: "result/heat_plane_quad_2d".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "summary".to_string(),
+                        artifact_type: "report/summary".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "export_csv".to_string(),
+                    kind: WorkflowNodeKind::Export,
+                    operator_id: Some("export.summary_csv".to_string()),
+                    name: Some("Export summary CSV".to_string()),
+                    description: None,
+                    config: Some(serde_json::json!({
+                        "fields": ["max_temperature", "max_heat_flux"]
+                    })),
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "summary".to_string(),
+                        artifact_type: "report/summary".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![WorkflowPort {
+                        id: "csv".to_string(),
+                        artifact_type: "export/csv".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                },
+                WorkflowNode {
+                    id: "csv_output".to_string(),
+                    kind: WorkflowNodeKind::Output,
+                    operator_id: None,
+                    name: Some("CSV output".to_string()),
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "csv".to_string(),
+                        artifact_type: "export/csv".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                    }],
+                    outputs: vec![],
+                },
+            ],
+            edges: vec![
+                WorkflowEdge {
+                    id: "edge-heat-input".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "heat_model".to_string(),
+                        port: "model".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "solve_heat".to_string(),
+                        port: "model".to_string(),
+                    },
+                    artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-heat-result".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "solve_heat".to_string(),
+                        port: "result".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "extract_summary".to_string(),
+                        port: "result".to_string(),
+                    },
+                    artifact_type: "result/heat_plane_quad_2d".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-summary".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "extract_summary".to_string(),
+                        port: "summary".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "export_csv".to_string(),
+                        port: "summary".to_string(),
+                    },
+                    artifact_type: "report/summary".to_string(),
+                },
+                WorkflowEdge {
+                    id: "edge-csv".to_string(),
+                    from: WorkflowNodePortRef {
+                        node: "export_csv".to_string(),
+                        port: "csv".to_string(),
+                    },
+                    to: WorkflowNodePortRef {
+                        node: "csv_output".to_string(),
+                        port: "csv".to_string(),
+                    },
+                    artifact_type: "export/csv".to_string(),
+                },
+            ],
+        };
+
+        let run = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([(
+                "heat_model".to_string(),
+                serde_json::json!({
+                    "nodes": [
+                        { "id": "h0", "x": 0, "y": 0, "fix_temperature": true, "temperature": 100, "heat_load": 0 },
+                        { "id": "h1", "x": 1, "y": 0, "fix_temperature": false, "temperature": 0, "heat_load": 0 },
+                        { "id": "h2", "x": 1, "y": 1, "fix_temperature": true, "temperature": 20, "heat_load": 0 },
+                        { "id": "h3", "x": 0, "y": 1, "fix_temperature": true, "temperature": 20, "heat_load": 0 }
+                    ],
+                    "elements": [
+                        { "id": "hq0", "node_i": 0, "node_j": 1, "node_k": 2, "node_l": 3, "thickness": 0.02, "conductivity": 45 }
+                    ]
+                }),
+            )]),
+        })
+        .expect("solve -> extract -> export -> output graph should run");
+
+        let exported = run
+            .artifacts
+            .get("csv_output.csv")
+            .cloned()
+            .expect("csv export artifact should exist");
+        assert_eq!(run.completed_nodes.len(), 5);
+        assert_eq!(exported["format"], serde_json::json!("csv"));
+        let content = exported["content"]
+            .as_str()
+            .expect("csv content should be a string");
+        assert!(content.contains("key,value"));
+        assert!(content.contains("max_temperature,100"));
+        assert!(content.contains("max_heat_flux"));
     }
 }

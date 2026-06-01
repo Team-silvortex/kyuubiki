@@ -127,6 +127,25 @@ That means this workflow is no longer only a UI direction:
 - the bridge step has a stable built-in operator identity
 - the runtime can already execute the first linear reference path headlessly
 
+The first generic executor layer now also exists for a small but real node set:
+
+- `input`
+- `solve`
+- `transform`
+- `extract`
+- `output`
+
+That executor now also supports a first export layer:
+
+- `export.summary_json`
+- `export.summary_csv`
+
+That is enough to run both:
+
+- `heat -> thermo_mechanical`
+- `solve -> extract -> output`
+- `solve -> extract -> export`
+
 ### `generate -> solve -> inspect -> export`
 
 1. generate parametric model

@@ -62,6 +62,7 @@ defmodule KyuubikiWeb.Protocol do
         "agents" => "/api/v1/agents",
         "jobs" => "/api/v1/jobs",
         "results" => "/api/v1/results",
+        "workflow_graph_run" => "/api/v1/workflows/graph/run",
         "projects" => "/api/v1/projects",
         "workload_catalog" => "/api/v1/workloads/catalog",
         "project_bundle_download" => "/api/v1/projects/:project_id/bundle"
