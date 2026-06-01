@@ -443,6 +443,54 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  post "/api/v1/workflows/graph/jobs" do
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_workflow_graph(conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
+  get "/api/v1/workflows/catalog" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, Analysis.list_workflow_catalog())
+    end)
+  end
+
+  get "/api/v1/workflows/catalog/:workflow_id" do
+    with_auth(conn, :read, fn conn ->
+      case Analysis.fetch_workflow_catalog_entry(workflow_id) do
+        {:ok, payload} ->
+          respond_json(conn, 200, payload)
+
+        {:error, {:workflow_not_found, _}} ->
+          respond_json(conn, 404, %{"error" => "workflow_not_found", "workflow_id" => workflow_id})
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
+  post "/api/v1/workflows/catalog/:workflow_id/jobs" do
+    with_auth(conn, :write, fn conn ->
+      case Analysis.submit_catalog_workflow(workflow_id, conn.body_params) do
+        {:ok, payload} ->
+          respond_json(conn, 202, payload)
+
+        {:error, {:workflow_not_found, _}} ->
+          respond_json(conn, 404, %{"error" => "workflow_not_found", "workflow_id" => workflow_id})
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
   get "/api/v1/jobs" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, Analysis.list_jobs())

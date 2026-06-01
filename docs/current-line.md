@@ -67,7 +67,9 @@ verified, and less speculative.
 6. [workflow-graph.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-graph.md)
    Multi-operator composition direction for shader-like workflow growth.
    The first headless reference runner now exists for
-   `heat_plane_quad_2d -> thermal_plane_quad_2d`.
+   `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
+   exposes a first built-in workflow catalog entry for
+   `workflow.heat-to-thermo-quad-2d`.
 7. [language-packs.md](/Users/Shared/chroot/dev/kyuubiki/docs/language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.

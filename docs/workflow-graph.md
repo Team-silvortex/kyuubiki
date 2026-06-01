@@ -146,6 +146,30 @@ That is enough to run both:
 - `solve -> extract -> output`
 - `solve -> extract -> export`
 
+The orchestrator now exposes two workflow graph entrypoints:
+
+- `POST /api/v1/workflows/graph/run`
+  synchronous reference execution
+- `POST /api/v1/workflows/graph/jobs`
+  asynchronous job submission that reuses the standard
+  `GET /api/v1/jobs/:job_id` polling path
+
+The orchestrator now also exposes a first workflow catalog layer:
+
+- `GET /api/v1/workflows/catalog`
+  list built-in named workflows and their entry/output contracts
+- `GET /api/v1/workflows/catalog/:workflow_id`
+  inspect one named workflow descriptor including the backing graph
+- `POST /api/v1/workflows/catalog/:workflow_id/jobs`
+  submit a workflow job without embedding the full graph JSON in the client
+
+The asynchronous job path now also exposes lightweight workflow runtime state
+through the normal job/result payload:
+
+- `current_node`
+- `completed_nodes`
+- `progress_events`
+
 ### `generate -> solve -> inspect -> export`
 
 1. generate parametric model
@@ -163,6 +187,16 @@ runtime execution, and result handling.
 3. export concise artifact
 
 This is the simplest workflow and should become the easiest headless example.
+
+## Built-in workflow catalog
+
+The first built-in workflow descriptor is:
+
+- `workflow.heat-to-thermo-quad-2d`
+
+Its role is to make one reference multi-operator path discoverable and reusable
+by Hub, Workbench, SDK callers, and automation without forcing every client to
+ship the full graph inline.
 
 ## Workflow runtime contract
 

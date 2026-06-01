@@ -239,6 +239,19 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec list_workflow_catalog() :: map()
+  def list_workflow_catalog do
+    %{"workflows" => built_in_workflow_catalog()}
+  end
+
+  @spec fetch_workflow_catalog_entry(String.t()) :: {:ok, map()} | {:error, term()}
+  def fetch_workflow_catalog_entry(workflow_id) when is_binary(workflow_id) do
+    case Enum.find(built_in_workflow_catalog(), &(&1["id"] == workflow_id)) do
+      nil -> {:error, {:workflow_not_found, workflow_id}}
+      workflow -> {:ok, %{"workflow" => workflow}}
+    end
+  end
+
   @spec run_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def run_workflow_graph(params) when is_map(params) do
     normalized = stringify_keys(params)
@@ -252,6 +265,57 @@ defmodule KyuubikiWeb.Analysis do
          "completed_nodes" => completed_nodes,
          "artifacts" => artifacts
        }}
+    else
+      nil -> {:error, :invalid_workflow_graph_request}
+      [] -> {:error, :invalid_workflow_graph_request}
+      {:error, _reason} = error -> error
+      _ -> {:error, :invalid_workflow_graph_request}
+    end
+  end
+
+  @spec submit_catalog_workflow(String.t(), map()) :: {:ok, map()} | {:error, term()}
+  def submit_catalog_workflow(workflow_id, params)
+      when is_binary(workflow_id) and is_map(params) do
+    normalized = stringify_keys(params)
+
+    with {:ok, graph} <- workflow_graph_by_id(workflow_id),
+         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
+         {:ok, payload} <-
+           submit_workflow_graph(%{
+             "graph" => graph,
+             "input_artifacts" => input_artifacts,
+             "tags" => Map.get(normalized, "tags", []),
+             "requested_agent_id" => Map.get(normalized, "requested_agent_id"),
+             "requested_capability" => Map.get(normalized, "requested_capability")
+           }) do
+      {:ok, payload}
+    else
+      nil -> {:error, :invalid_workflow_graph_request}
+      [] -> {:error, :invalid_workflow_graph_request}
+      {:error, _reason} = error -> error
+      _ -> {:error, :invalid_workflow_graph_request}
+    end
+  end
+
+  @spec submit_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
+  def submit_workflow_graph(params) when is_map(params) do
+    normalized = stringify_keys(params)
+
+    with %{} = graph <- Map.get(normalized, "graph"),
+         %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      :ok =
+        AnalysisResultStore.put(job.job_id, %{
+          "workflow_id" => Map.get(graph, "id"),
+          "current_node" => nil,
+          "progress_events" => [],
+          "completed_nodes" => [],
+          "artifacts" => %{}
+        })
+
+      start_background_workflow_job(job.job_id, graph, input_artifacts)
+      {:ok, serialize_payload(job)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
       [] -> {:error, :invalid_workflow_graph_request}
@@ -540,8 +604,213 @@ defmodule KyuubikiWeb.Analysis do
 
   defp csv_escape(value), do: value |> to_string() |> csv_escape()
 
-  defp execute_workflow_graph(%{"nodes" => nodes} = graph, input_artifacts)
-       when is_list(nodes) and is_map(input_artifacts) do
+  defp built_in_workflow_catalog do
+    [
+      %{
+        "id" => "workflow.heat-to-thermo-quad-2d",
+        "name" => "Heat to thermo quad",
+        "version" => "1.0.0",
+        "summary" =>
+          "Solves a heat plane quad model, bridges the temperature field into a thermo-mechanical quad model, then extracts and exports a summary.",
+        "graph" => heat_to_thermo_quad_graph(),
+        "entry_inputs" => [
+          %{
+            "node_id" => "heat_model",
+            "artifact_type" => "study_model/heat_plane_quad_2d",
+            "description" => "Heat plane quad study model used as the workflow entry artifact."
+          }
+        ],
+        "output_artifacts" => [
+          %{
+            "node_id" => "json_output",
+            "artifact_type" => "export/json",
+            "description" => "JSON-encoded result summary for the final thermo-mechanical solve."
+          }
+        ]
+      }
+    ]
+  end
+
+  defp workflow_graph_by_id("workflow.heat-to-thermo-quad-2d"),
+    do: {:ok, heat_to_thermo_quad_graph()}
+
+  defp workflow_graph_by_id(workflow_id), do: {:error, {:workflow_not_found, workflow_id}}
+
+  defp heat_to_thermo_quad_graph do
+    %{
+      "schema_version" => "kyuubiki.workflow-graph/v1",
+      "id" => "workflow.heat-to-thermo-quad-2d",
+      "name" => "Heat to thermo quad",
+      "version" => "1.0.0",
+      "entry_nodes" => ["heat_model"],
+      "output_nodes" => ["json_output"],
+      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
+      "nodes" => [
+        %{
+          "id" => "heat_model",
+          "kind" => "input",
+          "outputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "solve_heat",
+          "kind" => "solve",
+          "operator_id" => "solve.heat_plane_quad_2d",
+          "inputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
+          ],
+          "outputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}]
+        },
+        %{
+          "id" => "bridge_temperature",
+          "kind" => "transform",
+          "operator_id" => "bridge.temperature_field_to_thermo_quad_2d",
+          "config" => %{
+            "nodes" => [
+              %{
+                "id" => "h0",
+                "x" => 0.0,
+                "y" => 0.0,
+                "fix_x" => true,
+                "fix_y" => true,
+                "temperature_delta" => 0.0
+              },
+              %{
+                "id" => "h1",
+                "x" => 1.0,
+                "y" => 0.0,
+                "fix_x" => false,
+                "fix_y" => false,
+                "temperature_delta" => 0.0
+              },
+              %{
+                "id" => "h2",
+                "x" => 1.0,
+                "y" => 1.0,
+                "fix_x" => false,
+                "fix_y" => false,
+                "temperature_delta" => 0.0
+              },
+              %{
+                "id" => "h3",
+                "x" => 0.0,
+                "y" => 1.0,
+                "fix_x" => true,
+                "fix_y" => true,
+                "temperature_delta" => 0.0
+              }
+            ],
+            "elements" => [
+              %{
+                "id" => "tq0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "node_l" => 3,
+                "thickness" => 0.02,
+                "youngs_modulus" => 210.0e9,
+                "poisson_ratio" => 0.3,
+                "thermal_expansion" => 11.0e-6
+              }
+            ]
+          },
+          "inputs" => [
+            %{"id" => "heat_result", "artifact_type" => "result/heat_plane_quad_2d"}
+          ],
+          "outputs" => [
+            %{
+              "id" => "thermo_model",
+              "artifact_type" => "study_model/thermal_plane_quad_2d"
+            }
+          ]
+        },
+        %{
+          "id" => "solve_thermo",
+          "kind" => "solve",
+          "operator_id" => "solve.thermal_plane_quad_2d",
+          "inputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/thermal_plane_quad_2d"}
+          ],
+          "outputs" => [
+            %{"id" => "result", "artifact_type" => "result/thermal_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "extract_summary",
+          "kind" => "extract",
+          "operator_id" => "extract.result_summary",
+          "inputs" => [
+            %{"id" => "result", "artifact_type" => "result/thermal_plane_quad_2d"}
+          ],
+          "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+        },
+        %{
+          "id" => "export_json",
+          "kind" => "export",
+          "operator_id" => "export.summary_json",
+          "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
+          "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
+        },
+        %{
+          "id" => "json_output",
+          "kind" => "output",
+          "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
+          "outputs" => []
+        }
+      ],
+      "edges" => [
+        %{
+          "id" => "e0",
+          "from" => %{"node" => "heat_model", "port" => "model"},
+          "to" => %{"node" => "solve_heat", "port" => "model"},
+          "artifact_type" => "study_model/heat_plane_quad_2d"
+        },
+        %{
+          "id" => "e1",
+          "from" => %{"node" => "solve_heat", "port" => "result"},
+          "to" => %{"node" => "bridge_temperature", "port" => "heat_result"},
+          "artifact_type" => "result/heat_plane_quad_2d"
+        },
+        %{
+          "id" => "e2",
+          "from" => %{"node" => "bridge_temperature", "port" => "thermo_model"},
+          "to" => %{"node" => "solve_thermo", "port" => "model"},
+          "artifact_type" => "study_model/thermal_plane_quad_2d"
+        },
+        %{
+          "id" => "e3",
+          "from" => %{"node" => "solve_thermo", "port" => "result"},
+          "to" => %{"node" => "extract_summary", "port" => "result"},
+          "artifact_type" => "result/thermal_plane_quad_2d"
+        },
+        %{
+          "id" => "e4",
+          "from" => %{"node" => "extract_summary", "port" => "summary"},
+          "to" => %{"node" => "export_json", "port" => "summary"},
+          "artifact_type" => "report/summary"
+        },
+        %{
+          "id" => "e5",
+          "from" => %{"node" => "export_json", "port" => "json"},
+          "to" => %{"node" => "json_output", "port" => "json"},
+          "artifact_type" => "export/json"
+        }
+      ]
+    }
+  end
+
+  defp execute_workflow_graph(graph, input_artifacts) do
+    execute_workflow_graph(graph, input_artifacts, nil)
+  end
+
+  defp execute_workflow_graph(
+         %{"nodes" => nodes} = graph,
+         input_artifacts,
+         progress_callback
+       )
+       when is_list(nodes) and is_map(input_artifacts) and
+              (is_nil(progress_callback) or is_function(progress_callback, 1)) do
     edges = Map.get(graph, "edges", [])
 
     do_execute_workflow_graph(
@@ -550,16 +819,26 @@ defmodule KyuubikiWeb.Analysis do
       input_artifacts,
       MapSet.new(),
       [],
-      %{}
+      %{},
+      progress_callback
     )
   end
 
-  defp execute_workflow_graph(_graph, _input_artifacts), do: {:error, :invalid_workflow_graph}
+  defp execute_workflow_graph(_graph, _input_artifacts, _progress_callback),
+    do: {:error, :invalid_workflow_graph}
 
-  defp do_execute_workflow_graph(nodes, edges, input_artifacts, completed, ordered, artifacts) do
+  defp do_execute_workflow_graph(
+         nodes,
+         edges,
+         input_artifacts,
+         completed,
+         ordered,
+         artifacts,
+         progress_callback
+       ) do
     {next_completed, next_ordered, next_artifacts, progressed?} =
       Enum.reduce(nodes, {completed, ordered, artifacts, false}, fn node,
-                                                                   {done, order, acc, moved?} ->
+                                                                    {done, order, acc, moved?} ->
         node_id = Map.get(node, "id")
 
         cond do
@@ -574,9 +853,20 @@ defmodule KyuubikiWeb.Analysis do
             if ready? do
               case execute_workflow_node(node, incoming, input_artifacts, acc) do
                 {:ok, updated_artifacts} ->
+                  next_order = order ++ [node_id]
+                  next_done = MapSet.put(done, node_id)
+
+                  if is_function(progress_callback, 1) do
+                    progress_callback.(%{
+                      "node_id" => node_id,
+                      "completed_nodes" => length(next_order),
+                      "total_nodes" => length(nodes)
+                    })
+                  end
+
                   {
-                    MapSet.put(done, node_id),
-                    order ++ [node_id],
+                    next_done,
+                    next_order,
                     updated_artifacts,
                     true
                   }
@@ -600,7 +890,8 @@ defmodule KyuubikiWeb.Analysis do
           input_artifacts,
           next_completed,
           next_ordered,
-          next_artifacts
+          next_artifacts,
+          progress_callback
         )
       else
         pending =
@@ -614,9 +905,17 @@ defmodule KyuubikiWeb.Analysis do
   catch
     {:workflow_node_error, node_id, reason} ->
       {:error, {:workflow_node_error, node_id, reason}}
+
+    {:workflow_cancelled, node_id} ->
+      {:error, {:workflow_cancelled, node_id}}
   end
 
-  defp execute_workflow_node(%{"kind" => "input", "id" => node_id} = node, _incoming, inputs, artifacts) do
+  defp execute_workflow_node(
+         %{"kind" => "input", "id" => node_id} = node,
+         _incoming,
+         inputs,
+         artifacts
+       ) do
     case Map.fetch(inputs, node_id) do
       {:ok, value} ->
         updated =
@@ -669,7 +968,11 @@ defmodule KyuubikiWeb.Analysis do
   defp execute_workflow_node(%{"kind" => "output"} = node, incoming, _inputs, artifacts) do
     updated =
       Enum.reduce(incoming, artifacts, fn edge, acc ->
-        Map.put(acc, artifact_key(Map.get(node, "id"), get_in(edge, ["to", "port"])), Map.fetch!(acc, edge_from_key(edge)))
+        Map.put(
+          acc,
+          artifact_key(Map.get(node, "id"), get_in(edge, ["to", "port"])),
+          Map.fetch!(acc, edge_from_key(edge))
+        )
       end)
 
     {:ok, updated}
@@ -678,8 +981,9 @@ defmodule KyuubikiWeb.Analysis do
   defp execute_workflow_node(%{"kind" => kind}, _incoming, _inputs, _artifacts),
     do: {:error, {:unsupported_workflow_node_kind, kind}}
 
-  defp fetch_operator_id(%{"operator_id" => operator_id}) when is_binary(operator_id) and operator_id != "",
-    do: {:ok, operator_id}
+  defp fetch_operator_id(%{"operator_id" => operator_id})
+       when is_binary(operator_id) and operator_id != "",
+       do: {:ok, operator_id}
 
   defp fetch_operator_id(_node), do: {:error, :missing_operator_id}
 
@@ -735,7 +1039,8 @@ defmodule KyuubikiWeb.Analysis do
   defp run_workflow_extract_operator(operator_id, _payload, _config),
     do: {:error, {:unsupported_workflow_extract_operator, operator_id}}
 
-  defp run_workflow_export_operator("export.summary_json", payload, _config) when is_map(payload) do
+  defp run_workflow_export_operator("export.summary_json", payload, _config)
+       when is_map(payload) do
     export_summary_json(payload)
   end
 
@@ -877,6 +1182,12 @@ defmodule KyuubikiWeb.Analysis do
     end)
   end
 
+  defp start_background_workflow_job(job_id, graph, input_artifacts) do
+    Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
+      execute_background_workflow_job(job_id, graph, input_artifacts)
+    end)
+  end
+
   defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
     case Store.get(job_id) do
       {:ok, %{status: :cancelled}} ->
@@ -926,6 +1237,111 @@ defmodule KyuubikiWeb.Analysis do
           fail_job(job_id, "job execution timed out after #{timeout_ms} ms")
         end
     end
+  end
+
+  defp execute_background_workflow_job(job_id, graph, input_artifacts) do
+    timeout_ms = watchdog_job_timeout_ms()
+
+    task =
+      Task.async(fn ->
+        execute_workflow_graph(graph, input_artifacts, fn progress ->
+          apply_workflow_progress(job_id, progress)
+        end)
+      end)
+
+    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
+      {:ok, {:ok, completed_nodes, artifacts}} ->
+        unless cancelled?(job_id) do
+          :ok =
+            AnalysisResultStore.put(job_id, %{
+              "workflow_id" => Map.get(graph, "id"),
+              "current_node" => nil,
+              "progress_events" => workflow_progress_events(job_id),
+              "completed_nodes" => completed_nodes,
+              "artifacts" => artifacts
+            })
+
+          _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
+        end
+
+      {:ok, {:error, {:workflow_cancelled, _node_id}}} ->
+        cancel_job_with_message(job_id, "workflow cancelled by operator")
+
+      {:ok, {:error, reason}} ->
+        unless cancelled?(job_id) do
+          fail_job(job_id, inspect(reason))
+        end
+
+      nil ->
+        unless cancelled?(job_id) do
+          fail_job(job_id, "workflow execution timed out after #{timeout_ms} ms")
+        end
+    end
+  end
+
+  defp apply_workflow_progress(job_id, %{
+         "node_id" => node_id,
+         "completed_nodes" => completed_nodes,
+         "total_nodes" => total_nodes
+       })
+       when is_binary(job_id) and is_binary(node_id) and is_integer(completed_nodes) and
+              is_integer(total_nodes) and total_nodes > 0 do
+    case Store.get(job_id) do
+      {:ok, %{status: :cancelled}} ->
+        throw({:workflow_cancelled, node_id})
+
+      {:ok, _job} ->
+        progress = min(completed_nodes / total_nodes, 0.98)
+
+        progress_event = %{
+          "node_id" => node_id,
+          "completed_nodes" => completed_nodes,
+          "total_nodes" => total_nodes,
+          "progress" => progress,
+          "emitted_at" => DateTime.utc_now() |> DateTime.to_iso8601()
+        }
+
+        :ok =
+          update_workflow_runtime(job_id, fn runtime ->
+            runtime
+            |> Map.put("current_node", node_id)
+            |> Map.update("progress_events", [progress_event], fn events ->
+              (events ++ [progress_event]) |> Enum.take(-25)
+            end)
+          end)
+
+        _ =
+          Store.apply_progress(%{
+            job_id: job_id,
+            stage: "solving",
+            progress: progress,
+            iteration: completed_nodes,
+            message: "completed workflow node #{node_id}"
+          })
+
+        :ok
+
+      :error ->
+        :ok
+    end
+  end
+
+  defp workflow_progress_events(job_id) when is_binary(job_id) do
+    case AnalysisResultStore.get(job_id) do
+      {:ok, %{"progress_events" => events}} when is_list(events) -> events
+      _ -> []
+    end
+  end
+
+  defp update_workflow_runtime(job_id, updater)
+       when is_binary(job_id) and is_function(updater, 1) do
+    runtime =
+      case AnalysisResultStore.get(job_id) do
+        {:ok, payload} when is_map(payload) -> payload
+        _ -> %{}
+      end
+
+    AnalysisResultStore.put(job_id, updater.(runtime))
   end
 
   defp fail_job(job_id, message) when is_binary(job_id) and is_binary(message) do
