@@ -32,6 +32,11 @@ import { WorkbenchDataAdminPanel } from "@/components/workbench/system/workbench
 import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
+import {
+  WorkbenchWorkflowSidebar,
+  type WorkflowRunRecord,
+  type WorkflowSurfaceTab,
+} from "@/components/workbench/workflow/workbench-workflow-sidebar";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { parseMaterialLibrary } from "@/lib/materials";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
@@ -227,9 +232,11 @@ import {
   fetchJobHistory,
   fetchJobStatus,
   fetchProtocolAgents,
+  fetchWorkflowCatalog,
   fetchResultChunk,
   fetchProjects,
   fetchResults,
+  submitWorkflowCatalogJob,
   type AxialBarJobInput,
   type AxialBarResult,
   type Beam1dElementInput,
@@ -290,6 +297,8 @@ import {
   type ThermalTruss3dJobInput,
   type ThermalTruss3dNodeInput,
   type ThermalTruss3dResult,
+  type WorkflowCatalogEntry,
+  type WorkflowGraphJobResult,
   type Spring1dJobInput,
   type Spring1dResult,
   type Spring2dJobInput,
@@ -331,7 +340,7 @@ import {
 
 type Language = "en" | "zh" | "ja" | "es";
 type Theme = "linen" | "marine" | "graphite";
-type SidebarSection = "study" | "model" | "library" | "system";
+type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput;
 type HeatPlaneStudyJobInput = HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput;
@@ -360,6 +369,7 @@ type BeamResultField = Extract<LineResultField, "max_bending_stress" | "moment" 
 type StudyPanelTab = "summary" | "controls";
 type ModelPanelTab = "tools" | "tree";
 type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samples";
+type WorkflowPanelTab = WorkflowSurfaceTab;
 type ImmersiveToolTab = "node" | "props";
 type SystemDataTab = "jobs" | "results";
 type SystemPanelTab = "config" | "assistant" | "scripts" | "runtime" | "data";
@@ -835,8 +845,8 @@ const copyEn = {
     roleLabel: brand.workbenchRoleLabel ?? "Analysis shell",
     title: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
     subtitle: brand.workbenchDescription,
-    rail: { study: "Study", model: "Workspace", library: "History", system: "System" },
-    sections: { study: "Study Setup", model: "Workspace", library: "Job History", system: "System" },
+    rail: { study: "Study", model: "Workspace", workflow: "Workflow", library: "History", system: "System" },
+    sections: { study: "Study Setup", model: "Workspace", workflow: "Workflow Studio", library: "Job History", system: "System" },
     kinds: {
       axial_bar_1d: "1D axial bar",
       heat_bar_1d: "1D heat bar",
@@ -881,6 +891,37 @@ const copyEn = {
     importHint: "Load a JSON model for 1D or 2D studies.",
     sampleCatalogPage: "Catalog",
     sampleImportPage: "Import",
+    workflowOverviewPage: "Overview",
+    workflowCatalogPage: "Catalog",
+    workflowBuilderPage: "Builder",
+    workflowRunsPage: "Runs",
+    workflowCatalogTitle: "Workflow Catalog",
+    workflowCatalogHint: "Run named multi-operator workflows here before wiring them into a larger study path.",
+    workflowOverviewHint: "Keep composite operator workflows in one dedicated surface instead of hiding them inside samples or results.",
+    workflowBuilderHint: "Inspect graph nodes, bridges, extracts, and exports before turning them into a larger study chain.",
+    workflowRunsHint: "Track named workflow jobs, current nodes, and exported summaries from one place.",
+    workflowCatalogRefresh: "Refresh workflows",
+    workflowCatalogRun: "Run reference sample",
+    workflowCatalogEmpty: "No named workflows are published yet.",
+    workflowCatalogReady: "Workflow catalog ready.",
+    workflowCatalogQueued: "Queued workflow job",
+    workflowCatalogCompleted: "Workflow completed",
+    workflowCatalogUnsupported: "This workflow does not have a built-in sample input yet.",
+    workflowCatalogLoaded: "Loaded workflow catalog.",
+    workflowCatalogFailed: "Workflow run failed.",
+    workflowSelectForBuilder: "Open builder",
+    workflowNoSelection: "Select a named workflow first so the builder can show its graph.",
+    workflowNodesTitle: "Nodes",
+    workflowEdgesTitle: "Edges",
+    workflowEntryInputsTitle: "Entry Inputs",
+    workflowOutputArtifactsTitle: "Output Artifacts",
+    workflowOperatorLabel: "Operator",
+    workflowKindLabel: "Kind",
+    workflowProgressLabel: "Progress",
+    workflowCurrentNodeLabel: "Current node",
+    workflowLatestSummaryLabel: "Latest summary",
+    workflowOpenRunLabel: "Open run",
+    workflowRunsEmpty: "No workflow runs yet.",
     projectManagePage: "Manage",
     projectExchangePage: "Exchange",
     modelSavedPage: "Saved",
@@ -1496,8 +1537,8 @@ const copyZh = {
     roleLabel: "分析工作台",
     title: "结构分析工作台",
     subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
-    rail: { study: "研究", model: "工作区", library: "历史", system: "系统" },
-    sections: { study: "研究设置", model: "工作区", library: "任务历史", system: "系统" },
+    rail: { study: "研究", model: "工作区", workflow: "工作流", library: "历史", system: "系统" },
+    sections: { study: "研究设置", model: "工作区", workflow: "工作流工作台", library: "任务历史", system: "系统" },
     kinds: {
       axial_bar_1d: "一维轴向杆",
       heat_bar_1d: "一维导热杆",
@@ -1542,6 +1583,37 @@ const copyZh = {
     importHint: "导入 1D 或 2D 研究 JSON 模型。",
     sampleCatalogPage: "目录",
     sampleImportPage: "导入",
+    workflowOverviewPage: "概览",
+    workflowCatalogPage: "目录",
+    workflowBuilderPage: "搭建",
+    workflowRunsPage: "运行",
+    workflowCatalogTitle: "工作流目录",
+    workflowCatalogHint: "先在这里运行命名多算子工作流，再决定要不要把它接进更大的研究路径。",
+    workflowOverviewHint: "把复合算子工作流放在独立工作面里，而不是继续藏在样板或结果页里。",
+    workflowBuilderHint: "先看清 graph 的节点、桥接、提取和导出，再决定怎么把它接进更大的研究链。",
+    workflowRunsHint: "在一个地方看命名工作流任务、当前节点和导出摘要。",
+    workflowCatalogRefresh: "刷新工作流",
+    workflowCatalogRun: "运行参考样板",
+    workflowCatalogEmpty: "当前还没有发布命名工作流。",
+    workflowCatalogReady: "工作流目录已就绪。",
+    workflowCatalogQueued: "工作流任务已排队",
+    workflowCatalogCompleted: "工作流已完成",
+    workflowCatalogUnsupported: "这条工作流目前还没有内建参考输入。",
+    workflowCatalogLoaded: "已加载工作流目录。",
+    workflowCatalogFailed: "工作流运行失败。",
+    workflowSelectForBuilder: "打开搭建面",
+    workflowNoSelection: "先选择一条命名工作流，搭建面才会显示它的 graph。",
+    workflowNodesTitle: "节点",
+    workflowEdgesTitle: "连线",
+    workflowEntryInputsTitle: "入口输入",
+    workflowOutputArtifactsTitle: "输出产物",
+    workflowOperatorLabel: "算子",
+    workflowKindLabel: "类型",
+    workflowProgressLabel: "进度",
+    workflowCurrentNodeLabel: "当前节点",
+    workflowLatestSummaryLabel: "最近摘要",
+    workflowOpenRunLabel: "打开运行",
+    workflowRunsEmpty: "还没有工作流运行记录。",
     projectManagePage: "管理",
     projectExchangePage: "交换",
     modelSavedPage: "已保存",
@@ -2147,8 +2219,8 @@ const copy = {
     roleLabel: "解析シェル",
     title: "構造解析ワークベンチ",
     subtitle: "モデリング、オーケストレーション、結果レビューを一つにまとめた作業面です。",
-    rail: { study: "解析", model: "ワークスペース", library: "履歴", system: "システム" },
-    sections: { study: "解析設定", model: "ワークスペース", library: "ジョブ履歴", system: "システム" },
+    rail: { study: "解析", model: "ワークスペース", workflow: "ワークフロー", library: "履歴", system: "システム" },
+    sections: { study: "解析設定", model: "ワークスペース", workflow: "ワークフロースタジオ", library: "ジョブ履歴", system: "システム" },
     studyFamilies: {
       axialAndSprings: "軸・ばね",
       beamsAndFrames: "梁・フレーム",
@@ -2164,6 +2236,37 @@ const copy = {
     importHint: "1D / 2D 解析用の JSON モデルを読み込みます。",
     sampleCatalogPage: "カタログ",
     sampleImportPage: "インポート",
+    workflowOverviewPage: "概要",
+    workflowCatalogPage: "カタログ",
+    workflowBuilderPage: "ビルダー",
+    workflowRunsPage: "実行",
+    workflowCatalogTitle: "ワークフローカタログ",
+    workflowCatalogHint: "より大きな study path に組み込む前に、命名済みの多算子 workflow をここで実行します。",
+    workflowOverviewHint: "複合算子 workflow を専用作業面に集め、samples や results に埋め込まないようにします。",
+    workflowBuilderHint: "graph のノード、bridge、extract、export を確認してから大きな study chain に接続します。",
+    workflowRunsHint: "命名 workflow ジョブ、現在ノード、書き出し済み summary を一か所で追います。",
+    workflowCatalogRefresh: "ワークフローを更新",
+    workflowCatalogRun: "参照サンプルを実行",
+    workflowCatalogEmpty: "まだ公開済みの命名 workflow はありません。",
+    workflowCatalogReady: "ワークフローカタログの準備ができました。",
+    workflowCatalogQueued: "ワークフロージョブを投入しました",
+    workflowCatalogCompleted: "ワークフローが完了しました",
+    workflowCatalogUnsupported: "この workflow にはまだ内蔵サンプル入力がありません。",
+    workflowCatalogLoaded: "ワークフローカタログを読み込みました。",
+    workflowCatalogFailed: "ワークフロー実行に失敗しました。",
+    workflowSelectForBuilder: "ビルダーを開く",
+    workflowNoSelection: "まず命名 workflow を選ぶと、ビルダーに graph が表示されます。",
+    workflowNodesTitle: "ノード",
+    workflowEdgesTitle: "エッジ",
+    workflowEntryInputsTitle: "入口入力",
+    workflowOutputArtifactsTitle: "出力アーティファクト",
+    workflowOperatorLabel: "算子",
+    workflowKindLabel: "種別",
+    workflowProgressLabel: "進捗",
+    workflowCurrentNodeLabel: "現在ノード",
+    workflowLatestSummaryLabel: "最新サマリー",
+    workflowOpenRunLabel: "実行を開く",
+    workflowRunsEmpty: "まだ workflow 実行はありません。",
     projectManagePage: "管理",
     projectExchangePage: "入出力",
     modelSavedPage: "保存済み",
@@ -2677,6 +2780,16 @@ function isThermalFrame2dResult(value: unknown): value is ThermalFrame2dResult {
   );
 }
 
+function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJobResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "workflow_id" in value &&
+    "completed_nodes" in value &&
+    "artifacts" in value
+  );
+}
+
 function isPlaneResult(
   value: unknown,
 ): value is
@@ -2707,6 +2820,65 @@ function isPlaneResult(
         | ThermalPlaneQuad2dResult
     ).elements.some((element) => "node_k" in element)
   );
+}
+
+function builtInWorkflowSampleInputArtifacts(workflowId: string): Record<string, unknown> | null {
+  if (workflowId !== "workflow.heat-to-thermo-quad-2d") {
+    return null;
+  }
+
+  return {
+    heat_model: {
+      nodes: [
+        { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
+        { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
+        { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
+        { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
+      ],
+      elements: [
+        {
+          id: "hq0",
+          node_i: 0,
+          node_j: 1,
+          node_k: 2,
+          node_l: 3,
+          thickness: 0.02,
+          conductivity: 45,
+        },
+      ],
+    },
+  };
+}
+
+function summarizeWorkflowArtifacts(result: WorkflowGraphJobResult): string | null {
+  const exported = result.artifacts["json_output.json"];
+  if (!exported || typeof exported !== "object" || exported === null || !("content" in exported)) {
+    return null;
+  }
+
+  const content = (exported as { content?: unknown }).content;
+  if (typeof content !== "string") {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    const summary = Object.entries(parsed)
+      .slice(0, 3)
+      .map(([key, value]) => `${key}=${typeof value === "number" ? scientific(value) : String(value)}`)
+      .join(", ");
+    return summary || null;
+  } catch {
+    return null;
+  }
+}
+
+function upsertWorkflowRunRecord(
+  current: WorkflowRunRecord[],
+  next: WorkflowRunRecord,
+): WorkflowRunRecord[] {
+  const withoutMatch = current.filter((entry) => entry.jobId !== next.jobId);
+  return [next, ...withoutMatch].slice(0, 12);
 }
 
 function ensureBeamModelMaterials<T extends { materials?: Array<{ id: string }>; elements: Array<{ material_id?: string | undefined }> }>(
@@ -4376,6 +4548,11 @@ export function Workbench() {
   const [canvasViewportWidth, setCanvasViewportWidth] = useState(980);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
+  const [workflowCatalog, setWorkflowCatalog] = useState<WorkflowCatalogEntry[]>([]);
+  const [workflowCatalogBusy, setWorkflowCatalogBusy] = useState(false);
+  const [workflowPanelTab, setWorkflowPanelTab] = useState<WorkflowPanelTab>("overview");
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [workflowRuns, setWorkflowRuns] = useState<WorkflowRunRecord[]>([]);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -5062,6 +5239,23 @@ export function Workbench() {
     }
   }
 
+  async function refreshWorkflowCatalog() {
+    setWorkflowCatalogBusy(true);
+
+    try {
+      const payload = await fetchWorkflowCatalog();
+      setWorkflowCatalog(payload.workflows);
+      setSelectedWorkflowId((current) =>
+        current && payload.workflows.some((entry) => entry.id === current) ? current : payload.workflows[0]?.id ?? null,
+      );
+      setMessage(t.workflowCatalogLoaded);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : t.initialFailed);
+    } finally {
+      setWorkflowCatalogBusy(false);
+    }
+  }
+
   async function refreshResults() {
     const refreshSeq = ++resultRefreshSeqRef.current;
 
@@ -5522,148 +5716,175 @@ export function Workbench() {
     startTransition(async () => {
       try {
         const payload = await fetchJobStatus<
-          AxialBarResult | HeatBar1dResult | HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | ThermalFrame2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult
+          AxialBarResult | HeatBar1dResult | HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | ThermalFrame2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | WorkflowGraphJobResult
         >(jobId);
         setJob(payload.job);
 
         if (payload.result) {
-          setResult(payload.result);
+          const workflowResult = isWorkflowGraphResult(payload.result) ? payload.result : null;
+          if (workflowResult) {
+            setResult(null);
+            const summary = summarizeWorkflowArtifacts(workflowResult);
+            setSidebarSection("workflow");
+            setWorkflowPanelTab("runs");
+            setSelectedWorkflowId(workflowResult.workflow_id);
+            setWorkflowRuns((current) =>
+              upsertWorkflowRunRecord(current, {
+                jobId: payload.job.job_id,
+                workflowId: workflowResult.workflow_id,
+                status: payload.job.status,
+                progress: payload.job.progress ?? 0,
+                currentNode: workflowResult.current_node ?? payload.job.message ?? null,
+                summary,
+                updatedAt: payload.job.updated_at ?? null,
+              }),
+            );
+            setMessage(
+              summary
+                ? `${t.workflowCatalogCompleted}: ${workflowResult.workflow_id} (${summary})`
+                : `${t.workflowCatalogCompleted}: ${workflowResult.workflow_id}`,
+            );
+            return;
+          }
 
-          if (isAxialResult(payload.result)) {
+          const nonWorkflowResult = payload.result as Exclude<typeof payload.result, WorkflowGraphJobResult>;
+          setResult(nonWorkflowResult);
+
+          if (isAxialResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("axial_bar_1d");
             setAxialForm({
-              length: payload.result.input.length,
-              area: payload.result.input.area,
-              elements: payload.result.input.elements,
-              tipForce: payload.result.input.tip_force,
+              length: nonWorkflowResult.input.length,
+              area: nonWorkflowResult.input.area,
+              elements: nonWorkflowResult.input.elements,
+              tipForce: nonWorkflowResult.input.tip_force,
               material: activeMaterial,
-              youngsModulusGpa: round(payload.result.input.youngs_modulus / 1.0e9),
+              youngsModulusGpa: round(nonWorkflowResult.input.youngs_modulus / 1.0e9),
             });
           }
 
-          if (isThermalBar1dResult(payload.result)) {
+          if (isThermalBar1dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_bar_1d");
-            setThermalBarModel(payload.result.input);
+            setThermalBarModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isHeatBar1dResult(payload.result)) {
+          if (isHeatBar1dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("heat_bar_1d");
-            setHeatBarModel(payload.result.input);
+            setHeatBarModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isHeatPlaneTriangle2dResult(payload.result)) {
+          if (isHeatPlaneTriangle2dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("heat_plane_triangle_2d");
-            setHeatPlaneModel(payload.result.input);
+            setHeatPlaneModel(nonWorkflowResult.input);
             setPlaneResultField("average_temperature");
             openWorkspaceStudy("controls");
           }
 
-          if (isHeatPlaneQuad2dResult(payload.result)) {
+          if (isHeatPlaneQuad2dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("heat_plane_quad_2d");
-            setHeatPlaneModel(payload.result.input);
+            setHeatPlaneModel(nonWorkflowResult.input);
             setPlaneResultField("average_temperature");
             openWorkspaceStudy("controls");
           }
 
-          if (isThermalBeam1dResult(payload.result)) {
+          if (isThermalBeam1dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_beam_1d");
-            setThermalBeamModel(ensureBeamModelMaterials(payload.result.input, activeMaterial));
+            setThermalBeamModel(ensureBeamModelMaterials(nonWorkflowResult.input, activeMaterial));
             openWorkspaceStudy("controls");
           }
 
-          if (isThermalTruss2dResult(payload.result)) {
+          if (isThermalTruss2dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_truss_2d");
-            setThermalTrussModel(payload.result.input);
+            setThermalTrussModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isThermalTruss3dResult(payload.result)) {
+          if (isThermalTruss3dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_truss_3d");
-            setThermalTruss3dModel(payload.result.input);
+            setThermalTruss3dModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isSpring1dResult(payload.result)) {
+          if (isSpring1dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("spring_1d");
-            setSpringModel(payload.result.input);
+            setSpringModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isSpring2dResult(payload.result)) {
+          if (isSpring2dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("spring_2d");
-            setSpring2dModel(payload.result.input);
+            setSpring2dModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isSpring3dResult(payload.result)) {
+          if (isSpring3dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("spring_3d");
-            setSpring3dModel(payload.result.input);
+            setSpring3dModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isBeam1dResult(payload.result)) {
+          if (isBeam1dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("beam_1d");
-            setBeamModel(ensureBeamModelMaterials(payload.result.input, activeMaterial));
+            setBeamModel(ensureBeamModelMaterials(nonWorkflowResult.input, activeMaterial));
             openWorkspaceStudy("controls");
           }
 
-          if (isTorsion1dResult(payload.result)) {
+          if (isTorsion1dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("torsion_1d");
-            setTorsionModel(payload.result.input);
+            setTorsionModel(nonWorkflowResult.input);
             openWorkspaceStudy("controls");
           }
 
-          if (isTrussResult(payload.result)) {
+          if (isTrussResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("truss_2d");
-            setTrussModel(ensureTrussModelMaterials(payload.result.input, activeMaterial));
+            setTrussModel(ensureTrussModelMaterials(nonWorkflowResult.input, activeMaterial));
             openWorkspaceStudy("controls");
           }
 
-          if (isTruss3dResult(payload.result)) {
+          if (isTruss3dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("truss_3d");
-            setTruss3dModel(ensureTruss3dModelMaterials(payload.result.input, activeMaterial));
+            setTruss3dModel(ensureTruss3dModelMaterials(nonWorkflowResult.input, activeMaterial));
             openWorkspaceStudy("controls");
           }
 
-          if (isFrame2dResult(payload.result)) {
+          if (isFrame2dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("frame_2d");
-            setFrameModel(ensureFrameModelMaterials(payload.result.input, activeMaterial));
+            setFrameModel(ensureFrameModelMaterials(nonWorkflowResult.input, activeMaterial));
             openWorkspaceStudy("controls");
           }
 
-          if (isThermalFrame2dResult(payload.result)) {
+          if (isThermalFrame2dResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind("thermal_frame_2d");
-            setThermalFrameModel(ensureFrameModelMaterials(payload.result.input, activeMaterial) as ThermalFrameStudyJobInput);
+            setThermalFrameModel(ensureFrameModelMaterials(nonWorkflowResult.input, activeMaterial) as ThermalFrameStudyJobInput);
             openWorkspaceStudy("controls");
           }
 
-          if (isPlaneResult(payload.result)) {
+          if (isPlaneResult(nonWorkflowResult)) {
             recordHistory(t.historyAction);
             setStudyKind(
-              payload.result.input.elements.some((element) => "node_l" in element)
+              nonWorkflowResult.input.elements.some((element) => "node_l" in element)
                 ? "plane_quad_2d"
                 : "plane_triangle_2d",
             );
-            setPlaneModel(ensurePlaneModelMaterials(payload.result.input, activeMaterial));
+            setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
             openWorkspaceStudy("controls");
           }
         }
@@ -5899,6 +6120,96 @@ export function Workbench() {
         setMessage(`${t.importedModel}: ${imported.name}`);
       } catch (error) {
         setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
+      }
+    });
+  };
+
+  const runWorkflowCatalogEntry = (workflowId: string) => {
+    const inputArtifacts = builtInWorkflowSampleInputArtifacts(workflowId);
+    if (!inputArtifacts) {
+      setMessage(t.workflowCatalogUnsupported);
+      return;
+    }
+
+    startTransition(async () => {
+      setWorkflowCatalogBusy(true);
+
+      try {
+        const payload = await submitWorkflowCatalogJob(workflowId, inputArtifacts);
+        setSelectedWorkflowId(workflowId);
+        setSidebarSection("workflow");
+        setWorkflowPanelTab("runs");
+        setJob(payload.job);
+        setWorkflowRuns((current) =>
+          upsertWorkflowRunRecord(current, {
+            jobId: payload.job.job_id,
+            workflowId,
+            status: payload.job.status,
+            progress: payload.job.progress ?? 0,
+            currentNode: payload.job.message ?? null,
+            updatedAt: payload.job.updated_at ?? null,
+          }),
+        );
+        await refreshJobHistory();
+        setMessage(`${t.workflowCatalogQueued}: ${workflowId}`);
+
+        const pollToken = ++jobPollTokenRef.current;
+
+        for (let attempt = 0; attempt < 80; attempt += 1) {
+          if (pollToken !== jobPollTokenRef.current) return;
+
+          const next = await fetchJobStatus<WorkflowGraphJobResult>(payload.job.job_id);
+          if (pollToken !== jobPollTokenRef.current) return;
+
+          setJob(next.job);
+          setWorkflowRuns((current) =>
+            upsertWorkflowRunRecord(current, {
+              jobId: next.job.job_id,
+              workflowId,
+              status: next.job.status,
+              progress: next.job.progress ?? 0,
+              currentNode:
+                (next.result && isWorkflowGraphResult(next.result) ? next.result.current_node : null) ??
+                next.job.message ??
+                null,
+              summary:
+                next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowArtifacts(next.result) : null,
+              updatedAt: next.job.updated_at ?? null,
+            }),
+          );
+
+          if (next.job.status === "completed" && next.result && isWorkflowGraphResult(next.result)) {
+            await refreshJobHistory();
+            const summary = summarizeWorkflowArtifacts(next.result);
+            setMessage(
+              summary
+                ? `${t.workflowCatalogCompleted}: ${next.result.workflow_id} (${summary})`
+                : `${t.workflowCatalogCompleted}: ${next.result.workflow_id}`,
+            );
+            return;
+          }
+
+          if (next.job.status === "failed" || next.job.status === "cancelled") {
+            await refreshJobHistory();
+            setMessage(formatJobMessage(next.job, t.workflowCatalogFailed, t));
+            return;
+          }
+
+          await new Promise((resolve) => window.setTimeout(resolve, 350));
+        }
+
+        await refreshJobHistory();
+        setMessage(t.pollingDetached);
+      } catch (error) {
+        setMessage(
+          error instanceof Error
+            ? error.message.startsWith("request timed out:")
+              ? t.requestTimedOut
+              : error.message
+            : t.initialFailed,
+        );
+      } finally {
+        setWorkflowCatalogBusy(false);
       }
     });
   };
@@ -6945,6 +7256,9 @@ export function Workbench() {
     if (nextSection === "model") {
       setModelTab("tools");
     }
+    if (nextSection === "workflow" && workflowCatalog.length === 0 && !workflowCatalogBusy) {
+      void refreshWorkflowCatalog();
+    }
     recordManualDslAction("nav/setSidebarSection", { section: nextSection });
   };
 
@@ -6965,7 +7279,18 @@ export function Workbench() {
 
   const handleLibraryTabChange = (tab: LibraryPanelTab) => {
     setLibraryTab(tab);
+    if (tab === "samples" && workflowCatalog.length === 0 && !workflowCatalogBusy) {
+      void refreshWorkflowCatalog();
+    }
     recordManualDslAction("nav/setTabs", { libraryTab: tab });
+  };
+
+  const handleWorkflowPanelTabChange = (tab: WorkflowPanelTab) => {
+    setWorkflowPanelTab(tab);
+    if ((tab === "catalog" || tab === "builder") && workflowCatalog.length === 0 && !workflowCatalogBusy) {
+      void refreshWorkflowCatalog();
+    }
+    recordManualDslAction("nav/setTabs", { workflowPanelTab: tab });
   };
 
   const handleSystemPanelTabChange = (tab: SystemPanelTab) => {
@@ -7107,6 +7432,7 @@ export function Workbench() {
 
   const railItems: Array<{ key: SidebarSection; label: string; symbol: string }> = [
     { key: "model", label: t.rail.model, symbol: "M" },
+    { key: "workflow", label: t.rail.workflow, symbol: "W" },
     { key: "library", label: t.rail.library, symbol: "H" },
     { key: "system", label: t.rail.system, symbol: "Y" },
   ];
@@ -7117,6 +7443,9 @@ export function Workbench() {
   const deferredModelVersions = useDeferredValue(modelVersions);
   const deferredJobHistory = useDeferredValue(jobHistory);
   const deferredResultRecords = useDeferredValue(resultRecords);
+  const selectedWorkflow = workflowCatalog.find((entry) => entry.id === selectedWorkflowId) ?? workflowCatalog[0] ?? null;
+  const latestWorkflowRun = workflowRuns[0] ?? null;
+  const latestWorkflowSummary = latestWorkflowRun?.summary ?? null;
   const selectedAdminJob = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
   const selectedAdminResult = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
 
@@ -11137,12 +11466,62 @@ export function Workbench() {
           />
         ) : null}
 
+        {sidebarSection === "workflow" ? (
+          <WorkbenchWorkflowSidebar
+            surfaceTab={workflowPanelTab}
+            onSurfaceTabChange={handleWorkflowPanelTabChange}
+            labels={{
+              sectionTitle: t.sections.workflow,
+              overviewPageLabel: t.workflowOverviewPage,
+              catalogPageLabel: t.workflowCatalogPage,
+              builderPageLabel: t.workflowBuilderPage,
+              runsPageLabel: t.workflowRunsPage,
+              overviewHint: t.workflowOverviewHint,
+              catalogHint: t.workflowCatalogHint,
+              builderHint: t.workflowBuilderHint,
+              runsHint: t.workflowRunsHint,
+              catalogTitle: t.workflowCatalogTitle,
+              refreshLabel: t.workflowCatalogRefresh,
+              runLabel: t.workflowCatalogRun,
+              emptyCatalogLabel: t.workflowCatalogEmpty,
+              noSelectionLabel: t.workflowNoSelection,
+              nodesTitle: t.workflowNodesTitle,
+              edgesTitle: t.workflowEdgesTitle,
+              entryInputsTitle: t.workflowEntryInputsTitle,
+              outputArtifactsTitle: t.workflowOutputArtifactsTitle,
+              operatorLabel: t.workflowOperatorLabel,
+              kindLabel: t.workflowKindLabel,
+              progressLabel: t.workflowProgressLabel,
+              currentNodeLabel: t.workflowCurrentNodeLabel,
+              latestSummaryLabel: t.workflowLatestSummaryLabel,
+              openRunLabel: t.workflowOpenRunLabel,
+              emptyRunsLabel: t.workflowRunsEmpty,
+              selectForBuilderLabel: t.workflowSelectForBuilder,
+              statusReadyLabel: t.ready,
+              statusBusyLabel: t.busy,
+            }}
+            workflowCatalogEntries={workflowCatalog}
+            workflowCatalogBusy={workflowCatalogBusy}
+            selectedWorkflowId={selectedWorkflowId}
+            selectedWorkflow={selectedWorkflow}
+            latestJob={job}
+            latestWorkflowSummary={latestWorkflowSummary}
+            workflowRuns={workflowRuns}
+            onRefreshWorkflowCatalog={() => void refreshWorkflowCatalog()}
+            onSelectWorkflow={setSelectedWorkflowId}
+            onRunWorkflowCatalog={runWorkflowCatalogEntry}
+            onOpenWorkflowRun={openHistoryJob}
+          />
+        ) : null}
+
         {sidebarSection === "library" ? (
           <WorkbenchLibrarySidebar
             libraryTab={libraryTab}
             onLibraryTabChange={handleLibraryTabChange}
             labels={t}
             sampleRows={librarySampleRows}
+            workflowCatalogEntries={workflowCatalog}
+            workflowCatalogBusy={workflowCatalogBusy}
             projects={projects}
             selectedProjectId={selectedProjectId}
             onSelectedProjectChange={(projectId) => {
@@ -11184,6 +11563,8 @@ export function Workbench() {
             activeJobId={job?.job_id ?? null}
             onOpenHistoryJob={openHistoryJob}
             onOpenSample={openSample}
+            onRefreshWorkflowCatalog={() => void refreshWorkflowCatalog()}
+            onRunWorkflowCatalog={runWorkflowCatalogEntry}
             onRefresh={() => {
               void refreshJobHistory();
               void refreshProjects();

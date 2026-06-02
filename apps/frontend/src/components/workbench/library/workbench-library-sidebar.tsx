@@ -3,7 +3,7 @@
 import { memo, useMemo, useState } from "react";
 
 import { VirtualList } from "@/components/ui/virtual-list";
-import type { ProjectRecord } from "@/lib/api";
+import type { ProjectRecord, WorkflowCatalogEntry } from "@/lib/api";
 import type { StudyDomainKey } from "@/lib/workbench/view-models";
 
 type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samples";
@@ -52,6 +52,12 @@ type LibraryLabels = {
   importModel: string;
   importHint: string;
   sampleLibrary: string;
+  workflowCatalogTitle: string;
+  workflowCatalogHint: string;
+  workflowCatalogRefresh: string;
+  workflowCatalogRun: string;
+  workflowCatalogEmpty: string;
+  workflowCatalogReady: string;
   projectLibrary: string;
   projectNameField: string;
   projectDescriptionField: string;
@@ -110,6 +116,8 @@ type WorkbenchLibrarySidebarProps = {
   onLibraryTabChange: (tab: LibraryPanelTab) => void;
   labels: LibraryLabels;
   sampleRows: SampleRow[];
+  workflowCatalogEntries: WorkflowCatalogEntry[];
+  workflowCatalogBusy: boolean;
   projects: ProjectRecord[];
   selectedProjectId: string | null;
   onSelectedProjectChange: (projectId: string | null) => void;
@@ -142,6 +150,8 @@ type WorkbenchLibrarySidebarProps = {
   activeJobId: string | null;
   onOpenHistoryJob: (jobId: string) => void;
   onOpenSample: (href: string) => void;
+  onRefreshWorkflowCatalog: () => void;
+  onRunWorkflowCatalog: (workflowId: string) => void;
   onRefresh: () => void;
   onImportModel: (file: File | undefined) => void;
 };
@@ -184,6 +194,8 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   onLibraryTabChange,
   labels,
   sampleRows,
+  workflowCatalogEntries,
+  workflowCatalogBusy,
   projects,
   selectedProjectId,
   onSelectedProjectChange,
@@ -216,6 +228,8 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   activeJobId,
   onOpenHistoryJob,
   onOpenSample,
+  onRefreshWorkflowCatalog,
+  onRunWorkflowCatalog,
   onRefresh,
   onImportModel,
 }: WorkbenchLibrarySidebarProps) {
@@ -383,6 +397,37 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
           {samplePage === "catalog" ? (
             <>
               <p className="card-copy">{labels.historyHint}</p>
+              <div className="sample-group">
+                <div className="sample-group__head">
+                  <strong>{labels.workflowCatalogTitle}</strong>
+                  <button className="link-button" disabled={workflowCatalogBusy} onClick={onRefreshWorkflowCatalog} type="button">
+                    {labels.workflowCatalogRefresh}
+                  </button>
+                </div>
+                <p className="card-copy">{labels.workflowCatalogHint}</p>
+                <div className="sample-group__items">
+                  {workflowCatalogEntries.length === 0 ? (
+                    <p className="card-copy">{workflowCatalogBusy ? labels.workflowCatalogRefresh : labels.workflowCatalogEmpty}</p>
+                  ) : null}
+                  {workflowCatalogEntries.map((workflow) => (
+                    <div key={workflow.id} className="history-item">
+                      <strong>{workflow.name}</strong>
+                      <span>{workflow.version}</span>
+                      <small>{workflow.summary}</small>
+                      <div className="button-row">
+                        <button
+                          className="ghost-button ghost-button--compact"
+                          disabled={workflowCatalogBusy}
+                          onClick={() => onRunWorkflowCatalog(workflow.id)}
+                          type="button"
+                        >
+                          {labels.workflowCatalogRun}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               <div className="form-grid compact">
                 <label>
                   <span>{labels.studyDomain}</span>

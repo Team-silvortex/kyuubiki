@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
-type SidebarSection = "study" | "model" | "library" | "system";
+type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type TrussSuggestion = {

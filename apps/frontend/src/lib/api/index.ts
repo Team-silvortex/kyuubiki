@@ -1116,6 +1116,68 @@ export type JobEnvelope<TResult = unknown> = {
   result?: TResult;
 };
 
+export type WorkflowCatalogEntryArtifact = {
+  node_id: string;
+  artifact_type: string;
+  description: string;
+};
+
+export type WorkflowGraphPort = {
+  id: string;
+  artifact_type: string;
+  description?: string;
+};
+
+export type WorkflowGraphNode = {
+  id: string;
+  kind: string;
+  operator_id?: string;
+  config?: Record<string, unknown>;
+  inputs?: WorkflowGraphPort[];
+  outputs?: WorkflowGraphPort[];
+};
+
+export type WorkflowGraphEdge = {
+  id: string;
+  from: { node: string; port: string };
+  to: { node: string; port: string };
+  artifact_type: string;
+};
+
+export type WorkflowGraphDefinition = {
+  schema_version: string;
+  id: string;
+  name?: string;
+  version?: string;
+  entry_nodes?: string[];
+  output_nodes?: string[];
+  defaults?: Record<string, unknown>;
+  nodes: WorkflowGraphNode[];
+  edges?: WorkflowGraphEdge[];
+};
+
+export type WorkflowCatalogEntry = {
+  id: string;
+  name: string;
+  version: string;
+  summary: string;
+  graph?: WorkflowGraphDefinition;
+  entry_inputs: WorkflowCatalogEntryArtifact[];
+  output_artifacts: WorkflowCatalogEntryArtifact[];
+};
+
+export type WorkflowCatalogPayload = {
+  workflows: WorkflowCatalogEntry[];
+};
+
+export type WorkflowGraphJobResult = {
+  workflow_id: string;
+  current_node?: string | null;
+  progress_events?: Array<Record<string, unknown>>;
+  completed_nodes: string[];
+  artifacts: Record<string, unknown>;
+};
+
 export type JobResultRecord<TResult = unknown> = {
   job_id: string;
   status?: string;
@@ -2156,6 +2218,24 @@ export function fetchJobHistory(): Promise<JobHistoryPayload> {
   return requestJson<JobHistoryPayload>("/api/v1/jobs", {
     method: "GET",
     cache: "no-store",
+  });
+}
+
+export function fetchWorkflowCatalog(): Promise<WorkflowCatalogPayload> {
+  return requestJson<WorkflowCatalogPayload>("/api/v1/workflows/catalog", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function submitWorkflowCatalogJob(
+  workflowId: string,
+  inputArtifacts: Record<string, unknown>,
+): Promise<JobEnvelope<WorkflowGraphJobResult>> {
+  return requestJson<JobEnvelope<WorkflowGraphJobResult>>(`/api/v1/workflows/catalog/${workflowId}/jobs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ input_artifacts: inputArtifacts }),
   });
 }
 

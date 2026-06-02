@@ -43,7 +43,7 @@ export type WorkbenchStudyKind =
   | "plane_triangle_2d"
   | "plane_quad_2d"
   | "frame_2d";
-export type WorkbenchSidebarSection = "study" | "model" | "library" | "system";
+export type WorkbenchSidebarSection = "study" | "model" | "workflow" | "library" | "system";
 
 export type WorkbenchAxialFormState = {
   length: number;

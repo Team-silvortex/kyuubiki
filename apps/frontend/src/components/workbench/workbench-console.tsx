@@ -3,7 +3,7 @@
 import { memo } from "react";
 import { VirtualList } from "@/components/ui/virtual-list";
 
-type SidebarSection = "study" | "model" | "library" | "system";
+type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 
 type ConsoleElement = {
   index: number;
