@@ -97,6 +97,15 @@ Examples of useful artifact types:
 
 This is how the system avoids “just trust me” wiring.
 
+The graph now also has a first-class dataset-contract slot so that ports and
+edges can refer to named cross-operator values, not only loose artifact-type
+strings. That is the current line's ONNX-like layer:
+
+- the graph still carries topology
+- the dataset contract carries value semantics
+
+See [workflow-dataset.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-dataset.md).
+
 ## First workflow targets
 
 The earliest graphs should be small and high-value.
@@ -273,6 +282,8 @@ The first stable storage contract should live in:
 
 - [workflow-graph.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/workflow-graph.schema.json)
 - [examples.workflow-graph.json](/Users/Shared/chroot/dev/kyuubiki/schemas/examples.workflow-graph.json)
+- [workflow-dataset.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/workflow-dataset.schema.json)
+- [examples.workflow-dataset.json](/Users/Shared/chroot/dev/kyuubiki/schemas/examples.workflow-dataset.json)
 
 ## Suggested first headless API
 

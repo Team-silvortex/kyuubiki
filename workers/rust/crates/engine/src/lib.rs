@@ -8,8 +8,8 @@ use kyuubiki_protocol::{
     SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
     SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
     SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest, WorkflowGraphRunRequest,
-    WorkflowGraphRunResult, WorkflowNodeKind,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest, WorkflowGraph,
+    WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind,
 };
 use std::collections::{BTreeMap, HashMap, HashSet};
 use kyuubiki_solver::{
@@ -244,6 +244,7 @@ pub fn run_workflow_graph(
     request: WorkflowGraphRunRequest,
 ) -> Result<WorkflowGraphRunResult, String> {
     let graph = request.graph;
+    validate_workflow_dataset_contract(&graph)?;
     let node_map = graph
         .nodes
         .iter()
@@ -393,6 +394,130 @@ pub fn run_workflow_graph(
         completed_nodes: ordered_completed,
         artifacts,
     })
+}
+
+fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), String> {
+    let Some(contract) = graph.dataset_contract.as_ref() else {
+        return Ok(());
+    };
+
+    let value_map = contract
+        .values
+        .iter()
+        .map(|value| (value.id.as_str(), value))
+        .collect::<HashMap<_, _>>();
+
+    for node in &graph.nodes {
+        for port in node.inputs.iter().chain(node.outputs.iter()) {
+            let Some(dataset_value) = port.dataset_value.as_deref() else {
+                continue;
+            };
+            let value = value_map.get(dataset_value).ok_or_else(|| {
+                format!(
+                    "workflow port {}.{} references unknown dataset value {}",
+                    node.id, port.id, dataset_value
+                )
+            })?;
+
+            if let Some(semantic_type) = value.semantic_type.as_deref() {
+                if semantic_type != port.artifact_type {
+                    return Err(format!(
+                        "workflow port {}.{} declares artifact_type {} but dataset value {} uses semantic_type {}",
+                        node.id, port.id, port.artifact_type, dataset_value, semantic_type
+                    ));
+                }
+            }
+        }
+    }
+
+    for edge in &graph.edges {
+        let from_node = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == edge.from.node)
+            .ok_or_else(|| format!("workflow edge {} references unknown from node {}", edge.id, edge.from.node))?;
+        let to_node = graph
+            .nodes
+            .iter()
+            .find(|node| node.id == edge.to.node)
+            .ok_or_else(|| format!("workflow edge {} references unknown to node {}", edge.id, edge.to.node))?;
+        let from_port = from_node
+            .outputs
+            .iter()
+            .find(|port| port.id == edge.from.port)
+            .ok_or_else(|| {
+                format!(
+                    "workflow edge {} references unknown output port {}.{}",
+                    edge.id, edge.from.node, edge.from.port
+                )
+            })?;
+        let to_port = to_node
+            .inputs
+            .iter()
+            .find(|port| port.id == edge.to.port)
+            .ok_or_else(|| {
+                format!(
+                    "workflow edge {} references unknown input port {}.{}",
+                    edge.id, edge.to.node, edge.to.port
+                )
+            })?;
+
+        if from_port.artifact_type != edge.artifact_type {
+            return Err(format!(
+                "workflow edge {} artifact_type {} does not match from port {}.{} artifact_type {}",
+                edge.id, edge.artifact_type, edge.from.node, edge.from.port, from_port.artifact_type
+            ));
+        }
+        if to_port.artifact_type != edge.artifact_type {
+            return Err(format!(
+                "workflow edge {} artifact_type {} does not match to port {}.{} artifact_type {}",
+                edge.id, edge.artifact_type, edge.to.node, edge.to.port, to_port.artifact_type
+            ));
+        }
+
+        let referenced_dataset_value = edge
+            .dataset_value
+            .as_deref()
+            .or(from_port.dataset_value.as_deref())
+            .or(to_port.dataset_value.as_deref());
+
+        if let Some(dataset_value) = referenced_dataset_value {
+            let value = value_map.get(dataset_value).ok_or_else(|| {
+                format!(
+                    "workflow edge {} references unknown dataset value {}",
+                    edge.id, dataset_value
+                )
+            })?;
+
+            if let Some(from_dataset_value) = from_port.dataset_value.as_deref() {
+                if from_dataset_value != dataset_value {
+                    return Err(format!(
+                        "workflow edge {} dataset value {} does not match from port dataset value {}",
+                        edge.id, dataset_value, from_dataset_value
+                    ));
+                }
+            }
+            if let Some(to_dataset_value) = to_port.dataset_value.as_deref() {
+                if to_dataset_value != dataset_value {
+                    return Err(format!(
+                        "workflow edge {} dataset value {} does not match to port dataset value {}",
+                        edge.id, dataset_value, to_dataset_value
+                    ));
+                }
+            }
+
+            if let Some(semantic_type) = value.semantic_type.as_deref() {
+                if semantic_type != edge.artifact_type {
+                    return Err(format!(
+                        "workflow edge {} artifact_type {} does not match dataset value {} semantic_type {}",
+                        edge.id, edge.artifact_type, dataset_value, semantic_type
+                    ));
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn built_in_solver_descriptor(
@@ -855,10 +980,11 @@ mod tests {
         AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest, HeatPlaneNodeInput,
         HeatPlaneQuadElementInput, OperatorKind, ResultChunkKind, ResultChunkRequest,
         SolveBarRequest, SolveHeatPlaneQuad2dRequest, SolveThermalPlaneQuad2dRequest,
-        WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
-        WorkflowGraphRunRequest, WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort,
         SolveTruss2dRequest, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
-        TrussElementInput, TrussNodeInput,
+        TrussElementInput, TrussNodeInput, WorkflowCachePolicy, WorkflowDatasetContract,
+        WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge,
+        WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode, WorkflowNodeKind,
+        WorkflowNodePortRef, WorkflowPort,
     };
     use std::collections::BTreeMap;
 
@@ -1210,6 +1336,7 @@ mod tests {
             name: "Heat to thermo-mechanical quad".to_string(),
             version: "1.0.0".to_string(),
             description: Some("Reference graph".to_string()),
+            dataset_contract: None,
             entry_nodes: vec!["heat_model".to_string()],
             output_nodes: vec!["thermo_summary".to_string()],
             defaults: WorkflowDefaults {
@@ -1232,6 +1359,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1248,6 +1376,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "result".to_string(),
@@ -1255,6 +1384,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1281,6 +1411,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "thermo_model".to_string(),
@@ -1288,6 +1419,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1304,6 +1436,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "result".to_string(),
@@ -1311,6 +1444,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1327,6 +1461,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![],
                 },
@@ -1343,6 +1478,7 @@ mod tests {
                         port: "model".to_string(),
                     },
                     artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-heat-result".to_string(),
@@ -1355,6 +1491,7 @@ mod tests {
                         port: "heat_result".to_string(),
                     },
                     artifact_type: "result/heat_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-thermo-model".to_string(),
@@ -1367,6 +1504,7 @@ mod tests {
                         port: "model".to_string(),
                     },
                     artifact_type: "study_model/thermal_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-thermo-result".to_string(),
@@ -1379,6 +1517,7 @@ mod tests {
                         port: "result".to_string(),
                     },
                     artifact_type: "result/thermal_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
             ],
         };
@@ -1427,6 +1566,7 @@ mod tests {
             name: "Heat summary quad".to_string(),
             version: "1.0.0".to_string(),
             description: Some("Solve then extract summary".to_string()),
+            dataset_contract: None,
             entry_nodes: vec!["heat_model".to_string()],
             output_nodes: vec!["summary_output".to_string()],
             defaults: WorkflowDefaults {
@@ -1449,6 +1589,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1465,6 +1606,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "result".to_string(),
@@ -1472,6 +1614,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1490,6 +1633,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "summary".to_string(),
@@ -1497,6 +1641,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1513,6 +1658,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![],
                 },
@@ -1529,6 +1675,7 @@ mod tests {
                         port: "model".to_string(),
                     },
                     artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-heat-result".to_string(),
@@ -1541,6 +1688,7 @@ mod tests {
                         port: "result".to_string(),
                     },
                     artifact_type: "result/heat_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-summary".to_string(),
@@ -1553,6 +1701,7 @@ mod tests {
                         port: "summary".to_string(),
                     },
                     artifact_type: "report/summary".to_string(),
+                    dataset_value: None,
                 },
             ],
         };
@@ -1594,6 +1743,7 @@ mod tests {
             name: "Heat summary export csv".to_string(),
             version: "1.0.0".to_string(),
             description: Some("Solve then extract summary and export CSV".to_string()),
+            dataset_contract: None,
             entry_nodes: vec!["heat_model".to_string()],
             output_nodes: vec!["csv_output".to_string()],
             defaults: WorkflowDefaults {
@@ -1616,6 +1766,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1632,6 +1783,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "result".to_string(),
@@ -1639,6 +1791,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1657,6 +1810,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "summary".to_string(),
@@ -1664,6 +1818,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1682,6 +1837,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![WorkflowPort {
                         id: "csv".to_string(),
@@ -1689,6 +1845,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                 },
                 WorkflowNode {
@@ -1705,6 +1862,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: None,
                     }],
                     outputs: vec![],
                 },
@@ -1721,6 +1879,7 @@ mod tests {
                         port: "model".to_string(),
                     },
                     artifact_type: "study_model/heat_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-heat-result".to_string(),
@@ -1733,6 +1892,7 @@ mod tests {
                         port: "result".to_string(),
                     },
                     artifact_type: "result/heat_plane_quad_2d".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-summary".to_string(),
@@ -1745,6 +1905,7 @@ mod tests {
                         port: "summary".to_string(),
                     },
                     artifact_type: "report/summary".to_string(),
+                    dataset_value: None,
                 },
                 WorkflowEdge {
                     id: "edge-csv".to_string(),
@@ -1757,6 +1918,7 @@ mod tests {
                         port: "csv".to_string(),
                     },
                     artifact_type: "export/csv".to_string(),
+                    dataset_value: None,
                 },
             ],
         };
@@ -1793,5 +1955,96 @@ mod tests {
         assert!(content.contains("key,value"));
         assert!(content.contains("max_temperature,100"));
         assert!(content.contains("max_heat_flux"));
+    }
+
+    #[test]
+    fn rejects_workflow_graph_with_mismatched_dataset_contract() {
+        let graph = WorkflowGraph {
+            schema_version: "kyuubiki.workflow-graph/v1".to_string(),
+            id: "workflow.invalid-dataset-contract".to_string(),
+            name: "Invalid dataset contract".to_string(),
+            version: "1.0.0".to_string(),
+            description: Some("Graph with mismatched artifact and dataset semantic type".to_string()),
+            dataset_contract: Some(WorkflowDatasetContract {
+                id: "dataset.invalid/v1".to_string(),
+                version: "1.0.0".to_string(),
+                values: vec![WorkflowDatasetValueInfo {
+                    id: "bad_summary".to_string(),
+                    data_class: "result".to_string(),
+                    element_type: "json_object".to_string(),
+                    shape: WorkflowDatasetShape::default(),
+                    semantic_type: Some("result/thermal_plane_quad_2d".to_string()),
+                    unit: None,
+                    encoding: None,
+                    schema_ref: None,
+                }],
+                metadata: BTreeMap::new(),
+            }),
+            entry_nodes: vec!["in".to_string()],
+            output_nodes: vec!["out".to_string()],
+            defaults: WorkflowDefaults::default(),
+            nodes: vec![
+                WorkflowNode {
+                    id: "in".to_string(),
+                    kind: WorkflowNodeKind::Input,
+                    operator_id: None,
+                    name: None,
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![],
+                    outputs: vec![WorkflowPort {
+                        id: "value".to_string(),
+                        artifact_type: "report/summary".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                        dataset_value: Some("bad_summary".to_string()),
+                    }],
+                },
+                WorkflowNode {
+                    id: "out".to_string(),
+                    kind: WorkflowNodeKind::Output,
+                    operator_id: None,
+                    name: None,
+                    description: None,
+                    config: None,
+                    cache_policy: None,
+                    inputs: vec![WorkflowPort {
+                        id: "value".to_string(),
+                        artifact_type: "report/summary".to_string(),
+                        name: None,
+                        required: None,
+                        cardinality: None,
+                        dataset_value: Some("bad_summary".to_string()),
+                    }],
+                    outputs: vec![],
+                },
+            ],
+            edges: vec![WorkflowEdge {
+                id: "e0".to_string(),
+                from: WorkflowNodePortRef {
+                    node: "in".to_string(),
+                    port: "value".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "out".to_string(),
+                    port: "value".to_string(),
+                },
+                artifact_type: "report/summary".to_string(),
+                dataset_value: Some("bad_summary".to_string()),
+            }],
+        };
+
+        let error = run_workflow_graph(WorkflowGraphRunRequest {
+            graph,
+            input_artifacts: BTreeMap::from([(
+                "in".to_string(),
+                serde_json::json!({ "max_temperature": 100.0 }),
+            )]),
+        })
+        .expect_err("dataset contract mismatch should be rejected");
+
+        assert!(error.contains("semantic_type"));
     }
 }

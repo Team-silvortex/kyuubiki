@@ -16,6 +16,9 @@ README.
 - `workflow-graph.schema.json` is for headless-first multi-operator workflow
   definitions, including node/edge wiring, typed ports, and portable workflow
   entry/output layout
+- `workflow-dataset.schema.json` is for ONNX-like cross-operator data
+  contracts, including named values, shape semantics, encoding, and stable
+  schema references shared across workflow nodes
 - `workload-catalog.schema.json` is for Hub-facing workload libraries and
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
@@ -24,6 +27,8 @@ README.
   testing, Hub mockups, and future center-server rollout
 - `examples.workflow-graph.json` is a minimal reference workflow for
   `heat -> thermo_mechanical` graph wiring
+- `examples.workflow-dataset.json` is the matching reference dataset contract
+  for that workflow's cross-operator payloads
 
 They are intentionally lightweight and JSON-first. They now serve four
 consumers:

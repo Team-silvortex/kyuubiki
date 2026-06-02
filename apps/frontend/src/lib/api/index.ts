@@ -1126,6 +1126,7 @@ export type WorkflowGraphPort = {
   id: string;
   artifact_type: string;
   description?: string;
+  dataset_value?: string;
 };
 
 export type WorkflowGraphNode = {
@@ -1142,6 +1143,44 @@ export type WorkflowGraphEdge = {
   from: { node: string; port: string };
   to: { node: string; port: string };
   artifact_type: string;
+  dataset_value?: string;
+};
+
+export type WorkflowDatasetAxis = {
+  id: string;
+  label?: string;
+  size?: number;
+  semantic?: string;
+};
+
+export type WorkflowDatasetShape = {
+  axes?: WorkflowDatasetAxis[];
+};
+
+export type WorkflowDatasetSchemaRef = {
+  schema: string;
+  version: string;
+};
+
+export type WorkflowDatasetValueInfo = {
+  id: string;
+  data_class: string;
+  element_type: string;
+  shape: WorkflowDatasetShape;
+  semantic_type?: string;
+  unit?: string;
+  encoding?: string;
+  schema_ref?: WorkflowDatasetSchemaRef;
+};
+
+export type WorkflowDatasetContract = {
+  schema_version: string;
+  id: string;
+  version: string;
+  name?: string;
+  description?: string;
+  values: WorkflowDatasetValueInfo[];
+  metadata?: Record<string, string>;
 };
 
 export type WorkflowGraphDefinition = {
@@ -1149,6 +1188,7 @@ export type WorkflowGraphDefinition = {
   id: string;
   name?: string;
   version?: string;
+  dataset_contract?: WorkflowDatasetContract;
   entry_nodes?: string[];
   output_nodes?: string[];
   defaults?: Record<string, unknown>;

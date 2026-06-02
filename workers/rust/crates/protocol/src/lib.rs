@@ -30,6 +30,54 @@ pub struct OperatorSchemaRef {
     pub version: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowDatasetEncoding {
+    Json,
+    JsonLines,
+    F64Le,
+    F32Le,
+    I64Le,
+    I32Le,
+    U8,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowDatasetAxis {
+    pub id: String,
+    pub label: Option<String>,
+    pub size: Option<u64>,
+    pub semantic: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WorkflowDatasetShape {
+    #[serde(default)]
+    pub axes: Vec<WorkflowDatasetAxis>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WorkflowDatasetValueInfo {
+    pub id: String,
+    pub data_class: String,
+    pub element_type: String,
+    pub shape: WorkflowDatasetShape,
+    pub semantic_type: Option<String>,
+    pub unit: Option<String>,
+    pub encoding: Option<WorkflowDatasetEncoding>,
+    pub schema_ref: Option<OperatorSchemaRef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct WorkflowDatasetContract {
+    pub id: String,
+    pub version: String,
+    #[serde(default)]
+    pub values: Vec<WorkflowDatasetValueInfo>,
+    #[serde(default)]
+    pub metadata: BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct OperatorDescriptor {
     pub id: String,
@@ -122,6 +170,8 @@ pub struct WorkflowPort {
     pub name: Option<String>,
     pub required: Option<bool>,
     pub cardinality: Option<String>,
+    #[serde(default)]
+    pub dataset_value: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -149,6 +199,8 @@ pub struct WorkflowEdge {
     pub from: WorkflowNodePortRef,
     pub to: WorkflowNodePortRef,
     pub artifact_type: String,
+    #[serde(default)]
+    pub dataset_value: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -158,6 +210,8 @@ pub struct WorkflowGraph {
     pub name: String,
     pub version: String,
     pub description: Option<String>,
+    #[serde(default)]
+    pub dataset_contract: Option<WorkflowDatasetContract>,
     pub entry_nodes: Vec<String>,
     #[serde(default)]
     pub output_nodes: Vec<String>,
@@ -2341,7 +2395,9 @@ mod tests {
         ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
         ThermalPlaneQuadElementResult, ThermalPlaneNodeResult, ThermalPlaneTriangleElementInput,
         ThermalTruss2dElementInput, ThermalTruss2dNodeInput, Torsion1dElementInput,
-        Torsion1dNodeInput, WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
+        Torsion1dNodeInput, WorkflowCachePolicy, WorkflowDatasetAxis,
+        WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
+        WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
         WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind,
         WorkflowNodePortRef, WorkflowPort,
     };
@@ -2624,12 +2680,58 @@ mod tests {
 
     #[test]
     fn serializes_workflow_graph_run_request_round_trip() {
+        let dataset_contract = WorkflowDatasetContract {
+            id: "dataset.heat_to_thermo_quad/v1".to_string(),
+            version: "1.0.0".to_string(),
+            values: vec![
+                WorkflowDatasetValueInfo {
+                    id: "heat_model".to_string(),
+                    data_class: "study_model".to_string(),
+                    element_type: "json_object".to_string(),
+                    shape: WorkflowDatasetShape {
+                        axes: vec![WorkflowDatasetAxis {
+                            id: "elements".to_string(),
+                            label: Some("quad elements".to_string()),
+                            size: None,
+                            semantic: Some("mesh_element".to_string()),
+                        }],
+                    },
+                    semantic_type: Some("study_model/heat_plane_quad_2d".to_string()),
+                    unit: None,
+                    encoding: Some(WorkflowDatasetEncoding::Json),
+                    schema_ref: Some(OperatorSchemaRef {
+                        schema: "kyuubiki.operator.solve.heat_plane_quad_2d.input".to_string(),
+                        version: "1".to_string(),
+                    }),
+                },
+                WorkflowDatasetValueInfo {
+                    id: "thermo_result".to_string(),
+                    data_class: "result".to_string(),
+                    element_type: "json_object".to_string(),
+                    shape: WorkflowDatasetShape::default(),
+                    semantic_type: Some("result/thermal_plane_quad_2d".to_string()),
+                    unit: None,
+                    encoding: Some(WorkflowDatasetEncoding::Json),
+                    schema_ref: Some(OperatorSchemaRef {
+                        schema: "kyuubiki.operator.solve.thermal_plane_quad_2d.output"
+                            .to_string(),
+                        version: "1".to_string(),
+                    }),
+                },
+            ],
+            metadata: std::collections::BTreeMap::from([(
+                "philosophy".to_string(),
+                "onnx_like_cross_operator_contract".to_string(),
+            )]),
+        };
+
         let graph = WorkflowGraph {
             schema_version: "kyuubiki.workflow-graph/v1".to_string(),
             id: "workflow.heat-to-thermo-quad-2d".to_string(),
             name: "Heat to thermo-mechanical quad".to_string(),
             version: "1.0.0".to_string(),
             description: Some("Reference headless graph".to_string()),
+            dataset_contract: Some(dataset_contract),
             entry_nodes: vec!["heat_model".to_string()],
             output_nodes: vec!["thermo_summary".to_string()],
             defaults: WorkflowDefaults {
@@ -2652,6 +2754,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: Some("heat_model".to_string()),
                     }],
                 },
                 WorkflowNode {
@@ -2668,6 +2771,7 @@ mod tests {
                         name: None,
                         required: None,
                         cardinality: None,
+                        dataset_value: Some("thermo_result".to_string()),
                     }],
                     outputs: vec![],
                 },
@@ -2683,6 +2787,7 @@ mod tests {
                     port: "result".to_string(),
                 },
                 artifact_type: "result/thermal_plane_quad_2d".to_string(),
+                dataset_value: Some("thermo_result".to_string()),
             }],
         };
 
@@ -2699,6 +2804,16 @@ mod tests {
             serde_json::from_str(&json).expect("workflow graph request should decode");
         assert_eq!(decoded.graph.id, "workflow.heat-to-thermo-quad-2d");
         assert_eq!(decoded.input_artifacts.len(), 1);
+        assert_eq!(
+            decoded
+                .graph
+                .dataset_contract
+                .as_ref()
+                .expect("dataset contract")
+                .values
+                .len(),
+            2
+        );
 
         let result = WorkflowGraphRunResult {
             workflow_id: decoded.graph.id,

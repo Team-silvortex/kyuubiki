@@ -72,6 +72,11 @@ Every operator should declare the following metadata:
 - `output_schema`
   structured output contract reference
 
+For multi-operator chains, these schema refs should also be reusable from a
+workflow dataset contract so that cross-operator intermediate values are not
+described only by ad-hoc JSON convention. See
+[workflow-dataset.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-dataset.md).
+
 ## Runtime contract
 
 Each operator should expose one stable run interface:

@@ -33,6 +33,16 @@ type WorkflowSidebarLabels = {
   edgesTitle: string;
   entryInputsTitle: string;
   outputArtifactsTitle: string;
+  datasetContractTitle: string;
+  datasetValuesTitle: string;
+  datasetValueLabel: string;
+  datasetSemanticTypeLabel: string;
+  datasetEncodingLabel: string;
+  datasetShapeLabel: string;
+  datasetAxesLabel: string;
+  datasetSchemaLabel: string;
+  datasetClassLabel: string;
+  datasetNoneLabel: string;
   operatorLabel: string;
   kindLabel: string;
   progressLabel: string;
@@ -87,6 +97,8 @@ export function WorkbenchWorkflowSidebar({
   const selectedGraph = selectedWorkflow?.graph ?? null;
   const selectedNodes = selectedGraph?.nodes ?? [];
   const selectedEdges = selectedGraph?.edges ?? [];
+  const selectedDatasetContract = selectedGraph?.dataset_contract ?? null;
+  const selectedDatasetValues = selectedDatasetContract?.values ?? [];
   const latestRun = workflowRuns[0] ?? null;
 
   return (
@@ -269,6 +281,12 @@ export function WorkbenchWorkflowSidebar({
                       <strong>
                         {labels.kindLabel}: {node.kind}
                         {node.operator_id ? ` · ${labels.operatorLabel}: ${node.operator_id}` : ""}
+                        {node.outputs?.some((port) => port.dataset_value)
+                          ? ` · ${labels.datasetValueLabel}: ${node.outputs
+                              ?.map((port) => port.dataset_value)
+                              .filter(Boolean)
+                              .join(", ")}`
+                          : ""}
                       </strong>
                     </div>
                   ))}
@@ -285,10 +303,99 @@ export function WorkbenchWorkflowSidebar({
                       <span>
                         {edge.from.node}.{edge.from.port} → {edge.to.node}.{edge.to.port}
                       </span>
-                      <strong>{edge.artifact_type}</strong>
+                      <strong>
+                        {edge.artifact_type}
+                        {edge.dataset_value ? ` · ${labels.datasetValueLabel}: ${edge.dataset_value}` : ""}
+                      </strong>
                     </div>
                   ))}
                 </div>
+              </section>
+
+              <section className="sidebar-card sidebar-card--compact">
+                <div className="card-head">
+                  <h2>{labels.datasetContractTitle}</h2>
+                  <span className={`status-pill status-pill--${selectedDatasetContract ? "good" : "watch"}`}>
+                    {selectedDatasetContract?.version ?? "--"}
+                  </span>
+                </div>
+                {selectedDatasetContract ? (
+                  <>
+                    <p className="card-copy">
+                      {selectedDatasetContract.name ?? selectedDatasetContract.id}
+                    </p>
+                    <div className="sidebar-list">
+                      <div className="sidebar-list__row">
+                        <span>{labels.datasetValuesTitle}</span>
+                        <strong>{selectedDatasetValues.length}</strong>
+                      </div>
+                    </div>
+                    <div className="sidebar-stack">
+                      {selectedDatasetValues.map((value) => {
+                        const axes = value.shape?.axes ?? [];
+                        const schemaLabel = value.schema_ref
+                          ? `${value.schema_ref.schema}@${value.schema_ref.version}`
+                          : "--";
+                        const shapeLabel =
+                          axes.length > 0
+                            ? axes
+                                .map((axis) =>
+                                  axis.size != null ? `${axis.id}[${axis.size}]` : axis.id,
+                                )
+                                .join(" × ")
+                            : "--";
+                        return (
+                          <section className="sidebar-card sidebar-card--compact" key={value.id}>
+                            <div className="card-head">
+                              <h2>{value.id}</h2>
+                              <span className="status-pill status-pill--watch">
+                                {value.data_class}
+                              </span>
+                            </div>
+                            <div className="sidebar-list">
+                              <div className="sidebar-list__row">
+                                <span>{labels.datasetSemanticTypeLabel}</span>
+                                <strong>{value.semantic_type ?? "--"}</strong>
+                              </div>
+                              <div className="sidebar-list__row">
+                                <span>{labels.datasetEncodingLabel}</span>
+                                <strong>{value.encoding ?? "--"}</strong>
+                              </div>
+                              <div className="sidebar-list__row">
+                                <span>{labels.datasetClassLabel}</span>
+                                <strong>{value.element_type}</strong>
+                              </div>
+                              <div className="sidebar-list__row">
+                                <span>{labels.datasetShapeLabel}</span>
+                                <strong>{shapeLabel}</strong>
+                              </div>
+                              <div className="sidebar-list__row">
+                                <span>{labels.datasetSchemaLabel}</span>
+                                <strong>{schemaLabel}</strong>
+                              </div>
+                            </div>
+                            {axes.length > 0 ? (
+                              <div className="sidebar-list">
+                                {axes.map((axis) => (
+                                  <div className="sidebar-list__row" key={`${value.id}:${axis.id}`}>
+                                    <span>{labels.datasetAxesLabel}</span>
+                                    <strong>
+                                      {axis.id}
+                                      {axis.semantic ? ` · ${axis.semantic}` : ""}
+                                      {axis.size != null ? ` · ${axis.size}` : ""}
+                                    </strong>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null}
+                          </section>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <p className="card-copy">{labels.datasetNoneLabel}</p>
+                )}
               </section>
 
               <section className="sidebar-card sidebar-card--compact">

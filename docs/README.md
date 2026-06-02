@@ -25,6 +25,8 @@ Then branch by intent:
   Current extension-contract direction for new operator capabilities.
 - `workflow-graph.md`
   Multi-operator composition model for shader-like workflow growth.
+- `workflow-dataset.md`
+  ONNX-like cross-operator data contract for workflow-carried values.
 
 ## By Goal
 
@@ -56,6 +58,9 @@ Then branch by intent:
 - `workflow-graph.md`
   Proposed graph/runtime model for chaining multiple operators into stable
   headless workflows.
+- `workflow-dataset.md`
+  Portable dataset/value contract shared across workflow nodes, ports, and
+  operator schemas.
 
 ### Verify changes
 

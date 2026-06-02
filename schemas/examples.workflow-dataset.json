@@ -1,0 +1,71 @@
+{
+  "schema_version": "kyuubiki.workflow-dataset/v1",
+  "id": "dataset.heat_to_thermo_quad/v1",
+  "version": "1.0.0",
+  "name": "Heat to thermo-mechanical quad dataset contract",
+  "description": "Portable cross-operator data contract for the heat -> thermo-mechanical quad reference workflow.",
+  "values": [
+    {
+      "id": "heat_model",
+      "data_class": "study_model",
+      "element_type": "json_object",
+      "shape": {
+        "axes": [
+          {
+            "id": "elements",
+            "label": "quad elements",
+            "semantic": "mesh_element"
+          }
+        ]
+      },
+      "semantic_type": "study_model/heat_plane_quad_2d",
+      "encoding": "json",
+      "schema_ref": {
+        "schema": "kyuubiki.operator.solve.heat_plane_quad_2d.input",
+        "version": "1"
+      }
+    },
+    {
+      "id": "heat_result",
+      "data_class": "result",
+      "element_type": "json_object",
+      "shape": {},
+      "semantic_type": "result/heat_plane_quad_2d",
+      "unit": "degC",
+      "encoding": "json",
+      "schema_ref": {
+        "schema": "kyuubiki.operator.solve.heat_plane_quad_2d.output",
+        "version": "1"
+      }
+    },
+    {
+      "id": "thermo_model",
+      "data_class": "study_model",
+      "element_type": "json_object",
+      "shape": {},
+      "semantic_type": "study_model/thermal_plane_quad_2d",
+      "encoding": "json",
+      "schema_ref": {
+        "schema": "kyuubiki.operator.solve.thermal_plane_quad_2d.input",
+        "version": "1"
+      }
+    },
+    {
+      "id": "thermo_result",
+      "data_class": "result",
+      "element_type": "json_object",
+      "shape": {},
+      "semantic_type": "result/thermal_plane_quad_2d",
+      "unit": "Pa",
+      "encoding": "json",
+      "schema_ref": {
+        "schema": "kyuubiki.operator.solve.thermal_plane_quad_2d.output",
+        "version": "1"
+      }
+    }
+  ],
+  "metadata": {
+    "philosophy": "onnx_like_cross_operator_contract",
+    "primary_workflow": "workflow.heat-to-thermo-quad-2d"
+  }
+}
