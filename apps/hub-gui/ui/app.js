@@ -268,6 +268,11 @@ const HUB_I18N = {
       beams: "Beams & Frames",
       trusses: "Trusses",
       planes: "Planes",
+      workflowCatalogLabel: "Workflow catalog",
+      workflowCatalogTitle: "Named workflow runs",
+      workflowCatalogCopy: "Discover built-in multi-operator workflows and run a reference sample without pasting a raw graph.",
+      workflowCatalogRefresh: "Refresh workflow catalog",
+      workflowCatalogReady: "Workflow catalog is ready.",
       ready: "Workload library is ready.",
     },
     bundles: {
@@ -444,6 +449,17 @@ const HUB_I18N = {
       nonPinnedEmpty: "No non-pinned actions in this view.",
       managedWorkloadsEmpty: "No managed workloads yet. Register a current bundle or sync a remote catalog.",
       managedWorkloadsFilterEmpty: "No workloads match {domain} / {family}.",
+      workflowCatalogEmpty: "No named workflows are available yet.",
+      workflowCatalogLoading: "Loading workflow catalog…",
+      workflowCatalogLoaded: "loaded {count} named workflows into the Hub catalog",
+      workflowCatalogRun: "Run reference sample",
+      workflowCatalogUnsupported: "No Hub reference sample is defined for {workflow} yet.",
+      workflowCatalogEntryInputs: "Entry inputs: {inputs}",
+      workflowCatalogOutputs: "Outputs: {outputs}",
+      workflowCatalogQueued: "queued workflow {workflow} as job {job}",
+      workflowCatalogCompleted: "completed workflow {workflow} with {count} nodes · {summary}",
+      workflowCatalogPolling: "waiting for workflow job {job}",
+      workflowCatalogFailed: "workflow {workflow} finished with status {status}",
       restoredActionContext: "restored {action} context",
       restoredWorkloadContext: "restored workload context for {label}",
       loadedWorkloadContext: "loaded {label} into the bundle path",
@@ -707,19 +723,24 @@ const HUB_I18N = {
       syncRemote: "同步远端 catalog",
       export: "导出库 JSON",
       import: "导入库 JSON",
-      clear: "清空库",
-      managedWorkloads: "已管理工作负载",
-      all: "全部",
-      mechanical: "力学",
-      thermal: "热",
-      thermo: "力热",
-      allFamilies: "全部 family",
-      axial: "轴向与弹簧",
-      beams: "梁与刚架",
-      trusses: "桁架",
-      planes: "平面",
-      ready: "工作负载库已就绪。",
-    },
+    clear: "清空库",
+    managedWorkloads: "已管理工作负载",
+    all: "全部",
+    mechanical: "力学",
+    thermal: "热",
+    thermo: "力热",
+    allFamilies: "全部 family",
+    axial: "轴向与弹簧",
+    beams: "梁与刚架",
+    trusses: "桁架",
+    planes: "平面",
+    workflowCatalogLabel: "工作流目录",
+    workflowCatalogTitle: "命名工作流运行",
+    workflowCatalogCopy: "发现内建多算子工作流，并直接运行参考样板，不必手填 raw graph。",
+    workflowCatalogRefresh: "刷新工作流目录",
+    workflowCatalogReady: "工作流目录已就绪。",
+    ready: "工作负载库已就绪。",
+  },
     bundles: {
       introLabel: "Bundle 操作",
       introTitle: "项目 bundle 工具",
@@ -894,6 +915,17 @@ const HUB_I18N = {
       nonPinnedEmpty: "当前视图里没有未置顶动作。",
       managedWorkloadsEmpty: "还没有已管理工作负载。先注册当前 bundle，或同步远端 catalog。",
       managedWorkloadsFilterEmpty: "没有工作负载匹配 {domain} / {family}。",
+      workflowCatalogEmpty: "当前还没有可用的命名工作流。",
+      workflowCatalogLoading: "正在加载工作流目录……",
+      workflowCatalogLoaded: "已将 {count} 条命名工作流载入 Hub 目录",
+      workflowCatalogRun: "运行参考样板",
+      workflowCatalogUnsupported: "Hub 里还没有为 {workflow} 定义参考样板。",
+      workflowCatalogEntryInputs: "入口输入：{inputs}",
+      workflowCatalogOutputs: "输出产物：{outputs}",
+      workflowCatalogQueued: "已把工作流 {workflow} 排入队列，job 为 {job}",
+      workflowCatalogCompleted: "工作流 {workflow} 已完成，共跑完 {count} 个节点 · {summary}",
+      workflowCatalogPolling: "正在等待 workflow job {job}",
+      workflowCatalogFailed: "工作流 {workflow} 结束状态为 {status}",
       restoredActionContext: "已恢复 {action} 上下文",
       restoredWorkloadContext: "已恢复 {label} 的工作负载上下文",
       loadedWorkloadContext: "已把 {label} 载入 bundle 路径",
@@ -1168,6 +1200,11 @@ const HUB_I18N = {
       beams: "梁・フレーム",
       trusses: "トラス",
       planes: "平面",
+      workflowCatalogLabel: "workflow catalog",
+      workflowCatalogTitle: "名前付き workflow 実行",
+      workflowCatalogCopy: "raw graph を貼り付けずに、組み込み multi-operator workflow を見つけて reference sample を実行します。",
+      workflowCatalogRefresh: "workflow catalog を更新",
+      workflowCatalogReady: "workflow catalog の準備ができました。",
       ready: "ワークロードライブラリの準備ができました。",
     },
     bundles: {
@@ -1453,6 +1490,11 @@ HUB_I18N.es = {
     import: "Importar biblioteca JSON",
     clear: "Vaciar biblioteca",
     managedWorkloads: "Cargas gestionadas",
+    workflowCatalogLabel: "Catálogo de workflows",
+    workflowCatalogTitle: "Ejecuciones con nombre",
+    workflowCatalogCopy: "Descubre workflows integrados de varios operadores y ejecuta una muestra de referencia sin pegar un grafo crudo.",
+    workflowCatalogRefresh: "Actualizar catálogo de workflows",
+    workflowCatalogReady: "El catálogo de workflows está listo.",
   },
   bundles: {
     ...HUB_I18N.en.bundles,
@@ -1688,6 +1730,8 @@ const state = {
   historyFilter: "all",
   workloadFilter: "all",
   workloadFamilyFilter: "all",
+  workflowCatalog: [],
+  workflowCatalogBusy: false,
   assistantMode: "local",
   assistantPlan: null,
   hotLogRefreshInFlight: false,
@@ -1765,6 +1809,11 @@ function localizedWorkloadFamilyFilterLabel(filter) {
     default:
       return filter;
   }
+}
+
+function localizedWorkflowCatalogLabel(key) {
+  const copy = hubCopy();
+  return copy.dynamic?.[key] || HUB_I18N.en.dynamic?.[key] || key;
 }
 
 const elements = {
@@ -1854,6 +1903,12 @@ const elements = {
   libraryFamilyBeams: document.getElementById("library-family-beams"),
   libraryFamilyTrusses: document.getElementById("library-family-trusses"),
   libraryFamilyPlanes: document.getElementById("library-family-planes"),
+  workflowCatalogLabel: document.getElementById("workflow-catalog-label"),
+  workflowCatalogTitle: document.getElementById("workflow-catalog-title"),
+  workflowCatalogCopy: document.getElementById("workflow-catalog-copy"),
+  workflowCatalogRefresh: document.getElementById("workflow-catalog-refresh"),
+  workflowCatalogList: document.getElementById("workflow-catalog-list"),
+  workflowCatalogOutput: document.getElementById("workflow-catalog-output"),
   bundlesIntroLabel: document.getElementById("bundles-intro-label"),
   bundlesIntroTitle: document.getElementById("bundles-intro-title"),
   bundlesIntroCopy: document.getElementById("bundles-intro-copy"),
@@ -2221,6 +2276,13 @@ function renderDesktopLanguagePreference() {
   setText(elements.libraryFamilyBeams, copy.library.beams);
   setText(elements.libraryFamilyTrusses, copy.library.trusses);
   setText(elements.libraryFamilyPlanes, copy.library.planes);
+  setText(elements.workflowCatalogLabel, copy.library.workflowCatalogLabel);
+  setText(elements.workflowCatalogTitle, copy.library.workflowCatalogTitle);
+  setText(elements.workflowCatalogCopy, copy.library.workflowCatalogCopy);
+  setText(elements.workflowCatalogRefresh, copy.library.workflowCatalogRefresh);
+  if (elements.workflowCatalogOutput && !state.workflowCatalogBusy) {
+    elements.workflowCatalogOutput.textContent = copy.library.workflowCatalogReady;
+  }
   if (elements.workloadLibraryOutput && !state.isBusy) {
     elements.workloadLibraryOutput.textContent = copy.library.ready;
   }
@@ -2338,6 +2400,7 @@ function renderDesktopLanguagePreference() {
 function rerenderLocalizedHubShell() {
   renderDesktopLanguagePreference();
   renderHubRecents();
+  renderWorkflowCatalog();
   renderHubAssistantAudit();
   renderAssistantContext();
   renderHubAssistantLocalCards();
@@ -2838,6 +2901,10 @@ function currentOrchestratorBaseUrl() {
 
 function currentLocalWorkloadCatalogUrl() {
   return `${currentOrchestratorBaseUrl().replace(/\/+$/u, "")}/api/v1/workloads/catalog`;
+}
+
+function currentWorkflowCatalogUrl() {
+  return `${currentOrchestratorBaseUrl().replace(/\/+$/u, "")}/api/v1/workflows/catalog`;
 }
 
 function ensureDefaultWorkloadCatalogUrl(force = false) {
@@ -4674,6 +4741,12 @@ function setAssistantLocalOutput(value) {
   }
 }
 
+function setWorkflowCatalogOutput(value) {
+  if (elements.workflowCatalogOutput) {
+    elements.workflowCatalogOutput.textContent = value;
+  }
+}
+
 function renderProjectsPages() {
   elements.projectsPageButtons.forEach((button) => {
     const active = button.dataset.projectsPage === state.projectsPage;
@@ -4692,6 +4765,265 @@ function setProjectsPage(page) {
   state.projectsPage =
     page === "library" || page === "bundles" || page === "guides" ? page : "start";
   renderProjectsPages();
+  if (state.projectsPage === "library" && !state.workflowCatalog.length && !state.workflowCatalogBusy) {
+    void fetchWorkflowCatalog({ silent: true });
+  }
+}
+
+function builtInWorkflowSampleInputArtifacts(workflowId) {
+  switch (workflowId) {
+    case "workflow.heat-to-thermo-quad-2d":
+      return {
+        heat_model: {
+          nodes: [
+            { id: "h0", x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
+            { id: "h1", x: 1.0, y: 0.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+            { id: "h2", x: 1.0, y: 1.0, fix_temperature: true, temperature: 20.0, heat_load: 0.0 },
+            { id: "h3", x: 0.0, y: 1.0, fix_temperature: true, temperature: 20.0, heat_load: 0.0 },
+          ],
+          elements: [
+            {
+              id: "hq0",
+              node_i: 0,
+              node_j: 1,
+              node_k: 2,
+              node_l: 3,
+              thickness: 0.02,
+              conductivity: 45.0,
+            },
+          ],
+        },
+      };
+    default:
+      return null;
+  }
+}
+
+function describeWorkflowSummary(resultPayload) {
+  const exported = resultPayload?.result?.artifacts?.["json_output.json"];
+  if (!exported?.content) {
+    return "no exported summary";
+  }
+
+  try {
+    const summary = JSON.parse(exported.content);
+    return Object.entries(summary)
+      .slice(0, 3)
+      .map(([key, value]) => `${key}=${value}`)
+      .join(" · ");
+  } catch (_error) {
+    return "exported summary is not valid JSON";
+  }
+}
+
+async function waitForWorkflowJob(jobId, options = {}) {
+  const timeoutMs = Number(options.timeoutMs || 30_000);
+  const intervalMs = Number(options.intervalMs || 700);
+  const baseUrl = currentOrchestratorBaseUrl().replace(/\/+$/u, "");
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const response = await fetch(`${baseUrl}/api/v1/jobs/${encodeURIComponent(jobId)}`);
+    if (!response.ok) {
+      throw new Error(`workflow job lookup failed (${response.status})`);
+    }
+
+    const payload = await response.json();
+    const status = String(payload?.job?.status || "").trim();
+    if (status === "completed") {
+      return payload;
+    }
+    if (status === "failed" || status === "cancelled") {
+      throw new Error(
+        hubMessage(localizedWorkflowCatalogLabel("workflowCatalogFailed"), {
+          workflow: payload?.result?.workflow_id || payload?.job?.job_type || "workflow",
+          status,
+        }),
+      );
+    }
+
+    setWorkflowCatalogOutput(
+      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogPolling"), { job: jobId }),
+    );
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error(`workflow job ${jobId} timed out`);
+}
+
+async function runWorkflowCatalogSample(entry) {
+  const workflowId = String(entry?.id || "").trim();
+  const inputArtifacts = builtInWorkflowSampleInputArtifacts(workflowId);
+  if (!workflowId || !inputArtifacts) {
+    setWorkflowCatalogOutput(
+      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogUnsupported"), {
+        workflow: workflowId || "unknown",
+      }),
+    );
+    return;
+  }
+
+  state.workflowCatalogBusy = true;
+  renderWorkflowCatalog();
+  applyDesktopState(elements.actionState, "running", { kind: "activity" });
+
+  try {
+    const response = await fetch(
+      `${currentWorkflowCatalogUrl().replace(/\/+$/u, "")}/${encodeURIComponent(workflowId)}/jobs`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ input_artifacts: inputArtifacts }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`workflow submit failed (${response.status})`);
+    }
+
+    const payload = await response.json();
+    const jobId = String(payload?.job?.job_id || "").trim();
+    const queuedMessage = hubMessage(localizedWorkflowCatalogLabel("workflowCatalogQueued"), {
+      workflow: workflowId,
+      job: jobId || "--",
+    });
+    setWorkflowCatalogOutput(queuedMessage);
+    setOperationOutput(queuedMessage);
+
+    if (!jobId) {
+      throw new Error("workflow submit returned no job id");
+    }
+
+    const resultPayload = await waitForWorkflowJob(jobId);
+    const completedNodes = Array.isArray(resultPayload?.result?.completed_nodes)
+      ? resultPayload.result.completed_nodes
+      : [];
+    const completedMessage = hubMessage(localizedWorkflowCatalogLabel("workflowCatalogCompleted"), {
+      workflow: workflowId,
+      count: completedNodes.length,
+      summary: describeWorkflowSummary(resultPayload),
+    });
+    setWorkflowCatalogOutput(completedMessage);
+    setOperationOutput(completedMessage);
+    applyDesktopState(elements.actionState, "ready", { kind: "activity" });
+  } catch (error) {
+    setWorkflowCatalogOutput(formatHubOperatorError(error, {
+      actionLabel: "Running this workflow sample",
+    }));
+    applyDesktopState(elements.actionState, "failed", { kind: "activity" });
+  } finally {
+    state.workflowCatalogBusy = false;
+    renderWorkflowCatalog();
+  }
+}
+
+async function fetchWorkflowCatalog(options = {}) {
+  const silent = options?.silent === true;
+  if (state.workflowCatalogBusy) {
+    return;
+  }
+
+  state.workflowCatalogBusy = true;
+  renderWorkflowCatalog();
+  if (!silent) {
+    setWorkflowCatalogOutput(localizedWorkflowCatalogLabel("workflowCatalogLoading"));
+    applyDesktopState(elements.actionState, "running", { kind: "activity" });
+  }
+
+  try {
+    const response = await fetch(currentWorkflowCatalogUrl());
+    if (!response.ok) {
+      throw new Error(`workflow catalog fetch failed (${response.status})`);
+    }
+
+    const payload = await response.json();
+    state.workflowCatalog = Array.isArray(payload?.workflows) ? payload.workflows : [];
+    renderWorkflowCatalog();
+    if (!silent) {
+      const loadedMessage = hubMessage(localizedWorkflowCatalogLabel("workflowCatalogLoaded"), {
+        count: state.workflowCatalog.length,
+      });
+      setWorkflowCatalogOutput(loadedMessage);
+      setOperationOutput(loadedMessage);
+      applyDesktopState(elements.actionState, "ready", { kind: "activity" });
+    }
+  } catch (error) {
+    if (!silent) {
+      setWorkflowCatalogOutput(formatHubOperatorError(error, {
+        actionLabel: "Loading the workflow catalog",
+      }));
+      applyDesktopState(elements.actionState, "failed", { kind: "activity" });
+    }
+  } finally {
+    state.workflowCatalogBusy = false;
+    renderWorkflowCatalog();
+  }
+}
+
+function renderWorkflowCatalog(entries = state.workflowCatalog) {
+  if (!elements.workflowCatalogList) {
+    return;
+  }
+
+  elements.workflowCatalogList.innerHTML = "";
+  if (!entries.length) {
+    renderEmptyHistoryState(
+      elements.workflowCatalogList,
+      localizedWorkflowCatalogLabel("workflowCatalogEmpty"),
+    );
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const shell = document.createElement("div");
+    shell.className = "hub-history-item";
+
+    const summary = document.createElement("div");
+    summary.className = "hub-history-item__summary";
+    const heading = document.createElement("div");
+    heading.className = "hub-history-item__heading";
+    appendTextElement(heading, "strong", entry.name || entry.id || "workflow");
+    const meta = document.createElement("div");
+    meta.className = "hub-history-item__meta";
+    appendTextElement(meta, "span", entry.id || "--", "desktop-shell-chip");
+    appendTextElement(meta, "span", entry.version || "v1", "desktop-shell-chip");
+    heading.appendChild(meta);
+    summary.appendChild(heading);
+    appendTextElement(summary, "span", entry.summary || "named workflow");
+    appendTextElement(
+      summary,
+      "span",
+      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogEntryInputs"), {
+        inputs: Object.keys(entry.entry_inputs || {}).join(", ") || "--",
+      }),
+      "hub-history-item__alias",
+    );
+    appendTextElement(
+      summary,
+      "span",
+      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogOutputs"), {
+        outputs: Array.isArray(entry.output_artifacts) ? entry.output_artifacts.join(", ") : "--",
+      }),
+      "hub-history-item__provenance",
+    );
+
+    const controls = document.createElement("div");
+    controls.className = "hub-history-item__controls";
+    const runButton = document.createElement("button");
+    runButton.type = "button";
+    runButton.className = "desktop-shell-button-ghost";
+    runButton.textContent = localizedWorkflowCatalogLabel("workflowCatalogRun");
+    runButton.disabled = state.workflowCatalogBusy;
+    runButton.addEventListener("click", () => {
+      void runWorkflowCatalogSample(entry);
+    });
+    controls.appendChild(runButton);
+
+    shell.append(summary, controls);
+    elements.workflowCatalogList.appendChild(shell);
+  });
 }
 
 function renderPanelPages(group) {
@@ -5794,6 +6126,10 @@ async function runActionWithOptions(action, options = {}) {
         clearHubWorkloadLibrary();
         setBusy(false, "ready");
         return;
+      case "workflow-catalog-refresh":
+        await fetchWorkflowCatalog();
+        setBusy(false, "ready");
+        return;
       case "start-local":
         setOperationOutput(await invokeGuardedMutation("service_start", { mode: "local" }));
         await refreshRuntimeStatus();
@@ -6204,4 +6540,5 @@ setBusy(false, "idle");
 await refreshRuntimeStatus();
 await refreshHotRuntimeStatus();
 await refreshDesktopStatusOutput();
+await fetchWorkflowCatalog({ silent: true });
 rerenderLocalizedHubShell();

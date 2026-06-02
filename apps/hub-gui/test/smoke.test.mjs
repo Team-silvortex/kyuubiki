@@ -95,6 +95,12 @@ test("hub shell exposes the desktop information architecture", () => {
   assert.match(html, /workload-import-input/);
   assert.match(html, /workload-library-list/);
   assert.match(html, /workload-library-output/);
+  assert.match(html, /workflow-catalog-label/);
+  assert.match(html, /workflow-catalog-title/);
+  assert.match(html, /workflow-catalog-copy/);
+  assert.match(html, /workflow-catalog-refresh/);
+  assert.match(html, /workflow-catalog-list/);
+  assert.match(html, /workflow-catalog-output/);
   assert.match(html, /Register current bundle/);
   assert.match(html, /Sync local control plane/);
   assert.match(html, /Sync remote catalog/);
@@ -178,6 +184,12 @@ test("hub shell registers section switching behavior", () => {
   assert.match(js, /saveProjectBundleRecents/);
   assert.match(js, /saveHubWorkloadLibrary/);
   assert.match(js, /renderHubWorkloadLibrary/);
+  assert.match(js, /currentWorkflowCatalogUrl/);
+  assert.match(js, /fetchWorkflowCatalog/);
+  assert.match(js, /renderWorkflowCatalog/);
+  assert.match(js, /runWorkflowCatalogSample/);
+  assert.match(js, /waitForWorkflowJob/);
+  assert.match(js, /builtInWorkflowSampleInputArtifacts/);
   assert.match(js, /normalizeHubWorkloadEntry/);
   assert.match(js, /mergeHubWorkloadLibrary/);
   assert.match(js, /workloadIdentity/);
