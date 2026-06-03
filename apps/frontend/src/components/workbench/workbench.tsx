@@ -33,10 +33,15 @@ import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workben
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import {
-  WorkbenchWorkflowSidebar,
-  type WorkflowRunRecord,
-  type WorkflowSurfaceTab,
-} from "@/components/workbench/workflow/workbench-workflow-sidebar";
+  isWorkflowGraphResult,
+  summarizeWorkflowArtifacts,
+  upsertWorkflowRunRecord,
+  useWorkbenchWorkflowController,
+} from "@/components/workbench/workflow/workbench-workflow-controller";
+import { WorkbenchWorkflowSidebar } from "@/components/workbench/workflow/workbench-workflow-sidebar";
+import type {
+  WorkflowSurfaceTab,
+} from "@/components/workbench/workflow/workbench-workflow-types";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { parseMaterialLibrary } from "@/lib/materials";
 import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
@@ -53,12 +58,12 @@ import {
   safeStorageGet,
   scientific,
   serializeCurrentModel,
-  serializeResultCsv,
   toAxialInput,
   mergeLanguagePack,
   WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
   type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
+import { serializeResultCsv } from "@/lib/workbench/result-csv";
 import {
   buildWorkbenchSnapshot,
   createAssistantTransactionEntry,
@@ -232,11 +237,9 @@ import {
   fetchJobHistory,
   fetchJobStatus,
   fetchProtocolAgents,
-  fetchWorkflowCatalog,
   fetchResultChunk,
   fetchProjects,
   fetchResults,
-  submitWorkflowCatalogJob,
   type AxialBarJobInput,
   type AxialBarResult,
   type Beam1dElementInput,
@@ -297,7 +300,6 @@ import {
   type ThermalTruss3dJobInput,
   type ThermalTruss3dNodeInput,
   type ThermalTruss3dResult,
-  type WorkflowCatalogEntry,
   type WorkflowGraphJobResult,
   type Spring1dJobInput,
   type Spring1dResult,
@@ -925,6 +927,17 @@ const copyEn = {
     workflowDatasetSchemaLabel: "Schema",
     workflowDatasetClassLabel: "Element Type",
     workflowDatasetNoneLabel: "This workflow has not published a dataset contract yet.",
+    workflowDatasetDraftHint: "Edit dataset semantics locally here first so ports, edges, and cross-operator values line up before we add persistence.",
+    workflowDatasetEditorTitle: "Dataset Editor",
+    workflowDatasetValueSelectLabel: "Selected Dataset Value",
+    workflowDatasetUnitLabel: "Unit",
+    workflowDatasetMetadataLabel: "Metadata",
+    workflowDatasetPortMappingsTitle: "Port Mappings",
+    workflowDatasetEdgeMappingsTitle: "Edge Mappings",
+    workflowDatasetDraftLocalLabel: "local draft",
+    workflowDatasetUnassignedLabel: "Unassigned",
+    workflowExportGraphLabel: "Export Graph JSON",
+    workflowExportDatasetContractLabel: "Export Dataset JSON",
     workflowOperatorLabel: "Operator",
     workflowKindLabel: "Kind",
     workflowProgressLabel: "Progress",
@@ -1627,6 +1640,17 @@ const copyZh = {
     workflowDatasetSchemaLabel: "Schema",
     workflowDatasetClassLabel: "元素类型",
     workflowDatasetNoneLabel: "这条工作流还没有发布 dataset contract。",
+    workflowDatasetDraftHint: "先在这里本地调整 dataset 语义，让 port、edge 和跨算子值先对齐，后面再接持久化。",
+    workflowDatasetEditorTitle: "数据编辑器",
+    workflowDatasetValueSelectLabel: "当前数据值",
+    workflowDatasetUnitLabel: "单位",
+    workflowDatasetMetadataLabel: "元信息",
+    workflowDatasetPortMappingsTitle: "端口映射",
+    workflowDatasetEdgeMappingsTitle: "连线映射",
+    workflowDatasetDraftLocalLabel: "本地草稿",
+    workflowDatasetUnassignedLabel: "未分配",
+    workflowExportGraphLabel: "导出 Graph JSON",
+    workflowExportDatasetContractLabel: "导出 Dataset JSON",
     workflowOperatorLabel: "算子",
     workflowKindLabel: "类型",
     workflowProgressLabel: "进度",
@@ -2290,6 +2314,17 @@ const copy = {
     workflowDatasetSchemaLabel: "スキーマ",
     workflowDatasetClassLabel: "要素型",
     workflowDatasetNoneLabel: "この workflow にはまだ dataset contract がありません。",
+    workflowDatasetDraftHint: "まずここで dataset の意味付けをローカル草稿として調整し、port・edge・跨算子値を揃えてから永続化に進みます。",
+    workflowDatasetEditorTitle: "データセットエディタ",
+    workflowDatasetValueSelectLabel: "選択中のデータセット値",
+    workflowDatasetUnitLabel: "単位",
+    workflowDatasetMetadataLabel: "メタ情報",
+    workflowDatasetPortMappingsTitle: "ポート対応",
+    workflowDatasetEdgeMappingsTitle: "エッジ対応",
+    workflowDatasetDraftLocalLabel: "ローカル草稿",
+    workflowDatasetUnassignedLabel: "未割り当て",
+    workflowExportGraphLabel: "Graph JSON を書き出す",
+    workflowExportDatasetContractLabel: "Dataset JSON を書き出す",
     workflowOperatorLabel: "算子",
     workflowKindLabel: "種別",
     workflowProgressLabel: "進捗",
@@ -2810,16 +2845,6 @@ function isThermalFrame2dResult(value: unknown): value is ThermalFrame2dResult {
   );
 }
 
-function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJobResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "workflow_id" in value &&
-    "completed_nodes" in value &&
-    "artifacts" in value
-  );
-}
-
 function isPlaneResult(
   value: unknown,
 ): value is
@@ -2850,65 +2875,6 @@ function isPlaneResult(
         | ThermalPlaneQuad2dResult
     ).elements.some((element) => "node_k" in element)
   );
-}
-
-function builtInWorkflowSampleInputArtifacts(workflowId: string): Record<string, unknown> | null {
-  if (workflowId !== "workflow.heat-to-thermo-quad-2d") {
-    return null;
-  }
-
-  return {
-    heat_model: {
-      nodes: [
-        { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-        { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
-        { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-        { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-      ],
-      elements: [
-        {
-          id: "hq0",
-          node_i: 0,
-          node_j: 1,
-          node_k: 2,
-          node_l: 3,
-          thickness: 0.02,
-          conductivity: 45,
-        },
-      ],
-    },
-  };
-}
-
-function summarizeWorkflowArtifacts(result: WorkflowGraphJobResult): string | null {
-  const exported = result.artifacts["json_output.json"];
-  if (!exported || typeof exported !== "object" || exported === null || !("content" in exported)) {
-    return null;
-  }
-
-  const content = (exported as { content?: unknown }).content;
-  if (typeof content !== "string") {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(content) as Record<string, unknown>;
-    const summary = Object.entries(parsed)
-      .slice(0, 3)
-      .map(([key, value]) => `${key}=${typeof value === "number" ? scientific(value) : String(value)}`)
-      .join(", ");
-    return summary || null;
-  } catch {
-    return null;
-  }
-}
-
-function upsertWorkflowRunRecord(
-  current: WorkflowRunRecord[],
-  next: WorkflowRunRecord,
-): WorkflowRunRecord[] {
-  const withoutMatch = current.filter((entry) => entry.jobId !== next.jobId);
-  return [next, ...withoutMatch].slice(0, 12);
 }
 
 function ensureBeamModelMaterials<T extends { materials?: Array<{ id: string }>; elements: Array<{ material_id?: string | undefined }> }>(
@@ -4578,11 +4544,6 @@ export function Workbench() {
   const [canvasViewportWidth, setCanvasViewportWidth] = useState(980);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
   const [jobHistory, setJobHistory] = useState<JobState[]>([]);
-  const [workflowCatalog, setWorkflowCatalog] = useState<WorkflowCatalogEntry[]>([]);
-  const [workflowCatalogBusy, setWorkflowCatalogBusy] = useState(false);
-  const [workflowPanelTab, setWorkflowPanelTab] = useState<WorkflowPanelTab>("overview");
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
-  const [workflowRuns, setWorkflowRuns] = useState<WorkflowRunRecord[]>([]);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -5269,22 +5230,39 @@ export function Workbench() {
     }
   }
 
-  async function refreshWorkflowCatalog() {
-    setWorkflowCatalogBusy(true);
-
-    try {
-      const payload = await fetchWorkflowCatalog();
-      setWorkflowCatalog(payload.workflows);
-      setSelectedWorkflowId((current) =>
-        current && payload.workflows.some((entry) => entry.id === current) ? current : payload.workflows[0]?.id ?? null,
-      );
-      setMessage(t.workflowCatalogLoaded);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    } finally {
-      setWorkflowCatalogBusy(false);
-    }
-  }
+  const {
+    workflowCatalog,
+    workflowCatalogBusy,
+    workflowPanelTab,
+    setWorkflowPanelTab,
+    selectedWorkflowId,
+    setSelectedWorkflowId,
+    workflowRuns,
+    setWorkflowRuns,
+    selectedWorkflow,
+    latestWorkflowSummary,
+    refreshWorkflowCatalog,
+    runWorkflowCatalogEntry,
+  } = useWorkbenchWorkflowController({
+    labels: {
+      workflowCatalogLoaded: t.workflowCatalogLoaded,
+      workflowCatalogUnsupported: t.workflowCatalogUnsupported,
+      workflowCatalogQueued: t.workflowCatalogQueued,
+      workflowCatalogCompleted: t.workflowCatalogCompleted,
+      workflowCatalogFailed: t.workflowCatalogFailed,
+      initialFailed: t.initialFailed,
+      pollingDetached: t.pollingDetached,
+    },
+    jobPollTokenRef,
+    refreshJobHistory,
+    setJob,
+    setMessage,
+    openWorkflowRunsSurface: (workflowId) => {
+      setSelectedWorkflowId(workflowId);
+      setSidebarSection("workflow");
+      setWorkflowPanelTab("runs");
+    },
+  });
 
   async function refreshResults() {
     const refreshSeq = ++resultRefreshSeqRef.current;
@@ -6150,96 +6128,6 @@ export function Workbench() {
         setMessage(`${t.importedModel}: ${imported.name}`);
       } catch (error) {
         setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
-      }
-    });
-  };
-
-  const runWorkflowCatalogEntry = (workflowId: string) => {
-    const inputArtifacts = builtInWorkflowSampleInputArtifacts(workflowId);
-    if (!inputArtifacts) {
-      setMessage(t.workflowCatalogUnsupported);
-      return;
-    }
-
-    startTransition(async () => {
-      setWorkflowCatalogBusy(true);
-
-      try {
-        const payload = await submitWorkflowCatalogJob(workflowId, inputArtifacts);
-        setSelectedWorkflowId(workflowId);
-        setSidebarSection("workflow");
-        setWorkflowPanelTab("runs");
-        setJob(payload.job);
-        setWorkflowRuns((current) =>
-          upsertWorkflowRunRecord(current, {
-            jobId: payload.job.job_id,
-            workflowId,
-            status: payload.job.status,
-            progress: payload.job.progress ?? 0,
-            currentNode: payload.job.message ?? null,
-            updatedAt: payload.job.updated_at ?? null,
-          }),
-        );
-        await refreshJobHistory();
-        setMessage(`${t.workflowCatalogQueued}: ${workflowId}`);
-
-        const pollToken = ++jobPollTokenRef.current;
-
-        for (let attempt = 0; attempt < 80; attempt += 1) {
-          if (pollToken !== jobPollTokenRef.current) return;
-
-          const next = await fetchJobStatus<WorkflowGraphJobResult>(payload.job.job_id);
-          if (pollToken !== jobPollTokenRef.current) return;
-
-          setJob(next.job);
-          setWorkflowRuns((current) =>
-            upsertWorkflowRunRecord(current, {
-              jobId: next.job.job_id,
-              workflowId,
-              status: next.job.status,
-              progress: next.job.progress ?? 0,
-              currentNode:
-                (next.result && isWorkflowGraphResult(next.result) ? next.result.current_node : null) ??
-                next.job.message ??
-                null,
-              summary:
-                next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowArtifacts(next.result) : null,
-              updatedAt: next.job.updated_at ?? null,
-            }),
-          );
-
-          if (next.job.status === "completed" && next.result && isWorkflowGraphResult(next.result)) {
-            await refreshJobHistory();
-            const summary = summarizeWorkflowArtifacts(next.result);
-            setMessage(
-              summary
-                ? `${t.workflowCatalogCompleted}: ${next.result.workflow_id} (${summary})`
-                : `${t.workflowCatalogCompleted}: ${next.result.workflow_id}`,
-            );
-            return;
-          }
-
-          if (next.job.status === "failed" || next.job.status === "cancelled") {
-            await refreshJobHistory();
-            setMessage(formatJobMessage(next.job, t.workflowCatalogFailed, t));
-            return;
-          }
-
-          await new Promise((resolve) => window.setTimeout(resolve, 350));
-        }
-
-        await refreshJobHistory();
-        setMessage(t.pollingDetached);
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message.startsWith("request timed out:")
-              ? t.requestTimedOut
-              : error.message
-            : t.initialFailed,
-        );
-      } finally {
-        setWorkflowCatalogBusy(false);
       }
     });
   };
@@ -7473,9 +7361,6 @@ export function Workbench() {
   const deferredModelVersions = useDeferredValue(modelVersions);
   const deferredJobHistory = useDeferredValue(jobHistory);
   const deferredResultRecords = useDeferredValue(resultRecords);
-  const selectedWorkflow = workflowCatalog.find((entry) => entry.id === selectedWorkflowId) ?? workflowCatalog[0] ?? null;
-  const latestWorkflowRun = workflowRuns[0] ?? null;
-  const latestWorkflowSummary = latestWorkflowRun?.summary ?? null;
   const selectedAdminJob = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
   const selectedAdminResult = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
 
@@ -11529,6 +11414,17 @@ export function Workbench() {
               datasetSchemaLabel: t.workflowDatasetSchemaLabel,
               datasetClassLabel: t.workflowDatasetClassLabel,
               datasetNoneLabel: t.workflowDatasetNoneLabel,
+              datasetDraftHint: t.workflowDatasetDraftHint,
+              datasetEditorTitle: t.workflowDatasetEditorTitle,
+              datasetValueSelectLabel: t.workflowDatasetValueSelectLabel,
+              datasetUnitLabel: t.workflowDatasetUnitLabel,
+              datasetMetadataLabel: t.workflowDatasetMetadataLabel,
+              datasetPortMappingsTitle: t.workflowDatasetPortMappingsTitle,
+              datasetEdgeMappingsTitle: t.workflowDatasetEdgeMappingsTitle,
+              datasetDraftLocalLabel: t.workflowDatasetDraftLocalLabel,
+              datasetUnassignedLabel: t.workflowDatasetUnassignedLabel,
+              exportGraphLabel: t.workflowExportGraphLabel,
+              exportDatasetContractLabel: t.workflowExportDatasetContractLabel,
               operatorLabel: t.workflowOperatorLabel,
               kindLabel: t.workflowKindLabel,
               progressLabel: t.workflowProgressLabel,

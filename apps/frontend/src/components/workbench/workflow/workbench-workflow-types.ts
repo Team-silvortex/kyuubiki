@@ -1,0 +1,65 @@
+"use client";
+
+export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
+
+export type WorkflowRunRecord = {
+  jobId: string;
+  workflowId: string;
+  status: string;
+  progress: number;
+  currentNode?: string | null;
+  summary?: string | null;
+  updatedAt?: string | null;
+};
+
+export type WorkflowSidebarLabels = {
+  sectionTitle: string;
+  overviewPageLabel: string;
+  catalogPageLabel: string;
+  builderPageLabel: string;
+  runsPageLabel: string;
+  overviewHint: string;
+  catalogHint: string;
+  builderHint: string;
+  runsHint: string;
+  catalogTitle: string;
+  refreshLabel: string;
+  runLabel: string;
+  emptyCatalogLabel: string;
+  noSelectionLabel: string;
+  nodesTitle: string;
+  edgesTitle: string;
+  entryInputsTitle: string;
+  outputArtifactsTitle: string;
+  datasetContractTitle: string;
+  datasetValuesTitle: string;
+  datasetValueLabel: string;
+  datasetSemanticTypeLabel: string;
+  datasetEncodingLabel: string;
+  datasetShapeLabel: string;
+  datasetAxesLabel: string;
+  datasetSchemaLabel: string;
+  datasetClassLabel: string;
+  datasetNoneLabel: string;
+  datasetDraftHint: string;
+  datasetEditorTitle: string;
+  datasetValueSelectLabel: string;
+  datasetUnitLabel: string;
+  datasetMetadataLabel: string;
+  datasetPortMappingsTitle: string;
+  datasetEdgeMappingsTitle: string;
+  datasetDraftLocalLabel: string;
+  datasetUnassignedLabel: string;
+  exportGraphLabel: string;
+  exportDatasetContractLabel: string;
+  operatorLabel: string;
+  kindLabel: string;
+  progressLabel: string;
+  currentNodeLabel: string;
+  latestSummaryLabel: string;
+  openRunLabel: string;
+  emptyRunsLabel: string;
+  selectForBuilderLabel: string;
+  statusReadyLabel: string;
+  statusBusyLabel: string;
+};

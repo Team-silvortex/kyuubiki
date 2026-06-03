@@ -1,59 +1,16 @@
 "use client";
 
-import type { JobState, WorkflowCatalogEntry } from "@/lib/api";
+import type {
+  JobState,
+  WorkflowCatalogEntry,
+} from "@/lib/api";
 
-export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
-
-export type WorkflowRunRecord = {
-  jobId: string;
-  workflowId: string;
-  status: string;
-  progress: number;
-  currentNode?: string | null;
-  summary?: string | null;
-  updatedAt?: string | null;
-};
-
-type WorkflowSidebarLabels = {
-  sectionTitle: string;
-  overviewPageLabel: string;
-  catalogPageLabel: string;
-  builderPageLabel: string;
-  runsPageLabel: string;
-  overviewHint: string;
-  catalogHint: string;
-  builderHint: string;
-  runsHint: string;
-  catalogTitle: string;
-  refreshLabel: string;
-  runLabel: string;
-  emptyCatalogLabel: string;
-  noSelectionLabel: string;
-  nodesTitle: string;
-  edgesTitle: string;
-  entryInputsTitle: string;
-  outputArtifactsTitle: string;
-  datasetContractTitle: string;
-  datasetValuesTitle: string;
-  datasetValueLabel: string;
-  datasetSemanticTypeLabel: string;
-  datasetEncodingLabel: string;
-  datasetShapeLabel: string;
-  datasetAxesLabel: string;
-  datasetSchemaLabel: string;
-  datasetClassLabel: string;
-  datasetNoneLabel: string;
-  operatorLabel: string;
-  kindLabel: string;
-  progressLabel: string;
-  currentNodeLabel: string;
-  latestSummaryLabel: string;
-  openRunLabel: string;
-  emptyRunsLabel: string;
-  selectForBuilderLabel: string;
-  statusReadyLabel: string;
-  statusBusyLabel: string;
-};
+import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
+import type {
+  WorkflowRunRecord,
+  WorkflowSidebarLabels,
+  WorkflowSurfaceTab,
+} from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowSidebarProps = {
   surfaceTab: WorkflowSurfaceTab;
@@ -94,11 +51,6 @@ export function WorkbenchWorkflowSidebar({
   onRunWorkflowCatalog,
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
-  const selectedGraph = selectedWorkflow?.graph ?? null;
-  const selectedNodes = selectedGraph?.nodes ?? [];
-  const selectedEdges = selectedGraph?.edges ?? [];
-  const selectedDatasetContract = selectedGraph?.dataset_contract ?? null;
-  const selectedDatasetValues = selectedDatasetContract?.values ?? [];
   const latestRun = workflowRuns[0] ?? null;
 
   return (
@@ -236,200 +188,11 @@ export function WorkbenchWorkflowSidebar({
       ) : null}
 
       {surfaceTab === "builder" ? (
-        <section className="sidebar-card sidebar-card--compact">
-          {selectedWorkflow ? (
-            <>
-              <div className="card-head">
-                <h2>{selectedWorkflow.name}</h2>
-                <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
-              </div>
-              <p className="card-copy">{selectedWorkflow.summary}</p>
-              <div className="button-row">
-                <button onClick={() => onRunWorkflowCatalog(selectedWorkflow.id)} type="button">
-                  {labels.runLabel}
-                </button>
-              </div>
-              <div className="sidebar-list">
-                <div className="sidebar-list__row">
-                  <span>{labels.nodesTitle}</span>
-                  <strong>{selectedNodes.length}</strong>
-                </div>
-                <div className="sidebar-list__row">
-                  <span>{labels.edgesTitle}</span>
-                  <strong>{selectedEdges.length}</strong>
-                </div>
-                <div className="sidebar-list__row">
-                  <span>{labels.entryInputsTitle}</span>
-                  <strong>{selectedWorkflow.entry_inputs.length}</strong>
-                </div>
-                <div className="sidebar-list__row">
-                  <span>{labels.outputArtifactsTitle}</span>
-                  <strong>{selectedWorkflow.output_artifacts.length}</strong>
-                </div>
-              </div>
-
-              <section className="sidebar-card sidebar-card--compact">
-                <div className="card-head">
-                  <h2>{labels.nodesTitle}</h2>
-                </div>
-                <div className="sidebar-list">
-                  {selectedNodes.map((node) => (
-                    <div className="sidebar-list__row" key={node.id}>
-                      <span>
-                        {node.id}
-                      </span>
-                      <strong>
-                        {labels.kindLabel}: {node.kind}
-                        {node.operator_id ? ` · ${labels.operatorLabel}: ${node.operator_id}` : ""}
-                        {node.outputs?.some((port) => port.dataset_value)
-                          ? ` · ${labels.datasetValueLabel}: ${node.outputs
-                              ?.map((port) => port.dataset_value)
-                              .filter(Boolean)
-                              .join(", ")}`
-                          : ""}
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="sidebar-card sidebar-card--compact">
-                <div className="card-head">
-                  <h2>{labels.edgesTitle}</h2>
-                </div>
-                <div className="sidebar-list">
-                  {selectedEdges.map((edge) => (
-                    <div className="sidebar-list__row" key={edge.id}>
-                      <span>
-                        {edge.from.node}.{edge.from.port} → {edge.to.node}.{edge.to.port}
-                      </span>
-                      <strong>
-                        {edge.artifact_type}
-                        {edge.dataset_value ? ` · ${labels.datasetValueLabel}: ${edge.dataset_value}` : ""}
-                      </strong>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="sidebar-card sidebar-card--compact">
-                <div className="card-head">
-                  <h2>{labels.datasetContractTitle}</h2>
-                  <span className={`status-pill status-pill--${selectedDatasetContract ? "good" : "watch"}`}>
-                    {selectedDatasetContract?.version ?? "--"}
-                  </span>
-                </div>
-                {selectedDatasetContract ? (
-                  <>
-                    <p className="card-copy">
-                      {selectedDatasetContract.name ?? selectedDatasetContract.id}
-                    </p>
-                    <div className="sidebar-list">
-                      <div className="sidebar-list__row">
-                        <span>{labels.datasetValuesTitle}</span>
-                        <strong>{selectedDatasetValues.length}</strong>
-                      </div>
-                    </div>
-                    <div className="sidebar-stack">
-                      {selectedDatasetValues.map((value) => {
-                        const axes = value.shape?.axes ?? [];
-                        const schemaLabel = value.schema_ref
-                          ? `${value.schema_ref.schema}@${value.schema_ref.version}`
-                          : "--";
-                        const shapeLabel =
-                          axes.length > 0
-                            ? axes
-                                .map((axis) =>
-                                  axis.size != null ? `${axis.id}[${axis.size}]` : axis.id,
-                                )
-                                .join(" × ")
-                            : "--";
-                        return (
-                          <section className="sidebar-card sidebar-card--compact" key={value.id}>
-                            <div className="card-head">
-                              <h2>{value.id}</h2>
-                              <span className="status-pill status-pill--watch">
-                                {value.data_class}
-                              </span>
-                            </div>
-                            <div className="sidebar-list">
-                              <div className="sidebar-list__row">
-                                <span>{labels.datasetSemanticTypeLabel}</span>
-                                <strong>{value.semantic_type ?? "--"}</strong>
-                              </div>
-                              <div className="sidebar-list__row">
-                                <span>{labels.datasetEncodingLabel}</span>
-                                <strong>{value.encoding ?? "--"}</strong>
-                              </div>
-                              <div className="sidebar-list__row">
-                                <span>{labels.datasetClassLabel}</span>
-                                <strong>{value.element_type}</strong>
-                              </div>
-                              <div className="sidebar-list__row">
-                                <span>{labels.datasetShapeLabel}</span>
-                                <strong>{shapeLabel}</strong>
-                              </div>
-                              <div className="sidebar-list__row">
-                                <span>{labels.datasetSchemaLabel}</span>
-                                <strong>{schemaLabel}</strong>
-                              </div>
-                            </div>
-                            {axes.length > 0 ? (
-                              <div className="sidebar-list">
-                                {axes.map((axis) => (
-                                  <div className="sidebar-list__row" key={`${value.id}:${axis.id}`}>
-                                    <span>{labels.datasetAxesLabel}</span>
-                                    <strong>
-                                      {axis.id}
-                                      {axis.semantic ? ` · ${axis.semantic}` : ""}
-                                      {axis.size != null ? ` · ${axis.size}` : ""}
-                                    </strong>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : null}
-                          </section>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <p className="card-copy">{labels.datasetNoneLabel}</p>
-                )}
-              </section>
-
-              <section className="sidebar-card sidebar-card--compact">
-                <div className="card-head">
-                  <h2>{labels.entryInputsTitle}</h2>
-                </div>
-                <div className="sidebar-list">
-                  {selectedWorkflow.entry_inputs.map((artifact) => (
-                    <div className="sidebar-list__row" key={`${artifact.node_id}:${artifact.artifact_type}`}>
-                      <span>{artifact.node_id}</span>
-                      <strong>{artifact.artifact_type}</strong>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              <section className="sidebar-card sidebar-card--compact">
-                <div className="card-head">
-                  <h2>{labels.outputArtifactsTitle}</h2>
-                </div>
-                <div className="sidebar-list">
-                  {selectedWorkflow.output_artifacts.map((artifact) => (
-                    <div className="sidebar-list__row" key={`${artifact.node_id}:${artifact.artifact_type}`}>
-                      <span>{artifact.node_id}</span>
-                      <strong>{artifact.artifact_type}</strong>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </>
-          ) : (
-            <p className="card-copy">{labels.noSelectionLabel}</p>
-          )}
-        </section>
+        <WorkbenchWorkflowBuilderCard
+          labels={labels}
+          onRunWorkflowCatalog={onRunWorkflowCatalog}
+          selectedWorkflow={selectedWorkflow}
+        />
       ) : null}
 
       {surfaceTab === "runs" ? (
