@@ -10,17 +10,226 @@ import {
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
-  type UIEvent as ReactUIEvent,
   type SetStateAction,
 } from "react";
 import brand from "../../../../../assets/brand/brand.json";
+import {
+  applyJobContextToWorkbench as applyJobContextToWorkbenchWithDeps,
+  applySelectedAdminJobContext as applySelectedAdminJobContextWithDeps,
+  applySelectedAdminResultContext as applySelectedAdminResultContextWithDeps,
+  openProjectContextById as openProjectContextByIdWithDeps,
+  openSelectedAdminJobProject as openSelectedAdminJobProjectWithDeps,
+  openSelectedAdminJobVersion as openSelectedAdminJobVersionWithDeps,
+  openSelectedAdminResultProject as openSelectedAdminResultProjectWithDeps,
+  openSelectedAdminResultVersion as openSelectedAdminResultVersionWithDeps,
+  resolveScriptLinkedJob as resolveScriptLinkedJobWithDeps,
+} from "@/components/workbench/workbench-admin-data-controller";
+import {
+  deleteWorkbenchAdminResultRecord,
+  exportWorkbenchAdminResultRecord,
+  refreshWorkbenchResults,
+  saveWorkbenchAdminResultRecord,
+} from "@/components/workbench/workbench-admin-result-controller";
 import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
 import { WorkbenchConsole } from "@/components/workbench/workbench-console";
+import {
+  copyByLanguage,
+  humanizeSolverFailure,
+  type WorkbenchCopy,
+  type WorkbenchLanguage,
+} from "@/components/workbench/workbench-copy";
+import {
+  defaultAxial,
+  defaultBeam1d,
+  defaultFrame2d,
+  defaultHeatBar1d,
+  defaultHeatPlaneQuad,
+  defaultHeatPlaneTriangle,
+  defaultPanelParametric,
+  defaultParametric,
+  defaultPlaneQuad,
+  defaultPlaneTriangle,
+  defaultSpring1d,
+  defaultSpring2d,
+  defaultSpring3d,
+  defaultThermalBar1d,
+  defaultThermalBeam1d,
+  defaultThermalFrame2d,
+  defaultThermalPlaneQuad,
+  defaultThermalPlaneTriangle,
+  defaultThermalTruss2d,
+  defaultThermalTruss3d,
+  defaultTorsion1d,
+  defaultTruss,
+  defaultTruss3d,
+  type AxialFormState,
+  type DirectMeshExecutionState,
+  type DisplayTruss3dElement,
+  type DisplayTruss3dNode,
+  type DisplayTrussElement,
+  type DisplayTrussNode,
+  type PlaneResultField,
+  type SelectionKind,
+  type StabilitySummary,
+  type TrussDiagnostics,
+  type TrussSuggestion,
+} from "@/components/workbench/workbench-defaults";
+import { applyHistoryJobPayload } from "@/components/workbench/workbench-history-result";
+import { useWorkbenchDataRefreshController } from "@/components/workbench/workbench-data-refresh-controller";
+import {
+  downloadBlobFile,
+  downloadTextFile,
+  resetActiveResult,
+} from "@/components/workbench/workbench-file-helpers";
+import {
+  buildDisplayBeamElements,
+  buildDisplayBeamNodes,
+  buildDisplaySpring2dElements,
+  buildDisplaySpring2dNodes,
+  buildDisplaySpringElements,
+  buildDisplaySpringNodes,
+  buildDisplayThermalBeamElements,
+  buildDisplayThermalBeamNodes,
+  buildDisplayTorsionElements,
+  buildDisplayTorsionNodes,
+} from "@/components/workbench/workbench-display-line-helpers";
+import { applyImportedWorkbenchModel } from "@/components/workbench/workbench-model-load";
+import {
+  buildThermalBarFromHeatResult,
+  buildThermalPlaneQuadFromHeatResult,
+  buildThermalPlaneTriangleFromHeatResult,
+  ensureBeamModelMaterials,
+  ensureFrameModelMaterials,
+} from "@/components/workbench/workbench-model-transform-helpers";
+import {
+  buildDisplayFrameElements,
+  buildDisplayFrameNodes,
+  buildDisplayHeatBarElements,
+  buildDisplayHeatBarNodes,
+  buildDisplayThermalBarElements,
+  buildDisplayThermalBarNodes,
+  buildDisplayThermalFrameElements,
+  buildDisplayThermalFrameNodes,
+  buildDisplayThermalTrussElements,
+  buildDisplayThermalTrussNodes,
+  buildDisplayTrussElements,
+  buildDisplayTrussNodes,
+} from "@/components/workbench/workbench-display-planar-helpers";
+import {
+  downloadWorkbenchFrameForceSummary,
+  downloadWorkbenchFrameHotspotSummary,
+  downloadWorkbenchPlaneHotspotSummary,
+  downloadWorkbenchResultCsv,
+  downloadWorkbenchResultJson,
+} from "@/components/workbench/workbench-result-export-controller";
+import {
+  useWorkbenchResultWindowController,
+  type ResultWindowState,
+} from "@/components/workbench/workbench-result-window-controller";
+import {
+  buildDisplaySpring3dElements,
+  buildDisplaySpring3dNodes,
+  buildDisplayThermalTruss3dElements,
+  buildDisplayThermalTruss3dNodes,
+  buildDisplayTruss3dElements,
+  buildDisplayTruss3dNodes,
+  projectTruss3dPoint,
+} from "@/components/workbench/workbench-display-spatial-helpers";
+import {
+  clusterHealthTone,
+  formatJobMessage,
+  formatPeerStatus,
+  formatProtocolMethodLabel,
+  heartbeatStatus,
+  heartbeatTone,
+  isAxialResult,
+  isBeam1dResult,
+  isFrame2dResult,
+  isHeatBar1dResult,
+  isHeatPlaneQuad2dResult,
+  isHeatPlaneTriangle2dResult,
+  isPlaneResult,
+  isSpring1dResult,
+  isSpring2dResult,
+  isSpring3dResult,
+  isThermalBar1dResult,
+  isThermalBeam1dResult,
+  isThermalFrame2dResult,
+  isThermalTruss2dResult,
+  isThermalTruss3dResult,
+  isTorsion1dResult,
+  isTruss3dResult,
+  isTrussResult,
+  lineResultFieldValue,
+  localMaterialLabel,
+  materialColorByIndex,
+  planeResultFieldValue,
+  planeStressFill,
+} from "@/components/workbench/workbench-result-helpers";
+import {
+  importWorkbenchProjectBundle,
+  openPersistedWorkbenchModel,
+  openPersistedWorkbenchVersion,
+  openPersistedWorkbenchVersionById,
+} from "@/components/workbench/workbench-persisted-model-controller";
 import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
+import { useWorkbenchJobHistoryController } from "@/components/workbench/workbench-job-history-controller";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
+import { handleWorkbenchScriptNavAction } from "@/components/workbench/workbench-script-nav-controller";
+import { handleWorkbenchScriptProjectModelAction } from "@/components/workbench/workbench-script-project-model-controller";
+import { handleWorkbenchScriptStateAction } from "@/components/workbench/workbench-script-state-controller";
+import {
+  applyStudyKindSelection,
+  createStudyKindResetHandlers,
+  isWorkbenchStudyKind,
+} from "@/components/workbench/workbench-study-kind-controller";
+import {
+  analyzeTrussModel,
+  findNearestConnectableNode,
+  fromSvgPoint,
+  getTrussBounds,
+  renderLoadGlyph,
+  renderSupportGlyph,
+  round,
+  summarizeTrussStability,
+  toSvgPoint,
+} from "@/components/workbench/workbench-truss-helpers";
+import { runWorkbenchAnalysis } from "@/components/workbench/workbench-run-controller";
 import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
+import {
+  type AssistantMode,
+  type BeamResultField,
+  type BeamStudyJobInput,
+  type FrameResultField,
+  type FrameStudyJobInput,
+  type HeatBarStudyJobInput,
+  type HeatPlaneStudyJobInput,
+  type ImmersiveToolTab,
+  type Language,
+  type LibraryPanelTab,
+  type LineResultField,
+  type ModelPanelTab,
+  type PlaneStudyJobInput,
+  SECURITY_EVENT_WINDOW_MS,
+  type SecurityEventWindow,
+  type SidebarSection,
+  type Spring2dStudyJobInput,
+  type Spring3dStudyJobInput,
+  type SpringStudyJobInput,
+  type StudyKind,
+  type StudyPanelTab,
+  type SystemDataTab,
+  type SystemPanelTab,
+  type ThermalBarStudyJobInput,
+  type ThermalBeamStudyJobInput,
+  type ThermalFrameStudyJobInput,
+  type ThermalTruss2dStudyJobInput,
+  type ThermalTruss3dStudyJobInput,
+  type Theme,
+  type WorkflowPanelTab,
+} from "@/components/workbench/workbench-types";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
 import { WorkbenchMaterialLibraryCard } from "@/components/workbench/model/workbench-material-library-card";
 import { WorkbenchModelSidebar, type ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
@@ -39,14 +248,11 @@ import {
   useWorkbenchWorkflowController,
 } from "@/components/workbench/workflow/workbench-workflow-controller";
 import { WorkbenchWorkflowSidebar } from "@/components/workbench/workflow/workbench-workflow-sidebar";
-import type {
-  WorkflowSurfaceTab,
-} from "@/components/workbench/workflow/workbench-workflow-types";
 import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { parseMaterialLibrary } from "@/lib/materials";
-import { createMaterialDefinition, MATERIAL_PRESETS } from "@/lib/materials";
+import { MATERIAL_PRESETS } from "@/lib/materials";
 import { parsePlaygroundModel } from "@/lib/models";
-import { exportProjectBundleZip, parseProjectBundleFile } from "@/lib/projects";
+import { exportProjectBundleZip } from "@/lib/projects";
 import {
   persistWorkbenchSettings,
   fixed,
@@ -63,7 +269,6 @@ import {
   WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
   type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
-import { serializeResultCsv } from "@/lib/workbench/result-csv";
 import {
   buildWorkbenchSnapshot,
   createAssistantTransactionEntry,
@@ -124,16 +329,7 @@ import {
   updateMaterialInTruss3dModel,
   updateMaterialInTrussModel,
 } from "@/lib/workbench/material-commands";
-import {
-  clampChunkOffset,
-  chunkCacheKey,
-  computeResultWindowSize,
-  computeVisibleResultWindowOffset,
-  readChunkCache,
-  RESULT_WINDOW_BASE_SIZE,
-  RESULT_WINDOW_THRESHOLD,
-  writeChunkCache,
-} from "@/lib/workbench/result-window";
+import { clampChunkOffset, RESULT_WINDOW_BASE_SIZE } from "@/lib/workbench/result-window";
 import {
   addFrame2dNode,
   assignFrame2dElementMaterial,
@@ -187,7 +383,6 @@ import {
   getWorkbenchScriptMacroDefinition,
   listWorkbenchMacroPresets,
   resolveWorkbenchMacroPayloadTemplates,
-  saveWorkbenchMacroPreset,
   type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
@@ -216,7 +411,6 @@ import {
   createModel,
   createModelVersion,
   createProject,
-  fetchSecurityEvents,
   exportSecurityEvents,
   exportSecurityEventsCsv,
   createTruss2dJob,
@@ -228,17 +422,10 @@ import {
   deleteProject,
   deleteResultRecord,
   fetchDatabaseExport,
-  fetchDirectMeshAgents,
-  fetchDirectMeshResultChunk,
   fetchModel,
   fetchModelVersion,
   fetchModelVersions,
-  fetchHealth,
-  fetchJobHistory,
   fetchJobStatus,
-  fetchProtocolAgents,
-  fetchResultChunk,
-  fetchProjects,
   fetchResults,
   type AxialBarJobInput,
   type AxialBarResult,
@@ -278,7 +465,6 @@ import {
   type ProtocolAgentDescriptor,
   type ProjectRecord,
   type ResultRecord,
-  type ResultChunkPayload,
   type SecurityEventRecord,
   type ThermalBeam1dElementInput,
   type ThermalBeam1dJobInput,
@@ -340,4173 +526,6 @@ import {
   updateResultRecord,
 } from "@/lib/api";
 
-type Language = "en" | "zh" | "ja" | "es";
-type Theme = "linen" | "marine" | "graphite";
-type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
-type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
-type PlaneStudyJobInput = PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ThermalPlaneTriangle2dJobInput | ThermalPlaneQuad2dJobInput;
-type HeatPlaneStudyJobInput = HeatPlaneTriangle2dJobInput | HeatPlaneQuad2dJobInput;
-type FrameStudyJobInput = Frame2dJobInput;
-type ThermalFrameStudyJobInput = ThermalFrame2dJobInput;
-type BeamStudyJobInput = Beam1dJobInput;
-type ThermalBeamStudyJobInput = ThermalBeam1dJobInput;
-type ThermalBarStudyJobInput = ThermalBar1dJobInput;
-type HeatBarStudyJobInput = HeatBar1dJobInput;
-type ThermalTruss2dStudyJobInput = ThermalTruss2dJobInput;
-type ThermalTruss3dStudyJobInput = ThermalTruss3dJobInput;
-type SpringStudyJobInput = Spring1dJobInput;
-type Spring2dStudyJobInput = Spring2dJobInput;
-type Spring3dStudyJobInput = Spring3dJobInput;
-type LineResultField =
-  | "axial_stress"
-  | "max_bending_stress"
-  | "max_combined_stress"
-  | "moment"
-  | "shear_force"
-  | "average_temperature_delta"
-  | "temperature_gradient_y"
-  | "thermal_curvature";
-type FrameResultField = Exclude<LineResultField, "shear_force">;
-type BeamResultField = Extract<LineResultField, "max_bending_stress" | "moment" | "shear_force" | "temperature_gradient_y" | "thermal_curvature">;
-type StudyPanelTab = "summary" | "controls";
-type ModelPanelTab = "tools" | "tree";
-type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samples";
-type WorkflowPanelTab = WorkflowSurfaceTab;
-type ImmersiveToolTab = "node" | "props";
-type SystemDataTab = "jobs" | "results";
-type SystemPanelTab = "config" | "assistant" | "scripts" | "runtime" | "data";
-type AssistantMode = "local" | "llm";
-type SecurityEventWindow = "" | "1h" | "24h" | "7d" | "30d";
-
-const SECURITY_EVENT_WINDOW_MS: Record<Exclude<SecurityEventWindow, "">, number> = {
-  "1h": 60 * 60 * 1_000,
-  "24h": 24 * 60 * 60 * 1_000,
-  "7d": 7 * 24 * 60 * 60 * 1_000,
-  "30d": 30 * 24 * 60 * 60 * 1_000,
-};
-
-type AxialFormState = {
-  length: number;
-  area: number;
-  elements: number;
-  tipForce: number;
-  material: string;
-  youngsModulusGpa: number;
-};
-
-type DisplayTrussNode = {
-  index: number;
-  id: string;
-  x: number;
-  y: number;
-  ux: number;
-  uy: number;
-  fix_x: boolean;
-  fix_y: boolean;
-  load_x: number;
-  load_y: number;
-};
-
-type DisplayTrussElement = {
-  index: number;
-  id: string;
-  node_i: number;
-  node_j: number;
-  length: number;
-  strain: number;
-  stress: number;
-  axial_force: number;
-  axial_stress?: number;
-  max_bending_stress?: number;
-  max_combined_stress?: number;
-  axial_force_i?: number;
-  shear_force_i?: number;
-  moment_i?: number;
-  axial_force_j?: number;
-  shear_force_j?: number;
-  moment_j?: number;
-  average_temperature_delta?: number;
-  temperature_gradient_y?: number;
-  thermal_curvature?: number;
-  material_id?: string;
-};
-
-type DisplayTruss3dNode = {
-  index: number;
-  id: string;
-  x: number;
-  y: number;
-  z: number;
-  ux: number;
-  uy: number;
-  uz: number;
-};
-
-type DisplayTruss3dElement = {
-  index: number;
-  id: string;
-  node_i: number;
-  node_j: number;
-  length: number;
-  strain: number;
-  stress: number;
-  axial_force: number;
-  material_id?: string;
-};
-
-type SelectionKind = "node" | "element";
-
-type TrussSuggestion =
-  | { id: string; kind: "fix_support"; axis: "x" | "y"; nodeIndex: number; label: string }
-  | { id: string; kind: "connect_nearest"; nodeIndex: number; label: string };
-
-type TrussDiagnostics = {
-  blockingMessages: string[];
-  nodeIssues: Record<number, string[]>;
-  suggestions: TrussSuggestion[];
-};
-
-type StabilitySummary = {
-  score: number;
-  tone: "good" | "watch" | "risk";
-  hotspotNodes: number[];
-};
-
-type PlaneResultField =
-  | "von_mises"
-  | "principal_stress_1"
-  | "max_in_plane_shear"
-  | "average_temperature"
-  | "average_temperature_delta"
-  | "temperature_gradient_x"
-  | "temperature_gradient_y"
-  | "heat_flux_x"
-  | "heat_flux_y"
-  | "heat_flux_magnitude"
-  | "thermal_strain"
-  | "mechanical_strain";
-
-type ResultWindowState = {
-  jobId: string;
-  studyKind: Exclude<StudyKind, "axial_bar_1d">;
-  nodes: Record<string, unknown>[];
-  elements: Record<string, unknown>[];
-  totalNodes: number;
-  totalElements: number;
-  limit: number;
-};
-
-type DirectMeshExecutionState = {
-  endpoint: string;
-  strategy: DirectMeshSelectionMode;
-  at: string;
-};
-
-const defaultAxial: AxialFormState = {
-  length: 1.2,
-  area: 0.01,
-  elements: 6,
-  tipForce: 1800,
-  material: "210",
-  youngsModulusGpa: 210,
-};
-
-const defaultTruss: Truss2dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "n1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "n2", x: 0.5, y: 0.8, fix_x: false, fix_y: false, load_x: 0, load_y: -1000 },
-  ],
-  elements: [
-    { id: "e0", node_i: 0, node_j: 2, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e2", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-  ],
-};
-
-const defaultParametric: ParametricTrussConfig = {
-  bays: 4,
-  span: 12,
-  height: 3,
-  area: 0.01,
-  youngsModulusGpa: 70,
-  loadY: -1200,
-};
-
-const defaultPanelParametric: ParametricPanelConfig = {
-  width: 3.2,
-  height: 1.8,
-  divisionsX: 4,
-  divisionsY: 3,
-  thickness: 0.02,
-  youngsModulusGpa: 70,
-  poissonRatio: 0.33,
-  loadY: -1200,
-};
-
-const defaultPlaneTriangle: PlaneTriangle2dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1", poisson_ratio: 0.33 })],
-  nodes: [
-    { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "n1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "n2", x: 1, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -800 },
-    { id: "n3", x: 0, y: 1, fix_x: true, fix_y: false, load_x: 0, load_y: -800 },
-  ],
-  elements: [
-    { id: "p0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, material_id: "mat-1" },
-    { id: "p1", node_i: 0, node_j: 2, node_k: 3, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, material_id: "mat-1" },
-  ],
-};
-
-const defaultPlaneQuad: PlaneQuad2dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1", poisson_ratio: 0.33 })],
-  nodes: [
-    { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "n1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "n2", x: 1, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -800 },
-    { id: "n3", x: 0, y: 1, fix_x: true, fix_y: false, load_x: 0, load_y: -800 },
-  ],
-  elements: [
-    {
-      id: "q0",
-      node_i: 0,
-      node_j: 1,
-      node_k: 2,
-      node_l: 3,
-      thickness: 0.02,
-      youngs_modulus: 70e9,
-      poisson_ratio: 0.33,
-      material_id: "mat-1",
-    },
-  ],
-};
-
-const defaultThermalPlaneTriangle: ThermalPlaneTriangle2dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1", poisson_ratio: 0.33 })],
-  nodes: [
-    { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-    { id: "n1", x: 1, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-    { id: "n2", x: 1, y: 1, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-    { id: "n3", x: 0, y: 1, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-  ],
-  elements: [
-    { id: "tp0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, thermal_expansion: 12e-6, material_id: "mat-1" },
-    { id: "tp1", node_i: 0, node_j: 2, node_k: 3, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, thermal_expansion: 12e-6, material_id: "mat-1" },
-  ],
-};
-
-const defaultThermalPlaneQuad: ThermalPlaneQuad2dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1", poisson_ratio: 0.33 })],
-  nodes: [
-    { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 30 },
-    { id: "n1", x: 1, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 30 },
-    { id: "n2", x: 1, y: 1, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 30 },
-    { id: "n3", x: 0, y: 1, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 30 },
-  ],
-  elements: [
-    { id: "tq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, youngs_modulus: 70e9, poisson_ratio: 0.33, thermal_expansion: 11e-6, material_id: "mat-1" },
-  ],
-};
-
-const defaultHeatPlaneTriangle: HeatPlaneTriangle2dJobInput = {
-  nodes: [
-    { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-    { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
-    { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-    { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-  ],
-  elements: [
-    { id: "hp0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, conductivity: 45 },
-    { id: "hp1", node_i: 0, node_j: 2, node_k: 3, thickness: 0.02, conductivity: 45 },
-  ],
-};
-
-const defaultHeatPlaneQuad: HeatPlaneQuad2dJobInput = {
-  nodes: [
-    { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-    { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
-    { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-    { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-  ],
-  elements: [
-    { id: "hq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, conductivity: 45 },
-  ],
-};
-
-const defaultTruss3d: Truss3dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "b0", x: 0, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
-    { id: "b1", x: 1.2, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
-    { id: "b2", x: 0.1, y: 1.0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
-    { id: "top", x: 0.35, y: 0.3, z: 1.0, fix_x: false, fix_y: false, fix_z: false, load_x: 0, load_y: 0, load_z: -1500 },
-  ],
-  elements: [
-    { id: "e0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e2", node_i: 2, node_j: 0, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e3", node_i: 0, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e4", node_i: 1, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-    { id: "e5", node_i: 2, node_j: 3, area: 0.01, youngs_modulus: 70e9, material_id: "mat-1" },
-  ],
-};
-
-const defaultBeam1d: Beam1dJobInput = {
-  materials: [createMaterialDefinition("210", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "b0", x: 0, fix_y: true, fix_rz: true, load_y: 0, moment_z: 0 },
-    { id: "b1", x: 2.4, fix_y: false, fix_rz: false, load_y: -12000, moment_z: 0 },
-  ],
-  elements: [
-    {
-      id: "m0",
-      node_i: 0,
-      node_j: 1,
-      youngs_modulus: 210e9,
-      moment_of_inertia: 1.2e-4,
-      section_modulus: 1.1e-3,
-      distributed_load_y: 0,
-      material_id: "mat-1",
-    },
-  ],
-};
-
-const defaultThermalBeam1d: ThermalBeam1dJobInput = {
-  materials: [createMaterialDefinition("210", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "tb0", x: 0, fix_y: true, fix_rz: true, load_y: 0, moment_z: 0 },
-    { id: "tb1", x: 2.4, fix_y: false, fix_rz: false, load_y: 0, moment_z: 0 },
-  ],
-  elements: [
-    {
-      id: "tm0",
-      node_i: 0,
-      node_j: 1,
-      youngs_modulus: 210e9,
-      moment_of_inertia: 1.2e-4,
-      section_modulus: 1.1e-3,
-      thermal_expansion: 1.2e-5,
-      section_depth: 0.3,
-      distributed_load_y: 0,
-      temperature_gradient_y: 45,
-      material_id: "mat-1",
-    },
-  ],
-};
-
-const defaultTorsion1d: Torsion1dJobInput = {
-  nodes: [
-    { id: "t0", x: 0, fix_rz: true, torque_z: 0 },
-    { id: "t1", x: 1.5, fix_rz: false, torque_z: 2500 },
-  ],
-  elements: [
-    {
-      id: "s0",
-      node_i: 0,
-      node_j: 1,
-      shear_modulus: 79e9,
-      polar_moment: 1.8e-6,
-      section_modulus: 1.2e-4,
-    },
-  ],
-};
-
-const defaultSpring1d: Spring1dJobInput = {
-  nodes: [
-    { id: "s0", x: 0, fix_x: true, load_x: 0 },
-    { id: "s1", x: 1.2, fix_x: false, load_x: 0 },
-    { id: "s2", x: 2.4, fix_x: false, load_x: 1200 },
-  ],
-  elements: [
-    { id: "k0", node_i: 0, node_j: 1, stiffness: 35000 },
-    { id: "k1", node_i: 1, node_j: 2, stiffness: 20000 },
-  ],
-};
-
-const defaultThermalBar1d: ThermalBar1dJobInput = {
-  nodes: [
-    { id: "t0", x: 0, fix_x: true, load_x: 0, temperature_delta: 40 },
-    { id: "t1", x: 1.5, fix_x: true, load_x: 0, temperature_delta: 40 },
-  ],
-  elements: [
-    { id: "tb0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 210e9, thermal_expansion: 1.2e-5 },
-  ],
-};
-
-const defaultHeatBar1d: HeatBar1dJobInput = {
-  nodes: [
-    { id: "h0", x: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-    { id: "h1", x: 1, fix_temperature: false, temperature: 0, heat_load: 0 },
-    { id: "h2", x: 2, fix_temperature: true, temperature: 20, heat_load: 0 },
-  ],
-  elements: [
-    { id: "he0", node_i: 0, node_j: 1, area: 0.01, conductivity: 45 },
-    { id: "he1", node_i: 1, node_j: 2, area: 0.01, conductivity: 45 },
-  ],
-};
-
-const defaultThermalTruss2d: ThermalTruss2dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "tt0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-    { id: "tt1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-    { id: "tt2", x: 0.5, y: 0.8, fix_x: false, fix_y: false, load_x: 0, load_y: -400, temperature_delta: 25 },
-  ],
-  elements: [
-    { id: "tte0", node_i: 0, node_j: 2, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte2", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-  ],
-};
-
-const defaultThermalTruss3d: ThermalTruss3dJobInput = {
-  materials: [createMaterialDefinition("70", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "tb0", x: 0, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0, temperature_delta: 35 },
-    { id: "tb1", x: 1.2, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0, temperature_delta: 35 },
-    { id: "tb2", x: 0.1, y: 1.0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0, temperature_delta: 35 },
-    { id: "tb3", x: 0.35, y: 0.3, z: 1.0, fix_x: false, fix_y: false, fix_z: false, load_x: 0, load_y: 0, load_z: -900, temperature_delta: 15 },
-  ],
-  elements: [
-    { id: "tte0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte2", node_i: 2, node_j: 0, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte3", node_i: 0, node_j: 3, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte4", node_i: 1, node_j: 3, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-    { id: "tte5", node_i: 2, node_j: 3, area: 0.01, youngs_modulus: 70e9, thermal_expansion: 1.2e-5, material_id: "mat-1" },
-  ],
-};
-
-const defaultSpring2d: Spring2dJobInput = {
-  nodes: [
-    { id: "s0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "s1", x: 1.2, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
-    { id: "s2", x: 1.2, y: 1.2, fix_x: false, fix_y: false, load_x: 1200, load_y: -600 },
-    { id: "s3", x: 0, y: 1.2, fix_x: true, fix_y: false, load_x: 0, load_y: 0 },
-  ],
-  elements: [
-    { id: "k0", node_i: 0, node_j: 1, stiffness: 28000 },
-    { id: "k1", node_i: 1, node_j: 2, stiffness: 18000 },
-    { id: "k2", node_i: 2, node_j: 3, stiffness: 22000 },
-    { id: "k3", node_i: 3, node_j: 0, stiffness: 18000 },
-    { id: "k4", node_i: 0, node_j: 2, stiffness: 12000 },
-  ],
-};
-
-const defaultSpring3d: Spring3dJobInput = {
-  nodes: [
-    { id: "s0", x: 0, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
-    { id: "s1", x: 1.2, y: 0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
-    { id: "s2", x: 0, y: 1.0, z: 0, fix_x: true, fix_y: true, fix_z: true, load_x: 0, load_y: 0, load_z: 0 },
-    { id: "top", x: 0.45, y: 0.35, z: 1.1, fix_x: false, fix_y: false, fix_z: false, load_x: 250, load_y: 0, load_z: -1100 },
-  ],
-  elements: [
-    { id: "k0", node_i: 0, node_j: 3, stiffness: 18000 },
-    { id: "k1", node_i: 1, node_j: 3, stiffness: 22000 },
-    { id: "k2", node_i: 2, node_j: 3, stiffness: 16000 },
-    { id: "k3", node_i: 0, node_j: 1, stiffness: 9000 },
-    { id: "k4", node_i: 1, node_j: 2, stiffness: 9000 },
-    { id: "k5", node_i: 2, node_j: 0, stiffness: 9000 },
-  ],
-};
-
-const defaultFrame2d: Frame2dJobInput = {
-  materials: [createMaterialDefinition("210", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "f0", x: 0, y: 0, fix_x: true, fix_y: true, fix_rz: true, load_x: 0, load_y: 0, moment_z: 0 },
-    { id: "f1", x: 0, y: 2.4, fix_x: false, fix_y: false, fix_rz: false, load_x: 0, load_y: 0, moment_z: 0 },
-    { id: "f2", x: 3.2, y: 2.4, fix_x: false, fix_y: false, fix_rz: false, load_x: 0, load_y: -12000, moment_z: 0 },
-    { id: "f3", x: 3.2, y: 0, fix_x: false, fix_y: true, fix_rz: false, load_x: 0, load_y: 0, moment_z: 0 },
-  ],
-  elements: [
-    { id: "c0", node_i: 0, node_j: 1, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, material_id: "mat-1" },
-    { id: "b0", node_i: 1, node_j: 2, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.2e-4, section_modulus: 1.1e-3, material_id: "mat-1" },
-    { id: "c1", node_i: 2, node_j: 3, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, material_id: "mat-1" },
-  ],
-};
-
-const defaultThermalFrame2d: ThermalFrame2dJobInput = {
-  materials: [createMaterialDefinition("210", 1, { id: "mat-1" })],
-  nodes: [
-    { id: "tf0", x: 0, y: 0, fix_x: true, fix_y: true, fix_rz: true, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 20 },
-    { id: "tf1", x: 0, y: 2.4, fix_x: false, fix_y: false, fix_rz: false, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 40 },
-    { id: "tf2", x: 3.2, y: 2.4, fix_x: false, fix_y: false, fix_rz: false, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 40 },
-    { id: "tf3", x: 3.2, y: 0, fix_x: true, fix_y: true, fix_rz: true, load_x: 0, load_y: 0, moment_z: 0, temperature_delta: 20 },
-  ],
-  elements: [
-    { id: "tc0", node_i: 0, node_j: 1, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, thermal_expansion: 1.2e-5, section_depth: 0.32, temperature_gradient_y: 0, material_id: "mat-1" },
-    { id: "tb0", node_i: 1, node_j: 2, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.2e-4, section_modulus: 1.1e-3, thermal_expansion: 1.2e-5, section_depth: 0.28, temperature_gradient_y: 30, material_id: "mat-1" },
-    { id: "tc1", node_i: 2, node_j: 3, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, thermal_expansion: 1.2e-5, section_depth: 0.32, temperature_gradient_y: 0, material_id: "mat-1" },
-  ],
-};
-
-const copyEn = {
-    brand: brand.productName,
-    shortTitle: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
-    roleLabel: brand.workbenchRoleLabel ?? "Analysis shell",
-    title: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
-    subtitle: brand.workbenchDescription,
-    rail: { study: "Study", model: "Workspace", workflow: "Workflow", library: "History", system: "System" },
-    sections: { study: "Study Setup", model: "Workspace", workflow: "Workflow Studio", library: "Job History", system: "System" },
-    kinds: {
-      axial_bar_1d: "1D axial bar",
-      heat_bar_1d: "1D heat bar",
-      heat_plane_triangle_2d: "2D heat plane triangle",
-      heat_plane_quad_2d: "2D heat plane quad",
-      thermal_bar_1d: "1D thermal bar",
-      thermal_beam_1d: "1D thermal beam",
-      thermal_frame_2d: "2D thermal frame",
-      thermal_truss_2d: "2D thermal truss",
-      thermal_truss_3d: "3D thermal space truss",
-      thermal_plane_triangle_2d: "2D thermal plane triangle",
-      thermal_plane_quad_2d: "2D thermal plane quad",
-      spring_1d: "1D spring",
-      spring_2d: "2D spring",
-      spring_3d: "3D spring",
-      beam_1d: "1D beam",
-      torsion_1d: "1D torsion shaft",
-      truss_2d: "2D truss",
-      truss_3d: "3D space truss",
-      plane_triangle_2d: "2D plane triangle",
-      plane_quad_2d: "2D plane quad",
-      frame_2d: "2D frame",
-    },
-    studyFamilies: {
-      axialAndSprings: "Axial & Springs",
-      beamsAndFrames: "Beams & Frames",
-      trusses: "Trusses",
-      planes: "Planes",
-    },
-    studyDomains: {
-      mechanical: "Mechanical",
-      thermal: "Thermal",
-      thermoMechanical: "Thermo-mechanical",
-    },
-    familyHints: {
-      axialAndSprings: "Line studies focused on stiffness, extension, and axial force paths.",
-      beamsAndFrames: "Member studies focused on bending, shear, rotation, and end-force review.",
-      trusses: "Connectivity studies focused on axial load paths and structural stability.",
-      planes: "Continuum studies focused on stress fields, patches, and hotspot elements.",
-    },
-    importModel: "Import model",
-    importHint: "Load a JSON model for 1D or 2D studies.",
-    sampleCatalogPage: "Catalog",
-    sampleImportPage: "Import",
-    workflowOverviewPage: "Overview",
-    workflowCatalogPage: "Catalog",
-    workflowBuilderPage: "Builder",
-    workflowRunsPage: "Runs",
-    workflowCatalogTitle: "Workflow Catalog",
-    workflowCatalogHint: "Run named multi-operator workflows here before wiring them into a larger study path.",
-    workflowOverviewHint: "Keep composite operator workflows in one dedicated surface instead of hiding them inside samples or results.",
-    workflowBuilderHint: "Inspect graph nodes, bridges, extracts, and exports before turning them into a larger study chain.",
-    workflowRunsHint: "Track named workflow jobs, current nodes, and exported summaries from one place.",
-    workflowCatalogRefresh: "Refresh workflows",
-    workflowCatalogRun: "Run reference sample",
-    workflowCatalogEmpty: "No named workflows are published yet.",
-    workflowCatalogReady: "Workflow catalog ready.",
-    workflowCatalogQueued: "Queued workflow job",
-    workflowCatalogCompleted: "Workflow completed",
-    workflowCatalogUnsupported: "This workflow does not have a built-in sample input yet.",
-    workflowCatalogLoaded: "Loaded workflow catalog.",
-    workflowCatalogFailed: "Workflow run failed.",
-    workflowSelectForBuilder: "Open builder",
-    workflowNoSelection: "Select a named workflow first so the builder can show its graph.",
-    workflowNodesTitle: "Nodes",
-    workflowEdgesTitle: "Edges",
-    workflowEntryInputsTitle: "Entry Inputs",
-    workflowOutputArtifactsTitle: "Output Artifacts",
-    workflowDatasetContractTitle: "Dataset Contract",
-    workflowDatasetValuesTitle: "Dataset Values",
-    workflowDatasetValueLabel: "Dataset Value",
-    workflowDatasetSemanticTypeLabel: "Semantic Type",
-    workflowDatasetEncodingLabel: "Encoding",
-    workflowDatasetShapeLabel: "Shape",
-    workflowDatasetAxesLabel: "Axis",
-    workflowDatasetSchemaLabel: "Schema",
-    workflowDatasetClassLabel: "Element Type",
-    workflowDatasetNoneLabel: "This workflow has not published a dataset contract yet.",
-    workflowDatasetDraftHint: "Edit dataset semantics locally here first so ports, edges, and cross-operator values line up before we add persistence.",
-    workflowDatasetEditorTitle: "Dataset Editor",
-    workflowDatasetValueSelectLabel: "Selected Dataset Value",
-    workflowDatasetUnitLabel: "Unit",
-    workflowDatasetMetadataLabel: "Metadata",
-    workflowDatasetPortMappingsTitle: "Port Mappings",
-    workflowDatasetEdgeMappingsTitle: "Edge Mappings",
-    workflowDatasetDraftLocalLabel: "local draft",
-    workflowDatasetUnassignedLabel: "Unassigned",
-    workflowExportGraphLabel: "Export Graph JSON",
-    workflowExportDatasetContractLabel: "Export Dataset JSON",
-    workflowOperatorLabel: "Operator",
-    workflowKindLabel: "Kind",
-    workflowProgressLabel: "Progress",
-    workflowCurrentNodeLabel: "Current node",
-    workflowLatestSummaryLabel: "Latest summary",
-    workflowOpenRunLabel: "Open run",
-    workflowRunsEmpty: "No workflow runs yet.",
-    projectManagePage: "Manage",
-    projectExchangePage: "Exchange",
-    modelSavedPage: "Saved",
-    modelVersionsPage: "Versions",
-    studyDomain: "Physics domain",
-    noDomainStudies: "No studies are published in this domain yet.",
-    axialSample: "Open 1D sample",
-    trussSample: "Open 2D sample",
-    modelName: "Model",
-    material: "Material",
-    mesh: "Mesh",
-    load: "Load",
-    support: "Support",
-    viewport: "Viewport",
-    report: "Report",
-    metrics: "Solver Metrics",
-    messages: "Messages",
-    failureReason: "Failure reason",
-    lastHeartbeat: "Last heartbeat",
-    heartbeatStatus: "Heartbeat status",
-    cancelJob: "Cancel job",
-    historyPanel: "Operation History",
-    undo: "Undo",
-    redo: "Redo",
-    noOperations: "No reversible operations yet.",
-    undoApplied: "Rolled back the last change.",
-    redoApplied: "Re-applied the last rolled-back change.",
-    changeStudyType: "Changed study type",
-    editAxialField: "Edited axial study input",
-    editMaterial: "Changed material preset",
-    editParametric: "Edited parametric generator",
-    importAction: "Imported model file",
-    sampleAction: "Loaded sample model",
-    historyAction: "Opened historical job",
-    generateAction: "Generated parametric truss",
-    applySuggestionAction: "Applied diagnostic fix",
-    addNodeAction: "Added node",
-    deleteNodeAction: "Deleted node",
-    toggleMemberAction: "Changed member connectivity",
-    deleteMemberAction: "Deleted member",
-    dragNodeAction: "Dragged node",
-    editNodeAction: "Edited node properties",
-    editMemberAction: "Edited member properties",
-    overview: "Overview",
-    result: "Result",
-    actions: "Actions",
-    details: "Details",
-    controls: "Controls",
-    controlsSetupPage: "Setup",
-    controlsReviewPage: "Review",
-    studyTypeLabel: "Study Type",
-    modelStudyPage: "Study",
-    modelOverviewPage: "Overview",
-    modelStudioPage: "Studio",
-    modelMaterialsPage: "Materials",
-    modelGeneratePage: "Generate",
-    workspaceStudyHint: "Choose the study family, physics domain, and solver-ready setup here.",
-    workspaceStudioHint: "Build and edit nodes, members, boundaries, and geometry here.",
-    workspaceMaterialsHint: "Keep starter material values and reusable material choices together here.",
-    workspaceGenerateHint: "Use generators and parametric helpers to create repeatable models here.",
-    workspaceBrowseHint: "Browse objects, highlights, and result-linked selections here.",
-    settings: "Settings",
-    scripts: "Scripts",
-    settingsConfigHint: "Theme, language, routing, access tokens, and language packs stay here.",
-    settingsScriptsHint: "WASM Python, macro recording, and action catalogs stay here.",
-    assistant: "Assistant",
-    config: "Config",
-    runtime: "Runtime",
-    data: "Data",
-    packs: "Language packs",
-    workspace: "Workspace",
-    routing: "Routing",
-    access: "Access",
-    stack: "Stack",
-    security: "Security",
-    agents: "Agents",
-    audit: "Audit",
-    assistantSummary: "Context",
-    assistantStatusReady: "Ready",
-    assistantCurrentStudy: "Study",
-    assistantCurrentRuntime: "Runtime",
-    assistantCurrentJob: "Job",
-    assistantCurrentResult: "Result",
-    assistantEmpty: "The workbench looks healthy. No assisted action is needed right now.",
-    assistantNeedsProject: "Attach this workspace to a project",
-    assistantNeedsProjectHint: "Projects make saved models, jobs, exports, and history easier to manage.",
-    assistantOpenProjects: "Open projects",
-    assistantRefreshRuntime: "Refresh runtime status",
-    assistantRefreshRuntimeHint: "The runtime snapshot is missing or stale. Pull the latest health and agent state.",
-    assistantConfigureDirectMesh: "Configure direct mesh endpoints",
-    assistantConfigureDirectMeshHint: "Direct mesh mode needs at least one reachable host:port endpoint before it can route solves.",
-    assistantRunStudy: "Run the current study",
-    assistantRunStudyHint: "The model is ready enough to submit. Launch a fresh solve with the current inputs.",
-    assistantCancelRun: "Cancel the active run",
-    assistantCancelRunHint: "A solve is still in flight. Stop it if you want to edit the model or retry with different settings.",
-    assistantApplyFix: "Apply the first suggested fix",
-    assistantApplyFixHint: "The 2D truss precheck found a blocking issue and already prepared a safe first repair.",
-    assistantEnterImmersive: "Open immersive 3D viewport",
-    assistantEnterImmersiveHint: "Switch the 3D study into fullscreen editing when you want more room for picking and navigation.",
-    assistantOpenSample: "Open the official sample for this study",
-    assistantOpenSampleHint: "If you are still learning this study family, start with the closest official sample before editing your own model.",
-    assistantReviewControls: "Review supports, loads, and materials",
-    assistantReviewControlsHint: "Before the first run, check the study controls and confirm the basic physical story makes sense.",
-    assistantReviewReport: "Review the current result report",
-    assistantReviewReportHint: "Open the report first, then read hotspots, summary metrics, and result-field meaning before changing the model.",
-    assistantExportResult: "Export the current result data",
-    assistantExportResultHint: "Export CSV once the result looks plausible so you have a stable trail for comparison and review.",
-    assistantPromptExplain: "Explain this study to a beginner",
-    assistantPromptMaterial: "Help me choose starter material values",
-    assistantPromptBoundary: "Help me choose supports and loads",
-    assistantPromptResults: "Help me read these result fields",
-    assistantLauncherHint: "Need a guide?",
-    assistantFloatingTitle: "Ask the workbench",
-    assistantFloatingSubtitle: "Keep the main workspace clear, then pull a guide in only when you need one.",
-    assistantOpen: "Open assistant",
-    assistantClose: "Close assistant",
-    backend: "Backend",
-    protocols: "Protocols",
-    controlPlaneProtocol: "Control plane",
-    solverRpcProtocol: "Solver RPC",
-    deploymentMode: "Deployment mode",
-    discoveryMode: "Discovery",
-    registeredAgents: "Registered agents",
-    reachableAgents: "Reachable agents",
-    runtimeMode: "Runtime mode",
-    cluster: "Cluster",
-    clusterSize: "Cluster size",
-    clusterHealth: "Cluster health",
-    peers: "Peers",
-    peerState: "Peer state",
-    headless: "Headless",
-    capabilities: "Capabilities",
-    methods: "Methods",
-    protocolAgents: "Protocol agents",
-    noProtocolAgents: "No reachable solver agents were described yet.",
-    watchdog: "Watchdog",
-    activeJobs: "Active jobs",
-    stalledJobs: "Stalled jobs",
-    timedOutJobs: "Timed out jobs",
-    scanEvery: "Scan every",
-    staleAfter: "Stall limit",
-    timeoutAfter: "Timeout limit",
-    dataAdmin: "Data Admin",
-    orchestrator: "Elixir orchestrator",
-    solverAgent: "Rust solver agent",
-    ui: "Next.js UI",
-    theme: "Theme",
-    language: "Language",
-    languagePacksTitle: "Installed language packs",
-    languagePacksHint: "Import local JSON packs now, and keep this page ready for future remote pack delivery.",
-    languagePacksEmptyLabel: "No custom language packs are installed yet.",
-    languagePackName: "Name",
-    languagePackVersion: "Version",
-    languagePackSourceImported: "Imported",
-    languagePackSourceDownloaded: "Downloaded",
-    languagePackDownloadTemplate: "Download template",
-    languagePackExportInstalled: "Export installed pack",
-    languagePackImport: "Import pack",
-    languagePackRemove: "Remove",
-    languagePackCatalogTitle: "Future catalog",
-    languagePackCatalogHint: "These slots stay visible now so future remote pack download can plug into the same surface.",
-    languagePackCatalogAction: "Coming soon",
-    frontendMode: "Frontend mode",
-    directMeshEndpoints: "Direct mesh endpoints",
-    directMeshEndpointsHelp: "Comma or newline separated host:port agents for the LAN mesh GUI path.",
-    directMeshCompleted: "Direct mesh solve completed",
-    directMeshStrategy: "Mesh strategy",
-    directMeshLastRoute: "Last route",
-    directMeshLastAgent: "Last agent",
-    shortcutHints: "Shortcut hints",
-    shortcutHintsHelp: "Show the 3D keyboard legend in the viewport.",
-    immersiveGuard: "Immersive guard",
-    immersiveGuardHelp: "In immersive view, block text selection, context menu, and common copy shortcuts.",
-    enterImmersive: "Immersive",
-    exitImmersive: "Exit immersive",
-    immersiveModeEnabled: "Immersive viewport enabled.",
-    immersiveModeDisabled: "Immersive viewport closed.",
-    browserLimitsNote: "Browser extensions cannot be fully disabled from the page, but the viewport can reduce selection and copy interactions.",
-    controlPlaneTokenHelp:
-      "Used for token-protected control-plane deployments; sent as x-kyuubiki-token to /api/v1 requests.",
-    controlPlaneTokenPlaceholder: "Optional control-plane token",
-    clusterTokenHelp:
-      "Used for agent register/heartbeat/remove cluster routes; falls back to the control-plane token when empty.",
-    clusterTokenPlaceholder: "Optional cluster-only token",
-    directMeshTokenHelp:
-      "Used for token-protected direct mesh routes; sent to /api/direct-mesh requests.",
-    directMeshTokenPlaceholder: "Optional direct-mesh token",
-    exportDatabase: "Export database snapshot",
-    runtimeSecurityFooter:
-      "Runtime security state comes from /api/health; frontend tokens stay only in the current browser session.",
-    securityAudit: "Security audit",
-    auditSessionLabel:
-      "Shows the control-plane persisted automation and assistant event stream, including Workbench assistant, scripting, and Hub assistant actions.",
-    auditWindow: "Window",
-    auditSource: "Source",
-    auditRisk: "Risk",
-    auditStatus: "Status",
-    auditAction: "Action",
-    auditSummaryTitle: "Event summary",
-    auditTrendTitle: "Event trend",
-    auditTrendEmptyLabel: "No trend data is available for the current window.",
-    auditSourceStatusTitle: "Source × status",
-    auditStudyFacetTitle: "Study facets",
-    auditProjectFacetTitle: "Project facets",
-    auditModelVersionFacetTitle: "Version facets",
-    auditFacetEmptyLabel: "No facets are available for the current window.",
-    auditRefreshLabel: "Refresh events",
-    auditExportLabel: "Export bundle",
-    auditExportCsvLabel: "Export CSV",
-    auditWindowOptions: { all: "All time", h1: "Last 1 hour", h24: "Last 24 hours", d7: "Last 7 days", d30: "Last 30 days" },
-    auditSourceOptions: { all: "All", assistant: "Assistant", hubAssistant: "Hub assistant", script: "Script" },
-    auditRiskOptions: { all: "All", low: "Low", sensitive: "Sensitive", high: "High", destructive: "Destructive" },
-    auditStatusOptions: { all: "All", prompted: "Prompted", confirmed: "Confirmed", cancelled: "Cancelled", completed: "Completed", failed: "Failed" },
-    adminJobs: "Jobs",
-    adminResults: "Results",
-    adminBrowsePage: "Browse",
-    adminEditPage: "Edit",
-    selectRecord: "Select a record to inspect or edit.",
-    adminMessage: "Message",
-    adminProjectId: "Project ID",
-    adminModelVersionId: "Model version",
-    adminCaseId: "Simulation case",
-    saveRecord: "Save record",
-    deleteRecord: "Delete record",
-    exportRecord: "Export record",
-    applyRecordContext: "Apply record context",
-    openLinkedProject: "Open linked project",
-    openLinkedVersion: "Open linked version",
-    filterProject: "Filter project",
-    filterVersion: "Filter version",
-    useCurrentProject: "Use current project",
-    useCurrentVersion: "Use current version",
-    clearFilters: "Clear filters",
-    resultPayload: "Result JSON",
-    resultSaved: "Result record updated.",
-    resultDeleted: "Result record deleted.",
-    jobSaved: "Job record updated.",
-    jobDeleted: "Job record deleted.",
-    recordContextApplied: "Applied the record context to the workbench.",
-    linkedProjectOpened: "Opened the linked project context.",
-    invalidJson: "Invalid JSON payload.",
-    databaseRecordCount: "Records",
-    immersiveStudy: "Study",
-    immersiveModel: "Model",
-    immersiveLibrary: "Library",
-    immersiveTools: "Tools",
-    immersiveHelp: "3D Help",
-    immersiveViewTools: "View tools",
-    immersiveNodeOps: "Node ops",
-    immersiveMemberOps: "Member ops",
-    immersiveQuickProps: "Quick properties",
-    immersiveNodeSelection: "Selected nodes",
-    immersiveNoNodeSelection: "Select a 3D node to edit its coordinates, supports, and loads.",
-    immersiveTransform: "Transform",
-    immersiveLoads: "Batch loads",
-    immersiveUtilities: "Utilities",
-    frameSelection: "Frame selection",
-    duplicateNodes: "Duplicate",
-    mirrorX: "Mirror X",
-    mirrorY: "Mirror Y",
-    mirrorZ: "Mirror Z",
-    applyLoads: "Apply loads",
-    clearLoads: "Clear loads",
-    nudgeStep: "Nudge step",
-    immersiveDrawer: "Immersive drawer",
-    close: "Close",
-    immersiveSamples: "Samples",
-    immersiveModels: "Saved",
-    immersiveJobs: "Recent jobs",
-    immersiveEmptyModels: "No saved models in this project yet.",
-    immersiveEmptyJobs: "No jobs yet.",
-    themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
-    languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
-    frontendModes: {
-      orchestrated_gui: "Orchestrated GUI",
-      direct_mesh_gui: "Direct mesh GUI",
-    },
-    directMeshStrategies: {
-      healthiest: "Healthiest agent",
-      first_reachable: "First reachable",
-    },
-    shortcutLegendTitle: "3D controls",
-    shortcutLegendRows: [
-      "Drag pan · Alt+Drag orbit · Wheel zoom",
-      "Shift+Wheel pans sideways",
-      "1/2/3/4 views · P projection",
-      "G grid · L labels · N nodes",
-      "F focus · R reset · WASD/Arrows pan",
-      "Link mode: click two nodes to toggle a member",
-      "BOX selects visible nodes · Immersive button opens fullscreen",
-    ],
-    length: "Span (m)",
-    area: "Area (m²)",
-    modulus: "Young's modulus (GPa)",
-    elements: "Elements",
-    tipForce: "Tip force (N)",
-    run: "Run Study",
-    running: "Running...",
-    ready: "ready",
-    busy: "busy",
-    tipDisp: "Tip displacement",
-    maxStress: "Max stress",
-    reaction: "Reaction",
-    maxAxialForce: "Max axial force",
-    maxShearForce: "Max shear force",
-    displacementMagnitude: "Displacement magnitude",
-    fixRz: "Fix Rz",
-    momentZ: "Moment Z",
-    rotationZ: "Rotation Z",
-    frameElements: "Frame members",
-    memberEndForces: "Member end forces",
-    momentOfInertia: "Moment of inertia",
-    sectionModulus: "Section modulus",
-    distributedLoadY: "Distributed load Y",
-    temperatureDelta: "Temperature delta",
-    temperature: "Temperature",
-    averageTemperature: "Average temperature",
-    maxTemperature: "Max temperature",
-    conductivity: "Conductivity",
-    fixTemperature: "Fix temperature",
-    heatLoad: "Heat load",
-    temperatureGradientX: "Temperature gradient X",
-    temperatureGradientY: "Temperature gradient Y",
-    thermalIntent: "Thermal intent",
-    thermalBoundary: "Thermal boundary",
-    prescribedTemperatureNodes: "prescribed-T nodes",
-    sourceNodes: "source nodes",
-    heatedNodes: "heated nodes",
-    gradientMembers: "gradient members",
-    restrainedSupports: "restrained supports",
-    thermalMembers: "thermal members",
-    conductionField: "conduction field",
-    heatSourceField: "heat-source field",
-    nodalTemperatureRise: "nodal temperature rise",
-    memberTemperatureGradient: "member temperature gradient",
-    thermalBarResponse: "restrained bar response",
-    thermalBeamResponse: "beam thermal response",
-    thermalFrameResponse: "frame thermal response",
-    thermalTrussResponse: "truss thermal response",
-    thermoelasticPlaneResponse: "thermoelastic plane response",
-    maxHeatFlux: "Max heat flux",
-    heatFluxX: "Heat flux X",
-    heatFluxY: "Heat flux Y",
-    thermalCurvature: "Thermal curvature",
-    thermalStrain: "Thermal strain",
-    mechanicalStrain: "Mechanical strain",
-    totalStrain: "Total strain",
-    thermalExpansion: "Thermal expansion",
-    bendingStress: "Max bending stress",
-    combinedStress: "Combined stress",
-    maxMoment: "Max moment",
-    maxTorque: "Max torque",
-    torsionStress: "Torsion stress",
-    torqueZ: "Torque Z",
-    torsionHint: "Shaft studies focus on twist, torque transmission, and shear stress along the axis.",
-    maxRotation: "Max rotation",
-    sortBy: "Sort by",
-    shearForce: "Shear force",
-    forceI: "Axial @ i",
-    shearI: "Shear @ i",
-    momentI: "Moment @ i",
-    forceJ: "Axial @ j",
-    shearJ: "Shear @ j",
-    momentJ: "Moment @ j",
-    principalStress1: "Principal stress 1",
-    principalStress2: "Principal stress 2",
-    maxInPlaneShear: "Max in-plane shear",
-    currentField: "Current field",
-    planeHotspots: "Top hot elements",
-    topN: "Top N",
-    exportHotspots: "Export hotspots",
-    memberForceTable: "Member force table",
-    elementHeatTable: "Element heat table",
-    exportMemberForces: "Export member forces",
-    planeResultLegend: "Fill: von Mises · Overlay: deformed shape",
-    planeViewVonMises: "von Mises",
-    planeViewPrincipal1: "Principal 1",
-    planeViewMaxShear: "Max shear",
-    progress: "Progress",
-    iteration: "Iteration",
-    residual: "Residual",
-    worker: "Worker",
-    status: "Status",
-    nodes: "Nodes",
-    axialElements: "Element results",
-    trussElements: "Truss members",
-    spatialTrussElements: "Space-truss members",
-    span: "Span",
-    stress: "Stress (Pa)",
-    axialForce: "Axial force (N)",
-    importedModel: "Imported model",
-    importFailed: "Import failed",
-    initialLoaded: `${brand.productName} connected to the orchestrator.`,
-    initialFailed: "Unable to reach the orchestrator.",
-    dispatching: "Submitting a study to the orchestrator.",
-    defaultModel: "manual-study",
-    online: "online",
-    offline: "offline",
-    historyHint: "Durable jobs survive orchestrator restarts.",
-    historyEmpty: "No jobs yet.",
-    openJob: "Open",
-    refresh: "Refresh",
-    resultWindow: "Result Window",
-    previousPage: "Previous",
-    nextPage: "Next",
-    jumpStart: "Start",
-    jumpQuarter: "25%",
-    jumpMid: "50%",
-    jumpThreeQuarter: "75%",
-    jumpEnd: "End",
-    pageRange: "Rows",
-    chunkSize: "Chunk",
-    totalElements: "Elements",
-    projectLibrary: "Project Library",
-    projectNameField: "Project name",
-    projectDescriptionField: "Description",
-    createProject: "Create project",
-    updateProject: "Rename project",
-    deleteProject: "Delete project",
-    exportProject: "Export project",
-    exportProjectJson: "Project JSON",
-    exportProjectZip: "Project ZIP",
-    importProject: "Import project",
-    importProjectHint: "Load a .kyuubiki.json or .kyuubiki archive into the project library.",
-    projectEmpty: "No projects yet.",
-    savedModels: "Saved Models",
-    versions: "Versions",
-    save: "Save",
-    saveAs: "Save As",
-    deleteSavedModel: "Delete model",
-    renameVersion: "Rename version",
-    deleteVersion: "Delete version",
-    exportData: "Export Data",
-    exportJson: "JSON",
-    exportCsv: "CSV",
-    projectHeatToThermo: "Use temperatures in thermo study",
-    projectHeatToThermoAction: "Mapped heat result into thermo study",
-    projectedHeatToThermo: "Mapped the heat result into a thermo-mechanical study. Review supports and materials before solving.",
-    noSavedModels: "No saved models in this project yet.",
-    noVersions: "No saved versions yet.",
-    defaultProject: "Workspace",
-    projectCreated: "Project created.",
-    projectUpdated: "Project updated.",
-    projectDeleted: "Project deleted.",
-    projectRequired: "Create or select a project before saving models.",
-    projectExported: "Project bundle exported.",
-    projectExportedPartial: "Project bundle exported with partial data. Some models or results could not be fetched in time.",
-    databaseExported: "Database snapshot exported.",
-    projectImported: "Project bundle imported.",
-    modelSaved: "Saved a new model version.",
-    modelCreated: "Saved a new model.",
-    modelDeletedStored: "Deleted the saved model.",
-    versionLoaded: "Loaded a saved version into the workbench.",
-    persistedModelLoaded: "Loaded a saved model from the library.",
-    versionRenamed: "Version renamed.",
-    versionDeleted: "Version deleted.",
-    resultJsonDownloaded: "Analysis result JSON downloaded.",
-    resultCsvDownloaded: "Analysis result CSV downloaded.",
-    jobCancelled: "Job cancelled.",
-    noResultToExport: "Run a study first before exporting analysis data.",
-    modelTools: "Editing Tools",
-    dragHint: "Drag truss nodes directly in the viewport to reshape geometry.",
-    planeHint: "Select plane nodes and triangles to edit supports, loads, and material thickness.",
-    parametric: "Parametric Generator",
-    panelGenerator: "Panel Generator",
-    spaceStudio: "3D Space Studio",
-    tabs: { summary: "Summary", controls: "Controls", tools: "Tools", tree: "Browse", jobs: "Jobs", results: "Results", models: "Models", projects: "Projects", samples: "Samples" },
-    generate: "Generate",
-    generatePanel: "Generate Panel",
-    download: "Download JSON",
-    saveForSolver: "Use current model",
-    bays: "Bays",
-    height: "Height (m)",
-    divisionsX: "Divisions X",
-    divisionsY: "Divisions Y",
-    nodeTable: "Object browser",
-    dragNode: "Selected node",
-    noNodeSelected: "No node selected",
-    loadCase: "Load case",
-    modelStudioHint: "2D truss and 2D plane studies can be edited directly here. 3D studies can already be imported, solved, and reviewed.",
-    frameEditorHint: "Frame studies are ready to import, solve, inspect, and review here. Rich member editing is the next step.",
-    spaceStudioHint: "Use orbit, pan, and zoom to navigate the space frame. 3D nodes and members can be selected and edited numerically.",
-    sourceModel: "Source model",
-    createdAt: "Created",
-    updatedAt: "Updated",
-    hasResult: "Result",
-    yes: "Yes",
-    no: "No",
-    jobWorkspaceTitle: "Job Workspace",
-    jobWorkspaceHint: "Track solver runs first, then drill into a specific record only when you need the details.",
-    resultWorkspaceTitle: "Results Workspace",
-    resultWorkspaceHint: "Open the newest solved run here, then move into reports, exports, and linked records.",
-    modelWorkspaceTitle: "Model Workspace",
-    modelWorkspaceHint: "Keep saved studies and reusable versions together so you can reopen or branch them quickly.",
-    openLatestJob: "Open latest job",
-    openLatestResult: "Open latest result",
-    openLatestModel: "Open latest model",
-    waitingJobs: "Waiting result",
-    readyResults: "Ready results",
-    savedCount: "Saved models",
-    versionCount: "Versions",
-    dragToEdit: "Drag to edit",
-    historyLoaded: "Loaded a persisted study from history.",
-    modelDownloaded: "Model JSON downloaded.",
-    generatedModel: "Generated a parametric truss model.",
-    planeElements: "Plane elements",
-    thickness: "Thickness",
-    poisson: "Poisson ratio",
-    poissonRatio: "Poisson ratio",
-    sampleLibrary: "Sample Library",
-    objectTree: "Objects",
-    geometry: "Geometry",
-    results: "Results",
-    summary: "Summary",
-    properties: "Properties",
-    diagnostics: "Diagnostics",
-    diagnosticsClear: "No blocking issues detected.",
-    suggestedFixes: "Suggested fixes",
-    stabilityScore: "Stability score",
-    hotspotNodes: "Hotspot nodes",
-    stabilityGood: "Stable",
-    stabilityWatch: "Watch",
-    stabilityRisk: "At risk",
-    translatedSmallDeformation:
-      "The structure is behaving too softly for a small-deformation solve. Add supports or reinforce the weak span.",
-    translatedConnectivity:
-      "The truss likely has a weak or disconnected region. Check supports, member links, and isolated nodes.",
-    translatedSingular:
-      "The stiffness matrix is singular. The model is still acting like a mechanism, so it needs more restraints or diagonal bracing.",
-    translatedWatchdogStalled:
-      "The job stopped reporting progress for too long. The watchdog marked it as stalled.",
-    translatedWatchdogTimedOut:
-      "The job ran too long and was stopped by the watchdog timeout.",
-    translatedExecutionTimedOut:
-      "The solver took too long to respond. The run was timed out and stopped safely.",
-    translatedAgentTimeout:
-      "The solver agent did not respond in time. Check the agent process or try the run again.",
-    requestTimedOut: "The request took too long. The workbench kept the last stable state.",
-    pollingDetached: "Live polling paused to keep the UI responsive. Refresh the job state when ready.",
-    heartbeatHealthy: "healthy",
-    heartbeatQuiet: "quiet",
-    heartbeatStale: "stale",
-    mechanismRisk: "This topology still looks mechanism-prone. Add more triangulation or extra supports before solving.",
-    addNode: "Add Node",
-    addBranchNode: "Branch Node",
-    linkMode: "Link Mode",
-    linkModeActive: "Linking",
-    linkModeIdle: "Pick two nodes in the 3D viewport to link or unlink them.",
-    linkModeEnabled: "3D link mode enabled.",
-    linkModeDisabled: "3D link mode disabled.",
-    linkModeCompleted: "3D link edit applied.",
-    deleteNode: "Delete Node",
-    addMember: "Add Member",
-    toggleMember: "Toggle Link",
-    deleteMember: "Delete Member",
-    selectTwoNodes: "Select two nodes to create a member.",
-    memberCreated: "Member created.",
-    memberRemoved: "Member removed.",
-    nodeCreated: "Node created.",
-    branchCreated: "Node created and linked.",
-    nodeDeleted: "Node deleted.",
-    memberDeleted: "Member deleted.",
-    selectionHint: "Use the object tree or viewport to pick nodes and members.",
-    memberSelection: "Member selection",
-    noElementSelected: "No member selected",
-    nodeX: "Node X",
-    nodeY: "Node Y",
-    nodeZ: "Node Z",
-    fixX: "Fix X",
-    fixY: "Fix Y",
-    fixZ: "Fix Z",
-    loadX: "Load X",
-    loadY: "Load Y",
-    loadZ: "Load Z",
-    nodeI: "Node I",
-    nodeJ: "Node J",
-    nodeK: "Node K",
-    none: "None",
-    precheckPrefix: "Precheck failed",
-    unstableSupport: "Add at least two restrained degrees of freedom to stabilize the truss.",
-    isolatedNode: "Every node should connect to at least one member before solving.",
-    underconnected: "This truss is under-connected for a stable 2D solve.",
-    freeRigidBody: "Prevent rigid-body motion by constraining both translation directions across the model.",
-    supportXMissing: "Add at least one X restraint to prevent sideways drift.",
-    supportYMissing: "Add at least one Y restraint to prevent vertical drift.",
-    fixCurrentNodeXAction: "Fix current node in X",
-    fixCurrentNodeYAction: "Fix current node in Y",
-    fixNodeXAction: "Fix flagged node in X",
-    fixNodeYAction: "Fix flagged node in Y",
-    releaseX: "Release X",
-    releaseY: "Release Y",
-    releaseZ: "Release Z",
-    connectCurrentNodeAction: "Connect current node to nearest node",
-    connectNodeAction: "Connect flagged node to nearest node",
-    suggestionAppliedSupportX: "Added an X restraint to the suggested node.",
-    suggestionAppliedSupportY: "Added a Y restraint to the suggested node.",
-    suggestionAppliedLink: "Connected the node to its nearest available neighbor.",
-    suggestionNoLinkTarget: "No valid nearby node was available for an automatic link.",
-    panelGenerated: "Generated a rectangular plane mesh.",
-    planeThickness: "Thickness",
-    orbitHint: "Drag to pan, Alt+drag to orbit, scroll to zoom.",
-    spaceNodeCreated: "3D node created.",
-    spaceBranchCreated: "3D node created and linked.",
-    spaceNodeDeleted: "3D node deleted.",
-    spaceMemberDeleted: "3D member deleted.",
-    switchedTo2dStudio: "Switched to the 2D workbench.",
-    switchedTo3dStudio: "Switched to the 3D space studio.",
-  };
-
-const copyZh = {
-    brand: brand.productName,
-    shortTitle: brand.workbenchShortName ?? "Workbench",
-    roleLabel: "分析工作台",
-    title: "结构分析工作台",
-    subtitle: "更正式的前端工作台，统一建模、编排与求解回看。",
-    rail: { study: "研究", model: "工作区", workflow: "工作流", library: "历史", system: "系统" },
-    sections: { study: "研究设置", model: "工作区", workflow: "工作流工作台", library: "任务历史", system: "系统" },
-    kinds: {
-      axial_bar_1d: "一维轴向杆",
-      heat_bar_1d: "一维导热杆",
-      heat_plane_triangle_2d: "二维导热三角形单元",
-      heat_plane_quad_2d: "二维导热四边形单元",
-      thermal_bar_1d: "一维热轴杆",
-      thermal_beam_1d: "一维热梁",
-      thermal_frame_2d: "二维热刚架",
-      thermal_truss_2d: "二维热桁架",
-      thermal_truss_3d: "三维热空间桁架",
-      thermal_plane_triangle_2d: "二维热三角形单元",
-      thermal_plane_quad_2d: "二维热四边形单元",
-      spring_1d: "一维弹簧",
-      spring_2d: "二维弹簧",
-      spring_3d: "三维弹簧",
-      beam_1d: "一维梁",
-      torsion_1d: "一维扭转轴",
-      truss_2d: "二维桁架",
-      truss_3d: "三维空间桁架",
-      plane_triangle_2d: "二维三角形单元",
-      plane_quad_2d: "二维四边形单元",
-      frame_2d: "二维刚架",
-    },
-    studyFamilies: {
-      axialAndSprings: "轴向与弹簧",
-      beamsAndFrames: "梁与刚架",
-      trusses: "桁架",
-      planes: "平面单元",
-    },
-    studyDomains: {
-      mechanical: "纯力学",
-      thermal: "纯热",
-      thermoMechanical: "力-热",
-    },
-    familyHints: {
-      axialAndSprings: "这一类主要看刚度、伸长和轴力传递路径。",
-      beamsAndFrames: "这一类主要看弯曲、剪力、转角和构件端力。",
-      trusses: "这一类主要看连接关系、轴力路径和整体稳定性。",
-      planes: "这一类主要看应力场、单元斑块和热点区域。",
-    },
-    importModel: "导入模型",
-    importHint: "导入 1D 或 2D 研究 JSON 模型。",
-    sampleCatalogPage: "目录",
-    sampleImportPage: "导入",
-    workflowOverviewPage: "概览",
-    workflowCatalogPage: "目录",
-    workflowBuilderPage: "搭建",
-    workflowRunsPage: "运行",
-    workflowCatalogTitle: "工作流目录",
-    workflowCatalogHint: "先在这里运行命名多算子工作流，再决定要不要把它接进更大的研究路径。",
-    workflowOverviewHint: "把复合算子工作流放在独立工作面里，而不是继续藏在样板或结果页里。",
-    workflowBuilderHint: "先看清 graph 的节点、桥接、提取和导出，再决定怎么把它接进更大的研究链。",
-    workflowRunsHint: "在一个地方看命名工作流任务、当前节点和导出摘要。",
-    workflowCatalogRefresh: "刷新工作流",
-    workflowCatalogRun: "运行参考样板",
-    workflowCatalogEmpty: "当前还没有发布命名工作流。",
-    workflowCatalogReady: "工作流目录已就绪。",
-    workflowCatalogQueued: "工作流任务已排队",
-    workflowCatalogCompleted: "工作流已完成",
-    workflowCatalogUnsupported: "这条工作流目前还没有内建参考输入。",
-    workflowCatalogLoaded: "已加载工作流目录。",
-    workflowCatalogFailed: "工作流运行失败。",
-    workflowSelectForBuilder: "打开搭建面",
-    workflowNoSelection: "先选择一条命名工作流，搭建面才会显示它的 graph。",
-    workflowNodesTitle: "节点",
-    workflowEdgesTitle: "连线",
-    workflowEntryInputsTitle: "入口输入",
-    workflowOutputArtifactsTitle: "输出产物",
-    workflowDatasetContractTitle: "数据契约",
-    workflowDatasetValuesTitle: "数据值",
-    workflowDatasetValueLabel: "数据值",
-    workflowDatasetSemanticTypeLabel: "语义类型",
-    workflowDatasetEncodingLabel: "编码",
-    workflowDatasetShapeLabel: "形状",
-    workflowDatasetAxesLabel: "轴",
-    workflowDatasetSchemaLabel: "Schema",
-    workflowDatasetClassLabel: "元素类型",
-    workflowDatasetNoneLabel: "这条工作流还没有发布 dataset contract。",
-    workflowDatasetDraftHint: "先在这里本地调整 dataset 语义，让 port、edge 和跨算子值先对齐，后面再接持久化。",
-    workflowDatasetEditorTitle: "数据编辑器",
-    workflowDatasetValueSelectLabel: "当前数据值",
-    workflowDatasetUnitLabel: "单位",
-    workflowDatasetMetadataLabel: "元信息",
-    workflowDatasetPortMappingsTitle: "端口映射",
-    workflowDatasetEdgeMappingsTitle: "连线映射",
-    workflowDatasetDraftLocalLabel: "本地草稿",
-    workflowDatasetUnassignedLabel: "未分配",
-    workflowExportGraphLabel: "导出 Graph JSON",
-    workflowExportDatasetContractLabel: "导出 Dataset JSON",
-    workflowOperatorLabel: "算子",
-    workflowKindLabel: "类型",
-    workflowProgressLabel: "进度",
-    workflowCurrentNodeLabel: "当前节点",
-    workflowLatestSummaryLabel: "最近摘要",
-    workflowOpenRunLabel: "打开运行",
-    workflowRunsEmpty: "还没有工作流运行记录。",
-    projectManagePage: "管理",
-    projectExchangePage: "交换",
-    modelSavedPage: "已保存",
-    modelVersionsPage: "版本",
-    studyDomain: "物理类别",
-    noDomainStudies: "这个大类里的研究还没正式开放。",
-    axialSample: "打开 1D 样例",
-    trussSample: "打开 2D 样例",
-    modelName: "模型",
-    material: "材料",
-    mesh: "网格",
-    load: "载荷",
-    support: "约束",
-    viewport: "视图区",
-    report: "报告",
-    metrics: "求解指标",
-    messages: "消息",
-    failureReason: "失败原因",
-    lastHeartbeat: "最近心跳",
-    heartbeatStatus: "心跳状态",
-    cancelJob: "取消任务",
-    historyPanel: "操作历史",
-    undo: "撤销",
-    redo: "重做",
-    noOperations: "当前还没有可回滚的操作。",
-    undoApplied: "已回滚上一个改动。",
-    redoApplied: "已恢复刚才回滚的改动。",
-    changeStudyType: "切换研究类型",
-    editAxialField: "修改轴向研究参数",
-    editMaterial: "切换材料预设",
-    editParametric: "修改参数化生成器",
-    importAction: "导入模型文件",
-    sampleAction: "加载样板模型",
-    historyAction: "打开历史任务",
-    generateAction: "生成参数化桁架",
-    applySuggestionAction: "应用诊断修复",
-    addNodeAction: "新增节点",
-    deleteNodeAction: "删除节点",
-    toggleMemberAction: "修改杆件连接",
-    deleteMemberAction: "删除杆件",
-    dragNodeAction: "拖拽节点",
-    editNodeAction: "编辑节点属性",
-    editMemberAction: "编辑杆件属性",
-    overview: "概览",
-    result: "结果",
-    actions: "动作",
-    details: "细节",
-    controls: "控制",
-    controlsSetupPage: "设置",
-    controlsReviewPage: "复查",
-    studyTypeLabel: "研究类型",
-    modelStudyPage: "研究",
-    modelOverviewPage: "概览",
-    modelStudioPage: "工作区",
-    modelMaterialsPage: "材料",
-    modelGeneratePage: "生成",
-    workspaceStudyHint: "在这里选择研究族、物理域和可直接求解的 setup。",
-    workspaceStudioHint: "在这里建模和编辑节点、单元、边界与几何。",
-    workspaceMaterialsHint: "把起步材料参数和可复用材料选择集中放在这里。",
-    workspaceGenerateHint: "在这里用生成器和参数化助手快速生成可重复模型。",
-    workspaceBrowseHint: "在这里浏览对象、热点以及与结果联动的选择。",
-    settings: "设置",
-    scripts: "脚本",
-    settingsConfigHint: "主题、语言、路由、访问令牌和语言包都放在这里。",
-    settingsScriptsHint: "WASM Python、宏录制和动作目录都放在这里。",
-    assistant: "助手",
-    config: "配置",
-    runtime: "运行时",
-    data: "数据",
-    packs: "语言包",
-    workspace: "工作区",
-    routing: "路由",
-    access: "访问",
-    stack: "栈",
-    security: "安全",
-    agents: "代理",
-    audit: "审计",
-    assistantSummary: "上下文",
-    assistantStatusReady: "就绪",
-    assistantCurrentStudy: "当前研究",
-    assistantCurrentRuntime: "运行模式",
-    assistantCurrentJob: "当前任务",
-    assistantCurrentResult: "当前结果",
-    assistantEmpty: "当前工作台状态健康，暂时没有需要助手介入的动作。",
-    assistantNeedsProject: "把当前工作区挂到项目里",
-    assistantNeedsProjectHint: "挂到项目后，保存模型、任务历史和导出管理都会更顺手。",
-    assistantOpenProjects: "打开项目",
-    assistantRefreshRuntime: "刷新运行时状态",
-    assistantRefreshRuntimeHint: "当前运行时快照缺失或偏旧，可以重新拉一次健康状态和 agent 信息。",
-    assistantConfigureDirectMesh: "配置直连 Mesh 节点",
-    assistantConfigureDirectMeshHint: "直连 Mesh 模式至少需要一个可达的 host:port 节点才能路由求解。",
-    assistantRunStudy: "运行当前研究",
-    assistantRunStudyHint: "当前模型已经基本可提交，可以直接发起一次新求解。",
-    assistantCancelRun: "取消正在运行的任务",
-    assistantCancelRunHint: "当前仍有任务在执行，如果你要改模型或重试参数，可以先停掉它。",
-    assistantApplyFix: "应用第一条建议修复",
-    assistantApplyFixHint: "二维桁架预检查发现了阻塞问题，而且已经准备好一个安全的首个修复动作。",
-    assistantEnterImmersive: "打开沉浸式三维视图",
-    assistantEnterImmersiveHint: "编辑三维模型时切到全屏，会更适合选点、导航和建模。",
-    assistantOpenSample: "打开这个研究的官方样板",
-    assistantOpenSampleHint: "如果你还在熟悉这个研究家族，先从最接近的官方样板开始，再改成自己的模型会更稳。",
-    assistantReviewControls: "先检查约束、载荷和材料",
-    assistantReviewControlsHint: "第一次运行前，先确认 study controls 里的物理设定讲得通，再去求解。",
-    assistantReviewReport: "先看当前结果报告",
-    assistantReviewReportHint: "先看 summary、热点和结果场含义，再决定要不要继续改模型。",
-    assistantExportResult: "导出当前结果数据",
-    assistantExportResultHint: "如果这次结果基本可信，先导出一份 CSV，后面更方便对比和复查。",
-    assistantPromptExplain: "用小白能懂的话解释这个研究",
-    assistantPromptMaterial: "帮我选一套起步材料参数",
-    assistantPromptBoundary: "帮我判断支撑和载荷怎么设",
-    assistantPromptResults: "帮我解释这些结果字段怎么读",
-    assistantLauncherHint: "需要带路吗？",
-    assistantFloatingTitle: "问问工作台",
-    assistantFloatingSubtitle: "先把主工作面留干净，需要时再把助手拉出来。",
-    assistantOpen: "打开助手",
-    assistantClose: "关闭助手",
-    backend: "后端",
-    protocols: "协议",
-    controlPlaneProtocol: "调度面协议",
-    solverRpcProtocol: "求解代理协议",
-    deploymentMode: "部署模式",
-    discoveryMode: "发现方式",
-    registeredAgents: "注册代理",
-    reachableAgents: "可达代理",
-    runtimeMode: "运行模式",
-    cluster: "集群",
-    clusterSize: "集群规模",
-    clusterHealth: "集群健康度",
-    peers: "对等节点",
-    peerState: "节点状态",
-    headless: "无头运行",
-    capabilities: "能力",
-    methods: "方法",
-    protocolAgents: "协议代理",
-    noProtocolAgents: "当前还没有可描述的求解代理。",
-    watchdog: "看门狗",
-    activeJobs: "活跃任务",
-    stalledJobs: "卡住任务",
-    timedOutJobs: "超时任务",
-    scanEvery: "扫描周期",
-    staleAfter: "卡住阈值",
-    timeoutAfter: "超时阈值",
-    dataAdmin: "数据管理",
-    orchestrator: "Elixir 编排器",
-    solverAgent: "Rust 求解代理",
-    ui: "Next.js 界面",
-    theme: "主题",
-    language: "语言",
-    languagePacksTitle: "已安装语言包",
-    languagePacksHint: "现在先支持导入本地 JSON 语言包，这个页面也会为将来的远程下载入口保留位置。",
-    languagePacksEmptyLabel: "当前还没有安装自定义语言包。",
-    languagePackName: "名称",
-    languagePackVersion: "版本",
-    languagePackSourceImported: "本地导入",
-    languagePackSourceDownloaded: "远程下载",
-    languagePackDownloadTemplate: "下载模板",
-    languagePackExportInstalled: "导出当前语言包",
-    languagePackImport: "导入语言包",
-    languagePackRemove: "移除",
-    languagePackCatalogTitle: "未来目录",
-    languagePackCatalogHint: "这些槽位现在先作为预留，后面接远程语言包下载时会复用同一块界面。",
-    languagePackCatalogAction: "即将支持",
-    frontendMode: "前端模式",
-    directMeshEndpoints: "直连集群节点",
-    directMeshEndpointsHelp: "用逗号或换行分隔的 host:port，供局域网直连 mesh GUI 使用。",
-    directMeshCompleted: "直连 Mesh 求解已完成",
-    directMeshStrategy: "Mesh 策略",
-    directMeshLastRoute: "最近路由",
-    directMeshLastAgent: "最近节点",
-    shortcutHints: "快捷键提示",
-    shortcutHintsHelp: "在三维视图区显示键盘快捷键速查卡。",
-    immersiveGuard: "沉浸护栏",
-    immersiveGuardHelp: "沉浸模式下拦截文本选择、右键菜单和常见复制快捷键。",
-    enterImmersive: "沉浸模式",
-    exitImmersive: "退出沉浸",
-    immersiveModeEnabled: "已进入沉浸式视图区。",
-    immersiveModeDisabled: "已退出沉浸式视图区。",
-    browserLimitsNote: "网页无法彻底关闭浏览器插件，但可以显著减少选择文本和复制类交互。",
-    controlPlaneTokenHelp: "用于带 Token 的 control-plane 部署；会作为 x-kyuubiki-token 附加到 /api/v1 请求。",
-    controlPlaneTokenPlaceholder: "可选的控制面令牌",
-    clusterTokenHelp: "用于 agent 注册、心跳和摘除这类集群路由；未填写时会回退到控制面令牌。",
-    clusterTokenPlaceholder: "可选的集群专用令牌",
-    directMeshTokenHelp: "用于带 Token 的 direct mesh 路由；会附加到 /api/direct-mesh 请求。",
-    directMeshTokenPlaceholder: "可选的直连网格令牌",
-    exportDatabase: "导出数据库快照",
-    runtimeSecurityFooter: "运行中的安全状态来自 /api/health；前端输入的 token 只保存在当前浏览器会话里。",
-    securityAudit: "安全审计",
-    auditSessionLabel: "这里展示控制面持久化的自动化与助手事件流，包括 Workbench 助手、脚本和 Hub 助手的高风险动作。",
-    auditWindow: "时间窗",
-    auditSource: "来源",
-    auditRisk: "风险",
-    auditStatus: "状态",
-    auditAction: "动作",
-    auditSummaryTitle: "事件摘要",
-    auditTrendTitle: "时间趋势",
-    auditTrendEmptyLabel: "当前窗口下还没有趋势数据。",
-    auditSourceStatusTitle: "来源 × 状态",
-    auditStudyFacetTitle: "Study 分面",
-    auditProjectFacetTitle: "Project 分面",
-    auditModelVersionFacetTitle: "Version 分面",
-    auditFacetEmptyLabel: "当前窗口下没有可用分面。",
-    auditRefreshLabel: "刷新事件",
-    auditExportLabel: "导出分析包",
-    auditExportCsvLabel: "导出 CSV",
-    auditWindowOptions: { all: "全部时间", h1: "最近 1 小时", h24: "最近 24 小时", d7: "最近 7 天", d30: "最近 30 天" },
-    auditSourceOptions: { all: "全部", assistant: "助手", hubAssistant: "Hub 助手", script: "脚本" },
-    auditRiskOptions: { all: "全部", low: "低", sensitive: "敏感", high: "高", destructive: "高风险" },
-    auditStatusOptions: { all: "全部", prompted: "待确认", confirmed: "已确认", cancelled: "已取消", completed: "已执行", failed: "失败" },
-    adminJobs: "任务",
-    adminResults: "结果",
-    adminBrowsePage: "浏览",
-    adminEditPage: "编辑",
-    selectRecord: "选择一条记录后即可查看或编辑。",
-    adminMessage: "消息",
-    adminProjectId: "项目 ID",
-    adminModelVersionId: "模型版本",
-    adminCaseId: "仿真工况",
-    saveRecord: "保存记录",
-    deleteRecord: "删除记录",
-    exportRecord: "导出记录",
-    applyRecordContext: "应用记录上下文",
-    openLinkedProject: "打开关联项目",
-    openLinkedVersion: "打开关联版本",
-    filterProject: "筛选项目",
-    filterVersion: "筛选版本",
-    useCurrentProject: "使用当前项目",
-    useCurrentVersion: "使用当前版本",
-    clearFilters: "清空筛选",
-    resultPayload: "结果 JSON",
-    resultSaved: "结果记录已更新。",
-    resultDeleted: "结果记录已删除。",
-    jobSaved: "任务记录已更新。",
-    jobDeleted: "任务记录已删除。",
-    recordContextApplied: "已将记录上下文应用到工作台。",
-    linkedProjectOpened: "已打开关联项目上下文。",
-    invalidJson: "JSON 内容无效。",
-    databaseRecordCount: "记录数",
-    immersiveStudy: "研究",
-    immersiveModel: "建模",
-    immersiveLibrary: "库",
-    immersiveTools: "工具",
-    immersiveHelp: "3D 帮助",
-    immersiveViewTools: "视图工具",
-    immersiveNodeOps: "节点操作",
-    immersiveMemberOps: "杆件操作",
-    immersiveQuickProps: "快速属性",
-    immersiveNodeSelection: "选中节点",
-    immersiveNoNodeSelection: "先选中一个三维节点，再编辑它的坐标、约束和载荷。",
-    immersiveTransform: "变换",
-    immersiveLoads: "批量载荷",
-    immersiveUtilities: "实用工具",
-    frameSelection: "聚焦选中",
-    duplicateNodes: "复制节点",
-    mirrorX: "按 X 镜像",
-    mirrorY: "按 Y 镜像",
-    mirrorZ: "按 Z 镜像",
-    applyLoads: "应用载荷",
-    clearLoads: "清空载荷",
-    nudgeStep: "步进",
-    immersiveDrawer: "沉浸抽屉",
-    close: "关闭",
-    immersiveSamples: "样板",
-    immersiveModels: "已保存",
-    immersiveJobs: "最近任务",
-    immersiveEmptyModels: "当前项目还没有保存模型。",
-    immersiveEmptyJobs: "当前还没有任务记录。",
-    themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
-    languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
-    frontendModes: {
-      orchestrated_gui: "中心调度 GUI",
-      direct_mesh_gui: "直连 Mesh GUI",
-    },
-    directMeshStrategies: {
-      healthiest: "优先健康节点",
-      first_reachable: "首个可达节点",
-    },
-    shortcutLegendTitle: "三维控制",
-    shortcutLegendRows: [
-      "拖拽平移 · Alt+拖拽旋转 · 滚轮缩放",
-      "Shift+滚轮可左右平移",
-      "1/2/3/4 视角 · P 投影",
-      "G 网格 · L 标签 · N 节点",
-      "F 聚焦 · R 重置 · WASD/方向键平移",
-      "连线模式：依次点击两个节点即可切换杆件",
-      "BOX 框选可见节点 · 沉浸按钮可切全屏",
-    ],
-    length: "跨度 (m)",
-    area: "截面积 (m²)",
-    modulus: "弹性模量 (GPa)",
-    elements: "单元数",
-    tipForce: "端部载荷 (N)",
-    run: "运行研究",
-    running: "运行中...",
-    ready: "就绪",
-    busy: "处理中",
-    tipDisp: "端部位移",
-    maxStress: "最大应力",
-    reaction: "反力",
-    maxAxialForce: "最大轴力",
-    maxShearForce: "最大剪力",
-    displacementMagnitude: "位移模",
-    fixRz: "约束 Rz",
-    momentZ: "节点弯矩",
-    rotationZ: "转角 Rz",
-    frameElements: "刚架杆件",
-    memberEndForces: "杆端内力",
-    momentOfInertia: "惯性矩",
-    sectionModulus: "截面模量",
-    distributedLoadY: "均布载荷 Y",
-    temperatureDelta: "温升",
-    temperature: "温度",
-    averageTemperature: "平均温度",
-    maxTemperature: "最高温度",
-    conductivity: "导热系数",
-    fixTemperature: "固定温度",
-    heatLoad: "热载荷",
-    temperatureGradientX: "温差梯度 X",
-    temperatureGradientY: "温差梯度 Y",
-    thermalIntent: "热载荷意图",
-    thermalBoundary: "热边界模式",
-    prescribedTemperatureNodes: "固定温度节点",
-    sourceNodes: "热源节点",
-    heatedNodes: "受温升节点",
-    gradientMembers: "温差梯度杆件",
-    restrainedSupports: "受约束支撑",
-    thermalMembers: "热杆件",
-    conductionField: "导热场",
-    heatSourceField: "热源场",
-    nodalTemperatureRise: "节点温升",
-    memberTemperatureGradient: "杆件温差梯度",
-    thermalBarResponse: "受约束热杆响应",
-    thermalBeamResponse: "热梁响应",
-    thermalFrameResponse: "热刚架响应",
-    thermalTrussResponse: "热桁架响应",
-    thermoelasticPlaneResponse: "热弹性平面响应",
-    maxHeatFlux: "最大热流",
-    heatFluxX: "热流 X",
-    heatFluxY: "热流 Y",
-    thermalCurvature: "热曲率",
-    thermalStrain: "热应变",
-    mechanicalStrain: "机械应变",
-    totalStrain: "总应变",
-    thermalExpansion: "热膨胀系数",
-    bendingStress: "最大弯曲应力",
-    combinedStress: "组合应力",
-    maxMoment: "最大弯矩",
-    maxTorque: "最大扭矩",
-    torsionStress: "扭转应力",
-    torqueZ: "扭矩 Z",
-    torsionHint: "扭转轴研究主要看转角、扭矩传递和沿轴的剪应力。",
-    maxRotation: "最大转角",
-    sortBy: "排序方式",
-    shearForce: "剪力",
-    forceI: "i端轴力",
-    shearI: "i端剪力",
-    momentI: "i端弯矩",
-    forceJ: "j端轴力",
-    shearJ: "j端剪力",
-    momentJ: "j端弯矩",
-    principalStress1: "主应力 1",
-    principalStress2: "主应力 2",
-    maxInPlaneShear: "最大面内剪应力",
-    currentField: "当前结果场",
-    planeHotspots: "热点单元",
-    topN: "热点数",
-    exportHotspots: "导出热点",
-    memberForceTable: "杆端内力表",
-    elementHeatTable: "单元热量表",
-    exportMemberForces: "导出杆端内力",
-    planeResultLegend: "填色：von Mises · 叠加：变形后形状",
-    planeViewVonMises: "von Mises",
-    planeViewPrincipal1: "主应力 1",
-    planeViewMaxShear: "最大剪应力",
-    progress: "进度",
-    iteration: "迭代",
-    residual: "残差",
-    worker: "执行器",
-    status: "状态",
-    nodes: "节点",
-    axialElements: "单元结果",
-    trussElements: "桁架杆件",
-    spatialTrussElements: "空间桁架杆件",
-    span: "区间",
-    stress: "应力 (Pa)",
-    axialForce: "轴力 (N)",
-    importedModel: "已导入模型",
-    importFailed: "导入失败",
-    initialLoaded: "工作台已连接到编排器。",
-    initialFailed: "无法连接到编排器。",
-    dispatching: "正在向编排器提交研究任务。",
-    defaultModel: "手动研究",
-    online: "在线",
-    offline: "离线",
-    historyHint: "任务历史会在编排器重启后保留。",
-    historyEmpty: "暂时还没有任务。",
-    openJob: "打开",
-    refresh: "刷新",
-    resultWindow: "结果窗口",
-    previousPage: "上一页",
-    nextPage: "下一页",
-    jumpStart: "开头",
-    jumpQuarter: "25%",
-    jumpMid: "50%",
-    jumpThreeQuarter: "75%",
-    jumpEnd: "末尾",
-    pageRange: "区间",
-    chunkSize: "窗口",
-    totalElements: "单元",
-    projectLibrary: "项目库",
-    projectNameField: "项目名",
-    projectDescriptionField: "描述",
-    createProject: "新建项目",
-    updateProject: "更新项目",
-    deleteProject: "删除项目",
-    exportProject: "导出项目",
-    exportProjectJson: "项目 JSON",
-    exportProjectZip: "项目 ZIP",
-    importProject: "导入项目",
-    importProjectHint: "导入 .kyuubiki.json 或 .kyuubiki 项目包到项目库。",
-    projectEmpty: "还没有项目。",
-    savedModels: "已保存模型",
-    versions: "版本",
-    save: "保存",
-    saveAs: "另存为",
-    deleteSavedModel: "删除模型",
-    renameVersion: "重命名版本",
-    deleteVersion: "删除版本",
-    exportData: "导出数据",
-    exportJson: "JSON",
-    exportCsv: "CSV",
-    projectHeatToThermo: "将温度场用于力-热研究",
-    projectHeatToThermoAction: "已把热结果映射到力-热研究",
-    projectedHeatToThermo: "已将热结果映射到力-热研究。求解前请再检查约束和材料设置。",
-    noSavedModels: "这个项目里还没有保存的模型。",
-    noVersions: "还没有版本记录。",
-    defaultProject: "工作区",
-    projectCreated: "项目已创建。",
-    projectUpdated: "项目已更新。",
-    projectDeleted: "项目已删除。",
-    projectRequired: "保存模型前请先创建或选择一个项目。",
-    projectExported: "项目包已导出。",
-    projectExportedPartial: "项目包已导出，但只包含部分数据；有些模型或结果未能及时读取。",
-    databaseExported: "数据库快照已导出。",
-    projectImported: "项目包已导入。",
-    modelSaved: "已保存新模型版本。",
-    modelCreated: "已保存新模型。",
-    modelDeletedStored: "已删除保存的模型。",
-    versionLoaded: "已将保存版本加载到工作台。",
-    persistedModelLoaded: "已从库中加载保存模型。",
-    versionRenamed: "版本已重命名。",
-    versionDeleted: "版本已删除。",
-    resultJsonDownloaded: "分析结果 JSON 已下载。",
-    resultCsvDownloaded: "分析结果 CSV 已下载。",
-    jobCancelled: "任务已取消。",
-    noResultToExport: "请先运行一次分析再导出结果数据。",
-    modelTools: "编辑工具",
-    dragHint: "直接在视图区拖拽桁架节点来修改几何。",
-    planeHint: "选择平面节点和三角形单元，直接修改约束、载荷和厚度材料。",
-    parametric: "参数化生成",
-    panelGenerator: "面板生成器",
-    spaceStudio: "三维空间工作室",
-    tabs: { summary: "概览", controls: "控制", tools: "工具", tree: "浏览", jobs: "任务", results: "结果", models: "模型", projects: "项目", samples: "样板" },
-    generate: "生成模型",
-    generatePanel: "生成面板",
-    download: "下载 JSON",
-    saveForSolver: "使用当前模型",
-    bays: "跨数",
-    height: "高度 (m)",
-    divisionsX: "X 分段",
-    divisionsY: "Y 分段",
-    nodeTable: "对象浏览",
-    dragNode: "当前节点",
-    noNodeSelected: "未选择节点",
-    loadCase: "载荷工况",
-    modelStudioHint: "当前建模页支持二维桁架和二维平面单元。三维研究已经支持导入、求解和结果回看。",
-    frameEditorHint: "二维刚架现在已经支持导入、求解、检查和结果回看；更完整的构件编辑会继续补上。",
-    spaceStudioHint: "通过旋转、平移和缩放来查看空间桁架。三维节点和杆件现在也可以选中并做数值编辑。",
-    sourceModel: "来源模型",
-    createdAt: "创建时间",
-    updatedAt: "更新时间",
-    hasResult: "结果",
-    yes: "是",
-    no: "否",
-    jobWorkspaceTitle: "任务工作台",
-    jobWorkspaceHint: "先盯 solver 运行，再在需要时钻进某一条任务记录看细节。",
-    resultWorkspaceTitle: "结果工作台",
-    resultWorkspaceHint: "这里先打开最新已完成结果，再继续进入报告、导出和关联记录。",
-    modelWorkspaceTitle: "模型工作台",
-    modelWorkspaceHint: "把保存过的研究和可复用版本放在一起，方便快速重开或分支。",
-    openLatestJob: "打开最新任务",
-    openLatestResult: "打开最新结果",
-    openLatestModel: "打开最新模型",
-    waitingJobs: "待出结果",
-    readyResults: "已就绪结果",
-    savedCount: "已存模型",
-    versionCount: "版本数",
-    dragToEdit: "拖拽编辑",
-    historyLoaded: "已从历史记录加载持久化任务。",
-    modelDownloaded: "模型 JSON 已下载。",
-    generatedModel: "已生成参数化桁架模型。",
-    planeElements: "平面单元",
-    thickness: "厚度",
-    poisson: "泊松比",
-    poissonRatio: "泊松比",
-    sampleLibrary: "样板库",
-    objectTree: "对象",
-    geometry: "几何",
-    results: "结果",
-    summary: "概览",
-    properties: "属性",
-    diagnostics: "诊断",
-    diagnosticsClear: "当前没有阻塞性的预检查问题。",
-    suggestedFixes: "建议修复",
-    stabilityScore: "稳定性评分",
-    hotspotNodes: "危险热区节点",
-    stabilityGood: "稳定",
-    stabilityWatch: "需关注",
-    stabilityRisk: "高风险",
-    translatedSmallDeformation: "这个结构看起来过软，已经超出小变形求解范围。请补约束或增强薄弱跨段。",
-    translatedConnectivity: "桁架里可能有连接偏弱或断开的区域。请检查约束、杆件连接和孤立节点。",
-    translatedSingular: "刚度矩阵是奇异的。说明模型仍然像机构一样可动，需要更多约束或对角支撑。",
-    translatedWatchdogStalled: "任务长时间没有新的进度更新，已经被看门狗判定为卡住。",
-    translatedWatchdogTimedOut: "任务运行时间过长，已经被看门狗超时终止。",
-    translatedExecutionTimedOut: "求解器响应太久，任务已被安全超时终止。",
-    translatedAgentTimeout: "求解代理在规定时间内没有响应。请检查 agent 进程，或稍后重试。",
-    requestTimedOut: "请求等待过久，工作台已保留最近一次稳定状态。",
-    pollingDetached: "为了保持界面流畅，实时轮询已暂停；你可以稍后手动刷新任务状态。",
-    heartbeatHealthy: "正常",
-    heartbeatQuiet: "安静",
-    heartbeatStale: "过期",
-    mechanismRisk: "这个拓扑仍然很像机构。建议先增加三角化斜撑或额外支座再求解。",
-    addNode: "新增节点",
-    addBranchNode: "分支节点",
-    linkMode: "连线模式",
-    linkModeActive: "连线中",
-    linkModeIdle: "在三维视图区中依次选择两个节点，即可连接或断开。",
-    linkModeEnabled: "已开启三维连线模式。",
-    linkModeDisabled: "已关闭三维连线模式。",
-    linkModeCompleted: "已应用三维连线修改。",
-    deleteNode: "删除节点",
-    addMember: "新增杆件",
-    toggleMember: "切换连接",
-    deleteMember: "删除杆件",
-    selectTwoNodes: "请选择两个节点来创建杆件。",
-    memberCreated: "杆件已创建。",
-    memberRemoved: "杆件已断开。",
-    nodeCreated: "节点已创建。",
-    branchCreated: "节点已创建并连接。",
-    nodeDeleted: "节点已删除。",
-    memberDeleted: "杆件已删除。",
-    selectionHint: "可以通过对象树或视图区选择节点和杆件。",
-    memberSelection: "杆件选择",
-    noElementSelected: "未选择杆件",
-    nodeX: "节点 X",
-    nodeY: "节点 Y",
-    nodeZ: "节点 Z",
-    fixX: "固定 X",
-    fixY: "固定 Y",
-    fixZ: "固定 Z",
-    loadX: "载荷 X",
-    loadY: "载荷 Y",
-    loadZ: "载荷 Z",
-    nodeI: "起点节点",
-    nodeJ: "终点节点",
-    nodeK: "第三节点",
-    none: "无",
-    precheckPrefix: "预检查失败",
-    unstableSupport: "请至少提供两个受限自由度来稳定桁架。",
-    isolatedNode: "每个节点在求解前都应该至少连接一根杆件。",
-    underconnected: "这个桁架连接数量偏少，可能无法稳定求解。",
-    freeRigidBody: "请通过约束两个平移方向来避免整体刚体运动。",
-    supportXMissing: "至少增加一个 X 方向约束，避免侧向漂移。",
-    supportYMissing: "至少增加一个 Y 方向约束，避免竖向漂移。",
-    fixCurrentNodeXAction: "固定当前节点 X",
-    fixCurrentNodeYAction: "固定当前节点 Y",
-    fixNodeXAction: "固定问题节点 X",
-    fixNodeYAction: "固定问题节点 Y",
-    releaseX: "释放 X",
-    releaseY: "释放 Y",
-    releaseZ: "释放 Z",
-    connectCurrentNodeAction: "将当前节点连接到最近节点",
-    connectNodeAction: "将问题节点连接到最近节点",
-    suggestionAppliedSupportX: "已为建议节点补上 X 约束。",
-    suggestionAppliedSupportY: "已为建议节点补上 Y 约束。",
-    suggestionAppliedLink: "已将该节点连接到最近的可用邻点。",
-    suggestionNoLinkTarget: "附近没有可自动连接的有效节点。",
-    panelGenerated: "已生成矩形平面网格。",
-    planeThickness: "厚度",
-    orbitHint: "拖拽平移，按住 Alt 拖拽旋转，滚轮缩放。",
-    spaceNodeCreated: "三维节点已创建。",
-    spaceBranchCreated: "三维节点已创建并连接。",
-    spaceNodeDeleted: "三维节点已删除。",
-    spaceMemberDeleted: "三维杆件已删除。",
-    switchedTo2dStudio: "已切换到二维工作区。",
-    switchedTo3dStudio: "已切换到三维空间工作区。",
-  };
-
-const copy = {
-  en: copyEn,
-  zh: copyZh,
-  ja: {
-    ...copyEn,
-    roleLabel: "解析シェル",
-    title: "構造解析ワークベンチ",
-    subtitle: "モデリング、オーケストレーション、結果レビューを一つにまとめた作業面です。",
-    rail: { study: "解析", model: "ワークスペース", workflow: "ワークフロー", library: "履歴", system: "システム" },
-    sections: { study: "解析設定", model: "ワークスペース", workflow: "ワークフロースタジオ", library: "ジョブ履歴", system: "システム" },
-    studyFamilies: {
-      axialAndSprings: "軸・ばね",
-      beamsAndFrames: "梁・フレーム",
-      trusses: "トラス",
-      planes: "平面要素",
-    },
-    studyDomains: {
-      mechanical: "力学",
-      thermal: "熱",
-      thermoMechanical: "熱応力",
-    },
-    importModel: "モデルを読み込む",
-    importHint: "1D / 2D 解析用の JSON モデルを読み込みます。",
-    sampleCatalogPage: "カタログ",
-    sampleImportPage: "インポート",
-    workflowOverviewPage: "概要",
-    workflowCatalogPage: "カタログ",
-    workflowBuilderPage: "ビルダー",
-    workflowRunsPage: "実行",
-    workflowCatalogTitle: "ワークフローカタログ",
-    workflowCatalogHint: "より大きな study path に組み込む前に、命名済みの多算子 workflow をここで実行します。",
-    workflowOverviewHint: "複合算子 workflow を専用作業面に集め、samples や results に埋め込まないようにします。",
-    workflowBuilderHint: "graph のノード、bridge、extract、export を確認してから大きな study chain に接続します。",
-    workflowRunsHint: "命名 workflow ジョブ、現在ノード、書き出し済み summary を一か所で追います。",
-    workflowCatalogRefresh: "ワークフローを更新",
-    workflowCatalogRun: "参照サンプルを実行",
-    workflowCatalogEmpty: "まだ公開済みの命名 workflow はありません。",
-    workflowCatalogReady: "ワークフローカタログの準備ができました。",
-    workflowCatalogQueued: "ワークフロージョブを投入しました",
-    workflowCatalogCompleted: "ワークフローが完了しました",
-    workflowCatalogUnsupported: "この workflow にはまだ内蔵サンプル入力がありません。",
-    workflowCatalogLoaded: "ワークフローカタログを読み込みました。",
-    workflowCatalogFailed: "ワークフロー実行に失敗しました。",
-    workflowSelectForBuilder: "ビルダーを開く",
-    workflowNoSelection: "まず命名 workflow を選ぶと、ビルダーに graph が表示されます。",
-    workflowNodesTitle: "ノード",
-    workflowEdgesTitle: "エッジ",
-    workflowEntryInputsTitle: "入口入力",
-    workflowOutputArtifactsTitle: "出力アーティファクト",
-    workflowDatasetContractTitle: "データセット契約",
-    workflowDatasetValuesTitle: "データセット値",
-    workflowDatasetValueLabel: "データセット値",
-    workflowDatasetSemanticTypeLabel: "意味型",
-    workflowDatasetEncodingLabel: "エンコード",
-    workflowDatasetShapeLabel: "形状",
-    workflowDatasetAxesLabel: "軸",
-    workflowDatasetSchemaLabel: "スキーマ",
-    workflowDatasetClassLabel: "要素型",
-    workflowDatasetNoneLabel: "この workflow にはまだ dataset contract がありません。",
-    workflowDatasetDraftHint: "まずここで dataset の意味付けをローカル草稿として調整し、port・edge・跨算子値を揃えてから永続化に進みます。",
-    workflowDatasetEditorTitle: "データセットエディタ",
-    workflowDatasetValueSelectLabel: "選択中のデータセット値",
-    workflowDatasetUnitLabel: "単位",
-    workflowDatasetMetadataLabel: "メタ情報",
-    workflowDatasetPortMappingsTitle: "ポート対応",
-    workflowDatasetEdgeMappingsTitle: "エッジ対応",
-    workflowDatasetDraftLocalLabel: "ローカル草稿",
-    workflowDatasetUnassignedLabel: "未割り当て",
-    workflowExportGraphLabel: "Graph JSON を書き出す",
-    workflowExportDatasetContractLabel: "Dataset JSON を書き出す",
-    workflowOperatorLabel: "算子",
-    workflowKindLabel: "種別",
-    workflowProgressLabel: "進捗",
-    workflowCurrentNodeLabel: "現在ノード",
-    workflowLatestSummaryLabel: "最新サマリー",
-    workflowOpenRunLabel: "実行を開く",
-    workflowRunsEmpty: "まだ workflow 実行はありません。",
-    projectManagePage: "管理",
-    projectExchangePage: "入出力",
-    modelSavedPage: "保存済み",
-    modelVersionsPage: "バージョン",
-    studyDomain: "物理ドメイン",
-    noDomainStudies: "このドメインにはまだ公開済み study がありません。",
-    jobWorkspaceTitle: "ジョブ作業面",
-    jobWorkspaceHint: "まずは solver 実行を追い、必要になった時だけ個別ジョブに掘り下げます。",
-    resultWorkspaceTitle: "結果作業面",
-    resultWorkspaceHint: "ここでは最新の完了結果を開き、そこからレポートやエクスポートに進みます。",
-    modelWorkspaceTitle: "モデル作業面",
-    modelWorkspaceHint: "保存済み study と再利用用バージョンをまとめて、すぐに再開や分岐ができるようにします。",
-    openLatestJob: "最新ジョブを開く",
-    openLatestResult: "最新結果を開く",
-    openLatestModel: "最新モデルを開く",
-    waitingJobs: "結果待ち",
-    readyResults: "利用可能な結果",
-    savedCount: "保存済みモデル",
-    versionCount: "バージョン数",
-    overview: "概要",
-    result: "結果",
-    actions: "操作",
-    details: "詳細",
-    controls: "設定",
-    controlsSetupPage: "編集",
-    controlsReviewPage: "確認",
-    studyTypeLabel: "解析タイプ",
-    modelStudyPage: "解析",
-    modelOverviewPage: "概要",
-    modelStudioPage: "スタジオ",
-    modelMaterialsPage: "材料",
-    modelGeneratePage: "生成",
-    workspaceStudyHint: "Study ファミリー、物理ドメイン、solver 向け setup をここで整えます。",
-    workspaceStudioHint: "ノード、部材、境界、幾何の編集はここで行います。",
-    workspaceMaterialsHint: "初期材料値と再利用する材料選択をここにまとめます。",
-    workspaceGenerateHint: "ジェネレーターとパラメトリック補助で再現可能なモデルを作ります。",
-    workspaceBrowseHint: "オブジェクト、ハイライト、結果に結び付く選択をここで参照します。",
-    settings: "設定",
-    scripts: "スクリプト",
-    settingsConfigHint: "テーマ、言語、ルーティング、アクセストークン、言語パックをここで管理します。",
-    settingsScriptsHint: "WASM Python、マクロ記録、アクションカタログをここで扱います。",
-    assistant: "アシスタント",
-    config: "構成",
-    runtime: "ランタイム",
-    data: "データ",
-    packs: "言語パック",
-    workspace: "ワークスペース",
-    routing: "ルーティング",
-    access: "アクセス",
-    stack: "スタック",
-    security: "セキュリティ",
-    agents: "エージェント",
-    audit: "監査",
-    backend: "バックエンド",
-    protocols: "プロトコル",
-    dataAdmin: "データ管理",
-    languagePacksTitle: "インストール済み言語パック",
-    languagePacksHint: "今はローカル JSON パックの取り込みを先にサポートし、この画面を将来のリモート配布入口として残しておきます。",
-    languagePacksEmptyLabel: "まだカスタム言語パックはありません。",
-    languagePackName: "名称",
-    languagePackVersion: "バージョン",
-    languagePackSourceImported: "ローカル取込",
-    languagePackSourceDownloaded: "リモート取得",
-    languagePackDownloadTemplate: "テンプレートを出力",
-    languagePackExportInstalled: "現在の言語パックを出力",
-    languagePackImport: "言語パックを取込",
-    languagePackRemove: "削除",
-    languagePackCatalogTitle: "将来のカタログ",
-    languagePackCatalogHint: "この欄は将来のリモート言語パック配布を同じ画面で扱えるように先に用意しています。",
-    languagePackCatalogAction: "今後対応",
-    adminJobs: "ジョブ",
-    adminResults: "結果",
-    adminBrowsePage: "参照",
-    adminEditPage: "編集",
-    themes: { linen: "リネン", marine: "マリン", graphite: "グラファイト" },
-    languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
-    frontendModes: {
-      orchestrated_gui: "オーケストレーション GUI",
-      direct_mesh_gui: "ダイレクトメッシュ GUI",
-    },
-    directMeshStrategies: {
-      healthiest: "最も健全なノード",
-      first_reachable: "最初に到達可能なノード",
-    },
-    tabs: { summary: "概要", controls: "設定", tools: "ツール", tree: "参照", jobs: "ジョブ", results: "結果", models: "モデル", projects: "プロジェクト", samples: "サンプル" },
-    ready: "準備完了",
-    busy: "処理中",
-    run: "解析を実行",
-    running: "実行中...",
-    historyEmpty: "まだジョブはありません。",
-    refresh: "更新",
-    online: "オンライン",
-    offline: "オフライン",
-    controlPlaneTokenHelp:
-      "トークン保護された control-plane 配備向けです。/api/v1 リクエストに x-kyuubiki-token として送信されます。",
-    controlPlaneTokenPlaceholder: "任意の control-plane トークン",
-    clusterTokenHelp:
-      "agent の登録・heartbeat・削除などの cluster ルートに使います。未入力なら control-plane token を使います。",
-    clusterTokenPlaceholder: "任意の cluster 専用トークン",
-    directMeshTokenHelp:
-      "トークン保護された direct mesh ルート向けです。/api/direct-mesh リクエストに送信されます。",
-    directMeshTokenPlaceholder: "任意の direct-mesh トークン",
-    exportDatabase: "データベーススナップショットを出力",
-    runtimeSecurityFooter:
-      "実行中のセキュリティ状態は /api/health から取得され、フロントエンドのトークンは現在のブラウザセッションにのみ保持されます。",
-    securityAudit: "セキュリティ監査",
-    auditSessionLabel:
-      "Workbench アシスタント、スクリプト、Hub アシスタントを含む control-plane 永続化イベント列を表示します。",
-    auditWindow: "期間",
-    auditSource: "ソース",
-    auditRisk: "リスク",
-    auditStatus: "状態",
-    auditAction: "操作",
-    auditSummaryTitle: "イベント要約",
-    auditTrendTitle: "時間推移",
-    auditTrendEmptyLabel: "現在の期間ではトレンドデータがありません。",
-    auditSourceStatusTitle: "ソース × 状態",
-    auditStudyFacetTitle: "Study ファセット",
-    auditProjectFacetTitle: "Project ファセット",
-    auditModelVersionFacetTitle: "Version ファセット",
-    auditFacetEmptyLabel: "現在の期間では利用できるファセットがありません。",
-    auditRefreshLabel: "イベントを更新",
-    auditExportLabel: "分析バンドルを出力",
-    auditExportCsvLabel: "CSV を出力",
-    auditWindowOptions: { all: "全期間", h1: "直近 1 時間", h24: "直近 24 時間", d7: "直近 7 日", d30: "直近 30 日" },
-    auditSourceOptions: { all: "すべて", assistant: "アシスタント", hubAssistant: "Hub アシスタント", script: "スクリプト" },
-    auditRiskOptions: { all: "すべて", low: "低", sensitive: "機微", high: "高", destructive: "破壊的" },
-    auditStatusOptions: { all: "すべて", prompted: "確認待ち", confirmed: "確認済み", cancelled: "取消済み", completed: "完了", failed: "失敗" },
-    assistantLauncherHint: "ガイドが必要ですか？",
-    assistantFloatingTitle: "ワークベンチに質問",
-    assistantFloatingSubtitle: "作業面は軽く保ち、必要なときだけガイドを開きます。",
-    assistantOpen: "アシスタントを開く",
-    assistantClose: "アシスタントを閉じる",
-    modelName: "モデル",
-    material: "材料",
-    load: "荷重",
-    support: "拘束",
-    viewport: "ビュー",
-    report: "レポート",
-    summary: "概要",
-    messages: "メッセージ",
-    nodeTable: "オブジェクト参照",
-    objectTree: "オブジェクト",
-  },
-} as const;
-
-type WorkbenchCopy = typeof copyEn;
-const copyByLanguage: Record<Language, WorkbenchCopy> = {
-  en: copy.en,
-  zh: copy.zh,
-  ja: copy.ja,
-  es: {
-    ...copy.en,
-    language: "Idioma",
-    languages: {
-      ...copy.en.languages,
-      es: "Español",
-    },
-  },
-};
-
-function humanizeSolverFailure(message: string | null | undefined, languageCopy: WorkbenchCopy) {
-  if (!message) return null;
-
-  if (message.includes("watchdog marked job stalled")) {
-    return languageCopy.translatedWatchdogStalled;
-  }
-
-  if (message.includes("watchdog timed out job")) {
-    return languageCopy.translatedWatchdogTimedOut;
-  }
-
-  if (message.includes("job execution timed out")) {
-    return languageCopy.translatedExecutionTimedOut;
-  }
-
-  if (message.includes("small-deformation limit")) {
-    return `${languageCopy.translatedSmallDeformation} ${languageCopy.translatedConnectivity}`;
-  }
-
-  if (message.includes("system is singular")) {
-    return `${languageCopy.translatedSingular} ${languageCopy.translatedConnectivity}`;
-  }
-
-  if (message.includes("supports or connectivity")) {
-    return languageCopy.translatedConnectivity;
-  }
-
-  if (message.includes(":timeout") || message.includes("all_agents_failed")) {
-    return languageCopy.translatedAgentTimeout;
-  }
-
-  return message;
-}
-
-function formatJobMessage(job: JobEnvelope["job"] | null, fallback: string, languageCopy: WorkbenchCopy) {
-  if (!job) return fallback;
-  if (job.status === "failed" && job.message) {
-    return `${job.job_id} failed: ${humanizeSolverFailure(job.message, languageCopy) ?? job.message}`;
-  }
-  return `${job.job_id} ${job.status}`;
-}
-
-function summarizeTrussStability(model: Truss2dJobInput, diagnostics: TrussDiagnostics): StabilitySummary {
-  const nodeIssueEntries = Object.entries(diagnostics.nodeIssues);
-  const issueCount = diagnostics.blockingMessages.length + nodeIssueEntries.reduce((sum, [, issues]) => sum + issues.length, 0);
-  const supportCount = model.nodes.reduce((sum, node) => sum + (node.fix_x ? 1 : 0) + (node.fix_y ? 1 : 0), 0);
-  const structuralScore = Math.max(0, 100 - issueCount * 14 - Math.max(0, model.nodes.length - model.elements.length - 1) * 8);
-  const supportBoost = Math.min(12, supportCount * 3);
-  const score = Math.max(0, Math.min(100, structuralScore + supportBoost));
-  const hotspotNodes = nodeIssueEntries
-    .sort((left, right) => right[1].length - left[1].length)
-    .slice(0, 3)
-    .map(([nodeIndex]) => Number(nodeIndex));
-
-  if (score >= 80) return { score, tone: "good", hotspotNodes };
-  if (score >= 55) return { score, tone: "watch", hotspotNodes };
-  return { score, tone: "risk", hotspotNodes };
-}
-
-function isTruss3dResult(value: unknown): value is Truss3dResult {
-  return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && Array.isArray((value as Truss3dResult).nodes) && (value as Truss3dResult).nodes.some((node) => "z" in node);
-}
-
-function buildDisplayTruss3dNodes(
-  model: Truss3dJobInput,
-  result: Truss3dResult | null,
-  windowNodes?: Truss3dResult["nodes"],
-): DisplayTruss3dNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      z: node.z,
-      ux: node.ux,
-      uy: node.uy,
-      uz: node.uz,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    z: node.z,
-    ux: 0,
-    uy: 0,
-    uz: 0,
-  }));
-}
-
-function buildDisplayTruss3dElements(
-  model: Truss3dJobInput,
-  result: Truss3dResult | null,
-  windowElements?: Truss3dResult["elements"],
-): DisplayTruss3dElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      ...element,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-    const dz = (nodeJ?.z ?? 0) - (nodeI?.z ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy + dz * dz),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function projectTruss3dPoint(node: { x: number; y: number; z: number }, bounds: ReturnType<typeof getTrussBounds>) {
-  const isoX = node.x - node.y * 0.55;
-  const isoY = node.z + node.y * 0.35;
-  return toSvgPoint({ x: isoX, y: isoY }, bounds);
-}
-
-function localMaterialLabel(value: string, language: Language): string {
-  const labels = {
-    en: {
-      "210": "Steel",
-      "70": "Aluminum",
-      "116": "Titanium",
-      "30": "Concrete",
-      "135": "Carbon fiber",
-      custom: "Custom",
-    },
-    zh: {
-      "210": "钢",
-      "70": "铝",
-      "116": "钛",
-      "30": "混凝土",
-      "135": "碳纤维",
-      custom: "自定义",
-    },
-  } as const;
-
-  const localized = language === "zh" ? labels.zh : labels.en;
-  return localized[value as keyof typeof localized] ?? localized.custom;
-}
-
-const MATERIAL_COLOR_STOPS = [
-  "#1677a3",
-  "#ff8a3d",
-  "#4a9c61",
-  "#915fe2",
-  "#c7547a",
-  "#8a6f3b",
-];
-
-function materialColorByIndex(index: number) {
-  return MATERIAL_COLOR_STOPS[index % MATERIAL_COLOR_STOPS.length];
-}
-
-function isAxialResult(value: unknown): value is AxialBarResult {
-  return typeof value === "object" && value !== null && "tip_displacement" in value;
-}
-
-function isThermalBar1dResult(value: unknown): value is ThermalBar1dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature_delta" in value &&
-    "max_axial_force" in value &&
-    "nodes" in value &&
-    "elements" in value
-  );
-}
-
-function isHeatBar1dResult(value: unknown): value is HeatBar1dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature" in value &&
-    "max_heat_flux" in value &&
-    "nodes" in value &&
-    "elements" in value
-  );
-}
-
-function isHeatPlaneTriangle2dResult(value: unknown): value is HeatPlaneTriangle2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature" in value &&
-    "max_heat_flux" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as HeatPlaneTriangle2dResult).elements) &&
-    (value as HeatPlaneTriangle2dResult).elements.every((element) => !("node_l" in element))
-  );
-}
-
-function isHeatPlaneQuad2dResult(value: unknown): value is HeatPlaneQuad2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature" in value &&
-    "max_heat_flux" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as HeatPlaneQuad2dResult).elements) &&
-    (value as HeatPlaneQuad2dResult).elements.some((element) => "node_l" in element)
-  );
-}
-
-function isThermalTruss2dResult(value: unknown): value is ThermalTruss2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature_delta" in value &&
-    "max_axial_force" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as ThermalTruss2dResult).nodes) &&
-    !(value as ThermalTruss2dResult).nodes.some((node) => "z" in node)
-  );
-}
-
-function isThermalTruss3dResult(value: unknown): value is ThermalTruss3dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature_delta" in value &&
-    "max_axial_force" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as ThermalTruss3dResult).nodes) &&
-    (value as ThermalTruss3dResult).nodes.some((node) => "z" in node)
-  );
-}
-
-function isTrussResult(value: unknown): value is Truss2dResult {
-  return typeof value === "object" && value !== null && "nodes" in value && "elements" in value && !("tip_displacement" in value) && Array.isArray((value as Truss2dResult).nodes) && !(value as Truss2dResult).nodes.some((node) => "z" in node);
-}
-
-function isBeam1dResult(value: unknown): value is Beam1dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_rotation" in value &&
-    "max_moment" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as Beam1dResult).nodes) &&
-    !(value as Beam1dResult).nodes.some((node) => "y" in node)
-  );
-}
-
-function isThermalBeam1dResult(value: unknown): value is ThermalBeam1dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature_gradient" in value &&
-    "max_rotation" in value &&
-    "max_moment" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as ThermalBeam1dResult).nodes) &&
-    !(value as ThermalBeam1dResult).nodes.some((node) => "y" in node)
-  );
-}
-
-function isTorsion1dResult(value: unknown): value is Torsion1dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_torque" in value &&
-    "max_rotation" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as Torsion1dResult).nodes)
-  );
-}
-
-function isSpring1dResult(value: unknown): value is Spring1dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_force" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as Spring1dResult).nodes)
-  );
-}
-
-function isSpring2dResult(value: unknown): value is Spring2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_force" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as Spring2dResult).nodes) &&
-    (value as Spring2dResult).nodes.some((node) => "y" in node)
-  );
-}
-
-function isSpring3dResult(value: unknown): value is Spring3dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_force" in value &&
-    "nodes" in value &&
-    "elements" in value &&
-    Array.isArray((value as Spring3dResult).nodes) &&
-    (value as Spring3dResult).nodes.some((node) => "z" in node)
-  );
-}
-
-function isFrame2dResult(value: unknown): value is Frame2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_rotation" in value &&
-    "max_moment" in value &&
-    "nodes" in value &&
-    "elements" in value
-  );
-}
-
-function isThermalFrame2dResult(value: unknown): value is ThermalFrame2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "max_temperature_delta" in value &&
-    "max_temperature_gradient" in value &&
-    "max_rotation" in value &&
-    "nodes" in value &&
-    "elements" in value
-  );
-}
-
-function isPlaneResult(
-  value: unknown,
-): value is
-  | PlaneTriangle2dResult
-  | PlaneQuad2dResult
-  | ThermalPlaneTriangle2dResult
-  | ThermalPlaneQuad2dResult {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "elements" in value &&
-    "nodes" in value &&
-    "input" in value &&
-    Array.isArray(
-      (
-        value as
-          | PlaneTriangle2dResult
-          | PlaneQuad2dResult
-          | ThermalPlaneTriangle2dResult
-          | ThermalPlaneQuad2dResult
-      ).elements,
-    ) &&
-    (
-      value as
-        | PlaneTriangle2dResult
-        | PlaneQuad2dResult
-        | ThermalPlaneTriangle2dResult
-        | ThermalPlaneQuad2dResult
-    ).elements.some((element) => "node_k" in element)
-  );
-}
-
-function ensureBeamModelMaterials<T extends { materials?: Array<{ id: string }>; elements: Array<{ material_id?: string | undefined }> }>(
-  model: T,
-  materialValue: string,
-): T {
-  const existingMaterials = model.materials?.length
-    ? model.materials
-    : [createMaterialDefinition(materialValue, 1, { id: "mat-1" })];
-  const defaultMaterialId = existingMaterials[0]?.id ?? "mat-1";
-  return {
-    ...model,
-    materials: existingMaterials,
-    elements: model.elements.map((element) => ({
-      ...element,
-      material_id: element.material_id ?? defaultMaterialId,
-    })),
-  };
-}
-
-function ensureFrameModelMaterials(model: Frame2dJobInput, materialValue: string): Frame2dJobInput {
-  const existingMaterials = model.materials?.length
-    ? model.materials
-    : [createMaterialDefinition(materialValue, 1, { id: "mat-1" })];
-  const defaultMaterialId = existingMaterials[0]?.id ?? "mat-1";
-  return {
-    ...model,
-    materials: existingMaterials,
-    elements: model.elements.map((element) => ({
-      ...element,
-      material_id: element.material_id ?? defaultMaterialId,
-    })),
-  };
-}
-
-function buildThermalBarFromHeatResult(
-  sourceModel: HeatBar1dJobInput,
-  result: HeatBar1dResult,
-  fallbackModel: ThermalBar1dJobInput,
-): ThermalBar1dJobInput {
-  const sameTopology =
-    fallbackModel.nodes.length === sourceModel.nodes.length &&
-    fallbackModel.elements.length === sourceModel.elements.length;
-  const defaultElement = defaultThermalBar1d.elements[0];
-
-  return {
-    project_id: sourceModel.project_id,
-    model_version_id: sourceModel.model_version_id,
-    nodes: sourceModel.nodes.map((node, index) => ({
-      id: node.id,
-      x: node.x,
-      fix_x: sameTopology ? fallbackModel.nodes[index]?.fix_x ?? node.fix_temperature : node.fix_temperature,
-      load_x: sameTopology ? fallbackModel.nodes[index]?.load_x ?? 0 : 0,
-      temperature_delta: result.nodes[index]?.temperature ?? node.temperature ?? 0,
-    })),
-    elements: sourceModel.elements.map((element, index) => ({
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      area: element.area,
-      youngs_modulus: sameTopology ? fallbackModel.elements[index]?.youngs_modulus ?? defaultElement.youngs_modulus : defaultElement.youngs_modulus,
-      thermal_expansion: sameTopology ? fallbackModel.elements[index]?.thermal_expansion ?? defaultElement.thermal_expansion : defaultElement.thermal_expansion,
-    })),
-  };
-}
-
-function buildThermalPlaneTriangleFromHeatResult(
-  sourceModel: HeatPlaneTriangle2dJobInput,
-  result: HeatPlaneTriangle2dResult,
-  fallbackModel: ThermalPlaneTriangle2dJobInput,
-  fallbackMaterial: string,
-): ThermalPlaneTriangle2dJobInput {
-  const sameTopology =
-    fallbackModel.nodes.length === sourceModel.nodes.length &&
-    fallbackModel.elements.length === sourceModel.elements.length;
-  const fallbackMaterials = sameTopology && fallbackModel.materials?.length ? fallbackModel.materials : defaultThermalPlaneTriangle.materials;
-
-  return ensurePlaneModelMaterials(
-    {
-      materials: fallbackMaterials,
-      project_id: sourceModel.project_id,
-      model_version_id: sourceModel.model_version_id,
-      nodes: sourceModel.nodes.map((node, index) => ({
-        id: node.id,
-        x: node.x,
-        y: node.y,
-        fix_x: sameTopology ? fallbackModel.nodes[index]?.fix_x ?? node.fix_temperature : node.fix_temperature,
-        fix_y: sameTopology ? fallbackModel.nodes[index]?.fix_y ?? node.fix_temperature : node.fix_temperature,
-        load_x: sameTopology ? fallbackModel.nodes[index]?.load_x ?? 0 : 0,
-        load_y: sameTopology ? fallbackModel.nodes[index]?.load_y ?? 0 : 0,
-        temperature_delta: result.nodes[index]?.temperature ?? node.temperature ?? 0,
-      })),
-      elements: sourceModel.elements.map((element, index) => {
-        const template = sameTopology ? fallbackModel.elements[index] : defaultThermalPlaneTriangle.elements[Math.min(index, defaultThermalPlaneTriangle.elements.length - 1)];
-        return {
-          id: element.id,
-          node_i: element.node_i,
-          node_j: element.node_j,
-          node_k: element.node_k,
-          thickness: element.thickness,
-          youngs_modulus: template?.youngs_modulus ?? defaultThermalPlaneTriangle.elements[0].youngs_modulus,
-          poisson_ratio: template?.poisson_ratio ?? defaultThermalPlaneTriangle.elements[0].poisson_ratio,
-          thermal_expansion: template?.thermal_expansion ?? defaultThermalPlaneTriangle.elements[0].thermal_expansion,
-          material_id: template?.material_id ?? fallbackMaterials?.[0]?.id,
-        };
-      }),
-    },
-    fallbackMaterial,
-  ) as ThermalPlaneTriangle2dJobInput;
-}
-
-function buildThermalPlaneQuadFromHeatResult(
-  sourceModel: HeatPlaneQuad2dJobInput,
-  result: HeatPlaneQuad2dResult,
-  fallbackModel: ThermalPlaneQuad2dJobInput,
-  fallbackMaterial: string,
-): ThermalPlaneQuad2dJobInput {
-  const sameTopology =
-    fallbackModel.nodes.length === sourceModel.nodes.length &&
-    fallbackModel.elements.length === sourceModel.elements.length;
-  const fallbackMaterials = sameTopology && fallbackModel.materials?.length ? fallbackModel.materials : defaultThermalPlaneQuad.materials;
-
-  return ensurePlaneModelMaterials(
-    {
-      materials: fallbackMaterials,
-      project_id: sourceModel.project_id,
-      model_version_id: sourceModel.model_version_id,
-      nodes: sourceModel.nodes.map((node, index) => ({
-        id: node.id,
-        x: node.x,
-        y: node.y,
-        fix_x: sameTopology ? fallbackModel.nodes[index]?.fix_x ?? node.fix_temperature : node.fix_temperature,
-        fix_y: sameTopology ? fallbackModel.nodes[index]?.fix_y ?? node.fix_temperature : node.fix_temperature,
-        load_x: sameTopology ? fallbackModel.nodes[index]?.load_x ?? 0 : 0,
-        load_y: sameTopology ? fallbackModel.nodes[index]?.load_y ?? 0 : 0,
-        temperature_delta: result.nodes[index]?.temperature ?? node.temperature ?? 0,
-      })),
-      elements: sourceModel.elements.map((element, index) => {
-        const template = sameTopology ? fallbackModel.elements[index] : defaultThermalPlaneQuad.elements[Math.min(index, defaultThermalPlaneQuad.elements.length - 1)];
-        return {
-          id: element.id,
-          node_i: element.node_i,
-          node_j: element.node_j,
-          node_k: element.node_k,
-          node_l: element.node_l,
-          thickness: element.thickness,
-          youngs_modulus: template?.youngs_modulus ?? defaultThermalPlaneQuad.elements[0].youngs_modulus,
-          poisson_ratio: template?.poisson_ratio ?? defaultThermalPlaneQuad.elements[0].poisson_ratio,
-          thermal_expansion: template?.thermal_expansion ?? defaultThermalPlaneQuad.elements[0].thermal_expansion,
-          material_id: template?.material_id ?? fallbackMaterials?.[0]?.id,
-        };
-      }),
-    },
-    fallbackMaterial,
-  ) as ThermalPlaneQuad2dJobInput;
-}
-
-function buildDisplayTrussNodes(
-  model: Truss2dJobInput,
-  result: Truss2dResult | null,
-  windowNodes?: Truss2dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      ux: node.ux,
-      uy: node.uy,
-      fix_x: model.nodes[node.index]?.fix_x ?? false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: model.nodes[node.index]?.load_x ?? 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    ux: 0,
-    uy: 0,
-    fix_x: node.fix_x,
-    fix_y: node.fix_y,
-    load_x: node.load_x,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplayTrussElements(
-  model: Truss2dJobInput,
-  result: Truss2dResult | null,
-  windowElements?: Truss2dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.strain,
-      stress: element.stress,
-      axial_force: element.axial_force,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function buildDisplayFrameNodes(
-  model: Frame2dJobInput,
-  result: Frame2dResult | null,
-  windowNodes?: Frame2dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      ux: node.ux,
-      uy: node.uy,
-      fix_x: model.nodes[node.index]?.fix_x ?? false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: model.nodes[node.index]?.load_x ?? 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    ux: 0,
-    uy: 0,
-    fix_x: node.fix_x,
-    fix_y: node.fix_y,
-    load_x: node.load_x,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplayThermalFrameNodes(
-  model: ThermalFrame2dJobInput,
-  result: ThermalFrame2dResult | null,
-  windowNodes?: ThermalFrame2dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      ux: node.ux,
-      uy: node.uy,
-      fix_x: model.nodes[node.index]?.fix_x ?? false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: model.nodes[node.index]?.load_x ?? 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    ux: 0,
-    uy: 0,
-    fix_x: node.fix_x,
-    fix_y: node.fix_y,
-    load_x: node.load_x,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplayBeamNodes(
-  model: Beam1dJobInput,
-  result: Beam1dResult | null,
-  windowNodes?: Beam1dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: 0,
-      ux: 0,
-      uy: node.uy,
-      fix_x: false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: 0,
-    ux: 0,
-    uy: 0,
-    fix_x: false,
-    fix_y: node.fix_y,
-    load_x: 0,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplayThermalBeamNodes(
-  model: ThermalBeam1dJobInput,
-  result: ThermalBeam1dResult | null,
-  windowNodes?: ThermalBeam1dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: 0,
-      ux: 0,
-      uy: node.uy,
-      fix_x: false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: 0,
-    ux: 0,
-    uy: 0,
-    fix_x: false,
-    fix_y: node.fix_y,
-    load_x: 0,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplayTorsionNodes(
-  model: Torsion1dJobInput,
-  result: Torsion1dResult | null,
-  windowNodes?: Torsion1dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: 0,
-      ux: 0,
-      uy: 0,
-      fix_x: false,
-      fix_y: true,
-      load_x: 0,
-      load_y: model.nodes[node.index]?.torque_z ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: 0,
-    ux: 0,
-    uy: 0,
-    fix_x: false,
-    fix_y: true,
-    load_x: 0,
-    load_y: node.torque_z,
-  }));
-}
-
-function buildDisplaySpringNodes(
-  model: Spring1dJobInput,
-  result: Spring1dResult | null,
-  windowNodes?: Spring1dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: 0,
-      ux: node.ux,
-      uy: 0,
-      fix_x: model.nodes[node.index]?.fix_x ?? false,
-      fix_y: true,
-      load_x: model.nodes[node.index]?.load_x ?? 0,
-      load_y: 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: 0,
-    ux: 0,
-    uy: 0,
-    fix_x: node.fix_x,
-    fix_y: true,
-    load_x: node.load_x,
-    load_y: 0,
-  }));
-}
-
-function buildDisplayBeamElements(
-  model: Beam1dJobInput,
-  result: Beam1dResult | null,
-  windowElements?: Beam1dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: 0,
-      stress: element.max_bending_stress,
-      axial_force: Math.max(Math.abs(element.moment_i), Math.abs(element.moment_j)),
-      max_bending_stress: element.max_bending_stress,
-      shear_force_i: element.shear_force_i,
-      moment_i: element.moment_i,
-      shear_force_j: element.shear_force_j,
-      moment_j: element.moment_j,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.abs(dx),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function buildDisplayThermalBeamElements(
-  model: ThermalBeam1dJobInput,
-  result: ThermalBeam1dResult | null,
-  windowElements?: ThermalBeam1dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.thermal_curvature,
-      stress: element.max_bending_stress,
-      axial_force: Math.max(Math.abs(element.moment_i), Math.abs(element.moment_j)),
-      temperature_gradient_y: element.temperature_gradient_y,
-      thermal_curvature: element.thermal_curvature,
-      max_bending_stress: element.max_bending_stress,
-      shear_force_i: element.shear_force_i,
-      moment_i: element.moment_i,
-      shear_force_j: element.shear_force_j,
-      moment_j: element.moment_j,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.abs(dx),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      temperature_gradient_y: element.temperature_gradient_y,
-      thermal_curvature: 0,
-      max_bending_stress: 0,
-      shear_force_i: 0,
-      moment_i: 0,
-      shear_force_j: 0,
-      moment_j: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function buildDisplayTorsionElements(
-  model: Torsion1dJobInput,
-  result: Torsion1dResult | null,
-  windowElements?: Torsion1dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.twist,
-      stress: element.shear_stress,
-      axial_force: Math.abs(element.torque),
-      max_bending_stress: element.shear_stress,
-      moment_i: element.torque,
-      moment_j: element.torque,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.abs(dx),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      max_bending_stress: 0,
-      moment_i: 0,
-      moment_j: 0,
-    };
-  });
-}
-
-function buildDisplaySpringElements(
-  model: Spring1dJobInput,
-  result: Spring1dResult | null,
-  windowElements?: Spring1dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.extension,
-      stress: element.force,
-      axial_force: element.force,
-      axial_stress: element.force,
-      axial_force_i: element.force,
-      axial_force_j: element.force,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.abs(dx),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      axial_stress: 0,
-      axial_force_i: 0,
-      axial_force_j: 0,
-    };
-  });
-}
-
-function buildDisplayThermalBarNodes(
-  model: ThermalBar1dJobInput,
-  result: ThermalBar1dResult | null,
-  windowNodes?: ThermalBar1dResult["nodes"],
-): DisplayTrussNode[] {
-  const source = windowNodes ?? result?.nodes;
-  return (source ?? model.nodes.map((node, index) => ({ index, id: node.id, x: node.x, ux: 0, temperature_delta: node.temperature_delta }))).map((node, index) => ({
-    index: node.index ?? index,
-    id: model.nodes[node.index ?? index]?.id ?? node.id,
-    x: model.nodes[node.index ?? index]?.x ?? node.x,
-    y: 0,
-    ux: node.ux ?? 0,
-    uy: 0,
-    fix_x: model.nodes[node.index ?? index]?.fix_x ?? false,
-    fix_y: true,
-    load_x: model.nodes[node.index ?? index]?.load_x ?? 0,
-    load_y: 0,
-  }));
-}
-
-function buildDisplayThermalBarElements(
-  model: ThermalBar1dJobInput,
-  result: ThermalBar1dResult | null,
-  windowElements?: ThermalBar1dResult["elements"],
-): DisplayTrussElement[] {
-  const source = windowElements ?? result?.elements;
-  return (source ??
-    model.elements.map((element, index) => ({
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.abs(model.nodes[element.node_j].x - model.nodes[element.node_i].x),
-      stress: 0,
-      axial_force: 0,
-      average_temperature_delta: 0,
-    } as ThermalBar1dResult["elements"][number]))).map((element, index) => ({
-    index: element.index ?? index,
-    id: model.elements[element.index ?? index]?.id ?? element.id,
-    node_i: element.node_i,
-    node_j: element.node_j,
-    length: element.length,
-    strain: element.total_strain ?? 0,
-    stress: element.stress,
-    axial_force: element.axial_force,
-    axial_stress: element.stress,
-    axial_force_i: element.axial_force,
-    shear_force_i: 0,
-    moment_i: 0,
-    axial_force_j: element.axial_force,
-    shear_force_j: 0,
-    moment_j: 0,
-  }));
-}
-
-function buildDisplayHeatBarNodes(
-  model: HeatBar1dJobInput,
-  result: HeatBar1dResult | null,
-  windowNodes?: HeatBar1dResult["nodes"],
-): DisplayTrussNode[] {
-  const source = windowNodes ?? result?.nodes;
-  return (
-    source ??
-    model.nodes.map((node, index) => ({
-      index,
-      id: node.id,
-      x: node.x,
-      temperature: node.temperature,
-      heat_load: node.heat_load,
-    }))
-  ).map((node, index) => ({
-    index: node.index ?? index,
-    id: model.nodes[node.index ?? index]?.id ?? node.id,
-    x: model.nodes[node.index ?? index]?.x ?? node.x,
-    y: 0,
-    ux: 0,
-    uy: 0,
-    fix_x: model.nodes[node.index ?? index]?.fix_temperature ?? false,
-    fix_y: true,
-    load_x: model.nodes[node.index ?? index]?.heat_load ?? 0,
-    load_y: 0,
-    temperature_delta: node.temperature ?? model.nodes[node.index ?? index]?.temperature ?? 0,
-  }));
-}
-
-function buildDisplayHeatBarElements(
-  model: HeatBar1dJobInput,
-  result: HeatBar1dResult | null,
-  windowElements?: HeatBar1dResult["elements"],
-): DisplayTrussElement[] {
-  const source = windowElements ?? result?.elements;
-  return (
-    source ??
-    model.elements.map((element, index) => ({
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.abs(model.nodes[element.node_j].x - model.nodes[element.node_i].x),
-      average_temperature: 0,
-      temperature_gradient: 0,
-      heat_flux: 0,
-    }))
-  ).map((element, index) => ({
-    index: element.index ?? index,
-    id: model.elements[element.index ?? index]?.id ?? element.id,
-    node_i: element.node_i,
-    node_j: element.node_j,
-    length: element.length,
-    strain: element.temperature_gradient ?? 0,
-    stress: element.heat_flux ?? 0,
-    axial_force: element.heat_flux ?? 0,
-    axial_stress: element.heat_flux ?? 0,
-    average_temperature_delta: element.average_temperature ?? 0,
-    axial_force_i: element.heat_flux ?? 0,
-    shear_force_i: 0,
-    moment_i: 0,
-    axial_force_j: element.heat_flux ?? 0,
-    shear_force_j: 0,
-    moment_j: 0,
-  }));
-}
-
-function buildDisplayThermalTrussNodes(
-  model: ThermalTruss2dJobInput,
-  result: ThermalTruss2dResult | null,
-  windowNodes?: ThermalTruss2dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      ux: node.ux,
-      uy: node.uy,
-      fix_x: model.nodes[node.index]?.fix_x ?? false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: model.nodes[node.index]?.load_x ?? 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    ux: 0,
-    uy: 0,
-    fix_x: node.fix_x,
-    fix_y: node.fix_y,
-    load_x: node.load_x,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplayThermalTrussElements(
-  model: ThermalTruss2dJobInput,
-  result: ThermalTruss2dResult | null,
-  windowElements?: ThermalTruss2dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.total_strain,
-      stress: element.stress,
-      axial_force: element.axial_force,
-      axial_stress: element.stress,
-      axial_force_i: element.axial_force,
-      shear_force_i: 0,
-      moment_i: 0,
-      axial_force_j: element.axial_force,
-      shear_force_j: 0,
-      moment_j: 0,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      axial_stress: 0,
-      axial_force_i: 0,
-      shear_force_i: 0,
-      moment_i: 0,
-      axial_force_j: 0,
-      shear_force_j: 0,
-      moment_j: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function buildDisplaySpring2dNodes(
-  model: Spring2dJobInput,
-  result: Spring2dResult | null,
-  windowNodes?: Spring2dResult["nodes"],
-): DisplayTrussNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      ux: node.ux,
-      uy: node.uy,
-      fix_x: model.nodes[node.index]?.fix_x ?? false,
-      fix_y: model.nodes[node.index]?.fix_y ?? false,
-      load_x: model.nodes[node.index]?.load_x ?? 0,
-      load_y: model.nodes[node.index]?.load_y ?? 0,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    ux: 0,
-    uy: 0,
-    fix_x: node.fix_x,
-    fix_y: node.fix_y,
-    load_x: node.load_x,
-    load_y: node.load_y,
-  }));
-}
-
-function buildDisplaySpring2dElements(
-  model: Spring2dJobInput,
-  result: Spring2dResult | null,
-  windowElements?: Spring2dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.extension,
-      stress: element.force,
-      axial_force: element.force,
-      axial_stress: element.force,
-      axial_force_i: element.force,
-      axial_force_j: element.force,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      axial_stress: 0,
-      axial_force_i: 0,
-      axial_force_j: 0,
-    };
-  });
-}
-
-function buildDisplaySpring3dNodes(
-  model: Spring3dJobInput,
-  result: Spring3dResult | null,
-  windowNodes?: Spring3dResult["nodes"],
-): DisplayTruss3dNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      z: node.z,
-      ux: node.ux,
-      uy: node.uy,
-      uz: node.uz,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    z: node.z,
-    ux: 0,
-    uy: 0,
-    uz: 0,
-  }));
-}
-
-function buildDisplaySpring3dElements(
-  model: Spring3dJobInput,
-  result: Spring3dResult | null,
-  windowElements?: Spring3dResult["elements"],
-): DisplayTruss3dElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.extension,
-      stress: element.force,
-      axial_force: element.force,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-    const dz = (nodeJ?.z ?? 0) - (nodeI?.z ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy + dz * dz),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-    };
-  });
-}
-
-function buildDisplayThermalTruss3dNodes(
-  model: ThermalTruss3dJobInput,
-  result: ThermalTruss3dResult | null,
-  windowNodes?: ThermalTruss3dResult["nodes"],
-): DisplayTruss3dNode[] {
-  const nodes = windowNodes ?? result?.nodes;
-
-  if (nodes) {
-    return nodes.map((node, index) => ({
-      index: typeof node.index === "number" ? node.index : index,
-      id: node.id,
-      x: node.x,
-      y: node.y,
-      z: node.z,
-      ux: node.ux,
-      uy: node.uy,
-      uz: node.uz,
-    }));
-  }
-
-  return model.nodes.map((node, index) => ({
-    index,
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    z: node.z,
-    ux: 0,
-    uy: 0,
-    uz: 0,
-  }));
-}
-
-function buildDisplayThermalTruss3dElements(
-  model: ThermalTruss3dJobInput,
-  result: ThermalTruss3dResult | null,
-  windowElements?: ThermalTruss3dResult["elements"],
-): DisplayTruss3dElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.total_strain,
-      stress: element.stress,
-      axial_force: element.axial_force,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-    const dz = (nodeJ?.z ?? 0) - (nodeI?.z ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy + dz * dz),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function buildDisplayFrameElements(
-  model: Frame2dJobInput,
-  result: Frame2dResult | null,
-  windowElements?: Frame2dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: 0,
-      stress: element.max_combined_stress,
-      axial_force: Math.max(Math.abs(element.moment_i), Math.abs(element.moment_j)),
-      axial_stress: element.axial_stress,
-      max_bending_stress: element.max_bending_stress,
-      max_combined_stress: element.max_combined_stress,
-      axial_force_i: element.axial_force_i,
-      shear_force_i: element.shear_force_i,
-      moment_i: element.moment_i,
-      axial_force_j: element.axial_force_j,
-      shear_force_j: element.shear_force_j,
-      moment_j: element.moment_j,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function buildDisplayThermalFrameElements(
-  model: ThermalFrame2dJobInput,
-  result: ThermalFrame2dResult | null,
-  windowElements?: ThermalFrame2dResult["elements"],
-): DisplayTrussElement[] {
-  const elements = windowElements ?? result?.elements;
-
-  if (elements) {
-    return elements.map((element) => ({
-      index: element.index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: element.length,
-      strain: element.thermal_curvature,
-      stress: element.max_combined_stress,
-      axial_force: Math.max(Math.abs(element.moment_i), Math.abs(element.moment_j)),
-      axial_stress: element.axial_stress,
-      max_bending_stress: element.max_bending_stress,
-      max_combined_stress: element.max_combined_stress,
-      axial_force_i: element.axial_force_i,
-      shear_force_i: element.shear_force_i,
-      moment_i: element.moment_i,
-      axial_force_j: element.axial_force_j,
-      shear_force_j: element.shear_force_j,
-      moment_j: element.moment_j,
-      material_id: model.elements[element.index]?.material_id,
-    }));
-  }
-
-  return model.elements.map((element, index) => {
-    const nodeI = model.nodes[element.node_i];
-    const nodeJ = model.nodes[element.node_j];
-    const dx = (nodeJ?.x ?? 0) - (nodeI?.x ?? 0);
-    const dy = (nodeJ?.y ?? 0) - (nodeI?.y ?? 0);
-
-    return {
-      index,
-      id: element.id,
-      node_i: element.node_i,
-      node_j: element.node_j,
-      length: Math.sqrt(dx * dx + dy * dy),
-      strain: 0,
-      stress: 0,
-      axial_force: 0,
-      material_id: element.material_id,
-    };
-  });
-}
-
-function getTrussBounds(nodes: Array<{ x: number; y: number }>) {
-  const xs = nodes.map((node) => node.x);
-  const ys = nodes.map((node) => node.y);
-  const minX = Math.min(...xs, 0);
-  const maxX = Math.max(...xs, 1);
-  const minY = Math.min(...ys, 0);
-  const maxY = Math.max(...ys, 1);
-  return {
-    minX,
-    maxX,
-    minY,
-    maxY,
-    width: Math.max(maxX - minX, 1),
-    height: Math.max(maxY - minY, 1),
-  };
-}
-
-function toSvgPoint(node: { x: number; y: number }, bounds: ReturnType<typeof getTrussBounds>) {
-  const paddingX = 120;
-  const paddingY = 80;
-  const usableWidth = 980 - paddingX * 2;
-  const usableHeight = 460 - paddingY * 2;
-
-  return {
-    x: paddingX + ((node.x - bounds.minX) / bounds.width) * usableWidth,
-    y: 460 - paddingY - ((node.y - bounds.minY) / bounds.height) * usableHeight,
-  };
-}
-
-function fromSvgPoint(clientX: number, clientY: number, rect: DOMRect, bounds: ReturnType<typeof getTrussBounds>) {
-  const paddingX = 120;
-  const paddingY = 80;
-  const usableWidth = 980 - paddingX * 2;
-  const usableHeight = 460 - paddingY * 2;
-  const x = ((clientX - rect.left) / rect.width) * 980;
-  const y = ((clientY - rect.top) / rect.height) * 460;
-
-  const normalizedX = Math.min(Math.max((x - paddingX) / usableWidth, 0), 1);
-  const normalizedY = Math.min(Math.max((460 - paddingY - y) / usableHeight, 0), 1);
-
-  return {
-    x: round(bounds.minX + normalizedX * bounds.width),
-    y: round(bounds.minY + normalizedY * bounds.height),
-  };
-}
-
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
-
-function downloadTextFile(filename: string, contents: string) {
-  const blob = new Blob([contents], { type: "application/json;charset=utf-8" });
-  downloadBlobFile(filename, blob);
-}
-
-function downloadBlobFile(filename: string, blob: Blob) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-function resetActiveResult(
-  setResult: Dispatch<
-    SetStateAction<
-      | AxialBarResult
-      | HeatBar1dResult
-      | HeatPlaneTriangle2dResult
-      | HeatPlaneQuad2dResult
-      | ThermalBar1dResult
-      | ThermalBeam1dResult
-      | ThermalFrame2dResult
-      | ThermalTruss2dResult
-      | ThermalTruss3dResult
-      | ThermalPlaneTriangle2dResult
-      | ThermalPlaneQuad2dResult
-      | Spring1dResult
-      | Spring2dResult
-      | Spring3dResult
-      | Beam1dResult
-      | Torsion1dResult
-      | Truss2dResult
-      | Truss3dResult
-      | PlaneTriangle2dResult
-      | PlaneQuad2dResult
-      | Frame2dResult
-      | null
-    >
-  >,
-  setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>,
-) {
-  setResult(null);
-  setJob(null);
-}
-
-function pushNodeIssue(nodeIssues: Record<number, string[]>, nodeIndex: number, issue: string) {
-  const issues = nodeIssues[nodeIndex] ?? [];
-  if (!issues.includes(issue)) {
-    nodeIssues[nodeIndex] = [...issues, issue];
-  }
-}
-
-function heartbeatStatus(
-  job: JobEnvelope["job"] | null,
-  languageCopy: WorkbenchCopy,
-) {
-  if (!job?.updated_at) return "--";
-
-  const updatedAt = new Date(job.updated_at);
-  if (Number.isNaN(updatedAt.getTime())) return "--";
-
-  const active =
-    job.status === "queued" ||
-    job.status === "preprocessing" ||
-    job.status === "partitioning" ||
-    job.status === "solving" ||
-    job.status === "postprocessing";
-
-  if (!active) return languageCopy.heartbeatHealthy;
-
-  const ageMs = Math.max(0, Date.now() - updatedAt.getTime());
-
-  if (ageMs < 6_000) return languageCopy.heartbeatHealthy;
-  if (ageMs < 20_000) return `${languageCopy.heartbeatQuiet} ${Math.round(ageMs / 1000)}s`;
-  return `${languageCopy.heartbeatStale} ${Math.round(ageMs / 1000)}s`;
-}
-
-function heartbeatTone(job: JobEnvelope["job"] | null): "healthy" | "quiet" | "stale" {
-  if (!job?.updated_at) return "quiet";
-
-  const updatedAt = new Date(job.updated_at);
-  if (Number.isNaN(updatedAt.getTime())) return "quiet";
-
-  const active =
-    job.status === "queued" ||
-    job.status === "preprocessing" ||
-    job.status === "partitioning" ||
-    job.status === "solving" ||
-    job.status === "postprocessing";
-
-  if (!active) return "healthy";
-
-  const ageMs = Math.max(0, Date.now() - updatedAt.getTime());
-  if (ageMs < 6_000) return "healthy";
-  if (ageMs < 20_000) return "quiet";
-  return "stale";
-}
-
-function findNearestConnectableNode(model: Truss2dJobInput, nodeIndex: number): number | null {
-  const origin = model.nodes[nodeIndex];
-  if (!origin) return null;
-
-  let bestIndex: number | null = null;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  for (const [candidateIndex, candidate] of model.nodes.entries()) {
-    if (candidateIndex === nodeIndex) continue;
-
-    const alreadyLinked = model.elements.some(
-      (element) =>
-        (element.node_i === nodeIndex && element.node_j === candidateIndex) ||
-        (element.node_i === candidateIndex && element.node_j === nodeIndex),
-    );
-
-    if (alreadyLinked) continue;
-
-    const distance = Math.hypot(candidate.x - origin.x, candidate.y - origin.y);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestIndex = candidateIndex;
-    }
-  }
-
-  return bestIndex;
-}
-
-function analyzeTrussModel(
-  model: Truss2dJobInput,
-  languageCopy: WorkbenchCopy,
-  selectedNode: number | null,
-): TrussDiagnostics {
-  const nodeCount = model.nodes.length;
-  const elementCount = model.elements.length;
-  const fixedXCount = model.nodes.filter((node) => node.fix_x).length;
-  const fixedYCount = model.nodes.filter((node) => node.fix_y).length;
-  const constrainedDofs = model.nodes.reduce(
-    (count, node) => count + (node.fix_x ? 1 : 0) + (node.fix_y ? 1 : 0),
-    0,
-  );
-  const blockingMessages: string[] = [];
-  const nodeIssues: Record<number, string[]> = {};
-  const suggestions: TrussSuggestion[] = [];
-  const suggestionIds = new Set<string>();
-  const connectionCounts = new Array(nodeCount).fill(0);
-  const supportTarget = selectedNode ?? 0;
-
-  const addSuggestion = (suggestion: TrussSuggestion) => {
-    if (!suggestionIds.has(suggestion.id)) {
-      suggestionIds.add(suggestion.id);
-      suggestions.push(suggestion);
-    }
-  };
-
-  if (constrainedDofs < 2) {
-    blockingMessages.push(languageCopy.unstableSupport);
-    if (nodeCount > 0) {
-      pushNodeIssue(nodeIssues, supportTarget, languageCopy.unstableSupport);
-    }
-  }
-
-  if (fixedXCount === 0) {
-    blockingMessages.push(languageCopy.supportXMissing);
-    if (nodeCount > 0) {
-      pushNodeIssue(nodeIssues, supportTarget, languageCopy.supportXMissing);
-      addSuggestion({
-        id: `fix-x-${supportTarget}`,
-        kind: "fix_support",
-        axis: "x",
-        nodeIndex: supportTarget,
-        label: selectedNode !== null ? languageCopy.fixCurrentNodeXAction : languageCopy.fixNodeXAction,
-      });
-    }
-  }
-
-  if (fixedYCount === 0) {
-    blockingMessages.push(languageCopy.supportYMissing);
-    if (nodeCount > 0) {
-      pushNodeIssue(nodeIssues, supportTarget, languageCopy.supportYMissing);
-      addSuggestion({
-        id: `fix-y-${supportTarget}`,
-        kind: "fix_support",
-        axis: "y",
-        nodeIndex: supportTarget,
-        label: selectedNode !== null ? languageCopy.fixCurrentNodeYAction : languageCopy.fixNodeYAction,
-      });
-    }
-  }
-
-  if (fixedXCount === 0 || fixedYCount === 0) {
-    blockingMessages.push(languageCopy.freeRigidBody);
-  }
-
-  if (elementCount < nodeCount - 1) {
-    blockingMessages.push(languageCopy.underconnected);
-    if (nodeCount > 0) {
-      pushNodeIssue(nodeIssues, selectedNode ?? 0, languageCopy.underconnected);
-    }
-  }
-
-  if (elementCount + constrainedDofs < nodeCount * 2) {
-    blockingMessages.push(languageCopy.mechanismRisk);
-    if (nodeCount > 0) {
-      pushNodeIssue(nodeIssues, selectedNode ?? 0, languageCopy.mechanismRisk);
-    }
-  }
-
-  for (const element of model.elements) {
-    if (element.node_i < nodeCount) connectionCounts[element.node_i] += 1;
-    if (element.node_j < nodeCount) connectionCounts[element.node_j] += 1;
-  }
-
-  const isolatedNodes = connectionCounts.flatMap((count, index) => (count === 0 ? [index] : []));
-  for (const nodeIndex of isolatedNodes) {
-    pushNodeIssue(nodeIssues, nodeIndex, languageCopy.isolatedNode);
-  }
-
-  if (isolatedNodes.length > 0) {
-    blockingMessages.push(languageCopy.isolatedNode);
-  }
-
-  const connectTarget =
-    (selectedNode !== null && (isolatedNodes.includes(selectedNode) || connectionCounts[selectedNode] < 2)
-      ? selectedNode
-      : isolatedNodes[0] ?? selectedNode) ?? null;
-
-  if (connectTarget !== null && nodeCount > 1) {
-    addSuggestion({
-      id: `connect-${connectTarget}`,
-      kind: "connect_nearest",
-      nodeIndex: connectTarget,
-      label: selectedNode !== null ? languageCopy.connectCurrentNodeAction : languageCopy.connectNodeAction,
-    });
-  }
-
-  return {
-    blockingMessages: [...new Set(blockingMessages)],
-    nodeIssues,
-    suggestions,
-  };
-}
-
-function planeStressFill(value: number, maxValue: number): string {
-  const normalized = maxValue > 0 ? Math.max(0, Math.min(1, value / maxValue)) : 0;
-  const hue = 205 - normalized * 180;
-  const lightness = 72 - normalized * 22;
-  return `hsla(${hue}, 72%, ${lightness}%, 0.72)`;
-}
-
-function planeResultFieldValue(
-  element: {
-    von_mises?: number;
-    principal_stress_1?: number;
-    max_in_plane_shear?: number;
-    average_temperature?: number;
-    average_temperature_delta?: number;
-    temperature_gradient_x?: number;
-    temperature_gradient_y?: number;
-    heat_flux_x?: number;
-    heat_flux_y?: number;
-    heat_flux_magnitude?: number;
-    thermal_strain?: number;
-    mechanical_strain_x?: number;
-    mechanical_strain_y?: number;
-  },
-  field: PlaneResultField,
-) {
-  if (field === "average_temperature") {
-    return Math.abs(element.average_temperature ?? 0);
-  }
-  if (field === "average_temperature_delta") {
-    return Math.abs(element.average_temperature_delta ?? 0);
-  }
-  if (field === "temperature_gradient_x") {
-    return Math.abs(element.temperature_gradient_x ?? 0);
-  }
-  if (field === "temperature_gradient_y") {
-    return Math.abs(element.temperature_gradient_y ?? 0);
-  }
-  if (field === "heat_flux_x") {
-    return Math.abs(element.heat_flux_x ?? 0);
-  }
-  if (field === "heat_flux_y") {
-    return Math.abs(element.heat_flux_y ?? 0);
-  }
-  if (field === "heat_flux_magnitude") {
-    return Math.abs(element.heat_flux_magnitude ?? 0);
-  }
-  if (field === "thermal_strain") {
-    return Math.abs(element.thermal_strain ?? 0);
-  }
-  if (field === "mechanical_strain") {
-    return Math.max(Math.abs(element.mechanical_strain_x ?? 0), Math.abs(element.mechanical_strain_y ?? 0));
-  }
-  if (field === "principal_stress_1") {
-    return Math.abs(element.principal_stress_1 ?? 0);
-  }
-  if (field === "max_in_plane_shear") {
-    return Math.abs(element.max_in_plane_shear ?? 0);
-  }
-  return Math.abs(element.von_mises ?? 0);
-}
-
-function lineResultFieldValue(
-  element: {
-    axial_stress?: number;
-    max_bending_stress?: number;
-    max_combined_stress?: number;
-    shear_force_i?: number;
-    shear_force_j?: number;
-    moment_i?: number;
-    moment_j?: number;
-    average_temperature_delta?: number;
-    temperature_gradient_y?: number;
-    thermal_curvature?: number;
-  },
-  field: LineResultField,
-) {
-  if (field === "axial_stress") {
-    return Math.abs(element.axial_stress ?? 0);
-  }
-  if (field === "average_temperature_delta") {
-    return Math.abs(element.average_temperature_delta ?? 0);
-  }
-  if (field === "temperature_gradient_y") {
-    return Math.abs(element.temperature_gradient_y ?? 0);
-  }
-  if (field === "thermal_curvature") {
-    return Math.abs(element.thermal_curvature ?? 0);
-  }
-  if (field === "max_bending_stress") {
-    return Math.abs(element.max_bending_stress ?? 0);
-  }
-  if (field === "shear_force") {
-    return Math.max(Math.abs(element.shear_force_i ?? 0), Math.abs(element.shear_force_j ?? 0));
-  }
-  if (field === "moment") {
-    return Math.max(Math.abs(element.moment_i ?? 0), Math.abs(element.moment_j ?? 0));
-  }
-  return Math.abs(element.max_combined_stress ?? 0);
-}
-
-function renderSupportGlyph(
-  point: { x: number; y: number },
-  constraints: { fix_x: boolean; fix_y: boolean },
-  key: string,
-) {
-  if (!constraints.fix_x && !constraints.fix_y) return null;
-
-  return (
-    <g key={key} className="support-glyph">
-      {constraints.fix_y ? <line x1={point.x - 12} y1={point.y + 14} x2={point.x + 12} y2={point.y + 14} /> : null}
-      {constraints.fix_x ? <line x1={point.x - 14} y1={point.y - 12} x2={point.x - 14} y2={point.y + 12} /> : null}
-    </g>
-  );
-}
-
-function renderLoadGlyph(
-  point: { x: number; y: number },
-  load: { load_x: number; load_y: number },
-  key: string,
-) {
-  if (Math.abs(load.load_x) < 1.0e-9 && Math.abs(load.load_y) < 1.0e-9) return null;
-
-  const scale = 0.01;
-  const x2 = point.x + load.load_x * scale;
-  const y2 = point.y - load.load_y * scale;
-
-  return (
-    <g key={key} className="load-glyph">
-      <line x1={point.x} y1={point.y} x2={x2} y2={y2} />
-      <circle cx={x2} cy={y2} r={3.5} />
-    </g>
-  );
-}
-
-function formatProtocolMethodLabel(method: string) {
-  return method.replaceAll("_", " ");
-}
-
-function clusterHealthTone(score: number | null | undefined) {
-  if (score == null) return "quiet";
-  if (score >= 85) return "healthy";
-  if (score >= 55) return "watch";
-  return "stale";
-}
-
-function formatPeerStatus(status: string | undefined, languageCopy: WorkbenchCopy) {
-  if (!status) return "--";
-  switch (status) {
-    case "healthy":
-      return languageCopy.heartbeatHealthy;
-    case "degraded":
-      return languageCopy.heartbeatQuiet;
-    case "unreachable":
-      return languageCopy.heartbeatStale;
-    case "seed":
-      return languageCopy.ready;
-    default:
-      return status.replaceAll("_", " ");
-  }
-}
-
 export function Workbench() {
   const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
   const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
@@ -4543,19 +562,18 @@ export function Workbench() {
   const [resultWindowLimit, setResultWindowLimit] = useState(RESULT_WINDOW_BASE_SIZE);
   const [canvasViewportWidth, setCanvasViewportWidth] = useState(980);
   const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
-  const [jobHistory, setJobHistory] = useState<JobState[]>([]);
   const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
   const [modelVersions, setModelVersions] = useState<ModelVersionRecord[]>([]);
-  const [projectNameDraft, setProjectNameDraft] = useState<string>(copy.en.defaultProject);
+  const [projectNameDraft, setProjectNameDraft] = useState<string>(copyByLanguage.en.defaultProject);
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState<string>("");
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [protocolAgents, setProtocolAgents] = useState<ProtocolAgentDescriptor[]>([]);
-  const [loadedModelName, setLoadedModelName] = useState<string>(copy.en.defaultModel);
-  const [message, setMessage] = useState<string>(copy.en.initialLoaded);
+  const [loadedModelName, setLoadedModelName] = useState<string>(copyByLanguage.en.defaultModel);
+  const [message, setMessage] = useState<string>(copyByLanguage.en.initialLoaded);
   const [language, setLanguage] = useState<Language>("en");
   const [languagePacks, setLanguagePacks] = useState<WorkbenchLanguagePack[]>([]);
   const [theme, setTheme] = useState<Theme>("linen");
@@ -4572,7 +590,9 @@ export function Workbench() {
   const applyLanguagePreference = (nextLanguage: Language) => {
     setLanguage(nextLanguage);
     setLoadedModelName((current) =>
-      current === copy.en.defaultModel || current === copy.zh.defaultModel || current === copy.ja.defaultModel
+      current === copyByLanguage.en.defaultModel ||
+      current === copyByLanguage.zh.defaultModel ||
+      current === copyByLanguage.ja.defaultModel
         ? copyByLanguage[nextLanguage].defaultModel
         : current,
     );
@@ -4635,7 +655,6 @@ export function Workbench() {
   const [memberDraftNodes, setMemberDraftNodes] = useState<number[]>([]);
   const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
-  const [selectedAdminJobId, setSelectedAdminJobId] = useState<string | null>(null);
   const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
   const [adminFilterProjectId, setAdminFilterProjectId] = useState("");
   const [adminFilterModelVersionId, setAdminFilterModelVersionId] = useState("");
@@ -4645,9 +664,15 @@ export function Workbench() {
   const [securityEventRecords, setSecurityEventRecords] = useState<SecurityEventRecord[]>([]);
   const [scriptRecordingMode, setScriptRecordingMode] = useState(false);
   const [securityEventWindowFilter, setSecurityEventWindowFilter] = useState<SecurityEventWindow>("24h");
-  const [securityEventSourceFilter, setSecurityEventSourceFilter] = useState("");
-  const [securityEventRiskFilter, setSecurityEventRiskFilter] = useState("");
-  const [securityEventStatusFilter, setSecurityEventStatusFilter] = useState("");
+  const [securityEventSourceFilter, setSecurityEventSourceFilter] = useState<
+    WorkbenchSecurityAuditSource | "hub-assistant" | ""
+  >("");
+  const [securityEventRiskFilter, setSecurityEventRiskFilter] = useState<
+    WorkbenchSecurityAuditRisk | ""
+  >("");
+  const [securityEventStatusFilter, setSecurityEventStatusFilter] = useState<
+    "" | "allowed" | "blocked"
+  >("");
   const [securityEventActionFilter, setSecurityEventActionFilter] = useState("");
   const [adminJobMessage, setAdminJobMessage] = useState("");
   const [adminJobProjectId, setAdminJobProjectId] = useState("");
@@ -4669,16 +694,7 @@ export function Workbench() {
   const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const viewportPanelRef = useRef<HTMLElement | null>(null);
   const canvasStageRef = useRef<HTMLDivElement | null>(null);
-  const chunkScrollFrameRef = useRef<number | null>(null);
-  const chunkScrollLeftRef = useRef(0);
-  const chunkScrollDirectionRef = useRef<-1 | 0 | 1>(0);
-  const chunkCacheRef = useRef<Map<string, ResultChunkPayload<Record<string, unknown>>>>(new Map());
-  const healthRefreshSeqRef = useRef(0);
-  const jobHistoryRefreshSeqRef = useRef(0);
   const resultRefreshSeqRef = useRef(0);
-  const projectRefreshSeqRef = useRef(0);
-  const securityEventsRefreshSeqRef = useRef(0);
-  const versionsRefreshSeqRef = useRef(0);
   const jobPollTokenRef = useRef(0);
   const activeLanguagePack = useMemo(
     () => languagePacks.find((pack) => pack.language === language) ?? null,
@@ -4688,6 +704,12 @@ export function Workbench() {
     () => mergeLanguagePack<WorkbenchCopy>(copyByLanguage[language], activeLanguagePack?.overrides ?? null),
     [activeLanguagePack?.overrides, language],
   );
+  const jobIsActive =
+    job?.status === "queued" ||
+    job?.status === "preprocessing" ||
+    job?.status === "partitioning" ||
+    job?.status === "solving" ||
+    job?.status === "postprocessing";
   const languagePackCatalogRows = useMemo(
     () => [
       { id: "fr-preview", language: "fr", name: "French preview", status: language === "zh" ? "预留远程下载入口" : language === "ja" ? "将来のリモート配布枠" : "Reserved for future remote delivery" },
@@ -4695,12 +717,64 @@ export function Workbench() {
     ],
     [language],
   );
+  const {
+    jobHistory,
+    setJobHistory,
+    selectedAdminJobId,
+    setSelectedAdminJobId,
+    refreshJobHistory,
+    cancelCurrentJob,
+  } = useWorkbenchJobHistoryController({
+    labels: {
+      jobCancelled: t.jobCancelled,
+      initialFailed: t.initialFailed,
+      requestTimedOut: t.requestTimedOut,
+    },
+    job,
+    jobIsActive,
+    jobPollTokenRef,
+    setJob,
+    setMessage,
+    startTransition,
+  });
 
-  useEffect(() => {
-    setResultWindowOffset(0);
-    setResultWindowLimit(RESULT_WINDOW_BASE_SIZE);
-    chunkCacheRef.current.clear();
-  }, [job?.job_id, studyKind]);
+  const resultWindowMaxTotal = resultWindow ? Math.max(resultWindow.totalNodes, resultWindow.totalElements) : 0;
+  const { handleCanvasStageScroll } = useWorkbenchResultWindowController({
+    canvasStageRef,
+    canvasViewportWidth,
+    frontendRuntimeMode,
+    guards: {
+      isAxialResult,
+      isTrussResult,
+      isHeatBar1dResult,
+      isHeatPlaneQuad2dResult,
+      isHeatPlaneTriangle2dResult,
+      isThermalBar1dResult,
+      isThermalBeam1dResult,
+      isThermalTruss2dResult,
+      isThermalTruss3dResult,
+      isTruss3dResult,
+      isSpring1dResult,
+      isSpring2dResult,
+      isSpring3dResult,
+      isBeam1dResult,
+      isTorsion1dResult,
+      isFrame2dResult,
+    },
+    jobId: job?.job_id ?? null,
+    requestTimedOutLabel: t.requestTimedOut,
+    result,
+    resultWindow,
+    resultWindowLimit,
+    resultWindowMaxTotal,
+    resultWindowOffset,
+    setCanvasViewportWidth,
+    setMessage,
+    setResultWindow,
+    setResultWindowLimit,
+    setResultWindowOffset,
+    studyKind,
+  });
 
   useEffect(() => {
     if (!job?.job_id) {
@@ -4726,175 +800,6 @@ export function Workbench() {
       staleHeartbeatAlertedRef.current = null;
     }
   }, [job, language]);
-
-  useEffect(() => {
-    return () => {
-      if (chunkScrollFrameRef.current !== null) {
-        window.cancelAnimationFrame(chunkScrollFrameRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const syncCanvasViewportWidth = () => {
-      const nextWidth = canvasStageRef.current?.clientWidth ?? 980;
-      setCanvasViewportWidth((current) => (current === nextWidth ? current : nextWidth));
-    };
-
-    syncCanvasViewportWidth();
-    window.addEventListener("resize", syncCanvasViewportWidth);
-
-    return () => {
-      window.removeEventListener("resize", syncCanvasViewportWidth);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!job?.job_id || !result || isAxialResult(result)) {
-      setResultWindow(null);
-      return;
-    }
-
-    const totalNodes = Array.isArray(result.nodes) ? result.nodes.length : 0;
-    const totalElements = Array.isArray(result.elements) ? result.elements.length : 0;
-    const totalItems = Math.max(totalNodes, totalElements);
-
-    if (totalNodes <= RESULT_WINDOW_THRESHOLD && totalElements <= RESULT_WINDOW_THRESHOLD) {
-      setResultWindow(null);
-      return;
-    }
-
-    const limit = computeResultWindowSize(totalItems, canvasViewportWidth);
-    if (resultWindowLimit !== limit) {
-      setResultWindowLimit(limit);
-    }
-
-    const nextStudyKind: Exclude<StudyKind, "axial_bar_1d"> = isTrussResult(result)
-      ? "truss_2d"
-      : isHeatBar1dResult(result)
-        ? "heat_bar_1d"
-      : isHeatPlaneQuad2dResult(result)
-        ? "heat_plane_quad_2d"
-      : isHeatPlaneTriangle2dResult(result)
-        ? "heat_plane_triangle_2d"
-      : isThermalBar1dResult(result)
-        ? "thermal_bar_1d"
-        : isThermalBeam1dResult(result)
-          ? "thermal_beam_1d"
-        : isThermalTruss2dResult(result)
-          ? "thermal_truss_2d"
-          : isThermalTruss3dResult(result)
-            ? "thermal_truss_3d"
-        : isTruss3dResult(result)
-          ? "truss_3d"
-        : isSpring1dResult(result)
-          ? "spring_1d"
-        : isSpring2dResult(result)
-          ? "spring_2d"
-        : isSpring3dResult(result)
-          ? "spring_3d"
-        : isThermalBeam1dResult(result)
-          ? "thermal_beam_1d"
-        : isBeam1dResult(result)
-          ? "beam_1d"
-        : isTorsion1dResult(result)
-          ? "torsion_1d"
-        : isFrame2dResult(result)
-          ? "frame_2d"
-        : studyKind === "plane_quad_2d"
-          ? "plane_quad_2d"
-          : "plane_triangle_2d";
-
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const safeOffset = clampChunkOffset(resultWindowOffset, totalItems, limit);
-        const chunkFetcher =
-          frontendRuntimeMode === "direct_mesh_gui" ? fetchDirectMeshResultChunk : fetchResultChunk;
-        const fetchChunk = async (kind: "nodes" | "elements", offset: number) => {
-          const key = chunkCacheKey(frontendRuntimeMode, job.job_id, kind, offset, limit);
-          const cached = readChunkCache(chunkCacheRef.current, key);
-          if (cached) return cached;
-
-          const chunk = await chunkFetcher(job.job_id, kind, { offset, limit });
-          writeChunkCache(chunkCacheRef.current, key, chunk as ResultChunkPayload<Record<string, unknown>>);
-          return chunk;
-        };
-
-        const nodesKey = chunkCacheKey(frontendRuntimeMode, job.job_id, "nodes", safeOffset, limit);
-        const elementsKey = chunkCacheKey(frontendRuntimeMode, job.job_id, "elements", safeOffset, limit);
-        const cachedNodes = readChunkCache(chunkCacheRef.current, nodesKey);
-        const cachedElements = readChunkCache(chunkCacheRef.current, elementsKey);
-
-        if (cachedNodes && cachedElements) {
-          setResultWindow({
-            jobId: job.job_id,
-            studyKind: nextStudyKind,
-            nodes: cachedNodes.items,
-            elements: cachedElements.items,
-            totalNodes: cachedNodes.total,
-            totalElements: cachedElements.total,
-            limit,
-          });
-        }
-
-        const [nodesChunk, elementsChunk] = await Promise.all([
-          fetchChunk("nodes", safeOffset),
-          fetchChunk("elements", safeOffset),
-        ]);
-
-        if (cancelled) return;
-
-        setResultWindow({
-          jobId: job.job_id,
-          studyKind: nextStudyKind,
-          nodes: nodesChunk.items,
-          elements: elementsChunk.items,
-          totalNodes: nodesChunk.total,
-          totalElements: elementsChunk.total,
-          limit,
-        });
-
-        const directionalOffsets =
-          chunkScrollDirectionRef.current > 0
-            ? [safeOffset + limit, safeOffset + limit * 2, safeOffset - limit]
-            : chunkScrollDirectionRef.current < 0
-              ? [safeOffset - limit, safeOffset - limit * 2, safeOffset + limit]
-              : [safeOffset - limit, safeOffset + limit];
-
-        const prefetchOffsets = directionalOffsets
-          .map((offset) => clampChunkOffset(offset, totalItems, limit))
-          .filter((offset, index, values) => offset !== safeOffset && values.indexOf(offset) === index);
-
-        void Promise.all(
-          prefetchOffsets.flatMap((offset) => [
-            fetchChunk("nodes", offset),
-            fetchChunk("elements", offset),
-          ]),
-        ).catch(() => undefined);
-      } catch (error) {
-        if (!cancelled && error instanceof Error && error.message.startsWith("request timed out:")) {
-          setMessage(t.requestTimedOut);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canvasViewportWidth, frontendRuntimeMode, job?.job_id, result, resultWindowLimit, resultWindowOffset, t.requestTimedOut]);
-
-  useEffect(() => {
-    if (!resultWindow) return;
-
-    const totalItems = Math.max(resultWindow.totalNodes, resultWindow.totalElements);
-    const nextOffset = clampChunkOffset(resultWindowOffset, totalItems, resultWindowLimit);
-
-    if (nextOffset !== resultWindowOffset) {
-      setResultWindowOffset(nextOffset);
-    }
-  }, [resultWindow, resultWindowLimit, resultWindowOffset]);
 
   useEffect(() => {
     const stored = safeStorageGet();
@@ -5088,28 +993,6 @@ export function Workbench() {
   }, [immersiveViewport, immersiveGuardrails]);
 
   useEffect(() => {
-    void refreshHealth();
-    void refreshJobHistory();
-    void refreshResults();
-    void refreshProjects(true);
-    void refreshSecurityEvents();
-  }, []);
-
-  useEffect(() => {
-    void refreshHealth();
-  }, [frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode]);
-
-  useEffect(() => {
-    void refreshSecurityEvents();
-  }, [
-    securityEventWindowFilter,
-    securityEventSourceFilter,
-    securityEventRiskFilter,
-    securityEventStatusFilter,
-    securityEventActionFilter,
-  ]);
-
-  useEffect(() => {
     const current = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
     setAdminJobMessage(current?.message ?? "");
     setAdminJobProjectId(current?.project_id ?? "");
@@ -5133,102 +1016,6 @@ export function Workbench() {
       setProjectDescriptionDraft("");
     }
   }, [projects, selectedProjectId, t.defaultProject]);
-
-  useEffect(() => {
-    if (!selectedModelId) {
-      setModelVersions([]);
-      return;
-    }
-
-    void refreshVersions(selectedModelId);
-  }, [selectedModelId]);
-
-  async function refreshHealth() {
-    const refreshSeq = ++healthRefreshSeqRef.current;
-
-    if (frontendRuntimeMode === "direct_mesh_gui") {
-      try {
-        const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
-        const nextDirect = await fetchDirectMeshAgents(endpoints);
-        const directMethods = [...new Set(
-          nextDirect.agents.flatMap((agent) => agent.descriptor?.protocol?.methods ?? []),
-        )];
-
-        if (refreshSeq !== healthRefreshSeqRef.current) return;
-
-        setProtocolAgents(nextDirect.agents);
-        setHealth({
-          service: "kyuubiki-frontend-direct-mesh",
-          status: nextDirect.agents.length > 0 ? "ok" : "degraded",
-          protocol: {
-            program: "kyuubiki-frontend",
-            role: "gui",
-            protocol: {
-              name: "kyuubiki.direct-mesh/http-v1",
-              version: 1,
-              transport: { kind: "http", encoding: "json" },
-            },
-            compatible_solver_rpc: {
-              name: "kyuubiki.solver-rpc/v1",
-              rpc_version: 1,
-              transport: {
-                kind: "tcp",
-                framing: "length_prefixed_u32",
-                encoding: "json",
-              },
-              methods: directMethods,
-            },
-          },
-          deployment: {
-            mode: "direct_mesh",
-            discovery: nextDirect.discovery,
-            endpoint_count: nextDirect.endpoint_count,
-          },
-          remote_solver_registry: {
-            active_agents: nextDirect.agents.length,
-          },
-        });
-      } catch {
-        if (refreshSeq !== healthRefreshSeqRef.current) return;
-        setHealth(null);
-        setProtocolAgents([]);
-      }
-      return;
-    }
-
-    try {
-      const [nextHealth, nextProtocolAgents] = await Promise.all([
-        fetchHealth(),
-        fetchProtocolAgents().catch(() => ({ agents: [] })),
-      ]);
-
-      if (refreshSeq !== healthRefreshSeqRef.current) return;
-
-      setHealth(nextHealth);
-      setProtocolAgents(nextProtocolAgents.agents);
-    } catch {
-      if (refreshSeq !== healthRefreshSeqRef.current) return;
-      setHealth(null);
-      setProtocolAgents([]);
-    }
-  }
-
-  async function refreshJobHistory() {
-    const refreshSeq = ++jobHistoryRefreshSeqRef.current;
-
-    try {
-      const payload = await fetchJobHistory();
-      if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
-      setJobHistory(payload.jobs);
-      setSelectedAdminJobId((current) =>
-        current && payload.jobs.some((entry) => entry.job_id === current) ? current : payload.jobs[0]?.job_id ?? null,
-      );
-    } catch {
-      if (refreshSeq !== jobHistoryRefreshSeqRef.current) return;
-      setJobHistory([]);
-      setSelectedAdminJobId(null);
-    }
-  }
 
   const {
     workflowCatalog,
@@ -5265,340 +1052,87 @@ export function Workbench() {
   });
 
   async function refreshResults() {
-    const refreshSeq = ++resultRefreshSeqRef.current;
-
-    try {
-      const payload = await fetchResults();
-      if (refreshSeq !== resultRefreshSeqRef.current) return;
-      setResultRecords(payload.results);
-      setSelectedAdminResultJobId((current) =>
-        current && payload.results.some((entry) => entry.job_id === current) ? current : payload.results[0]?.job_id ?? null,
-      );
-    } catch {
-      if (refreshSeq !== resultRefreshSeqRef.current) return;
-      setResultRecords([]);
-      setSelectedAdminResultJobId(null);
-    }
+    await refreshWorkbenchResults({
+      resultRefreshSeqRef,
+      fetchResults,
+      setResultRecords,
+      setSelectedAdminResultJobId,
+    });
   }
-
-  async function refreshProjects(bootstrap = false) {
-    const refreshSeq = ++projectRefreshSeqRef.current;
-
-    try {
-      const payload = await fetchProjects();
-      let nextProjects = payload.projects;
-
-      if (bootstrap && nextProjects.length === 0) {
-        const created = await createProject({ name: copy.en.defaultProject, description: "Local workspace" });
-        nextProjects = [created.project];
-      }
-
-      if (refreshSeq !== projectRefreshSeqRef.current) return;
-
-      setProjects(nextProjects);
-
-      const nextProjectId =
-        selectedProjectId && nextProjects.some((project) => project.project_id === selectedProjectId)
-          ? selectedProjectId
-          : nextProjects[0]?.project_id ?? null;
-
-      setSelectedProjectId(nextProjectId);
-
-      const nextModelId =
-        selectedModelId &&
-        nextProjects.some((project) => (project.models ?? []).some((model) => model.model_id === selectedModelId))
-          ? selectedModelId
-          : (nextProjects.find((project) => project.project_id === nextProjectId)?.models ?? [])[0]?.model_id ?? null;
-
-      setSelectedModelId(nextModelId);
-      if (!nextModelId) {
-        setSelectedVersionId(null);
-      }
-    } catch {
-      if (refreshSeq !== projectRefreshSeqRef.current) return;
-      setProjects([]);
-    }
-  }
-
-  async function refreshSecurityEvents() {
-    const refreshSeq = ++securityEventsRefreshSeqRef.current;
-
-    try {
-      const occurredAfter =
-        securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
-          ? new Date(Date.now() - SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]).toISOString()
-          : undefined;
-      const payload = await fetchSecurityEvents({
-        occurred_after: occurredAfter,
-        source: securityEventSourceFilter || undefined,
-        risk: securityEventRiskFilter || undefined,
-        status: securityEventStatusFilter || undefined,
-        action: securityEventActionFilter || undefined,
-        limit: 120,
-      });
-      if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
-      setSecurityEventRecords(payload.events);
-    } catch {
-      if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
-      setSecurityEventRecords([]);
-    }
-  }
-
-  async function refreshVersions(modelId: string) {
-    const refreshSeq = ++versionsRefreshSeqRef.current;
-
-    try {
-      const payload = await fetchModelVersions(modelId);
-      if (refreshSeq !== versionsRefreshSeqRef.current) return;
-      setModelVersions(payload.versions);
-    } catch {
-      if (refreshSeq !== versionsRefreshSeqRef.current) return;
-      setModelVersions([]);
-    }
-  }
+  const {
+    refreshHealth,
+    refreshProjects,
+    refreshSecurityEvents,
+    refreshVersions,
+  } = useWorkbenchDataRefreshController({
+    directMeshEndpointsText,
+    directMeshSelectionMode,
+    frontendRuntimeMode,
+    securityEventActionFilter,
+    securityEventRiskFilter,
+    securityEventSourceFilter,
+    securityEventStatusFilter,
+    securityEventWindowFilter,
+    selectedModelId,
+    selectedProjectId,
+    setHealth,
+    setModelVersions,
+    setProjects,
+    setProtocolAgents,
+    setSecurityEventRecords,
+    setSelectedModelId,
+    setSelectedProjectId,
+    setSelectedVersionId,
+    refreshJobHistory,
+    refreshResults,
+    securityEventWindowMs: SECURITY_EVENT_WINDOW_MS,
+  });
 
   const runAnalysis = () => {
-    if (studyKind === "truss_2d") {
-      const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
-      if (precheckErrors.length > 0) {
-        setMessage(`${t.precheckPrefix}: ${precheckErrors[0]}`);
-        resetActiveResult(setResult, setJob);
-        return;
-      }
-    }
-
-    setMessage(t.dispatching);
-    setResult(null);
-    jobPollTokenRef.current += 1;
-
     startTransition(async () => {
       try {
-        if (frontendRuntimeMode === "direct_mesh_gui") {
-          const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
-          if (endpoints.length === 0) {
-            throw new Error(t.directMeshEndpointsHelp);
-          }
-
-          const created =
-            studyKind === "axial_bar_1d"
-              ? await createDirectMeshSolve<AxialBarResult>(
-                  "axial_bar_1d",
-                  toAxialInput(axialForm),
-                  endpoints,
-                  directMeshSelectionMode,
-                )
-              : studyKind === "heat_bar_1d"
-                ? await createDirectMeshSolve<HeatBar1dResult>(
-                    "heat_bar_1d",
-                    resolveHeatBar1dJobInput(heatBarModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "heat_plane_quad_2d"
-                ? await createDirectMeshSolve<HeatPlaneQuad2dResult>(
-                    "heat_plane_quad_2d",
-                    resolveHeatPlaneQuad2dJobInput(heatPlaneModel as HeatPlaneQuad2dJobInput) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "heat_plane_triangle_2d"
-                ? await createDirectMeshSolve<HeatPlaneTriangle2dResult>(
-                    "heat_plane_triangle_2d",
-                    resolveHeatPlaneTriangle2dJobInput(heatPlaneModel as HeatPlaneTriangle2dJobInput) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "thermal_bar_1d"
-                ? await createDirectMeshSolve<ThermalBar1dResult>(
-                    "thermal_bar_1d",
-                    resolveThermalBar1dJobInput(thermalBarModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "thermal_beam_1d"
-                ? await createDirectMeshSolve<ThermalBeam1dResult>(
-                    "thermal_beam_1d",
-                    resolveThermalBeam1dJobInput(thermalBeamModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "thermal_frame_2d"
-                ? await createDirectMeshSolve<ThermalFrame2dResult>(
-                    "thermal_frame_2d",
-                    resolveThermalFrame2dJobInput(thermalFrameModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "thermal_truss_2d"
-                ? await createDirectMeshSolve<ThermalTruss2dResult>(
-                    "thermal_truss_2d",
-                    resolveThermalTruss2dJobInput(thermalTrussModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "thermal_truss_3d"
-                ? await createDirectMeshSolve<ThermalTruss3dResult>(
-                    "thermal_truss_3d",
-                    resolveThermalTruss3dJobInput(thermalTruss3dModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "spring_1d"
-                ? await createDirectMeshSolve<Spring1dResult>(
-                    "spring_1d",
-                    resolveSpring1dJobInput(springModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-                : studyKind === "spring_2d"
-                  ? await createDirectMeshSolve<Spring2dResult>(
-                      "spring_2d",
-                      resolveSpring2dJobInput(spring2dModel) as unknown as Record<string, unknown>,
-                      endpoints,
-                      directMeshSelectionMode,
-                    )
-              : studyKind === "spring_3d"
-                    ? await createDirectMeshSolve<Spring3dResult>(
-                        "spring_3d",
-                        resolveSpring3dJobInput(spring3dModel) as unknown as Record<string, unknown>,
-                        endpoints,
-                        directMeshSelectionMode,
-                      )
-                : studyKind === "torsion_1d"
-                  ? await createDirectMeshSolve<Torsion1dResult>(
-                      "torsion_1d",
-                      resolveTorsion1dJobInput(torsionModel) as unknown as Record<string, unknown>,
-                      endpoints,
-                      directMeshSelectionMode,
-                    )
-                : studyKind === "beam_1d"
-                ? await createDirectMeshSolve<Beam1dResult>(
-                    "beam_1d",
-                    resolveBeam1dJobInput(beamModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-              : studyKind === "truss_2d"
-                ? await createDirectMeshSolve<Truss2dResult>(
-                    "truss_2d",
-                    resolveTruss2dJobInput(trussModel) as unknown as Record<string, unknown>,
-                    endpoints,
-                    directMeshSelectionMode,
-                  )
-                : studyKind === "truss_3d"
-                  ? await createDirectMeshSolve<Truss3dResult>(
-                      "truss_3d",
-                      resolveTruss3dJobInput(truss3dModel) as unknown as Record<string, unknown>,
-                      endpoints,
-                      directMeshSelectionMode,
-                    )
-                  : studyKind === "frame_2d"
-                    ? await createDirectMeshSolve<Frame2dResult>(
-                        "frame_2d",
-                        resolveFrame2dJobInput(frameModel) as unknown as Record<string, unknown>,
-                        endpoints,
-                        directMeshSelectionMode,
-                      )
-                  : studyKind === "thermal_plane_quad_2d"
-                    ? await createDirectMeshSolve<ThermalPlaneQuad2dResult>(
-                        "thermal_plane_quad_2d",
-                        resolveThermalPlaneQuad2dJobInput(planeModel as ThermalPlaneQuad2dJobInput) as unknown as Record<string, unknown>,
-                        endpoints,
-                        directMeshSelectionMode,
-                      )
-                  : studyKind === "plane_quad_2d"
-                    ? await createDirectMeshSolve<PlaneQuad2dResult>(
-                        "plane_quad_2d",
-                        resolvePlaneQuad2dJobInput(planeModel as PlaneQuad2dJobInput) as unknown as Record<string, unknown>,
-                        endpoints,
-                        directMeshSelectionMode,
-                      )
-                    : studyKind === "thermal_plane_triangle_2d"
-                      ? await createDirectMeshSolve<ThermalPlaneTriangle2dResult>(
-                          "thermal_plane_triangle_2d",
-                          resolveThermalPlaneTriangle2dJobInput(planeModel as ThermalPlaneTriangle2dJobInput) as unknown as Record<string, unknown>,
-                          endpoints,
-                          directMeshSelectionMode,
-                        )
-                    : await createDirectMeshSolve<PlaneTriangle2dResult>(
-                        "plane_triangle_2d",
-                        resolvePlaneTriangle2dJobInput(planeModel as PlaneTriangle2dJobInput) as unknown as Record<string, unknown>,
-                        endpoints,
-                        directMeshSelectionMode,
-                      );
-
-          setJob(created.job);
-          if (created.result) {
-            setResult(created.result);
-          }
-          setDirectMeshExecution({
-            endpoint: created.direct_mesh.endpoint,
-            strategy: created.direct_mesh.strategy,
-            at: new Date().toISOString(),
-          });
-          setMessage(`${t.directMeshCompleted}: ${created.job.worker_id ?? "direct-mesh"}`);
-          return;
-        }
-
-        const jobContext = {
-          ...(selectedProjectId ? { project_id: selectedProjectId } : {}),
-          ...(selectedVersionId ? { model_version_id: selectedVersionId } : {}),
-        };
-
-        const created =
-          studyKind === "axial_bar_1d"
-            ? await createAxialBarJob({ ...toAxialInput(axialForm), ...jobContext })
-            : studyKind === "heat_bar_1d"
-              ? await createHeatBar1dJob(resolveHeatBar1dJobInput({ ...heatBarModel, ...jobContext }))
-            : studyKind === "heat_plane_quad_2d"
-              ? await createHeatPlaneQuad2dJob(resolveHeatPlaneQuad2dJobInput({ ...(heatPlaneModel as HeatPlaneQuad2dJobInput), ...jobContext }))
-            : studyKind === "heat_plane_triangle_2d"
-              ? await createHeatPlaneTriangle2dJob(resolveHeatPlaneTriangle2dJobInput({ ...(heatPlaneModel as HeatPlaneTriangle2dJobInput), ...jobContext }))
-            : studyKind === "thermal_bar_1d"
-              ? await createThermalBar1dJob(resolveThermalBar1dJobInput({ ...thermalBarModel, ...jobContext }))
-            : studyKind === "thermal_beam_1d"
-              ? await createThermalBeam1dJob(resolveThermalBeam1dJobInput({ ...thermalBeamModel, ...jobContext }))
-            : studyKind === "thermal_frame_2d"
-              ? await createThermalFrame2dJob(resolveThermalFrame2dJobInput({ ...thermalFrameModel, ...jobContext }))
-            : studyKind === "thermal_truss_2d"
-              ? await createThermalTruss2dJob(resolveThermalTruss2dJobInput({ ...thermalTrussModel, ...jobContext }))
-            : studyKind === "thermal_truss_3d"
-              ? await createThermalTruss3dJob(resolveThermalTruss3dJobInput({ ...thermalTruss3dModel, ...jobContext }))
-            : studyKind === "spring_1d"
-              ? await createSpring1dJob(resolveSpring1dJobInput({ ...springModel, ...jobContext }))
-            : studyKind === "spring_2d"
-              ? await createSpring2dJob(resolveSpring2dJobInput({ ...spring2dModel, ...jobContext }))
-            : studyKind === "spring_3d"
-              ? await createSpring3dJob(resolveSpring3dJobInput({ ...spring3dModel, ...jobContext }))
-            : studyKind === "torsion_1d"
-              ? await createTorsion1dJob(resolveTorsion1dJobInput({ ...torsionModel, ...jobContext }))
-            : studyKind === "beam_1d"
-              ? await createBeam1dJob(resolveBeam1dJobInput({ ...beamModel, ...jobContext }))
-            : studyKind === "truss_2d"
-              ? await createTruss2dJob(resolveTruss2dJobInput({ ...trussModel, ...jobContext }))
-              : studyKind === "truss_3d"
-                ? await createTruss3dJob(resolveTruss3dJobInput({ ...truss3dModel, ...jobContext }))
-                : studyKind === "frame_2d"
-                  ? await createFrame2dJob(resolveFrame2dJobInput({ ...frameModel, ...jobContext }))
-                : studyKind === "thermal_plane_quad_2d"
-                  ? await createThermalPlaneQuad2dJob(
-                      resolveThermalPlaneQuad2dJobInput({ ...(planeModel as ThermalPlaneQuad2dJobInput), ...jobContext }),
-                  )
-                : studyKind === "plane_quad_2d"
-                  ? await createPlaneQuad2dJob(
-                      resolvePlaneQuad2dJobInput({ ...(planeModel as PlaneQuad2dJobInput), ...jobContext }),
-                  )
-                : studyKind === "thermal_plane_triangle_2d"
-                  ? await createThermalPlaneTriangle2dJob(
-                      resolveThermalPlaneTriangle2dJobInput({ ...(planeModel as ThermalPlaneTriangle2dJobInput), ...jobContext }),
-                  )
-                : await createPlaneTriangle2dJob(
-                    resolvePlaneTriangle2dJobInput({ ...(planeModel as PlaneTriangle2dJobInput), ...jobContext }),
-                  );
-
-        setJob(created.job);
-        await refreshJobHistory();
-        await pollJob(created.job.job_id, studyKind);
+        await runWorkbenchAnalysis({
+          axialForm,
+          beamModel,
+          copy: t,
+          directMeshEndpointsText,
+          directMeshSelectionMode,
+          frontendRuntimeMode,
+          frameModel,
+          heatBarModel,
+          heatPlaneModel,
+          jobPollTokenRef,
+          labels: {
+            precheckPrefix: t.precheckPrefix,
+            dispatching: t.dispatching,
+            directMeshEndpointsHelp: t.directMeshEndpointsHelp,
+            directMeshCompleted: t.directMeshCompleted,
+            requestTimedOut: t.requestTimedOut,
+            initialFailed: t.initialFailed,
+            pollingDetached: t.pollingDetached,
+          },
+          planeModel,
+          refreshJobHistory,
+          selectedProjectId,
+          selectedVersionId,
+          setDirectMeshExecution,
+          setJob,
+          setMessage,
+          setResult,
+          spring2dModel,
+          spring3dModel,
+          springModel,
+          studyKind,
+          thermalBarModel,
+          thermalBeamModel,
+          thermalFrameModel,
+          thermalTruss3dModel,
+          thermalTrussModel,
+          torsionModel,
+          truss3dModel,
+          trussDiagnostics,
+          trussModel,
+        });
       } catch (error) {
         setMessage(
           error instanceof Error
@@ -5609,113 +1143,6 @@ export function Workbench() {
         );
       }
     });
-  };
-
-  const handleCanvasStageScroll = (event: ReactUIEvent<HTMLDivElement>) => {
-    if (!activeResultWindow) return;
-    if (chunkScrollFrameRef.current !== null) return;
-
-    const target = event.currentTarget;
-    if (target.clientWidth > 0) {
-      setCanvasViewportWidth((current) => (current === target.clientWidth ? current : target.clientWidth));
-    }
-    const previousLeft = chunkScrollLeftRef.current;
-    chunkScrollDirectionRef.current =
-      target.scrollLeft > previousLeft ? 1 : target.scrollLeft < previousLeft ? -1 : 0;
-    chunkScrollLeftRef.current = target.scrollLeft;
-
-    chunkScrollFrameRef.current = window.requestAnimationFrame(() => {
-      chunkScrollFrameRef.current = null;
-
-      const maxScrollLeft = Math.max(0, target.scrollWidth - target.clientWidth);
-      if (maxScrollLeft <= 0) return;
-
-      const nextOffset = computeVisibleResultWindowOffset(
-        resultWindowMaxTotal,
-        resultWindowLimit,
-        target.clientWidth,
-        target.scrollLeft,
-        target.scrollWidth,
-      );
-
-      setResultWindowOffset((current) => (current === nextOffset ? current : nextOffset));
-    });
-  };
-
-  const pollJob = async (jobId: string, kind: StudyKind) => {
-    const pollToken = ++jobPollTokenRef.current;
-    let consecutiveErrors = 0;
-
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      if (pollToken !== jobPollTokenRef.current) return;
-
-      try {
-        const payload =
-          kind === "axial_bar_1d"
-            ? await fetchJobStatus<AxialBarResult>(jobId)
-            : kind === "heat_bar_1d"
-              ? await fetchJobStatus<HeatBar1dResult>(jobId)
-            : kind === "thermal_bar_1d"
-              ? await fetchJobStatus<ThermalBar1dResult>(jobId)
-            : kind === "thermal_beam_1d"
-              ? await fetchJobStatus<ThermalBeam1dResult>(jobId)
-            : kind === "thermal_truss_2d"
-              ? await fetchJobStatus<ThermalTruss2dResult>(jobId)
-            : kind === "thermal_truss_3d"
-              ? await fetchJobStatus<ThermalTruss3dResult>(jobId)
-            : kind === "spring_1d"
-              ? await fetchJobStatus<Spring1dResult>(jobId)
-            : kind === "spring_2d"
-              ? await fetchJobStatus<Spring2dResult>(jobId)
-            : kind === "spring_3d"
-              ? await fetchJobStatus<Spring3dResult>(jobId)
-            : kind === "torsion_1d"
-              ? await fetchJobStatus<Torsion1dResult>(jobId)
-            : kind === "beam_1d"
-              ? await fetchJobStatus<Beam1dResult>(jobId)
-            : kind === "truss_2d"
-              ? await fetchJobStatus<Truss2dResult>(jobId)
-              : kind === "truss_3d"
-                ? await fetchJobStatus<Truss3dResult>(jobId)
-                : kind === "frame_2d"
-                  ? await fetchJobStatus<Frame2dResult>(jobId)
-                : await fetchJobStatus<PlaneTriangle2dResult | PlaneQuad2dResult>(jobId);
-
-        if (pollToken !== jobPollTokenRef.current) return;
-
-        consecutiveErrors = 0;
-        setJob(payload.job);
-
-        if (payload.result) {
-          setResult(payload.result);
-        }
-
-        setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, t));
-
-        if (payload.job.status === "completed" || payload.job.status === "failed" || payload.job.status === "cancelled") {
-          await refreshJobHistory();
-          return;
-        }
-      } catch (error) {
-        if (pollToken !== jobPollTokenRef.current) return;
-
-        consecutiveErrors += 1;
-
-        if (consecutiveErrors >= 3) {
-          throw error;
-        }
-
-        await new Promise((resolve) => window.setTimeout(resolve, 500));
-        continue;
-      }
-
-      await new Promise((resolve) => window.setTimeout(resolve, 250));
-    }
-
-    if (pollToken === jobPollTokenRef.current) {
-      setMessage(t.pollingDetached);
-      await refreshJobHistory();
-    }
   };
 
   const openHistoryJob = (jobId: string) => {
@@ -5726,202 +1153,44 @@ export function Workbench() {
         const payload = await fetchJobStatus<
           AxialBarResult | HeatBar1dResult | HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | ThermalFrame2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | WorkflowGraphJobResult
         >(jobId);
-        setJob(payload.job);
-
-        if (payload.result) {
-          const workflowResult = isWorkflowGraphResult(payload.result) ? payload.result : null;
-          if (workflowResult) {
-            setResult(null);
-            const summary = summarizeWorkflowArtifacts(workflowResult);
-            setSidebarSection("workflow");
-            setWorkflowPanelTab("runs");
-            setSelectedWorkflowId(workflowResult.workflow_id);
-            setWorkflowRuns((current) =>
-              upsertWorkflowRunRecord(current, {
-                jobId: payload.job.job_id,
-                workflowId: workflowResult.workflow_id,
-                status: payload.job.status,
-                progress: payload.job.progress ?? 0,
-                currentNode: workflowResult.current_node ?? payload.job.message ?? null,
-                summary,
-                updatedAt: payload.job.updated_at ?? null,
-              }),
-            );
-            setMessage(
-              summary
-                ? `${t.workflowCatalogCompleted}: ${workflowResult.workflow_id} (${summary})`
-                : `${t.workflowCatalogCompleted}: ${workflowResult.workflow_id}`,
-            );
-            return;
-          }
-
-          const nonWorkflowResult = payload.result as Exclude<typeof payload.result, WorkflowGraphJobResult>;
-          setResult(nonWorkflowResult);
-
-          if (isAxialResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("axial_bar_1d");
-            setAxialForm({
-              length: nonWorkflowResult.input.length,
-              area: nonWorkflowResult.input.area,
-              elements: nonWorkflowResult.input.elements,
-              tipForce: nonWorkflowResult.input.tip_force,
-              material: activeMaterial,
-              youngsModulusGpa: round(nonWorkflowResult.input.youngs_modulus / 1.0e9),
-            });
-          }
-
-          if (isThermalBar1dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("thermal_bar_1d");
-            setThermalBarModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isHeatBar1dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("heat_bar_1d");
-            setHeatBarModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isHeatPlaneTriangle2dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("heat_plane_triangle_2d");
-            setHeatPlaneModel(nonWorkflowResult.input);
-            setPlaneResultField("average_temperature");
-            openWorkspaceStudy("controls");
-          }
-
-          if (isHeatPlaneQuad2dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("heat_plane_quad_2d");
-            setHeatPlaneModel(nonWorkflowResult.input);
-            setPlaneResultField("average_temperature");
-            openWorkspaceStudy("controls");
-          }
-
-          if (isThermalBeam1dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("thermal_beam_1d");
-            setThermalBeamModel(ensureBeamModelMaterials(nonWorkflowResult.input, activeMaterial));
-            openWorkspaceStudy("controls");
-          }
-
-          if (isThermalTruss2dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("thermal_truss_2d");
-            setThermalTrussModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isThermalTruss3dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("thermal_truss_3d");
-            setThermalTruss3dModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isSpring1dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("spring_1d");
-            setSpringModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isSpring2dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("spring_2d");
-            setSpring2dModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isSpring3dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("spring_3d");
-            setSpring3dModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isBeam1dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("beam_1d");
-            setBeamModel(ensureBeamModelMaterials(nonWorkflowResult.input, activeMaterial));
-            openWorkspaceStudy("controls");
-          }
-
-          if (isTorsion1dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("torsion_1d");
-            setTorsionModel(nonWorkflowResult.input);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isTrussResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("truss_2d");
-            setTrussModel(ensureTrussModelMaterials(nonWorkflowResult.input, activeMaterial));
-            openWorkspaceStudy("controls");
-          }
-
-          if (isTruss3dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("truss_3d");
-            setTruss3dModel(ensureTruss3dModelMaterials(nonWorkflowResult.input, activeMaterial));
-            openWorkspaceStudy("controls");
-          }
-
-          if (isFrame2dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("frame_2d");
-            setFrameModel(ensureFrameModelMaterials(nonWorkflowResult.input, activeMaterial));
-            openWorkspaceStudy("controls");
-          }
-
-          if (isThermalFrame2dResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind("thermal_frame_2d");
-            setThermalFrameModel(ensureFrameModelMaterials(nonWorkflowResult.input, activeMaterial) as ThermalFrameStudyJobInput);
-            openWorkspaceStudy("controls");
-          }
-
-          if (isPlaneResult(nonWorkflowResult)) {
-            recordHistory(t.historyAction);
-            setStudyKind(
-              nonWorkflowResult.input.elements.some((element) => "node_l" in element)
-                ? "plane_quad_2d"
-                : "plane_triangle_2d",
-            );
-            setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
-            openWorkspaceStudy("controls");
-          }
-        }
-
-        setMessage(payload.job.status === "failed" ? formatJobMessage(payload.job, t.historyLoaded, t) : t.historyLoaded);
+        applyHistoryJobPayload(payload, {
+          activeMaterial,
+          copy: {
+            historyAction: t.historyAction,
+            historyLoaded: t.historyLoaded,
+            workflowCatalogCompleted: t.workflowCatalogCompleted,
+          },
+          setJob,
+          setResult,
+          setSidebarSection,
+          setWorkflowPanelTab,
+          setSelectedWorkflowId,
+          setWorkflowRuns,
+          setMessage,
+          recordHistory,
+          openWorkspaceStudy,
+          setStudyKind,
+          setAxialForm,
+          setThermalBarModel,
+          setHeatBarModel,
+          setHeatPlaneModel,
+          setPlaneResultField,
+          setThermalBeamModel,
+          setThermalTrussModel,
+          setThermalTruss3dModel,
+          setSpringModel,
+          setSpring2dModel,
+          setSpring3dModel,
+          setBeamModel,
+          setTorsionModel,
+          setTrussModel,
+          setTruss3dModel,
+          setFrameModel,
+          setThermalFrameModel,
+          setPlaneModel,
+        });
       } catch (error) {
         setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const cancelCurrentJob = () => {
-    if (!job?.job_id || !jobIsActive) return;
-    jobPollTokenRef.current += 1;
-
-    startTransition(async () => {
-      try {
-        const payload = await cancelJob(job.job_id);
-        setJob(payload.job);
-        setMessage(t.jobCancelled);
-        await refreshJobHistory();
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message.startsWith("request timed out:")
-              ? t.requestTimedOut
-              : error.message
-            : t.initialFailed,
-        );
       }
     });
   };
@@ -5958,89 +1227,34 @@ export function Workbench() {
     try {
       const imported = parsePlaygroundModel(await file.text());
       recordHistory(t.importAction);
-      setLoadedModelName(imported.name);
-      setSelectedModelId(null);
-      setSelectedVersionId(null);
-      setModelVersions([]);
+      applyImportedWorkbenchModel(imported, {
+        setLoadedModelName,
+        setSelectedModelId,
+        setSelectedVersionId,
+        setModelVersions,
+        setStudyKind,
+        setAxialForm,
+        setHeatBarModel,
+        setHeatPlaneModel,
+        setThermalBarModel,
+        setThermalBeamModel,
+        setThermalFrameModel,
+        setThermalTrussModel,
+        setThermalTruss3dModel,
+        setSpringModel,
+        setSpring2dModel,
+        setSpring3dModel,
+        setTrussModel,
+        setTruss3dModel,
+        setPlaneModel,
+        setFrameModel,
+        setBeamModel,
+        setTorsionModel,
+        setPlaneResultField,
+        setParametric,
+        setActiveMaterial,
+      });
       setMessage(`${t.importedModel}: ${imported.name}`);
-
-      if (imported.kind === "truss_2d") {
-        setStudyKind("truss_2d");
-        setTrussModel(ensureTrussModelMaterials(imported.model, imported.material));
-        setActiveMaterial(imported.material);
-        setParametric((current) => ({
-          ...current,
-          youngsModulusGpa: imported.youngsModulusGpa,
-        }));
-      } else if (imported.kind === "spring_1d") {
-        setStudyKind("spring_1d");
-        setSpringModel(imported.model);
-      } else if (imported.kind === "heat_bar_1d") {
-        setStudyKind("heat_bar_1d");
-        setHeatBarModel(imported.model);
-      } else if (imported.kind === "heat_plane_triangle_2d" || imported.kind === "heat_plane_quad_2d") {
-        setStudyKind(imported.kind);
-        setHeatPlaneModel(imported.model);
-        setPlaneResultField("average_temperature");
-      } else if (imported.kind === "thermal_bar_1d") {
-        setStudyKind("thermal_bar_1d");
-        setThermalBarModel(imported.model);
-      } else if (imported.kind === "thermal_beam_1d") {
-        setStudyKind("thermal_beam_1d");
-        setThermalBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
-        setActiveMaterial(imported.material);
-      } else if (imported.kind === "thermal_frame_2d") {
-        setStudyKind("thermal_frame_2d");
-        setThermalFrameModel(ensureFrameModelMaterials(imported.model, imported.material) as ThermalFrameStudyJobInput);
-        setActiveMaterial(imported.material);
-      } else if (imported.kind === "thermal_truss_2d") {
-        setStudyKind("thermal_truss_2d");
-        setThermalTrussModel(imported.model);
-      } else if (imported.kind === "thermal_truss_3d") {
-        setStudyKind("thermal_truss_3d");
-        setThermalTruss3dModel(imported.model);
-      } else if (imported.kind === "spring_2d") {
-        setStudyKind("spring_2d");
-        setSpring2dModel(imported.model);
-      } else if (imported.kind === "spring_3d") {
-        setStudyKind("spring_3d");
-        setSpring3dModel(imported.model);
-      } else if (imported.kind === "truss_3d") {
-        setStudyKind("truss_3d");
-        setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
-        setActiveMaterial(imported.material);
-      } else if (imported.kind === "frame_2d") {
-        setStudyKind("frame_2d");
-        setFrameModel(ensureFrameModelMaterials(imported.model, imported.material));
-        setActiveMaterial(imported.material);
-      } else if (imported.kind === "beam_1d") {
-        setStudyKind("beam_1d");
-        setBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
-        setActiveMaterial(imported.material);
-      } else if (imported.kind === "torsion_1d") {
-        setStudyKind("torsion_1d");
-        setTorsionModel(imported.model);
-      } else if (
-        imported.kind === "plane_triangle_2d" ||
-        imported.kind === "plane_quad_2d" ||
-        imported.kind === "thermal_plane_triangle_2d" ||
-        imported.kind === "thermal_plane_quad_2d"
-      ) {
-        setStudyKind(imported.kind);
-        setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
-        setActiveMaterial(imported.material);
-      } else {
-        setStudyKind("axial_bar_1d");
-        setAxialForm({
-          length: imported.length,
-          area: imported.area,
-          elements: imported.elements,
-          tipForce: imported.tipForce,
-          material: imported.material,
-          youngsModulusGpa: imported.youngsModulusGpa,
-        });
-        setActiveMaterial(imported.material);
-      }
     } catch (error) {
       setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
     }
@@ -6052,79 +1266,33 @@ export function Workbench() {
         const text = await fetchTextWithTimeout(href);
         const imported = parsePlaygroundModel(text);
         recordHistory(t.sampleAction);
-        setLoadedModelName(imported.name);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        setModelVersions([]);
-
-        if (
-          imported.kind === "plane_triangle_2d" ||
-          imported.kind === "plane_quad_2d" ||
-          imported.kind === "thermal_plane_triangle_2d" ||
-          imported.kind === "thermal_plane_quad_2d"
-        ) {
-          setStudyKind(imported.kind);
-          setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
-        } else if (imported.kind === "heat_bar_1d") {
-          setStudyKind("heat_bar_1d");
-          setHeatBarModel(imported.model);
-        } else if (imported.kind === "heat_plane_triangle_2d" || imported.kind === "heat_plane_quad_2d") {
-          setStudyKind(imported.kind);
-          setHeatPlaneModel(imported.model);
-          setPlaneResultField("average_temperature");
-        } else if (imported.kind === "thermal_bar_1d") {
-          setStudyKind("thermal_bar_1d");
-          setThermalBarModel(imported.model);
-        } else if (imported.kind === "thermal_beam_1d") {
-          setStudyKind("thermal_beam_1d");
-          setThermalBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
-          setActiveMaterial(imported.material);
-        } else if (imported.kind === "thermal_frame_2d") {
-          setStudyKind("thermal_frame_2d");
-          setThermalFrameModel(ensureFrameModelMaterials(imported.model, imported.material) as ThermalFrameStudyJobInput);
-          setActiveMaterial(imported.material);
-        } else if (imported.kind === "thermal_truss_2d") {
-          setStudyKind("thermal_truss_2d");
-          setThermalTrussModel(imported.model);
-        } else if (imported.kind === "thermal_truss_3d") {
-          setStudyKind("thermal_truss_3d");
-          setThermalTruss3dModel(imported.model);
-        } else if (imported.kind === "spring_1d") {
-          setStudyKind("spring_1d");
-          setSpringModel(imported.model);
-        } else if (imported.kind === "spring_2d") {
-          setStudyKind("spring_2d");
-          setSpring2dModel(imported.model);
-        } else if (imported.kind === "spring_3d") {
-          setStudyKind("spring_3d");
-          setSpring3dModel(imported.model);
-        } else if (imported.kind === "beam_1d") {
-          setStudyKind("beam_1d");
-          setBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
-        } else if (imported.kind === "torsion_1d") {
-          setStudyKind("torsion_1d");
-          setTorsionModel(imported.model);
-        } else if (imported.kind === "frame_2d") {
-          setStudyKind("frame_2d");
-          setFrameModel(ensureFrameModelMaterials(imported.model, imported.material));
-        } else if (imported.kind === "truss_3d") {
-          setStudyKind("truss_3d");
-          setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
-        } else if (imported.kind === "truss_2d") {
-          setStudyKind("truss_2d");
-          setTrussModel(ensureTrussModelMaterials(imported.model, imported.material));
-        } else {
-          setStudyKind("axial_bar_1d");
-          setAxialForm({
-            length: imported.length,
-            area: imported.area,
-            elements: imported.elements,
-            tipForce: imported.tipForce,
-            material: imported.material,
-            youngsModulusGpa: imported.youngsModulusGpa,
-          });
-        }
-
+        applyImportedWorkbenchModel(imported, {
+          setLoadedModelName,
+          setSelectedModelId,
+          setSelectedVersionId,
+          setModelVersions,
+          setStudyKind,
+          setAxialForm,
+          setHeatBarModel,
+          setHeatPlaneModel,
+          setThermalBarModel,
+          setThermalBeamModel,
+          setThermalFrameModel,
+          setThermalTrussModel,
+          setThermalTruss3dModel,
+          setSpringModel,
+          setSpring2dModel,
+          setSpring3dModel,
+          setTrussModel,
+          setTruss3dModel,
+          setPlaneModel,
+          setFrameModel,
+          setBeamModel,
+          setTorsionModel,
+          setPlaneResultField,
+          setParametric,
+          setActiveMaterial,
+        });
         setMessage(`${t.importedModel}: ${imported.name}`);
       } catch (error) {
         setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
@@ -6354,92 +1522,23 @@ export function Workbench() {
   };
 
   const downloadResultJson = () => {
-    if (!result) {
-      setMessage(t.noResultToExport);
-      return;
-    }
-
-    const payload = {
-      exported_at: new Date().toISOString(),
-      study_kind: studyKind,
-      model_name: loadedModelName,
-      job,
-      result,
-    };
-
-    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-result.json`, JSON.stringify(payload, null, 2));
-    setMessage(t.resultJsonDownloaded);
+    downloadWorkbenchResultJson(resultExportEffects);
   };
 
   const downloadResultCsv = () => {
-    if (!result) {
-      setMessage(t.noResultToExport);
-      return;
-    }
-
-    const csv = serializeResultCsv(studyKind, job, result);
-    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-result.csv`, csv);
-    setMessage(t.resultCsvDownloaded);
+    downloadWorkbenchResultCsv(resultExportEffects);
   };
 
   const downloadPlaneHotspotSummary = () => {
-    if (!isPlane || planeHotspotElements.length === 0) {
-      setMessage(t.noResultToExport);
-      return;
-    }
-
-    const lines = [
-      ["rank", "id", "field", "value"].join(","),
-      ...planeHotspotElements.map((entry, index) => [index + 1, entry.id, planeResultField, entry.value].join(",")),
-    ];
-
-    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-${planeResultField}-hotspots.csv`, lines.join("\n"));
-    setMessage(t.resultCsvDownloaded);
+    downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
   };
 
   const downloadFrameHotspotSummary = () => {
-    if (!(isFrameLike || isBeam || isSpring || isThermal) || frameHotspotElements.length === 0) {
-      setMessage(t.noResultToExport);
-      return;
-    }
-
-    const lines = [
-      ["rank", "id", "field", "value", "end_forces"].join(","),
-      ...frameHotspotElements.map((entry, index) => [index + 1, entry.id, activeLineResultField, entry.value, `"${entry.summary ?? ""}"`].join(",")),
-    ];
-
-    downloadTextFile(`${loadedModelName || "kyuubiki-study"}-${activeLineResultField}-hotspots.csv`, lines.join("\n"));
-    setMessage(t.resultCsvDownloaded);
+    downloadWorkbenchFrameHotspotSummary(resultExportEffects);
   };
 
   const downloadFrameForceSummary = () => {
-    if (!(isFrameLike || isBeam || isSpring || isThermal) || frameForceRows.length === 0) {
-      setMessage(t.noResultToExport);
-      return;
-    }
-
-    const lines = [
-      ["id", "node_i", "node_j", "axial_force_i", "shear_force_i", "moment_i", "axial_force_j", "shear_force_j", "moment_j"].join(","),
-      ...displayTrussElements.map((element) =>
-        [
-          element.id,
-          element.node_i,
-          element.node_j,
-          element.axial_force_i ?? "",
-          element.shear_force_i ?? "",
-          element.moment_i ?? "",
-          element.axial_force_j ?? "",
-          element.shear_force_j ?? "",
-          element.moment_j ?? "",
-        ].join(","),
-      ),
-    ];
-
-    downloadTextFile(
-      `${loadedModelName || "kyuubiki-study"}-${isThermalBar ? "thermal-bar" : isThermalTruss2d || isThermalTruss3d ? "thermal-truss" : isSpring ? "spring" : isBeam ? "beam" : "frame"}-member-forces.csv`,
-      lines.join("\n"),
-    );
-    setMessage(t.resultCsvDownloaded);
+    downloadWorkbenchFrameForceSummary(resultExportEffects);
   };
 
   const buildProjectBundleJson = async () => {
@@ -6644,14 +1743,25 @@ export function Workbench() {
     if (!selectedAdminResultJobId) return;
 
     startTransition(async () => {
-      try {
-        const parsed = JSON.parse(adminResultDraft) as Record<string, unknown>;
-        await updateResultRecord(selectedAdminResultJobId, parsed);
-        await refreshResults();
-        setMessage(t.resultSaved);
-      } catch (error) {
-        setMessage(error instanceof SyntaxError ? t.invalidJson : error instanceof Error ? error.message : t.initialFailed);
-      }
+      await saveWorkbenchAdminResultRecord({
+        resultRefreshSeqRef,
+        fetchResults,
+        setResultRecords,
+        setSelectedAdminResultJobId,
+        selectedAdminResultJobId,
+        adminResultDraft,
+        updateResultRecord,
+        deleteResultRecord,
+        downloadTextFile,
+        setMessage,
+        labels: {
+          resultSaved: t.resultSaved,
+          resultDeleted: t.resultDeleted,
+          resultJsonDownloaded: t.resultJsonDownloaded,
+          invalidJson: t.invalidJson,
+          initialFailed: t.initialFailed,
+        },
+      });
     });
   };
 
@@ -6659,192 +1769,52 @@ export function Workbench() {
     if (!selectedAdminResultJobId) return;
 
     startTransition(async () => {
-      try {
-        await deleteResultRecord(selectedAdminResultJobId);
-        await refreshResults();
-        setMessage(t.resultDeleted);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
+      await deleteWorkbenchAdminResultRecord({
+        resultRefreshSeqRef,
+        fetchResults,
+        setResultRecords,
+        setSelectedAdminResultJobId,
+        selectedAdminResultJobId,
+        adminResultDraft,
+        updateResultRecord,
+        deleteResultRecord,
+        downloadTextFile,
+        setMessage,
+        labels: {
+          resultSaved: t.resultSaved,
+          resultDeleted: t.resultDeleted,
+          resultJsonDownloaded: t.resultJsonDownloaded,
+          invalidJson: t.invalidJson,
+          initialFailed: t.initialFailed,
+        },
+      });
     });
   };
 
   const exportAdminResultRecord = () => {
-    if (!selectedAdminResultJobId) return;
-
-    try {
-      const parsed = JSON.parse(adminResultDraft);
-      downloadTextFile(`${selectedAdminResultJobId}-result.json`, JSON.stringify(parsed, null, 2));
-      setMessage(t.resultJsonDownloaded);
-    } catch {
-      setMessage(t.invalidJson);
-    }
+    exportWorkbenchAdminResultRecord({
+      resultRefreshSeqRef,
+      fetchResults,
+      setResultRecords,
+      setSelectedAdminResultJobId,
+      selectedAdminResultJobId,
+      adminResultDraft,
+      updateResultRecord,
+      deleteResultRecord,
+      downloadTextFile,
+      setMessage,
+      labels: {
+        resultSaved: t.resultSaved,
+        resultDeleted: t.resultDeleted,
+        resultJsonDownloaded: t.resultJsonDownloaded,
+        invalidJson: t.invalidJson,
+        initialFailed: t.initialFailed,
+      },
+    });
   };
 
   const importProjectBundle = async (file: File | undefined) => {
-    if (!file) return;
-
-    try {
-      const bundle = await parseProjectBundleFile(file);
-      const createdProject = await createProject({
-        name: bundle.project.name,
-        description: bundle.project.description ?? "",
-      });
-
-      const modelIdMap = new Map<string, string>();
-
-      for (const bundledModel of bundle.models) {
-        const bundledVersions = bundle.model_versions
-          .filter((version) => version.model_id === bundledModel.model_id)
-          .sort((left, right) => left.version_number - right.version_number);
-
-        const baseVersion = bundledVersions[0];
-        const createdModel = await createModel(createdProject.project.project_id, {
-          name: baseVersion?.name || bundledModel.name,
-          kind: bundledModel.kind,
-          material: bundledModel.material ?? undefined,
-          model_schema_version: bundledModel.model_schema_version,
-          payload: (baseVersion?.payload ?? bundledModel.payload) as Record<string, unknown>,
-        });
-
-        const newModelId = createdModel.model.model_id;
-        modelIdMap.set(bundledModel.model_id, newModelId);
-
-        const initialVersionId = createdModel.model.versions?.[0]?.version_id;
-        if (initialVersionId && baseVersion?.name) {
-          await updateModelVersion(initialVersionId, { name: baseVersion.name });
-        }
-
-        for (const extraVersion of bundledVersions.slice(1)) {
-          await createModelVersion(newModelId, {
-            name: extraVersion.name,
-            kind: extraVersion.kind,
-            material: extraVersion.material ?? undefined,
-            model_schema_version: extraVersion.model_schema_version,
-            payload: extraVersion.payload,
-          });
-        }
-      }
-
-      for (const preset of bundle.automation_presets ?? []) {
-        try {
-          saveWorkbenchMacroPreset({
-            projectId: createdProject.project.project_id,
-            presetId: preset.presetId,
-            name: preset.name,
-            macro: preset.macro,
-          });
-        } catch {
-          // Ignore malformed preset payloads so model/project import stays usable.
-        }
-      }
-
-      await refreshProjects();
-
-      const importedActiveModelId =
-        (bundle.active_model_id && modelIdMap.get(bundle.active_model_id)) ||
-        [...modelIdMap.values()][0] ||
-        null;
-
-      setSelectedProjectId(createdProject.project.project_id);
-      setSelectedModelId(importedActiveModelId);
-
-      if (bundle.workspace_snapshot) {
-        recordHistory(t.importAction);
-        applyPersistedPayload(bundle.workspace_snapshot, bundle.project.name);
-      }
-
-      if (importedActiveModelId) {
-        await refreshVersions(importedActiveModelId);
-      } else {
-        setModelVersions([]);
-      }
-
-      setMessage(t.projectImported);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.importFailed);
-    }
-  };
-
-  const applyPersistedPayload = (payload: Record<string, unknown>, fallbackName?: string) => {
-    const imported = parsePlaygroundModel(JSON.stringify(payload));
-
-    if (
-      imported.kind === "heat_plane_triangle_2d" ||
-      imported.kind === "heat_plane_quad_2d" ||
-      imported.kind === "plane_triangle_2d" ||
-      imported.kind === "plane_quad_2d" ||
-      imported.kind === "thermal_plane_triangle_2d" ||
-      imported.kind === "thermal_plane_quad_2d"
-    ) {
-      setStudyKind(imported.kind);
-      if (imported.kind === "heat_plane_triangle_2d" || imported.kind === "heat_plane_quad_2d") {
-        setPlaneResultField("average_temperature");
-      }
-      if (imported.kind === "heat_plane_triangle_2d" || imported.kind === "heat_plane_quad_2d") {
-        setHeatPlaneModel(imported.model);
-      } else {
-        setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
-      }
-    } else if (imported.kind === "spring_1d") {
-      setStudyKind("spring_1d");
-      setSpringModel(imported.model);
-    } else if (imported.kind === "heat_bar_1d") {
-      setStudyKind("heat_bar_1d");
-      setHeatBarModel(imported.model);
-    } else if (imported.kind === "thermal_bar_1d") {
-      setStudyKind("thermal_bar_1d");
-      setThermalBarModel(imported.model);
-    } else if (imported.kind === "thermal_beam_1d") {
-      setStudyKind("thermal_beam_1d");
-      setThermalBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
-      setActiveMaterial(imported.material);
-    } else if (imported.kind === "thermal_frame_2d") {
-      setStudyKind("thermal_frame_2d");
-      setThermalFrameModel(ensureFrameModelMaterials(imported.model, imported.material) as ThermalFrameStudyJobInput);
-      setActiveMaterial(imported.material);
-    } else if (imported.kind === "thermal_truss_2d") {
-      setStudyKind("thermal_truss_2d");
-      setThermalTrussModel(imported.model);
-    } else if (imported.kind === "thermal_truss_3d") {
-      setStudyKind("thermal_truss_3d");
-      setThermalTruss3dModel(imported.model);
-    } else if (imported.kind === "spring_2d") {
-      setStudyKind("spring_2d");
-      setSpring2dModel(imported.model);
-    } else if (imported.kind === "spring_3d") {
-      setStudyKind("spring_3d");
-      setSpring3dModel(imported.model);
-    } else if (imported.kind === "beam_1d") {
-      setStudyKind("beam_1d");
-      setBeamModel(ensureBeamModelMaterials(imported.model, imported.material));
-    } else if (imported.kind === "torsion_1d") {
-      setStudyKind("torsion_1d");
-      setTorsionModel(imported.model);
-    } else if (imported.kind === "frame_2d") {
-      setStudyKind("frame_2d");
-      setFrameModel(ensureFrameModelMaterials(imported.model, imported.material));
-    } else if (imported.kind === "truss_3d") {
-      setStudyKind("truss_3d");
-      setTruss3dModel(ensureTruss3dModelMaterials(imported.model, imported.material));
-    } else if (imported.kind === "truss_2d") {
-      setStudyKind("truss_2d");
-      setTrussModel(ensureTrussModelMaterials(imported.model, imported.material));
-    } else {
-      setStudyKind("axial_bar_1d");
-      setAxialForm({
-        length: imported.length,
-        area: imported.area,
-        elements: imported.elements,
-        tipForce: imported.tipForce,
-        material: imported.material,
-        youngsModulusGpa: imported.youngsModulusGpa,
-      });
-    }
-
-    setLoadedModelName(fallbackName ?? imported.name);
-    setActiveMaterial("material" in imported ? imported.material : activeMaterial);
-    resetActiveResult(setResult, setJob);
+    await importWorkbenchProjectBundle(file, persistedModelEffects);
   };
 
   const createProjectRecord = () => {
@@ -6973,41 +1943,15 @@ export function Workbench() {
   };
 
   const openSavedModel = (model: ModelRecord) => {
-    startTransition(async () => {
-      try {
-        const payload = await fetchModel(model.model_id);
-        recordHistory(t.historyAction);
-        applyPersistedPayload(payload.model.payload, payload.model.name);
-        setSelectedProjectId(payload.model.project_id);
-        setSelectedModelId(payload.model.model_id);
-        setSelectedVersionId(payload.model.latest_version_id ?? null);
-        await refreshVersions(payload.model.model_id);
-        setMessage(t.persistedModelLoaded);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
+    openPersistedWorkbenchModel(model, persistedModelEffects);
   };
 
   const openSavedVersion = (version: ModelVersionRecord) => {
-    openModelVersionById(version.version_id);
+    openPersistedWorkbenchVersion(version, persistedModelEffects);
   };
 
   const openModelVersionById = (versionId: string) => {
-    startTransition(async () => {
-      try {
-        const payload = await fetchModelVersion(versionId);
-        recordHistory(t.historyAction);
-        applyPersistedPayload(payload.version.payload, payload.version.name);
-        setSelectedModelId(payload.version.model_id);
-        setSelectedProjectId(payload.version.project_id);
-        setSelectedVersionId(payload.version.version_id);
-        setMessage(t.versionLoaded);
-        setSidebarSection("model");
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
+    openPersistedWorkbenchVersionById(versionId, persistedModelEffects);
   };
 
   const renameSelectedVersion = () => {
@@ -7043,129 +1987,31 @@ export function Workbench() {
   };
 
   const openSelectedAdminJobVersion = () => {
-    if (!selectedAdminJob?.model_version_id) {
-      setMessage(language === "zh" ? "这个任务还没有关联模型版本。" : language === "ja" ? "このジョブには関連するモデルバージョンがまだありません。" : "This job does not have a linked model version.");
-      return;
-    }
-
-    openModelVersionById(selectedAdminJob.model_version_id);
+    openSelectedAdminJobVersionWithDeps(adminDataEffects);
   };
 
   const openSelectedAdminResultVersion = () => {
-    const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
-
-    if (!linkedJob?.model_version_id) {
-      setMessage(language === "zh" ? "这个结果还没有关联模型版本。" : language === "ja" ? "この結果には関連するモデルバージョンがまだありません。" : "This result does not have a linked model version.");
-      return;
-    }
-
-    openModelVersionById(linkedJob.model_version_id);
-  };
-
-  const applyJobContextToWorkbench = (entry: JobState) => {
-    setAdminFilterProjectId(entry.project_id ?? "");
-    setAdminFilterModelVersionId(entry.model_version_id ?? "");
-    setAdminJobCaseId(entry.simulation_case_id ?? "");
-    setLibraryTab("projects");
-
-    if (entry.model_version_id) {
-      openModelVersionById(entry.model_version_id);
-      return;
-    }
-
-    if (entry.project_id) {
-      openProjectContextById(entry.project_id);
-      return;
-    }
-
-    setMessage(language === "zh" ? "这条记录还没有可应用的项目或版本上下文。" : language === "ja" ? "このレコードには適用できる project / version の文脈がまだありません。" : "This record does not have a linked project or version context yet.");
-  };
-
-  const openProjectContextById = (projectId: string) => {
-    const project = projects.find((entry) => entry.project_id === projectId);
-
-    if (!project) {
-      setMessage(language === "zh" ? "找不到关联项目。" : language === "ja" ? "関連プロジェクトが見つかりませんでした。" : "Could not find the linked project.");
-      return;
-    }
-
-    const firstModelId = project.models?.[0]?.model_id ?? null;
-    const firstVersionId = project.models?.[0]?.latest_version_id ?? null;
-
-    setSelectedProjectId(project.project_id);
-    setSelectedModelId(firstModelId);
-    setSelectedVersionId(firstVersionId);
-    setSidebarSection("library");
-
-    if (firstModelId) {
-      void refreshVersions(firstModelId);
-    } else {
-      setModelVersions([]);
-    }
-
-    setMessage(t.linkedProjectOpened);
+    openSelectedAdminResultVersionWithDeps(adminDataEffects);
   };
 
   const openSelectedAdminJobProject = () => {
-    if (!selectedAdminJob?.project_id) {
-      setMessage(language === "zh" ? "这个任务还没有关联项目。" : language === "ja" ? "このジョブには関連プロジェクトがまだありません。" : "This job does not have a linked project.");
-      return;
-    }
-
-    openProjectContextById(selectedAdminJob.project_id);
+    openSelectedAdminJobProjectWithDeps(adminDataEffects);
   };
 
   const openSelectedAdminResultProject = () => {
-    const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
-
-    if (!linkedJob?.project_id) {
-      setMessage(language === "zh" ? "这个结果还没有关联项目。" : language === "ja" ? "この結果には関連プロジェクトがまだありません。" : "This result does not have a linked project.");
-      return;
-    }
-
-    openProjectContextById(linkedJob.project_id);
+    openSelectedAdminResultProjectWithDeps(adminDataEffects);
   };
 
   const applySelectedAdminJobContext = () => {
-    if (!selectedAdminJob) {
-      setMessage(language === "zh" ? "请先选择一条任务记录。" : language === "ja" ? "先にジョブレコードを選択してください。" : "Select a job record first.");
-      return;
-    }
-
-    applyJobContextToWorkbench(selectedAdminJob);
-    if (!selectedAdminJob.model_version_id && !selectedAdminJob.project_id) {
-      return;
-    }
-    setMessage(t.recordContextApplied);
+    applySelectedAdminJobContextWithDeps(adminDataEffects);
   };
 
   const applySelectedAdminResultContext = () => {
-    const linkedJob = jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId);
-
-    if (!linkedJob) {
-      setMessage(language === "zh" ? "找不到这条结果对应的任务记录。" : language === "ja" ? "この結果に対応するジョブレコードが見つかりませんでした。" : "Could not find the job record linked to this result.");
-      return;
-    }
-
-    applyJobContextToWorkbench(linkedJob);
-    if (!linkedJob.model_version_id && !linkedJob.project_id) {
-      return;
-    }
-    setMessage(t.recordContextApplied);
+    applySelectedAdminResultContextWithDeps(adminDataEffects);
   };
 
   const resolveScriptLinkedJob = (payload: Record<string, unknown>) => {
-    const target = payload.target === "job" || payload.target === "result" ? payload.target : "job";
-    const explicitJobId = typeof payload.jobId === "string" ? payload.jobId : null;
-    const explicitResultJobId = typeof payload.resultJobId === "string" ? payload.resultJobId : null;
-
-    if (target === "job") {
-      const jobId = explicitJobId ?? selectedAdminJobId;
-      return jobId ? jobHistory.find((entry) => entry.job_id === jobId) ?? null : null;
-    }
-
-    const resultJobId = explicitResultJobId ?? explicitJobId ?? selectedAdminResultJobId;
-    return resultJobId ? jobHistory.find((entry) => entry.job_id === resultJobId) ?? null : null;
+    return resolveScriptLinkedJobWithDeps(payload, adminDataEffects);
   };
 
   const handleSidebarSectionChange = (section: SidebarSection) => {
@@ -7363,6 +2209,77 @@ export function Workbench() {
   const deferredResultRecords = useDeferredValue(resultRecords);
   const selectedAdminJob = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
   const selectedAdminResult = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
+  const adminDataEffects = {
+    selectedAdminJob,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+    jobHistory,
+    projects,
+    refreshVersions,
+    openModelVersionById,
+    setAdminFilterProjectId,
+    setAdminFilterModelVersionId,
+    setAdminJobCaseId,
+    setLibraryTab,
+    setSelectedProjectId,
+    setSelectedModelId,
+    setSelectedVersionId,
+    setModelVersions,
+    setSidebarSection,
+    setMessage,
+    labels: {
+      noJobVersion:
+        language === "zh"
+          ? "这个任务还没有关联模型版本。"
+          : language === "ja"
+            ? "このジョブには関連するモデルバージョンがまだありません。"
+            : "This job does not have a linked model version.",
+      noResultVersion:
+        language === "zh"
+          ? "这个结果还没有关联模型版本。"
+          : language === "ja"
+            ? "この結果には関連するモデルバージョンがまだありません。"
+            : "This result does not have a linked model version.",
+      noRecordContext:
+        language === "zh"
+          ? "这条记录还没有可应用的项目或版本上下文。"
+          : language === "ja"
+            ? "このレコードには適用できる project / version の文脈がまだありません。"
+            : "This record does not have a linked project or version context yet.",
+      linkedProjectMissing:
+        language === "zh"
+          ? "找不到关联项目。"
+          : language === "ja"
+            ? "関連プロジェクトが見つかりませんでした。"
+            : "Could not find the linked project.",
+      linkedProjectOpened: t.linkedProjectOpened,
+      noJobProject:
+        language === "zh"
+          ? "这个任务还没有关联项目。"
+          : language === "ja"
+            ? "このジョブには関連プロジェクトがまだありません。"
+            : "This job does not have a linked project.",
+      noResultProject:
+        language === "zh"
+          ? "这个结果还没有关联项目。"
+          : language === "ja"
+            ? "この結果には関連プロジェクトがまだありません。"
+            : "This result does not have a linked project.",
+      selectJobFirst:
+        language === "zh"
+          ? "请先选择一条任务记录。"
+          : language === "ja"
+            ? "先にジョブレコードを選択してください。"
+            : "Select a job record first.",
+      missingResultJob:
+        language === "zh"
+          ? "找不到这条结果对应的任务记录。"
+          : language === "ja"
+            ? "この結果に対応するジョブレコードが見つかりませんでした。"
+            : "Could not find the job record linked to this result.",
+      recordContextApplied: t.recordContextApplied,
+    },
+  };
 
   const isAxial = studyKind === "axial_bar_1d";
   const isHeatBar = studyKind === "heat_bar_1d";
@@ -7393,12 +2310,6 @@ export function Workbench() {
     studyKind === "plane_quad_2d" ||
     isThermalPlaneTriangle ||
     isThermalPlaneQuad;
-  const jobIsActive =
-    job?.status === "queued" ||
-    job?.status === "preprocessing" ||
-    job?.status === "partitioning" ||
-    job?.status === "solving" ||
-    job?.status === "postprocessing";
   const axialResult = isAxial && isAxialResult(result) ? result : null;
   const heatBarResult = isHeatBar && isHeatBar1dResult(result) ? result : null;
   const heatPlaneTriangleResult = isHeatPlaneTriangle && isHeatPlaneTriangle2dResult(result) ? result : null;
@@ -7908,6 +2819,32 @@ export function Workbench() {
       })),
     [displayTrussElements, selectedElement],
   );
+  const resultExportEffects = {
+    result,
+    studyKind,
+    loadedModelName,
+    job,
+    isPlane,
+    isFrameLike,
+    isBeam,
+    isSpring,
+    isThermal,
+    isThermalBar,
+    isThermalTruss2d,
+    isThermalTruss3d,
+    planeResultField,
+    activeLineResultField,
+    planeHotspotElements,
+    frameHotspotElements,
+    frameForceRows,
+    downloadTextFile,
+    setMessage,
+    labels: {
+      noResultToExport: t.noResultToExport,
+      resultJsonDownloaded: t.resultJsonDownloaded,
+      resultCsvDownloaded: t.resultCsvDownloaded,
+    },
+  };
   const frameMaxAxialForce = useMemo(
     () => Math.max(...displayTrussElements.map((element) => Math.max(Math.abs(element.axial_force_i ?? 0), Math.abs(element.axial_force_j ?? 0))), 0),
     [displayTrussElements],
@@ -8629,7 +3566,6 @@ export function Workbench() {
       : activeResultWindow?.totalNodes ??
         (isTruss ? trussResult?.nodes.length : isSpring3d ? spring3dResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : isSpring ? activeSpringResult?.nodes.length : isBeam ? activeBeamLikeResult?.nodes.length : isTorsion ? torsionResult?.nodes.length : isFrameLike ? activeFrameLikeResult?.nodes.length : planeResult?.nodes.length) ??
         (isTruss ? trussModel.nodes.length : isSpring3d ? spring3dModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : isSpring ? activeSpringModel.nodes.length : isBeam ? activeBeamLikeModel.nodes.length : isTorsion ? torsionModel.nodes.length : isFrameLike ? activeFrameLikeModel.nodes.length : activePlaneInputModel.nodes.length);
-  const resultWindowMaxTotal = activeResultWindow ? Math.max(activeResultWindow.totalNodes, activeResultWindow.totalElements) : 0;
   const activeResultWindowLimit = activeResultWindow?.limit ?? resultWindowLimit;
   const resultWindowStart = activeResultWindow ? Math.min(resultWindowOffset, Math.max(0, resultWindowMaxTotal - 1)) + 1 : 0;
   const resultWindowEnd = activeResultWindow ? Math.min(resultWindowOffset + activeResultWindowLimit, resultWindowMaxTotal) : 0;
@@ -9038,246 +3974,63 @@ export function Workbench() {
 
     try {
       let resultPayload: Record<string, unknown>;
-      switch (action) {
-        case "macro/run": {
-          const macroId = typeof payload.macroId === "string" ? payload.macroId : null;
-          const macro = macroId ? getWorkbenchScriptMacroDefinition(macroId) : null;
-
-          if (!macro) {
-            throw new Error(language === "zh" ? "找不到指定的宏动作。" : language === "ja" ? "指定されたマクロが見つかりませんでした。" : "Could not find the requested macro.");
-          }
-
-          const macroPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "macroId"));
-          const macroSnapshot = getScriptSnapshot();
-
-          for (const step of macro.steps) {
-            const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
-            await invokeScriptAction(step.action, nextPayload, source, note ?? (language === "zh" ? macro.summary.zh : macro.summary.en));
-          }
-
-          resultPayload = { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };
-          break;
-        }
-        case "nav/setSidebarSection": {
-          const section = payload.section;
-          if (section === "study" || section === "model" || section === "library" || section === "system") {
-            handleSidebarSectionChange(section);
-          }
-          resultPayload = { ok: true, action, section };
-          break;
-        }
-        case "nav/setStudyKind": {
-          const nextStudyKind = payload.studyKind;
-          if (
-            nextStudyKind === "axial_bar_1d" ||
-            nextStudyKind === "heat_bar_1d" ||
-            nextStudyKind === "heat_plane_triangle_2d" ||
-            nextStudyKind === "heat_plane_quad_2d" ||
-            nextStudyKind === "thermal_bar_1d" ||
-            nextStudyKind === "thermal_beam_1d" ||
-            nextStudyKind === "thermal_frame_2d" ||
-            nextStudyKind === "thermal_truss_2d" ||
-            nextStudyKind === "thermal_truss_3d" ||
-            nextStudyKind === "thermal_plane_triangle_2d" ||
-            nextStudyKind === "thermal_plane_quad_2d" ||
-            nextStudyKind === "spring_1d" ||
-            nextStudyKind === "spring_2d" ||
-            nextStudyKind === "spring_3d" ||
-            nextStudyKind === "beam_1d" ||
-            nextStudyKind === "torsion_1d" ||
-            nextStudyKind === "truss_2d" ||
-            nextStudyKind === "truss_3d" ||
-            nextStudyKind === "plane_triangle_2d" ||
-            nextStudyKind === "plane_quad_2d" ||
-            nextStudyKind === "frame_2d"
-          ) {
-            recordHistory(t.changeStudyType);
-            if (nextStudyKind === "plane_quad_2d" && studyKind !== "plane_quad_2d") {
-              setPlaneModel(ensurePlaneModelMaterials(defaultPlaneQuad, activeMaterial));
-            } else if (nextStudyKind === "thermal_plane_quad_2d" && studyKind !== "thermal_plane_quad_2d") {
-              setPlaneModel(ensurePlaneModelMaterials(defaultThermalPlaneQuad, activeMaterial));
-            } else if (nextStudyKind === "plane_triangle_2d" && studyKind !== "plane_triangle_2d") {
-              setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial));
-            } else if (nextStudyKind === "thermal_plane_triangle_2d" && studyKind !== "thermal_plane_triangle_2d") {
-              setPlaneModel(ensurePlaneModelMaterials(defaultThermalPlaneTriangle, activeMaterial));
-            } else if (nextStudyKind === "heat_bar_1d" && studyKind !== "heat_bar_1d") {
-              setHeatBarModel(defaultHeatBar1d);
-            } else if (nextStudyKind === "heat_plane_quad_2d" && studyKind !== "heat_plane_quad_2d") {
-              setHeatPlaneModel(defaultHeatPlaneQuad);
-              setPlaneResultField("average_temperature");
-            } else if (nextStudyKind === "heat_plane_triangle_2d" && studyKind !== "heat_plane_triangle_2d") {
-              setHeatPlaneModel(defaultHeatPlaneTriangle);
-              setPlaneResultField("average_temperature");
-            } else if (nextStudyKind === "thermal_bar_1d" && studyKind !== "thermal_bar_1d") {
-              setThermalBarModel(defaultThermalBar1d);
-            } else if (nextStudyKind === "thermal_beam_1d" && studyKind !== "thermal_beam_1d") {
-              setThermalBeamModel(ensureBeamModelMaterials(defaultThermalBeam1d, activeMaterial));
-            } else if (nextStudyKind === "thermal_frame_2d" && studyKind !== "thermal_frame_2d") {
-              setThermalFrameModel(ensureFrameModelMaterials(defaultThermalFrame2d, activeMaterial) as ThermalFrameStudyJobInput);
-            } else if (nextStudyKind === "thermal_truss_2d" && studyKind !== "thermal_truss_2d") {
-              setThermalTrussModel(defaultThermalTruss2d);
-            } else if (nextStudyKind === "thermal_truss_3d" && studyKind !== "thermal_truss_3d") {
-              setThermalTruss3dModel(defaultThermalTruss3d);
-            } else if (nextStudyKind === "spring_1d" && studyKind !== "spring_1d") {
-              setSpringModel(defaultSpring1d);
-            } else if (nextStudyKind === "spring_2d" && studyKind !== "spring_2d") {
-              setSpring2dModel(defaultSpring2d);
-            } else if (nextStudyKind === "spring_3d" && studyKind !== "spring_3d") {
-              setSpring3dModel(defaultSpring3d);
-            } else if (nextStudyKind === "beam_1d" && studyKind !== "beam_1d") {
-              setBeamModel(ensureBeamModelMaterials(defaultBeam1d, activeMaterial));
-            } else if (nextStudyKind === "torsion_1d" && studyKind !== "torsion_1d") {
-              setTorsionModel(defaultTorsion1d);
-            } else if (nextStudyKind === "frame_2d" && studyKind !== "frame_2d") {
-              setFrameModel(ensureFrameModelMaterials(defaultFrame2d, activeMaterial));
-            }
-            setStudyKind(nextStudyKind);
-          }
-          resultPayload = { ok: true, action, studyKind: nextStudyKind };
-          break;
-        }
-        case "nav/setTabs": {
-          if (payload.studyTab === "summary" || payload.studyTab === "controls") {
-            setStudyTab(payload.studyTab);
-          }
-          if (payload.modelTab === "tools" || payload.modelTab === "tree") {
-            setModelTab(payload.modelTab);
-          }
-          if (
-            payload.modelToolsPage === "overview" ||
-            payload.modelToolsPage === "study" ||
-            payload.modelToolsPage === "studio" ||
-            payload.modelToolsPage === "materials" ||
-            payload.modelToolsPage === "generate"
-          ) {
-            setModelToolsPage(payload.modelToolsPage);
-          }
-          if (
-            payload.libraryTab === "results" ||
-            payload.libraryTab === "samples" ||
-            payload.libraryTab === "projects" ||
-            payload.libraryTab === "models" ||
-            payload.libraryTab === "jobs"
-          ) {
-            setLibraryTab(payload.libraryTab);
-          }
-          if (
-            payload.systemPanelTab === "config" ||
-            payload.systemPanelTab === "assistant" ||
-            payload.systemPanelTab === "scripts" ||
-            payload.systemPanelTab === "runtime" ||
-            payload.systemPanelTab === "data"
-          ) {
-            if (payload.systemPanelTab === "assistant") {
-              setAssistantWindowOpen(true);
-              setSystemPanelTab("config");
-            } else {
-              setSystemPanelTab(payload.systemPanelTab);
-            }
-          }
-          if (payload.systemDataTab === "jobs" || payload.systemDataTab === "results") {
-            setSystemDataTab(payload.systemDataTab);
-          }
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "settings/patch": {
-          if (payload.language === "en" || payload.language === "zh" || payload.language === "ja" || payload.language === "es") {
-            handleLanguageChange(payload.language);
-          }
-          if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
-            setTheme(payload.theme);
-          }
-          if (payload.frontendRuntimeMode === "orchestrated_gui" || payload.frontendRuntimeMode === "direct_mesh_gui") {
-            setFrontendRuntimeMode(payload.frontendRuntimeMode);
-          }
-          if (typeof payload.directMeshEndpointsText === "string") {
-            setDirectMeshEndpointsText(payload.directMeshEndpointsText);
-          }
-          if (payload.directMeshSelectionMode === "healthiest" || payload.directMeshSelectionMode === "first_reachable") {
-            setDirectMeshSelectionMode(payload.directMeshSelectionMode);
-          }
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "runtime/refreshAll": {
-          await Promise.all([refreshHealth(), refreshJobHistory(), refreshResults(), refreshProjects(), refreshSecurityEvents()]);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "project/create": {
-          const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : t.defaultProject;
-          const description = typeof payload.description === "string" ? payload.description : "";
-          const created = await createProject({ name, description });
-          setSelectedProjectId(created.project.project_id);
-          setProjectNameDraft(created.project.name);
-          setProjectDescriptionDraft(created.project.description ?? "");
-          await refreshProjects();
-          setMessage(t.projectCreated);
-          resultPayload = { ok: true, action, projectId: created.project.project_id };
-          break;
-        }
-        case "project/select": {
-          const projectId = typeof payload.projectId === "string" ? payload.projectId : null;
-          if (projectId) {
-            setSelectedProjectId(projectId);
-          }
-          resultPayload = { ok: true, action, projectId };
-          break;
-        }
-        case "project/updateSelected": {
-          if (!selectedProjectId) {
-            throw new Error(t.projectRequired);
-          }
-          const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : projectNameDraft || t.defaultProject;
-          const description = typeof payload.description === "string" ? payload.description : projectDescriptionDraft;
-          await updateProject(selectedProjectId, { name, description });
-          setProjectNameDraft(name);
-          setProjectDescriptionDraft(description);
-          await refreshProjects();
-          setMessage(t.projectUpdated);
-          resultPayload = { ok: true, action, projectId: selectedProjectId };
-          break;
-        }
-        case "project/deleteSelected": {
-          if (!selectedProjectId) {
-            throw new Error(t.projectRequired);
-          }
-          await deleteProject(selectedProjectId);
-          setSelectedProjectId(null);
-          setSelectedModelId(null);
-          setSelectedVersionId(null);
-          await refreshProjects();
-          setMessage(t.projectDeleted);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "project/exportJson": {
-          await downloadProjectBundleJson();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "project/exportZip": {
-          await downloadProjectBundleZip();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "model/generateTruss": {
-          generateModel();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "model/generatePanel": {
-          generatePanelModel();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "model/save":
-        case "model/saveAs": {
-          if (!selectedProjectId) {
-            throw new Error(t.projectRequired);
-          }
-          const payloadModel = serializeCurrentModel(
+      const navResult = await handleWorkbenchScriptNavAction({
+        action,
+        payload,
+        studyKind,
+        studyKindResetHandlers,
+        setStudyKind,
+        handleSidebarSectionChange,
+        recordHistory,
+        changeStudyTypeLabel: t.changeStudyType,
+        setStudyTab,
+        setModelTab,
+        setModelToolsPage,
+        setLibraryTab,
+        setSystemPanelTab,
+        setAssistantWindowOpen,
+        setSystemDataTab,
+        handleLanguageChange,
+        setTheme,
+        setFrontendRuntimeMode,
+        setDirectMeshEndpointsText,
+        setDirectMeshSelectionMode,
+        refreshHealth,
+        refreshJobHistory,
+        refreshResults,
+        refreshProjects,
+        refreshSecurityEvents,
+      });
+      if (navResult) {
+        resultPayload = navResult;
+      } else {
+      const projectModelResult = await handleWorkbenchScriptProjectModelAction({
+        action,
+        payload,
+        selectedProjectId,
+        selectedModelId,
+        selectedVersionId,
+        projectNameDraft,
+        projectDescriptionDraft,
+        loadedModelName,
+        activeMaterial,
+        studyKind,
+        setSelectedProjectId,
+        setProjectNameDraft,
+        setProjectDescriptionDraft,
+        setSelectedModelId,
+        setSelectedVersionId,
+        setModelVersions,
+        setLoadedModelName,
+        setActiveMaterial,
+        refreshProjects,
+        refreshVersions,
+        downloadProjectBundleJson,
+        downloadProjectBundleZip,
+        generateModel,
+        generatePanelModel,
+        serializeCurrentModel: () =>
+          serializeCurrentModel(
             studyKind,
             loadedModelName,
             activeMaterial,
@@ -9300,261 +4053,100 @@ export function Workbench() {
             spring3dModel,
             parametric,
             round,
-          );
-          if (!selectedModelId || action === "model/saveAs") {
-            const created = await createModel(selectedProjectId, {
-              name: loadedModelName,
-              kind: studyKind,
-              material: activeMaterial,
-              model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
-              payload: payloadModel,
-            });
-            setSelectedModelId(created.model.model_id);
-            setSelectedVersionId(created.model.latest_version_id ?? null);
-            await refreshProjects();
-            await refreshVersions(created.model.model_id);
-            setMessage(t.modelCreated);
-            resultPayload = { ok: true, action, modelId: created.model.model_id };
-            break;
+          ),
+        createProject,
+        updateProject,
+        deleteProject,
+        createModel,
+        updateModel,
+        deleteModel,
+        createModelVersion,
+        updateModelVersion,
+        deleteModelVersion,
+        projectRequiredLabel: t.projectRequired,
+        defaultProjectLabel: t.defaultProject,
+        projectCreatedLabel: t.projectCreated,
+        projectUpdatedLabel: t.projectUpdated,
+        projectDeletedLabel: t.projectDeleted,
+        noSavedModelsLabel: t.noSavedModels,
+        noVersionsLabel: t.noVersions,
+        modelCreatedLabel: t.modelCreated,
+        modelSavedLabel: t.modelSaved,
+        modelDeletedLabel: t.modelDeletedStored,
+        versionRenamedLabel: t.versionRenamed,
+        versionDeletedLabel: t.versionDeleted,
+        setMessage,
+      });
+      if (projectModelResult) {
+        resultPayload = projectModelResult;
+      } else {
+      const stateResult = await handleWorkbenchScriptStateAction({
+        action,
+        payload,
+        language,
+        setStudyKind,
+        setParametric,
+        setPanelParametric,
+        setTrussModel,
+        setTruss3dModel,
+        setPlaneModel,
+        setFrameModel,
+        setBeamModel,
+        setSelectedNode,
+        setSelectedElement,
+        setSelectedTruss3dNodes,
+        setMemberDraftNodes,
+        setTruss3dLinkMode,
+        setTruss3dFocusRequestVersion,
+        setTruss3dResetRequestVersion,
+        setTruss3dShowGrid,
+        setTruss3dShowLabels,
+        setTruss3dShowNodes,
+        setImmersiveToolDrawerOpen,
+        setImmersiveHelpDrawerOpen,
+        setTruss3dBoxSelectMode,
+        immersiveViewport,
+        recordHistory,
+        importActionLabel: t.importAction,
+        editParametricLabel: t.editParametric,
+        resolveTruss2dJobInput,
+        resolveTruss3dJobInput,
+        resolvePlaneQuad2dJobInput,
+        resolvePlaneTriangle2dJobInput,
+        ensureFrameModelMaterials,
+        ensureBeamModelMaterials,
+        activeMaterial,
+        resetActiveResult: () => resetActiveResult(setResult, setJob),
+        projectHeatToThermoStudy,
+        toggleImmersiveViewport,
+        handleUndo,
+        handleRedo,
+        runAnalysis,
+        cancelCurrentJob,
+        setTruss3dViewPreset,
+        setTruss3dProjectionMode,
+      });
+      if (stateResult) {
+        resultPayload = stateResult;
+      } else {
+      switch (action) {
+        case "macro/run": {
+          const macroId = typeof payload.macroId === "string" ? payload.macroId : null;
+          const macro = macroId ? getWorkbenchScriptMacroDefinition(macroId) : null;
+
+          if (!macro) {
+            throw new Error(language === "zh" ? "找不到指定的宏动作。" : language === "ja" ? "指定されたマクロが見つかりませんでした。" : "Could not find the requested macro.");
           }
 
-          await updateModel(selectedModelId, {
-            name: loadedModelName,
-            kind: studyKind,
-            material: activeMaterial,
-            model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
-            payload: payloadModel,
-          });
-          const version = await createModelVersion(selectedModelId, {
-            name: loadedModelName,
-            kind: studyKind,
-            material: activeMaterial,
-            model_schema_version: String(payloadModel.model_schema_version ?? "kyuubiki.model/v1"),
-            payload: payloadModel,
-          });
-          setSelectedVersionId(version.version.version_id);
-          await refreshProjects();
-          await refreshVersions(selectedModelId);
-          setMessage(t.modelSaved);
-          resultPayload = { ok: true, action, versionId: version.version.version_id };
-          break;
-        }
-        case "model/deleteSelected": {
-          if (!selectedModelId) {
-            throw new Error(t.noSavedModels);
+          const macroPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "macroId"));
+          const macroSnapshot = getScriptSnapshot();
+
+          for (const step of macro.steps) {
+            const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
+            await invokeScriptAction(step.action, nextPayload, source, note ?? (language === "zh" ? macro.summary.zh : macro.summary.en));
           }
-          await deleteModel(selectedModelId);
-          setSelectedModelId(null);
-          setSelectedVersionId(null);
-          setModelVersions([]);
-          await refreshProjects();
-          setMessage(t.modelDeletedStored);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "model/renameSelectedVersion": {
-          if (!selectedVersionId) {
-            throw new Error(t.noVersions);
-          }
-          await updateModelVersion(selectedVersionId, { name: loadedModelName });
-          await refreshVersions(selectedModelId ?? "");
-          setMessage(t.versionRenamed);
-          resultPayload = { ok: true, action, versionId: selectedVersionId };
-          break;
-        }
-        case "model/deleteSelectedVersion": {
-          if (!selectedVersionId) {
-            throw new Error(t.noVersions);
-          }
-          await deleteModelVersion(selectedVersionId);
-          setSelectedVersionId(null);
-          if (selectedModelId) {
-            await refreshVersions(selectedModelId);
-          }
-          await refreshProjects();
-          setMessage(t.versionDeleted);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "model/setWorkspaceMeta": {
-          if (typeof payload.loadedModelName === "string") {
-            setLoadedModelName(payload.loadedModelName);
-          }
-          if (typeof payload.activeMaterial === "string") {
-            setActiveMaterial(payload.activeMaterial);
-          }
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "state/setParametric": {
-          recordHistory(t.editParametric);
-          setParametric((current) => ({ ...current, ...(payload as Partial<ParametricTrussConfig>) }));
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "state/setPanelParametric": {
-          recordHistory(t.editParametric);
-          setPanelParametric((current) => ({ ...current, ...(payload as Partial<ParametricPanelConfig>) }));
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "state/replaceTruss2dModel": {
-          recordHistory(t.importAction);
-          setStudyKind("truss_2d");
-          setTrussModel(resolveTruss2dJobInput(payload as unknown as Truss2dJobInput));
-          resetActiveResult(setResult, setJob);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "state/replaceTruss3dModel": {
-          recordHistory(t.importAction);
-          setStudyKind("truss_3d");
-          setTruss3dModel(resolveTruss3dJobInput(payload as unknown as Truss3dJobInput));
-          resetActiveResult(setResult, setJob);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "state/replacePlaneModel": {
-          recordHistory(t.importAction);
-          const payloadRecord = payload as Record<string, unknown>;
-          const nextStudyKind = payloadRecord.study_kind === "plane_quad_2d" ? "plane_quad_2d" : "plane_triangle_2d";
-          setStudyKind(nextStudyKind);
-          setPlaneModel(
-            nextStudyKind === "plane_quad_2d"
-              ? resolvePlaneQuad2dJobInput(payload as unknown as PlaneQuad2dJobInput)
-              : resolvePlaneTriangle2dJobInput(payload as unknown as PlaneTriangle2dJobInput),
-          );
-          resetActiveResult(setResult, setJob);
-          resultPayload = { ok: true, action, studyKind: nextStudyKind };
-          break;
-        }
-        case "state/projectHeatToThermo": {
-          const projectedStudyKind = projectHeatToThermoStudy();
-          if (!projectedStudyKind) {
-            throw new Error(
-              language === "zh"
-                ? "当前研究没有可映射的热结果，或暂不支持映射到力-热研究。"
-                : language === "ja"
-                  ? "現在の study には投影できる熱結果がないか、この熱→熱応力マッピングはまだ未対応です。"
-                  : "The current study does not have a usable thermal result, or this thermo-mechanical projection is not supported yet.",
-            );
-          }
-          resultPayload = { ok: true, action, studyKind: projectedStudyKind };
-          break;
-        }
-        case "state/replaceFrameModel": {
-          recordHistory(t.importAction);
-          setStudyKind("frame_2d");
-          setFrameModel(ensureFrameModelMaterials(payload as unknown as Frame2dJobInput, activeMaterial));
-          resetActiveResult(setResult, setJob);
-          resultPayload = { ok: true, action, studyKind: "frame_2d" };
-          break;
-        }
-        case "state/replaceBeamModel": {
-          recordHistory(t.importAction);
-          setStudyKind("beam_1d");
-          setBeamModel(ensureBeamModelMaterials(payload as unknown as Beam1dJobInput, activeMaterial));
-          resetActiveResult(setResult, setJob);
-          resultPayload = { ok: true, action, studyKind: "beam_1d" };
-          break;
-        }
-        case "selection/set": {
-          setSelectedNode(typeof payload.nodeIndex === "number" ? payload.nodeIndex : null);
-          setSelectedElement(typeof payload.elementIndex === "number" ? payload.elementIndex : null);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "selection/set3d": {
-          if (Array.isArray(payload.nodeIndices)) {
-            setSelectedTruss3dNodes(payload.nodeIndices.filter((entry): entry is number => typeof entry === "number"));
-          }
-          if (typeof payload.anchorNodeIndex === "number" || payload.anchorNodeIndex === null) {
-            setSelectedNode(typeof payload.anchorNodeIndex === "number" ? payload.anchorNodeIndex : null);
-          }
-          if (Array.isArray(payload.memberDraftNodeIndices)) {
-            setMemberDraftNodes(payload.memberDraftNodeIndices.filter((entry): entry is number => typeof entry === "number"));
-          }
-          if (typeof payload.linkMode === "boolean") {
-            setTruss3dLinkMode(payload.linkMode);
-          }
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "job/run": {
-          runAnalysis();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "job/cancel": {
-          cancelCurrentJob();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "history/undo": {
-          handleUndo();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "history/redo": {
-          handleRedo();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "viewport/toggleImmersive": {
-          await toggleImmersiveViewport();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "viewport/set3dView": {
-          if (payload.preset === "iso" || payload.preset === "front" || payload.preset === "right" || payload.preset === "top") {
-            setTruss3dViewPreset(payload.preset);
-          }
-          if (payload.projection === "ortho" || payload.projection === "persp") {
-            setTruss3dProjectionMode(payload.projection);
-          }
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "viewport/focus3d": {
-          setTruss3dFocusRequestVersion((current) => current + 1);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "viewport/reset3d": {
-          setTruss3dResetRequestVersion((current) => current + 1);
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "viewport/toggleFlags": {
-          if (typeof payload.grid === "boolean") {
-            setTruss3dShowGrid(payload.grid);
-          }
-          if (typeof payload.labels === "boolean") {
-            setTruss3dShowLabels(payload.labels);
-          }
-          if (typeof payload.nodes === "boolean") {
-            setTruss3dShowNodes(payload.nodes);
-          }
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "viewport/setUiState": {
-          if (typeof payload.immersiveViewport === "boolean" && payload.immersiveViewport !== immersiveViewport) {
-            await toggleImmersiveViewport();
-          }
-          if (typeof payload.toolDrawerOpen === "boolean") {
-            setImmersiveToolDrawerOpen(payload.toolDrawerOpen);
-          }
-          if (typeof payload.helpDrawerOpen === "boolean") {
-            setImmersiveHelpDrawerOpen(payload.helpDrawerOpen);
-          }
-          if (typeof payload.boxSelectMode === "boolean") {
-            setTruss3dBoxSelectMode(payload.boxSelectMode);
-          }
-          if (typeof payload.linkMode === "boolean") {
-            setTruss3dLinkMode(payload.linkMode);
-          }
-          resultPayload = { ok: true, action };
+
+          resultPayload = { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };
           break;
         }
         case "data/setFilters": {
@@ -9605,9 +4197,9 @@ export function Workbench() {
             if (!linkedJob.project_id) {
               throw new Error(language === "zh" ? "这条记录没有关联项目。" : language === "ja" ? "このレコードには関連プロジェクトがありません。" : "This record does not have a linked project.");
             }
-            openProjectContextById(linkedJob.project_id);
+            openProjectContextByIdWithDeps(linkedJob.project_id, adminDataEffects);
           } else {
-            applyJobContextToWorkbench(linkedJob);
+            applyJobContextToWorkbenchWithDeps(linkedJob, adminDataEffects);
           }
 
           resultPayload = {
@@ -9627,6 +4219,9 @@ export function Workbench() {
         }
         default:
           throw new Error(`Unknown script action: ${action}`);
+      }
+      }
+      }
       }
 
       appendScriptActionLog({ action, source, status: "completed", summary: JSON.stringify(resultPayload), payload, result: resultPayload, note });
@@ -9781,6 +4376,55 @@ export function Workbench() {
     setUndoStack(nextTarget);
     restoreSnapshot(entry.snapshot);
     setMessage(t.redoApplied);
+  };
+
+  const persistedModelEffects = {
+    startTransition,
+    activeMaterial,
+    createProject,
+    createModel,
+    createModelVersion,
+    updateModelVersion,
+    fetchModel,
+    fetchModelVersion,
+    refreshProjects,
+    refreshVersions,
+    recordHistory,
+    resetActiveResult: () => resetActiveResult(setResult, setJob),
+    importActionLabel: t.importAction,
+    historyActionLabel: t.historyAction,
+    importedModelLabel: t.persistedModelLoaded,
+    importedProjectLabel: t.projectImported,
+    importedVersionLabel: t.versionLoaded,
+    importFailedLabel: t.importFailed,
+    setMessage,
+    setSelectedProjectId,
+    setSidebarSection,
+    setLoadedModelName,
+    setSelectedModelId,
+    setSelectedVersionId,
+    setModelVersions,
+    setStudyKind,
+    setAxialForm,
+    setHeatBarModel,
+    setHeatPlaneModel,
+    setThermalBarModel,
+    setThermalBeamModel,
+    setThermalFrameModel,
+    setThermalTrussModel,
+    setThermalTruss3dModel,
+    setSpringModel,
+    setSpring2dModel,
+    setSpring3dModel,
+    setTrussModel,
+    setTruss3dModel,
+    setPlaneModel,
+    setFrameModel,
+    setBeamModel,
+    setTorsionModel,
+    setPlaneResultField,
+    setParametric,
+    setActiveMaterial,
   };
 
   const applyTrussSuggestion = (suggestion: TrussSuggestion) => {
@@ -10578,7 +5222,7 @@ export function Workbench() {
       dragHistoryCapturedRef.current = true;
     }
     const rect = event.currentTarget.getBoundingClientRect();
-    const position = fromSvgPoint(event.clientX, event.clientY, rect, trussBounds);
+    const position = fromSvgPoint(event.clientX, event.clientY, rect, trussBounds, round);
     pendingDragPointRef.current = position;
 
     if (dragFrameRef.current !== null) {
@@ -10883,42 +5527,58 @@ export function Workbench() {
     fixed,
   });
 
+  const studyKindResetHandlers = useMemo(
+    () =>
+      createStudyKindResetHandlers({
+        activeMaterial,
+        setPlaneModel,
+        setHeatBarModel,
+        setHeatPlaneModel,
+        setThermalBarModel,
+        setThermalBeamModel,
+        setThermalFrameModel,
+        setThermalTrussModel,
+        setThermalTruss3dModel,
+        setSpringModel,
+        setSpring2dModel,
+        setSpring3dModel,
+        setBeamModel,
+        setTorsionModel,
+        setFrameModel,
+        setPlaneResultField,
+        ensurePlaneModelMaterials,
+        ensureBeamModelMaterials,
+        ensureFrameModelMaterials,
+        defaultPlaneQuad,
+        defaultThermalPlaneQuad,
+        defaultPlaneTriangle,
+        defaultThermalPlaneTriangle,
+        defaultHeatBar1d,
+        defaultHeatPlaneQuad,
+        defaultHeatPlaneTriangle,
+        defaultThermalBar1d,
+        defaultThermalBeam1d,
+        defaultThermalFrame2d,
+        defaultThermalTruss2d,
+        defaultThermalTruss3d,
+        defaultSpring1d,
+        defaultSpring2d,
+        defaultSpring3d,
+        defaultBeam1d,
+        defaultTorsion1d,
+        defaultFrame2d,
+      }),
+    [activeMaterial],
+  );
+
   const selectStudyKind = (nextStudyKind: typeof studyKind) => {
     recordHistory(t.changeStudyType);
-    if (nextStudyKind === "plane_quad_2d" && studyKind !== "plane_quad_2d") {
-      setPlaneModel(ensurePlaneModelMaterials(defaultPlaneQuad, activeMaterial));
-    } else if (nextStudyKind === "plane_triangle_2d" && studyKind !== "plane_triangle_2d") {
-      setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial));
-    } else if (nextStudyKind === "heat_bar_1d" && studyKind !== "heat_bar_1d") {
-      setHeatBarModel(defaultHeatBar1d);
-    } else if (nextStudyKind === "heat_plane_quad_2d" && studyKind !== "heat_plane_quad_2d") {
-      setHeatPlaneModel(defaultHeatPlaneQuad);
-      setPlaneResultField("average_temperature");
-    } else if (nextStudyKind === "heat_plane_triangle_2d" && studyKind !== "heat_plane_triangle_2d") {
-      setHeatPlaneModel(defaultHeatPlaneTriangle);
-      setPlaneResultField("average_temperature");
-    } else if (nextStudyKind === "thermal_bar_1d" && studyKind !== "thermal_bar_1d") {
-      setThermalBarModel(defaultThermalBar1d);
-    } else if (nextStudyKind === "thermal_beam_1d" && studyKind !== "thermal_beam_1d") {
-      setThermalBeamModel(ensureBeamModelMaterials(defaultThermalBeam1d, activeMaterial));
-    } else if (nextStudyKind === "thermal_truss_2d" && studyKind !== "thermal_truss_2d") {
-      setThermalTrussModel(defaultThermalTruss2d);
-    } else if (nextStudyKind === "thermal_truss_3d" && studyKind !== "thermal_truss_3d") {
-      setThermalTruss3dModel(defaultThermalTruss3d);
-    } else if (nextStudyKind === "spring_1d" && studyKind !== "spring_1d") {
-      setSpringModel(defaultSpring1d);
-    } else if (nextStudyKind === "spring_2d" && studyKind !== "spring_2d") {
-      setSpring2dModel(defaultSpring2d);
-    } else if (nextStudyKind === "spring_3d" && studyKind !== "spring_3d") {
-      setSpring3dModel(defaultSpring3d);
-    } else if (nextStudyKind === "beam_1d" && studyKind !== "beam_1d") {
-      setBeamModel(ensureBeamModelMaterials(defaultBeam1d, activeMaterial));
-    } else if (nextStudyKind === "torsion_1d" && studyKind !== "torsion_1d") {
-      setTorsionModel(defaultTorsion1d);
-    } else if (nextStudyKind === "frame_2d" && studyKind !== "frame_2d") {
-      setFrameModel(ensureFrameModelMaterials(defaultFrame2d, activeMaterial));
-    }
-    setStudyKind(nextStudyKind);
+    applyStudyKindSelection({
+      currentStudyKind: studyKind,
+      nextStudyKind,
+      setStudyKind,
+      resetHandlers: studyKindResetHandlers,
+    });
   };
 
   const openWorkspaceStudy = (tab: StudyPanelTab = "controls") => {
@@ -11702,9 +6362,16 @@ export function Workbench() {
                   { value: "failed", label: t.auditStatusOptions.failed },
                 ]}
                 onAuditWindowChange={(value) => setSecurityEventWindowFilter(value as SecurityEventWindow)}
-                onAuditSourceChange={setSecurityEventSourceFilter}
-                onAuditRiskChange={setSecurityEventRiskFilter}
-                onAuditStatusChange={setSecurityEventStatusFilter}
+                onAuditSourceChange={(value) =>
+                  setSecurityEventSourceFilter(
+                    value as WorkbenchSecurityAuditSource | "hub-assistant" | "",
+                  )}
+                onAuditRiskChange={(value) =>
+                  setSecurityEventRiskFilter(value as WorkbenchSecurityAuditRisk | "")
+                }
+                onAuditStatusChange={(value) =>
+                  setSecurityEventStatusFilter(value as "" | "allowed" | "blocked")
+                }
                 onAuditActionChange={setSecurityEventActionFilter}
                 onAuditRefresh={() => void refreshSecurityEvents()}
                 onAuditExport={() => void downloadSecurityEventExport()}

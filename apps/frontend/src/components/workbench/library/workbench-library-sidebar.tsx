@@ -2,192 +2,21 @@
 
 import { memo, useMemo, useState } from "react";
 
+import { HistoryWorkspaceCard } from "@/components/workbench/library/workbench-history-workspace-card";
+import type {
+  JobRow,
+  LibraryLabels,
+  LibraryPanelTab,
+  ModelPage,
+  ModelRow,
+  ProjectPage,
+  SamplePage,
+  SampleRow,
+  VersionRow,
+  WorkbenchLibrarySidebarProps,
+} from "@/components/workbench/library/workbench-library-sidebar-types";
 import { VirtualList } from "@/components/ui/virtual-list";
-import type { ProjectRecord, WorkflowCatalogEntry } from "@/lib/api";
 import type { StudyDomainKey } from "@/lib/workbench/view-models";
-
-type LibraryPanelTab = "jobs" | "results" | "models" | "projects" | "samples";
-type SamplePage = "catalog" | "import";
-type ProjectPage = "manage" | "exchange";
-type ModelPage = "saved" | "versions";
-
-type SampleRow = {
-  id: string;
-  name: string;
-  kindLabel: string;
-  domainKey: StudyDomainKey;
-  domainLabel: string;
-  familyKey: string;
-  familyLabel: string;
-  href: string;
-  summary: string;
-};
-
-type ModelRow = {
-  id: string;
-  name: string;
-  kindLabel: string;
-  updatedAt: string;
-  versionLabel: string;
-};
-
-type VersionRow = {
-  id: string;
-  name: string;
-  versionLabel: string;
-  updatedAt: string;
-};
-
-type JobRow = {
-  id: string;
-  shortId: string;
-  status: string;
-  updatedAt: string;
-  hasResult: string;
-};
-
-type LibraryLabels = {
-  refresh: string;
-  historyHint: string;
-  importModel: string;
-  importHint: string;
-  sampleLibrary: string;
-  workflowCatalogTitle: string;
-  workflowCatalogHint: string;
-  workflowCatalogRefresh: string;
-  workflowCatalogRun: string;
-  workflowCatalogEmpty: string;
-  workflowCatalogReady: string;
-  projectLibrary: string;
-  projectNameField: string;
-  projectDescriptionField: string;
-  createProject: string;
-  updateProject: string;
-  deleteProject: string;
-  exportProjectJson: string;
-  exportProjectZip: string;
-  importProject: string;
-  importProjectHint: string;
-  projectEmpty: string;
-  modelName: string;
-  savedModels: string;
-  save: string;
-  saveAs: string;
-  deleteSavedModel: string;
-  noSavedModels: string;
-  versions: string;
-  renameVersion: string;
-  deleteVersion: string;
-  noVersions: string;
-  historyEmpty: string;
-  updatedAt: string;
-  hasResult: string;
-  yes: string;
-  no: string;
-  jobWorkspaceTitle: string;
-  jobWorkspaceHint: string;
-  resultWorkspaceTitle: string;
-  resultWorkspaceHint: string;
-  modelWorkspaceTitle: string;
-  modelWorkspaceHint: string;
-  openLatestJob: string;
-  openLatestResult: string;
-  openLatestModel: string;
-  waitingJobs: string;
-  readyResults: string;
-  savedCount: string;
-  versionCount: string;
-  sections: { library: string };
-  tabs: { jobs: string; results: string; models: string; projects: string; samples: string };
-  sampleCatalogPage: string;
-  sampleImportPage: string;
-  projectManagePage: string;
-  projectExchangePage: string;
-  modelSavedPage: string;
-  modelVersionsPage: string;
-  kinds: Record<string, string>;
-  studyDomain: string;
-  noDomainStudies: string;
-  none: string;
-};
-
-type WorkbenchLibrarySidebarProps = {
-  libraryTab: LibraryPanelTab;
-  onLibraryTabChange: (tab: LibraryPanelTab) => void;
-  labels: LibraryLabels;
-  sampleRows: SampleRow[];
-  workflowCatalogEntries: WorkflowCatalogEntry[];
-  workflowCatalogBusy: boolean;
-  projects: ProjectRecord[];
-  selectedProjectId: string | null;
-  onSelectedProjectChange: (projectId: string | null) => void;
-  projectNameDraft: string;
-  onProjectNameDraftChange: (value: string) => void;
-  projectDescriptionDraft: string;
-  onProjectDescriptionDraftChange: (value: string) => void;
-  onCreateProject: () => void;
-  onUpdateProject: () => void;
-  onDeleteProject: () => void;
-  onExportProjectJson: () => void;
-  onExportProjectZip: () => void;
-  onImportProjectBundle: (file: File | undefined) => void | Promise<void>;
-  selectedProjectModelCount: number;
-  modelRows: ModelRow[];
-  selectedModelId: string | null;
-  loadedModelName: string;
-  onLoadedModelNameChange: (value: string) => void;
-  onSaveModel: (saveAs: boolean) => void;
-  onDeleteSavedModel: () => void;
-  onOpenSavedModel: (modelId: string) => void;
-  versionRows: VersionRow[];
-  modelVersionCount: number;
-  selectedVersionId: string | null;
-  onRenameSelectedVersion: () => void;
-  onDeleteSelectedVersion: () => void;
-  onOpenSavedVersion: (versionId: string) => void;
-  jobRows: JobRow[];
-  jobCount: number;
-  activeJobId: string | null;
-  onOpenHistoryJob: (jobId: string) => void;
-  onOpenSample: (href: string) => void;
-  onRefreshWorkflowCatalog: () => void;
-  onRunWorkflowCatalog: (workflowId: string) => void;
-  onRefresh: () => void;
-  onImportModel: (file: File | undefined) => void;
-};
-
-type HistoryWorkspaceCardProps = {
-  title: string;
-  hint: string;
-  actionLabel: string;
-  actionDisabled: boolean;
-  onAction: () => void;
-  metrics: Array<{ label: string; value: string | number }>;
-};
-
-function HistoryWorkspaceCard({ title, hint, actionLabel, actionDisabled, onAction, metrics }: HistoryWorkspaceCardProps) {
-  return (
-    <section className="sidebar-card sidebar-card--compact">
-      <div className="card-head">
-        <h2>{title}</h2>
-      </div>
-      <p className="card-copy">{hint}</p>
-      <div className="sidebar-list sidebar-list--metrics">
-        {metrics.map((metric) => (
-          <div key={metric.label} className="sidebar-list__row">
-            <span>{metric.label}</span>
-            <strong>{metric.value}</strong>
-          </div>
-        ))}
-      </div>
-      <div className="button-row">
-        <button className="ghost-button" disabled={actionDisabled} onClick={onAction} type="button">
-          {actionLabel}
-        </button>
-      </div>
-    </section>
-  );
-}
 
 export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
   libraryTab,

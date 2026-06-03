@@ -46,3 +46,4 @@ if (!routeTypesReady()) {
 }
 
 run("npx", ["tsc", "--noEmit", "--incremental", "false"]);
+run("node", ["./scripts/check-file-lines.mjs"]);
