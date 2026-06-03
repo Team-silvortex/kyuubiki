@@ -11,7 +11,6 @@ const DEBT_LIMITS = new Map([
   ["src/lib/models/model-import.ts", 1445],
   ["src/lib/scripting/workbench-script-runtime.ts", 1040],
   ["src/lib/models/modeler.ts", 820],
-  ["src/lib/workbench/view-models.ts", 746],
 ]);
 
 function listSourceFiles(dir) {
