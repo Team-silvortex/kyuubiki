@@ -37,6 +37,9 @@ import { WorkbenchAssistantFloat } from "@/components/workbench/workbench-assist
 import { WorkbenchConsoleMount } from "@/components/workbench/workbench-console-mount";
 import { WorkbenchImmersiveLibraryDrawer } from "@/components/workbench/workbench-immersive-library-drawer";
 import { WorkbenchLibrarySectionMount } from "@/components/workbench/workbench-library-section-mount";
+import { WorkbenchMainShellMount } from "@/components/workbench/workbench-main-shell-mount";
+import { WorkbenchMainViewportPanelMount } from "@/components/workbench/workbench-main-viewport-panel-mount";
+import { WorkbenchModelSectionMount } from "@/components/workbench/workbench-model-section-mount";
 import {
   downloadWorkbenchLanguagePackTemplate,
   exportWorkbenchInstalledLanguagePack,
@@ -268,12 +271,13 @@ import {
 } from "@/components/workbench/workbench-types";
 import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
 import { WorkbenchMaterialLibraryCard } from "@/components/workbench/model/workbench-material-library-card";
-import { WorkbenchModelSidebar, type ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
+import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
 import { WorkbenchModelToolsCard } from "@/components/workbench/model/workbench-model-tools-card";
 import { WorkbenchParametricCard } from "@/components/workbench/model/workbench-parametric-card";
 import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench-truss3d-tree-card";
 import { WorkbenchSystemSidebarMount } from "@/components/workbench/workbench-system-sidebar-mount";
 import { WorkbenchWorkflowSectionMount } from "@/components/workbench/workbench-workflow-section-mount";
+import { WorkbenchStudySectionMount } from "@/components/workbench/workbench-study-section-mount";
 import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
 import {
   isWorkflowGraphResult,
@@ -4408,7 +4412,7 @@ export function Workbench() {
         sidebarSection={sidebarSection}
         onSidebarSectionChange={handleSidebarSectionChange}
         studySection={
-          <WorkbenchStudySidebar
+          <WorkbenchStudySectionMount
             studyTab={studyTab}
             onStudyTabChange={handleStudyTabChange}
             sectionTitle={t.sections.study}
@@ -4437,7 +4441,7 @@ export function Workbench() {
           />
         }
         modelSection={
-          <WorkbenchModelSidebar
+          <WorkbenchModelSectionMount
             modelTab={modelTab}
             onModelTabChange={handleModelTabChange}
             toolsPage={modelToolsPage}
@@ -4701,11 +4705,11 @@ export function Workbench() {
         }
       />
 
-      <WorkbenchAssistantFloat
+      <WorkbenchMainShellMount
         t={t}
         assistantWindowOpen={assistantWindowOpen}
         setAssistantWindowOpen={setAssistantWindowOpen}
-        jobStatus={job?.status}
+        job={job}
         hasAnyResult={hasAnyResult}
         frontendRuntimeMode={frontendRuntimeMode}
         studyKind={studyKind}
@@ -4718,340 +4722,203 @@ export function Workbench() {
         assistantPromptPresets={assistantPromptPresets}
         assistantTransactions={assistantTransactions}
         executeAssistantPlan={executeAssistantPlan}
-        invokeScriptAction={async (action, payload, reason) => {
-          await invokeScriptAction(action, payload, undefined, reason);
-          return {};
-        }}
+        invokeScriptAction={invokeScriptAction}
         setAssistantApiKey={setAssistantApiKey}
         setAssistantApiBaseUrl={setAssistantApiBaseUrl}
         setAssistantModel={setAssistantModel}
         setAssistantMode={setAssistantMode}
         requestLlmAssistantPlan={requestLlmAssistantPlan}
         rollbackAssistantTransaction={rollbackAssistantTransaction}
-      />
-
-      <main className="workspace-main">
-        <WorkbenchViewportPanel
-          viewportPanelRef={viewportPanelRef}
-          immersiveViewport={immersiveViewport}
-          title={sidebarSection === "model" ? t.sections.model : t.viewport}
-          headActions={
-            <WorkbenchViewportHeadActions
-              t={t}
-              isTruss3d={isTruss3d}
-              immersiveViewport={immersiveViewport}
-              immersiveToolDrawerOpen={immersiveToolDrawerOpen}
-              immersiveHelpDrawerOpen={immersiveHelpDrawerOpen}
-              sidebarSection={sidebarSection}
-              modelTab={modelTab}
-              modelToolsPage={modelToolsPage}
-              jobStatus={job?.status}
-              handleSidebarSectionChange={handleSidebarSectionChange}
-              setModelTab={setModelTab}
-              setModelToolsPage={setModelToolsPage}
-              handleToggleImmersiveToolDrawer={handleToggleImmersiveToolDrawer}
-              handleToggleImmersiveHelpDrawer={handleToggleImmersiveHelpDrawer}
-              handleToggleImmersiveViewport={handleToggleImmersiveViewport}
-            />
-          }
-          hasViewportDock={hasViewportDock}
-          dockContent={
-            <WorkbenchViewportDock
-              t={t}
-              immersiveViewport={immersiveViewport}
-              immersiveToolDrawerOpen={immersiveToolDrawerOpen}
-              immersiveHelpDrawerOpen={immersiveHelpDrawerOpen}
-              showShortcutHints={showShortcutHints}
-              showViewportToolStrip={showViewportToolStrip}
-              immersiveToolTab={immersiveToolTab}
-              truss3dViewPreset={truss3dViewPreset}
-              selectedNode={selectedNode}
-              selectedElement={selectedElement}
-              selectedTruss3dNodes={selectedTruss3dNodes}
-              selectedTruss3dNodeData={selectedTruss3dNodeData}
-              truss3dLinkMode={truss3dLinkMode}
-              truss3dProjectionMode={truss3dProjectionMode}
-              truss3dShowGrid={truss3dShowGrid}
-              truss3dShowLabels={truss3dShowLabels}
-              truss3dShowNodes={truss3dShowNodes}
-              truss3dBoxSelectMode={truss3dBoxSelectMode}
-              truss3dNudgeStep={truss3dNudgeStep}
-              truss3dBatchLoadX={truss3dBatchLoadX}
-              truss3dBatchLoadY={truss3dBatchLoadY}
-              truss3dBatchLoadZ={truss3dBatchLoadZ}
-              undoStack={undoStack}
-              redoStack={redoStack}
-              truss3dModel={truss3dModel}
-              setImmersiveToolTab={setImmersiveToolTab}
-              handleTruss3dViewPresetChange={handleTruss3dViewPresetChange}
-              handleTruss3dFocusViewport={handleTruss3dFocusViewport}
-              setTruss3dFocusRequestVersion={setTruss3dFocusRequestVersion}
-              handleTruss3dProjectionModeChange={handleTruss3dProjectionModeChange}
-              setTruss3dShowGrid={setTruss3dShowGrid}
-              setTruss3dShowLabels={setTruss3dShowLabels}
-              setTruss3dShowNodes={setTruss3dShowNodes}
-              handleTruss3dBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
-              handleTruss3dResetViewport={handleTruss3dResetViewport}
-              addTruss3dNode={addTruss3dNode}
-              deleteSelectedTruss3dNode={deleteSelectedTruss3dNode}
-              handleToggleTruss3dLinkMode={handleToggleTruss3dLinkMode}
-              toggleTruss3dMemberFromDraft={toggleTruss3dMemberFromDraft}
-              deleteSelectedTruss3dElement={deleteSelectedTruss3dElement}
-              cloneSelectedTruss3dNodes={cloneSelectedTruss3dNodes}
-              handleUndo={handleUndo}
-              handleRedo={handleRedo}
-              updateSelectedTruss3dNode={updateSelectedTruss3dNode}
-              nudgeSelectedTruss3dNodes={nudgeSelectedTruss3dNodes}
-              setTruss3dNudgeStep={setTruss3dNudgeStep}
-              updateSelectedTruss3dNodes={updateSelectedTruss3dNodes}
-              setTruss3dBatchLoadX={setTruss3dBatchLoadX}
-              setTruss3dBatchLoadY={setTruss3dBatchLoadY}
-              setTruss3dBatchLoadZ={setTruss3dBatchLoadZ}
-              applySelectedTruss3dLoads={applySelectedTruss3dLoads}
-            />
-          }
-          resultWindowBar={
-            <WorkbenchResultWindowBar
-              t={t}
-              activeResultWindow={activeResultWindow}
-              resultWindowStart={resultWindowStart}
-              resultWindowEnd={resultWindowEnd}
-              activeResultWindowLimit={activeResultWindowLimit}
-              resultWindowOffset={resultWindowOffset}
-              resultWindowMaxTotal={resultWindowMaxTotal}
-              resultWindowJumps={resultWindowJumps}
-              isPlane={isPlane}
-              isHeatPlane={isHeatPlane}
-              isHeatPlaneTriangle={isHeatPlaneTriangle}
-              isThermalPlaneTriangle={isThermalPlaneTriangle}
-              isThermalPlaneQuad={isThermalPlaneQuad}
-              isFrameLike={isFrameLike}
-              isThermalFrame={isThermalFrame}
-              isBeam={isBeam}
-              isTorsion={isTorsion}
-              studyKind={studyKind}
-              planeResult={planeResult}
-              activeFrameLikeResult={activeFrameLikeResult}
-              activeBeamLikeResult={activeBeamLikeResult}
-              torsionResult={torsionResult}
-              planeResultField={planeResultField}
-              frameResultField={frameResultField}
-              beamResultField={beamResultField}
-              setPlaneResultField={setPlaneResultField}
-              setFrameResultField={setFrameResultField}
-              setBeamResultField={setBeamResultField}
-              setResultWindowOffset={setResultWindowOffset}
-              clampChunkOffset={clampChunkOffset}
-            />
-          }
-          isTruss3d={isTruss3d}
-          shouldStretchSpaceViewport={shouldStretchSpaceViewport}
-          onCanvasStageScroll={handleCanvasStageScroll}
-          canvasStageRef={canvasStageRef}
-          viewportContent={
-            <WorkbenchViewportMount
-              t={t}
-              studyKind={studyKind}
-              sidebarSection={sidebarSection}
-              isSpring2d={isSpring2d}
-              isSpring1d={isSpring1d}
-              isHeatBar={isHeatBar}
-              isThermalBar={isThermalBar}
-              isThermalBeam={isThermalBeam}
-              isThermalFrame={isThermalFrame}
-              isThermalTruss2d={isThermalTruss2d}
-              isTorsion={isTorsion}
-              isFrame={isFrame}
-              isFrameLike={isFrameLike}
-              isBeam={isBeam}
-              isSpring={isSpring}
-              isSpring3d={isSpring3d}
-              isThermalTruss3d={isThermalTruss3d}
-              isHeatPlane={isHeatPlane}
-              isHeatPlaneTriangle={isHeatPlaneTriangle}
-              isPlane={isPlane}
-              isTruss={isTruss}
-              isTruss3d={isTruss3d}
-              isThermal={isThermal}
-              hiddenMaterialIds={hiddenMaterialIds}
-              frameLegendText={frameLegendText}
-              planeLegendText={planeLegendText}
-              axialNodes={axialNodes}
-              axialLength={axialLength}
-              axialScale={axialScale}
-              displayTrussNodes={displayTrussNodes}
-              displayTrussElements={displayTrussElements}
-              displayTruss3dNodes={displayTruss3dNodes}
-              displayTruss3dElements={displayTruss3dElements}
-              planeNodes={planeNodes}
-              planeElements={planeElements}
-              trussElementColors={trussElementColors}
-              truss3dElementColors={truss3dElementColors}
-              planeElementColors={planeElementColors}
-              trussBounds={trussBounds}
-              planeBounds={planeBounds}
-              trussResult={trussResult}
-              thermalTrussResult={thermalTrussResult}
-              activeFrameLikeResult={activeFrameLikeResult}
-              activeBeamLikeResult={activeBeamLikeResult}
-              torsionResult={torsionResult}
-              heatBarResult={heatBarResult}
-              thermalBarResult={thermalBarResult}
-              thermalTruss3dResult={thermalTruss3dResult}
-              springResult={springResult}
-              spring2dResult={spring2dResult}
-              spring3dResult={spring3dResult}
-              heatPlaneQuadResult={heatPlaneQuadResult}
-              heatPlaneTriangleResult={heatPlaneTriangleResult}
-              planeResult={planeResult}
-              activeLineResultField={activeLineResultField}
-              frameResultFieldMax={frameResultFieldMax}
-              focusedFrameElement={focusedFrameElement}
-              trussStability={trussStability}
-              trussDiagnostics={trussDiagnostics}
-              selectedNode={selectedNode}
-              selectedElement={selectedElement}
-              memberDraftNodes={memberDraftNodes}
-              stopDraggingNode={stopDraggingNode}
-              handleTrussPointerMove={handleTrussPointerMove}
-              setSelectedElement={setSelectedElement}
-              setSelectedNode={setSelectedNode}
-              setMemberDraftNodes={setMemberDraftNodes}
-              setFocusedFrameElement={setFocusedFrameElement}
-              startTrussNodeDrag={startTrussNodeDrag}
-              hiddenPlaneMaterialIds={hiddenMaterialIds}
-              planeResultField={planeResultField}
-              planeResultFieldMax={planeResultFieldMax}
-              selectedPlaneNodeData={selectedPlaneNodeData}
-              focusedPlaneElement={focusedPlaneElement}
-              handleTruss3dNodePick={handleTruss3dNodePick}
-              setSelectedTruss3dNodes={setSelectedTruss3dNodes}
-              updateTruss3dNodePosition={updateTruss3dNodePosition}
-              recordHistory={recordHistory}
-              drag3dHistoryCapturedRef={drag3dHistoryCapturedRef}
-              truss3dLinkMode={truss3dLinkMode}
-              immersiveViewport={immersiveViewport}
-              truss3dProjectionMode={truss3dProjectionMode}
-              truss3dShowGrid={truss3dShowGrid}
-              truss3dShowLabels={truss3dShowLabels}
-              truss3dShowNodes={truss3dShowNodes}
-              truss3dBoxSelectMode={truss3dBoxSelectMode}
-              truss3dViewPreset={truss3dViewPreset}
-              truss3dFocusRequestVersion={truss3dFocusRequestVersion}
-              truss3dResetRequestVersion={truss3dResetRequestVersion}
-              selectedTruss3dNodes={selectedTruss3dNodes}
-              showShortcutHints={showShortcutHints}
-              viewportPixelWidth={viewportPixelWidth}
-              handleTruss3dNodesBoxSelect={handleTruss3dNodesBoxSelect}
-              handleTruss3dProjectionModeChange={handleTruss3dProjectionModeChange}
-              handleTruss3dShowGridChange={handleTruss3dShowGridChange}
-              handleTruss3dShowLabelsChange={handleTruss3dShowLabelsChange}
-              handleTruss3dShowNodesChange={handleTruss3dShowNodesChange}
-              handleTruss3dBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
-            />
-          }
-          immersiveDrawer={
-            <WorkbenchImmersiveLibraryDrawer
-              t={t}
-              immersiveViewport={immersiveViewport}
-              sidebarSection={sidebarSection}
-              librarySampleRows={librarySampleRows}
-              libraryModelRows={libraryModelRows}
-              libraryJobRows={libraryJobRows}
-              selectedProjectModels={selectedProjectModels}
-              handleSidebarSectionChange={handleSidebarSectionChange}
-              openSample={openSample}
-              openSavedModel={openSavedModel}
-              openHistoryJob={openHistoryJob}
-            />
-          }
-        />
-
-        <WorkbenchConsoleMount
-          sidebarSection={sidebarSection}
-          message={message}
-          t={t}
-          isPlane={isPlane}
-          isBeam={isBeam}
-          isTorsion={isTorsion}
-          isFrameLike={isFrameLike}
-          isHeatBar={isHeatBar}
-          isThermalBar={isThermalBar}
-          isSpring1d={isSpring1d}
-          isSpring={isSpring}
-          isSpring2d={isSpring2d}
-          isSpring3d={isSpring3d}
-          isHeatPlane={isHeatPlane}
-          isThermal={isThermal}
-          isThermalTruss3d={isThermalTruss3d}
-          isTruss={isTruss}
-          isTruss3d={isTruss3d}
-          isAxial={isAxial}
-          selectedNodeIssues={selectedNodeIssues}
-          selectedNodeData={selectedNodeData}
-          selectedPlaneNodeData={selectedPlaneNodeData}
-          selectedBeamNodeData={selectedBeamNodeData}
-          selectedTorsionNodeData={selectedTorsionNodeData}
-          selectedFrameNodeData={selectedFrameNodeData}
-          selectedThermalNodeData={selectedThermalNodeData}
-          selectedTruss3dNodeData={selectedTruss3dNodeData}
-          spring3dModel={spring3dModel}
-          axialElements={axialElements}
-          displayTruss3dElements={displayTruss3dElements}
-          displayTrussElements={displayTrussElements}
-          planeElements={planeElements}
-        />
-      </main>
-
-      <WorkbenchInspectorMount
-        t={t}
-        reportScopeLabel={currentStudyFamilyLabel}
-        reportScopeHint={currentStudyFamilyHint}
-        currentStudyFamilyLabel={currentStudyFamilyLabel}
-        currentStudyFamilyHint={currentStudyFamilyHint}
+        viewportPanelRef={viewportPanelRef}
+        canvasStageRef={canvasStageRef}
+        viewportPixelWidth={viewportPixelWidth}
+        immersiveViewport={immersiveViewport}
         sidebarSection={sidebarSection}
-        studyKind={studyKind}
-        language={language}
-        isPending={isPending}
-        isFrameLike={isFrameLike}
-        isThermalFrame={isThermalFrame}
-        isBeam={isBeam}
-        isTorsion={isTorsion}
-        isHeatBar={isHeatBar}
-        isThermalBar={isThermalBar}
-        isThermalTruss2d={isThermalTruss2d}
-        isThermalTruss3d={isThermalTruss3d}
-        isSpring={isSpring}
-        isSpring3d={isSpring3d}
+        modelTab={modelTab}
+        modelToolsPage={modelToolsPage}
+        isTruss3d={isTruss3d}
+        immersiveToolDrawerOpen={immersiveToolDrawerOpen}
+        immersiveHelpDrawerOpen={immersiveHelpDrawerOpen}
+        handleSidebarSectionChange={handleSidebarSectionChange}
+        setModelTab={setModelTab}
+        setModelToolsPage={setModelToolsPage}
+        handleToggleImmersiveToolDrawer={handleToggleImmersiveToolDrawer}
+        handleToggleImmersiveHelpDrawer={handleToggleImmersiveHelpDrawer}
+        handleToggleImmersiveViewport={handleToggleImmersiveViewport}
+        hasViewportDock={hasViewportDock}
+        showShortcutHints={showShortcutHints}
+        showViewportToolStrip={showViewportToolStrip}
+        immersiveToolTab={immersiveToolTab}
+        truss3dViewPreset={truss3dViewPreset}
+        selectedNode={selectedNode}
+        selectedElement={selectedElement}
+        selectedTruss3dNodes={selectedTruss3dNodes}
+        selectedTruss3dNodeData={selectedTruss3dNodeData}
+        truss3dLinkMode={truss3dLinkMode}
+        truss3dProjectionMode={truss3dProjectionMode}
+        truss3dShowGrid={truss3dShowGrid}
+        truss3dShowLabels={truss3dShowLabels}
+        truss3dShowNodes={truss3dShowNodes}
+        truss3dBoxSelectMode={truss3dBoxSelectMode}
+        truss3dNudgeStep={truss3dNudgeStep}
+        truss3dBatchLoadX={truss3dBatchLoadX}
+        truss3dBatchLoadY={truss3dBatchLoadY}
+        truss3dBatchLoadZ={truss3dBatchLoadZ}
+        undoStack={undoStack}
+        redoStack={redoStack}
+        truss3dModel={truss3dModel}
+        setImmersiveToolTab={setImmersiveToolTab}
+        handleTruss3dViewPresetChange={handleTruss3dViewPresetChange}
+        handleTruss3dFocusViewport={handleTruss3dFocusViewport}
+        setTruss3dFocusRequestVersion={setTruss3dFocusRequestVersion}
+        handleTruss3dProjectionModeChange={handleTruss3dProjectionModeChange}
+        setTruss3dShowGrid={setTruss3dShowGrid}
+        setTruss3dShowLabels={setTruss3dShowLabels}
+        setTruss3dShowNodes={setTruss3dShowNodes}
+        handleTruss3dBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
+        handleTruss3dResetViewport={handleTruss3dResetViewport}
+        addTruss3dNode={addTruss3dNode}
+        deleteSelectedTruss3dNode={deleteSelectedTruss3dNode}
+        handleToggleTruss3dLinkMode={handleToggleTruss3dLinkMode}
+        toggleTruss3dMemberFromDraft={toggleTruss3dMemberFromDraft}
+        deleteSelectedTruss3dElement={deleteSelectedTruss3dElement}
+        cloneSelectedTruss3dNodes={cloneSelectedTruss3dNodes}
+        handleUndo={handleUndo}
+        handleRedo={handleRedo}
+        updateSelectedTruss3dNode={updateSelectedTruss3dNode}
+        nudgeSelectedTruss3dNodes={nudgeSelectedTruss3dNodes}
+        setTruss3dNudgeStep={setTruss3dNudgeStep}
+        updateSelectedTruss3dNodes={updateSelectedTruss3dNodes}
+        setTruss3dBatchLoadX={setTruss3dBatchLoadX}
+        setTruss3dBatchLoadY={setTruss3dBatchLoadY}
+        setTruss3dBatchLoadZ={setTruss3dBatchLoadZ}
+        applySelectedTruss3dLoads={applySelectedTruss3dLoads}
+        activeResultWindow={activeResultWindow}
+        resultWindowStart={resultWindowStart}
+        resultWindowEnd={resultWindowEnd}
+        activeResultWindowLimit={activeResultWindowLimit}
+        resultWindowOffset={resultWindowOffset}
+        resultWindowMaxTotal={resultWindowMaxTotal}
+        resultWindowJumps={resultWindowJumps}
+        isPlane={isPlane}
         isHeatPlane={isHeatPlane}
         isHeatPlaneTriangle={isHeatPlaneTriangle}
         isThermalPlaneTriangle={isThermalPlaneTriangle}
         isThermalPlaneQuad={isThermalPlaneQuad}
-        canProjectHeatToThermo={canProjectHeatToThermo}
-        selectedNode={selectedNode}
-        selectedNodeData={selectedNodeData}
-        selectedElementData={selectedElementData}
-        selectedTruss3dNodeData={selectedTruss3dNodeData}
-        selectedTruss3dElementData={selectedTruss3dElementData}
+        isFrameLike={isFrameLike}
+        isThermalFrame={isThermalFrame}
+        isBeam={isBeam}
+        isTorsion={isTorsion}
+        planeResult={planeResult}
+        activeFrameLikeResult={activeFrameLikeResult}
+        activeBeamLikeResult={activeBeamLikeResult}
+        torsionResult={torsionResult}
+        planeResultField={planeResultField}
+        frameResultField={frameResultField}
+        beamResultField={beamResultField}
+        setPlaneResultField={setPlaneResultField}
+        setFrameResultField={setFrameResultField}
+        setBeamResultField={setBeamResultField}
+        setResultWindowOffset={setResultWindowOffset}
+        clampChunkOffset={clampChunkOffset}
+        shouldStretchSpaceViewport={shouldStretchSpaceViewport}
+        handleCanvasStageScroll={handleCanvasStageScroll}
+        isSpring2d={isSpring2d}
+        isSpring1d={isSpring1d}
+        isHeatBar={isHeatBar}
+        isThermalBar={isThermalBar}
+        isThermalBeam={isThermalBeam}
+        isThermalTruss2d={isThermalTruss2d}
+        isFrame={isFrame}
+        isSpring={isSpring}
+        isSpring3d={isSpring3d}
+        isThermalTruss3d={isThermalTruss3d}
+        isTruss={isTruss}
+        isThermal={isThermal}
+        hiddenMaterialIds={hiddenMaterialIds}
+        frameLegendText={frameLegendText}
+        planeLegendText={planeLegendText}
+        axialNodes={axialNodes}
+        axialLength={axialLength}
+        axialScale={axialScale}
+        displayTrussNodes={displayTrussNodes}
+        displayTrussElements={displayTrussElements}
+        displayTruss3dNodes={displayTruss3dNodes}
+        displayTruss3dElements={displayTruss3dElements}
+        planeNodes={planeNodes}
+        planeElements={planeElements}
+        trussElementColors={trussElementColors}
+        truss3dElementColors={truss3dElementColors}
+        planeElementColors={planeElementColors}
+        trussBounds={trussBounds}
+        planeBounds={planeBounds}
+        trussResult={trussResult}
+        thermalTrussResult={thermalTrussResult}
+        heatBarResult={heatBarResult}
+        thermalBarResult={thermalBarResult}
+        thermalTruss3dResult={thermalTruss3dResult}
+        springResult={springResult}
+        spring2dResult={spring2dResult}
+        spring3dResult={spring3dResult}
+        heatPlaneQuadResult={heatPlaneQuadResult}
+        heatPlaneTriangleResult={heatPlaneTriangleResult}
+        activeLineResultField={activeLineResultField}
+        frameResultFieldMax={frameResultFieldMax}
+        focusedFrameElement={focusedFrameElement}
+        trussStability={trussStability}
+        trussDiagnostics={trussDiagnostics}
+        memberDraftNodes={memberDraftNodes}
+        stopDraggingNode={stopDraggingNode}
+        handleTrussPointerMove={handleTrussPointerMove}
+        setSelectedElement={setSelectedElement}
+        setSelectedNode={setSelectedNode}
+        setMemberDraftNodes={setMemberDraftNodes}
+        setFocusedFrameElement={setFocusedFrameElement}
+        startTrussNodeDrag={startTrussNodeDrag}
+        planeResultFieldMax={planeResultFieldMax}
         selectedPlaneNodeData={selectedPlaneNodeData}
-        selectedPlaneElementData={selectedPlaneElementData}
-        selectedFrameNodeData={selectedFrameNodeData}
-        selectedFrameElementData={selectedFrameElementData}
+        focusedPlaneElement={focusedPlaneElement}
+        handleTruss3dNodePick={handleTruss3dNodePick}
+        setSelectedTruss3dNodes={setSelectedTruss3dNodes}
+        updateTruss3dNodePosition={updateTruss3dNodePosition}
+        recordHistory={recordHistory}
+        drag3dHistoryCapturedRef={drag3dHistoryCapturedRef}
+        truss3dFocusRequestVersion={truss3dFocusRequestVersion}
+        truss3dResetRequestVersion={truss3dResetRequestVersion}
+        handleTruss3dNodesBoxSelect={handleTruss3dNodesBoxSelect}
+        handleTruss3dShowGridChange={handleTruss3dShowGridChange}
+        handleTruss3dShowLabelsChange={handleTruss3dShowLabelsChange}
+        handleTruss3dShowNodesChange={handleTruss3dShowNodesChange}
+        librarySampleRows={librarySampleRows}
+        libraryModelRows={libraryModelRows}
+        libraryJobRows={libraryJobRows}
+        selectedProjectModels={selectedProjectModels}
+        openSample={openSample}
+        openSavedModel={openSavedModel}
+        openHistoryJob={openHistoryJob}
+        message={message}
+        isAxial={isAxial}
+        selectedNodeIssues={selectedNodeIssues}
+        selectedNodeData={selectedNodeData}
         selectedBeamNodeData={selectedBeamNodeData}
-        selectedBeamElementData={selectedBeamElementData}
         selectedTorsionNodeData={selectedTorsionNodeData}
-        selectedTorsionElementData={selectedTorsionElementData}
+        selectedFrameNodeData={selectedFrameNodeData}
         selectedThermalNodeData={selectedThermalNodeData}
+        spring3dModel={spring3dModel}
+        axialElements={axialElements}
+        currentStudyFamilyLabel={currentStudyFamilyLabel}
+        currentStudyFamilyHint={currentStudyFamilyHint}
+        isPending={isPending}
+        canProjectHeatToThermo={canProjectHeatToThermo}
+        selectedElementData={selectedElementData}
+        selectedTruss3dElementData={selectedTruss3dElementData}
+        selectedPlaneElementData={selectedPlaneElementData}
+        selectedFrameElementData={selectedFrameElementData}
+        selectedBeamElementData={selectedBeamElementData}
+        selectedTorsionElementData={selectedTorsionElementData}
         selectedThermalElementData={selectedThermalElementData}
         selectedSpringElementData={selectedSpringElementData}
-        selectedNodeIssues={selectedNodeIssues}
         materialOptions={materialOptions}
-        materialLabel={t.material}
-        trussDiagnostics={trussDiagnostics}
-        trussStability={trussStability}
-        undoStack={undoStack}
-        redoStack={redoStack}
-        job={job}
         nodeCount={nodeCount}
         tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isHeatBar ? scientific(heatBarResult?.max_temperature) : isHeatPlane ? scientific(isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_temperature : heatPlaneQuadResult?.max_temperature) : isThermalTruss2d ? scientific(thermalTrussResult?.max_displacement) : studyKind === "thermal_truss_3d" ? scientific(thermalTruss3dResult?.max_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isSpring3d ? scientific(spring3dResult?.max_displacement) : studyKind === "truss_3d" ? scientific(truss3dResult?.max_displacement) : isThermalBar ? scientific(thermalBarResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(activeBeamLikeResult?.max_displacement) : isTorsion ? scientific(torsionResult?.max_rotation) : isFrameLike ? scientific(activeFrameLikeResult?.max_displacement) : scientific(planeResult?.max_displacement)}
         maxStressValue={scientific(isAxial ? axialResult?.max_stress : isHeatBar ? heatBarResult?.max_heat_flux : isHeatPlane ? (isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_heat_flux : heatPlaneQuadResult?.max_heat_flux) : isThermalTruss2d ? thermalTrussResult?.max_stress : studyKind === "thermal_truss_3d" ? thermalTruss3dResult?.max_stress : isTruss ? trussResult?.max_stress : isSpring3d ? spring3dResult?.max_force : studyKind === "truss_3d" ? truss3dResult?.max_stress : isThermalBar ? thermalBarResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? activeBeamLikeResult?.max_stress : isTorsion ? torsionResult?.max_stress : isFrameLike ? activeFrameLikeResult?.max_stress : planeResult?.max_stress)}
@@ -5071,53 +4938,36 @@ export function Workbench() {
         frameForceRows={frameForceRows}
         planeHotspotLimit={planeHotspotLimit}
         heartbeatStatusValue={heartbeatStatusValue}
-        heartbeatTone={heartbeatToneValue}
+        heartbeatToneValue={heartbeatToneValue}
         translatedFailureReason={translatedFailureReason}
         jobIsActive={jobIsActive}
-        activeFrameLikeResult={activeFrameLikeResult}
-        activeBeamLikeResult={activeBeamLikeResult}
-        torsionResult={torsionResult}
         activePlaneInputModel={activePlaneInputModel}
         planeModel={planeModel}
         activeFrameLikeModel={activeFrameLikeModel}
         activeBeamLikeModel={activeBeamLikeModel}
         trussModel={trussModel}
         thermalTrussModel={thermalTrussModel}
-        truss3dModel={truss3dModel}
         thermalTruss3dModel={thermalTruss3dModel}
-        spring3dModel={spring3dModel}
-        onUpdateSelectedNode={updateSelectedNode}
-        onUpdateSelectedElement={updateSelectedElement}
-        onAssignSelectedElementMaterial={assignSelectedElementMaterial}
-        onUpdateSelectedTruss3dNode={updateSelectedTruss3dNode}
-        onUpdateSelectedTruss3dElement={updateSelectedTruss3dElement}
-        onAssignSelectedTruss3dElementMaterial={assignSelectedTruss3dElementMaterial}
-        onUpdateSelectedPlaneNode={updateSelectedPlaneNode}
-        onUpdateSelectedPlaneElement={updateSelectedPlaneElement}
-        onAssignSelectedPlaneElementMaterial={assignSelectedPlaneElementMaterial}
-        onUpdateSelectedFrameNode={updateSelectedFrameNode}
-        onUpdateSelectedFrameElement={updateSelectedFrameElement}
-        onAssignSelectedFrameElementMaterial={assignSelectedFrameElementMaterial}
-        applyTrussSuggestion={(suggestionId) => {
-          const suggestion = trussDiagnostics?.suggestions.find((entry) => entry.id === suggestionId);
-          if (suggestion) applyTrussSuggestion(suggestion);
-        }}
-        handleUndo={handleUndo}
-        handleRedo={handleRedo}
+        updateSelectedElement={updateSelectedElement}
+        assignSelectedElementMaterial={assignSelectedElementMaterial}
+        updateSelectedTruss3dElement={updateSelectedTruss3dElement}
+        assignSelectedTruss3dElementMaterial={assignSelectedTruss3dElementMaterial}
+        updateSelectedPlaneNode={updateSelectedPlaneNode}
+        updateSelectedPlaneElement={updateSelectedPlaneElement}
+        assignSelectedPlaneElementMaterial={assignSelectedPlaneElementMaterial}
+        updateSelectedFrameNode={updateSelectedFrameNode}
+        updateSelectedFrameElement={updateSelectedFrameElement}
+        assignSelectedFrameElementMaterial={assignSelectedFrameElementMaterial}
+        applyTrussSuggestion={applyTrussSuggestion}
         cancelCurrentJob={cancelCurrentJob}
         downloadResultJson={downloadResultJson}
         downloadResultCsv={downloadResultCsv}
-        projectHeatToThermoLabel={t.projectHeatToThermo}
         projectHeatToThermoStudy={projectHeatToThermoStudy}
         downloadPlaneHotspotSummary={downloadPlaneHotspotSummary}
         downloadFrameHotspotSummary={downloadFrameHotspotSummary}
         downloadFrameForceSummary={downloadFrameForceSummary}
         setSidebarSection={setSidebarSection}
-        setModelTab={setModelTab}
-        setSelectedElement={setSelectedElement}
-        setSelectedNode={setSelectedNode}
         setFocusedPlaneElement={setFocusedPlaneElement}
-        setFocusedFrameElement={setFocusedFrameElement}
         setPlaneHotspotLimit={setPlaneHotspotLimit}
       />
     </div>
