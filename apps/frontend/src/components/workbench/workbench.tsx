@@ -273,6 +273,7 @@ import { WorkbenchModelToolsCard } from "@/components/workbench/model/workbench-
 import { WorkbenchParametricCard } from "@/components/workbench/model/workbench-parametric-card";
 import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench-truss3d-tree-card";
 import { WorkbenchSystemSidebarMount } from "@/components/workbench/workbench-system-sidebar-mount";
+import { WorkbenchWorkflowSectionMount } from "@/components/workbench/workbench-workflow-section-mount";
 import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
 import {
   isWorkflowGraphResult,
@@ -4462,7 +4463,7 @@ export function Workbench() {
           />
         }
         workflowSection={
-          <WorkbenchWorkflowSidebar
+          <WorkbenchWorkflowSectionMount
             surfaceTab={workflowPanelTab}
             onSurfaceTabChange={handleWorkflowPanelTabChange}
             labels={{
@@ -4523,10 +4524,10 @@ export function Workbench() {
             latestJob={job}
             latestWorkflowSummary={latestWorkflowSummary}
             workflowRuns={workflowRuns}
-            onRefreshWorkflowCatalog={() => void refreshWorkflowCatalog()}
-            onSelectWorkflow={setSelectedWorkflowId}
-            onRunWorkflowCatalog={runWorkflowCatalogEntry}
-            onOpenWorkflowRun={openHistoryJob}
+            refreshWorkflowCatalog={refreshWorkflowCatalog}
+            setSelectedWorkflowId={setSelectedWorkflowId}
+            runWorkflowCatalogEntry={runWorkflowCatalogEntry}
+            openHistoryJob={openHistoryJob}
           />
         }
         librarySection={
