@@ -8,9 +8,6 @@ const MAX_LINES = 600;
 
 const DEBT_LIMITS = new Map([
   ["src/components/workbench/workbench.tsx", 12250],
-  ["src/lib/models/model-import.ts", 1445],
-  ["src/lib/scripting/workbench-script-runtime.ts", 1040],
-  ["src/lib/models/modeler.ts", 820],
 ]);
 
 function listSourceFiles(dir) {

@@ -5,7 +5,7 @@ import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 
-type ConsoleElement = {
+export type WorkbenchConsoleElement = {
   index: number;
   x1?: number;
   x2?: number;
@@ -22,7 +22,7 @@ type ConsoleElement = {
   moment_j?: number;
 };
 
-type WorkbenchConsoleProps = {
+export type WorkbenchConsoleProps = {
   sidebarSection: SidebarSection;
   title: string;
   subtitle: string;
@@ -43,7 +43,7 @@ type WorkbenchConsoleProps = {
   stressLabel: string;
   axialForceLabel: string;
   isFrame?: boolean;
-  elements: ConsoleElement[];
+  elements: WorkbenchConsoleElement[];
 };
 
 function fixed(value: number | null | undefined, digits = 2): string {

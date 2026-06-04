@@ -30,14 +30,27 @@ import {
   refreshWorkbenchResults,
   saveWorkbenchAdminResultRecord,
 } from "@/components/workbench/workbench-admin-result-controller";
+import { useWorkbenchAssistantController } from "@/components/workbench/workbench-assistant-controller";
+import { useWorkbenchAssistantAuditController } from "@/components/workbench/workbench-assistant-audit-controller";
 import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
-import { WorkbenchConsole } from "@/components/workbench/workbench-console";
+import { WorkbenchAssistantFloat } from "@/components/workbench/workbench-assistant-float";
+import { WorkbenchConsoleMount } from "@/components/workbench/workbench-console-mount";
+import { WorkbenchImmersiveLibraryDrawer } from "@/components/workbench/workbench-immersive-library-drawer";
+import { WorkbenchLibrarySectionMount } from "@/components/workbench/workbench-library-section-mount";
+import {
+  downloadWorkbenchLanguagePackTemplate,
+  exportWorkbenchInstalledLanguagePack,
+  importWorkbenchLanguagePack,
+  removeWorkbenchLanguagePack,
+} from "@/components/workbench/workbench-language-pack-controller";
+import { createWorkbenchMaterialEditController } from "@/components/workbench/workbench-material-edit-controller";
 import {
   copyByLanguage,
   humanizeSolverFailure,
   type WorkbenchCopy,
   type WorkbenchLanguage,
 } from "@/components/workbench/workbench-copy";
+import { buildRuntimeAuditModelVersionFacets, buildRuntimeAuditProjectFacets, buildRuntimeAuditSourceStatusFacets, buildRuntimeAuditStudyFacets, buildRuntimeAuditSummaryRows, buildRuntimeAuditTrendBars } from "@/components/workbench/workbench-runtime-audit-helpers";
 import {
   defaultAxial,
   defaultBeam1d,
@@ -116,6 +129,13 @@ import {
   buildDisplayTrussNodes,
 } from "@/components/workbench/workbench-display-planar-helpers";
 import {
+  downloadWorkbenchDatabaseSnapshot,
+  downloadWorkbenchProjectBundleJson,
+  downloadWorkbenchProjectBundleZip,
+  downloadWorkbenchSecurityEventCsvExport,
+  downloadWorkbenchSecurityEventExport,
+} from "@/components/workbench/workbench-export-controller";
+import {
   downloadWorkbenchFrameForceSummary,
   downloadWorkbenchFrameHotspotSummary,
   downloadWorkbenchPlaneHotspotSummary,
@@ -126,6 +146,7 @@ import {
   useWorkbenchResultWindowController,
   type ResultWindowState,
 } from "@/components/workbench/workbench-result-window-controller";
+import { WorkbenchResultWindowBar } from "@/components/workbench/workbench-result-window-bar";
 import {
   buildDisplaySpring3dElements,
   buildDisplaySpring3dNodes,
@@ -172,13 +193,27 @@ import {
   openPersistedWorkbenchVersion,
   openPersistedWorkbenchVersionById,
 } from "@/components/workbench/workbench-persisted-model-controller";
-import { WorkbenchInspector } from "@/components/workbench/workbench-inspector";
+import {
+  buildWorkbenchHotspotData,
+  buildWorkbenchSecurityUi,
+  buildWorkbenchSelectionData,
+} from "@/components/workbench/workbench-inspector-derived";
+import { WorkbenchInspectorMount } from "@/components/workbench/workbench-inspector-mount";
 import { useWorkbenchJobHistoryController } from "@/components/workbench/workbench-job-history-controller";
 import { WorkbenchObjectTree } from "@/components/workbench/workbench-object-tree";
-import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
+import { handleWorkbenchScriptMacroDataAction } from "@/components/workbench/workbench-script-macro-data-controller";
 import { handleWorkbenchScriptNavAction } from "@/components/workbench/workbench-script-nav-controller";
 import { handleWorkbenchScriptProjectModelAction } from "@/components/workbench/workbench-script-project-model-controller";
 import { handleWorkbenchScriptStateAction } from "@/components/workbench/workbench-script-state-controller";
+import { WorkbenchViewportHeadActions } from "@/components/workbench/workbench-viewport-head-actions";
+import { WorkbenchViewportDock } from "@/components/workbench/workbench-viewport-dock";
+import { WorkbenchViewportMount } from "@/components/workbench/workbench-viewport-mount";
+import { WorkbenchSidebarMount } from "@/components/workbench/workbench-sidebar-mount";
+import {
+  importWorkbenchModelFile,
+  openWorkbenchSample,
+} from "@/components/workbench/workbench-sample-import-controller";
+import { createWorkbenchStructureEditController } from "@/components/workbench/workbench-structure-edit-controller";
 import {
   applyStudyKindSelection,
   createStudyKindResetHandlers,
@@ -187,7 +222,6 @@ import {
 import {
   analyzeTrussModel,
   findNearestConnectableNode,
-  fromSvgPoint,
   getTrussBounds,
   renderLoadGlyph,
   renderSupportGlyph,
@@ -195,7 +229,9 @@ import {
   summarizeTrussStability,
   toSvgPoint,
 } from "@/components/workbench/workbench-truss-helpers";
+import { createWorkbenchTrussGestureController } from "@/components/workbench/workbench-truss-gesture-controller";
 import { runWorkbenchAnalysis } from "@/components/workbench/workbench-run-controller";
+import { buildWorkbenchStudySidebarData } from "@/components/workbench/workbench-study-sidebar-data";
 import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
 import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
 import {
@@ -236,11 +272,8 @@ import { WorkbenchModelSidebar, type ModelToolsPage } from "@/components/workben
 import { WorkbenchModelToolsCard } from "@/components/workbench/model/workbench-model-tools-card";
 import { WorkbenchParametricCard } from "@/components/workbench/model/workbench-parametric-card";
 import { WorkbenchTruss3dTreeCard } from "@/components/workbench/model/workbench-truss3d-tree-card";
+import { WorkbenchSystemSidebarMount } from "@/components/workbench/workbench-system-sidebar-mount";
 import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
-import { WorkbenchDataAdminPanel } from "@/components/workbench/system/workbench-data-admin-panel";
-import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
-import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
-import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import {
   isWorkflowGraphResult,
   summarizeWorkflowArtifacts,
@@ -248,11 +281,7 @@ import {
   useWorkbenchWorkflowController,
 } from "@/components/workbench/workflow/workbench-workflow-controller";
 import { WorkbenchWorkflowSidebar } from "@/components/workbench/workflow/workbench-workflow-sidebar";
-import { requestWorkbenchAssistantPlan, type AssistantPlan } from "@/lib/assistant/openai-compatible";
-import { parseMaterialLibrary } from "@/lib/materials";
 import { MATERIAL_PRESETS } from "@/lib/materials";
-import { parsePlaygroundModel } from "@/lib/models";
-import { exportProjectBundleZip } from "@/lib/projects";
 import {
   persistWorkbenchSettings,
   fixed,
@@ -266,24 +295,18 @@ import {
   serializeCurrentModel,
   toAxialInput,
   mergeLanguagePack,
-  WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
   type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
 import {
   buildWorkbenchSnapshot,
-  createAssistantTransactionEntry,
   pushHistoryEntry,
   restoreWorkbenchSnapshot,
   stepHistory,
-  type AssistantTransactionEntry,
   type HistoryEntry,
   type WorkbenchSnapshot,
 } from "@/lib/workbench/history";
 import {
-  createSecurityAuditEntry,
   readSecurityAuditLog,
-  writeSecurityAuditLog,
-  type WorkbenchSecurityAuditEntry,
   type WorkbenchSecurityAuditRisk,
   type WorkbenchSecurityAuditSource,
 } from "@/lib/workbench/security-audit";
@@ -298,76 +321,19 @@ import {
   buildStudyDomainOptions,
   classifyStudyKindDomain,
   classifyStudyKindFamily,
-  buildStudyControlsRows,
   buildStudyKindOptionGroups,
-  buildStudySummaryRows,
-  buildTruss3dTreeRows,
 } from "@/lib/workbench/view-models";
 import {
-  addCustomMaterialToFrameModel,
-  addCustomMaterialToPlaneModel,
-  addPresetMaterialToFrameModel,
-  addCustomMaterialToTruss3dModel,
-  addCustomMaterialToTrussModel,
-  applyMaterialToFrameModel,
-  addPresetMaterialToPlaneModel,
-  addPresetMaterialToTruss3dModel,
-  addPresetMaterialToTrussModel,
-  applyMaterialToPlaneModel,
-  applyMaterialToTruss3dModel,
-  applyMaterialToTrussModel,
-  deleteMaterialFromFrameModel,
-  deleteMaterialFromPlaneModel,
-  deleteMaterialFromTruss3dModel,
-  deleteMaterialFromTrussModel,
   ensurePlaneModelMaterials,
   ensureTruss3dModelMaterials,
   ensureTrussModelMaterials,
-  mergeImportedMaterials,
-  updateMaterialInFrameModel,
-  updateMaterialInPlaneModel,
-  updateMaterialInTruss3dModel,
-  updateMaterialInTrussModel,
 } from "@/lib/workbench/material-commands";
 import { clampChunkOffset, RESULT_WINDOW_BASE_SIZE } from "@/lib/workbench/result-window";
-import {
-  addFrame2dNode,
-  assignFrame2dElementMaterial,
-  deleteFrame2dElement,
-  deleteFrame2dNode,
-  toggleFrame2dMember,
-  updateFrame2dElement,
-  updateFrame2dNode,
-} from "@/lib/workbench/frame2d-commands";
-import {
-  addTruss2dNode,
-  assignTruss2dElementMaterial,
-  deleteTruss2dElement,
-  deleteTruss2dNode,
-  toggleDraftSelection,
-  toggleTruss2dMember,
-  updateTruss2dElement,
-  updateTruss2dNode,
-} from "@/lib/workbench/truss2d-commands";
+import { updateFrame2dNode } from "@/lib/workbench/frame2d-commands";
+import { toggleDraftSelection } from "@/lib/workbench/truss2d-commands";
 import {
   addTruss3dNodeCommand,
-  applyTruss3dSelectedLoads,
-  assignTruss3dElementMaterial,
-  cloneTruss3dSelectedNodes,
-  completeTruss3dLinkCommand,
-  deleteTruss3dElementCommand,
-  deleteTruss3dNodeCommand,
-  merge3dBoxSelection,
-  nudgeTruss3dSelectedNodes,
-  updateTruss3dElement,
-  updateTruss3dNodePositionCommand,
-  updateTruss3dSelectedNodes,
 } from "@/lib/workbench/truss3d-commands";
-import {
-  assignPlaneElementMaterial,
-  updatePlaneElement,
-  updatePlaneNode,
-} from "@/lib/workbench/plane-commands";
 import {
   exportProjectBundle,
   exportStudyModel,
@@ -380,10 +346,7 @@ import {
 import { SAMPLE_LIBRARY } from "@/lib/models";
 import {
   getWorkbenchScriptActionDefinition,
-  getWorkbenchScriptMacroDefinition,
   listWorkbenchMacroPresets,
-  resolveWorkbenchMacroPayloadTemplates,
-  type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
 import {
@@ -403,7 +366,6 @@ import {
   createSpring2dJob,
   createSpring3dJob,
   createTorsion1dJob,
-  createSecurityEvent,
   createDirectMeshSolve,
   createFrame2dJob,
   createPlaneQuad2dJob,
@@ -411,8 +373,6 @@ import {
   createModel,
   createModelVersion,
   createProject,
-  exportSecurityEvents,
-  exportSecurityEventsCsv,
   createTruss2dJob,
   createTruss3dJob,
   cancelJob,
@@ -421,7 +381,6 @@ import {
   deleteModelVersion,
   deleteProject,
   deleteResultRecord,
-  fetchDatabaseExport,
   fetchModel,
   fetchModelVersion,
   fetchModelVersions,
@@ -658,9 +617,6 @@ export function Workbench() {
   const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
   const [adminFilterProjectId, setAdminFilterProjectId] = useState("");
   const [adminFilterModelVersionId, setAdminFilterModelVersionId] = useState("");
-  const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
-  const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
-  const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
   const [securityEventRecords, setSecurityEventRecords] = useState<SecurityEventRecord[]>([]);
   const [scriptRecordingMode, setScriptRecordingMode] = useState(false);
   const [securityEventWindowFilter, setSecurityEventWindowFilter] = useState<SecurityEventWindow>("24h");
@@ -842,7 +798,6 @@ export function Workbench() {
       setMessage(copyByLanguage[bootLanguage].initialLoaded);
     }
     setLanguagePacks(readWorkbenchLanguagePacks());
-    setSecurityAuditLog(readSecurityAuditLog());
   }, []);
 
   useEffect(() => {
@@ -884,10 +839,6 @@ export function Workbench() {
       setBeamResultField("max_bending_stress");
     }
   }, [beamResultField, studyKind]);
-
-  useEffect(() => {
-    writeSecurityAuditLog(securityAuditLog);
-  }, [securityAuditLog]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -1195,39 +1146,16 @@ export function Workbench() {
     });
   };
 
-  const fetchTextWithTimeout = async (url: string, timeoutMs = 12_000) => {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, {
-        cache: "no-store",
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`request failed: ${response.status}`);
-      }
-
-      return await response.text();
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error(t.requestTimedOut);
-      }
-
-      throw error;
-    } finally {
-      window.clearTimeout(timeoutId);
-    }
-  };
-
   const importModel = async (file: File | undefined) => {
-    if (!file) return;
-
-    try {
-      const imported = parsePlaygroundModel(await file.text());
-      recordHistory(t.importAction);
-      applyImportedWorkbenchModel(imported, {
+    await importWorkbenchModelFile({
+      file,
+      labels: {
+        importAction: t.importAction,
+        importedModel: t.importedModel,
+        importFailed: t.importFailed,
+      },
+      recordHistory,
+      applyImportedModel: {
         setLoadedModelName,
         setSelectedModelId,
         setSelectedVersionId,
@@ -1253,20 +1181,23 @@ export function Workbench() {
         setPlaneResultField,
         setParametric,
         setActiveMaterial,
-      });
-      setMessage(`${t.importedModel}: ${imported.name}`);
-    } catch (error) {
-      setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
-    }
+      },
+      setMessage,
+    });
   };
 
   const openSample = (href: string) => {
     startTransition(async () => {
-      try {
-        const text = await fetchTextWithTimeout(href);
-        const imported = parsePlaygroundModel(text);
-        recordHistory(t.sampleAction);
-        applyImportedWorkbenchModel(imported, {
+      await openWorkbenchSample({
+        href,
+        labels: {
+          sampleAction: t.sampleAction,
+          importedModel: t.importedModel,
+          importFailed: t.importFailed,
+          requestTimedOut: t.requestTimedOut,
+        },
+        recordHistory,
+        applyImportedModel: {
           setLoadedModelName,
           setSelectedModelId,
           setSelectedVersionId,
@@ -1292,11 +1223,9 @@ export function Workbench() {
           setPlaneResultField,
           setParametric,
           setActiveMaterial,
-        });
-        setMessage(`${t.importedModel}: ${imported.name}`);
-      } catch (error) {
-        setMessage(error instanceof Error ? `${t.importFailed}: ${error.message}` : t.importFailed);
-      }
+        },
+        setMessage,
+      });
     });
   };
 
@@ -1324,119 +1253,20 @@ export function Workbench() {
     applyLanguagePreference(nextLanguage);
   };
 
-  const triggerJsonDownload = (filename: string, payload: Record<string, unknown>) => {
-    if (typeof window === "undefined") return;
-    const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
-    const url = window.URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    anchor.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   const handleDownloadLanguagePackTemplate = () => {
-    triggerJsonDownload(`workbench-language-pack-${language}.json`, {
-      schema_version: WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
-      id: `${language}-custom-pack`,
-      language,
-      name: `${t.languages[language]} custom pack`,
-      version: "1.0.0",
-      source: "imported",
-      description:
-        language === "zh"
-          ? "从这个模板开始覆盖 Workbench 文案。"
-          : language === "ja"
-            ? "このテンプレートから Workbench 文言を上書きします。"
-            : "Start from this template to override Workbench copy.",
-      overrides: {},
-    });
-    setMessage(
-      language === "zh"
-        ? "语言包模板已下载。"
-        : language === "ja"
-          ? "言語パックのテンプレートを出力しました。"
-          : "Language pack template downloaded.",
-    );
+    downloadWorkbenchLanguagePackTemplate({ language, copy: t, setMessage });
   };
 
   const handleExportInstalledLanguagePack = () => {
-    const pack = activeLanguagePack;
-    if (!pack) {
-      setMessage(
-        language === "zh"
-          ? "当前语言还没有安装自定义语言包。"
-          : language === "ja"
-            ? "現在の言語にはまだカスタム言語パックがありません。"
-            : "No custom language pack is installed for the current language yet.",
-      );
-      return;
-    }
-
-    triggerJsonDownload(`workbench-language-pack-${pack.language}-${pack.id}.json`, pack);
-    setMessage(
-      language === "zh"
-        ? "当前语言包已导出。"
-        : language === "ja"
-          ? "現在の言語パックを出力しました。"
-          : "Exported the current language pack.",
-    );
+    exportWorkbenchInstalledLanguagePack({ language, activeLanguagePack, setMessage });
   };
 
   const handleImportLanguagePack = async (file: File) => {
-    try {
-      const raw = JSON.parse(await file.text()) as Partial<WorkbenchLanguagePack> & { overrides?: Record<string, unknown> };
-      if (!raw || typeof raw !== "object" || typeof raw.language !== "string" || typeof raw.name !== "string") {
-        throw new Error("invalid-pack");
-      }
-
-      const nextPack: WorkbenchLanguagePack = {
-        schema_version:
-          typeof raw.schema_version === "string" && raw.schema_version.trim()
-            ? raw.schema_version.trim()
-            : WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
-        id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${raw.language}-${Date.now()}`,
-        language: raw.language,
-        name: raw.name,
-        version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.0.0",
-        source: raw.source === "downloaded" ? "downloaded" : "imported",
-        updatedAt: new Date().toISOString(),
-        description: typeof raw.description === "string" ? raw.description : undefined,
-        overrides: raw.overrides && typeof raw.overrides === "object" && !Array.isArray(raw.overrides) ? raw.overrides : {},
-      };
-
-      setLanguagePacks((current) => {
-        const next = current.filter((pack) => !(pack.id === nextPack.id || (pack.language === nextPack.language && pack.name === nextPack.name)));
-        return [nextPack, ...next];
-      });
-
-      setMessage(
-        language === "zh"
-          ? "语言包已导入。"
-          : language === "ja"
-            ? "言語パックを取り込みました。"
-            : "Language pack imported.",
-      );
-    } catch {
-      setMessage(
-        language === "zh"
-          ? "语言包 JSON 无效。"
-          : language === "ja"
-            ? "言語パック JSON が無効です。"
-            : "Invalid language pack JSON.",
-      );
-    }
+    await importWorkbenchLanguagePack({ file, language, setLanguagePacks, setMessage });
   };
 
   const handleRemoveLanguagePack = (packId: string) => {
-    setLanguagePacks((current) => current.filter((pack) => pack.id !== packId));
-    setMessage(
-      language === "zh"
-        ? "语言包已移除。"
-        : language === "ja"
-          ? "言語パックを削除しました。"
-          : "Language pack removed.",
-    );
+    removeWorkbenchLanguagePack({ packId, setLanguagePacks, language, setMessage });
   };
 
   const handleParametricChange = (key: keyof ParametricTrussConfig, value: number) => {
@@ -1630,79 +1460,65 @@ export function Workbench() {
   };
 
   const downloadProjectBundleJson = async () => {
-    try {
-      const { bundle, partial } = await buildProjectBundleJson();
-      downloadTextFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki.json`, bundle);
-      setMessage(partial ? t.projectExportedPartial : t.projectExported);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
+    await downloadWorkbenchProjectBundleJson({
+      selectedProject,
+      buildBundle: buildProjectBundleJson,
+      setMessage,
+      labels: {
+        projectExported: t.projectExported,
+        projectExportedPartial: t.projectExportedPartial,
+        initialFailed: t.initialFailed,
+      },
+    });
   };
 
   const downloadProjectBundleZip = async () => {
-    try {
-      const { bundle, partial } = await buildProjectBundleJson();
-      const blob = await exportProjectBundleZip(bundle);
-      downloadBlobFile(`${selectedProject?.name || "kyuubiki-project"}.kyuubiki`, blob);
-      setMessage(partial ? t.projectExportedPartial : t.projectExported);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
+    await downloadWorkbenchProjectBundleZip({
+      selectedProject,
+      buildBundle: buildProjectBundleJson,
+      setMessage,
+      labels: {
+        projectExported: t.projectExported,
+        projectExportedPartial: t.projectExportedPartial,
+        initialFailed: t.initialFailed,
+      },
+    });
   };
 
   const downloadDatabaseSnapshot = async () => {
-    try {
-      const snapshot = await fetchDatabaseExport();
-      const timestamp = snapshot.exported_at.replaceAll(":", "-");
-      downloadTextFile(`kyuubiki-database-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
-      setMessage(t.databaseExported);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
+    await downloadWorkbenchDatabaseSnapshot({
+      setMessage,
+      labels: {
+        databaseExported: t.databaseExported,
+        initialFailed: t.initialFailed,
+      },
+    });
   };
 
   const downloadSecurityEventExport = async () => {
-    try {
-      const occurredAfter =
-        securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
-          ? new Date(Date.now() - SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]).toISOString()
-          : undefined;
-      const snapshot = await exportSecurityEvents({
-        occurred_after: occurredAfter,
-        source: securityEventSourceFilter || undefined,
-        risk: securityEventRiskFilter || undefined,
-        status: securityEventStatusFilter || undefined,
-        action: securityEventActionFilter || undefined,
-        limit: 500,
-      });
-      const timestamp = snapshot.exported_at.replaceAll(":", "-");
-      downloadTextFile(`kyuubiki-security-events-${timestamp}.json`, JSON.stringify(snapshot, null, 2));
-      setMessage(language === "zh" ? "安全事件分析包已下载。" : language === "ja" ? "セキュリティイベント分析バンドルを出力しました。" : "Security event export downloaded.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
+    await downloadWorkbenchSecurityEventExport({
+      language,
+      securityEventWindowFilter,
+      securityEventSourceFilter,
+      securityEventRiskFilter,
+      securityEventStatusFilter,
+      securityEventActionFilter,
+      setMessage,
+      labels: { initialFailed: t.initialFailed },
+    });
   };
 
   const downloadSecurityEventCsvExport = async () => {
-    try {
-      const occurredAfter =
-        securityEventWindowFilter && SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]
-          ? new Date(Date.now() - SECURITY_EVENT_WINDOW_MS[securityEventWindowFilter]).toISOString()
-          : undefined;
-      const csv = await exportSecurityEventsCsv({
-        occurred_after: occurredAfter,
-        source: securityEventSourceFilter || undefined,
-        risk: securityEventRiskFilter || undefined,
-        status: securityEventStatusFilter || undefined,
-        action: securityEventActionFilter || undefined,
-        limit: 1000,
-      });
-      const timestamp = new Date().toISOString().replaceAll(":", "-");
-      downloadTextFile(`kyuubiki-security-events-${timestamp}.csv`, csv);
-      setMessage(language === "zh" ? "安全事件 CSV 已下载。" : language === "ja" ? "セキュリティイベント CSV を出力しました。" : "Security event CSV downloaded.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
+    await downloadWorkbenchSecurityEventCsvExport({
+      language,
+      securityEventWindowFilter,
+      securityEventSourceFilter,
+      securityEventRiskFilter,
+      securityEventStatusFilter,
+      securityEventActionFilter,
+      setMessage,
+      labels: { initialFailed: t.initialFailed },
+    });
   };
 
   const saveAdminJobRecord = () => {
@@ -2008,10 +1824,6 @@ export function Workbench() {
 
   const applySelectedAdminResultContext = () => {
     applySelectedAdminResultContextWithDeps(adminDataEffects);
-  };
-
-  const resolveScriptLinkedJob = (payload: Record<string, unknown>) => {
-    return resolveScriptLinkedJobWithDeps(payload, adminDataEffects);
   };
 
   const handleSidebarSectionChange = (section: SidebarSection) => {
@@ -2719,105 +2531,25 @@ export function Workbench() {
 
     return null;
   };
-  const planeHotspotElements = useMemo(
+  const { planeHotspotElements, planeThermalRows, frameHotspotElements, frameForceRows, frameMaxAxialForce, frameMaxShearForce } = useMemo(
     () =>
-      planeElements
-        .map((element) => ({
-          index: element.index,
-          id: element.id,
-          value: planeResultFieldValue(element, planeResultField),
-          active: selectedElement === element.index,
-          summary: isHeatPlane
-            ? `Tavg ${scientific("average_temperature" in element ? element.average_temperature : undefined)} · ∇Ty ${scientific("temperature_gradient_y" in element ? element.temperature_gradient_y : undefined)} · |q| ${scientific("heat_flux_magnitude" in element ? element.heat_flux_magnitude : undefined)}`
-            : undefined,
-        }))
-        .sort((left, right) => right.value - left.value)
-        .slice(0, planeHotspotLimit)
-        .map((element) => ({
-          index: element.index,
-          id: element.id,
-          value: scientific(element.value),
-          active: element.active,
-          summary: element.summary,
-        })),
-    [isHeatPlane, planeElements, planeResultField, selectedElement, planeHotspotLimit],
-  );
-  const planeThermalRows = useMemo(
-    () =>
-      isHeatPlane
-        ? planeElements.map((element) => {
-            const heatElement = element as typeof element & {
-              average_temperature?: number;
-              temperature_gradient_x?: number;
-              temperature_gradient_y?: number;
-              heat_flux_x?: number;
-              heat_flux_y?: number;
-              heat_flux_magnitude?: number;
-            };
-            return {
-              id: element.id,
-              index: element.index,
-              active: selectedElement === element.index,
-              sortTemperature: Math.abs(heatElement.average_temperature ?? 0),
-              sortGradient: Math.max(Math.abs(heatElement.temperature_gradient_y ?? 0), Math.abs(heatElement.temperature_gradient_x ?? 0)),
-              sortFlux: Math.abs(heatElement.heat_flux_magnitude ?? 0),
-              averageTemperature: scientific(heatElement.average_temperature),
-              temperatureGradientX: scientific(heatElement.temperature_gradient_x),
-              temperatureGradientY: scientific(heatElement.temperature_gradient_y),
-              heatFluxX: scientific(heatElement.heat_flux_x),
-              heatFluxY: scientific(heatElement.heat_flux_y),
-              heatFluxMagnitude: scientific(heatElement.heat_flux_magnitude),
-            };
-          })
-        : [],
-    [isHeatPlane, planeElements, selectedElement],
-  );
-  const frameHotspotElements = useMemo(
-    () =>
-      displayTrussElements
-        .map((element) => ({
-          index: element.index,
-          id: element.id,
-          value: lineResultFieldValue(element, activeLineResultField),
-          active: selectedElement === element.index,
-          summary: isThermalFrame
-            ? `ΔT ${scientific(element.average_temperature_delta)} · ∇T ${scientific(element.temperature_gradient_y)} · κth ${scientific(element.thermal_curvature)}`
-            : isSpring || isThermalBar || isThermalTruss2d || isThermalTruss3d
-            ? `Fi ${scientific(element.axial_force_i)} · Fj ${scientific(element.axial_force_j)}`
-            : isTorsion
-              ? `Ti ${scientific(element.moment_i)} · Tj ${scientific(element.moment_j)}`
-            : isBeam
-            ? `Vi ${scientific(element.shear_force_i)} · Mi ${scientific(element.moment_i)} · Vj ${scientific(element.shear_force_j)} · Mj ${scientific(element.moment_j)}`
-            : `Ai ${scientific(element.axial_force_i)} · Vi ${scientific(element.shear_force_i)} · Mi ${scientific(element.moment_i)} · Aj ${scientific(element.axial_force_j)} · Vj ${scientific(element.shear_force_j)} · Mj ${scientific(element.moment_j)}`,
-        }))
-        .sort((left, right) => right.value - left.value)
-        .slice(0, planeHotspotLimit)
-        .map((element) => ({
-          index: element.index,
-          id: element.id,
-          value: scientific(element.value),
-          active: element.active,
-          summary: element.summary,
-        })),
-    [activeLineResultField, displayTrussElements, isBeam, isSpring, isThermalBar, isThermalFrame, isThermalTruss2d, isThermalTruss3d, selectedElement, planeHotspotLimit],
-  );
-  const frameForceRows = useMemo(
-    () =>
-      displayTrussElements.map((element) => ({
-        id: element.id,
-        index: element.index,
-        active: selectedElement === element.index,
-        sortAxial: Math.max(Math.abs(element.axial_force_i ?? 0), Math.abs(element.axial_force_j ?? 0)),
-        sortShear: Math.max(Math.abs(element.shear_force_i ?? 0), Math.abs(element.shear_force_j ?? 0)),
-        sortMoment: Math.max(Math.abs(element.moment_i ?? 0), Math.abs(element.moment_j ?? 0)),
-        axialForceI: scientific(element.axial_force_i),
-        shearForceI: scientific(element.shear_force_i),
-        momentI: scientific(element.moment_i),
-        axialForceJ: scientific(element.axial_force_j),
-        shearForceJ: scientific(element.shear_force_j),
-        momentJ: scientific(element.moment_j),
-      })),
-    [displayTrussElements, selectedElement],
+      buildWorkbenchHotspotData({
+        isHeatPlane,
+        isThermalFrame,
+        isSpring,
+        isThermalBar,
+        isThermalTruss2d,
+        isThermalTruss3d,
+        isTorsion,
+        isBeam,
+        planeElements,
+        planeResultField,
+        displayTrussElements,
+        activeLineResultField,
+        selectedElement,
+        planeHotspotLimit,
+      }),
+    [activeLineResultField, displayTrussElements, isBeam, isHeatPlane, isSpring, isThermalBar, isThermalFrame, isThermalTruss2d, isThermalTruss3d, isTorsion, planeElements, planeHotspotLimit, planeResultField, selectedElement],
   );
   const resultExportEffects = {
     result,
@@ -2845,14 +2577,6 @@ export function Workbench() {
       resultCsvDownloaded: t.resultCsvDownloaded,
     },
   };
-  const frameMaxAxialForce = useMemo(
-    () => Math.max(...displayTrussElements.map((element) => Math.max(Math.abs(element.axial_force_i ?? 0), Math.abs(element.axial_force_j ?? 0))), 0),
-    [displayTrussElements],
-  );
-  const frameMaxShearForce = useMemo(
-    () => Math.max(...displayTrussElements.map((element) => Math.max(Math.abs(element.shear_force_i ?? 0), Math.abs(element.shear_force_j ?? 0))), 0),
-    [displayTrussElements],
-  );
   const thermalFrameMaxTemperatureDelta = isThermalFrame ? thermalFrameResult?.max_temperature_delta ?? 0 : 0;
   const thermalFrameMaxTemperatureGradient = isThermalFrame ? thermalFrameResult?.max_temperature_gradient ?? 0 : 0;
   const thermalBeamMaxTemperatureGradient = isThermalBeam ? thermalBeamResult?.max_temperature_gradient ?? 0 : 0;
@@ -2886,187 +2610,87 @@ export function Workbench() {
 
     return () => window.clearTimeout(timeout);
   }, [focusedFrameElement]);
-  const selectedNodeData = selectedNode !== null ? displayTrussNodes[selectedNode] : null;
   const heartbeatStatusValue = heartbeatStatus(job, t);
   const heartbeatToneValue = heartbeatTone(job);
-  const selectedElementData = selectedElement !== null ? displayTrussElements[selectedElement] : null;
-  const selectedTruss3dNodeData = selectedNode !== null ? displayTruss3dNodes[selectedNode] : null;
-  const selectedTruss3dElementData = selectedElement !== null ? displayTruss3dElements[selectedElement] : null;
-  const selectedPlaneNodeData = selectedNode !== null ? planeNodes[selectedNode] : null;
-  const selectedPlaneElementData = selectedElement !== null ? planeElements[selectedElement] : null;
-  const selectedFrameNodeData =
-    selectedNode !== null && (isThermalFrame ? thermalFrameModel.nodes[selectedNode] : frameModel.nodes[selectedNode])
-      ? {
-          ...(isThermalFrame ? thermalFrameModel.nodes[selectedNode] : frameModel.nodes[selectedNode]),
-          displacement_magnitude: isThermalFrame ? thermalFrameResult?.nodes[selectedNode]?.displacement_magnitude : frameResult?.nodes[selectedNode]?.displacement_magnitude,
-          rz: isThermalFrame ? thermalFrameResult?.nodes[selectedNode]?.rz : frameResult?.nodes[selectedNode]?.rz,
-        }
-      : null;
-  const selectedFrameElementData =
-    selectedElement !== null && (isThermalFrame ? thermalFrameModel.elements[selectedElement] : frameModel.elements[selectedElement])
-      ? {
-          index: selectedElement,
-          ...(isThermalFrame ? thermalFrameModel.elements[selectedElement] : frameModel.elements[selectedElement]),
-          ...(isThermalFrame ? thermalFrameResult?.elements[selectedElement] : frameResult?.elements[selectedElement]),
-        }
-      : null;
-  const selectedBeamNodeData =
-    selectedNode !== null && (isThermalBeam ? thermalBeamModel.nodes[selectedNode] : beamModel.nodes[selectedNode])
-      ? {
-          ...(isThermalBeam ? thermalBeamModel.nodes[selectedNode] : beamModel.nodes[selectedNode]),
-          displacement_magnitude: isThermalBeam ? thermalBeamResult?.nodes[selectedNode]?.displacement_magnitude : beamResult?.nodes[selectedNode]?.displacement_magnitude,
-          rz: isThermalBeam ? thermalBeamResult?.nodes[selectedNode]?.rz : beamResult?.nodes[selectedNode]?.rz,
-          y: 0,
-          load_x: 0,
-          load_y: (isThermalBeam ? thermalBeamModel.nodes[selectedNode]?.load_y : beamModel.nodes[selectedNode]?.load_y) ?? 0,
-          fix_x: false,
-          fix_y: (isThermalBeam ? thermalBeamModel.nodes[selectedNode]?.fix_y : beamModel.nodes[selectedNode]?.fix_y) ?? false,
-          moment_z: (isThermalBeam ? thermalBeamModel.nodes[selectedNode]?.moment_z : beamModel.nodes[selectedNode]?.moment_z) ?? 0,
-          fix_rz: (isThermalBeam ? thermalBeamModel.nodes[selectedNode]?.fix_rz : beamModel.nodes[selectedNode]?.fix_rz) ?? false,
-        }
-      : null;
-  const selectedBeamElementData =
-    selectedElement !== null && (isThermalBeam ? thermalBeamModel.elements[selectedElement] : beamModel.elements[selectedElement])
-      ? {
-          index: selectedElement,
-          ...(isThermalBeam ? thermalBeamModel.elements[selectedElement] : beamModel.elements[selectedElement]),
-          area: 0,
-          ...(isThermalBeam ? thermalBeamResult?.elements[selectedElement] : beamResult?.elements[selectedElement]),
-        }
-      : null;
-  const selectedTorsionNodeData =
-    selectedNode !== null && torsionModel.nodes[selectedNode]
-      ? {
-          id: torsionModel.nodes[selectedNode].id,
-          x: torsionModel.nodes[selectedNode].x,
-          y: 0,
-          load_x: 0,
-          load_y: 0,
-          moment_z: torsionModel.nodes[selectedNode].torque_z,
-          fix_x: false,
-          fix_y: true,
-          fix_rz: torsionModel.nodes[selectedNode].fix_rz,
-          displacement_magnitude: Math.abs(torsionResult?.nodes[selectedNode]?.rz ?? 0),
-          rz: torsionResult?.nodes[selectedNode]?.rz,
-        }
-      : null;
-  const selectedTorsionElementData =
-    selectedElement !== null && torsionModel.elements[selectedElement]
-      ? {
-          index: selectedElement,
-          id: torsionModel.elements[selectedElement].id,
-          node_i: torsionModel.elements[selectedElement].node_i,
-          node_j: torsionModel.elements[selectedElement].node_j,
-          area: 0,
-          youngs_modulus: torsionModel.elements[selectedElement].shear_modulus,
-          moment_of_inertia: torsionModel.elements[selectedElement].polar_moment,
-          section_modulus: torsionModel.elements[selectedElement].section_modulus,
-          axial_stress: undefined,
-          max_bending_stress: torsionResult?.elements[selectedElement]?.shear_stress,
-          max_combined_stress: undefined,
-          axial_force_i: 0,
-          shear_force_i: 0,
-          moment_i: torsionResult?.elements[selectedElement]?.torque,
-          axial_force_j: 0,
-          shear_force_j: 0,
-          moment_j: torsionResult?.elements[selectedElement]?.torque,
-        }
-      : null;
-  const selectedThermalNodeData =
-    selectedNode !== null && (isHeatBar ? heatBarModel.nodes[selectedNode] : thermalBarModel.nodes[selectedNode])
-      ? {
-          id: isHeatBar ? heatBarModel.nodes[selectedNode].id : thermalBarModel.nodes[selectedNode].id,
-          x: isHeatBar ? heatBarModel.nodes[selectedNode].x : thermalBarModel.nodes[selectedNode].x,
-          y: 0,
-          load_x: isHeatBar ? heatBarModel.nodes[selectedNode].heat_load : thermalBarModel.nodes[selectedNode].load_x,
-          load_y: 0,
-          fix_x: isHeatBar ? heatBarModel.nodes[selectedNode].fix_temperature : thermalBarModel.nodes[selectedNode].fix_x,
-          fix_y: true,
-          moment_z: 0,
-          fix_rz: true,
-          displacement_magnitude: Math.abs(isHeatBar ? heatBarResult?.nodes[selectedNode]?.temperature ?? 0 : thermalBarResult?.nodes[selectedNode]?.ux ?? 0),
-          rz: 0,
-          temperature: isHeatBar ? heatBarModel.nodes[selectedNode].temperature ?? 0 : undefined,
-          heat_load: isHeatBar ? heatBarModel.nodes[selectedNode].heat_load ?? 0 : undefined,
-          fix_temperature: isHeatBar ? heatBarModel.nodes[selectedNode].fix_temperature ?? false : undefined,
-        }
-      : null;
-  const selectedThermalElementData =
-    selectedElement !== null && (isHeatBar ? heatBarModel.elements[selectedElement] : thermalBarModel.elements[selectedElement])
-      ? {
-          index: selectedElement,
-          ...(isHeatBar ? heatBarModel.elements[selectedElement] : thermalBarModel.elements[selectedElement]),
-          area: isHeatBar ? heatBarModel.elements[selectedElement].area : thermalBarModel.elements[selectedElement].area,
-          youngs_modulus: isHeatBar ? heatBarModel.elements[selectedElement].conductivity : thermalBarModel.elements[selectedElement].youngs_modulus,
-          moment_of_inertia: 0,
-          section_modulus: 0,
-          axial_stress: displayTrussElements[selectedElement]?.axial_stress,
-          average_temperature: isHeatBar ? heatBarResult?.elements[selectedElement]?.average_temperature ?? 0 : undefined,
-          temperature_gradient_x: isHeatBar ? heatBarResult?.elements[selectedElement]?.temperature_gradient ?? 0 : undefined,
-          heat_flux_x: isHeatBar ? heatBarResult?.elements[selectedElement]?.heat_flux ?? 0 : undefined,
-          heat_flux_y: isHeatBar ? 0 : undefined,
-          heat_flux_magnitude: isHeatBar ? Math.abs(heatBarResult?.elements[selectedElement]?.heat_flux ?? 0) : undefined,
-          axial_force_i: displayTrussElements[selectedElement]?.axial_force_i,
-          shear_force_i: 0,
-          moment_i: 0,
-          axial_force_j: displayTrussElements[selectedElement]?.axial_force_j,
-          shear_force_j: 0,
-          moment_j: 0,
-        }
-      : null;
-  const selectedSpringElementData =
-    selectedElement !== null && activeSpringModel.elements[selectedElement]
-      ? {
-          index: selectedElement,
-          ...activeSpringModel.elements[selectedElement],
-          area: 0,
-          youngs_modulus: 0,
-          moment_of_inertia: 0,
-          section_modulus: 0,
-          axial_stress: displayTrussElements[selectedElement]?.axial_stress,
-          axial_force_i: displayTrussElements[selectedElement]?.axial_force_i,
-          shear_force_i: 0,
-          moment_i: 0,
-          axial_force_j: displayTrussElements[selectedElement]?.axial_force_j,
-          shear_force_j: 0,
-          moment_j: 0,
-        }
-      : null;
+  const {
+    selectedNodeData,
+    selectedElementData,
+    selectedTruss3dNodeData,
+    selectedTruss3dElementData,
+    selectedPlaneNodeData,
+    selectedPlaneElementData,
+    selectedFrameNodeData,
+    selectedFrameElementData,
+    selectedBeamNodeData,
+    selectedBeamElementData,
+    selectedTorsionNodeData,
+    selectedTorsionElementData,
+    selectedThermalNodeData,
+    selectedThermalElementData,
+    selectedSpringElementData,
+  } = useMemo(
+    () =>
+      buildWorkbenchSelectionData({
+        selectedNode,
+        selectedElement,
+        displayTrussNodes,
+        displayTrussElements,
+        displayTruss3dNodes,
+        displayTruss3dElements,
+        planeNodes,
+        planeElements,
+        isThermalFrame,
+        thermalFrameModel,
+        thermalFrameResult,
+        frameModel,
+        frameResult,
+        isThermalBeam,
+        thermalBeamModel,
+        thermalBeamResult,
+        beamModel,
+        beamResult,
+        torsionModel,
+        torsionResult,
+        isHeatBar,
+        heatBarModel,
+        heatBarResult,
+        thermalBarModel,
+        thermalBarResult,
+        activeSpringModel,
+      }),
+    [
+      activeSpringModel,
+      beamModel,
+      beamResult,
+      displayTruss3dElements,
+      displayTruss3dNodes,
+      displayTrussElements,
+      displayTrussNodes,
+      frameModel,
+      frameResult,
+      heatBarModel,
+      heatBarResult,
+      isHeatBar,
+      isThermalBeam,
+      isThermalFrame,
+      planeElements,
+      planeNodes,
+      selectedElement,
+      selectedNode,
+      thermalBarModel,
+      thermalBarResult,
+      thermalBeamModel,
+      thermalBeamResult,
+      thermalFrameModel,
+      thermalFrameResult,
+      torsionModel,
+      torsionResult,
+    ],
+  );
   const selectedNodeIssues =
     selectedNode !== null && trussDiagnostics ? trussDiagnostics.nodeIssues[selectedNode] ?? [] : [];
   const translatedFailureReason = humanizeSolverFailure(job?.message, t);
-  const securityUi =
-    language === "zh"
-      ? {
-          controlPlaneToken: "控制面 API Token",
-          clusterToken: "集群 API Token",
-          directMeshToken: "直连网格 Token",
-          protectReads: "保护只读接口",
-          clusterWindow: "集群时间窗",
-          directMeshRoutes: "直连网格路由",
-          security: "安全",
-          enabled: "已启用",
-          disabled: "未启用",
-          configured: "已配置",
-          notConfigured: "未配置",
-          mutatingRoutes: "写入路由保护",
-          clusterRoutes: "集群路由保护",
-        }
-      : {
-          controlPlaneToken: "Control-plane API token",
-          clusterToken: "Cluster API token",
-          directMeshToken: "Direct mesh token",
-          protectReads: "Protect reads",
-          clusterWindow: "Cluster time window",
-          directMeshRoutes: "Direct mesh routes",
-          security: "Security",
-          enabled: "Enabled",
-          disabled: "Disabled",
-          configured: "Configured",
-          notConfigured: "Not configured",
-          mutatingRoutes: "Mutating routes",
-          clusterRoutes: "Cluster routes",
-        };
+  const securityUi = useMemo(() => buildWorkbenchSecurityUi(language), [language]);
   const currentMaterials = useMemo(
     () =>
       studyKind === "thermal_truss_2d"
@@ -3348,190 +2972,30 @@ export function Workbench() {
       })),
     [formatTime, language, securityEventRecords],
   );
-  const runtimeAuditSummaryRows = useMemo(() => {
-    const countByRisk = securityEventRecords.reduce<Record<string, number>>((accumulator, entry) => {
-      accumulator[entry.risk] = (accumulator[entry.risk] ?? 0) + 1;
-      return accumulator;
-    }, {});
-    const countByStatus = securityEventRecords.reduce<Record<string, number>>((accumulator, entry) => {
-      accumulator[entry.status] = (accumulator[entry.status] ?? 0) + 1;
-      return accumulator;
-    }, {});
-
-    return [
-      {
-        label: language === "zh" ? "敏感" : language === "ja" ? "機微" : "Sensitive",
-        value: String(countByRisk.sensitive ?? 0),
-      },
-      {
-        label: language === "zh" ? "高风险" : language === "ja" ? "破壊的" : "Destructive",
-        value: String(countByRisk.destructive ?? 0),
-      },
-      {
-        label: language === "zh" ? "已执行" : language === "ja" ? "完了" : "Completed",
-        value: String(countByStatus.completed ?? 0),
-      },
-      {
-        label: language === "zh" ? "已取消" : language === "ja" ? "取消済み" : "Cancelled",
-        value: String(countByStatus.cancelled ?? 0),
-      },
-      {
-        label: language === "zh" ? "失败" : language === "ja" ? "失敗" : "Failed",
-        value: String(countByStatus.failed ?? 0),
-      },
-      {
-        label: language === "zh" ? "待确认" : language === "ja" ? "確認待ち" : "Prompted",
-        value: String(countByStatus.prompted ?? 0),
-      },
-    ];
-  }, [language, securityEventRecords]);
-  const runtimeAuditTrendBars = useMemo(() => {
-    if (securityEventRecords.length === 0) return [];
-
-    const bucketCount =
-      securityEventWindowFilter === "1h" ? 6 : securityEventWindowFilter === "24h" ? 8 : securityEventWindowFilter === "7d" ? 7 : 6;
-    const bucketWindowMs =
-      securityEventWindowFilter === "1h"
-        ? 10 * 60 * 1_000
-        : securityEventWindowFilter === "24h"
-          ? 3 * 60 * 60 * 1_000
-          : securityEventWindowFilter === "7d"
-            ? 24 * 60 * 60 * 1_000
-            : securityEventWindowFilter === "30d"
-              ? 5 * 24 * 60 * 60 * 1_000
-              : 24 * 60 * 60 * 1_000;
-    const bucketLabels = Array.from({ length: bucketCount }, (_, index) => {
-      if (securityEventWindowFilter === "1h") {
-        return language === "zh" ? `${(bucketCount - index) * 10} 分内` : language === "ja" ? `${(bucketCount - index) * 10}分以内` : `${(bucketCount - index) * 10}m`;
-      }
-      if (securityEventWindowFilter === "24h") {
-        return language === "zh" ? `${(bucketCount - index) * 3} 小时内` : language === "ja" ? `${(bucketCount - index) * 3}時間以内` : `${(bucketCount - index) * 3}h`;
-      }
-      if (securityEventWindowFilter === "7d") {
-        return language === "zh" ? `${bucketCount - index} 天内` : language === "ja" ? `${bucketCount - index}日以内` : `${bucketCount - index}d`;
-      }
-      if (securityEventWindowFilter === "30d") {
-        return language === "zh" ? `${(bucketCount - index) * 5} 天内` : language === "ja" ? `${(bucketCount - index) * 5}日以内` : `${(bucketCount - index) * 5}d`;
-      }
-      return language === "zh" ? `${bucketCount - index} 天内` : language === "ja" ? `${bucketCount - index}日以内` : `${bucketCount - index}d`;
-    });
-    const now = Date.now();
-    const counts = new Array(bucketCount).fill(0);
-
-    securityEventRecords.forEach((entry) => {
-      const occurredAt = Date.parse(entry.occurred_at);
-      if (Number.isNaN(occurredAt)) return;
-      const ageMs = Math.max(now - occurredAt, 0);
-      const bucketIndex = Math.min(Math.floor(ageMs / bucketWindowMs), bucketCount - 1);
-      counts[bucketCount - bucketIndex - 1] += 1;
-    });
-
-    const maxCount = Math.max(...counts, 1);
-    return counts.map((count, index) => ({
-      key: `${bucketLabels[index]}-${index}`,
-      label: bucketLabels[index],
-      value: String(count),
-      ratio: count / maxCount,
-    }));
-  }, [language, securityEventRecords, securityEventWindowFilter]);
-  const runtimeAuditSourceStatusFacets = useMemo(() => {
-    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
-      const key = `${entry.source}:${entry.status}`;
-      accumulator.set(key, (accumulator.get(key) ?? 0) + 1);
-      return accumulator;
-    }, new Map<string, number>());
-
-    return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, 6)
-      .map(([key, value]) => {
-        const [source, status] = key.split(":");
-        const sourceLabel =
-          source === "assistant"
-            ? language === "zh"
-              ? "助手"
-              : language === "ja"
-                ? "アシスタント"
-                : "Assistant"
-            : language === "zh"
-              ? "脚本"
-              : language === "ja"
-                ? "スクリプト"
-                : "Script";
-        const statusLabel =
-          status === "prompted"
-            ? language === "zh"
-              ? "待确认"
-              : language === "ja"
-                ? "確認待ち"
-                : "Prompted"
-            : status === "cancelled"
-              ? language === "zh"
-                ? "已取消"
-                : language === "ja"
-                  ? "取消済み"
-                  : "Cancelled"
-              : status === "completed"
-                ? language === "zh"
-                  ? "已执行"
-                  : language === "ja"
-                    ? "完了"
-                    : "Completed"
-                : language === "zh"
-                  ? "失败"
-                  : language === "ja"
-                    ? "失敗"
-                    : "Failed";
-
-        return {
-          key,
-          label: `${sourceLabel} / ${statusLabel}`,
-          value: String(value),
-        };
-      });
-  }, [language, securityEventRecords]);
-  const runtimeAuditStudyFacets = useMemo(() => {
-    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
-      const studyKind = typeof entry.context.study_kind === "string" ? entry.context.study_kind : "";
-      if (!studyKind) return accumulator;
-      accumulator.set(studyKind, (accumulator.get(studyKind) ?? 0) + 1);
-      return accumulator;
-    }, new Map<string, number>());
-
-    return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, 4)
-      .map(([label, value]) => ({ key: label, label, value: String(value) }));
-  }, [securityEventRecords]);
-  const runtimeAuditProjectFacets = useMemo(() => {
-    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
-      const projectId = typeof entry.context.project_id === "string" ? entry.context.project_id : "";
-      if (!projectId) return accumulator;
-      const shortId = projectId.slice(0, 8);
-      accumulator.set(shortId, (accumulator.get(shortId) ?? 0) + 1);
-      return accumulator;
-    }, new Map<string, number>());
-
-    return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, 4)
-      .map(([label, value]) => ({ key: label, label, value: String(value) }));
-  }, [securityEventRecords]);
-  const runtimeAuditModelVersionFacets = useMemo(() => {
-    const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
-      const modelVersionId =
-        typeof entry.context.model_version_id === "string" ? entry.context.model_version_id : "";
-      if (!modelVersionId) return accumulator;
-      const shortId = modelVersionId.slice(0, 8);
-      accumulator.set(shortId, (accumulator.get(shortId) ?? 0) + 1);
-      return accumulator;
-    }, new Map<string, number>());
-
-    return [...counts.entries()]
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, 4)
-      .map(([label, value]) => ({ key: label, label, value: String(value) }));
-  }, [securityEventRecords]);
+  const runtimeAuditSummaryRows = useMemo(
+    () => buildRuntimeAuditSummaryRows(language, securityEventRecords),
+    [language, securityEventRecords],
+  );
+  const runtimeAuditTrendBars = useMemo(
+    () => buildRuntimeAuditTrendBars(language, securityEventRecords, securityEventWindowFilter),
+    [language, securityEventRecords, securityEventWindowFilter],
+  );
+  const runtimeAuditSourceStatusFacets = useMemo(
+    () => buildRuntimeAuditSourceStatusFacets(language, securityEventRecords),
+    [language, securityEventRecords],
+  );
+  const runtimeAuditStudyFacets = useMemo(
+    () => buildRuntimeAuditStudyFacets(securityEventRecords),
+    [securityEventRecords],
+  );
+  const runtimeAuditProjectFacets = useMemo(
+    () => buildRuntimeAuditProjectFacets(securityEventRecords),
+    [securityEventRecords],
+  );
+  const runtimeAuditModelVersionFacets = useMemo(
+    () => buildRuntimeAuditModelVersionFacets(securityEventRecords),
+    [securityEventRecords],
+  );
   const runtimeWatchdogRows = useMemo(
     () => [
       { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
@@ -3597,206 +3061,8 @@ export function Workbench() {
         : 980;
   const directMeshEndpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
   const hasAnyResult = Boolean(axialResult || heatBarResult || thermalBarResult || thermalBeamResult || thermalFrameResult || thermalTrussResult || thermalTruss3dResult || trussResult || truss3dResult || springResult || spring2dResult || spring3dResult || beamResult || torsionResult || frameResult || planeResult);
-  const currentStudyDomain = classifyStudyKindDomain(studyKind);
-  const assistantStudyFamily = classifyStudyKindFamily(studyKind);
-  const currentStudySample =
-    SAMPLE_LIBRARY.find((sample) => sample.kind === studyKind) ??
-    SAMPLE_LIBRARY.find(
-      (sample) => classifyStudyKindDomain(sample.kind) === currentStudyDomain && classifyStudyKindFamily(sample.kind) === assistantStudyFamily,
-    ) ??
-    null;
-  const assistantCards: Array<{
-    id: string;
-    title: string;
-    summary: string;
-    actionLabel: string;
-    tone: "good" | "watch" | "risk";
-    onAction: () => void;
-  }> = [];
 
-  if (!selectedProjectId) {
-    assistantCards.push({
-      id: "project",
-      title: t.assistantNeedsProject,
-      summary: t.assistantNeedsProjectHint,
-      actionLabel: t.assistantOpenProjects,
-      tone: "watch",
-      onAction: () => {
-        setSidebarSection("library");
-        setLibraryTab("projects");
-      },
-    });
-  }
-
-  if (frontendRuntimeMode === "direct_mesh_gui" && directMeshEndpoints.length === 0) {
-    assistantCards.push({
-      id: "direct-mesh",
-      title: t.assistantConfigureDirectMesh,
-      summary: t.assistantConfigureDirectMeshHint,
-      actionLabel: t.settings,
-      tone: "risk",
-      onAction: () => {
-        setSidebarSection("system");
-        setSystemPanelTab("config");
-      },
-    });
-  }
-
-  if (!health) {
-    assistantCards.push({
-      id: "runtime",
-      title: t.assistantRefreshRuntime,
-      summary: t.assistantRefreshRuntimeHint,
-      actionLabel: t.refresh,
-      tone: "watch",
-      onAction: () => {
-        void refreshHealth();
-      },
-    });
-  }
-
-  if (jobIsActive) {
-    assistantCards.push({
-      id: "job",
-      title: t.assistantCancelRun,
-      summary: t.assistantCancelRunHint,
-      actionLabel: t.cancelJob,
-      tone: "watch",
-      onAction: cancelCurrentJob,
-    });
-  } else if (isTruss && trussDiagnostics?.blockingMessages.length && trussDiagnostics.suggestions[0]) {
-    assistantCards.push({
-      id: "fix",
-      title: t.assistantApplyFix,
-      summary: `${t.assistantApplyFixHint} ${trussDiagnostics.blockingMessages[0]}`,
-      actionLabel: t.assistantApplyFix,
-      tone: "risk",
-      onAction: () => applyTrussSuggestion(trussDiagnostics.suggestions[0]),
-    });
-  } else if (!hasAnyResult) {
-    if (currentStudySample) {
-      assistantCards.push({
-        id: "sample",
-        title: t.assistantOpenSample,
-        summary: `${t.assistantOpenSampleHint} ${currentStudySample.name}.`,
-        actionLabel: currentStudySample.name,
-        tone: "good",
-        onAction: () => {
-          openSample(currentStudySample.href);
-        },
-      });
-    }
-    assistantCards.push({
-      id: "controls",
-      title: t.assistantReviewControls,
-      summary: t.assistantReviewControlsHint,
-      actionLabel: t.controls,
-      tone: "watch",
-      onAction: () => {
-        openWorkspaceStudy("controls");
-      },
-    });
-    assistantCards.push({
-      id: "run",
-      title: t.assistantRunStudy,
-      summary: t.assistantRunStudyHint,
-      actionLabel: t.run,
-      tone: "good",
-      onAction: runAnalysis,
-    });
-  } else {
-    assistantCards.push({
-      id: "report",
-      title: t.assistantReviewReport,
-      summary: t.assistantReviewReportHint,
-      actionLabel: t.overview,
-      tone: "good",
-      onAction: () => {
-        openWorkspaceStudy("summary");
-      },
-    });
-    assistantCards.push({
-      id: "export",
-      title: t.assistantExportResult,
-      summary: t.assistantExportResultHint,
-      actionLabel: t.exportCsv,
-      tone: "watch",
-      onAction: downloadResultCsv,
-    });
-  }
-
-  if (isTruss3d && !immersiveViewport) {
-    assistantCards.push({
-      id: "immersive",
-      title: t.assistantEnterImmersive,
-      summary: t.assistantEnterImmersiveHint,
-      actionLabel: t.enterImmersive,
-      tone: "good",
-      onAction: () => {
-        void toggleImmersiveViewport();
-      },
-    });
-  }
-
-  const requestLlmAssistantPlan = async (prompt: string): Promise<AssistantPlan> =>
-    requestWorkbenchAssistantPlan({
-      baseUrl: assistantApiBaseUrl,
-      apiKey: assistantApiKey,
-      model: assistantModel,
-      prompt,
-      snapshot: getScriptSnapshot(),
-      localHints: assistantCards.map((card) => ({
-        id: card.id,
-        title: card.title,
-        summary: card.summary,
-        actionLabel: card.actionLabel,
-      })),
-    });
-
-  const assistantPromptPresets = [
-    {
-      id: "explain",
-      label: t.assistantPromptExplain,
-      prompt:
-        language === "zh"
-          ? `我现在在做 ${t.kinds[studyKind]}。请用小白能懂的话解释这个 study 是算什么的、最重要的输入是什么、我第一次运行前应该先检查哪三件事。`
-          : language === "ja"
-            ? `今は ${t.kinds[studyKind]} を扱っています。初心者にも分かる言葉で、この study が何を解くのか、重要な入力は何か、最初の実行前に確認すべき三つのことを教えてください。`
-          : `I am working on ${t.kinds[studyKind]}. Explain this study in beginner-friendly language, name the most important inputs, and tell me the first three things to check before my first run.`,
-    },
-    {
-      id: "materials",
-      label: t.assistantPromptMaterial,
-      prompt:
-        language === "zh"
-          ? `我不是材料专业的。针对 ${t.kinds[studyKind]}，请给我一套保守的起步材料参数建议，并说明哪些参数最值得先保持默认。`
-          : language === "ja"
-            ? `私は材料の専門家ではありません。${t.kinds[studyKind]} に対して、保守的な初期材料値の組み合わせを提案し、まずはどのパラメータを既定値に近いままにしておくのが安全か教えてください。`
-          : `I am not a materials specialist. For ${t.kinds[studyKind]}, suggest a conservative starter set of material values and explain which parameters are safest to leave near defaults first.`,
-    },
-    {
-      id: "boundary",
-      label: t.assistantPromptBoundary,
-      prompt:
-        language === "zh"
-          ? `请根据当前 ${t.kinds[studyKind]} 的上下文，帮我检查支撑和载荷应该怎么设才更像一个合理的第一轮仿真，并提醒我常见过约束或漏约束风险。`
-          : language === "ja"
-            ? `現在の ${t.kinds[studyKind]} の文脈に基づいて、最初の試行として妥当な支持条件と荷重の置き方を一緒に確認し、拘束不足や過拘束のよくある失敗も教えてください。`
-          : `Given the current ${t.kinds[studyKind]} context, help me choose a sensible first-pass set of supports and loads, and warn me about common under-constrained or over-constrained mistakes.`,
-    },
-    {
-      id: "results",
-      label: t.assistantPromptResults,
-      prompt:
-        language === "zh"
-          ? `请按 ${t.kinds[studyKind]} 的结果语义，告诉我当前最应该先看哪些结果字段，以及看到什么数量级时应该保持警惕。`
-          : language === "ja"
-            ? `${t.kinds[studyKind]} の結果の意味に沿って、まずどの結果フィールドを見るべきか、そしてどんな桁や傾向が出たら注意すべきか教えてください。`
-          : `For ${t.kinds[studyKind]}, tell me which result fields I should read first and what kinds of magnitudes or patterns should make me cautious.`,
-    },
-  ];
-
-  const scriptSnapshot: WorkbenchScriptSnapshot = {
+  const buildScriptSnapshot = (): WorkbenchScriptSnapshot => ({
     studyKind,
     sidebarSection,
     studyTab,
@@ -3828,103 +3094,6 @@ export function Workbench() {
     truss3dBoxSelectMode,
     truss3dLinkMode,
     hasResult: hasAnyResult,
-    jobStatus: job?.status ?? null,
-    projectCount: projects.length,
-    jobHistoryCount: jobHistory.length,
-    resultCount: resultRecords.length,
-    protocolAgentCount: protocolAgents.length,
-    healthStatus: health?.status ?? null,
-    message,
-  };
-
-  const appendScriptActionLog = (entry: Omit<WorkbenchScriptActionLogEntry, "id" | "at">) => {
-    setScriptActionLog((current) => [
-      {
-        id: `${Date.now()}-${current.length}`,
-        at: new Date().toISOString(),
-      ...entry,
-      },
-      ...current,
-    ].slice(0, 40));
-  };
-
-  const recordManualDslAction = (action: string, payload: Record<string, unknown>) => {
-    if (!scriptRecordingMode) return;
-
-    appendScriptActionLog({
-      action,
-      source: "manual",
-      status: "completed",
-      summary: JSON.stringify(payload),
-      payload,
-      note: language === "zh" ? "手动 UI 录制" : language === "ja" ? "手動 UI 操作から記録" : "Recorded from manual UI interaction",
-    });
-  };
-
-  const persistSecurityAuditEvent = async (entry: WorkbenchSecurityAuditEntry) => {
-    try {
-      await createSecurityEvent({
-        event_id: entry.id,
-        event_type: "security_high_risk_action",
-        source: entry.source,
-        action: entry.action,
-        risk: entry.risk,
-        status: entry.status,
-        note: entry.note,
-        occurred_at: entry.at,
-        context: {
-          frontend_runtime_mode: frontendRuntimeMode,
-          study_kind: studyKind,
-          project_id: selectedProjectId,
-          model_id: selectedModelId,
-          model_version_id: selectedVersionId,
-          language,
-          immersive_viewport: immersiveViewport,
-        },
-      });
-    } catch {
-      // Keep local audit logging available even when the control plane is unreachable.
-    }
-  };
-
-  const recordSecurityAuditEvent = (entry: Omit<WorkbenchSecurityAuditEntry, "id" | "at">) => {
-    const event = createSecurityAuditEntry(entry);
-    setSecurityAuditLog((current) => [event, ...current].slice(0, 80));
-    void persistSecurityAuditEvent(event);
-  };
-
-  const getScriptSnapshot = (): WorkbenchScriptSnapshot => ({
-    studyKind,
-    sidebarSection,
-    studyTab,
-    modelTab,
-    libraryTab,
-    systemPanelTab,
-    systemDataTab,
-    language,
-    theme,
-    frontendRuntimeMode,
-    selectedProjectId,
-    selectedModelId,
-    selectedVersionId,
-    selectedAdminJobId,
-    selectedAdminResultJobId,
-    adminFilterProjectId,
-    adminFilterModelVersionId,
-    loadedModelName,
-    activeMaterial,
-    selectedNode,
-    selectedElement,
-    selectedTruss3dNodeIndices: selectedTruss3dNodes,
-    memberDraftNodeIndices: memberDraftNodes,
-    immersiveViewport,
-    immersiveToolDrawerOpen,
-    immersiveHelpDrawerOpen,
-    truss3dProjectionMode,
-    truss3dViewPreset,
-    truss3dBoxSelectMode,
-    truss3dLinkMode,
-    hasResult: Boolean(result),
     jobStatus: job?.status ?? null,
     projectCount: projects.length,
     jobHistoryCount: jobHistory.length,
@@ -4129,96 +3298,31 @@ export function Workbench() {
       if (stateResult) {
         resultPayload = stateResult;
       } else {
-      switch (action) {
-        case "macro/run": {
-          const macroId = typeof payload.macroId === "string" ? payload.macroId : null;
-          const macro = macroId ? getWorkbenchScriptMacroDefinition(macroId) : null;
-
-          if (!macro) {
-            throw new Error(language === "zh" ? "找不到指定的宏动作。" : language === "ja" ? "指定されたマクロが見つかりませんでした。" : "Could not find the requested macro.");
-          }
-
-          const macroPayload = Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "macroId"));
-          const macroSnapshot = getScriptSnapshot();
-
-          for (const step of macro.steps) {
-            const nextPayload = resolveWorkbenchMacroPayloadTemplates(step.payload ?? {}, macroPayload, macroSnapshot) as Record<string, unknown>;
-            await invokeScriptAction(step.action, nextPayload, source, note ?? (language === "zh" ? macro.summary.zh : macro.summary.en));
-          }
-
-          resultPayload = { ok: true, action, macroId: macro.id, stepCount: macro.steps.length };
-          break;
-        }
-        case "data/setFilters": {
-          if (payload.activeTab === "jobs" || payload.activeTab === "results") {
-            setSystemDataTab(payload.activeTab);
-          }
-          if (typeof payload.projectId === "string" || payload.projectId === null) {
-            setAdminFilterProjectId(typeof payload.projectId === "string" ? payload.projectId : "");
-          }
-          if (typeof payload.modelVersionId === "string" || payload.modelVersionId === null) {
-            setAdminFilterModelVersionId(typeof payload.modelVersionId === "string" ? payload.modelVersionId : "");
-          }
-          setSidebarSection("system");
-          setSystemPanelTab("data");
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "data/selectRecord": {
-          if (payload.activeTab === "jobs" || payload.activeTab === "results") {
-            setSystemDataTab(payload.activeTab);
-          }
-          if (typeof payload.jobId === "string") {
-            setSelectedAdminJobId(payload.jobId);
-          }
-          if (typeof payload.resultJobId === "string") {
-            setSelectedAdminResultJobId(payload.resultJobId);
-          }
-          setSidebarSection("system");
-          setSystemPanelTab("data");
-          resultPayload = { ok: true, action };
-          break;
-        }
-        case "data/openLinkedContext": {
-          const mode =
-            payload.mode === "apply" || payload.mode === "project" || payload.mode === "version" ? payload.mode : "apply";
-          const linkedJob = resolveScriptLinkedJob(payload);
-
-          if (!linkedJob) {
-            throw new Error(language === "zh" ? "找不到关联的数据记录上下文。" : language === "ja" ? "関連するデータレコード文脈を解決できませんでした。" : "Could not resolve the linked data record context.");
-          }
-
-          if (mode === "version") {
-            if (!linkedJob.model_version_id) {
-              throw new Error(language === "zh" ? "这条记录没有关联模型版本。" : language === "ja" ? "このレコードには関連モデルバージョンがありません。" : "This record does not have a linked model version.");
-            }
-            openModelVersionById(linkedJob.model_version_id);
-          } else if (mode === "project") {
-            if (!linkedJob.project_id) {
-              throw new Error(language === "zh" ? "这条记录没有关联项目。" : language === "ja" ? "このレコードには関連プロジェクトがありません。" : "This record does not have a linked project.");
-            }
-            openProjectContextByIdWithDeps(linkedJob.project_id, adminDataEffects);
-          } else {
-            applyJobContextToWorkbenchWithDeps(linkedJob, adminDataEffects);
-          }
-
-          resultPayload = {
-            ok: true,
-            action,
-            mode,
-            jobId: linkedJob.job_id,
-            projectId: linkedJob.project_id ?? null,
-            modelVersionId: linkedJob.model_version_id ?? null,
-          };
-          break;
-        }
-        case "data/exportDatabase": {
-          await downloadDatabaseSnapshot();
-          resultPayload = { ok: true, action };
-          break;
-        }
-        default:
-          throw new Error(`Unknown script action: ${action}`);
+      const macroDataResult = await handleWorkbenchScriptMacroDataAction({
+        action,
+        payload,
+        source,
+        note,
+        language,
+        getScriptSnapshot,
+        invokeScriptAction,
+        setSystemDataTab,
+        setAdminFilterProjectId,
+        setAdminFilterModelVersionId,
+        setSelectedAdminJobId,
+        setSelectedAdminResultJobId,
+        setSidebarSection,
+        setSystemPanelTab,
+        resolveScriptLinkedJob: (nextPayload) => resolveScriptLinkedJobWithDeps(nextPayload, adminDataEffects),
+        openModelVersionById,
+        openProjectContextById: (projectId) => openProjectContextByIdWithDeps(projectId, adminDataEffects),
+        applyJobContextToWorkbench: (linkedJob) => applyJobContextToWorkbenchWithDeps(linkedJob, adminDataEffects),
+        downloadDatabaseSnapshot,
+      });
+      if (macroDataResult) {
+        resultPayload = macroDataResult;
+      } else {
+        throw new Error(`Unknown script action: ${action}`);
       }
       }
       }
@@ -4317,40 +3421,32 @@ export function Workbench() {
     );
   };
 
-  const recordAssistantTransaction = (summary: string, executedActions: string[]) => {
-    const entry: AssistantTransactionEntry = createAssistantTransactionEntry(
-      summary,
-      executedActions,
-      buildSnapshot(),
-    );
-    setAssistantTransactions((current) => [entry, ...current].slice(0, 12));
-    return entry.id;
-  };
+  const {
+    assistantTransactions,
+    appendScriptActionLog,
+    executeAssistantPlan,
+    getScriptSnapshot,
+    recordManualDslAction,
+    recordSecurityAuditEvent,
+    rollbackAssistantTransaction,
+    scriptActionLog,
+    securityAuditLog,
+  } = useWorkbenchAssistantAuditController({
+    language,
+    scriptRecordingMode,
+    frontendRuntimeMode,
+    studyKind,
+    selectedProjectId,
+    selectedModelId,
+    selectedVersionId,
+    immersiveViewport,
+    setMessage,
+    buildScriptSnapshot,
+    buildWorkbenchSnapshot: () => buildSnapshot(),
+    restoreWorkbenchSnapshot: restoreSnapshot,
+  });
 
-  const rollbackAssistantTransaction = (transactionId: string) => {
-    const entry = assistantTransactions.find((transaction) => transaction.id === transactionId);
-    if (!entry) return;
-    restoreSnapshot(entry.snapshot);
-    setAssistantTransactions((current) => current.filter((transaction) => transaction.id !== transactionId));
-    setMessage(language === "zh" ? "已回滚上一轮助手事务。" : language === "ja" ? "直前のアシスタント操作をロールバックしました。" : "Rolled back the last assistant transaction.");
-  };
-
-  const executeAssistantPlan = async (
-    actions: Array<{ action: string; payload?: Record<string, unknown>; reason?: string }>,
-    summary: string,
-  ) => {
-    const transactionId = recordAssistantTransaction(summary, actions.map((entry) => entry.action));
-    try {
-      for (const entry of actions) {
-        await invokeScriptAction(entry.action, entry.payload ?? {}, "assistant", entry.reason);
-      }
-      setMessage(language === "zh" ? "助手计划已执行。" : language === "ja" ? "アシスタントのプランを実行しました。" : "Assistant plan executed.");
-      return transactionId;
-    } catch (error) {
-      rollbackAssistantTransaction(transactionId);
-      throw error;
-    }
-  };
+  const scriptSnapshot = buildScriptSnapshot();
 
   const recordHistory = (label: string) => {
     const snapshot = buildSnapshot();
@@ -4473,201 +3569,177 @@ export function Workbench() {
     setMessage(connected ? t.suggestionAppliedLink : t.suggestionNoLinkTarget);
   };
 
-  const updateSelectedNode = (key: keyof Truss2dJobInput["nodes"][number], value: number | boolean) => {
-    if (selectedNode === null) return;
-    recordHistory(t.editNodeAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalTruss2d) {
-      setThermalTrussModel((current) => ({
-        ...current,
-        nodes: current.nodes.map((node, index) =>
-          index === selectedNode ? { ...node, [key]: value } : node,
-        ),
-      }));
-      return;
-    }
-    setTrussModel((current) => updateTruss2dNode(current, selectedNode, key, value));
-  };
+  const {
+    addCustomMaterialToCurrentModel,
+    addMaterialToCurrentModel,
+    applyMaterialToCurrentModel,
+    deleteCurrentMaterial,
+    importMaterials,
+    toggleMaterialVisibility,
+    updateCurrentMaterial,
+  } = createWorkbenchMaterialEditController({
+    activeMaterial,
+    labels: {
+      editMemberAction: t.editMemberAction,
+      editMaterial: t.editMaterial,
+      importedMaterialLibrary:
+        language === "zh"
+          ? "外部材料库已导入。"
+          : language === "ja"
+            ? "外部材料ライブラリを取り込みました。"
+            : "Imported external material library.",
+      initialFailed: t.initialFailed,
+    },
+    recordHistory,
+    resetResults: () => resetActiveResult(setResult, setJob),
+    selectedElement,
+    setFrameModel,
+    setHiddenMaterials,
+    setMessage,
+    setPlaneModel,
+    setThermalFrameModel,
+    setThermalTruss3dModel,
+    setThermalTrussModel,
+    setTruss3dModel,
+    setTrussModel,
+    studyKind,
+  });
 
-  const updateSelectedElement = (
-    key: keyof Truss2dJobInput["elements"][number],
-    value: number,
-  ) => {
-    if (selectedElement === null) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalTruss2d) {
-      setThermalTrussModel((current) => ({
-        ...current,
-        elements: current.elements.map((element, index) =>
-          index === selectedElement ? { ...element, [key]: value } : element,
-        ),
-      }));
-      return;
-    }
-    setTrussModel((current) => updateTruss2dElement(current, selectedElement, key, value));
-  };
-
-  const assignSelectedElementMaterial = (materialId: string) => {
-    if (selectedElement === null) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalTruss2d) {
-      setThermalTrussModel((current) => ({
-        ...current,
-        elements: current.elements.map((element, index) =>
-          index === selectedElement ? { ...element, material_id: materialId } : element,
-        ),
-      }));
-      return;
-    }
-    setTrussModel((current) => assignTruss2dElementMaterial(current, selectedElement, materialId));
-  };
-
-  const updateSelectedTruss3dNode = (
-    key: keyof Truss3dJobInput["nodes"][number],
-    value: number | boolean,
-  ) => {
-    if (selectedNode === null) return;
-    recordHistory(t.editNodeAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalTruss3d) {
-      setThermalTruss3dModel((current) => ({
-        ...current,
-        nodes: current.nodes.map((node, index) =>
-          index === selectedNode ? { ...node, [key]: value } : node,
-        ),
-      }));
-      return;
-    }
-    setTruss3dModel((current) => ({
-      ...current,
-      nodes: current.nodes.map((node, index) =>
-        index === selectedNode ? { ...node, [key]: value } : node,
-      ),
-    }));
-  };
-
-  const updateSelectedTruss3dNodes = (
-    key: keyof Truss3dJobInput["nodes"][number],
-    value: number | boolean,
-  ) => {
-    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
-    if (targetIndices.length === 0) return;
-    recordHistory(t.editNodeAction);
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) => updateTruss3dSelectedNodes(current, selectedTruss3dNodes, selectedNode, key, value));
-  };
-
-  const nudgeSelectedTruss3dNodes = (axis: "x" | "y" | "z", delta: number) => {
-    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
-    if (targetIndices.length === 0) return;
-    recordHistory(t.editNodeAction);
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) => nudgeTruss3dSelectedNodes(current, selectedTruss3dNodes, selectedNode, axis, delta, round));
-  };
-
-  const applySelectedTruss3dLoads = (mode: "apply" | "clear") => {
-    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
-    if (targetIndices.length === 0) return;
-    recordHistory(t.editNodeAction);
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) =>
-      applyTruss3dSelectedLoads(current, selectedTruss3dNodes, selectedNode, mode, {
-        x: truss3dBatchLoadX,
-        y: truss3dBatchLoadY,
-        z: truss3dBatchLoadZ,
-      }),
-    );
-  };
-
-  const cloneSelectedTruss3dNodes = (mirrorAxis: "x" | "y" | "z" | null = null) => {
-    const targetIndices = selectedTruss3dNodes.length > 0 ? selectedTruss3dNodes : selectedNode !== null ? [selectedNode] : [];
-    if (targetIndices.length === 0) return;
-    recordHistory(t.addNodeAction);
-    resetActiveResult(setResult, setJob);
-
-    const nextState = cloneTruss3dSelectedNodes(truss3dModel, selectedTruss3dNodes, selectedNode, round, mirrorAxis);
-    setTruss3dModel(nextState.model);
-
-    if (nextState.nextSelection.length > 0) {
-      setSelectedTruss3dNodes(nextState.nextSelection);
-      setSelectedNode(nextState.nextSelection[0] ?? null);
-      setMemberDraftNodes([]);
-      setSelectedElement(null);
-    }
-  };
-
-  const updateSelectedTruss3dElement = (
-    key: keyof Truss3dJobInput["elements"][number],
-    value: number,
-  ) => {
-    if (selectedElement === null) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalTruss3d) {
-      setThermalTruss3dModel((current) => ({
-        ...current,
-        elements: current.elements.map((element, index) =>
-          index === selectedElement ? { ...element, [key]: value } : element,
-        ),
-      }));
-      return;
-    }
-    setTruss3dModel((current) => updateTruss3dElement(current, selectedElement, key, value));
-  };
-
-  const assignSelectedTruss3dElementMaterial = (materialId: string) => {
-    if (selectedElement === null) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalTruss3d) {
-      setThermalTruss3dModel((current) => ({
-        ...current,
-        elements: current.elements.map((element, index) =>
-          index === selectedElement ? { ...element, material_id: materialId } : element,
-        ),
-      }));
-      return;
-    }
-    setTruss3dModel((current) => assignTruss3dElementMaterial(current, selectedElement, materialId));
-  };
-
-  const updateSelectedPlaneNode = (
-    key: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta" | "fix_temperature" | "temperature" | "heat_load",
-    value: number | boolean,
-  ) => {
-    if (selectedNode === null) return;
-    recordHistory(t.editNodeAction);
-    resetActiveResult(setResult, setJob);
-    if (isHeatPlane) {
-      setHeatPlaneModel((current) => updatePlaneNode(current, selectedNode, key, value) as HeatPlaneStudyJobInput);
-      return;
-    }
-    setPlaneModel((current) => updatePlaneNode(current, selectedNode, key, value));
-  };
-
-  const updateSelectedPlaneElement = (
-    key: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity",
-    value: number,
-  ) => {
-    if (selectedElement === null) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isHeatPlane) {
-      setHeatPlaneModel((current) => updatePlaneElement(current, selectedElement, key, value) as HeatPlaneStudyJobInput);
-      return;
-    }
-    setPlaneModel((current) => updatePlaneElement(current, selectedElement, key, value));
-  };
-
-  const assignSelectedPlaneElementMaterial = (materialId: string) => {
-    if (selectedElement === null) return;
-    if (isHeatPlane) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    setPlaneModel((current) => assignPlaneElementMaterial(current, selectedElement, materialId));
-  };
+  const {
+    addNode,
+    applySelectedTruss3dLoads,
+    assignSelectedElementMaterial,
+    assignSelectedFrameElementMaterial: assignSelectedFrameElementMaterialBase,
+    assignSelectedPlaneElementMaterial,
+    assignSelectedTruss3dElementMaterial,
+    cloneSelectedTruss3dNodes,
+    deleteSelectedElement,
+    deleteSelectedNode,
+    deleteSelectedTruss3dElement,
+    deleteSelectedTruss3dNode,
+    nudgeSelectedTruss3dNodes,
+    toggleMemberFromDraft,
+    updateSelectedElement,
+    updateSelectedFrameElement: updateSelectedFrameElementBase,
+    updateSelectedFrameNode: updateSelectedFrameNodeBase,
+    updateSelectedNode,
+    updateSelectedPlaneElement,
+    updateSelectedPlaneNode,
+    updateSelectedTruss3dElement,
+    updateSelectedTruss3dNode,
+    updateSelectedTruss3dNodes,
+  } = createWorkbenchStructureEditController({
+    activeFrameLikeModel,
+    isFrameLike,
+    isHeatPlane,
+    isThermalFrame,
+    isThermalTruss2d,
+    isThermalTruss3d,
+    labels: {
+      addNodeAction: t.addNodeAction,
+      branchCreated: t.branchCreated,
+      deleteMemberAction: t.deleteMemberAction,
+      deleteNodeAction: t.deleteNodeAction,
+      editMemberAction: t.editMemberAction,
+      editNodeAction: t.editNodeAction,
+      memberCreated: t.memberCreated,
+      memberDeleted: t.memberDeleted,
+      memberRemoved: t.memberRemoved,
+      nodeCreated: t.nodeCreated,
+      nodeDeleted: t.nodeDeleted,
+      selectTwoNodes: t.selectTwoNodes,
+      spaceMemberDeleted: t.spaceMemberDeleted,
+      spaceNodeDeleted: t.spaceNodeDeleted,
+      toggleMemberAction: t.toggleMemberAction,
+    },
+    memberDraftNodes,
+    parametric,
+    recordHistory,
+    resetResults: () => resetActiveResult(setResult, setJob),
+    roundValue: round,
+    selectedElement,
+    selectedNode,
+    selectedTruss3dNodes,
+    setFrameModel,
+    setHeatPlaneModel,
+    setMemberDraftNodes,
+    setMessage,
+    setPlaneModel,
+    setSelectedElement,
+    setSelectedNode,
+    setSelectedTruss3dNodes,
+    setSidebarSection,
+    setStudyKind,
+    setThermalFrameModel,
+    setThermalTruss3dModel,
+    setThermalTrussModel,
+    setTruss3dModel,
+    setTrussModel,
+    studyKind,
+    truss3dBatchLoadX,
+    truss3dBatchLoadY,
+    truss3dBatchLoadZ,
+    truss3dModel,
+    trussModel,
+  });
+  const {
+    addTruss3dNode,
+    handleTruss3dNodePick,
+    handleTruss3dNodesBoxSelect,
+    handleTrussPointerMove,
+    startTrussNodeDrag,
+    stopDraggingNode,
+    toggleDraftNode,
+    toggleTruss3dLinkMode,
+    toggleTruss3dMemberFromDraft,
+    updateTruss3dNodePosition,
+  } = createWorkbenchTrussGestureController({
+    studyKind,
+    isFrameLike,
+    isBeam,
+    isTorsion,
+    isHeatBar,
+    isThermal,
+    isThermalBar,
+    truss3dLinkMode,
+    truss3dModel,
+    trussBounds,
+    roundValue: round,
+    selectedNode,
+    selectedTruss3dNodes,
+    memberDraftNodes,
+    draggingNode,
+    dragHistoryCapturedRef,
+    dragFrameRef,
+    pendingDragPointRef,
+    setStudyKind,
+    setSidebarSection,
+    setSelectedNode,
+    setSelectedTruss3dNodes,
+    setSelectedElement,
+    setMemberDraftNodes,
+    setMessage,
+    setTruss3dLinkMode,
+    setDraggingNode,
+    setTruss3dModel,
+    setTrussModel,
+    setFrameModel,
+    setThermalFrameModel,
+    resetResults: () => resetActiveResult(setResult, setJob),
+    recordHistory,
+    labels: {
+      addNodeAction: t.addNodeAction,
+      branchCreated: t.spaceBranchCreated,
+      spaceNodeCreated: t.spaceNodeCreated,
+      linkModeEnabled: t.linkModeEnabled,
+      linkModeDisabled: t.linkModeDisabled,
+      toggleMemberAction: t.toggleMemberAction,
+      memberRemoved: t.memberRemoved,
+      linkModeCompleted: t.linkModeCompleted,
+      selectTwoNodes: t.selectTwoNodes,
+      dragNodeAction: t.dragNodeAction,
+    },
+  });
 
   const updateSelectedFrameNode = (
     key: keyof Frame2dJobInput["nodes"][number] | keyof ThermalFrame2dJobInput["nodes"][number],
@@ -4712,17 +3784,7 @@ export function Workbench() {
       return;
     }
 
-    if (isThermalFrame) {
-      setThermalFrameModel((current) => ({
-        ...current,
-        nodes: current.nodes.map((node, index) =>
-          index === selectedNode ? { ...node, [key]: value } : node,
-        ),
-      }));
-      return;
-    }
-
-    setFrameModel((current) => updateFrame2dNode(current, selectedNode, key as keyof Frame2dJobInput["nodes"][number], value));
+    updateSelectedFrameNodeBase(key, value);
   };
 
   const updateSelectedFrameElement = (
@@ -4779,306 +3841,12 @@ export function Workbench() {
       return;
     }
 
-    if (isThermalFrame) {
-      setThermalFrameModel((current) => ({
-        ...current,
-        elements: current.elements.map((element, index) =>
-          index === selectedElement ? { ...element, [key]: value } : element,
-        ),
-      }));
-      return;
-    }
-
-    setFrameModel((current) =>
-      updateFrame2dElement(current, selectedElement, key as keyof Frame2dJobInput["elements"][number], value),
-    );
+    updateSelectedFrameElementBase(key, value);
   };
 
   const assignSelectedFrameElementMaterial = (materialId: string) => {
-    if (selectedElement === null) return;
-    if (isTorsion) return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isThermalFrame) {
-      setThermalFrameModel((current) => ({
-        ...current,
-        elements: current.elements.map((element, index) =>
-          index === selectedElement ? { ...element, material_id: materialId } : element,
-        ),
-      }));
-      return;
-    }
-    setFrameModel((current) => assignFrame2dElementMaterial(current, selectedElement, materialId));
-  };
-
-  const addMaterialToCurrentModel = () => {
-    if (studyKind === "axial_bar_1d") return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-
-    if (studyKind === "truss_2d") {
-      setTrussModel((current) => addPresetMaterialToTrussModel(current, activeMaterial));
-      return;
-    }
-
-    if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => addPresetMaterialToTruss3dModel(current, activeMaterial));
-      return;
-    }
-
-    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
-      if (studyKind === "thermal_frame_2d") {
-        setThermalFrameModel((current) => addPresetMaterialToFrameModel(current, activeMaterial) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => addPresetMaterialToFrameModel(current, activeMaterial));
-      }
-      return;
-    }
-
-    setPlaneModel((current) => addPresetMaterialToPlaneModel(current, activeMaterial));
-  };
-
-  const addCustomMaterialToCurrentModel = () => {
-    if (studyKind === "axial_bar_1d") return;
-    recordHistory(t.editMaterial);
-    resetActiveResult(setResult, setJob);
-
-    if (studyKind === "truss_2d") {
-      setTrussModel((current) => addCustomMaterialToTrussModel(current));
-      return;
-    }
-
-    if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => addCustomMaterialToTruss3dModel(current));
-      return;
-    }
-
-    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
-      if (studyKind === "thermal_frame_2d") {
-        setThermalFrameModel((current) => addCustomMaterialToFrameModel(current) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => addCustomMaterialToFrameModel(current));
-      }
-      return;
-    }
-
-    setPlaneModel((current) => addCustomMaterialToPlaneModel(current));
-  };
-
-  const applyMaterialToCurrentModel = (materialId: string, mode: "selected" | "all") => {
-    if (studyKind === "axial_bar_1d") return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-
-    if (studyKind === "truss_2d") {
-      setTrussModel((current) => applyMaterialToTrussModel(current, materialId, mode, selectedElement));
-      return;
-    }
-
-    if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => applyMaterialToTruss3dModel(current, materialId, mode, selectedElement));
-      return;
-    }
-
-    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
-      if (studyKind === "thermal_frame_2d") {
-        setThermalFrameModel((current) => applyMaterialToFrameModel(current, materialId, mode, selectedElement) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => applyMaterialToFrameModel(current, materialId, mode, selectedElement));
-      }
-      return;
-    }
-
-    setPlaneModel((current) => applyMaterialToPlaneModel(current, materialId, mode, selectedElement));
-  };
-
-  const toggleMaterialVisibility = (materialId: string) => {
-    setHiddenMaterials((current) => {
-      const hidden = current[studyKind];
-      const nextHidden = hidden.includes(materialId)
-        ? hidden.filter((entry) => entry !== materialId)
-        : [...hidden, materialId];
-      return { ...current, [studyKind]: nextHidden };
-    });
-  };
-
-  const importMaterials = async (file: File | undefined) => {
-    if (!file || studyKind === "axial_bar_1d") return;
-
-    try {
-      const imported = parseMaterialLibrary(await file.text(), file.name);
-      recordHistory(t.editMaterial);
-      resetActiveResult(setResult, setJob);
-
-      if (studyKind === "truss_2d") {
-        setTrussModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
-      } else if (studyKind === "truss_3d") {
-        setTruss3dModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
-      } else if (studyKind === "frame_2d") {
-        setFrameModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
-      } else if (studyKind === "thermal_frame_2d") {
-        setThermalFrameModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
-      } else {
-        setPlaneModel((current) => ({ ...current, materials: mergeImportedMaterials(current.materials, imported) }));
-      }
-
-      setMessage(language === "zh" ? "外部材料库已导入。" : language === "ja" ? "外部材料ライブラリを取り込みました。" : "Imported external material library.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
-  };
-
-  const updateCurrentMaterial = (
-    materialId: string,
-    field: "name" | "youngs_modulus" | "poisson_ratio",
-    value: string | number,
-  ) => {
-    if (studyKind === "axial_bar_1d") return;
-    recordHistory(t.editMemberAction);
-    resetActiveResult(setResult, setJob);
-
-    if (studyKind === "truss_2d") {
-      setTrussModel((current) => updateMaterialInTrussModel(current, materialId, field, value));
-      return;
-    }
-
-    if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => updateMaterialInTruss3dModel(current, materialId, field, value));
-      return;
-    }
-
-    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
-      if (studyKind === "thermal_frame_2d") {
-        setThermalFrameModel((current) => updateMaterialInFrameModel(current, materialId, field, value) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => updateMaterialInFrameModel(current, materialId, field, value));
-      }
-      return;
-    }
-
-    setPlaneModel((current) => updateMaterialInPlaneModel(current, materialId, field, value));
-  };
-
-  const deleteCurrentMaterial = (materialId: string) => {
-    if (studyKind === "axial_bar_1d") return;
-    recordHistory(t.deleteMemberAction);
-    resetActiveResult(setResult, setJob);
-
-    if (studyKind === "truss_2d") {
-      setTrussModel((current) => deleteMaterialFromTrussModel(current, materialId));
-      return;
-    }
-
-    if (studyKind === "truss_3d") {
-      setTruss3dModel((current) => deleteMaterialFromTruss3dModel(current, materialId));
-      return;
-    }
-
-    if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
-      if (studyKind === "thermal_frame_2d") {
-        setThermalFrameModel((current) => deleteMaterialFromFrameModel(current, materialId) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => deleteMaterialFromFrameModel(current, materialId));
-      }
-      return;
-    }
-
-    setPlaneModel((current) => deleteMaterialFromPlaneModel(current, materialId));
-  };
-
-  const addNode = (connectToSelected: boolean) => {
-    if (isFrameLike) {
-      recordHistory(t.addNodeAction);
-      setStudyKind(studyKind);
-      setSidebarSection("model");
-      resetActiveResult(setResult, setJob);
-      const nextState = addFrame2dNode(activeFrameLikeModel, connectToSelected, selectedNode, round);
-      if (isThermalFrame) {
-        setThermalFrameModel(nextState.model as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel(nextState.model);
-      }
-      setSelectedNode(nextState.nextSelectedNode);
-      setSelectedElement(nextState.nextSelectedElement);
-      setMemberDraftNodes([]);
-      setMessage(nextState.createdBranch ? t.branchCreated : t.nodeCreated);
-      return;
-    }
-    recordHistory(t.addNodeAction);
-    setStudyKind("truss_2d");
-    setSidebarSection("model");
-    resetActiveResult(setResult, setJob);
-    const nextState = addTruss2dNode(trussModel, connectToSelected, selectedNode, parametric, round);
-    setTrussModel(nextState.model);
-    setSelectedNode(nextState.nextSelectedNode);
-    setSelectedElement(nextState.nextSelectedElement);
-    setMemberDraftNodes([]);
-    setMessage(nextState.createdBranch ? t.branchCreated : t.nodeCreated);
-  };
-
-  const addTruss3dNode = (connectToSelected: boolean) => {
-    recordHistory(t.addNodeAction);
-    setStudyKind("truss_3d");
-    setSidebarSection("model");
-    resetActiveResult(setResult, setJob);
-    const nextState = addTruss3dNodeCommand(truss3dModel, connectToSelected, selectedNode, round);
-    setTruss3dModel(nextState.model);
-    setSelectedNode(nextState.nextSelectedNode);
-    setSelectedTruss3dNodes([nextState.nextSelectedNode]);
-    setSelectedElement(nextState.nextSelectedElement);
-    setMemberDraftNodes([]);
-    setMessage(nextState.createdBranch ? t.spaceBranchCreated : t.spaceNodeCreated);
-  };
-
-  const deleteSelectedNode = () => {
-    if (selectedNode === null) return;
-    recordHistory(t.deleteNodeAction);
-    resetActiveResult(setResult, setJob);
-    if (isFrameLike) {
-      if (isThermalFrame) {
-        setThermalFrameModel((current) => deleteFrame2dNode(current, selectedNode) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => deleteFrame2dNode(current, selectedNode));
-      }
-      setSelectedNode(null);
-      setSelectedTruss3dNodes([]);
-      setSelectedElement(null);
-      setMemberDraftNodes([]);
-      setMessage(t.nodeDeleted);
-      return;
-    }
-    setTrussModel((current) => deleteTruss2dNode(current, selectedNode));
-    setSelectedNode(null);
-    setSelectedTruss3dNodes([]);
-    setSelectedElement(null);
-    setMemberDraftNodes([]);
-    setMessage(t.nodeDeleted);
-  };
-
-  const deleteSelectedTruss3dNode = () => {
-    if (selectedNode === null) return;
-    recordHistory(t.deleteNodeAction);
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) => deleteTruss3dNodeCommand(current, selectedNode));
-    setSelectedNode(null);
-    setSelectedElement(null);
-    setMemberDraftNodes([]);
-    setMessage(t.spaceNodeDeleted);
-  };
-
-  const toggleDraftNode = (index: number) => {
-    setSelectedNode(index);
-    setSelectedElement(null);
-    setMemberDraftNodes((current) => toggleDraftSelection(current, index));
-  };
-
-  const toggleTruss3dLinkMode = () => {
-    setTruss3dLinkMode((current) => {
-      const next = !current;
-      setMemberDraftNodes([]);
-      setMessage(next ? t.linkModeEnabled : t.linkModeDisabled);
-      return next;
-    });
+    if (selectedElement === null || isTorsion) return;
+    assignSelectedFrameElementMaterialBase(materialId);
   };
 
   const toggleImmersiveViewport = async () => {
@@ -5098,180 +3866,6 @@ export function Workbench() {
     }
   };
 
-  const completeTruss3dLink = (firstNode: number, secondNode: number) => {
-    if (firstNode === secondNode) {
-      setSelectedNode(firstNode);
-      setSelectedTruss3dNodes([firstNode]);
-      setMemberDraftNodes([firstNode]);
-      return;
-    }
-
-    recordHistory(t.toggleMemberAction);
-
-    resetActiveResult(setResult, setJob);
-    const nextState = completeTruss3dLinkCommand(truss3dModel, firstNode, secondNode);
-    if (nextState.repeatedNode) return;
-    setTruss3dModel(nextState.model);
-    setSelectedElement(nextState.removedExisting ? null : nextState.nextSelectedElement);
-    setSelectedNode(secondNode);
-    setSelectedTruss3dNodes([secondNode]);
-    setMemberDraftNodes([secondNode]);
-    setMessage(nextState.removedExisting ? t.memberRemoved : t.linkModeCompleted);
-  };
-
-  const handleTruss3dNodePick = (index: number) => {
-    if (!truss3dLinkMode) {
-      setSelectedTruss3dNodes([index]);
-      toggleDraftNode(index);
-      return;
-    }
-
-    setSelectedElement(null);
-    setSelectedNode(index);
-    setSelectedTruss3dNodes([index]);
-
-    if (memberDraftNodes.length === 1) {
-      completeTruss3dLink(memberDraftNodes[0], index);
-      return;
-    }
-
-    setMemberDraftNodes([index]);
-  };
-
-  const handleTruss3dNodesBoxSelect = (indices: number[], append: boolean) => {
-    const nextSelection = merge3dBoxSelection(selectedTruss3dNodes, indices, append);
-    setSelectedTruss3dNodes(nextSelection);
-    setSelectedElement(null);
-    setMemberDraftNodes([]);
-    setSelectedNode(nextSelection[0] ?? null);
-  };
-
-  const toggleMemberFromDraft = () => {
-    if (memberDraftNodes.length !== 2) {
-      setMessage(t.selectTwoNodes);
-      return;
-    }
-    recordHistory(t.toggleMemberAction);
-
-    resetActiveResult(setResult, setJob);
-    if (isFrameLike) {
-      const nextState = toggleFrame2dMember(activeFrameLikeModel, memberDraftNodes);
-      if (!nextState.valid) return;
-      if (isThermalFrame) {
-        setThermalFrameModel(nextState.model as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel(nextState.model);
-      }
-      setSelectedElement(nextState.removedExisting ? null : nextState.nextSelectedElement);
-      setSelectedTruss3dNodes([]);
-      setMemberDraftNodes([]);
-      setMessage(nextState.removedExisting ? t.memberRemoved : t.memberCreated);
-      return;
-    }
-    const nextState = toggleTruss2dMember(trussModel, memberDraftNodes, parametric);
-    if (!nextState.valid) return;
-    setTrussModel(nextState.model);
-    setSelectedElement(nextState.removedExisting ? null : nextState.nextSelectedElement);
-    setSelectedTruss3dNodes([]);
-    setMemberDraftNodes([]);
-    setMessage(nextState.removedExisting ? t.memberRemoved : t.memberCreated);
-  };
-
-  const toggleTruss3dMemberFromDraft = () => {
-    if (memberDraftNodes.length !== 2) {
-      setMessage(t.selectTwoNodes);
-      return;
-    }
-    const [nodeI, nodeJ] = memberDraftNodes;
-    completeTruss3dLink(nodeI, nodeJ);
-  };
-
-  const deleteSelectedElement = () => {
-    if (selectedElement === null) return;
-    recordHistory(t.deleteMemberAction);
-    resetActiveResult(setResult, setJob);
-    if (isFrameLike) {
-      if (isThermalFrame) {
-        setThermalFrameModel((current) => deleteFrame2dElement(current, selectedElement) as ThermalFrameStudyJobInput);
-      } else {
-        setFrameModel((current) => deleteFrame2dElement(current, selectedElement));
-      }
-      setSelectedElement(null);
-      setMessage(t.memberDeleted);
-      return;
-    }
-    setTrussModel((current) => deleteTruss2dElement(current, selectedElement));
-    setSelectedElement(null);
-    setMessage(t.memberDeleted);
-  };
-
-  const deleteSelectedTruss3dElement = () => {
-    if (selectedElement === null) return;
-    recordHistory(t.deleteMemberAction);
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) => deleteTruss3dElementCommand(current, selectedElement));
-    setSelectedElement(null);
-    setSelectedTruss3dNodes([]);
-    setMessage(t.spaceMemberDeleted);
-  };
-
-  const handleTrussPointerMove = (event: ReactPointerEvent<SVGSVGElement>) => {
-    if (draggingNode === null || (studyKind !== "truss_2d" && studyKind !== "frame_2d" && studyKind !== "thermal_frame_2d")) return;
-    if (!dragHistoryCapturedRef.current) {
-      recordHistory(t.dragNodeAction);
-      dragHistoryCapturedRef.current = true;
-    }
-    const rect = event.currentTarget.getBoundingClientRect();
-    const position = fromSvgPoint(event.clientX, event.clientY, rect, trussBounds, round);
-    pendingDragPointRef.current = position;
-
-    if (dragFrameRef.current !== null) {
-      return;
-    }
-
-    dragFrameRef.current = window.requestAnimationFrame(() => {
-      dragFrameRef.current = null;
-      const nextPoint = pendingDragPointRef.current;
-      if (!nextPoint) return;
-
-      resetActiveResult(setResult, setJob);
-      if (studyKind === "frame_2d" || studyKind === "thermal_frame_2d") {
-        if (studyKind === "thermal_frame_2d") {
-          setThermalFrameModel((current) =>
-            updateFrame2dNode(updateFrame2dNode(current, draggingNode, "x", nextPoint.x), draggingNode, "y", nextPoint.y) as ThermalFrameStudyJobInput,
-          );
-        } else {
-          setFrameModel((current) =>
-            updateFrame2dNode(updateFrame2dNode(current, draggingNode, "x", nextPoint.x), draggingNode, "y", nextPoint.y),
-          );
-        }
-        return;
-      }
-
-      setTrussModel((current) => ({
-        ...current,
-        nodes: current.nodes.map((node, index) =>
-          index === draggingNode ? { ...node, x: nextPoint.x, y: nextPoint.y } : node,
-        ),
-      }));
-    });
-  };
-
-  const stopDraggingNode = () => {
-    setDraggingNode(null);
-    dragHistoryCapturedRef.current = false;
-    pendingDragPointRef.current = null;
-    if (dragFrameRef.current !== null) {
-      window.cancelAnimationFrame(dragFrameRef.current);
-      dragFrameRef.current = null;
-    }
-  };
-
-  const updateTruss3dNodePosition = (index: number, position: { x: number; y: number; z: number }) => {
-    resetActiveResult(setResult, setJob);
-    setTruss3dModel((current) => updateTruss3dNodePositionCommand(current, index, position, round));
-  };
-
   const studyKindOptionGroups = buildStudyKindOptionGroups({
     kinds: t.kinds,
     domains: t.studyDomains,
@@ -5281,251 +3875,62 @@ export function Workbench() {
   const currentStudyFamily = classifyStudyKindFamily(studyKind);
   const currentStudyFamilyLabel = t.studyFamilies[currentStudyFamily];
   const currentStudyFamilyHint = t.familyHints[currentStudyFamily];
-  const joinThermalIntent = (...parts: Array<string | null | undefined | false>) => parts.filter(Boolean).join(" + ");
-  const countRestrainedFrameLikeNodes = (nodes: Array<{ fix_x?: boolean; fix_y?: boolean; fix_rz?: boolean }>) =>
-    nodes.reduce((sum, node) => sum + (node.fix_x || node.fix_y || node.fix_rz ? 1 : 0), 0);
-  const countRestrainedTruss2dNodes = (nodes: Array<{ fix_x: boolean; fix_y: boolean }>) =>
-    nodes.reduce((sum, node) => sum + (node.fix_x || node.fix_y ? 1 : 0), 0);
-  const countRestrainedTruss3dNodes = (nodes: Array<{ fix_x: boolean; fix_y: boolean; fix_z: boolean }>) =>
-    nodes.reduce((sum, node) => sum + (node.fix_x || node.fix_y || node.fix_z ? 1 : 0), 0);
-  const thermalPlaneHeatedNodeCount =
-    isThermalPlaneTriangle || isThermalPlaneQuad
-      ? activePlaneInputModel.nodes.reduce((sum, node) => {
-          const thermalNode = node as { temperature_delta?: number };
-          return sum + (typeof thermalNode.temperature_delta === "number" && Math.abs(thermalNode.temperature_delta) > 0 ? 1 : 0);
-        }, 0)
-      : 0;
-  const thermalPlaneRestrainedNodeCount =
-    isThermalPlaneTriangle || isThermalPlaneQuad
-      ? activePlaneInputModel.nodes.reduce((sum, node) => {
-          const supportNode = node as { fix_x?: boolean; fix_y?: boolean };
-          return sum + (supportNode.fix_x || supportNode.fix_y ? 1 : 0);
-        }, 0)
-      : 0;
-  const thermalIntentValue = isHeatBar
-    ? joinThermalIntent(t.conductionField, heatBarModel.nodes.some((node) => Math.abs(node.heat_load ?? 0) > 0) && t.heatSourceField)
-    : isHeatPlane
-      ? joinThermalIntent(
-          t.conductionField,
-          activePlaneInputModel.nodes.some((node) => "heat_load" in node && Math.abs(node.heat_load ?? 0) > 0) && t.heatSourceField,
-        )
-      : isThermalBar
-        ? joinThermalIntent(t.nodalTemperatureRise, t.thermalBarResponse)
-      : isThermalBeam
-        ? joinThermalIntent(t.memberTemperatureGradient, t.thermalBeamResponse)
-      : isThermalFrame
-        ? joinThermalIntent(
-            thermalFrameModel.nodes.some((node) => Math.abs(node.temperature_delta ?? 0) > 0) && t.nodalTemperatureRise,
-            thermalFrameModel.elements.some((element) => Math.abs(element.temperature_gradient_y ?? 0) > 0) && t.memberTemperatureGradient,
-            t.thermalFrameResponse,
-          )
-      : isThermalTruss2d
-        ? joinThermalIntent(t.nodalTemperatureRise, t.thermalTrussResponse)
-      : studyKind === "thermal_truss_3d"
-        ? joinThermalIntent(t.nodalTemperatureRise, t.thermalTrussResponse)
-      : isThermalPlaneTriangle || isThermalPlaneQuad
-        ? joinThermalIntent(t.nodalTemperatureRise, t.thermoelasticPlaneResponse)
-        : undefined;
-  const thermalBoundaryValue = isHeatBar
-    ? `${heatBarModel.nodes.filter((node) => node.fix_temperature).length} ${t.prescribedTemperatureNodes} · ${heatBarModel.nodes.filter((node) => Math.abs(node.heat_load ?? 0) > 0).length} ${t.sourceNodes}`
-    : isHeatPlane
-      ? `${activePlaneInputModel.nodes.reduce((sum, node) => sum + (("fix_temperature" in node && node.fix_temperature) ? 1 : 0), 0)} ${t.prescribedTemperatureNodes} · ${activePlaneInputModel.nodes.reduce((sum, node) => sum + (("heat_load" in node && Math.abs(node.heat_load ?? 0) > 0) ? 1 : 0), 0)} ${t.sourceNodes}`
-      : isThermalBar
-        ? `${thermalBarModel.nodes.filter((node) => Math.abs(node.temperature_delta) > 0).length} ${t.heatedNodes} · ${thermalBarModel.nodes.filter((node) => node.fix_x).length} ${t.restrainedSupports}`
-      : isThermalBeam
-        ? `${thermalBeamModel.elements.filter((element) => Math.abs(element.temperature_gradient_y ?? 0) > 0).length} ${t.gradientMembers} · ${countRestrainedFrameLikeNodes(thermalBeamModel.nodes)} ${t.restrainedSupports}`
-      : isThermalFrame
-        ? `${thermalFrameModel.nodes.filter((node) => Math.abs(node.temperature_delta ?? 0) > 0).length} ${t.heatedNodes} · ${thermalFrameModel.elements.filter((element) => Math.abs(element.temperature_gradient_y ?? 0) > 0).length} ${t.gradientMembers} · ${countRestrainedFrameLikeNodes(thermalFrameModel.nodes)} ${t.restrainedSupports}`
-      : isThermalTruss2d
-        ? `${thermalTrussModel.nodes.filter((node) => Math.abs(node.temperature_delta ?? 0) > 0).length} ${t.heatedNodes} · ${countRestrainedTruss2dNodes(thermalTrussModel.nodes)} ${t.restrainedSupports}`
-      : studyKind === "thermal_truss_3d"
-        ? `${thermalTruss3dModel.nodes.filter((node) => Math.abs(node.temperature_delta ?? 0) > 0).length} ${t.heatedNodes} · ${countRestrainedTruss3dNodes(thermalTruss3dModel.nodes)} ${t.restrainedSupports}`
-      : isThermalPlaneTriangle || isThermalPlaneQuad
-        ? `${thermalPlaneHeatedNodeCount} ${t.heatedNodes} · ${thermalPlaneRestrainedNodeCount} ${t.restrainedSupports}`
-        : undefined;
-  const studySummaryRows = buildStudySummaryRows({
-    labels: {
-      modelName: t.modelName,
-      material: t.material,
-      mesh: t.mesh,
-      load: t.load,
-      support: t.support,
-    },
-    loadedModelName,
-    materialLabel: isSpring || isHeatBar || isThermalBar || isTorsion ? "--" : localMaterialLabel(activeMaterial, language),
-    meshValue: isAxial
-      ? axialForm.elements
-      : isHeatBar
-        ? heatBarModel.elements.length
-      : isThermalBar
-        ? thermalBarModel.elements.length
-      : isThermalBeam
-        ? thermalBeamModel.elements.length
-      : isThermalTruss2d
-        ? thermalTrussModel.elements.length
-      : isSpring1d
-        ? springModel.elements.length
-      : isSpring2d
-        ? spring2dModel.elements.length
-      : isSpring3d
-        ? spring3dModel.elements.length
-      : isBeam
-        ? beamModel.elements.length
-      : isTorsion
-        ? torsionModel.elements.length
-      : isTruss
-        ? trussModel.elements.length
-        : isTruss3d
-          ? studyKind === "thermal_truss_3d"
-            ? thermalTruss3dModel.elements.length
-            : truss3dModel.elements.length
-          : studyKind === "frame_2d"
-            ? frameModel.elements.length
-          : activePlaneInputModel.elements.length,
-    loadValue: isAxial
-      ? `${fixed(axialForm.tipForce, 0)} N`
-      : isHeatBar
-        ? `${fixed(heatBarModel.nodes.reduce((sum, node) => sum + node.heat_load, 0), 0)} W · T ${fixed(heatBarModel.nodes.reduce((max, node) => Math.max(max, node.temperature), 0), 1)} °`
-      : isThermalBar
-        ? `${fixed(thermalBarModel.nodes.reduce((sum, node) => sum + node.load_x, 0), 0)} N · ΔT ${fixed(thermalBarModel.nodes.reduce((sum, node) => sum + Math.abs(node.temperature_delta), 0), 1)} °`
-      : isThermalBeam
-        ? `${fixed(thermalBeamModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N · ${fixed(thermalBeamModel.nodes.reduce((sum, node) => sum + node.moment_z, 0), 0)} N·m · q ${fixed(thermalBeamModel.elements.reduce((sum, element) => sum + Math.abs(element.distributed_load_y ?? 0), 0), 0)} N/m · ΔTy ${fixed(thermalBeamModel.elements.reduce((sum, element) => sum + Math.abs(element.temperature_gradient_y ?? 0), 0), 1)} °`
-      : isThermalTruss2d
-        ? `${fixed(thermalTrussModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y), 0), 0)} N · ΔT ${fixed(thermalTrussModel.nodes.reduce((sum, node) => sum + Math.abs(node.temperature_delta), 0), 1)} °`
-      : isSpring1d
-        ? `${fixed(springModel.nodes.reduce((sum, node) => sum + node.load_x, 0), 0)} N`
-      : isSpring2d
-        ? `${fixed(spring2dModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y), 0), 0)} N`
-      : isSpring3d
-        ? `${fixed(spring3dModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y, node.load_z), 0), 0)} N`
-      : isBeam
-        ? `${fixed(beamModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N · ${fixed(beamModel.nodes.reduce((sum, node) => sum + node.moment_z, 0), 0)} N·m · ${fixed(beamModel.elements.reduce((sum, element) => sum + Math.abs(element.distributed_load_y ?? 0), 0), 0)} N/m`
-      : isTorsion
-        ? `${fixed(torsionModel.nodes.reduce((sum, node) => sum + Math.abs(node.torque_z), 0), 0)} N·m`
-      : isTruss
-        ? `${fixed(trussModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N`
-      : isTruss3d
-          ? studyKind === "thermal_truss_3d"
-            ? `${fixed(thermalTruss3dModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y, node.load_z), 0), 0)} N · ΔT ${fixed(thermalTruss3dModel.nodes.reduce((sum, node) => sum + Math.abs(node.temperature_delta), 0), 1)} °`
-            : `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`
-          : studyKind === "frame_2d"
-            ? `${fixed(frameModel.nodes.reduce((sum, node) => sum + node.load_y, 0), 0)} N · ${fixed(frameModel.nodes.reduce((sum, node) => sum + node.moment_z, 0), 0)} N·m`
-          : isHeatPlane
-            ? `${fixed(activePlaneInputModel.nodes.reduce((sum, node) => sum + ("heat_load" in node ? (node.heat_load ?? 0) : 0), 0), 0)} W · T ${fixed(activePlaneInputModel.nodes.reduce((max, node) => Math.max(max, "temperature" in node ? (node.temperature ?? 0) : 0), 0), 1)} °`
-            : `${fixed((activePlaneInputModel.nodes as PlaneTriangle2dJobInput["nodes"]).reduce((sum, node) => sum + node.load_y, 0), 0)} N`,
-    supportValue: isAxial
-      ? "Node 0"
-      : isHeatBar
-        ? `${heatBarModel.nodes.filter((node) => node.fix_temperature).length} prescribed T`
-      : isThermalBar
-        ? "Restrained span"
-        : isThermalBeam
-          ? "Thermal cantilever"
-        : isThermalTruss2d
-          ? "Thermal truss anchors"
-        : isSpring1d
-          ? "Axial anchor"
-          : isSpring2d
-            ? "Planar anchors"
-            : isSpring3d
-              ? "Spatial anchors"
-              : isTruss3d
-                ? "Fixed tripod"
-                : isTorsion
-                  ? "Fixed shaft end"
-                  : isHeatPlane
-                    ? `${activePlaneInputModel.nodes.reduce((sum, node) => sum + (("fix_temperature" in node && node.fix_temperature) ? 1 : 0), 0)} prescribed T`
-                  : isFrameLike || isBeam
-                    ? "Moment-resisting base"
-                    : "Pinned base",
-  });
-
-  const studyControlsRows = buildStudyControlsRows({
-    labels: {
-      nodes: t.nodes,
-      trussElements: t.trussElements,
-      material: t.material,
-      sourceModel: t.sourceModel,
-      spatialTrussElements: t.spatialTrussElements,
-      load: t.load,
-      planeElements: t.planeElements,
-      frameElements: t.frameElements,
-      thickness: t.thickness,
-      thermalIntent: t.thermalIntent,
-      thermalBoundary: t.thermalBoundary,
-    },
-    studyKind,
-    loadedModelName,
-    materialLabel: localMaterialLabel(activeMaterial, language),
-    trussNodeCount: isFrameLike ? activeFrameLikeModel.nodes.length : trussModel.nodes.length,
-    trussElementCount: isFrameLike ? activeFrameLikeModel.elements.length : trussModel.elements.length,
-    truss3dNodeCount: isSpring3d ? spring3dModel.nodes.length : truss3dModel.nodes.length,
-    truss3dElementCount: isSpring3d ? spring3dModel.elements.length : truss3dModel.elements.length,
-    truss3dLoadValue: isSpring3d
-      ? `${fixed(spring3dModel.nodes.reduce((sum, node) => sum + Math.hypot(node.load_x, node.load_y, node.load_z), 0), 0)} N`
-      : `${fixed(truss3dModel.nodes.reduce((sum, node) => sum + node.load_z, 0), 0)} N`,
-    planeNodeCount:
-      studyKind === "frame_2d" || studyKind === "thermal_frame_2d"
-        ? activeFrameLikeModel.nodes.length
-        : studyKind === "beam_1d"
-          ? beamModel.nodes.length
-          : studyKind === "thermal_beam_1d"
-            ? thermalBeamModel.nodes.length
-          : studyKind === "torsion_1d"
-            ? torsionModel.nodes.length
-          : studyKind === "thermal_bar_1d"
-            ? thermalBarModel.nodes.length
-          : studyKind === "spring_1d"
-            ? springModel.nodes.length
-            : studyKind === "spring_2d"
-              ? spring2dModel.nodes.length
-              : studyKind === "spring_3d"
-                ? spring3dModel.nodes.length
-            : activePlaneInputModel.nodes.length,
-    planeElementCount:
-      studyKind === "frame_2d" || studyKind === "thermal_frame_2d"
-        ? activeFrameLikeModel.elements.length
-        : studyKind === "beam_1d"
-          ? beamModel.elements.length
-          : studyKind === "thermal_beam_1d"
-            ? thermalBeamModel.elements.length
-          : studyKind === "torsion_1d"
-            ? torsionModel.elements.length
-          : studyKind === "heat_bar_1d"
-            ? heatBarModel.elements.length
-          : studyKind === "thermal_bar_1d"
-            ? thermalBarModel.elements.length
-          : studyKind === "spring_1d"
-            ? springModel.elements.length
-            : studyKind === "spring_2d"
-              ? spring2dModel.elements.length
-              : studyKind === "spring_3d"
-                ? spring3dModel.elements.length
-            : activePlaneInputModel.elements.length,
-    planeThicknessValue:
-      studyKind === "frame_2d" ||
-      studyKind === "thermal_frame_2d" ||
-      studyKind === "beam_1d" ||
-      studyKind === "thermal_beam_1d" ||
-      studyKind === "torsion_1d" ||
-      studyKind === "heat_bar_1d" ||
-      studyKind === "thermal_bar_1d" ||
-      studyKind === "spring_1d" ||
-      studyKind === "spring_2d" ||
-      studyKind === "spring_3d"
-        ? "--"
-        : fixed(activePlaneInputModel.elements[0]?.thickness, 3),
-    thermalIntentValue,
-    thermalBoundaryValue,
-  });
-  const truss3dTreeRows = buildTruss3dTreeRows({
-    nodes: isSpring3d ? spring3dModel.nodes : truss3dModel.nodes,
-    elements: displayTruss3dElements,
-    selectedNode,
-    selectedTruss3dNodes,
-    memberDraftNodes,
-    fixed,
-  });
+  const { thermalIntentValue, thermalBoundaryValue, studySummaryRows, studyControlsRows, truss3dTreeRows } =
+    buildWorkbenchStudySidebarData({
+      t,
+      language,
+      studyKind,
+      loadedModelName,
+      activeMaterial,
+      localMaterialLabel,
+      fixed,
+      isAxial,
+      isSpring,
+      isSpring1d,
+      isSpring2d,
+      isSpring3d,
+      isBeam,
+      isTorsion,
+      isTruss,
+      isTruss3d,
+      isFrameLike,
+      isFrame,
+      isPlane,
+      isHeatBar,
+      isHeatPlane,
+      isHeatPlaneTriangle,
+      isHeatPlaneQuad,
+      isThermal,
+      isThermalBar,
+      isThermalBeam,
+      isThermalFrame,
+      isThermalTruss2d,
+      isThermalPlaneTriangle,
+      isThermalPlaneQuad,
+      axialForm,
+      heatBarModel,
+      heatPlaneModel,
+      thermalBarModel,
+      thermalBeamModel,
+      thermalFrameModel,
+      thermalTrussModel,
+      thermalTruss3dModel,
+      springModel,
+      spring2dModel,
+      spring3dModel,
+      beamModel,
+      torsionModel,
+      trussModel,
+      truss3dModel,
+      frameModel,
+      activePlaneInputModel,
+      activeFrameLikeModel,
+      displayTruss3dElements,
+      truss3dTreeNodes: isSpring3d ? spring3dModel.nodes : truss3dModel.nodes,
+      selectedNode,
+      selectedTruss3dNodes,
+      memberDraftNodes,
+    });
 
   const studyKindResetHandlers = useMemo(
     () =>
@@ -5587,6 +3992,46 @@ export function Workbench() {
     setModelToolsPage("study");
     setStudyTab(tab);
   };
+
+  const { assistantCards, assistantPromptPresets, requestLlmAssistantPlan } = useWorkbenchAssistantController({
+    t,
+    language,
+    studyKind,
+    frontendRuntimeMode,
+    selectedProjectId,
+    directMeshEndpointsCount: directMeshEndpoints.length,
+    hasHealth: Boolean(health),
+    jobIsActive,
+    isTruss,
+    isTruss3d,
+    immersiveViewport,
+    hasAnyResult,
+    trussDiagnostics,
+    openProjects: () => {
+      setSidebarSection("library");
+      setLibraryTab("projects");
+    },
+    openSystemConfig: () => {
+      setSidebarSection("system");
+      setSystemPanelTab("config");
+    },
+    refreshHealth: () => {
+      void refreshHealth();
+    },
+    cancelCurrentJob,
+    applyTrussSuggestion,
+    openSample,
+    openWorkspaceStudy,
+    runAnalysis,
+    downloadResultCsv,
+    toggleImmersiveViewport: () => {
+      void toggleImmersiveViewport();
+    },
+    assistantApiBaseUrl,
+    assistantApiKey,
+    assistantModel,
+    getScriptSnapshot,
+  });
 
   const studyControlsContent = isAxial ? (
     <div className="form-grid compact">
@@ -5953,38 +4398,15 @@ export function Workbench() {
 
   return (
     <div className="workbench-shell">
-      <aside className="app-rail panel">
-        <div className="rail-brand">
-          <img alt={`${t.shortTitle} mark`} className="rail-brand__mark" src="/kyuubiki.png" />
-          <strong>{t.shortTitle}</strong>
-          <span>tamamono 1.0.0</span>
-        </div>
-        <div className="rail-nav">
-          {railItems.map((item) => (
-            <button
-              key={item.key}
-              className={`rail-button${sidebarSection === item.key ? " rail-button--active" : ""}`}
-              onClick={() => handleSidebarSectionChange(item.key)}
-              type="button"
-            >
-              <span>{item.symbol}</span>
-              <small>{item.label}</small>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      <aside className="workspace-sidebar panel">
-        <div className="sidebar-header">
-          <div className="sidebar-header__brand">
-            <img alt={`${t.shortTitle} mark`} className="sidebar-header__mark" src="/kyuubiki.png" />
-            <p className="eyebrow">{t.roleLabel}</p>
-          </div>
-          <h1>{t.title}</h1>
-          <p>{t.subtitle}</p>
-        </div>
-
-        {sidebarSection === "study" ? (
+      <WorkbenchSidebarMount
+        shortTitle={t.shortTitle}
+        roleLabel={t.roleLabel}
+        title={t.title}
+        subtitle={t.subtitle}
+        railItems={railItems}
+        sidebarSection={sidebarSection}
+        onSidebarSectionChange={handleSidebarSectionChange}
+        studySection={
           <WorkbenchStudySidebar
             studyTab={studyTab}
             onStudyTabChange={handleStudyTabChange}
@@ -6012,9 +4434,8 @@ export function Workbench() {
             runningLabel={t.running}
             onRun={runAnalysis}
           />
-        ) : null}
-
-        {sidebarSection === "model" ? (
+        }
+        modelSection={
           <WorkbenchModelSidebar
             modelTab={modelTab}
             onModelTabChange={handleModelTabChange}
@@ -6039,9 +4460,8 @@ export function Workbench() {
             generateContent={modelGenerateContent}
             treeContent={modelTreeContent}
           />
-        ) : null}
-
-        {sidebarSection === "workflow" ? (
+        }
+        workflowSection={
           <WorkbenchWorkflowSidebar
             surfaceTab={workflowPanelTab}
             onSurfaceTabChange={handleWorkflowPanelTabChange}
@@ -6108,457 +4528,206 @@ export function Workbench() {
             onRunWorkflowCatalog={runWorkflowCatalogEntry}
             onOpenWorkflowRun={openHistoryJob}
           />
-        ) : null}
-
-        {sidebarSection === "library" ? (
-          <WorkbenchLibrarySidebar
+        }
+        librarySection={
+          <WorkbenchLibrarySectionMount
+            labels={t}
             libraryTab={libraryTab}
             onLibraryTabChange={handleLibraryTabChange}
-            labels={t}
             sampleRows={librarySampleRows}
             workflowCatalogEntries={workflowCatalog}
             workflowCatalogBusy={workflowCatalogBusy}
             projects={projects}
             selectedProjectId={selectedProjectId}
-            onSelectedProjectChange={(projectId) => {
-              setSelectedProjectId(projectId);
-              setSelectedModelId(null);
-            }}
+            setSelectedProjectId={setSelectedProjectId}
+            setSelectedModelId={setSelectedModelId}
             projectNameDraft={projectNameDraft}
-            onProjectNameDraftChange={setProjectNameDraft}
+            setProjectNameDraft={setProjectNameDraft}
             projectDescriptionDraft={projectDescriptionDraft}
-            onProjectDescriptionDraftChange={setProjectDescriptionDraft}
-            onCreateProject={createProjectRecord}
-            onUpdateProject={updateProjectRecord}
-            onDeleteProject={deleteProjectRecord}
-            onExportProjectJson={() => void downloadProjectBundleJson()}
-            onExportProjectZip={() => void downloadProjectBundleZip()}
-            onImportProjectBundle={(file) => void importProjectBundle(file)}
-            selectedProjectModelCount={selectedProjectModels.length}
+            setProjectDescriptionDraft={setProjectDescriptionDraft}
+            createProjectRecord={createProjectRecord}
+            updateProjectRecord={updateProjectRecord}
+            deleteProjectRecord={deleteProjectRecord}
+            downloadProjectBundleJson={downloadProjectBundleJson}
+            downloadProjectBundleZip={downloadProjectBundleZip}
+            importProjectBundle={importProjectBundle}
+            selectedProjectModels={selectedProjectModels}
             modelRows={libraryModelRows}
             selectedModelId={selectedModelId}
             loadedModelName={loadedModelName}
-            onLoadedModelNameChange={setLoadedModelName}
-            onSaveModel={saveModelVersion}
-            onDeleteSavedModel={deleteSavedModelRecord}
-            onOpenSavedModel={(modelId) => {
-              const model = selectedProjectModels.find((entry) => entry.model_id === modelId);
-              if (model) openSavedModel(model);
-            }}
+            setLoadedModelName={setLoadedModelName}
+            saveModelVersion={saveModelVersion}
+            deleteSavedModelRecord={deleteSavedModelRecord}
+            openSavedModel={openSavedModel}
             versionRows={libraryVersionRows}
-            modelVersionCount={modelVersions.length}
+            modelVersions={modelVersions}
             selectedVersionId={selectedVersionId}
-            onRenameSelectedVersion={renameSelectedVersion}
-            onDeleteSelectedVersion={deleteSelectedVersion}
-            onOpenSavedVersion={(versionId) => {
-              const version = modelVersions.find((entry) => entry.version_id === versionId);
-              if (version) openSavedVersion(version);
-            }}
+            renameSelectedVersion={renameSelectedVersion}
+            deleteSelectedVersion={deleteSelectedVersion}
+            openSavedVersion={openSavedVersion}
             jobRows={libraryJobRows}
             jobCount={jobHistory.length}
             activeJobId={job?.job_id ?? null}
-            onOpenHistoryJob={openHistoryJob}
-            onOpenSample={openSample}
-            onRefreshWorkflowCatalog={() => void refreshWorkflowCatalog()}
-            onRunWorkflowCatalog={runWorkflowCatalogEntry}
-            onRefresh={() => {
-              void refreshJobHistory();
-              void refreshProjects();
-            }}
-            onImportModel={importModel}
+            openHistoryJob={openHistoryJob}
+            openSample={openSample}
+            refreshWorkflowCatalog={refreshWorkflowCatalog}
+            runWorkflowCatalogEntry={runWorkflowCatalogEntry}
+            refreshJobHistory={refreshJobHistory}
+            refreshProjects={refreshProjects}
+            importModel={importModel}
           />
-        ) : null}
-
-        {sidebarSection === "system" ? (
-          <WorkbenchSystemSidebar
+        }
+        systemSection={
+          <WorkbenchSystemSidebarMount
+            t={t}
             systemPanelTab={systemPanelTab === "assistant" ? "config" : systemPanelTab}
-            onSystemPanelTabChange={handleSystemPanelTabChange}
-            settingsTabLabel={t.settings}
-            overviewPageLabel={t.overview}
-            configPageLabel={t.config}
-            scriptsPageLabel={t.scripts}
-            runtimeTabLabel={t.runtime}
-            dataTabLabel={t.data}
-            configOverviewHint={t.settingsConfigHint}
-            scriptsOverviewHint={t.settingsScriptsHint}
-            configContent={
-              <WorkbenchSystemConfigCard
-                title={t.settings}
-                status={health?.status === "ok" ? t.online : t.offline}
-                workspacePageLabel={t.workspace}
-                routingPageLabel={t.routing}
-                accessPageLabel={t.access}
-                packsPageLabel={t.packs}
-                themeLabel={t.theme}
-                languageLabel={t.language}
-                languagePacksTitle={t.languagePacksTitle}
-                languagePacksHint={t.languagePacksHint}
-                languagePacksEmptyLabel={t.languagePacksEmptyLabel}
-                languagePackNameLabel={t.languagePackName}
-                languagePackVersionLabel={t.languagePackVersion}
-                languagePackSourceImportedLabel={t.languagePackSourceImported}
-                languagePackSourceDownloadedLabel={t.languagePackSourceDownloaded}
-                languagePackDownloadTemplateLabel={t.languagePackDownloadTemplate}
-                languagePackExportInstalledLabel={t.languagePackExportInstalled}
-                languagePackImportLabel={t.languagePackImport}
-                languagePackRemoveLabel={t.languagePackRemove}
-                languagePackCatalogTitle={t.languagePackCatalogTitle}
-                languagePackCatalogHint={t.languagePackCatalogHint}
-                languagePackCatalogActionLabel={t.languagePackCatalogAction}
-                frontendModeLabel={t.frontendMode}
-                directMeshStrategyLabel={t.directMeshStrategy}
-                directMeshEndpointsLabel={t.directMeshEndpoints}
-                directMeshEndpointsHelp={t.directMeshEndpointsHelp}
-                controlPlaneTokenLabel={securityUi.controlPlaneToken}
-                controlPlaneTokenHelp={t.controlPlaneTokenHelp}
-                controlPlaneTokenPlaceholder={t.controlPlaneTokenPlaceholder}
-                clusterTokenLabel={securityUi.clusterToken}
-                clusterTokenHelp={t.clusterTokenHelp}
-                clusterTokenPlaceholder={t.clusterTokenPlaceholder}
-                directMeshTokenLabel={securityUi.directMeshToken}
-                directMeshTokenHelp={t.directMeshTokenHelp}
-                directMeshTokenPlaceholder={t.directMeshTokenPlaceholder}
-                shortcutHintsLabel={t.shortcutHints}
-                shortcutHintsHelp={t.shortcutHintsHelp}
-                immersiveGuardLabel={t.immersiveGuard}
-                immersiveGuardHelp={t.immersiveGuardHelp}
-                browserLimitsNote={t.browserLimitsNote}
-                exportDatabaseLabel={t.exportDatabase}
-                theme={theme}
-                language={language}
-                frontendRuntimeMode={frontendRuntimeMode}
-                directMeshSelectionMode={directMeshSelectionMode}
-                directMeshEndpointsText={directMeshEndpointsText}
-                controlPlaneApiToken={controlPlaneApiToken}
-                clusterApiToken={clusterApiToken}
-                directMeshApiToken={directMeshApiToken}
-                showShortcutHints={showShortcutHints}
-                immersiveGuardrails={immersiveGuardrails}
-                themeOptions={[
-                  { value: "linen", label: t.themes.linen },
-                  { value: "marine", label: t.themes.marine },
-                  { value: "graphite", label: t.themes.graphite },
-                ]}
-                languageOptions={[
-                  { value: "en", label: t.languages.en },
-                  { value: "zh", label: t.languages.zh },
-                  { value: "ja", label: t.languages.ja },
-                  { value: "es", label: t.languages.es },
-                ]}
-                installedLanguagePacks={languagePacks}
-                catalogLanguagePacks={languagePackCatalogRows}
-                frontendModeOptions={[
-                  { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
-                  { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
-                ]}
-                directMeshStrategyOptions={[
-                  { value: "healthiest", label: t.directMeshStrategies.healthiest },
-                  { value: "first_reachable", label: t.directMeshStrategies.first_reachable },
-                ]}
-                onThemeChange={setTheme}
-                onLanguageChange={handleLanguageChange}
-                onDownloadLanguagePackTemplate={handleDownloadLanguagePackTemplate}
-                onExportInstalledLanguagePack={handleExportInstalledLanguagePack}
-                onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
-                onRemoveLanguagePack={handleRemoveLanguagePack}
-                onFrontendRuntimeModeChange={setFrontendRuntimeMode}
-                onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
-                onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
-                onControlPlaneApiTokenChange={setControlPlaneApiToken}
-                onClusterApiTokenChange={setClusterApiToken}
-                onDirectMeshApiTokenChange={setDirectMeshApiToken}
-                onShowShortcutHintsChange={setShowShortcutHints}
-                onImmersiveGuardrailsChange={setImmersiveGuardrails}
-                onExportDatabase={() => void downloadDatabaseSnapshot()}
-              />
-            }
-            scriptsContent={
-              <WorkbenchScriptPanel
-                actionLog={scriptActionLog}
-                getSnapshot={getScriptSnapshot}
-                language={language}
-                recordingMode={scriptRecordingMode}
-                onInvokeAction={invokeScriptAction}
-                onToggleRecordingMode={() => setScriptRecordingMode((current) => !current)}
-                snapshot={scriptSnapshot}
-              />
-            }
-            runtimeContent={
-              <WorkbenchSystemRuntimePanel
-                overviewTabLabel={t.overview}
-                stackTabLabel={t.stack}
-                securityTabLabel={t.security}
-                agentsTabLabel={t.agents}
-                auditTabLabel={t.audit}
-                watchdogTabLabel={t.watchdog}
-                backendTitle={t.backend}
-                backendStatus={health?.status ?? t.offline}
-                backendRows={runtimeBackendRows}
-                protocolsTitle={t.protocols}
-                protocolsStatus={health?.protocol ? t.online : t.offline}
-                protocolRows={runtimeProtocolRows}
-                protocolMethods={runtimeProtocolMethods}
-                securityTitle={securityUi.security}
-                securityStatus={health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured}
-                securityRows={runtimeSecurityRows}
-                securityFooter={<p className="card-copy">{t.runtimeSecurityFooter}</p>}
-                auditTitle={t.securityAudit}
-                auditCountLabel={String(securityEventRecords.length)}
-                auditEmptyLabel={language === "zh" ? "当前筛选下还没有安全事件。" : language === "ja" ? "現在のフィルターに一致するセキュリティイベントはありません。" : "No security events match the current filters."}
-                auditSessionLabel={t.auditSessionLabel}
-                auditWindowLabel={t.auditWindow}
-                auditSourceLabel={t.auditSource}
-                auditRiskLabel={t.auditRisk}
-                auditStatusLabel={t.auditStatus}
-                auditActionLabel={t.auditAction}
-                auditSummaryTitle={t.auditSummaryTitle}
-                auditSummaryRows={runtimeAuditSummaryRows}
-                auditTrendTitle={t.auditTrendTitle}
-                auditTrendEmptyLabel={t.auditTrendEmptyLabel}
-                auditTrendBars={runtimeAuditTrendBars}
-                auditSourceStatusTitle={t.auditSourceStatusTitle}
-                auditSourceStatusFacets={runtimeAuditSourceStatusFacets}
-                auditStudyFacetTitle={t.auditStudyFacetTitle}
-                auditProjectFacetTitle={t.auditProjectFacetTitle}
-                auditModelVersionFacetTitle={t.auditModelVersionFacetTitle}
-                auditFacetEmptyLabel={t.auditFacetEmptyLabel}
-                auditStudyFacets={runtimeAuditStudyFacets}
-                auditProjectFacets={runtimeAuditProjectFacets}
-                auditModelVersionFacets={runtimeAuditModelVersionFacets}
-                auditRefreshLabel={t.auditRefreshLabel}
-                auditExportLabel={t.auditExportLabel}
-                auditExportCsvLabel={t.auditExportCsvLabel}
-                auditWindowValue={securityEventWindowFilter}
-                auditSourceValue={securityEventSourceFilter}
-                auditRiskValue={securityEventRiskFilter}
-                auditStatusValue={securityEventStatusFilter}
-                auditActionValue={securityEventActionFilter}
-                auditWindowOptions={[
-                  { value: "", label: t.auditWindowOptions.all },
-                  { value: "1h", label: t.auditWindowOptions.h1 },
-                  { value: "24h", label: t.auditWindowOptions.h24 },
-                  { value: "7d", label: t.auditWindowOptions.d7 },
-                  { value: "30d", label: t.auditWindowOptions.d30 },
-                ]}
-                auditSourceOptions={[
-                  { value: "", label: t.auditSourceOptions.all },
-                  { value: "assistant", label: t.auditSourceOptions.assistant },
-                  { value: "hub-assistant", label: t.auditSourceOptions.hubAssistant },
-                  { value: "script", label: t.auditSourceOptions.script },
-                ]}
-                auditRiskOptions={[
-                  { value: "", label: t.auditRiskOptions.all },
-                  { value: "low", label: t.auditRiskOptions.low },
-                  { value: "sensitive", label: t.auditRiskOptions.sensitive },
-                  { value: "high", label: t.auditRiskOptions.high },
-                  { value: "destructive", label: t.auditRiskOptions.destructive },
-                ]}
-                auditStatusOptions={[
-                  { value: "", label: t.auditStatusOptions.all },
-                  { value: "prompted", label: t.auditStatusOptions.prompted },
-                  { value: "confirmed", label: t.auditStatusOptions.confirmed },
-                  { value: "cancelled", label: t.auditStatusOptions.cancelled },
-                  { value: "completed", label: t.auditStatusOptions.completed },
-                  { value: "failed", label: t.auditStatusOptions.failed },
-                ]}
-                onAuditWindowChange={(value) => setSecurityEventWindowFilter(value as SecurityEventWindow)}
-                onAuditSourceChange={(value) =>
-                  setSecurityEventSourceFilter(
-                    value as WorkbenchSecurityAuditSource | "hub-assistant" | "",
-                  )}
-                onAuditRiskChange={(value) =>
-                  setSecurityEventRiskFilter(value as WorkbenchSecurityAuditRisk | "")
-                }
-                onAuditStatusChange={(value) =>
-                  setSecurityEventStatusFilter(value as "" | "allowed" | "blocked")
-                }
-                onAuditActionChange={setSecurityEventActionFilter}
-                onAuditRefresh={() => void refreshSecurityEvents()}
-                onAuditExport={() => void downloadSecurityEventExport()}
-                onAuditExportCsv={() => void downloadSecurityEventCsvExport()}
-                auditEntries={runtimeAuditEntries}
-                protocolAgentsTitle={t.protocolAgents}
-                protocolAgentsCountLabel={String(protocolAgents.length)}
-                protocolAgentsEmptyLabel={t.noProtocolAgents}
-                protocolAgents={protocolAgentCards}
-                watchdogTitle={t.watchdog}
-                watchdogStatus={health?.watchdog ? t.online : t.offline}
-                watchdogRows={runtimeWatchdogRows}
-              />
-            }
-            dataContent={
-              <WorkbenchDataAdminPanel
-                title={t.dataAdmin}
-                recordCountLabel={`${t.databaseRecordCount}: ${jobHistory.length + resultRecords.length}`}
-                overviewTabLabel={t.overview}
-                jobsTabLabel={t.adminJobs}
-                resultsTabLabel={t.adminResults}
-                browsePageLabel={t.adminBrowsePage}
-                editPageLabel={t.adminEditPage}
-                historyEmptyLabel={t.historyEmpty}
-                selectRecordLabel={t.selectRecord}
-                cancelJobLabel={t.cancelJob}
-                saveRecordLabel={t.saveRecord}
-                deleteRecordLabel={t.deleteRecord}
-                exportRecordLabel={t.exportRecord}
-                applyRecordContextLabel={t.applyRecordContext}
-                openLinkedProjectLabel={t.openLinkedProject}
-                openLinkedVersionLabel={t.openLinkedVersion}
-                filterProjectLabel={t.filterProject}
-                filterVersionLabel={t.filterVersion}
-                useCurrentProjectLabel={t.useCurrentProject}
-                useCurrentVersionLabel={t.useCurrentVersion}
-                clearFiltersLabel={t.clearFilters}
-                filterProjectValue={adminFilterProjectId}
-                onFilterProjectChange={handleAdminFilterProjectChange}
-                filterVersionValue={adminFilterModelVersionId}
-                onFilterVersionChange={handleAdminFilterModelVersionChange}
-                canUseCurrentProject={Boolean(selectedProjectId)}
-                canUseCurrentVersion={Boolean(selectedVersionId)}
-                onUseCurrentProject={useCurrentProjectAsAdminFilter}
-                onUseCurrentVersion={useCurrentVersionAsAdminFilter}
-                onClearFilters={clearAdminFilters}
-                adminMessageLabel={t.adminMessage}
-                adminProjectIdLabel={t.adminProjectId}
-                adminModelVersionIdLabel={t.adminModelVersionId}
-                adminCaseIdLabel={t.adminCaseId}
-                resultPayloadLabel={t.resultPayload}
-                activeTab={systemDataTab}
-                onTabChange={handleSystemDataTabChange}
-                jobRows={adminJobRows}
-                selectedAdminJobId={selectedAdminJobId}
-                onSelectAdminJob={handleSelectAdminJob}
-                selectedAdminJob={Boolean(selectedAdminJob)}
-                selectedAdminJobHasVersion={Boolean(selectedAdminJob?.model_version_id)}
-                selectedAdminJobHasProject={Boolean(selectedAdminJob?.project_id)}
-                selectedAdminJobHasContext={Boolean(selectedAdminJob?.project_id || selectedAdminJob?.model_version_id)}
-                canCancelSelectedJob={Boolean(
-                  selectedAdminJob &&
-                    selectedAdminJob.status !== "completed" &&
-                    selectedAdminJob.status !== "failed" &&
-                    selectedAdminJob.status !== "cancelled",
-                )}
-                onApplySelectedJobContext={applySelectedAdminJobContext}
-                onOpenSelectedJobProject={openSelectedAdminJobProject}
-                onOpenSelectedJobVersion={openSelectedAdminJobVersion}
-                onCancelSelectedJob={() => {
-                  if (!selectedAdminJob) return;
-                  if (selectedAdminJob.job_id === job?.job_id) {
-                    cancelCurrentJob();
-                    return;
-                  }
-                  void (async () => {
-                    try {
-                      await cancelJob(selectedAdminJob.job_id);
-                      setMessage(t.jobCancelled);
-                      await refreshJobHistory();
-                    } catch (error) {
-                      setMessage(error instanceof Error ? error.message : t.initialFailed);
-                    }
-                  })();
-                }}
-                adminJobMessage={adminJobMessage}
-                onAdminJobMessageChange={setAdminJobMessage}
-                adminJobProjectId={adminJobProjectId}
-                onAdminJobProjectIdChange={setAdminJobProjectId}
-                adminJobModelVersionId={adminJobModelVersionId}
-                onAdminJobModelVersionIdChange={setAdminJobModelVersionId}
-                adminJobCaseId={adminJobCaseId}
-                onAdminJobCaseIdChange={setAdminJobCaseId}
-                onSaveAdminJob={saveAdminJobRecord}
-                onDeleteAdminJob={deleteAdminJobRecord}
-                resultRows={adminResultRows}
-                selectedAdminResultJobId={selectedAdminResultJobId}
-                onSelectAdminResult={handleSelectAdminResult}
-                selectedAdminResult={Boolean(selectedAdminResult)}
-                selectedAdminResultHasProject={Boolean(
-                  jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.project_id,
-                )}
-                selectedAdminResultHasVersion={Boolean(
-                  jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.model_version_id,
-                )}
-                selectedAdminResultHasContext={Boolean(
-                  jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.project_id ||
-                    jobHistory.find((entry) => entry.job_id === selectedAdminResultJobId)?.model_version_id,
-                )}
-                adminResultDraft={adminResultDraft}
-                onAdminResultDraftChange={setAdminResultDraft}
-                onSaveAdminResult={saveAdminResultRecord}
-                onApplySelectedResultContext={applySelectedAdminResultContext}
-                onOpenSelectedResultProject={openSelectedAdminResultProject}
-                onOpenSelectedResultVersion={openSelectedAdminResultVersion}
-                onExportAdminResult={exportAdminResultRecord}
-                onDeleteAdminResult={deleteAdminResultRecord}
-              />
-            }
+            handleSystemPanelTabChange={handleSystemPanelTabChange}
+            healthStatus={health?.status}
+            healthProtocolOnline={Boolean(health?.protocol)}
+            healthWatchdogOnline={Boolean(health?.watchdog)}
+            healthSecurityApiTokenConfigured={Boolean(health?.security?.api_token_configured)}
+            runtimeBackendRows={runtimeBackendRows}
+            runtimeProtocolRows={runtimeProtocolRows}
+            runtimeProtocolMethods={runtimeProtocolMethods}
+            securityUi={securityUi}
+            runtimeSecurityRows={runtimeSecurityRows}
+            runtimeAuditSummaryRows={runtimeAuditSummaryRows}
+            runtimeAuditTrendBars={runtimeAuditTrendBars}
+            runtimeAuditSourceStatusFacets={runtimeAuditSourceStatusFacets}
+            runtimeAuditStudyFacets={runtimeAuditStudyFacets}
+            runtimeAuditProjectFacets={runtimeAuditProjectFacets}
+            runtimeAuditModelVersionFacets={runtimeAuditModelVersionFacets}
+            securityEventRecords={securityEventRecords}
+            securityEventWindowFilter={securityEventWindowFilter}
+            securityEventSourceFilter={securityEventSourceFilter}
+            securityEventRiskFilter={securityEventRiskFilter}
+            securityEventStatusFilter={securityEventStatusFilter}
+            securityEventActionFilter={securityEventActionFilter}
+            setSecurityEventWindowFilter={setSecurityEventWindowFilter}
+            setSecurityEventSourceFilter={setSecurityEventSourceFilter}
+            setSecurityEventRiskFilter={setSecurityEventRiskFilter}
+            setSecurityEventStatusFilter={setSecurityEventStatusFilter}
+            setSecurityEventActionFilter={setSecurityEventActionFilter}
+            refreshSecurityEvents={refreshSecurityEvents}
+            downloadSecurityEventExport={downloadSecurityEventExport}
+            downloadSecurityEventCsvExport={downloadSecurityEventCsvExport}
+            runtimeAuditEntries={runtimeAuditEntries}
+            protocolAgents={protocolAgents}
+            protocolAgentCards={protocolAgentCards}
+            runtimeWatchdogRows={runtimeWatchdogRows}
+            theme={theme}
+            language={language}
+            frontendRuntimeMode={frontendRuntimeMode}
+            directMeshSelectionMode={directMeshSelectionMode}
+            directMeshEndpointsText={directMeshEndpointsText}
+            controlPlaneApiToken={controlPlaneApiToken}
+            clusterApiToken={clusterApiToken}
+            directMeshApiToken={directMeshApiToken}
+            showShortcutHints={showShortcutHints}
+            immersiveGuardrails={immersiveGuardrails}
+            languagePacks={languagePacks}
+            languagePackCatalogRows={languagePackCatalogRows}
+            setTheme={setTheme}
+            handleLanguageChange={handleLanguageChange}
+            handleDownloadLanguagePackTemplate={handleDownloadLanguagePackTemplate}
+            handleExportInstalledLanguagePack={handleExportInstalledLanguagePack}
+            handleImportLanguagePack={handleImportLanguagePack}
+            handleRemoveLanguagePack={handleRemoveLanguagePack}
+            setFrontendRuntimeMode={setFrontendRuntimeMode}
+            setDirectMeshSelectionMode={setDirectMeshSelectionMode}
+            setDirectMeshEndpointsText={setDirectMeshEndpointsText}
+            setControlPlaneApiToken={setControlPlaneApiToken}
+            setClusterApiToken={setClusterApiToken}
+            setDirectMeshApiToken={setDirectMeshApiToken}
+            setShowShortcutHints={setShowShortcutHints}
+            setImmersiveGuardrails={setImmersiveGuardrails}
+            downloadDatabaseSnapshot={downloadDatabaseSnapshot}
+            scriptActionLog={scriptActionLog}
+            getScriptSnapshot={getScriptSnapshot}
+            scriptRecordingMode={scriptRecordingMode}
+            invokeScriptAction={async (action, payload) => {
+              await invokeScriptAction(action, payload);
+              return {};
+            }}
+            setScriptRecordingMode={setScriptRecordingMode}
+            scriptSnapshot={scriptSnapshot}
+            systemDataTab={systemDataTab}
+            handleSystemDataTabChange={handleSystemDataTabChange}
+            adminJobRows={adminJobRows}
+            selectedAdminJobId={selectedAdminJobId}
+            handleSelectAdminJob={handleSelectAdminJob}
+            selectedAdminJob={selectedAdminJob}
+            adminJobMessage={adminJobMessage}
+            setAdminJobMessage={setAdminJobMessage}
+            adminJobProjectId={adminJobProjectId}
+            setAdminJobProjectId={setAdminJobProjectId}
+            adminJobModelVersionId={adminJobModelVersionId}
+            setAdminJobModelVersionId={setAdminJobModelVersionId}
+            adminJobCaseId={adminJobCaseId}
+            setAdminJobCaseId={setAdminJobCaseId}
+            saveAdminJobRecord={saveAdminJobRecord}
+            deleteAdminJobRecord={deleteAdminJobRecord}
+            adminResultRows={adminResultRows}
+            selectedAdminResultJobId={selectedAdminResultJobId}
+            handleSelectAdminResult={handleSelectAdminResult}
+            jobHistory={jobHistory}
+            adminResultDraft={adminResultDraft}
+            setAdminResultDraft={setAdminResultDraft}
+            saveAdminResultRecord={saveAdminResultRecord}
+            applySelectedAdminResultContext={applySelectedAdminResultContext}
+            openSelectedAdminResultProject={openSelectedAdminResultProject}
+            openSelectedAdminResultVersion={openSelectedAdminResultVersion}
+            exportAdminResultRecord={exportAdminResultRecord}
+            deleteAdminResultRecord={deleteAdminResultRecord}
+            adminFilterProjectId={adminFilterProjectId}
+            handleAdminFilterProjectChange={handleAdminFilterProjectChange}
+            adminFilterModelVersionId={adminFilterModelVersionId}
+            handleAdminFilterModelVersionChange={handleAdminFilterModelVersionChange}
+            selectedProjectId={selectedProjectId}
+            selectedVersionId={selectedVersionId}
+            useCurrentProjectAsAdminFilter={useCurrentProjectAsAdminFilter}
+            useCurrentVersionAsAdminFilter={useCurrentVersionAsAdminFilter}
+            clearAdminFilters={clearAdminFilters}
+            applySelectedAdminJobContext={applySelectedAdminJobContext}
+            openSelectedAdminJobProject={openSelectedAdminJobProject}
+            openSelectedAdminJobVersion={openSelectedAdminJobVersion}
+            jobId={job?.job_id ?? null}
+            cancelCurrentJob={cancelCurrentJob}
+            cancelJob={cancelJob}
+            setMessage={setMessage}
+            refreshJobHistory={refreshJobHistory}
           />
-        ) : null}
-      </aside>
+        }
+      />
 
-      <button
-        aria-expanded={assistantWindowOpen}
-        aria-label={assistantWindowOpen ? t.assistantClose : t.assistantOpen}
-        className={`assistant-float-launcher${assistantWindowOpen ? " assistant-float-launcher--open" : ""}`}
-        onClick={() => setAssistantWindowOpen((current) => !current)}
-        type="button"
-      >
-        <img alt="" className="assistant-float-launcher__mark" src="/kyuubiki.png" />
-        <span className="assistant-float-launcher__copy">
-          <strong>{t.assistant}</strong>
-          <small>{assistantWindowOpen ? t.assistantClose : t.assistantLauncherHint}</small>
-        </span>
-      </button>
-
-      {assistantWindowOpen ? (
-        <aside aria-label={t.assistant} className="assistant-float-panel panel" role="dialog">
-          <div className="assistant-float-panel__header">
-            <div className="assistant-float-panel__headline">
-              <img alt="" className="assistant-float-panel__mark" src="/kyuubiki.png" />
-              <div>
-                <strong>{t.assistantFloatingTitle}</strong>
-                <p>{t.assistantFloatingSubtitle}</p>
-              </div>
-            </div>
-            <button className="ghost-button ghost-button--compact" onClick={() => setAssistantWindowOpen(false)} type="button">
-              {t.assistantClose}
-            </button>
-          </div>
-          <div className="assistant-float-panel__body panel-scroll-window">
-            <WorkbenchAssistantPanel
-              currentJobLabel={job?.status ?? t.none}
-              currentResultLabel={hasAnyResult ? t.yes : t.no}
-              currentRuntimeLabel={t.frontendModes[frontendRuntimeMode]}
-              currentStudyLabel={t.kinds[studyKind]}
-              language={language}
-              llmApiKey={assistantApiKey}
-              llmBaseUrl={assistantApiBaseUrl}
-              llmModel={assistantModel}
-              localCards={assistantCards}
-              mode={assistantMode}
-              promptPresets={assistantPromptPresets}
-              transactions={assistantTransactions.map((entry) => ({
-                id: entry.id,
-                summary: entry.summary,
-                createdAt: entry.createdAt,
-                executedActions: entry.executedActions,
-              }))}
-              variant="floating"
-              onExecuteLlmAction={async (action, payload, reason) => {
-                await executeAssistantPlan([{ action, payload, reason }], reason ?? action);
-              }}
-              onExecuteLlmPlan={async (actions, summary) => {
-                await executeAssistantPlan(actions, summary);
-              }}
-              onLlmApiKeyChange={setAssistantApiKey}
-              onLlmBaseUrlChange={setAssistantApiBaseUrl}
-              onLlmModelChange={setAssistantModel}
-              onModeChange={setAssistantMode}
-              onRequestPlan={requestLlmAssistantPlan}
-              onRollbackTransaction={rollbackAssistantTransaction}
-            />
-          </div>
-        </aside>
-      ) : null}
+      <WorkbenchAssistantFloat
+        t={t}
+        assistantWindowOpen={assistantWindowOpen}
+        setAssistantWindowOpen={setAssistantWindowOpen}
+        jobStatus={job?.status}
+        hasAnyResult={hasAnyResult}
+        frontendRuntimeMode={frontendRuntimeMode}
+        studyKind={studyKind}
+        language={language}
+        assistantApiKey={assistantApiKey}
+        assistantApiBaseUrl={assistantApiBaseUrl}
+        assistantModel={assistantModel}
+        assistantCards={assistantCards}
+        assistantMode={assistantMode}
+        assistantPromptPresets={assistantPromptPresets}
+        assistantTransactions={assistantTransactions}
+        executeAssistantPlan={executeAssistantPlan}
+        invokeScriptAction={async (action, payload, reason) => {
+          await invokeScriptAction(action, payload, undefined, reason);
+          return {};
+        }}
+        setAssistantApiKey={setAssistantApiKey}
+        setAssistantApiBaseUrl={setAssistantApiBaseUrl}
+        setAssistantModel={setAssistantModel}
+        setAssistantMode={setAssistantMode}
+        requestLlmAssistantPlan={requestLlmAssistantPlan}
+        rollbackAssistantTransaction={rollbackAssistantTransaction}
+      />
 
       <main className="workspace-main">
         <WorkbenchViewportPanel
@@ -6566,1003 +4735,356 @@ export function Workbench() {
           immersiveViewport={immersiveViewport}
           title={sidebarSection === "model" ? t.sections.model : t.viewport}
           headActions={
-            <>
-              {isTruss3d && immersiveViewport ? (
-                <div className="immersive-switches">
-                  <button
-                    className={`ghost-button ghost-button--compact${sidebarSection === "model" && modelTab === "tools" && modelToolsPage === "study" ? " ghost-button--active" : ""}`}
-                    onClick={() => {
-                      handleSidebarSectionChange("model");
-                      setModelTab("tools");
-                      setModelToolsPage("study");
-                    }}
-                    type="button"
-                  >
-                    {t.immersiveStudy}
-                  </button>
-                  <button
-                    className={`ghost-button ghost-button--compact${sidebarSection === "model" && modelTab === "tools" && modelToolsPage !== "study" ? " ghost-button--active" : ""}`}
-                    onClick={() => {
-                      handleSidebarSectionChange("model");
-                      setModelTab("tools");
-                      if (modelToolsPage === "study") {
-                        setModelToolsPage("studio");
-                      }
-                    }}
-                    type="button"
-                  >
-                    {t.immersiveModel}
-                  </button>
-                  <button
-                    className={`ghost-button ghost-button--compact${sidebarSection === "library" ? " ghost-button--active" : ""}`}
-                    onClick={() => handleSidebarSectionChange(sidebarSection === "library" ? "model" : "library")}
-                    type="button"
-                  >
-                    {t.immersiveLibrary}
-                  </button>
-                  <button
-                    className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={handleToggleImmersiveToolDrawer}
-                    type="button"
-                  >
-                    {t.immersiveTools}
-                  </button>
-                  <button
-                    className={`ghost-button ghost-button--compact${immersiveHelpDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={handleToggleImmersiveHelpDrawer}
-                    type="button"
-                  >
-                    {t.immersiveHelp}
-                  </button>
-                </div>
-              ) : null}
-              {isTruss3d && !immersiveViewport ? (
-                <div className="immersive-switches">
-                  <button
-                    className={`ghost-button ghost-button--compact${immersiveToolDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={handleToggleImmersiveToolDrawer}
-                    type="button"
-                  >
-                    {t.immersiveTools}
-                  </button>
-                  <button
-                    className={`ghost-button ghost-button--compact${immersiveHelpDrawerOpen ? " ghost-button--active" : ""}`}
-                    onClick={handleToggleImmersiveHelpDrawer}
-                    type="button"
-                  >
-                    {t.immersiveHelp}
-                  </button>
-                </div>
-              ) : null}
-              {isTruss3d ? (
-                <button className={`ghost-button ghost-button--compact${immersiveViewport ? " ghost-button--active" : ""}`} onClick={() => void handleToggleImmersiveViewport()} type="button">
-                  {immersiveViewport ? t.exitImmersive : t.enterImmersive}
-                </button>
-              ) : null}
-              <span>{job?.status ?? "idle"}</span>
-            </>
+            <WorkbenchViewportHeadActions
+              t={t}
+              isTruss3d={isTruss3d}
+              immersiveViewport={immersiveViewport}
+              immersiveToolDrawerOpen={immersiveToolDrawerOpen}
+              immersiveHelpDrawerOpen={immersiveHelpDrawerOpen}
+              sidebarSection={sidebarSection}
+              modelTab={modelTab}
+              modelToolsPage={modelToolsPage}
+              jobStatus={job?.status}
+              handleSidebarSectionChange={handleSidebarSectionChange}
+              setModelTab={setModelTab}
+              setModelToolsPage={setModelToolsPage}
+              handleToggleImmersiveToolDrawer={handleToggleImmersiveToolDrawer}
+              handleToggleImmersiveHelpDrawer={handleToggleImmersiveHelpDrawer}
+              handleToggleImmersiveViewport={handleToggleImmersiveViewport}
+            />
           }
           hasViewportDock={hasViewportDock}
           dockContent={
-            <>
-              {immersiveViewport && immersiveToolDrawerOpen ? (
-                <section className="viewport-dock__card">
-                  <div className="card-head">
-                    <h2>{t.immersiveTools}</h2>
-                    <span>{t.kinds.truss_3d}</span>
-                  </div>
-                  {showViewportToolStrip ? (
-                    <div className="viewport-toolbar-strip viewport-toolbar-strip--dock" role="toolbar" aria-label={t.immersiveViewTools}>
-                      {(["iso", "front", "right", "top"] as const).map((preset) => (
-                        <button
-                          key={preset}
-                          className={`ghost-button ghost-button--compact${truss3dViewPreset === preset ? " ghost-button--active" : ""}`}
-                          onClick={() => handleTruss3dViewPresetChange(preset)}
-                          type="button"
-                        >
-                          {preset === "iso" ? "ISO" : preset === "front" ? "FR" : preset === "right" ? "RT" : "TP"}
-                        </button>
-                      ))}
-                      <button
-                        className={`ghost-button ghost-button--compact${selectedNode !== null || selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
-                        onClick={handleTruss3dFocusViewport}
-                        type="button"
-                      >
-                        FOCUS
-                      </button>
-                      <button
-                        className={`ghost-button ghost-button--compact${selectedTruss3dNodes.length > 0 ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dFocusRequestVersion((current) => current + 1)}
-                        type="button"
-                      >
-                        {t.frameSelection}
-                      </button>
-                      <button
-                        className={`ghost-button ghost-button--compact${truss3dProjectionMode === "persp" ? " ghost-button--active" : ""}`}
-                        onClick={() => handleTruss3dProjectionModeChange(truss3dProjectionMode === "ortho" ? "persp" : "ortho")}
-                        type="button"
-                      >
-                        {truss3dProjectionMode === "ortho" ? "TO PERSP" : "TO ORTHO"}
-                      </button>
-                      <button
-                        className={`ghost-button ghost-button--compact${truss3dShowGrid ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dShowGrid((current) => !current)}
-                        type="button"
-                      >
-                        GRID
-                      </button>
-                      <button
-                        className={`ghost-button ghost-button--compact${truss3dShowLabels ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dShowLabels((current) => !current)}
-                        type="button"
-                      >
-                        LABEL
-                      </button>
-                      <button
-                        className={`ghost-button ghost-button--compact${truss3dShowNodes ? " ghost-button--active" : ""}`}
-                        onClick={() => setTruss3dShowNodes((current) => !current)}
-                        type="button"
-                      >
-                        NODE
-                      </button>
-                      <button
-                        className={`ghost-button ghost-button--compact${truss3dBoxSelectMode ? " ghost-button--active" : ""}`}
-                        onClick={() => handleTruss3dBoxSelectModeChange(!truss3dBoxSelectMode)}
-                        type="button"
-                      >
-                        BOX
-                      </button>
-                      <button
-                        className="ghost-button ghost-button--compact"
-                        onClick={handleTruss3dResetViewport}
-                        type="button"
-                      >
-                        RESET
-                      </button>
-                    </div>
-                  ) : null}
-                  <div className="panel-tabs viewport-dock__tabs">
-                    <button className={`panel-tab${immersiveToolTab === "node" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("node")} type="button">
-                      {t.immersiveNodeOps}
-                    </button>
-                    <button className={`panel-tab${immersiveToolTab === "props" ? " panel-tab--active" : ""}`} onClick={() => setImmersiveToolTab("props")} type="button">
-                      {t.immersiveQuickProps}
-                    </button>
-                  </div>
-                  <div className="viewport-dock__stack">
-                    {immersiveViewport && immersiveToolTab === "node" ? (
-                        <div>
-                          <div className="card-subhead">
-                            <strong>{t.immersiveNodeOps}</strong>
-                            <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.nodes}` : selectedTruss3dNodeData?.id ?? t.none}</span>
-                          </div>
-                          <div className="button-row">
-                            <button className="ghost-button ghost-button--compact" onClick={() => addTruss3dNode(false)} type="button">
-                              {t.addNode}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null} onClick={() => addTruss3dNode(true)} type="button">
-                              {t.addBranchNode}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null} onClick={deleteSelectedTruss3dNode} type="button">
-                              {t.deleteNode}
-                            </button>
-                          </div>
-                          <div className="button-row">
-                            <button className={`ghost-button ghost-button--compact${truss3dLinkMode ? " ghost-button--active" : ""}`} onClick={handleToggleTruss3dLinkMode} type="button">
-                              {truss3dLinkMode ? t.linkModeActive : t.linkMode}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" onClick={toggleTruss3dMemberFromDraft} type="button">
-                              {t.toggleMember}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={selectedElement === null} onClick={deleteSelectedTruss3dElement} type="button">
-                              {t.deleteMember}
-                            </button>
-                          </div>
-                          <div className="button-row">
-                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes(null)} type="button">
-                              {t.duplicateNodes}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("x")} type="button">
-                              {t.mirrorX}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("y")} type="button">
-                              {t.mirrorY}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={selectedNode === null && selectedTruss3dNodes.length === 0} onClick={() => cloneSelectedTruss3dNodes("z")} type="button">
-                              {t.mirrorZ}
-                            </button>
-                          </div>
-                          <div className="button-row">
-                            <button className="ghost-button ghost-button--compact" disabled={undoStack.length === 0} onClick={handleUndo} type="button">
-                              {t.undo}
-                            </button>
-                            <button className="ghost-button ghost-button--compact" disabled={redoStack.length === 0} onClick={handleRedo} type="button">
-                              {t.redo}
-                            </button>
-                          </div>
-                          <p className="card-copy">{truss3dLinkMode ? t.linkModeIdle : t.selectionHint}</p>
-                        </div>
-                    ) : null}
-                    {immersiveViewport && immersiveToolTab === "props" ? (
-                        <div>
-                          <div className="card-subhead">
-                            <strong>{t.immersiveQuickProps}</strong>
-                            <span>{selectedTruss3dNodes.length > 1 ? `${selectedTruss3dNodes.length} ${t.immersiveNodeSelection}` : selectedTruss3dNodeData?.id ?? t.none}</span>
-                          </div>
-                          {selectedTruss3dNodeData ? (
-                            <>
-                              <div className="form-grid compact">
-                                <label>
-                                  <span>{t.nodeX}</span>
-                                  <input
-                                    type="number"
-                                    step={0.1}
-                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.x ?? selectedTruss3dNodeData.x}
-                                    onChange={(event) => updateSelectedTruss3dNode("x", Number(event.target.value))}
-                                  />
-                                </label>
-                                <label>
-                                  <span>{t.nodeY}</span>
-                                  <input
-                                    type="number"
-                                    step={0.1}
-                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.y ?? selectedTruss3dNodeData.y}
-                                    onChange={(event) => updateSelectedTruss3dNode("y", Number(event.target.value))}
-                                  />
-                                </label>
-                                <label>
-                                  <span>{t.nodeZ}</span>
-                                  <input
-                                    type="number"
-                                    step={0.1}
-                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.z ?? selectedTruss3dNodeData.z}
-                                    onChange={(event) => updateSelectedTruss3dNode("z", Number(event.target.value))}
-                                  />
-                                </label>
-                                <label>
-                                  <span>{t.loadX}</span>
-                                  <input
-                                    type="number"
-                                    step={100}
-                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.load_x ?? 0}
-                                    onChange={(event) => updateSelectedTruss3dNode("load_x", Number(event.target.value))}
-                                  />
-                                </label>
-                                <label>
-                                  <span>{t.loadY}</span>
-                                  <input
-                                    type="number"
-                                    step={100}
-                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.load_y ?? 0}
-                                    onChange={(event) => updateSelectedTruss3dNode("load_y", Number(event.target.value))}
-                                  />
-                                </label>
-                                <label>
-                                  <span>{t.loadZ}</span>
-                                  <input
-                                    type="number"
-                                    step={100}
-                                    value={truss3dModel.nodes[selectedTruss3dNodeData.index]?.load_z ?? 0}
-                                    onChange={(event) => updateSelectedTruss3dNode("load_z", Number(event.target.value))}
-                                  />
-                                </label>
-                              </div>
-                              <div className="button-row">
-                                <button
-                                  className={`ghost-button ghost-button--compact${truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_x ? " ghost-button--active" : ""}`}
-                                  onClick={() => updateSelectedTruss3dNode("fix_x", !(truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_x ?? false))}
-                                  type="button"
-                                >
-                                  {t.fixX}
-                                </button>
-                                <button
-                                  className={`ghost-button ghost-button--compact${truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_y ? " ghost-button--active" : ""}`}
-                                  onClick={() => updateSelectedTruss3dNode("fix_y", !(truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_y ?? false))}
-                                  type="button"
-                                >
-                                  {t.fixY}
-                                </button>
-                                <button
-                                  className={`ghost-button ghost-button--compact${truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_z ? " ghost-button--active" : ""}`}
-                                  onClick={() => updateSelectedTruss3dNode("fix_z", !(truss3dModel.nodes[selectedTruss3dNodeData.index]?.fix_z ?? false))}
-                                  type="button"
-                                >
-                                  {t.fixZ}
-                                </button>
-                              </div>
-                              <div className="card-subhead">
-                                <strong>{t.immersiveTransform}</strong>
-                                <span>{t.nudgeStep}: {fixed(truss3dNudgeStep, 2)}</span>
-                              </div>
-                              <div className="button-row">
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", -truss3dNudgeStep)} type="button">X-</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", truss3dNudgeStep)} type="button">X+</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", -truss3dNudgeStep)} type="button">Y-</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", truss3dNudgeStep)} type="button">Y+</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", -truss3dNudgeStep)} type="button">Z-</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", truss3dNudgeStep)} type="button">Z+</button>
-                              </div>
-                              <label className="inline-field">
-                                <span>{t.nudgeStep}</span>
-                                <input type="number" min={0.01} step={0.05} value={truss3dNudgeStep} onChange={(event) => setTruss3dNudgeStep(Math.max(0.01, Number(event.target.value) || 0.01))} />
-                              </label>
-                            </>
-                          ) : selectedTruss3dNodes.length > 1 ? (
-                            <>
-                              <div className="button-row">
-                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_x", true)} type="button">
-                                  {t.fixX}
-                                </button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_y", true)} type="button">
-                                  {t.fixY}
-                                </button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_z", true)} type="button">
-                                  {t.fixZ}
-                                </button>
-                              </div>
-                              <div className="button-row">
-                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_x", false)} type="button">
-                                  {t.releaseX}
-                                </button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_y", false)} type="button">
-                                  {t.releaseY}
-                                </button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => updateSelectedTruss3dNodes("fix_z", false)} type="button">
-                                  {t.releaseZ}
-                                </button>
-                              </div>
-                              <div className="card-subhead">
-                                <strong>{t.immersiveTransform}</strong>
-                                <span>{t.nudgeStep}: {fixed(truss3dNudgeStep, 2)}</span>
-                              </div>
-                              <div className="button-row">
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", -truss3dNudgeStep)} type="button">X-</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("x", truss3dNudgeStep)} type="button">X+</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", -truss3dNudgeStep)} type="button">Y-</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("y", truss3dNudgeStep)} type="button">Y+</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", -truss3dNudgeStep)} type="button">Z-</button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => nudgeSelectedTruss3dNodes("z", truss3dNudgeStep)} type="button">Z+</button>
-                              </div>
-                              <label className="inline-field">
-                                <span>{t.nudgeStep}</span>
-                                <input type="number" min={0.01} step={0.05} value={truss3dNudgeStep} onChange={(event) => setTruss3dNudgeStep(Math.max(0.01, Number(event.target.value) || 0.01))} />
-                              </label>
-                              <div className="card-subhead">
-                                <strong>{t.immersiveLoads}</strong>
-                                <span>{selectedTruss3dNodes.length} {t.nodes}</span>
-                              </div>
-                              <div className="form-grid compact">
-                                <label>
-                                  <span>{t.loadX}</span>
-                                  <input type="number" step={100} value={truss3dBatchLoadX} onChange={(event) => setTruss3dBatchLoadX(Number(event.target.value))} />
-                                </label>
-                                <label>
-                                  <span>{t.loadY}</span>
-                                  <input type="number" step={100} value={truss3dBatchLoadY} onChange={(event) => setTruss3dBatchLoadY(Number(event.target.value))} />
-                                </label>
-                                <label>
-                                  <span>{t.loadZ}</span>
-                                  <input type="number" step={100} value={truss3dBatchLoadZ} onChange={(event) => setTruss3dBatchLoadZ(Number(event.target.value))} />
-                                </label>
-                              </div>
-                              <div className="button-row">
-                                <button className="ghost-button ghost-button--compact" onClick={() => applySelectedTruss3dLoads("apply")} type="button">
-                                  {t.applyLoads}
-                                </button>
-                                <button className="ghost-button ghost-button--compact" onClick={() => applySelectedTruss3dLoads("clear")} type="button">
-                                  {t.clearLoads}
-                                </button>
-                              </div>
-                              <p className="card-copy">{t.selectionHint}</p>
-                            </>
-                          ) : (
-                            <p className="card-copy">{t.immersiveNoNodeSelection}</p>
-                          )}
-                        </div>
-                    ) : null}
-                  </div>
-                </section>
-              ) : null}
-              {showShortcutHints && immersiveHelpDrawerOpen ? (
-                <section className="viewport-dock__card viewport-dock__card--help">
-                  <div className="card-head">
-                    <h2>{t.immersiveHelp}</h2>
-                    <span>{t.kinds.truss_3d}</span>
-                  </div>
-                  <div className="viewport-help-list">
-                    {t.shortcutLegendRows.map((row) => (
-                      <p key={row} className="card-copy">
-                        {row}
-                      </p>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </>
+            <WorkbenchViewportDock
+              t={t}
+              immersiveViewport={immersiveViewport}
+              immersiveToolDrawerOpen={immersiveToolDrawerOpen}
+              immersiveHelpDrawerOpen={immersiveHelpDrawerOpen}
+              showShortcutHints={showShortcutHints}
+              showViewportToolStrip={showViewportToolStrip}
+              immersiveToolTab={immersiveToolTab}
+              truss3dViewPreset={truss3dViewPreset}
+              selectedNode={selectedNode}
+              selectedElement={selectedElement}
+              selectedTruss3dNodes={selectedTruss3dNodes}
+              selectedTruss3dNodeData={selectedTruss3dNodeData}
+              truss3dLinkMode={truss3dLinkMode}
+              truss3dProjectionMode={truss3dProjectionMode}
+              truss3dShowGrid={truss3dShowGrid}
+              truss3dShowLabels={truss3dShowLabels}
+              truss3dShowNodes={truss3dShowNodes}
+              truss3dBoxSelectMode={truss3dBoxSelectMode}
+              truss3dNudgeStep={truss3dNudgeStep}
+              truss3dBatchLoadX={truss3dBatchLoadX}
+              truss3dBatchLoadY={truss3dBatchLoadY}
+              truss3dBatchLoadZ={truss3dBatchLoadZ}
+              undoStack={undoStack}
+              redoStack={redoStack}
+              truss3dModel={truss3dModel}
+              setImmersiveToolTab={setImmersiveToolTab}
+              handleTruss3dViewPresetChange={handleTruss3dViewPresetChange}
+              handleTruss3dFocusViewport={handleTruss3dFocusViewport}
+              setTruss3dFocusRequestVersion={setTruss3dFocusRequestVersion}
+              handleTruss3dProjectionModeChange={handleTruss3dProjectionModeChange}
+              setTruss3dShowGrid={setTruss3dShowGrid}
+              setTruss3dShowLabels={setTruss3dShowLabels}
+              setTruss3dShowNodes={setTruss3dShowNodes}
+              handleTruss3dBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
+              handleTruss3dResetViewport={handleTruss3dResetViewport}
+              addTruss3dNode={addTruss3dNode}
+              deleteSelectedTruss3dNode={deleteSelectedTruss3dNode}
+              handleToggleTruss3dLinkMode={handleToggleTruss3dLinkMode}
+              toggleTruss3dMemberFromDraft={toggleTruss3dMemberFromDraft}
+              deleteSelectedTruss3dElement={deleteSelectedTruss3dElement}
+              cloneSelectedTruss3dNodes={cloneSelectedTruss3dNodes}
+              handleUndo={handleUndo}
+              handleRedo={handleRedo}
+              updateSelectedTruss3dNode={updateSelectedTruss3dNode}
+              nudgeSelectedTruss3dNodes={nudgeSelectedTruss3dNodes}
+              setTruss3dNudgeStep={setTruss3dNudgeStep}
+              updateSelectedTruss3dNodes={updateSelectedTruss3dNodes}
+              setTruss3dBatchLoadX={setTruss3dBatchLoadX}
+              setTruss3dBatchLoadY={setTruss3dBatchLoadY}
+              setTruss3dBatchLoadZ={setTruss3dBatchLoadZ}
+              applySelectedTruss3dLoads={applySelectedTruss3dLoads}
+            />
           }
           resultWindowBar={
-            activeResultWindow ? (
-              <div className="viewport-window-bar">
-              <div className="viewport-window-bar__meta">
-                <strong>{t.resultWindow}</strong>
-                <span>
-                  {t.pageRange}: {resultWindowStart}-{resultWindowEnd}
-                </span>
-                <span>
-                  {t.chunkSize}: {activeResultWindowLimit}
-                </span>
-                <span>
-                  {t.nodes}: {activeResultWindow.totalNodes}
-                </span>
-                <span>
-                  {t.totalElements}: {activeResultWindow.totalElements}
-                </span>
-              </div>
-              <div className="button-row">
-                {isPlane && planeResult ? (
-                  <>
-                    {isHeatPlane ? (
-                      <>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "average_temperature" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("average_temperature")}
-                          type="button"
-                        >
-                          {t.maxTemperature}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "temperature_gradient_x" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("temperature_gradient_x")}
-                          type="button"
-                        >
-                          {t.temperatureGradientX}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "temperature_gradient_y" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("temperature_gradient_y")}
-                          type="button"
-                        >
-                          {t.temperatureGradientY}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "heat_flux_x" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("heat_flux_x")}
-                          type="button"
-                        >
-                          {t.heatFluxX}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "heat_flux_y" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("heat_flux_y")}
-                          type="button"
-                        >
-                          {t.heatFluxY}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "heat_flux_magnitude" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("heat_flux_magnitude")}
-                          type="button"
-                        >
-                          {t.maxHeatFlux}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "von_mises" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("von_mises")}
-                          type="button"
-                        >
-                          {t.planeViewVonMises}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "principal_stress_1" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("principal_stress_1")}
-                          type="button"
-                        >
-                          {t.planeViewPrincipal1}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "max_in_plane_shear" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("max_in_plane_shear")}
-                          type="button"
-                        >
-                          {t.planeViewMaxShear}
-                        </button>
-                      </>
-                    )}
-                    {isThermalPlaneTriangle || isThermalPlaneQuad ? (
-                      <>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "average_temperature_delta" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("average_temperature_delta")}
-                          type="button"
-                        >
-                          {t.temperatureDelta}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "thermal_strain" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("thermal_strain")}
-                          type="button"
-                        >
-                          {t.thermalStrain}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${planeResultField === "mechanical_strain" ? " ghost-button--active" : ""}`}
-                          onClick={() => setPlaneResultField("mechanical_strain")}
-                          type="button"
-                        >
-                          {t.mechanicalStrain}
-                        </button>
-                      </>
-                    ) : null}
-                  </>
-                ) : null}
-                {isFrameLike && activeFrameLikeResult ? (
-                  <>
-                    <button
-                      className={`ghost-button ghost-button--compact${frameResultField === "axial_stress" ? " ghost-button--active" : ""}`}
-                      onClick={() => setFrameResultField("axial_stress")}
-                      type="button"
-                    >
-                      {t.stress}
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${frameResultField === "max_bending_stress" ? " ghost-button--active" : ""}`}
-                      onClick={() => setFrameResultField("max_bending_stress")}
-                      type="button"
-                    >
-                      {t.bendingStress}
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${frameResultField === "max_combined_stress" ? " ghost-button--active" : ""}`}
-                      onClick={() => setFrameResultField("max_combined_stress")}
-                      type="button"
-                    >
-                      {t.combinedStress}
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${frameResultField === "moment" ? " ghost-button--active" : ""}`}
-                      onClick={() => setFrameResultField("moment")}
-                      type="button"
-                    >
-                      {t.maxMoment}
-                    </button>
-                    {isThermalFrame ? (
-                      <>
-                        <button
-                          className={`ghost-button ghost-button--compact${frameResultField === "average_temperature_delta" ? " ghost-button--active" : ""}`}
-                          onClick={() => setFrameResultField("average_temperature_delta")}
-                          type="button"
-                        >
-                          {t.temperatureDelta}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${frameResultField === "temperature_gradient_y" ? " ghost-button--active" : ""}`}
-                          onClick={() => setFrameResultField("temperature_gradient_y")}
-                          type="button"
-                        >
-                          {t.temperatureGradientY}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${frameResultField === "thermal_curvature" ? " ghost-button--active" : ""}`}
-                          onClick={() => setFrameResultField("thermal_curvature")}
-                          type="button"
-                        >
-                          {t.thermalCurvature}
-                        </button>
-                      </>
-                    ) : null}
-                  </>
-                ) : null}
-                {isBeam && activeBeamLikeResult ? (
-                  <>
-                    <button
-                      className={`ghost-button ghost-button--compact${beamResultField === "max_bending_stress" ? " ghost-button--active" : ""}`}
-                      onClick={() => setBeamResultField("max_bending_stress")}
-                      type="button"
-                    >
-                      {t.bendingStress}
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${beamResultField === "shear_force" ? " ghost-button--active" : ""}`}
-                      onClick={() => setBeamResultField("shear_force")}
-                      type="button"
-                    >
-                      {t.shearForce}
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${beamResultField === "moment" ? " ghost-button--active" : ""}`}
-                      onClick={() => setBeamResultField("moment")}
-                      type="button"
-                    >
-                      {t.maxMoment}
-                    </button>
-                    {studyKind === "thermal_beam_1d" ? (
-                      <>
-                        <button
-                          className={`ghost-button ghost-button--compact${beamResultField === "temperature_gradient_y" ? " ghost-button--active" : ""}`}
-                          onClick={() => setBeamResultField("temperature_gradient_y")}
-                          type="button"
-                        >
-                          {t.temperatureGradientY}
-                        </button>
-                        <button
-                          className={`ghost-button ghost-button--compact${beamResultField === "thermal_curvature" ? " ghost-button--active" : ""}`}
-                          onClick={() => setBeamResultField("thermal_curvature")}
-                          type="button"
-                        >
-                          {t.thermalCurvature}
-                        </button>
-                      </>
-                    ) : null}
-                  </>
-                ) : null}
-                {isTorsion && torsionResult ? (
-                  <>
-                    <button
-                      className={`ghost-button ghost-button--compact${frameResultField === "max_bending_stress" ? " ghost-button--active" : ""}`}
-                      onClick={() => setFrameResultField("max_bending_stress")}
-                      type="button"
-                    >
-                      {t.torsionStress}
-                    </button>
-                    <button
-                      className={`ghost-button ghost-button--compact${frameResultField === "moment" ? " ghost-button--active" : ""}`}
-                      onClick={() => setFrameResultField("moment")}
-                      type="button"
-                    >
-                      {t.maxTorque}
-                    </button>
-                  </>
-                ) : null}
-                {resultWindowJumps.map((jump) => (
-                  <button
-                    key={jump.label}
-                    className="ghost-button ghost-button--compact"
-                    disabled={resultWindowOffset === jump.offset}
-                    onClick={() => setResultWindowOffset(jump.offset)}
-                    type="button"
-                  >
-                    {jump.label}
-                  </button>
-                ))}
-                <button
-                  className="ghost-button ghost-button--compact"
-                  disabled={resultWindowOffset <= 0}
-                  onClick={() =>
-                    setResultWindowOffset((current) =>
-                      clampChunkOffset(current - activeResultWindowLimit, resultWindowMaxTotal, activeResultWindowLimit),
-                    )
-                  }
-                  type="button"
-                >
-                  {t.previousPage}
-                </button>
-                <button
-                  className="ghost-button ghost-button--compact"
-                  disabled={resultWindowOffset + activeResultWindowLimit >= resultWindowMaxTotal}
-                  onClick={() =>
-                    setResultWindowOffset((current) =>
-                      clampChunkOffset(current + activeResultWindowLimit, resultWindowMaxTotal, activeResultWindowLimit),
-                    )
-                  }
-                  type="button"
-                >
-                  {t.nextPage}
-                </button>
-              </div>
-            </div>
-            ) : null
+            <WorkbenchResultWindowBar
+              t={t}
+              activeResultWindow={activeResultWindow}
+              resultWindowStart={resultWindowStart}
+              resultWindowEnd={resultWindowEnd}
+              activeResultWindowLimit={activeResultWindowLimit}
+              resultWindowOffset={resultWindowOffset}
+              resultWindowMaxTotal={resultWindowMaxTotal}
+              resultWindowJumps={resultWindowJumps}
+              isPlane={isPlane}
+              isHeatPlane={isHeatPlane}
+              isHeatPlaneTriangle={isHeatPlaneTriangle}
+              isThermalPlaneTriangle={isThermalPlaneTriangle}
+              isThermalPlaneQuad={isThermalPlaneQuad}
+              isFrameLike={isFrameLike}
+              isThermalFrame={isThermalFrame}
+              isBeam={isBeam}
+              isTorsion={isTorsion}
+              studyKind={studyKind}
+              planeResult={planeResult}
+              activeFrameLikeResult={activeFrameLikeResult}
+              activeBeamLikeResult={activeBeamLikeResult}
+              torsionResult={torsionResult}
+              planeResultField={planeResultField}
+              frameResultField={frameResultField}
+              beamResultField={beamResultField}
+              setPlaneResultField={setPlaneResultField}
+              setFrameResultField={setFrameResultField}
+              setBeamResultField={setBeamResultField}
+              setResultWindowOffset={setResultWindowOffset}
+              clampChunkOffset={clampChunkOffset}
+            />
           }
           isTruss3d={isTruss3d}
           shouldStretchSpaceViewport={shouldStretchSpaceViewport}
           onCanvasStageScroll={handleCanvasStageScroll}
           canvasStageRef={canvasStageRef}
           viewportContent={
-            <WorkbenchViewport
-            studyKind={studyKind}
-            sidebarSection={sidebarSection}
-            title={t.sections.model}
-            axialTitle={t.kinds.axial_bar_1d}
-            trussTitle={t.kinds[isSpring2d ? "spring_2d" : isSpring1d ? "spring_1d" : isHeatBar ? "heat_bar_1d" : isThermalBar ? "thermal_bar_1d" : isThermalBeam ? "thermal_beam_1d" : isThermalFrame ? "thermal_frame_2d" : isThermalTruss2d ? "thermal_truss_2d" : studyKind === "beam_1d" ? "beam_1d" : isTorsion ? "torsion_1d" : isFrame ? "frame_2d" : "truss_2d"]}
-            trussLegend={(isFrameLike && activeFrameLikeResult) || (isBeam && activeBeamLikeResult) || (isTorsion && torsionResult) || (isHeatBar && heatBarResult) || (isThermalBar && thermalBarResult) || (isThermalTruss2d && thermalTrussResult) || (isThermalTruss3d && thermalTruss3dResult) || (isSpring1d && springResult) || (isSpring2d && spring2dResult) || (isSpring3d && spring3dResult) ? frameLegendText : undefined}
-            truss3dTitle={t.kinds[isSpring3d ? "spring_3d" : isThermalTruss3d ? "thermal_truss_3d" : "truss_3d"]}
-            planeTitle={
-              t.kinds[
-                studyKind === "heat_plane_quad_2d"
-                  ? "heat_plane_quad_2d"
-                  : studyKind === "heat_plane_triangle_2d"
-                    ? "heat_plane_triangle_2d"
-                    : studyKind === "thermal_plane_quad_2d"
-                      ? "thermal_plane_quad_2d"
-                      : studyKind === "plane_quad_2d"
-                        ? "plane_quad_2d"
-                        : studyKind === "thermal_plane_triangle_2d"
-                          ? "thermal_plane_triangle_2d"
-                          : "plane_triangle_2d"
-              ]
-            }
-            planeLegend={planeLegendText}
-            axialNodes={axialNodes}
-            axialLength={axialLength}
-            axialScale={axialScale}
-            displayTrussNodes={displayTrussNodes}
-            displayTrussElements={displayTrussElements}
-            trussElementColors={trussElementColors}
-            hiddenTrussMaterialIds={isTruss || isFrameLike || isBeam || isSpring || isThermal ? hiddenMaterialIds : []}
-            trussBounds={trussBounds}
-            trussResult={Boolean(trussResult || thermalTrussResult || activeFrameLikeResult || activeBeamLikeResult || torsionResult || heatBarResult || thermalBarResult || thermalTruss3dResult || springResult || spring2dResult || spring3dResult)}
-            frameResultField={activeLineResultField}
-            frameResultFieldMax={frameResultFieldMax}
-            focusedFrameElement={focusedFrameElement}
-            trussHotspotNodes={trussStability?.hotspotNodes ?? []}
-            trussNodeIssues={trussDiagnostics?.nodeIssues ?? {}}
-            selectedNode={selectedNode}
-            selectedElement={selectedElement}
-            memberDraftNodes={memberDraftNodes}
-            onTrussPointerMove={handleTrussPointerMove}
-            onStopDraggingNode={stopDraggingNode}
-            onSelectTrussElement={(index) => {
-              setSelectedElement(index);
-              setSelectedNode(null);
-              setMemberDraftNodes([]);
-              if (isBeam || isTorsion || isHeatBar || isThermal) setFocusedFrameElement(index);
-            }}
-            onStartTrussNodeDrag={(index) => {
-              if (isBeam || isTorsion || isHeatBar || isThermalBar) {
-                setSelectedNode(index);
-                setSelectedElement(null);
-                setMemberDraftNodes([]);
-                return;
-              }
-              if (isFrameLike) {
-                dragHistoryCapturedRef.current = false;
-                setDraggingNode(index);
-                toggleDraftNode(index);
-                return;
-              }
-              dragHistoryCapturedRef.current = false;
-              setDraggingNode(index);
-              toggleDraftNode(index);
-            }}
-            displayTruss3dNodes={displayTruss3dNodes}
-            displayTruss3dElements={displayTruss3dElements}
-            truss3dElementColors={truss3dElementColors}
-            hiddenTruss3dMaterialIds={isTruss3d ? hiddenMaterialIds : []}
-            planeNodes={planeNodes}
-            planeElements={planeElements}
-            planeElementColors={planeElementColors}
-            hiddenPlaneMaterialIds={isPlane ? hiddenMaterialIds : []}
-            planeBounds={planeBounds}
-            planeResult={Boolean(isHeatPlane ? (isHeatPlaneTriangle ? heatPlaneTriangleResult : heatPlaneQuadResult) : planeResult)}
-            planeResultField={planeResultField}
-            planeResultFieldMax={planeResultFieldMax}
-            selectedPlaneNodeId={selectedPlaneNodeData?.id ?? null}
-            focusedPlaneElement={focusedPlaneElement}
-            onSelectPlaneElement={(index) => {
-              setSelectedElement(index);
-              setSelectedNode(null);
-            }}
-            onSelectPlaneNode={(index) => {
-              setSelectedNode(index);
-              setSelectedElement(null);
-            }}
-            selectedTruss3dNode={selectedNode}
-            selectedTruss3dElement={selectedElement}
-            onSelectTruss3dNode={(index) => {
-              handleTruss3dNodePick(index);
-            }}
-            onSelectTruss3dElement={(index) => {
-              setSelectedElement(index);
-              setSelectedNode(null);
-              setSelectedTruss3dNodes([]);
-              setMemberDraftNodes([]);
-            }}
-            onUpdateTruss3dNodePosition={updateTruss3dNodePosition}
-            onBeginTruss3dNodeDrag={() => {
-              if (!drag3dHistoryCapturedRef.current) {
-                recordHistory(t.dragNodeAction);
-                drag3dHistoryCapturedRef.current = true;
-              }
-            }}
-            onEndTruss3dNodeDrag={() => {
-              drag3dHistoryCapturedRef.current = false;
-            }}
-            workspaceBadge={isTruss3d ? t.spaceStudio : t.sections.model}
-            truss3dLinkMode={truss3dLinkMode}
-            immersiveViewport={immersiveViewport}
-            projectionMode={truss3dProjectionMode}
-            showGrid={truss3dShowGrid}
-            showLabels={truss3dShowLabels}
-            showNodes={truss3dShowNodes}
-            boxSelectMode={truss3dBoxSelectMode}
-            activeViewPreset={truss3dViewPreset}
-            focusRequestVersion={truss3dFocusRequestVersion}
-            resetRequestVersion={truss3dResetRequestVersion}
-            selectedTruss3dNodeIndices={selectedTruss3dNodes}
-            onSelectTruss3dNodes={handleTruss3dNodesBoxSelect}
-            showShortcutHints={showShortcutHints}
-            shortcutLegendTitle={t.shortcutLegendTitle}
-            shortcutLegendRows={[...t.shortcutLegendRows]}
-            onProjectionModeChange={handleTruss3dProjectionModeChange}
-            onShowGridChange={handleTruss3dShowGridChange}
-            onShowLabelsChange={handleTruss3dShowLabelsChange}
-            onShowNodesChange={handleTruss3dShowNodesChange}
-            onBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
-            viewportPixelWidth={viewportPixelWidth}
-          />
+            <WorkbenchViewportMount
+              t={t}
+              studyKind={studyKind}
+              sidebarSection={sidebarSection}
+              isSpring2d={isSpring2d}
+              isSpring1d={isSpring1d}
+              isHeatBar={isHeatBar}
+              isThermalBar={isThermalBar}
+              isThermalBeam={isThermalBeam}
+              isThermalFrame={isThermalFrame}
+              isThermalTruss2d={isThermalTruss2d}
+              isTorsion={isTorsion}
+              isFrame={isFrame}
+              isFrameLike={isFrameLike}
+              isBeam={isBeam}
+              isSpring={isSpring}
+              isSpring3d={isSpring3d}
+              isThermalTruss3d={isThermalTruss3d}
+              isHeatPlane={isHeatPlane}
+              isHeatPlaneTriangle={isHeatPlaneTriangle}
+              isPlane={isPlane}
+              isTruss={isTruss}
+              isTruss3d={isTruss3d}
+              isThermal={isThermal}
+              hiddenMaterialIds={hiddenMaterialIds}
+              frameLegendText={frameLegendText}
+              planeLegendText={planeLegendText}
+              axialNodes={axialNodes}
+              axialLength={axialLength}
+              axialScale={axialScale}
+              displayTrussNodes={displayTrussNodes}
+              displayTrussElements={displayTrussElements}
+              displayTruss3dNodes={displayTruss3dNodes}
+              displayTruss3dElements={displayTruss3dElements}
+              planeNodes={planeNodes}
+              planeElements={planeElements}
+              trussElementColors={trussElementColors}
+              truss3dElementColors={truss3dElementColors}
+              planeElementColors={planeElementColors}
+              trussBounds={trussBounds}
+              planeBounds={planeBounds}
+              trussResult={trussResult}
+              thermalTrussResult={thermalTrussResult}
+              activeFrameLikeResult={activeFrameLikeResult}
+              activeBeamLikeResult={activeBeamLikeResult}
+              torsionResult={torsionResult}
+              heatBarResult={heatBarResult}
+              thermalBarResult={thermalBarResult}
+              thermalTruss3dResult={thermalTruss3dResult}
+              springResult={springResult}
+              spring2dResult={spring2dResult}
+              spring3dResult={spring3dResult}
+              heatPlaneQuadResult={heatPlaneQuadResult}
+              heatPlaneTriangleResult={heatPlaneTriangleResult}
+              planeResult={planeResult}
+              activeLineResultField={activeLineResultField}
+              frameResultFieldMax={frameResultFieldMax}
+              focusedFrameElement={focusedFrameElement}
+              trussStability={trussStability}
+              trussDiagnostics={trussDiagnostics}
+              selectedNode={selectedNode}
+              selectedElement={selectedElement}
+              memberDraftNodes={memberDraftNodes}
+              stopDraggingNode={stopDraggingNode}
+              handleTrussPointerMove={handleTrussPointerMove}
+              setSelectedElement={setSelectedElement}
+              setSelectedNode={setSelectedNode}
+              setMemberDraftNodes={setMemberDraftNodes}
+              setFocusedFrameElement={setFocusedFrameElement}
+              startTrussNodeDrag={startTrussNodeDrag}
+              hiddenPlaneMaterialIds={hiddenMaterialIds}
+              planeResultField={planeResultField}
+              planeResultFieldMax={planeResultFieldMax}
+              selectedPlaneNodeData={selectedPlaneNodeData}
+              focusedPlaneElement={focusedPlaneElement}
+              handleTruss3dNodePick={handleTruss3dNodePick}
+              setSelectedTruss3dNodes={setSelectedTruss3dNodes}
+              updateTruss3dNodePosition={updateTruss3dNodePosition}
+              recordHistory={recordHistory}
+              drag3dHistoryCapturedRef={drag3dHistoryCapturedRef}
+              truss3dLinkMode={truss3dLinkMode}
+              immersiveViewport={immersiveViewport}
+              truss3dProjectionMode={truss3dProjectionMode}
+              truss3dShowGrid={truss3dShowGrid}
+              truss3dShowLabels={truss3dShowLabels}
+              truss3dShowNodes={truss3dShowNodes}
+              truss3dBoxSelectMode={truss3dBoxSelectMode}
+              truss3dViewPreset={truss3dViewPreset}
+              truss3dFocusRequestVersion={truss3dFocusRequestVersion}
+              truss3dResetRequestVersion={truss3dResetRequestVersion}
+              selectedTruss3dNodes={selectedTruss3dNodes}
+              showShortcutHints={showShortcutHints}
+              viewportPixelWidth={viewportPixelWidth}
+              handleTruss3dNodesBoxSelect={handleTruss3dNodesBoxSelect}
+              handleTruss3dProjectionModeChange={handleTruss3dProjectionModeChange}
+              handleTruss3dShowGridChange={handleTruss3dShowGridChange}
+              handleTruss3dShowLabelsChange={handleTruss3dShowLabelsChange}
+              handleTruss3dShowNodesChange={handleTruss3dShowNodesChange}
+              handleTruss3dBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
+            />
           }
           immersiveDrawer={
-            immersiveViewport && sidebarSection === "library" ? (
-              <div className="immersive-drawer">
-              <section className="immersive-drawer__card">
-                <div className="card-head">
-                  <h2>{t.immersiveDrawer}</h2>
-                  <div className="immersive-drawer__head-actions">
-                    <span>{t.immersiveLibrary}</span>
-                    <button
-                      className="ghost-button ghost-button--compact"
-                      onClick={() => handleSidebarSectionChange("model")}
-                      type="button"
-                    >
-                      {t.close}
-                    </button>
-                  </div>
-                </div>
-                <div className="immersive-drawer__grid">
-                  <div className="immersive-drawer__section">
-                    <h3>{t.immersiveSamples}</h3>
-                    <div className="immersive-drawer__list">
-                      {librarySampleRows.slice(0, 4).map((sample) => (
-                        <button
-                          key={sample.href}
-                          className="history-item immersive-drawer__button"
-                          onClick={() => openSample(sample.href)}
-                          type="button"
-                        >
-                          <strong>{sample.name}</strong>
-                          <span>{sample.kindLabel}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="immersive-drawer__section">
-                    <h3>{t.immersiveModels}</h3>
-                    <div className="immersive-drawer__list">
-                      {libraryModelRows.slice(0, 4).length > 0 ? (
-                        libraryModelRows.slice(0, 4).map((model) => (
-                          <button
-                            key={model.id}
-                            className="history-item immersive-drawer__button"
-                            onClick={() => {
-                              const modelRecord = selectedProjectModels.find((entry) => entry.model_id === model.id);
-                              if (modelRecord) openSavedModel(modelRecord);
-                            }}
-                            type="button"
-                          >
-                            <strong>{model.name}</strong>
-                            <small>{t.updatedAt}: {model.updatedAt}</small>
-                          </button>
-                        ))
-                      ) : (
-                        <p className="card-copy">{t.immersiveEmptyModels}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="immersive-drawer__section">
-                    <h3>{t.immersiveJobs}</h3>
-                    <div className="immersive-drawer__list">
-                      {libraryJobRows.slice(0, 4).length > 0 ? (
-                        libraryJobRows.slice(0, 4).map((historyJob) => (
-                          <button
-                            key={historyJob.id}
-                            className="history-item immersive-drawer__button"
-                            onClick={() => openHistoryJob(historyJob.id)}
-                            type="button"
-                          >
-                            <strong>{historyJob.shortId}</strong>
-                            <span>{historyJob.status}</span>
-                          </button>
-                        ))
-                      ) : (
-                        <p className="card-copy">{t.immersiveEmptyJobs}</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-            ) : null
+            <WorkbenchImmersiveLibraryDrawer
+              t={t}
+              immersiveViewport={immersiveViewport}
+              sidebarSection={sidebarSection}
+              librarySampleRows={librarySampleRows}
+              libraryModelRows={libraryModelRows}
+              libraryJobRows={libraryJobRows}
+              selectedProjectModels={selectedProjectModels}
+              handleSidebarSectionChange={handleSidebarSectionChange}
+              openSample={openSample}
+              openSavedModel={openSavedModel}
+              openHistoryJob={openHistoryJob}
+            />
           }
         />
 
-        <WorkbenchConsole
+        <WorkbenchConsoleMount
           sidebarSection={sidebarSection}
-          title={sidebarSection === "model" ? t.nodeTable : t.report}
-          subtitle={message}
-          modelMessageTitle={t.dragNode}
-          reportMessageTitle={t.messages}
           message={message}
-          dragNodeLabel={t.dragNode}
-          noNodeSelectedLabel={t.noNodeSelected}
-          loadCaseLabel={t.loadCase}
-          diagnosticsLabel={t.diagnostics}
-          selectedNodeId={isPlane ? selectedPlaneNodeData?.id ?? null : isBeam ? selectedBeamNodeData?.id ?? null : isTorsion ? selectedTorsionNodeData?.id ?? null : isFrameLike ? selectedFrameNodeData?.id ?? null : isHeatBar || isThermalBar ? selectedThermalNodeData?.id ?? null : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.id ?? null : selectedNodeData?.id ?? null}
-          selectedNodeX={isPlane ? selectedPlaneNodeData?.x : isBeam ? selectedBeamNodeData?.x : isTorsion ? selectedTorsionNodeData?.x : isFrameLike ? selectedFrameNodeData?.x : isHeatBar || isThermalBar ? selectedThermalNodeData?.x : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.x : selectedNodeData?.x}
-          selectedNodeY={isPlane ? selectedPlaneNodeData?.y : isBeam || isTorsion || isHeatBar || isThermalBar || isSpring1d ? 0 : isFrameLike ? selectedFrameNodeData?.y : isSpring3d || isThermalTruss3d ? selectedTruss3dNodeData?.y : selectedNodeData?.y}
-          selectedNodeLoadY={
-            isPlane
-              ? selectedPlaneNodeData?.load_y
-              : isBeam
-                ? selectedBeamNodeData?.load_y
-                : isTorsion
-                  ? selectedTorsionNodeData?.moment_z
-                : isFrameLike
-                  ? selectedFrameNodeData?.load_y
-                  : isHeatBar
-                    ? selectedThermalNodeData?.load_x
-                  : isThermalBar
-                    ? selectedThermalNodeData?.load_x
-                  : isSpring1d
-                    ? selectedNodeData?.load_x
-                    : isSpring2d
-                      ? selectedNodeData?.load_y
-                      : isSpring3d
-                        ? (selectedTruss3dNodeData ? spring3dModel.nodes[selectedTruss3dNodeData.index]?.load_z : undefined)
-                        : selectedNodeData?.load_y
-          }
-          selectedNodeIssueCount={isPlane ? null : selectedNodeIssues.length > 0 ? selectedNodeIssues.length : null}
-          elementTitle={isAxial ? t.axialElements : isBeam || isTorsion || isSpring || isHeatBar || isThermalBar ? t.frameElements : isTruss ? t.trussElements : isTruss3d ? t.spatialTrussElements : isFrameLike ? t.frameElements : t.planeElements}
-          spanLabel={t.span}
-          stressLabel={isHeatPlane ? `${t.maxTemperature} / ${t.temperatureGradientY}` : isPlane ? `${t.maxStress} / ${t.principalStress1}` : isFrameLike ? t.combinedStress : isBeam ? t.bendingStress : isTorsion ? t.torsionStress : isHeatBar ? t.temperatureGradientY : isSpring || isThermalBar ? t.axialForce : t.stress}
-          axialForceLabel={isHeatPlane ? t.maxHeatFlux : isPlane ? t.maxInPlaneShear : isFrameLike || isBeam ? t.maxMoment : isTorsion ? t.maxTorque : isHeatBar ? t.maxHeatFlux : isSpring || isThermalBar ? t.axialForce : t.axialForce}
-          isFrame={isFrameLike || isBeam || isTorsion}
-          elements={(isAxial ? axialElements : isSpring3d || isThermalTruss3d ? displayTruss3dElements : isTruss || isSpring || isHeatBar || isThermal ? displayTrussElements : isTruss3d ? displayTruss3dElements : isFrameLike || isBeam ? displayTrussElements : planeElements) as Array<{
-            index: number;
-            x1?: number;
-            x2?: number;
-            node_i?: number;
-            node_j?: number;
-            node_k?: number;
-            node_l?: number;
-            stress?: number;
-            axial_force?: number;
-            von_mises?: number;
-            principal_stress_1?: number;
-            max_in_plane_shear?: number;
-          }>}
+          t={t}
+          isPlane={isPlane}
+          isBeam={isBeam}
+          isTorsion={isTorsion}
+          isFrameLike={isFrameLike}
+          isHeatBar={isHeatBar}
+          isThermalBar={isThermalBar}
+          isSpring1d={isSpring1d}
+          isSpring={isSpring}
+          isSpring2d={isSpring2d}
+          isSpring3d={isSpring3d}
+          isHeatPlane={isHeatPlane}
+          isThermal={isThermal}
+          isThermalTruss3d={isThermalTruss3d}
+          isTruss={isTruss}
+          isTruss3d={isTruss3d}
+          isAxial={isAxial}
+          selectedNodeIssues={selectedNodeIssues}
+          selectedNodeData={selectedNodeData}
+          selectedPlaneNodeData={selectedPlaneNodeData}
+          selectedBeamNodeData={selectedBeamNodeData}
+          selectedTorsionNodeData={selectedTorsionNodeData}
+          selectedFrameNodeData={selectedFrameNodeData}
+          selectedThermalNodeData={selectedThermalNodeData}
+          selectedTruss3dNodeData={selectedTruss3dNodeData}
+          spring3dModel={spring3dModel}
+          axialElements={axialElements}
+          displayTruss3dElements={displayTruss3dElements}
+          displayTrussElements={displayTrussElements}
+          planeElements={planeElements}
         />
       </main>
 
-      <WorkbenchInspector
+      <WorkbenchInspectorMount
         t={t}
         reportScopeLabel={currentStudyFamilyLabel}
         reportScopeHint={currentStudyFamilyHint}
+        currentStudyFamilyLabel={currentStudyFamilyLabel}
+        currentStudyFamilyHint={currentStudyFamilyHint}
         sidebarSection={sidebarSection}
         studyKind={studyKind}
+        language={language}
         isPending={isPending}
-        selectedNodeData={selectedNodeData ? { ...selectedNodeData } : null}
-        selectedElementData={selectedElementData ? { ...selectedElementData } : null}
-        selectedTruss3dNodeData={selectedTruss3dNodeData ? { ...selectedTruss3dNodeData, ...(isSpring3d ? spring3dModel.nodes[selectedTruss3dNodeData.index] : isThermalTruss3d ? thermalTruss3dModel.nodes[selectedTruss3dNodeData.index] : truss3dModel.nodes[selectedTruss3dNodeData.index]) } : null}
-        selectedTruss3dElementData={selectedTruss3dElementData ? { ...selectedTruss3dElementData } : null}
-        selectedPlaneNodeData={selectedPlaneNodeData ? { ...selectedPlaneNodeData } : null}
-        selectedPlaneElementData={selectedPlaneElementData ? { ...selectedPlaneElementData } : null}
-        selectedFrameNodeData={(isFrameLike ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : isTorsion ? selectedTorsionNodeData : isHeatBar || isThermalBar ? selectedThermalNodeData : null) ? { ...(isFrameLike ? selectedFrameNodeData : isBeam ? selectedBeamNodeData : isTorsion ? selectedTorsionNodeData : selectedThermalNodeData)! } : null}
-        selectedFrameElementData={(isFrameLike ? selectedFrameElementData : isBeam ? selectedBeamElementData : isTorsion ? selectedTorsionElementData : isHeatBar || isThermalBar ? selectedThermalElementData : isSpring ? selectedSpringElementData : null) ? { ...(isFrameLike ? selectedFrameElementData : isBeam ? selectedBeamElementData : isTorsion ? selectedTorsionElementData : isHeatBar || isThermalBar ? selectedThermalElementData : selectedSpringElementData)! } : null}
-        trussElementArea={selectedElementData ? (isThermalTruss2d ? thermalTrussModel.elements[selectedElementData.index]?.area : trussModel.elements[selectedElementData.index]?.area) ?? 0 : 0}
-        trussElementModulusGpa={selectedElementData ? round((((isThermalTruss2d ? thermalTrussModel.elements[selectedElementData.index]?.youngs_modulus : trussModel.elements[selectedElementData.index]?.youngs_modulus) ?? 0) / 1.0e9)) : 0}
-        trussElementMaterialId={selectedElementData ? (isThermalTruss2d ? thermalTrussModel.elements[selectedElementData.index]?.material_id : trussModel.elements[selectedElementData.index]?.material_id) ?? materialOptions[0]?.id ?? "" : ""}
-        truss3dElementArea={selectedTruss3dElementData ? (studyKind === "thermal_truss_3d" ? thermalTruss3dModel.elements[selectedTruss3dElementData.index]?.area : studyKind === "truss_3d" ? truss3dModel.elements[selectedTruss3dElementData.index]?.area : undefined) ?? 0 : 0}
-        truss3dElementModulusGpa={selectedTruss3dElementData ? round(((((studyKind === "thermal_truss_3d" ? thermalTruss3dModel.elements[selectedTruss3dElementData.index]?.youngs_modulus : studyKind === "truss_3d" ? truss3dModel.elements[selectedTruss3dElementData.index]?.youngs_modulus : undefined) ?? 0)) / 1.0e9)) : 0}
-        truss3dElementMaterialId={selectedTruss3dElementData ? ((studyKind === "thermal_truss_3d" ? thermalTruss3dModel.elements[selectedTruss3dElementData.index]?.material_id : studyKind === "truss_3d" ? truss3dModel.elements[selectedTruss3dElementData.index]?.material_id : undefined) ?? materialOptions[0]?.id ?? "") : ""}
-        planeElementThickness={selectedPlaneElementData ? activePlaneInputModel.elements[selectedPlaneElementData.index]?.thickness ?? 0 : 0}
-        planeElementModulusGpa={selectedPlaneElementData && !isHeatPlane ? round((((planeModel.elements[selectedPlaneElementData.index] as PlaneTriangle2dJobInput["elements"][number] | PlaneQuad2dJobInput["elements"][number] | ThermalPlaneTriangle2dJobInput["elements"][number] | ThermalPlaneQuad2dJobInput["elements"][number])?.youngs_modulus ?? 0) / 1.0e9)) : 0}
-        planeElementPoissonRatio={selectedPlaneElementData && !isHeatPlane ? (((planeModel.elements[selectedPlaneElementData.index] as PlaneTriangle2dJobInput["elements"][number] | PlaneQuad2dJobInput["elements"][number] | ThermalPlaneTriangle2dJobInput["elements"][number] | ThermalPlaneQuad2dJobInput["elements"][number])?.poisson_ratio) ?? 0.33) : 0.33}
-        planeElementMaterialId={selectedPlaneElementData && !isHeatPlane ? ((planeModel.elements[selectedPlaneElementData.index] as PlaneTriangle2dJobInput["elements"][number] | PlaneQuad2dJobInput["elements"][number] | ThermalPlaneTriangle2dJobInput["elements"][number] | ThermalPlaneQuad2dJobInput["elements"][number])?.material_id ?? materialOptions[0]?.id ?? "") : ""}
-        frameElementMaterialId={isFrameLike ? selectedFrameElementData ? activeFrameLikeModel.elements[selectedFrameElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : "" : isBeam ? selectedBeamElementData ? activeBeamLikeModel.elements[selectedBeamElementData.index]?.material_id ?? materialOptions[0]?.id ?? "" : "" : ""}
+        isFrameLike={isFrameLike}
+        isThermalFrame={isThermalFrame}
+        isBeam={isBeam}
+        isTorsion={isTorsion}
+        isHeatBar={isHeatBar}
+        isThermalBar={isThermalBar}
+        isThermalTruss2d={isThermalTruss2d}
+        isThermalTruss3d={isThermalTruss3d}
+        isSpring={isSpring}
+        isSpring3d={isSpring3d}
+        isHeatPlane={isHeatPlane}
+        isHeatPlaneTriangle={isHeatPlaneTriangle}
+        isThermalPlaneTriangle={isThermalPlaneTriangle}
+        isThermalPlaneQuad={isThermalPlaneQuad}
+        canProjectHeatToThermo={canProjectHeatToThermo}
+        selectedNode={selectedNode}
+        selectedNodeData={selectedNodeData}
+        selectedElementData={selectedElementData}
+        selectedTruss3dNodeData={selectedTruss3dNodeData}
+        selectedTruss3dElementData={selectedTruss3dElementData}
+        selectedPlaneNodeData={selectedPlaneNodeData}
+        selectedPlaneElementData={selectedPlaneElementData}
+        selectedFrameNodeData={selectedFrameNodeData}
+        selectedFrameElementData={selectedFrameElementData}
+        selectedBeamNodeData={selectedBeamNodeData}
+        selectedBeamElementData={selectedBeamElementData}
+        selectedTorsionNodeData={selectedTorsionNodeData}
+        selectedTorsionElementData={selectedTorsionElementData}
+        selectedThermalNodeData={selectedThermalNodeData}
+        selectedThermalElementData={selectedThermalElementData}
+        selectedSpringElementData={selectedSpringElementData}
+        selectedNodeIssues={selectedNodeIssues}
         materialOptions={materialOptions}
         materialLabel={t.material}
+        trussDiagnostics={trussDiagnostics}
+        trussStability={trussStability}
+        undoStack={undoStack}
+        redoStack={redoStack}
+        job={job}
+        nodeCount={nodeCount}
+        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isHeatBar ? scientific(heatBarResult?.max_temperature) : isHeatPlane ? scientific(isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_temperature : heatPlaneQuadResult?.max_temperature) : isThermalTruss2d ? scientific(thermalTrussResult?.max_displacement) : studyKind === "thermal_truss_3d" ? scientific(thermalTruss3dResult?.max_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isSpring3d ? scientific(spring3dResult?.max_displacement) : studyKind === "truss_3d" ? scientific(truss3dResult?.max_displacement) : isThermalBar ? scientific(thermalBarResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(activeBeamLikeResult?.max_displacement) : isTorsion ? scientific(torsionResult?.max_rotation) : isFrameLike ? scientific(activeFrameLikeResult?.max_displacement) : scientific(planeResult?.max_displacement)}
+        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isHeatBar ? heatBarResult?.max_heat_flux : isHeatPlane ? (isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_heat_flux : heatPlaneQuadResult?.max_heat_flux) : isThermalTruss2d ? thermalTrussResult?.max_stress : studyKind === "thermal_truss_3d" ? thermalTruss3dResult?.max_stress : isTruss ? trussResult?.max_stress : isSpring3d ? spring3dResult?.max_force : studyKind === "truss_3d" ? truss3dResult?.max_stress : isThermalBar ? thermalBarResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? activeBeamLikeResult?.max_stress : isTorsion ? torsionResult?.max_stress : isFrameLike ? activeFrameLikeResult?.max_stress : planeResult?.max_stress)}
+        frameMaxAxialForce={frameMaxAxialForce}
+        frameMaxShearForce={frameMaxShearForce}
+        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isHeatBar ? scientific(heatBarResult?.max_heat_flux) : isThermalBar ? scientific(thermalBarResult?.max_axial_force) : isThermalTruss2d ? scientific(thermalTrussResult?.max_axial_force) : isThermalTruss3d ? scientific(thermalTruss3dResult?.max_axial_force) : isSpring ? scientific(activeSpringResult?.max_force) : isTorsion ? scientific(torsionResult?.max_torque) : isFrameLike ? scientific(activeFrameLikeResult?.max_moment) : isBeam ? scientific(activeBeamLikeResult?.max_moment) : "--"}
+        frameMaxRotationValue={isFrameLike ? scientific(activeFrameLikeResult?.max_rotation) : isBeam ? scientific(activeBeamLikeResult?.max_rotation) : isTorsion ? scientific(torsionResult?.max_rotation) : undefined}
+        thermalPlaneMaxTemperatureDelta={planeResult && "max_temperature_delta" in planeResult ? planeResult.max_temperature_delta : undefined}
+        thermalFrameMaxTemperatureDelta={thermalFrameMaxTemperatureDelta}
+        thermalFrameMaxTemperatureGradient={thermalFrameMaxTemperatureGradient}
+        thermalBeamMaxTemperatureGradient={thermalBeamMaxTemperatureGradient}
+        planeHotspotFieldLabel={planeResultFieldLabel}
+        planeHotspotElements={planeHotspotElements}
+        planeThermalRows={planeThermalRows}
+        frameHotspotFieldLabel={frameResultFieldLabel}
+        frameHotspotElements={frameHotspotElements}
+        frameForceRows={frameForceRows}
+        planeHotspotLimit={planeHotspotLimit}
+        heartbeatStatusValue={heartbeatStatusValue}
+        heartbeatTone={heartbeatToneValue}
+        translatedFailureReason={translatedFailureReason}
+        jobIsActive={jobIsActive}
+        activeFrameLikeResult={activeFrameLikeResult}
+        activeBeamLikeResult={activeBeamLikeResult}
+        torsionResult={torsionResult}
+        activePlaneInputModel={activePlaneInputModel}
+        planeModel={planeModel}
+        activeFrameLikeModel={activeFrameLikeModel}
+        activeBeamLikeModel={activeBeamLikeModel}
+        trussModel={trussModel}
+        thermalTrussModel={thermalTrussModel}
+        truss3dModel={truss3dModel}
+        thermalTruss3dModel={thermalTruss3dModel}
+        spring3dModel={spring3dModel}
         onUpdateSelectedNode={updateSelectedNode}
         onUpdateSelectedElement={updateSelectedElement}
         onAssignSelectedElementMaterial={assignSelectedElementMaterial}
@@ -7575,66 +5097,27 @@ export function Workbench() {
         onUpdateSelectedFrameNode={updateSelectedFrameNode}
         onUpdateSelectedFrameElement={updateSelectedFrameElement}
         onAssignSelectedFrameElementMaterial={assignSelectedFrameElementMaterial}
-        trussDiagnostics={trussDiagnostics}
-        trussStability={trussStability}
-        hotspotNodeLabels={(trussStability?.hotspotNodes ?? []).map((nodeIndex) => trussModel.nodes[nodeIndex]?.id ?? nodeIndex).join(", ")}
-        onApplyTrussSuggestion={(id) => {
-          const suggestion = trussDiagnostics?.suggestions.find((entry) => entry.id === id);
+        applyTrussSuggestion={(suggestionId) => {
+          const suggestion = trussDiagnostics?.suggestions.find((entry) => entry.id === suggestionId);
           if (suggestion) applyTrussSuggestion(suggestion);
         }}
-        undoStack={undoStack}
-        redoStack={redoStack}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        job={job}
-        nodeCount={nodeCount}
-        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isHeatBar ? scientific(heatBarResult?.max_temperature) : isHeatPlane ? scientific(isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_temperature : heatPlaneQuadResult?.max_temperature) : isThermalTruss2d ? scientific(thermalTrussResult?.max_displacement) : studyKind === "thermal_truss_3d" ? scientific(thermalTruss3dResult?.max_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isSpring3d ? scientific(spring3dResult?.max_displacement) : studyKind === "truss_3d" ? scientific(truss3dResult?.max_displacement) : isThermalBar ? scientific(thermalBarResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(activeBeamLikeResult?.max_displacement) : isTorsion ? scientific(torsionResult?.max_rotation) : isFrameLike ? scientific(activeFrameLikeResult?.max_displacement) : scientific(planeResult?.max_displacement)}
-        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isHeatBar ? heatBarResult?.max_heat_flux : isHeatPlane ? (isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_heat_flux : heatPlaneQuadResult?.max_heat_flux) : isThermalTruss2d ? thermalTrussResult?.max_stress : studyKind === "thermal_truss_3d" ? thermalTruss3dResult?.max_stress : isTruss ? trussResult?.max_stress : isSpring3d ? spring3dResult?.max_force : studyKind === "truss_3d" ? truss3dResult?.max_stress : isThermalBar ? thermalBarResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? activeBeamLikeResult?.max_stress : isTorsion ? torsionResult?.max_stress : isFrameLike ? activeFrameLikeResult?.max_stress : planeResult?.max_stress)}
-        frameMaxAxialForceValue={isFrameLike || isSpring || isHeatBar || isThermalBar || isThermalTruss2d || isThermalTruss3d ? scientific(frameMaxAxialForce) : undefined}
-        frameMaxShearForceValue={isFrameLike || isBeam ? scientific(frameMaxShearForce) : undefined}
-        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isHeatBar ? scientific(heatBarResult?.max_heat_flux) : isThermalBar ? scientific(thermalBarResult?.max_axial_force) : isThermalTruss2d ? scientific(thermalTrussResult?.max_axial_force) : isThermalTruss3d ? scientific(thermalTruss3dResult?.max_axial_force) : isSpring ? scientific(activeSpringResult?.max_force) : isTorsion ? scientific(torsionResult?.max_torque) : isFrameLike ? scientific(activeFrameLikeResult?.max_moment) : isBeam ? scientific(activeBeamLikeResult?.max_moment) : "--"}
-        frameMaxRotationValue={isFrameLike ? scientific(activeFrameLikeResult?.max_rotation) : isBeam ? scientific(activeBeamLikeResult?.max_rotation) : isTorsion ? scientific(torsionResult?.max_rotation) : undefined}
-        thermalPlaneMaxTemperatureDeltaValue={isThermalPlaneTriangle || isThermalPlaneQuad ? scientific(planeResult && "max_temperature_delta" in planeResult ? planeResult.max_temperature_delta : undefined) : undefined}
-        thermalFrameMaxTemperatureDeltaValue={isThermalFrame ? scientific(thermalFrameMaxTemperatureDelta) : undefined}
-        thermalFrameMaxTemperatureGradientValue={isThermalFrame ? scientific(thermalFrameMaxTemperatureGradient) : undefined}
-        thermalBeamMaxTemperatureGradientValue={isThermalBeam ? scientific(thermalBeamMaxTemperatureGradient) : undefined}
-        planeHotspotFieldLabel={isPlane ? planeResultFieldLabel : undefined}
-        planeHotspotElements={isPlane ? planeHotspotElements : []}
-        planeThermalRows={isHeatPlane ? planeThermalRows : []}
-        frameHotspotFieldLabel={isFrameLike || isBeam || isSpring || isThermal || isTorsion ? frameResultFieldLabel : undefined}
-        frameHotspotElements={isFrameLike || isBeam || isTorsion || isSpring || isThermal ? frameHotspotElements : []}
-        frameForceRows={isFrameLike || isBeam || isTorsion || isSpring || isThermal ? frameForceRows : []}
-        planeHotspotLimit={planeHotspotLimit}
-        createdAtValue={formatTime(job?.created_at, language)}
-        updatedAtValue={formatTime(job?.updated_at, language)}
-        heartbeatStatusValue={heartbeatStatusValue}
-        heartbeatTone={heartbeatToneValue}
-        failureReasonValue={translatedFailureReason ?? job?.message ?? "--"}
-        canCancelJob={jobIsActive}
-        onCancelJob={cancelCurrentJob}
-        onDownloadJson={downloadResultJson}
-        onDownloadCsv={downloadResultCsv}
-        canProjectHeatToThermo={canProjectHeatToThermo}
+        handleUndo={handleUndo}
+        handleRedo={handleRedo}
+        cancelCurrentJob={cancelCurrentJob}
+        downloadResultJson={downloadResultJson}
+        downloadResultCsv={downloadResultCsv}
         projectHeatToThermoLabel={t.projectHeatToThermo}
-        onProjectHeatToThermo={projectHeatToThermoStudy}
-        onDownloadPlaneHotspots={downloadPlaneHotspotSummary}
-        onDownloadFrameHotspots={downloadFrameHotspotSummary}
-        onDownloadFrameForces={downloadFrameForceSummary}
-        onSelectPlaneHotspot={(index) => {
-          setSidebarSection("model");
-          setModelTab("tree");
-          setSelectedElement(index);
-          setSelectedNode(null);
-          setFocusedPlaneElement(index);
-        }}
-        onSelectFrameHotspot={(index) => {
-          setSidebarSection("model");
-          setModelTab("tree");
-          setSelectedElement(index);
-          setSelectedNode(null);
-          setFocusedFrameElement(index);
-        }}
-        onPlaneHotspotLimitChange={setPlaneHotspotLimit}
+        projectHeatToThermoStudy={projectHeatToThermoStudy}
+        downloadPlaneHotspotSummary={downloadPlaneHotspotSummary}
+        downloadFrameHotspotSummary={downloadFrameHotspotSummary}
+        downloadFrameForceSummary={downloadFrameForceSummary}
+        setSidebarSection={setSidebarSection}
+        setModelTab={setModelTab}
+        setSelectedElement={setSelectedElement}
+        setSelectedNode={setSelectedNode}
+        setFocusedPlaneElement={setFocusedPlaneElement}
+        setFocusedFrameElement={setFocusedFrameElement}
+        setPlaneHotspotLimit={setPlaneHotspotLimit}
       />
     </div>
   );
