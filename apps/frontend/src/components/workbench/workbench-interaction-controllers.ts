@@ -1,0 +1,184 @@
+"use client";
+
+import { useWorkbenchAssistantAuditController } from "@/components/workbench/workbench-assistant-audit-controller";
+import { createWorkbenchTopLevelActionsController } from "@/components/workbench/workbench-top-level-actions-controller";
+import { createWorkbenchUiActionController } from "@/components/workbench/workbench-ui-action-controller";
+
+export function useWorkbenchInteractionControllers(props: Record<string, any>) {
+  const topLevelActions = createWorkbenchTopLevelActionsController({
+    language: props.language,
+    t: props.t,
+    activeLanguagePack: props.activeLanguagePack,
+    setLanguagePacks: props.setLanguagePacks,
+    setMessage: props.setMessage,
+    securityEventWindowFilter: props.securityEventWindowFilter,
+    securityEventSourceFilter: props.securityEventSourceFilter,
+    securityEventRiskFilter: props.securityEventRiskFilter,
+    securityEventStatusFilter: props.securityEventStatusFilter,
+    securityEventActionFilter: props.securityEventActionFilter,
+    undoStack: props.undoStack,
+    redoStack: props.redoStack,
+    setUndoStack: props.setUndoStack,
+    setRedoStack: props.setRedoStack,
+    studyKind: props.studyKind,
+    sidebarSection: props.sidebarSection,
+    studyTab: props.studyTab,
+    modelTab: props.modelTab,
+    libraryTab: props.libraryTab,
+    systemPanelTab: props.systemPanelTab,
+    systemDataTab: props.systemDataTab,
+    theme: props.theme,
+    frontendRuntimeMode: props.frontendRuntimeMode,
+    selectedProjectId: props.selectedProjectId,
+    selectedModelId: props.selectedModelId,
+    selectedVersionId: props.selectedVersionId,
+    selectedAdminJobId: props.selectedAdminJobId,
+    selectedAdminResultJobId: props.selectedAdminResultJobId,
+    adminFilterProjectId: props.adminFilterProjectId,
+    adminFilterModelVersionId: props.adminFilterModelVersionId,
+    loadedModelName: props.loadedModelName,
+    activeMaterial: props.activeMaterial,
+    selectedNode: props.selectedNode,
+    selectedElement: props.selectedElement,
+    selectedTruss3dNodes: props.selectedTruss3dNodes,
+    memberDraftNodes: props.memberDraftNodes,
+    immersiveViewport: props.immersiveViewport,
+    immersiveToolDrawerOpen: props.immersiveToolDrawerOpen,
+    immersiveHelpDrawerOpen: props.immersiveHelpDrawerOpen,
+    truss3dProjectionMode: props.truss3dProjectionMode,
+    truss3dViewPreset: props.truss3dViewPreset,
+    truss3dBoxSelectMode: props.truss3dBoxSelectMode,
+    truss3dLinkMode: props.truss3dLinkMode,
+    hasAnyResult: props.hasAnyResult,
+    job: props.job,
+    projects: props.projects,
+    jobHistory: props.jobHistory,
+    resultRecords: props.resultRecords,
+    protocolAgents: props.protocolAgents,
+    health: props.health,
+    message: props.message,
+    axialForm: props.axialForm,
+    heatBarModel: props.heatBarModel,
+    heatPlaneModel: props.heatPlaneModel,
+    thermalBarModel: props.thermalBarModel,
+    thermalBeamModel: props.thermalBeamModel,
+    thermalFrameModel: props.thermalFrameModel,
+    thermalTrussModel: props.thermalTrussModel,
+    trussModel: props.trussModel,
+    thermalTruss3dModel: props.thermalTruss3dModel,
+    truss3dModel: props.truss3dModel,
+    planeModel: props.planeModel,
+    frameModel: props.frameModel,
+    beamModel: props.beamModel,
+    torsionModel: props.torsionModel,
+    springModel: props.springModel,
+    spring2dModel: props.spring2dModel,
+    spring3dModel: props.spring3dModel,
+    parametric: props.parametric,
+    panelParametric: props.panelParametric,
+    setStudyKind: props.setStudyKind,
+    setAxialForm: props.setAxialForm,
+    setHeatBarModel: props.setHeatBarModel,
+    setHeatPlaneModel: props.setHeatPlaneModel,
+    setThermalBarModel: props.setThermalBarModel,
+    setThermalBeamModel: props.setThermalBeamModel,
+    setThermalFrameModel: props.setThermalFrameModel,
+    setThermalTrussModel: props.setThermalTrussModel,
+    setTrussModel: props.setTrussModel,
+    setThermalTruss3dModel: props.setThermalTruss3dModel,
+    setTruss3dModel: props.setTruss3dModel,
+    setPlaneModel: props.setPlaneModel,
+    setFrameModel: props.setFrameModel,
+    setBeamModel: props.setBeamModel,
+    setTorsionModel: props.setTorsionModel,
+    setSpringModel: props.setSpringModel,
+    setSpring2dModel: props.setSpring2dModel,
+    setSpring3dModel: props.setSpring3dModel,
+    setParametric: props.setParametric,
+    setPanelParametric: props.setPanelParametric,
+    setActiveMaterial: props.setActiveMaterial,
+    setLoadedModelName: props.setLoadedModelName,
+    setSidebarSection: props.setSidebarSection,
+    setSelectedNode: props.setSelectedNode,
+    setSelectedElement: props.setSelectedElement,
+    setMemberDraftNodes: props.setMemberDraftNodes,
+    resetActiveResult: props.resetActiveResult,
+  });
+
+  const assistantAudit = useWorkbenchAssistantAuditController({
+    language: props.language,
+    scriptRecordingMode: props.scriptRecordingMode,
+    frontendRuntimeMode: props.frontendRuntimeMode,
+    studyKind: props.studyKind,
+    selectedProjectId: props.selectedProjectId,
+    selectedModelId: props.selectedModelId,
+    selectedVersionId: props.selectedVersionId,
+    immersiveViewport: props.immersiveViewport,
+    setMessage: props.setMessage,
+    buildScriptSnapshot: topLevelActions.buildScriptSnapshot,
+    buildWorkbenchSnapshot: () => topLevelActions.buildSnapshot(),
+    restoreWorkbenchSnapshot: topLevelActions.restoreSnapshot,
+  });
+
+  const toggleImmersiveViewport = async () => {
+    const target = props.viewportPanelRef.current;
+    if (!target) return;
+
+    try {
+      if (document.fullscreenElement === target) {
+        await document.exitFullscreen();
+        props.setMessage(props.t.immersiveModeDisabled);
+      } else {
+        await target.requestFullscreen();
+        props.setMessage(props.t.immersiveModeEnabled);
+      }
+    } catch (error) {
+      props.setMessage(error instanceof Error ? error.message : props.t.initialFailed);
+    }
+  };
+
+  const uiActionController = createWorkbenchUiActionController({
+    workflowCatalogLength: props.workflowCatalog.length,
+    workflowCatalogBusy: props.workflowCatalogBusy,
+    selectedProjectId: props.selectedProjectId,
+    selectedVersionId: props.selectedVersionId,
+    adminFilterProjectId: props.adminFilterProjectId,
+    adminFilterModelVersionId: props.adminFilterModelVersionId,
+    systemDataTab: props.systemDataTab,
+    truss3dLinkMode: props.truss3dLinkMode,
+    immersiveViewport: props.immersiveViewport,
+    setSidebarSection: props.setSidebarSection,
+    setStudyTab: props.setStudyTab,
+    setModelTab: props.setModelTab,
+    setModelToolsPage: props.setModelToolsPage,
+    setLibraryTab: props.setLibraryTab,
+    setWorkflowPanelTab: props.setWorkflowPanelTab,
+    setSystemPanelTab: props.setSystemPanelTab,
+    setSystemDataTab: props.setSystemDataTab,
+    setAdminFilterProjectId: props.setAdminFilterProjectId,
+    setAdminFilterModelVersionId: props.setAdminFilterModelVersionId,
+    setSelectedAdminJobId: props.setSelectedAdminJobId,
+    setSelectedAdminResultJobId: props.setSelectedAdminResultJobId,
+    setTruss3dViewPreset: props.setTruss3dViewPreset,
+    setTruss3dProjectionMode: props.setTruss3dProjectionMode,
+    setTruss3dBoxSelectMode: props.setTruss3dBoxSelectMode,
+    setTruss3dShowGrid: props.setTruss3dShowGrid,
+    setTruss3dShowLabels: props.setTruss3dShowLabels,
+    setTruss3dShowNodes: props.setTruss3dShowNodes,
+    setImmersiveToolDrawerOpen: props.setImmersiveToolDrawerOpen,
+    setImmersiveHelpDrawerOpen: props.setImmersiveHelpDrawerOpen,
+    setTruss3dFocusRequestVersion: props.setTruss3dFocusRequestVersion,
+    setTruss3dResetRequestVersion: props.setTruss3dResetRequestVersion,
+    refreshWorkflowCatalog: props.refreshWorkflowCatalog,
+    recordManualDslAction: assistantAudit.recordManualDslAction,
+    toggleTruss3dLinkMode: props.toggleTruss3dLinkMode,
+    toggleImmersiveViewport,
+  });
+
+  return {
+    assistantAudit,
+    topLevelActions,
+    toggleImmersiveViewport,
+    uiActionController,
+  };
+}

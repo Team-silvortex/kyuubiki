@@ -14,6 +14,10 @@ import {
 } from "react";
 import brand from "../../../../../assets/brand/brand.json";
 import {
+  buildWorkbenchAdminSelections,
+  buildWorkbenchStudyFlags,
+} from "@/components/workbench/workbench-admin-context";
+import {
   applyJobContextToWorkbench as applyJobContextToWorkbenchWithDeps,
   applySelectedAdminJobContext as applySelectedAdminJobContextWithDeps,
   applySelectedAdminResultContext as applySelectedAdminResultContextWithDeps,
@@ -24,37 +28,27 @@ import {
   openSelectedAdminResultVersion as openSelectedAdminResultVersionWithDeps,
   resolveScriptLinkedJob as resolveScriptLinkedJobWithDeps,
 } from "@/components/workbench/workbench-admin-data-controller";
+import { useWorkbenchAdminSecurityState } from "@/components/workbench/workbench-admin-security-state";
 import {
   deleteWorkbenchAdminResultRecord,
   exportWorkbenchAdminResultRecord,
   refreshWorkbenchResults,
   saveWorkbenchAdminResultRecord,
 } from "@/components/workbench/workbench-admin-result-controller";
-import { useWorkbenchAssistantController } from "@/components/workbench/workbench-assistant-controller";
-import { useWorkbenchAssistantAuditController } from "@/components/workbench/workbench-assistant-audit-controller";
-import { WorkbenchAssistantPanel } from "@/components/workbench/workbench-assistant-panel";
-import { WorkbenchAssistantFloat } from "@/components/workbench/workbench-assistant-float";
-import { WorkbenchConsoleMount } from "@/components/workbench/workbench-console-mount";
-import { WorkbenchImmersiveLibraryDrawer } from "@/components/workbench/workbench-immersive-library-drawer";
-import { WorkbenchLibrarySectionMount } from "@/components/workbench/workbench-library-section-mount";
+import { useWorkbenchFlowControllers } from "@/components/workbench/workbench-flow-controllers";
+import { buildWorkbenchFlowControllerProps } from "@/components/workbench/workbench-flow-controller-props";
 import { WorkbenchMainShellMount } from "@/components/workbench/workbench-main-shell-mount";
-import { WorkbenchMainViewportPanelMount } from "@/components/workbench/workbench-main-viewport-panel-mount";
+import { buildWorkbenchMainShellComposition } from "@/components/workbench/workbench-main-shell-composition";
 import { buildWorkbenchModelContent } from "@/components/workbench/workbench-model-content";
-import { WorkbenchModelSectionMount } from "@/components/workbench/workbench-model-section-mount";
-import {
-  downloadWorkbenchLanguagePackTemplate,
-  exportWorkbenchInstalledLanguagePack,
-  importWorkbenchLanguagePack,
-  removeWorkbenchLanguagePack,
-} from "@/components/workbench/workbench-language-pack-controller";
-import { createWorkbenchMaterialEditController } from "@/components/workbench/workbench-material-edit-controller";
+import { buildWorkbenchModelContentProps } from "@/components/workbench/workbench-model-content-props";
+import { buildWorkbenchProjectFlows } from "@/components/workbench/workbench-project-flows";
+import { useWorkbenchInteractionControllers } from "@/components/workbench/workbench-interaction-controllers";
 import {
   copyByLanguage,
   humanizeSolverFailure,
   type WorkbenchCopy,
   type WorkbenchLanguage,
 } from "@/components/workbench/workbench-copy";
-import { buildRuntimeAuditModelVersionFacets, buildRuntimeAuditProjectFacets, buildRuntimeAuditSourceStatusFacets, buildRuntimeAuditStudyFacets, buildRuntimeAuditSummaryRows, buildRuntimeAuditTrendBars } from "@/components/workbench/workbench-runtime-audit-helpers";
 import {
   defaultAxial,
   defaultBeam1d,
@@ -136,8 +130,6 @@ import {
   downloadWorkbenchDatabaseSnapshot,
   downloadWorkbenchProjectBundleJson,
   downloadWorkbenchProjectBundleZip,
-  downloadWorkbenchSecurityEventCsvExport,
-  downloadWorkbenchSecurityEventExport,
 } from "@/components/workbench/workbench-export-controller";
 import {
   downloadWorkbenchFrameForceSummary,
@@ -150,9 +142,7 @@ import {
   useWorkbenchResultWindowController,
   type ResultWindowState,
 } from "@/components/workbench/workbench-result-window-controller";
-import { WorkbenchResultWindowBar } from "@/components/workbench/workbench-result-window-bar";
-import { buildWorkbenchActiveResultState } from "@/components/workbench/workbench-active-result-state";
-import { createWorkbenchFrameLikeEditController } from "@/components/workbench/workbench-frame-like-edit-controller";
+import { useWorkbenchEditControllers } from "@/components/workbench/workbench-edit-controllers";
 import {
   buildDisplaySpring3dElements,
   buildDisplaySpring3dNodes,
@@ -167,8 +157,6 @@ import {
   formatJobMessage,
   formatPeerStatus,
   formatProtocolMethodLabel,
-  heartbeatStatus,
-  heartbeatTone,
   isAxialResult,
   isBeam1dResult,
   isFrame2dResult,
@@ -187,33 +175,22 @@ import {
   isTorsion1dResult,
   isTruss3dResult,
   isTrussResult,
-  lineResultFieldValue,
   localMaterialLabel,
   materialColorByIndex,
-  planeStressFill,
 } from "@/components/workbench/workbench-result-helpers";
-import {
-  importWorkbenchProjectBundle,
-  openPersistedWorkbenchModel,
-  openPersistedWorkbenchVersion,
-  openPersistedWorkbenchVersionById,
-} from "@/components/workbench/workbench-persisted-model-controller";
-import { buildWorkbenchResultDerivedData } from "@/components/workbench/workbench-result-derived";
+import { useWorkbenchStudyResultDerived } from "@/components/workbench/workbench-study-result-derived";
 import { WorkbenchInspectorMount } from "@/components/workbench/workbench-inspector-mount";
 import { useWorkbenchJobHistoryController } from "@/components/workbench/workbench-job-history-controller";
-import { handleWorkbenchScriptMacroDataAction } from "@/components/workbench/workbench-script-macro-data-controller";
-import { handleWorkbenchScriptNavAction } from "@/components/workbench/workbench-script-nav-controller";
-import { handleWorkbenchScriptProjectModelAction } from "@/components/workbench/workbench-script-project-model-controller";
-import { handleWorkbenchScriptStateAction } from "@/components/workbench/workbench-script-state-controller";
-import { WorkbenchViewportHeadActions } from "@/components/workbench/workbench-viewport-head-actions";
-import { WorkbenchViewportDock } from "@/components/workbench/workbench-viewport-dock";
-import { WorkbenchViewportMount } from "@/components/workbench/workbench-viewport-mount";
 import { WorkbenchSidebarMount } from "@/components/workbench/workbench-sidebar-mount";
+import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
+import { buildWorkbenchMainShellProps } from "@/components/workbench/workbench-main-shell-props";
+import { useWorkbenchShellState } from "@/components/workbench/workbench-shell-state";
+import { useWorkbenchRuntimeGuards } from "@/components/workbench/workbench-runtime-guards";
+import { useWorkbenchWorkspaceState } from "@/components/workbench/workbench-workspace-state";
 import {
   importWorkbenchModelFile,
   openWorkbenchSample,
 } from "@/components/workbench/workbench-sample-import-controller";
-import { createWorkbenchStructureEditController } from "@/components/workbench/workbench-structure-edit-controller";
 import {
   applyStudyKindSelection,
   createStudyKindResetHandlers,
@@ -221,7 +198,6 @@ import {
 } from "@/components/workbench/workbench-study-kind-controller";
 import {
   analyzeTrussModel,
-  findNearestConnectableNode,
   getTrussBounds,
   renderLoadGlyph,
   renderSupportGlyph,
@@ -229,11 +205,7 @@ import {
   summarizeTrussStability,
   toSvgPoint,
 } from "@/components/workbench/workbench-truss-helpers";
-import { createWorkbenchTrussGestureController } from "@/components/workbench/workbench-truss-gesture-controller";
-import { runWorkbenchAnalysis } from "@/components/workbench/workbench-run-controller";
 import { buildWorkbenchStudySidebarData } from "@/components/workbench/workbench-study-sidebar-data";
-import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
-import { WorkbenchViewport } from "@/components/workbench/workbench-viewport";
 import {
   type AssistantMode,
   type BeamResultField,
@@ -266,42 +238,22 @@ import {
   type Theme,
   type WorkflowPanelTab,
 } from "@/components/workbench/workbench-types";
-import { WorkbenchLibrarySidebar } from "@/components/workbench/library/workbench-library-sidebar";
 import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
-import { WorkbenchSystemSidebarMount } from "@/components/workbench/workbench-system-sidebar-mount";
-import { WorkbenchWorkflowSectionMount } from "@/components/workbench/workbench-workflow-section-mount";
-import { WorkbenchStudySectionMount } from "@/components/workbench/workbench-study-section-mount";
-import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
 import {
   isWorkflowGraphResult,
   summarizeWorkflowArtifacts,
   upsertWorkflowRunRecord,
   useWorkbenchWorkflowController,
 } from "@/components/workbench/workflow/workbench-workflow-controller";
-import { WorkbenchWorkflowSidebar } from "@/components/workbench/workflow/workbench-workflow-sidebar";
 import {
-  persistWorkbenchSettings,
   fixed,
   formatMilliseconds,
   formatTime,
-  parseDirectMeshEndpoints,
-  readWorkbenchLanguagePacks,
-  persistWorkbenchLanguagePacks,
-  safeStorageGet,
   scientific,
   serializeCurrentModel,
   toAxialInput,
-  mergeLanguagePack,
-  type WorkbenchLanguagePack,
 } from "@/lib/workbench/helpers";
-import {
-  buildWorkbenchSnapshot,
-  pushHistoryEntry,
-  restoreWorkbenchSnapshot,
-  stepHistory,
-  type HistoryEntry,
-  type WorkbenchSnapshot,
-} from "@/lib/workbench/history";
+import { type HistoryEntry, type WorkbenchSnapshot } from "@/lib/workbench/history";
 import {
   readSecurityAuditLog,
   type WorkbenchSecurityAuditRisk,
@@ -331,18 +283,12 @@ import {
   addTruss3dNodeCommand,
 } from "@/lib/workbench/truss3d-commands";
 import {
-  exportProjectBundle,
   exportStudyModel,
-  generatePrattTruss,
-  generateRectangularQuadPanelMesh,
-  generateRectangularPanelMesh,
   type ParametricPanelConfig,
   type ParametricTrussConfig,
 } from "@/lib/models";
 import { SAMPLE_LIBRARY } from "@/lib/models";
 import {
-  getWorkbenchScriptActionDefinition,
-  listWorkbenchMacroPresets,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
 import {
@@ -482,201 +428,253 @@ import {
 } from "@/lib/api";
 
 export function Workbench() {
-  const [studyKind, setStudyKind] = useState<StudyKind>("axial_bar_1d");
-  const [axialForm, setAxialForm] = useState<AxialFormState>(defaultAxial);
-  const [heatBarModel, setHeatBarModel] = useState<HeatBarStudyJobInput>(defaultHeatBar1d);
-  const [heatPlaneModel, setHeatPlaneModel] = useState<HeatPlaneStudyJobInput>(defaultHeatPlaneTriangle);
-  const [thermalBarModel, setThermalBarModel] = useState<ThermalBarStudyJobInput>(defaultThermalBar1d);
-  const [thermalBeamModel, setThermalBeamModel] = useState<ThermalBeamStudyJobInput>(defaultThermalBeam1d);
-  const [thermalFrameModel, setThermalFrameModel] = useState<ThermalFrameStudyJobInput>(defaultThermalFrame2d);
-  const [thermalTrussModel, setThermalTrussModel] = useState<ThermalTruss2dStudyJobInput>(defaultThermalTruss2d);
-  const [trussModel, setTrussModel] = useState<Truss2dJobInput>(defaultTruss);
-  const [thermalTruss3dModel, setThermalTruss3dModel] = useState<ThermalTruss3dStudyJobInput>(defaultThermalTruss3d);
-  const [truss3dModel, setTruss3dModel] = useState<Truss3dJobInput>(defaultTruss3d);
-  const [planeModel, setPlaneModel] = useState<PlaneStudyJobInput>(defaultPlaneTriangle);
-  const [frameModel, setFrameModel] = useState<FrameStudyJobInput>(defaultFrame2d);
-  const [beamModel, setBeamModel] = useState<BeamStudyJobInput>(defaultBeam1d);
-  const [torsionModel, setTorsionModel] = useState<Torsion1dJobInput>(defaultTorsion1d);
-  const [springModel, setSpringModel] = useState<SpringStudyJobInput>(defaultSpring1d);
-  const [spring2dModel, setSpring2dModel] = useState<Spring2dStudyJobInput>(defaultSpring2d);
-  const [spring3dModel, setSpring3dModel] = useState<Spring3dStudyJobInput>(defaultSpring3d);
-  const [parametric, setParametric] = useState<ParametricTrussConfig>(defaultParametric);
-  const [panelParametric, setPanelParametric] = useState<ParametricPanelConfig>(defaultPanelParametric);
-  const [activeMaterial, setActiveMaterial] = useState("210");
-  const [planeResultField, setPlaneResultField] = useState<PlaneResultField>("von_mises");
-  const [frameResultField, setFrameResultField] = useState<FrameResultField>("max_combined_stress");
-  const [beamResultField, setBeamResultField] = useState<BeamResultField>("max_bending_stress");
-  const [planeHotspotLimit, setPlaneHotspotLimit] = useState(5);
-  const [focusedPlaneElement, setFocusedPlaneElement] = useState<number | null>(null);
-  const [focusedFrameElement, setFocusedFrameElement] = useState<number | null>(null);
-  const [result, setResult] = useState<
-    AxialBarResult | HeatBar1dResult | HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalTruss2dResult | ThermalTruss3dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | Frame2dResult | ThermalFrame2dResult | PlaneTriangle2dResult | PlaneQuad2dResult | null
-  >(null);
-  const [resultWindow, setResultWindow] = useState<ResultWindowState | null>(null);
-  const [resultWindowOffset, setResultWindowOffset] = useState(0);
-  const [resultWindowLimit, setResultWindowLimit] = useState(RESULT_WINDOW_BASE_SIZE);
-  const [canvasViewportWidth, setCanvasViewportWidth] = useState(980);
-  const [job, setJob] = useState<JobEnvelope["job"] | null>(null);
-  const [resultRecords, setResultRecords] = useState<ResultRecord[]>([]);
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null);
-  const [modelVersions, setModelVersions] = useState<ModelVersionRecord[]>([]);
-  const [projectNameDraft, setProjectNameDraft] = useState<string>(copyByLanguage.en.defaultProject);
-  const [projectDescriptionDraft, setProjectDescriptionDraft] = useState<string>("");
+  const workspaceState = useWorkbenchWorkspaceState({
+    defaultLoadedModelName: copyByLanguage.en.defaultModel,
+    defaultMessage: copyByLanguage.en.initialLoaded,
+    defaultProjectLabel: copyByLanguage.en.defaultProject,
+  });
+  const {
+    studyKind,
+    setStudyKind,
+    axialForm,
+    setAxialForm,
+    heatBarModel,
+    setHeatBarModel,
+    heatPlaneModel,
+    setHeatPlaneModel,
+    thermalBarModel,
+    setThermalBarModel,
+    thermalBeamModel,
+    setThermalBeamModel,
+    thermalFrameModel,
+    setThermalFrameModel,
+    thermalTrussModel,
+    setThermalTrussModel,
+    trussModel,
+    setTrussModel,
+    thermalTruss3dModel,
+    setThermalTruss3dModel,
+    truss3dModel,
+    setTruss3dModel,
+    planeModel,
+    setPlaneModel,
+    frameModel,
+    setFrameModel,
+    beamModel,
+    setBeamModel,
+    torsionModel,
+    setTorsionModel,
+    springModel,
+    setSpringModel,
+    spring2dModel,
+    setSpring2dModel,
+    spring3dModel,
+    setSpring3dModel,
+    parametric,
+    setParametric,
+    panelParametric,
+    setPanelParametric,
+    activeMaterial,
+    setActiveMaterial,
+    planeResultField,
+    setPlaneResultField,
+    frameResultField,
+    setFrameResultField,
+    beamResultField,
+    setBeamResultField,
+    planeHotspotLimit,
+    setPlaneHotspotLimit,
+    focusedPlaneElement,
+    setFocusedPlaneElement,
+    focusedFrameElement,
+    setFocusedFrameElement,
+    result,
+    setResult,
+    resultWindow,
+    setResultWindow,
+    resultWindowOffset,
+    setResultWindowOffset,
+    resultWindowLimit,
+    setResultWindowLimit,
+    canvasViewportWidth,
+    setCanvasViewportWidth,
+    job,
+    setJob,
+    resultRecords,
+    setResultRecords,
+    projects,
+    setProjects,
+    selectedProjectId,
+    setSelectedProjectId,
+    selectedModelId,
+    setSelectedModelId,
+    selectedVersionId,
+    setSelectedVersionId,
+    modelVersions,
+    setModelVersions,
+    projectNameDraft,
+    setProjectNameDraft,
+    projectDescriptionDraft,
+    setProjectDescriptionDraft,
+    loadedModelName,
+    setLoadedModelName,
+    message,
+    setMessage,
+    hiddenMaterials,
+    setHiddenMaterials,
+    sidebarSection,
+    setSidebarSection,
+    studyTab,
+    setStudyTab,
+    modelTab,
+    setModelTab,
+    modelToolsPage,
+    setModelToolsPage,
+    libraryTab,
+    setLibraryTab,
+    systemDataTab,
+    setSystemDataTab,
+    systemPanelTab,
+    setSystemPanelTab,
+    draggingNode,
+    setDraggingNode,
+    truss3dLinkMode,
+    setTruss3dLinkMode,
+    selectedTruss3dNodes,
+    setSelectedTruss3dNodes,
+    selectedNode,
+    setSelectedNode,
+    selectedElement,
+    setSelectedElement,
+    memberDraftNodes,
+    setMemberDraftNodes,
+    undoStack,
+    setUndoStack,
+    redoStack,
+    setRedoStack,
+  } = workspaceState;
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [protocolAgents, setProtocolAgents] = useState<ProtocolAgentDescriptor[]>([]);
-  const [loadedModelName, setLoadedModelName] = useState<string>(copyByLanguage.en.defaultModel);
-  const [message, setMessage] = useState<string>(copyByLanguage.en.initialLoaded);
-  const [language, setLanguage] = useState<Language>("en");
-  const [languagePacks, setLanguagePacks] = useState<WorkbenchLanguagePack[]>([]);
-  const [theme, setTheme] = useState<Theme>("linen");
-  const [frontendRuntimeMode, setFrontendRuntimeMode] = useState<FrontendRuntimeMode>("orchestrated_gui");
-  const [directMeshEndpointsText, setDirectMeshEndpointsText] = useState("127.0.0.1:5001,127.0.0.1:5002");
-  const [directMeshSelectionMode, setDirectMeshSelectionMode] = useState<DirectMeshSelectionMode>("healthiest");
-  const [controlPlaneApiToken, setControlPlaneApiToken] = useState("");
-  const [clusterApiToken, setClusterApiToken] = useState("");
-  const [directMeshApiToken, setDirectMeshApiToken] = useState("");
-  const [assistantMode, setAssistantMode] = useState<AssistantMode>("local");
-  const [assistantApiBaseUrl, setAssistantApiBaseUrl] = useState("https://api.openai.com/v1");
-  const [assistantApiKey, setAssistantApiKey] = useState("");
-  const [assistantModel, setAssistantModel] = useState("gpt-4.1-mini");
-  const applyLanguagePreference = (nextLanguage: Language) => {
-    setLanguage(nextLanguage);
-    setLoadedModelName((current) =>
-      current === copyByLanguage.en.defaultModel ||
-      current === copyByLanguage.zh.defaultModel ||
-      current === copyByLanguage.ja.defaultModel
-        ? copyByLanguage[nextLanguage].defaultModel
-        : current,
-    );
-  };
-  const [assistantWindowOpen, setAssistantWindowOpen] = useState(false);
-  const [directMeshExecution, setDirectMeshExecution] = useState<DirectMeshExecutionState | null>(null);
-  const [showShortcutHints, setShowShortcutHints] = useState(true);
-  const [immersiveGuardrails, setImmersiveGuardrails] = useState(true);
-  const [immersiveViewport, setImmersiveViewport] = useState(false);
-  const [immersiveToolDrawerOpen, setImmersiveToolDrawerOpen] = useState(false);
-  const [immersiveHelpDrawerOpen, setImmersiveHelpDrawerOpen] = useState(false);
-  const [immersiveToolTab, setImmersiveToolTab] = useState<ImmersiveToolTab>("node");
-  const [truss3dProjectionMode, setTruss3dProjectionMode] = useState<"ortho" | "persp">("ortho");
-  const [truss3dShowGrid, setTruss3dShowGrid] = useState(true);
-  const [truss3dShowLabels, setTruss3dShowLabels] = useState(true);
-  const [truss3dShowNodes, setTruss3dShowNodes] = useState(true);
-  const [truss3dBoxSelectMode, setTruss3dBoxSelectMode] = useState(false);
-  const [truss3dViewPreset, setTruss3dViewPreset] = useState<"iso" | "front" | "right" | "top">("iso");
-  const [truss3dFocusRequestVersion, setTruss3dFocusRequestVersion] = useState(0);
-  const [truss3dResetRequestVersion, setTruss3dResetRequestVersion] = useState(0);
-  const [truss3dNudgeStep, setTruss3dNudgeStep] = useState(0.25);
-  const [truss3dBatchLoadX, setTruss3dBatchLoadX] = useState(0);
-  const [truss3dBatchLoadY, setTruss3dBatchLoadY] = useState(0);
-  const [truss3dBatchLoadZ, setTruss3dBatchLoadZ] = useState(0);
-  const [hiddenMaterials, setHiddenMaterials] = useState<Record<StudyKind, string[]>>({
-    axial_bar_1d: [],
-    heat_bar_1d: [],
-    heat_plane_triangle_2d: [],
-    heat_plane_quad_2d: [],
-    thermal_bar_1d: [],
-    thermal_beam_1d: [],
-    thermal_frame_2d: [],
-    thermal_truss_2d: [],
-    thermal_truss_3d: [],
-    thermal_plane_triangle_2d: [],
-    thermal_plane_quad_2d: [],
-    spring_1d: [],
-    spring_2d: [],
-    spring_3d: [],
-    beam_1d: [],
-    torsion_1d: [],
-    truss_2d: [],
-    truss_3d: [],
-    plane_triangle_2d: [],
-    plane_quad_2d: [],
-    frame_2d: [],
+  const shellState = useWorkbenchShellState({
+    setLoadedModelName,
+    setMessage,
   });
-  const [sidebarSection, setSidebarSection] = useState<SidebarSection>("model");
-  const [studyTab, setStudyTab] = useState<StudyPanelTab>("summary");
-  const [modelTab, setModelTab] = useState<ModelPanelTab>("tools");
-  const [modelToolsPage, setModelToolsPage] = useState<ModelToolsPage>("overview");
-  const [libraryTab, setLibraryTab] = useState<LibraryPanelTab>("jobs");
-  const [systemDataTab, setSystemDataTab] = useState<SystemDataTab>("jobs");
-  const [systemPanelTab, setSystemPanelTab] = useState<SystemPanelTab>("config");
-  const [draggingNode, setDraggingNode] = useState<number | null>(null);
-  const [truss3dLinkMode, setTruss3dLinkMode] = useState(false);
-  const [selectedTruss3dNodes, setSelectedTruss3dNodes] = useState<number[]>([]);
-  const [selectedNode, setSelectedNode] = useState<number | null>(null);
-  const [selectedElement, setSelectedElement] = useState<number | null>(null);
-  const [memberDraftNodes, setMemberDraftNodes] = useState<number[]>([]);
-  const [undoStack, setUndoStack] = useState<HistoryEntry[]>([]);
-  const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
-  const [selectedAdminResultJobId, setSelectedAdminResultJobId] = useState<string | null>(null);
-  const [adminFilterProjectId, setAdminFilterProjectId] = useState("");
-  const [adminFilterModelVersionId, setAdminFilterModelVersionId] = useState("");
-  const [securityEventRecords, setSecurityEventRecords] = useState<SecurityEventRecord[]>([]);
-  const [scriptRecordingMode, setScriptRecordingMode] = useState(false);
-  const [securityEventWindowFilter, setSecurityEventWindowFilter] = useState<SecurityEventWindow>("24h");
-  const [securityEventSourceFilter, setSecurityEventSourceFilter] = useState<
-    WorkbenchSecurityAuditSource | "hub-assistant" | ""
-  >("");
-  const [securityEventRiskFilter, setSecurityEventRiskFilter] = useState<
-    WorkbenchSecurityAuditRisk | ""
-  >("");
-  const [securityEventStatusFilter, setSecurityEventStatusFilter] = useState<
-    "" | "allowed" | "blocked"
-  >("");
-  const [securityEventActionFilter, setSecurityEventActionFilter] = useState("");
-  const [adminJobMessage, setAdminJobMessage] = useState("");
-  const [adminJobProjectId, setAdminJobProjectId] = useState("");
-
-  useEffect(() => {
-    if (systemPanelTab === "assistant") {
-      setAssistantWindowOpen(true);
-      setSystemPanelTab("config");
-    }
-  }, [systemPanelTab]);
-  const [adminJobModelVersionId, setAdminJobModelVersionId] = useState("");
-  const [adminJobCaseId, setAdminJobCaseId] = useState("");
-  const [adminResultDraft, setAdminResultDraft] = useState("{}");
+  const {
+    language,
+    languagePacks,
+    setLanguagePacks,
+    theme,
+    setTheme,
+    frontendRuntimeMode,
+    setFrontendRuntimeMode,
+    directMeshEndpointsText,
+    setDirectMeshEndpointsText,
+    directMeshSelectionMode,
+    setDirectMeshSelectionMode,
+    controlPlaneApiToken,
+    setControlPlaneApiToken,
+    clusterApiToken,
+    setClusterApiToken,
+    directMeshApiToken,
+    setDirectMeshApiToken,
+    assistantMode,
+    setAssistantMode,
+    assistantApiBaseUrl,
+    setAssistantApiBaseUrl,
+    assistantApiKey,
+    setAssistantApiKey,
+    assistantModel,
+    setAssistantModel,
+    assistantWindowOpen,
+    setAssistantWindowOpen,
+    directMeshExecution,
+    setDirectMeshExecution,
+    showShortcutHints,
+    setShowShortcutHints,
+    immersiveGuardrails,
+    setImmersiveGuardrails,
+    immersiveViewport,
+    setImmersiveViewport,
+    immersiveToolDrawerOpen,
+    setImmersiveToolDrawerOpen,
+    immersiveHelpDrawerOpen,
+    setImmersiveHelpDrawerOpen,
+    immersiveToolTab,
+    setImmersiveToolTab,
+    truss3dProjectionMode,
+    setTruss3dProjectionMode,
+    truss3dShowGrid,
+    setTruss3dShowGrid,
+    truss3dShowLabels,
+    setTruss3dShowLabels,
+    truss3dShowNodes,
+    setTruss3dShowNodes,
+    truss3dBoxSelectMode,
+    setTruss3dBoxSelectMode,
+    truss3dViewPreset,
+    setTruss3dViewPreset,
+    truss3dFocusRequestVersion,
+    setTruss3dFocusRequestVersion,
+    truss3dResetRequestVersion,
+    setTruss3dResetRequestVersion,
+    truss3dNudgeStep,
+    setTruss3dNudgeStep,
+    truss3dBatchLoadX,
+    setTruss3dBatchLoadX,
+    truss3dBatchLoadY,
+    setTruss3dBatchLoadY,
+    truss3dBatchLoadZ,
+    setTruss3dBatchLoadZ,
+    applyLanguagePreference,
+    activeLanguagePack,
+    t,
+    languagePackCatalogRows,
+  } = shellState;
   const [isPending, startTransition] = useTransition();
-  const staleHeartbeatAlertedRef = useRef<string | null>(null);
-  const dragHistoryCapturedRef = useRef(false);
-  const drag3dHistoryCapturedRef = useRef(false);
-  const dragFrameRef = useRef<number | null>(null);
-  const pendingDragPointRef = useRef<{ x: number; y: number } | null>(null);
   const viewportPanelRef = useRef<HTMLElement | null>(null);
-  const canvasStageRef = useRef<HTMLDivElement | null>(null);
-  const resultRefreshSeqRef = useRef(0);
-  const jobPollTokenRef = useRef(0);
-  const activeLanguagePack = useMemo(
-    () => languagePacks.find((pack) => pack.language === language) ?? null,
-    [language, languagePacks],
-  );
-  const t = useMemo(
-    () => mergeLanguagePack<WorkbenchCopy>(copyByLanguage[language], activeLanguagePack?.overrides ?? null),
-    [activeLanguagePack?.overrides, language],
-  );
+  const {
+    canvasStageRef,
+    drag3dHistoryCapturedRef,
+    dragFrameRef,
+    dragHistoryCapturedRef,
+    jobPollTokenRef,
+    pendingDragPointRef,
+    resultRefreshSeqRef,
+  } = useWorkbenchRuntimeGuards({
+    beamResultField,
+    focusedFrameElement,
+    focusedPlaneElement,
+    immersiveGuardrails,
+    immersiveViewport,
+    job,
+    language,
+    frameResultField,
+    projects,
+    selectedProjectId,
+    setAssistantWindowOpen,
+    setBeamResultField,
+    setFocusedFrameElement,
+    setFocusedPlaneElement,
+    setFrameResultField,
+    setImmersiveHelpDrawerOpen,
+    setImmersiveToolDrawerOpen,
+    setImmersiveViewport,
+    setMessage,
+    setProjectDescriptionDraft,
+    setProjectNameDraft,
+    setSystemPanelTab,
+    studyKind,
+    systemPanelTab,
+    t,
+    viewportPanelRef,
+  });
   const jobIsActive =
     job?.status === "queued" ||
     job?.status === "preprocessing" ||
     job?.status === "partitioning" ||
     job?.status === "solving" ||
     job?.status === "postprocessing";
-  const languagePackCatalogRows = useMemo(
-    () => [
-      { id: "fr-preview", language: "fr", name: "French preview", status: language === "zh" ? "预留远程下载入口" : language === "ja" ? "将来のリモート配布枠" : "Reserved for future remote delivery" },
-      { id: "de-preview", language: "de", name: "German preview", status: language === "zh" ? "预留远程下载入口" : language === "ja" ? "将来のリモート配布枠" : "Reserved for future remote delivery" },
-    ],
-    [language],
-  );
-  const {
-    jobHistory,
-    setJobHistory,
-    selectedAdminJobId,
-    setSelectedAdminJobId,
-    refreshJobHistory,
-    cancelCurrentJob,
-  } = useWorkbenchJobHistoryController({
+  const jobHistoryController = useWorkbenchJobHistoryController({
     labels: {
       jobCancelled: t.jobCancelled,
       initialFailed: t.initialFailed,
@@ -689,6 +687,14 @@ export function Workbench() {
     setMessage,
     startTransition,
   });
+  const {
+    jobHistory,
+    setJobHistory,
+    selectedAdminJobId,
+    setSelectedAdminJobId,
+    refreshJobHistory,
+    cancelCurrentJob,
+  } = jobHistoryController;
 
   const resultWindowMaxTotal = resultWindow ? Math.max(resultWindow.totalNodes, resultWindow.totalElements) : 0;
   const { handleCanvasStageScroll } = useWorkbenchResultWindowController({
@@ -728,256 +734,45 @@ export function Workbench() {
     studyKind,
   });
 
-  useEffect(() => {
-    if (!job?.job_id) {
-      staleHeartbeatAlertedRef.current = null;
-      return;
-    }
-
-    const tone = heartbeatTone(job);
-
-    if (tone === "stale") {
-      if (staleHeartbeatAlertedRef.current !== job.job_id) {
-        staleHeartbeatAlertedRef.current = job.job_id;
-        setMessage(
-          language === "zh"
-            ? `任务 ${job.job_id.slice(0, 8)} 心跳已过期，请检查 agent 或考虑取消任务。`
-            : `Job ${job.job_id.slice(0, 8)} heartbeat is stale. Check the agent or consider cancelling the run.`,
-        );
-      }
-      return;
-    }
-
-    if (staleHeartbeatAlertedRef.current === job.job_id) {
-      staleHeartbeatAlertedRef.current = null;
-    }
-  }, [job, language]);
-
-  useEffect(() => {
-    const stored = safeStorageGet();
-    const desktopLanguage =
-      typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("desktopLanguage")
-        : null;
-    if (stored.theme === "linen" || stored.theme === "marine" || stored.theme === "graphite") {
-      setTheme(stored.theme);
-    }
-    if (typeof stored.showShortcutHints === "boolean") setShowShortcutHints(stored.showShortcutHints);
-    if (typeof stored.immersiveGuardrails === "boolean") setImmersiveGuardrails(stored.immersiveGuardrails);
-    if (stored.frontendRuntimeMode) setFrontendRuntimeMode(stored.frontendRuntimeMode);
-    if (stored.directMeshEndpointsText) setDirectMeshEndpointsText(stored.directMeshEndpointsText);
-    if (stored.directMeshSelectionMode === "healthiest" || stored.directMeshSelectionMode === "first_reachable") {
-      setDirectMeshSelectionMode(stored.directMeshSelectionMode);
-    }
-    if (stored.controlPlaneApiToken) setControlPlaneApiToken(stored.controlPlaneApiToken);
-    if (stored.clusterApiToken) setClusterApiToken(stored.clusterApiToken);
-    if (stored.directMeshApiToken) setDirectMeshApiToken(stored.directMeshApiToken);
-    if (stored.assistantMode === "local" || stored.assistantMode === "llm") {
-      setAssistantMode(stored.assistantMode);
-    }
-    if (typeof stored.assistantApiBaseUrl === "string" && stored.assistantApiBaseUrl.trim()) {
-      setAssistantApiBaseUrl(stored.assistantApiBaseUrl);
-    }
-    if (typeof stored.assistantApiKey === "string") setAssistantApiKey(stored.assistantApiKey);
-    if (typeof stored.assistantModel === "string" && stored.assistantModel.trim()) {
-      setAssistantModel(stored.assistantModel);
-    }
-    const bootLanguage =
-      desktopLanguage === "en" || desktopLanguage === "zh" || desktopLanguage === "ja" || desktopLanguage === "es"
-        ? desktopLanguage
-        : stored.language === "en" || stored.language === "zh" || stored.language === "ja" || stored.language === "es"
-          ? stored.language
-          : null;
-
-    if (bootLanguage) {
-      applyLanguagePreference(bootLanguage);
-      setMessage(copyByLanguage[bootLanguage].initialLoaded);
-    }
-    setLanguagePacks(readWorkbenchLanguagePacks());
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const handleDesktopLanguage = (event: MessageEvent) => {
-      if (event.data?.type !== "kyuubiki:set-language") return;
-      const nextLanguage = event.data.language;
-      if (nextLanguage === "en" || nextLanguage === "zh" || nextLanguage === "ja" || nextLanguage === "es") {
-        applyLanguagePreference(nextLanguage);
-      }
-    };
-
-    window.addEventListener("message", handleDesktopLanguage);
-    return () => {
-      window.removeEventListener("message", handleDesktopLanguage);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (studyKind === "torsion_1d" && frameResultField === "max_combined_stress") {
-      setFrameResultField("max_bending_stress");
-    }
-    if (
-      studyKind !== "thermal_frame_2d" &&
-      (frameResultField === "average_temperature_delta" ||
-        frameResultField === "temperature_gradient_y" ||
-        frameResultField === "thermal_curvature")
-    ) {
-      setFrameResultField("max_combined_stress");
-    }
-  }, [frameResultField, studyKind]);
-
-  useEffect(() => {
-    if (
-      studyKind !== "thermal_beam_1d" &&
-      (beamResultField === "temperature_gradient_y" || beamResultField === "thermal_curvature")
-    ) {
-      setBeamResultField("max_bending_stress");
-    }
-  }, [beamResultField, studyKind]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    if (typeof window !== "undefined") {
-      window.parent?.postMessage({ type: "kyuubiki:language-changed", language }, "*");
-      persistWorkbenchSettings({
-        theme,
-        language,
-        showShortcutHints,
-        immersiveGuardrails,
-        frontendRuntimeMode,
-        directMeshEndpointsText,
-        directMeshSelectionMode,
-        controlPlaneApiToken,
-        clusterApiToken,
-        directMeshApiToken,
-        assistantMode,
-        assistantApiBaseUrl,
-        assistantApiKey,
-        assistantModel,
-      });
-    }
-  }, [theme, language, showShortcutHints, immersiveGuardrails, frontendRuntimeMode, directMeshEndpointsText, directMeshSelectionMode, controlPlaneApiToken, clusterApiToken, directMeshApiToken, assistantMode, assistantApiBaseUrl, assistantApiKey, assistantModel]);
-
-  useEffect(() => {
-    persistWorkbenchLanguagePacks(languagePacks);
-  }, [languagePacks]);
-
-  useEffect(() => {
-    return () => {
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      jobPollTokenRef.current += 1;
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setImmersiveViewport(document.fullscreenElement === viewportPanelRef.current);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    if (studyKind === "truss_3d") return;
-
-    setImmersiveToolDrawerOpen(false);
-    setImmersiveHelpDrawerOpen(false);
-
-    if (immersiveViewport) {
-      setImmersiveViewport(false);
-    }
-
-    if (document.fullscreenElement === viewportPanelRef.current) {
-      void document.exitFullscreen().catch(() => undefined);
-    }
-  }, [studyKind, immersiveViewport]);
-
-  useEffect(() => {
-    if (!immersiveViewport || !immersiveGuardrails) {
-      document.documentElement.classList.remove("immersive-guardrails");
-      return;
-    }
-
-    const stopEvent = (event: Event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-
-    const handleKeydown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && ["a", "c", "p", "s", "u", "v", "x"].includes(event.key.toLowerCase())) {
-        stopEvent(event);
-      }
-    };
-
-    document.documentElement.classList.add("immersive-guardrails");
-    document.addEventListener("contextmenu", stopEvent, true);
-    document.addEventListener("copy", stopEvent, true);
-    document.addEventListener("cut", stopEvent, true);
-    document.addEventListener("paste", stopEvent, true);
-    document.addEventListener("selectstart", stopEvent, true);
-    document.addEventListener("dragstart", stopEvent, true);
-    document.addEventListener("keydown", handleKeydown, true);
-
-    return () => {
-      document.documentElement.classList.remove("immersive-guardrails");
-      document.removeEventListener("contextmenu", stopEvent, true);
-      document.removeEventListener("copy", stopEvent, true);
-      document.removeEventListener("cut", stopEvent, true);
-      document.removeEventListener("paste", stopEvent, true);
-      document.removeEventListener("selectstart", stopEvent, true);
-      document.removeEventListener("dragstart", stopEvent, true);
-      document.removeEventListener("keydown", handleKeydown, true);
-    };
-  }, [immersiveViewport, immersiveGuardrails]);
-
-  useEffect(() => {
-    const current = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
-    setAdminJobMessage(current?.message ?? "");
-    setAdminJobProjectId(current?.project_id ?? "");
-    setAdminJobModelVersionId(current?.model_version_id ?? "");
-    setAdminJobCaseId(current?.simulation_case_id ?? "");
-  }, [jobHistory, selectedAdminJobId]);
-
-  useEffect(() => {
-    const current = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
-    setAdminResultDraft(JSON.stringify(current?.result ?? {}, null, 2));
-  }, [resultRecords, selectedAdminResultJobId]);
-
-  useEffect(() => {
-    const selectedProject = projects.find((project) => project.project_id === selectedProjectId) ?? null;
-
-    if (selectedProject) {
-      setProjectNameDraft(selectedProject.name);
-      setProjectDescriptionDraft(selectedProject.description ?? "");
-    } else if (projects.length === 0) {
-      setProjectNameDraft(t.defaultProject);
-      setProjectDescriptionDraft("");
-    }
-  }, [projects, selectedProjectId, t.defaultProject]);
-
+  const adminSecurityState = useWorkbenchAdminSecurityState({
+    jobHistory,
+    resultRecords,
+    selectedAdminJobId,
+  });
   const {
-    workflowCatalog,
-    workflowCatalogBusy,
-    workflowPanelTab,
-    setWorkflowPanelTab,
-    selectedWorkflowId,
-    setSelectedWorkflowId,
-    workflowRuns,
-    setWorkflowRuns,
-    selectedWorkflow,
-    latestWorkflowSummary,
-    refreshWorkflowCatalog,
-    runWorkflowCatalogEntry,
-  } = useWorkbenchWorkflowController({
+    selectedAdminResultJobId,
+    setSelectedAdminResultJobId,
+    adminFilterProjectId,
+    setAdminFilterProjectId,
+    adminFilterModelVersionId,
+    setAdminFilterModelVersionId,
+    securityEventRecords,
+    setSecurityEventRecords,
+    scriptRecordingMode,
+    setScriptRecordingMode,
+    securityEventWindowFilter,
+    setSecurityEventWindowFilter,
+    securityEventSourceFilter,
+    setSecurityEventSourceFilter,
+    securityEventRiskFilter,
+    setSecurityEventRiskFilter,
+    securityEventStatusFilter,
+    setSecurityEventStatusFilter,
+    securityEventActionFilter,
+    setSecurityEventActionFilter,
+    adminJobMessage,
+    setAdminJobMessage,
+    adminJobProjectId,
+    setAdminJobProjectId,
+    adminJobModelVersionId,
+    setAdminJobModelVersionId,
+    adminJobCaseId,
+    setAdminJobCaseId,
+    adminResultDraft,
+    setAdminResultDraft,
+  } = adminSecurityState;
+
+  const workflowController = useWorkbenchWorkflowController({
     labels: {
       workflowCatalogLoaded: t.workflowCatalogLoaded,
       workflowCatalogUnsupported: t.workflowCatalogUnsupported,
@@ -997,15 +792,97 @@ export function Workbench() {
       setWorkflowPanelTab("runs");
     },
   });
-
+  const {
+    workflowCatalog,
+    workflowCatalogBusy,
+    workflowPanelTab,
+    setWorkflowPanelTab,
+    selectedWorkflowId,
+    setSelectedWorkflowId,
+    workflowRuns,
+    setWorkflowRuns,
+    selectedWorkflow,
+    latestWorkflowSummary,
+    refreshWorkflowCatalog,
+    runWorkflowCatalogEntry,
+  } = workflowController;
+  const { selectedProject, selectedProjectModels, selectedAdminJob, selectedAdminResult } = buildWorkbenchAdminSelections({
+    jobHistory,
+    resultRecords,
+    projects,
+    selectedProjectId,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+  });
+  const deferredProjectModels = useDeferredValue(selectedProjectModels);
+  const deferredModelVersions = useDeferredValue(modelVersions);
+  const deferredJobHistory = useDeferredValue(jobHistory);
+  const deferredResultRecords = useDeferredValue(resultRecords);
   async function refreshResults() {
-    await refreshWorkbenchResults({
-      resultRefreshSeqRef,
-      fetchResults,
-      setResultRecords,
-      setSelectedAdminResultJobId,
-    });
+    await primaryActionsController.refreshResults();
   }
+  const studyResultDerived = useWorkbenchStudyResultDerived({
+    studyKind,
+    result,
+    job,
+    resultWindow,
+    t,
+    selectedNode,
+    selectedElement,
+    axialForm,
+    heatBarModel,
+    heatPlaneModel,
+    thermalBarModel,
+    thermalBeamModel,
+    thermalFrameModel,
+    thermalTrussModel,
+    thermalTruss3dModel,
+    springModel,
+    spring2dModel,
+    spring3dModel,
+    trussModel,
+    truss3dModel,
+    planeModel,
+    frameModel,
+    beamModel,
+    torsionModel,
+    beamResultField,
+    frameResultField,
+    planeResultField,
+    planeHotspotLimit,
+    language,
+    loadedModelName,
+    downloadTextFile,
+    setMessage,
+    health,
+    frontendRuntimeMode,
+    directMeshSelectionMode,
+    directMeshExecution,
+    directMeshApiToken,
+    protocolAgents,
+    hiddenMaterials,
+    deferredJobHistory,
+    deferredResultRecords,
+    deferredProjectModels,
+    deferredModelVersions,
+    adminFilterProjectId,
+    adminFilterModelVersionId,
+    jobHistory,
+    projects,
+    securityEventRecords,
+    securityEventWindowFilter,
+    formatTime,
+    formatMilliseconds,
+    round,
+    resultWindowLimit,
+    resultWindowMaxTotal,
+    resultWindowOffset,
+    directMeshEndpointsText,
+    immersiveViewport,
+    immersiveToolDrawerOpen,
+    immersiveHelpDrawerOpen,
+    showShortcutHints,
+  });
   const {
     refreshHealth,
     refreshProjects,
@@ -1034,272 +911,121 @@ export function Workbench() {
     refreshResults,
     securityEventWindowMs: SECURITY_EVENT_WINDOW_MS,
   });
-
-  const runAnalysis = () => {
-    startTransition(async () => {
-      try {
-        await runWorkbenchAnalysis({
-          axialForm,
-          beamModel,
-          copy: t,
-          directMeshEndpointsText,
-          directMeshSelectionMode,
-          frontendRuntimeMode,
-          frameModel,
-          heatBarModel,
-          heatPlaneModel,
-          jobPollTokenRef,
-          labels: {
-            precheckPrefix: t.precheckPrefix,
-            dispatching: t.dispatching,
-            directMeshEndpointsHelp: t.directMeshEndpointsHelp,
-            directMeshCompleted: t.directMeshCompleted,
-            requestTimedOut: t.requestTimedOut,
-            initialFailed: t.initialFailed,
-            pollingDetached: t.pollingDetached,
-          },
-          planeModel,
-          refreshJobHistory,
-          selectedProjectId,
-          selectedVersionId,
-          setDirectMeshExecution,
-          setJob,
-          setMessage,
-          setResult,
-          spring2dModel,
-          spring3dModel,
-          springModel,
-          studyKind,
-          thermalBarModel,
-          thermalBeamModel,
-          thermalFrameModel,
-          thermalTruss3dModel,
-          thermalTrussModel,
-          torsionModel,
-          truss3dModel,
-          trussDiagnostics,
-          trussModel,
-        });
-      } catch (error) {
-        setMessage(
-          error instanceof Error
-            ? error.message.startsWith("request timed out:")
-              ? t.requestTimedOut
-              : error.message
-            : t.initialFailed,
-        );
-      }
-    });
+  const downloadResultJson = () => {
+    downloadWorkbenchResultJson(resultExportEffects);
   };
 
-  const openHistoryJob = (jobId: string) => {
-    jobPollTokenRef.current += 1;
-
-    startTransition(async () => {
-      try {
-        const payload = await fetchJobStatus<
-          AxialBarResult | HeatBar1dResult | HeatPlaneTriangle2dResult | HeatPlaneQuad2dResult | ThermalBar1dResult | ThermalBeam1dResult | ThermalTruss2dResult | ThermalTruss3dResult | Spring1dResult | Spring2dResult | Spring3dResult | Beam1dResult | Torsion1dResult | Truss2dResult | Truss3dResult | PlaneTriangle2dResult | PlaneQuad2dResult | Frame2dResult | ThermalFrame2dResult | ThermalPlaneTriangle2dResult | ThermalPlaneQuad2dResult | WorkflowGraphJobResult
-        >(jobId);
-        applyHistoryJobPayload(payload, {
-          activeMaterial,
-          copy: {
-            historyAction: t.historyAction,
-            historyLoaded: t.historyLoaded,
-            workflowCatalogCompleted: t.workflowCatalogCompleted,
-          },
-          setJob,
-          setResult,
-          setSidebarSection,
-          setWorkflowPanelTab,
-          setSelectedWorkflowId,
-          setWorkflowRuns,
-          setMessage,
-          recordHistory,
-          openWorkspaceStudy,
-          setStudyKind,
-          setAxialForm,
-          setThermalBarModel,
-          setHeatBarModel,
-          setHeatPlaneModel,
-          setPlaneResultField,
-          setThermalBeamModel,
-          setThermalTrussModel,
-          setThermalTruss3dModel,
-          setSpringModel,
-          setSpring2dModel,
-          setSpring3dModel,
-          setBeamModel,
-          setTorsionModel,
-          setTrussModel,
-          setTruss3dModel,
-          setFrameModel,
-          setThermalFrameModel,
-          setPlaneModel,
-        });
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
+  const downloadResultCsv = () => {
+    downloadWorkbenchResultCsv(resultExportEffects);
   };
 
-  const importModel = async (file: File | undefined) => {
-    await importWorkbenchModelFile({
-      file,
-      labels: {
-        importAction: t.importAction,
-        importedModel: t.importedModel,
-        importFailed: t.importFailed,
-      },
-      recordHistory,
-      applyImportedModel: {
-        setLoadedModelName,
-        setSelectedModelId,
-        setSelectedVersionId,
-        setModelVersions,
-        setStudyKind,
-        setAxialForm,
-        setHeatBarModel,
-        setHeatPlaneModel,
-        setThermalBarModel,
-        setThermalBeamModel,
-        setThermalFrameModel,
-        setThermalTrussModel,
-        setThermalTruss3dModel,
-        setSpringModel,
-        setSpring2dModel,
-        setSpring3dModel,
-        setTrussModel,
-        setTruss3dModel,
-        setPlaneModel,
-        setFrameModel,
-        setBeamModel,
-        setTorsionModel,
-        setPlaneResultField,
-        setParametric,
-        setActiveMaterial,
-      },
-      setMessage,
-    });
+  const downloadPlaneHotspotSummary = () => {
+    downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
   };
 
-  const openSample = (href: string) => {
-    startTransition(async () => {
-      await openWorkbenchSample({
-        href,
-        labels: {
-          sampleAction: t.sampleAction,
-          importedModel: t.importedModel,
-          importFailed: t.importFailed,
-          requestTimedOut: t.requestTimedOut,
-        },
-        recordHistory,
-        applyImportedModel: {
-          setLoadedModelName,
-          setSelectedModelId,
-          setSelectedVersionId,
-          setModelVersions,
-          setStudyKind,
-          setAxialForm,
-          setHeatBarModel,
-          setHeatPlaneModel,
-          setThermalBarModel,
-          setThermalBeamModel,
-          setThermalFrameModel,
-          setThermalTrussModel,
-          setThermalTruss3dModel,
-          setSpringModel,
-          setSpring2dModel,
-          setSpring3dModel,
-          setTrussModel,
-          setTruss3dModel,
-          setPlaneModel,
-          setFrameModel,
-          setBeamModel,
-          setTorsionModel,
-          setPlaneResultField,
-          setParametric,
-          setActiveMaterial,
-        },
-        setMessage,
-      });
-    });
+  const downloadFrameHotspotSummary = () => {
+    downloadWorkbenchFrameHotspotSummary(resultExportEffects);
   };
 
-  const handleAxialFieldChange = (key: keyof AxialFormState, value: number | string) => {
-    recordHistory(t.editAxialField);
-    setAxialForm((current) => ({ ...current, [key]: value }));
+  const downloadFrameForceSummary = () => {
+    downloadWorkbenchFrameForceSummary(resultExportEffects);
   };
 
-  const handleLanguageChange = (nextLanguage: Language) => {
-    applyLanguagePreference(nextLanguage);
-  };
+  const railItems: Array<{ key: SidebarSection; label: string; symbol: string }> = [
+    { key: "model", label: t.rail.model, symbol: "M" },
+    { key: "workflow", label: t.rail.workflow, symbol: "W" },
+    { key: "library", label: t.rail.library, symbol: "H" },
+    { key: "system", label: t.rail.system, symbol: "Y" },
+  ];
 
-  const handleDownloadLanguagePackTemplate = () => {
-    downloadWorkbenchLanguagePackTemplate({ language, copy: t, setMessage });
-  };
-
-  const handleExportInstalledLanguagePack = () => {
-    exportWorkbenchInstalledLanguagePack({ language, activeLanguagePack, setMessage });
-  };
-
-  const handleImportLanguagePack = async (file: File) => {
-    await importWorkbenchLanguagePack({ file, language, setLanguagePacks, setMessage });
-  };
-
-  const handleRemoveLanguagePack = (packId: string) => {
-    removeWorkbenchLanguagePack({ packId, setLanguagePacks, language, setMessage });
-  };
-
-  const handleParametricChange = (key: keyof ParametricTrussConfig, value: number) => {
-    recordHistory(t.editParametric);
-    setParametric((current) => ({ ...current, [key]: value }));
-  };
-
-  const handlePanelParametricChange = (key: keyof ParametricPanelConfig, value: number) => {
-    recordHistory(t.editParametric);
-    setPanelParametric((current) => ({ ...current, [key]: value }));
-  };
-
-  const generateModel = () => {
-    recordHistory(t.generateAction);
-    const nextModel = ensureTrussModelMaterials(generatePrattTruss(parametric), activeMaterial);
-    setStudyKind("truss_2d");
-    setTrussModel(nextModel);
-    setSelectedNode(null);
-    setSelectedElement(null);
-    setSelectedModelId(null);
-    setSelectedVersionId(null);
-    setModelVersions([]);
-    setMemberDraftNodes([]);
-    setLoadedModelName("parametric-pratt-truss");
-    setMessage(t.generatedModel);
-    setSidebarSection("model");
-  };
-
-  const generatePanelModel = () => {
-    recordHistory(t.generateAction);
-    const nextModel = ensurePlaneModelMaterials(
-      studyKind === "plane_quad_2d"
-        ? generateRectangularQuadPanelMesh(panelParametric)
-        : generateRectangularPanelMesh(panelParametric),
-      activeMaterial,
-    );
-    setStudyKind(studyKind === "plane_quad_2d" ? "plane_quad_2d" : "plane_triangle_2d");
-    setPlaneModel(nextModel);
-    setSelectedNode(null);
-    setSelectedElement(null);
-    setSelectedModelId(null);
-    setSelectedVersionId(null);
-    setModelVersions([]);
-    setMemberDraftNodes([]);
-    setLoadedModelName("parametric-panel-mesh");
-    setMessage(t.panelGenerated);
-    setSidebarSection("model");
-    resetActiveResult(setResult, setJob);
-  };
-
-  const downloadModel = () => {
-    const contents = JSON.stringify(
+  const { adminDataEffects, projectStorageController } = buildWorkbenchProjectFlows({
+    selectedAdminJob,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+    jobHistory,
+    projects,
+    refreshVersions,
+    setAdminFilterProjectId,
+    setAdminFilterModelVersionId,
+    setAdminJobCaseId,
+    setLibraryTab,
+    setSelectedProjectId,
+    setSelectedModelId,
+    setSelectedVersionId,
+    setModelVersions,
+    setSidebarSection,
+    setMessage,
+    language,
+    t,
+    startTransition,
+    activeMaterial,
+    createProject,
+    createModel,
+    createModelVersion,
+    updateModelVersion,
+    fetchModel,
+    fetchModelVersion,
+    refreshProjects,
+    recordHistory,
+    resetActiveResult: () => resetActiveResult(setResult, setJob),
+    setLoadedModelName,
+    setStudyKind,
+    setAxialForm,
+    setHeatBarModel,
+    setHeatPlaneModel,
+    setThermalBarModel,
+    setThermalBeamModel,
+    setThermalFrameModel,
+    setThermalTrussModel,
+    setThermalTruss3dModel,
+    setSpringModel,
+    setSpring2dModel,
+    setSpring3dModel,
+    setTrussModel,
+    setTruss3dModel,
+    setPlaneModel,
+    setFrameModel,
+    setBeamModel,
+    setTorsionModel,
+    setPlaneResultField,
+    setParametric,
+    setActiveMaterial,
+    selectedProject,
+    selectedProjectId,
+    selectedProjectModels,
+    selectedModelId,
+    selectedVersionId,
+    projectNameDraft,
+    projectDescriptionDraft,
+    loadedModelName,
+    studyKind,
+    axialForm,
+    heatBarModel,
+    heatPlaneModel,
+    thermalBarModel,
+    thermalBeamModel,
+    thermalFrameModel,
+    thermalTrussModel,
+    trussModel,
+    thermalTruss3dModel,
+    truss3dModel,
+    planeModel,
+    frameModel,
+    beamModel,
+    torsionModel,
+    springModel,
+    spring2dModel,
+    spring3dModel,
+    parametric,
+    round,
+    updateProject,
+    deleteProject,
+    updateModel,
+    deleteModel,
+    deleteModelVersion,
+    fetchModelVersions,
+    fetchJobStatus,
+    serializeCurrentModel: () =>
       serializeCurrentModel(
         studyKind,
         loadedModelName,
@@ -1324,786 +1050,33 @@ export function Workbench() {
         parametric,
         round,
       ),
-      null,
-      2,
-    );
+  });
 
-    downloadTextFile(`${loadedModelName || "kyuubiki-model"}.json`, contents);
-    setMessage(t.modelDownloaded);
-  };
-
-  const downloadResultJson = () => {
-    downloadWorkbenchResultJson(resultExportEffects);
-  };
-
-  const downloadResultCsv = () => {
-    downloadWorkbenchResultCsv(resultExportEffects);
-  };
-
-  const downloadPlaneHotspotSummary = () => {
-    downloadWorkbenchPlaneHotspotSummary(resultExportEffects);
-  };
-
-  const downloadFrameHotspotSummary = () => {
-    downloadWorkbenchFrameHotspotSummary(resultExportEffects);
-  };
-
-  const downloadFrameForceSummary = () => {
-    downloadWorkbenchFrameForceSummary(resultExportEffects);
-  };
-
-  const buildProjectBundleJson = async () => {
-    if (!selectedProject) {
-      throw new Error(t.projectRequired);
-    }
-
-    const modelDetailsSettled = await Promise.allSettled(
-      selectedProjectModels.map(async (model) => {
-        const modelEnvelope = await fetchModel(model.model_id);
-        const versionsEnvelope = await fetchModelVersions(model.model_id);
-        return {
-          model: modelEnvelope.model,
-          versions: versionsEnvelope.versions,
-        };
-      }),
-    );
-
-    const modelDetails = modelDetailsSettled.flatMap((entry) => (entry.status === "fulfilled" ? [entry.value] : []));
-
-    const resultCandidatesSettled = await Promise.allSettled(
-      jobHistory
-        .filter((historyJob) => historyJob.has_result)
-        .map(async (historyJob) => {
-          try {
-            const payload = await fetchJobStatus(historyJob.job_id);
-
-            if (!payload.result) {
-              return null;
-            }
-
-            return {
-              job_id: historyJob.job_id,
-              status: payload.job.status,
-              worker_id: payload.job.worker_id,
-              result: payload.result,
-            };
-          } catch {
-            return null;
-          }
-        }),
-    );
-
-    const resultCandidates = resultCandidatesSettled.flatMap((entry): Array<JobResultRecord | null> =>
-      entry.status === "fulfilled" ? [entry.value as JobResultRecord | null] : [],
-    );
-    const results = resultCandidates.filter((entry): entry is JobResultRecord => entry !== null);
-    const partial =
-      modelDetails.length !== selectedProjectModels.length ||
-      resultCandidatesSettled.some((entry) => entry.status === "rejected");
-
-    return {
-      bundle: exportProjectBundle({
-        project: selectedProject,
-        models: modelDetails.map((entry) => entry.model),
-        modelVersions: modelDetails.flatMap((entry) => entry.versions),
-        activeModelId: selectedModelId,
-        activeVersionId: selectedVersionId,
-        workspaceSnapshot: serializeCurrentModel(
-          studyKind,
-          loadedModelName,
-          activeMaterial,
-          axialForm,
-          heatBarModel,
-          heatPlaneModel,
-          thermalBarModel,
-          thermalBeamModel,
-          thermalFrameModel,
-          thermalTrussModel,
-          trussModel,
-          thermalTruss3dModel,
-          truss3dModel,
-          planeModel,
-          frameModel,
-          beamModel,
-          torsionModel,
-          springModel,
-          spring2dModel,
-          spring3dModel,
-          parametric,
-          round,
-        ),
-        automationPresets: listWorkbenchMacroPresets(selectedProject.project_id),
-        jobs: jobHistory,
-        results,
-      }),
-      partial,
-    };
-  };
-
-  const downloadProjectBundleJson = async () => {
-    await downloadWorkbenchProjectBundleJson({
-      selectedProject,
-      buildBundle: buildProjectBundleJson,
-      setMessage,
-      labels: {
-        projectExported: t.projectExported,
-        projectExportedPartial: t.projectExportedPartial,
-        initialFailed: t.initialFailed,
-      },
-    });
-  };
-
-  const downloadProjectBundleZip = async () => {
-    await downloadWorkbenchProjectBundleZip({
-      selectedProject,
-      buildBundle: buildProjectBundleJson,
-      setMessage,
-      labels: {
-        projectExported: t.projectExported,
-        projectExportedPartial: t.projectExportedPartial,
-        initialFailed: t.initialFailed,
-      },
-    });
-  };
-
-  const downloadDatabaseSnapshot = async () => {
-    await downloadWorkbenchDatabaseSnapshot({
-      setMessage,
-      labels: {
-        databaseExported: t.databaseExported,
-        initialFailed: t.initialFailed,
-      },
-    });
-  };
-
-  const downloadSecurityEventExport = async () => {
-    await downloadWorkbenchSecurityEventExport({
-      language,
-      securityEventWindowFilter,
-      securityEventSourceFilter,
-      securityEventRiskFilter,
-      securityEventStatusFilter,
-      securityEventActionFilter,
-      setMessage,
-      labels: { initialFailed: t.initialFailed },
-    });
-  };
-
-  const downloadSecurityEventCsvExport = async () => {
-    await downloadWorkbenchSecurityEventCsvExport({
-      language,
-      securityEventWindowFilter,
-      securityEventSourceFilter,
-      securityEventRiskFilter,
-      securityEventStatusFilter,
-      securityEventActionFilter,
-      setMessage,
-      labels: { initialFailed: t.initialFailed },
-    });
-  };
-
-  const saveAdminJobRecord = () => {
-    if (!selectedAdminJobId) return;
-
-    startTransition(async () => {
-      try {
-        await updateJobRecord(selectedAdminJobId, {
-          message: adminJobMessage,
-          project_id: adminJobProjectId || undefined,
-          model_version_id: adminJobModelVersionId || undefined,
-          simulation_case_id: adminJobCaseId || undefined,
-        });
-        await refreshJobHistory();
-        setMessage(t.jobSaved);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const deleteAdminJobRecord = () => {
-    if (!selectedAdminJobId) return;
-
-    startTransition(async () => {
-      try {
-        await deleteJobRecord(selectedAdminJobId);
-        await refreshJobHistory();
-        await refreshResults();
-        setMessage(t.jobDeleted);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const saveAdminResultRecord = () => {
-    if (!selectedAdminResultJobId) return;
-
-    startTransition(async () => {
-      await saveWorkbenchAdminResultRecord({
-        resultRefreshSeqRef,
-        fetchResults,
-        setResultRecords,
-        setSelectedAdminResultJobId,
-        selectedAdminResultJobId,
-        adminResultDraft,
-        updateResultRecord,
-        deleteResultRecord,
-        downloadTextFile,
-        setMessage,
-        labels: {
-          resultSaved: t.resultSaved,
-          resultDeleted: t.resultDeleted,
-          resultJsonDownloaded: t.resultJsonDownloaded,
-          invalidJson: t.invalidJson,
-          initialFailed: t.initialFailed,
-        },
-      });
-    });
-  };
-
-  const deleteAdminResultRecord = () => {
-    if (!selectedAdminResultJobId) return;
-
-    startTransition(async () => {
-      await deleteWorkbenchAdminResultRecord({
-        resultRefreshSeqRef,
-        fetchResults,
-        setResultRecords,
-        setSelectedAdminResultJobId,
-        selectedAdminResultJobId,
-        adminResultDraft,
-        updateResultRecord,
-        deleteResultRecord,
-        downloadTextFile,
-        setMessage,
-        labels: {
-          resultSaved: t.resultSaved,
-          resultDeleted: t.resultDeleted,
-          resultJsonDownloaded: t.resultJsonDownloaded,
-          invalidJson: t.invalidJson,
-          initialFailed: t.initialFailed,
-        },
-      });
-    });
-  };
-
-  const exportAdminResultRecord = () => {
-    exportWorkbenchAdminResultRecord({
-      resultRefreshSeqRef,
-      fetchResults,
-      setResultRecords,
-      setSelectedAdminResultJobId,
-      selectedAdminResultJobId,
-      adminResultDraft,
-      updateResultRecord,
-      deleteResultRecord,
-      downloadTextFile,
-      setMessage,
-      labels: {
-        resultSaved: t.resultSaved,
-        resultDeleted: t.resultDeleted,
-        resultJsonDownloaded: t.resultJsonDownloaded,
-        invalidJson: t.invalidJson,
-        initialFailed: t.initialFailed,
-      },
-    });
-  };
-
-  const importProjectBundle = async (file: File | undefined) => {
-    await importWorkbenchProjectBundle(file, persistedModelEffects);
-  };
-
-  const createProjectRecord = () => {
-    startTransition(async () => {
-      try {
-        const payload = await createProject({
-          name: projectNameDraft || t.defaultProject,
-          description: projectDescriptionDraft,
-        });
-        setSelectedProjectId(payload.project.project_id);
-        await refreshProjects();
-        setMessage(t.projectCreated);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const updateProjectRecord = () => {
-    if (!selectedProjectId) return;
-
-    startTransition(async () => {
-      try {
-        await updateProject(selectedProjectId, {
-          name: projectNameDraft || t.defaultProject,
-          description: projectDescriptionDraft,
-        });
-        await refreshProjects();
-        setMessage(t.projectUpdated);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const deleteProjectRecord = () => {
-    if (!selectedProjectId) return;
-    if (typeof window !== "undefined" && !window.confirm(projectNameDraft)) return;
-
-    startTransition(async () => {
-      try {
-        await deleteProject(selectedProjectId);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        await refreshProjects();
-        setMessage(t.projectDeleted);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const saveModelVersion = (saveAs: boolean) => {
-    if (!selectedProjectId) {
-      setMessage(t.projectRequired);
-      return;
-    }
-
-    const payload = serializeCurrentModel(
-      studyKind,
-      loadedModelName,
-      activeMaterial,
-      axialForm,
-      heatBarModel,
-      heatPlaneModel,
-      thermalBarModel,
-      thermalBeamModel,
-      thermalFrameModel,
-      thermalTrussModel,
-      trussModel,
-      thermalTruss3dModel,
-      truss3dModel,
-      planeModel,
-      frameModel,
-      beamModel,
-      torsionModel,
-      springModel,
-      spring2dModel,
-      spring3dModel,
-      parametric,
-      round,
-    );
-
-    startTransition(async () => {
-      try {
-        if (!selectedModelId || saveAs) {
-          const created = await createModel(selectedProjectId, {
-            name: loadedModelName,
-            kind: studyKind,
-            material: activeMaterial,
-            model_schema_version: String(payload.model_schema_version ?? "kyuubiki.model/v1"),
-            payload,
-          });
-          setSelectedModelId(created.model.model_id);
-          setSelectedVersionId(created.model.latest_version_id ?? null);
-          await refreshProjects();
-          await refreshVersions(created.model.model_id);
-          setMessage(t.modelCreated);
-          return;
-        }
-
-        await updateModel(selectedModelId, {
-          name: loadedModelName,
-          kind: studyKind,
-          material: activeMaterial,
-          model_schema_version: String(payload.model_schema_version ?? "kyuubiki.model/v1"),
-          payload,
-        });
-
-        const version = await createModelVersion(selectedModelId, {
-          name: loadedModelName,
-          kind: studyKind,
-          material: activeMaterial,
-          model_schema_version: String(payload.model_schema_version ?? "kyuubiki.model/v1"),
-          payload,
-        });
-
-        setSelectedVersionId(version.version.version_id);
-        await refreshProjects();
-        await refreshVersions(selectedModelId);
-        setMessage(t.modelSaved);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const openSavedModel = (model: ModelRecord) => {
-    openPersistedWorkbenchModel(model, persistedModelEffects);
-  };
-
-  const openSavedVersion = (version: ModelVersionRecord) => {
-    openPersistedWorkbenchVersion(version, persistedModelEffects);
-  };
-
-  const openModelVersionById = (versionId: string) => {
-    openPersistedWorkbenchVersionById(versionId, persistedModelEffects);
-  };
-
-  const renameSelectedVersion = () => {
-    if (!selectedVersionId) return;
-
-    startTransition(async () => {
-      try {
-        await updateModelVersion(selectedVersionId, { name: loadedModelName });
-        await refreshVersions(selectedModelId ?? "");
-        setMessage(t.versionRenamed);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const deleteSelectedVersion = () => {
-    if (!selectedVersionId) return;
-
-    startTransition(async () => {
-      try {
-        await deleteModelVersion(selectedVersionId);
-        setSelectedVersionId(null);
-        if (selectedModelId) {
-          await refreshVersions(selectedModelId);
-        }
-        await refreshProjects();
-        setMessage(t.versionDeleted);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const openSelectedAdminJobVersion = () => {
-    openSelectedAdminJobVersionWithDeps(adminDataEffects);
-  };
-
-  const openSelectedAdminResultVersion = () => {
-    openSelectedAdminResultVersionWithDeps(adminDataEffects);
-  };
-
-  const openSelectedAdminJobProject = () => {
-    openSelectedAdminJobProjectWithDeps(adminDataEffects);
-  };
-
-  const openSelectedAdminResultProject = () => {
-    openSelectedAdminResultProjectWithDeps(adminDataEffects);
-  };
-
-  const applySelectedAdminJobContext = () => {
-    applySelectedAdminJobContextWithDeps(adminDataEffects);
-  };
-
-  const applySelectedAdminResultContext = () => {
-    applySelectedAdminResultContextWithDeps(adminDataEffects);
-  };
-
-  const handleSidebarSectionChange = (section: SidebarSection) => {
-    const nextSection = section === "study" ? "model" : section;
-    setSidebarSection(nextSection);
-    if (nextSection === "model") {
-      setModelTab("tools");
-    }
-    if (nextSection === "workflow" && workflowCatalog.length === 0 && !workflowCatalogBusy) {
-      void refreshWorkflowCatalog();
-    }
-    recordManualDslAction("nav/setSidebarSection", { section: nextSection });
-  };
-
-  const handleStudyTabChange = (tab: StudyPanelTab) => {
-    setStudyTab(tab);
-    recordManualDslAction("nav/setTabs", { studyTab: tab });
-  };
-
-  const handleModelTabChange = (tab: ModelPanelTab) => {
-    setModelTab(tab);
-    recordManualDslAction("nav/setTabs", { modelTab: tab });
-  };
-
-  const handleModelToolsPageChange = (page: ModelToolsPage) => {
-    setModelToolsPage(page);
-    recordManualDslAction("nav/setTabs", { modelTab, modelToolsPage: page });
-  };
-
-  const handleLibraryTabChange = (tab: LibraryPanelTab) => {
-    setLibraryTab(tab);
-    if (tab === "samples" && workflowCatalog.length === 0 && !workflowCatalogBusy) {
-      void refreshWorkflowCatalog();
-    }
-    recordManualDslAction("nav/setTabs", { libraryTab: tab });
-  };
-
-  const handleWorkflowPanelTabChange = (tab: WorkflowPanelTab) => {
-    setWorkflowPanelTab(tab);
-    if ((tab === "catalog" || tab === "builder") && workflowCatalog.length === 0 && !workflowCatalogBusy) {
-      void refreshWorkflowCatalog();
-    }
-    recordManualDslAction("nav/setTabs", { workflowPanelTab: tab });
-  };
-
-  const handleSystemPanelTabChange = (tab: SystemPanelTab) => {
-    setSystemPanelTab(tab);
-    recordManualDslAction("nav/setTabs", { systemPanelTab: tab });
-  };
-
-  const handleSystemDataTabChange = (tab: SystemDataTab) => {
-    setSystemDataTab(tab);
-    recordManualDslAction("nav/setTabs", { systemPanelTab: "data", systemDataTab: tab });
-  };
-
-  const handleAdminFilterProjectChange = (value: string) => {
-    setAdminFilterProjectId(value);
-    recordManualDslAction("data/setFilters", { activeTab: systemDataTab, projectId: value, modelVersionId: adminFilterModelVersionId });
-  };
-
-  const handleAdminFilterModelVersionChange = (value: string) => {
-    setAdminFilterModelVersionId(value);
-    recordManualDslAction("data/setFilters", { activeTab: systemDataTab, projectId: adminFilterProjectId, modelVersionId: value });
-  };
-
-  const handleSelectAdminJob = (jobId: string) => {
-    setSelectedAdminJobId(jobId);
-    recordManualDslAction("data/selectRecord", { activeTab: "jobs", jobId });
-  };
-
-  const handleSelectAdminResult = (jobId: string) => {
-    setSelectedAdminResultJobId(jobId);
-    recordManualDslAction("data/selectRecord", { activeTab: "results", resultJobId: jobId });
-  };
-
-  const handleTruss3dViewPresetChange = (preset: "iso" | "front" | "right" | "top") => {
-    setTruss3dViewPreset(preset);
-    recordManualDslAction("viewport/set3dView", { preset });
-  };
-
-  const handleTruss3dProjectionModeChange = (mode: "ortho" | "persp") => {
-    setTruss3dProjectionMode(mode);
-    recordManualDslAction("viewport/set3dView", { projection: mode });
-  };
-
-  const handleTruss3dBoxSelectModeChange = (next: boolean) => {
-    setTruss3dBoxSelectMode(next);
-    recordManualDslAction("viewport/setUiState", { boxSelectMode: next });
-  };
-
-  const handleTruss3dShowGridChange = (next: boolean) => {
-    setTruss3dShowGrid(next);
-    recordManualDslAction("viewport/toggleFlags", { grid: next });
-  };
-
-  const handleTruss3dShowLabelsChange = (next: boolean) => {
-    setTruss3dShowLabels(next);
-    recordManualDslAction("viewport/toggleFlags", { labels: next });
-  };
-
-  const handleTruss3dShowNodesChange = (next: boolean) => {
-    setTruss3dShowNodes(next);
-    recordManualDslAction("viewport/toggleFlags", { nodes: next });
-  };
-
-  const handleToggleTruss3dLinkMode = () => {
-    toggleTruss3dLinkMode();
-    recordManualDslAction("viewport/setUiState", { linkMode: !truss3dLinkMode });
-  };
-
-  const handleToggleImmersiveViewport = async () => {
-    await toggleImmersiveViewport();
-    recordManualDslAction("viewport/setUiState", { immersiveViewport: !immersiveViewport });
-  };
-
-  const handleToggleImmersiveToolDrawer = () => {
-    setImmersiveToolDrawerOpen((current) => {
-      const next = !current;
-      recordManualDslAction("viewport/setUiState", { toolDrawerOpen: next });
-      return next;
-    });
-  };
-
-  const handleToggleImmersiveHelpDrawer = () => {
-    setImmersiveHelpDrawerOpen((current) => {
-      const next = !current;
-      recordManualDslAction("viewport/setUiState", { helpDrawerOpen: next });
-      return next;
-    });
-  };
-
-  const handleTruss3dFocusViewport = () => {
-    setTruss3dFocusRequestVersion((current) => current + 1);
-    recordManualDslAction("viewport/focus3d", {});
-  };
-
-  const handleTruss3dResetViewport = () => {
-    setTruss3dResetRequestVersion((current) => current + 1);
-    recordManualDslAction("viewport/reset3d", {});
-  };
-
-  const useCurrentProjectAsAdminFilter = () => {
-    setAdminFilterProjectId(selectedProjectId ?? "");
-    recordManualDslAction("data/setFilters", {
-      activeTab: systemDataTab,
-      projectId: selectedProjectId ?? "",
-      modelVersionId: adminFilterModelVersionId,
-    });
-  };
-
-  const useCurrentVersionAsAdminFilter = () => {
-    setAdminFilterModelVersionId(selectedVersionId ?? "");
-    recordManualDslAction("data/setFilters", {
-      activeTab: systemDataTab,
-      projectId: adminFilterProjectId,
-      modelVersionId: selectedVersionId ?? "",
-    });
-  };
-
-  const clearAdminFilters = () => {
-    setAdminFilterProjectId("");
-    setAdminFilterModelVersionId("");
-    recordManualDslAction("data/setFilters", { activeTab: systemDataTab, projectId: "", modelVersionId: "" });
-  };
-
-  const deleteSavedModelRecord = () => {
-    if (!selectedModelId) return;
-
-    startTransition(async () => {
-      try {
-        await deleteModel(selectedModelId);
-        setSelectedModelId(null);
-        setSelectedVersionId(null);
-        setModelVersions([]);
-        await refreshProjects();
-        setMessage(t.modelDeletedStored);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : t.initialFailed);
-      }
-    });
-  };
-
-  const railItems: Array<{ key: SidebarSection; label: string; symbol: string }> = [
-    { key: "model", label: t.rail.model, symbol: "M" },
-    { key: "workflow", label: t.rail.workflow, symbol: "W" },
-    { key: "library", label: t.rail.library, symbol: "H" },
-    { key: "system", label: t.rail.system, symbol: "Y" },
-  ];
-
-  const selectedProject = projects.find((project) => project.project_id === selectedProjectId) ?? null;
-  const selectedProjectModels = selectedProject?.models ?? [];
-  const deferredProjectModels = useDeferredValue(selectedProjectModels);
-  const deferredModelVersions = useDeferredValue(modelVersions);
-  const deferredJobHistory = useDeferredValue(jobHistory);
-  const deferredResultRecords = useDeferredValue(resultRecords);
-  const selectedAdminJob = jobHistory.find((entry) => entry.job_id === selectedAdminJobId) ?? null;
-  const selectedAdminResult = resultRecords.find((entry) => entry.job_id === selectedAdminResultJobId) ?? null;
-  const adminDataEffects = {
-    selectedAdminJob,
-    selectedAdminJobId,
-    selectedAdminResultJobId,
-    jobHistory,
-    projects,
-    refreshVersions,
-    openModelVersionById,
-    setAdminFilterProjectId,
-    setAdminFilterModelVersionId,
-    setAdminJobCaseId,
-    setLibraryTab,
-    setSelectedProjectId,
-    setSelectedModelId,
-    setSelectedVersionId,
-    setModelVersions,
-    setSidebarSection,
-    setMessage,
-    labels: {
-      noJobVersion:
-        language === "zh"
-          ? "这个任务还没有关联模型版本。"
-          : language === "ja"
-            ? "このジョブには関連するモデルバージョンがまだありません。"
-            : "This job does not have a linked model version.",
-      noResultVersion:
-        language === "zh"
-          ? "这个结果还没有关联模型版本。"
-          : language === "ja"
-            ? "この結果には関連するモデルバージョンがまだありません。"
-            : "This result does not have a linked model version.",
-      noRecordContext:
-        language === "zh"
-          ? "这条记录还没有可应用的项目或版本上下文。"
-          : language === "ja"
-            ? "このレコードには適用できる project / version の文脈がまだありません。"
-            : "This record does not have a linked project or version context yet.",
-      linkedProjectMissing:
-        language === "zh"
-          ? "找不到关联项目。"
-          : language === "ja"
-            ? "関連プロジェクトが見つかりませんでした。"
-            : "Could not find the linked project.",
-      linkedProjectOpened: t.linkedProjectOpened,
-      noJobProject:
-        language === "zh"
-          ? "这个任务还没有关联项目。"
-          : language === "ja"
-            ? "このジョブには関連プロジェクトがまだありません。"
-            : "This job does not have a linked project.",
-      noResultProject:
-        language === "zh"
-          ? "这个结果还没有关联项目。"
-          : language === "ja"
-            ? "この結果には関連プロジェクトがまだありません。"
-            : "This result does not have a linked project.",
-      selectJobFirst:
-        language === "zh"
-          ? "请先选择一条任务记录。"
-          : language === "ja"
-            ? "先にジョブレコードを選択してください。"
-            : "Select a job record first.",
-      missingResultJob:
-        language === "zh"
-          ? "找不到这条结果对应的任务记录。"
-          : language === "ja"
-            ? "この結果に対応するジョブレコードが見つかりませんでした。"
-            : "Could not find the job record linked to this result.",
-      recordContextApplied: t.recordContextApplied,
-    },
-  };
-
-  const isAxial = studyKind === "axial_bar_1d";
-  const isHeatBar = studyKind === "heat_bar_1d";
-  const isHeatPlaneTriangle = studyKind === "heat_plane_triangle_2d";
-  const isHeatPlaneQuad = studyKind === "heat_plane_quad_2d";
-  const isHeatPlane = isHeatPlaneTriangle || isHeatPlaneQuad;
-  const isThermalBar = studyKind === "thermal_bar_1d";
-  const isThermalBeam = studyKind === "thermal_beam_1d";
-  const isThermalFrame = studyKind === "thermal_frame_2d";
-  const isThermalTruss2d = studyKind === "thermal_truss_2d";
-  const isThermalTruss3d = studyKind === "thermal_truss_3d";
-  const isThermalPlaneTriangle = studyKind === "thermal_plane_triangle_2d";
-  const isThermalPlaneQuad = studyKind === "thermal_plane_quad_2d";
-  const isThermal = isThermalBar || isThermalTruss2d || isThermalTruss3d;
-  const isSpring1d = studyKind === "spring_1d";
-  const isSpring2d = studyKind === "spring_2d";
-  const isSpring3d = studyKind === "spring_3d";
-  const isSpring = isSpring1d || isSpring2d || isSpring3d;
-  const isBeam = studyKind === "beam_1d" || isThermalBeam;
-  const isTorsion = studyKind === "torsion_1d";
-  const isTruss = studyKind === "truss_2d" || isThermalTruss2d;
-  const isTruss3d = studyKind === "truss_3d" || isThermalTruss3d || isSpring3d;
-  const isFrame = studyKind === "frame_2d";
-  const isFrameLike = isFrame || isThermalFrame;
-  const isPlane =
-    isHeatPlane ||
-    studyKind === "plane_triangle_2d" ||
-    studyKind === "plane_quad_2d" ||
-    isThermalPlaneTriangle ||
-    isThermalPlaneQuad;
   const {
+    isAxial,
+    isHeatBar,
+    isHeatPlaneTriangle,
+    isHeatPlaneQuad,
+    isHeatPlane,
+    isThermalBar,
+    isThermalBeam,
+    isThermalFrame,
+    isThermalTruss2d,
+    isThermalTruss3d,
+    isThermalPlaneTriangle,
+    isThermalPlaneQuad,
+    isThermal,
+    isSpring1d,
+    isSpring2d,
+    isSpring3d,
+    isSpring,
+    isBeam,
+    isTorsion,
+    isTruss,
+    isTruss3d,
+    isFrame,
+    isFrameLike,
+    isPlane,
     axialResult,
     heatBarResult,
     heatPlaneTriangleResult,
@@ -2172,76 +1145,82 @@ export function Workbench() {
     planeNodes,
     planeElements,
     planeBounds,
-  } = buildWorkbenchActiveResultState({
-    result,
-    studyKind,
-    job,
-    resultWindow,
-    t,
-    selectedNode,
-    axialForm,
-    heatBarModel,
-    heatPlaneModel,
-    thermalBarModel,
-    thermalBeamModel,
-    thermalFrameModel,
-    thermalTrussModel,
-    thermalTruss3dModel,
-    springModel,
-    spring2dModel,
-    spring3dModel,
-    trussModel,
-    truss3dModel,
-    planeModel,
-    frameModel,
-    beamModel,
-    torsionModel,
-    isAxial,
-    isHeatBar,
-    isHeatPlaneTriangle,
-    isHeatPlaneQuad,
-    isHeatPlane,
-    isThermalBar,
-    isThermalBeam,
-    isThermalFrame,
-    isThermalTruss2d,
-    isThermalTruss3d,
-    isSpring1d,
-    isSpring2d,
-    isSpring3d,
-    isFrame,
-    isPlane,
-    isTruss,
-    isBeam,
-    isTorsion,
-    isSpring,
-    isAxialResult,
-    isHeatBar1dResult,
-    isHeatPlaneTriangle2dResult,
-    isHeatPlaneQuad2dResult,
-    isThermalBar1dResult,
-    isThermalBeam1dResult,
-    isThermalFrame2dResult,
-    isThermalTruss2dResult,
-    isThermalTruss3dResult,
-    isSpring1dResult,
-    isSpring2dResult,
-    isSpring3dResult,
-    isTrussResult,
-    isTruss3dResult,
-    isBeam1dResult,
-    isTorsion1dResult,
-    isFrame2dResult,
-    isPlaneResult,
-  });
-  const activeLineResultField: LineResultField =
-    isHeatBar
-      ? "average_temperature_delta"
-      : isSpring || isThermalBar || isThermalTruss2d || isThermalTruss3d
-      ? "axial_stress"
-      : isBeam
-        ? beamResultField
-        : frameResultField;
+    activeLineResultField,
+    planeResultFieldMax,
+    frameResultFieldMax,
+    planeResultFieldLabel,
+    planeLegendText,
+    frameResultFieldLabel,
+    frameLegendText,
+    frameTreeValueLabel,
+    planeHotspotElements,
+    planeThermalRows,
+    frameHotspotElements,
+    frameForceRows,
+    frameMaxAxialForce,
+    frameMaxShearForce,
+    selectedNodeData,
+    selectedElementData,
+    selectedTruss3dNodeData,
+    selectedTruss3dElementData,
+    selectedPlaneNodeData,
+    selectedPlaneElementData,
+    selectedFrameNodeData,
+    selectedFrameElementData,
+    selectedBeamNodeData,
+    selectedBeamElementData,
+    selectedTorsionNodeData,
+    selectedTorsionElementData,
+    selectedThermalNodeData,
+    selectedThermalElementData,
+    selectedSpringElementData,
+    selectedNodeIssues,
+    securityUi,
+    resultExportEffects,
+    thermalFrameMaxTemperatureDelta,
+    thermalFrameMaxTemperatureGradient,
+    thermalBeamMaxTemperatureGradient,
+    heartbeatStatusValue,
+    heartbeatToneValue,
+    translatedFailureReason,
+    currentMaterials,
+    hiddenMaterialIds,
+    materialColorMap,
+    materialOptions,
+    adminJobRows,
+    adminResultRows,
+    librarySampleRows,
+    libraryModelRows,
+    libraryVersionRows,
+    libraryJobRows,
+    protocolAgentCards,
+    runtimeBackendRows,
+    runtimeProtocolRows,
+    runtimeProtocolMethods,
+    runtimeSecurityRows,
+    runtimeAuditEntries,
+    runtimeAuditSummaryRows,
+    runtimeAuditTrendBars,
+    runtimeAuditSourceStatusFacets,
+    runtimeAuditStudyFacets,
+    runtimeAuditProjectFacets,
+    runtimeAuditModelVersionFacets,
+    runtimeWatchdogRows,
+    trussElementColors,
+    truss3dElementColors,
+    planeElementColors,
+    nodeCount,
+    activeResultWindowLimit,
+    resultWindowStart,
+    resultWindowEnd,
+    resultWindowJumps,
+    hasViewportDock,
+    showViewportToolStrip,
+    shouldStretchSpaceViewport,
+    viewportPixelWidth,
+    directMeshEndpoints,
+    hasAnyResult,
+  } = studyResultDerived;
   const canProjectHeatToThermo =
     (studyKind === "heat_bar_1d" && Boolean(heatBarResult)) ||
     (studyKind === "heat_plane_triangle_2d" && Boolean(heatPlaneTriangleResult)) ||
@@ -2295,1018 +1274,83 @@ export function Workbench() {
 
     return null;
   };
-  const {
-    planeResultFieldMax,
-    frameResultFieldMax,
-    planeResultFieldLabel,
-    planeLegendText,
-    frameResultFieldLabel,
-    frameLegendText,
-    frameTreeValueLabel,
-    planeHotspotElements,
-    planeThermalRows,
-    frameHotspotElements,
-    frameForceRows,
-    frameMaxAxialForce,
-    frameMaxShearForce,
-    selectedNodeData,
-    selectedElementData,
-    selectedTruss3dNodeData,
-    selectedTruss3dElementData,
-    selectedPlaneNodeData,
-    selectedPlaneElementData,
-    selectedFrameNodeData,
-    selectedFrameElementData,
-    selectedBeamNodeData,
-    selectedBeamElementData,
-    selectedTorsionNodeData,
-    selectedTorsionElementData,
-    selectedThermalNodeData,
-    selectedThermalElementData,
-    selectedSpringElementData,
-    selectedNodeIssues,
-    securityUi,
-  } = buildWorkbenchResultDerivedData({
+
+  const editControllers = useWorkbenchEditControllers({
     t,
+    language,
+    activeMaterial,
+    setHiddenMaterials,
+    setMessage,
+    studyKind,
+    activeFrameLikeModel,
+    isFrameLike,
     isHeatPlane,
-    isSpring,
-    isThermalBar,
+    isThermalFrame,
     isThermalTruss2d,
     isThermalTruss3d,
+    memberDraftNodes,
+    parametric,
+    recordHistory,
+    resetResults: () => resetActiveResult(setResult, setJob),
+    round,
+    selectedElement,
+    selectedNode,
+    selectedTruss3dNodes,
+    setFrameModel,
+    setHeatPlaneModel,
+    setMemberDraftNodes,
+    setPlaneModel,
+    setSelectedElement,
+    setSelectedNode,
+    setSelectedTruss3dNodes,
+    setSidebarSection,
+    setStudyKind,
+    setThermalFrameModel,
+    setThermalTruss3dModel,
+    setThermalTrussModel,
+    setTruss3dModel,
+    setTrussModel,
+    truss3dBatchLoadX,
+    truss3dBatchLoadY,
+    truss3dBatchLoadZ,
+    truss3dModel,
+    trussModel,
     isBeam,
     isTorsion,
-    isFrameLike,
-    isThermalFrame,
-    isThermalBeam,
-    planeElements,
-    planeResultField,
-    displayTrussElements,
-    activeLineResultField,
-    selectedElement,
-    planeHotspotLimit,
-    selectedNode,
-    displayTrussNodes,
-    displayTruss3dNodes,
-    displayTruss3dElements,
-    planeNodes,
-    thermalFrameModel,
-    thermalFrameResult,
-    frameModel,
-    frameResult,
-    thermalBeamModel,
-    thermalBeamResult,
-    beamModel,
-    beamResult,
-    torsionModel,
-    torsionResult,
     isHeatBar,
-    heatBarModel,
-    heatBarResult,
-    thermalBarModel,
-    thermalBarResult,
-    activeSpringModel,
-    trussDiagnostics,
-    language,
-  });
-  const resultExportEffects = {
-    result,
-    studyKind,
-    loadedModelName,
-    job,
-    isPlane,
-    isFrameLike,
-    isBeam,
-    isSpring,
     isThermal,
     isThermalBar,
-    isThermalTruss2d,
-    isThermalTruss3d,
-    planeResultField,
-    activeLineResultField,
-    planeHotspotElements,
-    frameHotspotElements,
-    frameForceRows,
-    downloadTextFile,
-    setMessage,
-    labels: {
-      noResultToExport: t.noResultToExport,
-      resultJsonDownloaded: t.resultJsonDownloaded,
-      resultCsvDownloaded: t.resultCsvDownloaded,
-    },
-  };
-  const thermalFrameMaxTemperatureDelta = isThermalFrame ? thermalFrameResult?.max_temperature_delta ?? 0 : 0;
-  const thermalFrameMaxTemperatureGradient = isThermalFrame ? thermalFrameResult?.max_temperature_gradient ?? 0 : 0;
-  const thermalBeamMaxTemperatureGradient = isThermalBeam ? thermalBeamResult?.max_temperature_gradient ?? 0 : 0;
-
-  useEffect(() => {
-    if (focusedPlaneElement === null) return;
-
-    const timeout = window.setTimeout(() => {
-      setFocusedPlaneElement(null);
-    }, 1400);
-
-    return () => window.clearTimeout(timeout);
-  }, [focusedPlaneElement]);
-
-  useEffect(() => {
-    if (focusedFrameElement === null) return;
-
-    const timeout = window.setTimeout(() => {
-      setFocusedFrameElement(null);
-    }, 1400);
-
-    return () => window.clearTimeout(timeout);
-  }, [focusedFrameElement]);
-
-  useEffect(() => {
-    if (focusedFrameElement === null) return;
-
-    const timeout = window.setTimeout(() => {
-      setFocusedFrameElement(null);
-    }, 1400);
-
-    return () => window.clearTimeout(timeout);
-  }, [focusedFrameElement]);
-  const heartbeatStatusValue = heartbeatStatus(job, t);
-  const heartbeatToneValue = heartbeatTone(job);
-  const translatedFailureReason = humanizeSolverFailure(job?.message, t);
-  const currentMaterials = useMemo(
-    () =>
-      studyKind === "thermal_truss_2d"
-        ? thermalTrussModel.materials ?? []
-        : studyKind === "truss_2d"
-        ? trussModel.materials ?? []
-        : studyKind === "thermal_truss_3d"
-          ? thermalTruss3dModel.materials ?? []
-          : studyKind === "truss_3d"
-          ? truss3dModel.materials ?? []
-          : studyKind === "heat_bar_1d" || studyKind === "thermal_bar_1d"
-            ? []
-          : studyKind === "thermal_beam_1d"
-            ? thermalBeamModel.materials ?? []
-          : studyKind === "thermal_frame_2d"
-            ? thermalFrameModel.materials ?? []
-          : studyKind === "spring_1d" || studyKind === "spring_2d"
-            ? []
-          : studyKind === "beam_1d"
-            ? beamModel.materials ?? []
-          : studyKind === "torsion_1d"
-            ? []
-          : studyKind === "frame_2d"
-            ? frameModel.materials ?? []
-            : studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d"
-              ? planeModel.materials ?? []
-              : isHeatPlane
-                ? []
-              : [],
-    [beamModel.materials, frameModel.materials, isHeatPlane, planeModel.materials, studyKind, thermalBeamModel.materials, thermalFrameModel.materials, thermalTruss3dModel.materials, thermalTrussModel.materials, truss3dModel.materials, trussModel.materials],
-  );
-  const hiddenMaterialIds = hiddenMaterials[studyKind] ?? [];
-  const materialColorMap = useMemo(
-    () => new Map(currentMaterials.map((material, index) => [material.id, materialColorByIndex(index)])),
-    [currentMaterials],
-  );
-  const materialOptions = useMemo(
-    () =>
-      currentMaterials.map((material) => ({
-        id: material.id,
-        label: `${material.name} (${round(material.youngs_modulus / 1.0e9)} GPa)`,
-      })),
-    [currentMaterials],
-  );
-  const adminJobRows = useMemo(
-    () =>
-      buildAdminJobRows({
-        jobs: deferredJobHistory.filter((job) => {
-          const matchesProject =
-            !adminFilterProjectId ||
-            (job.project_id ?? "").toLowerCase().includes(adminFilterProjectId.trim().toLowerCase());
-          const matchesVersion =
-            !adminFilterModelVersionId ||
-            (job.model_version_id ?? "").toLowerCase().includes(adminFilterModelVersionId.trim().toLowerCase());
-          return matchesProject && matchesVersion;
-        }),
-        heartbeatTone: (job) => heartbeatTone(job),
-        heartbeatLabel: (job) => heartbeatStatus(job, t),
-        detailLabel: (job) => humanizeSolverFailure(job.message, t) ?? job.message ?? job.worker_id ?? "--",
-      }),
-    [adminFilterModelVersionId, adminFilterProjectId, deferredJobHistory, t],
-  );
-  const adminResultRows = useMemo(
-    () =>
-      buildAdminResultRows({
-        records: deferredResultRecords.filter((record) => {
-          const linkedJob = jobHistory.find((job) => job.job_id === record.job_id);
-          const matchesProject =
-            !adminFilterProjectId ||
-            (linkedJob?.project_id ?? "").toLowerCase().includes(adminFilterProjectId.trim().toLowerCase());
-          const matchesVersion =
-            !adminFilterModelVersionId ||
-            (linkedJob?.model_version_id ?? "").toLowerCase().includes(adminFilterModelVersionId.trim().toLowerCase());
-          return matchesProject && matchesVersion;
-        }),
-        jobs: jobHistory,
-        updatedAtLabel: (record) => (record.updated_at ? formatTime(record.updated_at, language) : t.hasResult),
-        summaryLabel: (record) => Object.keys(record.result).join(", ").slice(0, 64) || t.resultPayload,
-      }),
-    [adminFilterModelVersionId, adminFilterProjectId, deferredResultRecords, formatTime, jobHistory, language, t.hasResult, t.resultPayload],
-  );
-  const librarySampleRows = useMemo(
-    () =>
-      buildLibrarySampleRows({
-        samples: SAMPLE_LIBRARY,
-        kindLabel: (kind) => (kind in t.kinds ? t.kinds[kind as StudyKind] : kind),
-        domainLabel: (domain) => t.studyDomains[domain],
-        familyLabel: (family) => t.studyFamilies[family],
-      }),
-    [t],
-  );
-  const libraryModelRows = useMemo(
-    () =>
-      buildLibraryModelRows({
-        models: deferredProjectModels,
-        kindLabel: (kind) => (kind in t.kinds ? t.kinds[kind as StudyKind] : kind),
-        updatedAtLabel: (value) => formatTime(value, language),
-      }),
-    [deferredProjectModels, formatTime, language, t],
-  );
-  const libraryVersionRows = useMemo(
-    () =>
-      buildLibraryVersionRows({
-        versions: deferredModelVersions,
-        updatedAtLabel: (value) => formatTime(value, language),
-      }),
-    [deferredModelVersions, formatTime, language],
-  );
-  const libraryJobRows = useMemo(
-    () =>
-      buildLibraryJobRows({
-        jobs: deferredJobHistory,
-        updatedAtLabel: (value) => formatTime(value, language),
-        hasResultLabel: (hasResult) => (hasResult ? t.yes : t.no),
-      }),
-    [deferredJobHistory, formatTime, language, t.no, t.yes],
-  );
-  const protocolAgentCards = useMemo(
-    () =>
-      buildProtocolAgentCards({
-        agents: protocolAgents,
-        labels: {
-          runtimeMode: t.runtimeMode,
-          cluster: t.cluster,
-          clusterSize: t.clusterSize,
-          clusterHealth: t.clusterHealth,
-          peers: t.peers,
-          headless: t.headless,
-          yes: t.yes,
-          no: t.no,
-          capabilities: t.capabilities,
-          methods: t.methods,
-          peerState: t.peerState,
-        },
-        clusterHealthTone,
-        peerStatusLabel: (status) => formatPeerStatus(status, t),
-      }),
-    [protocolAgents, t],
-  );
-  const runtimeBackendRows = useMemo(
-    () => [
-      { label: t.ui, value: "3000" },
-      { label: t.orchestrator, value: health ? "4000" : t.offline },
-      { label: t.solverAgent, value: health?.transport?.solver_agent_tcp ?? 5001 },
-    ],
-    [health, t],
-  );
-  const runtimeProtocolRows = useMemo(
-    () => [
-      { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
-      { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
-      { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
-      { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
-      { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
-      { label: t.reachableAgents, value: protocolAgents.length },
-      ...(frontendRuntimeMode === "direct_mesh_gui"
-        ? [
-            { label: t.directMeshStrategy, value: t.directMeshStrategies[directMeshSelectionMode] },
-            { label: t.directMeshLastAgent, value: directMeshExecution?.endpoint ?? "--" },
-            {
-              label: t.directMeshLastRoute,
-              value: directMeshExecution
-                ? `${t.directMeshStrategies[directMeshExecution.strategy]} · ${formatTime(directMeshExecution.at, language)}`
-                : "--",
-            },
-          ]
-        : []),
-    ],
-    [directMeshExecution, directMeshSelectionMode, formatTime, frontendRuntimeMode, health, language, protocolAgents.length, t],
-  );
-  const runtimeProtocolMethods = useMemo(
-    () => health?.protocol?.compatible_solver_rpc?.methods?.map((method) => formatProtocolMethodLabel(method)),
-    [health?.protocol?.compatible_solver_rpc?.methods],
-  );
-  const runtimeSecurityRows = useMemo(
-    () => [
-      {
-        label: securityUi.controlPlaneToken,
-        value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
-      },
-      {
-        label: securityUi.clusterToken,
-        value: health?.security?.cluster_token_configured ? securityUi.configured : securityUi.notConfigured,
-      },
-      {
-        label: securityUi.clusterWindow,
-        value: `${health?.security?.cluster_timestamp_window_ms ?? 30000} ms`,
-      },
-      {
-        label: language === "zh" ? "Agent 白名单" : language === "ja" ? "Agent 許可リスト" : "Agent allowlist",
-        value: health?.security?.cluster_agent_allowlist_enabled
-          ? `${securityUi.enabled} · ${health?.security?.cluster_agent_allowlist_count ?? 0}`
-          : securityUi.disabled,
-      },
-      {
-        label: language === "zh" ? "Cluster 白名单" : language === "ja" ? "Cluster 許可リスト" : "Cluster allowlist",
-        value: health?.security?.cluster_cluster_allowlist_enabled
-          ? `${securityUi.enabled} · ${health?.security?.cluster_cluster_allowlist_count ?? 0}`
-          : securityUi.disabled,
-      },
-      {
-        label: language === "zh" ? "Fingerprint 绑定" : language === "ja" ? "Fingerprint バインディング" : "Fingerprint binding",
-        value: health?.security?.cluster_fingerprint_required ? securityUi.enabled : securityUi.disabled,
-      },
-      {
-        label: securityUi.protectReads,
-        value: health?.security?.protect_reads ? securityUi.enabled : securityUi.disabled,
-      },
-      {
-        label: securityUi.mutatingRoutes,
-        value: health?.security?.mutating_routes_protected ? securityUi.enabled : securityUi.disabled,
-      },
-      {
-        label: securityUi.clusterRoutes,
-        value: health?.security?.cluster_routes_protected ? securityUi.enabled : securityUi.disabled,
-      },
-      {
-        label: securityUi.directMeshRoutes,
-        value: directMeshApiToken ? securityUi.configured : securityUi.enabled,
-      },
-    ],
-    [directMeshApiToken, health, language, securityUi],
-  );
-  const runtimeAuditEntries = useMemo(
-    () =>
-      securityEventRecords.map((entry) => ({
-        id: entry.event_id,
-        at: formatTime(entry.occurred_at, language),
-        action: entry.action,
-        source:
-          entry.source === "assistant"
-            ? language === "zh"
-              ? "助手"
-              : language === "ja"
-                ? "アシスタント"
-                : "Assistant"
-            : language === "zh"
-              ? "脚本"
-              : language === "ja"
-                ? "スクリプト"
-                : "Script",
-        risk:
-          entry.risk === "destructive"
-            ? language === "zh"
-              ? "高风险"
-              : language === "ja"
-                ? "破壊的"
-                : "Destructive"
-            : language === "zh"
-              ? "敏感"
-              : language === "ja"
-                ? "機微"
-                : "Sensitive",
-        status:
-          entry.status === "prompted"
-            ? language === "zh"
-              ? "待确认"
-              : language === "ja"
-                ? "確認待ち"
-                : "Prompted"
-            : entry.status === "cancelled"
-              ? language === "zh"
-                ? "已取消"
-                : language === "ja"
-                  ? "取消済み"
-                  : "Cancelled"
-              : entry.status === "completed"
-                ? language === "zh"
-                  ? "已执行"
-                  : language === "ja"
-                    ? "完了"
-                    : "Completed"
-                : language === "zh"
-                  ? "失败"
-                  : language === "ja"
-                    ? "失敗"
-                    : "Failed",
-        note: entry.note ?? "--",
-      })),
-    [formatTime, language, securityEventRecords],
-  );
-  const runtimeAuditSummaryRows = useMemo(
-    () => buildRuntimeAuditSummaryRows(language, securityEventRecords),
-    [language, securityEventRecords],
-  );
-  const runtimeAuditTrendBars = useMemo(
-    () => buildRuntimeAuditTrendBars(language, securityEventRecords, securityEventWindowFilter),
-    [language, securityEventRecords, securityEventWindowFilter],
-  );
-  const runtimeAuditSourceStatusFacets = useMemo(
-    () => buildRuntimeAuditSourceStatusFacets(language, securityEventRecords),
-    [language, securityEventRecords],
-  );
-  const runtimeAuditStudyFacets = useMemo(
-    () => buildRuntimeAuditStudyFacets(securityEventRecords),
-    [securityEventRecords],
-  );
-  const runtimeAuditProjectFacets = useMemo(
-    () => buildRuntimeAuditProjectFacets(securityEventRecords),
-    [securityEventRecords],
-  );
-  const runtimeAuditModelVersionFacets = useMemo(
-    () => buildRuntimeAuditModelVersionFacets(securityEventRecords),
-    [securityEventRecords],
-  );
-  const runtimeWatchdogRows = useMemo(
-    () => [
-      { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
-      { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
-      { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
-      { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
-      { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
-      { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },
-    ],
-    [health, t],
-  );
-  const trussElementColors = useMemo(
-    () =>
-      displayTrussElements.map((element: any) =>
-        (isFrameLike && activeFrameLikeResult) || (isBeam && activeBeamLikeResult) || (isTorsion && torsionResult)
-          ? planeStressFill(lineResultFieldValue(element, activeLineResultField), frameResultFieldMax)
-          : materialColorMap.get(element.material_id ?? "") ?? "#1677a3",
-      ),
-    [activeBeamLikeResult, activeFrameLikeResult, activeLineResultField, displayTrussElements, frameResultFieldMax, isBeam, isFrameLike, isTorsion, materialColorMap, torsionResult],
-  );
-  const truss3dElementColors = useMemo(
-    () => displayTruss3dElements.map((element: any) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
-    [displayTruss3dElements, materialColorMap],
-  );
-  const planeElementColors = useMemo(
-    () => (isHeatPlane ? activePlaneInputModel.elements : planeModel.elements).map((element: any) => materialColorMap.get(("material_id" in element ? element.material_id : "") ?? "") ?? planeStressFill(0, 1)),
-    [activePlaneInputModel.elements, isHeatPlane, planeModel.elements, materialColorMap],
-  );
-  const nodeCount =
-    isAxial
-      ? axialNodes.length
-      : activeResultWindow?.totalNodes ??
-        (isTruss ? trussResult?.nodes.length : isSpring3d ? spring3dResult?.nodes.length : isTruss3d ? truss3dResult?.nodes.length : isSpring ? activeSpringResult?.nodes.length : isBeam ? activeBeamLikeResult?.nodes.length : isTorsion ? torsionResult?.nodes.length : isFrameLike ? activeFrameLikeResult?.nodes.length : planeResult?.nodes.length) ??
-        (isTruss ? trussModel.nodes.length : isSpring3d ? spring3dModel.nodes.length : isTruss3d ? truss3dModel.nodes.length : isSpring ? activeSpringModel.nodes.length : isBeam ? activeBeamLikeModel.nodes.length : isTorsion ? torsionModel.nodes.length : isFrameLike ? activeFrameLikeModel.nodes.length : activePlaneInputModel.nodes.length);
-  const activeResultWindowLimit = activeResultWindow?.limit ?? resultWindowLimit;
-  const resultWindowStart = activeResultWindow ? Math.min(resultWindowOffset, Math.max(0, resultWindowMaxTotal - 1)) + 1 : 0;
-  const resultWindowEnd = activeResultWindow ? Math.min(resultWindowOffset + activeResultWindowLimit, resultWindowMaxTotal) : 0;
-  const resultWindowJumps = activeResultWindow
-    ? [
-        { label: t.jumpStart, offset: 0 },
-        { label: t.jumpQuarter, offset: clampChunkOffset(resultWindowMaxTotal * 0.25, resultWindowMaxTotal, activeResultWindowLimit) },
-        { label: t.jumpMid, offset: clampChunkOffset(resultWindowMaxTotal * 0.5, resultWindowMaxTotal, activeResultWindowLimit) },
-        {
-          label: t.jumpThreeQuarter,
-          offset: clampChunkOffset(resultWindowMaxTotal * 0.75, resultWindowMaxTotal, activeResultWindowLimit),
-        },
-        {
-          label: t.jumpEnd,
-          offset: clampChunkOffset(Math.max(0, resultWindowMaxTotal - activeResultWindowLimit), resultWindowMaxTotal, activeResultWindowLimit),
-        },
-      ].filter((jump, index, jumps) => jumps.findIndex((candidate) => candidate.offset === jump.offset) === index)
-    : [];
-  const hasViewportDock = isTruss3d && ((immersiveViewport && immersiveToolDrawerOpen) || (showShortcutHints && immersiveHelpDrawerOpen));
-  const showViewportToolStrip = isTruss3d && immersiveToolDrawerOpen;
-  const shouldStretchSpaceViewport = isTruss3d && !hasViewportDock && !activeResultWindow;
-  const viewportPixelWidth =
-    activeResultWindow
-      ? Math.min(3200, 980 + Math.ceil(resultWindowMaxTotal / activeResultWindowLimit) * 180)
-      : isTruss3d
-        ? hasViewportDock
-          ? 1120
-          : undefined
-        : 980;
-  const directMeshEndpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
-  const hasAnyResult = Boolean(axialResult || heatBarResult || thermalBarResult || thermalBeamResult || thermalFrameResult || thermalTrussResult || thermalTruss3dResult || trussResult || truss3dResult || springResult || spring2dResult || spring3dResult || beamResult || torsionResult || frameResult || planeResult);
-
-  const buildScriptSnapshot = (): WorkbenchScriptSnapshot => ({
-    studyKind,
-    sidebarSection,
-    studyTab,
-    modelTab,
-    libraryTab,
-    systemPanelTab,
-    systemDataTab,
-    language,
-    theme,
-    frontendRuntimeMode,
-    selectedProjectId,
-    selectedModelId,
-    selectedVersionId,
-    selectedAdminJobId,
-    selectedAdminResultJobId,
-    adminFilterProjectId,
-    adminFilterModelVersionId,
-    loadedModelName,
-    activeMaterial,
-    selectedNode,
-    selectedElement,
-    selectedTruss3dNodeIndices: selectedTruss3dNodes,
-    memberDraftNodeIndices: memberDraftNodes,
-    immersiveViewport,
-    immersiveToolDrawerOpen,
-    immersiveHelpDrawerOpen,
-    truss3dProjectionMode,
-    truss3dViewPreset,
-    truss3dBoxSelectMode,
     truss3dLinkMode,
-    hasResult: hasAnyResult,
-    jobStatus: job?.status ?? null,
-    projectCount: projects.length,
-    jobHistoryCount: jobHistory.length,
-    resultCount: resultRecords.length,
-    protocolAgentCount: protocolAgents.length,
-    healthStatus: health?.status ?? null,
-    message,
-  });
-
-  const invokeScriptAction = async (
-    action: string,
-    payload: Record<string, unknown> = {},
-    source: WorkbenchSecurityAuditSource = "script",
-    note?: string,
-  ) => {
-    const actionDefinition = getWorkbenchScriptActionDefinition(action);
-    if (actionDefinition?.requiresConfirmation) {
-      const auditRisk = actionDefinition.risk as WorkbenchSecurityAuditRisk;
-      recordSecurityAuditEvent({
-        action,
-        source,
-        risk: auditRisk,
-        status: "prompted",
-        note: note ?? (language === "zh" ? "等待操作员确认。" : language === "ja" ? "オペレーター確認待ちです。" : "Waiting for operator confirmation."),
-      });
-      const confirmationMessage =
-        language === "zh"
-          ? `动作 ${action} 属于高风险操作，可能修改、删除或导出敏感数据。\n\n请确认是否继续执行。`
-          : language === "ja"
-            ? `操作 ${action} は高リスクで、機微データの変更・削除・出力を行う可能性があります。\n\n実行を続けますか。`
-          : `The action ${action} is high risk and may modify, delete, or export sensitive data.\n\nConfirm execution?`;
-      if (typeof window !== "undefined" && !window.confirm(confirmationMessage)) {
-        const summary = language === "zh" ? "已被操作员取消确认。" : language === "ja" ? "オペレーター確認で取り消されました。" : "Cancelled by operator confirmation.";
-        recordSecurityAuditEvent({
-          action,
-          source,
-          risk: auditRisk,
-          status: "cancelled",
-          note: summary,
-        });
-        appendScriptActionLog({ action, source, status: "failed", summary, payload, note: summary });
-        throw new Error(summary);
-      }
-    }
-
-    appendScriptActionLog({ action, source, status: "started", summary: JSON.stringify(payload), payload, note });
-
-    try {
-      let resultPayload: Record<string, unknown>;
-      const navResult = await handleWorkbenchScriptNavAction({
-        action,
-        payload,
-        studyKind,
-        studyKindResetHandlers,
-        setStudyKind,
-        handleSidebarSectionChange,
-        recordHistory,
-        changeStudyTypeLabel: t.changeStudyType,
-        setStudyTab,
-        setModelTab,
-        setModelToolsPage,
-        setLibraryTab,
-        setSystemPanelTab,
-        setAssistantWindowOpen,
-        setSystemDataTab,
-        handleLanguageChange,
-        setTheme,
-        setFrontendRuntimeMode,
-        setDirectMeshEndpointsText,
-        setDirectMeshSelectionMode,
-        refreshHealth,
-        refreshJobHistory,
-        refreshResults,
-        refreshProjects,
-        refreshSecurityEvents,
-      });
-      if (navResult) {
-        resultPayload = navResult;
-      } else {
-      const projectModelResult = await handleWorkbenchScriptProjectModelAction({
-        action,
-        payload,
-        selectedProjectId,
-        selectedModelId,
-        selectedVersionId,
-        projectNameDraft,
-        projectDescriptionDraft,
-        loadedModelName,
-        activeMaterial,
-        studyKind,
-        setSelectedProjectId,
-        setProjectNameDraft,
-        setProjectDescriptionDraft,
-        setSelectedModelId,
-        setSelectedVersionId,
-        setModelVersions,
-        setLoadedModelName,
-        setActiveMaterial,
-        refreshProjects,
-        refreshVersions,
-        downloadProjectBundleJson,
-        downloadProjectBundleZip,
-        generateModel,
-        generatePanelModel,
-        serializeCurrentModel: () =>
-          serializeCurrentModel(
-            studyKind,
-            loadedModelName,
-            activeMaterial,
-            axialForm,
-            heatBarModel,
-            heatPlaneModel,
-            thermalBarModel,
-            thermalBeamModel,
-            thermalFrameModel,
-            thermalTrussModel,
-            trussModel,
-            thermalTruss3dModel,
-            truss3dModel,
-            planeModel,
-            frameModel,
-            beamModel,
-            torsionModel,
-            springModel,
-            spring2dModel,
-            spring3dModel,
-            parametric,
-            round,
-          ),
-        createProject,
-        updateProject,
-        deleteProject,
-        createModel,
-        updateModel,
-        deleteModel,
-        createModelVersion,
-        updateModelVersion,
-        deleteModelVersion,
-        projectRequiredLabel: t.projectRequired,
-        defaultProjectLabel: t.defaultProject,
-        projectCreatedLabel: t.projectCreated,
-        projectUpdatedLabel: t.projectUpdated,
-        projectDeletedLabel: t.projectDeleted,
-        noSavedModelsLabel: t.noSavedModels,
-        noVersionsLabel: t.noVersions,
-        modelCreatedLabel: t.modelCreated,
-        modelSavedLabel: t.modelSaved,
-        modelDeletedLabel: t.modelDeletedStored,
-        versionRenamedLabel: t.versionRenamed,
-        versionDeletedLabel: t.versionDeleted,
-        setMessage,
-      });
-      if (projectModelResult) {
-        resultPayload = projectModelResult;
-      } else {
-      const stateResult = await handleWorkbenchScriptStateAction({
-        action,
-        payload,
-        language,
-        setStudyKind,
-        setParametric,
-        setPanelParametric,
-        setTrussModel,
-        setTruss3dModel,
-        setPlaneModel,
-        setFrameModel,
-        setBeamModel,
-        setSelectedNode,
-        setSelectedElement,
-        setSelectedTruss3dNodes,
-        setMemberDraftNodes,
-        setTruss3dLinkMode,
-        setTruss3dFocusRequestVersion,
-        setTruss3dResetRequestVersion,
-        setTruss3dShowGrid,
-        setTruss3dShowLabels,
-        setTruss3dShowNodes,
-        setImmersiveToolDrawerOpen,
-        setImmersiveHelpDrawerOpen,
-        setTruss3dBoxSelectMode,
-        immersiveViewport,
-        recordHistory,
-        importActionLabel: t.importAction,
-        editParametricLabel: t.editParametric,
-        resolveTruss2dJobInput,
-        resolveTruss3dJobInput,
-        resolvePlaneQuad2dJobInput,
-        resolvePlaneTriangle2dJobInput,
-        ensureFrameModelMaterials,
-        ensureBeamModelMaterials,
-        activeMaterial,
-        resetActiveResult: () => resetActiveResult(setResult, setJob),
-        projectHeatToThermoStudy,
-        toggleImmersiveViewport,
-        handleUndo,
-        handleRedo,
-        runAnalysis,
-        cancelCurrentJob,
-        setTruss3dViewPreset,
-        setTruss3dProjectionMode,
-      });
-      if (stateResult) {
-        resultPayload = stateResult;
-      } else {
-      const macroDataResult = await handleWorkbenchScriptMacroDataAction({
-        action,
-        payload,
-        source,
-        note,
-        language,
-        getScriptSnapshot,
-        invokeScriptAction,
-        setSystemDataTab,
-        setAdminFilterProjectId,
-        setAdminFilterModelVersionId,
-        setSelectedAdminJobId,
-        setSelectedAdminResultJobId,
-        setSidebarSection,
-        setSystemPanelTab,
-        resolveScriptLinkedJob: (nextPayload) => resolveScriptLinkedJobWithDeps(nextPayload, adminDataEffects),
-        openModelVersionById,
-        openProjectContextById: (projectId) => openProjectContextByIdWithDeps(projectId, adminDataEffects),
-        applyJobContextToWorkbench: (linkedJob) => applyJobContextToWorkbenchWithDeps(linkedJob, adminDataEffects),
-        downloadDatabaseSnapshot,
-      });
-      if (macroDataResult) {
-        resultPayload = macroDataResult;
-      } else {
-        throw new Error(`Unknown script action: ${action}`);
-      }
-      }
-      }
-      }
-
-      appendScriptActionLog({ action, source, status: "completed", summary: JSON.stringify(resultPayload), payload, result: resultPayload, note });
-      if (actionDefinition?.requiresConfirmation) {
-        recordSecurityAuditEvent({
-          action,
-          source,
-          risk: actionDefinition.risk as WorkbenchSecurityAuditRisk,
-          status: "completed",
-          note: note ?? (language === "zh" ? "高风险动作已执行完成。" : language === "ja" ? "高リスク操作の実行が完了しました。" : "High-risk action completed."),
-        });
-      }
-      return resultPayload;
-    } catch (error) {
-      const summary = error instanceof Error ? error.message : String(error);
-      if (actionDefinition?.requiresConfirmation) {
-        recordSecurityAuditEvent({
-          action,
-          source,
-          risk: actionDefinition.risk as WorkbenchSecurityAuditRisk,
-          status: "failed",
-          note: summary,
-        });
-      }
-      appendScriptActionLog({ action, source, status: "failed", summary, payload, note: summary });
-      throw error;
-    }
-  };
-
-  const buildSnapshot = (): WorkbenchSnapshot => ({
-    ...buildWorkbenchSnapshot({
-      studyKind,
-      axialForm,
-      heatBarModel,
-      heatPlaneModel,
-      thermalBarModel,
-      thermalBeamModel,
-      thermalFrameModel,
-      thermalTrussModel,
-      trussModel,
-      thermalTruss3dModel,
-      truss3dModel,
-      planeModel,
-      frameModel,
-      beamModel,
-      torsionModel,
-      springModel,
-      spring2dModel,
-      spring3dModel,
-      parametric,
-      panelParametric,
-      activeMaterial,
-      loadedModelName,
-      sidebarSection,
-      selectedNode,
-      selectedElement,
-      memberDraftNodes,
-    }),
-  });
-
-  const restoreSnapshot = (snapshot: WorkbenchSnapshot) => {
-    restoreWorkbenchSnapshot(
-      snapshot,
-      {
-        setStudyKind,
-        setAxialForm,
-        setHeatBarModel,
-        setHeatPlaneModel,
-        setThermalBarModel,
-        setThermalBeamModel,
-        setThermalFrameModel,
-        setThermalTrussModel,
-        setTrussModel,
-        setThermalTruss3dModel,
-        setTruss3dModel,
-        setPlaneModel,
-        setFrameModel,
-        setBeamModel,
-        setTorsionModel,
-        setSpringModel,
-        setSpring2dModel,
-        setSpring3dModel,
-        setParametric,
-        setPanelParametric,
-        setActiveMaterial,
-        setLoadedModelName,
-        setSidebarSection,
-        setSelectedNode,
-        setSelectedElement,
-        setMemberDraftNodes,
-      },
-      () => resetActiveResult(setResult, setJob),
-    );
-  };
-
-  const {
-    assistantTransactions,
-    appendScriptActionLog,
-    executeAssistantPlan,
-    getScriptSnapshot,
-    recordManualDslAction,
-    recordSecurityAuditEvent,
-    rollbackAssistantTransaction,
-    scriptActionLog,
-    securityAuditLog,
-  } = useWorkbenchAssistantAuditController({
-    language,
-    scriptRecordingMode,
-    frontendRuntimeMode,
-    studyKind,
-    selectedProjectId,
-    selectedModelId,
-    selectedVersionId,
-    immersiveViewport,
-    setMessage,
-    buildScriptSnapshot,
-    buildWorkbenchSnapshot: () => buildSnapshot(),
-    restoreWorkbenchSnapshot: restoreSnapshot,
-  });
-
-  const scriptSnapshot = buildScriptSnapshot();
-
-  const recordHistory = (label: string) => {
-    const snapshot = buildSnapshot();
-    setUndoStack((current) => pushHistoryEntry(current, label, snapshot));
-    setRedoStack([]);
-  };
-
-  const handleUndo = () => {
-    const currentSnapshot = buildSnapshot();
-    const { entry, nextSource, nextTarget } = stepHistory(undoStack, redoStack, currentSnapshot);
-    if (!entry) return;
-    setUndoStack(nextSource);
-    setRedoStack(nextTarget);
-    restoreSnapshot(entry.snapshot);
-    setMessage(t.undoApplied);
-  };
-
-  const handleRedo = () => {
-    const currentSnapshot = buildSnapshot();
-    const { entry, nextSource, nextTarget } = stepHistory(redoStack, undoStack, currentSnapshot);
-    if (!entry) return;
-    setRedoStack(nextSource);
-    setUndoStack(nextTarget);
-    restoreSnapshot(entry.snapshot);
-    setMessage(t.redoApplied);
-  };
-
-  const persistedModelEffects = {
-    startTransition,
-    activeMaterial,
-    createProject,
-    createModel,
-    createModelVersion,
-    updateModelVersion,
-    fetchModel,
-    fetchModelVersion,
-    refreshProjects,
-    refreshVersions,
-    recordHistory,
-    resetActiveResult: () => resetActiveResult(setResult, setJob),
-    importActionLabel: t.importAction,
-    historyActionLabel: t.historyAction,
-    importedModelLabel: t.persistedModelLoaded,
-    importedProjectLabel: t.projectImported,
-    importedVersionLabel: t.versionLoaded,
-    importFailedLabel: t.importFailed,
-    setMessage,
-    setSelectedProjectId,
-    setSidebarSection,
-    setLoadedModelName,
-    setSelectedModelId,
-    setSelectedVersionId,
-    setModelVersions,
-    setStudyKind,
-    setAxialForm,
-    setHeatBarModel,
-    setHeatPlaneModel,
-    setThermalBarModel,
-    setThermalBeamModel,
-    setThermalFrameModel,
-    setThermalTrussModel,
-    setThermalTruss3dModel,
-    setSpringModel,
-    setSpring2dModel,
-    setSpring3dModel,
-    setTrussModel,
-    setTruss3dModel,
-    setPlaneModel,
-    setFrameModel,
-    setBeamModel,
-    setTorsionModel,
-    setPlaneResultField,
-    setParametric,
+    trussBounds,
+    draggingNode,
+    dragHistoryCapturedRef,
+    dragFrameRef,
+    pendingDragPointRef,
+    setTruss3dLinkMode,
+    setDraggingNode,
     setActiveMaterial,
-  };
-
-  const applyTrussSuggestion = (suggestion: TrussSuggestion) => {
-    recordHistory(t.applySuggestionAction);
-    resetActiveResult(setResult, setJob);
-    setStudyKind("truss_2d");
-    setSidebarSection("model");
-    setSelectedElement(null);
-    setSelectedNode(suggestion.nodeIndex);
-    setMemberDraftNodes([]);
-
-    if (suggestion.kind === "fix_support") {
-      setTrussModel((current) => ({
-        ...current,
-        nodes: current.nodes.map((node, index) =>
-          index === suggestion.nodeIndex
-            ? { ...node, [suggestion.axis === "x" ? "fix_x" : "fix_y"]: true }
-            : node,
-        ),
-      }));
-      setMessage(suggestion.axis === "x" ? t.suggestionAppliedSupportX : t.suggestionAppliedSupportY);
-      return;
-    }
-
-    let connected = false;
-    setTrussModel((current) => {
-      const nearestIndex = findNearestConnectableNode(current, suggestion.nodeIndex);
-      if (nearestIndex === null) return current;
-      connected = true;
-      const material = current.materials?.[0];
-      return {
-        ...current,
-        elements: [
-          ...current.elements,
-          {
-            id: `e${current.elements.length}`,
-            node_i: suggestion.nodeIndex,
-            node_j: nearestIndex,
-            area: parametric.area,
-            youngs_modulus: material?.youngs_modulus ?? parametric.youngsModulusGpa * 1.0e9,
-            material_id: material?.id,
-          },
-        ],
-      };
-    });
-    setMessage(connected ? t.suggestionAppliedLink : t.suggestionNoLinkTarget);
-  };
+    setAxialForm,
+    setParametric,
+    setTorsionModel,
+    setHeatBarModel,
+    setBeamModel,
+  });
+  const {
+    createProjectRecord,
+    deleteProjectRecord,
+    deleteSavedModelRecord,
+    deleteSelectedVersion,
+    downloadDatabaseSnapshot,
+    downloadProjectBundleJson,
+    downloadProjectBundleZip,
+    importProjectBundle,
+    openModelVersionById,
+    openSavedModel,
+    openSavedVersion,
+    renameSelectedVersion,
+    saveModelVersion,
+    updateProjectRecord,
+  } = projectStorageController;
 
   const {
     addCustomMaterialToCurrentModel,
@@ -3316,39 +1360,9 @@ export function Workbench() {
     importMaterials,
     toggleMaterialVisibility,
     updateCurrentMaterial,
-  } = createWorkbenchMaterialEditController({
-    activeMaterial,
-    labels: {
-      editMemberAction: t.editMemberAction,
-      editMaterial: t.editMaterial,
-      importedMaterialLibrary:
-        language === "zh"
-          ? "外部材料库已导入。"
-          : language === "ja"
-            ? "外部材料ライブラリを取り込みました。"
-            : "Imported external material library.",
-      initialFailed: t.initialFailed,
-    },
-    recordHistory,
-    resetResults: () => resetActiveResult(setResult, setJob),
-    selectedElement,
-    setFrameModel,
-    setHiddenMaterials,
-    setMessage,
-    setPlaneModel,
-    setThermalFrameModel,
-    setThermalTruss3dModel,
-    setThermalTrussModel,
-    setTruss3dModel,
-    setTrussModel,
-    studyKind,
-  });
-
-  const {
     addNode,
     applySelectedTruss3dLoads,
     assignSelectedElementMaterial,
-    assignSelectedFrameElementMaterial: assignSelectedFrameElementMaterialBase,
     assignSelectedPlaneElementMaterial,
     assignSelectedTruss3dElementMaterial,
     cloneSelectedTruss3dNodes,
@@ -3359,69 +1373,12 @@ export function Workbench() {
     nudgeSelectedTruss3dNodes,
     toggleMemberFromDraft,
     updateSelectedElement,
-    updateSelectedFrameElement: updateSelectedFrameElementBase,
-    updateSelectedFrameNode: updateSelectedFrameNodeBase,
     updateSelectedNode,
     updateSelectedPlaneElement,
     updateSelectedPlaneNode,
     updateSelectedTruss3dElement,
     updateSelectedTruss3dNode,
     updateSelectedTruss3dNodes,
-  } = createWorkbenchStructureEditController({
-    activeFrameLikeModel,
-    isFrameLike,
-    isHeatPlane,
-    isThermalFrame,
-    isThermalTruss2d,
-    isThermalTruss3d,
-    labels: {
-      addNodeAction: t.addNodeAction,
-      branchCreated: t.branchCreated,
-      deleteMemberAction: t.deleteMemberAction,
-      deleteNodeAction: t.deleteNodeAction,
-      editMemberAction: t.editMemberAction,
-      editNodeAction: t.editNodeAction,
-      memberCreated: t.memberCreated,
-      memberDeleted: t.memberDeleted,
-      memberRemoved: t.memberRemoved,
-      nodeCreated: t.nodeCreated,
-      nodeDeleted: t.nodeDeleted,
-      selectTwoNodes: t.selectTwoNodes,
-      spaceMemberDeleted: t.spaceMemberDeleted,
-      spaceNodeDeleted: t.spaceNodeDeleted,
-      toggleMemberAction: t.toggleMemberAction,
-    },
-    memberDraftNodes,
-    parametric,
-    recordHistory,
-    resetResults: () => resetActiveResult(setResult, setJob),
-    roundValue: round,
-    selectedElement,
-    selectedNode,
-    selectedTruss3dNodes,
-    setFrameModel,
-    setHeatPlaneModel,
-    setMemberDraftNodes,
-    setMessage,
-    setPlaneModel,
-    setSelectedElement,
-    setSelectedNode,
-    setSelectedTruss3dNodes,
-    setSidebarSection,
-    setStudyKind,
-    setThermalFrameModel,
-    setThermalTruss3dModel,
-    setThermalTrussModel,
-    setTruss3dModel,
-    setTrussModel,
-    studyKind,
-    truss3dBatchLoadX,
-    truss3dBatchLoadY,
-    truss3dBatchLoadZ,
-    truss3dModel,
-    trussModel,
-  });
-  const {
     addTruss3dNode,
     handleTruss3dNodePick,
     handleTruss3dNodesBoxSelect,
@@ -3432,99 +1389,12 @@ export function Workbench() {
     toggleTruss3dLinkMode,
     toggleTruss3dMemberFromDraft,
     updateTruss3dNodePosition,
-  } = createWorkbenchTrussGestureController({
-    studyKind,
-    isFrameLike,
-    isBeam,
-    isTorsion,
-    isHeatBar,
-    isThermal,
-    isThermalBar,
-    truss3dLinkMode,
-    truss3dModel,
-    trussBounds,
-    roundValue: round,
-    selectedNode,
-    selectedTruss3dNodes,
-    memberDraftNodes,
-    draggingNode,
-    dragHistoryCapturedRef,
-    dragFrameRef,
-    pendingDragPointRef,
-    setStudyKind,
-    setSidebarSection,
-    setSelectedNode,
-    setSelectedTruss3dNodes,
-    setSelectedElement,
-    setMemberDraftNodes,
-    setMessage,
-    setTruss3dLinkMode,
-    setDraggingNode,
-    setTruss3dModel,
-    setTrussModel,
-    setFrameModel,
-    setThermalFrameModel,
-    resetResults: () => resetActiveResult(setResult, setJob),
-    recordHistory,
-    labels: {
-      addNodeAction: t.addNodeAction,
-      branchCreated: t.spaceBranchCreated,
-      spaceNodeCreated: t.spaceNodeCreated,
-      linkModeEnabled: t.linkModeEnabled,
-      linkModeDisabled: t.linkModeDisabled,
-      toggleMemberAction: t.toggleMemberAction,
-      memberRemoved: t.memberRemoved,
-      linkModeCompleted: t.linkModeCompleted,
-      selectTwoNodes: t.selectTwoNodes,
-      dragNodeAction: t.dragNodeAction,
-    },
-  });
-
-  const {
     handleMaterialChange,
     updateSelectedFrameNode,
     updateSelectedFrameElement,
     assignSelectedFrameElementMaterial,
-  } = createWorkbenchFrameLikeEditController({
-    labels: {
-      editMaterial: t.editMaterial,
-      editMemberAction: t.editMemberAction,
-      editNodeAction: t.editNodeAction,
-    },
-    recordHistory,
-    resetResults: () => resetActiveResult(setResult, setJob),
-    selectedElement,
-    selectedNode,
-    isTorsion,
-    isHeatBar,
-    isBeam,
-    setActiveMaterial,
-    setAxialForm,
-    setParametric,
-    setTorsionModel,
-    setHeatBarModel,
-    setBeamModel,
-    updateSelectedFrameNodeBase,
-    updateSelectedFrameElementBase,
-    assignSelectedFrameElementMaterialBase,
-  });
-
-  const toggleImmersiveViewport = async () => {
-    const target = viewportPanelRef.current;
-    if (!target) return;
-
-    try {
-      if (document.fullscreenElement === target) {
-        await document.exitFullscreen();
-        setMessage(t.immersiveModeDisabled);
-      } else {
-        await target.requestFullscreen();
-        setMessage(t.immersiveModeEnabled);
-      }
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : t.initialFailed);
-    }
-  };
+    applyTrussSuggestion,
+  } = editControllers;
 
   const studyKindOptionGroups = buildStudyKindOptionGroups({
     kinds: t.kinds,
@@ -3636,6 +1506,187 @@ export function Workbench() {
     [activeMaterial],
   );
 
+  const handleLanguageChange = (nextLanguage: Language) => {
+    applyLanguagePreference(nextLanguage);
+  };
+
+  const interactionControllers = useWorkbenchInteractionControllers({
+    activeLanguagePack,
+    activeMaterial,
+    adminFilterModelVersionId,
+    adminFilterProjectId,
+    frontendRuntimeMode,
+    health,
+    heatBarModel,
+    heatPlaneModel,
+    immersiveHelpDrawerOpen,
+    immersiveToolDrawerOpen,
+    immersiveViewport,
+    job,
+    jobHistory,
+    language,
+    libraryTab,
+    loadedModelName,
+    memberDraftNodes,
+    modelTab,
+    panelParametric,
+    planeModel,
+    projects,
+    protocolAgents,
+    redoStack,
+    resultRecords,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+    selectedElement,
+    selectedModelId,
+    selectedNode,
+    selectedProjectId,
+    selectedTruss3dNodes,
+    selectedVersionId,
+    setActiveMaterial,
+    setAxialForm,
+    setBeamModel,
+    setHeatBarModel,
+    setHeatPlaneModel,
+    setLanguagePacks,
+    setLoadedModelName,
+    setMemberDraftNodes,
+    setMessage,
+    setPlaneModel,
+    setSidebarSection,
+    setSpring2dModel,
+    setSpring3dModel,
+    setSpringModel,
+    setStudyKind,
+    setStudyTab,
+    setThermalBarModel,
+    setThermalBeamModel,
+    setThermalFrameModel,
+    setThermalTrussModel,
+    setThermalTruss3dModel,
+    setTorsionModel,
+    setTruss3dModel,
+    setTrussModel,
+    sidebarSection,
+    spring2dModel,
+    spring3dModel,
+    springModel,
+    studyKind,
+    studyTab,
+    systemDataTab,
+    systemPanelTab,
+    t,
+    theme,
+    thermalBarModel,
+    thermalBeamModel,
+    thermalFrameModel,
+    thermalTrussModel,
+    thermalTruss3dModel,
+    torsionModel,
+    truss3dBoxSelectMode,
+    truss3dLinkMode,
+    truss3dModel,
+    truss3dProjectionMode,
+    truss3dViewPreset,
+    trussModel,
+    undoStack,
+    viewportPanelRef,
+    workflowCatalog,
+    workflowCatalogBusy,
+    setUndoStack,
+    setRedoStack,
+    setAssistantWindowOpen,
+    setTheme,
+    setFrontendRuntimeMode,
+    setDirectMeshEndpointsText,
+    setDirectMeshSelectionMode,
+    setLibraryTab,
+    setModelTab,
+    setModelToolsPage,
+    setSystemPanelTab,
+    setSystemDataTab,
+    setAdminFilterProjectId,
+    setAdminFilterModelVersionId,
+    setSelectedAdminJobId,
+    setSelectedAdminResultJobId,
+    setTruss3dViewPreset,
+    setTruss3dProjectionMode,
+    setTruss3dBoxSelectMode,
+    setTruss3dShowGrid,
+    setTruss3dShowLabels,
+    setTruss3dShowNodes,
+    setImmersiveToolDrawerOpen,
+    setImmersiveHelpDrawerOpen,
+    setTruss3dFocusRequestVersion,
+    setTruss3dResetRequestVersion,
+    refreshWorkflowCatalog,
+    toggleTruss3dLinkMode,
+    resetActiveResult: () => resetActiveResult(setResult, setJob),
+  });
+  const {
+    topLevelActions,
+    assistantAudit,
+    uiActionController,
+    toggleImmersiveViewport,
+  } = interactionControllers;
+  const {
+    buildScriptSnapshot,
+    buildSnapshot,
+    restoreSnapshot,
+    scriptSnapshot,
+    recordHistory: recordHistoryAction,
+    handleUndo,
+    handleRedo,
+    handleDownloadLanguagePackTemplate,
+    handleExportInstalledLanguagePack,
+    handleImportLanguagePack,
+    handleRemoveLanguagePack,
+    downloadSecurityEventExport,
+    downloadSecurityEventCsvExport,
+  } = topLevelActions;
+  function recordHistory(action: string) {
+    recordHistoryAction(action);
+  }
+  const {
+    assistantTransactions,
+    appendScriptActionLog,
+    executeAssistantPlan,
+    getScriptSnapshot,
+    recordManualDslAction,
+    recordSecurityAuditEvent,
+    rollbackAssistantTransaction,
+    scriptActionLog,
+    securityAuditLog,
+  } = assistantAudit;
+  const {
+    clearAdminFilters,
+    handleAdminFilterModelVersionChange,
+    handleAdminFilterProjectChange,
+    handleLibraryTabChange,
+    handleModelTabChange,
+    handleSelectAdminJob,
+    handleSelectAdminResult,
+    handleSidebarSectionChange,
+    handleStudyTabChange,
+    handleSystemDataTabChange,
+    handleSystemPanelTabChange,
+    handleToggleImmersiveHelpDrawer,
+    handleToggleImmersiveToolDrawer,
+    handleToggleImmersiveViewport,
+    handleToggleTruss3dLinkMode,
+    handleTruss3dBoxSelectModeChange,
+    handleTruss3dFocusViewport,
+    handleTruss3dProjectionModeChange,
+    handleTruss3dResetViewport,
+    handleTruss3dShowGridChange,
+    handleTruss3dShowLabelsChange,
+    handleTruss3dShowNodesChange,
+    handleTruss3dViewPresetChange,
+    handleWorkflowPanelTabChange,
+    useCurrentProjectAsAdminFilter,
+    useCurrentVersionAsAdminFilter,
+  } = uiActionController;
+
   const selectStudyKind = (nextStudyKind: typeof studyKind) => {
     recordHistory(t.changeStudyType);
     applyStudyKindSelection({
@@ -3653,45 +1704,209 @@ export function Workbench() {
     setStudyTab(tab);
   };
 
-  const { assistantCards, assistantPromptPresets, requestLlmAssistantPlan } = useWorkbenchAssistantController({
-    t,
-    language,
-    studyKind,
-    frontendRuntimeMode,
-    selectedProjectId,
-    directMeshEndpointsCount: directMeshEndpoints.length,
-    hasHealth: Boolean(health),
-    jobIsActive,
-    isTruss,
-    isTruss3d,
-    immersiveViewport,
-    hasAnyResult,
-    trussDiagnostics,
-    openProjects: () => {
-      setSidebarSection("library");
-      setLibraryTab("projects");
-    },
-    openSystemConfig: () => {
-      setSidebarSection("system");
-      setSystemPanelTab("config");
-    },
-    refreshHealth: () => {
-      void refreshHealth();
-    },
-    cancelCurrentJob,
-    applyTrussSuggestion,
-    openSample,
-    openWorkspaceStudy,
+  const handleModelToolsPageChange = (page: ModelToolsPage) => {
+    uiActionController.handleModelToolsPageChange(page, modelTab);
+  };
+  const flowControllers = useWorkbenchFlowControllers(
+    buildWorkbenchFlowControllerProps({
+      t,
+      setMessage,
+      recordHistory,
+      setAxialForm,
+      setParametric,
+      setPanelParametric,
+      startTransition,
+      resultRefreshSeqRef,
+      fetchResults,
+      setResultRecords,
+      setSelectedAdminResultJobId,
+      directMeshEndpointsText,
+      directMeshSelectionMode,
+      frontendRuntimeMode,
+      jobPollTokenRef,
+      selectedProjectId,
+      selectedVersionId,
+      setDirectMeshExecution,
+      setJob,
+      setResult,
+      studyKind,
+      axialForm,
+      beamModel,
+      frameModel,
+      heatBarModel,
+      heatPlaneModel,
+      planeModel,
+      springModel,
+      spring2dModel,
+      spring3dModel,
+      thermalBarModel,
+      thermalBeamModel,
+      thermalFrameModel,
+      thermalTrussModel,
+      thermalTruss3dModel,
+      torsionModel,
+      trussModel,
+      truss3dModel,
+      trussDiagnostics,
+      refreshJobHistory,
+      fetchJobStatus,
+      setSidebarSection,
+      setWorkflowPanelTab,
+      setSelectedWorkflowId,
+      setWorkflowRuns,
+      openWorkspaceStudy,
+      setStudyKind,
+      setHeatBarModel,
+      setHeatPlaneModel,
+      setThermalBarModel,
+      setThermalBeamModel,
+      setThermalFrameModel,
+      setThermalTrussModel,
+      setThermalTruss3dModel,
+      setSpringModel,
+      setSpring2dModel,
+      setSpring3dModel,
+      setTrussModel,
+      setTruss3dModel,
+      setPlaneModel,
+      setFrameModel,
+      setBeamModel,
+      setTorsionModel,
+      setPlaneResultField,
+      setLoadedModelName,
+      setSelectedModelId,
+      setSelectedVersionId,
+      setModelVersions,
+      setActiveMaterial,
+      setSelectedNode,
+      setSelectedElement,
+      setMemberDraftNodes,
+      activeMaterial,
+      round,
+      parametric,
+      panelParametric,
+      loadedModelName,
+      updateJobRecord,
+      deleteJobRecord,
+      selectedAdminJobId,
+      adminJobMessage,
+      adminJobProjectId,
+      adminJobModelVersionId,
+      adminJobCaseId,
+      updateResultRecord,
+      deleteResultRecord,
+      adminResultDraft,
+      downloadTextFile,
+      adminDataEffects,
+      language,
+      directMeshEndpoints,
+      health,
+      jobIsActive,
+      isTruss,
+      isTruss3d,
+      immersiveViewport,
+      hasAnyResult,
+      cancelCurrentJob,
+      applyTrussSuggestion,
+      assistantApiBaseUrl,
+      assistantApiKey,
+      assistantModel,
+      getScriptSnapshot,
+      downloadResultCsv,
+      toggleImmersiveViewport,
+      setLibraryTab,
+      setSystemPanelTab,
+      refreshHealth,
+      setTheme,
+      setFrontendRuntimeMode,
+      setDirectMeshEndpointsText,
+      setDirectMeshSelectionMode,
+      refreshResults,
+      refreshProjects,
+      refreshSecurityEvents,
+      projectNameDraft,
+      projectDescriptionDraft,
+      setProjectNameDraft,
+      setProjectDescriptionDraft,
+      refreshVersions,
+      downloadProjectBundleJson,
+      downloadProjectBundleZip,
+      createProject,
+      updateProject,
+      deleteProject,
+      createModel,
+      updateModel,
+      deleteModel,
+      createModelVersion,
+      updateModelVersion,
+      deleteModelVersion,
+      handleLanguageChange,
+      studyKindResetHandlers,
+      handleSidebarSectionChange,
+      setStudyTab,
+      setModelTab,
+      setModelToolsPage,
+      setAssistantWindowOpen,
+      setSystemDataTab,
+      ensureFrameModelMaterials,
+      ensureBeamModelMaterials,
+      resolveTruss2dJobInput,
+      resolveTruss3dJobInput,
+      resolvePlaneQuad2dJobInput,
+      resolvePlaneTriangle2dJobInput,
+      projectHeatToThermoStudy,
+      handleUndo,
+      handleRedo,
+      setTruss3dLinkMode,
+      setTruss3dFocusRequestVersion,
+      setTruss3dResetRequestVersion,
+      setTruss3dShowGrid,
+      setTruss3dShowLabels,
+      setTruss3dShowNodes,
+      setImmersiveToolDrawerOpen,
+      setImmersiveHelpDrawerOpen,
+      setTruss3dBoxSelectMode,
+      setTruss3dViewPreset,
+      setTruss3dProjectionMode,
+      setAdminFilterProjectId,
+      setAdminFilterModelVersionId,
+      setSelectedAdminJobId,
+      resolveScriptLinkedJob: (nextPayload: Record<string, unknown>) =>
+        resolveScriptLinkedJobWithDeps(nextPayload, adminDataEffects),
+      openModelVersionById,
+      openProjectContextById: (projectId: string) => openProjectContextByIdWithDeps(projectId, adminDataEffects),
+      applyJobContextToWorkbench: (linkedJob: JobState) =>
+        applyJobContextToWorkbenchWithDeps(linkedJob, adminDataEffects),
+      downloadDatabaseSnapshot,
+    }),
+  );
+  const { primaryActionsController, assistantController, invokeScriptAction } = flowControllers;
+
+  const {
     runAnalysis,
-    downloadResultCsv,
-    toggleImmersiveViewport: () => {
-      void toggleImmersiveViewport();
-    },
-    assistantApiBaseUrl,
-    assistantApiKey,
-    assistantModel,
-    getScriptSnapshot,
-  });
+    openHistoryJob,
+    importModel,
+    openSample,
+    handleAxialFieldChange,
+    handleParametricChange,
+    handlePanelParametricChange,
+    generateModel,
+    generatePanelModel,
+    downloadModel,
+    saveAdminJobRecord,
+    deleteAdminJobRecord,
+    saveAdminResultRecord,
+    deleteAdminResultRecord,
+    exportAdminResultRecord,
+    openSelectedAdminJobVersion,
+    openSelectedAdminResultVersion,
+    openSelectedAdminJobProject,
+    openSelectedAdminResultProject,
+    applySelectedAdminJobContext,
+    applySelectedAdminResultContext,
+  } = primaryActionsController;
+
+  const { assistantCards, assistantPromptPresets, requestLlmAssistantPlan } = assistantController;
 
   const {
     studyControlsContent,
@@ -3700,672 +1915,470 @@ export function Workbench() {
     modelMaterialsContent,
     modelGenerateContent,
     modelTreeContent,
-  } = buildWorkbenchModelContent({
+  } = buildWorkbenchModelContent(
+    buildWorkbenchModelContentProps({
+      t,
+      isAxial,
+      axialForm,
+      handleAxialFieldChange,
+      handleMaterialChange,
+      language,
+      loadedModelName,
+      studyDomainOptions,
+      studyKind,
+      studyKindOptionGroups,
+      selectStudyKind,
+      studyControlsRows,
+      isPending,
+      runAnalysis,
+      isTruss3d,
+      isFrameLike,
+      isPlane,
+      isTorsion,
+      isThermal,
+      currentStudyFamilyHint,
+      selectedNode,
+      selectedElement,
+      truss3dLinkMode,
+      undoStack,
+      redoStack,
+      isTruss,
+      addTruss3dNode,
+      addNode,
+      deleteSelectedTruss3dNode,
+      deleteSelectedNode,
+      toggleTruss3dMemberFromDraft,
+      toggleMemberFromDraft,
+      deleteSelectedTruss3dElement,
+      deleteSelectedElement,
+      toggleTruss3dLinkMode,
+      handleUndo,
+      handleRedo,
+      downloadModel,
+      setStudyKind,
+      setSidebarSection,
+      setMessage,
+      isBeam,
+      hiddenMaterialIds,
+      activeMaterial,
+      currentMaterials,
+      localMaterialLabel,
+      materialColorMap,
+      setActiveMaterial,
+      addMaterialToCurrentModel,
+      addCustomMaterialToCurrentModel,
+      importMaterials,
+      updateCurrentMaterial,
+      toggleMaterialVisibility,
+      applyMaterialToCurrentModel,
+      deleteCurrentMaterial,
+      round,
+      isHeatBar,
+      isThermalBar,
+      panelParametric,
+      parametric,
+      handlePanelParametricChange,
+      handleParametricChange,
+      generatePanelModel,
+      generateModel,
+      selectedTruss3dNodes,
+      memberDraftNodes,
+      truss3dTreeRows,
+      truss3dModel,
+      setSelectedElement,
+      setSelectedNode,
+      setSelectedTruss3dNodes,
+      setMemberDraftNodes,
+      currentStudyFamilyLabel,
+      spring3dModel,
+      spring2dModel,
+      springModel,
+      thermalBarModel,
+      thermalTrussModel,
+      activePlaneInputModel,
+      activeFrameLikeModel,
+      activeBeamLikeModel,
+      torsionModel,
+      heatBarModel,
+      planeElements,
+      displayTrussElements,
+      activeLineResultField,
+      frameTreeValueLabel,
+      trussDiagnostics,
+      toggleDraftNode,
+      setFocusedFrameElement,
+      beamModel,
+      isThermalTruss2d,
+      trussModel,
+      handleTruss3dNodePick,
+    }),
+  );
+
+  const sidebarMountProps = buildWorkbenchSidebarMountProps({
     t,
-    isAxial,
-    axialForm,
-    handleAxialFieldChange,
-    handleMaterialChange,
-    language,
+    railItems,
+    sidebarSection,
+    handleSidebarSectionChange,
+    studyTab,
+    handleStudyTabChange,
     loadedModelName,
-    studyDomainOptions,
     studyKind,
+    studyDomainOptions,
     studyKindOptionGroups,
     selectStudyKind,
+    studySummaryRows,
     studyControlsRows,
+    studyControlsContent,
     isPending,
     runAnalysis,
+    modelTab,
+    handleModelTabChange,
+    modelToolsPage,
+    handleModelToolsPageChange,
     isTruss3d,
-    isFrameLike,
-    isPlane,
-    isTorsion,
-    isThermal,
-    currentStudyFamilyHint,
-    selectedNode,
-    selectedElement,
-    truss3dLinkMode,
-    undoStack,
-    redoStack,
-    isTruss,
-    addTruss3dNode,
-    addNode,
-    deleteSelectedTruss3dNode,
-    deleteSelectedNode,
-    toggleTruss3dMemberFromDraft,
-    toggleMemberFromDraft,
-    deleteSelectedTruss3dElement,
-    deleteSelectedElement,
-    toggleTruss3dLinkMode,
-    handleUndo,
-    handleRedo,
-    downloadModel,
-    setStudyKind,
-    setSidebarSection,
+    modelStudyContent,
+    modelStudioContent,
+    modelMaterialsContent,
+    modelGenerateContent,
+    modelTreeContent,
+    workflowPanelTab,
+    handleWorkflowPanelTabChange,
+    workflowLabels: {
+      sectionTitle: t.sections.workflow,
+      overviewPageLabel: t.workflowOverviewPage,
+      catalogPageLabel: t.workflowCatalogPage,
+      builderPageLabel: t.workflowBuilderPage,
+      runsPageLabel: t.workflowRunsPage,
+      overviewHint: t.workflowOverviewHint,
+      catalogHint: t.workflowCatalogHint,
+      builderHint: t.workflowBuilderHint,
+      runsHint: t.workflowRunsHint,
+      catalogTitle: t.workflowCatalogTitle,
+      refreshLabel: t.workflowCatalogRefresh,
+      runLabel: t.workflowCatalogRun,
+      emptyCatalogLabel: t.workflowCatalogEmpty,
+      noSelectionLabel: t.workflowNoSelection,
+      nodesTitle: t.workflowNodesTitle,
+      edgesTitle: t.workflowEdgesTitle,
+      entryInputsTitle: t.workflowEntryInputsTitle,
+      outputArtifactsTitle: t.workflowOutputArtifactsTitle,
+      datasetContractTitle: t.workflowDatasetContractTitle,
+      datasetValuesTitle: t.workflowDatasetValuesTitle,
+      datasetValueLabel: t.workflowDatasetValueLabel,
+      datasetSemanticTypeLabel: t.workflowDatasetSemanticTypeLabel,
+      datasetEncodingLabel: t.workflowDatasetEncodingLabel,
+      datasetShapeLabel: t.workflowDatasetShapeLabel,
+      datasetAxesLabel: t.workflowDatasetAxesLabel,
+      datasetSchemaLabel: t.workflowDatasetSchemaLabel,
+      datasetClassLabel: t.workflowDatasetClassLabel,
+      datasetNoneLabel: t.workflowDatasetNoneLabel,
+      datasetDraftHint: t.workflowDatasetDraftHint,
+      datasetEditorTitle: t.workflowDatasetEditorTitle,
+      datasetValueSelectLabel: t.workflowDatasetValueSelectLabel,
+      datasetUnitLabel: t.workflowDatasetUnitLabel,
+      datasetMetadataLabel: t.workflowDatasetMetadataLabel,
+      datasetPortMappingsTitle: t.workflowDatasetPortMappingsTitle,
+      datasetEdgeMappingsTitle: t.workflowDatasetEdgeMappingsTitle,
+      datasetDraftLocalLabel: t.workflowDatasetDraftLocalLabel,
+      datasetUnassignedLabel: t.workflowDatasetUnassignedLabel,
+      exportGraphLabel: t.workflowExportGraphLabel,
+      exportDatasetContractLabel: t.workflowExportDatasetContractLabel,
+      operatorLabel: t.workflowOperatorLabel,
+      kindLabel: t.workflowKindLabel,
+      progressLabel: t.workflowProgressLabel,
+      currentNodeLabel: t.workflowCurrentNodeLabel,
+      latestSummaryLabel: t.workflowLatestSummaryLabel,
+      openRunLabel: t.workflowOpenRunLabel,
+      emptyRunsLabel: t.workflowRunsEmpty,
+      selectForBuilderLabel: t.workflowSelectForBuilder,
+      statusReadyLabel: t.ready,
+      statusBusyLabel: t.busy,
+    },
+    workflowCatalog,
+    workflowCatalogBusy,
+    selectedWorkflowId,
+    selectedWorkflow,
+    job,
+    latestWorkflowSummary,
+    workflowRuns,
+    refreshWorkflowCatalog,
+    setSelectedWorkflowId,
+    runWorkflowCatalogEntry,
+    openHistoryJob,
+    libraryTab,
+    handleLibraryTabChange,
+    librarySampleRows,
+    projects,
+    selectedProjectId,
+    setSelectedProjectId,
+    setSelectedModelId,
+    projectNameDraft,
+    setProjectNameDraft,
+    projectDescriptionDraft,
+    setProjectDescriptionDraft,
+    createProjectRecord,
+    updateProjectRecord,
+    deleteProjectRecord,
+    downloadProjectBundleJson,
+    downloadProjectBundleZip,
+    importProjectBundle,
+    selectedProjectModels,
+    libraryModelRows,
+    selectedModelId,
+    setLoadedModelName,
+    saveModelVersion,
+    deleteSavedModelRecord,
+    openSavedModel,
+    libraryVersionRows,
+    modelVersions,
+    selectedVersionId,
+    renameSelectedVersion,
+    deleteSelectedVersion,
+    openSavedVersion,
+    libraryJobRows,
+    jobHistory,
+    openSample,
+    refreshJobHistory,
+    refreshProjects,
+    importModel,
+    systemPanelTab,
+    handleSystemPanelTabChange,
+    health,
+    runtimeBackendRows,
+    runtimeProtocolRows,
+    runtimeProtocolMethods,
+    securityUi,
+    runtimeSecurityRows,
+    runtimeAuditSummaryRows,
+    runtimeAuditTrendBars,
+    runtimeAuditSourceStatusFacets,
+    runtimeAuditStudyFacets,
+    runtimeAuditProjectFacets,
+    runtimeAuditModelVersionFacets,
+    securityEventRecords,
+    securityEventWindowFilter,
+    securityEventSourceFilter,
+    securityEventRiskFilter,
+    securityEventStatusFilter,
+    securityEventActionFilter,
+    setSecurityEventWindowFilter,
+    setSecurityEventSourceFilter,
+    setSecurityEventRiskFilter,
+    setSecurityEventStatusFilter,
+    setSecurityEventActionFilter,
+    refreshSecurityEvents,
+    downloadSecurityEventExport,
+    downloadSecurityEventCsvExport,
+    runtimeAuditEntries,
+    protocolAgents,
+    protocolAgentCards,
+    runtimeWatchdogRows,
+    theme,
+    language,
+    frontendRuntimeMode,
+    directMeshSelectionMode,
+    directMeshEndpointsText,
+    controlPlaneApiToken,
+    clusterApiToken,
+    directMeshApiToken,
+    showShortcutHints,
+    immersiveGuardrails,
+    languagePacks,
+    languagePackCatalogRows,
+    setTheme,
+    handleLanguageChange,
+    handleDownloadLanguagePackTemplate,
+    handleExportInstalledLanguagePack,
+    handleImportLanguagePack,
+    handleRemoveLanguagePack,
+    setFrontendRuntimeMode,
+    setDirectMeshSelectionMode,
+    setDirectMeshEndpointsText,
+    setControlPlaneApiToken,
+    setClusterApiToken,
+    setDirectMeshApiToken,
+    setShowShortcutHints,
+    setImmersiveGuardrails,
+    downloadDatabaseSnapshot,
+    scriptActionLog,
+    getScriptSnapshot,
+    scriptRecordingMode,
+    invokeScriptAction,
+    setScriptRecordingMode,
+    scriptSnapshot,
+    systemDataTab,
+    handleSystemDataTabChange,
+    adminJobRows,
+    selectedAdminJobId,
+    handleSelectAdminJob,
+    selectedAdminJob,
+    adminJobMessage,
+    setAdminJobMessage,
+    adminJobProjectId,
+    setAdminJobProjectId,
+    adminJobModelVersionId,
+    setAdminJobModelVersionId,
+    adminJobCaseId,
+    setAdminJobCaseId,
+    saveAdminJobRecord,
+    deleteAdminJobRecord,
+    adminResultRows,
+    selectedAdminResultJobId,
+    handleSelectAdminResult,
+    adminResultDraft,
+    setAdminResultDraft,
+    saveAdminResultRecord,
+    applySelectedAdminResultContext,
+    openSelectedAdminResultProject,
+    openSelectedAdminResultVersion,
+    exportAdminResultRecord,
+    deleteAdminResultRecord,
+    adminFilterProjectId,
+    handleAdminFilterProjectChange,
+    adminFilterModelVersionId,
+    handleAdminFilterModelVersionChange,
+    useCurrentProjectAsAdminFilter,
+    useCurrentVersionAsAdminFilter,
+    clearAdminFilters,
+    applySelectedAdminJobContext,
+    openSelectedAdminJobProject,
+    openSelectedAdminJobVersion,
+    cancelCurrentJob,
+    cancelJob,
     setMessage,
-    isBeam,
-    hiddenMaterialIds,
-    activeMaterial,
-    currentMaterials,
-    localMaterialLabel,
-    materialColorMap,
-    setActiveMaterial,
-    addMaterialToCurrentModel,
-    addCustomMaterialToCurrentModel,
-    importMaterials,
-    updateCurrentMaterial,
-    toggleMaterialVisibility,
-    applyMaterialToCurrentModel,
-    deleteCurrentMaterial,
-    round,
-    isHeatBar,
-    isThermalBar,
-    panelParametric,
-    parametric,
-    handlePanelParametricChange,
-    handleParametricChange,
-    generatePanelModel,
-    generateModel,
-    selectedTruss3dNodes,
-    memberDraftNodes,
-    truss3dTreeRows,
-    truss3dModel,
-    setSelectedElement,
-    setSelectedNode,
-    setSelectedTruss3dNodes,
-    setMemberDraftNodes,
+  });
+
+  const mainShellMountProps = buildWorkbenchMainShellComposition({
+    t,
+    shellState,
+    workspaceState,
+    studyResultDerived,
+    editControllers,
+    interactionControllers,
+    flowControllers,
+    viewportPanelRef,
+    canvasStageRef,
+    resultWindowMaxTotal,
+    handleCanvasStageScroll,
+    openSample,
+    openSavedModel,
+    openHistoryJob,
+    selectedProjectModels,
     currentStudyFamilyLabel,
-    spring3dModel,
-    spring2dModel,
-    springModel,
-    thermalBarModel,
-    thermalTrussModel,
-    activePlaneInputModel,
-    activeFrameLikeModel,
-    activeBeamLikeModel,
-    torsionModel,
-    heatBarModel,
-    planeElements,
-    displayTrussElements,
-    activeLineResultField,
-    frameTreeValueLabel,
-    trussDiagnostics,
-    toggleDraftNode,
-    setFocusedFrameElement,
-    beamModel,
-    isThermalTruss2d,
-    trussModel,
-    handleTruss3dNodePick,
+    currentStudyFamilyHint,
+    isPending,
+    canProjectHeatToThermo,
+    projectHeatToThermoStudy,
+    clampChunkOffset,
+    recordHistory,
+    drag3dHistoryCapturedRef,
+    jobIsActive,
+    cancelCurrentJob,
+    downloadResultJson,
+    downloadResultCsv,
+    downloadPlaneHotspotSummary,
+    downloadFrameHotspotSummary,
+    downloadFrameForceSummary,
+    tipDisplacement:
+      isAxial
+        ? scientific(axialResult?.tip_displacement)
+        : isHeatBar
+          ? scientific(heatBarResult?.max_temperature)
+          : isHeatPlane
+            ? scientific(
+                isHeatPlaneTriangle
+                  ? heatPlaneTriangleResult?.max_temperature
+                  : heatPlaneQuadResult?.max_temperature,
+              )
+            : isThermalTruss2d
+              ? scientific(thermalTrussResult?.max_displacement)
+              : studyKind === "thermal_truss_3d"
+                ? scientific(thermalTruss3dResult?.max_displacement)
+                : isTruss
+                  ? scientific(trussResult?.max_displacement)
+                  : isSpring3d
+                    ? scientific(spring3dResult?.max_displacement)
+                    : studyKind === "truss_3d"
+                      ? scientific(truss3dResult?.max_displacement)
+                      : isThermalBar
+                        ? scientific(thermalBarResult?.max_displacement)
+                        : isSpring
+                          ? scientific(activeSpringResult?.max_displacement)
+                          : isBeam
+                            ? scientific(activeBeamLikeResult?.max_displacement)
+                            : isTorsion
+                              ? scientific(torsionResult?.max_rotation)
+                              : isFrameLike
+                                ? scientific(activeFrameLikeResult?.max_displacement)
+                                : scientific(planeResult?.max_displacement),
+    maxStressValue: scientific(
+      isAxial
+        ? axialResult?.max_stress
+        : isHeatBar
+          ? heatBarResult?.max_heat_flux
+          : isHeatPlane
+            ? isHeatPlaneTriangle
+              ? heatPlaneTriangleResult?.max_heat_flux
+              : heatPlaneQuadResult?.max_heat_flux
+            : isThermalTruss2d
+              ? thermalTrussResult?.max_stress
+              : studyKind === "thermal_truss_3d"
+                ? thermalTruss3dResult?.max_stress
+                : isTruss
+                  ? trussResult?.max_stress
+                  : isSpring3d
+                    ? spring3dResult?.max_force
+                    : studyKind === "truss_3d"
+                      ? truss3dResult?.max_stress
+                      : isThermalBar
+                        ? thermalBarResult?.max_stress
+                        : isSpring
+                          ? activeSpringResult?.max_force
+                          : isBeam
+                            ? activeBeamLikeResult?.max_stress
+                            : isTorsion
+                              ? torsionResult?.max_stress
+                              : isFrameLike
+                                ? activeFrameLikeResult?.max_stress
+                                : planeResult?.max_stress,
+    ),
+    reactionValue:
+      isAxial
+        ? scientific(axialResult?.reaction_force)
+        : isHeatBar
+          ? scientific(heatBarResult?.max_heat_flux)
+          : isThermalBar
+            ? scientific(thermalBarResult?.max_axial_force)
+            : isThermalTruss2d
+              ? scientific(thermalTrussResult?.max_axial_force)
+              : isThermalTruss3d
+                ? scientific(thermalTruss3dResult?.max_axial_force)
+                : isSpring
+                  ? scientific(activeSpringResult?.max_force)
+                  : isTorsion
+                    ? scientific(torsionResult?.max_torque)
+                    : isFrameLike
+                      ? scientific(activeFrameLikeResult?.max_moment)
+                      : isBeam
+                        ? scientific(activeBeamLikeResult?.max_moment)
+                        : "--",
+    frameMaxRotationValue:
+      isFrameLike
+        ? scientific(activeFrameLikeResult?.max_rotation)
+        : isBeam
+          ? scientific(activeBeamLikeResult?.max_rotation)
+          : isTorsion
+            ? scientific(torsionResult?.max_rotation)
+            : undefined,
+    thermalPlaneMaxTemperatureDelta:
+      planeResult && "max_temperature_delta" in planeResult ? planeResult.max_temperature_delta : undefined,
   });
 
   return (
     <div className="workbench-shell">
-      <WorkbenchSidebarMount
-        shortTitle={t.shortTitle}
-        roleLabel={t.roleLabel}
-        title={t.title}
-        subtitle={t.subtitle}
-        railItems={railItems}
-        sidebarSection={sidebarSection}
-        onSidebarSectionChange={handleSidebarSectionChange}
-        studySection={
-          <WorkbenchStudySectionMount
-            studyTab={studyTab}
-            onStudyTabChange={handleStudyTabChange}
-            sectionTitle={t.sections.study}
-            summaryTabLabel={t.tabs.summary}
-            controlsTabLabel={t.tabs.controls}
-            loadedModelName={loadedModelName}
-            studyTypeLabel={t.studyTypeLabel}
-            studyKind={studyKind}
-            studyDomainLabel={t.studyDomain}
-            studyDomainOptions={studyDomainOptions}
-            noDomainStudiesLabel={t.noDomainStudies}
-            studyKindOptionGroups={studyKindOptionGroups}
-            onStudyKindChange={selectStudyKind}
-            summaryRows={studySummaryRows}
-            controlsRows={studyControlsRows}
-            controlsContent={studyControlsContent}
-            controlsTitle={t.controls}
-            controlsSetupPageLabel={t.controlsSetupPage}
-            controlsReviewPageLabel={t.controlsReviewPage}
-            readyLabel={t.ready}
-            busyLabel={t.busy}
-            isPending={isPending}
-            runLabel={t.run}
-            runningLabel={t.running}
-            onRun={runAnalysis}
-          />
-        }
-        modelSection={
-          <WorkbenchModelSectionMount
-            modelTab={modelTab}
-            onModelTabChange={handleModelTabChange}
-            toolsPage={modelToolsPage}
-            onToolsPageChange={handleModelToolsPageChange}
-            isTruss3d={isTruss3d}
-            toolsTabLabel={t.tabs.tools}
-            treeTabLabel={t.tabs.tree}
-            toolsPageOverviewLabel={t.modelOverviewPage}
-            toolsPageStudyLabel={t.modelStudyPage}
-            toolsPageStudioLabel={t.modelStudioPage}
-            toolsPageMaterialsLabel={t.modelMaterialsPage}
-            toolsPageGenerateLabel={t.modelGeneratePage}
-            studyOverviewHint={t.workspaceStudyHint}
-            studioOverviewHint={t.workspaceStudioHint}
-            materialsOverviewHint={t.workspaceMaterialsHint}
-            generateOverviewHint={t.workspaceGenerateHint}
-            browseOverviewHint={t.workspaceBrowseHint}
-            studyContent={modelStudyContent}
-            studioContent={modelStudioContent}
-            materialsContent={modelMaterialsContent}
-            generateContent={modelGenerateContent}
-            treeContent={modelTreeContent}
-          />
-        }
-        workflowSection={
-          <WorkbenchWorkflowSectionMount
-            surfaceTab={workflowPanelTab}
-            onSurfaceTabChange={handleWorkflowPanelTabChange}
-            labels={{
-              sectionTitle: t.sections.workflow,
-              overviewPageLabel: t.workflowOverviewPage,
-              catalogPageLabel: t.workflowCatalogPage,
-              builderPageLabel: t.workflowBuilderPage,
-              runsPageLabel: t.workflowRunsPage,
-              overviewHint: t.workflowOverviewHint,
-              catalogHint: t.workflowCatalogHint,
-              builderHint: t.workflowBuilderHint,
-              runsHint: t.workflowRunsHint,
-              catalogTitle: t.workflowCatalogTitle,
-              refreshLabel: t.workflowCatalogRefresh,
-              runLabel: t.workflowCatalogRun,
-              emptyCatalogLabel: t.workflowCatalogEmpty,
-              noSelectionLabel: t.workflowNoSelection,
-              nodesTitle: t.workflowNodesTitle,
-              edgesTitle: t.workflowEdgesTitle,
-              entryInputsTitle: t.workflowEntryInputsTitle,
-              outputArtifactsTitle: t.workflowOutputArtifactsTitle,
-              datasetContractTitle: t.workflowDatasetContractTitle,
-              datasetValuesTitle: t.workflowDatasetValuesTitle,
-              datasetValueLabel: t.workflowDatasetValueLabel,
-              datasetSemanticTypeLabel: t.workflowDatasetSemanticTypeLabel,
-              datasetEncodingLabel: t.workflowDatasetEncodingLabel,
-              datasetShapeLabel: t.workflowDatasetShapeLabel,
-              datasetAxesLabel: t.workflowDatasetAxesLabel,
-              datasetSchemaLabel: t.workflowDatasetSchemaLabel,
-              datasetClassLabel: t.workflowDatasetClassLabel,
-              datasetNoneLabel: t.workflowDatasetNoneLabel,
-              datasetDraftHint: t.workflowDatasetDraftHint,
-              datasetEditorTitle: t.workflowDatasetEditorTitle,
-              datasetValueSelectLabel: t.workflowDatasetValueSelectLabel,
-              datasetUnitLabel: t.workflowDatasetUnitLabel,
-              datasetMetadataLabel: t.workflowDatasetMetadataLabel,
-              datasetPortMappingsTitle: t.workflowDatasetPortMappingsTitle,
-              datasetEdgeMappingsTitle: t.workflowDatasetEdgeMappingsTitle,
-              datasetDraftLocalLabel: t.workflowDatasetDraftLocalLabel,
-              datasetUnassignedLabel: t.workflowDatasetUnassignedLabel,
-              exportGraphLabel: t.workflowExportGraphLabel,
-              exportDatasetContractLabel: t.workflowExportDatasetContractLabel,
-              operatorLabel: t.workflowOperatorLabel,
-              kindLabel: t.workflowKindLabel,
-              progressLabel: t.workflowProgressLabel,
-              currentNodeLabel: t.workflowCurrentNodeLabel,
-              latestSummaryLabel: t.workflowLatestSummaryLabel,
-              openRunLabel: t.workflowOpenRunLabel,
-              emptyRunsLabel: t.workflowRunsEmpty,
-              selectForBuilderLabel: t.workflowSelectForBuilder,
-              statusReadyLabel: t.ready,
-              statusBusyLabel: t.busy,
-            }}
-            workflowCatalogEntries={workflowCatalog}
-            workflowCatalogBusy={workflowCatalogBusy}
-            selectedWorkflowId={selectedWorkflowId}
-            selectedWorkflow={selectedWorkflow}
-            latestJob={job}
-            latestWorkflowSummary={latestWorkflowSummary}
-            workflowRuns={workflowRuns}
-            refreshWorkflowCatalog={refreshWorkflowCatalog}
-            setSelectedWorkflowId={setSelectedWorkflowId}
-            runWorkflowCatalogEntry={runWorkflowCatalogEntry}
-            openHistoryJob={openHistoryJob}
-          />
-        }
-        librarySection={
-          <WorkbenchLibrarySectionMount
-            labels={t}
-            libraryTab={libraryTab}
-            onLibraryTabChange={handleLibraryTabChange}
-            sampleRows={librarySampleRows}
-            workflowCatalogEntries={workflowCatalog}
-            workflowCatalogBusy={workflowCatalogBusy}
-            projects={projects}
-            selectedProjectId={selectedProjectId}
-            setSelectedProjectId={setSelectedProjectId}
-            setSelectedModelId={setSelectedModelId}
-            projectNameDraft={projectNameDraft}
-            setProjectNameDraft={setProjectNameDraft}
-            projectDescriptionDraft={projectDescriptionDraft}
-            setProjectDescriptionDraft={setProjectDescriptionDraft}
-            createProjectRecord={createProjectRecord}
-            updateProjectRecord={updateProjectRecord}
-            deleteProjectRecord={deleteProjectRecord}
-            downloadProjectBundleJson={downloadProjectBundleJson}
-            downloadProjectBundleZip={downloadProjectBundleZip}
-            importProjectBundle={importProjectBundle}
-            selectedProjectModels={selectedProjectModels}
-            modelRows={libraryModelRows}
-            selectedModelId={selectedModelId}
-            loadedModelName={loadedModelName}
-            setLoadedModelName={setLoadedModelName}
-            saveModelVersion={saveModelVersion}
-            deleteSavedModelRecord={deleteSavedModelRecord}
-            openSavedModel={openSavedModel}
-            versionRows={libraryVersionRows}
-            modelVersions={modelVersions}
-            selectedVersionId={selectedVersionId}
-            renameSelectedVersion={renameSelectedVersion}
-            deleteSelectedVersion={deleteSelectedVersion}
-            openSavedVersion={openSavedVersion}
-            jobRows={libraryJobRows}
-            jobCount={jobHistory.length}
-            activeJobId={job?.job_id ?? null}
-            openHistoryJob={openHistoryJob}
-            openSample={openSample}
-            refreshWorkflowCatalog={refreshWorkflowCatalog}
-            runWorkflowCatalogEntry={runWorkflowCatalogEntry}
-            refreshJobHistory={refreshJobHistory}
-            refreshProjects={refreshProjects}
-            importModel={importModel}
-          />
-        }
-        systemSection={
-          <WorkbenchSystemSidebarMount
-            t={t}
-            systemPanelTab={systemPanelTab === "assistant" ? "config" : systemPanelTab}
-            handleSystemPanelTabChange={handleSystemPanelTabChange}
-            healthStatus={health?.status}
-            healthProtocolOnline={Boolean(health?.protocol)}
-            healthWatchdogOnline={Boolean(health?.watchdog)}
-            healthSecurityApiTokenConfigured={Boolean(health?.security?.api_token_configured)}
-            runtimeBackendRows={runtimeBackendRows}
-            runtimeProtocolRows={runtimeProtocolRows}
-            runtimeProtocolMethods={runtimeProtocolMethods}
-            securityUi={securityUi}
-            runtimeSecurityRows={runtimeSecurityRows}
-            runtimeAuditSummaryRows={runtimeAuditSummaryRows}
-            runtimeAuditTrendBars={runtimeAuditTrendBars}
-            runtimeAuditSourceStatusFacets={runtimeAuditSourceStatusFacets}
-            runtimeAuditStudyFacets={runtimeAuditStudyFacets}
-            runtimeAuditProjectFacets={runtimeAuditProjectFacets}
-            runtimeAuditModelVersionFacets={runtimeAuditModelVersionFacets}
-            securityEventRecords={securityEventRecords}
-            securityEventWindowFilter={securityEventWindowFilter}
-            securityEventSourceFilter={securityEventSourceFilter}
-            securityEventRiskFilter={securityEventRiskFilter}
-            securityEventStatusFilter={securityEventStatusFilter}
-            securityEventActionFilter={securityEventActionFilter}
-            setSecurityEventWindowFilter={setSecurityEventWindowFilter}
-            setSecurityEventSourceFilter={setSecurityEventSourceFilter}
-            setSecurityEventRiskFilter={setSecurityEventRiskFilter}
-            setSecurityEventStatusFilter={setSecurityEventStatusFilter}
-            setSecurityEventActionFilter={setSecurityEventActionFilter}
-            refreshSecurityEvents={refreshSecurityEvents}
-            downloadSecurityEventExport={downloadSecurityEventExport}
-            downloadSecurityEventCsvExport={downloadSecurityEventCsvExport}
-            runtimeAuditEntries={runtimeAuditEntries}
-            protocolAgents={protocolAgents}
-            protocolAgentCards={protocolAgentCards}
-            runtimeWatchdogRows={runtimeWatchdogRows}
-            theme={theme}
-            language={language}
-            frontendRuntimeMode={frontendRuntimeMode}
-            directMeshSelectionMode={directMeshSelectionMode}
-            directMeshEndpointsText={directMeshEndpointsText}
-            controlPlaneApiToken={controlPlaneApiToken}
-            clusterApiToken={clusterApiToken}
-            directMeshApiToken={directMeshApiToken}
-            showShortcutHints={showShortcutHints}
-            immersiveGuardrails={immersiveGuardrails}
-            languagePacks={languagePacks}
-            languagePackCatalogRows={languagePackCatalogRows}
-            setTheme={setTheme}
-            handleLanguageChange={handleLanguageChange}
-            handleDownloadLanguagePackTemplate={handleDownloadLanguagePackTemplate}
-            handleExportInstalledLanguagePack={handleExportInstalledLanguagePack}
-            handleImportLanguagePack={handleImportLanguagePack}
-            handleRemoveLanguagePack={handleRemoveLanguagePack}
-            setFrontendRuntimeMode={setFrontendRuntimeMode}
-            setDirectMeshSelectionMode={setDirectMeshSelectionMode}
-            setDirectMeshEndpointsText={setDirectMeshEndpointsText}
-            setControlPlaneApiToken={setControlPlaneApiToken}
-            setClusterApiToken={setClusterApiToken}
-            setDirectMeshApiToken={setDirectMeshApiToken}
-            setShowShortcutHints={setShowShortcutHints}
-            setImmersiveGuardrails={setImmersiveGuardrails}
-            downloadDatabaseSnapshot={downloadDatabaseSnapshot}
-            scriptActionLog={scriptActionLog}
-            getScriptSnapshot={getScriptSnapshot}
-            scriptRecordingMode={scriptRecordingMode}
-            invokeScriptAction={async (action, payload) => {
-              await invokeScriptAction(action, payload);
-              return {};
-            }}
-            setScriptRecordingMode={setScriptRecordingMode}
-            scriptSnapshot={scriptSnapshot}
-            systemDataTab={systemDataTab}
-            handleSystemDataTabChange={handleSystemDataTabChange}
-            adminJobRows={adminJobRows}
-            selectedAdminJobId={selectedAdminJobId}
-            handleSelectAdminJob={handleSelectAdminJob}
-            selectedAdminJob={selectedAdminJob}
-            adminJobMessage={adminJobMessage}
-            setAdminJobMessage={setAdminJobMessage}
-            adminJobProjectId={adminJobProjectId}
-            setAdminJobProjectId={setAdminJobProjectId}
-            adminJobModelVersionId={adminJobModelVersionId}
-            setAdminJobModelVersionId={setAdminJobModelVersionId}
-            adminJobCaseId={adminJobCaseId}
-            setAdminJobCaseId={setAdminJobCaseId}
-            saveAdminJobRecord={saveAdminJobRecord}
-            deleteAdminJobRecord={deleteAdminJobRecord}
-            adminResultRows={adminResultRows}
-            selectedAdminResultJobId={selectedAdminResultJobId}
-            handleSelectAdminResult={handleSelectAdminResult}
-            jobHistory={jobHistory}
-            adminResultDraft={adminResultDraft}
-            setAdminResultDraft={setAdminResultDraft}
-            saveAdminResultRecord={saveAdminResultRecord}
-            applySelectedAdminResultContext={applySelectedAdminResultContext}
-            openSelectedAdminResultProject={openSelectedAdminResultProject}
-            openSelectedAdminResultVersion={openSelectedAdminResultVersion}
-            exportAdminResultRecord={exportAdminResultRecord}
-            deleteAdminResultRecord={deleteAdminResultRecord}
-            adminFilterProjectId={adminFilterProjectId}
-            handleAdminFilterProjectChange={handleAdminFilterProjectChange}
-            adminFilterModelVersionId={adminFilterModelVersionId}
-            handleAdminFilterModelVersionChange={handleAdminFilterModelVersionChange}
-            selectedProjectId={selectedProjectId}
-            selectedVersionId={selectedVersionId}
-            useCurrentProjectAsAdminFilter={useCurrentProjectAsAdminFilter}
-            useCurrentVersionAsAdminFilter={useCurrentVersionAsAdminFilter}
-            clearAdminFilters={clearAdminFilters}
-            applySelectedAdminJobContext={applySelectedAdminJobContext}
-            openSelectedAdminJobProject={openSelectedAdminJobProject}
-            openSelectedAdminJobVersion={openSelectedAdminJobVersion}
-            jobId={job?.job_id ?? null}
-            cancelCurrentJob={cancelCurrentJob}
-            cancelJob={cancelJob}
-            setMessage={setMessage}
-            refreshJobHistory={refreshJobHistory}
-          />
-        }
-      />
+      <WorkbenchSidebarMount {...sidebarMountProps} />
 
-      <WorkbenchMainShellMount
-        t={t}
-        assistantWindowOpen={assistantWindowOpen}
-        setAssistantWindowOpen={setAssistantWindowOpen}
-        job={job}
-        hasAnyResult={hasAnyResult}
-        frontendRuntimeMode={frontendRuntimeMode}
-        studyKind={studyKind}
-        language={language}
-        assistantApiKey={assistantApiKey}
-        assistantApiBaseUrl={assistantApiBaseUrl}
-        assistantModel={assistantModel}
-        assistantCards={assistantCards}
-        assistantMode={assistantMode}
-        assistantPromptPresets={assistantPromptPresets}
-        assistantTransactions={assistantTransactions}
-        executeAssistantPlan={executeAssistantPlan}
-        invokeScriptAction={invokeScriptAction}
-        setAssistantApiKey={setAssistantApiKey}
-        setAssistantApiBaseUrl={setAssistantApiBaseUrl}
-        setAssistantModel={setAssistantModel}
-        setAssistantMode={setAssistantMode}
-        requestLlmAssistantPlan={requestLlmAssistantPlan}
-        rollbackAssistantTransaction={rollbackAssistantTransaction}
-        viewportPanelRef={viewportPanelRef}
-        canvasStageRef={canvasStageRef}
-        viewportPixelWidth={viewportPixelWidth}
-        immersiveViewport={immersiveViewport}
-        sidebarSection={sidebarSection}
-        modelTab={modelTab}
-        modelToolsPage={modelToolsPage}
-        isTruss3d={isTruss3d}
-        immersiveToolDrawerOpen={immersiveToolDrawerOpen}
-        immersiveHelpDrawerOpen={immersiveHelpDrawerOpen}
-        handleSidebarSectionChange={handleSidebarSectionChange}
-        setModelTab={setModelTab}
-        setModelToolsPage={setModelToolsPage}
-        handleToggleImmersiveToolDrawer={handleToggleImmersiveToolDrawer}
-        handleToggleImmersiveHelpDrawer={handleToggleImmersiveHelpDrawer}
-        handleToggleImmersiveViewport={handleToggleImmersiveViewport}
-        hasViewportDock={hasViewportDock}
-        showShortcutHints={showShortcutHints}
-        showViewportToolStrip={showViewportToolStrip}
-        immersiveToolTab={immersiveToolTab}
-        truss3dViewPreset={truss3dViewPreset}
-        selectedNode={selectedNode}
-        selectedElement={selectedElement}
-        selectedTruss3dNodes={selectedTruss3dNodes}
-        selectedTruss3dNodeData={selectedTruss3dNodeData}
-        truss3dLinkMode={truss3dLinkMode}
-        truss3dProjectionMode={truss3dProjectionMode}
-        truss3dShowGrid={truss3dShowGrid}
-        truss3dShowLabels={truss3dShowLabels}
-        truss3dShowNodes={truss3dShowNodes}
-        truss3dBoxSelectMode={truss3dBoxSelectMode}
-        truss3dNudgeStep={truss3dNudgeStep}
-        truss3dBatchLoadX={truss3dBatchLoadX}
-        truss3dBatchLoadY={truss3dBatchLoadY}
-        truss3dBatchLoadZ={truss3dBatchLoadZ}
-        undoStack={undoStack}
-        redoStack={redoStack}
-        truss3dModel={truss3dModel}
-        setImmersiveToolTab={setImmersiveToolTab}
-        handleTruss3dViewPresetChange={handleTruss3dViewPresetChange}
-        handleTruss3dFocusViewport={handleTruss3dFocusViewport}
-        setTruss3dFocusRequestVersion={setTruss3dFocusRequestVersion}
-        handleTruss3dProjectionModeChange={handleTruss3dProjectionModeChange}
-        setTruss3dShowGrid={setTruss3dShowGrid}
-        setTruss3dShowLabels={setTruss3dShowLabels}
-        setTruss3dShowNodes={setTruss3dShowNodes}
-        handleTruss3dBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
-        handleTruss3dResetViewport={handleTruss3dResetViewport}
-        addTruss3dNode={addTruss3dNode}
-        deleteSelectedTruss3dNode={deleteSelectedTruss3dNode}
-        handleToggleTruss3dLinkMode={handleToggleTruss3dLinkMode}
-        toggleTruss3dMemberFromDraft={toggleTruss3dMemberFromDraft}
-        deleteSelectedTruss3dElement={deleteSelectedTruss3dElement}
-        cloneSelectedTruss3dNodes={cloneSelectedTruss3dNodes}
-        handleUndo={handleUndo}
-        handleRedo={handleRedo}
-        updateSelectedTruss3dNode={updateSelectedTruss3dNode}
-        nudgeSelectedTruss3dNodes={nudgeSelectedTruss3dNodes}
-        setTruss3dNudgeStep={setTruss3dNudgeStep}
-        updateSelectedTruss3dNodes={updateSelectedTruss3dNodes}
-        setTruss3dBatchLoadX={setTruss3dBatchLoadX}
-        setTruss3dBatchLoadY={setTruss3dBatchLoadY}
-        setTruss3dBatchLoadZ={setTruss3dBatchLoadZ}
-        applySelectedTruss3dLoads={applySelectedTruss3dLoads}
-        activeResultWindow={activeResultWindow}
-        resultWindowStart={resultWindowStart}
-        resultWindowEnd={resultWindowEnd}
-        activeResultWindowLimit={activeResultWindowLimit}
-        resultWindowOffset={resultWindowOffset}
-        resultWindowMaxTotal={resultWindowMaxTotal}
-        resultWindowJumps={resultWindowJumps}
-        isPlane={isPlane}
-        isHeatPlane={isHeatPlane}
-        isHeatPlaneTriangle={isHeatPlaneTriangle}
-        isThermalPlaneTriangle={isThermalPlaneTriangle}
-        isThermalPlaneQuad={isThermalPlaneQuad}
-        isFrameLike={isFrameLike}
-        isThermalFrame={isThermalFrame}
-        isBeam={isBeam}
-        isTorsion={isTorsion}
-        planeResult={planeResult}
-        activeFrameLikeResult={activeFrameLikeResult}
-        activeBeamLikeResult={activeBeamLikeResult}
-        torsionResult={torsionResult}
-        planeResultField={planeResultField}
-        frameResultField={frameResultField}
-        beamResultField={beamResultField}
-        setPlaneResultField={setPlaneResultField}
-        setFrameResultField={setFrameResultField}
-        setBeamResultField={setBeamResultField}
-        setResultWindowOffset={setResultWindowOffset}
-        clampChunkOffset={clampChunkOffset}
-        shouldStretchSpaceViewport={shouldStretchSpaceViewport}
-        handleCanvasStageScroll={handleCanvasStageScroll}
-        isSpring2d={isSpring2d}
-        isSpring1d={isSpring1d}
-        isHeatBar={isHeatBar}
-        isThermalBar={isThermalBar}
-        isThermalBeam={isThermalBeam}
-        isThermalTruss2d={isThermalTruss2d}
-        isFrame={isFrame}
-        isSpring={isSpring}
-        isSpring3d={isSpring3d}
-        isThermalTruss3d={isThermalTruss3d}
-        isTruss={isTruss}
-        isThermal={isThermal}
-        hiddenMaterialIds={hiddenMaterialIds}
-        frameLegendText={frameLegendText}
-        planeLegendText={planeLegendText}
-        axialNodes={axialNodes}
-        axialLength={axialLength}
-        axialScale={axialScale}
-        displayTrussNodes={displayTrussNodes}
-        displayTrussElements={displayTrussElements}
-        displayTruss3dNodes={displayTruss3dNodes}
-        displayTruss3dElements={displayTruss3dElements}
-        planeNodes={planeNodes}
-        planeElements={planeElements}
-        trussElementColors={trussElementColors}
-        truss3dElementColors={truss3dElementColors}
-        planeElementColors={planeElementColors}
-        trussBounds={trussBounds}
-        planeBounds={planeBounds}
-        trussResult={trussResult}
-        thermalTrussResult={thermalTrussResult}
-        heatBarResult={heatBarResult}
-        thermalBarResult={thermalBarResult}
-        thermalTruss3dResult={thermalTruss3dResult}
-        springResult={springResult}
-        spring2dResult={spring2dResult}
-        spring3dResult={spring3dResult}
-        heatPlaneQuadResult={heatPlaneQuadResult}
-        heatPlaneTriangleResult={heatPlaneTriangleResult}
-        activeLineResultField={activeLineResultField}
-        frameResultFieldMax={frameResultFieldMax}
-        focusedFrameElement={focusedFrameElement}
-        trussStability={trussStability}
-        trussDiagnostics={trussDiagnostics}
-        memberDraftNodes={memberDraftNodes}
-        stopDraggingNode={stopDraggingNode}
-        handleTrussPointerMove={handleTrussPointerMove}
-        setSelectedElement={setSelectedElement}
-        setSelectedNode={setSelectedNode}
-        setMemberDraftNodes={setMemberDraftNodes}
-        setFocusedFrameElement={setFocusedFrameElement}
-        startTrussNodeDrag={startTrussNodeDrag}
-        planeResultFieldMax={planeResultFieldMax}
-        selectedPlaneNodeData={selectedPlaneNodeData}
-        focusedPlaneElement={focusedPlaneElement}
-        handleTruss3dNodePick={handleTruss3dNodePick}
-        setSelectedTruss3dNodes={setSelectedTruss3dNodes}
-        updateTruss3dNodePosition={updateTruss3dNodePosition}
-        recordHistory={recordHistory}
-        drag3dHistoryCapturedRef={drag3dHistoryCapturedRef}
-        truss3dFocusRequestVersion={truss3dFocusRequestVersion}
-        truss3dResetRequestVersion={truss3dResetRequestVersion}
-        handleTruss3dNodesBoxSelect={handleTruss3dNodesBoxSelect}
-        handleTruss3dShowGridChange={handleTruss3dShowGridChange}
-        handleTruss3dShowLabelsChange={handleTruss3dShowLabelsChange}
-        handleTruss3dShowNodesChange={handleTruss3dShowNodesChange}
-        librarySampleRows={librarySampleRows}
-        libraryModelRows={libraryModelRows}
-        libraryJobRows={libraryJobRows}
-        selectedProjectModels={selectedProjectModels}
-        openSample={openSample}
-        openSavedModel={openSavedModel}
-        openHistoryJob={openHistoryJob}
-        message={message}
-        isAxial={isAxial}
-        selectedNodeIssues={selectedNodeIssues}
-        selectedNodeData={selectedNodeData}
-        selectedBeamNodeData={selectedBeamNodeData}
-        selectedTorsionNodeData={selectedTorsionNodeData}
-        selectedFrameNodeData={selectedFrameNodeData}
-        selectedThermalNodeData={selectedThermalNodeData}
-        spring3dModel={spring3dModel}
-        axialElements={axialElements}
-        currentStudyFamilyLabel={currentStudyFamilyLabel}
-        currentStudyFamilyHint={currentStudyFamilyHint}
-        isPending={isPending}
-        canProjectHeatToThermo={canProjectHeatToThermo}
-        selectedElementData={selectedElementData}
-        selectedTruss3dElementData={selectedTruss3dElementData}
-        selectedPlaneElementData={selectedPlaneElementData}
-        selectedFrameElementData={selectedFrameElementData}
-        selectedBeamElementData={selectedBeamElementData}
-        selectedTorsionElementData={selectedTorsionElementData}
-        selectedThermalElementData={selectedThermalElementData}
-        selectedSpringElementData={selectedSpringElementData}
-        materialOptions={materialOptions}
-        nodeCount={nodeCount}
-        tipDisplacement={isAxial ? scientific(axialResult?.tip_displacement) : isHeatBar ? scientific(heatBarResult?.max_temperature) : isHeatPlane ? scientific(isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_temperature : heatPlaneQuadResult?.max_temperature) : isThermalTruss2d ? scientific(thermalTrussResult?.max_displacement) : studyKind === "thermal_truss_3d" ? scientific(thermalTruss3dResult?.max_displacement) : isTruss ? scientific(trussResult?.max_displacement) : isSpring3d ? scientific(spring3dResult?.max_displacement) : studyKind === "truss_3d" ? scientific(truss3dResult?.max_displacement) : isThermalBar ? scientific(thermalBarResult?.max_displacement) : isSpring ? scientific(activeSpringResult?.max_displacement) : isBeam ? scientific(activeBeamLikeResult?.max_displacement) : isTorsion ? scientific(torsionResult?.max_rotation) : isFrameLike ? scientific(activeFrameLikeResult?.max_displacement) : scientific(planeResult?.max_displacement)}
-        maxStressValue={scientific(isAxial ? axialResult?.max_stress : isHeatBar ? heatBarResult?.max_heat_flux : isHeatPlane ? (isHeatPlaneTriangle ? heatPlaneTriangleResult?.max_heat_flux : heatPlaneQuadResult?.max_heat_flux) : isThermalTruss2d ? thermalTrussResult?.max_stress : studyKind === "thermal_truss_3d" ? thermalTruss3dResult?.max_stress : isTruss ? trussResult?.max_stress : isSpring3d ? spring3dResult?.max_force : studyKind === "truss_3d" ? truss3dResult?.max_stress : isThermalBar ? thermalBarResult?.max_stress : isSpring ? activeSpringResult?.max_force : isBeam ? activeBeamLikeResult?.max_stress : isTorsion ? torsionResult?.max_stress : isFrameLike ? activeFrameLikeResult?.max_stress : planeResult?.max_stress)}
-        frameMaxAxialForce={frameMaxAxialForce}
-        frameMaxShearForce={frameMaxShearForce}
-        reactionValue={isAxial ? scientific(axialResult?.reaction_force) : isHeatBar ? scientific(heatBarResult?.max_heat_flux) : isThermalBar ? scientific(thermalBarResult?.max_axial_force) : isThermalTruss2d ? scientific(thermalTrussResult?.max_axial_force) : isThermalTruss3d ? scientific(thermalTruss3dResult?.max_axial_force) : isSpring ? scientific(activeSpringResult?.max_force) : isTorsion ? scientific(torsionResult?.max_torque) : isFrameLike ? scientific(activeFrameLikeResult?.max_moment) : isBeam ? scientific(activeBeamLikeResult?.max_moment) : "--"}
-        frameMaxRotationValue={isFrameLike ? scientific(activeFrameLikeResult?.max_rotation) : isBeam ? scientific(activeBeamLikeResult?.max_rotation) : isTorsion ? scientific(torsionResult?.max_rotation) : undefined}
-        thermalPlaneMaxTemperatureDelta={planeResult && "max_temperature_delta" in planeResult ? planeResult.max_temperature_delta : undefined}
-        thermalFrameMaxTemperatureDelta={thermalFrameMaxTemperatureDelta}
-        thermalFrameMaxTemperatureGradient={thermalFrameMaxTemperatureGradient}
-        thermalBeamMaxTemperatureGradient={thermalBeamMaxTemperatureGradient}
-        planeHotspotFieldLabel={planeResultFieldLabel}
-        planeHotspotElements={planeHotspotElements}
-        planeThermalRows={planeThermalRows}
-        frameHotspotFieldLabel={frameResultFieldLabel}
-        frameHotspotElements={frameHotspotElements}
-        frameForceRows={frameForceRows}
-        planeHotspotLimit={planeHotspotLimit}
-        heartbeatStatusValue={heartbeatStatusValue}
-        heartbeatToneValue={heartbeatToneValue}
-        translatedFailureReason={translatedFailureReason}
-        jobIsActive={jobIsActive}
-        activePlaneInputModel={activePlaneInputModel}
-        planeModel={planeModel}
-        activeFrameLikeModel={activeFrameLikeModel}
-        activeBeamLikeModel={activeBeamLikeModel}
-        trussModel={trussModel}
-        thermalTrussModel={thermalTrussModel}
-        thermalTruss3dModel={thermalTruss3dModel}
-        updateSelectedElement={updateSelectedElement}
-        assignSelectedElementMaterial={assignSelectedElementMaterial}
-        updateSelectedTruss3dElement={updateSelectedTruss3dElement}
-        assignSelectedTruss3dElementMaterial={assignSelectedTruss3dElementMaterial}
-        updateSelectedPlaneNode={updateSelectedPlaneNode}
-        updateSelectedPlaneElement={updateSelectedPlaneElement}
-        assignSelectedPlaneElementMaterial={assignSelectedPlaneElementMaterial}
-        updateSelectedFrameNode={updateSelectedFrameNode}
-        updateSelectedFrameElement={updateSelectedFrameElement}
-        assignSelectedFrameElementMaterial={assignSelectedFrameElementMaterial}
-        applyTrussSuggestion={applyTrussSuggestion}
-        cancelCurrentJob={cancelCurrentJob}
-        downloadResultJson={downloadResultJson}
-        downloadResultCsv={downloadResultCsv}
-        projectHeatToThermoStudy={projectHeatToThermoStudy}
-        downloadPlaneHotspotSummary={downloadPlaneHotspotSummary}
-        downloadFrameHotspotSummary={downloadFrameHotspotSummary}
-        downloadFrameForceSummary={downloadFrameForceSummary}
-        setSidebarSection={setSidebarSection}
-        setFocusedPlaneElement={setFocusedPlaneElement}
-        setPlaneHotspotLimit={setPlaneHotspotLimit}
-      />
+      <WorkbenchMainShellMount {...mainShellMountProps} />
     </div>
   );
 }
