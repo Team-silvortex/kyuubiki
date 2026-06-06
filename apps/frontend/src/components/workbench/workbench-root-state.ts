@@ -68,7 +68,9 @@ export function useWorkbenchRootState() {
 
   return {
     workspaceState,
+    workspaceBindings,
     shellState,
+    shellBindings,
     health,
     setHealth,
     protocolAgents,
@@ -77,6 +79,7 @@ export function useWorkbenchRootState() {
     startTransition,
     viewportPanelRef,
     jobIsActive,
+    runtimeGuards,
     ...workspaceBindings,
     ...shellBindings,
     ...runtimeGuards,

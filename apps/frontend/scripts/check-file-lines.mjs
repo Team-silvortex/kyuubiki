@@ -6,9 +6,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC_ROOT = path.join(ROOT, "src");
 const MAX_LINES = 600;
 
-const DEBT_LIMITS = new Map([
-  ["src/components/workbench/workbench.tsx", 12250],
-]);
+const DEBT_LIMITS = new Map();
 
 function listSourceFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -60,5 +58,6 @@ if (violations.length > 0) {
 const trackedSummary = [...DEBT_LIMITS.entries()]
   .map(([relative, limit]) => `${relative}<=${limit}`)
   .join(", ");
+const trackedSuffix = trackedSummary ? `; tracked debt: ${trackedSummary}` : "";
 
-console.log(`File line-count guard passed. Default limit ${MAX_LINES}; tracked debt: ${trackedSummary}`);
+console.log(`File line-count guard passed. Default limit ${MAX_LINES}${trackedSuffix}`);
