@@ -1,15 +1,18 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
-
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type {
   WorkflowCatalogEntry,
   WorkflowDatasetContract,
   WorkflowDatasetValueInfo,
   WorkflowGraphDefinition,
 } from "@/lib/api";
-
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
+import {
+  asWorkflowDatasetContract,
+  asWorkflowGraphDefinition,
+  mergeDatasetContractIntoGraph,
+  readJsonFile,
+} from "@/components/workbench/workflow/workbench-workflow-builder-import";
 
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
@@ -68,11 +71,15 @@ export function WorkbenchWorkflowBuilderCard({
 }: WorkbenchWorkflowBuilderCardProps) {
   const [draftGraph, setDraftGraph] = useState<WorkflowGraphDefinition | null>(null);
   const [selectedDatasetValueId, setSelectedDatasetValueId] = useState<string | null>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const graphInputRef = useRef<HTMLInputElement | null>(null);
+  const datasetInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const nextDraft = cloneWorkflowGraph(selectedWorkflow?.graph ?? null);
     setDraftGraph(nextDraft);
     setSelectedDatasetValueId(nextDraft?.dataset_contract?.values?.[0]?.id ?? null);
+    setImportMessage(null);
   }, [selectedWorkflow]);
 
   const selectedGraph = draftGraph;
@@ -151,6 +158,51 @@ export function WorkbenchWorkflowBuilderCard({
     );
   }
 
+  async function importWorkflowGraphFile(file: File) {
+    try {
+      const json = await readJsonFile(file);
+      const graph = asWorkflowGraphDefinition(json);
+      if (!graph) {
+        setImportMessage(labels.importInvalidGraphLabel);
+        return;
+      }
+      const nextGraph = cloneWorkflowGraph(graph);
+      setDraftGraph(nextGraph);
+      setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
+      setImportMessage(labels.importSuccessLabel);
+    } catch {
+      setImportMessage(labels.importInvalidGraphLabel);
+    }
+  }
+
+  async function importDatasetContractFile(file: File) {
+    try {
+      const json = await readJsonFile(file);
+      const contract = asWorkflowDatasetContract(json);
+      if (!contract) {
+        setImportMessage(labels.importInvalidDatasetLabel);
+        return;
+      }
+      setDraftGraph((current) => mergeDatasetContractIntoGraph(cloneWorkflowGraph(current), contract));
+      setSelectedDatasetValueId(contract.values[0]?.id ?? null);
+      setImportMessage(labels.importSuccessLabel);
+    } catch {
+      setImportMessage(labels.importInvalidDatasetLabel);
+    }
+  }
+
+  function handleGraphFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) void importWorkflowGraphFile(file);
+    event.target.value = "";
+  }
+
+  function handleDatasetFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (file) void importDatasetContractFile(file);
+    event.target.value = "";
+  }
+
   if (!selectedWorkflow) {
     return (
       <section className="sidebar-card sidebar-card--compact">
@@ -170,6 +222,12 @@ export function WorkbenchWorkflowBuilderCard({
         <button onClick={() => onRunWorkflowCatalog(selectedWorkflow.id)} type="button">
           {labels.runLabel}
         </button>
+        <button onClick={() => graphInputRef.current?.click()} type="button">
+          {labels.importGraphLabel}
+        </button>
+        <button onClick={() => datasetInputRef.current?.click()} type="button">
+          {labels.importDatasetContractLabel}
+        </button>
         <button onClick={exportDraftWorkflowGraph} type="button">
           {labels.exportGraphLabel}
         </button>
@@ -181,6 +239,21 @@ export function WorkbenchWorkflowBuilderCard({
           {labels.exportDatasetContractLabel}
         </button>
       </div>
+      <input
+        accept="application/json,.json"
+        hidden
+        onChange={handleGraphFileChange}
+        ref={graphInputRef}
+        type="file"
+      />
+      <input
+        accept="application/json,.json"
+        hidden
+        onChange={handleDatasetFileChange}
+        ref={datasetInputRef}
+        type="file"
+      />
+      {importMessage ? <p className="card-copy">{importMessage}</p> : null}
       <div className="sidebar-list">
         <div className="sidebar-list__row">
           <span>{labels.nodesTitle}</span>

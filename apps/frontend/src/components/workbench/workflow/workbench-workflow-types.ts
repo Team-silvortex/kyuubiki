@@ -50,6 +50,11 @@ export type WorkflowSidebarLabels = {
   datasetEdgeMappingsTitle: string;
   datasetDraftLocalLabel: string;
   datasetUnassignedLabel: string;
+  importGraphLabel: string;
+  importDatasetContractLabel: string;
+  importSuccessLabel: string;
+  importInvalidGraphLabel: string;
+  importInvalidDatasetLabel: string;
   exportGraphLabel: string;
   exportDatasetContractLabel: string;
   operatorLabel: string;
