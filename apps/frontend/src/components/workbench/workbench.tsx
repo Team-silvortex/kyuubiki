@@ -1,50 +1,23 @@
 "use client";
 
 import {
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type SetStateAction,
 } from "react";
 import brand from "../../../../../assets/brand/brand.json";
-import {
-  buildWorkbenchAdminSelections,
-  buildWorkbenchStudyFlags,
-} from "@/components/workbench/workbench-admin-context";
-import {
-  applyJobContextToWorkbench as applyJobContextToWorkbenchWithDeps,
-  applySelectedAdminJobContext as applySelectedAdminJobContextWithDeps,
-  applySelectedAdminResultContext as applySelectedAdminResultContextWithDeps,
-  openProjectContextById as openProjectContextByIdWithDeps,
-  openSelectedAdminJobProject as openSelectedAdminJobProjectWithDeps,
-  openSelectedAdminJobVersion as openSelectedAdminJobVersionWithDeps,
-  openSelectedAdminResultProject as openSelectedAdminResultProjectWithDeps,
-  openSelectedAdminResultVersion as openSelectedAdminResultVersionWithDeps,
-  resolveScriptLinkedJob as resolveScriptLinkedJobWithDeps,
-} from "@/components/workbench/workbench-admin-data-controller";
-import { useWorkbenchAdminSecurityState } from "@/components/workbench/workbench-admin-security-state";
+import { buildWorkbenchStudyFlags } from "@/components/workbench/workbench-admin-context";
 import {
   deleteWorkbenchAdminResultRecord,
   exportWorkbenchAdminResultRecord,
   refreshWorkbenchResults,
   saveWorkbenchAdminResultRecord,
 } from "@/components/workbench/workbench-admin-result-controller";
-import { useWorkbenchFlowControllers } from "@/components/workbench/workbench-flow-controllers";
-import { buildWorkbenchFlowControllerProps } from "@/components/workbench/workbench-flow-controller-props";
 import { WorkbenchMainShellMount } from "@/components/workbench/workbench-main-shell-mount";
-import { buildWorkbenchMainShellComposition } from "@/components/workbench/workbench-main-shell-composition";
+import { useWorkbenchMainComposition } from "@/components/workbench/workbench-main-composition";
 import { buildWorkbenchModelContent } from "@/components/workbench/workbench-model-content";
-import { buildWorkbenchModelContentProps } from "@/components/workbench/workbench-model-content-props";
-import { buildWorkbenchProjectFlows } from "@/components/workbench/workbench-project-flows";
-import { useWorkbenchInteractionControllers } from "@/components/workbench/workbench-interaction-controllers";
 import {
-  copyByLanguage,
   humanizeSolverFailure,
   type WorkbenchCopy,
   type WorkbenchLanguage,
@@ -86,7 +59,6 @@ import {
   type TrussSuggestion,
 } from "@/components/workbench/workbench-defaults";
 import { applyHistoryJobPayload } from "@/components/workbench/workbench-history-result";
-import { useWorkbenchDataRefreshController } from "@/components/workbench/workbench-data-refresh-controller";
 import {
   downloadBlobFile,
   downloadTextFile,
@@ -142,7 +114,6 @@ import {
   useWorkbenchResultWindowController,
   type ResultWindowState,
 } from "@/components/workbench/workbench-result-window-controller";
-import { useWorkbenchEditControllers } from "@/components/workbench/workbench-edit-controllers";
 import {
   buildDisplaySpring3dElements,
   buildDisplaySpring3dNodes,
@@ -180,22 +151,18 @@ import {
 } from "@/components/workbench/workbench-result-helpers";
 import { useWorkbenchStudyResultDerived } from "@/components/workbench/workbench-study-result-derived";
 import { WorkbenchInspectorMount } from "@/components/workbench/workbench-inspector-mount";
-import { useWorkbenchJobHistoryController } from "@/components/workbench/workbench-job-history-controller";
+import {
+  bindWorkbenchMainComposition,
+  bindWorkbenchStudyResultDerived,
+} from "@/components/workbench/workbench-root-bindings";
+import { useWorkbenchRootState } from "@/components/workbench/workbench-root-state";
 import { WorkbenchSidebarMount } from "@/components/workbench/workbench-sidebar-mount";
-import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
-import { buildWorkbenchMainShellProps } from "@/components/workbench/workbench-main-shell-props";
-import { useWorkbenchShellState } from "@/components/workbench/workbench-shell-state";
-import { useWorkbenchRuntimeGuards } from "@/components/workbench/workbench-runtime-guards";
-import { useWorkbenchWorkspaceState } from "@/components/workbench/workbench-workspace-state";
+import { useWorkbenchSessionComposition } from "@/components/workbench/workbench-session-composition";
 import {
   importWorkbenchModelFile,
   openWorkbenchSample,
 } from "@/components/workbench/workbench-sample-import-controller";
-import {
-  applyStudyKindSelection,
-  createStudyKindResetHandlers,
-  isWorkbenchStudyKind,
-} from "@/components/workbench/workbench-study-kind-controller";
+import { isWorkbenchStudyKind } from "@/components/workbench/workbench-study-kind-controller";
 import {
   analyzeTrussModel,
   getTrussBounds,
@@ -205,7 +172,6 @@ import {
   summarizeTrussStability,
   toSvgPoint,
 } from "@/components/workbench/workbench-truss-helpers";
-import { buildWorkbenchStudySidebarData } from "@/components/workbench/workbench-study-sidebar-data";
 import {
   type AssistantMode,
   type BeamResultField,
@@ -239,17 +205,11 @@ import {
   type WorkflowPanelTab,
 } from "@/components/workbench/workbench-types";
 import type { ModelToolsPage } from "@/components/workbench/model/workbench-model-sidebar";
-import {
-  isWorkflowGraphResult,
-  summarizeWorkflowArtifacts,
-  upsertWorkflowRunRecord,
-  useWorkbenchWorkflowController,
-} from "@/components/workbench/workflow/workbench-workflow-controller";
+import { isWorkflowGraphResult, summarizeWorkflowArtifacts, upsertWorkflowRunRecord } from "@/components/workbench/workflow/workbench-workflow-controller";
 import {
   fixed,
   formatMilliseconds,
   formatTime,
-  scientific,
   serializeCurrentModel,
   toAxialInput,
 } from "@/lib/workbench/helpers";
@@ -259,18 +219,7 @@ import {
   type WorkbenchSecurityAuditRisk,
   type WorkbenchSecurityAuditSource,
 } from "@/lib/workbench/security-audit";
-import {
-  buildAdminJobRows,
-  buildAdminResultRows,
-  buildLibraryJobRows,
-  buildLibraryModelRows,
-  buildLibrarySampleRows,
-  buildLibraryVersionRows,
-  buildProtocolAgentCards,
-  buildStudyDomainOptions,
-  classifyStudyKindFamily,
-  buildStudyKindOptionGroups,
-} from "@/lib/workbench/view-models";
+import { classifyStudyKindFamily } from "@/lib/workbench/view-models";
 import {
   ensurePlaneModelMaterials,
   ensureTruss3dModelMaterials,
@@ -349,7 +298,6 @@ import {
   type HeatPlaneQuad2dResult,
   type HeatPlaneTriangle2dJobInput,
   type HeatPlaneTriangle2dResult,
-  type HealthPayload,
   type JobEnvelope,
   type JobResultRecord,
   type JobState,
@@ -363,7 +311,6 @@ import {
   type ThermalPlaneQuad2dResult,
   type ThermalPlaneTriangle2dJobInput,
   type ThermalPlaneTriangle2dResult,
-  type ProtocolAgentDescriptor,
   type ProjectRecord,
   type ResultRecord,
   type SecurityEventRecord,
@@ -428,12 +375,8 @@ import {
 } from "@/lib/api";
 
 export function Workbench() {
-  const workspaceState = useWorkbenchWorkspaceState({
-    defaultLoadedModelName: copyByLanguage.en.defaultModel,
-    defaultMessage: copyByLanguage.en.initialLoaded,
-    defaultProjectLabel: copyByLanguage.en.defaultProject,
-  });
   const {
+    workspaceState,
     studyKind,
     setStudyKind,
     axialForm,
@@ -552,14 +495,11 @@ export function Workbench() {
     setUndoStack,
     redoStack,
     setRedoStack,
-  } = workspaceState;
-  const [health, setHealth] = useState<HealthPayload | null>(null);
-  const [protocolAgents, setProtocolAgents] = useState<ProtocolAgentDescriptor[]>([]);
-  const shellState = useWorkbenchShellState({
-    setLoadedModelName,
-    setMessage,
-  });
-  const {
+    health,
+    setHealth,
+    protocolAgents,
+    setProtocolAgents,
+    shellState,
     language,
     languagePacks,
     setLanguagePacks,
@@ -629,10 +569,9 @@ export function Workbench() {
     activeLanguagePack,
     t,
     languagePackCatalogRows,
-  } = shellState;
-  const [isPending, startTransition] = useTransition();
-  const viewportPanelRef = useRef<HTMLElement | null>(null);
-  const {
+    isPending,
+    startTransition,
+    viewportPanelRef,
     canvasStageRef,
     drag3dHistoryCapturedRef,
     dragFrameRef,
@@ -640,61 +579,8 @@ export function Workbench() {
     jobPollTokenRef,
     pendingDragPointRef,
     resultRefreshSeqRef,
-  } = useWorkbenchRuntimeGuards({
-    beamResultField,
-    focusedFrameElement,
-    focusedPlaneElement,
-    immersiveGuardrails,
-    immersiveViewport,
-    job,
-    language,
-    frameResultField,
-    projects,
-    selectedProjectId,
-    setAssistantWindowOpen,
-    setBeamResultField,
-    setFocusedFrameElement,
-    setFocusedPlaneElement,
-    setFrameResultField,
-    setImmersiveHelpDrawerOpen,
-    setImmersiveToolDrawerOpen,
-    setImmersiveViewport,
-    setMessage,
-    setProjectDescriptionDraft,
-    setProjectNameDraft,
-    setSystemPanelTab,
-    studyKind,
-    systemPanelTab,
-    t,
-    viewportPanelRef,
-  });
-  const jobIsActive =
-    job?.status === "queued" ||
-    job?.status === "preprocessing" ||
-    job?.status === "partitioning" ||
-    job?.status === "solving" ||
-    job?.status === "postprocessing";
-  const jobHistoryController = useWorkbenchJobHistoryController({
-    labels: {
-      jobCancelled: t.jobCancelled,
-      initialFailed: t.initialFailed,
-      requestTimedOut: t.requestTimedOut,
-    },
-    job,
     jobIsActive,
-    jobPollTokenRef,
-    setJob,
-    setMessage,
-    startTransition,
-  });
-  const {
-    jobHistory,
-    setJobHistory,
-    selectedAdminJobId,
-    setSelectedAdminJobId,
-    refreshJobHistory,
-    cancelCurrentJob,
-  } = jobHistoryController;
+  } = useWorkbenchRootState();
 
   const resultWindowMaxTotal = resultWindow ? Math.max(resultWindow.totalNodes, resultWindow.totalElements) : 0;
   const { handleCanvasStageScroll } = useWorkbenchResultWindowController({
@@ -733,12 +619,153 @@ export function Workbench() {
     setResultWindowOffset,
     studyKind,
   });
-
-  const adminSecurityState = useWorkbenchAdminSecurityState({
-    jobHistory,
+  async function refreshResults() {
+    await primaryActionsController.refreshResults();
+  }
+  let mainCompositionRef: { recordHistory?: (action: string) => void } | null = null;
+  function recordHistoryBridge(action: string) {
+    mainCompositionRef?.recordHistory?.(action);
+  }
+  const sessionComposition = useWorkbenchSessionComposition({
+    t,
+    job,
+    jobIsActive,
+    jobPollTokenRef,
+    setJob,
+    setMessage,
+    startTransition,
     resultRecords,
-    selectedAdminJobId,
+    projects,
+    selectedProjectId,
+    selectedModelId,
+    modelVersions,
+    setSidebarSection,
+    directMeshEndpointsText,
+    directMeshSelectionMode,
+    frontendRuntimeMode,
+    setHealth,
+    setModelVersions,
+    setProjects,
+    setProtocolAgents,
+    setSelectedModelId,
+    setSelectedProjectId,
+    setSelectedVersionId,
+    refreshResults,
+    securityEventWindowMs: SECURITY_EVENT_WINDOW_MS,
+    setLibraryTab,
+    activeMaterial,
+    createProject,
+    createModel,
+    createModelVersion,
+    updateModelVersion,
+    fetchModel,
+    fetchModelVersion,
+    recordHistory: recordHistoryBridge,
+    resetActiveResult: () => resetActiveResult(setResult, setJob),
+    setLoadedModelName,
+    setStudyKind,
+    setAxialForm,
+    setHeatBarModel,
+    setHeatPlaneModel,
+    setThermalBarModel,
+    setThermalBeamModel,
+    setThermalFrameModel,
+    setThermalTrussModel,
+    setThermalTruss3dModel,
+    setSpringModel,
+    setSpring2dModel,
+    setSpring3dModel,
+    setTrussModel,
+    setTruss3dModel,
+    setPlaneModel,
+    setFrameModel,
+    setBeamModel,
+    setTorsionModel,
+    setPlaneResultField,
+    setParametric,
+    setActiveMaterial,
+    projectNameDraft,
+    projectDescriptionDraft,
+    loadedModelName,
+    studyKind,
+    axialForm,
+    heatBarModel,
+    heatPlaneModel,
+    thermalBarModel,
+    thermalBeamModel,
+    thermalFrameModel,
+    thermalTrussModel,
+    trussModel,
+    thermalTruss3dModel,
+    truss3dModel,
+    planeModel,
+    frameModel,
+    beamModel,
+    torsionModel,
+    springModel,
+    spring2dModel,
+    spring3dModel,
+    parametric,
+    round,
+    updateProject,
+    deleteProject,
+    updateModel,
+    deleteModel,
+    deleteModelVersion,
+    fetchModelVersions,
+    fetchJobStatus,
+    serializeCurrentModel: () =>
+      serializeCurrentModel(
+        studyKind,
+        loadedModelName,
+        activeMaterial,
+        axialForm,
+        heatBarModel,
+        heatPlaneModel,
+        thermalBarModel,
+        thermalBeamModel,
+        thermalFrameModel,
+        thermalTrussModel,
+        trussModel,
+        thermalTruss3dModel,
+        truss3dModel,
+        planeModel,
+        frameModel,
+        beamModel,
+        torsionModel,
+        springModel,
+        spring2dModel,
+        spring3dModel,
+        parametric,
+        round,
+      ),
   });
+  const {
+    jobHistoryController,
+    adminSecurityState,
+    workflowController,
+    selectedProject,
+    selectedProjectModels,
+    selectedAdminJob,
+    selectedAdminResult,
+    deferredProjectModels,
+    deferredModelVersions,
+    deferredJobHistory,
+    deferredResultRecords,
+    refreshHealth,
+    refreshProjects,
+    refreshSecurityEvents,
+    refreshVersions,
+    projectFlows,
+  } = sessionComposition;
+  const {
+    jobHistory,
+    setJobHistory,
+    selectedAdminJobId,
+    setSelectedAdminJobId,
+    refreshJobHistory,
+    cancelCurrentJob,
+  } = jobHistoryController;
   const {
     selectedAdminResultJobId,
     setSelectedAdminResultJobId,
@@ -771,27 +798,6 @@ export function Workbench() {
     adminResultDraft,
     setAdminResultDraft,
   } = adminSecurityState;
-
-  const workflowController = useWorkbenchWorkflowController({
-    labels: {
-      workflowCatalogLoaded: t.workflowCatalogLoaded,
-      workflowCatalogUnsupported: t.workflowCatalogUnsupported,
-      workflowCatalogQueued: t.workflowCatalogQueued,
-      workflowCatalogCompleted: t.workflowCatalogCompleted,
-      workflowCatalogFailed: t.workflowCatalogFailed,
-      initialFailed: t.initialFailed,
-      pollingDetached: t.pollingDetached,
-    },
-    jobPollTokenRef,
-    refreshJobHistory,
-    setJob,
-    setMessage,
-    openWorkflowRunsSurface: (workflowId) => {
-      setSelectedWorkflowId(workflowId);
-      setSidebarSection("workflow");
-      setWorkflowPanelTab("runs");
-    },
-  });
   const {
     workflowCatalog,
     workflowCatalogBusy,
@@ -806,21 +812,6 @@ export function Workbench() {
     refreshWorkflowCatalog,
     runWorkflowCatalogEntry,
   } = workflowController;
-  const { selectedProject, selectedProjectModels, selectedAdminJob, selectedAdminResult } = buildWorkbenchAdminSelections({
-    jobHistory,
-    resultRecords,
-    projects,
-    selectedProjectId,
-    selectedAdminJobId,
-    selectedAdminResultJobId,
-  });
-  const deferredProjectModels = useDeferredValue(selectedProjectModels);
-  const deferredModelVersions = useDeferredValue(modelVersions);
-  const deferredJobHistory = useDeferredValue(jobHistory);
-  const deferredResultRecords = useDeferredValue(resultRecords);
-  async function refreshResults() {
-    await primaryActionsController.refreshResults();
-  }
   const studyResultDerived = useWorkbenchStudyResultDerived({
     studyKind,
     result,
@@ -883,34 +874,6 @@ export function Workbench() {
     immersiveHelpDrawerOpen,
     showShortcutHints,
   });
-  const {
-    refreshHealth,
-    refreshProjects,
-    refreshSecurityEvents,
-    refreshVersions,
-  } = useWorkbenchDataRefreshController({
-    directMeshEndpointsText,
-    directMeshSelectionMode,
-    frontendRuntimeMode,
-    securityEventActionFilter,
-    securityEventRiskFilter,
-    securityEventSourceFilter,
-    securityEventStatusFilter,
-    securityEventWindowFilter,
-    selectedModelId,
-    selectedProjectId,
-    setHealth,
-    setModelVersions,
-    setProjects,
-    setProtocolAgents,
-    setSecurityEventRecords,
-    setSelectedModelId,
-    setSelectedProjectId,
-    setSelectedVersionId,
-    refreshJobHistory,
-    refreshResults,
-    securityEventWindowMs: SECURITY_EVENT_WINDOW_MS,
-  });
   const downloadResultJson = () => {
     downloadWorkbenchResultJson(resultExportEffects);
   };
@@ -938,119 +901,7 @@ export function Workbench() {
     { key: "system", label: t.rail.system, symbol: "Y" },
   ];
 
-  const { adminDataEffects, projectStorageController } = buildWorkbenchProjectFlows({
-    selectedAdminJob,
-    selectedAdminJobId,
-    selectedAdminResultJobId,
-    jobHistory,
-    projects,
-    refreshVersions,
-    setAdminFilterProjectId,
-    setAdminFilterModelVersionId,
-    setAdminJobCaseId,
-    setLibraryTab,
-    setSelectedProjectId,
-    setSelectedModelId,
-    setSelectedVersionId,
-    setModelVersions,
-    setSidebarSection,
-    setMessage,
-    language,
-    t,
-    startTransition,
-    activeMaterial,
-    createProject,
-    createModel,
-    createModelVersion,
-    updateModelVersion,
-    fetchModel,
-    fetchModelVersion,
-    refreshProjects,
-    recordHistory,
-    resetActiveResult: () => resetActiveResult(setResult, setJob),
-    setLoadedModelName,
-    setStudyKind,
-    setAxialForm,
-    setHeatBarModel,
-    setHeatPlaneModel,
-    setThermalBarModel,
-    setThermalBeamModel,
-    setThermalFrameModel,
-    setThermalTrussModel,
-    setThermalTruss3dModel,
-    setSpringModel,
-    setSpring2dModel,
-    setSpring3dModel,
-    setTrussModel,
-    setTruss3dModel,
-    setPlaneModel,
-    setFrameModel,
-    setBeamModel,
-    setTorsionModel,
-    setPlaneResultField,
-    setParametric,
-    setActiveMaterial,
-    selectedProject,
-    selectedProjectId,
-    selectedProjectModels,
-    selectedModelId,
-    selectedVersionId,
-    projectNameDraft,
-    projectDescriptionDraft,
-    loadedModelName,
-    studyKind,
-    axialForm,
-    heatBarModel,
-    heatPlaneModel,
-    thermalBarModel,
-    thermalBeamModel,
-    thermalFrameModel,
-    thermalTrussModel,
-    trussModel,
-    thermalTruss3dModel,
-    truss3dModel,
-    planeModel,
-    frameModel,
-    beamModel,
-    torsionModel,
-    springModel,
-    spring2dModel,
-    spring3dModel,
-    parametric,
-    round,
-    updateProject,
-    deleteProject,
-    updateModel,
-    deleteModel,
-    deleteModelVersion,
-    fetchModelVersions,
-    fetchJobStatus,
-    serializeCurrentModel: () =>
-      serializeCurrentModel(
-        studyKind,
-        loadedModelName,
-        activeMaterial,
-        axialForm,
-        heatBarModel,
-        heatPlaneModel,
-        thermalBarModel,
-        thermalBeamModel,
-        thermalFrameModel,
-        thermalTrussModel,
-        trussModel,
-        thermalTruss3dModel,
-        truss3dModel,
-        planeModel,
-        frameModel,
-        beamModel,
-        torsionModel,
-        springModel,
-        spring2dModel,
-        spring3dModel,
-        parametric,
-        round,
-      ),
-  });
+  const { adminDataEffects, projectStorageController } = projectFlows;
 
   const {
     isAxial,
@@ -1220,62 +1071,8 @@ export function Workbench() {
     viewportPixelWidth,
     directMeshEndpoints,
     hasAnyResult,
-  } = studyResultDerived;
-  const canProjectHeatToThermo =
-    (studyKind === "heat_bar_1d" && Boolean(heatBarResult)) ||
-    (studyKind === "heat_plane_triangle_2d" && Boolean(heatPlaneTriangleResult)) ||
-    (studyKind === "heat_plane_quad_2d" && Boolean(heatPlaneQuadResult));
-  const projectHeatToThermoStudy = () => {
-    if (studyKind === "heat_bar_1d" && heatBarResult) {
-      recordHistory(t.projectHeatToThermoAction);
-      resetActiveResult(setResult, setJob);
-      setThermalBarModel(buildThermalBarFromHeatResult(heatBarModel, heatBarResult, thermalBarModel));
-      setStudyKind("thermal_bar_1d");
-      openWorkspaceStudy("controls");
-      setMessage(t.projectedHeatToThermo);
-      return "thermal_bar_1d" as const;
-    }
-
-    if (studyKind === "heat_plane_triangle_2d" && heatPlaneTriangleResult) {
-      recordHistory(t.projectHeatToThermoAction);
-      resetActiveResult(setResult, setJob);
-      setPlaneModel(
-        buildThermalPlaneTriangleFromHeatResult(
-          heatPlaneModel as HeatPlaneTriangle2dJobInput,
-          heatPlaneTriangleResult,
-          planeModel as ThermalPlaneTriangle2dJobInput,
-          activeMaterial,
-        ),
-      );
-      setPlaneResultField("average_temperature_delta");
-      setStudyKind("thermal_plane_triangle_2d");
-      openWorkspaceStudy("controls");
-      setMessage(t.projectedHeatToThermo);
-      return "thermal_plane_triangle_2d" as const;
-    }
-
-    if (studyKind === "heat_plane_quad_2d" && heatPlaneQuadResult) {
-      recordHistory(t.projectHeatToThermoAction);
-      resetActiveResult(setResult, setJob);
-      setPlaneModel(
-        buildThermalPlaneQuadFromHeatResult(
-          heatPlaneModel as HeatPlaneQuad2dJobInput,
-          heatPlaneQuadResult,
-          planeModel as ThermalPlaneQuad2dJobInput,
-          activeMaterial,
-        ),
-      );
-      setPlaneResultField("average_temperature_delta");
-      setStudyKind("thermal_plane_quad_2d");
-      openWorkspaceStudy("controls");
-      setMessage(t.projectedHeatToThermo);
-      return "thermal_plane_quad_2d" as const;
-    }
-
-    return null;
-  };
-
-  const editControllers = useWorkbenchEditControllers({
+  } = bindWorkbenchStudyResultDerived(studyResultDerived);
+  const mainComposition = useWorkbenchMainComposition({
     t,
     language,
     activeMaterial,
@@ -1290,9 +1087,6 @@ export function Workbench() {
     isThermalTruss3d,
     memberDraftNodes,
     parametric,
-    recordHistory,
-    resetResults: () => resetActiveResult(setResult, setJob),
-    round,
     selectedElement,
     selectedNode,
     selectedTruss3dNodes,
@@ -1334,23 +1128,206 @@ export function Workbench() {
     setTorsionModel,
     setHeatBarModel,
     setBeamModel,
+    projectStorageController,
+    adminFilterModelVersionId,
+    adminFilterProjectId,
+    frontendRuntimeMode,
+    health,
+    heatBarModel,
+    heatPlaneModel,
+    immersiveHelpDrawerOpen,
+    immersiveToolDrawerOpen,
+    immersiveViewport,
+    job,
+    jobHistory,
+    libraryTab,
+    loadedModelName,
+    modelTab,
+    panelParametric,
+    planeModel,
+    projects,
+    protocolAgents,
+    redoStack,
+    resultRecords,
+    selectedAdminJobId,
+    selectedAdminResultJobId,
+    selectedModelId,
+    selectedProjectId,
+    selectedVersionId,
+    setLanguagePacks,
+    setStudyTab,
+    sidebarSection,
+    spring2dModel,
+    spring3dModel,
+    springModel,
+    studyTab,
+    systemDataTab,
+    systemPanelTab,
+    theme,
+    thermalBarModel,
+    thermalBeamModel,
+    thermalFrameModel,
+    thermalTrussModel,
+    thermalTruss3dModel,
+    torsionModel,
+    truss3dBoxSelectMode,
+    truss3dProjectionMode,
+    truss3dViewPreset,
+    undoStack,
+    viewportPanelRef,
+    setUndoStack,
+    setRedoStack,
+    setAssistantWindowOpen,
+    setTheme,
+    setFrontendRuntimeMode,
+    setDirectMeshEndpointsText,
+    setDirectMeshSelectionMode,
+    setLibraryTab,
+    setModelTab,
+    setModelToolsPage,
+    setSystemPanelTab,
+    setSystemDataTab,
+    setAdminFilterProjectId,
+    setAdminFilterModelVersionId,
+    setSelectedAdminJobId,
+    setSelectedAdminResultJobId,
+    setTruss3dViewPreset,
+    setTruss3dProjectionMode,
+    setTruss3dBoxSelectMode,
+    setTruss3dShowGrid,
+    setTruss3dShowLabels,
+    setTruss3dShowNodes,
+    setImmersiveToolDrawerOpen,
+    setImmersiveHelpDrawerOpen,
+    setTruss3dFocusRequestVersion,
+    setTruss3dResetRequestVersion,
+    workflowController,
+    resetActiveResult: () => resetActiveResult(setResult, setJob),
+    shellState,
+    workspaceState,
+    studyResultDerived,
+    fixed,
+    ensurePlaneModelMaterials,
+    ensureBeamModelMaterials,
+    ensureFrameModelMaterials,
+    defaultPlaneQuad,
+    defaultThermalPlaneQuad,
+    defaultPlaneTriangle,
+    defaultThermalPlaneTriangle,
+    defaultHeatBar1d,
+    defaultHeatPlaneQuad,
+    defaultHeatPlaneTriangle,
+    defaultThermalBar1d,
+    defaultThermalBeam1d,
+    defaultThermalFrame2d,
+    defaultThermalTruss2d,
+    defaultThermalTruss3d,
+    defaultSpring1d,
+    defaultSpring2d,
+    defaultSpring3d,
+    defaultBeam1d,
+    defaultTorsion1d,
+    defaultFrame2d,
+    buildThermalBarFromHeatResult,
+    buildThermalPlaneTriangleFromHeatResult,
+    buildThermalPlaneQuadFromHeatResult,
+    startTransition,
+    resultRefreshSeqRef,
+    fetchResults,
+    jobPollTokenRef,
+    refreshJobHistory,
+    fetchJobStatus,
+    updateJobRecord,
+    deleteJobRecord,
+    updateResultRecord,
+    deleteResultRecord,
+    downloadTextFile,
+    jobIsActive,
+    cancelCurrentJob,
+    refreshHealth,
+    refreshResults,
+    refreshProjects,
+    refreshSecurityEvents,
+    refreshVersions,
+    createProject,
+    updateProject,
+    deleteProject,
+    createModel,
+    updateModel,
+    deleteModel,
+    createModelVersion,
+    updateModelVersion,
+    deleteModelVersion,
+    resolveTruss2dJobInput,
+    resolveTruss3dJobInput,
+    resolvePlaneQuad2dJobInput,
+    resolvePlaneTriangle2dJobInput,
+    round,
+    downloadResultCsv,
+    railItems,
+    isPending,
+    selectedProjectModels,
+    securityEventRecords,
+    securityEventWindowFilter,
+    securityEventSourceFilter,
+    securityEventRiskFilter,
+    securityEventStatusFilter,
+    securityEventActionFilter,
+    setSecurityEventWindowFilter,
+    setSecurityEventSourceFilter,
+    setSecurityEventRiskFilter,
+    setSecurityEventStatusFilter,
+    setSecurityEventActionFilter,
+    scriptRecordingMode,
+    setScriptRecordingMode,
+    selectedAdminJob,
+    adminJobMessage,
+    setAdminJobMessage,
+    adminJobProjectId,
+    setAdminJobProjectId,
+    adminJobModelVersionId,
+    setAdminJobModelVersionId,
+    adminJobCaseId,
+    setAdminJobCaseId,
+    adminResultDraft,
+    setAdminResultDraft,
+    cancelJob,
+    clampChunkOffset,
+    canvasStageRef,
+    resultWindowMaxTotal,
+    handleCanvasStageScroll,
+    downloadResultJson,
+    downloadPlaneHotspotSummary,
+    downloadFrameHotspotSummary,
+    downloadFrameForceSummary,
+    localMaterialLabel,
+    activeLanguagePack,
   });
+  mainCompositionRef = mainComposition;
+
   const {
-    createProjectRecord,
-    deleteProjectRecord,
-    deleteSavedModelRecord,
-    deleteSelectedVersion,
-    downloadDatabaseSnapshot,
-    downloadProjectBundleJson,
-    downloadProjectBundleZip,
-    importProjectBundle,
-    openModelVersionById,
-    openSavedModel,
-    openSavedVersion,
-    renameSelectedVersion,
-    saveModelVersion,
-    updateProjectRecord,
-  } = projectStorageController;
+    editControllers,
+    interactionControllers,
+    flowControllers,
+    primaryActionsController,
+    assistantController,
+    topLevelActions,
+    assistantAudit,
+    uiActionController,
+    toggleImmersiveViewport,
+    recordHistory,
+    handleLanguageChange,
+    studyKindResetHandlers,
+    projectHeatToThermoStudy,
+    currentStudyFamilyHint,
+    currentStudyFamilyLabel,
+    canProjectHeatToThermo,
+    thermalBoundaryValue,
+    thermalIntentValue,
+    handleModelToolsPageChange,
+    sidebarMountProps,
+    mainShellMountProps,
+  } = bindWorkbenchMainComposition(mainComposition);
 
   const {
     addCustomMaterialToCurrentModel,
@@ -1395,246 +1372,11 @@ export function Workbench() {
     assignSelectedFrameElementMaterial,
     applyTrussSuggestion,
   } = editControllers;
-
-  const studyKindOptionGroups = buildStudyKindOptionGroups({
-    kinds: t.kinds,
-    domains: t.studyDomains,
-    families: t.studyFamilies,
-  });
-  const studyDomainOptions = buildStudyDomainOptions(t.studyDomains);
-  const currentStudyFamily = classifyStudyKindFamily(studyKind);
-  const currentStudyFamilyLabel = t.studyFamilies[currentStudyFamily];
-  const currentStudyFamilyHint = t.familyHints[currentStudyFamily];
-  const { thermalIntentValue, thermalBoundaryValue, studySummaryRows, studyControlsRows, truss3dTreeRows } =
-    buildWorkbenchStudySidebarData({
-      t,
-      language,
-      studyKind,
-      loadedModelName,
-      activeMaterial,
-      localMaterialLabel,
-      fixed,
-      isAxial,
-      isSpring,
-      isSpring1d,
-      isSpring2d,
-      isSpring3d,
-      isBeam,
-      isTorsion,
-      isTruss,
-      isTruss3d,
-      isFrameLike,
-      isFrame,
-      isPlane,
-      isHeatBar,
-      isHeatPlane,
-      isHeatPlaneTriangle,
-      isHeatPlaneQuad,
-      isThermal,
-      isThermalBar,
-      isThermalBeam,
-      isThermalFrame,
-      isThermalTruss2d,
-      isThermalPlaneTriangle,
-      isThermalPlaneQuad,
-      axialForm,
-      heatBarModel,
-      heatPlaneModel,
-      thermalBarModel,
-      thermalBeamModel,
-      thermalFrameModel,
-      thermalTrussModel,
-      thermalTruss3dModel,
-      springModel,
-      spring2dModel,
-      spring3dModel,
-      beamModel,
-      torsionModel,
-      trussModel,
-      truss3dModel,
-      frameModel,
-      activePlaneInputModel,
-      activeFrameLikeModel,
-      displayTruss3dElements,
-      truss3dTreeNodes: isSpring3d ? spring3dModel.nodes : truss3dModel.nodes,
-      selectedNode,
-      selectedTruss3dNodes,
-      memberDraftNodes,
-    });
-
-  const studyKindResetHandlers = useMemo(
-    () =>
-      createStudyKindResetHandlers({
-        activeMaterial,
-        setPlaneModel,
-        setHeatBarModel,
-        setHeatPlaneModel,
-        setThermalBarModel,
-        setThermalBeamModel,
-        setThermalFrameModel,
-        setThermalTrussModel,
-        setThermalTruss3dModel,
-        setSpringModel,
-        setSpring2dModel,
-        setSpring3dModel,
-        setBeamModel,
-        setTorsionModel,
-        setFrameModel,
-        setPlaneResultField,
-        ensurePlaneModelMaterials,
-        ensureBeamModelMaterials,
-        ensureFrameModelMaterials,
-        defaultPlaneQuad,
-        defaultThermalPlaneQuad,
-        defaultPlaneTriangle,
-        defaultThermalPlaneTriangle,
-        defaultHeatBar1d,
-        defaultHeatPlaneQuad,
-        defaultHeatPlaneTriangle,
-        defaultThermalBar1d,
-        defaultThermalBeam1d,
-        defaultThermalFrame2d,
-        defaultThermalTruss2d,
-        defaultThermalTruss3d,
-        defaultSpring1d,
-        defaultSpring2d,
-        defaultSpring3d,
-        defaultBeam1d,
-        defaultTorsion1d,
-        defaultFrame2d,
-      }),
-    [activeMaterial],
-  );
-
-  const handleLanguageChange = (nextLanguage: Language) => {
-    applyLanguagePreference(nextLanguage);
-  };
-
-  const interactionControllers = useWorkbenchInteractionControllers({
-    activeLanguagePack,
-    activeMaterial,
-    adminFilterModelVersionId,
-    adminFilterProjectId,
-    frontendRuntimeMode,
-    health,
-    heatBarModel,
-    heatPlaneModel,
-    immersiveHelpDrawerOpen,
-    immersiveToolDrawerOpen,
-    immersiveViewport,
-    job,
-    jobHistory,
-    language,
-    libraryTab,
-    loadedModelName,
-    memberDraftNodes,
-    modelTab,
-    panelParametric,
-    planeModel,
-    projects,
-    protocolAgents,
-    redoStack,
-    resultRecords,
-    selectedAdminJobId,
-    selectedAdminResultJobId,
-    selectedElement,
-    selectedModelId,
-    selectedNode,
-    selectedProjectId,
-    selectedTruss3dNodes,
-    selectedVersionId,
-    setActiveMaterial,
-    setAxialForm,
-    setBeamModel,
-    setHeatBarModel,
-    setHeatPlaneModel,
-    setLanguagePacks,
-    setLoadedModelName,
-    setMemberDraftNodes,
-    setMessage,
-    setPlaneModel,
-    setSidebarSection,
-    setSpring2dModel,
-    setSpring3dModel,
-    setSpringModel,
-    setStudyKind,
-    setStudyTab,
-    setThermalBarModel,
-    setThermalBeamModel,
-    setThermalFrameModel,
-    setThermalTrussModel,
-    setThermalTruss3dModel,
-    setTorsionModel,
-    setTruss3dModel,
-    setTrussModel,
-    sidebarSection,
-    spring2dModel,
-    spring3dModel,
-    springModel,
-    studyKind,
-    studyTab,
-    systemDataTab,
-    systemPanelTab,
-    t,
-    theme,
-    thermalBarModel,
-    thermalBeamModel,
-    thermalFrameModel,
-    thermalTrussModel,
-    thermalTruss3dModel,
-    torsionModel,
-    truss3dBoxSelectMode,
-    truss3dLinkMode,
-    truss3dModel,
-    truss3dProjectionMode,
-    truss3dViewPreset,
-    trussModel,
-    undoStack,
-    viewportPanelRef,
-    workflowCatalog,
-    workflowCatalogBusy,
-    setUndoStack,
-    setRedoStack,
-    setAssistantWindowOpen,
-    setTheme,
-    setFrontendRuntimeMode,
-    setDirectMeshEndpointsText,
-    setDirectMeshSelectionMode,
-    setLibraryTab,
-    setModelTab,
-    setModelToolsPage,
-    setSystemPanelTab,
-    setSystemDataTab,
-    setAdminFilterProjectId,
-    setAdminFilterModelVersionId,
-    setSelectedAdminJobId,
-    setSelectedAdminResultJobId,
-    setTruss3dViewPreset,
-    setTruss3dProjectionMode,
-    setTruss3dBoxSelectMode,
-    setTruss3dShowGrid,
-    setTruss3dShowLabels,
-    setTruss3dShowNodes,
-    setImmersiveToolDrawerOpen,
-    setImmersiveHelpDrawerOpen,
-    setTruss3dFocusRequestVersion,
-    setTruss3dResetRequestVersion,
-    refreshWorkflowCatalog,
-    toggleTruss3dLinkMode,
-    resetActiveResult: () => resetActiveResult(setResult, setJob),
-  });
-  const {
-    topLevelActions,
-    assistantAudit,
-    uiActionController,
-    toggleImmersiveViewport,
-  } = interactionControllers;
   const {
     buildScriptSnapshot,
     buildSnapshot,
     restoreSnapshot,
     scriptSnapshot,
-    recordHistory: recordHistoryAction,
     handleUndo,
     handleRedo,
     handleDownloadLanguagePackTemplate,
@@ -1644,9 +1386,6 @@ export function Workbench() {
     downloadSecurityEventExport,
     downloadSecurityEventCsvExport,
   } = topLevelActions;
-  function recordHistory(action: string) {
-    recordHistoryAction(action);
-  }
   const {
     assistantTransactions,
     appendScriptActionLog,
@@ -1686,202 +1425,6 @@ export function Workbench() {
     useCurrentProjectAsAdminFilter,
     useCurrentVersionAsAdminFilter,
   } = uiActionController;
-
-  const selectStudyKind = (nextStudyKind: typeof studyKind) => {
-    recordHistory(t.changeStudyType);
-    applyStudyKindSelection({
-      currentStudyKind: studyKind,
-      nextStudyKind,
-      setStudyKind,
-      resetHandlers: studyKindResetHandlers,
-    });
-  };
-
-  const openWorkspaceStudy = (tab: StudyPanelTab = "controls") => {
-    setSidebarSection("model");
-    setModelTab("tools");
-    setModelToolsPage("study");
-    setStudyTab(tab);
-  };
-
-  const handleModelToolsPageChange = (page: ModelToolsPage) => {
-    uiActionController.handleModelToolsPageChange(page, modelTab);
-  };
-  const flowControllers = useWorkbenchFlowControllers(
-    buildWorkbenchFlowControllerProps({
-      t,
-      setMessage,
-      recordHistory,
-      setAxialForm,
-      setParametric,
-      setPanelParametric,
-      startTransition,
-      resultRefreshSeqRef,
-      fetchResults,
-      setResultRecords,
-      setSelectedAdminResultJobId,
-      directMeshEndpointsText,
-      directMeshSelectionMode,
-      frontendRuntimeMode,
-      jobPollTokenRef,
-      selectedProjectId,
-      selectedVersionId,
-      setDirectMeshExecution,
-      setJob,
-      setResult,
-      studyKind,
-      axialForm,
-      beamModel,
-      frameModel,
-      heatBarModel,
-      heatPlaneModel,
-      planeModel,
-      springModel,
-      spring2dModel,
-      spring3dModel,
-      thermalBarModel,
-      thermalBeamModel,
-      thermalFrameModel,
-      thermalTrussModel,
-      thermalTruss3dModel,
-      torsionModel,
-      trussModel,
-      truss3dModel,
-      trussDiagnostics,
-      refreshJobHistory,
-      fetchJobStatus,
-      setSidebarSection,
-      setWorkflowPanelTab,
-      setSelectedWorkflowId,
-      setWorkflowRuns,
-      openWorkspaceStudy,
-      setStudyKind,
-      setHeatBarModel,
-      setHeatPlaneModel,
-      setThermalBarModel,
-      setThermalBeamModel,
-      setThermalFrameModel,
-      setThermalTrussModel,
-      setThermalTruss3dModel,
-      setSpringModel,
-      setSpring2dModel,
-      setSpring3dModel,
-      setTrussModel,
-      setTruss3dModel,
-      setPlaneModel,
-      setFrameModel,
-      setBeamModel,
-      setTorsionModel,
-      setPlaneResultField,
-      setLoadedModelName,
-      setSelectedModelId,
-      setSelectedVersionId,
-      setModelVersions,
-      setActiveMaterial,
-      setSelectedNode,
-      setSelectedElement,
-      setMemberDraftNodes,
-      activeMaterial,
-      round,
-      parametric,
-      panelParametric,
-      loadedModelName,
-      updateJobRecord,
-      deleteJobRecord,
-      selectedAdminJobId,
-      adminJobMessage,
-      adminJobProjectId,
-      adminJobModelVersionId,
-      adminJobCaseId,
-      updateResultRecord,
-      deleteResultRecord,
-      adminResultDraft,
-      downloadTextFile,
-      adminDataEffects,
-      language,
-      directMeshEndpoints,
-      health,
-      jobIsActive,
-      isTruss,
-      isTruss3d,
-      immersiveViewport,
-      hasAnyResult,
-      cancelCurrentJob,
-      applyTrussSuggestion,
-      assistantApiBaseUrl,
-      assistantApiKey,
-      assistantModel,
-      getScriptSnapshot,
-      downloadResultCsv,
-      toggleImmersiveViewport,
-      setLibraryTab,
-      setSystemPanelTab,
-      refreshHealth,
-      setTheme,
-      setFrontendRuntimeMode,
-      setDirectMeshEndpointsText,
-      setDirectMeshSelectionMode,
-      refreshResults,
-      refreshProjects,
-      refreshSecurityEvents,
-      projectNameDraft,
-      projectDescriptionDraft,
-      setProjectNameDraft,
-      setProjectDescriptionDraft,
-      refreshVersions,
-      downloadProjectBundleJson,
-      downloadProjectBundleZip,
-      createProject,
-      updateProject,
-      deleteProject,
-      createModel,
-      updateModel,
-      deleteModel,
-      createModelVersion,
-      updateModelVersion,
-      deleteModelVersion,
-      handleLanguageChange,
-      studyKindResetHandlers,
-      handleSidebarSectionChange,
-      setStudyTab,
-      setModelTab,
-      setModelToolsPage,
-      setAssistantWindowOpen,
-      setSystemDataTab,
-      ensureFrameModelMaterials,
-      ensureBeamModelMaterials,
-      resolveTruss2dJobInput,
-      resolveTruss3dJobInput,
-      resolvePlaneQuad2dJobInput,
-      resolvePlaneTriangle2dJobInput,
-      projectHeatToThermoStudy,
-      handleUndo,
-      handleRedo,
-      setTruss3dLinkMode,
-      setTruss3dFocusRequestVersion,
-      setTruss3dResetRequestVersion,
-      setTruss3dShowGrid,
-      setTruss3dShowLabels,
-      setTruss3dShowNodes,
-      setImmersiveToolDrawerOpen,
-      setImmersiveHelpDrawerOpen,
-      setTruss3dBoxSelectMode,
-      setTruss3dViewPreset,
-      setTruss3dProjectionMode,
-      setAdminFilterProjectId,
-      setAdminFilterModelVersionId,
-      setSelectedAdminJobId,
-      resolveScriptLinkedJob: (nextPayload: Record<string, unknown>) =>
-        resolveScriptLinkedJobWithDeps(nextPayload, adminDataEffects),
-      openModelVersionById,
-      openProjectContextById: (projectId: string) => openProjectContextByIdWithDeps(projectId, adminDataEffects),
-      applyJobContextToWorkbench: (linkedJob: JobState) =>
-        applyJobContextToWorkbenchWithDeps(linkedJob, adminDataEffects),
-      downloadDatabaseSnapshot,
-    }),
-  );
-  const { primaryActionsController, assistantController, invokeScriptAction } = flowControllers;
-
   const {
     runAnalysis,
     openHistoryJob,
@@ -1905,474 +1448,7 @@ export function Workbench() {
     applySelectedAdminJobContext,
     applySelectedAdminResultContext,
   } = primaryActionsController;
-
   const { assistantCards, assistantPromptPresets, requestLlmAssistantPlan } = assistantController;
-
-  const {
-    studyControlsContent,
-    modelStudyContent,
-    modelStudioContent,
-    modelMaterialsContent,
-    modelGenerateContent,
-    modelTreeContent,
-  } = buildWorkbenchModelContent(
-    buildWorkbenchModelContentProps({
-      t,
-      isAxial,
-      axialForm,
-      handleAxialFieldChange,
-      handleMaterialChange,
-      language,
-      loadedModelName,
-      studyDomainOptions,
-      studyKind,
-      studyKindOptionGroups,
-      selectStudyKind,
-      studyControlsRows,
-      isPending,
-      runAnalysis,
-      isTruss3d,
-      isFrameLike,
-      isPlane,
-      isTorsion,
-      isThermal,
-      currentStudyFamilyHint,
-      selectedNode,
-      selectedElement,
-      truss3dLinkMode,
-      undoStack,
-      redoStack,
-      isTruss,
-      addTruss3dNode,
-      addNode,
-      deleteSelectedTruss3dNode,
-      deleteSelectedNode,
-      toggleTruss3dMemberFromDraft,
-      toggleMemberFromDraft,
-      deleteSelectedTruss3dElement,
-      deleteSelectedElement,
-      toggleTruss3dLinkMode,
-      handleUndo,
-      handleRedo,
-      downloadModel,
-      setStudyKind,
-      setSidebarSection,
-      setMessage,
-      isBeam,
-      hiddenMaterialIds,
-      activeMaterial,
-      currentMaterials,
-      localMaterialLabel,
-      materialColorMap,
-      setActiveMaterial,
-      addMaterialToCurrentModel,
-      addCustomMaterialToCurrentModel,
-      importMaterials,
-      updateCurrentMaterial,
-      toggleMaterialVisibility,
-      applyMaterialToCurrentModel,
-      deleteCurrentMaterial,
-      round,
-      isHeatBar,
-      isThermalBar,
-      panelParametric,
-      parametric,
-      handlePanelParametricChange,
-      handleParametricChange,
-      generatePanelModel,
-      generateModel,
-      selectedTruss3dNodes,
-      memberDraftNodes,
-      truss3dTreeRows,
-      truss3dModel,
-      setSelectedElement,
-      setSelectedNode,
-      setSelectedTruss3dNodes,
-      setMemberDraftNodes,
-      currentStudyFamilyLabel,
-      spring3dModel,
-      spring2dModel,
-      springModel,
-      thermalBarModel,
-      thermalTrussModel,
-      activePlaneInputModel,
-      activeFrameLikeModel,
-      activeBeamLikeModel,
-      torsionModel,
-      heatBarModel,
-      planeElements,
-      displayTrussElements,
-      activeLineResultField,
-      frameTreeValueLabel,
-      trussDiagnostics,
-      toggleDraftNode,
-      setFocusedFrameElement,
-      beamModel,
-      isThermalTruss2d,
-      trussModel,
-      handleTruss3dNodePick,
-    }),
-  );
-
-  const sidebarMountProps = buildWorkbenchSidebarMountProps({
-    t,
-    railItems,
-    sidebarSection,
-    handleSidebarSectionChange,
-    studyTab,
-    handleStudyTabChange,
-    loadedModelName,
-    studyKind,
-    studyDomainOptions,
-    studyKindOptionGroups,
-    selectStudyKind,
-    studySummaryRows,
-    studyControlsRows,
-    studyControlsContent,
-    isPending,
-    runAnalysis,
-    modelTab,
-    handleModelTabChange,
-    modelToolsPage,
-    handleModelToolsPageChange,
-    isTruss3d,
-    modelStudyContent,
-    modelStudioContent,
-    modelMaterialsContent,
-    modelGenerateContent,
-    modelTreeContent,
-    workflowPanelTab,
-    handleWorkflowPanelTabChange,
-    workflowLabels: {
-      sectionTitle: t.sections.workflow,
-      overviewPageLabel: t.workflowOverviewPage,
-      catalogPageLabel: t.workflowCatalogPage,
-      builderPageLabel: t.workflowBuilderPage,
-      runsPageLabel: t.workflowRunsPage,
-      overviewHint: t.workflowOverviewHint,
-      catalogHint: t.workflowCatalogHint,
-      builderHint: t.workflowBuilderHint,
-      runsHint: t.workflowRunsHint,
-      catalogTitle: t.workflowCatalogTitle,
-      refreshLabel: t.workflowCatalogRefresh,
-      runLabel: t.workflowCatalogRun,
-      emptyCatalogLabel: t.workflowCatalogEmpty,
-      noSelectionLabel: t.workflowNoSelection,
-      nodesTitle: t.workflowNodesTitle,
-      edgesTitle: t.workflowEdgesTitle,
-      entryInputsTitle: t.workflowEntryInputsTitle,
-      outputArtifactsTitle: t.workflowOutputArtifactsTitle,
-      datasetContractTitle: t.workflowDatasetContractTitle,
-      datasetValuesTitle: t.workflowDatasetValuesTitle,
-      datasetValueLabel: t.workflowDatasetValueLabel,
-      datasetSemanticTypeLabel: t.workflowDatasetSemanticTypeLabel,
-      datasetEncodingLabel: t.workflowDatasetEncodingLabel,
-      datasetShapeLabel: t.workflowDatasetShapeLabel,
-      datasetAxesLabel: t.workflowDatasetAxesLabel,
-      datasetSchemaLabel: t.workflowDatasetSchemaLabel,
-      datasetClassLabel: t.workflowDatasetClassLabel,
-      datasetNoneLabel: t.workflowDatasetNoneLabel,
-      datasetDraftHint: t.workflowDatasetDraftHint,
-      datasetEditorTitle: t.workflowDatasetEditorTitle,
-      datasetValueSelectLabel: t.workflowDatasetValueSelectLabel,
-      datasetUnitLabel: t.workflowDatasetUnitLabel,
-      datasetMetadataLabel: t.workflowDatasetMetadataLabel,
-      datasetPortMappingsTitle: t.workflowDatasetPortMappingsTitle,
-      datasetEdgeMappingsTitle: t.workflowDatasetEdgeMappingsTitle,
-      datasetDraftLocalLabel: t.workflowDatasetDraftLocalLabel,
-      datasetUnassignedLabel: t.workflowDatasetUnassignedLabel,
-      exportGraphLabel: t.workflowExportGraphLabel,
-      exportDatasetContractLabel: t.workflowExportDatasetContractLabel,
-      operatorLabel: t.workflowOperatorLabel,
-      kindLabel: t.workflowKindLabel,
-      progressLabel: t.workflowProgressLabel,
-      currentNodeLabel: t.workflowCurrentNodeLabel,
-      latestSummaryLabel: t.workflowLatestSummaryLabel,
-      openRunLabel: t.workflowOpenRunLabel,
-      emptyRunsLabel: t.workflowRunsEmpty,
-      selectForBuilderLabel: t.workflowSelectForBuilder,
-      statusReadyLabel: t.ready,
-      statusBusyLabel: t.busy,
-    },
-    workflowCatalog,
-    workflowCatalogBusy,
-    selectedWorkflowId,
-    selectedWorkflow,
-    job,
-    latestWorkflowSummary,
-    workflowRuns,
-    refreshWorkflowCatalog,
-    setSelectedWorkflowId,
-    runWorkflowCatalogEntry,
-    openHistoryJob,
-    libraryTab,
-    handleLibraryTabChange,
-    librarySampleRows,
-    projects,
-    selectedProjectId,
-    setSelectedProjectId,
-    setSelectedModelId,
-    projectNameDraft,
-    setProjectNameDraft,
-    projectDescriptionDraft,
-    setProjectDescriptionDraft,
-    createProjectRecord,
-    updateProjectRecord,
-    deleteProjectRecord,
-    downloadProjectBundleJson,
-    downloadProjectBundleZip,
-    importProjectBundle,
-    selectedProjectModels,
-    libraryModelRows,
-    selectedModelId,
-    setLoadedModelName,
-    saveModelVersion,
-    deleteSavedModelRecord,
-    openSavedModel,
-    libraryVersionRows,
-    modelVersions,
-    selectedVersionId,
-    renameSelectedVersion,
-    deleteSelectedVersion,
-    openSavedVersion,
-    libraryJobRows,
-    jobHistory,
-    openSample,
-    refreshJobHistory,
-    refreshProjects,
-    importModel,
-    systemPanelTab,
-    handleSystemPanelTabChange,
-    health,
-    runtimeBackendRows,
-    runtimeProtocolRows,
-    runtimeProtocolMethods,
-    securityUi,
-    runtimeSecurityRows,
-    runtimeAuditSummaryRows,
-    runtimeAuditTrendBars,
-    runtimeAuditSourceStatusFacets,
-    runtimeAuditStudyFacets,
-    runtimeAuditProjectFacets,
-    runtimeAuditModelVersionFacets,
-    securityEventRecords,
-    securityEventWindowFilter,
-    securityEventSourceFilter,
-    securityEventRiskFilter,
-    securityEventStatusFilter,
-    securityEventActionFilter,
-    setSecurityEventWindowFilter,
-    setSecurityEventSourceFilter,
-    setSecurityEventRiskFilter,
-    setSecurityEventStatusFilter,
-    setSecurityEventActionFilter,
-    refreshSecurityEvents,
-    downloadSecurityEventExport,
-    downloadSecurityEventCsvExport,
-    runtimeAuditEntries,
-    protocolAgents,
-    protocolAgentCards,
-    runtimeWatchdogRows,
-    theme,
-    language,
-    frontendRuntimeMode,
-    directMeshSelectionMode,
-    directMeshEndpointsText,
-    controlPlaneApiToken,
-    clusterApiToken,
-    directMeshApiToken,
-    showShortcutHints,
-    immersiveGuardrails,
-    languagePacks,
-    languagePackCatalogRows,
-    setTheme,
-    handleLanguageChange,
-    handleDownloadLanguagePackTemplate,
-    handleExportInstalledLanguagePack,
-    handleImportLanguagePack,
-    handleRemoveLanguagePack,
-    setFrontendRuntimeMode,
-    setDirectMeshSelectionMode,
-    setDirectMeshEndpointsText,
-    setControlPlaneApiToken,
-    setClusterApiToken,
-    setDirectMeshApiToken,
-    setShowShortcutHints,
-    setImmersiveGuardrails,
-    downloadDatabaseSnapshot,
-    scriptActionLog,
-    getScriptSnapshot,
-    scriptRecordingMode,
-    invokeScriptAction,
-    setScriptRecordingMode,
-    scriptSnapshot,
-    systemDataTab,
-    handleSystemDataTabChange,
-    adminJobRows,
-    selectedAdminJobId,
-    handleSelectAdminJob,
-    selectedAdminJob,
-    adminJobMessage,
-    setAdminJobMessage,
-    adminJobProjectId,
-    setAdminJobProjectId,
-    adminJobModelVersionId,
-    setAdminJobModelVersionId,
-    adminJobCaseId,
-    setAdminJobCaseId,
-    saveAdminJobRecord,
-    deleteAdminJobRecord,
-    adminResultRows,
-    selectedAdminResultJobId,
-    handleSelectAdminResult,
-    adminResultDraft,
-    setAdminResultDraft,
-    saveAdminResultRecord,
-    applySelectedAdminResultContext,
-    openSelectedAdminResultProject,
-    openSelectedAdminResultVersion,
-    exportAdminResultRecord,
-    deleteAdminResultRecord,
-    adminFilterProjectId,
-    handleAdminFilterProjectChange,
-    adminFilterModelVersionId,
-    handleAdminFilterModelVersionChange,
-    useCurrentProjectAsAdminFilter,
-    useCurrentVersionAsAdminFilter,
-    clearAdminFilters,
-    applySelectedAdminJobContext,
-    openSelectedAdminJobProject,
-    openSelectedAdminJobVersion,
-    cancelCurrentJob,
-    cancelJob,
-    setMessage,
-  });
-
-  const mainShellMountProps = buildWorkbenchMainShellComposition({
-    t,
-    shellState,
-    workspaceState,
-    studyResultDerived,
-    editControllers,
-    interactionControllers,
-    flowControllers,
-    viewportPanelRef,
-    canvasStageRef,
-    resultWindowMaxTotal,
-    handleCanvasStageScroll,
-    openSample,
-    openSavedModel,
-    openHistoryJob,
-    selectedProjectModels,
-    currentStudyFamilyLabel,
-    currentStudyFamilyHint,
-    isPending,
-    canProjectHeatToThermo,
-    projectHeatToThermoStudy,
-    clampChunkOffset,
-    recordHistory,
-    drag3dHistoryCapturedRef,
-    jobIsActive,
-    cancelCurrentJob,
-    downloadResultJson,
-    downloadResultCsv,
-    downloadPlaneHotspotSummary,
-    downloadFrameHotspotSummary,
-    downloadFrameForceSummary,
-    tipDisplacement:
-      isAxial
-        ? scientific(axialResult?.tip_displacement)
-        : isHeatBar
-          ? scientific(heatBarResult?.max_temperature)
-          : isHeatPlane
-            ? scientific(
-                isHeatPlaneTriangle
-                  ? heatPlaneTriangleResult?.max_temperature
-                  : heatPlaneQuadResult?.max_temperature,
-              )
-            : isThermalTruss2d
-              ? scientific(thermalTrussResult?.max_displacement)
-              : studyKind === "thermal_truss_3d"
-                ? scientific(thermalTruss3dResult?.max_displacement)
-                : isTruss
-                  ? scientific(trussResult?.max_displacement)
-                  : isSpring3d
-                    ? scientific(spring3dResult?.max_displacement)
-                    : studyKind === "truss_3d"
-                      ? scientific(truss3dResult?.max_displacement)
-                      : isThermalBar
-                        ? scientific(thermalBarResult?.max_displacement)
-                        : isSpring
-                          ? scientific(activeSpringResult?.max_displacement)
-                          : isBeam
-                            ? scientific(activeBeamLikeResult?.max_displacement)
-                            : isTorsion
-                              ? scientific(torsionResult?.max_rotation)
-                              : isFrameLike
-                                ? scientific(activeFrameLikeResult?.max_displacement)
-                                : scientific(planeResult?.max_displacement),
-    maxStressValue: scientific(
-      isAxial
-        ? axialResult?.max_stress
-        : isHeatBar
-          ? heatBarResult?.max_heat_flux
-          : isHeatPlane
-            ? isHeatPlaneTriangle
-              ? heatPlaneTriangleResult?.max_heat_flux
-              : heatPlaneQuadResult?.max_heat_flux
-            : isThermalTruss2d
-              ? thermalTrussResult?.max_stress
-              : studyKind === "thermal_truss_3d"
-                ? thermalTruss3dResult?.max_stress
-                : isTruss
-                  ? trussResult?.max_stress
-                  : isSpring3d
-                    ? spring3dResult?.max_force
-                    : studyKind === "truss_3d"
-                      ? truss3dResult?.max_stress
-                      : isThermalBar
-                        ? thermalBarResult?.max_stress
-                        : isSpring
-                          ? activeSpringResult?.max_force
-                          : isBeam
-                            ? activeBeamLikeResult?.max_stress
-                            : isTorsion
-                              ? torsionResult?.max_stress
-                              : isFrameLike
-                                ? activeFrameLikeResult?.max_stress
-                                : planeResult?.max_stress,
-    ),
-    reactionValue:
-      isAxial
-        ? scientific(axialResult?.reaction_force)
-        : isHeatBar
-          ? scientific(heatBarResult?.max_heat_flux)
-          : isThermalBar
-            ? scientific(thermalBarResult?.max_axial_force)
-            : isThermalTruss2d
-              ? scientific(thermalTrussResult?.max_axial_force)
-              : isThermalTruss3d
-                ? scientific(thermalTruss3dResult?.max_axial_force)
-                : isSpring
-                  ? scientific(activeSpringResult?.max_force)
-                  : isTorsion
-                    ? scientific(torsionResult?.max_torque)
-                    : isFrameLike
-                      ? scientific(activeFrameLikeResult?.max_moment)
-                      : isBeam
-                        ? scientific(activeBeamLikeResult?.max_moment)
-                        : "--",
-    frameMaxRotationValue:
-      isFrameLike
-        ? scientific(activeFrameLikeResult?.max_rotation)
-        : isBeam
-          ? scientific(activeBeamLikeResult?.max_rotation)
-          : isTorsion
-            ? scientific(torsionResult?.max_rotation)
-            : undefined,
-    thermalPlaneMaxTemperatureDelta:
-      planeResult && "max_temperature_delta" in planeResult ? planeResult.max_temperature_delta : undefined,
-  });
 
   return (
     <div className="workbench-shell">
