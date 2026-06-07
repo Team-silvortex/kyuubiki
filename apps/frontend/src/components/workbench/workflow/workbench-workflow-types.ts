@@ -25,6 +25,7 @@ export type WorkflowSidebarLabels = {
   catalogTitle: string;
   refreshLabel: string;
   runLabel: string;
+  runDraftLabel: string;
   emptyCatalogLabel: string;
   noSelectionLabel: string;
   nodesTitle: string;
@@ -76,6 +77,8 @@ export type WorkflowSidebarLabels = {
   datasetAxisIdLabel: string;
   datasetAxisSizeLabel: string;
   datasetAxisSemanticLabel: string;
+  inputArtifactsTitle: string;
+  inputArtifactsHint: string;
   importGraphLabel: string;
   importDatasetContractLabel: string;
   importSuccessLabel: string;
@@ -90,6 +93,7 @@ export type WorkflowSidebarLabels = {
   draftSavedLabel: string;
   draftLoadedLabel: string;
   draftDeletedLabel: string;
+  runDraftInvalidInputsLabel: string;
   validationTitle: string;
   validationOkLabel: string;
   validationFixLabel: string;

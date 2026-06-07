@@ -1,8 +1,18 @@
 "use client";
 
 import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
-import { fetchJobStatus, fetchWorkflowCatalog, submitWorkflowCatalogJob, type JobEnvelope, type WorkflowCatalogEntry, type WorkflowGraphJobResult } from "@/lib/api";
+import {
+  fetchJobStatus,
+  fetchWorkflowCatalog,
+  submitWorkflowCatalogJob,
+  submitWorkflowGraphJob,
+  type JobEnvelope,
+  type WorkflowCatalogEntry,
+  type WorkflowGraphDefinition,
+  type WorkflowGraphJobResult,
+} from "@/lib/api";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
+import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
 
 type WorkflowControllerLabels = {
   workflowCatalogLoaded: string;
@@ -22,34 +32,6 @@ type UseWorkbenchWorkflowControllerArgs = {
   setMessage: Dispatch<SetStateAction<string>>;
   openWorkflowRunsSurface: (workflowId: string) => void;
 };
-
-function builtInWorkflowSampleInputArtifacts(workflowId: string): Record<string, unknown> | null {
-  if (workflowId !== "workflow.heat-to-thermo-quad-2d") {
-    return null;
-  }
-
-  return {
-    heat_model: {
-      nodes: [
-        { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-        { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
-        { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-        { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-      ],
-      elements: [
-        {
-          id: "hq0",
-          node_i: 0,
-          node_j: 1,
-          node_k: 2,
-          node_l: 3,
-          thickness: 0.02,
-          conductivity: 45,
-        },
-      ],
-    },
-  };
-}
 
 export function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJobResult {
   return (
@@ -120,8 +102,14 @@ export function useWorkbenchWorkflowController({
     }
   }, [labels.initialFailed, labels.workflowCatalogLoaded, setMessage]);
 
-  const runWorkflowCatalogEntry = useCallback(async (workflowId: string) => {
-    const inputArtifacts = builtInWorkflowSampleInputArtifacts(workflowId);
+  const runWorkflowJob = useCallback(async (params: {
+    sourceWorkflowId: string;
+    displayWorkflowId: string;
+    graph?: WorkflowGraphDefinition;
+    inputArtifacts?: Record<string, unknown>;
+  }) => {
+    const inputArtifacts =
+      params.inputArtifacts ?? builtInWorkflowSampleInputArtifacts(params.sourceWorkflowId);
     if (!inputArtifacts) {
       setMessage(labels.workflowCatalogUnsupported);
       return;
@@ -130,13 +118,15 @@ export function useWorkbenchWorkflowController({
     setWorkflowCatalogBusy(true);
 
     try {
-      const payload = await submitWorkflowCatalogJob(workflowId, inputArtifacts);
-      openWorkflowRunsSurface(workflowId);
+      const payload = params.graph
+        ? await submitWorkflowGraphJob(params.graph, inputArtifacts)
+        : await submitWorkflowCatalogJob(params.sourceWorkflowId, inputArtifacts);
+      openWorkflowRunsSurface(params.displayWorkflowId);
       setJob(payload.job);
       setWorkflowRuns((current) =>
         upsertWorkflowRunRecord(current, {
           jobId: payload.job.job_id,
-          workflowId,
+          workflowId: params.displayWorkflowId,
           status: payload.job.status,
           progress: payload.job.progress ?? 0,
           currentNode: payload.job.message ?? null,
@@ -144,7 +134,7 @@ export function useWorkbenchWorkflowController({
         }),
       );
       await refreshJobHistory();
-      setMessage(`${labels.workflowCatalogQueued}: ${workflowId}`);
+      setMessage(`${labels.workflowCatalogQueued}: ${params.displayWorkflowId}`);
 
       const pollToken = ++jobPollTokenRef.current;
 
@@ -158,7 +148,7 @@ export function useWorkbenchWorkflowController({
         setWorkflowRuns((current) =>
           upsertWorkflowRunRecord(current, {
             jobId: next.job.job_id,
-            workflowId,
+            workflowId: params.displayWorkflowId,
             status: next.job.status,
             progress: next.job.progress ?? 0,
             currentNode:
@@ -211,6 +201,27 @@ export function useWorkbenchWorkflowController({
     setMessage,
   ]);
 
+  const runWorkflowCatalogEntry = useCallback(
+    async (workflowId: string) =>
+      runWorkflowJob({ sourceWorkflowId: workflowId, displayWorkflowId: workflowId }),
+    [runWorkflowJob],
+  );
+
+  const runWorkflowDraft = useCallback(
+    async (
+      workflowId: string,
+      graph: WorkflowGraphDefinition,
+      inputArtifacts: Record<string, unknown>,
+    ) =>
+      runWorkflowJob({
+        sourceWorkflowId: workflowId,
+        displayWorkflowId: graph.id || workflowId,
+        graph,
+        inputArtifacts,
+      }),
+    [runWorkflowJob],
+  );
+
   const selectedWorkflow = useMemo(
     () => workflowCatalog.find((entry) => entry.id === selectedWorkflowId) ?? workflowCatalog[0] ?? null,
     [selectedWorkflowId, workflowCatalog],
@@ -231,5 +242,6 @@ export function useWorkbenchWorkflowController({
     latestWorkflowSummary,
     refreshWorkflowCatalog,
     runWorkflowCatalogEntry,
+    runWorkflowDraft,
   };
 }

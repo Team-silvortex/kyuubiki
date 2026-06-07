@@ -48,6 +48,7 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     refreshWorkflowCatalog: workflowController.refreshWorkflowCatalog,
     setSelectedWorkflowId: workflowController.setSelectedWorkflowId,
     runWorkflowCatalogEntry: workflowController.runWorkflowCatalogEntry,
+    runWorkflowDraft: workflowController.runWorkflowDraft,
     openHistoryJob: primaryActionsController.openHistoryJob,
     libraryTab: workspaceState.libraryTab,
     handleLibraryTabChange: uiActionController.handleLibraryTabChange,

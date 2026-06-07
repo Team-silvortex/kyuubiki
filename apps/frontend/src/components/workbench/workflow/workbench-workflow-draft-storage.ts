@@ -11,10 +11,20 @@ export type StoredWorkflowDraft = {
   name: string;
   savedAt: string;
   graph: WorkflowGraphDefinition;
+  inputArtifactTexts?: Record<string, string>;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function asStringRecord(value: unknown): Record<string, string> | undefined {
+  if (!isRecord(value)) return undefined;
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      ([key, entryValue]) => typeof key === "string" && typeof entryValue === "string",
+    ),
+  ) as Record<string, string>;
 }
 
 function readStoredDrafts(): StoredWorkflowDraft[] {
@@ -43,6 +53,7 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
           name: entry.name,
           savedAt: entry.savedAt,
           graph,
+          inputArtifactTexts: asStringRecord(entry.inputArtifactTexts),
         },
       ];
     });
@@ -72,6 +83,7 @@ export function saveStoredWorkflowDraft(params: {
   workflowId: string;
   workflowName: string;
   graph: WorkflowGraphDefinition;
+  inputArtifactTexts?: Record<string, string>;
 }): StoredWorkflowDraft {
   const nextRecord: StoredWorkflowDraft = {
     id: `draft_${Date.now()}`,
@@ -79,6 +91,7 @@ export function saveStoredWorkflowDraft(params: {
     name: buildDraftName(params.workflowName, params.graph),
     savedAt: new Date().toISOString(),
     graph: params.graph,
+    inputArtifactTexts: params.inputArtifactTexts,
   };
   const next = [nextRecord, ...readStoredDrafts()].slice(0, 40);
   writeStoredDrafts(next);

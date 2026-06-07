@@ -1,6 +1,6 @@
 "use client";
 
-import type { JobState, WorkflowCatalogEntry } from "@/lib/api";
+import type { JobState, WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 
 import { WorkbenchWorkflowSidebar } from "@/components/workbench/workflow/workbench-workflow-sidebar";
 import type {
@@ -23,6 +23,11 @@ type WorkbenchWorkflowSectionMountProps = {
   refreshWorkflowCatalog: () => Promise<void>;
   setSelectedWorkflowId: (workflowId: string | null) => void;
   runWorkflowCatalogEntry: (workflowId: string) => void;
+  runWorkflowDraft: (
+    workflowId: string,
+    graph: WorkflowGraphDefinition,
+    inputArtifacts: Record<string, unknown>,
+  ) => void;
   openHistoryJob: (jobId: string) => void;
 };
 
@@ -40,6 +45,7 @@ export function WorkbenchWorkflowSectionMount({
   refreshWorkflowCatalog,
   setSelectedWorkflowId,
   runWorkflowCatalogEntry,
+  runWorkflowDraft,
   openHistoryJob,
 }: WorkbenchWorkflowSectionMountProps) {
   return (
@@ -57,6 +63,7 @@ export function WorkbenchWorkflowSectionMount({
       onRefreshWorkflowCatalog={() => void refreshWorkflowCatalog()}
       onSelectWorkflow={(workflowId) => setSelectedWorkflowId(workflowId)}
       onRunWorkflowCatalog={runWorkflowCatalogEntry}
+      onRunWorkflowDraft={runWorkflowDraft}
       onOpenWorkflowRun={openHistoryJob}
     />
   );

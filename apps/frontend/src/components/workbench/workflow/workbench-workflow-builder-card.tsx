@@ -21,6 +21,12 @@ import {
   type StoredWorkflowDraft,
 } from "@/components/workbench/workflow/workbench-workflow-draft-storage";
 import { WorkbenchWorkflowDraftCard } from "@/components/workbench/workflow/workbench-workflow-draft-card";
+import { WorkbenchWorkflowBuilderToolbar } from "@/components/workbench/workflow/workbench-workflow-builder-toolbar";
+import {
+  buildWorkflowInputArtifactTexts,
+  parseWorkflowInputArtifactTexts,
+} from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
+import { WorkbenchWorkflowInputArtifactsCard } from "@/components/workbench/workflow/workbench-workflow-input-artifacts-card";
 import { WorkbenchWorkflowArtifactCard } from "@/components/workbench/workflow/workbench-workflow-artifact-card";
 import {
   buildDraftArtifact,
@@ -37,6 +43,7 @@ import { createWorkflowTopologyActions } from "@/components/workbench/workflow/w
 import { validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card";
+import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
 import { WorkbenchWorkflowTopologyCard } from "@/components/workbench/workflow/workbench-workflow-topology-card";
 import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
 
@@ -44,14 +51,21 @@ type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
   selectedWorkflow: WorkflowCatalogEntry | null;
   onRunWorkflowCatalog: (workflowId: string) => void;
+  onRunWorkflowDraft: (
+    workflowId: string,
+    graph: WorkflowGraphDefinition,
+    inputArtifacts: Record<string, unknown>,
+  ) => void;
 };
 
 export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
   onRunWorkflowCatalog,
+  onRunWorkflowDraft,
 }: WorkbenchWorkflowBuilderCardProps) {
   const [draftGraph, setDraftGraph] = useState<WorkflowGraphDefinition | null>(null);
+  const [draftInputTexts, setDraftInputTexts] = useState<Record<string, string>>({});
   const [selectedDatasetValueId, setSelectedDatasetValueId] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [savedDrafts, setSavedDrafts] = useState<StoredWorkflowDraft[]>([]);
@@ -83,6 +97,14 @@ export function WorkbenchWorkflowBuilderCard({
         : nextDraft.output_artifacts ?? [];
     }
     setDraftGraph(nextDraft);
+    setDraftInputTexts(
+      selectedWorkflow
+        ? buildWorkflowInputArtifactTexts(
+            nextDraft?.entry_inputs ?? [],
+            builtInWorkflowSampleInputArtifacts(selectedWorkflow.id),
+          )
+        : {},
+    );
     setSelectedDatasetValueId(nextDraft?.dataset_contract?.values?.[0]?.id ?? null);
     setImportMessage(null);
     resetBuilderFocus();
@@ -96,6 +118,7 @@ export function WorkbenchWorkflowBuilderCard({
   const selectedOutputArtifacts = selectedGraph?.output_artifacts ?? [];
   const selectedDatasetContract = selectedGraph?.dataset_contract ?? null;
   const selectedDatasetValues = selectedDatasetContract?.values ?? [];
+  const parsedDraftInputs = useMemo(() => parseWorkflowInputArtifactTexts(draftInputTexts), [draftInputTexts]);
   const validationIssues = useMemo(
     () =>
       validateWorkflowGraphDefinition(
@@ -364,15 +387,31 @@ export function WorkbenchWorkflowBuilderCard({
       workflowId: selectedWorkflow.id,
       workflowName: selectedWorkflow.name,
       graph: selectedGraph,
+      inputArtifactTexts: draftInputTexts,
     });
     setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id));
     setImportMessage(labels.draftSavedLabel);
+  }
+  function runCurrentDraft() {
+    if (!selectedWorkflow || !selectedGraph) return;
+    if (parsedDraftInputs.invalidKeys.length > 0) {
+      setImportMessage(labels.runDraftInvalidInputsLabel);
+      return;
+    }
+    onRunWorkflowDraft(selectedWorkflow.id, selectedGraph, parsedDraftInputs.inputArtifacts);
   }
   function loadSavedDraft(draftId: string) {
     const draft = savedDrafts.find((entry) => entry.id === draftId);
     if (!draft) return;
     const nextGraph = cloneWorkflowGraph(draft.graph);
     setDraftGraph(nextGraph);
+    setDraftInputTexts(
+      draft.inputArtifactTexts ??
+        buildWorkflowInputArtifactTexts(
+          nextGraph?.entry_inputs ?? [],
+          selectedWorkflow ? builtInWorkflowSampleInputArtifacts(selectedWorkflow.id) : null,
+        ),
+    );
     setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
     resetBuilderFocus();
     setImportMessage(labels.draftLoadedLabel);
@@ -435,6 +474,10 @@ export function WorkbenchWorkflowBuilderCard({
     if (file) void importDatasetContractFile(file);
     event.target.value = "";
   }
+
+  function updateDraftInputText(nodeId: string, value: string) {
+    setDraftInputTexts((current) => ({ ...current, [nodeId]: value }));
+  }
   if (!selectedWorkflow) {
     return (
       <section className="sidebar-card sidebar-card--compact">
@@ -445,56 +488,35 @@ export function WorkbenchWorkflowBuilderCard({
 
   return (
     <section className="sidebar-card sidebar-card--compact" ref={builderRootRef}>
-      <div className="card-head">
-        <h2>{selectedWorkflow.name}</h2>
-        <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
-      </div>
-      <p className="card-copy">{selectedWorkflow.summary}</p>
-      <div className="button-row">
-        <button onClick={() => onRunWorkflowCatalog(selectedWorkflow.id)} type="button">
-          {labels.runLabel}
-        </button>
-        <button onClick={saveCurrentDraft} type="button">
-          {labels.saveDraftLabel}
-        </button>
-        <button onClick={() => graphInputRef.current?.click()} type="button">
-          {labels.importGraphLabel}
-        </button>
-        <button onClick={() => datasetInputRef.current?.click()} type="button">
-          {labels.importDatasetContractLabel}
-        </button>
-        <button onClick={exportDraftWorkflowGraph} type="button">
-          {labels.exportGraphLabel}
-        </button>
-        <button
-          disabled={!selectedDatasetContract}
-          onClick={exportDraftDatasetContract}
-          type="button"
-        >
-          {labels.exportDatasetContractLabel}
-        </button>
-      </div>
-      <input
-        accept="application/json,.json"
-        hidden
-        onChange={handleGraphFileChange}
-        ref={graphInputRef}
-        type="file"
+      <WorkbenchWorkflowBuilderToolbar
+        canExportDataset={Boolean(selectedDatasetContract)}
+        canRunDraft={Boolean(selectedGraph)}
+        datasetInputRef={datasetInputRef}
+        graphInputRef={graphInputRef}
+        importMessage={importMessage}
+        labels={labels}
+        onDatasetFileChange={handleDatasetFileChange}
+        onExportDataset={exportDraftDatasetContract}
+        onExportGraph={exportDraftWorkflowGraph}
+        onGraphFileChange={handleGraphFileChange}
+        onRunCatalog={() => onRunWorkflowCatalog(selectedWorkflow.id)}
+        onRunDraft={runCurrentDraft}
+        onSaveDraft={saveCurrentDraft}
+        selectedWorkflow={selectedWorkflow}
       />
-      <input
-        accept="application/json,.json"
-        hidden
-        onChange={handleDatasetFileChange}
-        ref={datasetInputRef}
-        type="file"
-      />
-      {importMessage ? <p className="card-copy">{importMessage}</p> : null}
       <WorkbenchWorkflowDraftCard
         drafts={savedDrafts}
         labels={labels}
         onDeleteDraft={deleteSavedDraft}
         onLoadDraft={loadSavedDraft}
         onSaveDraft={saveCurrentDraft}
+      />
+      <WorkbenchWorkflowInputArtifactsCard
+        entryInputs={selectedEntryInputs}
+        inputTexts={draftInputTexts}
+        invalidKeys={parsedDraftInputs.invalidKeys}
+        labels={labels}
+        onChangeInputText={updateDraftInputText}
       />
       <WorkbenchWorkflowValidationCard
         labels={labels}
@@ -509,8 +531,7 @@ export function WorkbenchWorkflowBuilderCard({
         selectedEdges={selectedEdges}
         selectedEntryInputsCount={selectedEntryInputs.length}
         selectedNodes={selectedNodes}
-        selectedOutputArtifactsCount={selectedOutputArtifacts.length}
-      />
+        selectedOutputArtifactsCount={selectedOutputArtifacts.length} />
       <WorkbenchWorkflowTopologyCard
         focusedEdgeId={focusedEdgeId}
         focusedNodeId={focusedNodeId}

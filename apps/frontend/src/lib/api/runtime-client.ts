@@ -7,6 +7,7 @@ import type {
   JobState,
   ProtocolAgentListPayload,
   WorkflowCatalogPayload,
+  WorkflowGraphDefinition,
   WorkflowGraphJobResult,
 } from "./index";
 import { requestJson } from "./core";
@@ -40,6 +41,17 @@ export function submitWorkflowCatalogJob(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ input_artifacts: inputArtifacts }),
+  });
+}
+
+export function submitWorkflowGraphJob(
+  graph: WorkflowGraphDefinition,
+  inputArtifacts: Record<string, unknown>,
+): Promise<JobEnvelope<WorkflowGraphJobResult>> {
+  return requestJson<JobEnvelope<WorkflowGraphJobResult>>("/api/v1/workflows/graph/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ graph, input_artifacts: inputArtifacts }),
   });
 }
 

@@ -3,6 +3,7 @@
 import type {
   JobState,
   WorkflowCatalogEntry,
+  WorkflowGraphDefinition,
 } from "@/lib/api";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
@@ -26,6 +27,11 @@ type WorkbenchWorkflowSidebarProps = {
   onRefreshWorkflowCatalog: () => void;
   onSelectWorkflow: (workflowId: string) => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
+  onRunWorkflowDraft: (
+    workflowId: string,
+    graph: WorkflowGraphDefinition,
+    inputArtifacts: Record<string, unknown>,
+  ) => void;
   onOpenWorkflowRun: (jobId: string) => void;
 };
 
@@ -49,6 +55,7 @@ export function WorkbenchWorkflowSidebar({
   onRefreshWorkflowCatalog,
   onSelectWorkflow,
   onRunWorkflowCatalog,
+  onRunWorkflowDraft,
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
@@ -191,6 +198,7 @@ export function WorkbenchWorkflowSidebar({
         <WorkbenchWorkflowBuilderCard
           labels={labels}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
+          onRunWorkflowDraft={onRunWorkflowDraft}
           selectedWorkflow={selectedWorkflow}
         />
       ) : null}
