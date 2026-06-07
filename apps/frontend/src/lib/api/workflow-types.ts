@@ -71,6 +71,8 @@ export type WorkflowGraphDefinition = {
   name?: string;
   version?: string;
   dataset_contract?: WorkflowDatasetContract;
+  entry_inputs?: WorkflowCatalogEntryArtifact[];
+  output_artifacts?: WorkflowCatalogEntryArtifact[];
   entry_nodes?: string[];
   output_nodes?: string[];
   defaults?: Record<string, unknown>;

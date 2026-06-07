@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type {
+  WorkflowCatalogEntryArtifact,
+  WorkflowDatasetAxis,
   WorkflowCatalogEntry,
   WorkflowDatasetContract,
   WorkflowDatasetValueInfo,
@@ -13,6 +15,9 @@ import {
   mergeDatasetContractIntoGraph,
   readJsonFile,
 } from "@/components/workbench/workflow/workbench-workflow-builder-import";
+import { WorkbenchWorkflowArtifactCard } from "@/components/workbench/workflow/workbench-workflow-artifact-card";
+import { validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
+import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
@@ -23,6 +28,14 @@ type WorkbenchWorkflowBuilderCardProps = {
 function cloneWorkflowGraph(graph: WorkflowGraphDefinition | null): WorkflowGraphDefinition | null {
   if (!graph) return null;
   return JSON.parse(JSON.stringify(graph)) as WorkflowGraphDefinition;
+}
+
+function buildDraftArtifact(nextIndex: number): WorkflowCatalogEntryArtifact {
+  return {
+    node_id: `node_${nextIndex}`,
+    artifact_type: "artifact/json",
+    description: "",
+  };
 }
 
 function ensureDatasetContract(
@@ -40,6 +53,18 @@ function ensureDatasetContract(
     };
   }
   return graph.dataset_contract;
+}
+
+function buildDraftDatasetValue(nextIndex: number): WorkflowDatasetValueInfo {
+  return {
+    id: `value_${nextIndex}`,
+    data_class: "field",
+    element_type: "scalar",
+    shape: { axes: [] },
+    semantic_type: "result/derived",
+    encoding: "json",
+    unit: "",
+  };
 }
 
 function slugifyWorkflowAssetName(value: string): string {
@@ -77,6 +102,14 @@ export function WorkbenchWorkflowBuilderCard({
 
   useEffect(() => {
     const nextDraft = cloneWorkflowGraph(selectedWorkflow?.graph ?? null);
+    if (nextDraft) {
+      nextDraft.entry_inputs = selectedWorkflow?.entry_inputs
+        ? [...selectedWorkflow.entry_inputs]
+        : nextDraft.entry_inputs ?? [];
+      nextDraft.output_artifacts = selectedWorkflow?.output_artifacts
+        ? [...selectedWorkflow.output_artifacts]
+        : nextDraft.output_artifacts ?? [];
+    }
     setDraftGraph(nextDraft);
     setSelectedDatasetValueId(nextDraft?.dataset_contract?.values?.[0]?.id ?? null);
     setImportMessage(null);
@@ -85,8 +118,19 @@ export function WorkbenchWorkflowBuilderCard({
   const selectedGraph = draftGraph;
   const selectedNodes = selectedGraph?.nodes ?? [];
   const selectedEdges = selectedGraph?.edges ?? [];
+  const selectedEntryInputs = selectedGraph?.entry_inputs ?? [];
+  const selectedOutputArtifacts = selectedGraph?.output_artifacts ?? [];
   const selectedDatasetContract = selectedGraph?.dataset_contract ?? null;
   const selectedDatasetValues = selectedDatasetContract?.values ?? [];
+  const validationIssues = useMemo(
+    () =>
+      validateWorkflowGraphDefinition(
+        selectedGraph,
+        selectedEntryInputs,
+        selectedOutputArtifacts,
+      ),
+    [selectedGraph, selectedEntryInputs, selectedOutputArtifacts],
+  );
   const selectedDatasetValue = useMemo(
     () =>
       selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ??
@@ -142,6 +186,112 @@ export function WorkbenchWorkflowBuilderCard({
     });
   }
 
+  function updateArtifacts(
+    field: "entry_inputs" | "output_artifacts",
+    updater: (artifacts: WorkflowCatalogEntryArtifact[]) => WorkflowCatalogEntryArtifact[],
+  ) {
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const next = cloneWorkflowGraph(current);
+      if (!next) return current;
+      next[field] = updater([...(next[field] ?? [])]);
+      return next;
+    });
+  }
+
+  function addArtifact(field: "entry_inputs" | "output_artifacts") {
+    const nextIndex = ((selectedGraph?.[field] ?? []).length || 0) + 1;
+    updateArtifacts(field, (artifacts) => [...artifacts, buildDraftArtifact(nextIndex)]);
+  }
+
+  function removeArtifact(field: "entry_inputs" | "output_artifacts", index: number) {
+    updateArtifacts(field, (artifacts) => artifacts.filter((_, artifactIndex) => artifactIndex !== index));
+  }
+
+  function updateArtifact(
+    field: "entry_inputs" | "output_artifacts",
+    index: number,
+    updater: (artifact: WorkflowCatalogEntryArtifact) => WorkflowCatalogEntryArtifact,
+  ) {
+    updateArtifacts(field, (artifacts) =>
+      artifacts.map((artifact, artifactIndex) =>
+        artifactIndex === index ? updater(artifact) : artifact,
+      ),
+    );
+  }
+
+  function addDatasetValue() {
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const next = cloneWorkflowGraph(current);
+      if (!next) return current;
+      const contract = ensureDatasetContract(next);
+      if (!contract) return current;
+      const nextValue = buildDraftDatasetValue(contract.values.length + 1);
+      contract.values = [...contract.values, nextValue];
+      setSelectedDatasetValueId(nextValue.id);
+      return next;
+    });
+  }
+
+  function removeSelectedDatasetValue() {
+    if (!selectedDatasetValue) return;
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const next = cloneWorkflowGraph(current);
+      if (!next) return current;
+      const contract = ensureDatasetContract(next);
+      if (!contract) return current;
+      contract.values = contract.values.filter((value) => value.id !== selectedDatasetValue.id);
+      for (const node of next.nodes) {
+        for (const port of [...(node.inputs ?? []), ...(node.outputs ?? [])]) {
+          if (port.dataset_value === selectedDatasetValue.id) port.dataset_value = undefined;
+        }
+      }
+      for (const edge of next.edges ?? []) {
+        if (edge.dataset_value === selectedDatasetValue.id) edge.dataset_value = undefined;
+      }
+      setSelectedDatasetValueId(contract.values[0]?.id ?? null);
+      return next;
+    });
+  }
+
+  function updateDatasetAxes(
+    valueId: string,
+    updater: (axes: WorkflowDatasetAxis[]) => WorkflowDatasetAxis[],
+  ) {
+    updateDatasetValue(valueId, (value) => ({
+      ...value,
+      shape: {
+        ...(value.shape ?? {}),
+        axes: updater(value.shape?.axes ?? []),
+      },
+    }));
+  }
+
+  function addDatasetAxis() {
+    if (!selectedDatasetValue) return;
+    updateDatasetAxes(selectedDatasetValue.id, (axes) => [
+      ...axes,
+      { id: `axis_${axes.length + 1}` },
+    ]);
+  }
+
+  function removeDatasetAxis(axisId: string) {
+    if (!selectedDatasetValue) return;
+    updateDatasetAxes(selectedDatasetValue.id, (axes) => axes.filter((axis) => axis.id !== axisId));
+  }
+
+  function updateDatasetAxis(
+    axisId: string,
+    updater: (axis: WorkflowDatasetAxis) => WorkflowDatasetAxis,
+  ) {
+    if (!selectedDatasetValue) return;
+    updateDatasetAxes(selectedDatasetValue.id, (axes) =>
+      axes.map((axis) => (axis.id === axisId ? updater(axis) : axis)),
+    );
+  }
+
   function exportDraftWorkflowGraph() {
     if (!selectedGraph) return;
     downloadJsonArtifact(
@@ -167,6 +317,10 @@ export function WorkbenchWorkflowBuilderCard({
         return;
       }
       const nextGraph = cloneWorkflowGraph(graph);
+      if (nextGraph) {
+        nextGraph.entry_inputs = nextGraph.entry_inputs ?? selectedEntryInputs;
+        nextGraph.output_artifacts = nextGraph.output_artifacts ?? selectedOutputArtifacts;
+      }
       setDraftGraph(nextGraph);
       setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
       setImportMessage(labels.importSuccessLabel);
@@ -254,6 +408,28 @@ export function WorkbenchWorkflowBuilderCard({
         type="file"
       />
       {importMessage ? <p className="card-copy">{importMessage}</p> : null}
+      <section className="sidebar-card sidebar-card--compact">
+        <div className="card-head">
+          <h2>{labels.validationTitle}</h2>
+          <span
+            className={`status-pill status-pill--${validationIssues.length > 0 ? "watch" : "good"}`}
+          >
+            {validationIssues.length}
+          </span>
+        </div>
+        {validationIssues.length > 0 ? (
+          <div className="sidebar-list">
+            {validationIssues.map((issue) => (
+              <div className="sidebar-list__row" key={issue.id}>
+                <span>{issue.level}</span>
+                <strong>{issue.message}</strong>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="card-copy">{labels.validationOkLabel}</p>
+        )}
+      </section>
       <div className="sidebar-list">
         <div className="sidebar-list__row">
           <span>{labels.nodesTitle}</span>
@@ -265,11 +441,11 @@ export function WorkbenchWorkflowBuilderCard({
         </div>
         <div className="sidebar-list__row">
           <span>{labels.entryInputsTitle}</span>
-          <strong>{selectedWorkflow.entry_inputs.length}</strong>
+          <strong>{selectedEntryInputs.length}</strong>
         </div>
         <div className="sidebar-list__row">
           <span>{labels.outputArtifactsTitle}</span>
-          <strong>{selectedWorkflow.output_artifacts.length}</strong>
+          <strong>{selectedOutputArtifacts.length}</strong>
         </div>
       </div>
 
@@ -315,284 +491,48 @@ export function WorkbenchWorkflowBuilderCard({
         </div>
       </section>
 
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{labels.datasetContractTitle}</h2>
-          <span className={`status-pill status-pill--${selectedDatasetContract ? "good" : "watch"}`}>
-            {selectedDatasetContract?.version ?? "--"}
-          </span>
-        </div>
-        {selectedDatasetContract ? (
-          <>
-            <p className="card-copy">{selectedDatasetContract.name ?? selectedDatasetContract.id}</p>
-            <p className="card-copy">{labels.datasetDraftHint}</p>
-            <div className="sidebar-list">
-              <div className="sidebar-list__row">
-                <span>{labels.datasetValuesTitle}</span>
-                <strong>{selectedDatasetValues.length}</strong>
-              </div>
-              <div className="sidebar-list__row">
-                <span>{labels.datasetMetadataLabel}</span>
-                <strong>{selectedDatasetContract.id}</strong>
-              </div>
-            </div>
-            <div className="sidebar-stack">
-              {selectedDatasetValues.map((value) => {
-                const axes = value.shape?.axes ?? [];
-                const schemaLabel = value.schema_ref
-                  ? `${value.schema_ref.schema}@${value.schema_ref.version}`
-                  : "--";
-                const shapeLabel =
-                  axes.length > 0
-                    ? axes
-                        .map((axis) => (axis.size != null ? `${axis.id}[${axis.size}]` : axis.id))
-                        .join(" × ")
-                    : "--";
-                return (
-                  <section className="sidebar-card sidebar-card--compact" key={value.id}>
-                    <div className="card-head">
-                      <h2>{value.id}</h2>
-                      <span className="status-pill status-pill--watch">{value.data_class}</span>
-                    </div>
-                    <div className="sidebar-list">
-                      <div className="sidebar-list__row">
-                        <span>{labels.datasetSemanticTypeLabel}</span>
-                        <strong>{value.semantic_type ?? "--"}</strong>
-                      </div>
-                      <div className="sidebar-list__row">
-                        <span>{labels.datasetEncodingLabel}</span>
-                        <strong>{value.encoding ?? "--"}</strong>
-                      </div>
-                      <div className="sidebar-list__row">
-                        <span>{labels.datasetClassLabel}</span>
-                        <strong>{value.element_type}</strong>
-                      </div>
-                      <div className="sidebar-list__row">
-                        <span>{labels.datasetShapeLabel}</span>
-                        <strong>{shapeLabel}</strong>
-                      </div>
-                      <div className="sidebar-list__row">
-                        <span>{labels.datasetSchemaLabel}</span>
-                        <strong>{schemaLabel}</strong>
-                      </div>
-                    </div>
-                    {axes.length > 0 ? (
-                      <div className="sidebar-list">
-                        {axes.map((axis) => (
-                          <div className="sidebar-list__row" key={`${value.id}:${axis.id}`}>
-                            <span>{labels.datasetAxesLabel}</span>
-                            <strong>
-                              {axis.id}
-                              {axis.semantic ? ` · ${axis.semantic}` : ""}
-                              {axis.size != null ? ` · ${axis.size}` : ""}
-                            </strong>
-                          </div>
-                        ))}
-                      </div>
-                    ) : null}
-                  </section>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <p className="card-copy">{labels.datasetNoneLabel}</p>
-        )}
-      </section>
+      <WorkbenchWorkflowDatasetCard
+        addDatasetAxis={addDatasetAxis}
+        addDatasetValue={addDatasetValue}
+        labels={labels}
+        removeDatasetAxis={removeDatasetAxis}
+        removeSelectedDatasetValue={removeSelectedDatasetValue}
+        selectedDatasetContract={selectedDatasetContract}
+        selectedDatasetValue={selectedDatasetValue}
+        selectedDatasetValueId={selectedDatasetValueId}
+        selectedDatasetValues={selectedDatasetValues}
+        selectedEdges={selectedEdges}
+        selectedNodes={selectedNodes}
+        setSelectedDatasetValueId={setSelectedDatasetValueId}
+        updateDatasetAxis={updateDatasetAxis}
+        updateDatasetValue={updateDatasetValue}
+        updateEdgeDatasetValue={updateEdgeDatasetValue}
+        updateNodePortDatasetValue={updateNodePortDatasetValue}
+      />
 
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{labels.datasetEditorTitle}</h2>
-          <span className="status-pill status-pill--watch">{labels.datasetDraftLocalLabel}</span>
-        </div>
-        {selectedDatasetValue ? (
-          <div className="form-grid compact">
-            <label>
-              <span>{labels.datasetValueSelectLabel}</span>
-              <select
-                onChange={(event) => setSelectedDatasetValueId(event.target.value)}
-                value={selectedDatasetValue.id}
-              >
-                {selectedDatasetValues.map((value) => (
-                  <option key={value.id} value={value.id}>
-                    {value.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span>{labels.datasetSemanticTypeLabel}</span>
-              <input
-                onChange={(event) =>
-                  updateDatasetValue(selectedDatasetValue.id, (value) => ({
-                    ...value,
-                    semantic_type: event.target.value || undefined,
-                  }))
-                }
-                value={selectedDatasetValue.semantic_type ?? ""}
-              />
-            </label>
-            <label>
-              <span>{labels.datasetEncodingLabel}</span>
-              <input
-                onChange={(event) =>
-                  updateDatasetValue(selectedDatasetValue.id, (value) => ({
-                    ...value,
-                    encoding: event.target.value || undefined,
-                  }))
-                }
-                value={selectedDatasetValue.encoding ?? ""}
-              />
-            </label>
-            <label>
-              <span>{labels.datasetUnitLabel}</span>
-              <input
-                onChange={(event) =>
-                  updateDatasetValue(selectedDatasetValue.id, (value) => ({
-                    ...value,
-                    unit: event.target.value || undefined,
-                  }))
-                }
-                value={selectedDatasetValue.unit ?? ""}
-              />
-            </label>
-            <label>
-              <span>{labels.datasetSchemaLabel}</span>
-              <input
-                onChange={(event) =>
-                  updateDatasetValue(selectedDatasetValue.id, (value) => ({
-                    ...value,
-                    schema_ref: {
-                      schema: event.target.value,
-                      version: value.schema_ref?.version ?? "1",
-                    },
-                  }))
-                }
-                value={selectedDatasetValue.schema_ref?.schema ?? ""}
-              />
-            </label>
-            <label>
-              <span>{labels.datasetMetadataLabel}</span>
-              <input
-                onChange={(event) =>
-                  updateDatasetValue(selectedDatasetValue.id, (value) => ({
-                    ...value,
-                    schema_ref: value.schema_ref
-                      ? {
-                          ...value.schema_ref,
-                          version: event.target.value || "1",
-                        }
-                      : {
-                          schema: "",
-                          version: event.target.value || "1",
-                        },
-                  }))
-                }
-                value={selectedDatasetValue.schema_ref?.version ?? ""}
-              />
-            </label>
-          </div>
-        ) : (
-          <p className="card-copy">{labels.datasetNoneLabel}</p>
-        )}
-      </section>
+      <WorkbenchWorkflowArtifactCard
+        addLabel={labels.artifactAddEntryLabel}
+        artifacts={selectedEntryInputs}
+        labels={labels}
+        mode="entry"
+        onAddArtifact={() => addArtifact("entry_inputs")}
+        onRemoveArtifact={(index) => removeArtifact("entry_inputs", index)}
+        onUpdateArtifact={(index, updater) => updateArtifact("entry_inputs", index, updater)}
+        selectedNodes={selectedNodes}
+        title={labels.entryInputsTitle}
+      />
 
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{labels.datasetPortMappingsTitle}</h2>
-        </div>
-        <div className="sidebar-stack">
-          {selectedNodes.map((node) => (
-            <section className="sidebar-card sidebar-card--compact" key={`map:${node.id}`}>
-              <div className="card-head">
-                <h2>{node.id}</h2>
-                <span className="status-pill status-pill--watch">{node.kind}</span>
-              </div>
-              <div className="form-grid compact">
-                {[...(node.inputs ?? []), ...(node.outputs ?? [])].map((port) => {
-                  const direction = (node.inputs ?? []).some((entry) => entry.id === port.id)
-                    ? "inputs"
-                    : "outputs";
-                  return (
-                    <label key={`${node.id}:${direction}:${port.id}`}>
-                      <span>
-                        {direction === "inputs" ? "in" : "out"} · {port.id} · {port.artifact_type}
-                      </span>
-                      <select
-                        onChange={(event) =>
-                          updateNodePortDatasetValue(node.id, port.id, direction, event.target.value)
-                        }
-                        value={port.dataset_value ?? ""}
-                      >
-                        <option value="">{labels.datasetUnassignedLabel}</option>
-                        {selectedDatasetValues.map((value) => (
-                          <option key={value.id} value={value.id}>
-                            {value.id}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-        </div>
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{labels.datasetEdgeMappingsTitle}</h2>
-        </div>
-        <div className="form-grid compact">
-          {selectedEdges.map((edge) => (
-            <label key={`edge-map:${edge.id}`}>
-              <span>
-                {edge.from.node}.{edge.from.port} → {edge.to.node}.{edge.to.port}
-              </span>
-              <select
-                onChange={(event) => updateEdgeDatasetValue(edge.id, event.target.value)}
-                value={edge.dataset_value ?? ""}
-              >
-                <option value="">{labels.datasetUnassignedLabel}</option>
-                {selectedDatasetValues.map((value) => (
-                  <option key={value.id} value={value.id}>
-                    {value.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{labels.entryInputsTitle}</h2>
-        </div>
-        <div className="sidebar-list">
-          {selectedWorkflow.entry_inputs.map((artifact) => (
-            <div className="sidebar-list__row" key={`${artifact.node_id}:${artifact.artifact_type}`}>
-              <span>{artifact.node_id}</span>
-              <strong>{artifact.artifact_type}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{labels.outputArtifactsTitle}</h2>
-        </div>
-        <div className="sidebar-list">
-          {selectedWorkflow.output_artifacts.map((artifact) => (
-            <div className="sidebar-list__row" key={`${artifact.node_id}:${artifact.artifact_type}`}>
-              <span>{artifact.node_id}</span>
-              <strong>{artifact.artifact_type}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
+      <WorkbenchWorkflowArtifactCard
+        addLabel={labels.artifactAddOutputLabel}
+        artifacts={selectedOutputArtifacts}
+        labels={labels}
+        mode="output"
+        onAddArtifact={() => addArtifact("output_artifacts")}
+        onRemoveArtifact={(index) => removeArtifact("output_artifacts", index)}
+        onUpdateArtifact={(index, updater) => updateArtifact("output_artifacts", index, updater)}
+        selectedNodes={selectedNodes}
+        title={labels.outputArtifactsTitle}
+      />
     </section>
   );
 }
