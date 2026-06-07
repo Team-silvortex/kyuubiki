@@ -157,7 +157,7 @@ is absent, remote, restarting, or one of several managed targets.
 
 The Hub should live in:
 
-- [apps/hub-gui](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui)
+- [apps/hub-gui](../apps/hub-gui)
 
 Recommended structure:
 

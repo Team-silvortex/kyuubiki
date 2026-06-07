@@ -216,8 +216,8 @@ hard-coded.
 
 The first stable schema lives in:
 
-- [workflow-dataset.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/workflow-dataset.schema.json)
-- [examples.workflow-dataset.json](/Users/Shared/chroot/dev/kyuubiki/schemas/examples.workflow-dataset.json)
+- [workflow-dataset.schema.json](../schemas/workflow-dataset.schema.json)
+- [examples.workflow-dataset.json](../schemas/examples.workflow-dataset.json)
 
 The first runtime validation layer now also exists in the Rust engine:
 

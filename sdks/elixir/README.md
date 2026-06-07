@@ -37,7 +37,7 @@ Highlights:
 
 Example:
 
-- Run from [run_study.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/examples/run_study.exs)
+- Run from [run_study.exs](examples/run_study.exs)
 - Typical invocation:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_study.exs`
 - Smoke test:

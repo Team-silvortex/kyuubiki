@@ -24,6 +24,6 @@ control plane.
 
 See also:
 
-- [workers/rust/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/README.md)
-- [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
-- [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
+- [workers/rust/README.md](rust/README.md)
+- [docs/repository-structure.md](../docs/repository-structure.md)
+- [docs/protocols.md](../docs/protocols.md)

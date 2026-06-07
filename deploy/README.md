@@ -23,5 +23,5 @@ shape rather than live runtime state.
 
 Use the shared schema references when editing or extending these examples:
 
-- `/Users/Shared/chroot/dev/kyuubiki/schemas/agent-manifest.schema.json`
-- `/Users/Shared/chroot/dev/kyuubiki/schemas/workload-catalog.schema.json`
+- `../schemas/agent-manifest.schema.json`
+- `../schemas/workload-catalog.schema.json`

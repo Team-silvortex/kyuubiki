@@ -32,5 +32,5 @@ For `tamamono 1.x`, the priority order is:
 
 ## Related docs
 
-- [accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
-- [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+- [accuracy-plan.md](accuracy-plan.md)
+- [accuracy-baselines.md](accuracy-baselines.md)

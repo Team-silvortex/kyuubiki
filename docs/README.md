@@ -81,10 +81,9 @@ Then branch by intent:
   Cross-process smoke map, including the current orchestrated API path for
   `axial_bar_1d`, `thermal_bar_1d`, `frame_3d`, `truss_2d`,
   `thermal_frame_3d`, and `thermal_truss_3d`.
-- `tdd.md`
-  Test-first expectations across Elixir, Rust, and shared contract work.
 - `development.md`
-  Day-to-day contributor workflow, launcher choices, and current priorities.
+  Day-to-day contributor workflow, launcher choices, current priorities, and
+  the test-first loop for Elixir, Rust, and shared contract work.
 - `frontend-style.md`
   Workbench visual language, layout rules, and interaction feel.
 - `frontend-implementation.md`
@@ -101,16 +100,11 @@ Then branch by intent:
   Deployment modes, watchdog knobs, and runtime entry points.
 - `security.md`
   Current guardrails, token protection, and deployment safety notes.
-- `security-sensitive-modules.md`
-  Marked source paths that require security-focused review before changes.
 - `packaging-and-deployment.md`
   Component build commands, artifact paths, and packaging output boundaries.
 - `desktop-release-checklist.md`
   Platform-specific desktop bundle targets, icon requirements, and release
   checks.
-- `ubuntu24-hub-pilot.md`
-  A practical first remote-target pilot guide for using one Ubuntu 24 machine
-  as a real Hub runtime and workload test server.
 
 ### Directory entrypoints
 

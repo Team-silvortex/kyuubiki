@@ -70,7 +70,7 @@ Highlights:
 
 Example:
 
-- Run from [run_study.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/examples/run_study.rs)
+- Run from [run_study.rs](examples/run_study.rs)
 - Typical invocation:
   `cargo run --manifest-path sdks/rust/Cargo.toml --example run_study`
 - Smoke test:

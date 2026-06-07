@@ -1,7 +1,7 @@
 import brand from "../../../../../assets/brand/brand.json";
 
 export const copyEnExtended = {
-    themes: { linen: "Linen Draft", marine: "Marine Grid", graphite: "Graphite Lab" },
+    themes: { linen: "Workshop Slate", marine: "Blueprint Teal", graphite: "Blender Forge" },
     languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
     frontendModes: {
       orchestrated_gui: "Orchestrated GUI",

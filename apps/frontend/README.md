@@ -4,9 +4,9 @@
 
 Its implementation and visual direction should follow:
 
-- [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
-- [docs/frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
-- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
+- [docs/philosophy.md](../../docs/philosophy.md)
+- [docs/frontend-style.md](../../docs/frontend-style.md)
+- [docs/frontend-implementation.md](../../docs/frontend-implementation.md)
 
 The workbench is now expected to support two runtime shapes over time:
 

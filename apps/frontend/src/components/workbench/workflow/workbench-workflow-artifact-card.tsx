@@ -14,6 +14,7 @@ type WorkbenchWorkflowArtifactCardProps = {
   mode: "entry" | "output";
   artifacts: WorkflowCatalogEntryArtifact[];
   selectedNodes: WorkflowGraphNode[];
+  focusedArtifactKey?: string | null;
   onAddArtifact: () => void;
   onRemoveArtifact: (index: number) => void;
   onUpdateArtifact: (
@@ -29,6 +30,7 @@ export function WorkbenchWorkflowArtifactCard({
   mode,
   artifacts,
   selectedNodes,
+  focusedArtifactKey,
   onAddArtifact,
   onRemoveArtifact,
   onUpdateArtifact,
@@ -61,7 +63,16 @@ export function WorkbenchWorkflowArtifactCard({
       {artifacts.length > 0 ? (
         <div className="sidebar-stack">
           {artifacts.map((artifact, index) => (
-            <section className="sidebar-card sidebar-card--compact" key={`${artifact.node_id}:${artifact.artifact_type}:${index}`}>
+            <section
+              className="sidebar-card sidebar-card--compact"
+              data-workflow-artifact-key={`${mode}:${artifact.node_id}:${artifact.artifact_type}:${index}`}
+              key={`${artifact.node_id}:${artifact.artifact_type}:${index}`}
+              style={
+                focusedArtifactKey === `${mode}:${artifact.node_id}:${artifact.artifact_type}:${index}`
+                  ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
+                  : undefined
+              }
+            >
               {(() => {
                 const suggestedTypes = nodeArtifactTypes.get(artifact.node_id) ?? [];
                 const suggestedArtifactType = suggestedTypes[0];

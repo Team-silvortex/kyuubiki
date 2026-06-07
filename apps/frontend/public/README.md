@@ -13,4 +13,4 @@ This directory holds browser-served static assets.
 
 Brand-source deliverables live in:
 
-- [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
+- [assets/icons/app](../../../assets/icons/app)

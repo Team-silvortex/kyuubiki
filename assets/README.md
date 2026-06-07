@@ -14,4 +14,4 @@ kept here anymore. This directory is for repository-ready deliverables only.
 
 Desktop shell icon variants are regenerated with:
 
-- [/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants](/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants)
+- [scripts/generate_desktop_icon_variants](../scripts/generate_desktop_icon_variants)

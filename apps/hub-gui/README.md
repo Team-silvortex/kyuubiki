@@ -7,8 +7,8 @@ for launch, runtime control, bundle operations, and operator guidance.
 
 It sits above:
 
-- [installer-gui](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui)
-- [workbench-gui](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui)
+- [installer-gui](../installer-gui)
+- [workbench-gui](../workbench-gui)
 
 Its job is not to replace the modeling workbench. Its job is to sit above the
 runtime surfaces and give one short runway into the right next shell.
@@ -27,13 +27,13 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 ## Main paths
 
 - UI shell:
-  [ui/](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/ui)
+  [ui/](ui)
 - Tauri backend:
-  [src-tauri/](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/src-tauri)
+  [src-tauri/](src-tauri)
 - Packaged icons:
-  [src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/src-tauri/icons)
+  [src-tauri/icons](src-tauri/icons)
 - Product split and IA notes:
-  [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
+  [docs/hub-architecture.md](../../docs/hub-architecture.md)
 
 ## Commands
 
@@ -74,6 +74,6 @@ Do not treat that directory as source-owned. The source of truth is:
 - the Hub Tauri shell source in this app
 - the shared desktop runtime crate
 - the repository-level desktop packaging flow
-- [docs/hub-architecture.md](/Users/Shared/chroot/dev/kyuubiki/docs/hub-architecture.md)
-- [deploy/workload-catalog.example.json](/Users/Shared/chroot/dev/kyuubiki/deploy/workload-catalog.example.json)
-- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
+- [docs/hub-architecture.md](../../docs/hub-architecture.md)
+- [deploy/workload-catalog.example.json](../../deploy/workload-catalog.example.json)
+- [docs/packaging-and-deployment.md](../../docs/packaging-and-deployment.md)

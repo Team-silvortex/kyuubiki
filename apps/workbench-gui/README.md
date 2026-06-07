@@ -19,13 +19,13 @@ It is intentionally thin:
 ## Main paths
 
 - UI shell:
-  [ui/](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/ui)
+  [ui/](ui)
 - Tauri backend:
-  [src-tauri/](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/src-tauri)
+  [src-tauri/](src-tauri)
 - Packaged icons:
-  [src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/src-tauri/icons)
+  [src-tauri/icons](src-tauri/icons)
 - UI assets:
-  [ui/assets](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/ui/assets)
+  [ui/assets](ui/assets)
 
 ## Commands
 

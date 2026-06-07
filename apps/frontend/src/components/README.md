@@ -13,4 +13,4 @@ Keep domain-specific stateful surfaces in `workbench/`. Only promote code into
 
 For component splitting, ownership, and state placement rules, see:
 
-- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
+- [docs/frontend-implementation.md](../../../../docs/frontend-implementation.md)

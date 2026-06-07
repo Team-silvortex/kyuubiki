@@ -52,6 +52,6 @@ The three desktop-facing Tauri apps are intended to evolve as one family:
 
 See also:
 
-- [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
-- [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
-- [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
+- [docs/repository-structure.md](../docs/repository-structure.md)
+- [docs/testing-and-ci.md](../docs/testing-and-ci.md)
+- [docs/system-overview.md](../docs/system-overview.md)

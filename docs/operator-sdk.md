@@ -75,7 +75,7 @@ Every operator should declare the following metadata:
 For multi-operator chains, these schema refs should also be reusable from a
 workflow dataset contract so that cross-operator intermediate values are not
 described only by ad-hoc JSON convention. See
-[workflow-dataset.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-dataset.md).
+[workflow-dataset.md](workflow-dataset.md).
 
 ## Runtime contract
 
@@ -164,7 +164,7 @@ produced input shape.
 A new operator should not be treated as real support until it has:
 
 - a formal family baseline in
-  [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+  [accuracy-baselines.md](accuracy-baselines.md)
 - at least one official sample or fixture
 - at least one orchestrated or direct-mesh smoke path
 - a stable result summary shape
@@ -260,7 +260,7 @@ The workflow graph defines how multiple capabilities compose.
 
 Use:
 
-- [workflow-graph.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-graph.md)
+- [workflow-graph.md](workflow-graph.md)
 
 when the question becomes:
 

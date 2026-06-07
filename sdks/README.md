@@ -11,8 +11,8 @@
 
 If you are integrating from outside the monorepo, start with:
 
-1. [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
-2. [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
+1. [docs/protocols.md](../docs/protocols.md)
+2. [docs/headless-sdks.md](../docs/headless-sdks.md)
 3. one language example below
 
 Current language targets:
@@ -23,15 +23,15 @@ Current language targets:
 
 Minimal runnable examples now live at:
 
-- [sdks/python/examples/run_study.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/examples/run_study.py)
-- [sdks/elixir/examples/run_study.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/examples/run_study.exs)
-- [sdks/rust/examples/run_study.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/examples/run_study.rs)
+- [sdks/python/examples/run_study.py](python/examples/run_study.py)
+- [sdks/elixir/examples/run_study.exs](elixir/examples/run_study.exs)
+- [sdks/rust/examples/run_study.rs](rust/examples/run_study.rs)
 
 Smoke tests now live at:
 
-- [sdks/python/tests/test_smoke.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/tests/test_smoke.py)
-- [sdks/elixir/test/smoke_test.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/test/smoke_test.exs)
-- [sdks/rust/tests/smoke.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/tests/smoke.rs)
+- [sdks/python/tests/test_smoke.py](python/tests/test_smoke.py)
+- [sdks/elixir/test/smoke_test.exs](elixir/test/smoke_test.exs)
+- [sdks/rust/tests/smoke.rs](rust/tests/smoke.rs)
 
 Each SDK follows the same split:
 
@@ -65,5 +65,5 @@ thin workflow layer:
 - JSON-first payloads that AI models can generate or inspect easily
 
 These SDKs intentionally target the public protocol boundaries described in
-[`docs/protocols.md`](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md), not
+[`docs/protocols.md`](../docs/protocols.md), not
 frontend internals.

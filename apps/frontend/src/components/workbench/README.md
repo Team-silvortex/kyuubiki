@@ -54,4 +54,4 @@ Implementation rules for this directory:
 
 See:
 
-- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
+- [docs/frontend-implementation.md](../../../../../docs/frontend-implementation.md)

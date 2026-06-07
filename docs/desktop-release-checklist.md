@@ -37,11 +37,11 @@ Keep these names aligned with:
 - Review current readiness:
   - `zsh ./scripts/kyuubiki desktop-status all`
 - Confirm brand assets exist under:
-  - [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
+  - [assets/icons/app](../assets/icons/app)
 - Confirm desktop icon copies exist under:
-  - [apps/hub-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/hub-gui/src-tauri/icons)
-  - [apps/installer-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/icons)
-  - [apps/workbench-gui/src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/workbench-gui/src-tauri/icons)
+  - [apps/hub-gui/src-tauri/icons](../apps/hub-gui/src-tauri/icons)
+  - [apps/installer-gui/src-tauri/icons](../apps/installer-gui/src-tauri/icons)
+  - [apps/workbench-gui/src-tauri/icons](../apps/workbench-gui/src-tauri/icons)
 - Confirm runtime scaffold exists:
   - `zsh ./scripts/kyuubiki package-runtime`
 - Confirm desktop manifests exist:
@@ -69,9 +69,9 @@ Typical commands:
 
 Staged descriptor paths:
 
-- [dist/macos/desktop/hub-gui](/Users/Shared/chroot/dev/kyuubiki/dist/macos/desktop/hub-gui)
-- [dist/macos/desktop/installer-gui](/Users/Shared/chroot/dev/kyuubiki/dist/macos/desktop/installer-gui)
-- [dist/macos/desktop/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/dist/macos/desktop/workbench-gui)
+- [dist/macos/desktop/hub-gui](../dist/macos/desktop/hub-gui)
+- [dist/macos/desktop/installer-gui](../dist/macos/desktop/installer-gui)
+- [dist/macos/desktop/workbench-gui](../dist/macos/desktop/workbench-gui)
 
 Suggested verification:
 
@@ -101,9 +101,9 @@ Typical commands:
 
 Staged descriptor paths:
 
-- [dist/linux/desktop/hub-gui](/Users/Shared/chroot/dev/kyuubiki/dist/linux/desktop/hub-gui)
-- [dist/linux/desktop/installer-gui](/Users/Shared/chroot/dev/kyuubiki/dist/linux/desktop/installer-gui)
-- [dist/linux/desktop/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/dist/linux/desktop/workbench-gui)
+- [dist/linux/desktop/hub-gui](../dist/linux/desktop/hub-gui)
+- [dist/linux/desktop/installer-gui](../dist/linux/desktop/installer-gui)
+- [dist/linux/desktop/workbench-gui](../dist/linux/desktop/workbench-gui)
 
 Suggested verification:
 
@@ -133,9 +133,9 @@ Typical commands:
 
 Staged descriptor paths:
 
-- [dist/windows/desktop/hub-gui](/Users/Shared/chroot/dev/kyuubiki/dist/windows/desktop/hub-gui)
-- [dist/windows/desktop/installer-gui](/Users/Shared/chroot/dev/kyuubiki/dist/windows/desktop/installer-gui)
-- [dist/windows/desktop/workbench-gui](/Users/Shared/chroot/dev/kyuubiki/dist/windows/desktop/workbench-gui)
+- [dist/windows/desktop/hub-gui](../dist/windows/desktop/hub-gui)
+- [dist/windows/desktop/installer-gui](../dist/windows/desktop/installer-gui)
+- [dist/windows/desktop/workbench-gui](../dist/windows/desktop/workbench-gui)
 
 Suggested verification:
 
@@ -179,5 +179,5 @@ When preparing a release, keep the order stable:
   desktop packaging descriptors and directory layout without pretending to
   perform a full cross-platform bundle build.
 - The source of truth for bundle metadata is:
-  - [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
-  - [dist/README.md](/Users/Shared/chroot/dev/kyuubiki/dist/README.md)
+  - [docs/packaging-and-deployment.md](packaging-and-deployment.md)
+  - [dist/README.md](../dist/README.md)

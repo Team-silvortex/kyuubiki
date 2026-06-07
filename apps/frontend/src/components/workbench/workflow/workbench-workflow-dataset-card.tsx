@@ -17,6 +17,8 @@ type WorkbenchWorkflowDatasetCardProps = {
   selectedNodes: WorkflowGraphNode[];
   selectedEdges: WorkflowGraphEdge[];
   selectedDatasetValueId: string | null;
+  focusedDatasetValueId?: string | null;
+  highlightDatasetEditor?: boolean;
   setSelectedDatasetValueId: (value: string | null) => void;
   updateDatasetValue: (
     valueId: string,
@@ -47,6 +49,8 @@ export function WorkbenchWorkflowDatasetCard({
   selectedNodes,
   selectedEdges,
   selectedDatasetValueId,
+  focusedDatasetValueId,
+  highlightDatasetEditor,
   setSelectedDatasetValueId,
   updateDatasetValue,
   updateNodePortDatasetValue,
@@ -59,7 +63,15 @@ export function WorkbenchWorkflowDatasetCard({
 }: WorkbenchWorkflowDatasetCardProps) {
   return (
     <>
-      <section className="sidebar-card sidebar-card--compact">
+      <section
+        className="sidebar-card sidebar-card--compact"
+        data-workflow-dataset-editor="summary"
+        style={
+          highlightDatasetEditor
+            ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
+            : undefined
+        }
+      >
         <div className="card-head">
           <h2>{labels.datasetContractTitle}</h2>
           <span className={`status-pill status-pill--${selectedDatasetContract ? "good" : "watch"}`}>
@@ -91,7 +103,16 @@ export function WorkbenchWorkflowDatasetCard({
                     ? axes.map((axis) => (axis.size != null ? `${axis.id}[${axis.size}]` : axis.id)).join(" × ")
                     : "--";
                 return (
-                  <section className="sidebar-card sidebar-card--compact" key={value.id}>
+                  <section
+                    className="sidebar-card sidebar-card--compact"
+                    data-workflow-dataset-value-id={value.id}
+                    key={value.id}
+                    style={
+                      focusedDatasetValueId === value.id
+                        ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
+                        : undefined
+                    }
+                  >
                     <div className="card-head">
                       <h2>{value.id}</h2>
                       <span className="status-pill status-pill--watch">{value.data_class}</span>
@@ -142,7 +163,15 @@ export function WorkbenchWorkflowDatasetCard({
         )}
       </section>
 
-      <section className="sidebar-card sidebar-card--compact">
+      <section
+        className="sidebar-card sidebar-card--compact"
+        data-workflow-dataset-editor="editor"
+        style={
+          highlightDatasetEditor
+            ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
+            : undefined
+        }
+      >
         <div className="card-head">
           <h2>{labels.datasetEditorTitle}</h2>
           <span className="status-pill status-pill--watch">{labels.datasetDraftLocalLabel}</span>

@@ -33,7 +33,7 @@ export function useWorkbenchShellState({
 }: UseWorkbenchShellStateArgs) {
   const [language, setLanguage] = useState<Language>("en");
   const [languagePacks, setLanguagePacks] = useState<WorkbenchLanguagePack[]>([]);
-  const [theme, setTheme] = useState<Theme>("linen");
+  const [theme, setTheme] = useState<Theme>("graphite");
   const [frontendRuntimeMode, setFrontendRuntimeMode] = useState<FrontendRuntimeMode>("orchestrated_gui");
   const [directMeshEndpointsText, setDirectMeshEndpointsText] = useState("127.0.0.1:5001,127.0.0.1:5002");
   const [directMeshSelectionMode, setDirectMeshSelectionMode] = useState<DirectMeshSelectionMode>("healthiest");

@@ -153,7 +153,7 @@ default for `tamamono`.
 
 ## Related docs
 
-- [current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
-- [version-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/version-line.md)
-- [accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
-- [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+- [current-line.md](current-line.md)
+- [version-line.md](version-line.md)
+- [accuracy-plan.md](accuracy-plan.md)
+- [accuracy-baselines.md](accuracy-baselines.md)

@@ -148,18 +148,18 @@ Use the smallest honest layer first:
 
 - solver correctness:
   Rust solver tests in
-  [workers/rust/crates/solver/src/lib.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/solver/src/lib.rs)
+  [workers/rust/crates/solver/src/lib.rs](../workers/rust/crates/solver/src/lib.rs)
 - protocol / result-shape integrity:
   Rust protocol and CLI tests in
-  [workers/rust/crates/protocol/src/lib.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/protocol/src/lib.rs)
+  [workers/rust/crates/protocol/src/lib.rs](../workers/rust/crates/protocol/src/lib.rs)
   and
-  [workers/rust/crates/cli/src/main.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/cli/src/main.rs)
+  [workers/rust/crates/cli/src/main.rs](../workers/rust/crates/cli/src/main.rs)
 - sample and workflow regression:
   Workbench UI smoke and orchestrated/direct-mesh integration tests in
-  [tests/integration](/Users/Shared/chroot/dev/kyuubiki/tests/integration)
+  [tests/integration](../tests/integration)
 - performance-only baselines:
   benchmark tooling in
-  [workers/rust/benchmarks/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/README.md)
+  [workers/rust/benchmarks/README.md](../workers/rust/benchmarks/README.md)
 
 ## First 1.x priorities
 
@@ -181,7 +181,7 @@ accuracy-to-effort return.
 
 The first concrete baseline seed set is tracked in:
 
-- [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+- [accuracy-baselines.md](accuracy-baselines.md)
 
 ## Exit rule for 1.x accuracy
 
@@ -195,6 +195,6 @@ Treat a family as accuracy-ready for `v1.x` when:
 
 ## Related docs
 
-- [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
-- [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
-- [workers/rust/benchmarks/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/benchmarks/README.md)
+- [testing-and-ci.md](testing-and-ci.md)
+- [accuracy-baselines.md](accuracy-baselines.md)
+- [workers/rust/benchmarks/README.md](../workers/rust/benchmarks/README.md)

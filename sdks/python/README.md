@@ -59,7 +59,7 @@ Highlights:
 
 Example:
 
-- Run from [run_study.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/examples/run_study.py)
+- Run from [run_study.py](examples/run_study.py)
 - Typical invocation:
   `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_study.py`
 - Smoke test:

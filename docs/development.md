@@ -94,6 +94,29 @@ For exact runtime/storage mode details, use
 3. Refactor with the test suite still green
 4. Run `make verify` before wrapping the change
 
+Prefer these first targets when choosing the first failing test:
+
+- `Elixir`
+  job validation and lifecycle transitions, orchestration-side progress
+  application, worker adapter behavior, and UI/control-plane boundary cases
+- `Rust`
+  protocol/domain invariants, solver progress semantics, transport parsing,
+  checkpoint/retry, and cancellation edge cases
+
+Keep the loop behavior-focused:
+
+- one failing test should correspond to one behavior change
+- prefer behavior tests over implementation-detail tests
+- reproduce a bug with a regression test before fixing it
+- when shared contracts move, update both runtimes if both consume them
+
+Fast verification shortcuts:
+
+- `make tdd-web FILE=test/kyuubiki_web/jobs/store_test.exs`
+- `make tdd-rust FILTER=protocol`
+- `make test`
+- `make verify`
+
 ## Active development priorities
 
 1. Push the Rust solver path toward stable `10k`-node single-machine targets

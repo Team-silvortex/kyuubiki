@@ -38,12 +38,12 @@ mechanics.
 
 These baselines are enforced in:
 
-- [accuracy_baselines.rs](/Users/Shared/chroot/dev/kyuubiki/workers/rust/crates/solver/tests/accuracy_baselines.rs)
+- [accuracy_baselines.rs](../workers/rust/crates/solver/tests/accuracy_baselines.rs)
 
 Run them with:
 
 ```bash
-cd /Users/Shared/chroot/dev/kyuubiki/workers/rust
+cd workers/rust
 cargo test -p kyuubiki-solver --test accuracy_baselines
 ```
 
@@ -93,5 +93,5 @@ After this seed set, the next best families are:
 
 ## Related docs
 
-- [accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
-- [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+- [accuracy-plan.md](accuracy-plan.md)
+- [testing-and-ci.md](testing-and-ci.md)

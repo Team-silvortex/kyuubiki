@@ -104,7 +104,7 @@ strings. That is the current line's ONNX-like layer:
 - the graph still carries topology
 - the dataset contract carries value semantics
 
-See [workflow-dataset.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-dataset.md).
+See [workflow-dataset.md](workflow-dataset.md).
 
 ## First workflow targets
 
@@ -280,10 +280,10 @@ This allows:
 
 The first stable storage contract should live in:
 
-- [workflow-graph.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/workflow-graph.schema.json)
-- [examples.workflow-graph.json](/Users/Shared/chroot/dev/kyuubiki/schemas/examples.workflow-graph.json)
-- [workflow-dataset.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/workflow-dataset.schema.json)
-- [examples.workflow-dataset.json](/Users/Shared/chroot/dev/kyuubiki/schemas/examples.workflow-dataset.json)
+- [workflow-graph.schema.json](../schemas/workflow-graph.schema.json)
+- [examples.workflow-graph.json](../schemas/examples.workflow-graph.json)
+- [workflow-dataset.schema.json](../schemas/workflow-dataset.schema.json)
+- [examples.workflow-dataset.json](../schemas/examples.workflow-dataset.json)
 
 ## Suggested first headless API
 
@@ -309,7 +309,7 @@ The workflow graph should not invent its own node contracts.
 
 It should consume operator descriptors defined by:
 
-- [operator-sdk.md](/Users/Shared/chroot/dev/kyuubiki/docs/operator-sdk.md)
+- [operator-sdk.md](operator-sdk.md)
 
 In short:
 

@@ -25,15 +25,15 @@ The headless SDK layer gives them a cleaner tool surface:
 
 Minimal end-to-end examples:
 
-- [sdks/python/examples/run_study.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/examples/run_study.py)
-- [sdks/elixir/examples/run_study.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/examples/run_study.exs)
-- [sdks/rust/examples/run_study.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/examples/run_study.rs)
+- [sdks/python/examples/run_study.py](../sdks/python/examples/run_study.py)
+- [sdks/elixir/examples/run_study.exs](../sdks/elixir/examples/run_study.exs)
+- [sdks/rust/examples/run_study.rs](../sdks/rust/examples/run_study.rs)
 
 SDK-local smoke coverage:
 
-- [sdks/python/tests/test_smoke.py](/Users/Shared/chroot/dev/kyuubiki/sdks/python/tests/test_smoke.py)
-- [sdks/elixir/test/smoke_test.exs](/Users/Shared/chroot/dev/kyuubiki/sdks/elixir/test/smoke_test.exs)
-- [sdks/rust/tests/smoke.rs](/Users/Shared/chroot/dev/kyuubiki/sdks/rust/tests/smoke.rs)
+- [sdks/python/tests/test_smoke.py](../sdks/python/tests/test_smoke.py)
+- [sdks/elixir/test/smoke_test.exs](../sdks/elixir/test/smoke_test.exs)
+- [sdks/rust/tests/smoke.rs](../sdks/rust/tests/smoke.rs)
 
 All three SDKs expose the same conceptual split:
 

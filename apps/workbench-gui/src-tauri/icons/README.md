@@ -11,9 +11,9 @@ These are the packaged desktop icons for the Tauri workbench shell.
 
 Canonical source assets live in:
 
-- [/Users/Shared/chroot/dev/kyuubiki/assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
+- [assets/icons/app](../../../../assets/icons/app)
 
 This shell now uses the Workbench-specific badge variant generated from:
 
-- [/Users/Shared/chroot/dev/kyuubiki/assets/icons/app/kyuubiki-workbench.png](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app/kyuubiki-workbench.png)
-- [/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants](/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants)
+- [assets/icons/app/kyuubiki-workbench.png](../../../../assets/icons/app/kyuubiki-workbench.png)
+- [scripts/generate_desktop_icon_variants](../../../../scripts/generate_desktop_icon_variants)

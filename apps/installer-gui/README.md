@@ -17,13 +17,13 @@ operator-facing surface in the repository.
 ## Main paths
 
 - UI shell:
-  [ui/](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui)
+  [ui/](ui)
 - Tauri backend:
-  [src-tauri/](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri)
+  [src-tauri/](src-tauri)
 - Packaged icons:
-  [src-tauri/icons](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/src-tauri/icons)
+  [src-tauri/icons](src-tauri/icons)
 - UI brand assets:
-  [ui/assets](/Users/Shared/chroot/dev/kyuubiki/apps/installer-gui/ui/assets)
+  [ui/assets](ui/assets)
 
 ## Commands
 
@@ -64,4 +64,4 @@ Do not treat that directory as source-owned. The source of truth is:
 - repo-relative runtime defaults such as `./deploy/agents.local.json` and
   `./tmp/data/kyuubiki_dev.sqlite3`
 - the shared packaging docs in
-  [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
+  [docs/packaging-and-deployment.md](../../docs/packaging-and-deployment.md)

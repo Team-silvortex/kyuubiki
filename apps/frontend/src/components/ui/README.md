@@ -11,4 +11,4 @@ Only place code here when it is reusable outside one FEM-specific workflow.
 
 See:
 
-- [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
+- [docs/frontend-implementation.md](../../../../../docs/frontend-implementation.md)

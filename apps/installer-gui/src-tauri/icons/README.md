@@ -11,9 +11,9 @@ This directory contains the packaged desktop icons for the Tauri installer.
 
 Source artwork lives under:
 
-- [assets/icons/app](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app)
+- [assets/icons/app](../../../../assets/icons/app)
 
 This shell now uses the Installer-specific badge variant generated from:
 
-- [/Users/Shared/chroot/dev/kyuubiki/assets/icons/app/kyuubiki-installer.png](/Users/Shared/chroot/dev/kyuubiki/assets/icons/app/kyuubiki-installer.png)
-- [/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants](/Users/Shared/chroot/dev/kyuubiki/scripts/generate_desktop_icon_variants)
+- [assets/icons/app/kyuubiki-installer.png](../../../../assets/icons/app/kyuubiki-installer.png)
+- [scripts/generate_desktop_icon_variants](../../../../scripts/generate_desktop_icon_variants)

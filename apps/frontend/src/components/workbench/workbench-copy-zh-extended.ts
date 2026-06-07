@@ -1,5 +1,5 @@
 export const copyZhExtended = {
-    themes: { linen: "纸面浅色", marine: "海图网格", graphite: "石墨实验室" },
+    themes: { linen: "工坊灰板", marine: "蓝图青色", graphite: "Blender 锻台" },
     languages: { en: "English", zh: "中文", ja: "日本語", es: "Español" },
     frontendModes: {
       orchestrated_gui: "中心调度 GUI",

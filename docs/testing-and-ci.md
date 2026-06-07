@@ -59,7 +59,7 @@ The current integration family covers:
 
 The full integration entrypoint list stays in:
 
-- [tests/integration/README.md](/Users/Shared/chroot/dev/kyuubiki/tests/integration/README.md)
+- [tests/integration/README.md](../tests/integration/README.md)
 
 ### Desktop shell checks
 
