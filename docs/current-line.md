@@ -28,8 +28,8 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The line opens at `tamamono 1.0.0`, but these expectations are meant to remain
-true across later `1.x` releases too.
+The current shipping point in this line is `tamamono 1.4.0`, and these
+expectations are meant to remain true across later `1.x` releases too.
 
 ## Current backend momentum
 
@@ -53,26 +53,26 @@ verified, and less speculative.
 
 ## Current reading path
 
-1. [version-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/version-line.md)
+1. [version-line.md](version-line.md)
    Formal version-line note, codename, and major-version policy.
-2. [tamamono-minor-lines.md](/Users/Shared/chroot/dev/kyuubiki/docs/tamamono-minor-lines.md)
+2. [tamamono-minor-lines.md](tamamono-minor-lines.md)
    Suggested long-range grouping for the `1.x` minors.
-3. [accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
+3. [accuracy-plan.md](accuracy-plan.md)
    Accuracy roadmap, benchmark targets, and verification priorities.
-4. [accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+4. [accuracy-baselines.md](accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
-5. [operator-sdk.md](/Users/Shared/chroot/dev/kyuubiki/docs/operator-sdk.md)
+5. [operator-sdk.md](operator-sdk.md)
    Current extension-contract direction for growing operator capabilities
    without turning every family into a one-off vertical slice.
-6. [workflow-graph.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-graph.md)
+6. [workflow-graph.md](workflow-graph.md)
    Multi-operator composition direction for shader-like workflow growth.
    The first headless reference runner now exists for
    `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
    exposes a first built-in workflow catalog entry for
    `workflow.heat-to-thermo-quad-2d`.
-7. [workflow-dataset.md](/Users/Shared/chroot/dev/kyuubiki/docs/workflow-dataset.md)
+7. [workflow-dataset.md](workflow-dataset.md)
    ONNX-like cross-operator data contract for workflow-carried values, with
    named datasets, shape semantics, and schema references shared across nodes.
-8. [language-packs.md](/Users/Shared/chroot/dev/kyuubiki/docs/language-packs.md)
+8. [language-packs.md](language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.

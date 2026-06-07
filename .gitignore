@@ -1,6 +1,14 @@
 # OS noise
 .DS_Store
 Thumbs.db
+._*
+
+# Editor / patch residue
+*~
+*.old
+*.orig
+*.rej
+*.bak
 
 # Environment
 .env

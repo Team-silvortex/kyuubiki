@@ -40,7 +40,7 @@ Those runtime layers map cleanly onto the monorepo:
 - `workers/rust`
   solver kernels, engine crates, agents, and CLI runtime
 
-See [repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+See [repository-structure.md](repository-structure.md)
 for the fuller directory map.
 
 The relationship between `Hub` and `control plane` is intentional:
@@ -146,6 +146,6 @@ implementation:
 
 See:
 
-- [protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md)
-- [security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
-- [operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
+- [protocols.md](protocols.md)
+- [security.md](security.md)
+- [operations.md](operations.md)

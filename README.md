@@ -1,4 +1,4 @@
-# kyuubiki tamamono 1.0.0
+# kyuubiki tamamono 1.4.0
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -7,7 +7,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 - an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
-`tamamono 1.0.0` is the current repository-wide version line.
+`tamamono 1.4.0` is the current repository-wide version line.
 
 It also now has an explicit deployment split:
 
@@ -67,34 +67,34 @@ The monorepo is intentionally split by responsibility:
 
 Start here if you need orientation:
 
-- [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md)
+- [docs/README.md](docs/README.md)
   Full current documentation map.
-- [docs/current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
+- [docs/current-line.md](docs/current-line.md)
   Short current-line posture for `tamamono 1.x`.
-- [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md)
+- [docs/system-overview.md](docs/system-overview.md)
   Runtime map across GUI, control plane, and solver data plane.
 
 ## Read By Intent
 
 - new to the project:
-  [docs/README.md](/Users/Shared/chroot/dev/kyuubiki/docs/README.md),
-  [docs/system-overview.md](/Users/Shared/chroot/dev/kyuubiki/docs/system-overview.md),
-  [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+  [docs/README.md](docs/README.md),
+  [docs/system-overview.md](docs/system-overview.md),
+  [docs/repository-structure.md](docs/repository-structure.md)
 - changing protocols or automation surfaces:
-  [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md),
-  [docs/protocols.md](/Users/Shared/chroot/dev/kyuubiki/docs/protocols.md),
-  [docs/headless-sdks.md](/Users/Shared/chroot/dev/kyuubiki/docs/headless-sdks.md)
+  [docs/philosophy.md](docs/philosophy.md),
+  [docs/protocols.md](docs/protocols.md),
+  [docs/headless-sdks.md](docs/headless-sdks.md)
 - changing tests, CI, or release flow:
-  [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md),
-  [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md),
-  [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
+  [docs/testing-and-ci.md](docs/testing-and-ci.md),
+  [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md),
+  [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
 - changing workbench UX or visual language:
-  [docs/philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md),
-  [docs/frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md),
-  [docs/frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md),
-  [apps/frontend/README.md](/Users/Shared/chroot/dev/kyuubiki/apps/frontend/README.md)
+  [docs/philosophy.md](docs/philosophy.md),
+  [docs/frontend-style.md](docs/frontend-style.md),
+  [docs/frontend-implementation.md](docs/frontend-implementation.md),
+  [apps/frontend/README.md](apps/frontend/README.md)
 
-## What tamamono 1.0.0 Can Do
+## What tamamono 1.4.0 Can Do
 
 ### Supported analysis domains
 
@@ -142,16 +142,16 @@ Lighter but supported operator families:
 For the current product-line posture, major-version policy, and quality
 direction, use:
 
-- [docs/current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
-- [docs/version-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/version-line.md)
-- [docs/tamamono-minor-lines.md](/Users/Shared/chroot/dev/kyuubiki/docs/tamamono-minor-lines.md)
-- [docs/accuracy-plan.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-plan.md)
-- [docs/accuracy-baselines.md](/Users/Shared/chroot/dev/kyuubiki/docs/accuracy-baselines.md)
+- [docs/current-line.md](docs/current-line.md)
+- [docs/version-line.md](docs/version-line.md)
+- [docs/tamamono-minor-lines.md](docs/tamamono-minor-lines.md)
+- [docs/accuracy-plan.md](docs/accuracy-plan.md)
+- [docs/accuracy-baselines.md](docs/accuracy-baselines.md)
 
 Packaging and deployment paths are now documented centrally in:
 
-- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
-- [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
+- [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
+- [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
 
 Desktop release planning and platform bundle checks now live in the two docs
 above rather than in the repo root.
@@ -175,9 +175,9 @@ The main repo-level verification entrypoints are:
 
 The packaging/output map and smoke breakdown live in:
 
-- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
-- [docs/testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
-- [tests/integration/README.md](/Users/Shared/chroot/dev/kyuubiki/tests/integration/README.md)
+- [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
+- [docs/testing-and-ci.md](docs/testing-and-ci.md)
+- [tests/integration/README.md](tests/integration/README.md)
 
 ## Deployment Notes
 
@@ -218,8 +218,8 @@ DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev
 
 Current security notes, project format details, installer flows, benchmark usage, and local development commands live in dedicated docs:
 
-- [docs/security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
-- [docs/operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
-- [docs/packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
-- [docs/desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
-- [docs/repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- [docs/security.md](docs/security.md)
+- [docs/operations.md](docs/operations.md)
+- [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
+- [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
+- [docs/repository-structure.md](docs/repository-structure.md)

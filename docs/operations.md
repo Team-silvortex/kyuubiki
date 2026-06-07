@@ -50,7 +50,7 @@ Use:
 
 Schema:
 
-- [agent-manifest.schema.json](/Users/Shared/chroot/dev/kyuubiki/schemas/agent-manifest.schema.json)
+- [agent-manifest.schema.json](../schemas/agent-manifest.schema.json)
 
 ### Registry
 
@@ -91,7 +91,7 @@ Security controls currently group into:
 These can now be written from the installer GUI Setup panel. For the current
 guardrails and exact switch names, use:
 
-- [security.md](/Users/Shared/chroot/dev/kyuubiki/docs/security.md)
+- [security.md](security.md)
 
 ## Useful entry points
 
@@ -109,9 +109,9 @@ Common operator-facing entry points:
 
 Build, packaging, desktop-release, and benchmark command matrices are kept in:
 
-- [packaging-and-deployment.md](/Users/Shared/chroot/dev/kyuubiki/docs/packaging-and-deployment.md)
-- [desktop-release-checklist.md](/Users/Shared/chroot/dev/kyuubiki/docs/desktop-release-checklist.md)
-- [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+- [packaging-and-deployment.md](packaging-and-deployment.md)
+- [desktop-release-checklist.md](desktop-release-checklist.md)
+- [testing-and-ci.md](testing-and-ci.md)
 
 For operator-facing desktop control, Hub now mirrors several of these flows:
 

@@ -46,7 +46,7 @@ function ensureDatasetContract(
     graph.dataset_contract = {
       schema_version: "kyuubiki.workflow-dataset/v1",
       id: `${graph.id}.dataset`,
-      version: graph.version ?? "1.0.0",
+      version: graph.version ?? "1.4.0",
       name: `${graph.name ?? graph.id} dataset contract`,
       values: [],
       metadata: {},
@@ -218,6 +218,47 @@ export function WorkbenchWorkflowBuilderCard({
         artifactIndex === index ? updater(artifact) : artifact,
       ),
     );
+  }
+
+  function applyValidationFix(issueId: string) {
+    const issue = validationIssues.find((entry) => entry.id === issueId);
+    if (!issue?.fix) return;
+    const fix = issue.fix;
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const next = cloneWorkflowGraph(current);
+      if (!next) return current;
+      switch (fix.kind) {
+        case "set_edge_artifact_type_from_source":
+        case "set_edge_artifact_type_from_target": {
+          const edge = next.edges?.find((entry) => entry.id === fix.edgeId);
+          if (edge) edge.artifact_type = fix.artifactType;
+          break;
+        }
+        case "set_catalog_artifact_type": {
+          const artifacts = next[fix.mode === "entry" ? "entry_inputs" : "output_artifacts"] ?? [];
+          const artifact = artifacts.find(
+            (entry) =>
+              entry.node_id === fix.nodeId &&
+              entry.artifact_type === fix.currentArtifactType,
+          );
+          if (artifact) artifact.artifact_type = fix.artifactType;
+          break;
+        }
+        case "clear_port_dataset_value": {
+          const node = next.nodes.find((entry) => entry.id === fix.nodeId);
+          const port = node?.[fix.direction]?.find((entry) => entry.id === fix.portId);
+          if (port) port.dataset_value = undefined;
+          break;
+        }
+        case "clear_edge_dataset_value": {
+          const edge = next.edges?.find((entry) => entry.id === fix.edgeId);
+          if (edge) edge.dataset_value = undefined;
+          break;
+        }
+      }
+      return next;
+    });
   }
 
   function addDatasetValue() {
@@ -423,6 +464,11 @@ export function WorkbenchWorkflowBuilderCard({
               <div className="sidebar-list__row" key={issue.id}>
                 <span>{issue.level}</span>
                 <strong>{issue.message}</strong>
+                {issue.fix ? (
+                  <button onClick={() => applyValidationFix(issue.id)} type="button">
+                    {labels.validationFixLabel}
+                  </button>
+                ) : null}
               </div>
             ))}
           </div>

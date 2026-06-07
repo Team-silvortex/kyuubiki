@@ -65,10 +65,12 @@ export type WorkflowSidebarLabels = {
   importInvalidDatasetLabel: string;
   validationTitle: string;
   validationOkLabel: string;
+  validationFixLabel: string;
   artifactNodeLabel: string;
   artifactTypeLabel: string;
   artifactDescriptionLabel: string;
   artifactRemoveLabel: string;
+  artifactAdoptSuggestedLabel: string;
   artifactAddEntryLabel: string;
   artifactAddOutputLabel: string;
   artifactDraftLocalLabel: string;

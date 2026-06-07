@@ -27,7 +27,7 @@ export function downloadWorkbenchLanguagePackTemplate(params: {
     id: `${language}-custom-pack`,
     language,
     name: `${t.languages[language]} custom pack`,
-    version: "1.0.0",
+    version: "1.4.0",
     source: "imported",
     description:
       language === "zh"
@@ -99,7 +99,7 @@ export async function importWorkbenchLanguagePack(params: {
       id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${raw.language}-${Date.now()}`,
       language: raw.language,
       name: raw.name,
-      version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.0.0",
+      version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.4.0",
       source: raw.source === "downloaded" ? "downloaded" : "imported",
       updatedAt: new Date().toISOString(),
       description: typeof raw.description === "string" ? raw.description : undefined,
@@ -148,4 +148,3 @@ export function removeWorkbenchLanguagePack(params: {
         : "Language pack removed.",
   );
 }
-

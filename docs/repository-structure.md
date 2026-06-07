@@ -39,10 +39,10 @@ shapes without tightly coupling the browser, orchestrator, and solver runtime.
 
 See also:
 
-- [scripts/README.md](/Users/Shared/chroot/dev/kyuubiki/scripts/README.md)
-- [tmp/README.md](/Users/Shared/chroot/dev/kyuubiki/tmp/README.md)
-- [dist/README.md](/Users/Shared/chroot/dev/kyuubiki/dist/README.md)
-- [tests/integration/README.md](/Users/Shared/chroot/dev/kyuubiki/tests/integration/README.md)
+- [scripts/README.md](../scripts/README.md)
+- [tmp/README.md](../tmp/README.md)
+- [dist/README.md](../dist/README.md)
+- [tests/integration/README.md](../tests/integration/README.md)
 
 ## Application Layer
 
@@ -139,7 +139,7 @@ Benchmark profiles for medium, large, v2, and 10k-scale targets.
 Cross-platform CLI for doctor, env validation, release staging, and deployment
 setup.
 
-See [workers/rust/README.md](/Users/Shared/chroot/dev/kyuubiki/workers/rust/README.md)
+See [workers/rust/README.md](../workers/rust/README.md)
 for the crate-by-crate map.
 
 Rust tests remain colocated with crates or under crate-local `tests/`

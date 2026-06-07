@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Operations · Kyuubiki Hub Docs</title>
+    <link rel="stylesheet" href="./docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Operations</div>
+        <h1>Runtime and operator workflow</h1>
+        <p class="docs-copy">
+          Use this page when you need the practical runtime map: deployment
+          modes, storage choices, agent discovery, and the everyday commands or
+          GUI surfaces operators reach for first.
+        </p>
+        <div class="docs-links">
+          <a class="docs-link" href="./index.html">Back to docs home</a>
+          <a class="docs-link" href="./troubleshooting.html">Open troubleshooting</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Main deployment modes</h2>
+          <ul class="docs-list">
+            <li><strong>Local workstation</strong>: frontend + orchestrator + local Rust agents with SQLite.</li>
+            <li><strong>Cloud control plane</strong>: frontend and orchestrator deployed centrally with PostgreSQL.</li>
+            <li><strong>Distributed control plane</strong>: remote solver agents discovered by manifest or registry.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Agent discovery modes</h2>
+          <ul class="docs-list">
+            <li><strong>Static</strong>: explicit local agent endpoints.</li>
+            <li><strong>Manifest</strong>: runtime loads remote agents from a manifest file.</li>
+            <li><strong>Registry</strong>: agents register, heartbeat, and unregister dynamically.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Operator entrypoints</h2>
+          <ul class="docs-list">
+            <li>Use Hub for desktop readiness, runtime control, and guided packaging flows.</li>
+            <li>Use Workbench for focused modeling, analysis, and result inspection.</li>
+            <li>Use Installer for heavier bootstrap and deployment setup.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -114,15 +114,15 @@ Then branch by intent:
 
 ### Directory entrypoints
 
-- `/Users/Shared/chroot/dev/kyuubiki/scripts/README.md`
+- `scripts/README.md`
   Unified launcher, host-side workflow commands, and packaging entrypoints.
-- `/Users/Shared/chroot/dev/kyuubiki/deploy/README.md`
+- `deploy/README.md`
   Deployment descriptors, agent manifests, and workload-catalog examples.
-- `/Users/Shared/chroot/dev/kyuubiki/dist/README.md`
+- `dist/README.md`
   Generated desktop artifacts, build summaries, and release-output layout.
-- `/Users/Shared/chroot/dev/kyuubiki/tmp/README.md`
+- `tmp/README.md`
   Disposable local runtime state, working data, and dev-only paths.
-- `/Users/Shared/chroot/dev/kyuubiki/schemas/README.md`
+- `schemas/README.md`
   Shared JSON contract map for jobs, projects, materials, catalogs, language
   packs, and workflow graphs.
 

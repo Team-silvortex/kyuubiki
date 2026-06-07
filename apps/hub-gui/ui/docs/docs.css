@@ -1,0 +1,142 @@
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(110, 168, 255, 0.18), transparent 38%),
+    linear-gradient(180deg, #0e1525 0%, #101b2d 46%, #13213a 100%);
+  color: #eef4ff;
+}
+
+.docs-shell {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 24px 72px;
+}
+
+.docs-hero,
+.docs-card {
+  border: 1px solid rgba(171, 198, 255, 0.18);
+  border-radius: 22px;
+  background: rgba(12, 19, 34, 0.78);
+  box-shadow: 0 28px 80px rgba(6, 10, 20, 0.34);
+  backdrop-filter: blur(16px);
+}
+
+.docs-hero {
+  padding: 28px;
+  margin-bottom: 22px;
+}
+
+.docs-card {
+  padding: 22px;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.docs-kicker {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #93b4ff;
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin: 0;
+}
+
+h1 {
+  margin-top: 8px;
+  font-size: clamp(28px, 3.4vw, 42px);
+}
+
+h2 {
+  font-size: 22px;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+.docs-copy {
+  margin-top: 10px;
+  color: #bfd1ef;
+  line-height: 1.6;
+}
+
+.docs-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.docs-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid rgba(149, 181, 255, 0.22);
+  background: rgba(72, 112, 196, 0.16);
+  color: #dce8ff;
+  font-size: 13px;
+}
+
+.docs-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.docs-list {
+  margin-top: 12px;
+  padding-left: 18px;
+  color: #d6e4ff;
+  line-height: 1.7;
+}
+
+.docs-links {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.docs-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(149, 181, 255, 0.22);
+  background: rgba(35, 56, 96, 0.62);
+  color: #f5f8ff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.docs-link:hover {
+  background: rgba(54, 82, 136, 0.78);
+}
+
+.docs-section {
+  margin-top: 20px;
+}
+
+@media (max-width: 720px) {
+  .docs-shell {
+    padding: 24px 16px 48px;
+  }
+
+  .docs-hero,
+  .docs-card {
+    padding: 18px;
+  }
+}

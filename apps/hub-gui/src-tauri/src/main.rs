@@ -613,8 +613,13 @@ fn open_host_path(path: &Path) -> Result<String, String> {
     Ok(format!("opened {}", path.display()))
 }
 
-fn docs_file(relative: &str) -> PathBuf {
-    workspace_root().join("docs").join(relative)
+fn hub_docs_file(relative: &str) -> PathBuf {
+    workspace_root()
+        .join("apps")
+        .join("hub-gui")
+        .join("ui")
+        .join("docs")
+        .join(relative)
 }
 
 fn node_command() -> &'static str {
@@ -936,22 +941,22 @@ fn launch_installer_gui() -> Result<String, String> {
 
 #[tauri::command]
 fn open_docs_index() -> Result<String, String> {
-    open_host_path(&docs_file("README.md"))
+    open_host_path(&hub_docs_file("index.html"))
 }
 
 #[tauri::command]
 fn open_current_line_doc() -> Result<String, String> {
-    open_host_path(&docs_file("current-line.md"))
+    open_host_path(&hub_docs_file("current-line.html"))
 }
 
 #[tauri::command]
 fn open_operations_doc() -> Result<String, String> {
-    open_host_path(&docs_file("operations.md"))
+    open_host_path(&hub_docs_file("operations.html"))
 }
 
 #[tauri::command]
 fn open_troubleshooting_doc() -> Result<String, String> {
-    open_host_path(&docs_file("troubleshooting.md"))
+    open_host_path(&hub_docs_file("troubleshooting.html"))
 }
 
 #[tauri::command]

@@ -61,14 +61,31 @@ export function WorkbenchWorkflowArtifactCard({
       {artifacts.length > 0 ? (
         <div className="sidebar-stack">
           {artifacts.map((artifact, index) => (
-            <section
-              className="sidebar-card sidebar-card--compact"
-              key={`${artifact.node_id}:${artifact.artifact_type}:${index}`}
-            >
+            <section className="sidebar-card sidebar-card--compact" key={`${artifact.node_id}:${artifact.artifact_type}:${index}`}>
+              {(() => {
+                const suggestedTypes = nodeArtifactTypes.get(artifact.node_id) ?? [];
+                const suggestedArtifactType = suggestedTypes[0];
+                const needsSuggestion =
+                  suggestedTypes.length > 0 && !suggestedTypes.includes(artifact.artifact_type);
+                return (
+                  <>
               <div className="button-row">
                 <button onClick={() => onRemoveArtifact(index)} type="button">
                   {labels.artifactRemoveLabel}
                 </button>
+                {needsSuggestion && suggestedArtifactType ? (
+                  <button
+                    onClick={() =>
+                      onUpdateArtifact(index, (current) => ({
+                        ...current,
+                        artifact_type: suggestedArtifactType,
+                      }))
+                    }
+                    type="button"
+                  >
+                    {labels.artifactAdoptSuggestedLabel}
+                  </button>
+                ) : null}
               </div>
               <div className="form-grid compact">
                 <label>
@@ -111,10 +128,13 @@ export function WorkbenchWorkflowArtifactCard({
                 </label>
               </div>
               <datalist id={`${title}-artifact-options-${index}`}>
-                {(nodeArtifactTypes.get(artifact.node_id) ?? []).map((artifactType) => (
+                {suggestedTypes.map((artifactType) => (
                   <option key={artifactType} value={artifactType} />
                 ))}
               </datalist>
+                  </>
+                );
+              })()}
             </section>
           ))}
         </div>

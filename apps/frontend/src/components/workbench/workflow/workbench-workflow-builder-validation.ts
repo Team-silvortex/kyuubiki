@@ -12,6 +12,18 @@ export type WorkflowGraphValidationIssue = {
   id: string;
   level: "warning";
   message: string;
+  fix?:
+    | { kind: "set_edge_artifact_type_from_source"; edgeId: string; artifactType: string }
+    | { kind: "set_edge_artifact_type_from_target"; edgeId: string; artifactType: string }
+    | {
+        kind: "set_catalog_artifact_type";
+        mode: "entry" | "output";
+        nodeId: string;
+        currentArtifactType: string;
+        artifactType: string;
+      }
+    | { kind: "clear_port_dataset_value"; nodeId: string; portId: string; direction: "inputs" | "outputs" }
+    | { kind: "clear_edge_dataset_value"; edgeId: string };
 };
 
 function buildNodeMap(graph: WorkflowGraphDefinition) {
@@ -54,6 +66,15 @@ function validateCatalogArtifacts(
         id: `${mode}:missing-artifact:${artifact.node_id}:${artifact.artifact_type}`,
         level: "warning",
         message: `${mode === "entry" ? "Entry input" : "Output artifact"} "${artifact.artifact_type}" is not exposed on node "${artifact.node_id}".`,
+        fix: ports[0]
+          ? {
+              kind: "set_catalog_artifact_type",
+              mode,
+              nodeId: artifact.node_id,
+              currentArtifactType: artifact.artifact_type,
+              artifactType: ports[0].artifact_type,
+            }
+          : undefined,
       });
     }
   }
@@ -97,6 +118,12 @@ export function validateWorkflowGraphDefinition(
           id: `port-dataset:${node.id}:${port.id}:${port.dataset_value}`,
           level: "warning",
           message: `Port "${node.id}.${port.id}" references missing dataset value "${port.dataset_value}".`,
+          fix: {
+            kind: "clear_port_dataset_value",
+            nodeId: node.id,
+            portId: port.id,
+            direction: (node.inputs ?? []).some((input) => input.id === port.id) ? "inputs" : "outputs",
+          },
         });
       }
     }
@@ -141,6 +168,11 @@ export function validateWorkflowGraphDefinition(
         id: `edge-artifact-from:${edge.id}`,
         level: "warning",
         message: `Edge "${edge.id}" artifact type "${edge.artifact_type}" does not match source port "${fromPort.artifact_type}".`,
+        fix: {
+          kind: "set_edge_artifact_type_from_source",
+          edgeId: edge.id,
+          artifactType: fromPort.artifact_type,
+        },
       });
     }
     if (toPort && toPort.artifact_type !== edge.artifact_type) {
@@ -148,6 +180,11 @@ export function validateWorkflowGraphDefinition(
         id: `edge-artifact-to:${edge.id}`,
         level: "warning",
         message: `Edge "${edge.id}" artifact type "${edge.artifact_type}" does not match target port "${toPort.artifact_type}".`,
+        fix: {
+          kind: "set_edge_artifact_type_from_target",
+          edgeId: edge.id,
+          artifactType: toPort.artifact_type,
+        },
       });
     }
     if (!hasDatasetValue(contract, edge.dataset_value)) {
@@ -155,6 +192,7 @@ export function validateWorkflowGraphDefinition(
         id: `edge-dataset:${edge.id}:${edge.dataset_value}`,
         level: "warning",
         message: `Edge "${edge.id}" references missing dataset value "${edge.dataset_value}".`,
+        fix: { kind: "clear_edge_dataset_value", edgeId: edge.id },
       });
     }
   }

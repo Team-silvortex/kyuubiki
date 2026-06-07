@@ -6,15 +6,15 @@ repo shape.
 
 Use these companion docs when you need deeper detail:
 
-- [repository-structure.md](/Users/Shared/chroot/dev/kyuubiki/docs/repository-structure.md)
+- [repository-structure.md](repository-structure.md)
   directory ownership and generated-path boundaries
-- [testing-and-ci.md](/Users/Shared/chroot/dev/kyuubiki/docs/testing-and-ci.md)
+- [testing-and-ci.md](testing-and-ci.md)
   verification entrypoints and smoke layout
-- [operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md)
+- [operations.md](operations.md)
   deployment modes, runtime switches, and operator flows
-- [frontend-style.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-style.md)
+- [frontend-style.md](frontend-style.md)
   visual/UI language
-- [frontend-implementation.md](/Users/Shared/chroot/dev/kyuubiki/docs/frontend-implementation.md)
+- [frontend-implementation.md](frontend-implementation.md)
   frontend component, state, and helper boundaries
 
 ## Working posture
@@ -24,8 +24,8 @@ a failing test before production code changes.
 
 Use these baseline docs to stay aligned:
 
-- [philosophy.md](/Users/Shared/chroot/dev/kyuubiki/docs/philosophy.md)
-- [current-line.md](/Users/Shared/chroot/dev/kyuubiki/docs/current-line.md)
+- [philosophy.md](philosophy.md)
+- [current-line.md](current-line.md)
 
 ## Repository conventions
 
@@ -85,7 +85,7 @@ The shortest useful loops are:
   higher-confidence pre-merge check
 
 For exact runtime/storage mode details, use
-[operations.md](/Users/Shared/chroot/dev/kyuubiki/docs/operations.md).
+[operations.md](operations.md).
 
 ## TDD Workflow
 
