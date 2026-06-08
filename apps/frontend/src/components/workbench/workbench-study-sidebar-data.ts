@@ -178,6 +178,11 @@ export function buildWorkbenchStudySidebarData(args: StudySidebarDataArgs) {
                   ? joinThermalIntent(t.nodalTemperatureRise, t.thermoelasticPlaneResponse)
                   : undefined;
 
+  const materialLabelFor =
+    typeof localMaterialLabel === "function"
+      ? localMaterialLabel
+      : (materialId: string) => materialId || "--";
+
   const thermalBoundaryValue = isHeatBar
     ? `${heatBarModel.nodes.filter((node) => node.fix_temperature).length} ${t.prescribedTemperatureNodes} · ${heatBarModel.nodes.filter((node) => Math.abs(node.heat_load ?? 0) > 0).length} ${t.sourceNodes}`
     : isHeatPlane
@@ -205,7 +210,7 @@ export function buildWorkbenchStudySidebarData(args: StudySidebarDataArgs) {
       support: t.support,
     },
     loadedModelName,
-    materialLabel: isSpring || isHeatBar || isThermalBar || isTorsion ? "--" : localMaterialLabel(activeMaterial, language),
+    materialLabel: isSpring || isHeatBar || isThermalBar || isTorsion ? "--" : materialLabelFor(activeMaterial, language),
     meshValue: isAxial
       ? axialForm.elements
       : isHeatBar
@@ -311,7 +316,7 @@ export function buildWorkbenchStudySidebarData(args: StudySidebarDataArgs) {
     },
     studyKind,
     loadedModelName,
-    materialLabel: localMaterialLabel(activeMaterial, language),
+    materialLabel: materialLabelFor(activeMaterial, language),
     trussNodeCount: isFrameLike ? activeFrameLikeModel.nodes.length : trussModel.nodes.length,
     trussElementCount: isFrameLike ? activeFrameLikeModel.elements.length : trussModel.elements.length,
     truss3dNodeCount: isSpring3d ? spring3dModel.nodes.length : truss3dModel.nodes.length,

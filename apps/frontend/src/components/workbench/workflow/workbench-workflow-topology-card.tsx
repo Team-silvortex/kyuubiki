@@ -9,6 +9,11 @@ import type {
 } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import { listWorkflowNodeTemplatePresets } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import {
+  buildOperatorOptionLabel,
+  sortWorkflowOperatorOptionPresets,
+  WorkbenchWorkflowOperatorDescriptorSummary,
+} from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
 
 type WorkbenchWorkflowTopologyCardProps = {
   labels: WorkflowSidebarLabels;
@@ -52,21 +57,6 @@ type WorkbenchWorkflowTopologyCardProps = {
 };
 
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
-
-function formatOperatorSchemaRef(schemaRef?: { schema: string; version: string } | null) {
-  if (!schemaRef?.schema) return "--";
-  return `${schemaRef.schema}@${schemaRef.version}`;
-}
-
-function formatOperatorValidationStatus(
-  labels: WorkflowSidebarLabels,
-  status?: WorkflowOperatorDescriptor["validation"]["baseline_status"],
-) {
-  if (status === "verified") return labels.operatorValidationVerifiedLabel;
-  if (status === "partial") return labels.operatorValidationPartialLabel;
-  if (status === "unverified") return labels.operatorValidationUnverifiedLabel;
-  return "--";
-}
 
 function WorkbenchWorkflowPortEditor(props: {
   labels: WorkflowSidebarLabels;
@@ -184,6 +174,13 @@ export function WorkbenchWorkflowTopologyCard({
   const operatorDescriptorMap = new Map(
     (operatorDescriptors ?? []).map((descriptor) => [descriptor.id, descriptor] as const),
   );
+  const nextOperatorDescriptor = nextOperatorId
+    ? operatorDescriptorMap.get(nextOperatorId)
+    : undefined;
+  const sortedNextOperatorTemplates = sortWorkflowOperatorOptionPresets(
+    nextOperatorTemplates,
+    operatorDescriptorMap,
+  );
   const getPortOptions = (
     node: WorkflowGraphNode | undefined,
     direction: "inputs" | "outputs",
@@ -218,8 +215,16 @@ export function WorkbenchWorkflowTopologyCard({
             value={nextOperatorId}
           />
           <datalist id="workflow-topology-operator-templates">
-            {nextOperatorTemplates.map((preset) => (
-              <option key={preset.id} label={preset.label} value={preset.operatorId} />
+            {sortedNextOperatorTemplates.map((preset) => (
+              <option
+                key={preset.id}
+                label={buildOperatorOptionLabel(
+                  labels,
+                  preset.label,
+                  preset.operatorId ? operatorDescriptorMap.get(preset.operatorId) : undefined,
+                )}
+                value={preset.operatorId}
+              />
             ))}
           </datalist>
         </label>
@@ -235,6 +240,10 @@ export function WorkbenchWorkflowTopologyCard({
           {labels.addNodeLabel}
         </button>
       </div>
+      <WorkbenchWorkflowOperatorDescriptorSummary
+        descriptor={nextOperatorDescriptor}
+        labels={labels}
+      />
       <div className="button-row">
         <button
           onClick={() =>
@@ -342,41 +351,32 @@ export function WorkbenchWorkflowTopologyCard({
                       value={node.operator_id ?? ""}
                     />
                     <datalist id={`workflow-node-operators-${node.id}`}>
-                      {listWorkflowNodeTemplatePresets(node.kind, operatorDescriptors)
-                        .filter((preset) => preset.operatorId)
+                      {sortWorkflowOperatorOptionPresets(
+                        listWorkflowNodeTemplatePresets(node.kind, operatorDescriptors).filter(
+                          (preset) => preset.operatorId,
+                        ),
+                        operatorDescriptorMap,
+                      )
                         .map((preset) => (
-                          <option key={preset.id} label={preset.label} value={preset.operatorId} />
+                          <option
+                            key={preset.id}
+                            label={buildOperatorOptionLabel(
+                              labels,
+                              preset.label,
+                              preset.operatorId
+                                ? operatorDescriptorMap.get(preset.operatorId)
+                                : undefined,
+                            )}
+                            value={preset.operatorId}
+                          />
                         ))}
                     </datalist>
                   </label>
                 </div>
-                {operatorDescriptor ? (
-                  <div className="sidebar-list">
-                    <div className="sidebar-list__row">
-                      <span>{labels.operatorValidationLabel}</span>
-                      <strong>
-                        {formatOperatorValidationStatus(
-                          labels,
-                          operatorDescriptor.validation?.baseline_status,
-                        )}
-                      </strong>
-                    </div>
-                    <div className="sidebar-list__row">
-                      <span>{labels.operatorInputSchemaLabel}</span>
-                      <strong>{formatOperatorSchemaRef(operatorDescriptor.input_schema)}</strong>
-                    </div>
-                    <div className="sidebar-list__row">
-                      <span>{labels.operatorOutputSchemaLabel}</span>
-                      <strong>{formatOperatorSchemaRef(operatorDescriptor.output_schema)}</strong>
-                    </div>
-                    {operatorDescriptor.capability_tags.length > 0 ? (
-                      <div className="sidebar-list__row">
-                        <span>{labels.operatorCapabilitiesLabel}</span>
-                        <strong>{operatorDescriptor.capability_tags.join(", ")}</strong>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
+                <WorkbenchWorkflowOperatorDescriptorSummary
+                  descriptor={operatorDescriptor}
+                  labels={labels}
+                />
                 <WorkbenchWorkflowPortEditor
                   direction="inputs"
                   labels={labels}

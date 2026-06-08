@@ -129,7 +129,7 @@ export function WorkbenchWorkflowSidebar({
               <h2>{labels.catalogPageLabel}</h2>
             </div>
             <p className="card-copy">{labels.catalogHint}</p>
-            <div className="button-row">
+            <div className="button-row button-row--adaptive">
               <button onClick={() => onSurfaceTabChange("catalog")} type="button">
                 {labels.catalogPageLabel}
               </button>
@@ -187,7 +187,7 @@ export function WorkbenchWorkflowSidebar({
             <h2>{labels.catalogTitle}</h2>
           </div>
           <p className="card-copy">{labels.catalogHint}</p>
-          <div className="button-row">
+          <div className="button-row button-row--adaptive">
             <button onClick={() => setCatalogFilter("all")} type="button">
               {labels.catalogFilterAllLabel}
             </button>
@@ -231,7 +231,7 @@ export function WorkbenchWorkflowSidebar({
                   </div>
                 ) : null}
                 {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
-                <div className="button-row">
+                <div className="button-row button-row--adaptive">
                   <button
                     onClick={() => {
                       onSelectWorkflow(workflow.id);

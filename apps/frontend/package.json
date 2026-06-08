@@ -12,6 +12,7 @@
     "start": "next start",
     "lint": "next lint",
     "check:file-lines": "node ./scripts/check-file-lines.mjs",
+    "check:ui-layout": "node ./scripts/check-ui-layout.mjs",
     "typecheck": "node ./scripts/typecheck.mjs"
   },
   "dependencies": {

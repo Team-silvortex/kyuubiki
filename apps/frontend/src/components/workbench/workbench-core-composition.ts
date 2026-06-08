@@ -35,9 +35,11 @@ import {
   isTorsion1dResult,
   isTruss3dResult,
   isTrussResult,
+  localMaterialLabel,
 } from "@/components/workbench/workbench-result-helpers";
 import { SECURITY_EVENT_WINDOW_MS } from "@/components/workbench/workbench-types";
 import {
+  fixed,
   formatMilliseconds,
   formatTime,
   serializeCurrentModel,
@@ -219,6 +221,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     jobHistoryController,
     adminSecurityState,
     workflowController,
+    selectedAdminJob,
     selectedProjectModels,
     deferredProjectModels,
     deferredModelVersions,
@@ -275,9 +278,9 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     deferredResultRecords,
     deferredProjectModels,
     deferredModelVersions,
+    jobHistory: jobHistoryController.jobHistory,
     adminFilterProjectId: adminSecurityState.adminFilterProjectId,
     adminFilterModelVersionId: adminSecurityState.adminFilterModelVersionId,
-    jobHistory: jobHistoryController.jobHistory,
     projects: rootState.projects,
     securityEventRecords: adminSecurityState.securityEventRecords,
     securityEventWindowFilter: adminSecurityState.securityEventWindowFilter,
@@ -312,6 +315,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
 
   const mainComposition = useWorkbenchMainComposition({
     ...rootState,
+    fixed,
+    localMaterialLabel,
     workflowController,
     projectStorageController: projectFlows.projectStorageController,
     selectedProjectModels,
@@ -330,6 +335,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     cancelCurrentJob: jobHistoryController.cancelCurrentJob,
     selectedAdminJobId: jobHistoryController.selectedAdminJobId,
     setSelectedAdminJobId: jobHistoryController.setSelectedAdminJobId,
+    selectedAdminJob,
     adminFilterProjectId: adminSecurityState.adminFilterProjectId,
     setAdminFilterProjectId: adminSecurityState.setAdminFilterProjectId,
     adminFilterModelVersionId: adminSecurityState.adminFilterModelVersionId,

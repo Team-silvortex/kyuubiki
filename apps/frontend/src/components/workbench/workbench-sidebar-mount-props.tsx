@@ -127,7 +127,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         deleteSelectedVersion={props.deleteSelectedVersion}
         openSavedVersion={props.openSavedVersion}
         jobRows={props.libraryJobRows}
-        jobCount={props.jobHistory.length}
+        jobCount={props.jobHistory?.length ?? 0}
         activeJobId={props.job?.job_id ?? null}
         openHistoryJob={props.openHistoryJob}
         openSample={props.openSample}

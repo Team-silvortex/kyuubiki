@@ -76,7 +76,7 @@ export function WorkbenchWorkflowBuilderToolbar({
         </div>
       ) : null}
       {selectedWorkflow.local?.notes ? <p className="card-copy">{selectedWorkflow.local.notes}</p> : null}
-      <div className="button-row">
+      <div className="button-row button-row--adaptive">
         <button onClick={onRunCatalog} type="button">{labels.runLabel}</button>
         <button disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
         <button onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
