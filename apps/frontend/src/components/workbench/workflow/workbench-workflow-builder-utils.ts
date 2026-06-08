@@ -7,6 +7,7 @@ import type {
   WorkflowGraphDefinition,
   WorkflowGraphEdge,
   WorkflowGraphNode,
+  WorkflowOperatorDescriptor,
   WorkflowGraphPort,
 } from "@/lib/api";
 import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
@@ -56,8 +57,9 @@ export function buildDraftDatasetValue(nextIndex: number): WorkflowDatasetValueI
 export function buildDraftNode(
   nextIndex: number,
   template?: { kind?: string; operatorId?: string },
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
 ): WorkflowGraphNode {
-  const resolved = buildPortsForWorkflowNodeTemplate(template);
+  const resolved = buildPortsForWorkflowNodeTemplate(template, operatorDescriptors);
   return {
     id: `node_${nextIndex}`,
     kind: resolved.kind,

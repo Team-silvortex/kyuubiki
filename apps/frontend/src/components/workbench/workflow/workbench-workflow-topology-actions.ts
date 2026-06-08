@@ -6,6 +6,7 @@ import type {
   WorkflowGraphDefinition,
   WorkflowGraphEdge,
   WorkflowGraphNode,
+  WorkflowOperatorDescriptor,
   WorkflowGraphPort,
 } from "@/lib/api";
 import {
@@ -101,8 +102,9 @@ function mergeMissingDatasetValues(
 function ensureTemplateDatasetValues(
   graph: WorkflowGraphDefinition,
   template?: { kind?: string; operatorId?: string },
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
-  const datasetValues = listWorkflowTemplateDatasetValues(template);
+  const datasetValues = listWorkflowTemplateDatasetValues(template, operatorDescriptors);
   if (datasetValues.length === 0) return;
 
   const currentContract = graph.dataset_contract;
@@ -124,10 +126,11 @@ function appendConnectedNode(
   graph: WorkflowGraphDefinition,
   sourceNode: WorkflowGraphNode | null,
   template?: { kind?: string; operatorId?: string },
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
-  const createdNode = buildDraftNode(graph.nodes.length + 1, template);
+  const createdNode = buildDraftNode(graph.nodes.length + 1, template, operatorDescriptors);
   graph.nodes = [...graph.nodes, createdNode];
-  ensureTemplateDatasetValues(graph, template);
+  ensureTemplateDatasetValues(graph, template, operatorDescriptors);
 
   const previousNode = sourceNode;
   if (!previousNode) return createdNode;
@@ -153,7 +156,10 @@ function appendConnectedNode(
   return createdNode;
 }
 
-export function createWorkflowTopologyActions(setDraftGraph: SetDraftGraph) {
+export function createWorkflowTopologyActions(
+  setDraftGraph: SetDraftGraph,
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
   function updateNode(nodeId: string, updater: (node: WorkflowGraphNode) => WorkflowGraphNode) {
     setDraftGraph((current) => {
       if (!current) return current;
@@ -183,7 +189,7 @@ export function createWorkflowTopologyActions(setDraftGraph: SetDraftGraph) {
       if (!current) return current;
       const next = cloneWorkflowGraph(current);
       if (!next) return current;
-      appendConnectedNode(next, null, template);
+      appendConnectedNode(next, null, template, operatorDescriptors);
       return next;
     });
   }
@@ -199,7 +205,7 @@ export function createWorkflowTopologyActions(setDraftGraph: SetDraftGraph) {
 
       const sourceNode = next.nodes.find((node) => node.id === sourceNodeId);
       if (!sourceNode) return current;
-      appendConnectedNode(next, sourceNode, template);
+      appendConnectedNode(next, sourceNode, template, operatorDescriptors);
       return next;
     });
   }
@@ -216,7 +222,7 @@ export function createWorkflowTopologyActions(setDraftGraph: SetDraftGraph) {
       let previousNode =
         sourceNodeId ? next.nodes.find((node) => node.id === sourceNodeId) ?? null : null;
       for (const template of templates) {
-        previousNode = appendConnectedNode(next, previousNode, template);
+        previousNode = appendConnectedNode(next, previousNode, template, operatorDescriptors);
       }
       return next;
     });

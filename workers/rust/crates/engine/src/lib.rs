@@ -1,7 +1,8 @@
 use kyuubiki_protocol::{
     AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest,
     HeatToThermoPlaneQuad2dWorkflowResult, OperatorDescriptor, OperatorKind, OperatorOrigin,
-    OperatorSchemaRef, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
+    OperatorPortDescriptor, OperatorSchemaRef, OperatorValidationProfile,
+    OperatorValidationStatus, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
     SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
     SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
     SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
@@ -544,6 +545,21 @@ fn built_in_solver_descriptor(
             schema: format!("kyuubiki.operator.{family}.output"),
             version: "1".to_string(),
         },
+        inputs: vec![operator_port_descriptor(
+            "model",
+            &format!("model/{family}"),
+            "Primary operator model input",
+            Some("model"),
+            Some(&format!("kyuubiki.operator.{family}.input")),
+        )],
+        outputs: vec![operator_port_descriptor(
+            "result",
+            &format!("result/{family}"),
+            "Primary operator result output",
+            Some("result"),
+            Some(&format!("kyuubiki.operator.{family}.output")),
+        )],
+        validation: verified_operator_validation_profile(family, &["workflow_graph", "orchestrated_api"]),
     }
 }
 
@@ -571,6 +587,21 @@ fn built_in_bridge_descriptor(
             schema: format!("kyuubiki.operator.{family}.bridge_output"),
             version: "1".to_string(),
         },
+        inputs: vec![operator_port_descriptor(
+            "source",
+            &format!("result/{family}_bridge_source"),
+            "Upstream workflow bridge payload",
+            Some("upstream_result"),
+            Some(&format!("kyuubiki.operator.{family}.bridge_input")),
+        )],
+        outputs: vec![operator_port_descriptor(
+            "bridged_model",
+            &format!("model/{family}"),
+            "Downstream bridged model payload",
+            Some("bridged_model"),
+            Some(&format!("kyuubiki.operator.{family}.bridge_output")),
+        )],
+        validation: verified_operator_validation_profile(family, &["workflow_graph", "catalog_job"]),
     }
 }
 
@@ -598,6 +629,21 @@ fn built_in_extract_descriptor(
             schema: format!("kyuubiki.operator.{family}.extract_output"),
             version: "1".to_string(),
         },
+        inputs: vec![operator_port_descriptor(
+            "result",
+            "result/any",
+            "Result payload to extract from",
+            Some("result"),
+            Some(&format!("kyuubiki.operator.{family}.extract_input")),
+        )],
+        outputs: vec![operator_port_descriptor(
+            "summary",
+            &format!("extract/{family}"),
+            "Extracted summary payload",
+            Some("summary"),
+            Some(&format!("kyuubiki.operator.{family}.extract_output")),
+        )],
+        validation: verified_operator_validation_profile(family, &["workflow_graph", "draft_builder"]),
     }
 }
 
@@ -625,6 +671,51 @@ fn built_in_export_descriptor(
             schema: format!("kyuubiki.operator.{family}.export_output"),
             version: "1".to_string(),
         },
+        inputs: vec![operator_port_descriptor(
+            "summary",
+            "extract/result_summary",
+            "Summary payload to export",
+            Some("summary"),
+            Some(&format!("kyuubiki.operator.{family}.export_input")),
+        )],
+        outputs: vec![operator_port_descriptor(
+            "export_artifact",
+            &format!("export/{family}"),
+            "Exported delivery artifact",
+            Some("export_artifact"),
+            Some(&format!("kyuubiki.operator.{family}.export_output")),
+        )],
+        validation: verified_operator_validation_profile(family, &["workflow_graph", "draft_builder"]),
+    }
+}
+
+fn operator_port_descriptor(
+    id: &str,
+    artifact_type: &str,
+    description: &str,
+    dataset_value: Option<&str>,
+    schema: Option<&str>,
+) -> OperatorPortDescriptor {
+    OperatorPortDescriptor {
+        id: id.to_string(),
+        artifact_type: artifact_type.to_string(),
+        description: description.to_string(),
+        dataset_value: dataset_value.map(|value| value.to_string()),
+        schema_ref: schema.map(|schema| OperatorSchemaRef {
+            schema: schema.to_string(),
+            version: "1".to_string(),
+        }),
+    }
+}
+
+fn verified_operator_validation_profile(
+    family: &str,
+    smoke_paths: &[&str],
+) -> OperatorValidationProfile {
+    OperatorValidationProfile {
+        baseline_status: OperatorValidationStatus::Verified,
+        baseline_cases: vec![format!("{family}_baseline")],
+        smoke_paths: smoke_paths.iter().map(|path| (*path).to_string()).collect(),
     }
 }
 

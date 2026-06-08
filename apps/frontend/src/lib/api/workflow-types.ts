@@ -4,6 +4,45 @@ export type WorkflowCatalogEntryArtifact = {
   description: string;
 };
 
+export type WorkflowOperatorSchemaRef = {
+  schema: string;
+  version: string;
+};
+
+export type WorkflowOperatorPortDescriptor = {
+  id: string;
+  artifact_type: string;
+  description: string;
+  dataset_value?: string | null;
+  schema_ref?: WorkflowOperatorSchemaRef | null;
+};
+
+export type WorkflowOperatorValidationProfile = {
+  baseline_status: "verified" | "partial" | "unverified";
+  baseline_cases: string[];
+  smoke_paths: string[];
+};
+
+export type WorkflowOperatorDescriptor = {
+  id: string;
+  version: string;
+  domain: string;
+  family: string;
+  kind: "solver" | "transform" | "extract" | "export" | "workflow_bridge";
+  summary: string;
+  capability_tags: string[];
+  origin: "built_in" | "external_local" | "external_remote";
+  input_schema: WorkflowOperatorSchemaRef;
+  output_schema: WorkflowOperatorSchemaRef;
+  inputs: WorkflowOperatorPortDescriptor[];
+  outputs: WorkflowOperatorPortDescriptor[];
+  validation: WorkflowOperatorValidationProfile;
+};
+
+export type WorkflowOperatorCatalogPayload = {
+  operators: WorkflowOperatorDescriptor[];
+};
+
 export type WorkflowGraphPort = {
   id: string;
   artifact_type: string;
@@ -96,6 +135,7 @@ export type WorkflowCatalogEntry = {
     promoted_at?: string;
     variant_of_workflow_id?: string;
     variant_of_workflow_name?: string;
+    notes?: string;
   };
 };
 

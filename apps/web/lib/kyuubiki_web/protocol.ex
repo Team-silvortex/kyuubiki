@@ -62,6 +62,8 @@ defmodule KyuubikiWeb.Protocol do
         "agents" => "/api/v1/agents",
         "jobs" => "/api/v1/jobs",
         "results" => "/api/v1/results",
+        "operators" => "/api/v1/operators",
+        "operator_descriptor" => "/api/v1/operators/:operator_id",
         "workflow_graph_run" => "/api/v1/workflows/graph/run",
         "workflow_graph_jobs" => "/api/v1/workflows/graph/jobs",
         "workflow_catalog" => "/api/v1/workflows/catalog",

@@ -11,6 +11,7 @@ export type StoredLocalWorkflow = {
   sourceWorkflowName?: string;
   name: string;
   summary: string;
+  notes?: string;
   version: string;
   promotedAt: string;
   variantOfWorkflowId?: string;
@@ -60,6 +61,7 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
           sourceWorkflowName: typeof entry.sourceWorkflowName === "string" ? entry.sourceWorkflowName : undefined,
           name: entry.name,
           summary: entry.summary,
+          notes: typeof entry.notes === "string" ? entry.notes : undefined,
           version: entry.version,
           promotedAt: entry.promotedAt,
           variantOfWorkflowId:
@@ -117,6 +119,7 @@ export function saveStoredLocalWorkflow(params: {
     sourceWorkflowName: params.workflowName,
     name: nextGraph.name,
     summary: `Local workflow promoted from ${params.workflowName}.`,
+    notes: "",
     version: "local",
     promotedAt: new Date().toISOString(),
     graph: nextGraph,
@@ -148,6 +151,23 @@ export function renameStoredLocalWorkflow(workflowId: string, nextName: string) 
   );
 }
 
+export function updateStoredLocalWorkflowMetadata(
+  workflowId: string,
+  params: { summary: string; notes: string },
+) {
+  writeStoredLocalWorkflows(
+    readStoredLocalWorkflows().map((entry) =>
+      entry.id === workflowId
+        ? {
+            ...entry,
+            summary: params.summary.trim(),
+            notes: params.notes.trim(),
+          }
+        : entry,
+    ),
+  );
+}
+
 export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWorkflow | null {
   const current = findStoredLocalWorkflow(workflowId);
   if (!current) return null;
@@ -163,6 +183,7 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
     sourceWorkflowName: current.sourceWorkflowName,
     name: baseName,
     summary: `Local workflow variant duplicated from ${current.name}.`,
+    notes: current.notes,
     version: "local",
     promotedAt: new Date().toISOString(),
     variantOfWorkflowId: current.id,
@@ -196,6 +217,7 @@ export function buildStoredLocalWorkflowCatalogEntries(): WorkflowCatalogEntry[]
       promoted_at: entry.promotedAt,
       variant_of_workflow_id: entry.variantOfWorkflowId,
       variant_of_workflow_name: entry.variantOfWorkflowName,
+      notes: entry.notes,
     },
   }));
 }

@@ -30,6 +30,34 @@ pub struct OperatorSchemaRef {
     pub version: String,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OperatorValidationStatus {
+    Verified,
+    Partial,
+    Unverified,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OperatorPortDescriptor {
+    pub id: String,
+    pub artifact_type: String,
+    pub description: String,
+    #[serde(default)]
+    pub dataset_value: Option<String>,
+    #[serde(default)]
+    pub schema_ref: Option<OperatorSchemaRef>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct OperatorValidationProfile {
+    pub baseline_status: OperatorValidationStatus,
+    #[serde(default)]
+    pub baseline_cases: Vec<String>,
+    #[serde(default)]
+    pub smoke_paths: Vec<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkflowDatasetEncoding {
@@ -90,6 +118,11 @@ pub struct OperatorDescriptor {
     pub origin: OperatorOrigin,
     pub input_schema: OperatorSchemaRef,
     pub output_schema: OperatorSchemaRef,
+    #[serde(default)]
+    pub inputs: Vec<OperatorPortDescriptor>,
+    #[serde(default)]
+    pub outputs: Vec<OperatorPortDescriptor>,
+    pub validation: OperatorValidationProfile,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -2377,9 +2410,10 @@ mod tests {
         HeatToThermoPlaneQuad2dWorkflowResult, HeatPlaneNodeInput,
         HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneNodeResult,
         HeatPlaneTriangleElementInput, Job, JobStatus, OperatorArtifactRef,
-        OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorRunRequest,
-        OperatorRunResult, OperatorSchemaRef, PlaneQuadElementInput, ProgressEvent,
-        RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
+        OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
+        OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
+        OperatorValidationProfile, OperatorValidationStatus, PlaneQuadElementInput,
+        ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
         SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
         SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
         SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
@@ -2472,6 +2506,31 @@ mod tests {
                 schema: "kyuubiki.operator.solve.frame_3d.output".to_string(),
                 version: "1".to_string(),
             },
+            inputs: vec![OperatorPortDescriptor {
+                id: "model".to_string(),
+                artifact_type: "model/frame_3d".to_string(),
+                description: "Frame model payload".to_string(),
+                dataset_value: Some("frame_model".to_string()),
+                schema_ref: Some(OperatorSchemaRef {
+                    schema: "kyuubiki.operator.solve.frame_3d.input".to_string(),
+                    version: "1".to_string(),
+                }),
+            }],
+            outputs: vec![OperatorPortDescriptor {
+                id: "result".to_string(),
+                artifact_type: "result/frame_3d".to_string(),
+                description: "Frame solve result".to_string(),
+                dataset_value: Some("frame_result".to_string()),
+                schema_ref: Some(OperatorSchemaRef {
+                    schema: "kyuubiki.operator.solve.frame_3d.output".to_string(),
+                    version: "1".to_string(),
+                }),
+            }],
+            validation: OperatorValidationProfile {
+                baseline_status: OperatorValidationStatus::Verified,
+                baseline_cases: vec!["frame_3d_baseline".to_string()],
+                smoke_paths: vec!["workflow_graph".to_string(), "orchestrated_api".to_string()],
+            },
         };
 
         let json = serde_json::to_string(&descriptor).expect("descriptor should serialize");
@@ -2481,6 +2540,11 @@ mod tests {
         assert_eq!(decoded.id, "solve.frame_3d");
         assert_eq!(decoded.kind, OperatorKind::Solver);
         assert_eq!(decoded.origin, OperatorOrigin::BuiltIn);
+        assert_eq!(decoded.inputs.len(), 1);
+        assert_eq!(
+            decoded.validation.baseline_status,
+            OperatorValidationStatus::Verified
+        );
     }
 
     #[test]

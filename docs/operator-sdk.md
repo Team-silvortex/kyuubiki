@@ -201,23 +201,42 @@ Remote operator discovery should only be added when:
 - capability negotiation is stable
 - failure modes are understandable
 
-## Suggested Rust-side shape
+## Current Rust-side shape
 
-The operator SDK likely wants a Rust-first representation because the runtime
+The operator SDK now has a Rust-first representation because the runtime
 contract already lives closest to the Rust data plane.
 
-An eventual shape could look like:
+The current shape includes:
 
 - `OperatorDescriptor`
-- `OperatorInputSchemaRef`
-- `OperatorOutputSchemaRef`
+- `OperatorPortDescriptor`
+- `OperatorValidationProfile`
+- `OperatorValidationStatus`
+- `OperatorSchemaRef`
 - `OperatorRunRequest`
 - `OperatorRunResult`
-- `OperatorProgressEvent`
-- `OperatorError`
+- `OperatorArtifactRef`
+
+Built-in descriptors now carry:
+
+- typed input/output ports
+- artifact types
+- dataset-value hints
+- validation metadata such as `baseline_status`, `baseline_cases`, and
+  `smoke_paths`
 
 That does not mean every operator must execute in Rust forever. It means the
 contract should be runtime-neutral and transportable.
+
+## Current control-plane shape
+
+The orchestrator now exposes built-in operator descriptors over HTTP:
+
+- `GET /api/v1/operators`
+- `GET /api/v1/operators/:operator_id`
+
+These endpoints currently describe the built-in operator catalog in a shape
+aligned with the Rust-side `OperatorDescriptor`.
 
 ## Suggested protocol shape
 

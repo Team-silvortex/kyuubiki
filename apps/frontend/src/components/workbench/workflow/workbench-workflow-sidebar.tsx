@@ -1,15 +1,18 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import type {
   JobState,
   WorkflowCatalogEntry,
   WorkflowGraphDefinition,
+  WorkflowOperatorDescriptor,
 } from "@/lib/api";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import type {
   WorkflowRunRecord,
+  WorkflowCatalogFilter,
   WorkflowSidebarLabels,
   WorkflowSurfaceTab,
 } from "@/components/workbench/workflow/workbench-workflow-types";
@@ -19,6 +22,7 @@ type WorkbenchWorkflowSidebarProps = {
   onSurfaceTabChange: (tab: WorkflowSurfaceTab) => void;
   labels: WorkflowSidebarLabels;
   workflowCatalogEntries: WorkflowCatalogEntry[];
+  workflowOperatorDescriptors?: WorkflowOperatorDescriptor[];
   workflowCatalogBusy: boolean;
   selectedWorkflowId: string | null;
   selectedWorkflow: WorkflowCatalogEntry | null;
@@ -57,6 +61,7 @@ export function WorkbenchWorkflowSidebar({
   onSurfaceTabChange,
   labels,
   workflowCatalogEntries,
+  workflowOperatorDescriptors,
   workflowCatalogBusy,
   selectedWorkflowId,
   selectedWorkflow,
@@ -70,11 +75,19 @@ export function WorkbenchWorkflowSidebar({
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
+  const [catalogFilter, setCatalogFilter] = useState<WorkflowCatalogFilter>("all");
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
     removeStoredLocalWorkflow(workflow.local.storage_id);
     onRefreshWorkflowCatalog();
   }
+  const filteredWorkflowCatalogEntries = useMemo(() => {
+    if (catalogFilter === "local") return workflowCatalogEntries.filter((workflow) => Boolean(workflow.local));
+    if (catalogFilter === "variants") {
+      return workflowCatalogEntries.filter((workflow) => Boolean(workflow.local?.variant_of_workflow_id));
+    }
+    return workflowCatalogEntries;
+  }, [catalogFilter, workflowCatalogEntries]);
 
   return (
     <div className="sidebar-stack panel-scroll-window">
@@ -175,13 +188,22 @@ export function WorkbenchWorkflowSidebar({
           </div>
           <p className="card-copy">{labels.catalogHint}</p>
           <div className="button-row">
+            <button onClick={() => setCatalogFilter("all")} type="button">
+              {labels.catalogFilterAllLabel}
+            </button>
+            <button onClick={() => setCatalogFilter("local")} type="button">
+              {labels.catalogFilterLocalLabel}
+            </button>
+            <button onClick={() => setCatalogFilter("variants")} type="button">
+              {labels.catalogFilterVariantsLabel}
+            </button>
             <button onClick={onRefreshWorkflowCatalog} type="button">
               {labels.refreshLabel}
             </button>
           </div>
-          {workflowCatalogEntries.length === 0 ? <p className="card-copy">{labels.emptyCatalogLabel}</p> : null}
+          {filteredWorkflowCatalogEntries.length === 0 ? <p className="card-copy">{labels.emptyCatalogLabel}</p> : null}
           <div className="runtime-overview-grid">
-            {workflowCatalogEntries.map((workflow) => (
+            {filteredWorkflowCatalogEntries.map((workflow) => (
               <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={workflow.id}>
                 <div className="card-head">
                   <h2>{workflow.name}</h2>
@@ -208,6 +230,7 @@ export function WorkbenchWorkflowSidebar({
                     ) : null}
                   </div>
                 ) : null}
+                {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
                 <div className="button-row">
                   <button
                     onClick={() => {
@@ -236,6 +259,7 @@ export function WorkbenchWorkflowSidebar({
       {surfaceTab === "builder" ? (
         <WorkbenchWorkflowBuilderCard
           labels={labels}
+          operatorDescriptors={workflowOperatorDescriptors}
           onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
           onRunWorkflowDraft={onRunWorkflowDraft}

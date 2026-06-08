@@ -1,6 +1,7 @@
 "use client";
 
 export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
+export type WorkflowCatalogFilter = "all" | "local" | "variants";
 
 export type WorkflowRunRecord = {
   jobId: string;
@@ -23,6 +24,9 @@ export type WorkflowSidebarLabels = {
   builderHint: string;
   runsHint: string;
   catalogTitle: string;
+  catalogFilterAllLabel: string;
+  catalogFilterLocalLabel: string;
+  catalogFilterVariantsLabel: string;
   refreshLabel: string;
   runLabel: string;
   runDraftLabel: string;
@@ -105,6 +109,11 @@ export type WorkflowSidebarLabels = {
   localWorkflowSourceLabel: string;
   localWorkflowPromotedAtLabel: string;
   localWorkflowVariantOfLabel: string;
+  localWorkflowMetadataTitle: string;
+  localWorkflowSummaryLabel: string;
+  localWorkflowNotesLabel: string;
+  localWorkflowSaveMetadataLabel: string;
+  localWorkflowMetadataSavedLabel: string;
   runDraftInvalidInputsLabel: string;
   validationTitle: string;
   validationOkLabel: string;
@@ -121,6 +130,13 @@ export type WorkflowSidebarLabels = {
   exportGraphLabel: string;
   exportDatasetContractLabel: string;
   operatorLabel: string;
+  operatorValidationLabel: string;
+  operatorCapabilitiesLabel: string;
+  operatorInputSchemaLabel: string;
+  operatorOutputSchemaLabel: string;
+  operatorValidationVerifiedLabel: string;
+  operatorValidationPartialLabel: string;
+  operatorValidationUnverifiedLabel: string;
   kindLabel: string;
   progressLabel: string;
   currentNodeLabel: string;

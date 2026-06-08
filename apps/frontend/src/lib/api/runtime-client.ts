@@ -9,6 +9,7 @@ import type {
   WorkflowCatalogPayload,
   WorkflowGraphDefinition,
   WorkflowGraphJobResult,
+  WorkflowOperatorCatalogPayload,
 } from "./index";
 import { requestJson } from "./core";
 
@@ -28,6 +29,13 @@ export function fetchJobHistory(): Promise<JobHistoryPayload> {
 
 export function fetchWorkflowCatalog(): Promise<WorkflowCatalogPayload> {
   return requestJson<WorkflowCatalogPayload>("/api/v1/workflows/catalog", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchWorkflowOperators(): Promise<WorkflowOperatorCatalogPayload> {
+  return requestJson<WorkflowOperatorCatalogPayload>("/api/v1/operators", {
     method: "GET",
     cache: "no-store",
   });

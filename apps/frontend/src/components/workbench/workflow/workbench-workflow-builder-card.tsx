@@ -6,6 +6,7 @@ import type {
   WorkflowCatalogEntry,
   WorkflowDatasetValueInfo,
   WorkflowGraphDefinition,
+  WorkflowOperatorDescriptor,
 } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
@@ -25,6 +26,7 @@ import {
   removeStoredLocalWorkflow,
   renameStoredLocalWorkflow,
   saveStoredLocalWorkflow,
+  updateStoredLocalWorkflowMetadata,
 } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { WorkbenchWorkflowDraftCard } from "@/components/workbench/workflow/workbench-workflow-draft-card";
 import { WorkbenchWorkflowBuilderToolbar } from "@/components/workbench/workflow/workbench-workflow-builder-toolbar";
@@ -37,9 +39,6 @@ import { WorkbenchWorkflowArtifactCard } from "@/components/workbench/workflow/w
 import {
   buildDraftArtifact,
   buildDraftDatasetValue,
-  buildDraftEdge,
-  buildDraftNode,
-  buildDraftPort,
   cloneWorkflowGraph,
   downloadJsonArtifact,
   ensureDatasetContract,
@@ -49,6 +48,7 @@ import { createWorkflowTopologyActions } from "@/components/workbench/workflow/w
 import { validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card";
+import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
 import { WorkbenchWorkflowTopologyCard } from "@/components/workbench/workflow/workbench-workflow-topology-card";
 import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
@@ -56,6 +56,7 @@ import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
   selectedWorkflow: WorkflowCatalogEntry | null;
+  operatorDescriptors?: WorkflowOperatorDescriptor[];
   onRefreshWorkflowCatalog: () => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
   onRunWorkflowDraft: (
@@ -68,6 +69,7 @@ type WorkbenchWorkflowBuilderCardProps = {
 export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
+  operatorDescriptors,
   onRefreshWorkflowCatalog,
   onRunWorkflowCatalog,
   onRunWorkflowDraft,
@@ -136,7 +138,7 @@ export function WorkbenchWorkflowBuilderCard({
     () => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null,
     [selectedDatasetValueId, selectedDatasetValues],
   );
-  const topologyActions = createWorkflowTopologyActions(setDraftGraph);
+  const topologyActions = createWorkflowTopologyActions(setDraftGraph, operatorDescriptors);
   function updateDatasetValue(
     valueId: string,
     updater: (value: WorkflowDatasetValueInfo) => WorkflowDatasetValueInfo,
@@ -426,6 +428,12 @@ export function WorkbenchWorkflowBuilderCard({
     onRefreshWorkflowCatalog();
     setImportMessage(labels.localWorkflowDeletedLabel);
   }
+  function saveCurrentLocalWorkflowMetadata(summary: string, notes: string) {
+    if (!selectedWorkflow?.local) return;
+    updateStoredLocalWorkflowMetadata(selectedWorkflow.local.storage_id, { notes, summary });
+    onRefreshWorkflowCatalog();
+    setImportMessage(labels.localWorkflowMetadataSavedLabel);
+  }
   function loadSavedDraft(draftId: string) {
     const draft = savedDrafts.find((entry) => entry.id === draftId);
     if (!draft) return;
@@ -533,6 +541,9 @@ export function WorkbenchWorkflowBuilderCard({
         onLoadDraft={loadSavedDraft}
         onSaveDraft={saveCurrentDraft}
       />
+      {selectedWorkflow.local ? (
+        <WorkbenchWorkflowLocalMetadataCard labels={labels} onSave={saveCurrentLocalWorkflowMetadata} workflow={selectedWorkflow} />
+      ) : null}
       <WorkbenchWorkflowInputArtifactsCard
         entryInputs={selectedEntryInputs} inputTexts={draftInputTexts} invalidKeys={parsedDraftInputs.invalidKeys}
         labels={labels} onChangeInputText={updateDraftInputText} />
@@ -542,6 +553,7 @@ export function WorkbenchWorkflowBuilderCard({
         focusedEdgeId={focusedEdgeId}
         focusedNodeId={focusedNodeId}
         labels={labels}
+        operatorDescriptors={operatorDescriptors}
         onAddEdge={topologyActions.addEdge}
         onAddConnectedNode={topologyActions.addConnectedNode}
         onInsertTemplateChain={topologyActions.insertTemplateChain}

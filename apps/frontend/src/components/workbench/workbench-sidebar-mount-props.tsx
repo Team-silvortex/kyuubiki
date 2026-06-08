@@ -76,6 +76,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         onSurfaceTabChange={props.handleWorkflowPanelTabChange}
         labels={props.workflowLabels}
         workflowCatalogEntries={props.workflowCatalog}
+        workflowOperatorDescriptors={props.workflowOperatorDescriptors}
         workflowCatalogBusy={props.workflowCatalogBusy}
         selectedWorkflowId={props.selectedWorkflowId}
         selectedWorkflow={props.selectedWorkflow}

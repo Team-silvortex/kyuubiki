@@ -1801,6 +1801,67 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert_in_delta summary["max_stress"], 34_477_611.940298505, 1.0e-6
   end
 
+  test "lists built-in operators and fetches a descriptor" do
+    list_conn =
+      :get
+      |> conn("/api/v1/operators")
+      |> Router.call(@opts)
+
+    assert list_conn.status == 200
+    payload = Jason.decode!(list_conn.resp_body)
+    operators = payload["operators"]
+    assert length(operators) >= 8
+
+    frame_operator =
+      Enum.find(operators, fn operator -> operator["id"] == "solve.frame_3d" end)
+
+    assert frame_operator["kind"] == "solver"
+    assert frame_operator["origin"] == "built_in"
+    assert frame_operator["input_schema"]["schema"] == "kyuubiki.operator.frame_3d.input"
+    assert frame_operator["validation"]["baseline_status"] == "verified"
+    assert frame_operator["validation"]["baseline_cases"] == ["frame_3d_baseline"]
+    assert "orchestrated_api" in frame_operator["validation"]["smoke_paths"]
+
+    assert [
+             %{
+               "id" => "model",
+               "artifact_type" => "model/frame_3d",
+               "dataset_value" => "model"
+             }
+           ] = frame_operator["inputs"]
+
+    assert [
+             %{
+               "id" => "result",
+               "artifact_type" => "result/frame_3d",
+               "dataset_value" => "result"
+             }
+           ] = frame_operator["outputs"]
+
+    fetch_conn =
+      :get
+      |> conn("/api/v1/operators/export.summary_csv")
+      |> Router.call(@opts)
+
+    assert fetch_conn.status == 200
+    fetched = Jason.decode!(fetch_conn.resp_body)["operator"]
+    assert fetched["id"] == "export.summary_csv"
+    assert fetched["kind"] == "export"
+    assert fetched["outputs"] |> hd() |> Map.fetch!("artifact_type") == "export/summary_csv"
+  end
+
+  test "returns 404 for an unknown operator descriptor" do
+    conn =
+      :get
+      |> conn("/api/v1/operators/solve.missing_operator")
+      |> Router.call(@opts)
+
+    assert conn.status == 404
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["error"] == "operator_not_found"
+    assert payload["operator_id"] == "solve.missing_operator"
+  end
+
   test "runs a thermal bar job through the orchestration API" do
     {:ok, _pid} =
       FakePlaygroundAgent.start_link([

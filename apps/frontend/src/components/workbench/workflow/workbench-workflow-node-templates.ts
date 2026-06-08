@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  WorkflowOperatorDescriptor,
   WorkflowDatasetValueInfo,
   WorkflowGraphNode,
   WorkflowGraphPort,
@@ -227,17 +228,101 @@ function clonePorts(ports: WorkflowGraphPort[]): WorkflowGraphPort[] {
   return ports.map((port) => ({ ...port }));
 }
 
-export function listWorkflowNodeTemplatePresets(kind?: string) {
-  return PRESETS.filter((preset) => !kind || preset.kind === kind);
+function workflowKindFromOperatorKind(
+  kind: WorkflowOperatorDescriptor["kind"],
+): string {
+  if (kind === "solver") return "solve";
+  if (kind === "workflow_bridge") return "transform";
+  return kind;
 }
 
-export function resolveWorkflowNodeTemplate(template?: {
+function fallbackDataClassForArtifactType(artifactType: string) {
+  if (artifactType.startsWith("model/") || artifactType.startsWith("study_model/")) return "study_model";
+  if (artifactType.startsWith("result/")) return "result";
+  if (artifactType.startsWith("extract/") || artifactType.startsWith("report/")) return "artifact";
+  if (artifactType.startsWith("export/") || artifactType.startsWith("artifact/")) return "artifact";
+  return "field";
+}
+
+function buildDatasetValuePresetFromPort(
+  port: WorkflowGraphPort,
+  schemaRef?: { schema: string; version: string } | null,
+): WorkflowDatasetValueInfo | null {
+  const datasetId = port.dataset_value?.trim();
+  if (!datasetId) return null;
+  const preset = DATASET_VALUE_PRESETS[datasetId];
+  if (preset) return JSON.parse(JSON.stringify(preset)) as WorkflowDatasetValueInfo;
+  return {
+    id: datasetId,
+    data_class: fallbackDataClassForArtifactType(port.artifact_type),
+    element_type: "json_object",
+    shape: { axes: [] },
+    semantic_type: port.artifact_type,
+    encoding: port.artifact_type.startsWith("export/summary_csv") ? "text/csv" : "json",
+    schema_ref: schemaRef ? { ...schemaRef } : undefined,
+  };
+}
+
+function buildPortsFromOperatorDescriptor(
+  descriptor: WorkflowOperatorDescriptor,
+): WorkflowNodeTemplatePreset {
+  const kind = workflowKindFromOperatorKind(descriptor.kind);
+  return {
+    id: descriptor.id,
+    kind,
+    label: descriptor.summary,
+    operatorId: descriptor.id,
+    config:
+      descriptor.id === "extract.result_summary"
+        ? { fields: ["max_displacement", "max_stress"] }
+        : undefined,
+    inputs: descriptor.inputs.map((port) => ({
+      id: port.id,
+      artifact_type: port.artifact_type,
+      description: port.description,
+      dataset_value: port.dataset_value ?? undefined,
+    })),
+    outputs: descriptor.outputs.map((port) => ({
+      id: port.id,
+      artifact_type: port.artifact_type,
+      description: port.description,
+      dataset_value: port.dataset_value ?? undefined,
+    })),
+  };
+}
+
+function listDescriptorBackedPresets(
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
+  return (operatorDescriptors ?? []).map(buildPortsFromOperatorDescriptor);
+}
+
+export function listWorkflowNodeTemplatePresets(
+  kind?: string,
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
+  const descriptorPresets = listDescriptorBackedPresets(operatorDescriptors);
+  const merged = [...descriptorPresets];
+  for (const preset of PRESETS) {
+    if (!merged.some((entry) => entry.id === preset.id || entry.operatorId === preset.operatorId)) {
+      merged.push(preset);
+    }
+  }
+  return merged.filter((preset) => !kind || preset.kind === kind);
+}
+
+export function resolveWorkflowNodeTemplate(
+  template?: {
   kind?: string;
   operatorId?: string;
-}): WorkflowNodeTemplatePreset | null {
+  },
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+): WorkflowNodeTemplatePreset | null {
   const operatorId = template?.operatorId?.trim();
   if (operatorId) {
-    const byOperator = PRESETS.find((preset) => preset.operatorId === operatorId);
+    const byOperator = listWorkflowNodeTemplatePresets(undefined, operatorDescriptors).find(
+      (preset) => preset.operatorId === operatorId,
+    );
     if (byOperator) return byOperator;
   }
 
@@ -247,11 +332,33 @@ export function resolveWorkflowNodeTemplate(template?: {
   return null;
 }
 
-export function listWorkflowTemplateDatasetValues(template?: {
-  kind?: string;
-  operatorId?: string;
-}): WorkflowDatasetValueInfo[] {
-  const preset = resolveWorkflowNodeTemplate(template);
+export function listWorkflowTemplateDatasetValues(
+  template?: {
+    kind?: string;
+    operatorId?: string;
+  },
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+): WorkflowDatasetValueInfo[] {
+  const descriptor = (operatorDescriptors ?? []).find(
+    (entry) => entry.id === template?.operatorId?.trim(),
+  );
+  if (descriptor) {
+    return [...descriptor.inputs, ...descriptor.outputs]
+      .map((port) =>
+        buildDatasetValuePresetFromPort(
+          {
+            id: port.id,
+            artifact_type: port.artifact_type,
+            description: port.description,
+            dataset_value: port.dataset_value ?? undefined,
+          },
+          port.schema_ref,
+        ),
+      )
+      .filter((value): value is WorkflowDatasetValueInfo => Boolean(value));
+  }
+
+  const preset = resolveWorkflowNodeTemplate(template, operatorDescriptors);
   if (!preset) return [];
   const datasetIds = [...preset.inputs, ...preset.outputs]
     .map((port) => port.dataset_value)
@@ -263,11 +370,14 @@ export function listWorkflowTemplateDatasetValues(template?: {
     .map((value) => JSON.parse(JSON.stringify(value)) as WorkflowDatasetValueInfo);
 }
 
-export function buildPortsForWorkflowNodeTemplate(template?: {
-  kind?: string;
-  operatorId?: string;
-}) {
-  const preset = resolveWorkflowNodeTemplate(template);
+export function buildPortsForWorkflowNodeTemplate(
+  template?: {
+    kind?: string;
+    operatorId?: string;
+  },
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
+  const preset = resolveWorkflowNodeTemplate(template, operatorDescriptors);
   if (preset) {
     return {
       kind: preset.kind,

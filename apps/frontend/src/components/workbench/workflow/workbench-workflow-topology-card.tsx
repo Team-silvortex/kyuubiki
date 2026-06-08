@@ -4,6 +4,7 @@ import { useState } from "react";
 import type {
   WorkflowGraphEdge,
   WorkflowGraphNode,
+  WorkflowOperatorDescriptor,
   WorkflowGraphPort,
 } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
@@ -11,6 +12,7 @@ import { listWorkflowNodeTemplatePresets } from "@/components/workbench/workflow
 
 type WorkbenchWorkflowTopologyCardProps = {
   labels: WorkflowSidebarLabels;
+  operatorDescriptors?: WorkflowOperatorDescriptor[];
   selectedNodes: WorkflowGraphNode[];
   selectedEdges: WorkflowGraphEdge[];
   focusedNodeId?: string | null;
@@ -50,6 +52,22 @@ type WorkbenchWorkflowTopologyCardProps = {
 };
 
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
+
+function formatOperatorSchemaRef(schemaRef?: { schema: string; version: string } | null) {
+  if (!schemaRef?.schema) return "--";
+  return `${schemaRef.schema}@${schemaRef.version}`;
+}
+
+function formatOperatorValidationStatus(
+  labels: WorkflowSidebarLabels,
+  status?: WorkflowOperatorDescriptor["validation"]["baseline_status"],
+) {
+  if (status === "verified") return labels.operatorValidationVerifiedLabel;
+  if (status === "partial") return labels.operatorValidationPartialLabel;
+  if (status === "unverified") return labels.operatorValidationUnverifiedLabel;
+  return "--";
+}
+
 function WorkbenchWorkflowPortEditor(props: {
   labels: WorkflowSidebarLabels;
   nodeId: string;
@@ -141,6 +159,7 @@ function getSuggestedPorts(
 
 export function WorkbenchWorkflowTopologyCard({
   labels,
+  operatorDescriptors,
   selectedNodes,
   selectedEdges,
   focusedNodeId,
@@ -159,9 +178,12 @@ export function WorkbenchWorkflowTopologyCard({
 }: WorkbenchWorkflowTopologyCardProps) {
   const [nextNodeKind, setNextNodeKind] = useState("transform");
   const [nextOperatorId, setNextOperatorId] = useState("");
-  const nextKindTemplates = listWorkflowNodeTemplatePresets(nextNodeKind);
+  const nextKindTemplates = listWorkflowNodeTemplatePresets(nextNodeKind, operatorDescriptors);
   const nextOperatorTemplates = nextKindTemplates.filter((preset) => preset.operatorId);
   const selectedSourceNodeId = selectedNodes[0]?.id ?? null;
+  const operatorDescriptorMap = new Map(
+    (operatorDescriptors ?? []).map((descriptor) => [descriptor.id, descriptor] as const),
+  );
   const getPortOptions = (
     node: WorkflowGraphNode | undefined,
     direction: "inputs" | "outputs",
@@ -247,104 +269,137 @@ export function WorkbenchWorkflowTopologyCard({
       </div>
 
       <div className="sidebar-stack">
-        {selectedNodes.map((node) => (
-          <section
-            className="sidebar-card sidebar-card--compact"
-            data-workflow-node-id={node.id}
-            key={node.id}
-            style={
-              focusedNodeId === node.id
-                ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
-                : undefined
-            }
-          >
-            <div className="card-head">
-              <h2>{node.id}</h2>
-              <div className="button-row">
-                <button
-                  onClick={() =>
-                    onAddConnectedNode(node.id, {
-                      kind: nextNodeKind,
-                      operatorId: nextOperatorId || undefined,
-                    })
-                  }
-                  type="button"
-                >
-                  {labels.addConnectedNodeLabel}
-                </button>
-                <button onClick={() => onRemoveNode(node.id)} type="button">
-                  {labels.removeNodeLabel}
-                </button>
-              </div>
-            </div>
-            <div className="form-grid compact">
-              <label>
-                <span>{labels.nodeIdLabel}</span>
-                <input
-                  onChange={(event) =>
-                    onUpdateNode(node.id, (current) => ({
-                      ...current,
-                      id: event.target.value,
-                    }))
-                  }
-                  value={node.id}
+        {selectedNodes.map((node) => {
+          const operatorDescriptor = node.operator_id
+            ? operatorDescriptorMap.get(node.operator_id)
+            : undefined;
+
+          return (
+            <section
+              className="sidebar-card sidebar-card--compact"
+              data-workflow-node-id={node.id}
+              key={node.id}
+              style={
+                focusedNodeId === node.id
+                  ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
+                  : undefined
+              }
+            >
+                <div className="card-head">
+                  <h2>{node.id}</h2>
+                  <div className="button-row">
+                    <button
+                      onClick={() =>
+                        onAddConnectedNode(node.id, {
+                          kind: nextNodeKind,
+                          operatorId: nextOperatorId || undefined,
+                        })
+                      }
+                      type="button"
+                    >
+                      {labels.addConnectedNodeLabel}
+                    </button>
+                    <button onClick={() => onRemoveNode(node.id)} type="button">
+                      {labels.removeNodeLabel}
+                    </button>
+                  </div>
+                </div>
+                <div className="form-grid compact">
+                  <label>
+                    <span>{labels.nodeIdLabel}</span>
+                    <input
+                      onChange={(event) =>
+                        onUpdateNode(node.id, (current) => ({
+                          ...current,
+                          id: event.target.value,
+                        }))
+                      }
+                      value={node.id}
+                    />
+                  </label>
+                  <label>
+                    <span>{labels.kindLabel}</span>
+                    <input
+                      onChange={(event) =>
+                        onUpdateNode(node.id, (current) => ({
+                          ...current,
+                          kind: event.target.value,
+                        }))
+                      }
+                      value={node.kind}
+                    />
+                  </label>
+                  <label>
+                    <span>{labels.operatorLabel}</span>
+                    <input
+                      list={`workflow-node-operators-${node.id}`}
+                      onChange={(event) =>
+                        onUpdateNode(node.id, (current) => ({
+                          ...current,
+                          operator_id: event.target.value || undefined,
+                        }))
+                      }
+                      value={node.operator_id ?? ""}
+                    />
+                    <datalist id={`workflow-node-operators-${node.id}`}>
+                      {listWorkflowNodeTemplatePresets(node.kind, operatorDescriptors)
+                        .filter((preset) => preset.operatorId)
+                        .map((preset) => (
+                          <option key={preset.id} label={preset.label} value={preset.operatorId} />
+                        ))}
+                    </datalist>
+                  </label>
+                </div>
+                {operatorDescriptor ? (
+                  <div className="sidebar-list">
+                    <div className="sidebar-list__row">
+                      <span>{labels.operatorValidationLabel}</span>
+                      <strong>
+                        {formatOperatorValidationStatus(
+                          labels,
+                          operatorDescriptor.validation?.baseline_status,
+                        )}
+                      </strong>
+                    </div>
+                    <div className="sidebar-list__row">
+                      <span>{labels.operatorInputSchemaLabel}</span>
+                      <strong>{formatOperatorSchemaRef(operatorDescriptor.input_schema)}</strong>
+                    </div>
+                    <div className="sidebar-list__row">
+                      <span>{labels.operatorOutputSchemaLabel}</span>
+                      <strong>{formatOperatorSchemaRef(operatorDescriptor.output_schema)}</strong>
+                    </div>
+                    {operatorDescriptor.capability_tags.length > 0 ? (
+                      <div className="sidebar-list__row">
+                        <span>{labels.operatorCapabilitiesLabel}</span>
+                        <strong>{operatorDescriptor.capability_tags.join(", ")}</strong>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+                <WorkbenchWorkflowPortEditor
+                  direction="inputs"
+                  labels={labels}
+                  nodeId={node.id}
+                  onAdd={() => onAddNodePort(node.id, "inputs")}
+                  onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)}
+                  onUpdate={(portId, updater) => onUpdateNodePort(node.id, "inputs", portId, updater)}
+                  ports={node.inputs ?? []}
+                  title={labels.inputsTitle}
                 />
-              </label>
-              <label>
-                <span>{labels.kindLabel}</span>
-                <input
-                  onChange={(event) =>
-                    onUpdateNode(node.id, (current) => ({
-                      ...current,
-                      kind: event.target.value,
-                    }))
-                  }
-                  value={node.kind}
+                <WorkbenchWorkflowPortEditor
+                  direction="outputs"
+                  labels={labels}
+                  nodeId={node.id}
+                  onAdd={() => onAddNodePort(node.id, "outputs")}
+                  onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)}
+                  onUpdate={(portId, updater) => onUpdateNodePort(node.id, "outputs", portId, updater)}
+                  ports={node.outputs ?? []}
+                  title={labels.outputsTitle}
                 />
-              </label>
-              <label>
-                <span>{labels.operatorLabel}</span>
-                <input
-                  list={`workflow-node-operators-${node.id}`}
-                  onChange={(event) =>
-                    onUpdateNode(node.id, (current) => ({
-                      ...current,
-                      operator_id: event.target.value || undefined,
-                    }))
-                  }
-                  value={node.operator_id ?? ""}
-                />
-                <datalist id={`workflow-node-operators-${node.id}`}>
-                  {listWorkflowNodeTemplatePresets(node.kind)
-                    .filter((preset) => preset.operatorId)
-                    .map((preset) => (
-                      <option key={preset.id} label={preset.label} value={preset.operatorId} />
-                    ))}
-                </datalist>
-              </label>
-            </div>
-            <WorkbenchWorkflowPortEditor
-              direction="inputs"
-              labels={labels}
-              nodeId={node.id}
-              onAdd={() => onAddNodePort(node.id, "inputs")}
-              onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)}
-              onUpdate={(portId, updater) => onUpdateNodePort(node.id, "inputs", portId, updater)}
-              ports={node.inputs ?? []}
-              title={labels.inputsTitle}
-            />
-            <WorkbenchWorkflowPortEditor
-              direction="outputs"
-              labels={labels}
-              nodeId={node.id}
-              onAdd={() => onAddNodePort(node.id, "outputs")}
-              onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)}
-              onUpdate={(portId, updater) => onUpdateNodePort(node.id, "outputs", portId, updater)}
-              ports={node.outputs ?? []}
-              title={labels.outputsTitle}
-            />
-          </section>
-        ))}
+            </section>
+          );
+        })}
       </div>
 
       <div className="sidebar-stack">

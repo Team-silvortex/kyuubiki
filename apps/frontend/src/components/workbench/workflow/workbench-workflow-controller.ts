@@ -4,12 +4,14 @@ import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, t
 import {
   fetchJobStatus,
   fetchWorkflowCatalog,
+  fetchWorkflowOperators,
   submitWorkflowCatalogJob,
   submitWorkflowGraphJob,
   type JobEnvelope,
   type WorkflowCatalogEntry,
   type WorkflowGraphDefinition,
   type WorkflowGraphJobResult,
+  type WorkflowOperatorDescriptor,
 } from "@/lib/api";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
@@ -85,6 +87,7 @@ export function useWorkbenchWorkflowController({
   openWorkflowRunsSurface,
 }: UseWorkbenchWorkflowControllerArgs) {
   const [workflowCatalog, setWorkflowCatalog] = useState<WorkflowCatalogEntry[]>([]);
+  const [workflowOperatorDescriptors, setWorkflowOperatorDescriptors] = useState<WorkflowOperatorDescriptor[]>([]);
   const [workflowCatalogBusy, setWorkflowCatalogBusy] = useState(false);
   const [workflowPanelTab, setWorkflowPanelTab] = useState<WorkflowSurfaceTab>("overview");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
@@ -94,8 +97,12 @@ export function useWorkbenchWorkflowController({
     setWorkflowCatalogBusy(true);
 
     try {
-      const payload = await fetchWorkflowCatalog();
+      const [payload, operatorPayload] = await Promise.all([
+        fetchWorkflowCatalog(),
+        fetchWorkflowOperators().catch(() => ({ operators: [] as WorkflowOperatorDescriptor[] })),
+      ]);
       const localEntries = buildStoredLocalWorkflowCatalogEntries();
+      setWorkflowOperatorDescriptors(operatorPayload.operators ?? []);
       setWorkflowCatalog([...localEntries, ...payload.workflows]);
       setSelectedWorkflowId((current) =>
         current && [...localEntries, ...payload.workflows].some((entry) => entry.id === current)
@@ -257,6 +264,7 @@ export function useWorkbenchWorkflowController({
 
   return {
     workflowCatalog,
+    workflowOperatorDescriptors,
     workflowCatalogBusy,
     workflowPanelTab,
     setWorkflowPanelTab,

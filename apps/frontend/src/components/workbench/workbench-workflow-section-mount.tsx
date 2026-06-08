@@ -1,6 +1,11 @@
 "use client";
 
-import type { JobState, WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
+import type {
+  JobState,
+  WorkflowCatalogEntry,
+  WorkflowGraphDefinition,
+  WorkflowOperatorDescriptor,
+} from "@/lib/api";
 
 import { WorkbenchWorkflowSidebar } from "@/components/workbench/workflow/workbench-workflow-sidebar";
 import type {
@@ -14,6 +19,7 @@ type WorkbenchWorkflowSectionMountProps = {
   onSurfaceTabChange: (tab: WorkflowSurfaceTab) => void;
   labels: WorkflowSidebarLabels;
   workflowCatalogEntries: WorkflowCatalogEntry[];
+  workflowOperatorDescriptors?: WorkflowOperatorDescriptor[];
   workflowCatalogBusy: boolean;
   selectedWorkflowId: string | null;
   selectedWorkflow: WorkflowCatalogEntry | null;
@@ -36,6 +42,7 @@ export function WorkbenchWorkflowSectionMount({
   onSurfaceTabChange,
   labels,
   workflowCatalogEntries,
+  workflowOperatorDescriptors,
   workflowCatalogBusy,
   selectedWorkflowId,
   selectedWorkflow,
@@ -54,6 +61,7 @@ export function WorkbenchWorkflowSectionMount({
       onSurfaceTabChange={onSurfaceTabChange}
       labels={labels}
       workflowCatalogEntries={workflowCatalogEntries}
+      workflowOperatorDescriptors={workflowOperatorDescriptors}
       workflowCatalogBusy={workflowCatalogBusy}
       selectedWorkflowId={selectedWorkflowId}
       selectedWorkflow={selectedWorkflow}

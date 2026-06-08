@@ -491,6 +491,27 @@ defmodule KyuubikiWeb.Router do
     end)
   end
 
+  get "/api/v1/operators" do
+    with_auth(conn, :read, fn conn ->
+      respond_json(conn, 200, Analysis.list_operator_catalog())
+    end)
+  end
+
+  get "/api/v1/operators/:operator_id" do
+    with_auth(conn, :read, fn conn ->
+      case Analysis.fetch_operator_catalog_entry(operator_id) do
+        {:ok, payload} ->
+          respond_json(conn, 200, payload)
+
+        {:error, {:operator_not_found, _}} ->
+          respond_json(conn, 404, %{"error" => "operator_not_found", "operator_id" => operator_id})
+
+        {:error, reason} ->
+          respond_json(conn, 422, %{"error" => inspect(reason)})
+      end
+    end)
+  end
+
   get "/api/v1/jobs" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, Analysis.list_jobs())
