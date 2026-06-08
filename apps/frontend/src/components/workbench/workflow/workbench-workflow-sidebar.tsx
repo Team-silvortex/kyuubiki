@@ -7,6 +7,7 @@ import type {
 } from "@/lib/api";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
+import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import type {
   WorkflowRunRecord,
   WorkflowSidebarLabels,
@@ -41,6 +42,16 @@ function workflowStatusTone(status: string): string {
   return "watch";
 }
 
+function formatPromotedAt(value?: string) {
+  if (!value) return "--";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
 export function WorkbenchWorkflowSidebar({
   surfaceTab,
   onSurfaceTabChange,
@@ -59,6 +70,11 @@ export function WorkbenchWorkflowSidebar({
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
+  function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
+    if (!workflow.local) return;
+    removeStoredLocalWorkflow(workflow.local.storage_id);
+    onRefreshWorkflowCatalog();
+  }
 
   return (
     <div className="sidebar-stack panel-scroll-window">
@@ -170,10 +186,28 @@ export function WorkbenchWorkflowSidebar({
                 <div className="card-head">
                   <h2>{workflow.name}</h2>
                   <span className={`status-pill status-pill--${selectedWorkflowId === workflow.id ? "good" : "watch"}`}>
-                    {workflow.version}
+                    {workflow.local ? labels.localWorkflowBadgeLabel : workflow.version}
                   </span>
                 </div>
                 <p className="card-copy">{workflow.summary}</p>
+                {workflow.local ? (
+                  <div className="sidebar-list">
+                    <div className="sidebar-list__row">
+                      <span>{labels.localWorkflowSourceLabel}</span>
+                      <strong>{workflow.local.source_workflow_name ?? workflow.local.source_workflow_id ?? "--"}</strong>
+                    </div>
+                    <div className="sidebar-list__row">
+                      <span>{labels.localWorkflowPromotedAtLabel}</span>
+                      <strong>{formatPromotedAt(workflow.local.promoted_at)}</strong>
+                    </div>
+                    {workflow.local.variant_of_workflow_name || workflow.local.variant_of_workflow_id ? (
+                      <div className="sidebar-list__row">
+                        <span>{labels.localWorkflowVariantOfLabel}</span>
+                        <strong>{workflow.local.variant_of_workflow_name ?? workflow.local.variant_of_workflow_id}</strong>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="button-row">
                   <button
                     onClick={() => {
@@ -187,6 +221,11 @@ export function WorkbenchWorkflowSidebar({
                   <button onClick={() => onRunWorkflowCatalog(workflow.id)} type="button">
                     {labels.runLabel}
                   </button>
+                  {workflow.local ? (
+                    <button onClick={() => deleteCatalogLocalWorkflow(workflow)} type="button">
+                      {labels.localWorkflowDeleteLabel}
+                    </button>
+                  ) : null}
                 </div>
               </section>
             ))}
@@ -197,6 +236,7 @@ export function WorkbenchWorkflowSidebar({
       {surfaceTab === "builder" ? (
         <WorkbenchWorkflowBuilderCard
           labels={labels}
+          onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
           onRunWorkflowDraft={onRunWorkflowDraft}
           selectedWorkflow={selectedWorkflow}

@@ -13,6 +13,11 @@ import {
 } from "@/lib/api";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
+import {
+  buildStoredLocalWorkflowCatalogEntries,
+  findStoredLocalWorkflow,
+} from "@/components/workbench/workflow/workbench-workflow-local-storage";
+import { parseWorkflowInputArtifactTexts } from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
 
 type WorkflowControllerLabels = {
   workflowCatalogLoaded: string;
@@ -90,9 +95,12 @@ export function useWorkbenchWorkflowController({
 
     try {
       const payload = await fetchWorkflowCatalog();
-      setWorkflowCatalog(payload.workflows);
+      const localEntries = buildStoredLocalWorkflowCatalogEntries();
+      setWorkflowCatalog([...localEntries, ...payload.workflows]);
       setSelectedWorkflowId((current) =>
-        current && payload.workflows.some((entry) => entry.id === current) ? current : payload.workflows[0]?.id ?? null,
+        current && [...localEntries, ...payload.workflows].some((entry) => entry.id === current)
+          ? current
+          : [...localEntries, ...payload.workflows][0]?.id ?? null,
       );
       setMessage(labels.workflowCatalogLoaded);
     } catch (error) {
@@ -202,9 +210,27 @@ export function useWorkbenchWorkflowController({
   ]);
 
   const runWorkflowCatalogEntry = useCallback(
-    async (workflowId: string) =>
-      runWorkflowJob({ sourceWorkflowId: workflowId, displayWorkflowId: workflowId }),
-    [runWorkflowJob],
+    async (workflowId: string) => {
+      const localWorkflow = findStoredLocalWorkflow(workflowId);
+      if (localWorkflow) {
+        const parsedInputs = parseWorkflowInputArtifactTexts(localWorkflow.inputArtifactTexts ?? {});
+        if (parsedInputs.invalidKeys.length > 0) {
+          setMessage(labels.workflowCatalogUnsupported);
+          return;
+        }
+        return runWorkflowJob({
+          sourceWorkflowId: localWorkflow.sourceWorkflowId,
+          displayWorkflowId: localWorkflow.id,
+          graph: localWorkflow.graph,
+          inputArtifacts:
+            Object.keys(parsedInputs.inputArtifacts).length > 0
+              ? parsedInputs.inputArtifacts
+              : builtInWorkflowSampleInputArtifacts(localWorkflow.sourceWorkflowId) ?? undefined,
+        });
+      }
+      return runWorkflowJob({ sourceWorkflowId: workflowId, displayWorkflowId: workflowId });
+    },
+    [labels.workflowCatalogUnsupported, runWorkflowJob, setMessage],
   );
 
   const runWorkflowDraft = useCallback(

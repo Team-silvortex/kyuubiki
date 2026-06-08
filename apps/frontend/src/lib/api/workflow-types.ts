@@ -88,6 +88,15 @@ export type WorkflowCatalogEntry = {
   graph?: WorkflowGraphDefinition;
   entry_inputs: WorkflowCatalogEntryArtifact[];
   output_artifacts: WorkflowCatalogEntryArtifact[];
+  local?: {
+    storage_id: string;
+    source_workflow_id?: string;
+    source_workflow_name?: string;
+    input_artifact_texts?: Record<string, string>;
+    promoted_at?: string;
+    variant_of_workflow_id?: string;
+    variant_of_workflow_name?: string;
+  };
 };
 
 export type WorkflowCatalogPayload = {

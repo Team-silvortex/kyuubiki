@@ -85,6 +85,9 @@ export type WorkflowSidebarLabels = {
   importInvalidGraphLabel: string;
   importInvalidDatasetLabel: string;
   saveDraftLabel: string;
+  promoteDraftLabel: string;
+  duplicateLocalWorkflowLabel: string;
+  renameLocalWorkflowLabel: string;
   savedDraftsTitle: string;
   savedDraftsHint: string;
   savedDraftsEmptyLabel: string;
@@ -93,6 +96,15 @@ export type WorkflowSidebarLabels = {
   draftSavedLabel: string;
   draftLoadedLabel: string;
   draftDeletedLabel: string;
+  localWorkflowPromotedLabel: string;
+  localWorkflowDeleteLabel: string;
+  localWorkflowDeletedLabel: string;
+  localWorkflowBadgeLabel: string;
+  localWorkflowDuplicatedLabel: string;
+  localWorkflowRenamePrompt: string;
+  localWorkflowSourceLabel: string;
+  localWorkflowPromotedAtLabel: string;
+  localWorkflowVariantOfLabel: string;
   runDraftInvalidInputsLabel: string;
   validationTitle: string;
   validationOkLabel: string;

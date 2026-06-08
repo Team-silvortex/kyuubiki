@@ -20,6 +20,12 @@ import {
   saveStoredWorkflowDraft,
   type StoredWorkflowDraft,
 } from "@/components/workbench/workflow/workbench-workflow-draft-storage";
+import {
+  duplicateStoredLocalWorkflow,
+  removeStoredLocalWorkflow,
+  renameStoredLocalWorkflow,
+  saveStoredLocalWorkflow,
+} from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { WorkbenchWorkflowDraftCard } from "@/components/workbench/workflow/workbench-workflow-draft-card";
 import { WorkbenchWorkflowBuilderToolbar } from "@/components/workbench/workflow/workbench-workflow-builder-toolbar";
 import {
@@ -50,6 +56,7 @@ import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
   selectedWorkflow: WorkflowCatalogEntry | null;
+  onRefreshWorkflowCatalog: () => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
   onRunWorkflowDraft: (
     workflowId: string,
@@ -61,6 +68,7 @@ type WorkbenchWorkflowBuilderCardProps = {
 export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
+  onRefreshWorkflowCatalog,
   onRunWorkflowCatalog,
   onRunWorkflowDraft,
 }: WorkbenchWorkflowBuilderCardProps) {
@@ -99,9 +107,10 @@ export function WorkbenchWorkflowBuilderCard({
     setDraftGraph(nextDraft);
     setDraftInputTexts(
       selectedWorkflow
-        ? buildWorkflowInputArtifactTexts(
+        ? selectedWorkflow.local?.input_artifact_texts ??
+          buildWorkflowInputArtifactTexts(
             nextDraft?.entry_inputs ?? [],
-            builtInWorkflowSampleInputArtifacts(selectedWorkflow.id),
+            builtInWorkflowSampleInputArtifacts(selectedWorkflow.local?.source_workflow_id ?? selectedWorkflow.id),
           )
         : {},
     );
@@ -120,19 +129,11 @@ export function WorkbenchWorkflowBuilderCard({
   const selectedDatasetValues = selectedDatasetContract?.values ?? [];
   const parsedDraftInputs = useMemo(() => parseWorkflowInputArtifactTexts(draftInputTexts), [draftInputTexts]);
   const validationIssues = useMemo(
-    () =>
-      validateWorkflowGraphDefinition(
-        selectedGraph,
-        selectedEntryInputs,
-        selectedOutputArtifacts,
-      ),
+    () => validateWorkflowGraphDefinition(selectedGraph, selectedEntryInputs, selectedOutputArtifacts),
     [selectedGraph, selectedEntryInputs, selectedOutputArtifacts],
   );
   const selectedDatasetValue = useMemo(
-    () =>
-      selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ??
-      selectedDatasetValues[0] ??
-      null,
+    () => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null,
     [selectedDatasetValueId, selectedDatasetValues],
   );
   const topologyActions = createWorkflowTopologyActions(setDraftGraph);
@@ -145,9 +146,7 @@ export function WorkbenchWorkflowBuilderCard({
       const next = cloneWorkflowGraph(current);
       const contract = ensureDatasetContract(next);
       if (!contract) return current;
-      contract.values = contract.values.map((value) =>
-        value.id === valueId ? updater(value) : value,
-      );
+      contract.values = contract.values.map((value) => (value.id === valueId ? updater(value) : value));
       return next;
     });
   }
@@ -207,11 +206,7 @@ export function WorkbenchWorkflowBuilderCard({
     index: number,
     updater: (artifact: WorkflowCatalogEntryArtifact) => WorkflowCatalogEntryArtifact,
   ) {
-    updateArtifacts(field, (artifacts) =>
-      artifacts.map((artifact, artifactIndex) =>
-        artifactIndex === index ? updater(artifact) : artifact,
-      ),
-    );
+    updateArtifacts(field, (artifacts) => artifacts.map((artifact, artifactIndex) => (artifactIndex === index ? updater(artifact) : artifact)));
   }
 
   function applyValidationFix(issueId: string) {
@@ -400,6 +395,37 @@ export function WorkbenchWorkflowBuilderCard({
     }
     onRunWorkflowDraft(selectedWorkflow.id, selectedGraph, parsedDraftInputs.inputArtifacts);
   }
+  function promoteCurrentDraft() {
+    if (!selectedWorkflow || !selectedGraph) return;
+    saveStoredLocalWorkflow({
+      sourceWorkflowId: selectedWorkflow.local?.source_workflow_id ?? selectedWorkflow.id,
+      workflowName: selectedWorkflow.name,
+      graph: selectedGraph,
+      inputArtifactTexts: draftInputTexts,
+    });
+    onRefreshWorkflowCatalog();
+    setImportMessage(labels.localWorkflowPromotedLabel);
+  }
+  function renameCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    const nextName = window.prompt(labels.localWorkflowRenamePrompt, selectedWorkflow.name);
+    if (!nextName?.trim()) return;
+    renameStoredLocalWorkflow(selectedWorkflow.local.storage_id, nextName);
+    onRefreshWorkflowCatalog();
+    setImportMessage(`${labels.localWorkflowBadgeLabel}: ${nextName.trim()}`);
+  }
+  function duplicateCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    duplicateStoredLocalWorkflow(selectedWorkflow.local.storage_id);
+    onRefreshWorkflowCatalog();
+    setImportMessage(labels.localWorkflowDuplicatedLabel);
+  }
+  function deleteCurrentLocalWorkflow() {
+    if (!selectedWorkflow?.local) return;
+    removeStoredLocalWorkflow(selectedWorkflow.local.storage_id);
+    onRefreshWorkflowCatalog();
+    setImportMessage(labels.localWorkflowDeletedLabel);
+  }
   function loadSavedDraft(draftId: string) {
     const draft = savedDrafts.find((entry) => entry.id === draftId);
     if (!draft) return;
@@ -475,16 +501,8 @@ export function WorkbenchWorkflowBuilderCard({
     event.target.value = "";
   }
 
-  function updateDraftInputText(nodeId: string, value: string) {
-    setDraftInputTexts((current) => ({ ...current, [nodeId]: value }));
-  }
-  if (!selectedWorkflow) {
-    return (
-      <section className="sidebar-card sidebar-card--compact">
-        <p className="card-copy">{labels.noSelectionLabel}</p>
-      </section>
-    );
-  }
+  function updateDraftInputText(nodeId: string, value: string) { setDraftInputTexts((current) => ({ ...current, [nodeId]: value })); }
+  if (!selectedWorkflow) return <section className="sidebar-card sidebar-card--compact"><p className="card-copy">{labels.noSelectionLabel}</p></section>;
 
   return (
     <section className="sidebar-card sidebar-card--compact" ref={builderRootRef}>
@@ -497,8 +515,12 @@ export function WorkbenchWorkflowBuilderCard({
         labels={labels}
         onDatasetFileChange={handleDatasetFileChange}
         onExportDataset={exportDraftDatasetContract}
+        onDuplicateLocalWorkflow={duplicateCurrentLocalWorkflow}
         onExportGraph={exportDraftWorkflowGraph}
+        onDeleteLocalWorkflow={deleteCurrentLocalWorkflow}
         onGraphFileChange={handleGraphFileChange}
+        onPromoteDraft={promoteCurrentDraft}
+        onRenameLocalWorkflow={renameCurrentLocalWorkflow}
         onRunCatalog={() => onRunWorkflowCatalog(selectedWorkflow.id)}
         onRunDraft={runCurrentDraft}
         onSaveDraft={saveCurrentDraft}
@@ -512,26 +534,10 @@ export function WorkbenchWorkflowBuilderCard({
         onSaveDraft={saveCurrentDraft}
       />
       <WorkbenchWorkflowInputArtifactsCard
-        entryInputs={selectedEntryInputs}
-        inputTexts={draftInputTexts}
-        invalidKeys={parsedDraftInputs.invalidKeys}
-        labels={labels}
-        onChangeInputText={updateDraftInputText}
-      />
-      <WorkbenchWorkflowValidationCard
-        labels={labels}
-        onApplyValidationFix={applyValidationFix}
-        onLocateValidationIssue={locateValidationIssue}
-        validationIssues={validationIssues}
-      />
-      <WorkbenchWorkflowGraphSummaryCard
-        focusedEdgeId={focusedEdgeId}
-        focusedNodeId={focusedNodeId}
-        labels={labels}
-        selectedEdges={selectedEdges}
-        selectedEntryInputsCount={selectedEntryInputs.length}
-        selectedNodes={selectedNodes}
-        selectedOutputArtifactsCount={selectedOutputArtifacts.length} />
+        entryInputs={selectedEntryInputs} inputTexts={draftInputTexts} invalidKeys={parsedDraftInputs.invalidKeys}
+        labels={labels} onChangeInputText={updateDraftInputText} />
+      <WorkbenchWorkflowValidationCard labels={labels} onApplyValidationFix={applyValidationFix} onLocateValidationIssue={locateValidationIssue} validationIssues={validationIssues} />
+      <WorkbenchWorkflowGraphSummaryCard focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} labels={labels} selectedEdges={selectedEdges} selectedEntryInputsCount={selectedEntryInputs.length} selectedNodes={selectedNodes} selectedOutputArtifactsCount={selectedOutputArtifacts.length} />
       <WorkbenchWorkflowTopologyCard
         focusedEdgeId={focusedEdgeId}
         focusedNodeId={focusedNodeId}
@@ -550,26 +556,7 @@ export function WorkbenchWorkflowBuilderCard({
         selectedEdges={selectedEdges}
         selectedNodes={selectedNodes}
       />
-      <WorkbenchWorkflowDatasetCard
-        addDatasetAxis={addDatasetAxis}
-        addDatasetValue={addDatasetValue}
-        labels={labels}
-        removeDatasetAxis={removeDatasetAxis}
-        removeSelectedDatasetValue={removeSelectedDatasetValue}
-        selectedDatasetContract={selectedDatasetContract}
-        selectedDatasetValue={selectedDatasetValue}
-        selectedDatasetValueId={selectedDatasetValueId}
-        selectedDatasetValues={selectedDatasetValues}
-        selectedEdges={selectedEdges}
-        focusedDatasetValueId={focusedDatasetValueId}
-        highlightDatasetEditor={highlightDatasetEditor}
-        selectedNodes={selectedNodes}
-        setSelectedDatasetValueId={setSelectedDatasetValueId}
-        updateDatasetAxis={updateDatasetAxis}
-        updateDatasetValue={updateDatasetValue}
-        updateEdgeDatasetValue={updateEdgeDatasetValue}
-        updateNodePortDatasetValue={updateNodePortDatasetValue}
-      />
+      <WorkbenchWorkflowDatasetCard addDatasetAxis={addDatasetAxis} addDatasetValue={addDatasetValue} labels={labels} removeDatasetAxis={removeDatasetAxis} removeSelectedDatasetValue={removeSelectedDatasetValue} selectedDatasetContract={selectedDatasetContract} selectedDatasetValue={selectedDatasetValue} selectedDatasetValueId={selectedDatasetValueId} selectedDatasetValues={selectedDatasetValues} selectedEdges={selectedEdges} focusedDatasetValueId={focusedDatasetValueId} highlightDatasetEditor={highlightDatasetEditor} selectedNodes={selectedNodes} setSelectedDatasetValueId={setSelectedDatasetValueId} updateDatasetAxis={updateDatasetAxis} updateDatasetValue={updateDatasetValue} updateEdgeDatasetValue={updateEdgeDatasetValue} updateNodePortDatasetValue={updateNodePortDatasetValue} />
       <WorkbenchWorkflowArtifactCard
         addLabel={labels.artifactAddEntryLabel}
         artifacts={selectedEntryInputs}
