@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
 import { workbenchScriptPanelCopy } from "@/components/workbench/workbench-script-panel-copy";
 import {
   buildWorkbenchRecordedMacroDraft,
@@ -257,6 +258,13 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     appendOutput(`[preset] ${t.presetDeleted}`);
   };
 
+  const insertExternalMacroDraft = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>) => {
+    setMacroDraftBuffer(draft);
+    const snippet = serializeWorkbenchMacroPythonSnippet(draft);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+    appendOutput(`[macro] ${t.macroDraftInserted}`);
+  };
+
   return (
     <>
       <section className="sidebar-card sidebar-card--compact">
@@ -311,6 +319,8 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         </div>
         {recordingMode ? <p className="card-copy">{t.recordingActive}</p> : null}
       </section>
+
+      <WorkbenchHeadlessWorkflowPanel language={language} onInsertMacroDraft={insertExternalMacroDraft} />
 
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">

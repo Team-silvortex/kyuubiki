@@ -5,7 +5,7 @@ import path from "node:path";
 import JSZip from "jszip";
 import { listAutomationActionContracts, validateAutomationStep } from "./kyuubiki-automation-actions.mjs";
 import { runHeadlessAutomationEnvelope } from "./kyuubiki-automation-runner.mjs";
-import { createPlaywrightExecutor } from "./kyuubiki-playwright-executor.mjs";
+import { createHybridAutomationExecutor } from "./kyuubiki-hybrid-executor.mjs";
 import { buildHeadlessAutomationEnvelope, normalizeMacroDraft } from "./kyuubiki-macro-headless.mjs";
 
 const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v2";
@@ -46,13 +46,13 @@ Usage:
   kyuubiki project diff <left> <right> [--json]
   kyuubiki project automation-presets <input> [--json]
   kyuubiki project automation-render <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json]
-  kyuubiki project automation-run <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir]
+  kyuubiki project automation-run <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir] [--api-base-url url]
   kyuubiki macro inspect <macro.json> [--json]
   kyuubiki macro actions [--json]
   kyuubiki macro validate <input> [--json]
   kyuubiki macro normalize <input> --out <output>
   kyuubiki macro render <input> [--payload payload.json] [--state state.json] [--json]
-  kyuubiki macro run <input> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir]
+  kyuubiki macro run <input> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir] [--api-base-url url]
 
 Examples:
   kyuubiki project inspect demo.kyuubiki
@@ -63,13 +63,13 @@ Examples:
   kyuubiki project diff before.kyuubiki after.kyuubiki
   kyuubiki project automation-presets demo.kyuubiki --json
   kyuubiki project automation-render demo.kyuubiki --preset preset_123 --payload payload.json --json
-  kyuubiki project automation-run demo.kyuubiki --preset preset_123 --execute --allow-sensitive --artifacts-dir ./artifacts
+  kyuubiki project automation-run demo.kyuubiki --preset preset_123 --execute --allow-sensitive --api-base-url http://127.0.0.1:3000
   kyuubiki macro inspect review-result.json
   kyuubiki macro actions --json
   kyuubiki macro validate review-result.json --json
   kyuubiki macro normalize review-result.json --out review-result.normalized.json
   kyuubiki macro render review-result.json --payload payload.json --state state.json --json
-  kyuubiki macro run review-result.json --execute --allow-sensitive --allow-destructive --artifacts-dir ./artifacts
+  kyuubiki macro run review-result.json --execute --allow-sensitive --allow-destructive --api-base-url http://127.0.0.1:3000
 `);
 }
 
@@ -955,6 +955,7 @@ async function handleMacroActions(flags) {
   console.log(`Automation actions: ${contracts.length}`);
   for (const contract of contracts) {
     console.log(`- ${contract.id} [${contract.risk}]`);
+    console.log(`  engine: ${contract.engine}`);
     console.log(`  aliases: ${contract.aliases.join(", ") || "--"}`);
     console.log(`  summary: ${contract.summary}`);
     console.log(`  required payload: ${contract.requiredPayloadKeys.join(", ") || "--"}`);
@@ -968,13 +969,14 @@ async function readOptionalJsonFile(inputPath) {
 
 async function withAutomationExecutor(flags, callback) {
   if (!flags.execute) return callback({ executor: null, artifactsDir: null });
-  const runtime = await createPlaywrightExecutor({
+  const runtime = await createHybridAutomationExecutor({
     artifactsDir: typeof flags["artifacts-dir"] === "string" ? flags["artifacts-dir"] : undefined,
+    apiBaseUrl: typeof flags["api-base-url"] === "string" ? flags["api-base-url"] : undefined,
   });
   try {
     return await callback({
       executor: runtime.executor,
-      artifactsDir: runtime.artifactsDir ?? null,
+      artifactsDir: runtime.getArtifactsDir?.() ?? runtime.artifactsDir ?? null,
     });
   } finally {
     await runtime.dispose();
