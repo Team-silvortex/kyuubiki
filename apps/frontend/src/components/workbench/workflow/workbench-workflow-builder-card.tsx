@@ -45,7 +45,10 @@ import {
   slugifyWorkflowAssetName,
 } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
 import { createWorkflowTopologyActions } from "@/components/workbench/workflow/workbench-workflow-topology-actions";
-import { validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
+import {
+  applyWorkflowValidationFix,
+  validateWorkflowGraphDefinition,
+} from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card";
 import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card";
@@ -131,8 +134,14 @@ export function WorkbenchWorkflowBuilderCard({
   const selectedDatasetValues = selectedDatasetContract?.values ?? [];
   const parsedDraftInputs = useMemo(() => parseWorkflowInputArtifactTexts(draftInputTexts), [draftInputTexts]);
   const validationIssues = useMemo(
-    () => validateWorkflowGraphDefinition(selectedGraph, selectedEntryInputs, selectedOutputArtifacts),
-    [selectedGraph, selectedEntryInputs, selectedOutputArtifacts],
+    () =>
+      validateWorkflowGraphDefinition(
+        selectedGraph,
+        selectedEntryInputs,
+        selectedOutputArtifacts,
+        operatorDescriptors ?? [],
+      ),
+    [operatorDescriptors, selectedGraph, selectedEntryInputs, selectedOutputArtifacts],
   );
   const selectedDatasetValue = useMemo(
     () => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null,
@@ -214,42 +223,7 @@ export function WorkbenchWorkflowBuilderCard({
   function applyValidationFix(issueId: string) {
     const issue = validationIssues.find((entry) => entry.id === issueId);
     if (!issue?.fix) return;
-    const fix = issue.fix;
-    setDraftGraph((current) => {
-      if (!current) return current;
-      const next = cloneWorkflowGraph(current);
-      if (!next) return current;
-      switch (fix.kind) {
-        case "set_edge_artifact_type_from_source":
-        case "set_edge_artifact_type_from_target": {
-          const edge = next.edges?.find((entry) => entry.id === fix.edgeId);
-          if (edge) edge.artifact_type = fix.artifactType;
-          break;
-        }
-        case "set_catalog_artifact_type": {
-          const artifacts = next[fix.mode === "entry" ? "entry_inputs" : "output_artifacts"] ?? [];
-          const artifact = artifacts.find(
-            (entry) =>
-              entry.node_id === fix.nodeId &&
-              entry.artifact_type === fix.currentArtifactType,
-          );
-          if (artifact) artifact.artifact_type = fix.artifactType;
-          break;
-        }
-        case "clear_port_dataset_value": {
-          const node = next.nodes.find((entry) => entry.id === fix.nodeId);
-          const port = node?.[fix.direction]?.find((entry) => entry.id === fix.portId);
-          if (port) port.dataset_value = undefined;
-          break;
-        }
-        case "clear_edge_dataset_value": {
-          const edge = next.edges?.find((entry) => entry.id === fix.edgeId);
-          if (edge) edge.dataset_value = undefined;
-          break;
-        }
-      }
-      return next;
-    });
+    setDraftGraph((current) => applyWorkflowValidationFix(current, issue));
   }
   function locateValidationIssue(issueId: string) {
     const issue = validationIssues.find((entry) => entry.id === issueId);
@@ -562,6 +536,7 @@ export function WorkbenchWorkflowBuilderCard({
         onRemoveEdge={topologyActions.removeEdge}
         onRemoveNode={topologyActions.removeNode}
         onRemoveNodePort={topologyActions.removeNodePort}
+        onSyncNodeTemplate={topologyActions.syncNodeTemplate}
         onUpdateEdge={topologyActions.updateEdge}
         onUpdateNode={topologyActions.updateNode}
         onUpdateNodePort={topologyActions.updateNodePort}

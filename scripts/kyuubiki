@@ -68,6 +68,7 @@ Commands:
   package           Stage a portable release directory under dist/
   package-runtime   Stage the portable runtime release scaffold under dist/
   package-desktop [platform|all] Build/stage all Tauri desktop shells
+  release-snapshot <version> [args...] Scaffold or update a lightweight release snapshot manifest
   desktop-status [platform|all] Show host/platform desktop packaging readiness and next steps
   desktop-stage [platform|all] Stage the desktop/runtime release scaffold under dist/
   desktop-build-host Build the Hub, Installer, and Workbench desktop bundles for this host
@@ -133,6 +134,7 @@ Examples:
   ./scripts/kyuubiki package-desktop
   ./scripts/kyuubiki package-desktop linux
   ./scripts/kyuubiki package-desktop all
+  ./scripts/kyuubiki release-snapshot 1.4.1 --status staged --dry-run
   ./scripts/kyuubiki desktop-status
   ./scripts/kyuubiki desktop-status all
   ./scripts/kyuubiki desktop-stage all
@@ -397,6 +399,13 @@ run_sdk_smoke() {
   (
     cd "$ROOT_DIR"
     cargo test --manifest-path sdks/rust/Cargo.toml --test smoke
+  )
+}
+
+run_release_snapshot() {
+  (
+    cd "$ROOT_DIR"
+    node ./scripts/create-release-snapshot.mjs "$@"
   )
 }
 
@@ -1645,6 +1654,9 @@ case "$command" in
     ;;
   package-runtime)
     run_package_runtime "$@"
+    ;;
+  release-snapshot)
+    run_release_snapshot "$@"
     ;;
   package-desktop)
     run_package_desktop "${1:-$(host_platform)}"

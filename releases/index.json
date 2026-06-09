@@ -1,0 +1,14 @@
+{
+  "line": "tamamono 1.x",
+  "current_version": "1.4.0",
+  "snapshots": [
+    {
+      "version": "1.4.0",
+      "status": "current",
+      "date": "2026-06-08",
+      "codename": "tamamono",
+      "line": "1.x",
+      "snapshot_path": "snapshots/1.4.0.json"
+    }
+  ]
+}

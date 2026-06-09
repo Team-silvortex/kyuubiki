@@ -6,6 +6,7 @@ import type {
   WorkflowGraphDefinition,
   WorkflowGraphNode,
   WorkflowGraphPort,
+  WorkflowOperatorDescriptor,
 } from "@/lib/api";
 
 export type WorkflowGraphValidationIssue = {
@@ -27,6 +28,20 @@ export type WorkflowGraphValidationIssue = {
         currentArtifactType: string;
         artifactType: string;
       }
+    | {
+        kind: "set_node_port_artifact_type_from_operator";
+        nodeId: string;
+        portId: string;
+        direction: "inputs" | "outputs";
+        artifactType: string;
+      }
+    | {
+        kind: "set_node_port_dataset_value_from_operator";
+        nodeId: string;
+        portId: string;
+        direction: "inputs" | "outputs";
+        datasetValue?: string;
+      }
     | { kind: "clear_port_dataset_value"; nodeId: string; portId: string; direction: "inputs" | "outputs" }
     | { kind: "clear_edge_dataset_value"; edgeId: string };
 };
@@ -46,6 +61,92 @@ function findPort(
 function hasDatasetValue(contract: WorkflowDatasetContract | undefined, valueId: string | undefined) {
   if (!contract || !valueId) return true;
   return contract.values.some((value) => value.id === valueId);
+}
+
+function validateOperatorDescriptorContracts(
+  graph: WorkflowGraphDefinition,
+  operatorDescriptors: WorkflowOperatorDescriptor[],
+): WorkflowGraphValidationIssue[] {
+  const issues: WorkflowGraphValidationIssue[] = [];
+  if (operatorDescriptors.length === 0) return issues;
+  const descriptorMap = new Map(operatorDescriptors.map((descriptor) => [descriptor.id, descriptor] as const));
+
+  for (const node of graph.nodes) {
+    const operatorId = node.operator_id?.trim();
+    if (!operatorId) continue;
+    const descriptor = descriptorMap.get(operatorId);
+    if (!descriptor) {
+      issues.push({
+        id: `operator:missing:${node.id}:${operatorId}`,
+        level: "warning",
+        message: `Node "${node.id}" references unknown operator "${operatorId}".`,
+        locate: { kind: "node", nodeId: node.id },
+      });
+      continue;
+    }
+
+    for (const direction of ["inputs", "outputs"] as const) {
+      const descriptorPorts = descriptor[direction];
+      const nodePorts = node[direction] ?? [];
+      for (const descriptorPort of descriptorPorts) {
+        const nodePort = nodePorts.find((port) => port.id === descriptorPort.id);
+        if (!nodePort) {
+          issues.push({
+            id: `operator:missing-port:${node.id}:${direction}:${descriptorPort.id}`,
+            level: "warning",
+            message: `Node "${node.id}" is missing ${direction === "inputs" ? "input" : "output"} port "${descriptorPort.id}" required by operator "${operatorId}".`,
+            locate: { kind: "node", nodeId: node.id },
+          });
+          continue;
+        }
+        if (nodePort.artifact_type !== descriptorPort.artifact_type) {
+          issues.push({
+            id: `operator:artifact:${node.id}:${direction}:${descriptorPort.id}`,
+            level: "warning",
+            message: `Node "${node.id}" port "${descriptorPort.id}" uses artifact type "${nodePort.artifact_type}" but operator "${operatorId}" requires "${descriptorPort.artifact_type}".`,
+            locate: { kind: "node", nodeId: node.id },
+            fix: {
+              kind: "set_node_port_artifact_type_from_operator",
+              nodeId: node.id,
+              portId: descriptorPort.id,
+              direction,
+              artifactType: descriptorPort.artifact_type,
+            },
+          });
+        }
+        if ((nodePort.dataset_value ?? "") !== (descriptorPort.dataset_value ?? "")) {
+          issues.push({
+            id: `operator:dataset:${node.id}:${direction}:${descriptorPort.id}`,
+            level: "warning",
+            message: descriptorPort.dataset_value
+              ? `Node "${node.id}" port "${descriptorPort.id}" should bind dataset value "${descriptorPort.dataset_value}" from operator "${operatorId}".`
+              : `Node "${node.id}" port "${descriptorPort.id}" should not bind a dataset value for operator "${operatorId}".`,
+            locate: { kind: "node", nodeId: node.id },
+            fix: {
+              kind: "set_node_port_dataset_value_from_operator",
+              nodeId: node.id,
+              portId: descriptorPort.id,
+              direction,
+              datasetValue: descriptorPort.dataset_value ?? undefined,
+            },
+          });
+        }
+      }
+
+      for (const nodePort of nodePorts) {
+        if (!descriptorPorts.some((port) => port.id === nodePort.id)) {
+          issues.push({
+            id: `operator:extra-port:${node.id}:${direction}:${nodePort.id}`,
+            level: "warning",
+            message: `Node "${node.id}" exposes ${direction === "inputs" ? "input" : "output"} port "${nodePort.id}" that is not declared by operator "${operatorId}".`,
+            locate: { kind: "node", nodeId: node.id },
+          });
+        }
+      }
+    }
+  }
+
+  return issues;
 }
 
 function validateCatalogArtifacts(
@@ -102,6 +203,7 @@ export function validateWorkflowGraphDefinition(
   graph: WorkflowGraphDefinition | null,
   entryInputs: WorkflowCatalogEntryArtifact[],
   outputArtifacts: WorkflowCatalogEntryArtifact[],
+  operatorDescriptors: WorkflowOperatorDescriptor[] = [],
 ): WorkflowGraphValidationIssue[] {
   if (!graph) return [];
   const issues: WorkflowGraphValidationIssue[] = [];
@@ -226,6 +328,51 @@ export function validateWorkflowGraphDefinition(
 
   issues.push(...validateCatalogArtifacts(graph, entryInputs, "entry"));
   issues.push(...validateCatalogArtifacts(graph, outputArtifacts, "output"));
+  issues.push(...validateOperatorDescriptorContracts(graph, operatorDescriptors));
 
   return issues;
+}
+
+export function applyWorkflowValidationFix(
+  graph: WorkflowGraphDefinition | null,
+  issue: WorkflowGraphValidationIssue | undefined,
+): WorkflowGraphDefinition | null {
+  if (!graph || !issue?.fix) return graph;
+  const next = structuredClone(graph) as WorkflowGraphDefinition;
+  const fix = issue.fix;
+
+  switch (fix.kind) {
+    case "set_edge_artifact_type_from_source":
+    case "set_edge_artifact_type_from_target": {
+      const edge = next.edges?.find((entry) => entry.id === fix.edgeId);
+      if (edge) edge.artifact_type = fix.artifactType;
+      break;
+    }
+    case "set_catalog_artifact_type": {
+      const artifacts = next[fix.mode === "entry" ? "entry_inputs" : "output_artifacts"] ?? [];
+      const artifact = artifacts.find(
+        (entry) => entry.node_id === fix.nodeId && entry.artifact_type === fix.currentArtifactType,
+      );
+      if (artifact) artifact.artifact_type = fix.artifactType;
+      break;
+    }
+    case "set_node_port_artifact_type_from_operator":
+    case "set_node_port_dataset_value_from_operator":
+    case "clear_port_dataset_value": {
+      const node = next.nodes.find((entry) => entry.id === fix.nodeId);
+      const port = node?.[fix.direction]?.find((entry) => entry.id === fix.portId);
+      if (!port) break;
+      if (fix.kind === "set_node_port_artifact_type_from_operator") port.artifact_type = fix.artifactType;
+      else if (fix.kind === "set_node_port_dataset_value_from_operator") port.dataset_value = fix.datasetValue;
+      else port.dataset_value = undefined;
+      break;
+    }
+    case "clear_edge_dataset_value": {
+      const edge = next.edges?.find((entry) => entry.id === fix.edgeId);
+      if (edge) edge.dataset_value = undefined;
+      break;
+    }
+  }
+
+  return next;
 }

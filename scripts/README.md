@@ -4,6 +4,9 @@ This directory contains host-native operational entry points.
 
 - `kyuubiki`
   Unified launcher for local, cloud, and distributed development flows.
+- `create-release-snapshot.mjs`
+  Scaffold a new lightweight release snapshot manifest and update the release
+  index.
 
 Use this directory for operator-facing workflow wrappers, not for source
 libraries or generated output.
@@ -17,6 +20,7 @@ Typical responsibilities:
 - component-scoped build entry points
 - runtime and desktop packaging entry points
 - installer entry points
+- release snapshot scaffolding
 
 Useful smoke wrappers:
 

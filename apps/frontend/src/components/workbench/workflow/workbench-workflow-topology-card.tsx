@@ -27,6 +27,7 @@ type WorkbenchWorkflowTopologyCardProps = {
     sourceNodeId: string,
     template?: { kind?: string; operatorId?: string },
   ) => void;
+  onSyncNodeTemplate: (nodeId: string, template?: { kind?: string; operatorId?: string }) => void;
   onInsertTemplateChain: (
     templates: Array<{ kind?: string; operatorId?: string }>,
     sourceNodeId?: string | null,
@@ -64,24 +65,30 @@ function WorkbenchWorkflowPortEditor(props: {
   ports: WorkflowGraphPort[];
   direction: "inputs" | "outputs";
   title: string;
+  locked?: boolean;
   onAdd: () => void;
   onRemove: (portId: string) => void;
   onUpdate: (portId: string, updater: (port: WorkflowGraphPort) => WorkflowGraphPort) => void;
 }) {
-  const { labels, nodeId, ports, direction, title, onAdd, onRemove, onUpdate } = props;
+  const { labels, nodeId, ports, direction, title, locked = false, onAdd, onRemove, onUpdate } = props;
   return (
     <div className="sidebar-stack">
       <div className="card-head">
         <h3>{title}</h3>
-        <button onClick={onAdd} type="button">
-          {direction === "inputs" ? labels.addInputPortLabel : labels.addOutputPortLabel}
-        </button>
+        {locked ? (
+          <span className="status-pill status-pill--watch">descriptor</span>
+        ) : (
+          <button onClick={onAdd} type="button">
+            {direction === "inputs" ? labels.addInputPortLabel : labels.addOutputPortLabel}
+          </button>
+        )}
       </div>
       {ports.map((port) => (
         <div className="form-grid compact" key={`${nodeId}:${direction}:${port.id}`}>
           <label>
             <span>{labels.portIdLabel}</span>
             <input
+              disabled={locked}
               onChange={(event) =>
                 onUpdate(port.id, (current) => ({
                   ...current,
@@ -94,6 +101,7 @@ function WorkbenchWorkflowPortEditor(props: {
           <label>
             <span>{labels.artifactTypeLabel}</span>
             <input
+              disabled={locked}
               onChange={(event) =>
                 onUpdate(port.id, (current) => ({
                   ...current,
@@ -106,6 +114,7 @@ function WorkbenchWorkflowPortEditor(props: {
           <label>
             <span>{labels.artifactDescriptionLabel}</span>
             <input
+              disabled={locked}
               onChange={(event) =>
                 onUpdate(port.id, (current) => ({
                   ...current,
@@ -115,9 +124,11 @@ function WorkbenchWorkflowPortEditor(props: {
               value={port.description ?? ""}
             />
           </label>
-          <button onClick={() => onRemove(port.id)} type="button">
-            {labels.removePortLabel}
-          </button>
+          {locked ? null : (
+            <button onClick={() => onRemove(port.id)} type="button">
+              {labels.removePortLabel}
+            </button>
+          )}
         </div>
       ))}
     </div>
@@ -156,6 +167,7 @@ export function WorkbenchWorkflowTopologyCard({
   focusedEdgeId,
   onAddNode,
   onAddConnectedNode,
+  onSyncNodeTemplate,
   onInsertTemplateChain,
   onRemoveNode,
   onUpdateNode,
@@ -282,6 +294,7 @@ export function WorkbenchWorkflowTopologyCard({
           const operatorDescriptor = node.operator_id
             ? operatorDescriptorMap.get(node.operator_id)
             : undefined;
+          const templateLocked = Boolean(operatorDescriptor);
 
           return (
             <section
@@ -329,6 +342,7 @@ export function WorkbenchWorkflowTopologyCard({
                   <label>
                     <span>{labels.kindLabel}</span>
                     <input
+                      disabled={templateLocked}
                       onChange={(event) =>
                         onUpdateNode(node.id, (current) => ({
                           ...current,
@@ -343,10 +357,10 @@ export function WorkbenchWorkflowTopologyCard({
                     <input
                       list={`workflow-node-operators-${node.id}`}
                       onChange={(event) =>
-                        onUpdateNode(node.id, (current) => ({
-                          ...current,
-                          operator_id: event.target.value || undefined,
-                        }))
+                        onSyncNodeTemplate(node.id, {
+                          kind: node.kind,
+                          operatorId: event.target.value || undefined,
+                        })
                       }
                       value={node.operator_id ?? ""}
                     />
@@ -380,6 +394,7 @@ export function WorkbenchWorkflowTopologyCard({
                 <WorkbenchWorkflowPortEditor
                   direction="inputs"
                   labels={labels}
+                  locked={templateLocked}
                   nodeId={node.id}
                   onAdd={() => onAddNodePort(node.id, "inputs")}
                   onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)}
@@ -390,6 +405,7 @@ export function WorkbenchWorkflowTopologyCard({
                 <WorkbenchWorkflowPortEditor
                   direction="outputs"
                   labels={labels}
+                  locked={templateLocked}
                   nodeId={node.id}
                   onAdd={() => onAddNodePort(node.id, "outputs")}
                   onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)}

@@ -1,13 +1,13 @@
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   --desktop-font-family: "SF Pro Display", "Segoe UI", sans-serif;
   --desktop-display-font-family: "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
   --desktop-mono-font-family: "SF Mono", "Menlo", monospace;
-  --desktop-radius-card: 18px;
-  --desktop-radius-shell: 28px;
+  --desktop-radius-card: 14px;
+  --desktop-radius-shell: 20px;
   --desktop-radius-pill: 999px;
-  --desktop-shadow-soft: 0 16px 40px rgba(23, 47, 70, 0.10);
-  --desktop-shadow-strong: 0 18px 44px rgba(24, 55, 85, 0.08);
+  --desktop-shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.28);
+  --desktop-shadow-strong: 0 18px 42px rgba(0, 0, 0, 0.32);
 }
 
 * {
@@ -52,9 +52,9 @@ button {
   min-height: 30px;
   padding: 0 12px;
   border-radius: var(--desktop-radius-pill);
-  border: 1px solid var(--line, rgba(26, 54, 84, 0.14));
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--text, #102438);
+  border: 1px solid var(--line, rgba(106, 113, 124, 0.34));
+  background: rgba(73, 78, 87, 0.9);
+  color: var(--text, #e6ebf2);
   font-size: 12px;
   font-weight: 700;
 }
@@ -74,9 +74,9 @@ button {
 }
 
 .desktop-shell-button-primary {
-  background: linear-gradient(180deg, rgba(125, 181, 217, 0.24), rgba(255, 255, 255, 0.96));
-  border-color: rgba(47, 111, 150, 0.24);
-  color: var(--text, #102438);
+  background: linear-gradient(180deg, rgba(102, 165, 214, 0.28), rgba(79, 84, 93, 0.96));
+  border-color: rgba(102, 165, 214, 0.34);
+  color: var(--text, #e6ebf2);
 }
 
 .desktop-shell-button-danger {
@@ -85,13 +85,13 @@ button {
 }
 
 .desktop-shell-button-ghost {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(61, 66, 74, 0.82);
 }
 
 .desktop-shell-surface-card {
-  border: 1px solid var(--line, rgba(26, 54, 84, 0.14));
+  border: 1px solid var(--line, rgba(106, 113, 124, 0.34));
   border-radius: calc(var(--desktop-radius-card) + 2px);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(53, 57, 64, 0.94);
 }
 
 .desktop-shell-metric-row {

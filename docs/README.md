@@ -96,6 +96,8 @@ Then branch by intent:
 
 - `version-line.md`
   Current product-line anchor and version policy.
+- `../releases/README.md`
+  Lightweight release-snapshot registry for shipped or staged product points.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
 - `security.md`

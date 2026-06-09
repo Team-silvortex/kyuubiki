@@ -1,0 +1,138 @@
+{
+  "version": "1.4.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-08",
+  "git_commit": "92b544d17d3710f45f9a15ad23510cf7925f18df",
+  "summary": "Industrial hardening point for the tamamono 1.x line, with richer workflow authoring, operator descriptor APIs, Blender-leaning workbench styling, responsive layout validation, and desktop bundles rebuilt as 1.4.0.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.4.0",
+      "notes": [
+        "Graphite default theme with Blender-like darker industrial panel language",
+        "Responsive layout guard and Playwright UI overlap/overflow validation",
+        "Workflow Builder supports topology, dataset, interface, draft storage, local workflow library, lineage, notes, and draft execution"
+      ]
+    },
+    "hub_gui": {
+      "version": "1.4.0",
+      "notes": [
+        "Docs entrypoints now open packaged HTML docs instead of local markdown files"
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.4.0",
+      "notes": [
+        "Desktop shell rebuilt after workflow and UI responsiveness updates"
+      ]
+    },
+    "installer_gui": {
+      "version": "1.4.0",
+      "notes": [
+        "Desktop installer shell rebuilt in line with current version chain"
+      ]
+    },
+    "web_api": {
+      "version": "1.4.0",
+      "notes": [
+        "Operator descriptor endpoints exposed at /api/v1/operators and /api/v1/operators/:operator_id",
+        "Workflow graph synchronous and async execution APIs available",
+        "Named workflow catalog API available"
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "active",
+    "capabilities": [
+      "graph topology authoring",
+      "dataset contract authoring",
+      "entry and output interface authoring",
+      "validation, locate, and apply-fix flows",
+      "local draft save, load, and delete",
+      "custom input artifact editing",
+      "run current draft against workflow graph jobs",
+      "promote draft to local named workflow",
+      "rename, delete, duplicate as variant",
+      "lineage, summary, and notes metadata",
+      "catalog filters for all, local, and variants"
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "richer Rust operator descriptor with typed ports",
+      "dataset value hints and schema references",
+      "validation profile and baseline status",
+      "operator descriptor HTTP APIs",
+      "Workbench Builder consumes live operator descriptors"
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.4.0_aarch64.dmg",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.4.0_aarch64.dmg",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.4.0_aarch64.dmg"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M README.md",
+        "M docs/README.md",
+        "M scripts/README.md",
+        "M scripts/kyuubiki",
+        "?? releases/",
+        "?? scripts/create-release-snapshot.mjs"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.4.0",
+      "workbench": "1.4.0",
+      "installer": "1.4.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": {
+        "short_version": "1.4.0",
+        "build_version": "1.4.0",
+        "source": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app/Contents/Info.plist"
+      },
+      "workbench": {
+        "short_version": "1.4.0",
+        "build_version": "1.4.0",
+        "source": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app/Contents/Info.plist"
+      },
+      "installer": {
+        "short_version": "1.4.0",
+        "build_version": "1.4.0",
+        "source": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app/Contents/Info.plist"
+      }
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run check:file-lines",
+      "UI_LAYOUT_URL=http://127.0.0.1:3001 npm run check:ui-layout"
+    ],
+    "web_checks": [
+      "mix test test/kyuubiki_web/api/router_test.exs"
+    ],
+    "rust_checks": [
+      "cargo test -p kyuubiki-protocol --lib",
+      "cargo test -p kyuubiki-engine --lib"
+    ],
+    "repo_checks": [
+      "git diff --check"
+    ]
+  }
+}

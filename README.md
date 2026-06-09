@@ -152,9 +152,10 @@ Packaging and deployment paths are now documented centrally in:
 
 - [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
 - [docs/desktop-release-checklist.md](docs/desktop-release-checklist.md)
+- [releases/README.md](releases/README.md)
 
 Desktop release planning and platform bundle checks now live in the two docs
-above rather than in the repo root.
+above, while versioned release snapshots now live under `releases/`.
 
 ## Verification
 
