@@ -16,9 +16,9 @@ import {
   cloneWorkflowGraph,
 } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
 import {
-  buildPortsForWorkflowNodeTemplate,
   listWorkflowTemplateDatasetValues,
 } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 type SetDraftGraph = Dispatch<SetStateAction<WorkflowGraphDefinition | null>>;
 
@@ -216,28 +216,9 @@ export function createWorkflowTopologyActions(
       if (!current) return current;
       const next = cloneWorkflowGraph(current);
       if (!next) return current;
-      const node = next.nodes.find((entry) => entry.id === nodeId);
-      if (!node) return current;
-
-      const resolved = buildPortsForWorkflowNodeTemplate(template, operatorDescriptors);
-      node.kind = resolved.kind;
-      node.operator_id = resolved.operatorId;
-      node.config = resolved.config;
-      node.inputs = resolved.inputs;
-      node.outputs = resolved.outputs;
+      const changed = applyWorkflowNodeTemplateSync(next, nodeId, template, operatorDescriptors);
+      if (!changed) return current;
       ensureTemplateDatasetValues(next, template, operatorDescriptors);
-
-      next.edges = (next.edges ?? [])
-        .filter((edge) => {
-          if (edge.from.node === nodeId) {
-            return Boolean(node.outputs?.some((port) => port.id === edge.from.port));
-          }
-          if (edge.to.node === nodeId) {
-            return Boolean(node.inputs?.some((port) => port.id === edge.to.port));
-          }
-          return true;
-        })
-        .map((edge) => syncEdgeFromPorts(edge, next.nodes));
       return next;
     });
   }

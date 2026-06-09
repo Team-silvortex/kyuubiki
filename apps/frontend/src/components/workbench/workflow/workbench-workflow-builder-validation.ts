@@ -8,6 +8,8 @@ import type {
   WorkflowGraphPort,
   WorkflowOperatorDescriptor,
 } from "@/lib/api";
+import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 export type WorkflowGraphValidationIssue = {
   id: string;
@@ -41,6 +43,12 @@ export type WorkflowGraphValidationIssue = {
         portId: string;
         direction: "inputs" | "outputs";
         datasetValue?: string;
+      }
+    | {
+        kind: "sync_node_template_from_operator";
+        nodeId: string;
+        operatorId: string;
+        templateKind?: string;
       }
     | { kind: "clear_port_dataset_value"; nodeId: string; portId: string; direction: "inputs" | "outputs" }
     | { kind: "clear_edge_dataset_value"; edgeId: string };
@@ -96,6 +104,12 @@ function validateOperatorDescriptorContracts(
             level: "warning",
             message: `Node "${node.id}" is missing ${direction === "inputs" ? "input" : "output"} port "${descriptorPort.id}" required by operator "${operatorId}".`,
             locate: { kind: "node", nodeId: node.id },
+            fix: {
+              kind: "sync_node_template_from_operator",
+              nodeId: node.id,
+              operatorId,
+              templateKind: node.kind,
+            },
           });
           continue;
         }
@@ -140,6 +154,12 @@ function validateOperatorDescriptorContracts(
             level: "warning",
             message: `Node "${node.id}" exposes ${direction === "inputs" ? "input" : "output"} port "${nodePort.id}" that is not declared by operator "${operatorId}".`,
             locate: { kind: "node", nodeId: node.id },
+            fix: {
+              kind: "sync_node_template_from_operator",
+              nodeId: node.id,
+              operatorId,
+              templateKind: node.kind,
+            },
           });
         }
       }
@@ -336,12 +356,22 @@ export function validateWorkflowGraphDefinition(
 export function applyWorkflowValidationFix(
   graph: WorkflowGraphDefinition | null,
   issue: WorkflowGraphValidationIssue | undefined,
+  operatorDescriptors: WorkflowOperatorDescriptor[] = [],
 ): WorkflowGraphDefinition | null {
   if (!graph || !issue?.fix) return graph;
   const next = structuredClone(graph) as WorkflowGraphDefinition;
   const fix = issue.fix;
 
   switch (fix.kind) {
+    case "sync_node_template_from_operator": {
+      applyWorkflowNodeTemplateSync(
+        next,
+        fix.nodeId,
+        { kind: fix.templateKind, operatorId: fix.operatorId },
+        operatorDescriptors,
+      );
+      break;
+    }
     case "set_edge_artifact_type_from_source":
     case "set_edge_artifact_type_from_target": {
       const edge = next.edges?.find((entry) => entry.id === fix.edgeId);

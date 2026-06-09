@@ -3,6 +3,10 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
+import { listAutomationActionContracts, validateAutomationStep } from "./kyuubiki-automation-actions.mjs";
+import { runHeadlessAutomationEnvelope } from "./kyuubiki-automation-runner.mjs";
+import { createPlaywrightExecutor } from "./kyuubiki-playwright-executor.mjs";
+import { buildHeadlessAutomationEnvelope, normalizeMacroDraft } from "./kyuubiki-macro-headless.mjs";
 
 const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v2";
 const LEGACY_PROJECT_SCHEMA_VERSION = "kyuubiki.project/v1";
@@ -40,9 +44,15 @@ Usage:
   kyuubiki project unpack <bundle> --out <directory>
   kyuubiki project pack <input> --out <bundle>
   kyuubiki project diff <left> <right> [--json]
+  kyuubiki project automation-presets <input> [--json]
+  kyuubiki project automation-render <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json]
+  kyuubiki project automation-run <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir]
   kyuubiki macro inspect <macro.json> [--json]
+  kyuubiki macro actions [--json]
   kyuubiki macro validate <input> [--json]
   kyuubiki macro normalize <input> --out <output>
+  kyuubiki macro render <input> [--payload payload.json] [--state state.json] [--json]
+  kyuubiki macro run <input> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir]
 
 Examples:
   kyuubiki project inspect demo.kyuubiki
@@ -51,9 +61,15 @@ Examples:
   kyuubiki project unpack demo.kyuubiki --out ./tmp/demo-project
   kyuubiki project pack ./tmp/demo-project --out demo.repacked.kyuubiki
   kyuubiki project diff before.kyuubiki after.kyuubiki
+  kyuubiki project automation-presets demo.kyuubiki --json
+  kyuubiki project automation-render demo.kyuubiki --preset preset_123 --payload payload.json --json
+  kyuubiki project automation-run demo.kyuubiki --preset preset_123 --execute --allow-sensitive --artifacts-dir ./artifacts
   kyuubiki macro inspect review-result.json
+  kyuubiki macro actions --json
   kyuubiki macro validate review-result.json --json
   kyuubiki macro normalize review-result.json --out review-result.normalized.json
+  kyuubiki macro render review-result.json --payload payload.json --state state.json --json
+  kyuubiki macro run review-result.json --execute --allow-sensitive --allow-destructive --artifacts-dir ./artifacts
 `);
 }
 
@@ -518,28 +534,6 @@ async function exportProjectBundleZip(bundle) {
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
 }
 
-function normalizeMacroDraft(raw) {
-  if (!raw || typeof raw !== "object") throw new Error("Invalid macro document.");
-  const id = typeof raw.id === "string" && raw.id.trim() ? raw.id : "macro/imported";
-  const steps = Array.isArray(raw.steps) ? raw.steps : null;
-  if (!steps || steps.length === 0) {
-    throw new Error("Macro document does not contain any steps.");
-  }
-  const normalizedSteps = steps.map((step) => {
-    if (!step || typeof step !== "object" || typeof step.action !== "string" || !step.action.trim()) {
-      throw new Error("Macro document contains an invalid step.");
-    }
-    if (step.payload !== undefined && (!step.payload || typeof step.payload !== "object" || Array.isArray(step.payload))) {
-      throw new Error("Macro document contains an invalid payload.");
-    }
-    return {
-      action: step.action,
-      ...(step.payload ? { payload: step.payload } : {}),
-    };
-  });
-  return { id, steps: normalizedSteps };
-}
-
 async function writeOutputFile(outputPath, contents, binary = false) {
   const absolutePath = path.resolve(outputPath);
   await mkdir(path.dirname(absolutePath), { recursive: true });
@@ -937,12 +931,8 @@ function validateMacroDraft(macro) {
     issues.push("macro has no steps");
   }
   for (const [index, step] of (macro.steps ?? []).entries()) {
-    if (!step.action || typeof step.action !== "string") {
-      issues.push(`step ${index} is missing action`);
-    }
-    if (step.payload !== undefined && (!step.payload || typeof step.payload !== "object" || Array.isArray(step.payload))) {
-      issues.push(`step ${index} has an invalid payload`);
-    }
+    const validation = validateAutomationStep(step, index);
+    issues.push(...validation.issues);
   }
   return {
     ok: issues.length === 0,
@@ -954,6 +944,41 @@ function validateMacroDraft(macro) {
       actions: macro.steps.map((step) => step.action),
     },
   };
+}
+
+async function handleMacroActions(flags) {
+  const contracts = listAutomationActionContracts();
+  if (flags.json) {
+    console.log(JSON.stringify({ action_count: contracts.length, actions: contracts }, null, 2));
+    return;
+  }
+  console.log(`Automation actions: ${contracts.length}`);
+  for (const contract of contracts) {
+    console.log(`- ${contract.id} [${contract.risk}]`);
+    console.log(`  aliases: ${contract.aliases.join(", ") || "--"}`);
+    console.log(`  summary: ${contract.summary}`);
+    console.log(`  required payload: ${contract.requiredPayloadKeys.join(", ") || "--"}`);
+  }
+}
+
+async function readOptionalJsonFile(inputPath) {
+  if (!inputPath) return {};
+  return JSON.parse(await readFile(path.resolve(inputPath), "utf8"));
+}
+
+async function withAutomationExecutor(flags, callback) {
+  if (!flags.execute) return callback({ executor: null, artifactsDir: null });
+  const runtime = await createPlaywrightExecutor({
+    artifactsDir: typeof flags["artifacts-dir"] === "string" ? flags["artifacts-dir"] : undefined,
+  });
+  try {
+    return await callback({
+      executor: runtime.executor,
+      artifactsDir: runtime.artifactsDir ?? null,
+    });
+  } finally {
+    await runtime.dispose();
+  }
 }
 
 async function handleProjectDiff(leftInputPath, rightInputPath, flags) {
@@ -978,6 +1003,122 @@ async function handleProjectDiff(leftInputPath, rightInputPath, flags) {
   console.log(`Automation presets: +${summary.automation_preset_ids.added.length} / -${summary.automation_preset_ids.removed.length}`);
 }
 
+async function handleProjectAutomationPresets(inputPath, flags) {
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
+  const presets = (bundle.automation_presets ?? []).map((preset) => ({
+    preset_id: preset.presetId,
+    project_id: preset.projectId,
+    name: preset.name,
+    updated_at: preset.updatedAt,
+    macro_id: preset.macro?.id ?? null,
+    step_count: Array.isArray(preset.macro?.steps) ? preset.macro.steps.length : 0,
+    actions: Array.isArray(preset.macro?.steps) ? preset.macro.steps.map((step) => step.action) : [],
+  }));
+  if (flags.json) {
+    console.log(JSON.stringify({ preset_count: presets.length, presets }, null, 2));
+    return;
+  }
+  console.log(`Automation presets: ${presets.length}`);
+  for (const preset of presets) {
+    console.log(`- ${preset.name} (${preset.preset_id})`);
+    console.log(`  steps: ${preset.step_count}`);
+    console.log(`  actions: ${preset.actions.join(", ") || "--"}`);
+  }
+}
+
+function findAutomationPreset(bundle, presetSelector) {
+  const normalized = String(presetSelector ?? "").trim();
+  if (!normalized) {
+    throw new Error("automation-render requires --preset <id|name>");
+  }
+  const presets = bundle.automation_presets ?? [];
+  return (
+    presets.find((preset) => preset.presetId === normalized) ??
+    presets.find((preset) => preset.name === normalized) ??
+    null
+  );
+}
+
+async function handleProjectAutomationRender(inputPath, flags) {
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
+  const preset = findAutomationPreset(bundle, flags.preset);
+  if (!preset) {
+    throw new Error(`Could not find automation preset "${String(flags.preset ?? "")}".`);
+  }
+  const payload = await readOptionalJsonFile(typeof flags.payload === "string" ? flags.payload : null);
+  const state = await readOptionalJsonFile(typeof flags.state === "string" ? flags.state : null);
+  const result = buildHeadlessAutomationEnvelope(
+    {
+      kind: "project_automation_preset",
+      preset_id: preset.presetId,
+      preset_name: preset.name,
+      project_id: preset.projectId,
+      updated_at: preset.updatedAt,
+    },
+    preset.macro,
+    { payload, state },
+  );
+  if (flags.json) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  console.log(`Automation preset: ${result.source.preset_name} (${result.source.preset_id})`);
+  console.log(`Project: ${result.source.project_id}`);
+  console.log(`Steps: ${result.plan.step_count}`);
+  console.log(`Highest risk: ${result.risk_summary.highest_risk}`);
+  for (const [index, step] of result.plan.steps.entries()) {
+    console.log(`${index + 1}. ${step.action} [${step.risk}]`);
+    console.log(`   payload: ${JSON.stringify(step.payload)}`);
+  }
+}
+
+async function handleProjectAutomationRun(inputPath, flags) {
+  const bundle = finalizeProjectBundle(await parseProjectBundleInput(inputPath));
+  const preset = findAutomationPreset(bundle, flags.preset);
+  if (!preset) {
+    throw new Error(`Could not find automation preset "${String(flags.preset ?? "")}".`);
+  }
+  const payload = await readOptionalJsonFile(typeof flags.payload === "string" ? flags.payload : null);
+  const state = await readOptionalJsonFile(typeof flags.state === "string" ? flags.state : null);
+  const envelope = buildHeadlessAutomationEnvelope(
+    {
+      kind: "project_automation_preset",
+      preset_id: preset.presetId,
+      preset_name: preset.name,
+      project_id: preset.projectId,
+      updated_at: preset.updatedAt,
+    },
+    preset.macro,
+    { payload, state },
+  );
+  const report = await withAutomationExecutor(flags, ({ executor, artifactsDir }) =>
+    runHeadlessAutomationEnvelope(envelope, {
+      dryRun: !flags.execute,
+      allowSensitive: flags["allow-sensitive"],
+      allowDestructive: flags["allow-destructive"],
+      executor,
+      context: artifactsDir ? { artifactsDir } : {},
+    }),
+  );
+  if (flags.json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  console.log(`Automation run: ${report.metadata.macro_id}`);
+  console.log(`Mode: ${report.dry_run ? "dry-run" : "stub-execute"}`);
+  console.log(`Status: ${report.status}`);
+  console.log(`Executed steps: ${report.executed_step_count}/${report.metadata.step_count}`);
+  if (report.blocked_by_confirmation) {
+    console.log(
+      `Blocked: step ${report.blocked_by_confirmation.index + 1} requires ${report.blocked_by_confirmation.risk} confirmation`,
+    );
+  }
+  for (const [index, step] of report.steps.entries()) {
+    console.log(`${index + 1}. ${step.action} -> ${step.status}`);
+    console.log(`   payload: ${JSON.stringify(step.payload)}`);
+  }
+}
+
 async function handleMacroInspect(inputPath, flags) {
   const macro = normalizeMacroDraft(JSON.parse(await readFile(path.resolve(inputPath), "utf8")));
   const summary = { id: macro.id, step_count: macro.steps.length, actions: macro.steps.map((step) => step.action) };
@@ -991,7 +1132,7 @@ async function handleMacroInspect(inputPath, flags) {
 }
 
 async function handleMacroValidate(inputPath, flags) {
-  const macro = normalizeMacroDraft(JSON.parse(await readFile(path.resolve(inputPath), "utf8")));
+  const macro = JSON.parse(await readFile(path.resolve(inputPath), "utf8"));
   const report = validateMacroDraft(macro);
   if (flags.json) {
     console.log(JSON.stringify(report, null, 2));
@@ -1017,6 +1158,65 @@ async function handleMacroNormalize(inputPath, flags) {
   console.log(`normalized macro -> ${path.resolve(outputPath)}`);
 }
 
+async function handleMacroRender(inputPath, flags) {
+  const macro = normalizeMacroDraft(JSON.parse(await readFile(path.resolve(inputPath), "utf8")));
+  const payload = await readOptionalJsonFile(typeof flags.payload === "string" ? flags.payload : null);
+  const state = await readOptionalJsonFile(typeof flags.state === "string" ? flags.state : null);
+  const envelope = buildHeadlessAutomationEnvelope(
+    { kind: "macro_file", input_path: path.resolve(inputPath) },
+    macro,
+    { payload, state },
+  );
+  if (flags.json) {
+    console.log(JSON.stringify(envelope, null, 2));
+    return;
+  }
+  console.log(`Macro render: ${envelope.plan.id}`);
+  console.log(`Steps: ${envelope.plan.step_count}`);
+  console.log(`Highest risk: ${envelope.risk_summary.highest_risk}`);
+  for (const [index, step] of envelope.plan.steps.entries()) {
+    console.log(`${index + 1}. ${step.action} [${step.risk}]`);
+    console.log(`   payload: ${JSON.stringify(step.payload)}`);
+  }
+}
+
+async function handleMacroRun(inputPath, flags) {
+  const macro = normalizeMacroDraft(JSON.parse(await readFile(path.resolve(inputPath), "utf8")));
+  const payload = await readOptionalJsonFile(typeof flags.payload === "string" ? flags.payload : null);
+  const state = await readOptionalJsonFile(typeof flags.state === "string" ? flags.state : null);
+  const envelope = buildHeadlessAutomationEnvelope(
+    { kind: "macro_file", input_path: path.resolve(inputPath) },
+    macro,
+    { payload, state },
+  );
+  const report = await withAutomationExecutor(flags, ({ executor, artifactsDir }) =>
+    runHeadlessAutomationEnvelope(envelope, {
+      dryRun: !flags.execute,
+      allowSensitive: flags["allow-sensitive"],
+      allowDestructive: flags["allow-destructive"],
+      executor,
+      context: artifactsDir ? { artifactsDir } : {},
+    }),
+  );
+  if (flags.json) {
+    console.log(JSON.stringify(report, null, 2));
+    return;
+  }
+  console.log(`Macro run: ${report.metadata.macro_id}`);
+  console.log(`Mode: ${report.dry_run ? "dry-run" : "stub-execute"}`);
+  console.log(`Status: ${report.status}`);
+  console.log(`Executed steps: ${report.executed_step_count}/${report.metadata.step_count}`);
+  if (report.blocked_by_confirmation) {
+    console.log(
+      `Blocked: step ${report.blocked_by_confirmation.index + 1} requires ${report.blocked_by_confirmation.risk} confirmation`,
+    );
+  }
+  for (const [index, step] of report.steps.entries()) {
+    console.log(`${index + 1}. ${step.action} -> ${step.status}`);
+    console.log(`   payload: ${JSON.stringify(step.payload)}`);
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const [scope = "help", command = ""] = positionalArgs(args);
@@ -1039,15 +1239,21 @@ async function main() {
       if (!secondInputPath) fail("project diff requires <left> <right>");
       return handleProjectDiff(firstInputPath, secondInputPath, flags);
     }
+    if (command === "automation-presets") return handleProjectAutomationPresets(firstInputPath, flags);
+    if (command === "automation-render") return handleProjectAutomationRender(firstInputPath, flags);
+    if (command === "automation-run") return handleProjectAutomationRun(firstInputPath, flags);
     fail(`unknown project command: ${command}`);
   }
 
   if (scope === "macro") {
     const [, , inputPath] = positionalArgs(args);
+    if (command === "actions") return handleMacroActions(flags);
     if (!inputPath) fail("macro command requires an input path");
     if (command === "inspect") return handleMacroInspect(inputPath, flags);
     if (command === "validate") return handleMacroValidate(inputPath, flags);
     if (command === "normalize") return handleMacroNormalize(inputPath, flags);
+    if (command === "render") return handleMacroRender(inputPath, flags);
+    if (command === "run") return handleMacroRun(inputPath, flags);
     fail(`unknown macro command: ${command}`);
   }
 

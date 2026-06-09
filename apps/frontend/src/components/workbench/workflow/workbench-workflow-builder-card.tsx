@@ -13,6 +13,7 @@ import {
   asWorkflowDatasetContract,
   asWorkflowGraphDefinition,
   mergeDatasetContractIntoGraph,
+  normalizeImportedWorkflowGraph,
   readJsonFile,
 } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import {
@@ -30,10 +31,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { WorkbenchWorkflowDraftCard } from "@/components/workbench/workflow/workbench-workflow-draft-card";
 import { WorkbenchWorkflowBuilderToolbar } from "@/components/workbench/workflow/workbench-workflow-builder-toolbar";
-import {
-  buildWorkflowInputArtifactTexts,
-  parseWorkflowInputArtifactTexts,
-} from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
+import { buildWorkflowInputArtifactTexts, parseWorkflowInputArtifactTexts } from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
 import { WorkbenchWorkflowInputArtifactsCard } from "@/components/workbench/workflow/workbench-workflow-input-artifacts-card";
 import { WorkbenchWorkflowArtifactCard } from "@/components/workbench/workflow/workbench-workflow-artifact-card";
 import {
@@ -49,6 +47,11 @@ import {
   applyWorkflowValidationFix,
   validateWorkflowGraphDefinition,
 } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
+import {
+  describeWorkflowNodeTemplateSyncImpact,
+  getWorkflowNodeTemplateSyncImpact,
+  listAutoReconnectEdgeIds,
+} from "@/components/workbench/workflow/workbench-workflow-template-impact";
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card";
 import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card";
@@ -86,6 +89,7 @@ export function WorkbenchWorkflowBuilderCard({
   const [focusedEdgeId, setFocusedEdgeId] = useState<string | null>(null);
   const [focusedArtifactKey, setFocusedArtifactKey] = useState<string | null>(null);
   const [focusedDatasetValueId, setFocusedDatasetValueId] = useState<string | null>(null);
+  const [highlightedEdgeIds, setHighlightedEdgeIds] = useState<string[]>([]);
   const [highlightDatasetEditor, setHighlightDatasetEditor] = useState(false);
   const graphInputRef = useRef<HTMLInputElement | null>(null);
   const datasetInputRef = useRef<HTMLInputElement | null>(null);
@@ -97,6 +101,12 @@ export function WorkbenchWorkflowBuilderCard({
     setFocusedArtifactKey(null);
     setFocusedDatasetValueId(null);
     setHighlightDatasetEditor(false);
+  }
+
+  function flashHighlightedEdges(edgeIds: string[]) {
+    if (edgeIds.length === 0) return;
+    setHighlightedEdgeIds(edgeIds);
+    window.setTimeout(() => setHighlightedEdgeIds((current) => (current === edgeIds ? [] : current)), 2200);
   }
 
   useEffect(() => {
@@ -223,7 +233,18 @@ export function WorkbenchWorkflowBuilderCard({
   function applyValidationFix(issueId: string) {
     const issue = validationIssues.find((entry) => entry.id === issueId);
     if (!issue?.fix) return;
-    setDraftGraph((current) => applyWorkflowValidationFix(current, issue));
+    if (issue.fix.kind === "sync_node_template_from_operator" && selectedGraph) {
+      const impact = getWorkflowNodeTemplateSyncImpact(
+        selectedGraph,
+        issue.fix.nodeId,
+        { kind: issue.fix.templateKind, operatorId: issue.fix.operatorId },
+        operatorDescriptors ?? [],
+      );
+      const preview = describeWorkflowNodeTemplateSyncImpact(impact);
+      if (preview && !window.confirm(preview)) return;
+      flashHighlightedEdges(listAutoReconnectEdgeIds(impact));
+    }
+    setDraftGraph((current) => applyWorkflowValidationFix(current, issue, operatorDescriptors ?? []));
   }
   function locateValidationIssue(issueId: string) {
     const issue = validationIssues.find((entry) => entry.id === issueId);
@@ -445,13 +466,15 @@ export function WorkbenchWorkflowBuilderCard({
         setImportMessage(labels.importInvalidGraphLabel);
         return;
       }
-      const nextGraph = cloneWorkflowGraph(graph);
+      const imported = normalizeImportedWorkflowGraph(graph, operatorDescriptors ?? []);
+      const nextGraph = cloneWorkflowGraph(imported.graph);
       if (nextGraph) {
         nextGraph.entry_inputs = nextGraph.entry_inputs ?? selectedEntryInputs;
         nextGraph.output_artifacts = nextGraph.output_artifacts ?? selectedOutputArtifacts;
       }
       setDraftGraph(nextGraph);
       setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
+      flashHighlightedEdges(imported.autoReconnectEdgeIds);
       setImportMessage(labels.importSuccessLabel);
     } catch {
       setImportMessage(labels.importInvalidGraphLabel);
@@ -540,6 +563,7 @@ export function WorkbenchWorkflowBuilderCard({
         onUpdateEdge={topologyActions.updateEdge}
         onUpdateNode={topologyActions.updateNode}
         onUpdateNodePort={topologyActions.updateNodePort}
+        highlightedEdgeIds={highlightedEdgeIds}
         selectedEdges={selectedEdges}
         selectedNodes={selectedNodes}
       />

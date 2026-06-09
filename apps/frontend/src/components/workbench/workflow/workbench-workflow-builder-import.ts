@@ -3,7 +3,13 @@
 import type {
   WorkflowDatasetContract,
   WorkflowGraphDefinition,
+  WorkflowOperatorDescriptor,
 } from "@/lib/api";
+import {
+  applyWorkflowNodeTemplateSync,
+  getWorkflowNodeTemplateSyncImpact,
+  listAutoReconnectEdgeIds,
+} from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -40,5 +46,37 @@ export function mergeDatasetContractIntoGraph(
       values: [...contract.values],
       metadata: contract.metadata ? { ...contract.metadata } : {},
     },
+  };
+}
+
+export function normalizeImportedWorkflowGraph(
+  graph: WorkflowGraphDefinition | null,
+  operatorDescriptors: WorkflowOperatorDescriptor[] = [],
+) {
+  if (!graph) return { graph, autoReconnectEdgeIds: [] as string[] };
+  const nextGraph = structuredClone(graph) as WorkflowGraphDefinition;
+  const autoReconnectEdgeIds = new Set<string>();
+
+  for (const node of nextGraph.nodes) {
+    const operatorId = node.operator_id?.trim();
+    if (!operatorId) continue;
+    const impact = getWorkflowNodeTemplateSyncImpact(
+      nextGraph,
+      node.id,
+      { kind: node.kind, operatorId },
+      operatorDescriptors,
+    );
+    for (const edgeId of listAutoReconnectEdgeIds(impact)) autoReconnectEdgeIds.add(edgeId);
+    applyWorkflowNodeTemplateSync(
+      nextGraph,
+      node.id,
+      { kind: node.kind, operatorId },
+      operatorDescriptors,
+    );
+  }
+
+  return {
+    graph: nextGraph,
+    autoReconnectEdgeIds: [...autoReconnectEdgeIds],
   };
 }

@@ -14,47 +14,32 @@ import {
   sortWorkflowOperatorOptionPresets,
   WorkbenchWorkflowOperatorDescriptorSummary,
 } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
+import {
+  describeWorkflowNodeTemplateSyncImpact,
+  getWorkflowNodeTemplateSyncImpact,
+  listAutoReconnectEdgeIds,
+} from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 type WorkbenchWorkflowTopologyCardProps = {
   labels: WorkflowSidebarLabels;
   operatorDescriptors?: WorkflowOperatorDescriptor[];
   selectedNodes: WorkflowGraphNode[];
   selectedEdges: WorkflowGraphEdge[];
+  highlightedEdgeIds?: string[];
   focusedNodeId?: string | null;
   focusedEdgeId?: string | null;
   onAddNode: (template?: { kind?: string; operatorId?: string }) => void;
-  onAddConnectedNode: (
-    sourceNodeId: string,
-    template?: { kind?: string; operatorId?: string },
-  ) => void;
+  onAddConnectedNode: (sourceNodeId: string, template?: { kind?: string; operatorId?: string }) => void;
   onSyncNodeTemplate: (nodeId: string, template?: { kind?: string; operatorId?: string }) => void;
-  onInsertTemplateChain: (
-    templates: Array<{ kind?: string; operatorId?: string }>,
-    sourceNodeId?: string | null,
-  ) => void;
+  onInsertTemplateChain: (templates: Array<{ kind?: string; operatorId?: string }>, sourceNodeId?: string | null) => void;
   onRemoveNode: (nodeId: string) => void;
-  onUpdateNode: (
-    nodeId: string,
-    updater: (node: WorkflowGraphNode) => WorkflowGraphNode,
-  ) => void;
+  onUpdateNode: (nodeId: string, updater: (node: WorkflowGraphNode) => WorkflowGraphNode) => void;
   onAddNodePort: (nodeId: string, direction: "inputs" | "outputs") => void;
-  onRemoveNodePort: (
-    nodeId: string,
-    direction: "inputs" | "outputs",
-    portId: string,
-  ) => void;
-  onUpdateNodePort: (
-    nodeId: string,
-    direction: "inputs" | "outputs",
-    portId: string,
-    updater: (port: WorkflowGraphPort) => WorkflowGraphPort,
-  ) => void;
+  onRemoveNodePort: (nodeId: string, direction: "inputs" | "outputs", portId: string) => void;
+  onUpdateNodePort: (nodeId: string, direction: "inputs" | "outputs", portId: string, updater: (port: WorkflowGraphPort) => WorkflowGraphPort) => void;
   onAddEdge: () => void;
   onRemoveEdge: (edgeId: string) => void;
-  onUpdateEdge: (
-    edgeId: string,
-    updater: (edge: WorkflowGraphEdge) => WorkflowGraphEdge,
-  ) => void;
+  onUpdateEdge: (edgeId: string, updater: (edge: WorkflowGraphEdge) => WorkflowGraphEdge) => void;
 };
 
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
@@ -158,11 +143,27 @@ function getSuggestedPorts(
   return ports;
 }
 
+function buildEdgeHighlightStyle(
+  edgeId: string,
+  focusedEdgeId: string | null | undefined,
+  highlightedEdgeIds: string[],
+  localHighlightedEdgeIds: string[],
+) {
+  const highlighted = highlightedEdgeIds.includes(edgeId) || localHighlightedEdgeIds.includes(edgeId);
+  if (!highlighted && focusedEdgeId !== edgeId) return undefined;
+  return {
+    outline: highlighted ? "2px solid rgba(34, 197, 94, 0.9)" : "2px solid var(--accent, #4f46e5)",
+    outlineOffset: "2px",
+    boxShadow: highlighted ? "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" : undefined,
+  };
+}
+
 export function WorkbenchWorkflowTopologyCard({
   labels,
   operatorDescriptors,
   selectedNodes,
   selectedEdges,
+  highlightedEdgeIds = [],
   focusedNodeId,
   focusedEdgeId,
   onAddNode,
@@ -180,6 +181,7 @@ export function WorkbenchWorkflowTopologyCard({
 }: WorkbenchWorkflowTopologyCardProps) {
   const [nextNodeKind, setNextNodeKind] = useState("transform");
   const [nextOperatorId, setNextOperatorId] = useState("");
+  const [localHighlightedEdgeIds, setLocalHighlightedEdgeIds] = useState<string[]>([]);
   const nextKindTemplates = listWorkflowNodeTemplatePresets(nextNodeKind, operatorDescriptors);
   const nextOperatorTemplates = nextKindTemplates.filter((preset) => preset.operatorId);
   const selectedSourceNodeId = selectedNodes[0]?.id ?? null;
@@ -197,6 +199,24 @@ export function WorkbenchWorkflowTopologyCard({
     node: WorkflowGraphNode | undefined,
     direction: "inputs" | "outputs",
   ) => node?.[direction] ?? [];
+  const confirmNodeTemplateSync = (node: WorkflowGraphNode, operatorId?: string) => {
+    const impact = getWorkflowNodeTemplateSyncImpact(
+      { nodes: selectedNodes, edges: selectedEdges },
+      node.id,
+      { kind: node.kind, operatorId },
+      operatorDescriptors ?? [],
+    );
+    const preview = describeWorkflowNodeTemplateSyncImpact(impact);
+    const accepted = preview ? window.confirm(preview) : true;
+    if (accepted) {
+      const edgeIds = listAutoReconnectEdgeIds(impact);
+      if (edgeIds.length > 0) {
+        setLocalHighlightedEdgeIds(edgeIds);
+        window.setTimeout(() => setLocalHighlightedEdgeIds([]), 2200);
+      }
+    }
+    return accepted;
+  };
 
   return (
     <section className="sidebar-card sidebar-card--compact">
@@ -357,10 +377,12 @@ export function WorkbenchWorkflowTopologyCard({
                     <input
                       list={`workflow-node-operators-${node.id}`}
                       onChange={(event) =>
-                        onSyncNodeTemplate(node.id, {
-                          kind: node.kind,
-                          operatorId: event.target.value || undefined,
-                        })
+                        confirmNodeTemplateSync(node, event.target.value || undefined)
+                          ? onSyncNodeTemplate(node.id, {
+                              kind: node.kind,
+                              operatorId: event.target.value || undefined,
+                            })
+                          : undefined
                       }
                       value={node.operator_id ?? ""}
                     />
@@ -437,11 +459,7 @@ export function WorkbenchWorkflowTopologyCard({
               className="sidebar-card sidebar-card--compact"
               data-workflow-edge-id={edge.id}
               key={edge.id}
-              style={
-                focusedEdgeId === edge.id
-                  ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
-                  : undefined
-              }
+              style={buildEdgeHighlightStyle(edge.id, focusedEdgeId, highlightedEdgeIds, localHighlightedEdgeIds)}
             >
               <div className="card-head">
                 <h2>{edge.id}</h2>
