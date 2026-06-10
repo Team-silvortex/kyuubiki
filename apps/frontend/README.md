@@ -28,14 +28,17 @@ Key subtrees:
 - `src/lib/`
   Browser-side API clients, import/export helpers, materials, and model logic.
 - `src/lib/scripting/`
-  Pyodide/WASM Python runtime helpers and the frontend automation action catalog.
+  Pyodide/WASM Python helpers for frontend automation, plus separate headless
+  service action contracts for the SDK-side workflow builder.
 - `public/models/`
   Sample models bundled with the frontend.
 
 Automation support:
 
 - The System panel now exposes a `Scripts` surface powered by WASM Python
-  (Pyodide).
+  (Pyodide) for frontend automation inside the browser.
+- The same area also exposes a separate headless SDK workflow builder for
+  service-side and solver-side automation that bypasses the frontend UI.
 - The assistant surface now supports two execution modes:
   `local` for built-in rule/diagnostic guidance, and `llm` for OpenAI-compatible
   remote model planning.

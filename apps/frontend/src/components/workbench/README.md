@@ -17,8 +17,11 @@ Top-level files keep the shell and cross-cutting surfaces:
 - `workbench-object-tree.tsx`
   Modeling-side object tree and selection list.
 - `workbench-script-panel.tsx`
-  WASM Python automation surface that drives registered frontend actions through
-  a Pyodide bridge.
+  Frontend automation surface powered by WASM Python / Pyodide. This panel is
+  for browser-side automation, macro recording, and replay.
+- `workbench-headless-workflow-panel.tsx`
+  Separate headless SDK workflow builder for service-side and solver-side
+  automation that bypasses the frontend UI.
 
 Subdirectories group extracted workbench surfaces by domain:
 

@@ -14,6 +14,34 @@ export type HeadlessReferenceToken = {
   template: string;
 };
 
+export type HeadlessInputPort = {
+  key: string;
+  bindable?: boolean;
+  label: string;
+  required?: boolean;
+};
+
+export type HeadlessOutputPort = {
+  key: string;
+  label: string;
+};
+
+export type HeadlessActionContract = {
+  id: string;
+  risk: "normal" | "sensitive" | "destructive";
+  summary: Record<string, string>;
+  payloadExample: PayloadObject;
+  inputSchema: HeadlessInputPort[];
+  outputSchema: HeadlessOutputPort[];
+};
+
+export type HeadlessWorkflowTemplate = {
+  id: string;
+  title: Record<string, string>;
+  description: Record<string, string>;
+  steps: Array<{ action: string; payload: PayloadObject }>;
+};
+
 export function formatPayload(payload: PayloadObject) {
   return JSON.stringify(payload, null, 2);
 }

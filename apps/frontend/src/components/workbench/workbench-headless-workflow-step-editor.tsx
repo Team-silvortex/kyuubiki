@@ -1,17 +1,21 @@
 "use client";
 
-import type { DraftStep, HeadlessReferenceToken, PayloadObject } from "@/components/workbench/workbench-headless-workflow-contract";
+import type {
+  DraftStep,
+  HeadlessActionContract,
+  HeadlessInputPort,
+  HeadlessReferenceToken,
+  PayloadObject,
+} from "@/components/workbench/workbench-headless-workflow-contract";
 import { updatePayloadField } from "@/components/workbench/workbench-headless-workflow-contract";
 import { WorkbenchHeadlessReferenceMapper } from "@/components/workbench/workbench-headless-reference-mapper";
-import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime";
 
 type WorkbenchHeadlessWorkflowStepEditorProps = {
+  contract: HeadlessActionContract | undefined;
   endpointsHint: string;
   endpointsLabel: string;
-  language: WorkbenchScriptLanguage;
   noReferencesLabel: string;
   parsePayloadText: (payloadText: string) => PayloadObject | null;
-  payloadJsonLabel: string;
   patchStepPayload: (stepId: string, updater: (payload: PayloadObject | null) => PayloadObject | null) => void;
   referenceApplyLabel: string;
   referenceClearLabel: string;
@@ -54,10 +58,22 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function isJsonField(port: HeadlessInputPort) {
+  return port.key === "payload" || port.key === "input_artifacts";
+}
+
+function isNumericField(port: HeadlessInputPort) {
+  return port.key === "timeout_ms" || port.key === "interval_ms";
+}
+
+function isListField(port: HeadlessInputPort) {
+  return port.key === "endpoints";
+}
+
 export function WorkbenchHeadlessWorkflowStepEditor({
+  contract,
   endpointsHint,
   endpointsLabel,
-  language,
   noReferencesLabel,
   parsePayloadText,
   patchStepPayload,
@@ -70,255 +86,99 @@ export function WorkbenchHeadlessWorkflowStepEditor({
 }: WorkbenchHeadlessWorkflowStepEditorProps) {
   const payload = parsePayloadText(step.payloadText);
 
-  const renderReferenceMapper = (field: string) => (
-    <WorkbenchHeadlessReferenceMapper
-      applyLabel={referenceApplyLabel}
-      clearLabel={referenceClearLabel}
-      emptyLabel={noReferencesLabel}
-      field={field}
-      helperText={referenceCurrentLabel}
-      onApply={(template) => patchStepPayload(step.id, (current) => updatePayloadField(current, field, template))}
-      onClear={() => patchStepPayload(step.id, (current) => updatePayloadField(current, field, ""))}
-      references={references}
-      title={referenceTitle}
-      value={readString(payload, field)}
-    />
-  );
+  const renderReferenceMapper = (port: HeadlessInputPort) =>
+    port.bindable ? (
+      <WorkbenchHeadlessReferenceMapper
+        applyLabel={referenceApplyLabel}
+        clearLabel={referenceClearLabel}
+        emptyLabel={noReferencesLabel}
+        field={port.key}
+        helperText={referenceCurrentLabel}
+        onApply={(template) => patchStepPayload(step.id, (current) => updatePayloadField(current, port.key, template))}
+        onClear={() => patchStepPayload(step.id, (current) => updatePayloadField(current, port.key, ""))}
+        references={references}
+        title={referenceTitle}
+        value={readString(payload, port.key)}
+      />
+    ) : null;
 
-  if (step.action === "project_create") {
-    return (
-      <>
-        <label className="field-label">
-          <span>name</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "name", event.target.value))}
-            type="text"
-            value={readString(payload, "name")}
-          />
-        </label>
-        <label className="field-label">
-          <span>description</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "description", event.target.value))}
-            type="text"
-            value={readString(payload, "description")}
-          />
-        </label>
-      </>
-    );
-  }
+  const renderField = (port: HeadlessInputPort) => {
+    const label = isListField(port) ? endpointsLabel : port.label;
 
-  if (step.action === "model_create") {
-    return (
-      <>
-        <label className="field-label">
-          <span>project_id</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "project_id", event.target.value))}
-            type="text"
-            value={readString(payload, "project_id")}
-          />
-        </label>
-        {renderReferenceMapper("project_id")}
-        <label className="field-label">
-          <span>name</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "name", event.target.value))}
-            type="text"
-            value={readString(payload, "name")}
-          />
-        </label>
-        <label className="field-label">
-          <span>kind</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "kind", event.target.value))}
-            type="text"
-            value={readString(payload, "kind")}
-          />
-        </label>
-        <label className="field-label">
-          <span>payload</span>
+    if (isJsonField(port)) {
+      return (
+        <label className="field-label" key={port.key}>
+          <span>{label}</span>
           <textarea
             className="script-panel__editor"
             onChange={(event) => {
               const next = parsePayloadText(event.target.value);
               if (!next) return;
-              patchStepPayload(step.id, (current) => updatePayloadField(current, "payload", next));
+              patchStepPayload(step.id, (current) => updatePayloadField(current, port.key, next));
             }}
-            rows={6}
+            rows={port.key === "payload" ? 6 : 5}
             spellCheck={false}
-            value={readJsonBlock(payload, "payload")}
+            value={readJsonBlock(payload, port.key)}
           />
         </label>
-      </>
-    );
-  }
+      );
+    }
 
-  if (step.action === "model_version_create") {
-    return (
-      <>
-        <label className="field-label">
-          <span>model_id</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "model_id", event.target.value))}
-            type="text"
-            value={readString(payload, "model_id")}
-          />
-        </label>
-        {renderReferenceMapper("model_id")}
-        <label className="field-label">
-          <span>name</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "name", event.target.value))}
-            type="text"
-            value={readString(payload, "name")}
-          />
-        </label>
-        <label className="field-label">
-          <span>payload</span>
-          <textarea
-            className="script-panel__editor"
-            onChange={(event) => {
-              const next = parsePayloadText(event.target.value);
-              if (!next) return;
-              patchStepPayload(step.id, (current) => updatePayloadField(current, "payload", next));
-            }}
-            rows={6}
-            spellCheck={false}
-            value={readJsonBlock(payload, "payload")}
-          />
-        </label>
-      </>
-    );
-  }
-
-  if (step.action === "workflow_submit_catalog") {
-    return (
-      <>
-        <label className="field-label">
-          <span>workflow_id</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "workflow_id", event.target.value))}
-            type="text"
-            value={readString(payload, "workflow_id")}
-          />
-        </label>
-        <label className="field-label">
-          <span>input_artifacts</span>
-          <textarea
-            className="script-panel__editor"
-            onChange={(event) => {
-              const next = parsePayloadText(event.target.value);
-              if (!next) return;
-              patchStepPayload(step.id, (current) => updatePayloadField(current, "input_artifacts", next));
-            }}
-            rows={5}
-            spellCheck={false}
-            value={readJsonBlock(payload, "input_artifacts")}
-          />
-        </label>
-      </>
-    );
-  }
-
-  if (step.action === "solve_from_model_version" || step.action === "solve_and_wait_from_model_version") {
-    return (
-      <>
-        <label className="field-label">
-          <span>model_version_id</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "model_version_id", event.target.value))}
-            type="text"
-            value={readString(payload, "model_version_id")}
-          />
-        </label>
-        {renderReferenceMapper("model_version_id")}
-        <label className="field-label">
-          <span>{endpointsLabel}</span>
-          <textarea
-            className="script-panel__editor"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "endpoints", toStringList(event.target.value)))}
-            rows={4}
-            spellCheck={false}
-            value={readStringList(payload, "endpoints")}
-          />
-        </label>
-        <p className="card-copy">{endpointsHint}</p>
-        {step.action === "solve_and_wait_from_model_version" ? (
+    if (isListField(port)) {
+      return (
+        <div key={port.key}>
           <label className="field-label">
-            <span>timeout_ms</span>
-            <input
-              className="text-input"
-              onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "timeout_ms", toOptionalNumber(event.target.value)))}
-              type="text"
-              value={readNumber(payload, "timeout_ms")}
+            <span>{label}</span>
+            <textarea
+              className="script-panel__editor"
+              onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, port.key, toStringList(event.target.value)))}
+              rows={4}
+              spellCheck={false}
+              value={readStringList(payload, port.key)}
             />
           </label>
-        ) : null}
-      </>
-    );
-  }
+          <p className="card-copy">{endpointsHint}</p>
+        </div>
+      );
+    }
 
-  if (step.action === "job_wait") {
+    if (isNumericField(port)) {
+      return (
+        <label className="field-label" key={port.key}>
+          <span>{label}</span>
+          <input
+            className="text-input"
+            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, port.key, toOptionalNumber(event.target.value)))}
+            type="text"
+            value={readNumber(payload, port.key)}
+          />
+        </label>
+      );
+    }
+
     return (
-      <>
-        <label className="field-label">
-          <span>job_id</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "job_id", event.target.value))}
-            type="text"
-            value={readString(payload, "job_id")}
-          />
-        </label>
-        {renderReferenceMapper("job_id")}
-        <label className="field-label">
-          <span>interval_ms</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "interval_ms", toOptionalNumber(event.target.value)))}
-            type="text"
-            value={readNumber(payload, "interval_ms")}
-          />
-        </label>
-        <label className="field-label">
-          <span>timeout_ms</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "timeout_ms", toOptionalNumber(event.target.value)))}
-            type="text"
-            value={readNumber(payload, "timeout_ms")}
-          />
-        </label>
-      </>
+      <label className="field-label" key={port.key}>
+        <span>{label}</span>
+        <input
+          className="text-input"
+          onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, port.key, event.target.value))}
+          type="text"
+          value={readString(payload, port.key)}
+        />
+      </label>
     );
-  }
+  };
 
-  if (step.action === "job_fetch" || step.action === "result_fetch") {
-    return (
-      <>
-        <label className="field-label">
-          <span>job_id</span>
-          <input
-            className="text-input"
-            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "job_id", event.target.value))}
-            type="text"
-            value={readString(payload, "job_id")}
-          />
-        </label>
-        {renderReferenceMapper("job_id")}
-      </>
-    );
-  }
+  if (!contract || contract.inputSchema.length === 0) return null;
 
-  return null;
+  return (
+    <>
+      {contract.inputSchema.map((port) => (
+        <div key={`${step.id}-${port.key}`}>
+          {renderField(port)}
+          {renderReferenceMapper(port)}
+        </div>
+      ))}
+    </>
+  );
 }

@@ -2,14 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
-import { workbenchScriptPanelCopy } from "@/components/workbench/workbench-script-panel-copy";
+import { WorkbenchScriptAuthorPanel } from "@/components/workbench/workbench-script-author-panel";
+import { WorkbenchScriptCatalogPanel } from "@/components/workbench/workbench-script-catalog-panel";
+import { WorkbenchScriptInspectPanel } from "@/components/workbench/workbench-script-inspect-panel";
+import { WorkbenchScriptLaunchCard } from "@/components/workbench/workbench-script-launch-card";
+import { workbenchScriptPanelCopy, type WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
 import {
   buildWorkbenchRecordedMacroDraft,
   buildWorkbenchPythonPrelude,
   DEFAULT_WORKBENCH_PYTHON,
   deleteWorkbenchMacroPreset,
   ensurePyodideRuntime,
-  isWorkbenchScriptActionHighRisk,
   listWorkbenchMacroPresets,
   parseWorkbenchRecordedMacroDraft,
   saveWorkbenchMacroPreset,
@@ -63,7 +66,7 @@ function downloadTextFile(filename: string, contents: string) {
 }
 
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
-  const t = workbenchScriptPanelCopy[language];
+  const t = workbenchScriptPanelCopy[language] as WorkbenchScriptPanelCopyEntry;
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [output, setOutput] = useState<string[]>([]);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
@@ -74,19 +77,12 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   useEffect(() => {
     const stored = safeStorageGet();
-    if (stored?.code) {
-      setScriptCode(stored.code);
-    }
+    if (stored?.code) setScriptCode(stored.code);
   }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        code: scriptCode,
-      }),
-    );
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ code: scriptCode }));
   }, [scriptCode]);
 
   useEffect(() => {
@@ -106,7 +102,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const loadRuntime = async () => {
     setRuntimeError(null);
     setRuntimeStatus("loading");
-
     try {
       await ensurePyodideRuntime();
       setRuntimeStatus("ready");
@@ -122,15 +117,11 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const runScript = async () => {
     setRuntimeError(null);
     setRuntimeStatus("running");
-
     try {
       const pyodide = await ensurePyodideRuntime();
-      const bridge = {
+      window.__kyuubikiBridge = {
         invoke: async (action: string, payloadJson?: string) => {
-          const payload =
-            payloadJson && payloadJson.trim().length > 0
-              ? (JSON.parse(payloadJson) as Record<string, unknown>)
-              : {};
+          const payload = payloadJson && payloadJson.trim().length > 0 ? (JSON.parse(payloadJson) as Record<string, unknown>) : {};
           const result = await onInvokeAction(action, payload);
           return JSON.stringify(result ?? { ok: true, action });
         },
@@ -138,13 +129,8 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         actions_json: () => JSON.stringify(WORKBENCH_SCRIPT_ACTIONS),
         macros_json: () => JSON.stringify(WORKBENCH_SCRIPT_MACROS),
         log: (message: string) => appendOutput(message),
-        sleep: async (seconds = 0) =>
-          new Promise<void>((resolve) => {
-            window.setTimeout(resolve, Math.max(0, seconds) * 1000);
-          }),
+        sleep: async (seconds = 0) => new Promise<void>((resolve) => window.setTimeout(resolve, Math.max(0, seconds) * 1000)),
       };
-
-      window.__kyuubikiBridge = bridge;
       appendOutput(`[script] ${t.running}`);
       await pyodide.runPythonAsync(`${buildWorkbenchPythonPrelude()}\n${scriptCode}`);
       setRuntimeStatus("ready");
@@ -158,8 +144,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   };
 
   const insertAction = (action: WorkbenchScriptActionDefinition) => {
-    const payload = stringifyPayload(action.payloadExample);
-    setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.invoke("${action.id}", ${payload})\n`);
+    setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.invoke("${action.id}", ${stringifyPayload(action.payloadExample)})\n`);
   };
 
   const insertMacro = (macroId: string, payload?: Record<string, unknown>) => {
@@ -168,26 +153,21 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   const insertMacroDraftFromLog = () => {
     const draft = buildWorkbenchRecordedMacroDraft(actionLog);
-
     if (!draft) {
       appendOutput(`[macro] ${t.noMacroDraftSource}`);
       return;
     }
-
     setMacroDraftBuffer(draft);
-    const snippet = serializeWorkbenchMacroPythonSnippet(draft);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
 
   const exportMacroDraftJson = () => {
     const draft = buildWorkbenchRecordedMacroDraft(actionLog);
-
     if (!draft) {
       appendOutput(`[macro] ${t.noMacroDraftSource}`);
       return;
     }
-
     setMacroDraftBuffer(draft);
     downloadTextFile(`${draft.id}.json`, serializeWorkbenchRecordedMacroDraft(draft));
     appendOutput(`[macro] ${t.macroJsonExported}`);
@@ -195,12 +175,10 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   const importMacroJson = async (file: File | undefined) => {
     if (!file) return;
-
     try {
       const parsed = parseWorkbenchRecordedMacroDraft(JSON.parse(await file.text()) as unknown);
       setMacroDraftBuffer(parsed);
-      const snippet = serializeWorkbenchMacroPythonSnippet(parsed);
-      setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+      setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(parsed)}\n`);
       appendOutput(`[macro] ${t.macroJsonImported}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -214,13 +192,11 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       appendOutput(`[preset] ${t.noProjectSelected}`);
       return;
     }
-
     const draft = resolveCurrentDraft();
     if (!draft) {
       appendOutput(`[preset] ${t.noPresetDraft}`);
       return;
     }
-
     try {
       const saved = saveWorkbenchMacroPreset({
         projectId: snapshot.selectedProjectId,
@@ -241,8 +217,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const insertPreset = (preset: WorkbenchMacroPresetRecord) => {
     setMacroDraftBuffer(preset.macro);
     setPresetName(preset.name);
-    const snippet = serializeWorkbenchMacroPythonSnippet(preset.macro);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(preset.macro)}\n`);
     appendOutput(`[preset] ${t.presetInserted}`);
   };
 
@@ -260,303 +235,70 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   const insertExternalMacroDraft = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>) => {
     setMacroDraftBuffer(draft);
-    const snippet = serializeWorkbenchMacroPythonSnippet(draft);
-    setScriptCode((current) => `${current.trimEnd()}\n\n${snippet}\n`);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
 
   return (
     <>
+      <WorkbenchScriptLaunchCard
+        clearOutput={() => setOutput([])}
+        copy={t}
+        loadRuntime={() => void loadRuntime()}
+        recordingMode={recordingMode}
+        resetScript={() => setScriptCode(DEFAULT_WORKBENCH_PYTHON)}
+        runScript={() => void runScript()}
+        runtimeError={runtimeError}
+        runtimeStatus={runtimeStatus}
+        toggleRecordingMode={onToggleRecordingMode}
+      />
+
+      <WorkbenchScriptAuthorPanel
+        copy={t}
+        exportMacroDraftJson={exportMacroDraftJson}
+        importMacroJson={importMacroJson}
+        insertMacroDraftFromLog={insertMacroDraftFromLog}
+        recordingMode={recordingMode}
+        scriptCode={scriptCode}
+        setScriptCode={setScriptCode}
+      />
+
+      <WorkbenchScriptInspectPanel
+        actionCatalogCount={WORKBENCH_SCRIPT_ACTIONS.length}
+        actionLog={actionLog}
+        copy={t}
+        macroCatalogCount={WORKBENCH_SCRIPT_MACROS.length}
+        output={output}
+        scriptCode={scriptCode}
+        snapshot={snapshot}
+      />
+
+      <WorkbenchScriptCatalogPanel
+        actions={WORKBENCH_SCRIPT_ACTIONS}
+        copy={t}
+        deletePreset={deletePreset}
+        exportPresetJson={exportPresetJson}
+        insertAction={insertAction}
+        insertMacro={insertMacro}
+        insertPreset={insertPreset}
+        language={language}
+        macros={WORKBENCH_SCRIPT_MACROS}
+        presetName={presetName}
+        presetRecords={presetRecords}
+        saveCurrentPreset={saveCurrentPreset}
+        selectedProjectId={snapshot.selectedProjectId}
+        setPresetName={setPresetName}
+      />
+
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
-          <h2>{t.title}</h2>
-          <span className={`status-chip status-chip--${runtimeStatus === "error" ? "risk" : runtimeStatus === "ready" ? "good" : "watch"}`}>
-            {runtimeStatus === "loading"
-              ? t.loading
-              : runtimeStatus === "ready"
-                ? t.ready
-                : runtimeStatus === "running"
-                  ? t.running
-                  : runtimeStatus === "error"
-                    ? t.error
-                    : t.idle}
-          </span>
+          <h2>{t.headlessSurface}</h2>
+          <span>SDK</span>
         </div>
-        <p className="card-copy">{t.subtitle}</p>
-        <p className="card-copy">{t.firstRun}</p>
-        {runtimeError ? <p className="card-copy">{runtimeError}</p> : null}
-        <div className="button-row">
-          <button className="ghost-button" onClick={() => void loadRuntime()} type="button">
-            {t.loadRuntime}
-          </button>
-          <button className="ghost-button" onClick={() => setScriptCode(DEFAULT_WORKBENCH_PYTHON)} type="button">
-            {t.resetScript}
-          </button>
-          <button className="ghost-button" onClick={() => void runScript()} type="button">
-            {t.runScript}
-          </button>
-          <button className={`ghost-button${recordingMode ? " ghost-button--active" : ""}`} onClick={onToggleRecordingMode} type="button">
-            {recordingMode ? t.stopRecording : t.startRecording}
-          </button>
-          <button className="ghost-button" onClick={exportMacroDraftJson} type="button">
-            {t.exportMacroJson}
-          </button>
-          <label className="ghost-button" style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
-            {t.importMacroJson}
-            <input
-              accept="application/json,.json"
-              hidden
-              onChange={(event) => {
-                void importMacroJson(event.target.files?.[0]);
-                event.currentTarget.value = "";
-              }}
-              type="file"
-            />
-          </label>
-          <button className="ghost-button" onClick={() => setOutput([])} type="button">
-            {t.clearOutput}
-          </button>
-        </div>
-        {recordingMode ? <p className="card-copy">{t.recordingActive}</p> : null}
+        <p className="card-copy">{t.headlessSurfaceHint}</p>
       </section>
 
       <WorkbenchHeadlessWorkflowPanel language={language} onInsertMacroDraft={insertExternalMacroDraft} />
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.projectPresets}</h2>
-          <span>{presetRecords.length}</span>
-        </div>
-        {!snapshot.selectedProjectId ? <p className="card-copy">{t.noProjectSelected}</p> : null}
-        <label className="field-label">
-          <span>{t.presetName}</span>
-          <input
-            className="text-input"
-            onChange={(event) => setPresetName(event.target.value)}
-            placeholder={t.presetNamePlaceholder}
-            type="text"
-            value={presetName}
-          />
-        </label>
-        <div className="button-row">
-          <button className="ghost-button" disabled={!snapshot.selectedProjectId} onClick={saveCurrentPreset} type="button">
-            {t.savePreset}
-          </button>
-        </div>
-        {presetRecords.length === 0 ? (
-          <p className="card-copy">{snapshot.selectedProjectId ? t.noPresets : t.noProjectSelected}</p>
-        ) : (
-          <div className="script-panel__catalog">
-            {presetRecords.map((preset) => (
-              <article className="script-panel__action" key={preset.presetId}>
-                <div className="script-panel__action-head">
-                  <strong>{preset.name}</strong>
-                  <span>{preset.updatedAt}</span>
-                </div>
-                <div className="script-panel__payload">
-                  <span>ID</span>
-                  <code>{preset.macro.id}</code>
-                </div>
-                <div className="script-panel__payload">
-                  <span>Steps</span>
-                  <code>{String(preset.macro.steps.length)}</code>
-                </div>
-                <div className="button-row">
-                  <button className="ghost-button ghost-button--compact" onClick={() => insertPreset(preset)} type="button">
-                    {t.insertPreset}
-                  </button>
-                  <button className="ghost-button ghost-button--compact" onClick={() => exportPresetJson(preset)} type="button">
-                    {t.exportPresetJson}
-                  </button>
-                  <button className="ghost-button ghost-button--compact" onClick={() => deletePreset(preset)} type="button">
-                    {t.deletePreset}
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.snapshot}</h2>
-          <span>{snapshot.studyKind}</span>
-        </div>
-        <div className="sidebar-list">
-          <div>
-            <span>{t.stateKeys}</span>
-            <strong>{Object.keys(snapshot).length}</strong>
-          </div>
-          <div>
-            <span>{t.actionCount}</span>
-            <strong>{WORKBENCH_SCRIPT_ACTIONS.length + WORKBENCH_SCRIPT_MACROS.length}</strong>
-          </div>
-          <div>
-            <span>{t.lineCount}</span>
-            <strong>{scriptCode.split("\n").length}</strong>
-          </div>
-        </div>
-        <pre className="script-panel__snapshot">{JSON.stringify(snapshot, null, 2)}</pre>
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.editor}</h2>
-          <span>Pyodide</span>
-        </div>
-        <textarea
-          className="script-panel__editor"
-          rows={18}
-          spellCheck={false}
-          value={scriptCode}
-          onChange={(event) => setScriptCode(event.target.value)}
-        />
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.output}</h2>
-          <span>{output.length}</span>
-        </div>
-        {output.length === 0 ? (
-          <p className="card-copy">{t.noOutput}</p>
-        ) : (
-          <pre className="script-panel__output">{output.join("\n")}</pre>
-        )}
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.actionLog}</h2>
-          <span>{actionLog.length}</span>
-        </div>
-        <div className="button-row">
-          <button className="ghost-button ghost-button--compact" onClick={insertMacroDraftFromLog} type="button">
-            {t.insertMacroDraft}
-          </button>
-        </div>
-        {actionLog.length === 0 ? (
-          <p className="card-copy">{t.noActionLog}</p>
-        ) : (
-          <div className="script-panel__catalog">
-            {actionLog.map((entry) => (
-              <article className="script-panel__action" key={entry.id}>
-                <div className="script-panel__action-head">
-                  <strong>{entry.action}</strong>
-                  <span>{entry.status}</span>
-                </div>
-                <p className="card-copy">{entry.summary}</p>
-                {entry.source ? (
-                  <div className="script-panel__payload">
-                    <span>{t.actionSource}</span>
-                    <code>{entry.source}</code>
-                  </div>
-                ) : null}
-                {entry.payload ? (
-                  <div className="script-panel__payload">
-                    <span>{t.actionPayload}</span>
-                    <code>{JSON.stringify(entry.payload)}</code>
-                  </div>
-                ) : null}
-                {entry.result ? (
-                  <div className="script-panel__payload">
-                    <span>{t.actionResult}</span>
-                    <code>{JSON.stringify(entry.result)}</code>
-                  </div>
-                ) : null}
-                {entry.note ? (
-                  <div className="script-panel__payload">
-                    <span>{t.actionNote}</span>
-                    <code>{entry.note}</code>
-                  </div>
-                ) : null}
-                <div className="script-panel__payload">
-                  <span>Time</span>
-                  <code>{entry.at}</code>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.actionCatalog}</h2>
-          <span>{WORKBENCH_SCRIPT_ACTIONS.length}</span>
-        </div>
-        <div className="script-panel__catalog">
-          {WORKBENCH_SCRIPT_ACTIONS.map((action) => (
-            <article className="script-panel__action" key={action.id}>
-              <div className="script-panel__action-head">
-                <strong>{action.id}</strong>
-                <span>
-                  {t.categories[action.category as keyof typeof t.categories] ?? action.category}
-                  {action.risk === "destructive"
-                    ? ` · ${t.riskDestructive}`
-                    : action.risk === "sensitive"
-                      ? ` · ${t.riskSensitive}`
-                      : ` · ${t.riskNormal}`}
-                </span>
-              </div>
-              <p className="card-copy">{language === "zh" ? action.summary.zh : action.summary.en}</p>
-              {isWorkbenchScriptActionHighRisk(action.id) ? <p className="card-copy">{t.confirmationRequired}</p> : null}
-              <div className="script-panel__payload">
-                <span>{t.payload}</span>
-                <code>{stringifyPayload(action.payloadExample)}</code>
-              </div>
-              <div className="button-row">
-                <button className="ghost-button ghost-button--compact" onClick={() => insertAction(action)} type="button">
-                  {t.insertLabel}
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="sidebar-card sidebar-card--compact">
-        <div className="card-head">
-          <h2>{t.macroCatalog}</h2>
-          <span>{WORKBENCH_SCRIPT_MACROS.length}</span>
-        </div>
-        <div className="script-panel__catalog">
-          {WORKBENCH_SCRIPT_MACROS.map((macro) => (
-            <article className="script-panel__action" key={macro.id}>
-              <div className="script-panel__action-head">
-                <strong>{macro.id}</strong>
-                <span>
-                  {t.categories[macro.category as keyof typeof t.categories] ?? macro.category}
-                  {macro.risk === "destructive"
-                    ? ` · ${t.riskDestructive}`
-                    : macro.risk === "sensitive"
-                      ? ` · ${t.riskSensitive}`
-                      : ` · ${t.riskNormal}`}
-                </span>
-              </div>
-              <p className="card-copy">{language === "zh" ? macro.summary.zh : macro.summary.en}</p>
-              {macro.requiresConfirmation ? <p className="card-copy">{t.confirmationRequired}</p> : null}
-              <div className="script-panel__payload">
-                <span>{t.payload}</span>
-                <code>{stringifyPayload(macro.payloadExample)}</code>
-              </div>
-              <div className="script-panel__payload">
-                <span>{t.stepsLabel}</span>
-                <code>{macro.steps.map((step) => step.action).join(" -> ")}</code>
-              </div>
-              {macro.payloadExample ? (
-                <p className="card-copy">{t.macroPayloadHint}</p>
-              ) : null}
-              <div className="button-row">
-                <button className="ghost-button ghost-button--compact" onClick={() => insertMacro(macro.id, macro.payloadExample)} type="button">
-                  {t.insertLabel}
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
     </>
   );
 }
