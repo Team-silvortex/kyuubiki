@@ -61,6 +61,7 @@ export function WorkbenchWorkflowDatasetCard({
   removeDatasetAxis,
   updateDatasetAxis,
 }: WorkbenchWorkflowDatasetCardProps) {
+  const activeDatasetValueId = selectedDatasetValue?.id ?? null;
   return (
     <>
       <section
@@ -346,7 +347,7 @@ export function WorkbenchWorkflowDatasetCard({
                 {[...(node.inputs ?? []), ...(node.outputs ?? [])].map((port) => {
                   const direction = (node.inputs ?? []).some((entry) => entry.id === port.id) ? "inputs" : "outputs";
                   return (
-                    <label key={`${node.id}:${direction}:${port.id}`}>
+                    <label key={`${node.id}:${direction}:${port.id}`} style={port.dataset_value && port.dataset_value === activeDatasetValueId ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px", borderRadius: "8px" } : undefined}>
                       <span>
                         {direction === "inputs" ? "in" : "out"} · {port.id} · {port.artifact_type}
                       </span>
@@ -376,7 +377,7 @@ export function WorkbenchWorkflowDatasetCard({
         </div>
         <div className="form-grid compact">
           {selectedEdges.map((edge) => (
-            <label key={`edge-map:${edge.id}`}>
+            <label key={`edge-map:${edge.id}`} style={edge.dataset_value && edge.dataset_value === activeDatasetValueId ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px", borderRadius: "8px" } : undefined}>
               <span>
                 {edge.from.node}.{edge.from.port} → {edge.to.node}.{edge.to.port}
               </span>

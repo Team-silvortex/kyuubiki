@@ -19,6 +19,9 @@ type WorkbenchWorkflowControlFlowPlaneCardProps = {
   selectedEdges: WorkflowGraphEdge[];
   validationIssues: WorkflowGraphValidationIssue[];
   invalidInputCount: number;
+  traceFocusBranchNodeId?: string | null;
+  traceFocusBranchOutputId?: string | null;
+  traceFocusBranchToken?: number;
   onAddConditionNode: () => void;
   onAddMergeNode: () => void;
   onAddNode: (template?: WorkflowNodeTemplateSelection) => void;
@@ -373,6 +376,9 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
   selectedEdges,
   validationIssues,
   invalidInputCount,
+  traceFocusBranchNodeId,
+  traceFocusBranchOutputId,
+  traceFocusBranchToken,
   onAddConditionNode,
   onAddMergeNode,
   onAddNode,
@@ -427,6 +433,7 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [armedConnection]);
+  useEffect(() => { if (!traceFocusBranchNodeId || !traceFocusBranchOutputId) return; setSelectedLaneKey(laneKey(traceFocusBranchNodeId, traceFocusBranchOutputId === "if_false" ? "false" : "true")); }, [traceFocusBranchNodeId, traceFocusBranchOutputId, traceFocusBranchToken]);
 
   return (
     <section

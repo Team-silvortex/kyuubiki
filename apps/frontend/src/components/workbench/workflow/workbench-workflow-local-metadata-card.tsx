@@ -26,7 +26,7 @@ export function WorkbenchWorkflowLocalMetadataCard({
   if (!workflow.local) return null;
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workflow-local-card="card">
       <div className="card-head">
         <h2>{labels.localWorkflowMetadataTitle}</h2>
         <span className="status-pill status-pill--watch">{labels.localWorkflowBadgeLabel}</span>

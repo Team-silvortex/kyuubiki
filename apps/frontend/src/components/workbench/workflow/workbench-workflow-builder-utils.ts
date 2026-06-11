@@ -112,6 +112,17 @@ export function downloadJsonArtifact(filename: string, payload: unknown) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
   });
+  downloadBlobArtifact(filename, blob);
+}
+
+export function downloadHtmlArtifact(filename: string, html: string) {
+  const blob = new Blob([html], {
+    type: "text/html;charset=utf-8",
+  });
+  downloadBlobArtifact(filename, blob);
+}
+
+function downloadBlobArtifact(filename: string, blob: Blob) {
   const href = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = href;

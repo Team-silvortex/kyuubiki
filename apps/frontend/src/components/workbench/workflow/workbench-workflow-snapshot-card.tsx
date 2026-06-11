@@ -17,7 +17,7 @@ export function WorkbenchWorkflowSnapshotCard({
   onDeleteSnapshot,
 }: WorkbenchWorkflowSnapshotCardProps) {
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workflow-snapshot-card="card">
       <div className="card-head">
         <h2>{labels.validationSnapshotsTitle}</h2>
         <span className={`status-pill status-pill--${snapshots.length > 0 ? "watch" : "good"}`}>{snapshots.length}</span>

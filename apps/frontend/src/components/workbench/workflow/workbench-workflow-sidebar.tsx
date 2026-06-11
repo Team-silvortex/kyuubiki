@@ -76,8 +76,13 @@ export function WorkbenchWorkflowSidebar({
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
+  const latestRunWorkflow = latestRun
+    ? workflowCatalogEntries.find((entry) => entry.id === latestRun.workflowId) ?? null
+    : null;
   const [catalogFilter, setCatalogFilter] = useState<WorkflowCatalogFilter>("all");
   const [builderTraceFocus, setBuilderTraceFocus] = useState<{ nodeId: string; token: number } | null>(null);
+  const [builderBranchFocus, setBuilderBranchFocus] = useState<{ nodeId: string; outputId: string; token: number } | null>(null);
+  const [builderDatasetFocus, setBuilderDatasetFocus] = useState<{ nodeId: string; portId: string; token: number } | null>(null);
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
     removeStoredLocalWorkflow(workflow.local.storage_id);
@@ -87,6 +92,19 @@ export function WorkbenchWorkflowSidebar({
     onSelectWorkflow(workflowId);
     setBuilderTraceFocus({ nodeId, token: Date.now() });
     onSurfaceTabChange("builder");
+  }
+  function openRunBranchInBuilder(workflowId: string, nodeId: string, outputId: string) {
+    onSelectWorkflow(workflowId); setBuilderTraceFocus({ nodeId, token: Date.now() }); setBuilderBranchFocus({ nodeId, outputId, token: Date.now() }); onSurfaceTabChange("builder");
+  }
+  function openRunLineageInBuilder(run: WorkflowRunRecord, artifactKey: string, nodeId: string) {
+    const producer = run.artifactLineage?.find((entry) => entry.artifact_key === artifactKey);
+    if (producer) setBuilderDatasetFocus({ nodeId: producer.node_id, portId: producer.port_id, token: Date.now() });
+    const branchSource = run.artifactLineage?.find((entry) => entry.artifact_key === artifactKey)?.source_artifacts?.find((source) => source.endsWith(".if_true") || source.endsWith(".if_false"));
+    if (branchSource) {
+      const lastDot = branchSource.lastIndexOf(".");
+      if (lastDot > 0) return openRunBranchInBuilder(run.workflowId, branchSource.slice(0, lastDot), branchSource.slice(lastDot + 1));
+    }
+    openRunNodeInBuilder(run.workflowId, nodeId);
   }
   const filteredWorkflowCatalogEntries = useMemo(() => {
     if (catalogFilter === "local") return workflowCatalogEntries.filter((workflow) => Boolean(workflow.local));
@@ -273,6 +291,12 @@ export function WorkbenchWorkflowSidebar({
           selectedWorkflow={selectedWorkflow}
           traceFocusNodeId={builderTraceFocus?.nodeId ?? null}
           traceFocusToken={builderTraceFocus?.token}
+          traceFocusBranchNodeId={builderBranchFocus?.nodeId ?? null}
+          traceFocusBranchOutputId={builderBranchFocus?.outputId ?? null}
+          traceFocusBranchToken={builderBranchFocus?.token}
+          traceFocusDatasetNodeId={builderDatasetFocus?.nodeId ?? null}
+          traceFocusDatasetPortId={builderDatasetFocus?.portId ?? null}
+          traceFocusDatasetToken={builderDatasetFocus?.token}
         />
       ) : null}
 
@@ -298,7 +322,7 @@ export function WorkbenchWorkflowSidebar({
               </div>
             </div>
           ) : null}
-          {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} run={latestRun} /> : null}
+          {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectBranch={(nodeId, outputId) => openRunBranchInBuilder(latestRun.workflowId, nodeId, outputId)} onSelectLineage={(entry) => openRunLineageInBuilder(latestRun, entry.artifact_key, entry.node_id)} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} operatorDescriptors={workflowOperatorDescriptors} run={latestRun} workflow={latestRunWorkflow} /> : null}
           {workflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
             {workflowRuns.map((run) => (
