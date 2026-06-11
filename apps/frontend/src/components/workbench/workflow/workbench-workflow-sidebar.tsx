@@ -10,6 +10,7 @@ import type {
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
+import { WorkbenchWorkflowRunTraceCard } from "@/components/workbench/workflow/workbench-workflow-run-trace-card";
 import type {
   WorkflowRunRecord,
   WorkflowCatalogFilter,
@@ -76,10 +77,16 @@ export function WorkbenchWorkflowSidebar({
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
   const [catalogFilter, setCatalogFilter] = useState<WorkflowCatalogFilter>("all");
+  const [builderTraceFocus, setBuilderTraceFocus] = useState<{ nodeId: string; token: number } | null>(null);
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
     removeStoredLocalWorkflow(workflow.local.storage_id);
     onRefreshWorkflowCatalog();
+  }
+  function openRunNodeInBuilder(workflowId: string, nodeId: string) {
+    onSelectWorkflow(workflowId);
+    setBuilderTraceFocus({ nodeId, token: Date.now() });
+    onSurfaceTabChange("builder");
   }
   const filteredWorkflowCatalogEntries = useMemo(() => {
     if (catalogFilter === "local") return workflowCatalogEntries.filter((workflow) => Boolean(workflow.local));
@@ -264,6 +271,8 @@ export function WorkbenchWorkflowSidebar({
           onRunWorkflowCatalog={onRunWorkflowCatalog}
           onRunWorkflowDraft={onRunWorkflowDraft}
           selectedWorkflow={selectedWorkflow}
+          traceFocusNodeId={builderTraceFocus?.nodeId ?? null}
+          traceFocusToken={builderTraceFocus?.token}
         />
       ) : null}
 
@@ -289,6 +298,7 @@ export function WorkbenchWorkflowSidebar({
               </div>
             </div>
           ) : null}
+          {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} run={latestRun} /> : null}
           {workflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
             {workflowRuns.map((run) => (
@@ -309,6 +319,14 @@ export function WorkbenchWorkflowSidebar({
                   <div className="sidebar-list__row">
                     <span>{labels.latestSummaryLabel}</span>
                     <strong>{run.summary ?? "--"}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>skipped</span>
+                    <strong>{run.skippedNodes?.length ?? 0}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>branches</span>
+                    <strong>{run.branchDecisions?.length ?? 0}</strong>
                   </div>
                 </div>
                 <div className="button-row">

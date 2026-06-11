@@ -18,6 +18,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-operator-search";
 import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
 import { WorkbenchWorkflowConditionEditor } from "@/components/workbench/workflow/workbench-workflow-condition-editor";
+import { WorkbenchWorkflowControlFlowHint } from "@/components/workbench/workflow/workbench-workflow-control-flow-hint";
 import { WorkbenchWorkflowTemplateChainActions } from "@/components/workbench/workflow/workbench-workflow-template-chain-actions";
 import {
   describeWorkflowNodeTemplateSyncImpact,
@@ -315,7 +316,6 @@ export function WorkbenchWorkflowTopologyCard({
         selectedSourceNodeId={selectedSourceNodeId}
         selectedNodes={selectedNodes}
       />
-
       <div className="sidebar-stack">
         {selectedNodes.map((node) => {
           const operatorDescriptor = node.operator_id
@@ -416,6 +416,7 @@ export function WorkbenchWorkflowTopologyCard({
                   descriptor={operatorDescriptor}
                   labels={labels}
                 />
+                <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={selectedEdges} />
                 <WorkbenchWorkflowBridgeContractEditor
                   labels={labels}
                   node={node}

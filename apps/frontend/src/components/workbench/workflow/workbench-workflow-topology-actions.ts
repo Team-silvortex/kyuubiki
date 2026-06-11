@@ -158,6 +158,74 @@ function appendConnectedNode(
   return createdNode;
 }
 
+function connectNodesByPorts(
+  graph: WorkflowGraphDefinition,
+  sourceNodeId: string,
+  sourcePortId: string,
+  targetNodeId: string,
+  targetPortId: string,
+) {
+  const baseEdge = buildDraftEdge((graph.edges ?? []).length + 1, graph.nodes);
+  const connectedEdge = syncEdgeFromPorts(
+    {
+      ...baseEdge,
+      from: { node: sourceNodeId, port: sourcePortId },
+      to: { node: targetNodeId, port: targetPortId },
+    },
+    graph.nodes,
+  );
+  graph.edges = [...(graph.edges ?? []), connectedEdge];
+}
+
+function upsertControlFlowEdge(
+  graph: WorkflowGraphDefinition,
+  mode: "outgoing" | "incoming",
+  nodeId: string,
+  portId: string,
+  remoteNodeId: string,
+  remotePortId: string,
+) {
+  const existingIndex = (graph.edges ?? []).findIndex((edge) =>
+    mode === "outgoing"
+      ? edge.from.node === nodeId && edge.from.port === portId
+      : edge.to.node === nodeId && edge.to.port === portId,
+  );
+  const existingEdges = graph.edges ?? [];
+
+  if (!remoteNodeId || !remotePortId) {
+    if (existingIndex >= 0) {
+      graph.edges = existingEdges.filter((_, index) => index !== existingIndex);
+    }
+    return;
+  }
+
+  const baseEdge = buildDraftEdge(
+    existingIndex >= 0 ? existingIndex + 1 : existingEdges.length + 1,
+    graph.nodes,
+  );
+  const nextEdge = syncEdgeFromPorts(
+    {
+      ...(existingIndex >= 0 ? existingEdges[existingIndex] : baseEdge),
+      from:
+        mode === "outgoing"
+          ? { node: nodeId, port: portId }
+          : { node: remoteNodeId, port: remotePortId },
+      to:
+        mode === "outgoing"
+          ? { node: remoteNodeId, port: remotePortId }
+          : { node: nodeId, port: portId },
+    },
+    graph.nodes,
+  );
+
+  if (existingIndex >= 0) {
+    graph.edges = existingEdges.map((edge, index) => (index === existingIndex ? nextEdge : edge));
+    return;
+  }
+
+  graph.edges = [...existingEdges, nextEdge];
+}
+
 export function createWorkflowTopologyActions(
   setDraftGraph: SetDraftGraph,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
@@ -238,6 +306,44 @@ export function createWorkflowTopologyActions(
       for (const template of templates) {
         previousNode = appendConnectedNode(next, previousNode, template, operatorDescriptors);
       }
+      return next;
+    });
+  }
+
+  function insertControlFlowPlane(sourceNodeId?: string | null) {
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const next = cloneWorkflowGraph(current);
+      if (!next) return current;
+
+      const sourceNode =
+        sourceNodeId ? next.nodes.find((node) => node.id === sourceNodeId) ?? null : null;
+      const conditionNode = appendConnectedNode(next, sourceNode, { kind: "condition" }, operatorDescriptors);
+      const mergeNode = appendConnectedNode(
+        next,
+        null,
+        { kind: "transform", operatorId: "transform.first_available" },
+        operatorDescriptors,
+      );
+
+      connectNodesByPorts(next, conditionNode.id, "if_true", mergeNode.id, "left");
+      connectNodesByPorts(next, conditionNode.id, "if_false", mergeNode.id, "right");
+      return next;
+    });
+  }
+
+  function setControlFlowEdge(
+    mode: "outgoing" | "incoming",
+    nodeId: string,
+    portId: string,
+    target: string,
+  ) {
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const next = cloneWorkflowGraph(current);
+      if (!next) return current;
+      const [remoteNodeId = "", remotePortId = ""] = target.split(".");
+      upsertControlFlowEdge(next, mode, nodeId, portId, remoteNodeId, remotePortId);
       return next;
     });
   }
@@ -325,12 +431,14 @@ export function createWorkflowTopologyActions(
   return {
     addEdge,
     addConnectedNode,
+    insertControlFlowPlane,
     insertTemplateChain,
     addNode,
     addNodePort,
     removeEdge,
     removeNode,
     removeNodePort,
+    setControlFlowEdge,
     syncNodeTemplate,
     updateEdge,
     updateNode,

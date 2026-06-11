@@ -15,6 +15,7 @@ import {
   WORKFLOW_CONDITION_OPERATORS,
 } from "@/components/workbench/workflow/workbench-workflow-condition";
 import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 export type WorkflowGraphValidationIssue = {
@@ -276,6 +277,22 @@ function validateConditionNodes(graph: WorkflowGraphDefinition): WorkflowGraphVa
   return issues;
 }
 
+function validateRuntimeSupport(graph: WorkflowGraphDefinition): WorkflowGraphValidationIssue[] {
+  const issues: WorkflowGraphValidationIssue[] = [];
+  for (const node of graph.nodes) {
+    if (isWorkflowNodeSupportedInRuntime(node)) continue;
+    issues.push({
+      id: `runtime:unsupported:${node.id}`,
+      level: "warning",
+      message: node.operator_id
+        ? `Node "${node.id}" uses operator "${node.operator_id}" which is not supported by the current workflow executor.`
+        : `Node "${node.id}" uses node kind "${node.kind}" which is not supported by the current workflow executor.`,
+      locate: { kind: "node", nodeId: node.id },
+    });
+  }
+  return issues;
+}
+
 export function validateWorkflowGraphDefinition(
   graph: WorkflowGraphDefinition | null,
   entryInputs: WorkflowCatalogEntryArtifact[],
@@ -403,6 +420,7 @@ export function validateWorkflowGraphDefinition(
     }
   }
 
+  issues.push(...validateRuntimeSupport(graph));
   issues.push(...validateCatalogArtifacts(graph, entryInputs, "entry"));
   issues.push(...validateCatalogArtifacts(graph, outputArtifacts, "output"));
   issues.push(...validateOperatorDescriptorContracts(graph, operatorDescriptors));

@@ -150,5 +150,25 @@ export type WorkflowGraphJobResult = {
   current_node?: string | null;
   progress_events?: Array<Record<string, unknown>>;
   completed_nodes: string[];
+  skipped_nodes?: string[];
+  branch_decisions?: Array<{
+    node_id: string;
+    chosen_output: string;
+    predicate_result: boolean;
+  }>;
+  node_runs?: Array<{
+    node_id: string;
+    kind: string;
+    operator_id?: string | null;
+    status: "completed" | "skipped";
+    consumed_artifacts?: string[];
+    produced_artifacts?: string[];
+  }>;
+  artifact_lineage?: Array<{
+    artifact_key: string;
+    node_id: string;
+    port_id: string;
+    source_artifacts?: string[];
+  }>;
   artifacts: Record<string, unknown>;
 };

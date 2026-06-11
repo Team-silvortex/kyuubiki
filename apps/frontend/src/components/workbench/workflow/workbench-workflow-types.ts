@@ -11,6 +11,26 @@ export type WorkflowRunRecord = {
   currentNode?: string | null;
   summary?: string | null;
   updatedAt?: string | null;
+  skippedNodes?: string[];
+  branchDecisions?: Array<{
+    node_id: string;
+    chosen_output: string;
+    predicate_result: boolean;
+  }>;
+  nodeRuns?: Array<{
+    node_id: string;
+    kind: string;
+    operator_id?: string | null;
+    status: "completed" | "skipped";
+    consumed_artifacts?: string[];
+    produced_artifacts?: string[];
+  }>;
+  artifactLineage?: Array<{
+    artifact_key: string;
+    node_id: string;
+    port_id: string;
+    source_artifacts?: string[];
+  }>;
 };
 
 export type WorkflowSidebarLabels = {
@@ -68,6 +88,12 @@ export type WorkflowSidebarLabels = {
   templateChainAllLabel: string;
   templateChainPinnedLabel: string;
   templateChainTagsLabel: string;
+  controlFlowPlaneTitle: string;
+  controlFlowPlaneHint: string;
+  controlFlowPlaneInsertLabel: string;
+  controlFlowPlaneConditionLabel: string;
+  controlFlowPlaneMergeLabel: string;
+  controlFlowPlaneEmptyLabel: string;
   removeNodeLabel: string;
   addEdgeLabel: string;
   removeEdgeLabel: string;

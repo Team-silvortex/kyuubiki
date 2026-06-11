@@ -265,7 +265,50 @@ pub struct WorkflowGraphRunRequest {
 pub struct WorkflowGraphRunResult {
     pub workflow_id: String,
     pub completed_nodes: Vec<String>,
+    #[serde(default)]
+    pub skipped_nodes: Vec<String>,
+    #[serde(default)]
+    pub branch_decisions: Vec<WorkflowBranchDecision>,
+    #[serde(default)]
+    pub node_runs: Vec<WorkflowNodeRunTrace>,
+    #[serde(default)]
+    pub artifact_lineage: Vec<WorkflowArtifactLineage>,
     pub artifacts: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowBranchDecision {
+    pub node_id: String,
+    pub chosen_output: String,
+    pub predicate_result: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowNodeRunStatus {
+    Completed,
+    Skipped,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowNodeRunTrace {
+    pub node_id: String,
+    pub kind: WorkflowNodeKind,
+    pub operator_id: Option<String>,
+    pub status: WorkflowNodeRunStatus,
+    #[serde(default)]
+    pub consumed_artifacts: Vec<String>,
+    #[serde(default)]
+    pub produced_artifacts: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowArtifactLineage {
+    pub artifact_key: String,
+    pub node_id: String,
+    pub port_id: String,
+    #[serde(default)]
+    pub source_artifacts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -3104,6 +3147,10 @@ mod tests {
         let result = WorkflowGraphRunResult {
             workflow_id: decoded.graph.id,
             completed_nodes: vec!["heat_model".to_string(), "thermo_summary".to_string()],
+            skipped_nodes: vec![],
+            branch_decisions: vec![],
+            node_runs: vec![],
+            artifact_lineage: vec![],
             artifacts: std::collections::BTreeMap::from([(
                 "thermo_summary.result".to_string(),
                 serde_json::json!({"max_stress": 123.0}),
@@ -3113,6 +3160,8 @@ mod tests {
         let decoded: WorkflowGraphRunResult =
             serde_json::from_str(&json).expect("workflow graph result should decode");
         assert_eq!(decoded.completed_nodes.len(), 2);
+        assert_eq!(decoded.skipped_nodes.len(), 0);
+        assert_eq!(decoded.node_runs.len(), 0);
     }
 
     #[test]

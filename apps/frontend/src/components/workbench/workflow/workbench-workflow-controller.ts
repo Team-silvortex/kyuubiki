@@ -171,6 +171,10 @@ export function useWorkbenchWorkflowController({
               next.job.message ??
               null,
             summary: next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowArtifacts(next.result) : null,
+            skippedNodes: next.result && isWorkflowGraphResult(next.result) ? next.result.skipped_nodes ?? [] : [],
+            branchDecisions: next.result && isWorkflowGraphResult(next.result) ? next.result.branch_decisions ?? [] : [],
+            nodeRuns: next.result && isWorkflowGraphResult(next.result) ? next.result.node_runs ?? [] : [],
+            artifactLineage: next.result && isWorkflowGraphResult(next.result) ? next.result.artifact_lineage ?? [] : [],
             updatedAt: next.job.updated_at ?? null,
           }),
         );
