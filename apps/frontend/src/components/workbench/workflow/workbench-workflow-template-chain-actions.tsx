@@ -47,8 +47,29 @@ function describeTemplateChainPreview(chain: WorkflowTemplateChainDefinition) {
     .join(" -> ");
 }
 
-function describeTemplateChainTags(chain: WorkflowTemplateChainDefinition) {
-  return chain.tags?.join(" · ") ?? "";
+function TemplateChainTagRow(props: {
+  tags?: string[];
+  label: string;
+  onSelectTag: (tag: string) => void;
+  activeQuery: string;
+}) {
+  const { tags, label, onSelectTag, activeQuery } = props;
+  if (!tags || tags.length === 0) return null;
+  return (
+    <div className="card-copy" style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
+      <span>{label}:</span>
+      {tags.map((tag) => (
+        <button
+          key={tag}
+          onClick={() => onSelectTag(tag)}
+          type="button"
+          style={activeQuery.trim().toLowerCase() === tag.toLowerCase() ? { outline: "1px solid var(--accent, #4f46e5)" } : undefined}
+        >
+          {tag}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function sortChainsByPriority(
@@ -246,6 +267,9 @@ export function WorkbenchWorkflowTemplateChainActions({
     }));
     setImportedChains(listStoredWorkflowTemplateChains());
   }
+  function selectTag(tag: string) {
+    setQuery(tag);
+  }
 
   return (
     <div className="sidebar-stack">
@@ -287,7 +311,7 @@ export function WorkbenchWorkflowTemplateChainActions({
                   <strong>{preset.templates.length}</strong>
                 </div>
                 <p className="card-copy">{describeTemplateChainPreview(preset)}</p>
-                {preset.tags?.length ? <p className="card-copy">{labels.templateChainTagsLabel}: {describeTemplateChainTags(preset)}</p> : null}
+                <TemplateChainTagRow activeQuery={query} label={labels.templateChainTagsLabel} onSelectTag={selectTag} tags={preset.tags} />
                 {preset.summary ? <p className="card-copy">{preset.summary}</p> : null}
                 <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
                   <button
@@ -323,7 +347,7 @@ export function WorkbenchWorkflowTemplateChainActions({
                   <strong>{preset.templates.length}</strong>
                 </div>
                 <p className="card-copy">{describeTemplateChainPreview(preset)}</p>
-                {preset.tags?.length ? <p className="card-copy">{labels.templateChainTagsLabel}: {describeTemplateChainTags(preset)}</p> : null}
+                <TemplateChainTagRow activeQuery={query} label={labels.templateChainTagsLabel} onSelectTag={selectTag} tags={preset.tags} />
                 {preset.summary ? <p className="card-copy">{preset.summary}</p> : null}
                 <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
                   <button onClick={() => insertChain(preset.templates)} type="button">
@@ -359,7 +383,7 @@ export function WorkbenchWorkflowTemplateChainActions({
                 <strong>{preset.templates.length}</strong>
               </div>
               <p className="card-copy">{describeTemplateChainPreview(preset)}</p>
-              {preset.tags?.length ? <p className="card-copy">{labels.templateChainTagsLabel}: {describeTemplateChainTags(preset)}</p> : null}
+              <TemplateChainTagRow activeQuery={query} label={labels.templateChainTagsLabel} onSelectTag={selectTag} tags={preset.tags} />
               {preset.summary ? <p className="card-copy">{preset.summary}</p> : null}
               <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
                 <button onClick={() => insertChain(preset.templates)} type="button">

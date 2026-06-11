@@ -1,7 +1,8 @@
 use crate::workflow_contract::validate_workflow_dataset_contract;
 use crate::workflow_executor::{
-    artifact_key, resolve_single_input_payload, run_export_operator, run_extract_operator,
-    run_solve_operator, run_transform_operator,
+    artifact_key, evaluate_condition_operator, resolve_first_available_input_payload,
+    resolve_single_input_payload, run_export_operator, run_extract_operator, run_solve_operator,
+    run_transform_operator, transform_operator_accepts_partial_inputs,
 };
 use kyuubiki_protocol::{WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind};
 use serde_json::Value;
@@ -18,6 +19,7 @@ pub fn run_workflow_graph(
         .map(|node| (node.id.clone(), node))
         .collect::<HashMap<_, _>>();
     let mut completed = HashSet::new();
+    let mut skipped = HashSet::new();
     let mut ordered_completed = Vec::new();
     let mut artifacts = BTreeMap::new();
 
@@ -25,7 +27,7 @@ pub fn run_workflow_graph(
         let mut progressed = false;
 
         for node in &graph.nodes {
-            if completed.contains(&node.id) {
+            if completed.contains(&node.id) || skipped.contains(&node.id) {
                 continue;
             }
 
@@ -34,11 +36,34 @@ pub fn run_workflow_graph(
                 .iter()
                 .filter(|edge| edge.to.node == node.id)
                 .collect::<Vec<_>>();
-            let ready = incoming.iter().all(|edge| {
-                artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port))
+            let supports_partial_inputs = node
+                .operator_id
+                .as_deref()
+                .is_some_and(transform_operator_accepts_partial_inputs);
+            let ready = if supports_partial_inputs {
+                incoming
+                    .iter()
+                    .any(|edge| artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port)))
+            } else {
+                incoming.iter().all(|edge| {
+                    artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port))
+                })
+            };
+            let unresolved_missing_inputs = incoming.iter().any(|edge| {
+                let key = artifact_key(&edge.from.node, &edge.from.port);
+                !artifacts.contains_key(&key)
+            }) && incoming.iter().all(|edge| {
+                let key = artifact_key(&edge.from.node, &edge.from.port);
+                artifacts.contains_key(&key)
+                    || completed.contains(&edge.from.node)
+                    || skipped.contains(&edge.from.node)
             });
 
             if node.kind != WorkflowNodeKind::Input && !ready {
+                if unresolved_missing_inputs {
+                    skipped.insert(node.id.clone());
+                    progressed = true;
+                }
                 continue;
             }
 
@@ -70,7 +95,11 @@ pub fn run_workflow_graph(
                     let operator_id = node.operator_id.as_deref().ok_or_else(|| {
                         format!("workflow transform node {} is missing operator_id", node.id)
                     })?;
-                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                    let payload = if transform_operator_accepts_partial_inputs(operator_id) {
+                        resolve_first_available_input_payload(node, &incoming, &artifacts)?
+                    } else {
+                        resolve_single_input_payload(node, &incoming, &artifacts)?
+                    };
                     let output_value = run_transform_operator(
                         operator_id,
                         payload,
@@ -122,11 +151,37 @@ pub fn run_workflow_graph(
                         artifacts.insert(artifact_key(&node.id, &edge.to.port), value);
                     }
                 }
-                _ => {
-                    return Err(format!(
-                        "workflow node kind {:?} is not supported by the first headless executor",
-                        node.kind
-                    ));
+                WorkflowNodeKind::Condition => {
+                    let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
+                    let predicate_result = evaluate_condition_operator(
+                        &payload,
+                        &node.config.clone().unwrap_or(Value::Null),
+                    )?;
+                    let chosen_output = node
+                        .outputs
+                        .iter()
+                        .find(|output| {
+                            (predicate_result && (output.id == "if_true" || output.id == "true"))
+                                || (!predicate_result
+                                    && (output.id == "if_false" || output.id == "false"))
+                        })
+                        .or_else(|| {
+                            if predicate_result {
+                                node.outputs.first()
+                            } else {
+                                node.outputs.get(1).or_else(|| node.outputs.first())
+                            }
+                        })
+                        .ok_or_else(|| {
+                            format!(
+                                "workflow condition node {} requires branch output ports",
+                                node.id
+                            )
+                        })?;
+                    artifacts.insert(
+                        artifact_key(&node.id, &chosen_output.id),
+                        payload,
+                    );
                 }
             }
 
@@ -135,14 +190,14 @@ pub fn run_workflow_graph(
             progressed = true;
         }
 
-        if completed.len() == graph.nodes.len() {
+        if completed.len() + skipped.len() == graph.nodes.len() {
             break;
         }
         if !progressed {
             let pending = graph
                 .nodes
                 .iter()
-                .filter(|node| !completed.contains(&node.id))
+                .filter(|node| !completed.contains(&node.id) && !skipped.contains(&node.id))
                 .map(|node| node.id.clone())
                 .collect::<Vec<_>>();
             return Err(format!(

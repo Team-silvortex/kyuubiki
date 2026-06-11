@@ -1,6 +1,6 @@
 use crate::catalog::descriptors::{
     built_in_bridge_descriptor, built_in_export_descriptor, built_in_extract_descriptor,
-    built_in_solver_descriptor,
+    built_in_solver_descriptor, built_in_transform_descriptor,
 };
 use kyuubiki_protocol::OperatorDescriptor;
 
@@ -164,6 +164,13 @@ fn bridge_descriptors() -> Vec<OperatorDescriptor> {
             "electrostatic_to_heat_quad_2d",
             "Bridge electrostatic quad field magnitudes into nodal heat loads for a downstream heat quad model.",
             &["workflow_bridge", "electrostatic", "heat", "quad", "2d"],
+        ),
+        built_in_transform_descriptor(
+            "transform.first_available",
+            "multi_domain",
+            "first_available",
+            "Merge two branch payloads by forwarding the first available incoming artifact.",
+            &["transform", "merge", "branch", "headless_safe"],
         ),
     ]
 }

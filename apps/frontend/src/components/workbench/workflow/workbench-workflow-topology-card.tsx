@@ -17,6 +17,7 @@ import {
   WorkbenchWorkflowOperatorSearch,
 } from "@/components/workbench/workflow/workbench-workflow-operator-search";
 import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
+import { WorkbenchWorkflowConditionEditor } from "@/components/workbench/workflow/workbench-workflow-condition-editor";
 import { WorkbenchWorkflowTemplateChainActions } from "@/components/workbench/workflow/workbench-workflow-template-chain-actions";
 import {
   describeWorkflowNodeTemplateSyncImpact,
@@ -421,6 +422,7 @@ export function WorkbenchWorkflowTopologyCard({
                   selectedNodes={selectedNodes}
                   onUpdateNode={onUpdateNode}
                 />
+                <WorkbenchWorkflowConditionEditor labels={labels} node={node} onUpdateNode={onUpdateNode} />
                 <WorkbenchWorkflowPortEditor
                   direction="inputs"
                   labels={labels}

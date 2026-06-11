@@ -126,6 +126,18 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
       { kind: "export", operatorId: "export.summary_json" },
     ],
   },
+  {
+    id: "condition_branch_merge_export",
+    label: "condition -> branch -> merge",
+    source: "built-in",
+    summary: "Split a summary payload with a condition node, then merge the active branch back into one lane.",
+    tags: ["condition", "branch", "merge", "control", "workflow"],
+    templates: [
+      { kind: "condition" },
+      { kind: "transform", operatorId: "transform.first_available" },
+      { kind: "output" },
+    ],
+  },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -7,6 +7,8 @@ import type {
   WorkflowGraphPort,
 } from "@/lib/api";
 import { createElectrostaticToHeatBridgeContract } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
+import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";
 
 type WorkflowNodeTemplatePreset = {
   id: string;
@@ -464,7 +466,7 @@ export function listWorkflowNodeTemplatePresets(
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
   const descriptorPresets = listDescriptorBackedPresets(operatorDescriptors);
-  const merged = [...PRESETS];
+  const merged = [...PRESETS, ...CONTROL_NODE_TEMPLATE_PRESETS];
   for (const preset of descriptorPresets) {
     if (!merged.some((entry) => entry.id === preset.id || entry.operatorId === preset.operatorId)) {
       merged.push(preset);
@@ -487,6 +489,7 @@ export function resolveWorkflowNodeTemplate(
 
   const kind = template?.kind?.trim();
   if (kind === "input") return PRESETS.find((preset) => preset.id === "input.blank") ?? null;
+  if (kind === "condition") return PRESETS.find((preset) => preset.id === "condition.if_else") ?? null;
   if (kind === "output") return PRESETS.find((preset) => preset.id === "output.blank") ?? null;
   return null;
 }
@@ -561,6 +564,18 @@ export function buildPortsForWorkflowNodeTemplate(
       config: undefined,
       inputs: [{ id: "result", artifact_type: "artifact/json", description: "" }],
       outputs: [] as WorkflowGraphPort[],
+    };
+  }
+  if (kind === "condition") {
+    return {
+      kind,
+      operatorId: undefined,
+      config: createDefaultWorkflowConditionConfig(),
+      inputs: [{ id: "value", artifact_type: "artifact/json", description: "" }],
+      outputs: [
+        { id: "if_true", artifact_type: "artifact/json", description: "" },
+        { id: "if_false", artifact_type: "artifact/json", description: "" },
+      ],
     };
   }
 

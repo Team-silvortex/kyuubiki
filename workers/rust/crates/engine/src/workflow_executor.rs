@@ -37,6 +37,7 @@ const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
 const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "bridge.temperature_field_to_thermo_quad_2d",
     "bridge.electrostatic_field_to_heat_quad_2d",
+    "transform.first_available",
 ];
 
 const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &["extract.result_summary"];
@@ -81,6 +82,103 @@ pub fn resolve_single_input_payload(
                 node.id, first.from.node, first.from.port
             )
         })
+}
+
+pub fn resolve_first_available_input_payload(
+    node: &kyuubiki_protocol::WorkflowNode,
+    incoming: &[&kyuubiki_protocol::WorkflowEdge],
+    artifacts: &BTreeMap<String, Value>,
+) -> Result<Value, String> {
+    incoming
+        .iter()
+        .find_map(|edge| artifacts.get(&artifact_key(&edge.from.node, &edge.from.port)))
+        .cloned()
+        .ok_or_else(|| {
+            format!(
+                "workflow node {} requires at least one resolved input artifact",
+                node.id
+            )
+        })
+}
+
+pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
+    operator_id == "transform.first_available"
+}
+
+pub fn evaluate_condition_operator(payload: &Value, config: &Value) -> Result<bool, String> {
+    let predicate = config
+        .get("predicate")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    let operator = predicate
+        .get("operator")
+        .and_then(Value::as_str)
+        .unwrap_or("gt");
+    let target = predicate
+        .get("path")
+        .and_then(Value::as_str)
+        .map(|path| resolve_condition_target(payload, path))
+        .unwrap_or(payload);
+
+    match operator {
+        "truthy" => Ok(is_truthy(target)),
+        "falsy" => Ok(!is_truthy(target)),
+        "eq" => Ok(target == predicate.get("value").unwrap_or(&Value::Null)),
+        "neq" => Ok(target != predicate.get("value").unwrap_or(&Value::Null)),
+        "gt" | "gte" | "lt" | "lte" => {
+            let left = target
+                .as_f64()
+                .ok_or_else(|| format!("condition operator {operator} expects numeric input"))?;
+            let right = predicate
+                .get("value")
+                .and_then(Value::as_f64)
+                .ok_or_else(|| format!("condition operator {operator} expects numeric config.value"))?;
+            Ok(match operator {
+                "gt" => left > right,
+                "gte" => left >= right,
+                "lt" => left < right,
+                "lte" => left <= right,
+                _ => unreachable!(),
+            })
+        }
+        "contains" => {
+            let right = predicate.get("value").unwrap_or(&Value::Null);
+            match target {
+                Value::String(text) => Ok(right.as_str().is_some_and(|needle| text.contains(needle))),
+                Value::Array(items) => Ok(items.iter().any(|item| item == right)),
+                _ => Err("condition operator contains expects string or array input".to_string()),
+            }
+        }
+        _ => Err(format!("unsupported condition operator in first executor: {operator}")),
+    }
+}
+
+fn resolve_condition_target<'a>(payload: &'a Value, path: &str) -> &'a Value {
+    let mut current = payload;
+    for segment in path.split('.').filter(|segment| !segment.is_empty()) {
+        current = match current {
+            Value::Object(map) => map.get(segment).unwrap_or(&Value::Null),
+            Value::Array(items) => segment
+                .parse::<usize>()
+                .ok()
+                .and_then(|index| items.get(index))
+                .unwrap_or(&Value::Null),
+            _ => &Value::Null,
+        };
+    }
+    current
+}
+
+fn is_truthy(value: &Value) -> bool {
+    match value {
+        Value::Null => false,
+        Value::Bool(flag) => *flag,
+        Value::Number(number) => number.as_f64().is_some_and(|entry| entry != 0.0),
+        Value::String(text) => !text.is_empty(),
+        Value::Array(items) => !items.is_empty(),
+        Value::Object(map) => !map.is_empty(),
+    }
 }
 
 pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, String> {
@@ -276,6 +374,7 @@ pub fn run_transform_operator(
             )?;
             serde_json::to_value(bridged).map_err(|err| err.to_string())
         }
+        "transform.first_available" => Ok(payload),
         _ => Err(format!(
             "unsupported transform operator in first executor: {operator_id}"
         )),

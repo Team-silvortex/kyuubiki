@@ -8,6 +8,12 @@ import type {
   WorkflowGraphPort,
   WorkflowOperatorDescriptor,
 } from "@/lib/api";
+import {
+  conditionOperatorNeedsValue,
+  isWorkflowConditionNode,
+  resolveWorkflowConditionConfig,
+  WORKFLOW_CONDITION_OPERATORS,
+} from "@/components/workbench/workflow/workbench-workflow-condition";
 import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
@@ -225,6 +231,51 @@ function validateCatalogArtifacts(
   return issues;
 }
 
+function validateConditionNodes(graph: WorkflowGraphDefinition): WorkflowGraphValidationIssue[] {
+  const issues: WorkflowGraphValidationIssue[] = [];
+  for (const node of graph.nodes) {
+    if (!isWorkflowConditionNode(node)) continue;
+    const config = resolveWorkflowConditionConfig(
+      node.config as Record<string, unknown> | null | undefined,
+    );
+    const predicate = config.predicate ?? {};
+    const operator = predicate.operator ?? "gt";
+    if (!WORKFLOW_CONDITION_OPERATORS.includes(operator)) {
+      issues.push({
+        id: `condition:operator:${node.id}`,
+        level: "warning",
+        message: `Condition node "${node.id}" uses unsupported operator "${String(predicate.operator ?? "")}".`,
+        locate: { kind: "node", nodeId: node.id },
+      });
+    }
+    if (conditionOperatorNeedsValue(operator) && predicate.value === undefined) {
+      issues.push({
+        id: `condition:value:${node.id}`,
+        level: "warning",
+        message: `Condition node "${node.id}" requires a comparison value for operator "${operator}".`,
+        locate: { kind: "node", nodeId: node.id },
+      });
+    }
+    if ((node.inputs ?? []).length === 0) {
+      issues.push({
+        id: `condition:inputs:${node.id}`,
+        level: "warning",
+        message: `Condition node "${node.id}" should expose one input port to evaluate.`,
+        locate: { kind: "node", nodeId: node.id },
+      });
+    }
+    if ((node.outputs ?? []).length < 2) {
+      issues.push({
+        id: `condition:outputs:${node.id}`,
+        level: "warning",
+        message: `Condition node "${node.id}" should expose true/false output ports.`,
+        locate: { kind: "node", nodeId: node.id },
+      });
+    }
+  }
+  return issues;
+}
+
 export function validateWorkflowGraphDefinition(
   graph: WorkflowGraphDefinition | null,
   entryInputs: WorkflowCatalogEntryArtifact[],
@@ -355,6 +406,7 @@ export function validateWorkflowGraphDefinition(
   issues.push(...validateCatalogArtifacts(graph, entryInputs, "entry"));
   issues.push(...validateCatalogArtifacts(graph, outputArtifacts, "output"));
   issues.push(...validateOperatorDescriptorContracts(graph, operatorDescriptors));
+  issues.push(...validateConditionNodes(graph));
 
   return issues;
 }
