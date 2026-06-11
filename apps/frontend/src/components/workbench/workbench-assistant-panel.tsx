@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AssistantPlan } from "@/lib/assistant/openai-compatible";
 import { getWorkbenchScriptActionDefinition, isWorkbenchScriptActionHighRisk } from "@/lib/scripting/workbench-script-runtime";
+import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 
 type AssistantMode = "local" | "llm";
 
@@ -51,6 +52,7 @@ const copy = {
     currentResult: "Result",
     floatingWelcomeTitle: "Start with one simple question",
     floatingWelcomeBody: "You do not need material intuition yet. Ask for a safe first sample, starter values, boundary conditions, or help reading the current result fields.",
+    floatingWelcomeDocs: "Open workflow bridge docs",
     localEmpty: "The local assistant does not see an urgent action right now.",
     llmTitle: "Model Assist",
     llmHint: "Connect an OpenAI-compatible endpoint to get higher-level operational plans.",
@@ -90,6 +92,7 @@ const copy = {
     currentResult: "当前结果",
     floatingWelcomeTitle: "先从一个简单问题开始",
     floatingWelcomeBody: "你还不用先有材料背景。可以直接问我该开哪个样板、起步参数怎么填、支撑载荷怎么设，或者当前结果字段该怎么看。",
+    floatingWelcomeDocs: "打开工作流桥接文档",
     localEmpty: "本地助手当前没有识别到紧急动作。",
     llmTitle: "模型辅助",
     llmHint: "接入 OpenAI 兼容接口后，可以拿到更高层的操作计划。",
@@ -129,6 +132,7 @@ const copy = {
     currentResult: "結果",
     floatingWelcomeTitle: "まずは一つだけ聞いてみましょう",
     floatingWelcomeBody: "材料の直感がなくても大丈夫です。最初のサンプル、初期値、境界条件、結果の読み方をそのまま聞けます。",
+    floatingWelcomeDocs: "ワークフローブリッジ文書を開く",
     localEmpty: "今すぐ必要なローカル支援アクションは見つかりませんでした。",
     llmTitle: "モデル支援",
     llmHint: "OpenAI 互換エンドポイントをつなぐと、より高レベルな作業プランを返せます。",
@@ -279,6 +283,11 @@ export function WorkbenchAssistantPanel({
             <span>{currentStudyLabel}</span>
           </div>
           <p className="card-copy">{t.floatingWelcomeBody}</p>
+          <div className="button-row">
+            <a className="ghost-button" href={WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF} rel="noreferrer" target="_blank">
+              {t.floatingWelcomeDocs}
+            </a>
+          </div>
         </section>
       ) : null}
 

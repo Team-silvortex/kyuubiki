@@ -2,6 +2,7 @@
 
 import type { WorkflowOperatorDescriptor } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
+import { WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 
 type WorkflowOperatorOptionPreset = {
   id: string;
@@ -12,6 +13,22 @@ type WorkflowOperatorOptionPreset = {
 function formatOperatorSchemaRef(schemaRef?: { schema: string; version: string } | null) {
   if (!schemaRef?.schema) return "--";
   return `${schemaRef.schema}@${schemaRef.version}`;
+}
+
+function formatOperatorConfigExample(
+  configExample?: Record<string, unknown> | null,
+) {
+  if (!configExample) return "--";
+  return JSON.stringify(configExample);
+}
+
+function resolveOperatorDocsHref(
+  descriptor?: WorkflowOperatorDescriptor,
+) {
+  const schema = descriptor?.config_schema?.schema;
+  if (!schema) return null;
+  if (schema.startsWith("kyuubiki.bridge-contract.")) return WORKFLOW_BRIDGE_CONTRACT_DOCS_HREF;
+  return null;
 }
 
 export function formatOperatorValidationStatus(
@@ -66,6 +83,7 @@ export function WorkbenchWorkflowOperatorDescriptorSummary(props: {
 }) {
   const { labels, descriptor } = props;
   if (!descriptor) return null;
+  const docsHref = resolveOperatorDocsHref(descriptor);
 
   return (
     <div className="sidebar-list">
@@ -83,10 +101,32 @@ export function WorkbenchWorkflowOperatorDescriptorSummary(props: {
         <span>{labels.operatorOutputSchemaLabel}</span>
         <strong>{formatOperatorSchemaRef(descriptor.output_schema)}</strong>
       </div>
+      {descriptor.config_schema ? (
+        <div className="sidebar-list__row">
+          <span>{labels.operatorConfigSchemaLabel}</span>
+          <strong>{formatOperatorSchemaRef(descriptor.config_schema)}</strong>
+        </div>
+      ) : null}
+      {descriptor.config_example ? (
+        <div className="sidebar-list__row">
+          <span>{labels.operatorConfigExampleLabel}</span>
+          <strong>{formatOperatorConfigExample(descriptor.config_example)}</strong>
+        </div>
+      ) : null}
       {descriptor.capability_tags.length > 0 ? (
         <div className="sidebar-list__row">
           <span>{labels.operatorCapabilitiesLabel}</span>
           <strong>{descriptor.capability_tags.join(", ")}</strong>
+        </div>
+      ) : null}
+      {docsHref ? (
+        <div className="sidebar-list__row">
+          <span>{labels.operatorDocsLabel}</span>
+          <strong>
+            <a href={docsHref} rel="noreferrer" target="_blank">
+              {labels.operatorDocsLabel}
+            </a>
+          </strong>
         </div>
       ) : null}
     </div>

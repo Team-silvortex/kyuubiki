@@ -6,6 +6,7 @@ import type {
   WorkflowGraphNode,
   WorkflowGraphPort,
 } from "@/lib/api";
+import { createElectrostaticToHeatBridgeContract } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 
 type WorkflowNodeTemplatePreset = {
   id: string;
@@ -15,6 +16,12 @@ type WorkflowNodeTemplatePreset = {
   config?: Record<string, unknown>;
   inputs: WorkflowGraphPort[];
   outputs: WorkflowGraphPort[];
+};
+
+export type WorkflowNodeTemplateSelection = {
+  kind?: string;
+  operatorId?: string;
+  config?: Record<string, unknown>;
 };
 
 const DATASET_VALUE_PRESETS: Record<string, WorkflowDatasetValueInfo> = {
@@ -108,6 +115,42 @@ const DATASET_VALUE_PRESETS: Record<string, WorkflowDatasetValueInfo> = {
     encoding: "json",
     schema_ref: { schema: "kyuubiki.operator.solve.thermal_truss_3d.output", version: "1" },
   },
+  electrostatic_bar_model: {
+    id: "electrostatic_bar_model",
+    data_class: "study_model",
+    element_type: "json_object",
+    shape: { axes: [] },
+    semantic_type: "study_model/electrostatic_bar_1d",
+    encoding: "json",
+    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_bar_1d.input", version: "1" },
+  },
+  electrostatic_bar_result: {
+    id: "electrostatic_bar_result",
+    data_class: "result",
+    element_type: "json_object",
+    shape: { axes: [] },
+    semantic_type: "result/electrostatic_bar_1d",
+    encoding: "json",
+    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_bar_1d.output", version: "1" },
+  },
+  electrostatic_plane_quad_model: {
+    id: "electrostatic_plane_quad_model",
+    data_class: "study_model",
+    element_type: "json_object",
+    shape: { axes: [] },
+    semantic_type: "study_model/electrostatic_plane_quad_2d",
+    encoding: "json",
+    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_plane_quad_2d.input", version: "1" },
+  },
+  electrostatic_plane_quad_result: {
+    id: "electrostatic_plane_quad_result",
+    data_class: "result",
+    element_type: "json_object",
+    shape: { axes: [] },
+    semantic_type: "result/electrostatic_plane_quad_2d",
+    encoding: "json",
+    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_plane_quad_2d.output", version: "1" },
+  },
   result_summary: {
     id: "result_summary",
     data_class: "artifact",
@@ -183,12 +226,57 @@ const PRESETS: WorkflowNodeTemplatePreset[] = [
     outputs: [{ id: "result", artifact_type: "result/thermal_truss_3d", description: "Thermal 3D truss result", dataset_value: "thermal_truss_result" }],
   },
   {
+    id: "solve.electrostatic_bar_1d",
+    kind: "solve",
+    label: "Solve electrostatic 1D bar",
+    operatorId: "solve.electrostatic_bar_1d",
+    inputs: [{ id: "model", artifact_type: "study_model/electrostatic_bar_1d", description: "Electrostatic 1D bar model", dataset_value: "electrostatic_bar_model" }],
+    outputs: [{ id: "result", artifact_type: "result/electrostatic_bar_1d", description: "Electrostatic 1D bar result", dataset_value: "electrostatic_bar_result" }],
+  },
+  {
+    id: "solve.electrostatic_plane_quad_2d",
+    kind: "solve",
+    label: "Solve electrostatic plane quad",
+    operatorId: "solve.electrostatic_plane_quad_2d",
+    inputs: [{
+      id: "model",
+      artifact_type: "study_model/electrostatic_plane_quad_2d",
+      description: "Electrostatic plane quad model",
+      dataset_value: "electrostatic_plane_quad_model",
+    }],
+    outputs: [{
+      id: "result",
+      artifact_type: "result/electrostatic_plane_quad_2d",
+      description: "Electrostatic plane quad result",
+      dataset_value: "electrostatic_plane_quad_result",
+    }],
+  },
+  {
     id: "bridge.temperature_field_to_thermo_quad_2d",
     kind: "transform",
     label: "Bridge heat result to thermo model",
     operatorId: "bridge.temperature_field_to_thermo_quad_2d",
     inputs: [{ id: "heat_result", artifact_type: "result/heat_plane_quad_2d", description: "Heat quad result", dataset_value: "heat_result" }],
     outputs: [{ id: "thermo_model", artifact_type: "study_model/thermal_plane_quad_2d", description: "Thermo-mechanical quad model", dataset_value: "thermo_model" }],
+  },
+  {
+    id: "bridge.electrostatic_field_to_heat_quad_2d",
+    kind: "transform",
+    label: "Bridge electrostatic field to heat model",
+    operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
+    config: { contract: createElectrostaticToHeatBridgeContract() },
+    inputs: [{
+      id: "electrostatic_result",
+      artifact_type: "result/electrostatic_plane_quad_2d",
+      description: "Electrostatic quad result",
+      dataset_value: "electrostatic_plane_quad_result",
+    }],
+    outputs: [{
+      id: "heat_model",
+      artifact_type: "study_model/heat_plane_quad_2d",
+      description: "Heat quad model with bridged nodal loads",
+      dataset_value: "heat_model",
+    }],
   },
   {
     id: "extract.result_summary",
@@ -302,8 +390,8 @@ export function listWorkflowNodeTemplatePresets(
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
   const descriptorPresets = listDescriptorBackedPresets(operatorDescriptors);
-  const merged = [...descriptorPresets];
-  for (const preset of PRESETS) {
+  const merged = [...PRESETS];
+  for (const preset of descriptorPresets) {
     if (!merged.some((entry) => entry.id === preset.id || entry.operatorId === preset.operatorId)) {
       merged.push(preset);
     }
@@ -312,10 +400,7 @@ export function listWorkflowNodeTemplatePresets(
 }
 
 export function resolveWorkflowNodeTemplate(
-  template?: {
-  kind?: string;
-  operatorId?: string;
-  },
+  template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ): WorkflowNodeTemplatePreset | null {
   const operatorId = template?.operatorId?.trim();
@@ -333,10 +418,7 @@ export function resolveWorkflowNodeTemplate(
 }
 
 export function listWorkflowTemplateDatasetValues(
-  template?: {
-    kind?: string;
-    operatorId?: string;
-  },
+  template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ): WorkflowDatasetValueInfo[] {
   const descriptor = (operatorDescriptors ?? []).find(
@@ -371,10 +453,7 @@ export function listWorkflowTemplateDatasetValues(
 }
 
 export function buildPortsForWorkflowNodeTemplate(
-  template?: {
-    kind?: string;
-    operatorId?: string;
-  },
+  template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
   const preset = resolveWorkflowNodeTemplate(template, operatorDescriptors);
@@ -382,7 +461,10 @@ export function buildPortsForWorkflowNodeTemplate(
     return {
       kind: preset.kind,
       operatorId: preset.operatorId,
-      config: preset.config ? { ...preset.config } : undefined,
+      config: {
+        ...(preset.config ?? {}),
+        ...(template?.config ?? {}),
+      },
       inputs: clonePorts(preset.inputs),
       outputs: clonePorts(preset.outputs),
     };
@@ -411,7 +493,7 @@ export function buildPortsForWorkflowNodeTemplate(
   return {
     kind,
     operatorId: template?.operatorId?.trim() || undefined,
-    config: undefined,
+    config: template?.config ? { ...template.config } : undefined,
     inputs: [{ id: "in_1", artifact_type: "artifact/json", description: "" }],
     outputs: [{ id: "out_1", artifact_type: "artifact/json", description: "" }],
   };

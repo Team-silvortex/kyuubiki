@@ -59,6 +59,29 @@ export type HeatBar1dJobInput = {
   model_version_id?: string;
 };
 
+export type ElectrostaticBar1dNodeInput = {
+  id: string;
+  x: number;
+  fix_potential: boolean;
+  potential: number;
+  charge_density: number;
+};
+
+export type ElectrostaticBar1dElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  area: number;
+  permittivity: number;
+};
+
+export type ElectrostaticBar1dJobInput = {
+  nodes: ElectrostaticBar1dNodeInput[];
+  elements: ElectrostaticBar1dElementInput[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type Beam1dNodeInput = {
   id: string;
   x: number;
@@ -224,6 +247,25 @@ export type HeatBar1dResult = {
   input: HeatBar1dJobInput;
 };
 
+export type ElectrostaticBar1dResult = {
+  max_potential: number;
+  max_electric_field: number;
+  max_flux_density: number;
+  nodes: Array<{ index: number; id: string; x: number; potential: number; charge_density: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    length: number;
+    average_potential: number;
+    potential_gradient: number;
+    electric_field: number;
+    electric_flux_density: number;
+  }>;
+  input: ElectrostaticBar1dJobInput;
+};
+
 export type Beam1dResult = {
   max_displacement: number;
   max_rotation: number;
@@ -331,6 +373,17 @@ export function resolveHeatBar1dJobInput(input: HeatBar1dJobInput): HeatBar1dJob
   };
 }
 
+export function resolveElectrostaticBar1dJobInput(
+  input: ElectrostaticBar1dJobInput,
+): ElectrostaticBar1dJobInput {
+  return {
+    nodes: input.nodes,
+    elements: input.elements,
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolveBeam1dJobInput(input: Beam1dJobInput): Omit<Beam1dJobInput, "materials"> {
   const materials = resolveMaterialLookup(input.materials);
   return {
@@ -397,6 +450,16 @@ export function createThermalBar1dJob(
 
 export function createHeatBar1dJob(input: HeatBar1dJobInput): Promise<JobEnvelope<HeatBar1dResult>> {
   return requestJson<JobEnvelope<HeatBar1dResult>>("/api/v1/fem/heat-bar-1d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createElectrostaticBar1dJob(
+  input: ElectrostaticBar1dJobInput,
+): Promise<JobEnvelope<ElectrostaticBar1dResult>> {
+  return requestJson<JobEnvelope<ElectrostaticBar1dResult>>("/api/v1/fem/electrostatic-bar-1d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),

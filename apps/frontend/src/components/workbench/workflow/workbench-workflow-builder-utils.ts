@@ -10,7 +10,10 @@ import type {
   WorkflowOperatorDescriptor,
   WorkflowGraphPort,
 } from "@/lib/api";
-import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import {
+  buildPortsForWorkflowNodeTemplate,
+  type WorkflowNodeTemplateSelection,
+} from "@/components/workbench/workflow/workbench-workflow-node-templates";
 
 export function cloneWorkflowGraph(graph: WorkflowGraphDefinition | null): WorkflowGraphDefinition | null {
   if (!graph) return null;
@@ -56,7 +59,7 @@ export function buildDraftDatasetValue(nextIndex: number): WorkflowDatasetValueI
 
 export function buildDraftNode(
   nextIndex: number,
-  template?: { kind?: string; operatorId?: string },
+  template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ): WorkflowGraphNode {
   const resolved = buildPortsForWorkflowNodeTemplate(template, operatorDescriptors);

@@ -17,6 +17,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
 import {
   listWorkflowTemplateDatasetValues,
+  type WorkflowNodeTemplateSelection,
 } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
@@ -102,7 +103,7 @@ function mergeMissingDatasetValues(
 
 function ensureTemplateDatasetValues(
   graph: WorkflowGraphDefinition,
-  template?: { kind?: string; operatorId?: string },
+  template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
   const datasetValues = listWorkflowTemplateDatasetValues(template, operatorDescriptors);
@@ -126,7 +127,7 @@ function ensureTemplateDatasetValues(
 function appendConnectedNode(
   graph: WorkflowGraphDefinition,
   sourceNode: WorkflowGraphNode | null,
-  template?: { kind?: string; operatorId?: string },
+  template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
   const createdNode = buildDraftNode(graph.nodes.length + 1, template, operatorDescriptors);
@@ -185,7 +186,7 @@ export function createWorkflowTopologyActions(
     }));
   }
 
-  function addNode(template?: { kind?: string; operatorId?: string }) {
+  function addNode(template?: WorkflowNodeTemplateSelection) {
     setDraftGraph((current) => {
       if (!current) return current;
       const next = cloneWorkflowGraph(current);
@@ -197,7 +198,7 @@ export function createWorkflowTopologyActions(
 
   function addConnectedNode(
     sourceNodeId: string,
-    template?: { kind?: string; operatorId?: string },
+    template?: WorkflowNodeTemplateSelection,
   ) {
     setDraftGraph((current) => {
       if (!current) return current;
@@ -211,7 +212,7 @@ export function createWorkflowTopologyActions(
     });
   }
 
-  function syncNodeTemplate(nodeId: string, template?: { kind?: string; operatorId?: string }) {
+  function syncNodeTemplate(nodeId: string, template?: WorkflowNodeTemplateSelection) {
     setDraftGraph((current) => {
       if (!current) return current;
       const next = cloneWorkflowGraph(current);
@@ -224,7 +225,7 @@ export function createWorkflowTopologyActions(
   }
 
   function insertTemplateChain(
-    templates: Array<{ kind?: string; operatorId?: string }>,
+    templates: WorkflowNodeTemplateSelection[],
     sourceNodeId?: string | null,
   ) {
     setDraftGraph((current) => {

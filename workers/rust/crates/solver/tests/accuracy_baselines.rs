@@ -1,10 +1,12 @@
 use kyuubiki_protocol::{
     Beam1dElementInput, Beam1dNodeInput, ElectrostaticBar1dElementInput,
-    ElectrostaticBar1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput,
-    Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput,
-    HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput, PlaneNodeInput,
+    ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput, ElectrostaticPlaneQuadElementInput,
+    ElectrostaticPlaneTriangleElementInput, Frame2dElementInput, Frame2dNodeInput,
+    Frame3dElementInput, Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput,
+    HeatPlaneNodeInput, HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput, PlaneNodeInput,
     PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
-    SolveElectrostaticBar1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
     SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
     SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
     SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
@@ -20,8 +22,9 @@ use kyuubiki_protocol::{
     Truss3dElementInput, Truss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d, solve_frame_3d,
-    solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
     solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
     solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
@@ -447,6 +450,159 @@ fn accuracy_baseline_electrostatic_bar_1d_two_element_gradient() {
         4.0,
         1.0e-12,
         "electrostatic_bar_1d second element electric field",
+    );
+}
+
+#[test]
+fn accuracy_baseline_electrostatic_plane_triangle_2d_patch() {
+    let result = solve_electrostatic_plane_triangle_2d(&SolveElectrostaticPlaneTriangle2dRequest {
+        nodes: vec![
+            ElectrostaticPlaneNodeInput {
+                id: "e0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_potential: true,
+                potential: 12.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticPlaneNodeInput {
+                id: "e1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_potential: true,
+                potential: 4.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticPlaneNodeInput {
+                id: "e2".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_potential: true,
+                potential: 12.0,
+                charge_density: 0.0,
+            },
+        ],
+        elements: vec![ElectrostaticPlaneTriangleElementInput {
+            id: "ep0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            thickness: 0.1,
+            permittivity: 3.0,
+        }],
+    })
+    .expect("electrostatic_plane_triangle_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_potential,
+        12.0,
+        1.0e-12,
+        "electrostatic_plane_triangle_2d max potential",
+    );
+    assert_close_abs(
+        result.max_electric_field,
+        8.0,
+        1.0e-12,
+        "electrostatic_plane_triangle_2d max electric field",
+    );
+    assert_close_abs(
+        result.max_flux_density,
+        24.0,
+        1.0e-12,
+        "electrostatic_plane_triangle_2d max flux density",
+    );
+    assert_close_abs(
+        result.elements[0].potential_gradient_x,
+        -8.0,
+        1.0e-12,
+        "electrostatic_plane_triangle_2d gradient x",
+    );
+    assert_close_abs(
+        result.elements[0].potential_gradient_y,
+        0.0,
+        1.0e-12,
+        "electrostatic_plane_triangle_2d gradient y",
+    );
+}
+
+#[test]
+fn accuracy_baseline_electrostatic_plane_quad_2d_patch() {
+    let result = solve_electrostatic_plane_quad_2d(&SolveElectrostaticPlaneQuad2dRequest {
+        nodes: vec![
+            ElectrostaticPlaneNodeInput {
+                id: "e0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                fix_potential: true,
+                potential: 12.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticPlaneNodeInput {
+                id: "e1".to_string(),
+                x: 1.0,
+                y: 0.0,
+                fix_potential: true,
+                potential: 4.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticPlaneNodeInput {
+                id: "e2".to_string(),
+                x: 1.0,
+                y: 1.0,
+                fix_potential: true,
+                potential: 4.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticPlaneNodeInput {
+                id: "e3".to_string(),
+                x: 0.0,
+                y: 1.0,
+                fix_potential: true,
+                potential: 12.0,
+                charge_density: 0.0,
+            },
+        ],
+        elements: vec![ElectrostaticPlaneQuadElementInput {
+            id: "epq0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.1,
+            permittivity: 3.0,
+        }],
+    })
+    .expect("electrostatic_plane_quad_2d baseline should solve");
+
+    assert_close_abs(
+        result.max_potential,
+        12.0,
+        1.0e-12,
+        "electrostatic_plane_quad_2d max potential",
+    );
+    assert_close_abs(
+        result.max_electric_field,
+        8.0,
+        1.0e-12,
+        "electrostatic_plane_quad_2d max electric field",
+    );
+    assert_close_abs(
+        result.max_flux_density,
+        24.0,
+        1.0e-12,
+        "electrostatic_plane_quad_2d max flux density",
+    );
+    assert_close_abs(
+        result.elements[0].potential_gradient_x,
+        -8.0,
+        1.0e-12,
+        "electrostatic_plane_quad_2d gradient x",
+    );
+    assert_close_abs(
+        result.elements[0].potential_gradient_y,
+        0.0,
+        1.0e-12,
+        "electrostatic_plane_quad_2d gradient y",
     );
 }
 

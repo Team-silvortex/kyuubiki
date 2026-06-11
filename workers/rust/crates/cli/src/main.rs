@@ -9,8 +9,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest, SolveFrame2dRequest,
-    SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+    SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
     SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
     SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
@@ -18,7 +19,8 @@ use kyuubiki_protocol::{
     SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d,
+    MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d,
+    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
     solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
     solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
     solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
@@ -1345,6 +1347,132 @@ fn handle_request(request: RpcRequest, writer: Option<Arc<Mutex<TcpStream>>>) ->
                 }
             }
         }
+        RpcMethod::SolveElectrostaticPlaneTriangle2d => {
+            let params = match serde_json::from_value::<SolveElectrostaticPlaneTriangle2dRequest>(
+                request.params.clone(),
+            ) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_electrostatic_plane_triangle_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames = build_progress_frames(
+                        "2d electrostatic plane triangle",
+                        &request.id,
+                        params.nodes.len(),
+                    );
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("electrostatic plane triangle result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
+        RpcMethod::SolveElectrostaticPlaneQuad2d => {
+            let params = match serde_json::from_value::<SolveElectrostaticPlaneQuad2dRequest>(
+                request.params.clone(),
+            ) {
+                Ok(params) => params,
+                Err(error) => {
+                    return AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "invalid_params", error.to_string()),
+                    );
+                }
+            };
+
+            let heartbeat = maybe_job_id.as_ref().and_then(|job_id| {
+                writer.clone().map(|shared_writer| {
+                    HeartbeatHandle::spawn(shared_writer, request.id.clone(), job_id.clone())
+                })
+            });
+
+            match solve_electrostatic_plane_quad_2d(&params) {
+                Ok(result) => {
+                    if let Some(job_id) = maybe_job_id.as_deref() {
+                        if take_cancelled(job_id) {
+                            if let Some(heartbeat) = heartbeat {
+                                heartbeat.stop();
+                            }
+
+                            return AgentReply::Stream(
+                                Vec::new(),
+                                RpcResponse::error(request.id, "cancelled", "job was cancelled"),
+                            );
+                        }
+                    }
+
+                    let progress_frames = build_progress_frames(
+                        "2d electrostatic plane quad",
+                        &request.id,
+                        params.nodes.len(),
+                    );
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+                    AgentReply::Stream(
+                        progress_frames,
+                        RpcResponse::success(
+                            request.id,
+                            serde_json::to_value(result)
+                                .expect("electrostatic plane quad result should serialize"),
+                        ),
+                    )
+                }
+                Err(error) => {
+                    if let Some(heartbeat) = heartbeat {
+                        heartbeat.stop();
+                    }
+
+                    AgentReply::Stream(
+                        Vec::new(),
+                        RpcResponse::error(request.id, "solve_failed", error),
+                    )
+                }
+            }
+        }
         RpcMethod::SolveHeatPlaneQuad2d => {
             let params =
                 match serde_json::from_value::<SolveHeatPlaneQuad2dRequest>(request.params.clone())
@@ -2539,11 +2667,13 @@ mod tests {
     };
     use kyuubiki_protocol::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ClusterPeerDescriptor,
-        ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput, HeatBar1dElementInput,
-        HeatBar1dNodeInput, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
-        PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod, RpcRequest,
-        SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest, SolveFrame2dRequest,
-        SolveFrame3dRequest, SolveHeatBar1dRequest, SolvePlaneQuad2dRequest,
+        ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput,
+        ElectrostaticPlaneQuadElementInput, ElectrostaticPlaneTriangleElementInput,
+        HeatBar1dElementInput, HeatBar1dNodeInput, JobStatus, PlaneNodeInput,
+        PlaneQuadElementInput, PlaneTriangleElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
+        RpcRequest, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
+        SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
+        SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolvePlaneQuad2dRequest,
         SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
         SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
         SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
@@ -2824,6 +2954,135 @@ mod tests {
         let result: kyuubiki_protocol::SolveElectrostaticBar1dResult =
             serde_json::from_value(final_response.result.expect("solver result"))
                 .expect("electrostatic bar result");
+        assert_eq!(result.max_potential, 10.0);
+        assert!((result.max_electric_field - 10.0).abs() < 1.0e-6);
+        assert!((result.max_flux_density - 20.0).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn handles_electrostatic_plane_triangle_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-electrostatic-plane-triangle".to_string(),
+            method: RpcMethod::SolveElectrostaticPlaneTriangle2d,
+            params: serde_json::to_value(SolveElectrostaticPlaneTriangle2dRequest {
+                nodes: vec![
+                    ElectrostaticPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                ],
+                elements: vec![ElectrostaticPlaneTriangleElementInput {
+                    id: "ep0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.05,
+                    permittivity: 2.0,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveElectrostaticPlaneTriangle2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("electrostatic plane triangle result");
+        assert_eq!(result.max_potential, 10.0);
+        assert!((result.max_electric_field - 10.0).abs() < 1.0e-6);
+        assert!((result.max_flux_density - 20.0).abs() < 1.0e-6);
+    }
+
+    #[test]
+    fn handles_electrostatic_plane_quad_2d_rpc_requests() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-electrostatic-plane-quad".to_string(),
+            method: RpcMethod::SolveElectrostaticPlaneQuad2d,
+            params: serde_json::to_value(SolveElectrostaticPlaneQuad2dRequest {
+                nodes: vec![
+                    ElectrostaticPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n3".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                ],
+                elements: vec![ElectrostaticPlaneQuadElementInput {
+                    id: "epq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    node_l: 3,
+                    thickness: 0.05,
+                    permittivity: 2.0,
+                }],
+            })
+            .expect("params"),
+        };
+
+        let response =
+            handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+        let AgentReply::Stream(progress_frames, final_response) = response;
+
+        assert_eq!(progress_frames.len(), 4);
+        assert!(final_response.ok);
+        let result: kyuubiki_protocol::SolveElectrostaticPlaneQuad2dResult =
+            serde_json::from_value(final_response.result.expect("solver result"))
+                .expect("electrostatic plane quad result");
         assert_eq!(result.max_potential, 10.0);
         assert!((result.max_electric_field - 10.0).abs() < 1.0e-6);
         assert!((result.max_flux_density - 20.0).abs() < 1.0e-6);

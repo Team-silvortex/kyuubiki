@@ -524,6 +524,12 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp preferred_tags("solve_electrostatic_bar_1d"),
     do: ["electromagnetic", "electrostatic", "bar", "line"]
 
+  defp preferred_tags("solve_electrostatic_plane_triangle_2d"),
+    do: ["electromagnetic", "electrostatic", "plane", "triangle", "mesh"]
+
+  defp preferred_tags("solve_electrostatic_plane_quad_2d"),
+    do: ["electromagnetic", "electrostatic", "plane", "quad", "mesh"]
+
   defp preferred_tags("solve_heat_plane_triangle_2d"), do: ["heat", "plane", "mesh"]
   defp preferred_tags("solve_heat_plane_quad_2d"), do: ["heat", "plane", "mesh", "quad"]
   defp preferred_tags("solve_thermal_truss_2d"), do: ["truss", "thermal", "plane"]

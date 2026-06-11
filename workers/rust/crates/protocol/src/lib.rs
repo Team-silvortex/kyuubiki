@@ -475,6 +475,51 @@ pub struct SolveHeatPlaneTriangle2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticPlaneNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_potential: bool,
+    #[serde(default)]
+    pub potential: f64,
+    #[serde(default)]
+    pub charge_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticPlaneTriangleElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub thickness: f64,
+    pub permittivity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveElectrostaticPlaneTriangle2dRequest {
+    pub nodes: Vec<ElectrostaticPlaneNodeInput>,
+    pub elements: Vec<ElectrostaticPlaneTriangleElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticPlaneQuadElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub thickness: f64,
+    pub permittivity: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveElectrostaticPlaneQuad2dRequest {
+    pub nodes: Vec<ElectrostaticPlaneNodeInput>,
+    pub elements: Vec<ElectrostaticPlaneQuadElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneQuadElementInput {
     pub id: String,
     pub node_i: usize,
@@ -872,6 +917,75 @@ pub struct SolveHeatPlaneTriangle2dResult {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticPlaneNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub potential: f64,
+    pub charge_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticPlaneTriangleElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub area: f64,
+    pub average_potential: f64,
+    pub potential_gradient_x: f64,
+    pub potential_gradient_y: f64,
+    pub electric_field_x: f64,
+    pub electric_field_y: f64,
+    pub electric_field_magnitude: f64,
+    pub electric_flux_density_x: f64,
+    pub electric_flux_density_y: f64,
+    pub electric_flux_density_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveElectrostaticPlaneTriangle2dResult {
+    pub input: SolveElectrostaticPlaneTriangle2dRequest,
+    pub nodes: Vec<ElectrostaticPlaneNodeResult>,
+    pub elements: Vec<ElectrostaticPlaneTriangleElementResult>,
+    pub max_potential: f64,
+    pub max_electric_field: f64,
+    pub max_flux_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticPlaneQuadElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub area: f64,
+    pub average_potential: f64,
+    pub potential_gradient_x: f64,
+    pub potential_gradient_y: f64,
+    pub electric_field_x: f64,
+    pub electric_field_y: f64,
+    pub electric_field_magnitude: f64,
+    pub electric_flux_density_x: f64,
+    pub electric_flux_density_y: f64,
+    pub electric_flux_density_magnitude: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveElectrostaticPlaneQuad2dResult {
+    pub input: SolveElectrostaticPlaneQuad2dRequest,
+    pub nodes: Vec<ElectrostaticPlaneNodeResult>,
+    pub elements: Vec<ElectrostaticPlaneQuadElementResult>,
+    pub max_potential: f64,
+    pub max_electric_field: f64,
+    pub max_flux_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneQuadElementResult {
     pub index: usize,
     pub id: String,
@@ -1232,6 +1346,10 @@ pub enum RpcMethod {
     SolveHeatBar1d,
     #[serde(rename = "solve_electrostatic_bar_1d")]
     SolveElectrostaticBar1d,
+    #[serde(rename = "solve_electrostatic_plane_triangle_2d")]
+    SolveElectrostaticPlaneTriangle2d,
+    #[serde(rename = "solve_electrostatic_plane_quad_2d")]
+    SolveElectrostaticPlaneQuad2d,
     #[serde(rename = "solve_heat_plane_triangle_2d")]
     SolveHeatPlaneTriangle2d,
     #[serde(rename = "solve_heat_plane_quad_2d")]
@@ -1378,6 +1496,8 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveThermalBar1d,
                 RpcMethod::SolveHeatBar1d,
                 RpcMethod::SolveElectrostaticBar1d,
+                RpcMethod::SolveElectrostaticPlaneTriangle2d,
+                RpcMethod::SolveElectrostaticPlaneQuad2d,
                 RpcMethod::SolveHeatPlaneTriangle2d,
                 RpcMethod::SolveHeatPlaneQuad2d,
                 RpcMethod::SolveThermalTruss2d,
@@ -1448,6 +1568,32 @@ impl AgentDescriptor {
                         "electrostatic".to_string(),
                         "bar".to_string(),
                         "line".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "electrostatic-plane-triangle-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveElectrostaticPlaneTriangle2d],
+                    tags: vec![
+                        "electromagnetic".to_string(),
+                        "electrostatic".to_string(),
+                        "plane".to_string(),
+                        "triangle".to_string(),
+                        "2d".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "electrostatic-plane-quad-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveElectrostaticPlaneQuad2d],
+                    tags: vec![
+                        "electromagnetic".to_string(),
+                        "electrostatic".to_string(),
+                        "plane".to_string(),
+                        "quad".to_string(),
+                        "2d".to_string(),
                         "cpu".to_string(),
                     ],
                 },
@@ -2429,6 +2575,8 @@ pub enum AnalysisResult {
     ThermalBar1d(SolveThermalBar1dResult),
     HeatBar1d(SolveHeatBar1dResult),
     ElectrostaticBar1d(SolveElectrostaticBar1dResult),
+    ElectrostaticPlaneTriangle2d(SolveElectrostaticPlaneTriangle2dResult),
+    ElectrostaticPlaneQuad2d(SolveElectrostaticPlaneQuad2dResult),
     HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dResult),
     HeatPlaneQuad2d(SolveHeatPlaneQuad2dResult),
     ThermalTruss2d(SolveThermalTruss2dResult),
@@ -2479,16 +2627,18 @@ pub struct ResultChunkResponse {
 mod tests {
     use super::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ElectrostaticBar1dElementInput,
-        ElectrostaticBar1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput,
-        Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput,
-        HeatPlaneNodeResult, HeatPlaneQuadElementInput, HeatPlaneQuadElementResult,
-        HeatPlaneTriangleElementInput, HeatToThermoPlaneQuad2dWorkflowRequest,
-        HeatToThermoPlaneQuad2dWorkflowResult, Job, JobStatus, OperatorArtifactRef,
-        OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
-        OperatorRunRequest, OperatorRunResult, OperatorSchemaRef, OperatorValidationProfile,
-        OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
-        RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
-        SolveElectrostaticBar1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+        ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput,
+        ElectrostaticPlaneQuadElementInput, ElectrostaticPlaneTriangleElementInput,
+        Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput,
+        HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneNodeResult,
+        HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput,
+        HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneQuad2dWorkflowResult, Job,
+        JobStatus, OperatorArtifactRef, OperatorDescriptor, OperatorKind, OperatorOrigin,
+        OperatorPortDescriptor, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
+        OperatorValidationProfile, OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent,
+        RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
+        SolveBeam1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+        SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
         SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
         SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
         SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
@@ -3087,6 +3237,119 @@ mod tests {
 
         assert_eq!(decoded.method, RpcMethod::SolveElectrostaticBar1d);
         assert_eq!(decoded.id, "rpc-electrostatic-bar");
+    }
+
+    #[test]
+    fn serializes_electrostatic_plane_triangle_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-electrostatic-plane-triangle".to_string(),
+            method: RpcMethod::SolveElectrostaticPlaneTriangle2d,
+            params: serde_json::to_value(SolveElectrostaticPlaneTriangle2dRequest {
+                nodes: vec![
+                    ElectrostaticPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                ],
+                elements: vec![ElectrostaticPlaneTriangleElementInput {
+                    id: "ep0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.05,
+                    permittivity: 2.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveElectrostaticPlaneTriangle2d);
+        assert_eq!(decoded.id, "rpc-electrostatic-plane-triangle");
+    }
+
+    #[test]
+    fn serializes_electrostatic_plane_quad_2d_rpc_round_trip() {
+        let request = RpcRequest {
+            rpc_version: RPC_VERSION,
+            id: "rpc-electrostatic-plane-quad".to_string(),
+            method: RpcMethod::SolveElectrostaticPlaneQuad2d,
+            params: serde_json::to_value(SolveElectrostaticPlaneQuad2dRequest {
+                nodes: vec![
+                    ElectrostaticPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 1.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n3".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                ],
+                elements: vec![ElectrostaticPlaneQuadElementInput {
+                    id: "epq0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    node_l: 3,
+                    thickness: 0.05,
+                    permittivity: 2.0,
+                }],
+            })
+            .expect("request params should serialize"),
+        };
+
+        let json = serde_json::to_string(&request).expect("request should serialize");
+        let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+        assert_eq!(decoded.method, RpcMethod::SolveElectrostaticPlaneQuad2d);
+        assert_eq!(decoded.id, "rpc-electrostatic-plane-quad");
     }
 
     #[test]

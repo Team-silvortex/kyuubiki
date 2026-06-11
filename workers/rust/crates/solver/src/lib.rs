@@ -1,21 +1,26 @@
 use kyuubiki_protocol::{
     Beam1dElementResult, Beam1dNodeResult, ElectrostaticBar1dElementResult,
-    ElectrostaticBar1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
-    Frame3dElementResult, Frame3dNodeResult, HeatBar1dElementResult, HeatBar1dNodeResult,
-    HeatPlaneNodeResult, HeatPlaneQuadElementInput, HeatPlaneQuadElementResult,
-    HeatPlaneTriangleElementInput, HeatPlaneTriangleElementResult, Job, JobStatus, NodeResult,
-    PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
-    PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult, SolveBeam1dRequest,
-    SolveBeam1dResult, SolveElectrostaticBar1dRequest, SolveElectrostaticBar1dResult,
-    SolveFrame2dRequest, SolveFrame2dResult, SolveFrame3dRequest, SolveFrame3dResult,
-    SolveHeatBar1dRequest, SolveHeatBar1dResult, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
-    SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
-    SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
-    SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveThermalBar1dRequest,
-    SolveThermalBar1dResult, SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
-    SolveThermalFrame2dRequest, SolveThermalFrame2dResult, SolveThermalFrame3dRequest,
-    SolveThermalFrame3dResult, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
+    ElectrostaticBar1dNodeResult, ElectrostaticPlaneNodeResult, ElectrostaticPlaneQuadElementInput,
+    ElectrostaticPlaneQuadElementResult, ElectrostaticPlaneTriangleElementInput,
+    ElectrostaticPlaneTriangleElementResult, ElementResult, Frame2dElementResult,
+    Frame2dNodeResult, Frame3dElementResult, Frame3dNodeResult, HeatBar1dElementResult,
+    HeatBar1dNodeResult, HeatPlaneNodeResult, HeatPlaneQuadElementInput,
+    HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput, HeatPlaneTriangleElementResult, Job,
+    JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult,
+    PlaneTriangleElementInput, PlaneTriangleElementResult, ProgressEvent, SolveBarRequest,
+    SolveBarResult, SolveBeam1dRequest, SolveBeam1dResult, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticBar1dResult, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneQuad2dResult, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveElectrostaticPlaneTriangle2dResult, SolveFrame2dRequest, SolveFrame2dResult,
+    SolveFrame3dRequest, SolveFrame3dResult, SolveHeatBar1dRequest, SolveHeatBar1dResult,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
+    SolveHeatPlaneTriangle2dResult, SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult,
+    SolvePlaneTriangle2dRequest, SolvePlaneTriangle2dResult, SolveSpring1dRequest,
+    SolveSpring1dResult, SolveSpring2dRequest, SolveSpring2dResult, SolveSpring3dRequest,
+    SolveSpring3dResult, SolveThermalBar1dRequest, SolveThermalBar1dResult,
+    SolveThermalBeam1dRequest, SolveThermalBeam1dResult, SolveThermalFrame2dRequest,
+    SolveThermalFrame2dResult, SolveThermalFrame3dRequest, SolveThermalFrame3dResult,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
     SolveThermalPlaneTriangle2dRequest, SolveThermalPlaneTriangle2dResult,
     SolveThermalTruss2dRequest, SolveThermalTruss2dResult, SolveThermalTruss3dRequest,
     SolveThermalTruss3dResult, SolveTorsion1dRequest, SolveTorsion1dResult, SolveTruss2dRequest,
@@ -558,7 +563,11 @@ pub fn solve_heat_plane_triangle_2d(
                 temperatures[element.node_j],
                 temperatures[element.node_k],
             ];
-            let gradient = heat_plane_triangle_gradient(&computed, &element_temperatures);
+            let gradient = plane_triangle_scalar_gradient(
+                &computed.gradient_x,
+                &computed.gradient_y,
+                &element_temperatures,
+            );
             let heat_flux_x = -element.conductivity * gradient[0];
             let heat_flux_y = -element.conductivity * gradient[1];
 
@@ -594,6 +603,308 @@ pub fn solve_heat_plane_triangle_2d(
         elements,
         max_temperature,
         max_heat_flux,
+    })
+}
+
+pub fn solve_electrostatic_plane_triangle_2d(
+    request: &SolveElectrostaticPlaneTriangle2dRequest,
+) -> Result<SolveElectrostaticPlaneTriangle2dResult, String> {
+    validate_electrostatic_plane_triangle_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut source_vector = vec![0.0; dof_count];
+    let computed_elements = request
+        .elements
+        .iter()
+        .map(|element| precompute_electrostatic_plane_triangle_element(request, element))
+        .collect::<Result<Vec<_>, String>>()?;
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        source_vector[index] = node.charge_density;
+    }
+
+    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+        let map = [element.node_i, element.node_j, element.node_k];
+        for row in 0..3 {
+            for column in 0..3 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    computed.stiffness[row][column],
+                );
+            }
+        }
+    }
+
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_potential.then_some((index, node.potential)))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_source, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+
+    let mut potentials = vec![0.0; dof_count];
+    for &(index, value) in &prescribed {
+        potentials[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        potentials[dof] = reduced_potentials[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| ElectrostaticPlaneNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            potential: potentials[index],
+            charge_density: node.charge_density,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+        .map(|(index, (element, computed))| {
+            let element_potentials = [
+                potentials[element.node_i],
+                potentials[element.node_j],
+                potentials[element.node_k],
+            ];
+            let gradient = plane_triangle_scalar_gradient(
+                &computed.gradient_x,
+                &computed.gradient_y,
+                &element_potentials,
+            );
+            let electric_field_x = -gradient[0];
+            let electric_field_y = -gradient[1];
+            let electric_flux_density_x = element.permittivity * electric_field_x;
+            let electric_flux_density_y = element.permittivity * electric_field_y;
+
+            ElectrostaticPlaneTriangleElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                node_k: element.node_k,
+                area: computed.area,
+                average_potential: element_potentials.iter().sum::<f64>() / 3.0,
+                potential_gradient_x: gradient[0],
+                potential_gradient_y: gradient[1],
+                electric_field_x,
+                electric_field_y,
+                electric_field_magnitude: (electric_field_x * electric_field_x
+                    + electric_field_y * electric_field_y)
+                    .sqrt(),
+                electric_flux_density_x,
+                electric_flux_density_y,
+                electric_flux_density_magnitude: (electric_flux_density_x
+                    * electric_flux_density_x
+                    + electric_flux_density_y * electric_flux_density_y)
+                    .sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_potential = nodes
+        .iter()
+        .map(|node| node.potential.abs())
+        .fold(0.0_f64, f64::max);
+    let max_electric_field = elements
+        .iter()
+        .map(|element| element.electric_field_magnitude.abs())
+        .fold(0.0_f64, f64::max);
+    let max_flux_density = elements
+        .iter()
+        .map(|element| element.electric_flux_density_magnitude.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveElectrostaticPlaneTriangle2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_potential,
+        max_electric_field,
+        max_flux_density,
+    })
+}
+
+pub fn solve_electrostatic_plane_quad_2d(
+    request: &SolveElectrostaticPlaneQuad2dRequest,
+) -> Result<SolveElectrostaticPlaneQuad2dResult, String> {
+    validate_electrostatic_plane_quad_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut source_vector = vec![0.0; dof_count];
+    let computed_elements = request
+        .elements
+        .iter()
+        .map(|element| precompute_electrostatic_plane_quad_element(request, element))
+        .collect::<Result<Vec<_>, String>>()?;
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        source_vector[index] = node.charge_density;
+    }
+
+    for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
+        let triangles = [
+            (
+                [element.node_i, element.node_j, element.node_k],
+                &computed.first,
+            ),
+            (
+                [element.node_i, element.node_k, element.node_l],
+                &computed.second,
+            ),
+        ];
+
+        for (nodes, triangle) in triangles {
+            let map = [nodes[0], nodes[1], nodes[2]];
+            for row in 0..3 {
+                for column in 0..3 {
+                    add_at(
+                        &mut global_stiffness,
+                        map[row],
+                        map[column],
+                        triangle.stiffness[row][column],
+                    );
+                }
+            }
+        }
+    }
+
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_potential.then_some((index, node.potential)))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_source, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+
+    let mut potentials = vec![0.0; dof_count];
+    for &(index, value) in &prescribed {
+        potentials[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        potentials[dof] = reduced_potentials[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| ElectrostaticPlaneNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            y: node.y,
+            potential: potentials[index],
+            charge_density: node.charge_density,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .zip(computed_elements.iter())
+        .enumerate()
+        .map(|(index, (element, computed))| {
+            let first_potentials = [
+                potentials[element.node_i],
+                potentials[element.node_j],
+                potentials[element.node_k],
+            ];
+            let second_potentials = [
+                potentials[element.node_i],
+                potentials[element.node_k],
+                potentials[element.node_l],
+            ];
+            let first_gradient = plane_triangle_scalar_gradient(
+                &computed.first.gradient_x,
+                &computed.first.gradient_y,
+                &first_potentials,
+            );
+            let second_gradient = plane_triangle_scalar_gradient(
+                &computed.second.gradient_x,
+                &computed.second.gradient_y,
+                &second_potentials,
+            );
+            let total_area = computed.first.area + computed.second.area;
+            let weighted = |left: f64, right: f64| -> f64 {
+                ((left * computed.first.area) + (right * computed.second.area)) / total_area
+            };
+            let potential_gradient_x = weighted(first_gradient[0], second_gradient[0]);
+            let potential_gradient_y = weighted(first_gradient[1], second_gradient[1]);
+            let electric_field_x = -potential_gradient_x;
+            let electric_field_y = -potential_gradient_y;
+            let electric_flux_density_x = element.permittivity * electric_field_x;
+            let electric_flux_density_y = element.permittivity * electric_field_y;
+
+            ElectrostaticPlaneQuadElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                node_k: element.node_k,
+                node_l: element.node_l,
+                area: total_area,
+                average_potential: (potentials[element.node_i]
+                    + potentials[element.node_j]
+                    + potentials[element.node_k]
+                    + potentials[element.node_l])
+                    / 4.0,
+                potential_gradient_x,
+                potential_gradient_y,
+                electric_field_x,
+                electric_field_y,
+                electric_field_magnitude: (electric_field_x * electric_field_x
+                    + electric_field_y * electric_field_y)
+                    .sqrt(),
+                electric_flux_density_x,
+                electric_flux_density_y,
+                electric_flux_density_magnitude: (electric_flux_density_x
+                    * electric_flux_density_x
+                    + electric_flux_density_y * electric_flux_density_y)
+                    .sqrt(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_potential = nodes
+        .iter()
+        .map(|node| node.potential.abs())
+        .fold(0.0_f64, f64::max);
+    let max_electric_field = elements
+        .iter()
+        .map(|element| element.electric_field_magnitude.abs())
+        .fold(0.0_f64, f64::max);
+    let max_flux_density = elements
+        .iter()
+        .map(|element| element.electric_flux_density_magnitude.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveElectrostaticPlaneQuad2dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_potential,
+        max_electric_field,
+        max_flux_density,
     })
 }
 
@@ -691,9 +1002,16 @@ pub fn solve_heat_plane_quad_2d(
                 temperatures[element.node_k],
                 temperatures[element.node_l],
             ];
-            let first_gradient = heat_plane_triangle_gradient(&computed.first, &first_temperatures);
-            let second_gradient =
-                heat_plane_triangle_gradient(&computed.second, &second_temperatures);
+            let first_gradient = plane_triangle_scalar_gradient(
+                &computed.first.gradient_x,
+                &computed.first.gradient_y,
+                &first_temperatures,
+            );
+            let second_gradient = plane_triangle_scalar_gradient(
+                &computed.second.gradient_x,
+                &computed.second.gradient_y,
+                &second_temperatures,
+            );
             let total_area = computed.first.area + computed.second.area;
             let weighted = |left: f64, right: f64| -> f64 {
                 ((left * computed.first.area) + (right * computed.second.area)) / total_area
@@ -4965,6 +5283,159 @@ fn validate_heat_plane_triangle_request(
     Ok(())
 }
 
+fn validate_electrostatic_plane_triangle_request(
+    request: &SolveElectrostaticPlaneTriangle2dRequest,
+) -> Result<(), String> {
+    if request.nodes.len() < 3 {
+        return Err(
+            "electrostatic plane triangle model must define at least three nodes".to_string(),
+        );
+    }
+    if request.elements.is_empty() {
+        return Err(
+            "electrostatic plane triangle model must define at least one element".to_string(),
+        );
+    }
+    if !request.nodes.iter().any(|node| node.fix_potential) {
+        return Err(
+            "electrostatic plane triangle model must include at least one potential support"
+                .to_string(),
+        );
+    }
+
+    for node in &request.nodes {
+        if !(node.x.is_finite() && node.y.is_finite()) {
+            return Err("electrostatic plane triangle node coordinates must be finite".to_string());
+        }
+        if !node.potential.is_finite() {
+            return Err("electrostatic plane triangle node potential must be finite".to_string());
+        }
+        if !node.charge_density.is_finite() {
+            return Err(
+                "electrostatic plane triangle node charge_density must be finite".to_string(),
+            );
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len()
+            || element.node_j >= request.nodes.len()
+            || element.node_k >= request.nodes.len()
+        {
+            return Err(
+                "electrostatic plane triangle element references an out-of-range node".to_string(),
+            );
+        }
+        if !element.thickness.is_finite() || element.thickness <= 0.0 {
+            return Err("electrostatic plane triangle thickness must be positive".to_string());
+        }
+        if !element.permittivity.is_finite() || element.permittivity <= 0.0 {
+            return Err("electrostatic plane triangle permittivity must be positive".to_string());
+        }
+        let ni = kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[element.node_i].id.clone(),
+            x: request.nodes[element.node_i].x,
+            y: request.nodes[element.node_i].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let nj = kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[element.node_j].id.clone(),
+            x: request.nodes[element.node_j].x,
+            y: request.nodes[element.node_j].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let nk = kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[element.node_k].id.clone(),
+            x: request.nodes[element.node_k].x,
+            y: request.nodes[element.node_k].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let area = signed_triangle_area(&ni, &nj, &nk).abs();
+        if area <= 1.0e-12 {
+            return Err("electrostatic plane triangle element area must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_electrostatic_plane_quad_request(
+    request: &SolveElectrostaticPlaneQuad2dRequest,
+) -> Result<(), String> {
+    if request.nodes.len() < 4 {
+        return Err("electrostatic plane quad model must define at least four nodes".to_string());
+    }
+    if request.elements.is_empty() {
+        return Err("electrostatic plane quad model must define at least one element".to_string());
+    }
+    if !request.nodes.iter().any(|node| node.fix_potential) {
+        return Err(
+            "electrostatic plane quad model must include at least one potential support"
+                .to_string(),
+        );
+    }
+
+    for node in &request.nodes {
+        if !(node.x.is_finite() && node.y.is_finite()) {
+            return Err("electrostatic plane quad node coordinates must be finite".to_string());
+        }
+        if !node.potential.is_finite() {
+            return Err("electrostatic plane quad node potential must be finite".to_string());
+        }
+        if !node.charge_density.is_finite() {
+            return Err("electrostatic plane quad node charge_density must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len()
+            || element.node_j >= request.nodes.len()
+            || element.node_k >= request.nodes.len()
+            || element.node_l >= request.nodes.len()
+        {
+            return Err(
+                "electrostatic plane quad element references an out-of-range node".to_string(),
+            );
+        }
+        if !element.thickness.is_finite() || element.thickness <= 0.0 {
+            return Err("electrostatic plane quad thickness must be positive".to_string());
+        }
+        if !element.permittivity.is_finite() || element.permittivity <= 0.0 {
+            return Err("electrostatic plane quad permittivity must be positive".to_string());
+        }
+
+        let to_node = |index: usize| kyuubiki_protocol::PlaneNodeInput {
+            id: request.nodes[index].id.clone(),
+            x: request.nodes[index].x,
+            y: request.nodes[index].y,
+            fix_x: false,
+            fix_y: false,
+            load_x: 0.0,
+            load_y: 0.0,
+        };
+        let ni = to_node(element.node_i);
+        let nj = to_node(element.node_j);
+        let nk = to_node(element.node_k);
+        let nl = to_node(element.node_l);
+        let first_area = signed_triangle_area(&ni, &nj, &nk).abs();
+        let second_area = signed_triangle_area(&ni, &nk, &nl).abs();
+        if first_area <= 1.0e-12 || second_area <= 1.0e-12 {
+            return Err("electrostatic plane quad triangles must have positive area".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_heat_plane_quad_request(request: &SolveHeatPlaneQuad2dRequest) -> Result<(), String> {
     if request.nodes.len() < 4 {
         return Err("heat plane quad model must define at least four nodes".to_string());
@@ -5399,6 +5870,20 @@ struct HeatPlaneTriangleComputed {
 }
 
 #[derive(Debug, Clone)]
+struct ElectrostaticPlaneTriangleComputed {
+    stiffness: [[f64; 3]; 3],
+    area: f64,
+    gradient_x: [f64; 3],
+    gradient_y: [f64; 3],
+}
+
+#[derive(Debug, Clone)]
+struct ElectrostaticPlaneQuadComputed {
+    first: ElectrostaticPlaneTriangleComputed,
+    second: ElectrostaticPlaneTriangleComputed,
+}
+
+#[derive(Debug, Clone)]
 struct HeatPlaneQuadComputed {
     first: HeatPlaneTriangleComputed,
     second: HeatPlaneTriangleComputed,
@@ -5507,6 +5992,81 @@ fn precompute_heat_plane_triangle_element(
     })
 }
 
+fn precompute_electrostatic_plane_triangle_element(
+    request: &SolveElectrostaticPlaneTriangle2dRequest,
+    element: &ElectrostaticPlaneTriangleElementInput,
+) -> Result<ElectrostaticPlaneTriangleComputed, String> {
+    let node_i = &request.nodes[element.node_i];
+    let node_j = &request.nodes[element.node_j];
+    let node_k = &request.nodes[element.node_k];
+    let signed_area = 0.5
+        * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
+            - (node_k.x - node_i.x) * (node_j.y - node_i.y));
+    let area = signed_area.abs();
+    if area <= 1.0e-12 {
+        return Err("electrostatic plane triangle element area must be positive".to_string());
+    }
+
+    let twice_area = signed_area * 2.0;
+    let gradient_x = [
+        (node_j.y - node_k.y) / twice_area,
+        (node_k.y - node_i.y) / twice_area,
+        (node_i.y - node_j.y) / twice_area,
+    ];
+    let gradient_y = [
+        (node_k.x - node_j.x) / twice_area,
+        (node_i.x - node_k.x) / twice_area,
+        (node_j.x - node_i.x) / twice_area,
+    ];
+
+    let scale = element.permittivity * element.thickness * area;
+    let mut stiffness = [[0.0; 3]; 3];
+    for row in 0..3 {
+        for column in 0..3 {
+            stiffness[row][column] = scale
+                * ((gradient_x[row] * gradient_x[column]) + (gradient_y[row] * gradient_y[column]));
+        }
+    }
+
+    Ok(ElectrostaticPlaneTriangleComputed {
+        stiffness,
+        area,
+        gradient_x,
+        gradient_y,
+    })
+}
+
+fn precompute_electrostatic_plane_quad_element(
+    request: &SolveElectrostaticPlaneQuad2dRequest,
+    element: &ElectrostaticPlaneQuadElementInput,
+) -> Result<ElectrostaticPlaneQuadComputed, String> {
+    let first = ElectrostaticPlaneTriangleElementInput {
+        id: format!("{}#0", element.id),
+        node_i: element.node_i,
+        node_j: element.node_j,
+        node_k: element.node_k,
+        thickness: element.thickness,
+        permittivity: element.permittivity,
+    };
+    let second = ElectrostaticPlaneTriangleElementInput {
+        id: format!("{}#1", element.id),
+        node_i: element.node_i,
+        node_j: element.node_k,
+        node_k: element.node_l,
+        thickness: element.thickness,
+        permittivity: element.permittivity,
+    };
+    let triangle_request = SolveElectrostaticPlaneTriangle2dRequest {
+        nodes: request.nodes.clone(),
+        elements: vec![],
+    };
+
+    Ok(ElectrostaticPlaneQuadComputed {
+        first: precompute_electrostatic_plane_triangle_element(&triangle_request, &first)?,
+        second: precompute_electrostatic_plane_triangle_element(&triangle_request, &second)?,
+    })
+}
+
 fn precompute_plane_quad_element(
     request: &SolvePlaneQuad2dRequest,
     element: &PlaneQuadElementInput,
@@ -5607,16 +6167,17 @@ fn precompute_heat_plane_quad_element(
     })
 }
 
-fn heat_plane_triangle_gradient(
-    computed: &HeatPlaneTriangleComputed,
-    nodal_temperatures: &[f64; 3],
+fn plane_triangle_scalar_gradient(
+    gradient_x: &[f64; 3],
+    gradient_y: &[f64; 3],
+    nodal_values: &[f64; 3],
 ) -> [f64; 2] {
     [
         (0..3)
-            .map(|index| computed.gradient_x[index] * nodal_temperatures[index])
+            .map(|index| gradient_x[index] * nodal_values[index])
             .sum(),
         (0..3)
-            .map(|index| computed.gradient_y[index] * nodal_temperatures[index])
+            .map(|index| gradient_y[index] * nodal_values[index])
             .sum(),
     ]
 }
@@ -6771,7 +7332,8 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d,
+        MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d,
+        solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
         solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
         solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
         solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
@@ -6781,11 +7343,14 @@ mod tests {
     };
     use kyuubiki_protocol::{
         Beam1dElementInput, Beam1dNodeInput, ElectrostaticBar1dElementInput,
-        ElectrostaticBar1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput,
-        Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput,
-        HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput, Job, JobStatus, PlaneNodeInput,
-        PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
-        SolveElectrostaticBar1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+        ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput,
+        ElectrostaticPlaneQuadElementInput, ElectrostaticPlaneTriangleElementInput,
+        Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput,
+        HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
+        HeatPlaneTriangleElementInput, Job, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
+        PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
+        SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+        SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
         SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
         SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
         SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
@@ -6955,6 +7520,123 @@ mod tests {
         assert!((result.elements[0].potential_gradient + 10.0).abs() < 1.0e-9);
         assert!((result.elements[0].electric_field - 10.0).abs() < 1.0e-9);
         assert!((result.elements[0].electric_flux_density - 20.0).abs() < 1.0e-9);
+        assert_eq!(result.max_potential, 10.0);
+        assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
+        assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn solves_a_small_electrostatic_plane_triangle_2d_patch() {
+        let result =
+            solve_electrostatic_plane_triangle_2d(&SolveElectrostaticPlaneTriangle2dRequest {
+                nodes: vec![
+                    ElectrostaticPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_potential: true,
+                        potential: 0.0,
+                        charge_density: 0.0,
+                    },
+                    ElectrostaticPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_potential: true,
+                        potential: 10.0,
+                        charge_density: 0.0,
+                    },
+                ],
+                elements: vec![ElectrostaticPlaneTriangleElementInput {
+                    id: "ep0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.05,
+                    permittivity: 2.0,
+                }],
+            })
+            .expect("electrostatic plane triangle should solve");
+
+        assert_eq!(result.nodes[0].potential, 10.0);
+        assert_eq!(result.nodes[1].potential, 0.0);
+        assert_eq!(result.nodes[2].potential, 10.0);
+        assert!((result.elements[0].potential_gradient_x + 10.0).abs() < 1.0e-9);
+        assert!(result.elements[0].potential_gradient_y.abs() < 1.0e-9);
+        assert!((result.elements[0].electric_field_x - 10.0).abs() < 1.0e-9);
+        assert!(result.elements[0].electric_field_y.abs() < 1.0e-9);
+        assert!((result.elements[0].electric_flux_density_x - 20.0).abs() < 1.0e-9);
+        assert_eq!(result.max_potential, 10.0);
+        assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
+        assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    }
+
+    #[test]
+    fn solves_a_small_electrostatic_plane_quad_2d_patch() {
+        let result = solve_electrostatic_plane_quad_2d(&SolveElectrostaticPlaneQuad2dRequest {
+            nodes: vec![
+                ElectrostaticPlaneNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_potential: true,
+                    potential: 10.0,
+                    charge_density: 0.0,
+                },
+                ElectrostaticPlaneNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_potential: true,
+                    potential: 0.0,
+                    charge_density: 0.0,
+                },
+                ElectrostaticPlaneNodeInput {
+                    id: "n2".to_string(),
+                    x: 1.0,
+                    y: 1.0,
+                    fix_potential: true,
+                    potential: 0.0,
+                    charge_density: 0.0,
+                },
+                ElectrostaticPlaneNodeInput {
+                    id: "n3".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    fix_potential: true,
+                    potential: 10.0,
+                    charge_density: 0.0,
+                },
+            ],
+            elements: vec![ElectrostaticPlaneQuadElementInput {
+                id: "epq0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                node_l: 3,
+                thickness: 0.05,
+                permittivity: 2.0,
+            }],
+        })
+        .expect("electrostatic plane quad should solve");
+
+        assert_eq!(result.nodes[0].potential, 10.0);
+        assert_eq!(result.nodes[1].potential, 0.0);
+        assert_eq!(result.nodes[2].potential, 0.0);
+        assert_eq!(result.nodes[3].potential, 10.0);
+        assert!((result.elements[0].potential_gradient_x + 10.0).abs() < 1.0e-9);
+        assert!(result.elements[0].potential_gradient_y.abs() < 1.0e-9);
+        assert!((result.elements[0].electric_field_x - 10.0).abs() < 1.0e-9);
+        assert!(result.elements[0].electric_field_y.abs() < 1.0e-9);
+        assert!((result.elements[0].electric_flux_density_x - 20.0).abs() < 1.0e-9);
         assert_eq!(result.max_potential, 10.0);
         assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
         assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);

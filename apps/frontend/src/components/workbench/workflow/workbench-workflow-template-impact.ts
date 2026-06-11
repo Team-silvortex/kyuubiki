@@ -7,7 +7,10 @@ import type {
   WorkflowGraphPort,
   WorkflowOperatorDescriptor,
 } from "@/lib/api";
-import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import {
+  buildPortsForWorkflowNodeTemplate,
+  type WorkflowNodeTemplateSelection,
+} from "@/components/workbench/workflow/workbench-workflow-node-templates";
 
 type WorkflowTemplateReconnectSuggestion = {
   edgeId: string;
@@ -62,7 +65,7 @@ function syncEdgeFromPorts(edge: WorkflowGraphEdge, nodes: WorkflowGraphNode[]) 
 export function getWorkflowNodeTemplateSyncImpact(
   graph: Pick<WorkflowGraphDefinition, "nodes" | "edges">,
   nodeId: string,
-  template: { kind?: string; operatorId?: string } | undefined,
+  template: WorkflowNodeTemplateSelection | undefined,
   operatorDescriptors: WorkflowOperatorDescriptor[] = [],
 ): WorkflowNodeTemplateSyncImpact | null {
   const node = graph.nodes.find((entry) => entry.id === nodeId);
@@ -142,7 +145,7 @@ export function listAutoReconnectEdgeIds(impact: WorkflowNodeTemplateSyncImpact 
 export function applyWorkflowNodeTemplateSync(
   graph: WorkflowGraphDefinition,
   nodeId: string,
-  template: { kind?: string; operatorId?: string } | undefined,
+  template: WorkflowNodeTemplateSelection | undefined,
   operatorDescriptors: WorkflowOperatorDescriptor[] = [],
 ) {
   const node = graph.nodes.find((entry) => entry.id === nodeId);

@@ -49,6 +49,26 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec submit_electrostatic_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_electrostatic_plane_triangle_2d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_electrostatic_plane_triangle_2d(params),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      start_background_job(job.job_id, "solve_electrostatic_plane_triangle_2d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
+  @spec submit_electrostatic_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_electrostatic_plane_quad_2d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_electrostatic_plane_quad_2d(params),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      start_background_job(job.job_id, "solve_electrostatic_plane_quad_2d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
   @spec submit_heat_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_heat_plane_triangle_2d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_heat_plane_triangle_2d(params),
@@ -644,6 +664,27 @@ defmodule KyuubikiWeb.Analysis do
         ["verified", "thermo_mechanical", "frame", "3d"]
       ),
       built_in_solver_descriptor(
+        "solve.electrostatic_bar_1d",
+        "electromagnetic",
+        "electrostatic_bar_1d",
+        "Solve a 1D electrostatic bar model and expose potential, field, and flux results.",
+        ["verified", "electromagnetic", "electrostatic", "bar", "1d"]
+      ),
+      built_in_solver_descriptor(
+        "solve.electrostatic_plane_triangle_2d",
+        "electromagnetic",
+        "electrostatic_plane_triangle_2d",
+        "Solve a 2D electrostatic triangle model and expose potential, field, and flux results.",
+        ["verified", "electromagnetic", "electrostatic", "plane", "triangle", "2d"]
+      ),
+      built_in_solver_descriptor(
+        "solve.electrostatic_plane_quad_2d",
+        "electromagnetic",
+        "electrostatic_plane_quad_2d",
+        "Solve a 2D electrostatic quad model and expose potential, field, and flux results.",
+        ["verified", "electromagnetic", "electrostatic", "plane", "quad", "2d"]
+      ),
+      built_in_solver_descriptor(
         "solve.heat_plane_quad_2d",
         "thermal",
         "heat_plane_quad_2d",
@@ -662,8 +703,68 @@ defmodule KyuubikiWeb.Analysis do
         "thermo_mechanical",
         "thermal_plane_quad_2d",
         "Bridge a heat quad temperature field into a thermal quad structural model.",
-        ["workflow_bridge", "temperature_field", "quad", "2d"]
+        ["workflow_bridge", "temperature_field", "quad", "2d"],
+        %{"schema" => "kyuubiki.bridge-contract.heat_to_thermo.v1", "version" => "1"},
+        %{
+          "seed_model" => thermo_quad_seed_model_example(),
+          "contract" => heat_to_thermo_bridge_contract_example()
+        }
       ),
+      %{
+        "id" => "bridge.electrostatic_field_to_heat_quad_2d",
+        "version" => "1.0.0",
+        "domain" => "electromagnetic",
+        "family" => "electrostatic_to_heat_quad_2d",
+        "kind" => "workflow_bridge",
+        "summary" =>
+          "Bridge electrostatic quad field magnitudes into nodal heat loads for a downstream heat quad model.",
+        "capability_tags" => ["workflow_bridge", "electrostatic", "heat", "quad", "2d"],
+        "origin" => "built_in",
+        "input_schema" => %{
+          "schema" => "kyuubiki.operator.electrostatic_to_heat_quad_2d.bridge_input",
+          "version" => "1"
+        },
+        "output_schema" => %{
+          "schema" => "kyuubiki.operator.electrostatic_to_heat_quad_2d.bridge_output",
+          "version" => "1"
+        },
+        "config_schema" => %{
+          "schema" => "kyuubiki.bridge-contract.electrostatic_to_heat.v1",
+          "version" => "1"
+        },
+        "config_example" => %{
+          "contract" => electrostatic_to_heat_bridge_contract_example(50.0)
+        },
+        "inputs" => [
+          %{
+            "id" => "electrostatic_result",
+            "artifact_type" => "result/electrostatic_plane_quad_2d",
+            "description" => "Electrostatic quad result payload to bridge from",
+            "dataset_value" => "electrostatic_result",
+            "schema_ref" => %{
+              "schema" => "kyuubiki.operator.electrostatic_plane_quad_2d.output",
+              "version" => "1"
+            }
+          }
+        ],
+        "outputs" => [
+          %{
+            "id" => "heat_model",
+            "artifact_type" => "study_model/heat_plane_quad_2d",
+            "description" => "Heat quad model with bridged nodal heat loads",
+            "dataset_value" => "heat_model",
+            "schema_ref" => %{
+              "schema" => "kyuubiki.operator.heat_plane_quad_2d.input",
+              "version" => "1"
+            }
+          }
+        ],
+        "validation" =>
+          verified_operator_validation_profile(
+            "electrostatic_to_heat_quad_2d",
+            ["workflow_graph", "catalog_job"]
+          )
+      },
       built_in_extract_descriptor(
         "extract.result_summary",
         "multi_domain",
@@ -690,6 +791,52 @@ defmodule KyuubikiWeb.Analysis do
 
   defp built_in_workflow_catalog do
     [
+      %{
+        "id" => "workflow.electrostatic-to-heat-quad-2d",
+        "name" => "Electrostatic to heat quad",
+        "version" => "1.0.0",
+        "summary" =>
+          "Solves an electrostatic quad model, bridges field magnitude into a heat quad study, then extracts and exports a heat summary.",
+        "graph" => electrostatic_to_heat_quad_graph(),
+        "entry_inputs" => [
+          %{
+            "node_id" => "electrostatic_model",
+            "artifact_type" => "study_model/electrostatic_plane_quad_2d",
+            "description" =>
+              "Electrostatic plane quad study model used as the workflow entry artifact."
+          }
+        ],
+        "output_artifacts" => [
+          %{
+            "node_id" => "json_output",
+            "artifact_type" => "export/json",
+            "description" => "JSON-encoded heat summary after bridging the electrostatic field."
+          }
+        ]
+      },
+      %{
+        "id" => "workflow.electrostatic-plane-quad-2d",
+        "name" => "Electrostatic plane quad",
+        "version" => "1.0.0",
+        "summary" =>
+          "Solves a 2D electrostatic quad model, extracts the peak field metrics, and exports a JSON summary artifact.",
+        "graph" => electrostatic_plane_quad_graph(),
+        "entry_inputs" => [
+          %{
+            "node_id" => "electrostatic_model",
+            "artifact_type" => "study_model/electrostatic_plane_quad_2d",
+            "description" =>
+              "Electrostatic plane quad study model used as the workflow entry artifact."
+          }
+        ],
+        "output_artifacts" => [
+          %{
+            "node_id" => "json_output",
+            "artifact_type" => "export/json",
+            "description" => "JSON-encoded summary for the electrostatic quad solve."
+          }
+        ]
+      },
       %{
         "id" => "workflow.heat-to-thermo-quad-2d",
         "name" => "Heat to thermo quad",
@@ -750,8 +897,16 @@ defmodule KyuubikiWeb.Analysis do
     }
   end
 
-  defp built_in_bridge_descriptor(id, domain, family, summary, capability_tags) do
-    %{
+  defp built_in_bridge_descriptor(
+         id,
+         domain,
+         family,
+         summary,
+         capability_tags,
+         config_schema,
+         config_example
+       ) do
+    base = %{
       "id" => id,
       "version" => "1.0.0",
       "domain" => domain,
@@ -789,6 +944,10 @@ defmodule KyuubikiWeb.Analysis do
       "validation" =>
         verified_operator_validation_profile(family, ["workflow_graph", "catalog_job"])
     }
+
+    base
+    |> maybe_put_descriptor_field("config_schema", config_schema)
+    |> maybe_put_descriptor_field("config_example", config_example)
   end
 
   defp built_in_extract_descriptor(id, domain, family, summary, capability_tags) do
@@ -891,10 +1050,265 @@ defmodule KyuubikiWeb.Analysis do
     }
   end
 
+  defp workflow_graph_by_id("workflow.electrostatic-to-heat-quad-2d"),
+    do: {:ok, electrostatic_to_heat_quad_graph()}
+
+  defp workflow_graph_by_id("workflow.electrostatic-plane-quad-2d"),
+    do: {:ok, electrostatic_plane_quad_graph()}
+
   defp workflow_graph_by_id("workflow.heat-to-thermo-quad-2d"),
     do: {:ok, heat_to_thermo_quad_graph()}
 
   defp workflow_graph_by_id(workflow_id), do: {:error, {:workflow_not_found, workflow_id}}
+
+  defp electrostatic_plane_quad_graph do
+    %{
+      "schema_version" => "kyuubiki.workflow-graph/v1",
+      "id" => "workflow.electrostatic-plane-quad-2d",
+      "name" => "Electrostatic plane quad",
+      "version" => "1.0.0",
+      "entry_nodes" => ["electrostatic_model"],
+      "output_nodes" => ["json_output"],
+      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
+      "nodes" => [
+        %{
+          "id" => "electrostatic_model",
+          "kind" => "input",
+          "outputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "solve_electrostatic",
+          "kind" => "solve",
+          "operator_id" => "solve.electrostatic_plane_quad_2d",
+          "inputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
+          ],
+          "outputs" => [
+            %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "extract_summary",
+          "kind" => "extract",
+          "operator_id" => "extract.result_summary",
+          "config" => %{
+            "fields" => ["max_potential", "max_electric_field", "max_flux_density"]
+          },
+          "inputs" => [
+            %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
+          ],
+          "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+        },
+        %{
+          "id" => "export_json",
+          "kind" => "export",
+          "operator_id" => "export.summary_json",
+          "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
+          "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
+        },
+        %{
+          "id" => "json_output",
+          "kind" => "output",
+          "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
+          "outputs" => []
+        }
+      ],
+      "edges" => [
+        %{
+          "id" => "e0",
+          "from" => %{"node" => "electrostatic_model", "port" => "model"},
+          "to" => %{"node" => "solve_electrostatic", "port" => "model"},
+          "artifact_type" => "study_model/electrostatic_plane_quad_2d"
+        },
+        %{
+          "id" => "e1",
+          "from" => %{"node" => "solve_electrostatic", "port" => "result"},
+          "to" => %{"node" => "extract_summary", "port" => "result"},
+          "artifact_type" => "result/electrostatic_plane_quad_2d"
+        },
+        %{
+          "id" => "e2",
+          "from" => %{"node" => "extract_summary", "port" => "summary"},
+          "to" => %{"node" => "export_json", "port" => "summary"},
+          "artifact_type" => "report/summary"
+        },
+        %{
+          "id" => "e3",
+          "from" => %{"node" => "export_json", "port" => "json"},
+          "to" => %{"node" => "json_output", "port" => "json"},
+          "artifact_type" => "export/json"
+        }
+      ]
+    }
+  end
+
+  defp electrostatic_to_heat_quad_graph do
+    %{
+      "schema_version" => "kyuubiki.workflow-graph/v1",
+      "id" => "workflow.electrostatic-to-heat-quad-2d",
+      "name" => "Electrostatic to heat quad",
+      "version" => "1.0.0",
+      "entry_nodes" => ["electrostatic_model"],
+      "output_nodes" => ["json_output"],
+      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
+      "nodes" => [
+        %{
+          "id" => "electrostatic_model",
+          "kind" => "input",
+          "outputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "solve_electrostatic",
+          "kind" => "solve",
+          "operator_id" => "solve.electrostatic_plane_quad_2d",
+          "inputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
+          ],
+          "outputs" => [
+            %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "bridge_field_to_heat",
+          "kind" => "transform",
+          "operator_id" => "bridge.electrostatic_field_to_heat_quad_2d",
+          "config" => %{
+            "seed_model" => %{
+              "nodes" => [
+                %{
+                  "id" => "n0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "fix_temperature" => true,
+                  "temperature" => 20.0,
+                  "heat_load" => 0.0
+                },
+                %{
+                  "id" => "n1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "fix_temperature" => false,
+                  "temperature" => 0.0,
+                  "heat_load" => 0.0
+                },
+                %{
+                  "id" => "n2",
+                  "x" => 1.0,
+                  "y" => 1.0,
+                  "fix_temperature" => false,
+                  "temperature" => 0.0,
+                  "heat_load" => 0.0
+                },
+                %{
+                  "id" => "n3",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "fix_temperature" => true,
+                  "temperature" => 20.0,
+                  "heat_load" => 0.0
+                }
+              ],
+              "elements" => [
+                %{
+                  "id" => "hq0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "node_l" => 3,
+                  "thickness" => 0.02,
+                  "conductivity" => 45.0
+                }
+              ]
+            },
+            "contract" => electrostatic_to_heat_bridge_contract_example(50.0)
+          },
+          "inputs" => [
+            %{
+              "id" => "electrostatic_result",
+              "artifact_type" => "result/electrostatic_plane_quad_2d"
+            }
+          ],
+          "outputs" => [
+            %{"id" => "heat_model", "artifact_type" => "study_model/heat_plane_quad_2d"}
+          ]
+        },
+        %{
+          "id" => "solve_heat",
+          "kind" => "solve",
+          "operator_id" => "solve.heat_plane_quad_2d",
+          "inputs" => [
+            %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
+          ],
+          "outputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}]
+        },
+        %{
+          "id" => "extract_summary",
+          "kind" => "extract",
+          "operator_id" => "extract.result_summary",
+          "config" => %{"fields" => ["max_temperature", "max_heat_flux"]},
+          "inputs" => [
+            %{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}
+          ],
+          "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+        },
+        %{
+          "id" => "export_json",
+          "kind" => "export",
+          "operator_id" => "export.summary_json",
+          "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
+          "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
+        },
+        %{
+          "id" => "json_output",
+          "kind" => "output",
+          "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
+          "outputs" => []
+        }
+      ],
+      "edges" => [
+        %{
+          "id" => "e0",
+          "from" => %{"node" => "electrostatic_model", "port" => "model"},
+          "to" => %{"node" => "solve_electrostatic", "port" => "model"},
+          "artifact_type" => "study_model/electrostatic_plane_quad_2d"
+        },
+        %{
+          "id" => "e1",
+          "from" => %{"node" => "solve_electrostatic", "port" => "result"},
+          "to" => %{"node" => "bridge_field_to_heat", "port" => "electrostatic_result"},
+          "artifact_type" => "result/electrostatic_plane_quad_2d"
+        },
+        %{
+          "id" => "e2",
+          "from" => %{"node" => "bridge_field_to_heat", "port" => "heat_model"},
+          "to" => %{"node" => "solve_heat", "port" => "model"},
+          "artifact_type" => "study_model/heat_plane_quad_2d"
+        },
+        %{
+          "id" => "e3",
+          "from" => %{"node" => "solve_heat", "port" => "result"},
+          "to" => %{"node" => "extract_summary", "port" => "result"},
+          "artifact_type" => "result/heat_plane_quad_2d"
+        },
+        %{
+          "id" => "e4",
+          "from" => %{"node" => "extract_summary", "port" => "summary"},
+          "to" => %{"node" => "export_json", "port" => "summary"},
+          "artifact_type" => "report/summary"
+        },
+        %{
+          "id" => "e5",
+          "from" => %{"node" => "export_json", "port" => "json"},
+          "to" => %{"node" => "json_output", "port" => "json"},
+          "artifact_type" => "export/json"
+        }
+      ]
+    }
+  end
 
   defp heat_to_thermo_quad_graph do
     %{
@@ -927,53 +1341,8 @@ defmodule KyuubikiWeb.Analysis do
           "kind" => "transform",
           "operator_id" => "bridge.temperature_field_to_thermo_quad_2d",
           "config" => %{
-            "nodes" => [
-              %{
-                "id" => "h0",
-                "x" => 0.0,
-                "y" => 0.0,
-                "fix_x" => true,
-                "fix_y" => true,
-                "temperature_delta" => 0.0
-              },
-              %{
-                "id" => "h1",
-                "x" => 1.0,
-                "y" => 0.0,
-                "fix_x" => false,
-                "fix_y" => false,
-                "temperature_delta" => 0.0
-              },
-              %{
-                "id" => "h2",
-                "x" => 1.0,
-                "y" => 1.0,
-                "fix_x" => false,
-                "fix_y" => false,
-                "temperature_delta" => 0.0
-              },
-              %{
-                "id" => "h3",
-                "x" => 0.0,
-                "y" => 1.0,
-                "fix_x" => true,
-                "fix_y" => true,
-                "temperature_delta" => 0.0
-              }
-            ],
-            "elements" => [
-              %{
-                "id" => "tq0",
-                "node_i" => 0,
-                "node_j" => 1,
-                "node_k" => 2,
-                "node_l" => 3,
-                "thickness" => 0.02,
-                "youngs_modulus" => 210.0e9,
-                "poisson_ratio" => 0.3,
-                "thermal_expansion" => 11.0e-6
-              }
-            ]
+            "seed_model" => thermo_quad_seed_model_example(),
+            "contract" => heat_to_thermo_bridge_contract_example()
           },
           "inputs" => [
             %{"id" => "heat_result", "artifact_type" => "result/heat_plane_quad_2d"}
@@ -1268,6 +1637,11 @@ defmodule KyuubikiWeb.Analysis do
     end)
   end
 
+  defp run_workflow_solve_operator("solve.electrostatic_plane_quad_2d", payload)
+       when is_map(payload) do
+    AgentClient.solve_electrostatic_plane_quad_2d(payload)
+  end
+
   defp run_workflow_solve_operator("solve.heat_plane_quad_2d", payload) when is_map(payload) do
     AgentClient.solve_heat_plane_quad_2d(payload)
   end
@@ -1282,10 +1656,40 @@ defmodule KyuubikiWeb.Analysis do
   defp run_workflow_transform_operator(
          "bridge.temperature_field_to_thermo_quad_2d",
          heat_result,
+         %{"seed_model" => thermo_seed_model} = config
+       )
+       when is_map(heat_result) and is_map(thermo_seed_model) and is_map(config) do
+    with {:ok, bridge_contract} <- resolve_heat_to_thermo_bridge_contract(config) do
+      bridge_heat_result_to_thermal_plane_quad_model(
+        heat_result,
+        thermo_seed_model,
+        bridge_contract
+      )
+    end
+  end
+
+  defp run_workflow_transform_operator(
+         "bridge.temperature_field_to_thermo_quad_2d",
+         heat_result,
          thermo_seed_model
        )
        when is_map(heat_result) and is_map(thermo_seed_model) do
     bridge_heat_result_to_thermal_plane_quad_model(heat_result, thermo_seed_model)
+  end
+
+  defp run_workflow_transform_operator(
+         "bridge.electrostatic_field_to_heat_quad_2d",
+         electrostatic_result,
+         %{"seed_model" => heat_seed_model} = config
+       )
+       when is_map(electrostatic_result) and is_map(heat_seed_model) and is_map(config) do
+    with {:ok, bridge_contract} <- resolve_electrostatic_to_heat_bridge_contract(config) do
+      bridge_electrostatic_result_to_heat_plane_quad_model(
+        electrostatic_result,
+        heat_seed_model,
+        bridge_contract
+      )
+    end
   end
 
   defp run_workflow_transform_operator(operator_id, _payload, _config),
@@ -1424,6 +1828,347 @@ defmodule KyuubikiWeb.Analysis do
 
   defp bridge_heat_result_to_thermal_plane_quad_model(_heat_result, _thermo_seed_model),
     do: {:error, :invalid_bridge_payload}
+
+  defp bridge_heat_result_to_thermal_plane_quad_model(
+         %{"nodes" => heat_nodes, "input" => %{"elements" => heat_elements}},
+         %{"nodes" => thermo_nodes, "elements" => thermo_elements} = thermo_seed_model,
+         bridge_contract
+       )
+       when is_list(heat_nodes) and is_list(heat_elements) and is_list(thermo_nodes) and
+              is_list(thermo_elements) do
+    cond do
+      length(heat_nodes) != length(thermo_nodes) ->
+        {:error, :node_count_mismatch}
+
+      length(heat_elements) != length(thermo_elements) ->
+        {:error, :element_count_mismatch}
+
+      true ->
+        bridged_nodes =
+          Enum.zip(heat_nodes, thermo_nodes)
+          |> Enum.reduce_while([], fn {heat_node, thermo_node}, acc ->
+            if close_enough?(Map.get(heat_node, "x"), Map.get(thermo_node, "x")) and
+                 close_enough?(Map.get(heat_node, "y"), Map.get(thermo_node, "y")) do
+              {:cont,
+               acc ++
+                 [
+                   Map.put(
+                     thermo_node,
+                     bridge_contract.target_field,
+                     normalize_numeric_value(
+                       Map.get(heat_node, bridge_contract.source_field, bridge_contract.default_value)
+                     ) * bridge_contract.scale
+                   )
+                 ]}
+            else
+              {:halt, :mismatch}
+            end
+          end)
+
+        case bridged_nodes do
+          :mismatch -> {:error, :node_alignment_mismatch}
+          nodes -> {:ok, Map.put(thermo_seed_model, "nodes", nodes)}
+        end
+    end
+  end
+
+  defp bridge_heat_result_to_thermal_plane_quad_model(_heat_result, _thermo_seed_model, _bridge_contract),
+    do: {:error, :invalid_bridge_payload}
+
+  defp bridge_electrostatic_result_to_heat_plane_quad_model(
+         %{"nodes" => electrostatic_nodes, "elements" => electrostatic_elements},
+         %{"nodes" => heat_nodes, "elements" => heat_elements} = heat_seed_model,
+         bridge_contract
+       )
+       when is_list(electrostatic_nodes) and is_list(electrostatic_elements) and
+              is_list(heat_nodes) and is_list(heat_elements) do
+    cond do
+      length(electrostatic_nodes) != length(heat_nodes) ->
+        {:error, :node_count_mismatch}
+
+      true ->
+        with :ok <- ensure_node_alignment(electrostatic_nodes, heat_nodes),
+             nodal_heat_loads <-
+               derive_nodal_target_field(
+                 electrostatic_elements,
+                 length(heat_nodes),
+                 bridge_contract
+               ) do
+          bridged_nodes =
+            Enum.with_index(heat_nodes)
+            |> Enum.map(fn {heat_node, index} ->
+              Map.put(
+                heat_node,
+                bridge_contract.target_field,
+                Enum.at(nodal_heat_loads, index, bridge_contract.default_value)
+              )
+            end)
+
+          {:ok, Map.put(heat_seed_model, "nodes", bridged_nodes)}
+        end
+    end
+  end
+
+  defp bridge_electrostatic_result_to_heat_plane_quad_model(_result, _seed_model, _bridge_contract),
+    do: {:error, :invalid_bridge_payload}
+
+  defp resolve_electrostatic_to_heat_bridge_contract(config) when is_map(config) do
+    contract = Map.get(config, "contract", %{})
+
+    with {:ok, source_field} <-
+           normalize_contract_string(
+             get_in(contract, ["source", "field"]) || "electric_field_magnitude",
+             :invalid_bridge_contract_source_field
+           ),
+         {:ok, distribution} <-
+           normalize_contract_string(
+             get_in(contract, ["source", "distribution"]) || "element_to_nodes",
+             :invalid_bridge_contract_distribution
+           ),
+         :ok <- validate_bridge_distribution(distribution),
+         {:ok, node_index_fields} <-
+           normalize_node_index_fields(
+             get_in(contract, ["source", "node_index_fields"]) ||
+               ["node_i", "node_j", "node_k", "node_l"]
+           ),
+         {:ok, scale} <-
+           normalize_bridge_scale(
+             get_in(contract, ["transform", "scale"]) || Map.get(config, "field_to_heat_scale")
+           ),
+         {:ok, reduction} <-
+           normalize_contract_string(
+             get_in(contract, ["transform", "reduction"]) || "mean",
+             :invalid_bridge_contract_reduction
+           ),
+         :ok <- validate_bridge_reduction(reduction),
+         {:ok, default_value} <-
+           normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0),
+         {:ok, target_field} <-
+           normalize_contract_string(
+             get_in(contract, ["target", "field"]) || "heat_load",
+             :invalid_bridge_contract_target_field
+           ) do
+      {:ok,
+       %{
+         source_field: source_field,
+         distribution: distribution,
+         node_index_fields: node_index_fields,
+         scale: scale,
+         reduction: reduction,
+         default_value: default_value,
+         target_field: target_field
+       }}
+    end
+  end
+
+  defp resolve_electrostatic_to_heat_bridge_contract(_config),
+    do: {:error, :invalid_bridge_contract}
+
+  defp resolve_heat_to_thermo_bridge_contract(config) when is_map(config) do
+    contract = Map.get(config, "contract", %{})
+
+    with {:ok, source_field} <-
+           normalize_contract_string(
+             get_in(contract, ["source", "field"]) || "temperature",
+             :invalid_bridge_contract_source_field
+           ),
+         {:ok, target_field} <-
+           normalize_contract_string(
+             get_in(contract, ["target", "field"]) || "temperature_delta",
+             :invalid_bridge_contract_target_field
+           ),
+         {:ok, scale} <-
+           normalize_bridge_scale(get_in(contract, ["transform", "scale"]) || 1.0),
+         {:ok, default_value} <-
+           normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0) do
+      {:ok,
+       %{
+         source_field: source_field,
+         target_field: target_field,
+         scale: scale,
+         default_value: default_value
+       }}
+    end
+  end
+
+  defp resolve_heat_to_thermo_bridge_contract(_config),
+    do: {:error, :invalid_bridge_contract}
+
+  defp electrostatic_to_heat_bridge_contract_example(scale) do
+    %{
+      "version" => "kyuubiki.bridge-contract/v1",
+      "source" => %{
+        "field" => "electric_field_magnitude",
+        "distribution" => "element_to_nodes",
+        "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
+      },
+      "transform" => %{
+        "scale" => scale,
+        "reduction" => "mean",
+        "default_value" => 0.0
+      },
+      "target" => %{"field" => "heat_load"}
+    }
+  end
+
+  defp heat_to_thermo_bridge_contract_example do
+    %{
+      "version" => "kyuubiki.bridge-contract/v1",
+      "source" => %{"field" => "temperature"},
+      "transform" => %{"scale" => 1.0, "default_value" => 0.0},
+      "target" => %{"field" => "temperature_delta"}
+    }
+  end
+
+  defp thermo_quad_seed_model_example do
+    %{
+      "nodes" => [
+        %{
+          "id" => "h0",
+          "x" => 0.0,
+          "y" => 0.0,
+          "fix_x" => true,
+          "fix_y" => true,
+          "temperature_delta" => 0.0
+        },
+        %{
+          "id" => "h1",
+          "x" => 1.0,
+          "y" => 0.0,
+          "fix_x" => false,
+          "fix_y" => false,
+          "temperature_delta" => 0.0
+        },
+        %{
+          "id" => "h2",
+          "x" => 1.0,
+          "y" => 1.0,
+          "fix_x" => false,
+          "fix_y" => false,
+          "temperature_delta" => 0.0
+        },
+        %{
+          "id" => "h3",
+          "x" => 0.0,
+          "y" => 1.0,
+          "fix_x" => true,
+          "fix_y" => true,
+          "temperature_delta" => 0.0
+        }
+      ],
+      "elements" => [
+        %{
+          "id" => "tq0",
+          "node_i" => 0,
+          "node_j" => 1,
+          "node_k" => 2,
+          "node_l" => 3,
+          "thickness" => 0.02,
+          "youngs_modulus" => 210.0e9,
+          "poisson_ratio" => 0.3,
+          "thermal_expansion" => 11.0e-6
+        }
+      ]
+    }
+  end
+
+  defp maybe_put_descriptor_field(descriptor, _key, nil), do: descriptor
+  defp maybe_put_descriptor_field(descriptor, key, value), do: Map.put(descriptor, key, value)
+
+  defp ensure_node_alignment(source_nodes, target_nodes) do
+    source_nodes
+    |> Enum.zip(target_nodes)
+    |> Enum.reduce_while(:ok, fn {source_node, target_node}, _acc ->
+      if close_enough?(Map.get(source_node, "x"), Map.get(target_node, "x")) and
+           close_enough?(Map.get(source_node, "y"), Map.get(target_node, "y")) do
+        {:cont, :ok}
+      else
+        {:halt, {:error, :node_alignment_mismatch}}
+      end
+    end)
+  end
+
+  defp normalize_bridge_scale(nil), do: {:ok, 1.0}
+  defp normalize_bridge_scale(scale) when is_number(scale), do: {:ok, scale}
+  defp normalize_bridge_scale(_scale), do: {:error, :invalid_bridge_scale}
+
+  defp normalize_contract_string(value, _reason)
+       when is_binary(value) and value != "",
+       do: {:ok, value}
+
+  defp normalize_contract_string(_value, reason), do: {:error, reason}
+
+  defp validate_bridge_distribution("element_to_nodes"), do: :ok
+  defp validate_bridge_distribution(_distribution), do: {:error, :unsupported_bridge_distribution}
+
+  defp validate_bridge_reduction("mean"), do: :ok
+  defp validate_bridge_reduction("sum"), do: :ok
+  defp validate_bridge_reduction(_reduction), do: {:error, :unsupported_bridge_reduction}
+
+  defp normalize_node_index_fields(fields) when is_list(fields) do
+    normalized =
+      fields
+      |> Enum.filter(&(is_binary(&1) and &1 != ""))
+      |> Enum.uniq()
+
+    if normalized == [] do
+      {:error, :invalid_bridge_contract_node_index_fields}
+    else
+      {:ok, normalized}
+    end
+  end
+
+  defp normalize_node_index_fields(_fields),
+    do: {:error, :invalid_bridge_contract_node_index_fields}
+
+  defp derive_nodal_target_field(
+         elements,
+         node_count,
+         %{source_field: source_field, node_index_fields: node_index_fields, scale: scale} =
+           bridge_contract
+       ) do
+    {totals, counts} =
+      Enum.reduce(
+        elements,
+        {List.duplicate(0.0, node_count), List.duplicate(0, node_count)},
+        fn element, {totals, counts} ->
+          magnitude =
+            element
+            |> Map.get(source_field, bridge_contract.default_value)
+            |> normalize_numeric_value()
+
+          node_indexes = Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
+
+          Enum.reduce(node_indexes, {totals, counts}, fn node_index, {totals_acc, counts_acc} ->
+            {
+              List.update_at(totals_acc, node_index, &(&1 + magnitude * scale)),
+              List.update_at(counts_acc, node_index, &(&1 + 1))
+            }
+          end)
+        end
+      )
+
+    reduce_nodal_values(totals, counts, bridge_contract)
+  end
+
+  defp reduce_nodal_values(totals, counts, %{reduction: "sum", default_value: default_value}) do
+    Enum.zip(totals, counts)
+    |> Enum.map(fn
+      {_total, 0} -> default_value
+      {total, _count} -> total
+    end)
+  end
+
+  defp reduce_nodal_values(totals, counts, %{default_value: default_value}) do
+    Enum.zip(totals, counts)
+    |> Enum.map(fn
+      {_total, 0} -> default_value
+      {total, count} -> total / count
+    end)
+  end
+
+  defp normalize_numeric_value(value) when is_number(value), do: value
+  defp normalize_numeric_value(_value), do: 0.0
 
   defp close_enough?(left, right) when is_number(left) and is_number(right),
     do: abs(left - right) <= 1.0e-9
@@ -1911,6 +2656,28 @@ defmodule KyuubikiWeb.Analysis do
 
   defp normalize_electrostatic_bar_1d(_params),
     do: {:error, :invalid_electrostatic_bar_model}
+
+  defp normalize_electrostatic_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements),
+       do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  defp normalize_electrostatic_plane_triangle_2d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements),
+       do: {:ok, %{nodes: nodes, elements: elements}}
+
+  defp normalize_electrostatic_plane_triangle_2d(_params),
+    do: {:error, :invalid_electrostatic_plane_triangle_model}
+
+  defp normalize_electrostatic_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements),
+       do: {:ok, %{"nodes" => nodes, "elements" => elements}}
+
+  defp normalize_electrostatic_plane_quad_2d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements),
+       do: {:ok, %{nodes: nodes, elements: elements}}
+
+  defp normalize_electrostatic_plane_quad_2d(_params),
+    do: {:error, :invalid_electrostatic_plane_quad_model}
 
   defp normalize_heat_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
        when is_list(nodes) and is_list(elements),

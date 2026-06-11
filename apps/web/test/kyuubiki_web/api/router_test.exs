@@ -120,6 +120,35 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert is_map(Jason.decode!(conn.resp_body))
   end
 
+  test "allows loopback mutating routes without a configured API token" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/projects",
+        Jason.encode!(%{"name" => "Local Project", "description" => "loopback allowed"})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 201
+    assert Jason.decode!(conn.resp_body)["project"]["name"] == "Local Project"
+  end
+
+  test "rejects non-loopback mutating routes without a configured API token" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/projects",
+        Jason.encode!(%{"name" => "Remote Project", "description" => "should fail"})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Map.put(:remote_ip, {203, 0, 113, 9})
+      |> Router.call(@opts)
+
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "unauthorized"
+  end
+
   test "submits a spring 2d job" do
     conn =
       :post
@@ -616,6 +645,33 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     assert stale_conn.status == 401
     assert Jason.decode!(stale_conn.resp_body)["error"] == "stale_cluster_request"
+  end
+
+  test "rejects missing cluster timestamps on protected cluster routes" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "shared-secret",
+      cluster_api_token: "cluster-only-secret",
+      protect_reads?: false
+    )
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-ts-missing",
+          "host" => "127.0.0.1",
+          "port" => 5006,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-ts-missing")
+      |> Router.call(@opts)
+
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "stale_cluster_request"
   end
 
   test "allows protected cluster registration when agent and cluster IDs are allowlisted" do
@@ -1670,6 +1726,182 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert_in_delta summary["max_stress"], 34_477_611.940298505, 1.0e-6
   end
 
+  test "runs an electrostatic to heat workflow graph with an explicit bridge contract" do
+    {:ok, _pid} =
+      start_fake_agent_sessions([
+        [
+          %{
+            "ok" => true,
+            "result" => %{
+              "nodes" => [
+                %{"index" => 0, "id" => "n0", "x" => 0.0, "y" => 0.0, "potential" => 10.0},
+                %{"index" => 1, "id" => "n1", "x" => 1.0, "y" => 0.0, "potential" => 0.0},
+                %{"index" => 2, "id" => "n2", "x" => 1.0, "y" => 1.0, "potential" => 0.0},
+                %{"index" => 3, "id" => "n3", "x" => 0.0, "y" => 1.0, "potential" => 10.0}
+              ],
+              "elements" => [
+                %{
+                  "index" => 0,
+                  "id" => "epq0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "node_l" => 3,
+                  "electric_field_magnitude" => 10.0
+                }
+              ]
+            }
+          }
+        ],
+        [
+          %{
+            "ok" => true,
+            "result" => %{
+              "max_temperature" => 70.0,
+              "max_heat_flux" => 1500.0,
+              "nodes" => [
+                %{"id" => "n0", "x" => 0.0, "y" => 0.0, "temperature" => 20.0, "heat_load" => 500.0},
+                %{"id" => "n1", "x" => 1.0, "y" => 0.0, "temperature" => 70.0, "heat_load" => 500.0},
+                %{"id" => "n2", "x" => 1.0, "y" => 1.0, "temperature" => 70.0, "heat_load" => 500.0},
+                %{"id" => "n3", "x" => 0.0, "y" => 1.0, "temperature" => 20.0, "heat_load" => 500.0}
+              ],
+              "elements" => [
+                %{
+                  "id" => "hq0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "node_l" => 3,
+                  "temperature_gradient_x" => 50.0,
+                  "temperature_gradient_y" => 0.0,
+                  "heat_flux_x" => -1500.0,
+                  "heat_flux_y" => 0.0
+                }
+              ]
+            }
+          }
+        ]
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/run",
+        Jason.encode!(%{
+          "graph" => %{
+            "schema_version" => "kyuubiki.workflow-graph/v1",
+            "id" => "workflow.explicit-electrostatic-to-heat-contract",
+            "name" => "Electrostatic to heat contract",
+            "version" => "1.0.0",
+            "entry_nodes" => ["electrostatic_model"],
+            "output_nodes" => ["json_output"],
+            "nodes" => [
+              %{
+                "id" => "electrostatic_model",
+                "kind" => "input",
+                "outputs" => [%{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}]
+              },
+              %{
+                "id" => "solve_electrostatic",
+                "kind" => "solve",
+                "operator_id" => "solve.electrostatic_plane_quad_2d",
+                "inputs" => [%{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}],
+                "outputs" => [%{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}]
+              },
+              %{
+                "id" => "bridge_field_to_heat",
+                "kind" => "transform",
+                "operator_id" => "bridge.electrostatic_field_to_heat_quad_2d",
+                "config" => %{
+                  "seed_model" => %{
+                    "nodes" => [
+                      %{"id" => "n0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
+                      %{"id" => "n1", "x" => 1.0, "y" => 0.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
+                      %{"id" => "n2", "x" => 1.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
+                      %{"id" => "n3", "x" => 0.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0}
+                    ],
+                    "elements" => [
+                      %{"id" => "hq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.02, "conductivity" => 45.0}
+                    ]
+                  },
+                  "contract" => %{
+                    "version" => "kyuubiki.bridge-contract/v1",
+                    "source" => %{
+                      "field" => "electric_field_magnitude",
+                      "distribution" => "element_to_nodes",
+                      "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
+                    },
+                    "transform" => %{"scale" => 50.0, "reduction" => "mean", "default_value" => 0.0},
+                    "target" => %{"field" => "heat_load"}
+                  }
+                },
+                "inputs" => [%{"id" => "electrostatic_result", "artifact_type" => "result/electrostatic_plane_quad_2d"}],
+                "outputs" => [%{"id" => "heat_model", "artifact_type" => "study_model/heat_plane_quad_2d"}]
+              },
+              %{
+                "id" => "solve_heat",
+                "kind" => "solve",
+                "operator_id" => "solve.heat_plane_quad_2d",
+                "inputs" => [%{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}],
+                "outputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}]
+              },
+              %{
+                "id" => "extract_summary",
+                "kind" => "extract",
+                "operator_id" => "extract.result_summary",
+                "config" => %{"fields" => ["max_temperature", "max_heat_flux"]},
+                "inputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}],
+                "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+              },
+              %{
+                "id" => "export_json",
+                "kind" => "export",
+                "operator_id" => "export.summary_json",
+                "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
+                "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
+              },
+              %{
+                "id" => "json_output",
+                "kind" => "output",
+                "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
+                "outputs" => []
+              }
+            ],
+            "edges" => [
+              %{"id" => "e0", "from" => %{"node" => "electrostatic_model", "port" => "model"}, "to" => %{"node" => "solve_electrostatic", "port" => "model"}, "artifact_type" => "study_model/electrostatic_plane_quad_2d"},
+              %{"id" => "e1", "from" => %{"node" => "solve_electrostatic", "port" => "result"}, "to" => %{"node" => "bridge_field_to_heat", "port" => "electrostatic_result"}, "artifact_type" => "result/electrostatic_plane_quad_2d"},
+              %{"id" => "e2", "from" => %{"node" => "bridge_field_to_heat", "port" => "heat_model"}, "to" => %{"node" => "solve_heat", "port" => "model"}, "artifact_type" => "study_model/heat_plane_quad_2d"},
+              %{"id" => "e3", "from" => %{"node" => "solve_heat", "port" => "result"}, "to" => %{"node" => "extract_summary", "port" => "result"}, "artifact_type" => "result/heat_plane_quad_2d"},
+              %{"id" => "e4", "from" => %{"node" => "extract_summary", "port" => "summary"}, "to" => %{"node" => "export_json", "port" => "summary"}, "artifact_type" => "report/summary"},
+              %{"id" => "e5", "from" => %{"node" => "export_json", "port" => "json"}, "to" => %{"node" => "json_output", "port" => "json"}, "artifact_type" => "export/json"}
+            ]
+          },
+          "input_artifacts" => electrostatic_plane_quad_input_artifacts()
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["workflow_id"] == "workflow.explicit-electrostatic-to-heat-contract"
+    assert length(payload["completed_nodes"]) == 7
+    summary = Jason.decode!(payload["artifacts"]["json_output.json"]["content"])
+    assert summary["max_temperature"] == 70.0
+    assert summary["max_heat_flux"] == 1500.0
+
+    bridged_nodes = payload["artifacts"]["bridge_field_to_heat.heat_model"]["nodes"]
+    assert Enum.all?(bridged_nodes, fn node -> node["heat_load"] == 500.0 end)
+  end
+
   test "lists the built-in workflow catalog and fetches a descriptor" do
     list_conn =
       :get
@@ -1678,15 +1910,30 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     assert list_conn.status == 200
     payload = Jason.decode!(list_conn.resp_body)
+    workflows = payload["workflows"]
+    assert length(workflows) == 3
 
-    assert [
-             %{
-               "id" => "workflow.heat-to-thermo-quad-2d",
-               "name" => "Heat to thermo quad",
-               "version" => "1.0.0"
-             } = workflow
-           ] = payload["workflows"]
+    electrostatic_heat_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-to-heat-quad-2d"
+      end)
 
+    electrostatic_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-plane-quad-2d"
+      end)
+
+    workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.heat-to-thermo-quad-2d"
+      end)
+
+    assert electrostatic_heat_workflow["name"] == "Electrostatic to heat quad"
+    assert electrostatic_heat_workflow["version"] == "1.0.0"
+    assert electrostatic_workflow["name"] == "Electrostatic plane quad"
+    assert electrostatic_workflow["version"] == "1.0.0"
+    assert workflow["name"] == "Heat to thermo quad"
+    assert workflow["version"] == "1.0.0"
     assert length(workflow["entry_inputs"]) == 1
     assert length(workflow["output_artifacts"]) == 1
     assert is_map(workflow["graph"])
@@ -1700,6 +1947,29 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     fetched = Jason.decode!(fetch_conn.resp_body)["workflow"]
     assert fetched["id"] == "workflow.heat-to-thermo-quad-2d"
     assert fetched["graph"]["output_nodes"] == ["json_output"]
+
+    electrostatic_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-plane-quad-2d")
+      |> Router.call(@opts)
+
+    assert electrostatic_fetch_conn.status == 200
+    electrostatic_fetched = Jason.decode!(electrostatic_fetch_conn.resp_body)["workflow"]
+    assert electrostatic_fetched["id"] == "workflow.electrostatic-plane-quad-2d"
+    assert electrostatic_fetched["graph"]["output_nodes"] == ["json_output"]
+
+    electrostatic_heat_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-to-heat-quad-2d")
+      |> Router.call(@opts)
+
+    assert electrostatic_heat_fetch_conn.status == 200
+
+    electrostatic_heat_fetched =
+      Jason.decode!(electrostatic_heat_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_heat_fetched["id"] == "workflow.electrostatic-to-heat-quad-2d"
+    assert electrostatic_heat_fetched["graph"]["output_nodes"] == ["json_output"]
   end
 
   test "submits a catalog workflow as an asynchronous job" do
@@ -1801,6 +2071,250 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert_in_delta summary["max_stress"], 34_477_611.940298505, 1.0e-6
   end
 
+  test "submits an electrostatic quad catalog workflow as an asynchronous job" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.5,
+            "iteration" => 1,
+            "message" => "solving electrostatic plane quad"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{
+                "index" => 0,
+                "id" => "n0",
+                "x" => 0.0,
+                "y" => 0.0,
+                "potential" => 10.0,
+                "charge_density" => 0.0
+              }
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "epq0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "node_l" => 3,
+                "area" => 1.0,
+                "average_potential" => 5.0,
+                "potential_gradient_x" => -10.0,
+                "potential_gradient_y" => 0.0,
+                "electric_field_x" => 10.0,
+                "electric_field_y" => 0.0,
+                "electric_field_magnitude" => 10.0,
+                "electric_flux_density_x" => 20.0,
+                "electric_flux_density_y" => 0.0,
+                "electric_flux_density_magnitude" => 20.0
+              }
+            ],
+            "max_potential" => 10.0,
+            "max_electric_field" => 10.0,
+            "max_flux_density" => 20.0,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/catalog/workflow.electrostatic-plane-quad-2d/jobs",
+        Jason.encode!(%{"input_artifacts" => electrostatic_plane_quad_input_artifacts()})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["workflow_id"] == "workflow.electrostatic-plane-quad-2d"
+    assert length(result_payload["result"]["completed_nodes"]) == 5
+    exported = result_payload["result"]["artifacts"]["json_output.json"]
+    assert exported["format"] == "json"
+    summary = Jason.decode!(exported["content"])
+    assert summary["max_potential"] == 10.0
+    assert summary["max_electric_field"] == 10.0
+    assert summary["max_flux_density"] == 20.0
+  end
+
+  test "submits an electrostatic to heat catalog workflow as an asynchronous job" do
+    {:ok, _pid} =
+      start_fake_agent_sessions([
+        [
+          %{
+            "ok" => true,
+            "result" => %{
+              "nodes" => [
+                %{
+                  "index" => 0,
+                  "id" => "n0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "potential" => 10.0,
+                  "charge_density" => 0.0
+                },
+                %{
+                  "index" => 1,
+                  "id" => "n1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "potential" => 0.0,
+                  "charge_density" => 0.0
+                },
+                %{
+                  "index" => 2,
+                  "id" => "n2",
+                  "x" => 1.0,
+                  "y" => 1.0,
+                  "potential" => 0.0,
+                  "charge_density" => 0.0
+                },
+                %{
+                  "index" => 3,
+                  "id" => "n3",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "potential" => 10.0,
+                  "charge_density" => 0.0
+                }
+              ],
+              "elements" => [
+                %{
+                  "index" => 0,
+                  "id" => "epq0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "node_l" => 3,
+                  "area" => 1.0,
+                  "average_potential" => 5.0,
+                  "potential_gradient_x" => -10.0,
+                  "potential_gradient_y" => 0.0,
+                  "electric_field_x" => 10.0,
+                  "electric_field_y" => 0.0,
+                  "electric_field_magnitude" => 10.0,
+                  "electric_flux_density_x" => 20.0,
+                  "electric_flux_density_y" => 0.0,
+                  "electric_flux_density_magnitude" => 20.0
+                }
+              ],
+              "max_potential" => 10.0,
+              "max_electric_field" => 10.0,
+              "max_flux_density" => 20.0,
+              "input" => %{"nodes" => [], "elements" => []}
+            }
+          }
+        ],
+        [
+          %{
+            "ok" => true,
+            "result" => %{
+              "max_temperature" => 70.0,
+              "max_heat_flux" => 1500.0,
+              "nodes" => [
+                %{
+                  "id" => "n0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "temperature" => 20.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "n1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "temperature" => 70.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "n2",
+                  "x" => 1.0,
+                  "y" => 1.0,
+                  "temperature" => 70.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "n3",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "temperature" => 20.0,
+                  "heat_load" => 500.0
+                }
+              ],
+              "elements" => [
+                %{
+                  "id" => "hq0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "node_l" => 3,
+                  "temperature_gradient_x" => 50.0,
+                  "temperature_gradient_y" => 0.0,
+                  "heat_flux_x" => -1500.0,
+                  "heat_flux_y" => 0.0
+                }
+              ],
+              "input" => %{"nodes" => [], "elements" => []}
+            }
+          }
+        ]
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/catalog/workflow.electrostatic-to-heat-quad-2d/jobs",
+        Jason.encode!(%{"input_artifacts" => electrostatic_plane_quad_input_artifacts()})
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["workflow_id"] == "workflow.electrostatic-to-heat-quad-2d"
+    assert length(result_payload["result"]["completed_nodes"]) == 7
+    exported = result_payload["result"]["artifacts"]["json_output.json"]
+    assert exported["format"] == "json"
+    summary = Jason.decode!(exported["content"])
+    assert summary["max_temperature"] == 70.0
+    assert summary["max_heat_flux"] == 1500.0
+
+    bridged_model = result_payload["result"]["artifacts"]["bridge_field_to_heat.heat_model"]
+    bridged_nodes = bridged_model["nodes"]
+    assert Enum.all?(bridged_nodes, fn node -> node["heat_load"] == 500.0 end)
+  end
+
   test "lists built-in operators and fetches a descriptor" do
     list_conn =
       :get
@@ -1814,6 +2328,19 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     frame_operator =
       Enum.find(operators, fn operator -> operator["id"] == "solve.frame_3d" end)
+
+    electrostatic_operator =
+      Enum.find(operators, fn operator -> operator["id"] == "solve.electrostatic_bar_1d" end)
+
+    electrostatic_heat_bridge_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "bridge.electrostatic_field_to_heat_quad_2d"
+      end)
+
+    heat_thermo_bridge_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "bridge.temperature_field_to_thermo_quad_2d"
+      end)
 
     assert frame_operator["kind"] == "solver"
     assert frame_operator["origin"] == "built_in"
@@ -1837,6 +2364,59 @@ defmodule KyuubikiWeb.Playground.RouterTest do
                "dataset_value" => "result"
              }
            ] = frame_operator["outputs"]
+
+    assert electrostatic_operator["kind"] == "solver"
+    assert electrostatic_operator["family"] == "electrostatic_bar_1d"
+    assert electrostatic_operator["domain"] == "electromagnetic"
+    assert electrostatic_operator["validation"]["baseline_status"] == "verified"
+    assert "electrostatic" in electrostatic_operator["capability_tags"]
+
+    assert [
+             %{
+               "id" => "model",
+               "artifact_type" => "model/electrostatic_bar_1d",
+               "dataset_value" => "model"
+             }
+           ] = electrostatic_operator["inputs"]
+
+    assert [
+             %{
+               "id" => "result",
+               "artifact_type" => "result/electrostatic_bar_1d",
+               "dataset_value" => "result"
+             }
+           ] = electrostatic_operator["outputs"]
+
+    assert electrostatic_heat_bridge_operator["kind"] == "workflow_bridge"
+    assert electrostatic_heat_bridge_operator["config_schema"]["schema"] ==
+             "kyuubiki.bridge-contract.electrostatic_to_heat.v1"
+    assert electrostatic_heat_bridge_operator["config_example"]["contract"]["source"]["field"] ==
+             "electric_field_magnitude"
+    assert electrostatic_heat_bridge_operator["config_example"]["contract"]["target"]["field"] ==
+             "heat_load"
+    assert heat_thermo_bridge_operator["config_schema"]["schema"] ==
+             "kyuubiki.bridge-contract.heat_to_thermo.v1"
+    assert heat_thermo_bridge_operator["config_example"]["contract"]["target"]["field"] ==
+             "temperature_delta"
+
+    electrostatic_plane_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "solve.electrostatic_plane_triangle_2d"
+      end)
+
+    electrostatic_plane_quad_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "solve.electrostatic_plane_quad_2d"
+      end)
+
+    assert electrostatic_plane_operator["kind"] == "solver"
+    assert electrostatic_plane_operator["family"] == "electrostatic_plane_triangle_2d"
+    assert electrostatic_plane_operator["domain"] == "electromagnetic"
+    assert "triangle" in electrostatic_plane_operator["capability_tags"]
+    assert electrostatic_plane_quad_operator["kind"] == "solver"
+    assert electrostatic_plane_quad_operator["family"] == "electrostatic_plane_quad_2d"
+    assert electrostatic_plane_quad_operator["domain"] == "electromagnetic"
+    assert "quad" in electrostatic_plane_quad_operator["capability_tags"]
 
     fetch_conn =
       :get
@@ -2149,6 +2729,270 @@ defmodule KyuubikiWeb.Playground.RouterTest do
               "node_i" => 0,
               "node_j" => 1,
               "area" => 0.02,
+              "permittivity" => 2.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["max_potential"] == 10.0
+    assert result_payload["result"]["max_electric_field"] > 0
+    assert result_payload["result"]["max_flux_density"] > 0
+    assert length(result_payload["result"]["elements"]) == 1
+  end
+
+  test "runs an electrostatic plane triangle job through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.5,
+            "iteration" => 1,
+            "message" => "solving electrostatic plane triangle"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{
+                "index" => 0,
+                "id" => "n0",
+                "x" => 0.0,
+                "y" => 0.0,
+                "potential" => 10.0,
+                "charge_density" => 0.0
+              },
+              %{
+                "index" => 1,
+                "id" => "n1",
+                "x" => 1.0,
+                "y" => 0.0,
+                "potential" => 0.0,
+                "charge_density" => 0.0
+              },
+              %{
+                "index" => 2,
+                "id" => "n2",
+                "x" => 0.0,
+                "y" => 1.0,
+                "potential" => 10.0,
+                "charge_density" => 0.0
+              }
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "ep0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "area" => 0.5,
+                "average_potential" => 6.666666666666667,
+                "potential_gradient_x" => -10.0,
+                "potential_gradient_y" => 0.0,
+                "electric_field_x" => 10.0,
+                "electric_field_y" => 0.0,
+                "electric_field_magnitude" => 10.0,
+                "electric_flux_density_x" => 20.0,
+                "electric_flux_density_y" => 0.0,
+                "electric_flux_density_magnitude" => 20.0
+              }
+            ],
+            "max_potential" => 10.0,
+            "max_electric_field" => 10.0,
+            "max_flux_density" => 20.0,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/electrostatic-plane-triangle-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_potential" => true,
+              "potential" => 10.0,
+              "charge_density" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "fix_potential" => true,
+              "potential" => 0.0,
+              "charge_density" => 0.0
+            },
+            %{
+              "id" => "n2",
+              "x" => 0.0,
+              "y" => 1.0,
+              "fix_potential" => true,
+              "potential" => 10.0,
+              "charge_density" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "ep0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "node_k" => 2,
+              "thickness" => 0.05,
+              "permittivity" => 2.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["max_potential"] == 10.0
+    assert result_payload["result"]["max_electric_field"] > 0
+    assert result_payload["result"]["max_flux_density"] > 0
+    assert length(result_payload["result"]["elements"]) == 1
+  end
+
+  test "runs an electrostatic plane quad job through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.5,
+            "iteration" => 1,
+            "message" => "solving electrostatic plane quad"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{
+                "index" => 0,
+                "id" => "n0",
+                "x" => 0.0,
+                "y" => 0.0,
+                "potential" => 10.0,
+                "charge_density" => 0.0
+              }
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "epq0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "node_l" => 3,
+                "area" => 1.0,
+                "average_potential" => 5.0,
+                "potential_gradient_x" => -10.0,
+                "potential_gradient_y" => 0.0,
+                "electric_field_x" => 10.0,
+                "electric_field_y" => 0.0,
+                "electric_field_magnitude" => 10.0,
+                "electric_flux_density_x" => 20.0,
+                "electric_flux_density_y" => 0.0,
+                "electric_flux_density_magnitude" => 20.0
+              }
+            ],
+            "max_potential" => 10.0,
+            "max_electric_field" => 10.0,
+            "max_flux_density" => 20.0,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/electrostatic-plane-quad-2d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "y" => 0.0,
+              "fix_potential" => true,
+              "potential" => 10.0,
+              "charge_density" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "y" => 0.0,
+              "fix_potential" => true,
+              "potential" => 0.0,
+              "charge_density" => 0.0
+            },
+            %{
+              "id" => "n2",
+              "x" => 1.0,
+              "y" => 1.0,
+              "fix_potential" => true,
+              "potential" => 0.0,
+              "charge_density" => 0.0
+            },
+            %{
+              "id" => "n3",
+              "x" => 0.0,
+              "y" => 1.0,
+              "fix_potential" => true,
+              "potential" => 10.0,
+              "charge_density" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "epq0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "node_k" => 2,
+              "node_l" => 3,
+              "thickness" => 0.05,
               "permittivity" => 2.0
             }
           ]
@@ -3859,6 +4703,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
   test "registers, heartbeats, and removes remote agents through the API" do
     Application.put_env(:kyuubiki_web, AgentPool, discovery: :registry, endpoints: [])
     AgentPool.reload()
+    cluster_ts = Integer.to_string(System.system_time(:millisecond))
 
     conn =
       :post
@@ -3872,6 +4717,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
         })
       )
       |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
       |> Router.call(@opts)
 
     assert conn.status == 201
@@ -3889,6 +4735,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
         })
       )
       |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
       |> Router.call(@opts)
 
     assert conn.status == 200
@@ -3907,6 +4754,7 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     conn =
       :delete
       |> conn("/api/v1/agents/solver-remote-a")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
       |> Router.call(@opts)
 
     assert conn.status == 200
@@ -4398,6 +5246,58 @@ defmodule KyuubikiWeb.Playground.RouterTest do
             "node_l" => 3,
             "thickness" => 0.02,
             "conductivity" => 45.0
+          }
+        ]
+      }
+    }
+  end
+
+  defp electrostatic_plane_quad_input_artifacts do
+    %{
+      "electrostatic_model" => %{
+        "nodes" => [
+          %{
+            "id" => "n0",
+            "x" => 0.0,
+            "y" => 0.0,
+            "fix_potential" => true,
+            "potential" => 10.0,
+            "charge_density" => 0.0
+          },
+          %{
+            "id" => "n1",
+            "x" => 1.0,
+            "y" => 0.0,
+            "fix_potential" => true,
+            "potential" => 0.0,
+            "charge_density" => 0.0
+          },
+          %{
+            "id" => "n2",
+            "x" => 1.0,
+            "y" => 1.0,
+            "fix_potential" => true,
+            "potential" => 0.0,
+            "charge_density" => 0.0
+          },
+          %{
+            "id" => "n3",
+            "x" => 0.0,
+            "y" => 1.0,
+            "fix_potential" => true,
+            "potential" => 10.0,
+            "charge_density" => 0.0
+          }
+        ],
+        "elements" => [
+          %{
+            "id" => "epq0",
+            "node_i" => 0,
+            "node_j" => 1,
+            "node_k" => 2,
+            "node_l" => 3,
+            "thickness" => 0.05,
+            "permittivity" => 2.0
           }
         ]
       }

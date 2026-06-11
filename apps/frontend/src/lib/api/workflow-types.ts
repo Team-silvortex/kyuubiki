@@ -34,6 +34,8 @@ export type WorkflowOperatorDescriptor = {
   origin: "built_in" | "external_local" | "external_remote";
   input_schema: WorkflowOperatorSchemaRef;
   output_schema: WorkflowOperatorSchemaRef;
+  config_schema?: WorkflowOperatorSchemaRef;
+  config_example?: Record<string, unknown> | null;
   inputs: WorkflowOperatorPortDescriptor[];
   outputs: WorkflowOperatorPortDescriptor[];
   validation: WorkflowOperatorValidationProfile;

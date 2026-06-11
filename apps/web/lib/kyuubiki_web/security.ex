@@ -2,10 +2,11 @@ defmodule KyuubikiWeb.Security do
   @moduledoc """
   Small runtime security helpers for control-plane HTTP access.
 
-  Kyuubiki keeps local workstation mode friction low by default, so token
-  enforcement is opt-in. Once a token is configured, mutating API routes and
-  cluster-management routes require it. Read routes can also be protected by
-  enabling `protect_reads?`.
+  Kyuubiki keeps local workstation mode friction low by default, while still
+  avoiding accidental exposure beyond the host machine. When no token is
+  configured, mutating and cluster-management routes stay available only to
+  loopback callers. Once a token is configured, protected routes require it.
+  Read routes can also be protected by enabling `protect_reads?`.
   """
 
   @type scope :: :read | :write | :cluster
@@ -26,7 +27,7 @@ defmodule KyuubikiWeb.Security do
            }}
       end
     else
-      :ok
+      authorize_without_token(conn, scope)
     end
   end
 
@@ -42,8 +43,9 @@ defmodule KyuubikiWeb.Security do
       "cluster_timestamp_window_ms" => cluster_timestamp_window_ms(),
       "cluster_identity_headers_required" => cluster_token_required?(),
       "protect_reads" => protect_reads?(),
-      "mutating_routes_protected" => token_configured?(),
-      "cluster_routes_protected" => cluster_token_required?()
+      "mutating_routes_protected" => true,
+      "cluster_routes_protected" => true,
+      "loopback_only_without_token" => true
     }
   end
 
@@ -106,6 +108,20 @@ defmodule KyuubikiWeb.Security do
   defp token_required?(:read), do: token_configured?() and protect_reads?()
   defp token_required?(:write), do: token_configured?()
   defp token_required?(:cluster), do: cluster_token_required?()
+
+  defp authorize_without_token(_conn, :read), do: :ok
+
+  defp authorize_without_token(conn, scope) when scope in [:write, :cluster] do
+    if loopback_request?(conn) do
+      authorize_post_token(conn, scope)
+    else
+      {:error, 401,
+       %{
+         "error" => "unauthorized",
+         "message" => "missing API token for non-local request"
+       }}
+    end
+  end
 
   defp authorize_post_token(conn, :cluster), do: validate_cluster_timestamp(conn)
   defp authorize_post_token(_conn, _scope), do: :ok
@@ -174,7 +190,11 @@ defmodule KyuubikiWeb.Security do
   defp validate_cluster_timestamp(conn) do
     case Plug.Conn.get_req_header(conn, "x-kyuubiki-cluster-ts") do
       [] ->
-        :ok
+        {:error, 401,
+         %{
+           "error" => "stale_cluster_request",
+           "message" => "missing or stale cluster timestamp"
+         }}
 
       [value | _] ->
         with {timestamp_ms, ""} <- Integer.parse(value),
@@ -193,6 +213,14 @@ defmodule KyuubikiWeb.Security do
 
   defp timestamp_fresh?(timestamp_ms) do
     abs(System.system_time(:millisecond) - timestamp_ms) <= cluster_timestamp_window_ms()
+  end
+
+  defp loopback_request?(conn) do
+    case conn.remote_ip do
+      {127, _, _, _} -> true
+      {0, 0, 0, 0, 0, 0, 0, 1} -> true
+      _ -> false
+    end
   end
 
   defp validate_cluster_id_match(conn, attrs) do

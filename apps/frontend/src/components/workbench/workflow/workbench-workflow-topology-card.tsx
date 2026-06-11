@@ -8,12 +8,17 @@ import type {
   WorkflowGraphPort,
 } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
-import { listWorkflowNodeTemplatePresets } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import {
+  listWorkflowNodeTemplatePresets,
+  type WorkflowNodeTemplateSelection,
+} from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import {
   buildOperatorOptionLabel,
   sortWorkflowOperatorOptionPresets,
   WorkbenchWorkflowOperatorDescriptorSummary,
 } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
+import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
+import { WorkbenchWorkflowTemplateChainActions } from "@/components/workbench/workflow/workbench-workflow-template-chain-actions";
 import {
   describeWorkflowNodeTemplateSyncImpact,
   getWorkflowNodeTemplateSyncImpact,
@@ -28,10 +33,10 @@ type WorkbenchWorkflowTopologyCardProps = {
   highlightedEdgeIds?: string[];
   focusedNodeId?: string | null;
   focusedEdgeId?: string | null;
-  onAddNode: (template?: { kind?: string; operatorId?: string }) => void;
-  onAddConnectedNode: (sourceNodeId: string, template?: { kind?: string; operatorId?: string }) => void;
-  onSyncNodeTemplate: (nodeId: string, template?: { kind?: string; operatorId?: string }) => void;
-  onInsertTemplateChain: (templates: Array<{ kind?: string; operatorId?: string }>, sourceNodeId?: string | null) => void;
+  onAddNode: (template?: WorkflowNodeTemplateSelection) => void;
+  onAddConnectedNode: (sourceNodeId: string, template?: WorkflowNodeTemplateSelection) => void;
+  onSyncNodeTemplate: (nodeId: string, template?: WorkflowNodeTemplateSelection) => void;
+  onInsertTemplateChain: (templates: WorkflowNodeTemplateSelection[], sourceNodeId?: string | null) => void;
   onRemoveNode: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updater: (node: WorkflowGraphNode) => WorkflowGraphNode) => void;
   onAddNodePort: (nodeId: string, direction: "inputs" | "outputs") => void;
@@ -276,38 +281,11 @@ export function WorkbenchWorkflowTopologyCard({
         descriptor={nextOperatorDescriptor}
         labels={labels}
       />
-      <div className="button-row">
-        <button
-          onClick={() =>
-            onInsertTemplateChain(
-              [
-                { kind: "solve", operatorId: "solve.frame_3d" },
-                { kind: "extract", operatorId: "extract.result_summary" },
-                { kind: "export", operatorId: "export.summary_json" },
-              ],
-              selectedSourceNodeId,
-            )
-          }
-          type="button"
-        >
-          {labels.insertSolveExtractExportLabel}
-        </button>
-        <button
-          onClick={() =>
-            onInsertTemplateChain(
-              [
-                { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
-                { kind: "transform", operatorId: "bridge.temperature_field_to_thermo_quad_2d" },
-                { kind: "solve", operatorId: "solve.thermal_plane_quad_2d" },
-              ],
-              selectedSourceNodeId,
-            )
-          }
-          type="button"
-        >
-          {labels.insertHeatBridgeThermoLabel}
-        </button>
-      </div>
+      <WorkbenchWorkflowTemplateChainActions
+        labels={labels}
+        onInsertTemplateChain={onInsertTemplateChain}
+        selectedSourceNodeId={selectedSourceNodeId}
+      />
 
       <div className="sidebar-stack">
         {selectedNodes.map((node) => {
@@ -412,6 +390,12 @@ export function WorkbenchWorkflowTopologyCard({
                 <WorkbenchWorkflowOperatorDescriptorSummary
                   descriptor={operatorDescriptor}
                   labels={labels}
+                />
+                <WorkbenchWorkflowBridgeContractEditor
+                  labels={labels}
+                  node={node}
+                  selectedNodes={selectedNodes}
+                  onUpdateNode={onUpdateNode}
                 />
                 <WorkbenchWorkflowPortEditor
                   direction="inputs"

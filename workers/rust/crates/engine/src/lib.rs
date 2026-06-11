@@ -3,6 +3,7 @@ use kyuubiki_protocol::{
     OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor, OperatorSchemaRef,
     OperatorValidationProfile, OperatorValidationStatus, ResultChunkKind, ResultChunkRequest,
     ResultChunkResponse, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
+    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
     SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
     SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
     SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
@@ -12,8 +13,9 @@ use kyuubiki_protocol::{
     WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d, solve_frame_3d,
-    solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
     solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
     solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
@@ -28,6 +30,8 @@ pub enum EngineSolveRequest {
     ThermalBar1d(SolveThermalBar1dRequest),
     HeatBar1d(SolveHeatBar1dRequest),
     ElectrostaticBar1d(SolveElectrostaticBar1dRequest),
+    ElectrostaticPlaneTriangle2d(SolveElectrostaticPlaneTriangle2dRequest),
+    ElectrostaticPlaneQuad2d(SolveElectrostaticPlaneQuad2dRequest),
     HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dRequest),
     HeatPlaneQuad2d(SolveHeatPlaneQuad2dRequest),
     ThermalTruss2d(SolveThermalTruss2dRequest),
@@ -72,6 +76,34 @@ pub fn built_in_operator_descriptors() -> Vec<OperatorDescriptor> {
             "electrostatic_bar_1d",
             "Solve a 1D electrostatic bar model and expose potential, field, and flux results.",
             &["verified", "electromagnetic", "electrostatic", "bar", "1d"],
+        ),
+        built_in_solver_descriptor(
+            "solve.electrostatic_plane_triangle_2d",
+            "electromagnetic",
+            "electrostatic_plane_triangle_2d",
+            "Solve a 2D electrostatic triangle model and expose potential, field, and flux results.",
+            &[
+                "verified",
+                "electromagnetic",
+                "electrostatic",
+                "plane",
+                "triangle",
+                "2d",
+            ],
+        ),
+        built_in_solver_descriptor(
+            "solve.electrostatic_plane_quad_2d",
+            "electromagnetic",
+            "electrostatic_plane_quad_2d",
+            "Solve a 2D electrostatic quad model and expose potential, field, and flux results.",
+            &[
+                "verified",
+                "electromagnetic",
+                "electrostatic",
+                "plane",
+                "quad",
+                "2d",
+            ],
         ),
         built_in_solver_descriptor(
             "solve.heat_plane_quad_2d",
@@ -135,6 +167,14 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::ElectrostaticBar1d(request) => {
             solve_electrostatic_bar_1d(&request).map(AnalysisResult::ElectrostaticBar1d)
+        }
+        EngineSolveRequest::ElectrostaticPlaneTriangle2d(request) => {
+            solve_electrostatic_plane_triangle_2d(&request)
+                .map(AnalysisResult::ElectrostaticPlaneTriangle2d)
+        }
+        EngineSolveRequest::ElectrostaticPlaneQuad2d(request) => {
+            solve_electrostatic_plane_quad_2d(&request)
+                .map(AnalysisResult::ElectrostaticPlaneQuad2d)
         }
         EngineSolveRequest::HeatPlaneTriangle2d(request) => {
             solve_heat_plane_triangle_2d(&request).map(AnalysisResult::HeatPlaneTriangle2d)
@@ -989,6 +1029,18 @@ pub fn chunk_result(
             encode_slice(&result.nodes)?
         }
         (AnalysisResult::ElectrostaticBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ElectrostaticPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ElectrostaticPlaneTriangle2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ElectrostaticPlaneQuad2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ElectrostaticPlaneQuad2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::HeatPlaneTriangle2d(result), ResultChunkKind::Nodes) => {

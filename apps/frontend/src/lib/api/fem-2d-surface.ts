@@ -62,6 +62,52 @@ export type HeatPlaneQuad2dJobInput = {
   model_version_id?: string;
 };
 
+export type ElectrostaticPlaneNodeInput = {
+  id: string;
+  x: number;
+  y: number;
+  fix_potential: boolean;
+  potential?: number;
+  charge_density?: number;
+};
+
+export type ElectrostaticPlaneTriangleElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  thickness: number;
+  permittivity: number;
+  material_id?: string;
+};
+
+export type ElectrostaticPlaneTriangle2dJobInput = {
+  nodes: ElectrostaticPlaneNodeInput[];
+  elements: ElectrostaticPlaneTriangleElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
+export type ElectrostaticPlaneQuadElementInput = {
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  node_l: number;
+  thickness: number;
+  permittivity: number;
+  material_id?: string;
+};
+
+export type ElectrostaticPlaneQuad2dJobInput = {
+  nodes: ElectrostaticPlaneNodeInput[];
+  elements: ElectrostaticPlaneQuadElementInput[];
+  materials?: ModelMaterial[];
+  project_id?: string;
+  model_version_id?: string;
+};
+
 export type PlaneTriangleElementInput = {
   id: string;
   node_i: number;
@@ -166,6 +212,57 @@ export type HeatPlaneQuad2dResult = {
     heat_flux_magnitude: number;
   }>;
   input: HeatPlaneQuad2dJobInput;
+};
+
+export type ElectrostaticPlaneTriangle2dResult = {
+  max_potential: number;
+  max_electric_field: number;
+  max_flux_density: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; potential: number; charge_density: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    area: number;
+    average_potential: number;
+    potential_gradient_x: number;
+    potential_gradient_y: number;
+    electric_field_x: number;
+    electric_field_y: number;
+    electric_field_magnitude: number;
+    electric_flux_density_x: number;
+    electric_flux_density_y: number;
+    electric_flux_density_magnitude: number;
+  }>;
+  input: ElectrostaticPlaneTriangle2dJobInput;
+};
+
+export type ElectrostaticPlaneQuad2dResult = {
+  max_potential: number;
+  max_electric_field: number;
+  max_flux_density: number;
+  nodes: Array<{ index: number; id: string; x: number; y: number; potential: number; charge_density: number }>;
+  elements: Array<{
+    index: number;
+    id: string;
+    node_i: number;
+    node_j: number;
+    node_k: number;
+    node_l: number;
+    area: number;
+    average_potential: number;
+    potential_gradient_x: number;
+    potential_gradient_y: number;
+    electric_field_x: number;
+    electric_field_y: number;
+    electric_field_magnitude: number;
+    electric_flux_density_x: number;
+    electric_flux_density_y: number;
+    electric_flux_density_magnitude: number;
+  }>;
+  input: ElectrostaticPlaneQuad2dJobInput;
 };
 
 export type PlaneTriangle2dResult = {
@@ -302,6 +399,28 @@ export function resolveHeatPlaneQuad2dJobInput(
   };
 }
 
+export function resolveElectrostaticPlaneTriangle2dJobInput(
+  input: ElectrostaticPlaneTriangle2dJobInput,
+): Omit<ElectrostaticPlaneTriangle2dJobInput, "materials"> {
+  return {
+    nodes: input.nodes.map((node) => ({ ...node, potential: node.potential ?? 0, charge_density: node.charge_density ?? 0 })),
+    elements: input.elements.map(({ material_id, ...element }) => ({ ...element })),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
+export function resolveElectrostaticPlaneQuad2dJobInput(
+  input: ElectrostaticPlaneQuad2dJobInput,
+): Omit<ElectrostaticPlaneQuad2dJobInput, "materials"> {
+  return {
+    nodes: input.nodes.map((node) => ({ ...node, potential: node.potential ?? 0, charge_density: node.charge_density ?? 0 })),
+    elements: input.elements.map(({ material_id, ...element }) => ({ ...element })),
+    ...(input.project_id ? { project_id: input.project_id } : {}),
+    ...(input.model_version_id ? { model_version_id: input.model_version_id } : {}),
+  };
+}
+
 export function resolvePlaneTriangle2dJobInput(
   input: PlaneTriangle2dJobInput,
 ): Omit<PlaneTriangle2dJobInput, "materials"> {
@@ -404,6 +523,26 @@ export function createHeatPlaneQuad2dJob(
   input: HeatPlaneQuad2dJobInput,
 ): Promise<JobEnvelope<HeatPlaneQuad2dResult>> {
   return requestJson<JobEnvelope<HeatPlaneQuad2dResult>>("/api/v1/fem/heat-plane-quad-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createElectrostaticPlaneTriangle2dJob(
+  input: ElectrostaticPlaneTriangle2dJobInput,
+): Promise<JobEnvelope<ElectrostaticPlaneTriangle2dResult>> {
+  return requestJson<JobEnvelope<ElectrostaticPlaneTriangle2dResult>>("/api/v1/fem/electrostatic-plane-triangle-2d/jobs", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+}
+
+export function createElectrostaticPlaneQuad2dJob(
+  input: ElectrostaticPlaneQuad2dJobInput,
+): Promise<JobEnvelope<ElectrostaticPlaneQuad2dResult>> {
+  return requestJson<JobEnvelope<ElectrostaticPlaneQuad2dResult>>("/api/v1/fem/electrostatic-plane-quad-2d/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
