@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Installation Integrity Contract</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Installation Contract</div>
+        <h1>tamamono 1.x installation integrity</h1>
+        <p class="docs-copy">
+          Generated from <code>deploy/installation-integrity-contract.json</code>.
+          This page exposes the same contract used by the desktop installer integrity report and repair workflow.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Shipping version: 1.4.0</span>
+          <span class="docs-chip">Schema: kyuubiki.installation-contract/v1</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./README.md">Back to docs readme</a>
+          <a class="docs-link" href="../deploy/installation-integrity-contract.json">Open JSON source</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Visible behavior contract</h2>
+          <p class="docs-copy">
+            Every repair-side behavior should be operator-visible. Some rules are intentionally read-only,
+            but none of them should be hidden.
+          </p>
+          <div class="docs-stack">
+            <article class="docs-card">
+    <div class="docs-kicker">cleanup</div>
+    <h3>removable residue allowlist</h3>
+    <p class="docs-copy">Only these known cache and stale runtime artifacts are eligible for automatic cleanup.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>.DS_Store, Thumbs.db, ._*, tmp/run/*.pid, tmp/run/*.sock, tmp/run/*.lock, tmp/run/*.tmp</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+<article class="docs-card">
+    <div class="docs-kicker">layout</div>
+    <h3>platform release root</h3>
+    <p class="docs-copy">Platform-scoped release staging root tracked by the installer.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>dist/{platform}</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+<article class="docs-card">
+    <div class="docs-kicker">layout</div>
+    <h3>runtime roots</h3>
+    <p class="docs-copy">Standard repo-local roots that every platform install must expose.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>tmp/, dist/, releases/</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+<article class="docs-card">
+    <div class="docs-kicker">protection</div>
+    <h3>protected paths</h3>
+    <p class="docs-copy">Repair must not remove user environment, runtime data, release snapshots, or desktop shells.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>.env.local, tmp/data, releases/snapshots, apps/hub-gui, apps/workbench-gui, apps/installer-gui</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+<article class="docs-card">
+    <div class="docs-kicker">version</div>
+    <h3>required shipping version</h3>
+    <p class="docs-copy">Desktop shells, release manifests, and workspace packages are expected to align to this version.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>1.4.0</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+<article class="docs-card">
+    <div class="docs-kicker">workflow</div>
+    <h3>repair action</h3>
+    <p class="docs-copy">Repair is deterministic and intentionally narrow so it never becomes a hidden cleanup burden.</p>
+    <p class="docs-copy"><strong>Value:</strong> <code>prepare standard layout, then remove allowlisted residue</code></p>
+    <p class="docs-copy"><strong>Mode:</strong> Read-only</p>
+  </article>
+          </div>
+        </article>
+
+        <article class="docs-card">
+          <h2>Required install layout</h2>
+          <ul class="docs-list">
+            <li><strong>workspace root</strong>: <code>.</code> (required)</li>
+<li><strong>runtime temp root</strong>: <code>tmp</code> (required)</li>
+<li><strong>runtime process state</strong>: <code>tmp/run</code> (required)</li>
+<li><strong>runtime data state</strong>: <code>tmp/data</code> (required)</li>
+<li><strong>release staging root</strong>: <code>dist</code> (required)</li>
+<li><strong>platform release staging</strong>: <code>dist/{platform}</code> (required)</li>
+<li><strong>release snapshots</strong>: <code>releases/snapshots</code> (required)</li>
+<li><strong>desktop installer shell</strong>: <code>apps/installer-gui</code> (required)</li>
+<li><strong>desktop hub shell</strong>: <code>apps/hub-gui</code> (required)</li>
+<li><strong>desktop workbench shell</strong>: <code>apps/workbench-gui</code> (required)</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Protected paths</h2>
+          <ul class="docs-list">
+            <li><code>.env.local</code></li>
+<li><code>tmp/data</code></li>
+<li><code>releases/snapshots</code></li>
+<li><code>apps/installer-gui</code></li>
+<li><code>apps/hub-gui</code></li>
+<li><code>apps/workbench-gui</code></li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Cleanup allowlist</h2>
+          <ul class="docs-list">
+            <li><code>.DS_Store</code></li>
+<li><code>Thumbs.db</code></li>
+<li><code>._*</code></li>
+<li><code>tmp/run/*.pid</code></li>
+<li><code>tmp/run/*.sock</code></li>
+<li><code>tmp/run/*.lock</code></li>
+<li><code>tmp/run/*.tmp</code></li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

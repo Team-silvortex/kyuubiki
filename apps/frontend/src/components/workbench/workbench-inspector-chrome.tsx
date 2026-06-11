@@ -87,12 +87,13 @@ export function WorkbenchInspectorDiagnosticsPanel({
   hotspotNodeLabels,
   onApplyTrussSuggestion,
 }: DiagnosticsPanelProps) {
+  const hasDiagnostics = Boolean(trussDiagnostics && trussDiagnostics.blockingMessages.length > 0);
   return (
     <section className="info-card">
       <h3>{t.diagnostics}</h3>
-      {isTruss && trussDiagnostics && trussDiagnostics.blockingMessages.length > 0 ? (
+      {hasDiagnostics && trussDiagnostics ? (
         <div className="diagnostic-list">
-          {trussStability ? (
+          {isTruss && trussStability ? (
             <div className={`stability-badge stability-badge--${trussStability.tone}`}>
               <strong>{t.stabilityScore}</strong>
               <span>{trussStability.score}/100</span>
@@ -102,22 +103,22 @@ export function WorkbenchInspectorDiagnosticsPanel({
           {trussDiagnostics.blockingMessages.map((issue) => (
             <div key={issue} className="diagnostic-item"><strong>{issue}</strong></div>
           ))}
-          {trussStability && trussStability.hotspotNodes.length > 0 ? (
+          {isTruss && trussStability && trussStability.hotspotNodes.length > 0 ? (
             <div className="diagnostic-item"><strong>{t.hotspotNodes}: {hotspotNodeLabels}</strong></div>
           ) : null}
-          {trussDiagnostics.suggestions.length > 0 ? <p className="card-copy">{t.suggestedFixes}</p> : null}
-          <div className="diagnostic-actions">
-            {trussDiagnostics.suggestions.map((suggestion) => (
-              <button key={suggestion.id} className="ghost-button" onClick={() => onApplyTrussSuggestion(suggestion.id)} type="button">
-                {suggestion.label}
-              </button>
-            ))}
-          </div>
+          {isTruss && trussDiagnostics.suggestions.length > 0 ? <p className="card-copy">{t.suggestedFixes}</p> : null}
+          {isTruss ? (
+            <div className="diagnostic-actions">
+              {trussDiagnostics.suggestions.map((suggestion) => (
+                <button key={suggestion.id} className="ghost-button" onClick={() => onApplyTrussSuggestion(suggestion.id)} type="button">
+                  {suggestion.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
-      ) : isTruss ? (
-        <p className="card-copy">{t.diagnosticsClear}</p>
       ) : (
-        <p className="card-copy">{t.selectionHint}</p>
+        <p className="card-copy">{t.diagnosticsClear}</p>
       )}
     </section>
   );

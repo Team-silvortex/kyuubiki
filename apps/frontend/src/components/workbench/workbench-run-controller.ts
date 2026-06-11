@@ -305,14 +305,12 @@ export async function runWorkbenchAnalysis({
   trussDiagnostics,
   trussModel,
 }: RunWorkbenchAnalysisArgs) {
-  if (studyKind === "truss_2d") {
-    const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
-    if (precheckErrors.length > 0) {
-      setMessage(`${labels.precheckPrefix}: ${precheckErrors[0]}`);
-      setResult(null);
-      setJob(null);
-      return;
-    }
+  const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
+  if (precheckErrors.length > 0) {
+    setMessage(`${labels.precheckPrefix}: ${precheckErrors[0]}`);
+    setResult(null);
+    setJob(null);
+    return;
   }
 
   setMessage(labels.dispatching);

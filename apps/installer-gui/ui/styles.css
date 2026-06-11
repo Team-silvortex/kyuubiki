@@ -1,6 +1,7 @@
 @import "./shared/desktop-shell.css";
 @import "./styles/installer-hero.css";
 @import "./styles/installer-workspace.css";
+@import "./styles/installer-update.css";
 
 :root {
   --bg: #191b1f;

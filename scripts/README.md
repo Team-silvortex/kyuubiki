@@ -7,6 +7,9 @@ This directory contains host-native operational entry points.
 - `create-release-snapshot.mjs`
   Scaffold a new lightweight release snapshot manifest and update the release
   index.
+- `build-update-catalog.mjs`
+  Generate the shared update catalog JSON plus HTML docs from release snapshots
+  and the human-owned channel contract.
 
 Use this directory for operator-facing workflow wrappers, not for source
 libraries or generated output.
@@ -21,6 +24,7 @@ Typical responsibilities:
 - runtime and desktop packaging entry points
 - installer entry points
 - release snapshot scaffolding
+- unified update-catalog generation
 
 Useful smoke wrappers:
 

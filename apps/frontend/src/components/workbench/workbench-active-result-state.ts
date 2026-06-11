@@ -5,6 +5,7 @@ import {
   getTrussBounds,
   summarizeTrussStability,
 } from "@/components/workbench/workbench-truss-helpers";
+import { analyzeWorkbenchComponentIntegrity, mergeWorkbenchDiagnostics } from "@/components/workbench/workbench-component-integrity";
 import {
   buildDisplayBeamElements,
   buildDisplayBeamNodes,
@@ -115,7 +116,29 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
   const activePlaneInputModel = isHeatPlane ? heatPlaneModel : planeModel;
   const activeResultWindow =
     resultWindow && job?.job_id === resultWindow.jobId && studyKind === resultWindow.studyKind ? resultWindow : null;
-  const trussDiagnostics = isTruss ? analyzeTrussModel(trussModel, t, selectedNode) : null;
+  const trussDiagnostics = mergeWorkbenchDiagnostics(
+    isTruss ? analyzeTrussModel(trussModel, t, selectedNode) : null,
+    analyzeWorkbenchComponentIntegrity({
+      beamModel,
+      frameModel,
+      heatBarModel,
+      heatPlaneModel,
+      planeModel,
+      springModel,
+      spring2dModel,
+      spring3dModel,
+      studyKind,
+      thermalBarModel,
+      thermalBeamModel,
+      thermalFrameModel,
+      thermalPlaneModel: planeModel,
+      thermalTrussModel,
+      thermalTruss3dModel,
+      torsionModel,
+      trussModel,
+      truss3dModel,
+    }, t),
+  );
   const trussStability = isTruss && trussDiagnostics ? summarizeTrussStability(trussModel, trussDiagnostics) : null;
   const axialNodes = axialResult?.nodes ?? [];
   const axialElements = axialResult?.elements ?? [];

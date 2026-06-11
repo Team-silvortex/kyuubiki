@@ -104,6 +104,41 @@ These are maintained by humans and should stay readable:
 - `docs/`
 - `scripts/`
 
+### Shared install contract
+
+The desktop installer integrity report and repair workflow now read from one
+human-owned source file:
+
+- `deploy/installation-integrity-contract.json`
+- `make build-installation-docs` regenerates the HTML documentation views that
+  mirror this contract under `docs/` and `apps/hub-gui/ui/docs/`
+
+That file defines:
+
+- required repo-local install layout roots
+- protected paths that repair must not remove
+- allowlisted residue patterns that repair may clean
+- the visible behavior contract surfaced in the installer GUI
+- the expected desktop shipping version for the current line
+
+### Unified update contract
+
+Unified updates now follow the same source-of-truth posture:
+
+- `deploy/update-channels.json`
+  human-owned channel, tag, and rollout contract
+- `releases/update-catalog.json`
+  generated channel-to-version registry consumed by installer/runtime tooling
+- `docs/update-catalog.html`
+  generated operator-facing HTML reference for the current channel map
+
+This gives the project a Docker-like update model:
+
+- human-facing tags such as `tamamono:stable`
+- concrete immutable shipped versions such as `1.4.0`
+- visible rollout rules instead of hidden cleanup or migration behavior
+- one shared update description for CLI, installer GUI, and docs surfaces
+
 ### Generated paths
 
 These are tool outputs and should be treated as disposable:

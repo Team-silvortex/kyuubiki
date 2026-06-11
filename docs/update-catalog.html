@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki Unified Update Catalog</title>
+    <link rel="stylesheet" href="./docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Unified update catalog</div>
+        <h1>tamamono 1.x delivery channels</h1>
+        <p class="docs-copy">
+          This page is generated from the shared release index and the human-owned update channel contract.
+          It defines the visible, Docker-like update tags that point to concrete shipped versions.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Shipping version: 1.4.0</span>
+          <span class="docs-chip">Default channel: stable</span>
+          <span class="docs-chip">Schema: kyuubiki.update-catalog/v1</span>
+        </div>
+      </section>
+
+      <section class="docs-section">
+        <article class="docs-card">
+          <div class="docs-kicker">source of truth</div>
+          <h2>How this stays unified</h2>
+          <ul class="docs-list">
+            <li><strong>channel contract</strong>: <code>deploy/update-channels.json</code></li>
+            <li><strong>release registry</strong>: <code>releases/index.json</code></li>
+            <li><strong>tag model</strong>: human-facing channels point to immutable shipped versions</li>
+            <li><strong>installer posture</strong>: update behavior must stay visible and bounded by the installation contract</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="docs-grid">
+        
+        <article class="docs-card">
+          <div class="docs-kicker">channel</div>
+          <h2>Stable <code>tamamono:stable</code></h2>
+          <p class="docs-copy">Industrial hardening point for the tamamono 1.x line, with richer workflow authoring, operator descriptor APIs, Blender-leaning workbench styling, responsive layout validation, and desktop bundles rebuilt as 1.4.0.</p>
+          <div class="docs-meta">
+            <span class="docs-chip">Version: 1.4.0</span>
+            <span class="docs-chip">Status: current</span>
+            <span class="docs-chip">Aliases: tamamono:latest, tamamono:1, tamamono:1.4, tamamono:1.4.0</span>
+          </div>
+          <h3>Visible rules</h3>
+          <ul class="docs-list">
+            <li><strong>preflight integrity</strong>: required<br />Run installation integrity before switching or repairing the current release.</li>
+<li><strong>layout repair</strong>: automatic if needed<br />Update handoff may recreate missing standard roots before applying the target release.</li>
+<li><strong>residue cleanup</strong>: allowlisted only<br />Only residue approved by the installation integrity contract may be removed automatically.</li>
+<li><strong>rollback posture</strong>: same-channel reinstall<br />Rollback stays explicit and visible by reinstalling a concrete shipped version from the same channel.</li>
+          </ul>
+          <h3>Desktop artifact references</h3>
+          <ul class="docs-list">
+            <li><strong>hub</strong> · macos · app · <code>apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app</code> · present</li>
+<li><strong>hub</strong> · macos · dmg · <code>apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.4.0_aarch64.dmg</code> · present</li>
+<li><strong>workbench</strong> · macos · app · <code>apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app</code> · present</li>
+<li><strong>workbench</strong> · macos · dmg · <code>apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.4.0_aarch64.dmg</code> · present</li>
+<li><strong>installer</strong> · macos · app · <code>apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app</code> · present</li>
+<li><strong>installer</strong> · macos · dmg · <code>apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.4.0_aarch64.dmg</code> · present</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

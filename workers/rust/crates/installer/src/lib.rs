@@ -4,6 +4,27 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod integrity;
+mod integrity_contract;
+mod release;
+#[cfg(test)]
+mod tests;
+mod update_catalog;
+
+pub use integrity::{
+    InstallationIntegrityEntry, InstallationIntegrityReport, IntegrityContractRule,
+    ResidueCandidate, VersionAlignmentCheck, installation_integrity_report, repair_installation,
+};
+pub(crate) use integrity_contract::{contract_path, load_integrity_contract, IntegrityContract};
+pub(crate) use release::{
+    build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
+    build_release_manifest, build_release_readme, write_release_scripts,
+};
+pub use update_catalog::{
+    UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep, UpdateArtifactRef,
+    unified_update_plan, unified_update_preview,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DoctorCheck {
     pub label: String,
@@ -90,6 +111,10 @@ pub fn print_help() {
         "Commands:\n",
         "  help             Show this help\n",
         "  doctor           Check local prerequisites for the current platform\n",
+        "  installation-integrity  Validate install layout, versions, and residue\n",
+        "  update-plan      Show the unified channel-based update target\n",
+        "  update-preview   Show pre-apply checks and blockers for a channel update\n",
+        "  repair-installation     Recreate layout and clean removable residue\n",
         "  validate-env     Validate required environment variables from .env.local\n",
         "  init-env         Create .env.local from .env.example when missing\n",
         "  prepare-layout   Create repo-local runtime folders\n",
@@ -98,6 +123,8 @@ pub fn print_help() {
         "  bootstrap        Run doctor + prepare-layout + init-env\n\n",
         "Examples:\n",
         "  cargo run -p kyuubiki-installer -- doctor\n",
+        "  cargo run -p kyuubiki-installer -- update-plan stable\n",
+        "  cargo run -p kyuubiki-installer -- update-preview stable\n",
         "  cargo run -p kyuubiki-installer -- stage-release\n",
         "  cargo run -p kyuubiki-installer -- stage-release windows ./dist/windows-preview\n",
     ));
@@ -221,197 +248,6 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         "staged release layout at {}",
         release_dir.display()
     ))
-}
-
-fn write_release_scripts(release_dir: &Path, platform: Platform) -> Result<(), String> {
-    let scripts_dir = release_dir.join("scripts");
-
-    if platform == Platform::Windows {
-        write_text_file(
-            &scripts_dir.join("start.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki start\r\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("stop.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki stop\r\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("status.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki status\r\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("export-db.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki export-db > .\\exports\\kyuubiki-database.json\r\n",
-        )?;
-    } else {
-        write_text_file(
-            &scripts_dir.join("start.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki start\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("stop.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki stop\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("status.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki status\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("export-db.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki export-db > ./dist/exports/kyuubiki-database.json\n",
-        )?;
-    }
-
-    Ok(())
-}
-
-fn build_release_manifest(root: &Path, release_dir: &Path, platform: Platform) -> String {
-    format!(
-        concat!(
-            "{{\n",
-            "  \"schema_version\": \"kyuubiki.release/v1\",\n",
-            "  \"platform\": \"{platform}\",\n",
-            "  \"release_dir\": \"{release_dir}\",\n",
-            "  \"workspace\": \"{workspace}\",\n",
-            "  \"layout\": [\n",
-            "    \"bin\",\n",
-            "    \"config\",\n",
-            "    \"data\",\n",
-            "    \"desktop\",\n",
-            "    \"logs\",\n",
-            "    \"exports\",\n",
-            "    \"manifests\",\n",
-            "    \"scripts\"\n",
-            "  ],\n",
-            "  \"recommended_flow\": [\n",
-            "    \"scripts/start\",\n",
-            "    \"scripts/status\",\n",
-            "    \"scripts/export-db\"\n",
-            "  ]\n",
-            "}}\n"
-        ),
-        platform = platform.as_str(),
-        release_dir = escape_json(&release_dir.display().to_string()),
-        workspace = escape_json(&root.display().to_string()),
-    )
-}
-
-fn build_launch_manifest(root: &Path, platform: Platform) -> String {
-    format!(
-        concat!(
-            "{{\n",
-            "  \"schema_version\": \"kyuubiki.launch/v1\",\n",
-            "  \"platform\": \"{platform}\",\n",
-            "  \"shell\": \"{shell}\",\n",
-            "  \"workspace\": \"{workspace}\",\n",
-            "  \"entrypoint\": \"{entry}\",\n",
-            "  \"deployment_profiles\": [\"local\", \"cloud\", \"distributed\"],\n",
-            "  \"agent_discovery\": [\"static\", \"manifest\"],\n",
-            "  \"services\": [\n",
-            "    {{\"name\": \"frontend\", \"port\": 3000}},\n",
-            "    {{\"name\": \"orchestrator\", \"port\": 4000}},\n",
-            "    {{\"name\": \"agent-1\", \"port\": 5001}},\n",
-            "    {{\"name\": \"agent-2\", \"port\": 5002}}\n",
-            "  ]\n",
-            "}}\n"
-        ),
-        platform = platform.as_str(),
-        shell = platform.default_shell(),
-        workspace = escape_json(&root.display().to_string()),
-        entry = escape_json(platform.entrypoint_command()),
-    )
-}
-
-fn build_release_readme(platform: Platform) -> String {
-    format!(
-        concat!(
-            "Kyuubiki portable release scaffold\n\n",
-            "Platform: {platform}\n\n",
-            "This directory is a repo-local deployment scaffold.\n",
-            "It is intentionally lightweight and does not install host-level packages.\n\n",
-            "Directory shape:\n",
-            "- bin/        component binaries or launch helpers\n",
-            "- config/     environment and deployment configuration\n",
-            "- data/       local runtime state\n",
-            "- desktop/    desktop-shell packaging placeholders\n",
-            "- logs/       runtime logs\n",
-            "- manifests/  release and launch manifests\n",
-            "- scripts/    operator entry points\n",
-            "- exports/    snapshots and operator exports\n\n",
-            "Suggested flow:\n",
-            "1. copy config/.env.example to config/.env.local when packaging externally\n",
-            "2. use scripts/start to launch services\n",
-            "3. use scripts/export-db to snapshot persisted data\n"
-        ),
-        platform = platform.as_str()
-    )
-}
-
-fn build_desktop_readme() -> String {
-    concat!(
-        "Desktop packaging placeholders\n\n",
-        "hub-gui/\n",
-        "  Reserved for the Tauri Hub shell build output or packaged bundle references.\n",
-        "  Contains a manifest.json packaging descriptor.\n\n",
-        "installer-gui/\n",
-        "  Reserved for the Tauri installer GUI build output or packaged bundle references.\n",
-        "  Contains a manifest.json packaging descriptor.\n\n",
-        "workbench-gui/\n",
-        "  Reserved for the Tauri desktop workbench shell build output or packaged bundle references.\n",
-        "  Contains a manifest.json packaging descriptor.\n"
-    )
-    .to_string()
-}
-
-fn build_desktop_app_manifest(app: &str, platform: Platform) -> String {
-    let (product_name, source_dir, target_dir, build_command) = match app {
-        "hub-gui" => (
-            "Kyuubiki Hub",
-            "apps/hub-gui",
-            "apps/hub-gui/src-tauri/target",
-            "make build-hub-gui",
-        ),
-        "installer-gui" => (
-            "Kyuubiki Installer",
-            "apps/installer-gui",
-            "apps/installer-gui/src-tauri/target",
-            "make build-installer-gui",
-        ),
-        _ => (
-            "Kyuubiki Workbench",
-            "apps/workbench-gui",
-            "apps/workbench-gui/src-tauri/target",
-            "make build-workbench-gui",
-        ),
-    };
-
-    format!(
-        concat!(
-            "{{\n",
-            "  \"schema_version\": \"kyuubiki.desktop-package/v1\",\n",
-            "  \"app\": \"{app}\",\n",
-            "  \"product_name\": \"{product_name}\",\n",
-            "  \"platform\": \"{platform}\",\n",
-            "  \"expected_bundle_kinds\": [{bundle_kinds}],\n",
-            "  \"source_dir\": \"{source_dir}\",\n",
-            "  \"tauri_target_dir\": \"{target_dir}\",\n",
-            "  \"build_command\": \"{build_command}\",\n",
-            "  \"notes\": \"Use the platform-scoped desktop packaging flow to populate this placeholder.\"\n",
-            "}}\n"
-        ),
-        app = app,
-        product_name = product_name,
-        platform = platform.as_str(),
-        bundle_kinds = platform.desktop_bundle_kinds_json(),
-        source_dir = source_dir,
-        target_dir = target_dir,
-        build_command = build_command,
-    )
-}
-
-fn write_text_file(path: &Path, contents: &str) -> Result<(), String> {
-    fs::write(path, contents)
-        .map_err(|error| format!("failed to write {}: {error}", path.display()))
 }
 
 pub fn validate_env_file() -> Result<String, String> {
@@ -727,70 +563,5 @@ impl Platform {
             Self::Linux => "\"appimage\", \"deb\", \"rpm\"",
             Self::Windows => "\"msi\", \"nsis\"",
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parses_unknown_platform_to_current() {
-        assert_eq!(
-            parse_platform(Some("unknown".to_string())),
-            Platform::current()
-        );
-    }
-
-    #[test]
-    fn release_manifest_contains_expected_schema() {
-        let manifest = build_release_manifest(
-            Path::new("/tmp/workspace"),
-            Path::new("/tmp/dist/macos"),
-            Platform::Macos,
-        );
-        assert!(manifest.contains("\"schema_version\": \"kyuubiki.release/v1\""));
-        assert!(manifest.contains("\"platform\": \"macos\""));
-    }
-
-    #[test]
-    fn parses_agent_endpoint_list() {
-        let parsed = parse_agent_endpoints("127.0.0.1:5001,solver.local:5002").unwrap();
-        assert_eq!(parsed.len(), 2);
-        assert_eq!(parsed[0].0, "127.0.0.1");
-        assert_eq!(parsed[1].1, 5002);
-    }
-
-    #[test]
-    fn rejects_invalid_agent_endpoint_list() {
-        assert!(parse_agent_endpoints("127.0.0.1").is_err());
-        assert!(parse_agent_endpoints("127.0.0.1:abc").is_err());
-    }
-
-    #[test]
-    fn parses_agent_manifest_file() {
-        let path = workspace_root()
-            .join("tmp")
-            .join("installer-agent-manifest-test.json");
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(
-            &path,
-            r#"{
-              "schema_version": "kyuubiki.agent-manifest/v1",
-              "deployment_mode": "distributed",
-              "agents": [
-                {"id": "solver-a", "host": "10.0.0.11", "port": 6101},
-                {"id": "solver-b", "host": "10.0.0.12", "port": 6102}
-              ]
-            }"#,
-        )
-        .unwrap();
-
-        let parsed = parse_agent_manifest(&path).unwrap();
-        assert_eq!(parsed.len(), 2);
-        assert_eq!(parsed[0].0, "10.0.0.11");
-        assert_eq!(parsed[1].1, 6102);
-
-        fs::remove_file(path).unwrap();
     }
 }

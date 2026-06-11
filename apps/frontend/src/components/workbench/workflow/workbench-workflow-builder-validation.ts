@@ -54,6 +54,12 @@ export type WorkflowGraphValidationIssue = {
     | { kind: "clear_edge_dataset_value"; edgeId: string };
 };
 
+export type WorkflowValidationFixBatchResult = {
+  graph: WorkflowGraphDefinition | null;
+  appliedCount: number;
+  appliedIssues: WorkflowGraphValidationIssue[];
+};
+
 function buildNodeMap(graph: WorkflowGraphDefinition) {
   return new Map(graph.nodes.map((node) => [node.id, node] as const));
 }
@@ -405,4 +411,34 @@ export function applyWorkflowValidationFix(
   }
 
   return next;
+}
+
+export function applyAllWorkflowValidationFixes(
+  graph: WorkflowGraphDefinition | null,
+  entryInputs: WorkflowCatalogEntryArtifact[],
+  outputArtifacts: WorkflowCatalogEntryArtifact[],
+  operatorDescriptors: WorkflowOperatorDescriptor[] = [],
+) : WorkflowValidationFixBatchResult {
+  let current = graph;
+  let appliedCount = 0;
+  const appliedIssues: WorkflowGraphValidationIssue[] = [];
+
+  for (let iteration = 0; iteration < 24; iteration += 1) {
+    const issues = validateWorkflowGraphDefinition(
+      current,
+      entryInputs,
+      outputArtifacts,
+      operatorDescriptors,
+    );
+    const nextIssue = issues.find((issue) => issue.fix);
+    if (!nextIssue) break;
+
+    const next = applyWorkflowValidationFix(current, nextIssue, operatorDescriptors);
+    if (!next || JSON.stringify(next) === JSON.stringify(current)) break;
+    current = next;
+    appliedCount += 1;
+    appliedIssues.push(nextIssue);
+  }
+
+  return { graph: current, appliedCount, appliedIssues };
 }

@@ -9,11 +9,24 @@ import {
   setText,
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
+import {
+  applyPreset,
+  currentRemoteAgentPayload,
+  currentRemoteBootstrapPayload,
+  renderDoctor,
+} from "./installer-workflows.js";
+import { mountIntegrityPanel, renderIntegrityReport } from "./integrity-panel.js";
+import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdateChannel } from "./update-panel.js";
 
 (function () {
   const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json";
   const DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json";
   const DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
+  const DEFAULT_PRESET = {
+    agentManifestPath: DEFAULT_AGENT_MANIFEST_PATH,
+    distributedAgentManifestPath: DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH,
+    sqliteDatabasePath: DEFAULT_SQLITE_DATABASE_PATH,
+  };
 
   const output = document.getElementById("output");
   const serviceStatus = document.getElementById("service-status");
@@ -36,6 +49,9 @@ import {
   let latestLogSnapshot = "";
   let brandConfig = null;
   let currentLanguage = "en";
+
+  mountIntegrityPanel();
+  mountUpdatePanel();
 
   function releaseLabel() {
     const releaseVersion = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
@@ -184,88 +200,6 @@ import {
     setModeCard(form.deployment_mode || "local");
   }
 
-  function applyPreset(mode) {
-    const storageMode = document.getElementById("storage-mode");
-    const deploymentMode = document.getElementById("deployment-mode");
-    const agentDiscovery = document.getElementById("agent-discovery");
-    const agentManifestPath = document.getElementById("agent-manifest-path");
-
-    if (mode === "local") {
-      deploymentMode.value = "local";
-      agentDiscovery.value = "static";
-      storageMode.value = "sqlite";
-      if (!document.getElementById("sqlite-path").value.trim()) {
-        document.getElementById("sqlite-path").value = DEFAULT_SQLITE_DATABASE_PATH;
-      }
-      if (!agentManifestPath.value.trim()) {
-        agentManifestPath.value = DEFAULT_AGENT_MANIFEST_PATH;
-      }
-    } else if (mode === "cloud") {
-      deploymentMode.value = "cloud";
-      agentDiscovery.value = "static";
-      storageMode.value = "postgres";
-      if (!document.getElementById("database-url").value.trim()) {
-        document.getElementById("database-url").value =
-          "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev";
-      }
-    } else {
-      deploymentMode.value = "distributed";
-      agentDiscovery.value = "registry";
-      storageMode.value = "postgres";
-      if (!document.getElementById("database-url").value.trim()) {
-        document.getElementById("database-url").value =
-          "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev";
-      }
-      if (!agentManifestPath.value.trim()) {
-        agentManifestPath.value = DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH;
-      }
-    }
-    if (!document.getElementById("agent-endpoints").value.trim()) {
-      document.getElementById("agent-endpoints").value = "127.0.0.1:5001,127.0.0.1:5002";
-    }
-    setModeCard(mode);
-  }
-
-  function currentRemoteBootstrapPayload() {
-    return {
-      sshUser: document.getElementById("remote-ssh-user").value.trim(),
-      targetHost: document.getElementById("remote-target-host").value.trim(),
-      remoteWorkspace: document.getElementById("remote-workspace").value.trim(),
-      sshPort: document.getElementById("remote-ssh-port").value
-        ? Number(document.getElementById("remote-ssh-port").value)
-        : null,
-    };
-  }
-
-  function currentRemoteAgentPayload() {
-    return {
-      ...currentRemoteBootstrapPayload(),
-      orchestratorUrl: document.getElementById("remote-orchestrator-url").value.trim(),
-      agentId: document.getElementById("remote-agent-id").value.trim(),
-      advertiseHost: document.getElementById("remote-advertise-host").value.trim(),
-      agentPort: Number(document.getElementById("remote-agent-port").value || "5001"),
-    };
-  }
-
-  function renderDoctor(report) {
-    platformLabel.textContent = report.platform;
-    workspaceLabel.textContent = report.workspace;
-    doctorGrid.innerHTML = "";
-
-    report.checks.forEach((check) => {
-      const card = document.createElement("article");
-      card.className = "doctor-card desktop-shell-surface-card";
-      const stateLabel = check.ok ? "ok" : "missing";
-      const stateClass = check.ok ? "ok" : "missing";
-      card.innerHTML = `
-        <strong>${check.label}</strong>
-        <span class="doctor-state ${stateClass}">${stateLabel}</span>
-      `;
-      applyDesktopState(card.querySelector(".doctor-state"), stateLabel, { kind: "health" });
-      doctorGrid.appendChild(card);
-    });
-  }
-
   function renderServiceStatus(rendered) {
     serviceStatus.textContent = formatServiceReport(rendered);
   }
@@ -292,7 +226,25 @@ import {
 
   async function refreshDoctor() {
     const report = await invoke("doctor_report");
-    renderDoctor(report);
+    renderDoctor(report, platformLabel, workspaceLabel, doctorGrid);
+    return report.rendered;
+  }
+
+  async function refreshIntegrityReport() {
+    const report = await invoke("installation_integrity_report");
+    renderIntegrityReport(report, brandConfig);
+    return report.rendered;
+  }
+
+  async function refreshUpdatePlan() {
+    const report = await invoke("unified_update_plan", { channel: selectedUpdateChannel() });
+    renderUpdatePlan(report);
+    return report.rendered;
+  }
+
+  async function refreshUpdatePreview() {
+    const report = await invoke("unified_update_preview", { channel: selectedUpdateChannel() });
+    renderUpdatePreview(report);
     return report.rendered;
   }
 
@@ -415,6 +367,23 @@ import {
         case "validate-env":
           await runAction("validate-env", () => invokeGuardedMutation("validate_env"));
           break;
+        case "refresh-integrity":
+          await runAction("refresh-integrity", refreshIntegrityReport);
+          break;
+        case "repair-installation":
+          await runAction("repair-installation", async () => {
+            const result = await invokeGuardedMutation("repair_installation");
+            await refreshIntegrityReport();
+            showCompletion("Installation contract repaired and residue cleanup completed.");
+            return result;
+          });
+          break;
+        case "refresh-update-plan":
+          await runAction("refresh-update-plan", refreshUpdatePlan);
+          break;
+        case "refresh-update-preview":
+          await runAction("refresh-update-preview", refreshUpdatePreview);
+          break;
         case "write-env":
           await runAction("write-env", async () => {
             const result = await invokeGuardedMutation("write_env_file", {
@@ -432,17 +401,20 @@ import {
           });
           break;
         case "use-local-mode":
-          applyPreset("local");
+          applyPreset("local", DEFAULT_PRESET);
+          setModeCard("local");
           showCompletion("Local SQLite profile selected.");
           appendOutput("mode", "selected local SQLite profile");
           break;
         case "use-cloud-mode":
-          applyPreset("cloud");
+          applyPreset("cloud", DEFAULT_PRESET);
+          setModeCard("cloud");
           showCompletion("Cloud PostgreSQL profile selected.");
           appendOutput("mode", "selected cloud PostgreSQL profile");
           break;
         case "use-distributed-mode":
-          applyPreset("distributed");
+          applyPreset("distributed", DEFAULT_PRESET);
+          setModeCard("distributed");
           showCompletion("Distributed control-plane profile selected.");
           appendOutput("mode", "selected distributed control-plane profile");
           break;
@@ -572,13 +544,17 @@ import {
   runAction(
     "startup",
     async () => {
-      const [doctor, envForm, status, language, brand] = await Promise.all([
-        invoke("doctor_report"),
-        invoke("read_env_file").catch(() => null),
-        invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
-        loadDesktopLanguagePreference().catch(() => "en"),
-        loadDesktopBrand().catch(() => null),
-      ]);
+      const [doctor, integrityReport, updatePlan, updatePreview, envForm, status, language, brand] =
+        await Promise.all([
+          invoke("doctor_report"),
+          invoke("installation_integrity_report").catch(() => null),
+          invoke("unified_update_plan", { channel: "stable" }).catch(() => null),
+          invoke("unified_update_preview", { channel: "stable" }).catch(() => null),
+          invoke("read_env_file").catch(() => null),
+          invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
+          loadDesktopLanguagePreference().catch(() => "en"),
+          loadDesktopBrand().catch(() => null),
+        ]);
 
       currentLanguage = language || currentLanguage;
       renderDesktopLanguagePreference();
@@ -587,11 +563,21 @@ import {
         applyBrandConfig(brand);
       }
       syncDesktopStates();
-      renderDoctor(doctor);
+      renderDoctor(doctor, platformLabel, workspaceLabel, doctorGrid);
+      if (integrityReport) {
+        renderIntegrityReport(integrityReport, brand);
+      }
+      if (updatePlan) {
+        renderUpdatePlan(updatePlan);
+      }
+      if (updatePreview) {
+        renderUpdatePreview(updatePreview);
+      }
       if (envForm) {
         hydrateEnv(envForm);
       } else {
-        applyPreset("local");
+        applyPreset("local", DEFAULT_PRESET);
+        setModeCard("local");
       }
       renderServiceStatus(status.rendered);
       await refreshRuntimeLog().catch(() => {
@@ -600,9 +586,11 @@ import {
       if (liveTailToggle.checked) {
         await startRuntimeLogStream().catch(() => {});
       }
-      showCompletion(
-        `${brandConfig?.installerName || "Installer GUI"} ready. Pick a profile, write env, then start services and watch live logs here.`,
-      );
+      const readyMessage =
+        integrityReport && Array.isArray(integrityReport.issues) && integrityReport.issues.length > 0
+          ? `${brandConfig?.installerName || "Installer GUI"} ready. Integrity panel has flagged install contract drift; clear that before packaging a release.`
+          : `${brandConfig?.installerName || "Installer GUI"} ready. Pick a profile, write env, then start services and watch live logs here.`;
+      showCompletion(readyMessage);
 
       return "installer gui ready";
     },

@@ -31,6 +31,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   selectedNodes: WorkflowGraphNode[];
   selectedEdges: WorkflowGraphEdge[];
   highlightedEdgeIds?: string[];
+  highlightedNodeIds?: string[];
   focusedNodeId?: string | null;
   focusedEdgeId?: string | null;
   onAddNode: (template?: WorkflowNodeTemplateSelection) => void;
@@ -163,12 +164,21 @@ function buildEdgeHighlightStyle(
   };
 }
 
+function buildNodeHighlightStyle(nodeId: string, focusedNodeId: string | null | undefined, highlightedNodeIds: string[]) {
+  const highlighted = highlightedNodeIds.includes(nodeId);
+  if (!highlighted && focusedNodeId !== nodeId) return undefined;
+  return highlighted
+    ? { outline: "2px solid rgba(34, 197, 94, 0.9)", outlineOffset: "2px", boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" }
+    : { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" };
+}
+
 export function WorkbenchWorkflowTopologyCard({
   labels,
   operatorDescriptors,
   selectedNodes,
   selectedEdges,
   highlightedEdgeIds = [],
+  highlightedNodeIds = [],
   focusedNodeId,
   focusedEdgeId,
   onAddNode,
@@ -299,11 +309,7 @@ export function WorkbenchWorkflowTopologyCard({
               className="sidebar-card sidebar-card--compact"
               data-workflow-node-id={node.id}
               key={node.id}
-              style={
-                focusedNodeId === node.id
-                  ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
-                  : undefined
-              }
+              style={buildNodeHighlightStyle(node.id, focusedNodeId, highlightedNodeIds)}
             >
                 <div className="card-head">
                   <h2>{node.id}</h2>

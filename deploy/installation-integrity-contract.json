@@ -1,0 +1,79 @@
+{
+  "schema_version": "kyuubiki.installation-contract/v1",
+  "product_line": "tamamono 1.x",
+  "shipping_version": "1.4.0",
+  "required_layout": [
+    { "label": "workspace root", "path": ".", "required": true },
+    { "label": "runtime temp root", "path": "tmp", "required": true },
+    { "label": "runtime process state", "path": "tmp/run", "required": true },
+    { "label": "runtime data state", "path": "tmp/data", "required": true },
+    { "label": "release staging root", "path": "dist", "required": true },
+    { "label": "platform release staging", "path": "dist/{platform}", "required": true },
+    { "label": "release snapshots", "path": "releases/snapshots", "required": true },
+    { "label": "desktop installer shell", "path": "apps/installer-gui", "required": true },
+    { "label": "desktop hub shell", "path": "apps/hub-gui", "required": true },
+    { "label": "desktop workbench shell", "path": "apps/workbench-gui", "required": true }
+  ],
+  "protected_paths": [
+    ".env.local",
+    "tmp/data",
+    "releases/snapshots",
+    "apps/installer-gui",
+    "apps/hub-gui",
+    "apps/workbench-gui"
+  ],
+  "removable_patterns": [
+    ".DS_Store",
+    "Thumbs.db",
+    "._*",
+    "tmp/run/*.pid",
+    "tmp/run/*.sock",
+    "tmp/run/*.lock",
+    "tmp/run/*.tmp"
+  ],
+  "allowed_dist_children": ["macos", "linux", "windows"],
+  "visible_rules": [
+    {
+      "category": "cleanup",
+      "label": "removable residue allowlist",
+      "value": ".DS_Store, Thumbs.db, ._*, tmp/run/*.pid, tmp/run/*.sock, tmp/run/*.lock, tmp/run/*.tmp",
+      "editable": false,
+      "description": "Only these known cache and stale runtime artifacts are eligible for automatic cleanup."
+    },
+    {
+      "category": "layout",
+      "label": "platform release root",
+      "value": "dist/{platform}",
+      "editable": false,
+      "description": "Platform-scoped release staging root tracked by the installer."
+    },
+    {
+      "category": "layout",
+      "label": "runtime roots",
+      "value": "tmp/, dist/, releases/",
+      "editable": false,
+      "description": "Standard repo-local roots that every platform install must expose."
+    },
+    {
+      "category": "protection",
+      "label": "protected paths",
+      "value": ".env.local, tmp/data, releases/snapshots, apps/hub-gui, apps/workbench-gui, apps/installer-gui",
+      "editable": false,
+      "description": "Repair must not remove user environment, runtime data, release snapshots, or desktop shells."
+    },
+    {
+      "category": "version",
+      "label": "required shipping version",
+      "value": "1.4.0",
+      "editable": false,
+      "description": "Desktop shells, release manifests, and workspace packages are expected to align to this version."
+    },
+    {
+      "category": "workflow",
+      "label": "repair action",
+      "value": "prepare standard layout, then remove allowlisted residue",
+      "editable": false,
+      "description": "Repair is deterministic and intentionally narrow so it never becomes a hidden cleanup burden."
+    }
+  ]
+}

@@ -108,6 +108,15 @@ button.primary {
   display: grid;
 }
 
+.integrity-subview {
+  display: none;
+  gap: 16px;
+}
+
+.integrity-subview--active {
+  display: grid;
+}
+
 .section-header,
 .panel-header {
   display: flex;
@@ -121,7 +130,11 @@ button.primary {
 .service-grid,
 .doctor-grid,
 .wizard-grid,
-.completion-shell {
+.completion-shell,
+.integrity-summary-grid,
+.integrity-panel-grid,
+.integrity-policy-grid,
+.integrity-layout-grid {
   display: grid;
   gap: 14px;
 }
@@ -146,6 +159,35 @@ button.primary {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.integrity-subnav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.integrity-subtab {
+  border: 1px solid var(--line);
+  background: rgba(45, 49, 56, 0.94);
+}
+
+.integrity-subtab--active {
+  background: var(--accent-soft);
+  border-color: rgba(245, 166, 35, 0.32);
+}
+
+.integrity-summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.integrity-policy-grid,
+.integrity-panel-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.integrity-layout-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
 .mode-card,
 .service-card,
 .doctor-card,
@@ -154,7 +196,10 @@ button.primary {
 .status-shell,
 .form-shell,
 .doctor-shell,
-.log-shell {
+.log-shell,
+.integrity-summary-card,
+.integrity-policy-card,
+.integrity-shell {
   padding: 16px;
 }
 
@@ -209,6 +254,146 @@ select {
 .doctor-card {
   display: grid;
   gap: 6px;
+}
+
+.integrity-summary-card,
+.integrity-policy-card,
+.integrity-shell,
+.integrity-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel-strong);
+}
+
+.integrity-summary-card,
+.integrity-policy-card,
+.integrity-card {
+  display: grid;
+  gap: 10px;
+}
+
+.integrity-card {
+  padding: 14px;
+}
+
+.integrity-card__top,
+.integrity-version-row,
+.integrity-residue-row,
+.integrity-target-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.integrity-version-row,
+.integrity-residue-row {
+  align-items: flex-start;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.integrity-version-row:first-child,
+.integrity-residue-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.integrity-version-row p,
+.integrity-residue-row p,
+.integrity-summary-card p,
+.integrity-policy-card p,
+.integrity-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.integrity-card code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(24, 27, 32, 0.92);
+  color: #d6dde8;
+  overflow: auto;
+}
+
+.integrity-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(60, 64, 72, 0.92);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.integrity-policy-list,
+.integrity-issues {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.integrity-target-grid {
+  flex-wrap: wrap;
+}
+
+.integrity-target-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.integrity-version-list,
+.integrity-residue-list,
+.integrity-contract-list,
+.update-artifact-list {
+  display: grid;
+}
+
+.integrity-contract-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.integrity-contract-row:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.integrity-contract-row p {
+  margin: 6px 0 10px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.integrity-contract-row code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(24, 27, 32, 0.92);
+  color: #d6dde8;
+  overflow: auto;
+}
+
+.integrity-contract-meta {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+#integrity-report-output {
+  min-height: 180px;
 }
 
 .wizard-step {
@@ -351,5 +536,17 @@ pre {
 
   .field-span-2 {
     grid-column: auto;
+  }
+
+  .integrity-card__top,
+  .integrity-version-row,
+  .integrity-residue-row,
+  .integrity-target-grid,
+  .integrity-contract-row {
+    flex-direction: column;
+  }
+
+  .integrity-contract-meta {
+    justify-items: start;
   }
 }

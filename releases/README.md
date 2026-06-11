@@ -18,6 +18,9 @@ Instead, each snapshot records:
   Machine-readable list of known snapshots.
 - `snapshots/<version>.json`
   One structured snapshot manifest per version.
+- `update-catalog.json`
+  Generated channel-to-version registry that gives desktop and installer
+  surfaces one unified update view.
 
 ## Scaffolding
 
@@ -30,6 +33,12 @@ node ./scripts/create-release-snapshot.mjs 1.4.1 --status staged
 
 The script updates `releases/index.json` and creates
 `releases/snapshots/<version>.json`.
+
+Regenerate the unified update catalog after channel or snapshot changes with:
+
+```bash
+node ./scripts/build-update-catalog.mjs
+```
 
 ## Current policy
 

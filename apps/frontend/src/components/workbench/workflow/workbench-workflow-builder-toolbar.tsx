@@ -9,6 +9,7 @@ type WorkbenchWorkflowBuilderToolbarProps = {
   selectedWorkflow: WorkflowCatalogEntry;
   canRunDraft: boolean;
   canExportDataset: boolean;
+  draftBlockingIssueCount: number;
   importMessage: string | null;
   graphInputRef: RefObject<HTMLInputElement | null>;
   datasetInputRef: RefObject<HTMLInputElement | null>;
@@ -30,6 +31,7 @@ export function WorkbenchWorkflowBuilderToolbar({
   selectedWorkflow,
   canRunDraft,
   canExportDataset,
+  draftBlockingIssueCount,
   importMessage,
   graphInputRef,
   datasetInputRef,
@@ -50,6 +52,8 @@ export function WorkbenchWorkflowBuilderToolbar({
         new Date(selectedWorkflow.local.promoted_at),
       )
     : null;
+  const draftStatusTone = canRunDraft ? "good" : "watch";
+  const draftStatusLabel = canRunDraft ? labels.statusReadyLabel : String(draftBlockingIssueCount);
   return (
     <>
       <div className="card-head">
@@ -57,6 +61,14 @@ export function WorkbenchWorkflowBuilderToolbar({
         <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
       </div>
       <p className="card-copy">{selectedWorkflow.summary}</p>
+      <div className="sidebar-list">
+        <div className="sidebar-list__row">
+          <span>{labels.runDraftLabel}</span>
+          <strong>
+            <span className={`status-pill status-pill--${draftStatusTone}`}>{draftStatusLabel}</span>
+          </strong>
+        </div>
+      </div>
       {selectedWorkflow.local ? (
         <div className="sidebar-list">
           <div className="sidebar-list__row">

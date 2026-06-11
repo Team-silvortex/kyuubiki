@@ -5,7 +5,10 @@ use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+mod diagnostics;
+mod remote;
 
 use kyuubiki_desktop_runtime::{
     append_desktop_audit_line as desktop_append_audit_line,
@@ -15,29 +18,18 @@ use kyuubiki_desktop_runtime::{
     service_stop as desktop_service_stop, write_global_language_preference as desktop_write_global_language_preference,
     ServiceMode,
 };
-use kyuubiki_installer::{
-    doctor_report as build_doctor_report, export_launch_config, init_env as installer_init_env,
-    parse_platform, prepare_layout as installer_prepare_layout, stage_release as installer_stage_release,
-    validate_env_file, workspace_root,
+use diagnostics::{
+    doctor_report, installation_integrity_report, unified_update_plan, unified_update_preview,
 };
+use kyuubiki_installer::{
+    export_launch_config, init_env as installer_init_env, parse_platform,
+    prepare_layout as installer_prepare_layout, repair_installation as installer_repair_installation,
+    stage_release as installer_stage_release, validate_env_file, workspace_root,
+};
+use remote::{remote_bootstrap, remote_start_agent, RemoteAgentPayload, RemoteBootstrapPayload};
 use serde::Serialize;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
-use std::time::{SystemTime, UNIX_EPOCH};
-
-#[derive(Serialize)]
-struct DoctorReportPayload {
-    platform: String,
-    workspace: String,
-    checks: Vec<DoctorCheckPayload>,
-    rendered: String,
-}
-
-#[derive(Serialize)]
-struct DoctorCheckPayload {
-    label: String,
-    ok: bool,
-}
 
 #[derive(Serialize)]
 struct EnvFormPayload {
@@ -111,28 +103,6 @@ struct BuildPayload {
     bundle_mode: Option<String>,
 }
 
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RemoteBootstrapPayload {
-    target_host: String,
-    ssh_user: String,
-    remote_workspace: String,
-    ssh_port: Option<u16>,
-}
-
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RemoteAgentPayload {
-    target_host: String,
-    ssh_user: String,
-    remote_workspace: String,
-    orchestrator_url: String,
-    agent_id: String,
-    advertise_host: String,
-    agent_port: u16,
-    ssh_port: Option<u16>,
-}
-
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct InstallerGuardedMutationPayload {
@@ -161,26 +131,6 @@ struct DesktopPreferencesPayload {
 struct RuntimeLogPayload {
     service: String,
     rendered: String,
-}
-
-fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return Err(format!("{label} is required"));
-    }
-
-    if trimmed.starts_with('-') {
-        return Err(format!("{label} must not start with '-'"));
-    }
-
-    if !trimmed
-        .chars()
-        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_' | ':' | '@'))
-    {
-        return Err(format!("{label} contains unsupported characters"));
-    }
-
-    Ok(trimmed.to_string())
 }
 
 static LOG_STREAMS: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
@@ -213,24 +163,6 @@ fn append_installer_guarded_mutation_audit(
         "detail": detail,
     });
     let _ = desktop_append_audit_line(INSTALLER_GUARDED_MUTATION_AUDIT_FILE, &record.to_string());
-}
-
-#[tauri::command]
-fn doctor_report() -> Result<DoctorReportPayload, String> {
-    let report = build_doctor_report();
-    Ok(DoctorReportPayload {
-        rendered: report.render(),
-        platform: report.platform,
-        workspace: report.workspace,
-        checks: report
-            .checks
-            .into_iter()
-            .map(|check| DoctorCheckPayload {
-                label: check.label,
-                ok: check.ok,
-            })
-            .collect(),
-    })
 }
 
 #[tauri::command]
@@ -455,38 +387,6 @@ fn parse_service_mode(mode: Option<&str>) -> ServiceMode {
 }
 
 #[tauri::command]
-fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, String> {
-    let ssh_user = validate_ssh_identity(&payload.ssh_user, "ssh user")?;
-    let target_host = validate_ssh_identity(&payload.target_host, "target host")?;
-    let target = format!("{ssh_user}@{target_host}");
-    let remote_command = format!(
-        "cd {} && zsh ./scripts/kyuubiki install bootstrap",
-        shell_escape(&payload.remote_workspace)
-    );
-
-    run_remote_ssh(payload.ssh_port, &target, &remote_command)
-}
-
-#[tauri::command]
-fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String> {
-    let ssh_user = validate_ssh_identity(&payload.ssh_user, "ssh user")?;
-    let target_host = validate_ssh_identity(&payload.target_host, "target host")?;
-    let target = format!("{ssh_user}@{target_host}");
-    let screen_name = format!("kyuubiki_remote_agent_{}", payload.agent_port);
-    let remote_command = format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} zsh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
-        workspace = shell_escape(&payload.remote_workspace),
-        screen = shell_escape(&screen_name),
-        orchestrator = shell_escape(&payload.orchestrator_url),
-        agent_id = shell_escape(&payload.agent_id),
-        advertise_host = shell_escape(&payload.advertise_host),
-        port = payload.agent_port
-    );
-
-    run_remote_ssh(payload.ssh_port, &target, &remote_command)
-}
-
-#[tauri::command]
 fn read_runtime_log(payload: LogPayload) -> Result<RuntimeLogPayload, String> {
     Ok(RuntimeLogPayload {
         service: payload.service.clone(),
@@ -601,6 +501,7 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
         "validate_env" => validate_env_file(),
         "init_env" => installer_init_env(payload.force.unwrap_or(false)),
         "prepare_layout" => installer_prepare_layout(),
+        "repair_installation" => installer_repair_installation(),
         "bootstrap" => {
             installer_prepare_layout()?;
             installer_init_env(false)?;
@@ -653,41 +554,13 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
 
     result
 }
-
-fn run_remote_ssh(ssh_port: Option<u16>, target: &str, remote_command: &str) -> Result<String, String> {
-    let mut command = Command::new("ssh");
-    if let Some(port) = ssh_port {
-        command.arg("-p").arg(port.to_string());
-    }
-
-    let output = command
-        .arg(target)
-        .arg(remote_command)
-        .output()
-        .map_err(|error| format!("failed to run ssh command: {error}"))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if output.status.success() {
-        Ok(if stdout.is_empty() {
-            format!("remote command completed on {}", target)
-        } else {
-            stdout
-        })
-    } else {
-        Err(if stderr.is_empty() { stdout } else { stderr })
-    }
-}
-
-fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\"'\"'"))
-}
-
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             doctor_report,
+            installation_integrity_report,
+            unified_update_plan,
+            unified_update_preview,
             export_launch,
             read_env_file,
             service_status,

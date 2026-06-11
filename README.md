@@ -159,6 +159,14 @@ Packaging and deployment paths are now documented centrally in:
 Desktop release planning and platform bundle checks now live in the two docs
 above, while versioned release snapshots now live under `releases/`.
 
+Unified update channel metadata now lives across:
+
+- `deploy/update-channels.json`
+- `releases/update-catalog.json`
+- `docs/update-catalog.html`
+
+The channel contract is human-owned; the catalog and HTML view are generated.
+
 ## Verification
 
 The main repo-level verification entrypoints are:

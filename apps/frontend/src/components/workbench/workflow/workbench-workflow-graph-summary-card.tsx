@@ -11,7 +11,16 @@ type WorkbenchWorkflowGraphSummaryCardProps = {
   selectedOutputArtifactsCount: number;
   focusedNodeId?: string | null;
   focusedEdgeId?: string | null;
+  highlightedNodeIds?: string[];
+  highlightedEdgeIds?: string[];
 };
+
+function buildHighlightStyle(active: boolean, highlighted: boolean) {
+  if (!active && !highlighted) return undefined;
+  return highlighted
+    ? { outline: "2px solid rgba(34, 197, 94, 0.9)", outlineOffset: "2px", boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" }
+    : { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" };
+}
 
 export function WorkbenchWorkflowGraphSummaryCard({
   labels,
@@ -21,6 +30,8 @@ export function WorkbenchWorkflowGraphSummaryCard({
   selectedOutputArtifactsCount,
   focusedNodeId,
   focusedEdgeId,
+  highlightedNodeIds = [],
+  highlightedEdgeIds = [],
 }: WorkbenchWorkflowGraphSummaryCardProps) {
   return (
     <>
@@ -53,11 +64,7 @@ export function WorkbenchWorkflowGraphSummaryCard({
               className="sidebar-list__row"
               data-workflow-node-id={node.id}
               key={node.id}
-              style={
-                focusedNodeId === node.id
-                  ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
-                  : undefined
-              }
+              style={buildHighlightStyle(focusedNodeId === node.id, highlightedNodeIds.includes(node.id))}
             >
               <span>{node.id}</span>
               <strong>
@@ -85,11 +92,7 @@ export function WorkbenchWorkflowGraphSummaryCard({
               className="sidebar-list__row"
               data-workflow-edge-id={edge.id}
               key={edge.id}
-              style={
-                focusedEdgeId === edge.id
-                  ? { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" }
-                  : undefined
-              }
+              style={buildHighlightStyle(focusedEdgeId === edge.id, highlightedEdgeIds.includes(edge.id))}
             >
               <span>
                 {edge.from.node}.{edge.from.port} → {edge.to.node}.{edge.to.port}

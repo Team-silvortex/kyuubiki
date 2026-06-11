@@ -1,7 +1,7 @@
 SHELL := /bin/zsh
 ENTRYPOINT := zsh ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -43,6 +43,8 @@ help:
 	@echo "  make desktop-release Stage, build, and verify desktop release output for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make desktop-verify Verify staged manifests and icon inputs for PLATFORM=<host|macos|linux|windows|all>"
 	@echo "  make sync-desktop-shared Refresh shared desktop UI helper files into each Tauri app"
+	@echo "  make build-installation-docs Regenerate installation integrity HTML docs from the shared JSON contract"
+	@echo "  make build-update-catalog Regenerate the unified update catalog JSON and HTML docs"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
 	@echo "  make installer-gui-dev   Run the Tauri installer GUI in development mode"
@@ -194,6 +196,12 @@ desktop-verify:
 
 sync-desktop-shared:
 	@node ./apps/desktop-shared/scripts/sync-desktop-shared.mjs
+
+build-installation-docs:
+	@node ./scripts/build-installation-integrity-docs.mjs
+
+build-update-catalog:
+	@node ./scripts/build-update-catalog.mjs
 
 hub-gui-dev:
 	@$(ENTRYPOINT) hub-gui-dev

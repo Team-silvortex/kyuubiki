@@ -23,6 +23,9 @@ README.
   future central-server downloadable project catalogs, including optional
   `analysis_domains` and `thermal_intents` hints that let Hub and Workbench
   classify workloads before opening them
+- `deploy/installation-integrity-contract.json` is the shared installer and
+  desktop-facing installation contract source that defines standard layout,
+  protected paths, cleanup allowlists, and visible repair rules
 - `deploy/workload-catalog.example.json` is a concrete sample payload for local
   testing, Hub mockups, and future center-server rollout
 - `examples.workflow-graph.json` is a minimal reference workflow for

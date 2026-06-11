@@ -113,6 +113,9 @@ Then branch by intent:
 - `desktop-release-checklist.md`
   Platform-specific desktop bundle targets, icon requirements, and release
   checks.
+- `update-catalog.html`
+  Generated operator-facing view of the unified update tags, release channels,
+  and shipped version bindings.
 
 ### Directory entrypoints
 
@@ -137,4 +140,4 @@ Then branch by intent:
 - Rust solver/agent work:
   `philosophy.md` -> `system-overview.md` -> `protocols.md`
 - Packaging/release work:
-  `packaging-and-deployment.md` -> `desktop-release-checklist.md`
+  `packaging-and-deployment.md` -> `desktop-release-checklist.md` -> `update-catalog.html`

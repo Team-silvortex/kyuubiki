@@ -1,0 +1,53 @@
+{
+  "schema_version": "kyuubiki.update-channels/v1",
+  "shipping_version": "1.4.0",
+  "default_channel": "stable",
+  "line": "tamamono 1.x",
+  "channels": [
+    {
+      "id": "stable",
+      "label": "Stable",
+      "tag": "tamamono:stable",
+      "version": "1.4.0",
+      "aliases": [
+        "tamamono:latest",
+        "tamamono:1",
+        "tamamono:1.4",
+        "tamamono:1.4.0"
+      ],
+      "notes": [
+        "Primary operator-facing update track for the current shipping line.",
+        "Targets standard installs that follow the visible installation contract."
+      ],
+      "visible_rules": [
+        {
+          "label": "preflight integrity",
+          "value": "required",
+          "description": "Run installation integrity before switching or repairing the current release."
+        },
+        {
+          "label": "layout repair",
+          "value": "automatic if needed",
+          "description": "Update handoff may recreate missing standard roots before applying the target release."
+        },
+        {
+          "label": "residue cleanup",
+          "value": "allowlisted only",
+          "description": "Only residue approved by the installation integrity contract may be removed automatically."
+        },
+        {
+          "label": "rollback posture",
+          "value": "same-channel reinstall",
+          "description": "Rollback stays explicit and visible by reinstalling a concrete shipped version from the same channel."
+        }
+      ],
+      "rollout": {
+        "mode": "manual",
+        "installer_surface": "installer_gui",
+        "requires_integrity_contract": "deploy/installation-integrity-contract.json",
+        "cleanup_policy": "allowlisted",
+        "rollback": "same-channel reinstall"
+      }
+    }
+  ]
+}
