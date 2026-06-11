@@ -58,6 +58,8 @@ thin workflow layer:
 - health and protocol descriptor discovery
 - reachable agent discovery
 - jobs/results/export CRUD through the control plane
+- workflow catalog discovery, operator discovery, and workflow job submission
+- workflow graph and workflow dataset contract validation helpers
 - solver job submission through the control plane
 - batch submit and terminal-state polling helpers
 - direct TCP RPC access to headless agents

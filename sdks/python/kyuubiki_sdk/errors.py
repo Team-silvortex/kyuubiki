@@ -27,6 +27,12 @@ class KyuubikiTimeoutError(KyuubikiSdkError):
     pass
 
 
+class WorkflowContractValidationError(KyuubikiSdkError):
+    def __init__(self, errors: list[str]) -> None:
+        self.errors = errors
+        super().__init__("workflow contract validation failed:\n- " + "\n- ".join(errors))
+
+
 def classify_error(error: Exception) -> str:
     if isinstance(error, KyuubikiTimeoutError):
         return "timeout"

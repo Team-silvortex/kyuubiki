@@ -22,6 +22,13 @@ defmodule KyuubikiSdk.Error do
     }
   end
 
+  def validation(errors) when is_list(errors) do
+    %__MODULE__{
+      type: :validation,
+      message: "workflow contract validation failed:\n- " <> Enum.join(errors, "\n- ")
+    }
+  end
+
   def transport(message), do: %__MODULE__{type: :transport, message: message}
   def timeout(message), do: %__MODULE__{type: :timeout, message: message}
 end

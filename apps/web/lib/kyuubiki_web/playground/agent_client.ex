@@ -22,6 +22,11 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_heat_bar_1d", params, on_progress)
   end
 
+  @spec solve_electrostatic_bar_1d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  def solve_electrostatic_bar_1d(params, on_progress \\ fn _progress -> :ok end) do
+    request("solve_electrostatic_bar_1d", params, on_progress)
+  end
+
   @spec solve_heat_plane_triangle_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
   def solve_heat_plane_triangle_2d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_heat_plane_triangle_2d", params, on_progress)
@@ -97,7 +102,8 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     request("solve_plane_triangle_2d", params, on_progress)
   end
 
-  @spec solve_thermal_plane_triangle_2d(map(), (map() -> any())) :: {:ok, map()} | {:error, term()}
+  @spec solve_thermal_plane_triangle_2d(map(), (map() -> any())) ::
+          {:ok, map()} | {:error, term()}
   def solve_thermal_plane_triangle_2d(params, on_progress \\ fn _progress -> :ok end) do
     request("solve_thermal_plane_triangle_2d", params, on_progress)
   end

@@ -91,6 +91,7 @@ defmodule KyuubikiWeb.Protocol do
         "solve_bar_1d",
         "solve_thermal_bar_1d",
         "solve_heat_bar_1d",
+        "solve_electrostatic_bar_1d",
         "solve_heat_plane_triangle_2d",
         "solve_heat_plane_quad_2d",
         "solve_thermal_truss_2d",

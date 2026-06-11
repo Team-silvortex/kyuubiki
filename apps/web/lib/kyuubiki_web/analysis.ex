@@ -39,6 +39,16 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
+  @spec submit_electrostatic_bar_1d(map()) :: {:ok, map()} | {:error, term()}
+  def submit_electrostatic_bar_1d(params) when is_map(params) do
+    with {:ok, normalized} <- normalize_electrostatic_bar_1d(params),
+         {:ok, job_context} <- derive_job_context(params),
+         {:ok, job} <- create_job(job_context) do
+      start_background_job(job.job_id, "solve_electrostatic_bar_1d", normalized)
+      {:ok, serialize_payload(job)}
+    end
+  end
+
   @spec submit_heat_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_heat_plane_triangle_2d(params) when is_map(params) do
     with {:ok, normalized} <- normalize_heat_plane_triangle_2d(params),
@@ -776,7 +786,8 @@ defmodule KyuubikiWeb.Analysis do
           "kyuubiki.operator.#{family}.bridge_output"
         )
       ],
-      "validation" => verified_operator_validation_profile(family, ["workflow_graph", "catalog_job"])
+      "validation" =>
+        verified_operator_validation_profile(family, ["workflow_graph", "catalog_job"])
     }
   end
 
@@ -816,7 +827,8 @@ defmodule KyuubikiWeb.Analysis do
           "kyuubiki.operator.#{family}.extract_output"
         )
       ],
-      "validation" => verified_operator_validation_profile(family, ["workflow_graph", "draft_builder"])
+      "validation" =>
+        verified_operator_validation_profile(family, ["workflow_graph", "draft_builder"])
     }
   end
 
@@ -856,7 +868,8 @@ defmodule KyuubikiWeb.Analysis do
           "kyuubiki.operator.#{family}.export_output"
         )
       ],
-      "validation" => verified_operator_validation_profile(family, ["workflow_graph", "draft_builder"])
+      "validation" =>
+        verified_operator_validation_profile(family, ["workflow_graph", "draft_builder"])
     }
   end
 
@@ -1885,6 +1898,19 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   defp normalize_heat_bar_1d(_params), do: {:error, :invalid_heat_bar_model}
+
+  defp normalize_electrostatic_bar_1d(%{"nodes" => nodes, "elements" => elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_electrostatic_bar_1d(%{nodes: nodes, elements: elements})
+       when is_list(nodes) and is_list(elements) do
+    {:ok, %{"nodes" => nodes, "elements" => elements}}
+  end
+
+  defp normalize_electrostatic_bar_1d(_params),
+    do: {:error, :invalid_electrostatic_bar_model}
 
   defp normalize_heat_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
        when is_list(nodes) and is_list(elements),

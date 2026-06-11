@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
+import type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel";
 import { WorkbenchScriptAuthorPanel } from "@/components/workbench/workbench-script-author-panel";
 import { WorkbenchScriptCatalogPanel } from "@/components/workbench/workbench-script-catalog-panel";
 import { WorkbenchScriptInspectPanel } from "@/components/workbench/workbench-script-inspect-panel";
@@ -9,6 +10,7 @@ import { WorkbenchScriptLaunchCard } from "@/components/workbench/workbench-scri
 import { workbenchScriptPanelCopy, type WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
 import {
   buildWorkbenchRecordedMacroDraft,
+  buildWorkbenchRecordedMacroDraftFromEntries,
   buildWorkbenchPythonPrelude,
   DEFAULT_WORKBENCH_PYTHON,
   deleteWorkbenchMacroPreset,
@@ -26,6 +28,7 @@ import {
   type WorkbenchMacroPresetRecord,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
+import { serializeWorkbenchPythonLiteral } from "@/lib/scripting/workbench-script-python-format";
 
 type WorkbenchScriptPanelProps = {
   language: WorkbenchScriptLanguage;
@@ -52,7 +55,82 @@ function safeStorageGet() {
 }
 
 function stringifyPayload(payload: Record<string, unknown> | undefined): string {
-  return payload ? JSON.stringify(payload) : "{}";
+  return serializeWorkbenchPythonLiteral(payload ?? {});
+}
+
+function sanitizePythonComment(value: string | undefined): string | null {
+  if (!value) return null;
+  const collapsed = value.replace(/\s+/g, " ").trim();
+  return collapsed ? collapsed.replaceAll("#", "") : null;
+}
+
+function buildTimelineReplaySnippet(entry: WorkbenchScriptActionLogEntry): string {
+  const failureReason =
+    entry.status !== "failed"
+      ? null
+      : sanitizePythonComment(entry.note ?? (entry.result ? JSON.stringify(entry.result) : entry.payload ? JSON.stringify(entry.payload) : entry.summary));
+  const commentLines = [
+    "# Replay snippet from timeline",
+    `# action: ${entry.action}`,
+    `# source: ${entry.source ?? "unknown"}`,
+    `# status: ${entry.status}`,
+    `# at: ${entry.at}`,
+    sanitizePythonComment(entry.summary) ? `# summary: ${sanitizePythonComment(entry.summary)}` : null,
+    sanitizePythonComment(entry.note) ? `# note: ${sanitizePythonComment(entry.note)}` : null,
+    failureReason ? `# last failure: ${failureReason}` : null,
+  ].filter(Boolean);
+  const actionLiteral = JSON.stringify(entry.action);
+  const payloadLiteral = stringifyPayload(entry.payload);
+
+  return `${commentLines.join("\n")}
+replay_payload = ${payloadLiteral}
+replay_result = await ky.invoke(${actionLiteral}, replay_payload)
+ky.log("Replay result:", replay_result)
+latest_state = ky.state()
+ky.log("Replay message:", latest_state.get("message"))
+# await ky.sleep(0.25)  # Un-comment if the next UI action needs a short settle window.
+`;
+}
+
+function buildTimelineContinuationSnippet(actionLog: WorkbenchScriptActionLogEntry[], entry: WorkbenchScriptActionLogEntry): string {
+  const entryIndex = actionLog.findIndex((candidate) => candidate.id === entry.id);
+  const replayEntries = (entryIndex >= 0 ? actionLog.slice(0, entryIndex + 1) : [entry]).reverse();
+  const header = [
+    "# Continue timeline from selected action",
+    `# start action: ${entry.action}`,
+    `# steps: ${replayEntries.length}`,
+    "# Re-run the recorded flow in chronological order.",
+  ].join("\n");
+  const body = replayEntries
+    .map((step, index) => {
+      const actionLiteral = JSON.stringify(step.action);
+      const payloadLiteral = stringifyPayload(step.payload);
+      const summary = sanitizePythonComment(step.summary);
+      const note = sanitizePythonComment(step.note);
+
+      return [
+        `# step ${index + 1}: ${step.action}`,
+        summary ? `# summary: ${summary}` : null,
+        note ? `# note: ${note}` : null,
+        `step_${index + 1}_payload = ${payloadLiteral}`,
+        `step_${index + 1}_result = await ky.invoke(${actionLiteral}, step_${index + 1}_payload)`,
+        `replay_results.append(step_${index + 1}_result)`,
+        `ky.log("Step ${index + 1} result:", step_${index + 1}_result)`,
+        "# await ky.sleep(0.25)",
+      ]
+        .filter(Boolean)
+        .join("\n");
+    })
+    .join("\n\n");
+
+  return `${header}
+replay_results = []
+
+${body}
+
+latest_state = ky.state()
+ky.log("Continuation message:", latest_state.get("message"))
+`;
 }
 
 function downloadTextFile(filename: string, contents: string) {
@@ -65,8 +143,29 @@ function downloadTextFile(filename: string, contents: string) {
   URL.revokeObjectURL(url);
 }
 
+function buildTimelinePresetName(entry: WorkbenchScriptActionLogEntry): string {
+  const actionName = entry.action.replaceAll("/", " ");
+  const timestamp = entry.at.replace("T", " ").slice(0, 16);
+  return `${actionName} ${timestamp}`.trim();
+}
+
+function buildFrontendMacroAssetId(source: FrontendMacroAssetRecord["source"]) {
+  return `asset_${source}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function buildDerivedMacroDraftId(baseId: string) {
+  const normalized = (baseId.startsWith("macro/") ? baseId.slice("macro/".length) : baseId)
+    .replace(/-derived-[a-z0-9]+$/i, "")
+    .replace(/[^a-zA-Z0-9/_-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-/]+|[-/]+$/g, "");
+  const suffix = Date.now().toString(36).slice(-6);
+  return `macro/${normalized || "frontend-subflow"}-derived-${suffix}`;
+}
+
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
   const t = workbenchScriptPanelCopy[language] as WorkbenchScriptPanelCopyEntry;
+  const [headlessFrontendMacroAssets, setHeadlessFrontendMacroAssets] = useState<FrontendMacroAssetRecord[]>([]);
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [output, setOutput] = useState<string[]>([]);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
@@ -95,6 +194,15 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   const refreshPresetRecords = () => {
     setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
+  };
+  const pushHeadlessFrontendMacroAsset = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>, source: FrontendMacroAssetRecord["source"]) => {
+    const nextRecord: FrontendMacroAssetRecord = {
+      assetId: buildFrontendMacroAssetId(source),
+      draft,
+      source,
+      updatedAt: new Date().toISOString(),
+    };
+    setHeadlessFrontendMacroAssets((current) => [nextRecord, ...current].slice(0, 16));
   };
 
   const resolveCurrentDraft = () => macroDraftBuffer ?? buildWorkbenchRecordedMacroDraft(actionLog);
@@ -238,6 +346,105 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
+  const insertFrontendMacroAsset = (asset: FrontendMacroAssetRecord) => {
+    setMacroDraftBuffer(asset.draft);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(asset.draft)}\n`);
+    appendOutput(`[macro] ${t.frontendMacroAssetInserted}`);
+  };
+  const deriveFrontendMacroAsset = (asset: FrontendMacroAssetRecord) => {
+    const derivedDraft = {
+      id: buildDerivedMacroDraftId(asset.draft.id),
+      steps: asset.draft.steps.map((step) => ({
+        action: step.action,
+        ...(step.payload ? { payload: { ...step.payload } } : {}),
+      })),
+    };
+    setMacroDraftBuffer(derivedDraft);
+    pushHeadlessFrontendMacroAsset(derivedDraft, "snapshot_derived");
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(derivedDraft)}\n`);
+    appendOutput(`[macro] ${t.frontendMacroAssetDerived}`);
+  };
+  const restoreBridgeMacroToFrontend = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>) => {
+    setMacroDraftBuffer(draft);
+    pushHeadlessFrontendMacroAsset(draft, "bridge_restore");
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
+    appendOutput(`[macro] ${t.restoreBridgeMacroToFrontend}`);
+  };
+
+  const insertTimelineStep = (entry: WorkbenchScriptActionLogEntry) => {
+    setScriptCode((current) => `${current.trimEnd()}\n\n${buildTimelineReplaySnippet(entry)}\n`);
+    appendOutput(`[macro] ${t.insertActionStep}`);
+  };
+
+  const continueTimelineFromEntry = (entry: WorkbenchScriptActionLogEntry) => {
+    setScriptCode((current) => `${current.trimEnd()}\n\n${buildTimelineContinuationSnippet(actionLog, entry)}\n`);
+    appendOutput(`[macro] ${t.continueFromStep}`);
+  };
+
+  const insertTimelineMacroDraft = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
+    const draft = buildWorkbenchRecordedMacroDraftFromEntries(actionLog, {
+      includedEntryIds,
+      id: `macro/${entry.action.replaceAll("/", "-")}-selection`,
+      maxSteps: 12,
+      startEntryId: entry.id,
+    });
+    if (!draft) {
+      appendOutput(`[macro] ${t.noTimelineMacroDraft}`);
+      return;
+    }
+    setMacroDraftBuffer(draft);
+    setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
+    appendOutput(`[macro] ${t.timelineMacroDraftInserted}`);
+  };
+
+  const saveTimelineMacroPreset = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
+    if (!snapshot.selectedProjectId) {
+      appendOutput(`[preset] ${t.noProjectSelected}`);
+      return;
+    }
+    const draft = buildWorkbenchRecordedMacroDraftFromEntries(actionLog, {
+      includedEntryIds,
+      id: `macro/${entry.action.replaceAll("/", "-")}-selection`,
+      maxSteps: 12,
+      startEntryId: entry.id,
+    });
+    if (!draft) {
+      appendOutput(`[preset] ${t.noTimelineMacroDraft}`);
+      return;
+    }
+    try {
+      const nextPresetName = buildTimelinePresetName(entry);
+      const saved = saveWorkbenchMacroPreset({
+        projectId: snapshot.selectedProjectId,
+        name: nextPresetName,
+        macro: draft,
+      });
+      setMacroDraftBuffer(saved.macro);
+      setPresetName(saved.name);
+      refreshPresetRecords();
+      appendOutput(`[preset] ${t.timelineMacroPresetSaved}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      appendOutput(`[preset] ${message}`);
+      setRuntimeError(message);
+    }
+  };
+
+  const sendTimelineMacroToHeadless = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
+    const draft = buildWorkbenchRecordedMacroDraftFromEntries(actionLog, {
+      includedEntryIds,
+      id: `macro/${entry.action.replaceAll("/", "-")}-frontend-subflow`,
+      maxSteps: 12,
+      startEntryId: entry.id,
+    });
+    if (!draft) {
+      appendOutput(`[macro] ${t.noTimelineMacroDraft}`);
+      return;
+    }
+    setMacroDraftBuffer(draft);
+    pushHeadlessFrontendMacroAsset(draft, "timeline_selection");
+    appendOutput(`[macro] ${t.sendTimelineMacroToHeadless}`);
+  };
 
   return (
     <>
@@ -255,8 +462,11 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
       <WorkbenchScriptAuthorPanel
         copy={t}
+        deriveFrontendMacroAsset={deriveFrontendMacroAsset}
         exportMacroDraftJson={exportMacroDraftJson}
+        frontendMacroAssets={headlessFrontendMacroAssets}
         importMacroJson={importMacroJson}
+        insertFrontendMacroAsset={insertFrontendMacroAsset}
         insertMacroDraftFromLog={insertMacroDraftFromLog}
         recordingMode={recordingMode}
         scriptCode={scriptCode}
@@ -266,7 +476,12 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       <WorkbenchScriptInspectPanel
         actionCatalogCount={WORKBENCH_SCRIPT_ACTIONS.length}
         actionLog={actionLog}
+        continueTimelineFromEntry={continueTimelineFromEntry}
         copy={t}
+        insertTimelineStep={insertTimelineStep}
+        insertTimelineMacroDraft={insertTimelineMacroDraft}
+        sendTimelineMacroToHeadless={sendTimelineMacroToHeadless}
+        saveTimelineMacroPreset={saveTimelineMacroPreset}
         macroCatalogCount={WORKBENCH_SCRIPT_MACROS.length}
         output={output}
         scriptCode={scriptCode}
@@ -298,7 +513,13 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         <p className="card-copy">{t.headlessSurfaceHint}</p>
       </section>
 
-      <WorkbenchHeadlessWorkflowPanel language={language} onInsertMacroDraft={insertExternalMacroDraft} />
+      <WorkbenchHeadlessWorkflowPanel
+        frontendMacroAssets={headlessFrontendMacroAssets}
+        language={language}
+        onDeriveFrontendMacro={deriveFrontendMacroAsset}
+        onInsertMacroDraft={insertExternalMacroDraft}
+        onRestoreFrontendMacro={restoreBridgeMacroToFrontend}
+      />
     </>
   );
 }

@@ -52,7 +52,7 @@ const SERVICE_SCHEMA_OVERRIDES: Record<string, Pick<HeadlessActionContract, "inp
   result_fetch: { inputSchema: [{ key: "job_id", label: "job_id", required: true, bindable: true }], outputSchema: [{ key: "result", label: "result" }] },
 };
 
-export const HEADLESS_ACTIONS: HeadlessActionContract[] = (headlessServiceActionContracts as AutomationContractRecord[])
+const SERVICE_HEADLESS_ACTIONS: HeadlessActionContract[] = (headlessServiceActionContracts as AutomationContractRecord[])
   .filter((contract) => SERVICE_SCHEMA_OVERRIDES[contract.id])
   .map((contract) => ({
     id: contract.id,
@@ -65,6 +65,33 @@ export const HEADLESS_ACTIONS: HeadlessActionContract[] = (headlessServiceAction
     inputSchema: SERVICE_SCHEMA_OVERRIDES[contract.id].inputSchema,
     outputSchema: SERVICE_SCHEMA_OVERRIDES[contract.id].outputSchema,
   }));
+
+export const HEADLESS_ACTIONS: HeadlessActionContract[] = SERVICE_HEADLESS_ACTIONS.concat([
+  {
+    id: "frontend_macro_bridge",
+    risk: "normal",
+    summary: {
+      en: "Run a frontend automation subflow as an explicit bridge node inside this workflow draft.",
+      zh: "把一段前端自动化子流程作为显式桥接节点挂进当前工作流草稿。",
+      ja: "フロントエンド自動化サブフローを明示的なブリッジノードとして現在のワークフロー草稿へ組み込みます。",
+      es: "Inserta un subflujo de automatizacion frontend como nodo puente explicito dentro de este borrador de workflow.",
+    },
+    payloadExample: {
+      macro_id: "macro/frontend-subflow",
+      replay_mode: "bridge",
+      steps: [{ action: "runtime/refreshAll", payload: {} }],
+    },
+    inputSchema: [
+      { key: "macro_id", label: "macro_id", required: true },
+      { key: "replay_mode", label: "replay_mode" },
+      { key: "steps", label: "steps", required: true },
+    ],
+    outputSchema: [
+      { key: "macro_id", label: "macro_id" },
+      { key: "step_count", label: "step_count" },
+    ],
+  },
+]);
 
 export const HEADLESS_WORKFLOW_TEMPLATES: HeadlessWorkflowTemplate[] = [
   {

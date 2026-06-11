@@ -158,6 +158,16 @@ button {
   background: linear-gradient(180deg, var(--panel-soft), rgba(255, 255, 255, 0.36));
 }
 
+.script-panel__action--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.script-panel__action--failed {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--line));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--danger) 10%, var(--panel-soft)), rgba(255, 255, 255, 0.3));
+}
+
 .script-panel__action-head,
 .script-panel__payload {
   display: flex;

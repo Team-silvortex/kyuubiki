@@ -17,6 +17,8 @@ Then branch by intent:
 
 - `tamamono-minor-lines.md`
   Long-range `tamamono 1.x` roadmap.
+- `fem-blender-roadmap.md`
+  Product north star and staged path toward becoming the Blender of FEM.
 - `accuracy-plan.md`
   Quality direction and verification policy.
 - `accuracy-baselines.md`
@@ -27,6 +29,8 @@ Then branch by intent:
   Multi-operator composition model for shader-like workflow growth.
 - `workflow-dataset.md`
   ONNX-like cross-operator data contract for workflow-carried values.
+- `fem-blender-roadmap.md`
+  Product north star linking workbench, workflow, SDK, and operator-ecosystem growth.
 
 ## By Goal
 
@@ -91,6 +95,8 @@ Then branch by intent:
 - `language-packs.md`
   Local-first language-pack format, override behavior, and the future remote
   delivery shape for Workbench UI translation packs.
+- `fem-blender-roadmap.md`
+  Long-range product shape for turning Kyuubiki into a full FEM creation platform.
 
 ### Operate and deploy
 

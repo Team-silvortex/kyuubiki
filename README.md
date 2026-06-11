@@ -73,6 +73,8 @@ Start here if you need orientation:
   Short current-line posture for `tamamono 1.x`.
 - [docs/system-overview.md](docs/system-overview.md)
   Runtime map across GUI, control plane, and solver data plane.
+- [docs/fem-blender-roadmap.md](docs/fem-blender-roadmap.md)
+  Product north star for becoming the Blender of FEM.
 
 ## Read By Intent
 

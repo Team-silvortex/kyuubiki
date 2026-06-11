@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type {
   DraftStep,
   HeadlessActionContract,
@@ -11,10 +13,20 @@ import { updatePayloadField } from "@/components/workbench/workbench-headless-wo
 import { WorkbenchHeadlessReferenceMapper } from "@/components/workbench/workbench-headless-reference-mapper";
 
 type WorkbenchHeadlessWorkflowStepEditorProps = {
+  bridgeActionListLabel: string;
+  bridgeMacroIdLabel: string;
+  bridgePreviewHideLabel: string;
+  bridgePreviewPayloadLabel: string;
+  bridgePreviewShowLabel: string;
+  bridgeReplayModeHint: string;
+  bridgeReplayModeLabel: string;
+  bridgeRestoreLabel: string;
+  bridgeStepCountLabel: string;
   contract: HeadlessActionContract | undefined;
   endpointsHint: string;
   endpointsLabel: string;
   noReferencesLabel: string;
+  onRestoreBridgeMacro?: () => void;
   parsePayloadText: (payloadText: string) => PayloadObject | null;
   patchStepPayload: (stepId: string, updater: (payload: PayloadObject | null) => PayloadObject | null) => void;
   referenceApplyLabel: string;
@@ -58,6 +70,35 @@ function toOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function readStepActions(payload: PayloadObject | null) {
+  const value = payload?.steps;
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const action = (entry as { action?: unknown }).action;
+    return typeof action === "string" ? [action] : [];
+  });
+}
+
+function readBridgeSteps(payload: PayloadObject | null) {
+  const value = payload?.steps;
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== "object") return [];
+    const candidate = entry as { action?: unknown; payload?: unknown };
+    if (typeof candidate.action !== "string") return [];
+    return [
+      {
+        action: candidate.action,
+        payload:
+          candidate.payload && typeof candidate.payload === "object" && !Array.isArray(candidate.payload)
+            ? (candidate.payload as PayloadObject)
+            : {},
+      },
+    ];
+  });
+}
+
 function isJsonField(port: HeadlessInputPort) {
   return port.key === "payload" || port.key === "input_artifacts";
 }
@@ -71,10 +112,20 @@ function isListField(port: HeadlessInputPort) {
 }
 
 export function WorkbenchHeadlessWorkflowStepEditor({
+  bridgeActionListLabel,
+  bridgeMacroIdLabel,
+  bridgePreviewHideLabel,
+  bridgePreviewPayloadLabel,
+  bridgePreviewShowLabel,
+  bridgeReplayModeHint,
+  bridgeReplayModeLabel,
+  bridgeRestoreLabel,
+  bridgeStepCountLabel,
   contract,
   endpointsHint,
   endpointsLabel,
   noReferencesLabel,
+  onRestoreBridgeMacro,
   parsePayloadText,
   patchStepPayload,
   referenceApplyLabel,
@@ -84,7 +135,10 @@ export function WorkbenchHeadlessWorkflowStepEditor({
   referenceTitle,
   step,
 }: WorkbenchHeadlessWorkflowStepEditorProps) {
+  const [bridgePreviewExpanded, setBridgePreviewExpanded] = useState(false);
   const payload = parsePayloadText(step.payloadText);
+  const stepActions = readStepActions(payload);
+  const bridgeSteps = readBridgeSteps(payload);
 
   const renderReferenceMapper = (port: HeadlessInputPort) =>
     port.bindable ? (
@@ -170,6 +224,66 @@ export function WorkbenchHeadlessWorkflowStepEditor({
   };
 
   if (!contract || contract.inputSchema.length === 0) return null;
+
+  if (contract.id === "frontend_macro_bridge") {
+    return (
+      <>
+        <label className="field-label">
+          <span>{bridgeMacroIdLabel}</span>
+          <input
+            className="text-input"
+            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "macro_id", event.target.value))}
+            type="text"
+            value={readString(payload, "macro_id")}
+          />
+        </label>
+        <label className="field-label">
+          <span>{bridgeReplayModeLabel}</span>
+          <input
+            className="text-input"
+            onChange={(event) => patchStepPayload(step.id, (current) => updatePayloadField(current, "replay_mode", event.target.value))}
+            type="text"
+            value={readString(payload, "replay_mode")}
+          />
+        </label>
+        <p className="card-copy">{bridgeReplayModeHint}</p>
+        <div className="script-panel__payload">
+          <span>{bridgeStepCountLabel}</span>
+          <code>{String(stepActions.length)}</code>
+        </div>
+        <div className="card-subhead">
+          <strong>{bridgeActionListLabel}</strong>
+          <span>{stepActions.length}</span>
+        </div>
+        <div className="button-row">
+          {onRestoreBridgeMacro ? (
+            <button className="ghost-button ghost-button--compact" onClick={onRestoreBridgeMacro} type="button">
+              {bridgeRestoreLabel}
+            </button>
+          ) : null}
+          <button className="ghost-button ghost-button--compact" onClick={() => setBridgePreviewExpanded((current) => !current)} type="button">
+            {bridgePreviewExpanded ? bridgePreviewHideLabel : bridgePreviewShowLabel}
+          </button>
+        </div>
+        <div className="script-panel__catalog">
+          {bridgeSteps.map((bridgeStep, index) => (
+            <article className="script-panel__action" key={`${step.id}-bridge-${index}`}>
+              <div className="script-panel__action-head">
+                <strong>{`${index + 1}. ${bridgeStep.action}`}</strong>
+                <span>{bridgeReplayModeLabel}</span>
+              </div>
+              {bridgePreviewExpanded ? (
+                <div className="script-panel__payload">
+                  <span>{bridgePreviewPayloadLabel}</span>
+                  <code>{JSON.stringify(bridgeStep.payload, null, 2)}</code>
+                </div>
+              ) : null}
+            </article>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

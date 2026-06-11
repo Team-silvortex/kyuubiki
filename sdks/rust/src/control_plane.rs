@@ -54,6 +54,14 @@ impl ControlPlaneClient {
         self.request_json("GET", "/api/v1/protocol/agents", None)
     }
 
+    pub fn list_workflow_catalog(&self) -> SdkResult<Value> {
+        self.request_json("GET", "/api/v1/workflows/catalog", None)
+    }
+
+    pub fn list_workflow_operators(&self) -> SdkResult<Value> {
+        self.request_json("GET", "/api/v1/operators", None)
+    }
+
     pub fn list_jobs(&self) -> SdkResult<Value> {
         self.request_json("GET", "/api/v1/jobs", None)
     }
@@ -88,6 +96,22 @@ impl ControlPlaneClient {
 
     pub fn create_plane_triangle_2d_job(&self, payload: &Value) -> SdkResult<Value> {
         self.request_json("POST", "/api/v1/fem/plane-triangle-2d/jobs", Some(payload))
+    }
+
+    pub fn submit_workflow_catalog_job(&self, workflow_id: &str, input_artifacts: &Value) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            &format!("/api/v1/workflows/catalog/{workflow_id}/jobs"),
+            Some(&serde_json::json!({ "input_artifacts": input_artifacts })),
+        )
+    }
+
+    pub fn submit_workflow_graph_job(&self, graph: &Value, input_artifacts: &Value) -> SdkResult<Value> {
+        self.request_json(
+            "POST",
+            "/api/v1/workflows/graph/jobs",
+            Some(&serde_json::json!({ "graph": graph, "input_artifacts": input_artifacts })),
+        )
     }
 
     pub fn list_results(&self) -> SdkResult<Value> {

@@ -2061,6 +2061,114 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert length(result_payload["result"]["elements"]) == 1
   end
 
+  test "runs an electrostatic bar job through the orchestration API" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "event" => "progress",
+          "progress" => %{
+            "job_id" => "solver-session",
+            "stage" => "solving",
+            "progress" => 0.5,
+            "iteration" => 1,
+            "message" => "solving electrostatic bar"
+          }
+        },
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{
+                "index" => 0,
+                "id" => "n0",
+                "x" => 0.0,
+                "potential" => 10.0,
+                "charge_density" => 0.0
+              },
+              %{
+                "index" => 1,
+                "id" => "n1",
+                "x" => 1.0,
+                "potential" => 0.0,
+                "charge_density" => 0.0
+              }
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "eb0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "length" => 1.0,
+                "average_potential" => 5.0,
+                "potential_gradient" => -10.0,
+                "electric_field" => 10.0,
+                "electric_flux_density" => 20.0
+              }
+            ],
+            "max_potential" => 10.0,
+            "max_electric_field" => 10.0,
+            "max_flux_density" => 20.0,
+            "input" => %{"nodes" => [], "elements" => []}
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/fem/electrostatic-bar-1d/jobs",
+        Jason.encode!(%{
+          "nodes" => [
+            %{
+              "id" => "n0",
+              "x" => 0.0,
+              "fix_potential" => true,
+              "potential" => 10.0,
+              "charge_density" => 0.0
+            },
+            %{
+              "id" => "n1",
+              "x" => 1.0,
+              "fix_potential" => true,
+              "potential" => 0.0,
+              "charge_density" => 0.0
+            }
+          ],
+          "elements" => [
+            %{
+              "id" => "eb0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "area" => 0.02,
+              "permittivity" => 2.0
+            }
+          ]
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = wait_for_job(payload["job"]["job_id"])
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["max_potential"] == 10.0
+    assert result_payload["result"]["max_electric_field"] > 0
+    assert result_payload["result"]["max_flux_density"] > 0
+    assert length(result_payload["result"]["elements"]) == 1
+  end
+
   test "binds a submitted job to the selected model version" do
     {:ok, project} = Library.create_project(%{"name" => "Version-bound study"})
 

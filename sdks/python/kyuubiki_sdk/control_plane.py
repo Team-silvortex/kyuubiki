@@ -55,6 +55,12 @@ class ControlPlaneClient:
     def agents(self) -> dict[str, Any]:
         return self._request("/api/v1/protocol/agents")
 
+    def list_workflow_catalog(self) -> dict[str, Any]:
+        return self._request("/api/v1/workflows/catalog")
+
+    def list_workflow_operators(self) -> dict[str, Any]:
+        return self._request("/api/v1/operators")
+
     def create_axial_bar_job(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("/api/v1/fem/axial-bar/jobs", "POST", payload)
 
@@ -66,6 +72,28 @@ class ControlPlaneClient:
 
     def create_plane_triangle_2d_job(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("/api/v1/fem/plane-triangle-2d/jobs", "POST", payload)
+
+    def submit_workflow_catalog_job(
+        self,
+        workflow_id: str,
+        input_artifacts: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return self._request(
+            f"/api/v1/workflows/catalog/{workflow_id}/jobs",
+            "POST",
+            {"input_artifacts": input_artifacts or {}},
+        )
+
+    def submit_workflow_graph_job(
+        self,
+        graph: dict[str, Any],
+        input_artifacts: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return self._request(
+            "/api/v1/workflows/graph/jobs",
+            "POST",
+            {"graph": graph, "input_artifacts": input_artifacts or {}},
+        )
 
     def fetch_job(self, job_id: str) -> dict[str, Any]:
         return self._request(f"/api/v1/jobs/{job_id}")

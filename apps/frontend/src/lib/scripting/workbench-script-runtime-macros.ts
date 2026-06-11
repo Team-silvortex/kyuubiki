@@ -7,6 +7,7 @@ import type {
   WorkbenchScriptMacroStep,
   WorkbenchScriptSnapshot,
 } from "./workbench-script-runtime-types";
+import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format";
 
 const MACRO_TEMPLATE_EXACT_RE = /^\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}$/;
 const MACRO_TEMPLATE_INLINE_RE = /\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}/g;
@@ -15,13 +16,16 @@ const WORKBENCH_MACRO_PRESETS_KEY = "kyuubiki-workbench-macro-presets";
 export function buildWorkbenchRecordedMacroDraft(
   actionLog: WorkbenchScriptActionLogEntry[],
   options: {
+    includedEntryIds?: string[];
     id?: string;
     maxSteps?: number;
   } = {},
 ): WorkbenchRecordedMacroDraft | null {
+  const allowedEntryIds = options.includedEntryIds ? new Set(options.includedEntryIds) : null;
   const steps = actionLog
     .filter(
       (entry) =>
+        (!allowedEntryIds || allowedEntryIds.has(entry.id)) &&
         entry.action !== "macro/run" &&
         ((entry.source === "manual" && entry.status === "completed") || entry.status === "started"),
     )
@@ -40,6 +44,25 @@ export function buildWorkbenchRecordedMacroDraft(
     id: options.id ?? "macro/draft-from-log",
     steps,
   };
+}
+
+export function buildWorkbenchRecordedMacroDraftFromEntries(
+  actionLog: WorkbenchScriptActionLogEntry[],
+  options: {
+    includedEntryIds?: string[];
+    id?: string;
+    maxSteps?: number;
+    startEntryId?: string;
+  } = {},
+): WorkbenchRecordedMacroDraft | null {
+  const startIndex = options.startEntryId ? actionLog.findIndex((entry) => entry.id === options.startEntryId) : -1;
+  const timelineSlice = startIndex >= 0 ? actionLog.slice(0, startIndex + 1) : actionLog;
+
+  return buildWorkbenchRecordedMacroDraft(timelineSlice, {
+    includedEntryIds: options.includedEntryIds,
+    id: options.id ?? "macro/draft-from-selection",
+    maxSteps: options.maxSteps,
+  });
 }
 
 export function isWorkbenchMacroStep(value: unknown): value is WorkbenchScriptMacroStep {
@@ -84,7 +107,7 @@ export function serializeWorkbenchRecordedMacroDraft(macro: WorkbenchRecordedMac
 }
 
 export function serializeWorkbenchMacroPythonSnippet(macro: WorkbenchRecordedMacroDraft): string {
-  return `recorded_macro = ${JSON.stringify(macro, null, 2)}\n\nawait ky.run_macro_definition(recorded_macro)\n`;
+  return `recorded_macro = ${serializeWorkbenchPythonLiteral(macro)}\n\nawait ky.run_macro_definition(recorded_macro)\n`;
 }
 
 function safeReadWorkbenchMacroPresetRecords(): WorkbenchMacroPresetRecord[] {
@@ -227,4 +250,3 @@ export function resolveWorkbenchMacroPayloadTemplates(
 
   return value;
 }
-

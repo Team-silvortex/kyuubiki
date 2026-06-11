@@ -1,32 +1,33 @@
 use kyuubiki_protocol::{
-    AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest,
-    HeatToThermoPlaneQuad2dWorkflowResult, OperatorDescriptor, OperatorKind, OperatorOrigin,
-    OperatorPortDescriptor, OperatorSchemaRef, OperatorValidationProfile,
-    OperatorValidationStatus, ResultChunkKind, ResultChunkRequest, ResultChunkResponse, SolveBarRequest,
-    SolveBeam1dRequest, SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest,
-    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-    SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest, WorkflowGraph,
-    WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind,
+    AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneQuad2dWorkflowResult,
+    OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor, OperatorSchemaRef,
+    OperatorValidationProfile, OperatorValidationStatus, ResultChunkKind, ResultChunkRequest,
+    ResultChunkResponse, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+    SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
+    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNodeKind,
 };
-use std::collections::{BTreeMap, HashMap, HashSet};
 use kyuubiki_solver::{
-    solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d,
-    solve_heat_plane_triangle_2d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d,
-    solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
+    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d, solve_frame_3d,
+    solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
     solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
     solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
 use serde_json::Value;
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum EngineSolveRequest {
     Bar1d(SolveBarRequest),
     ThermalBar1d(SolveThermalBar1dRequest),
     HeatBar1d(SolveHeatBar1dRequest),
+    ElectrostaticBar1d(SolveElectrostaticBar1dRequest),
     HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dRequest),
     HeatPlaneQuad2d(SolveHeatPlaneQuad2dRequest),
     ThermalTruss2d(SolveThermalTruss2dRequest),
@@ -64,6 +65,13 @@ pub fn built_in_operator_descriptors() -> Vec<OperatorDescriptor> {
             "thermal_frame_3d",
             "Solve a thermal 3D frame model with restrained expansion and temperature gradients.",
             &["verified", "thermo_mechanical", "frame", "3d"],
+        ),
+        built_in_solver_descriptor(
+            "solve.electrostatic_bar_1d",
+            "electromagnetic",
+            "electrostatic_bar_1d",
+            "Solve a 1D electrostatic bar model and expose potential, field, and flux results.",
+            &["verified", "electromagnetic", "electrostatic", "bar", "1d"],
         ),
         built_in_solver_descriptor(
             "solve.heat_plane_quad_2d",
@@ -124,6 +132,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::HeatBar1d(request) => {
             solve_heat_bar_1d(&request).map(AnalysisResult::HeatBar1d)
+        }
+        EngineSolveRequest::ElectrostaticBar1d(request) => {
+            solve_electrostatic_bar_1d(&request).map(AnalysisResult::ElectrostaticBar1d)
         }
         EngineSolveRequest::HeatPlaneTriangle2d(request) => {
             solve_heat_plane_triangle_2d(&request).map(AnalysisResult::HeatPlaneTriangle2d)
@@ -223,13 +234,12 @@ pub fn run_heat_to_thermo_plane_quad_2d_workflow(
 
     let bridged_model =
         bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &request.thermo_seed_model)?;
-    let thermo_result = match solve(EngineSolveRequest::ThermalPlaneQuad2d(bridged_model.clone()))?
-    {
+    let thermo_result = match solve(EngineSolveRequest::ThermalPlaneQuad2d(
+        bridged_model.clone(),
+    ))? {
         AnalysisResult::ThermalPlaneQuad2d(result) => result,
         _ => {
-            return Err(
-                "heat-to-thermo workflow produced an unexpected thermo result".to_string()
-            )
+            return Err("heat-to-thermo workflow produced an unexpected thermo result".to_string());
         }
     };
 
@@ -278,20 +288,22 @@ pub fn run_workflow_graph(
 
             match node.kind {
                 WorkflowNodeKind::Input => {
-                    let value = request
-                        .input_artifacts
-                        .get(&node.id)
-                        .cloned()
-                        .ok_or_else(|| format!("missing workflow input artifact for node {}", node.id))?;
+                    let value =
+                        request
+                            .input_artifacts
+                            .get(&node.id)
+                            .cloned()
+                            .ok_or_else(|| {
+                                format!("missing workflow input artifact for node {}", node.id)
+                            })?;
                     for output in &node.outputs {
                         artifacts.insert(artifact_key(&node.id, &output.id), value.clone());
                     }
                 }
                 WorkflowNodeKind::Solve => {
-                    let operator_id = node
-                        .operator_id
-                        .as_deref()
-                        .ok_or_else(|| format!("workflow solve node {} is missing operator_id", node.id))?;
+                    let operator_id = node.operator_id.as_deref().ok_or_else(|| {
+                        format!("workflow solve node {} is missing operator_id", node.id)
+                    })?;
                     let payload = resolve_single_input_payload(node, &incoming, &artifacts)?;
                     let output_value = run_solve_operator(operator_id, payload)?;
                     for output in &node.outputs {
@@ -358,7 +370,7 @@ pub fn run_workflow_graph(
                     return Err(format!(
                         "workflow node kind {:?} is not supported by the first headless executor",
                         node.kind
-                    ))
+                    ));
                 }
             }
 
@@ -436,12 +448,22 @@ fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), Strin
             .nodes
             .iter()
             .find(|node| node.id == edge.from.node)
-            .ok_or_else(|| format!("workflow edge {} references unknown from node {}", edge.id, edge.from.node))?;
+            .ok_or_else(|| {
+                format!(
+                    "workflow edge {} references unknown from node {}",
+                    edge.id, edge.from.node
+                )
+            })?;
         let to_node = graph
             .nodes
             .iter()
             .find(|node| node.id == edge.to.node)
-            .ok_or_else(|| format!("workflow edge {} references unknown to node {}", edge.id, edge.to.node))?;
+            .ok_or_else(|| {
+                format!(
+                    "workflow edge {} references unknown to node {}",
+                    edge.id, edge.to.node
+                )
+            })?;
         let from_port = from_node
             .outputs
             .iter()
@@ -466,7 +488,11 @@ fn validate_workflow_dataset_contract(graph: &WorkflowGraph) -> Result<(), Strin
         if from_port.artifact_type != edge.artifact_type {
             return Err(format!(
                 "workflow edge {} artifact_type {} does not match from port {}.{} artifact_type {}",
-                edge.id, edge.artifact_type, edge.from.node, edge.from.port, from_port.artifact_type
+                edge.id,
+                edge.artifact_type,
+                edge.from.node,
+                edge.from.port,
+                from_port.artifact_type
             ));
         }
         if to_port.artifact_type != edge.artifact_type {
@@ -535,7 +561,10 @@ fn built_in_solver_descriptor(
         family: family.to_string(),
         kind: OperatorKind::Solver,
         summary: summary.to_string(),
-        capability_tags: capability_tags.iter().map(|tag| (*tag).to_string()).collect(),
+        capability_tags: capability_tags
+            .iter()
+            .map(|tag| (*tag).to_string())
+            .collect(),
         origin: OperatorOrigin::BuiltIn,
         input_schema: OperatorSchemaRef {
             schema: format!("kyuubiki.operator.{family}.input"),
@@ -559,7 +588,10 @@ fn built_in_solver_descriptor(
             Some("result"),
             Some(&format!("kyuubiki.operator.{family}.output")),
         )],
-        validation: verified_operator_validation_profile(family, &["workflow_graph", "orchestrated_api"]),
+        validation: verified_operator_validation_profile(
+            family,
+            &["workflow_graph", "orchestrated_api"],
+        ),
     }
 }
 
@@ -577,7 +609,10 @@ fn built_in_bridge_descriptor(
         family: family.to_string(),
         kind: OperatorKind::WorkflowBridge,
         summary: summary.to_string(),
-        capability_tags: capability_tags.iter().map(|tag| (*tag).to_string()).collect(),
+        capability_tags: capability_tags
+            .iter()
+            .map(|tag| (*tag).to_string())
+            .collect(),
         origin: OperatorOrigin::BuiltIn,
         input_schema: OperatorSchemaRef {
             schema: format!("kyuubiki.operator.{family}.bridge_input"),
@@ -601,7 +636,10 @@ fn built_in_bridge_descriptor(
             Some("bridged_model"),
             Some(&format!("kyuubiki.operator.{family}.bridge_output")),
         )],
-        validation: verified_operator_validation_profile(family, &["workflow_graph", "catalog_job"]),
+        validation: verified_operator_validation_profile(
+            family,
+            &["workflow_graph", "catalog_job"],
+        ),
     }
 }
 
@@ -619,7 +657,10 @@ fn built_in_extract_descriptor(
         family: family.to_string(),
         kind: OperatorKind::Extract,
         summary: summary.to_string(),
-        capability_tags: capability_tags.iter().map(|tag| (*tag).to_string()).collect(),
+        capability_tags: capability_tags
+            .iter()
+            .map(|tag| (*tag).to_string())
+            .collect(),
         origin: OperatorOrigin::BuiltIn,
         input_schema: OperatorSchemaRef {
             schema: format!("kyuubiki.operator.{family}.extract_input"),
@@ -643,7 +684,10 @@ fn built_in_extract_descriptor(
             Some("summary"),
             Some(&format!("kyuubiki.operator.{family}.extract_output")),
         )],
-        validation: verified_operator_validation_profile(family, &["workflow_graph", "draft_builder"]),
+        validation: verified_operator_validation_profile(
+            family,
+            &["workflow_graph", "draft_builder"],
+        ),
     }
 }
 
@@ -661,7 +705,10 @@ fn built_in_export_descriptor(
         family: family.to_string(),
         kind: OperatorKind::Export,
         summary: summary.to_string(),
-        capability_tags: capability_tags.iter().map(|tag| (*tag).to_string()).collect(),
+        capability_tags: capability_tags
+            .iter()
+            .map(|tag| (*tag).to_string())
+            .collect(),
         origin: OperatorOrigin::BuiltIn,
         input_schema: OperatorSchemaRef {
             schema: format!("kyuubiki.operator.{family}.export_input"),
@@ -685,7 +732,10 @@ fn built_in_export_descriptor(
             Some("export_artifact"),
             Some(&format!("kyuubiki.operator.{family}.export_output")),
         )],
-        validation: verified_operator_validation_profile(family, &["workflow_graph", "draft_builder"]),
+        validation: verified_operator_validation_profile(
+            family,
+            &["workflow_graph", "draft_builder"],
+        ),
     }
 }
 
@@ -765,11 +815,17 @@ fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, String
             };
             serde_json::to_value(result).map_err(|err| err.to_string())
         }
-        _ => Err(format!("unsupported solve operator in first executor: {operator_id}")),
+        _ => Err(format!(
+            "unsupported solve operator in first executor: {operator_id}"
+        )),
     }
 }
 
-fn run_transform_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+fn run_transform_operator(
+    operator_id: &str,
+    payload: Value,
+    config: Value,
+) -> Result<Value, String> {
     match operator_id {
         "bridge.temperature_field_to_thermo_quad_2d" => {
             let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
@@ -925,10 +981,14 @@ pub fn chunk_result(
         (AnalysisResult::ThermalBar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
-        (AnalysisResult::HeatBar1d(result), ResultChunkKind::Nodes) => {
+        (AnalysisResult::HeatBar1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
+        (AnalysisResult::HeatBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ElectrostaticBar1d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }
-        (AnalysisResult::HeatBar1d(result), ResultChunkKind::Elements) => {
+        (AnalysisResult::ElectrostaticBar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::HeatPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
@@ -1068,8 +1128,8 @@ mod tests {
         run_heat_to_thermo_plane_quad_2d_workflow, run_workflow_graph, solve,
     };
     use kyuubiki_protocol::{
-        AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest, HeatPlaneNodeInput,
-        HeatPlaneQuadElementInput, OperatorKind, ResultChunkKind, ResultChunkRequest,
+        AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
+        HeatToThermoPlaneQuad2dWorkflowRequest, OperatorKind, ResultChunkKind, ResultChunkRequest,
         SolveBarRequest, SolveHeatPlaneQuad2dRequest, SolveThermalPlaneQuad2dRequest,
         SolveTruss2dRequest, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
         TrussElementInput, TrussNodeInput, WorkflowCachePolicy, WorkflowDatasetContract,
@@ -1176,11 +1236,15 @@ mod tests {
                 .any(|descriptor| descriptor.id == "solve.frame_3d")
         );
 
-        let descriptor =
-            describe_built_in_operator("solve.thermal_frame_3d").expect("descriptor");
+        let descriptor = describe_built_in_operator("solve.thermal_frame_3d").expect("descriptor");
         assert_eq!(descriptor.kind, OperatorKind::Solver);
         assert_eq!(descriptor.family, "thermal_frame_3d");
-        assert!(descriptor.capability_tags.iter().any(|tag| tag == "verified"));
+        assert!(
+            descriptor
+                .capability_tags
+                .iter()
+                .any(|tag| tag == "verified")
+        );
     }
 
     #[test]
@@ -1306,8 +1370,8 @@ mod tests {
 
     #[test]
     fn runs_heat_to_thermo_plane_quad_workflow() {
-        let result = run_heat_to_thermo_plane_quad_2d_workflow(
-            HeatToThermoPlaneQuad2dWorkflowRequest {
+        let result =
+            run_heat_to_thermo_plane_quad_2d_workflow(HeatToThermoPlaneQuad2dWorkflowRequest {
                 heat_model: SolveHeatPlaneQuad2dRequest {
                     nodes: vec![
                         HeatPlaneNodeInput {
@@ -1408,9 +1472,8 @@ mod tests {
                         thermal_expansion: 11.0e-6,
                     }],
                 },
-            },
-        )
-        .expect("workflow should run");
+            })
+            .expect("workflow should run");
 
         assert_eq!(result.workflow_id, "workflow.heat-to-thermo-quad-2d");
         assert_eq!(result.heat_result.max_temperature, 100.0);
@@ -2055,7 +2118,9 @@ mod tests {
             id: "workflow.invalid-dataset-contract".to_string(),
             name: "Invalid dataset contract".to_string(),
             version: "1.0.0".to_string(),
-            description: Some("Graph with mismatched artifact and dataset semantic type".to_string()),
+            description: Some(
+                "Graph with mismatched artifact and dataset semantic type".to_string(),
+            ),
             dataset_contract: Some(WorkflowDatasetContract {
                 id: "dataset.invalid/v1".to_string(),
                 version: "1.0.0".to_string(),

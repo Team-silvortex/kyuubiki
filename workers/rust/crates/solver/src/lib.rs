@@ -1,34 +1,34 @@
 use kyuubiki_protocol::{
-    Beam1dElementResult, Beam1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
-    Frame3dElementResult, Frame3dNodeResult,
-    HeatBar1dElementResult, HeatBar1dNodeResult, HeatPlaneNodeResult,
-    HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput,
-    HeatPlaneTriangleElementResult, Job, JobStatus, NodeResult, PlaneNodeResult,
-    PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
-    PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult,
-    SolveBeam1dRequest, SolveBeam1dResult, SolveFrame2dRequest, SolveFrame2dResult,
-    SolveFrame3dRequest, SolveFrame3dResult,
+    Beam1dElementResult, Beam1dNodeResult, ElectrostaticBar1dElementResult,
+    ElectrostaticBar1dNodeResult, ElementResult, Frame2dElementResult, Frame2dNodeResult,
+    Frame3dElementResult, Frame3dNodeResult, HeatBar1dElementResult, HeatBar1dNodeResult,
+    HeatPlaneNodeResult, HeatPlaneQuadElementInput, HeatPlaneQuadElementResult,
+    HeatPlaneTriangleElementInput, HeatPlaneTriangleElementResult, Job, JobStatus, NodeResult,
+    PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult, PlaneTriangleElementInput,
+    PlaneTriangleElementResult, ProgressEvent, SolveBarRequest, SolveBarResult, SolveBeam1dRequest,
+    SolveBeam1dResult, SolveElectrostaticBar1dRequest, SolveElectrostaticBar1dResult,
+    SolveFrame2dRequest, SolveFrame2dResult, SolveFrame3dRequest, SolveFrame3dResult,
     SolveHeatBar1dRequest, SolveHeatBar1dResult, SolveHeatPlaneQuad2dRequest,
     SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
     SolvePlaneQuad2dRequest, SolvePlaneQuad2dResult, SolvePlaneTriangle2dRequest,
-    SolvePlaneTriangle2dResult, SolveSpring1dRequest,
-    SolveSpring1dResult, SolveSpring2dRequest, SolveSpring2dResult, SolveSpring3dRequest,
-    SolveSpring3dResult, SolveThermalBar1dRequest, SolveThermalBar1dResult,
-    SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
-    SolveThermalFrame2dRequest, SolveThermalFrame2dResult, SolveThermalFrame3dRequest, SolveThermalFrame3dResult, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dRequest, SolveThermalTruss2dResult,
-    SolveThermalTruss3dRequest, SolveThermalTruss3dResult, SolveTorsion1dRequest,
-    SolveTorsion1dResult, SolveTruss2dRequest, SolveTruss2dResult, SolveTruss3dRequest,
-    SolveTruss3dResult, Spring1dElementResult, Spring1dNodeResult, Spring2dElementResult,
-    Spring2dNodeResult, Spring3dElementResult, Spring3dNodeResult, ThermalBar1dElementResult,
-    ThermalBar1dNodeResult, ThermalBeam1dElementResult, ThermalBeam1dNodeResult,
-    ThermalFrame2dElementResult, ThermalFrame2dNodeResult, ThermalFrame3dElementResult, ThermalFrame3dNodeResult, ThermalPlaneNodeResult,
-    ThermalPlaneQuadElementInput, ThermalPlaneQuadElementResult, ThermalPlaneTriangleElementInput,
-    ThermalPlaneTriangleElementResult, ThermalTruss2dElementResult, ThermalTruss2dNodeResult,
-    ThermalTruss3dElementResult, ThermalTruss3dNodeResult, Torsion1dElementResult,
-    Torsion1dNodeResult, Truss3dElementResult, Truss3dNodeResult, TrussElementResult,
-    TrussNodeResult,
+    SolvePlaneTriangle2dResult, SolveSpring1dRequest, SolveSpring1dResult, SolveSpring2dRequest,
+    SolveSpring2dResult, SolveSpring3dRequest, SolveSpring3dResult, SolveThermalBar1dRequest,
+    SolveThermalBar1dResult, SolveThermalBeam1dRequest, SolveThermalBeam1dResult,
+    SolveThermalFrame2dRequest, SolveThermalFrame2dResult, SolveThermalFrame3dRequest,
+    SolveThermalFrame3dResult, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalPlaneTriangle2dResult,
+    SolveThermalTruss2dRequest, SolveThermalTruss2dResult, SolveThermalTruss3dRequest,
+    SolveThermalTruss3dResult, SolveTorsion1dRequest, SolveTorsion1dResult, SolveTruss2dRequest,
+    SolveTruss2dResult, SolveTruss3dRequest, SolveTruss3dResult, Spring1dElementResult,
+    Spring1dNodeResult, Spring2dElementResult, Spring2dNodeResult, Spring3dElementResult,
+    Spring3dNodeResult, ThermalBar1dElementResult, ThermalBar1dNodeResult,
+    ThermalBeam1dElementResult, ThermalBeam1dNodeResult, ThermalFrame2dElementResult,
+    ThermalFrame2dNodeResult, ThermalFrame3dElementResult, ThermalFrame3dNodeResult,
+    ThermalPlaneNodeResult, ThermalPlaneQuadElementInput, ThermalPlaneQuadElementResult,
+    ThermalPlaneTriangleElementInput, ThermalPlaneTriangleElementResult,
+    ThermalTruss2dElementResult, ThermalTruss2dNodeResult, ThermalTruss3dElementResult,
+    ThermalTruss3dNodeResult, Torsion1dElementResult, Torsion1dNodeResult, Truss3dElementResult,
+    Truss3dNodeResult, TrussElementResult, TrussNodeResult,
 };
 
 pub struct MockSolver {
@@ -145,8 +145,7 @@ pub fn solve_thermal_bar_1d(
         let node_j = &request.nodes[element.node_j];
         let length = (node_j.x - node_i.x).abs();
         let stiffness = element.youngs_modulus * element.area / length;
-        let average_temperature_delta =
-            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
         let thermal_force = element.youngs_modulus
             * element.area
             * element.thermal_expansion
@@ -159,7 +158,12 @@ pub fn solve_thermal_bar_1d(
             force_vector[map[row]] += equivalent_load[row];
 
             for column in 0..2 {
-                add_at(&mut global_stiffness, map[row], map[column], local_stiffness[row][column]);
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    local_stiffness[row][column],
+                );
             }
         }
     }
@@ -203,7 +207,8 @@ pub fn solve_thermal_bar_1d(
             let length = (node_j.x - node_i.x).abs();
             let average_temperature_delta =
                 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-            let total_strain = (displacements[element.node_j] - displacements[element.node_i]) / length;
+            let total_strain =
+                (displacements[element.node_j] - displacements[element.node_i]) / length;
             let thermal_strain = element.thermal_expansion * average_temperature_delta;
             let mechanical_strain = total_strain - thermal_strain;
             let stress = element.youngs_modulus * mechanical_strain;
@@ -225,8 +230,14 @@ pub fn solve_thermal_bar_1d(
         })
         .collect::<Vec<_>>();
 
-    let max_displacement = nodes.iter().map(|node| node.ux.abs()).fold(0.0_f64, f64::max);
-    let max_stress = elements.iter().map(|element| element.stress.abs()).fold(0.0_f64, f64::max);
+    let max_displacement = nodes
+        .iter()
+        .map(|node| node.ux.abs())
+        .fold(0.0_f64, f64::max);
+    let max_stress = elements
+        .iter()
+        .map(|element| element.stress.abs())
+        .fold(0.0_f64, f64::max);
     let max_axial_force = elements
         .iter()
         .map(|element| element.axial_force.abs())
@@ -268,7 +279,12 @@ pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar
 
         for row in 0..2 {
             for column in 0..2 {
-                add_at(&mut global_stiffness, map[row], map[column], local[row][column]);
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    local[row][column],
+                );
             }
         }
     }
@@ -313,8 +329,10 @@ pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar
             let node_i = &request.nodes[element.node_i];
             let node_j = &request.nodes[element.node_j];
             let length = (node_j.x - node_i.x).abs();
-            let average_temperature = 0.5 * (temperatures[element.node_i] + temperatures[element.node_j]);
-            let temperature_gradient = (temperatures[element.node_j] - temperatures[element.node_i]) / length;
+            let average_temperature =
+                0.5 * (temperatures[element.node_i] + temperatures[element.node_j]);
+            let temperature_gradient =
+                (temperatures[element.node_j] - temperatures[element.node_i]) / length;
             let heat_flux = -element.conductivity * temperature_gradient;
 
             HeatBar1dElementResult {
@@ -345,6 +363,122 @@ pub fn solve_heat_bar_1d(request: &SolveHeatBar1dRequest) -> Result<SolveHeatBar
         elements,
         max_temperature,
         max_heat_flux,
+    })
+}
+
+pub fn solve_electrostatic_bar_1d(
+    request: &SolveElectrostaticBar1dRequest,
+) -> Result<SolveElectrostaticBar1dResult, String> {
+    validate_electrostatic_bar_1d_request(request)?;
+
+    let dof_count = request.nodes.len();
+    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut source_vector = vec![0.0; dof_count];
+
+    for (index, node) in request.nodes.iter().enumerate() {
+        source_vector[index] = node.charge_density;
+    }
+
+    for element in &request.elements {
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        let conductance = element.permittivity * element.area / length;
+        let local = [[conductance, -conductance], [-conductance, conductance]];
+        let map = [element.node_i, element.node_j];
+
+        for row in 0..2 {
+            for column in 0..2 {
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    local[row][column],
+                );
+            }
+        }
+    }
+
+    let prescribed = request
+        .nodes
+        .iter()
+        .enumerate()
+        .filter_map(|(index, node)| node.fix_potential.then_some((index, node.potential)))
+        .collect::<Vec<_>>();
+
+    let (reduced_stiffness, reduced_source, free) =
+        reduce_sparse_system_with_prescribed(&global_stiffness, &source_vector, &prescribed);
+    let reduced_potentials = solve_spd_system(&reduced_stiffness, &reduced_source)?;
+
+    let mut potentials = vec![0.0; dof_count];
+    for &(index, value) in &prescribed {
+        potentials[index] = value;
+    }
+    for (index, &dof) in free.iter().enumerate() {
+        potentials[dof] = reduced_potentials[index];
+    }
+
+    let nodes = request
+        .nodes
+        .iter()
+        .enumerate()
+        .map(|(index, node)| ElectrostaticBar1dNodeResult {
+            index,
+            id: node.id.clone(),
+            x: node.x,
+            potential: potentials[index],
+            charge_density: node.charge_density,
+        })
+        .collect::<Vec<_>>();
+
+    let elements = request
+        .elements
+        .iter()
+        .enumerate()
+        .map(|(index, element)| {
+            let node_i = &request.nodes[element.node_i];
+            let node_j = &request.nodes[element.node_j];
+            let length = (node_j.x - node_i.x).abs();
+            let average_potential = 0.5 * (potentials[element.node_i] + potentials[element.node_j]);
+            let potential_gradient =
+                (potentials[element.node_j] - potentials[element.node_i]) / length;
+            let electric_field = -potential_gradient;
+            let electric_flux_density = element.permittivity * electric_field;
+
+            ElectrostaticBar1dElementResult {
+                index,
+                id: element.id.clone(),
+                node_i: element.node_i,
+                node_j: element.node_j,
+                length,
+                average_potential,
+                potential_gradient,
+                electric_field,
+                electric_flux_density,
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let max_potential = nodes
+        .iter()
+        .map(|node| node.potential.abs())
+        .fold(0.0_f64, f64::max);
+    let max_electric_field = elements
+        .iter()
+        .map(|element| element.electric_field.abs())
+        .fold(0.0_f64, f64::max);
+    let max_flux_density = elements
+        .iter()
+        .map(|element| element.electric_flux_density.abs())
+        .fold(0.0_f64, f64::max);
+
+    Ok(SolveElectrostaticBar1dResult {
+        input: request.clone(),
+        nodes,
+        elements,
+        max_potential,
+        max_electric_field,
+        max_flux_density,
     })
 }
 
@@ -483,8 +617,14 @@ pub fn solve_heat_plane_quad_2d(
 
     for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
         let triangles = [
-            ([element.node_i, element.node_j, element.node_k], &computed.first),
-            ([element.node_i, element.node_k, element.node_l], &computed.second),
+            (
+                [element.node_i, element.node_j, element.node_k],
+                &computed.first,
+            ),
+            (
+                [element.node_i, element.node_k, element.node_l],
+                &computed.second,
+            ),
         ];
 
         for (nodes, triangle) in triangles {
@@ -552,13 +692,16 @@ pub fn solve_heat_plane_quad_2d(
                 temperatures[element.node_l],
             ];
             let first_gradient = heat_plane_triangle_gradient(&computed.first, &first_temperatures);
-            let second_gradient = heat_plane_triangle_gradient(&computed.second, &second_temperatures);
+            let second_gradient =
+                heat_plane_triangle_gradient(&computed.second, &second_temperatures);
             let total_area = computed.first.area + computed.second.area;
             let weighted = |left: f64, right: f64| -> f64 {
                 ((left * computed.first.area) + (right * computed.second.area)) / total_area
             };
-            let heat_flux_x = -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
-            let heat_flux_y = -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
+            let heat_flux_x =
+                -element.conductivity * weighted(first_gradient[0], second_gradient[0]);
+            let heat_flux_y =
+                -element.conductivity * weighted(first_gradient[1], second_gradient[1]);
 
             HeatPlaneQuadElementResult {
                 index,
@@ -568,12 +711,11 @@ pub fn solve_heat_plane_quad_2d(
                 node_k: element.node_k,
                 node_l: element.node_l,
                 area: total_area,
-                average_temperature: (
-                    temperatures[element.node_i]
-                        + temperatures[element.node_j]
-                        + temperatures[element.node_k]
-                        + temperatures[element.node_l]
-                ) / 4.0,
+                average_temperature: (temperatures[element.node_i]
+                    + temperatures[element.node_j]
+                    + temperatures[element.node_k]
+                    + temperatures[element.node_l])
+                    / 4.0,
                 temperature_gradient_x: weighted(first_gradient[0], second_gradient[0]),
                 temperature_gradient_y: weighted(first_gradient[1], second_gradient[1]),
                 heat_flux_x,
@@ -624,10 +766,11 @@ pub fn solve_thermal_truss_2d(
         let c = dx / length;
         let s = dy / length;
         let k = element.youngs_modulus * element.area / length;
-        let average_temperature_delta =
-            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-        let thermal_force =
-            element.youngs_modulus * element.area * element.thermal_expansion * average_temperature_delta;
+        let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let thermal_force = element.youngs_modulus
+            * element.area
+            * element.thermal_expansion
+            * average_temperature_delta;
 
         let local = [
             [c * c, c * s, -c * c, -c * s],
@@ -635,7 +778,12 @@ pub fn solve_thermal_truss_2d(
             [-c * c, -c * s, c * c, c * s],
             [-c * s, -s * s, c * s, s * s],
         ];
-        let equivalent_load = [-thermal_force * c, -thermal_force * s, thermal_force * c, thermal_force * s];
+        let equivalent_load = [
+            -thermal_force * c,
+            -thermal_force * s,
+            thermal_force * c,
+            thermal_force * s,
+        ];
 
         let map = [
             element.node_i * 2,
@@ -794,10 +942,11 @@ pub fn solve_thermal_truss_3d(
         let m = dy / length;
         let n = dz / length;
         let k = element.youngs_modulus * element.area / length;
-        let average_temperature_delta =
-            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-        let thermal_force =
-            element.youngs_modulus * element.area * element.thermal_expansion * average_temperature_delta;
+        let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let thermal_force = element.youngs_modulus
+            * element.area
+            * element.thermal_expansion
+            * average_temperature_delta;
 
         let local = [
             [l * l, l * m, l * n, -l * l, -l * m, -l * n],
@@ -907,8 +1056,7 @@ pub fn solve_thermal_truss_3d(
             let uz_j = displacements[element.node_j * 3 + 2];
             let average_temperature_delta =
                 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
-            let total_strain =
-                ((ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n) / length;
+            let total_strain = ((ux_j - ux_i) * l + (uy_j - uy_i) * m + (uz_j - uz_i) * n) / length;
             let thermal_strain = element.thermal_expansion * average_temperature_delta;
             let mechanical_strain = total_strain - thermal_strain;
             let stress = element.youngs_modulus * mechanical_strain;
@@ -1314,7 +1462,12 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
 
         for row in 0..2 {
             for column in 0..2 {
-                add_at(&mut global_stiffness, map[row], map[column], local_stiffness[row][column]);
+                add_at(
+                    &mut global_stiffness,
+                    map[row],
+                    map[column],
+                    local_stiffness[row][column],
+                );
             }
         }
     }
@@ -1372,8 +1525,14 @@ pub fn solve_torsion_1d(request: &SolveTorsion1dRequest) -> Result<SolveTorsion1
         })
         .collect::<Vec<_>>();
 
-    let max_rotation = nodes.iter().map(|node| node.rz.abs()).fold(0.0_f64, f64::max);
-    let max_torque = elements.iter().map(|element| element.torque.abs()).fold(0.0_f64, f64::max);
+    let max_rotation = nodes
+        .iter()
+        .map(|node| node.rz.abs())
+        .fold(0.0_f64, f64::max);
+    let max_torque = elements
+        .iter()
+        .map(|element| element.torque.abs())
+        .fold(0.0_f64, f64::max);
     let max_stress = elements
         .iter()
         .map(|element| element.shear_stress)
@@ -2241,17 +2400,14 @@ pub fn solve_frame_3d(request: &SolveFrame3dRequest) -> Result<SolveFrame3dResul
                 displacements[map[10]],
                 displacements[map[11]],
             ];
-            let local_displacements = multiply_matrix_vector_12x12(&transform, &global_displacements);
+            let local_displacements =
+                multiply_matrix_vector_12x12(&transform, &global_displacements);
             let local_forces = multiply_matrix_vector_12x12(&local_stiffness, &local_displacements);
             let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
-            let bending_stress_y = local_forces[4]
-                .abs()
-                .max(local_forces[10].abs())
-                / element.section_modulus_y;
-            let bending_stress_z = local_forces[5]
-                .abs()
-                .max(local_forces[11].abs())
-                / element.section_modulus_z;
+            let bending_stress_y =
+                local_forces[4].abs().max(local_forces[10].abs()) / element.section_modulus_y;
+            let bending_stress_z =
+                local_forces[5].abs().max(local_forces[11].abs()) / element.section_modulus_z;
             let max_bending_stress = bending_stress_y + bending_stress_z;
             let max_combined_stress = axial_stress + max_bending_stress;
 
@@ -2809,7 +2965,8 @@ pub fn solve_thermal_plane_triangle_2d(
                 displacements[element.node_k * 2 + 1],
             ];
 
-            let total_strain = multiply_matrix_vector_3x6(&computed.b_matrix, &element_displacements);
+            let total_strain =
+                multiply_matrix_vector_3x6(&computed.b_matrix, &element_displacements);
             let thermal_strain = [
                 element.thermal_expansion * computed.average_temperature_delta,
                 element.thermal_expansion * computed.average_temperature_delta,
@@ -2889,8 +3046,14 @@ pub fn solve_thermal_plane_quad_2d(
 
     for (element, computed) in request.elements.iter().zip(computed_elements.iter()) {
         let triangles = [
-            ([element.node_i, element.node_j, element.node_k], &computed.first),
-            ([element.node_i, element.node_k, element.node_l], &computed.second),
+            (
+                [element.node_i, element.node_j, element.node_k],
+                &computed.first,
+            ),
+            (
+                [element.node_i, element.node_k, element.node_l],
+                &computed.second,
+            ),
         ];
 
         for (nodes, triangle) in triangles {
@@ -3286,8 +3449,7 @@ pub fn solve_thermal_frame_2d(
         let transform = frame_transform(c, s);
         let transform_t = transpose_6x6(&transform);
         let global_element_stiffness = transform_frame_stiffness(&local_stiffness, &transform);
-        let average_temperature_delta =
-            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
         let equivalent_local = add_vector_6(
             &frame_thermal_uniform_vector(
                 element.area,
@@ -3464,7 +3626,10 @@ pub fn solve_thermal_frame_2d(
         .iter()
         .map(|node| node.displacement_magnitude)
         .fold(0.0_f64, f64::max);
-    let max_rotation = nodes.iter().map(|node| node.rz.abs()).fold(0.0_f64, f64::max);
+    let max_rotation = nodes
+        .iter()
+        .map(|node| node.rz.abs())
+        .fold(0.0_f64, f64::max);
     let max_moment = elements
         .iter()
         .flat_map(|element| [element.moment_i.abs(), element.moment_j.abs()])
@@ -3537,8 +3702,7 @@ pub fn solve_thermal_frame_3d(
         );
         let transform = frame3d_transform(&rotation);
         let global_element_stiffness = transform_frame3d_stiffness(&local_stiffness, &transform);
-        let average_temperature_delta =
-            0.5 * (node_i.temperature_delta + node_j.temperature_delta);
+        let average_temperature_delta = 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
         let equivalent_local = add_vector_12(
             &frame3d_thermal_uniform_vector(
                 element.area,
@@ -3557,7 +3721,8 @@ pub fn solve_thermal_frame_3d(
                 element.temperature_gradient_z,
             ),
         );
-        let equivalent_global = multiply_matrix_vector_12x12(&transpose_12x12(&transform), &equivalent_local);
+        let equivalent_global =
+            multiply_matrix_vector_12x12(&transpose_12x12(&transform), &equivalent_local);
         let map = frame3d_dof_map(element.node_i, element.node_j);
 
         for row in 0..12 {
@@ -3679,7 +3844,8 @@ pub fn solve_thermal_frame_3d(
                 displacements[map[10]],
                 displacements[map[11]],
             ];
-            let local_displacements = multiply_matrix_vector_12x12(&transform, &global_displacements);
+            let local_displacements =
+                multiply_matrix_vector_12x12(&transform, &global_displacements);
             let average_temperature_delta =
                 0.5 * (node_i.temperature_delta + node_j.temperature_delta);
             let equivalent_local = add_vector_12(
@@ -3708,14 +3874,10 @@ pub fn solve_thermal_frame_3d(
             let total_strain = (local_displacements[6] - local_displacements[0]) / length;
             let mechanical_strain = total_strain - thermal_strain;
             let axial_stress = local_forces[0].abs().max(local_forces[6].abs()) / element.area;
-            let bending_stress_y = local_forces[4]
-                .abs()
-                .max(local_forces[10].abs())
-                / element.section_modulus_y;
-            let bending_stress_z = local_forces[5]
-                .abs()
-                .max(local_forces[11].abs())
-                / element.section_modulus_z;
+            let bending_stress_y =
+                local_forces[4].abs().max(local_forces[10].abs()) / element.section_modulus_y;
+            let bending_stress_z =
+                local_forces[5].abs().max(local_forces[11].abs()) / element.section_modulus_z;
             let max_bending_stress = bending_stress_y + bending_stress_z;
             let max_combined_stress = axial_stress + max_bending_stress;
 
@@ -3896,9 +4058,7 @@ fn validate_thermal_truss_2d_request(request: &SolveThermalTruss2dRequest) -> Re
         }
 
         if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
-            return Err(
-                "thermal truss element thermal_expansion must be non-negative".to_string(),
-            );
+            return Err("thermal truss element thermal_expansion must be non-negative".to_string());
         }
 
         let node_i = &request.nodes[element.node_i];
@@ -4077,7 +4237,9 @@ fn validate_thermal_plane_triangle_request(
             && element.poisson_ratio > -1.0
             && element.poisson_ratio < 0.5)
         {
-            return Err("thermal plane element poisson_ratio must be between -1.0 and 0.5".to_string());
+            return Err(
+                "thermal plane element poisson_ratio must be between -1.0 and 0.5".to_string(),
+            );
         }
         if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
             return Err("thermal plane element thermal_expansion must be non-negative".to_string());
@@ -4139,7 +4301,12 @@ fn validate_thermal_plane_quad_request(
     }
 
     for element in &request.elements {
-        let indices = [element.node_i, element.node_j, element.node_k, element.node_l];
+        let indices = [
+            element.node_i,
+            element.node_j,
+            element.node_k,
+            element.node_l,
+        ];
         if indices.iter().any(|&index| index >= request.nodes.len()) {
             return Err("thermal plane quad element references an out-of-range node".to_string());
         }
@@ -4149,7 +4316,9 @@ fn validate_thermal_plane_quad_request(
             .collect::<std::collections::BTreeSet<_>>()
             .len();
         if unique_count < 4 {
-            return Err("thermal plane quad element must reference four distinct nodes".to_string());
+            return Err(
+                "thermal plane quad element must reference four distinct nodes".to_string(),
+            );
         }
         if !(element.thickness.is_finite() && element.thickness > 0.0) {
             return Err("thermal plane quad element thickness must be positive".to_string());
@@ -4161,10 +4330,14 @@ fn validate_thermal_plane_quad_request(
             && element.poisson_ratio > -1.0
             && element.poisson_ratio < 0.5)
         {
-            return Err("thermal plane quad element poisson_ratio must be between -1.0 and 0.5".to_string());
+            return Err(
+                "thermal plane quad element poisson_ratio must be between -1.0 and 0.5".to_string(),
+            );
         }
         if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
-            return Err("thermal plane quad element thermal_expansion must be non-negative".to_string());
+            return Err(
+                "thermal plane quad element thermal_expansion must be non-negative".to_string(),
+            );
         }
 
         let to_plane_node = |index: usize| kyuubiki_protocol::PlaneNodeInput {
@@ -4189,7 +4362,10 @@ fn validate_thermal_plane_quad_request(
         )
         .abs();
         if first_area <= 1.0e-12 || second_area <= 1.0e-12 {
-            return Err("thermal plane quad element must decompose into positive-area triangles".to_string());
+            return Err(
+                "thermal plane quad element must decompose into positive-area triangles"
+                    .to_string(),
+            );
         }
     }
 
@@ -4334,8 +4510,7 @@ fn validate_thermal_frame_3d_request(request: &SolveThermalFrame3dRequest) -> Re
     }
 
     let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
-        sum
-            + usize::from(node.fix_x)
+        sum + usize::from(node.fix_x)
             + usize::from(node.fix_y)
             + usize::from(node.fix_z)
             + usize::from(node.fix_rx)
@@ -4372,10 +4547,14 @@ fn validate_thermal_frame_3d_request(request: &SolveThermalFrame3dRequest) -> Re
             return Err("thermal 3d frame element torsion_constant must be positive".to_string());
         }
         if !(element.moment_of_inertia_y.is_finite() && element.moment_of_inertia_y > 0.0) {
-            return Err("thermal 3d frame element moment_of_inertia_y must be positive".to_string());
+            return Err(
+                "thermal 3d frame element moment_of_inertia_y must be positive".to_string(),
+            );
         }
         if !(element.moment_of_inertia_z.is_finite() && element.moment_of_inertia_z > 0.0) {
-            return Err("thermal 3d frame element moment_of_inertia_z must be positive".to_string());
+            return Err(
+                "thermal 3d frame element moment_of_inertia_z must be positive".to_string(),
+            );
         }
         if !(element.section_modulus_y.is_finite() && element.section_modulus_y > 0.0) {
             return Err("thermal 3d frame element section_modulus_y must be positive".to_string());
@@ -4384,7 +4563,9 @@ fn validate_thermal_frame_3d_request(request: &SolveThermalFrame3dRequest) -> Re
             return Err("thermal 3d frame element section_modulus_z must be positive".to_string());
         }
         if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
-            return Err("thermal 3d frame element thermal_expansion must be non-negative".to_string());
+            return Err(
+                "thermal 3d frame element thermal_expansion must be non-negative".to_string(),
+            );
         }
         if !(element.section_depth_y.is_finite() && element.section_depth_y > 0.0) {
             return Err("thermal 3d frame element section_depth_y must be positive".to_string());
@@ -4393,10 +4574,14 @@ fn validate_thermal_frame_3d_request(request: &SolveThermalFrame3dRequest) -> Re
             return Err("thermal 3d frame element section_depth_z must be positive".to_string());
         }
         if !element.temperature_gradient_y.is_finite() {
-            return Err("thermal 3d frame element temperature_gradient_y must be finite".to_string());
+            return Err(
+                "thermal 3d frame element temperature_gradient_y must be finite".to_string(),
+            );
         }
         if !element.temperature_gradient_z.is_finite() {
-            return Err("thermal 3d frame element temperature_gradient_z must be finite".to_string());
+            return Err(
+                "thermal 3d frame element temperature_gradient_z must be finite".to_string(),
+            );
         }
 
         let node_i = &request.nodes[element.node_i];
@@ -4475,11 +4660,15 @@ fn validate_thermal_beam_1d_request(request: &SolveThermalBeam1dRequest) -> Resu
 
     for (index, element) in request.elements.iter().enumerate() {
         if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
-            return Err(format!("thermal beam element {index} references an unknown node"));
+            return Err(format!(
+                "thermal beam element {index} references an unknown node"
+            ));
         }
 
         if element.node_i == element.node_j {
-            return Err(format!("thermal beam element {index} must connect two distinct nodes"));
+            return Err(format!(
+                "thermal beam element {index} must connect two distinct nodes"
+            ));
         }
 
         let node_i = &request.nodes[element.node_i];
@@ -4503,7 +4692,9 @@ fn validate_thermal_beam_1d_request(request: &SolveThermalBeam1dRequest) -> Resu
             || !element.distributed_load_y.is_finite()
             || !element.temperature_gradient_y.is_finite()
         {
-            return Err(format!("thermal beam element {index} has invalid thermal load data"));
+            return Err(format!(
+                "thermal beam element {index} has invalid thermal load data"
+            ));
         }
     }
 
@@ -4578,7 +4769,9 @@ fn validate_thermal_bar_1d_request(request: &SolveThermalBar1dRequest) -> Result
             return Err("1d thermal bar element youngs_modulus must be positive".to_string());
         }
         if !(element.thermal_expansion.is_finite() && element.thermal_expansion >= 0.0) {
-            return Err("1d thermal bar element thermal_expansion must be non-negative".to_string());
+            return Err(
+                "1d thermal bar element thermal_expansion must be non-negative".to_string(),
+            );
         }
 
         let node_i = &request.nodes[element.node_i];
@@ -4642,6 +4835,60 @@ fn validate_heat_bar_1d_request(request: &SolveHeatBar1dRequest) -> Result<(), S
     Ok(())
 }
 
+fn validate_electrostatic_bar_1d_request(
+    request: &SolveElectrostaticBar1dRequest,
+) -> Result<(), String> {
+    if request.nodes.len() < 2 {
+        return Err("1d electrostatic bar model must define at least two nodes".to_string());
+    }
+
+    if request.elements.is_empty() {
+        return Err("1d electrostatic bar model must define at least one element".to_string());
+    }
+
+    if !request.nodes.iter().any(|node| node.fix_potential) {
+        return Err(
+            "1d electrostatic bar model must include at least one potential support".to_string(),
+        );
+    }
+
+    for node in &request.nodes {
+        if !node.x.is_finite() {
+            return Err("1d electrostatic bar node x must be finite".to_string());
+        }
+        if !node.potential.is_finite() {
+            return Err("1d electrostatic bar node potential must be finite".to_string());
+        }
+        if !node.charge_density.is_finite() {
+            return Err("1d electrostatic bar node charge_density must be finite".to_string());
+        }
+    }
+
+    for element in &request.elements {
+        if element.node_i >= request.nodes.len() || element.node_j >= request.nodes.len() {
+            return Err("1d electrostatic bar element references an out-of-range node".to_string());
+        }
+        if element.node_i == element.node_j {
+            return Err("1d electrostatic bar element must connect two distinct nodes".to_string());
+        }
+        if !element.area.is_finite() || element.area <= 0.0 {
+            return Err("1d electrostatic bar element area must be positive".to_string());
+        }
+        if !element.permittivity.is_finite() || element.permittivity <= 0.0 {
+            return Err("1d electrostatic bar element permittivity must be positive".to_string());
+        }
+
+        let node_i = &request.nodes[element.node_i];
+        let node_j = &request.nodes[element.node_j];
+        let length = (node_j.x - node_i.x).abs();
+        if !length.is_finite() || length <= 0.0 {
+            return Err("1d electrostatic bar element length must be positive".to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn validate_heat_plane_triangle_request(
     request: &SolveHeatPlaneTriangle2dRequest,
 ) -> Result<(), String> {
@@ -4652,7 +4899,9 @@ fn validate_heat_plane_triangle_request(
         return Err("heat plane triangle model must define at least one element".to_string());
     }
     if !request.nodes.iter().any(|node| node.fix_temperature) {
-        return Err("heat plane triangle model must include at least one temperature support".to_string());
+        return Err(
+            "heat plane triangle model must include at least one temperature support".to_string(),
+        );
     }
 
     for node in &request.nodes {
@@ -4716,9 +4965,7 @@ fn validate_heat_plane_triangle_request(
     Ok(())
 }
 
-fn validate_heat_plane_quad_request(
-    request: &SolveHeatPlaneQuad2dRequest,
-) -> Result<(), String> {
+fn validate_heat_plane_quad_request(request: &SolveHeatPlaneQuad2dRequest) -> Result<(), String> {
     if request.nodes.len() < 4 {
         return Err("heat plane quad model must define at least four nodes".to_string());
     }
@@ -4726,7 +4973,9 @@ fn validate_heat_plane_quad_request(
         return Err("heat plane quad model must define at least one element".to_string());
     }
     if !request.nodes.iter().any(|node| node.fix_temperature) {
-        return Err("heat plane quad model must include at least one temperature support".to_string());
+        return Err(
+            "heat plane quad model must include at least one temperature support".to_string(),
+        );
     }
 
     for node in &request.nodes {
@@ -4943,13 +5192,12 @@ fn validate_frame_3d_request(request: &SolveFrame3dRequest) -> Result<(), String
     }
 
     let constrained_dofs = request.nodes.iter().fold(0, |sum, node| {
-        sum
-        + usize::from(node.fix_x)
-        + usize::from(node.fix_y)
-        + usize::from(node.fix_z)
-        + usize::from(node.fix_rx)
-        + usize::from(node.fix_ry)
-        + usize::from(node.fix_rz)
+        sum + usize::from(node.fix_x)
+            + usize::from(node.fix_y)
+            + usize::from(node.fix_z)
+            + usize::from(node.fix_rx)
+            + usize::from(node.fix_ry)
+            + usize::from(node.fix_rz)
     });
     if constrained_dofs < 6 {
         return Err("3d frame must restrain at least six degrees of freedom".to_string());
@@ -5199,12 +5447,12 @@ fn precompute_thermal_plane_triangle_element(
         youngs_modulus: element.youngs_modulus,
         poisson_ratio: element.poisson_ratio,
     };
-    let (stiffness, area, b_matrix, d_matrix) = triangle_element_data(&plane_request, &plane_element)?;
-    let average_temperature_delta = (
-        request.nodes[element.node_i].temperature_delta
-            + request.nodes[element.node_j].temperature_delta
-            + request.nodes[element.node_k].temperature_delta
-    ) / 3.0;
+    let (stiffness, area, b_matrix, d_matrix) =
+        triangle_element_data(&plane_request, &plane_element)?;
+    let average_temperature_delta = (request.nodes[element.node_i].temperature_delta
+        + request.nodes[element.node_j].temperature_delta
+        + request.nodes[element.node_k].temperature_delta)
+        / 3.0;
 
     Ok(ThermalPlaneTriangleComputed {
         stiffness,
@@ -5246,8 +5494,8 @@ fn precompute_heat_plane_triangle_element(
     let mut stiffness = [[0.0; 3]; 3];
     for row in 0..3 {
         for column in 0..3 {
-            stiffness[row][column] =
-                scale * ((gradient_x[row] * gradient_x[column]) + (gradient_y[row] * gradient_y[column]));
+            stiffness[row][column] = scale
+                * ((gradient_x[row] * gradient_x[column]) + (gradient_y[row] * gradient_y[column]));
         }
     }
 
@@ -5553,11 +5801,7 @@ fn multiply_matrix_vector_3x3(matrix: &[[f64; 3]; 3], vector: &[f64; 3]) -> [f64
 }
 
 fn subtract_vector_3(left: &[f64; 3], right: &[f64; 3]) -> [f64; 3] {
-    [
-        left[0] - right[0],
-        left[1] - right[1],
-        left[2] - right[2],
-    ]
+    [left[0] - right[0], left[1] - right[1], left[2] - right[2]]
 }
 
 fn thermal_plane_triangle_equivalent_load(
@@ -5970,7 +6214,9 @@ fn multiply_matrix_vector_6x6(matrix: &[[f64; 6]; 6], vector: &[f64; 6]) -> [f64
 fn multiply_matrix_vector_12x12(matrix: &[[f64; 12]; 12], vector: &[f64; 12]) -> [f64; 12] {
     let mut output = [0.0; 12];
     for row in 0..12 {
-        output[row] = (0..12).map(|index| matrix[row][index] * vector[index]).sum();
+        output[row] = (0..12)
+            .map(|index| matrix[row][index] * vector[index])
+            .sum();
     }
     output
 }
@@ -6525,37 +6771,35 @@ fn solve_linear_system(matrix: Vec<Vec<f64>>, vector: Vec<f64>) -> Result<Vec<f6
 #[cfg(test)]
 mod tests {
     use super::{
-        MockSolver, solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
-        solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
-        solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-        solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
-        solve_thermal_frame_3d,
-        solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
+        MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d,
+        solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
+        solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
+        solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+        solve_thermal_frame_3d, solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
         solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
         solve_truss_3d,
     };
     use kyuubiki_protocol::{
-        Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
-        Frame3dElementInput, Frame3dNodeInput,
-        HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
-        HeatPlaneTriangleElementInput, Job, JobStatus, PlaneNodeInput, PlaneQuadElementInput,
-        PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
-        SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-        SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
-        SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
-        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-        SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
-        SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
-        SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+        Beam1dElementInput, Beam1dNodeInput, ElectrostaticBar1dElementInput,
+        ElectrostaticBar1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput,
+        Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput,
+        HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput, Job, JobStatus, PlaneNodeInput,
+        PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
+        SolveElectrostaticBar1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+        SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
+        SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
+        SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+        SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
+        SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+        SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
         SolveTruss2dRequest, SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput,
         Spring2dElementInput, Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput,
         ThermalBar1dElementInput, ThermalBar1dNodeInput, ThermalBeam1dElementInput,
         ThermalBeam1dNodeInput, ThermalFrame3dElementInput, ThermalFrame3dNodeInput,
-        ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
-        ThermalPlaneTriangleElementInput,
-        Torsion1dElementInput, Torsion1dNodeInput, ThermalTruss2dElementInput,
-        ThermalTruss2dNodeInput, ThermalTruss3dElementInput, ThermalTruss3dNodeInput,
-        Truss3dElementInput, Truss3dNodeInput, TrussElementInput, TrussNodeInput,
+        ThermalPlaneNodeInput, ThermalPlaneQuadElementInput, ThermalPlaneTriangleElementInput,
+        ThermalTruss2dElementInput, ThermalTruss2dNodeInput, ThermalTruss3dElementInput,
+        ThermalTruss3dNodeInput, Torsion1dElementInput, Torsion1dNodeInput, Truss3dElementInput,
+        Truss3dNodeInput, TrussElementInput, TrussNodeInput,
     };
 
     #[test]
@@ -6678,12 +6922,72 @@ mod tests {
     }
 
     #[test]
+    fn solves_a_small_electrostatic_bar_1d_gradient() {
+        let result = solve_electrostatic_bar_1d(&SolveElectrostaticBar1dRequest {
+            nodes: vec![
+                ElectrostaticBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_potential: true,
+                    potential: 10.0,
+                    charge_density: 0.0,
+                },
+                ElectrostaticBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_potential: true,
+                    potential: 0.0,
+                    charge_density: 0.0,
+                },
+            ],
+            elements: vec![ElectrostaticBar1dElementInput {
+                id: "eb0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                permittivity: 2.0,
+            }],
+        })
+        .expect("electrostatic bar should solve");
+
+        assert_eq!(result.nodes[0].potential, 10.0);
+        assert_eq!(result.nodes[1].potential, 0.0);
+        assert!((result.elements[0].potential_gradient + 10.0).abs() < 1.0e-9);
+        assert!((result.elements[0].electric_field - 10.0).abs() < 1.0e-9);
+        assert!((result.elements[0].electric_flux_density - 20.0).abs() < 1.0e-9);
+        assert_eq!(result.max_potential, 10.0);
+        assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
+        assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    }
+
+    #[test]
     fn solves_a_small_heat_plane_triangle_2d_patch() {
         let result = solve_heat_plane_triangle_2d(&SolveHeatPlaneTriangle2dRequest {
             nodes: vec![
-                HeatPlaneNodeInput { id: "n0".to_string(), x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
-                HeatPlaneNodeInput { id: "n1".to_string(), x: 1.0, y: 0.0, fix_temperature: true, temperature: 0.0, heat_load: 0.0 },
-                HeatPlaneNodeInput { id: "n2".to_string(), x: 0.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+                HeatPlaneNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_temperature: true,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_temperature: true,
+                    temperature: 0.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "n2".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    fix_temperature: false,
+                    temperature: 0.0,
+                    heat_load: 0.0,
+                },
             ],
             elements: vec![HeatPlaneTriangleElementInput {
                 id: "hp0".to_string(),
@@ -6706,10 +7010,38 @@ mod tests {
     fn solves_a_small_heat_plane_quad_2d_patch() {
         let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
             nodes: vec![
-                HeatPlaneNodeInput { id: "n0".to_string(), x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
-                HeatPlaneNodeInput { id: "n1".to_string(), x: 1.0, y: 0.0, fix_temperature: true, temperature: 0.0, heat_load: 0.0 },
-                HeatPlaneNodeInput { id: "n2".to_string(), x: 1.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
-                HeatPlaneNodeInput { id: "n3".to_string(), x: 0.0, y: 1.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
+                HeatPlaneNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_temperature: true,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_temperature: true,
+                    temperature: 0.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "n2".to_string(),
+                    x: 1.0,
+                    y: 1.0,
+                    fix_temperature: false,
+                    temperature: 0.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "n3".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    fix_temperature: false,
+                    temperature: 0.0,
+                    heat_load: 0.0,
+                },
             ],
             elements: vec![HeatPlaneQuadElementInput {
                 id: "hq0".to_string(),

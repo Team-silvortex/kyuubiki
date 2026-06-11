@@ -1,37 +1,31 @@
 use kyuubiki_protocol::{
-    Beam1dElementInput, Beam1dNodeInput, Frame2dElementInput, Frame2dNodeInput,
-    Frame3dElementInput, Frame3dNodeInput, PlaneNodeInput, PlaneQuadElementInput,
-    PlaneTriangleElementInput,
-    HeatBar1dElementInput, HeatBar1dNodeInput, SolveBarRequest, SolveBeam1dRequest,
-    HeatPlaneNodeInput, HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput,
-    SolveFrame2dRequest, SolveFrame3dRequest,
-    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest,
-    SolvePlaneTriangle2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest,
-    SolveThermalFrame3dRequest,
-    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
-    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
-    SolveSpring1dRequest,
-    Spring1dElementInput, Spring1dNodeInput,
-    SolveSpring2dRequest,
-    Spring2dElementInput, Spring2dNodeInput,
-    SolveSpring3dRequest,
-    Spring3dElementInput, Spring3dNodeInput,
-    Torsion1dElementInput, Torsion1dNodeInput,
-    ThermalBar1dElementInput, ThermalBar1dNodeInput, ThermalBeam1dElementInput,
-    ThermalBeam1dNodeInput, ThermalFrame3dElementInput,
+    Beam1dElementInput, Beam1dNodeInput, ElectrostaticBar1dElementInput,
+    ElectrostaticBar1dNodeInput, Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput,
+    Frame3dNodeInput, HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput,
+    HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput, PlaneNodeInput,
+    PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveBeam1dRequest,
+    SolveElectrostaticBar1dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
+    SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
+    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput, Spring2dNodeInput,
+    Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput, ThermalBar1dNodeInput,
+    ThermalBeam1dElementInput, ThermalBeam1dNodeInput, ThermalFrame3dElementInput,
     ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
-    ThermalPlaneTriangleElementInput,
-    ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
-    ThermalTruss3dElementInput, ThermalTruss3dNodeInput, Truss3dElementInput, Truss3dNodeInput, TrussElementInput, TrussNodeInput,
+    ThermalPlaneTriangleElementInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
+    ThermalTruss3dElementInput, ThermalTruss3dNodeInput, Torsion1dElementInput, Torsion1dNodeInput,
+    Truss3dElementInput, Truss3dNodeInput, TrussElementInput, TrussNodeInput,
 };
 use kyuubiki_solver::{
-    solve_bar_1d, solve_beam_1d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
-    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_thermal_bar_1d,
-    solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
-    solve_thermal_plane_quad_2d,
-    solve_thermal_plane_triangle_2d, solve_thermal_truss_2d, solve_thermal_truss_3d,
-    solve_torsion_1d, solve_truss_2d, solve_truss_3d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_frame_2d, solve_frame_3d,
+    solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
+    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
+    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
 
 fn assert_close_abs(actual: f64, expected: f64, tolerance: f64, label: &str) {
@@ -129,12 +123,7 @@ fn accuracy_baseline_spring_1d_chain_fixture() {
         1.0e-15,
         "spring_1d max displacement",
     );
-    assert_close_abs(
-        result.max_force,
-        1200.0,
-        1.0e-12,
-        "spring_1d max force",
-    );
+    assert_close_abs(result.max_force, 1200.0, 1.0e-12, "spring_1d max force");
     assert_close_abs(
         result.nodes[1].ux,
         0.03428571428571429,
@@ -379,6 +368,89 @@ fn accuracy_baseline_heat_bar_1d_two_element_gradient() {
 }
 
 #[test]
+fn accuracy_baseline_electrostatic_bar_1d_two_element_gradient() {
+    let result = solve_electrostatic_bar_1d(&SolveElectrostaticBar1dRequest {
+        nodes: vec![
+            ElectrostaticBar1dNodeInput {
+                id: "e0".to_string(),
+                x: 0.0,
+                fix_potential: true,
+                potential: 12.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticBar1dNodeInput {
+                id: "e1".to_string(),
+                x: 1.0,
+                fix_potential: false,
+                potential: 0.0,
+                charge_density: 0.0,
+            },
+            ElectrostaticBar1dNodeInput {
+                id: "e2".to_string(),
+                x: 2.0,
+                fix_potential: true,
+                potential: 4.0,
+                charge_density: 0.0,
+            },
+        ],
+        elements: vec![
+            ElectrostaticBar1dElementInput {
+                id: "ee0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.01,
+                permittivity: 3.0,
+            },
+            ElectrostaticBar1dElementInput {
+                id: "ee1".to_string(),
+                node_i: 1,
+                node_j: 2,
+                area: 0.01,
+                permittivity: 3.0,
+            },
+        ],
+    })
+    .expect("electrostatic_bar_1d baseline should solve");
+
+    assert_close_abs(
+        result.max_potential,
+        12.0,
+        1.0e-12,
+        "electrostatic_bar_1d max potential",
+    );
+    assert_close_abs(
+        result.max_electric_field,
+        4.0,
+        1.0e-12,
+        "electrostatic_bar_1d max electric field",
+    );
+    assert_close_abs(
+        result.max_flux_density,
+        12.0,
+        1.0e-12,
+        "electrostatic_bar_1d max flux density",
+    );
+    assert_close_abs(
+        result.nodes[1].potential,
+        8.0,
+        1.0e-12,
+        "electrostatic_bar_1d middle node potential",
+    );
+    assert_close_abs(
+        result.elements[0].electric_field,
+        4.0,
+        1.0e-12,
+        "electrostatic_bar_1d first element electric field",
+    );
+    assert_close_abs(
+        result.elements[1].electric_field,
+        4.0,
+        1.0e-12,
+        "electrostatic_bar_1d second element electric field",
+    );
+}
+
+#[test]
 fn accuracy_baseline_heat_plane_quad_2d_single_patch() {
     let result = solve_heat_plane_quad_2d(&SolveHeatPlaneQuad2dRequest {
         nodes: vec![
@@ -606,12 +678,7 @@ fn accuracy_baseline_beam_1d_tip_loaded_cantilever() {
         1.0e-12,
         "beam_1d max rotation",
     );
-    assert_close_abs(
-        result.max_moment,
-        2000.0,
-        1.0e-6,
-        "beam_1d max moment",
-    );
+    assert_close_abs(result.max_moment, 2000.0, 1.0e-6, "beam_1d max moment");
     assert_close_abs(
         result.max_stress,
         1.25e7,
@@ -654,12 +721,7 @@ fn accuracy_baseline_torsion_1d_sample_fixture() {
         1.0e-15,
         "torsion_1d max rotation",
     );
-    assert_close_abs(
-        result.max_torque,
-        2500.0,
-        1.0e-12,
-        "torsion_1d max torque",
-    );
+    assert_close_abs(result.max_torque, 2500.0, 1.0e-12, "torsion_1d max torque");
     assert_close_abs(
         result.max_stress,
         20833333.333333332,
@@ -746,12 +808,7 @@ fn accuracy_baseline_frame_2d_tip_loaded_cantilever() {
         1.0e-12,
         "frame_2d max rotation",
     );
-    assert_close_abs(
-        result.max_moment,
-        2000.0,
-        1.0e-6,
-        "frame_2d max moment",
-    );
+    assert_close_abs(result.max_moment, 2000.0, 1.0e-6, "frame_2d max moment");
     assert_close_abs(
         result.max_stress,
         1.25e7,
@@ -841,12 +898,7 @@ fn accuracy_baseline_frame_3d_tip_loaded_cantilever() {
         1.0e-12,
         "frame_3d max rotation",
     );
-    assert_close_abs(
-        result.max_moment,
-        2000.0,
-        1.0e-6,
-        "frame_3d max moment",
-    );
+    assert_close_abs(result.max_moment, 2000.0, 1.0e-6, "frame_3d max moment");
     assert_close_abs(
         result.max_stress,
         1.25e7,

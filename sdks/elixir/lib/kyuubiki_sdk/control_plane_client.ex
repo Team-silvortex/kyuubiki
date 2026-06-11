@@ -23,6 +23,8 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def health(client), do: request(client, :get, "/api/health")
   def protocol(client), do: request(client, :get, "/api/v1/protocol")
   def agents(client), do: request(client, :get, "/api/v1/protocol/agents")
+  def list_workflow_catalog(client), do: request(client, :get, "/api/v1/workflows/catalog")
+  def list_workflow_operators(client), do: request(client, :get, "/api/v1/operators")
   def list_jobs(client), do: request(client, :get, "/api/v1/jobs")
   def fetch_job(client, job_id), do: request(client, :get, "/api/v1/jobs/#{job_id}")
   def update_job(client, job_id, payload), do: request(client, :patch, "/api/v1/jobs/#{job_id}", payload)
@@ -32,6 +34,11 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def create_truss_2d_job(client, payload), do: request(client, :post, "/api/v1/fem/truss-2d/jobs", payload)
   def create_truss_3d_job(client, payload), do: request(client, :post, "/api/v1/fem/truss-3d/jobs", payload)
   def create_plane_triangle_2d_job(client, payload), do: request(client, :post, "/api/v1/fem/plane-triangle-2d/jobs", payload)
+  def submit_workflow_catalog_job(client, workflow_id, input_artifacts \\ %{}),
+    do: request(client, :post, "/api/v1/workflows/catalog/#{workflow_id}/jobs", %{"input_artifacts" => input_artifacts})
+
+  def submit_workflow_graph_job(client, graph, input_artifacts \\ %{}),
+    do: request(client, :post, "/api/v1/workflows/graph/jobs", %{"graph" => graph, "input_artifacts" => input_artifacts})
   def list_results(client), do: request(client, :get, "/api/v1/results")
   def fetch_result(client, job_id), do: request(client, :get, "/api/v1/results/#{job_id}")
 

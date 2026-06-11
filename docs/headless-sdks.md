@@ -57,10 +57,14 @@ All three SDKs expose the same conceptual split:
 - `GET /api/health`
 - `GET /api/v1/protocol`
 - `GET /api/v1/protocol/agents`
+- `GET /api/v1/workflows/catalog`
+- `GET /api/v1/operators`
 - `GET /api/v1/jobs`
 - `PATCH /api/v1/jobs/:job_id`
 - `DELETE /api/v1/jobs/:job_id`
 - `POST /api/v1/fem/*/jobs`
+- `POST /api/v1/workflows/catalog/:workflow_id/jobs`
+- `POST /api/v1/workflows/graph/jobs`
 - `GET /api/v1/jobs/:job_id`
 - `POST /api/v1/jobs/:job_id/cancel`
 - `GET /api/v1/results`
@@ -99,6 +103,7 @@ They now also expose a small workflow layer:
 
 - submit one job by solve kind
 - submit many jobs in sequence
+- validate workflow graphs and workflow dataset contracts before submission
 - wait for terminal job states by polling the control plane
 - optionally bypass the control plane and solve directly over solver RPC
 - run one study and fetch its result bundle in one call

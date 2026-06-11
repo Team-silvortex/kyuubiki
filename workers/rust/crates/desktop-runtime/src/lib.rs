@@ -1,8 +1,8 @@
 use std::fs;
 use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::PathBuf;
 use std::process::Command;
-use std::io::Write;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
 
@@ -74,7 +74,10 @@ fn desktop_preferences_dir() -> Result<PathBuf, String> {
         let home = std::env::var_os("HOME")
             .map(PathBuf::from)
             .ok_or_else(|| "HOME is not available".to_string())?;
-        return Ok(home.join("Library").join("Application Support").join("kyuubiki"));
+        return Ok(home
+            .join("Library")
+            .join("Application Support")
+            .join("kyuubiki"));
     }
 
     #[cfg(target_os = "windows")]

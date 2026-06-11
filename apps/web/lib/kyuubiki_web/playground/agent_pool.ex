@@ -520,6 +520,10 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp preferred_tags("solve_bar_1d"), do: ["bar"]
   defp preferred_tags("solve_thermal_bar_1d"), do: ["bar", "thermal", "line"]
   defp preferred_tags("solve_heat_bar_1d"), do: ["heat", "bar", "line"]
+
+  defp preferred_tags("solve_electrostatic_bar_1d"),
+    do: ["electromagnetic", "electrostatic", "bar", "line"]
+
   defp preferred_tags("solve_heat_plane_triangle_2d"), do: ["heat", "plane", "mesh"]
   defp preferred_tags("solve_heat_plane_quad_2d"), do: ["heat", "plane", "mesh", "quad"]
   defp preferred_tags("solve_thermal_truss_2d"), do: ["truss", "thermal", "plane"]
@@ -530,7 +534,10 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp preferred_tags("solve_beam_1d"), do: ["beam", "bending", "line"]
   defp preferred_tags("solve_thermal_beam_1d"), do: ["beam", "thermal", "bending", "line"]
   defp preferred_tags("solve_thermal_frame_2d"), do: ["frame", "thermal", "beam", "bending"]
-  defp preferred_tags("solve_thermal_frame_3d"), do: ["frame", "thermal", "space", "beam", "bending"]
+
+  defp preferred_tags("solve_thermal_frame_3d"),
+    do: ["frame", "thermal", "space", "beam", "bending"]
+
   defp preferred_tags("solve_torsion_1d"), do: ["torsion", "shaft", "line"]
   defp preferred_tags("solve_truss_2d"), do: ["truss"]
   defp preferred_tags("solve_truss_3d"), do: ["truss", "space"]

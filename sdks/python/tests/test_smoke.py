@@ -9,6 +9,37 @@ from kyuubiki_sdk import KyuubikiAgentClient, KyuubikiSession
 
 
 class _SmokeHandler(BaseHTTPRequestHandler):
+    workflow_catalog_payload = {
+        "workflows": [
+            {
+                "id": "workflow.test-graph",
+                "name": "Test Graph",
+                "version": "1.0.0",
+                "summary": "Smoke workflow",
+                "entry_inputs": [{"node_id": "input", "artifact_type": "mesh.input", "description": "Mesh input"}],
+                "output_artifacts": [{"node_id": "solve", "artifact_type": "mesh.result", "description": "Solve result"}],
+            }
+        ]
+    }
+    operator_catalog_payload = {
+        "operators": [
+            {
+                "id": "solver.truss_2d",
+                "version": "1.0.0",
+                "domain": "structural",
+                "family": "solver",
+                "kind": "solver",
+                "summary": "Smoke operator",
+                "capability_tags": ["smoke"],
+                "origin": "built_in",
+                "input_schema": {"schema": "kyuubiki.study.truss_2d", "version": "v1"},
+                "output_schema": {"schema": "kyuubiki.result.truss_2d", "version": "v1"},
+                "inputs": [],
+                "outputs": [],
+                "validation": {"baseline_status": "verified", "baseline_cases": [], "smoke_paths": []},
+            }
+        ]
+    }
     job_payload = {
         "job": {
             "job_id": "job-smoke",
@@ -34,9 +65,21 @@ class _SmokeHandler(BaseHTTPRequestHandler):
         if self.path == "/api/v1/fem/truss-2d/jobs":
             self._respond(202, {"job": {"job_id": "job-smoke", "status": "queued"}})
             return
+        if self.path == "/api/v1/workflows/catalog/workflow.test-graph/jobs":
+            self._respond(202, {"job": {"job_id": "workflow-catalog-job", "status": "queued"}})
+            return
+        if self.path == "/api/v1/workflows/graph/jobs":
+            self._respond(202, {"job": {"job_id": "workflow-graph-job", "status": "queued"}})
+            return
         self._respond(404, {"error": "not_found"})
 
     def do_GET(self) -> None:
+        if self.path == "/api/v1/workflows/catalog":
+            self._respond(200, self.workflow_catalog_payload)
+            return
+        if self.path == "/api/v1/operators":
+            self._respond(200, self.operator_catalog_payload)
+            return
         if self.path == "/api/v1/jobs/job-smoke":
             self._respond(200, self.job_payload)
             return
@@ -97,6 +140,27 @@ class SmokeTest(unittest.TestCase):
         page = agent.browse_result_chunks("job-smoke", "nodes", offset=0, limit=2)
         self.assertEqual(page["returned"], 2)
         self.assertEqual(page["total"], 3)
+
+    def test_control_plane_workflow_endpoints(self) -> None:
+        session = KyuubikiSession.from_control_plane(self.base_url)
+        catalog = session.control_plane.list_workflow_catalog()
+        self.assertEqual(catalog["workflows"][0]["id"], "workflow.test-graph")
+
+        operators = session.control_plane.list_workflow_operators()
+        self.assertEqual(operators["operators"][0]["id"], "solver.truss_2d")
+
+        catalog_job = session.control_plane.submit_workflow_catalog_job("workflow.test-graph", {"mesh": {"project_id": "demo"}})
+        self.assertEqual(catalog_job["job"]["job_id"], "workflow-catalog-job")
+
+        graph_job = session.control_plane.submit_workflow_graph_job(
+            {
+                "schema_version": "kyuubiki.workflow-graph/v1",
+                "id": "workflow.test-inline",
+                "nodes": [{"id": "solve", "kind": "solver", "operator_id": "solver.truss_2d"}],
+            },
+            {"mesh": {"project_id": "demo"}},
+        )
+        self.assertEqual(graph_job["job"]["job_id"], "workflow-graph-job")
 
 
 if __name__ == "__main__":

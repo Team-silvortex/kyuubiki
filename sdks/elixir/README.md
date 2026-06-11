@@ -23,6 +23,27 @@ session =
 {:ok, nodes_page} = KyuubikiSdk.AgentClient.browse_result_chunks(session, bundle.terminal["job"]["job_id"], "nodes", offset: 0, limit: 250)
 {:ok, retried} = KyuubikiSdk.AgentClient.run_study_with_retry(session, "truss_2d", %{"model" => %{}, "case" => %{}}, max_attempts: 3)
 pages = Enum.take(KyuubikiSdk.AgentClient.stream_result_chunks(session, bundle.terminal["job"]["job_id"], "nodes", page_size: 250), 2)
+
+dataset =
+  KyuubikiSdk.workflow_dataset_contract(
+    "dataset.demo/v1",
+    "1.0.0",
+    [KyuubikiSdk.workflow_dataset_value("thermal_case", "study_model", "json_object")]
+  )
+
+graph =
+  KyuubikiSdk.workflow_graph(
+    "workflow.demo",
+    "Demo workflow",
+    "1.0.0",
+    ["input"],
+    [
+      KyuubikiSdk.workflow_node("input", "input", %{outputs: [KyuubikiSdk.workflow_port("case", "study_model/demo", %{dataset_value: "thermal_case"})]}),
+      KyuubikiSdk.workflow_node("output", "output", %{inputs: [KyuubikiSdk.workflow_port("case", "study_model/demo", %{dataset_value: "thermal_case"})]})
+    ],
+    [KyuubikiSdk.workflow_edge("edge-1", "input", "case", "output", "case", "study_model/demo", %{dataset_value: "thermal_case"})],
+    %{dataset_contract: dataset}
+  )
 ```
 
 Highlights:
@@ -33,6 +54,7 @@ Highlights:
 - `KyuubikiSdk.AgentClient` for run-study and chunk-browse flows
 - retry, failure classification, and chunk streaming helpers
 - `KyuubikiSdk.Auth` and structured `KyuubikiSdk.Error`
+- workflow contract validation and builder helpers
 - BEAM-friendly thin wrapper over the public protocol
 
 Example:
