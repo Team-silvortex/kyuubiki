@@ -1,12 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type {
-  WorkflowGraphEdge,
-  WorkflowGraphNode,
-  WorkflowOperatorDescriptor,
-  WorkflowGraphPort,
-} from "@/lib/api";
+import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowOperatorDescriptor, WorkflowGraphPort } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
   listWorkflowNodeTemplatePresets,
@@ -17,6 +12,10 @@ import {
   sortWorkflowOperatorOptionPresets,
   WorkbenchWorkflowOperatorDescriptorSummary,
 } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
+import {
+  filterWorkflowOperatorOptionPresets,
+  WorkbenchWorkflowOperatorSearch,
+} from "@/components/workbench/workflow/workbench-workflow-operator-search";
 import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
 import { WorkbenchWorkflowTemplateChainActions } from "@/components/workbench/workflow/workbench-workflow-template-chain-actions";
 import {
@@ -196,6 +195,10 @@ export function WorkbenchWorkflowTopologyCard({
 }: WorkbenchWorkflowTopologyCardProps) {
   const [nextNodeKind, setNextNodeKind] = useState("transform");
   const [nextOperatorId, setNextOperatorId] = useState("");
+  const [nextOperatorSearchQuery, setNextOperatorSearchQuery] = useState("");
+  const [nextOperatorDomainFilter, setNextOperatorDomainFilter] = useState("");
+  const [nextOperatorValidationFilter, setNextOperatorValidationFilter] = useState("");
+  const [nextOperatorCapabilityFilter, setNextOperatorCapabilityFilter] = useState("");
   const [localHighlightedEdgeIds, setLocalHighlightedEdgeIds] = useState<string[]>([]);
   const nextKindTemplates = listWorkflowNodeTemplatePresets(nextNodeKind, operatorDescriptors);
   const nextOperatorTemplates = nextKindTemplates.filter((preset) => preset.operatorId);
@@ -203,12 +206,26 @@ export function WorkbenchWorkflowTopologyCard({
   const operatorDescriptorMap = new Map(
     (operatorDescriptors ?? []).map((descriptor) => [descriptor.id, descriptor] as const),
   );
+  const availableDomains = [...new Set(nextOperatorTemplates.map((preset) => {
+    const descriptor = preset.operatorId ? operatorDescriptorMap.get(preset.operatorId) : undefined;
+    return descriptor?.domain;
+  }).filter(Boolean))] as string[];
+  const availableCapabilities = [...new Set(nextOperatorTemplates.flatMap((preset) => {
+    const descriptor = preset.operatorId ? operatorDescriptorMap.get(preset.operatorId) : undefined;
+    return descriptor?.capability_tags ?? [];
+  }))];
   const nextOperatorDescriptor = nextOperatorId
     ? operatorDescriptorMap.get(nextOperatorId)
     : undefined;
-  const sortedNextOperatorTemplates = sortWorkflowOperatorOptionPresets(
+  const sortedNextOperatorTemplates = filterWorkflowOperatorOptionPresets(
     nextOperatorTemplates,
     operatorDescriptorMap,
+    nextOperatorSearchQuery,
+    {
+      domain: nextOperatorDomainFilter,
+      validation: nextOperatorValidationFilter,
+      capability: nextOperatorCapabilityFilter,
+    },
   );
   const getPortOptions = (
     node: WorkflowGraphNode | undefined,
@@ -254,27 +271,27 @@ export function WorkbenchWorkflowTopologyCard({
             ))}
           </select>
         </label>
-        <label>
-          <span>{labels.operatorLabel}</span>
-          <input
-            list="workflow-topology-operator-templates"
-            onChange={(event) => setNextOperatorId(event.target.value)}
-            value={nextOperatorId}
-          />
-          <datalist id="workflow-topology-operator-templates">
-            {sortedNextOperatorTemplates.map((preset) => (
-              <option
-                key={preset.id}
-                label={buildOperatorOptionLabel(
-                  labels,
-                  preset.label,
-                  preset.operatorId ? operatorDescriptorMap.get(preset.operatorId) : undefined,
-                )}
-                value={preset.operatorId}
-              />
-            ))}
-          </datalist>
-        </label>
+        <WorkbenchWorkflowOperatorSearch
+          availableCapabilities={availableCapabilities}
+          availableDomains={availableDomains}
+          capabilityFilter={nextOperatorCapabilityFilter}
+          domainFilter={nextOperatorDomainFilter}
+          filteredPresets={sortedNextOperatorTemplates}
+          labels={labels}
+          operatorDescriptorMap={operatorDescriptorMap}
+          operatorId={nextOperatorId}
+          onCapabilityFilterChange={setNextOperatorCapabilityFilter}
+          onDomainFilterChange={setNextOperatorDomainFilter}
+          onOperatorIdChange={setNextOperatorId}
+          onQueryChange={setNextOperatorSearchQuery}
+          onQuickInsert={(operatorId) => {
+            setNextOperatorId(operatorId);
+            onAddNode({ kind: nextNodeKind, operatorId });
+          }}
+          onValidationFilterChange={setNextOperatorValidationFilter}
+          query={nextOperatorSearchQuery}
+          validationFilter={nextOperatorValidationFilter}
+        />
         <button
           onClick={() =>
             onAddNode({
@@ -295,6 +312,7 @@ export function WorkbenchWorkflowTopologyCard({
         labels={labels}
         onInsertTemplateChain={onInsertTemplateChain}
         selectedSourceNodeId={selectedSourceNodeId}
+        selectedNodes={selectedNodes}
       />
 
       <div className="sidebar-stack">

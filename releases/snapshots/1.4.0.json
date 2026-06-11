@@ -2,7 +2,7 @@
   "version": "1.4.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-06-08",
   "git_commit": "92b544d17d3710f45f9a15ad23510cf7925f18df",
   "summary": "Industrial hardening point for the tamamono 1.x line, with richer workflow authoring, operator descriptor APIs, Blender-leaning workbench styling, responsive layout validation, and desktop bundles rebuilt as 1.4.0.",

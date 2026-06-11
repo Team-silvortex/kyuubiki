@@ -49,7 +49,7 @@ async function main() {
 }
 
 function renderHtml(contract, options) {
-  const version = escapeHtml(contract.shipping_version || "1.4.0");
+  const version = escapeHtml(contract.shipping_version || "1.5.0");
   const productLine = escapeHtml(contract.product_line || "tamamono 1.x");
   const schemaVersion = escapeHtml(contract.schema_version || "kyuubiki.installation-contract/v1");
   const requiredLayout = Array.isArray(contract.required_layout) ? contract.required_layout : [];

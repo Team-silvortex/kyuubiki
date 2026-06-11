@@ -1,0 +1,154 @@
+{
+  "version": "1.5.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-11",
+  "git_commit": "9cd9030603d1ae1687dea501249b89d87e19afc2",
+  "summary": "TODO: summarize tamamono 1.5.0.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.5.0",
+      "notes": [
+        "TODO: describe frontend/workbench changes."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.5.0",
+      "notes": [
+        "TODO: describe Hub desktop-shell changes."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.5.0",
+      "notes": [
+        "TODO: describe Workbench desktop-shell changes."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.5.0",
+      "notes": [
+        "TODO: describe Installer desktop-shell changes."
+      ]
+    },
+    "web_api": {
+      "version": "1.5.0",
+      "notes": [
+        "TODO: describe API/control-plane changes."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "TODO",
+    "capabilities": []
+  },
+  "operator_sdk": {
+    "status": "TODO",
+    "capabilities": []
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.5.0_aarch64.dmg",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.5.0_aarch64.dmg",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.5.0_aarch64.dmg"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M README.md",
+        " M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-controller.ts",
+        " M apps/frontend/src/components/workbench/workbench-sidebar-mount.tsx",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-topology-actions.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/docs/current-line.html",
+        " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/docs/installation-integrity.html",
+        " M apps/hub-gui/ui/docs/update-catalog.html",
+        " M apps/hub-gui/ui/index.html",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/installer-gui/ui/index.html",
+        " M apps/installer-gui/ui/integrity-panel.js",
+        " M apps/installer-gui/ui/update-panel.js",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/ui/index.html",
+        " M deploy/installation-integrity-contract.json",
+        " M deploy/update-channels.json",
+        " M docs/current-line.md",
+        " M docs/desktop-release-checklist.md",
+        " M docs/installation-integrity-contract.html",
+        " M docs/language-packs.md",
+        " M docs/packaging-and-deployment.md",
+        " M docs/update-catalog.html",
+        " M docs/version-line.md",
+        " M releases/README.md",
+        " M releases/index.json",
+        " M releases/snapshots/1.4.0.json",
+        " M releases/update-catalog.json",
+        " M scripts/build-installation-integrity-docs.mjs",
+        " M scripts/create-release-snapshot.mjs",
+        " M scripts/kyuubiki",
+        " M workers/rust/Cargo.toml",
+        " M workers/rust/crates/installer/src/integrity.rs",
+        " M workers/rust/crates/installer/src/tests.rs",
+        "?? releases/snapshots/1.5.0.json"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.5.0",
+      "workbench": "1.5.0",
+      "installer": "1.5.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": {
+        "short_version": "1.5.0",
+        "build_version": "1.5.0",
+        "source": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app/Contents/Info.plist"
+      },
+      "workbench": {
+        "short_version": "1.5.0",
+        "build_version": "1.5.0",
+        "source": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app/Contents/Info.plist"
+      },
+      "installer": {
+        "short_version": "1.5.0",
+        "build_version": "1.5.0",
+        "source": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app/Contents/Info.plist"
+      }
+    },
+    "frontend_checks": [],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check"
+    ]
+  }
+}

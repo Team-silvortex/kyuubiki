@@ -75,7 +75,11 @@ impl UnifiedUpdatePlan {
                 artifact.product,
                 artifact.platform,
                 artifact.kind,
-                if artifact.exists { "present" } else { "declared" },
+                if artifact.exists {
+                    "present"
+                } else {
+                    "declared"
+                },
                 artifact.path
             ));
         }
@@ -96,7 +100,10 @@ impl UnifiedUpdatePreview {
         ];
 
         for step in &self.steps {
-            lines.push(format!("[step] {} {} - {}", step.status, step.label, step.detail));
+            lines.push(format!(
+                "[step] {} {} - {}",
+                step.status, step.label, step.detail
+            ));
         }
 
         lines.join("\n")
@@ -133,13 +140,21 @@ pub fn unified_update_plan(channel: Option<String>) -> Result<UnifiedUpdatePlan,
 pub fn unified_update_preview(channel: Option<String>) -> Result<UnifiedUpdatePreview, String> {
     let plan = unified_update_plan(channel)?;
     let integrity = crate::installation_integrity_report();
-    let version_mismatches = integrity.version_checks.iter().filter(|check| !check.ok).count();
+    let version_mismatches = integrity
+        .version_checks
+        .iter()
+        .filter(|check| !check.ok)
+        .count();
     let missing_paths = integrity
         .layout
         .iter()
         .filter(|entry| entry.required && !entry.present)
         .count();
-    let removable_residue = integrity.residues.iter().filter(|entry| entry.removable).count();
+    let removable_residue = integrity
+        .residues
+        .iter()
+        .filter(|entry| entry.removable)
+        .count();
     let blocking_issues = integrity.issues.len() + version_mismatches + missing_paths;
     let overall_status = if plan.update_state == "up_to_date" {
         "noop"
@@ -153,20 +168,35 @@ pub fn unified_update_preview(channel: Option<String>) -> Result<UnifiedUpdatePr
     let steps = vec![
         UnifiedUpdatePreviewStep {
             label: "resolve install drift".to_string(),
-            status: if integrity.issues.is_empty() { "ok" } else { "attention" }.to_string(),
+            status: if integrity.issues.is_empty() {
+                "ok"
+            } else {
+                "attention"
+            }
+            .to_string(),
             detail: if integrity.issues.is_empty() {
                 "installation contract is currently healthy".to_string()
             } else {
-                format!("{} visible install issues should be cleared first", integrity.issues.len())
+                format!(
+                    "{} visible install issues should be cleared first",
+                    integrity.issues.len()
+                )
             },
         },
         UnifiedUpdatePreviewStep {
             label: "clean removable residue".to_string(),
-            status: if removable_residue == 0 { "ok" } else { "recommended" }.to_string(),
+            status: if removable_residue == 0 {
+                "ok"
+            } else {
+                "recommended"
+            }
+            .to_string(),
             detail: if removable_residue == 0 {
                 "no allowlisted cleanup candidate detected".to_string()
             } else {
-                format!("{removable_residue} allowlisted residue item(s) can be removed before update")
+                format!(
+                    "{removable_residue} allowlisted residue item(s) can be removed before update"
+                )
             },
         },
         UnifiedUpdatePreviewStep {
@@ -185,11 +215,19 @@ pub fn unified_update_preview(channel: Option<String>) -> Result<UnifiedUpdatePr
         },
         UnifiedUpdatePreviewStep {
             label: "review artifact references".to_string(),
-            status: if plan.artifacts.is_empty() { "review" } else { "ok" }.to_string(),
+            status: if plan.artifacts.is_empty() {
+                "review"
+            } else {
+                "ok"
+            }
+            .to_string(),
             detail: if plan.artifacts.is_empty() {
                 "selected channel has no declared desktop artifact references".to_string()
             } else {
-                format!("{} desktop artifact reference(s) are declared for this channel", plan.artifacts.len())
+                format!(
+                    "{} desktop artifact reference(s) are declared for this channel",
+                    plan.artifacts.len()
+                )
             },
         },
     ];
@@ -214,7 +252,9 @@ fn load_update_catalog() -> Result<Value, String> {
 }
 
 pub(crate) fn update_catalog_path() -> PathBuf {
-    workspace_root().join("releases").join("update-catalog.json")
+    workspace_root()
+        .join("releases")
+        .join("update-catalog.json")
 }
 
 fn select_channel<'a>(catalog: &'a Value, requested: Option<&str>) -> Result<&'a Value, String> {
@@ -233,7 +273,11 @@ fn select_channel<'a>(catalog: &'a Value, requested: Option<&str>) -> Result<&'a
                 || channel
                     .get("aliases")
                     .and_then(Value::as_array)
-                    .map(|aliases| aliases.iter().any(|alias| value_string(Some(alias)) == desired))
+                    .map(|aliases| {
+                        aliases
+                            .iter()
+                            .any(|alias| value_string(Some(alias)) == desired)
+                    })
                     .unwrap_or(false)
         })
         .ok_or_else(|| format!("unknown update channel: {desired}"))
@@ -243,7 +287,8 @@ fn parse_rules(value: Option<&Value>) -> Vec<IntegrityContractRule> {
     value
         .and_then(Value::as_array)
         .map(|rules| {
-            rules.iter()
+            rules
+                .iter()
                 .map(|rule| IntegrityContractRule {
                     category: "update".to_string(),
                     label: value_string(rule.get("label")),

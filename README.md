@@ -1,4 +1,4 @@
-# kyuubiki tamamono 1.4.0
+# kyuubiki tamamono 1.5.0
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -7,7 +7,7 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 - an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
-`tamamono 1.4.0` is the current repository-wide version line.
+`tamamono 1.5.0` is the current repository-wide version line.
 
 It also now has an explicit deployment split:
 
@@ -96,7 +96,7 @@ Start here if you need orientation:
   [docs/frontend-implementation.md](docs/frontend-implementation.md),
   [apps/frontend/README.md](apps/frontend/README.md)
 
-## What tamamono 1.4.0 Can Do
+## What tamamono 1.5.0 Can Do
 
 ### Supported analysis domains
 

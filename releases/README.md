@@ -27,8 +27,8 @@ Instead, each snapshot records:
 Create the next snapshot scaffold with:
 
 ```bash
-node ./scripts/create-release-snapshot.mjs 1.4.1 --status staged --dry-run
-node ./scripts/create-release-snapshot.mjs 1.4.1 --status staged
+node ./scripts/create-release-snapshot.mjs 1.5.1 --status staged --dry-run
+node ./scripts/create-release-snapshot.mjs 1.5.1 --status staged
 ```
 
 The script updates `releases/index.json` and creates

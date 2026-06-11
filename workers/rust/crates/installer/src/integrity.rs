@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::{
-    contract_path, load_integrity_contract, IntegrityContract, Platform, prepare_layout,
+    IntegrityContract, Platform, contract_path, load_integrity_contract, prepare_layout,
     workspace_root,
 };
 
@@ -68,7 +68,11 @@ impl InstallationIntegrityReport {
         for rule in &self.contract_rules {
             lines.push(format!(
                 "  [{}] {} => {} ({})",
-                if rule.editable { "editable" } else { "read-only" },
+                if rule.editable {
+                    "editable"
+                } else {
+                    "read-only"
+                },
                 rule.label,
                 rule.value,
                 rule.category
@@ -153,7 +157,9 @@ pub fn installation_integrity_report() -> InstallationIntegrityReport {
             label: "contract source".to_string(),
             value: contract_path().to_string(),
             editable: false,
-            description: "Shared JSON source that drives installer integrity behavior and documentation.".to_string(),
+            description:
+                "Shared JSON source that drives installer integrity behavior and documentation."
+                    .to_string(),
         }))
         .collect();
     let layout = expected_layout(&root, &contract);
@@ -475,7 +481,11 @@ fn fallback_contract(platform: Platform, current_version: &str) -> IntegrityCont
     }
 }
 
-fn fallback_layout_rule(label: &str, relative_path: &str, required: bool) -> crate::integrity_contract::IntegrityLayoutRule {
+fn fallback_layout_rule(
+    label: &str,
+    relative_path: &str,
+    required: bool,
+) -> crate::integrity_contract::IntegrityLayoutRule {
     crate::integrity_contract::IntegrityLayoutRule {
         label: label.to_string(),
         relative_path: relative_path.to_string(),
@@ -610,11 +620,11 @@ mod tests {
         let root = std::env::temp_dir().join("kyuubiki-installer-integrity-test");
         let _ = fs::create_dir_all(&root);
         let path = root.join("Cargo.toml");
-        let contents = "[workspace]\nmembers = []\n\n[workspace.package]\nversion = \"1.4.0\"\n";
+        let contents = "[workspace]\nmembers = []\n\n[workspace.package]\nversion = \"1.5.0\"\n";
         fs::write(&path, contents).unwrap();
         assert_eq!(
             read_workspace_cargo_version(path),
-            Some("1.4.0".to_string())
+            Some("1.5.0".to_string())
         );
         let _ = fs::remove_dir_all(root);
     }

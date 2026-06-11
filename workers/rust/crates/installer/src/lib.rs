@@ -15,7 +15,7 @@ pub use integrity::{
     InstallationIntegrityEntry, InstallationIntegrityReport, IntegrityContractRule,
     ResidueCandidate, VersionAlignmentCheck, installation_integrity_report, repair_installation,
 };
-pub(crate) use integrity_contract::{contract_path, load_integrity_contract, IntegrityContract};
+pub(crate) use integrity_contract::{IntegrityContract, contract_path, load_integrity_contract};
 pub(crate) use release::{
     build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
     build_release_manifest, build_release_readme, write_release_scripts,

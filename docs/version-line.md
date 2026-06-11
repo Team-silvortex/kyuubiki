@@ -1,7 +1,7 @@
 # Version Line: tamamono 1.x
 
 `tamamono 1.x` is the current formal Kyuubiki version line, and
-`tamamono 1.4.0` is the current shipping version in that line.
+`tamamono 1.5.0` is the current shipping version in that line.
 
 It marks the point where the project stops treating version movement mainly as
 feature expansion and starts treating it as product hardening:
@@ -14,7 +14,7 @@ feature expansion and starts treating it as product hardening:
 ## What this line means
 
 - the codename for this generation is `tamamono`
-- the current formal product version is `tamamono 1.4.0`
+- the current formal product version is `tamamono 1.5.0`
 - unless there is a special structural reset later, the major version is
   expected to remain `1`
 

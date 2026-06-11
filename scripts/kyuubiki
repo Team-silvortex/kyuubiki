@@ -134,7 +134,7 @@ Examples:
   ./scripts/kyuubiki package-desktop
   ./scripts/kyuubiki package-desktop linux
   ./scripts/kyuubiki package-desktop all
-  ./scripts/kyuubiki release-snapshot 1.4.1 --status staged --dry-run
+  ./scripts/kyuubiki release-snapshot 1.5.1 --status staged --dry-run
   ./scripts/kyuubiki desktop-status
   ./scripts/kyuubiki desktop-status all
   ./scripts/kyuubiki desktop-stage all

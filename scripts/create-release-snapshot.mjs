@@ -14,8 +14,8 @@ function usage() {
   node ./scripts/create-release-snapshot.mjs <version> [--status current|staged|archived] [--codename tamamono] [--line 1.x] [--dry-run] [--force]
 
 Examples:
-  node ./scripts/create-release-snapshot.mjs 1.4.1 --status staged --dry-run
-  node ./scripts/create-release-snapshot.mjs 1.4.1 --status current
+  node ./scripts/create-release-snapshot.mjs 1.5.1 --status staged --dry-run
+  node ./scripts/create-release-snapshot.mjs 1.5.1 --status current
 `);
 }
 

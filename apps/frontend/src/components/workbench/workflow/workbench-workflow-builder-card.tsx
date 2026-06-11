@@ -5,6 +5,7 @@ import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/work
 import { asWorkflowDatasetContract, asWorkflowGraphDefinition, mergeDatasetContractIntoGraph, normalizeImportedWorkflowGraph, readJsonFile } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import { listStoredWorkflowDrafts, removeStoredWorkflowDraft, saveStoredWorkflowDraft, type StoredWorkflowDraft } from "@/components/workbench/workflow/workbench-workflow-draft-storage";
 import { duplicateStoredLocalWorkflow, removeStoredLocalWorkflow, renameStoredLocalWorkflow, saveStoredLocalWorkflow, updateStoredLocalWorkflowMetadata } from "@/components/workbench/workflow/workbench-workflow-local-storage";
+import { asWorkflowDraftBundle, buildWorkflowDraftBundle } from "@/components/workbench/workflow/workbench-workflow-draft-bundle";
 import { WorkbenchWorkflowDraftCard } from "@/components/workbench/workflow/workbench-workflow-draft-card";
 import { WorkbenchWorkflowBuilderToolbar } from "@/components/workbench/workflow/workbench-workflow-builder-toolbar";
 import { buildWorkflowInputArtifactTexts, parseWorkflowInputArtifactTexts } from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
@@ -23,8 +24,8 @@ import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workf
 import { WorkbenchWorkflowSnapshotCard } from "@/components/workbench/workflow/workbench-workflow-snapshot-card";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
 import { WorkbenchWorkflowTopologyCard } from "@/components/workbench/workflow/workbench-workflow-topology-card";
+import { readWorkflowTemplateChainPreferences, writeWorkflowTemplateChainPreferences } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
 import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
-
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
   selectedWorkflow: WorkflowCatalogEntry | null;
@@ -33,7 +34,6 @@ type WorkbenchWorkflowBuilderCardProps = {
   onRunWorkflowCatalog: (workflowId: string) => void;
   onRunWorkflowDraft: (workflowId: string, graph: WorkflowGraphDefinition, inputArtifacts: Record<string, unknown>) => void;
 };
-
 export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
@@ -60,7 +60,6 @@ export function WorkbenchWorkflowBuilderCard({
   const graphInputRef = useRef<HTMLInputElement | null>(null);
   const datasetInputRef = useRef<HTMLInputElement | null>(null);
   const builderRootRef = useRef<HTMLElement | null>(null);
-
   function resetBuilderFocus() {
     setFocusedNodeId(null);
     setFocusedEdgeId(null);
@@ -71,7 +70,6 @@ export function WorkbenchWorkflowBuilderCard({
     setHighlightedArtifactKeys([]);
     setHighlightDatasetEditor(false);
   }
-
   function flashHighlightedEdges(edgeIds: string[]) {
     if (edgeIds.length === 0) return;
     setHighlightedEdgeIds(edgeIds);
@@ -108,7 +106,6 @@ export function WorkbenchWorkflowBuilderCard({
       setHighlightDatasetEditor((current) => (current && plan.highlightDatasetEditor ? false : current));
     }, 2200);
   }
-
   useEffect(() => {
     const nextDraft = cloneWorkflowGraph(selectedWorkflow?.graph ?? null);
     if (nextDraft) {
@@ -136,7 +133,6 @@ export function WorkbenchWorkflowBuilderCard({
     setSavedDrafts(selectedWorkflow ? listStoredWorkflowDrafts(selectedWorkflow.id) : []);
     setSavedSnapshots(selectedWorkflow ? listStoredWorkflowSnapshots(selectedWorkflow.id) : []);
   }, [selectedWorkflow]);
-
   const selectedGraph = draftGraph;
   const selectedNodes = selectedGraph?.nodes ?? [];
   const selectedEdges = selectedGraph?.edges ?? [];
@@ -202,7 +198,6 @@ export function WorkbenchWorkflowBuilderCard({
       return next;
     });
   }
-
   function addArtifact(field: "entry_inputs" | "output_artifacts") {
     const nextIndex = ((selectedGraph?.[field] ?? []).length || 0) + 1;
     updateArtifacts(field, (artifacts) => [...artifacts, buildDraftArtifact(nextIndex)]);
@@ -380,7 +375,14 @@ export function WorkbenchWorkflowBuilderCard({
   }
   function exportDraftWorkflowGraph() {
     if (!selectedGraph) return;
-    downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedGraph.id)}.workflow-graph.json`, selectedGraph);
+    downloadJsonArtifact(
+      `${slugifyWorkflowAssetName(selectedGraph.id)}.workflow-graph.json`,
+      buildWorkflowDraftBundle({
+        graph: selectedGraph,
+        inputArtifactTexts: draftInputTexts,
+        templateChainPreferences: readWorkflowTemplateChainPreferences(),
+      }),
+    );
   }
   function saveCurrentDraft() {
     if (!selectedWorkflow || !selectedGraph) return;
@@ -389,6 +391,7 @@ export function WorkbenchWorkflowBuilderCard({
       workflowName: selectedWorkflow.name,
       graph: selectedGraph,
       inputArtifactTexts: draftInputTexts,
+      templateChainPreferences: readWorkflowTemplateChainPreferences(),
     });
     setSavedDrafts(listStoredWorkflowDrafts(selectedWorkflow.id));
     setImportMessage(labels.draftSavedLabel);
@@ -456,6 +459,9 @@ export function WorkbenchWorkflowBuilderCard({
           selectedWorkflow ? builtInWorkflowSampleInputArtifacts(selectedWorkflow.id) : null,
         ),
     );
+    if (draft.templateChainPreferences) {
+      writeWorkflowTemplateChainPreferences(draft.templateChainPreferences);
+    }
     setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
     resetBuilderFocus();
     setImportMessage(labels.draftLoadedLabel);
@@ -496,7 +502,8 @@ export function WorkbenchWorkflowBuilderCard({
   async function importWorkflowGraphFile(file: File) {
     try {
       const json = await readJsonFile(file);
-      const graph = asWorkflowGraphDefinition(json);
+      const bundle = asWorkflowDraftBundle(json);
+      const graph = bundle?.graph ?? asWorkflowGraphDefinition(json);
       if (!graph) {
         setImportMessage(labels.importInvalidGraphLabel);
         return;
@@ -508,6 +515,16 @@ export function WorkbenchWorkflowBuilderCard({
         nextGraph.output_artifacts = nextGraph.output_artifacts ?? selectedOutputArtifacts;
       }
       setDraftGraph(nextGraph);
+      setDraftInputTexts(
+        bundle?.input_artifact_texts ??
+          buildWorkflowInputArtifactTexts(
+            nextGraph?.entry_inputs ?? [],
+            selectedWorkflow ? builtInWorkflowSampleInputArtifacts(selectedWorkflow.id) : null,
+          ),
+      );
+      if (bundle?.template_chain_preferences) {
+        writeWorkflowTemplateChainPreferences(bundle.template_chain_preferences);
+      }
       setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
       flashHighlightedEdges(imported.autoReconnectEdgeIds);
       setImportMessage(labels.importSuccessLabel);
@@ -540,10 +557,8 @@ export function WorkbenchWorkflowBuilderCard({
     if (file) void importDatasetContractFile(file);
     event.target.value = "";
   }
-
   function updateDraftInputText(nodeId: string, value: string) { setDraftInputTexts((current) => ({ ...current, [nodeId]: value })); }
   if (!selectedWorkflow) return <section className="sidebar-card sidebar-card--compact"><p className="card-copy">{labels.noSelectionLabel}</p></section>;
-
   return (
     <section className="sidebar-card sidebar-card--compact" ref={builderRootRef}>
       <WorkbenchWorkflowBuilderToolbar

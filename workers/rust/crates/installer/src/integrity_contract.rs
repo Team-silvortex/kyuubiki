@@ -35,7 +35,10 @@ pub struct IntegrityVisibleRule {
     pub description: String,
 }
 
-pub fn load_integrity_contract(root: &Path, platform: Platform) -> Result<IntegrityContract, String> {
+pub fn load_integrity_contract(
+    root: &Path,
+    platform: Platform,
+) -> Result<IntegrityContract, String> {
     let path = root.join(CONTRACT_PATH);
     let contents = fs::read_to_string(&path)
         .map_err(|error| format!("failed to read {}: {error}", path.display()))?;

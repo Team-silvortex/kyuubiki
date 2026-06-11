@@ -2,6 +2,7 @@
 
 import type { WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
+import type { WorkflowTemplateChainPreferenceSnapshot } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
 
 const WORKBENCH_WORKFLOW_DRAFTS_KEY = "kyuubiki.workbench.workflowDrafts.v1";
 
@@ -12,6 +13,7 @@ export type StoredWorkflowDraft = {
   savedAt: string;
   graph: WorkflowGraphDefinition;
   inputArtifactTexts?: Record<string, string>;
+  templateChainPreferences?: WorkflowTemplateChainPreferenceSnapshot;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -25,6 +27,22 @@ function asStringRecord(value: unknown): Record<string, string> | undefined {
       ([key, entryValue]) => typeof key === "string" && typeof entryValue === "string",
     ),
   ) as Record<string, string>;
+}
+
+function asTemplateChainPreferences(
+  value: unknown,
+): WorkflowTemplateChainPreferenceSnapshot | undefined {
+  if (!isRecord(value)) return undefined;
+  const favoriteChainIds = Array.isArray(value.favoriteChainIds)
+    ? value.favoriteChainIds.filter(
+        (entry): entry is string => typeof entry === "string",
+      )
+    : [];
+  const favoriteChainAliases = asStringRecord(value.favoriteChainAliases) ?? {};
+  if (favoriteChainIds.length === 0 && Object.keys(favoriteChainAliases).length === 0) {
+    return undefined;
+  }
+  return { favoriteChainIds, favoriteChainAliases };
 }
 
 function readStoredDrafts(): StoredWorkflowDraft[] {
@@ -54,6 +72,9 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
           savedAt: entry.savedAt,
           graph,
           inputArtifactTexts: asStringRecord(entry.inputArtifactTexts),
+          templateChainPreferences: asTemplateChainPreferences(
+            entry.templateChainPreferences,
+          ),
         },
       ];
     });
@@ -84,6 +105,7 @@ export function saveStoredWorkflowDraft(params: {
   workflowName: string;
   graph: WorkflowGraphDefinition;
   inputArtifactTexts?: Record<string, string>;
+  templateChainPreferences?: WorkflowTemplateChainPreferenceSnapshot;
 }): StoredWorkflowDraft {
   const nextRecord: StoredWorkflowDraft = {
     id: `draft_${Date.now()}`,
@@ -92,6 +114,7 @@ export function saveStoredWorkflowDraft(params: {
     savedAt: new Date().toISOString(),
     graph: params.graph,
     inputArtifactTexts: params.inputArtifactTexts,
+    templateChainPreferences: params.templateChainPreferences,
   };
   const next = [nextRecord, ...readStoredDrafts()].slice(0, 40);
   writeStoredDrafts(next);
