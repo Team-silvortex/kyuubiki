@@ -1,120 +1,160 @@
 "use client";
 
-const SAMPLE_INPUTS: Record<string, Record<string, unknown>> = {
+type WorkflowSampleInputArtifactDefinition = {
+  semanticType: string;
+  payload: Record<string, unknown>;
+};
+
+type WorkflowSampleInputDefinition = {
+  artifacts: Record<string, WorkflowSampleInputArtifactDefinition>;
+};
+
+function sampleInputArtifact(
+  semanticType: string,
+  payload: Record<string, unknown>,
+): WorkflowSampleInputArtifactDefinition {
+  return { semanticType, payload };
+}
+
+const SAMPLE_INPUTS: Record<string, WorkflowSampleInputDefinition> = {
   electrostatic_plane_quad: {
-    electrostatic_model: {
-      nodes: [
-        { id: "n0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
-        { id: "n1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
-        { id: "n2", x: 1, y: 1, fix_potential: true, potential: 0, charge_density: 0 },
-        { id: "n3", x: 0, y: 1, fix_potential: true, potential: 10, charge_density: 0 },
-      ],
-      elements: [{ id: "epq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.05, permittivity: 2 }],
+    artifacts: {
+      electrostatic_model: sampleInputArtifact("study_model/electrostatic_plane_quad_2d", {
+        nodes: [
+          { id: "n0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
+          { id: "n1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
+          { id: "n2", x: 1, y: 1, fix_potential: true, potential: 0, charge_density: 0 },
+          { id: "n3", x: 0, y: 1, fix_potential: true, potential: 10, charge_density: 0 },
+        ],
+        elements: [{ id: "epq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.05, permittivity: 2 }],
+      }),
     },
   },
   electrostatic_plane_triangle: {
-    electrostatic_plane_triangle_model: {
-      nodes: [
-        { id: "et0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
-        { id: "et1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
-        { id: "et2", x: 0, y: 1, fix_potential: false, potential: 0, charge_density: 0 },
-      ],
-      elements: [{ id: "ept0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.05, permittivity: 2 }],
+    artifacts: {
+      electrostatic_plane_triangle_model: sampleInputArtifact("study_model/electrostatic_plane_triangle_2d", {
+        nodes: [
+          { id: "et0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
+          { id: "et1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
+          { id: "et2", x: 0, y: 1, fix_potential: false, potential: 0, charge_density: 0 },
+        ],
+        elements: [{ id: "ept0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.05, permittivity: 2 }],
+      }),
     },
   },
   heat_plane_quad: {
-    heat_model: {
-      nodes: [
-        { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-        { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
-        { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-        { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-      ],
-      elements: [{ id: "hq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, conductivity: 45 }],
+    artifacts: {
+      heat_model: sampleInputArtifact("study_model/heat_plane_quad_2d", {
+        nodes: [
+          { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
+          { id: "h1", x: 1, y: 0, fix_temperature: false, temperature: 0, heat_load: 0 },
+          { id: "h2", x: 1, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
+          { id: "h3", x: 0, y: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
+        ],
+        elements: [{ id: "hq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, conductivity: 45 }],
+      }),
     },
   },
   bar_1d: {
-    bar_1d_model: { length: 1, area: 0.01, youngs_modulus: 210000000000, elements: 2, tip_force: 1200 },
+    artifacts: {
+      bar_1d_model: sampleInputArtifact("study_model/bar_1d", { length: 1, area: 0.01, youngs_modulus: 210000000000, elements: 2, tip_force: 1200 }),
+    },
   },
   thermal_bar_1d: {
-    thermal_bar_1d_model: {
-      nodes: [
-        { id: "n0", x: 0, fix_x: true, load_x: 0, temperature_delta: 0 },
-        { id: "n1", x: 1, fix_x: true, load_x: 0, temperature_delta: 35 },
-      ],
-      elements: [{ id: "e0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 210000000000, thermal_expansion: 0.000012 }],
+    artifacts: {
+      thermal_bar_1d_model: sampleInputArtifact("study_model/thermal_bar_1d", {
+        nodes: [
+          { id: "n0", x: 0, fix_x: true, load_x: 0, temperature_delta: 0 },
+          { id: "n1", x: 1, fix_x: true, load_x: 0, temperature_delta: 35 },
+        ],
+        elements: [{ id: "e0", node_i: 0, node_j: 1, area: 0.01, youngs_modulus: 210000000000, thermal_expansion: 0.000012 }],
+      }),
     },
   },
   heat_bar_1d: {
-    heat_bar_1d_model: {
-      nodes: [
-        { id: "h0", x: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-        { id: "h1", x: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
-      ],
-      elements: [{ id: "he0", node_i: 0, node_j: 1, area: 0.02, conductivity: 45 }],
+    artifacts: {
+      heat_bar_1d_model: sampleInputArtifact("study_model/heat_bar_1d", {
+        nodes: [
+          { id: "h0", x: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
+          { id: "h1", x: 1, fix_temperature: true, temperature: 20, heat_load: 0 },
+        ],
+        elements: [{ id: "he0", node_i: 0, node_j: 1, area: 0.02, conductivity: 45 }],
+      }),
     },
   },
   heat_plane_triangle_2d: {
-    heat_plane_triangle_2d_model: {
-      nodes: [
-        { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
-        { id: "h1", x: 1, y: 0, fix_temperature: true, temperature: 20, heat_load: 0 },
-        { id: "h2", x: 0, y: 1, fix_temperature: false, temperature: 0, heat_load: 0 },
-      ],
-      elements: [{ id: "ht0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, conductivity: 45 }],
+    artifacts: {
+      heat_plane_triangle_2d_model: sampleInputArtifact("study_model/heat_plane_triangle_2d", {
+        nodes: [
+          { id: "h0", x: 0, y: 0, fix_temperature: true, temperature: 100, heat_load: 0 },
+          { id: "h1", x: 1, y: 0, fix_temperature: true, temperature: 20, heat_load: 0 },
+          { id: "h2", x: 0, y: 1, fix_temperature: false, temperature: 0, heat_load: 0 },
+        ],
+        elements: [{ id: "ht0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, conductivity: 45 }],
+      }),
     },
   },
   thermal_truss_2d: {
-    thermal_truss_2d_model: {
-      nodes: [
-        { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 20 },
-        { id: "n1", x: 1, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-        { id: "n2", x: 0.5, y: 0.8, fix_x: false, fix_y: false, load_x: 0, load_y: 0, temperature_delta: 40 },
-      ],
-      elements: [
-        { id: "tt0", node_i: 0, node_j: 2, area: 0.01, youngs_modulus: 210000000000, thermal_expansion: 0.000012 },
-        { id: "tt1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 210000000000, thermal_expansion: 0.000012 },
-      ],
+    artifacts: {
+      thermal_truss_2d_model: sampleInputArtifact("study_model/thermal_truss_2d", {
+        nodes: [
+          { id: "n0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 20 },
+          { id: "n1", x: 1, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
+          { id: "n2", x: 0.5, y: 0.8, fix_x: false, fix_y: false, load_x: 0, load_y: 0, temperature_delta: 40 },
+        ],
+        elements: [
+          { id: "tt0", node_i: 0, node_j: 2, area: 0.01, youngs_modulus: 210000000000, thermal_expansion: 0.000012 },
+          { id: "tt1", node_i: 1, node_j: 2, area: 0.01, youngs_modulus: 210000000000, thermal_expansion: 0.000012 },
+        ],
+      }),
     },
   },
   torsion_1d: {
-    torsion_1d_model: {
-      nodes: [
-        { id: "t0", x: 0, fix_rz: true, torque_z: 0 },
-        { id: "t1", x: 1, fix_rz: false, torque_z: 500 },
-      ],
-      elements: [{ id: "te0", node_i: 0, node_j: 1, shear_modulus: 80000000000, polar_moment: 0.000005, section_modulus: 0.00016 }],
+    artifacts: {
+      torsion_1d_model: sampleInputArtifact("study_model/torsion_1d", {
+        nodes: [
+          { id: "t0", x: 0, fix_rz: true, torque_z: 0 },
+          { id: "t1", x: 1, fix_rz: false, torque_z: 500 },
+        ],
+        elements: [{ id: "te0", node_i: 0, node_j: 1, shear_modulus: 80000000000, polar_moment: 0.000005, section_modulus: 0.00016 }],
+      }),
     },
   },
   plane_triangle_2d: {
-    plane_triangle_2d_model: {
-      nodes: [
-        { id: "p0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
-        { id: "p1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
-        { id: "p2", x: 0, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -1000 },
-      ],
-      elements: [{ id: "pt0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70000000000, poisson_ratio: 0.33 }],
+    artifacts: {
+      plane_triangle_2d_model: sampleInputArtifact("study_model/plane_triangle_2d", {
+        nodes: [
+          { id: "p0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
+          { id: "p1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
+          { id: "p2", x: 0, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -1000 },
+        ],
+        elements: [{ id: "pt0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70000000000, poisson_ratio: 0.33 }],
+      }),
     },
   },
   thermal_plane_triangle_2d: {
-    thermal_plane_triangle_2d_model: {
-      nodes: [
-        { id: "tp0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 20 },
-        { id: "tp1", x: 1, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-        { id: "tp2", x: 0, y: 1, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
-      ],
-      elements: [{ id: "tpt0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70000000000, poisson_ratio: 0.33, thermal_expansion: 0.000011 }],
+    artifacts: {
+      thermal_plane_triangle_2d_model: sampleInputArtifact("study_model/thermal_plane_triangle_2d", {
+        nodes: [
+          { id: "tp0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 20 },
+          { id: "tp1", x: 1, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
+          { id: "tp2", x: 0, y: 1, fix_x: true, fix_y: true, load_x: 0, load_y: 0, temperature_delta: 40 },
+        ],
+        elements: [{ id: "tpt0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.02, youngs_modulus: 70000000000, poisson_ratio: 0.33, thermal_expansion: 0.000011 }],
+      }),
     },
   },
   plane_quad_2d: {
-    plane_quad_2d_model: {
-      nodes: [
-        { id: "q0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
-        { id: "q1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
-        { id: "q2", x: 1, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -1000 },
-        { id: "q3", x: 0, y: 1, fix_x: true, fix_y: false, load_x: 0, load_y: 0 },
-      ],
-      elements: [{ id: "pq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, youngs_modulus: 70000000000, poisson_ratio: 0.33 }],
+    artifacts: {
+      plane_quad_2d_model: sampleInputArtifact("study_model/plane_quad_2d", {
+        nodes: [
+          { id: "q0", x: 0, y: 0, fix_x: true, fix_y: true, load_x: 0, load_y: 0 },
+          { id: "q1", x: 1, y: 0, fix_x: false, fix_y: true, load_x: 0, load_y: 0 },
+          { id: "q2", x: 1, y: 1, fix_x: false, fix_y: false, load_x: 0, load_y: -1000 },
+          { id: "q3", x: 0, y: 1, fix_x: true, fix_y: false, load_x: 0, load_y: 0 },
+        ],
+        elements: [{ id: "pq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, youngs_modulus: 70000000000, poisson_ratio: 0.33 }],
+      }),
     },
   },
 };
@@ -151,5 +191,26 @@ export function builtInWorkflowSampleInputArtifacts(
   workflowId: string,
 ): Record<string, unknown> | null {
   const sampleKey = SAMPLE_INPUT_ALIASES[workflowId];
-  return sampleKey ? SAMPLE_INPUTS[sampleKey] : null;
+  return sampleKey
+    ? Object.fromEntries(
+        Object.entries(SAMPLE_INPUTS[sampleKey].artifacts).map(([artifactId, entry]) => [
+          artifactId,
+          entry.payload,
+        ]),
+      )
+    : null;
+}
+
+export function builtInWorkflowSampleInputSemanticTypes(
+  workflowId: string,
+): Record<string, string> | null {
+  const sampleKey = SAMPLE_INPUT_ALIASES[workflowId];
+  return sampleKey
+    ? Object.fromEntries(
+        Object.entries(SAMPLE_INPUTS[sampleKey].artifacts).map(([artifactId, entry]) => [
+          artifactId,
+          entry.semanticType,
+        ]),
+      )
+    : null;
 }

@@ -2,6 +2,7 @@
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import type { WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
+import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { WORKBENCH_LOCAL_WORKFLOWS_KEY } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_LOG_KEY } from "@/components/workbench/workflow/workbench-workflow-package-maintenance-log";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
@@ -44,6 +45,7 @@ export type WorkflowPackageInstallReport = {
     format_contract: string;
     portability: string;
   };
+  input_contract_warnings: Record<string, string[]>;
   integrity: WorkflowIntegrityReport;
   residuals: WorkflowPackageResidualRecord[];
   maintenance_history?: Array<{
@@ -133,6 +135,12 @@ export function buildWorkflowPackageInstallReport(params: {
     integrityReport.snapshotCount > 0
       ? `${integrityReport.snapshotCount} indexed; ${integrityReport.summaryOnlySnapshotCount} summary-only.`
       : "Snapshots are stored independently from package metadata.";
+  const inputContractWarnings =
+    importedPackage?.workflow.input_artifact_contract_warnings ??
+    collectWorkflowInputArtifactContractWarnings({
+      entryInputs: workflow.entry_inputs,
+      inputArtifactTexts: workflow.local?.input_artifact_texts,
+    });
 
   return {
     generated_at: new Date().toISOString(),
@@ -167,6 +175,7 @@ export function buildWorkflowPackageInstallReport(params: {
       portability:
         "Package manifest, graph, and dataset contract remain JSON-exportable for cross-operator reuse and headless SDK flows.",
     },
+    input_contract_warnings: inputContractWarnings,
     integrity: integrityReport,
     residuals: scanWorkflowPackageResiduals(params),
     maintenance_history: maintenanceHistory,

@@ -9,7 +9,11 @@ import {
   type WorkflowPackage,
 } from "@/components/workbench/workflow/workbench-workflow-package";
 import type { WorkflowTemplateChainPreferenceSnapshot } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
-import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
+import {
+  builtInWorkflowSampleInputArtifacts,
+  builtInWorkflowSampleInputSemanticTypes,
+} from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
+import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 
 function resolveExportInputArtifactTexts(params: {
   workflow: WorkflowCatalogEntry;
@@ -27,6 +31,27 @@ function resolveExportInputArtifactTexts(params: {
   return Object.fromEntries(
     Object.entries(sampleInputs).map(([key, value]) => [key, JSON.stringify(value, null, 2)]),
   );
+}
+
+function resolveExportInputArtifactSemanticTypes(params: {
+  workflow: WorkflowCatalogEntry;
+}) {
+  return (
+    builtInWorkflowSampleInputSemanticTypes(params.workflow.id) ??
+    builtInWorkflowSampleInputSemanticTypes(params.workflow.graph?.id ?? "") ??
+    undefined
+  );
+}
+
+function resolveExportInputArtifactContractWarnings(params: {
+  workflow: WorkflowCatalogEntry;
+  inputArtifactTexts?: Record<string, string>;
+}) {
+  const inputArtifactTexts = resolveExportInputArtifactTexts(params);
+  return collectWorkflowInputArtifactContractWarnings({
+    entryInputs: params.workflow.entry_inputs,
+    inputArtifactTexts,
+  });
 }
 
 export type ImportedWorkflowPayload = {
@@ -157,6 +182,20 @@ function validateImportedWorkflowPackage(
     });
   }
 
+  const storedContractWarnings = importedPackage.workflow.input_artifact_contract_warnings;
+  if (storedContractWarnings) {
+    diagnostics.push(
+      ...Object.entries(storedContractWarnings).flatMap(([nodeId, lines]) =>
+        lines.map((line) => ({
+          message: `Stored export contract warning at ${nodeId}: ${line}`,
+          locate: entryInputs.some((artifact) => artifact.node_id === nodeId)
+            ? ({ kind: "node", nodeId } as const)
+            : ({ kind: "package" } as const),
+        })),
+      ),
+    );
+  }
+
   return diagnostics;
 }
 
@@ -169,6 +208,8 @@ export function buildExportedWorkflowPackage(params: {
   return buildWorkflowPackage({
     ...params,
     inputArtifactTexts: resolveExportInputArtifactTexts(params),
+    inputArtifactSemanticTypes: resolveExportInputArtifactSemanticTypes(params),
+    inputArtifactContractWarnings: resolveExportInputArtifactContractWarnings(params),
   });
 }
 

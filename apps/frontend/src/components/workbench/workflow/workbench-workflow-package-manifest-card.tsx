@@ -1,6 +1,8 @@
 "use client";
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
+import { formatWorkflowContractHealthSummary } from "@/components/workbench/workflow/workbench-workflow-contract-health";
+import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import type {
   WorkflowPackage,
   WorkflowPackageContractEntry,
@@ -16,6 +18,20 @@ type WorkbenchWorkflowPackageManifestCardProps = {
 function formatList(values?: string[]) {
   const normalized = values?.filter(Boolean) ?? [];
   return normalized.length > 0 ? normalized.join(", ") : "--";
+}
+
+function formatSemanticTypeMap(values?: Record<string, string>) {
+  if (!values) return "--";
+  const entries = Object.entries(values).filter(([, value]) => value);
+  if (entries.length === 0) return "--";
+  return entries.map(([key, value]) => `${key} -> ${value}`).join(", ");
+}
+
+function formatWarningMap(values?: Record<string, string[]>) {
+  if (!values) return "--";
+  const entries = Object.entries(values).filter(([, lines]) => lines.length > 0);
+  if (entries.length === 0) return "--";
+  return entries.map(([key, lines]) => `${key} -> ${lines.join(" | ")}`).join(", ");
 }
 
 function formatDateTime(value?: string) {
@@ -118,6 +134,12 @@ export function WorkbenchWorkflowPackageManifestCard({
           bridge_seed_summaries: [],
         }
       : null);
+  const contractWarnings =
+    importedPackage?.workflow.input_artifact_contract_warnings ??
+    collectWorkflowInputArtifactContractWarnings({
+      entryInputs: workflow.entry_inputs,
+      inputArtifactTexts: workflow.local?.input_artifact_texts,
+    });
 
   if (!mountedPackageId) {
     return (
@@ -197,6 +219,18 @@ export function WorkbenchWorkflowPackageManifestCard({
         <div className="sidebar-list__row">
           <span>{labels.inputArtifactsTitle}</span>
           <strong>{formatList(runtimeManifest?.included_input_text_node_ids)}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>input semantics</span>
+          <strong>{formatSemanticTypeMap(importedPackage?.workflow.input_artifact_semantic_types)}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>contract health</span>
+          <strong>{formatWorkflowContractHealthSummary(contractWarnings)}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>export contract warnings</span>
+          <strong>{formatWarningMap(contractWarnings)}</strong>
         </div>
         <div className="sidebar-list__row">
           <span>{labels.bridgeContractTitle}</span>

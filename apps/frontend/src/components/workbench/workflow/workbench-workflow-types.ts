@@ -1,7 +1,7 @@
 "use client";
 
 export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
-export type WorkflowCatalogFilter = "all" | "local" | "variants";
+export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "needs_review";
 
 export type WorkflowRunRecord = {
   jobId: string;
@@ -47,6 +47,8 @@ export type WorkflowSidebarLabels = {
   catalogFilterAllLabel: string;
   catalogFilterLocalLabel: string;
   catalogFilterVariantsLabel: string;
+  catalogFilterHealthyLabel: string;
+  catalogFilterNeedsReviewLabel: string;
   refreshLabel: string;
   runLabel: string;
   runDraftLabel: string;

@@ -37,6 +37,8 @@ export const copyJa = {
     workflowCatalogFilterAllLabel: "すべて",
     workflowCatalogFilterLocalLabel: "ローカル",
     workflowCatalogFilterVariantsLabel: "variant",
+    workflowCatalogFilterHealthyLabel: "健全",
+    workflowCatalogFilterNeedsReviewLabel: "要確認",
     workflowOverviewHint: "複合算子 workflow を専用作業面に集め、samples や results に埋め込まないようにします。",
     workflowBuilderHint: "graph のノード、bridge、extract、export を確認してから大きな study chain に接続します。",
     workflowRunsHint: "命名 workflow ジョブ、現在ノード、書き出し済み summary を一か所で追います。",

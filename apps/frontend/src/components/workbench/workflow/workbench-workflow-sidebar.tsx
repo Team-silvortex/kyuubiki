@@ -10,6 +10,12 @@ import type {
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
+import {
+  buildWorkflowContractHealthRunFeedbackMessage,
+  elevateWorkflowContractHealthLabel,
+  formatWorkflowContractHealthLabel,
+  rankWorkflowContractHealth,
+} from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import {
   markWorkflowSurfaceIntent,
@@ -96,9 +102,11 @@ export function WorkbenchWorkflowSidebar({
     ? workflowCatalogEntries.find((entry) => entry.id === latestRun.workflowId) ?? null
     : null;
   const [catalogFilter, setCatalogFilter] = useState<WorkflowCatalogFilter>("all");
+  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [builderTraceFocus, setBuilderTraceFocus] = useState<{ nodeId: string; token: number } | null>(null);
   const [builderBranchFocus, setBuilderBranchFocus] = useState<{ nodeId: string; outputId: string; token: number } | null>(null);
   const [builderDatasetFocus, setBuilderDatasetFocus] = useState<{ nodeId: string; portId: string; token: number } | null>(null);
+  const latestRunStatusByWorkflowId = useMemo(() => new Map(workflowRuns.map((run) => [run.workflowId, run.status] as const)), [workflowRuns]);
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
     removeStoredLocalWorkflow(workflow.local.storage_id);
@@ -127,12 +135,37 @@ export function WorkbenchWorkflowSidebar({
     openRunNodeInBuilder(run.workflowId, nodeId);
   }
   const filteredWorkflowCatalogEntries = useMemo(() => {
-    if (catalogFilter === "local") return workflowCatalogEntries.filter((workflow) => Boolean(workflow.local));
-    if (catalogFilter === "variants") {
-      return workflowCatalogEntries.filter((workflow) => Boolean(workflow.local?.variant_of_workflow_id));
-    }
-    return workflowCatalogEntries;
-  }, [catalogFilter, workflowCatalogEntries]);
+    const dynamicHealth = (workflow: WorkflowCatalogEntry) =>
+      elevateWorkflowContractHealthLabel(
+        formatWorkflowContractHealthLabel(workflow.capability_tags ?? workflow.local?.tags),
+        latestRunStatusByWorkflowId.get(workflow.id),
+      );
+    const filtered =
+      catalogFilter === "local"
+        ? workflowCatalogEntries.filter((workflow) => Boolean(workflow.local))
+        : catalogFilter === "variants"
+          ? workflowCatalogEntries.filter((workflow) => Boolean(workflow.local?.variant_of_workflow_id))
+          : catalogFilter === "healthy"
+            ? workflowCatalogEntries.filter((workflow) => {
+                const health = dynamicHealth(workflow);
+                return health === "clean" || health === "manageable";
+              })
+            : catalogFilter === "needs_review"
+              ? workflowCatalogEntries.filter((workflow) => dynamicHealth(workflow) === "needs review")
+              : workflowCatalogEntries;
+    return [...filtered].sort((left, right) => {
+      const leftRank = rankWorkflowContractHealth({ ...left, capability_tags: [`contract_health:${dynamicHealth(left) === "needs review" ? "review" : dynamicHealth(left) ?? "manageable"}`] });
+      const rightRank = rankWorkflowContractHealth({ ...right, capability_tags: [`contract_health:${dynamicHealth(right) === "needs review" ? "review" : dynamicHealth(right) ?? "manageable"}`] });
+      const healthDelta = leftRank - rightRank;
+      if (healthDelta !== 0) return healthDelta;
+      if (left.local?.promoted_at && right.local?.promoted_at) {
+        return right.local.promoted_at.localeCompare(left.local.promoted_at);
+      }
+      if (left.local?.promoted_at) return -1;
+      if (right.local?.promoted_at) return 1;
+      return left.name.localeCompare(right.name);
+    });
+  }, [catalogFilter, latestRunStatusByWorkflowId, workflowCatalogEntries]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     let disposed = false;
@@ -245,6 +278,7 @@ export function WorkbenchWorkflowSidebar({
             <h2>{labels.catalogTitle}</h2>
           </div>
           <p className="card-copy">{labels.catalogHint}</p>
+          {catalogMessage ? <p className="card-copy">{catalogMessage}</p> : null}
           <div className="button-row button-row--adaptive">
             <button onClick={() => setCatalogFilter("all")} type="button">
               {labels.catalogFilterAllLabel}
@@ -255,6 +289,12 @@ export function WorkbenchWorkflowSidebar({
             <button onClick={() => setCatalogFilter("variants")} type="button">
               {labels.catalogFilterVariantsLabel}
             </button>
+            <button onClick={() => setCatalogFilter("healthy")} type="button">
+              {labels.catalogFilterHealthyLabel}
+            </button>
+            <button onClick={() => setCatalogFilter("needs_review")} type="button">
+              {labels.catalogFilterNeedsReviewLabel}
+            </button>
             <button onClick={onRefreshWorkflowCatalog} type="button">
               {labels.refreshLabel}
             </button>
@@ -263,6 +303,7 @@ export function WorkbenchWorkflowSidebar({
           <div className="runtime-overview-grid">
             {filteredWorkflowCatalogEntries.map((workflow) => {
               const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
+              const contractHealth = elevateWorkflowContractHealthLabel(formatWorkflowContractHealthLabel(workflow.capability_tags ?? workflow.local?.tags), latestRunStatusByWorkflowId.get(workflow.id));
               return (
                 <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={workflow.id}>
                   <div className="card-head">
@@ -306,6 +347,12 @@ export function WorkbenchWorkflowSidebar({
                           <strong>{localWorkflowTags}</strong>
                         </div>
                       ) : null}
+                      {contractHealth ? (
+                        <div className="sidebar-list__row">
+                          <span>contract health</span>
+                          <strong>{contractHealth}</strong>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                   {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
@@ -319,7 +366,7 @@ export function WorkbenchWorkflowSidebar({
                     >
                       {labels.selectForBuilderLabel}
                     </button>
-                    <button onClick={() => onRunWorkflowCatalog(workflow.id)} type="button">
+                    <button onClick={() => { setCatalogMessage(buildWorkflowContractHealthRunFeedbackMessage(workflow.name, workflow.capability_tags ?? workflow.local?.tags, latestRunStatusByWorkflowId.get(workflow.id))); onRunWorkflowCatalog(workflow.id); }} type="button">
                       {labels.runLabel}
                     </button>
                     {workflow.local ? (

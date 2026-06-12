@@ -2,6 +2,7 @@
 
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { HOTSPOT_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-hotspot-presets";
 
 const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY =
   "kyuubiki.workflow.templateChainLibrary.v1";
@@ -410,32 +411,7 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
       { kind: "export", operatorId: "export.summary_json" },
     ],
   },
-  {
-    id: "electrostatic_hotspot_alert",
-    label: "electrostatic hotspot alert",
-    source: "built-in",
-    summary: "Electrostatic solve, hotspot extraction, and markdown alert export.",
-    tags: ["electrostatic", "hotspot", "alert", "field", "2d"],
-    templates: [
-      { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.field_hotspots",
-        config: { source: "elements", field: "electric_field_magnitude", output_prefix: "field", percentile: 90 },
-      },
-      {
-        kind: "export",
-        operatorId: "export.alert_markdown",
-        config: {
-          title: "Electrostatic Hotspot Alert",
-          severity: "warning",
-          summary: "Hotspot candidates were detected in the electrostatic field.",
-          fields: ["field_threshold", "field_hotspot_count", "field_hotspot_fraction"],
-        },
-      },
-    ],
-  },
-  { id: "electrostatic_hotspot_guard", label: "electrostatic hotspot guard", source: "built-in", summary: "Route hotspot summaries into alert or clear markdown output.", tags: ["electrostatic", "hotspot", "condition", "alert", "2d"], templates: [{ kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" }, { kind: "extract", operatorId: "extract.field_hotspots", config: { source: "elements", field: "electric_field_magnitude", output_prefix: "field", percentile: 90 } }, { kind: "condition", config: { predicate: { path: "field_hotspot_count", operator: "gt", value: 0 } } }, { kind: "export", operatorId: "export.alert_markdown", config: { title: "Electrostatic Hotspot Alert", severity: "warning", summary: "Hotspot candidates exceeded the workflow threshold.", fields: ["field_hotspot_count", "field_hotspot_fraction", "field_threshold"] } }, { kind: "export", operatorId: "export.alert_markdown", config: { title: "Electrostatic Field Clear", severity: "info", summary: "Hotspot count stayed within the configured workflow threshold.", fields: ["field_hotspot_count", "field_hotspot_fraction", "field_threshold"] } }, { kind: "transform", operatorId: "transform.first_available" }, { kind: "output" }], connections: [{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 3, fromPort: "if_true" }, { from: 2, to: 4, fromPort: "if_false" }, { from: 3, to: 5, toPort: "left" }, { from: 4, to: 5, toPort: "right" }, { from: 5, to: 6 }] },
+  ...HOTSPOT_TEMPLATE_CHAINS,
   {
     id: "condition_branch_merge_export",
     label: "condition -> branch -> merge",

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatSnapshotContractTrend } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { StoredWorkflowSnapshotSummary } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 
@@ -24,13 +25,19 @@ export function WorkbenchWorkflowSnapshotCard({
       </div>
       {snapshots.length > 0 ? (
         <div className="sidebar-stack">
-          {snapshots.map((snapshot) => (
+          {snapshots.map((snapshot, index) => (
             <div className="sidebar-card sidebar-card--compact" key={snapshot.id}>
               <div className="sidebar-list">
                 <div className="sidebar-list__row">
                   <span>{snapshot.reason}</span>
                   <strong>{new Date(snapshot.createdAt).toLocaleString()}</strong>
                 </div>
+                {formatSnapshotContractTrend(snapshot, snapshots[index + 1]) ? (
+                  <div className="sidebar-list__row">
+                    <span>health trend</span>
+                    <strong>{formatSnapshotContractTrend(snapshot, snapshots[index + 1])}</strong>
+                  </div>
+                ) : null}
                 {snapshot.payloadState === "summary_only" ? (
                   <div className="sidebar-list__row">
                     <span>{labels.validationSnapshotSummaryOnlyLabel}</span>

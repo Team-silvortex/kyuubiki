@@ -2,6 +2,7 @@
 
 import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
+import { summarizeWorkflowInputArtifactContractHealth } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { buildWorkflowPackageSearchIndex } from "@/components/workbench/workflow/workbench-workflow-package";
 
 export const WORKBENCH_LOCAL_WORKFLOWS_KEY = "kyuubiki.workbench.workflowLibrary.v1";
@@ -234,9 +235,13 @@ export function findStoredLocalWorkflow(workflowId: string): StoredLocalWorkflow
 
 export function buildStoredLocalWorkflowCatalogEntries(): WorkflowCatalogEntry[] {
   return listStoredLocalWorkflows().map((entry) => {
+    const contractHealth = summarizeWorkflowInputArtifactContractHealth({
+      entryInputs: entry.graph.entry_inputs ?? [],
+      inputArtifactTexts: entry.inputArtifactTexts,
+    });
     const searchIndex = buildWorkflowPackageSearchIndex({
       graph: entry.graph,
-      tags: entry.tags,
+      tags: [...(entry.tags ?? []), ...contractHealth.tags],
     });
 
     return {
@@ -258,7 +263,7 @@ export function buildStoredLocalWorkflowCatalogEntries(): WorkflowCatalogEntry[]
         variant_of_workflow_id: entry.variantOfWorkflowId,
         variant_of_workflow_name: entry.variantOfWorkflowName,
         notes: entry.notes,
-        tags: entry.tags,
+        tags: [...(entry.tags ?? []), ...contractHealth.tags],
         imported_from_package_id: entry.importedFromPackageId,
         imported_from_package_version: entry.importedFromPackageVersion,
       },

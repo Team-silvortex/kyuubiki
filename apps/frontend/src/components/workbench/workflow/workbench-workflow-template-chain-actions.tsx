@@ -61,6 +61,23 @@ function describeTemplateStep(template: WorkflowNodeTemplateSelection, index: nu
   return `step ${index + 1}: ${compactTemplateStepLabel(template)}`;
 }
 
+function scoreTemplateChainQueryMatch(
+  chain: WorkflowTemplateChainDefinition,
+  normalizedQuery: string,
+) {
+  const haystack = [chain.id, chain.label, chain.summary ?? "", chain.tags?.join(" ") ?? ""]
+    .join(" ")
+    .toLowerCase();
+  if (!normalizedQuery) return 0;
+  if (!haystack.includes(normalizedQuery)) return -1;
+  let score = haystack.startsWith(normalizedQuery) ? 180 : 0;
+  if (chain.label.toLowerCase().includes(normalizedQuery)) score += 120;
+  if (chain.id.toLowerCase().includes(normalizedQuery)) score += 80;
+  score += (chain.tags ?? []).filter((tag) => tag.toLowerCase().includes(normalizedQuery)).length * 40;
+  score += chain.templates.filter((template) => (template.operatorId ?? template.kind ?? "").toLowerCase().includes(normalizedQuery)).length * 12;
+  return score;
+}
+
 function buildTemplateChainPreviewLayout(chain: WorkflowTemplateChainDefinition) {
   const connections =
     chain.connections?.length
@@ -274,15 +291,11 @@ export function WorkbenchWorkflowTemplateChainActions({
   const filteredChains = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return availableChains;
-    return availableChains.filter((chain) => {
-      const operatorText = chain.templates
-        .map((template) => template.operatorId ?? template.kind ?? "")
-        .join(" ");
-      return [chain.id, chain.label, chain.summary ?? "", operatorText, chain.tags?.join(" ") ?? ""]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalized);
-    });
+    return availableChains
+      .map((chain) => ({ chain, score: scoreTemplateChainQueryMatch(chain, normalized) }))
+      .filter((entry) => entry.score >= 0)
+      .sort((left, right) => right.score - left.score || left.chain.label.localeCompare(right.chain.label))
+      .map((entry) => entry.chain);
   }, [availableChains, query]);
   const filteredBuiltInChains = useMemo(
     () => sortChainsByPriority(filteredChains.filter((chain) => chain.source === "built-in"), favoriteChainIds),

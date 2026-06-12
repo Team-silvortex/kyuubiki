@@ -61,6 +61,8 @@ export const copyEnCore = {
     workflowCatalogFilterAllLabel: "All",
     workflowCatalogFilterLocalLabel: "Local",
     workflowCatalogFilterVariantsLabel: "Variants",
+    workflowCatalogFilterHealthyLabel: "Healthy",
+    workflowCatalogFilterNeedsReviewLabel: "Needs Review",
     workflowOverviewHint: "Keep composite operator workflows in one dedicated surface instead of hiding them inside samples or results.",
     workflowBuilderHint: "Inspect graph nodes, bridges, extracts, and exports before turning them into a larger study chain.",
     workflowRunsHint: "Track named workflow jobs, current nodes, and exported summaries from one place.",

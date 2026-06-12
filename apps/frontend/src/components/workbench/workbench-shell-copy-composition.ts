@@ -17,6 +17,8 @@ export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
     catalogFilterAllLabel: t.workflowCatalogFilterAllLabel,
     catalogFilterLocalLabel: t.workflowCatalogFilterLocalLabel,
     catalogFilterVariantsLabel: t.workflowCatalogFilterVariantsLabel,
+    catalogFilterHealthyLabel: t.workflowCatalogFilterHealthyLabel,
+    catalogFilterNeedsReviewLabel: t.workflowCatalogFilterNeedsReviewLabel,
     refreshLabel: t.workflowCatalogRefresh,
     runLabel: t.workflowCatalogRun,
     runDraftLabel: t.workflowRunDraftLabel,

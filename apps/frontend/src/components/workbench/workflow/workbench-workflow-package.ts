@@ -66,6 +66,8 @@ export type WorkflowPackage = {
     notes?: string;
     graph: WorkflowGraphDefinition;
     input_artifact_texts?: Record<string, string>;
+    input_artifact_semantic_types?: Record<string, string>;
+    input_artifact_contract_warnings?: Record<string, string[]>;
     template_chain_preferences?: WorkflowTemplateChainPreferenceSnapshot;
   };
 };
@@ -87,6 +89,15 @@ function asStringRecord(value: unknown): Record<string, string> | undefined {
       ([key, entryValue]) => typeof key === "string" && typeof entryValue === "string",
     ),
   ) as Record<string, string>;
+}
+
+function asStringArrayRecord(value: unknown): Record<string, string[]> | undefined {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value).flatMap(([key, entryValue]) => {
+    const values = asStringArray(entryValue);
+    return typeof key === "string" && values ? [[key, values] as const] : [];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 function asTemplateChainPreferences(
@@ -260,6 +271,8 @@ export function buildWorkflowPackage(params: {
   workflow: WorkflowCatalogEntry;
   graph: WorkflowGraphDefinition;
   inputArtifactTexts?: Record<string, string>;
+  inputArtifactSemanticTypes?: Record<string, string>;
+  inputArtifactContractWarnings?: Record<string, string[]>;
   templateChainPreferences?: WorkflowTemplateChainPreferenceSnapshot;
 }): WorkflowPackage {
   const tags = params.workflow.local?.tags ?? params.workflow.capability_tags ?? [];
@@ -295,6 +308,8 @@ export function buildWorkflowPackage(params: {
       notes: params.workflow.local?.notes,
       graph: params.graph,
       input_artifact_texts: params.inputArtifactTexts,
+      input_artifact_semantic_types: params.inputArtifactSemanticTypes,
+      input_artifact_contract_warnings: params.inputArtifactContractWarnings,
       template_chain_preferences: params.templateChainPreferences,
     },
   };
@@ -446,6 +461,12 @@ export function asWorkflowPackage(value: unknown): WorkflowPackage | null {
       notes: typeof value.workflow.notes === "string" ? value.workflow.notes : undefined,
       graph,
       input_artifact_texts: asStringRecord(value.workflow.input_artifact_texts),
+      input_artifact_semantic_types: asStringRecord(
+        value.workflow.input_artifact_semantic_types,
+      ),
+      input_artifact_contract_warnings: asStringArrayRecord(
+        value.workflow.input_artifact_contract_warnings,
+      ),
       template_chain_preferences: asTemplateChainPreferences(
         value.workflow.template_chain_preferences,
       ),
