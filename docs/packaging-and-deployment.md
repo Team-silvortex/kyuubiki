@@ -31,9 +31,9 @@ Use these commands when working component-by-component:
 - `make build-hub-gui`
 - `make build-installer-gui`
 - `make build-workbench-gui`
-- `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`
-- `zsh ./scripts/kyuubiki build-installer-gui macos|linux|windows`
-- `zsh ./scripts/kyuubiki build-workbench-gui macos|linux|windows`
+- `./scripts/kyuubiki build-hub-gui macos|linux|windows`
+- `./scripts/kyuubiki build-installer-gui macos|linux|windows`
+- `./scripts/kyuubiki build-workbench-gui macos|linux|windows`
 
 These are thin wrappers over the component-native toolchains:
 
@@ -62,13 +62,13 @@ Use these commands when building deployable layouts:
   Runs `desktop-stage`, host-native desktop bundle builds, and desktop verification
 - `make desktop-verify PLATFORM=macos|linux|windows|all`
   Verifies staged manifests and required icon inputs for each desktop app
-- `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
-- `zsh ./scripts/kyuubiki package-desktop all`
-- `zsh ./scripts/kyuubiki desktop-status macos|linux|windows|all`
-- `zsh ./scripts/kyuubiki desktop-stage macos|linux|windows|all`
-- `zsh ./scripts/kyuubiki desktop-build-host`
-- `zsh ./scripts/kyuubiki desktop-release macos|linux|windows|all`
-- `zsh ./scripts/kyuubiki desktop-verify macos|linux|windows|all`
+- `./scripts/kyuubiki package-desktop macos|linux|windows`
+- `./scripts/kyuubiki package-desktop all`
+- `./scripts/kyuubiki desktop-status macos|linux|windows|all`
+- `./scripts/kyuubiki desktop-stage macos|linux|windows|all`
+- `./scripts/kyuubiki desktop-build-host`
+- `./scripts/kyuubiki desktop-release macos|linux|windows|all`
+- `./scripts/kyuubiki desktop-verify macos|linux|windows|all`
 
 `make package-runtime` is the cleanest entry point when you want a portable
 runtime layout that keeps component outputs organized in one generated tree.

@@ -187,6 +187,7 @@ export function useWorkbenchMainComposition(props: Record<string, any>) {
     setLibraryTab: props.setLibraryTab,
     setModelTab: props.setModelTab,
     setModelToolsPage: props.setModelToolsPage,
+    setWorkflowPanelTab: props.workflowController.setWorkflowPanelTab,
     setSystemPanelTab: props.setSystemPanelTab,
     setSystemDataTab: props.setSystemDataTab,
     setAdminFilterProjectId: props.setAdminFilterProjectId,

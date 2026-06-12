@@ -354,7 +354,8 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
 
     AgentPool.reload()
 
-    assert {:error, {:all_agents_failed, [%{agent: "rust-agent-rpc@stalling", reason: ":timeout"}]}} =
+    assert {:error,
+            {:all_agents_failed, [%{agent: "rust-agent-rpc@stalling", reason: ":timeout"}]}} =
              AgentClient.solve_bar_1d(%{
                length: 1.0,
                area: 1.0,

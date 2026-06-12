@@ -5,14 +5,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-export const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
+export const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
 export const FRONTEND_URL = "http://127.0.0.1:3000";
 
 const requireFromFrontend = createRequire(`${ROOT}/apps/frontend/package.json`);
 export const { chromium } = requireFromFrontend("playwright");
 
 export function runKyuubiki(args) {
-  return execFileSync("zsh", [ENTRYPOINT, ...args], {
+  return execFileSync("node", [ENTRYPOINT, ...args], {
     cwd: ROOT,
     stdio: "pipe",
     encoding: "utf8",

@@ -1414,6 +1414,218 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert_in_delta summary["max_stress"], 34_477_611.940298505, 1.0e-6
   end
 
+  test "runs a condition branch workflow and skips the inactive path" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/run",
+        Jason.encode!(%{
+          "graph" => %{
+            "schema_version" => "kyuubiki.workflow-graph/v1",
+            "id" => "workflow.condition-branch",
+            "name" => "Condition branch",
+            "version" => "1.0.0",
+            "entry_nodes" => ["summary_input"],
+            "output_nodes" => ["true_output", "false_output"],
+            "nodes" => [
+              %{
+                "id" => "summary_input",
+                "kind" => "input",
+                "outputs" => [%{"id" => "value", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "gate",
+                "kind" => "condition",
+                "config" => %{
+                  "predicate" => %{
+                    "path" => "summary.max_displacement",
+                    "operator" => "gt",
+                    "value" => 1.0
+                  }
+                },
+                "inputs" => [%{"id" => "value", "artifact_type" => "artifact/json"}],
+                "outputs" => [
+                  %{"id" => "if_true", "artifact_type" => "artifact/json"},
+                  %{"id" => "if_false", "artifact_type" => "artifact/json"}
+                ]
+              },
+              %{
+                "id" => "true_output",
+                "kind" => "output",
+                "inputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}],
+                "outputs" => []
+              },
+              %{
+                "id" => "false_output",
+                "kind" => "output",
+                "inputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}],
+                "outputs" => []
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => "input-to-gate",
+                "from" => %{"node" => "summary_input", "port" => "value"},
+                "to" => %{"node" => "gate", "port" => "value"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "gate-to-true",
+                "from" => %{"node" => "gate", "port" => "if_true"},
+                "to" => %{"node" => "true_output", "port" => "result"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "gate-to-false",
+                "from" => %{"node" => "gate", "port" => "if_false"},
+                "to" => %{"node" => "false_output", "port" => "result"},
+                "artifact_type" => "artifact/json"
+              }
+            ]
+          },
+          "input_artifacts" => %{
+            "summary_input" => %{
+              "summary" => %{"max_displacement" => 2.5, "max_stress" => 14.0}
+            }
+          }
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["completed_nodes"] == ["summary_input", "gate", "true_output"]
+    assert payload["skipped_nodes"] == ["false_output"]
+
+    assert payload["branch_decisions"] == [
+             %{
+               "node_id" => "gate",
+               "chosen_output" => "if_true",
+               "predicate_result" => true
+             }
+           ]
+
+    assert Enum.at(payload["node_runs"], 3)["status"] == "skipped"
+
+    assert get_in(payload, ["artifacts", "true_output.result", "summary", "max_displacement"]) ==
+             2.5
+
+    refute Map.has_key?(payload["artifacts"], "gate.if_false")
+    refute Map.has_key?(payload["artifacts"], "false_output.result")
+  end
+
+  test "runs a condition merge workflow through transform.first_available" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/run",
+        Jason.encode!(%{
+          "graph" => %{
+            "schema_version" => "kyuubiki.workflow-graph/v1",
+            "id" => "workflow.condition-merge",
+            "name" => "Condition merge",
+            "version" => "1.0.0",
+            "entry_nodes" => ["summary_input"],
+            "output_nodes" => ["merged_output"],
+            "nodes" => [
+              %{
+                "id" => "summary_input",
+                "kind" => "input",
+                "outputs" => [%{"id" => "value", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "gate",
+                "kind" => "condition",
+                "config" => %{
+                  "predicate" => %{
+                    "path" => "summary.max_stress",
+                    "operator" => "gt",
+                    "value" => 10.0
+                  }
+                },
+                "inputs" => [%{"id" => "value", "artifact_type" => "artifact/json"}],
+                "outputs" => [
+                  %{"id" => "if_true", "artifact_type" => "artifact/json"},
+                  %{"id" => "if_false", "artifact_type" => "artifact/json"}
+                ]
+              },
+              %{
+                "id" => "join",
+                "kind" => "transform",
+                "operator_id" => "transform.first_available",
+                "inputs" => [
+                  %{"id" => "left", "artifact_type" => "artifact/json"},
+                  %{"id" => "right", "artifact_type" => "artifact/json"}
+                ],
+                "outputs" => [%{"id" => "merged", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "merged_output",
+                "kind" => "output",
+                "inputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}],
+                "outputs" => []
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => "input-to-gate",
+                "from" => %{"node" => "summary_input", "port" => "value"},
+                "to" => %{"node" => "gate", "port" => "value"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "gate-true-to-join",
+                "from" => %{"node" => "gate", "port" => "if_true"},
+                "to" => %{"node" => "join", "port" => "left"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "gate-false-to-join",
+                "from" => %{"node" => "gate", "port" => "if_false"},
+                "to" => %{"node" => "join", "port" => "right"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "join-to-output",
+                "from" => %{"node" => "join", "port" => "merged"},
+                "to" => %{"node" => "merged_output", "port" => "result"},
+                "artifact_type" => "artifact/json"
+              }
+            ]
+          },
+          "input_artifacts" => %{
+            "summary_input" => %{
+              "summary" => %{"max_displacement" => 0.4, "max_stress" => 12.0}
+            }
+          }
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["completed_nodes"] == ["summary_input", "gate", "join", "merged_output"]
+    assert payload["skipped_nodes"] == []
+
+    assert payload["branch_decisions"] == [
+             %{
+               "node_id" => "gate",
+               "chosen_output" => "if_true",
+               "predicate_result" => true
+             }
+           ]
+
+    assert Enum.any?(payload["artifact_lineage"], fn entry ->
+             entry["artifact_key"] == "join.merged" and
+               entry["source_artifacts"] == ["gate.if_true"]
+           end)
+
+    assert payload["artifacts"]["join.merged"] == payload["artifacts"]["gate.if_true"]
+    assert get_in(payload, ["artifacts", "merged_output.result", "summary", "max_stress"]) == 12.0
+  end
+
   test "submits a workflow graph as an asynchronous job" do
     {:ok, _pid} =
       start_fake_agent_sessions([
@@ -1760,10 +1972,34 @@ defmodule KyuubikiWeb.Playground.RouterTest do
               "max_temperature" => 70.0,
               "max_heat_flux" => 1500.0,
               "nodes" => [
-                %{"id" => "n0", "x" => 0.0, "y" => 0.0, "temperature" => 20.0, "heat_load" => 500.0},
-                %{"id" => "n1", "x" => 1.0, "y" => 0.0, "temperature" => 70.0, "heat_load" => 500.0},
-                %{"id" => "n2", "x" => 1.0, "y" => 1.0, "temperature" => 70.0, "heat_load" => 500.0},
-                %{"id" => "n3", "x" => 0.0, "y" => 1.0, "temperature" => 20.0, "heat_load" => 500.0}
+                %{
+                  "id" => "n0",
+                  "x" => 0.0,
+                  "y" => 0.0,
+                  "temperature" => 20.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "n1",
+                  "x" => 1.0,
+                  "y" => 0.0,
+                  "temperature" => 70.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "n2",
+                  "x" => 1.0,
+                  "y" => 1.0,
+                  "temperature" => 70.0,
+                  "heat_load" => 500.0
+                },
+                %{
+                  "id" => "n3",
+                  "x" => 0.0,
+                  "y" => 1.0,
+                  "temperature" => 20.0,
+                  "heat_load" => 500.0
+                }
               ],
               "elements" => [
                 %{
@@ -1807,14 +2043,20 @@ defmodule KyuubikiWeb.Playground.RouterTest do
               %{
                 "id" => "electrostatic_model",
                 "kind" => "input",
-                "outputs" => [%{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}]
+                "outputs" => [
+                  %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
+                ]
               },
               %{
                 "id" => "solve_electrostatic",
                 "kind" => "solve",
                 "operator_id" => "solve.electrostatic_plane_quad_2d",
-                "inputs" => [%{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}],
-                "outputs" => [%{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}]
+                "inputs" => [
+                  %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
+                ],
+                "outputs" => [
+                  %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
+                ]
               },
               %{
                 "id" => "bridge_field_to_heat",
@@ -1823,13 +2065,49 @@ defmodule KyuubikiWeb.Playground.RouterTest do
                 "config" => %{
                   "seed_model" => %{
                     "nodes" => [
-                      %{"id" => "n0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-                      %{"id" => "n1", "x" => 1.0, "y" => 0.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-                      %{"id" => "n2", "x" => 1.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-                      %{"id" => "n3", "x" => 0.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0}
+                      %{
+                        "id" => "n0",
+                        "x" => 0.0,
+                        "y" => 0.0,
+                        "fix_temperature" => true,
+                        "temperature" => 20.0,
+                        "heat_load" => 0.0
+                      },
+                      %{
+                        "id" => "n1",
+                        "x" => 1.0,
+                        "y" => 0.0,
+                        "fix_temperature" => false,
+                        "temperature" => 0.0,
+                        "heat_load" => 0.0
+                      },
+                      %{
+                        "id" => "n2",
+                        "x" => 1.0,
+                        "y" => 1.0,
+                        "fix_temperature" => false,
+                        "temperature" => 0.0,
+                        "heat_load" => 0.0
+                      },
+                      %{
+                        "id" => "n3",
+                        "x" => 0.0,
+                        "y" => 1.0,
+                        "fix_temperature" => true,
+                        "temperature" => 20.0,
+                        "heat_load" => 0.0
+                      }
                     ],
                     "elements" => [
-                      %{"id" => "hq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.02, "conductivity" => 45.0}
+                      %{
+                        "id" => "hq0",
+                        "node_i" => 0,
+                        "node_j" => 1,
+                        "node_k" => 2,
+                        "node_l" => 3,
+                        "thickness" => 0.02,
+                        "conductivity" => 45.0
+                      }
                     ]
                   },
                   "contract" => %{
@@ -1839,18 +2117,31 @@ defmodule KyuubikiWeb.Playground.RouterTest do
                       "distribution" => "element_to_nodes",
                       "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
                     },
-                    "transform" => %{"scale" => 50.0, "reduction" => "mean", "default_value" => 0.0},
+                    "transform" => %{
+                      "scale" => 50.0,
+                      "reduction" => "mean",
+                      "default_value" => 0.0
+                    },
                     "target" => %{"field" => "heat_load"}
                   }
                 },
-                "inputs" => [%{"id" => "electrostatic_result", "artifact_type" => "result/electrostatic_plane_quad_2d"}],
-                "outputs" => [%{"id" => "heat_model", "artifact_type" => "study_model/heat_plane_quad_2d"}]
+                "inputs" => [
+                  %{
+                    "id" => "electrostatic_result",
+                    "artifact_type" => "result/electrostatic_plane_quad_2d"
+                  }
+                ],
+                "outputs" => [
+                  %{"id" => "heat_model", "artifact_type" => "study_model/heat_plane_quad_2d"}
+                ]
               },
               %{
                 "id" => "solve_heat",
                 "kind" => "solve",
                 "operator_id" => "solve.heat_plane_quad_2d",
-                "inputs" => [%{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}],
+                "inputs" => [
+                  %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
+                ],
                 "outputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}]
               },
               %{
@@ -1876,12 +2167,42 @@ defmodule KyuubikiWeb.Playground.RouterTest do
               }
             ],
             "edges" => [
-              %{"id" => "e0", "from" => %{"node" => "electrostatic_model", "port" => "model"}, "to" => %{"node" => "solve_electrostatic", "port" => "model"}, "artifact_type" => "study_model/electrostatic_plane_quad_2d"},
-              %{"id" => "e1", "from" => %{"node" => "solve_electrostatic", "port" => "result"}, "to" => %{"node" => "bridge_field_to_heat", "port" => "electrostatic_result"}, "artifact_type" => "result/electrostatic_plane_quad_2d"},
-              %{"id" => "e2", "from" => %{"node" => "bridge_field_to_heat", "port" => "heat_model"}, "to" => %{"node" => "solve_heat", "port" => "model"}, "artifact_type" => "study_model/heat_plane_quad_2d"},
-              %{"id" => "e3", "from" => %{"node" => "solve_heat", "port" => "result"}, "to" => %{"node" => "extract_summary", "port" => "result"}, "artifact_type" => "result/heat_plane_quad_2d"},
-              %{"id" => "e4", "from" => %{"node" => "extract_summary", "port" => "summary"}, "to" => %{"node" => "export_json", "port" => "summary"}, "artifact_type" => "report/summary"},
-              %{"id" => "e5", "from" => %{"node" => "export_json", "port" => "json"}, "to" => %{"node" => "json_output", "port" => "json"}, "artifact_type" => "export/json"}
+              %{
+                "id" => "e0",
+                "from" => %{"node" => "electrostatic_model", "port" => "model"},
+                "to" => %{"node" => "solve_electrostatic", "port" => "model"},
+                "artifact_type" => "study_model/electrostatic_plane_quad_2d"
+              },
+              %{
+                "id" => "e1",
+                "from" => %{"node" => "solve_electrostatic", "port" => "result"},
+                "to" => %{"node" => "bridge_field_to_heat", "port" => "electrostatic_result"},
+                "artifact_type" => "result/electrostatic_plane_quad_2d"
+              },
+              %{
+                "id" => "e2",
+                "from" => %{"node" => "bridge_field_to_heat", "port" => "heat_model"},
+                "to" => %{"node" => "solve_heat", "port" => "model"},
+                "artifact_type" => "study_model/heat_plane_quad_2d"
+              },
+              %{
+                "id" => "e3",
+                "from" => %{"node" => "solve_heat", "port" => "result"},
+                "to" => %{"node" => "extract_summary", "port" => "result"},
+                "artifact_type" => "result/heat_plane_quad_2d"
+              },
+              %{
+                "id" => "e4",
+                "from" => %{"node" => "extract_summary", "port" => "summary"},
+                "to" => %{"node" => "export_json", "port" => "summary"},
+                "artifact_type" => "report/summary"
+              },
+              %{
+                "id" => "e5",
+                "from" => %{"node" => "export_json", "port" => "json"},
+                "to" => %{"node" => "json_output", "port" => "json"},
+                "artifact_type" => "export/json"
+              }
             ]
           },
           "input_artifacts" => electrostatic_plane_quad_input_artifacts()
@@ -1970,6 +2291,21 @@ defmodule KyuubikiWeb.Playground.RouterTest do
 
     assert electrostatic_heat_fetched["id"] == "workflow.electrostatic-to-heat-quad-2d"
     assert electrostatic_heat_fetched["graph"]["output_nodes"] == ["json_output"]
+  end
+
+  test "filters workflow catalog by query contract fields" do
+    conn =
+      :get
+      |> conn(
+        "/api/v1/workflows/catalog?q=thermo&domain=thermo_mechanical&capability=workflow_bridge&entry_artifact=study_model/heat_plane_quad_2d&operator_id=bridge.temperature_field_to_thermo_quad_2d"
+      )
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    workflows = payload["workflows"]
+    assert length(workflows) == 1
+    assert hd(workflows)["id"] == "workflow.heat-to-thermo-quad-2d"
   end
 
   test "submits a catalog workflow as an asynchronous job" do
@@ -2388,14 +2724,19 @@ defmodule KyuubikiWeb.Playground.RouterTest do
            ] = electrostatic_operator["outputs"]
 
     assert electrostatic_heat_bridge_operator["kind"] == "workflow_bridge"
+
     assert electrostatic_heat_bridge_operator["config_schema"]["schema"] ==
              "kyuubiki.bridge-contract.electrostatic_to_heat.v1"
+
     assert electrostatic_heat_bridge_operator["config_example"]["contract"]["source"]["field"] ==
              "electric_field_magnitude"
+
     assert electrostatic_heat_bridge_operator["config_example"]["contract"]["target"]["field"] ==
              "heat_load"
+
     assert heat_thermo_bridge_operator["config_schema"]["schema"] ==
              "kyuubiki.bridge-contract.heat_to_thermo.v1"
+
     assert heat_thermo_bridge_operator["config_example"]["contract"]["target"]["field"] ==
              "temperature_delta"
 
@@ -2428,6 +2769,24 @@ defmodule KyuubikiWeb.Playground.RouterTest do
     assert fetched["id"] == "export.summary_csv"
     assert fetched["kind"] == "export"
     assert fetched["outputs"] |> hd() |> Map.fetch!("artifact_type") == "export/summary_csv"
+  end
+
+  test "filters built-in operators by query contract fields" do
+    conn =
+      :get
+      |> conn(
+        "/api/v1/operators?q=heat&domain=thermal&kind=solver&validation=verified&capability=heat"
+      )
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    operators = payload["operators"]
+    assert Enum.any?(operators, &(&1["id"] == "solve.heat_plane_quad_2d"))
+    assert Enum.all?(operators, &(&1["domain"] == "thermal"))
+    assert Enum.all?(operators, &(&1["kind"] == "solver"))
+    assert Enum.all?(operators, &(&1["validation"]["baseline_status"] == "verified"))
+    assert Enum.all?(operators, &("heat" in (&1["capability_tags"] || [])))
   end
 
   test "returns 404 for an unknown operator descriptor" do

@@ -45,6 +45,23 @@ export type WorkflowOperatorCatalogPayload = {
   operators: WorkflowOperatorDescriptor[];
 };
 
+export type WorkflowCatalogQuery = Partial<{
+  q: string;
+  domain: string;
+  capability: string;
+  operator_id: string;
+  entry_artifact: string;
+  output_artifact: string;
+}>;
+
+export type WorkflowOperatorCatalogQuery = Partial<{
+  q: string;
+  domain: string;
+  kind: WorkflowOperatorDescriptor["kind"];
+  validation: WorkflowOperatorValidationProfile["baseline_status"];
+  capability: string;
+}>;
+
 export type WorkflowGraphPort = {
   id: string;
   artifact_type: string;
@@ -126,6 +143,8 @@ export type WorkflowCatalogEntry = {
   name: string;
   version: string;
   summary: string;
+  domains?: string[];
+  capability_tags?: string[];
   graph?: WorkflowGraphDefinition;
   entry_inputs: WorkflowCatalogEntryArtifact[];
   output_artifacts: WorkflowCatalogEntryArtifact[];
@@ -138,6 +157,9 @@ export type WorkflowCatalogEntry = {
     variant_of_workflow_id?: string;
     variant_of_workflow_name?: string;
     notes?: string;
+    tags?: string[];
+    imported_from_package_id?: string;
+    imported_from_package_version?: string;
   };
 };
 

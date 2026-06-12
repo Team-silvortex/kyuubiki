@@ -35,7 +35,7 @@ Keep these names aligned with:
 ## Shared preflight
 
 - Review current readiness:
-  - `zsh ./scripts/kyuubiki desktop-status all`
+  - `./scripts/kyuubiki desktop-status all`
 - Confirm brand assets exist under:
   - [assets/icons/app](../assets/icons/app)
 - Confirm desktop icon copies exist under:
@@ -43,9 +43,9 @@ Keep these names aligned with:
   - [apps/installer-gui/src-tauri/icons](../apps/installer-gui/src-tauri/icons)
   - [apps/workbench-gui/src-tauri/icons](../apps/workbench-gui/src-tauri/icons)
 - Confirm runtime scaffold exists:
-  - `zsh ./scripts/kyuubiki package-runtime`
+  - `./scripts/kyuubiki package-runtime`
 - Confirm desktop manifests exist:
-  - `zsh ./scripts/kyuubiki package-desktop all`
+  - `./scripts/kyuubiki package-desktop all`
 
 ## macOS
 
@@ -61,11 +61,11 @@ Icon inputs:
 
 Typical commands:
 
-- `zsh ./scripts/kyuubiki build-installer-gui macos`
-- `zsh ./scripts/kyuubiki build-hub-gui macos`
-- `zsh ./scripts/kyuubiki build-workbench-gui macos`
-- `zsh ./scripts/kyuubiki package-desktop macos`
-- `zsh ./scripts/kyuubiki desktop-verify macos`
+- `./scripts/kyuubiki build-installer-gui macos`
+- `./scripts/kyuubiki build-hub-gui macos`
+- `./scripts/kyuubiki build-workbench-gui macos`
+- `./scripts/kyuubiki package-desktop macos`
+- `./scripts/kyuubiki desktop-verify macos`
 
 Staged descriptor paths:
 
@@ -93,11 +93,11 @@ Icon inputs:
 
 Typical commands:
 
-- `zsh ./scripts/kyuubiki build-installer-gui linux`
-- `zsh ./scripts/kyuubiki build-hub-gui linux`
-- `zsh ./scripts/kyuubiki build-workbench-gui linux`
-- `zsh ./scripts/kyuubiki package-desktop linux`
-- `zsh ./scripts/kyuubiki desktop-verify linux`
+- `./scripts/kyuubiki build-installer-gui linux`
+- `./scripts/kyuubiki build-hub-gui linux`
+- `./scripts/kyuubiki build-workbench-gui linux`
+- `./scripts/kyuubiki package-desktop linux`
+- `./scripts/kyuubiki desktop-verify linux`
 
 Staged descriptor paths:
 
@@ -125,11 +125,11 @@ Icon inputs:
 
 Typical commands:
 
-- `zsh ./scripts/kyuubiki build-installer-gui windows`
-- `zsh ./scripts/kyuubiki build-hub-gui windows`
-- `zsh ./scripts/kyuubiki build-workbench-gui windows`
-- `zsh ./scripts/kyuubiki package-desktop windows`
-- `zsh ./scripts/kyuubiki desktop-verify windows`
+- `./scripts/kyuubiki build-installer-gui windows`
+- `./scripts/kyuubiki build-hub-gui windows`
+- `./scripts/kyuubiki build-workbench-gui windows`
+- `./scripts/kyuubiki package-desktop windows`
+- `./scripts/kyuubiki desktop-verify windows`
 
 Staged descriptor paths:
 
@@ -149,15 +149,15 @@ When preparing a release, keep the order stable:
 
 1. Update version notes and changelog.
 2. Inspect readiness and missing pieces:
-   `zsh ./scripts/kyuubiki desktop-status all`
+   `./scripts/kyuubiki desktop-status all`
 3. Refresh runtime scaffold:
-   `zsh ./scripts/kyuubiki desktop-stage all`
+   `./scripts/kyuubiki desktop-stage all`
 4. Refresh desktop manifests:
-   `zsh ./scripts/kyuubiki desktop-verify all`
+   `./scripts/kyuubiki desktop-verify all`
 5. Build the current host-platform desktop bundles:
-   - `zsh ./scripts/kyuubiki desktop-build-host`
+   - `./scripts/kyuubiki desktop-build-host`
 6. Run the host release wrapper:
-   - `zsh ./scripts/kyuubiki desktop-release <host-platform>`
+   - `./scripts/kyuubiki desktop-release <host-platform>`
 7. Review staged host artifacts:
    - `dist/<host-platform>/desktop/<app>/artifacts`
    - `dist/<host-platform>/desktop/<app>/artifacts.json`

@@ -493,7 +493,8 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/workflows/catalog" do
     with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.list_workflow_catalog())
+      conn = fetch_query_params(conn)
+      respond_json(conn, 200, Analysis.list_workflow_catalog(conn.query_params))
     end)
   end
 
@@ -529,7 +530,8 @@ defmodule KyuubikiWeb.Router do
 
   get "/api/v1/operators" do
     with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.list_operator_catalog())
+      conn = fetch_query_params(conn)
+      respond_json(conn, 200, Analysis.list_operator_catalog(conn.query_params))
     end)
   end
 

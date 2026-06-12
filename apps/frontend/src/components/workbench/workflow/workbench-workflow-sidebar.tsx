@@ -1,15 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   JobState,
   WorkflowCatalogEntry,
   WorkflowGraphDefinition,
   WorkflowOperatorDescriptor,
 } from "@/lib/api";
+import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
+import {
+  markWorkflowSurfaceIntent,
+  measureWorkflowSurfaceReady,
+} from "@/components/workbench/workflow/workbench-workflow-perf";
 import { WorkbenchWorkflowRunTraceCard } from "@/components/workbench/workflow/workbench-workflow-run-trace-card";
 import type {
   WorkflowRunRecord,
@@ -27,6 +32,9 @@ type WorkbenchWorkflowSidebarProps = {
   workflowCatalogBusy: boolean;
   selectedWorkflowId: string | null;
   selectedWorkflow: WorkflowCatalogEntry | null;
+  currentStudyKind: StudyKind;
+  currentHeatPlaneModel: HeatPlaneStudyJobInput;
+  currentPlaneModel: PlaneStudyJobInput;
   latestJob: JobState | null;
   latestWorkflowSummary: string | null;
   workflowRuns: WorkflowRunRecord[];
@@ -57,6 +65,11 @@ function formatPromotedAt(value?: string) {
   }).format(date);
 }
 
+function formatWorkflowTags(tags?: string[]) {
+  const normalized = tags?.filter(Boolean) ?? [];
+  return normalized.length > 0 ? normalized.join(", ") : null;
+}
+
 export function WorkbenchWorkflowSidebar({
   surfaceTab,
   onSurfaceTabChange,
@@ -66,6 +79,9 @@ export function WorkbenchWorkflowSidebar({
   workflowCatalogBusy,
   selectedWorkflowId,
   selectedWorkflow,
+  currentStudyKind,
+  currentHeatPlaneModel,
+  currentPlaneModel,
   latestJob,
   latestWorkflowSummary,
   workflowRuns,
@@ -88,13 +104,17 @@ export function WorkbenchWorkflowSidebar({
     removeStoredLocalWorkflow(workflow.local.storage_id);
     onRefreshWorkflowCatalog();
   }
+  function openSurfaceTab(tab: WorkflowSurfaceTab) {
+    markWorkflowSurfaceIntent(tab);
+    onSurfaceTabChange(tab);
+  }
   function openRunNodeInBuilder(workflowId: string, nodeId: string) {
     onSelectWorkflow(workflowId);
     setBuilderTraceFocus({ nodeId, token: Date.now() });
-    onSurfaceTabChange("builder");
+    openSurfaceTab("builder");
   }
   function openRunBranchInBuilder(workflowId: string, nodeId: string, outputId: string) {
-    onSelectWorkflow(workflowId); setBuilderTraceFocus({ nodeId, token: Date.now() }); setBuilderBranchFocus({ nodeId, outputId, token: Date.now() }); onSurfaceTabChange("builder");
+    onSelectWorkflow(workflowId); setBuilderTraceFocus({ nodeId, token: Date.now() }); setBuilderBranchFocus({ nodeId, outputId, token: Date.now() }); openSurfaceTab("builder");
   }
   function openRunLineageInBuilder(run: WorkflowRunRecord, artifactKey: string, nodeId: string) {
     const producer = run.artifactLineage?.find((entry) => entry.artifact_key === artifactKey);
@@ -113,34 +133,47 @@ export function WorkbenchWorkflowSidebar({
     }
     return workflowCatalogEntries;
   }, [catalogFilter, workflowCatalogEntries]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let disposed = false;
+    const handle = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (!disposed) measureWorkflowSurfaceReady(surfaceTab);
+      });
+    });
+    return () => {
+      disposed = true;
+      window.cancelAnimationFrame(handle);
+    };
+  }, [surfaceTab, latestRun?.jobId, filteredWorkflowCatalogEntries.length]);
 
   return (
     <div className="sidebar-stack panel-scroll-window">
       <div className="panel-tabs panel-tabs--editor">
         <button
           className={`panel-tab${surfaceTab === "overview" ? " panel-tab--active" : ""}`}
-          onClick={() => onSurfaceTabChange("overview")}
+          onClick={() => openSurfaceTab("overview")}
           type="button"
         >
           {labels.overviewPageLabel}
         </button>
         <button
           className={`panel-tab${surfaceTab === "catalog" ? " panel-tab--active" : ""}`}
-          onClick={() => onSurfaceTabChange("catalog")}
+          onClick={() => openSurfaceTab("catalog")}
           type="button"
         >
           {labels.catalogPageLabel}
         </button>
         <button
           className={`panel-tab${surfaceTab === "builder" ? " panel-tab--active" : ""}`}
-          onClick={() => onSurfaceTabChange("builder")}
+          onClick={() => openSurfaceTab("builder")}
           type="button"
         >
           {labels.builderPageLabel}
         </button>
         <button
           className={`panel-tab${surfaceTab === "runs" ? " panel-tab--active" : ""}`}
-          onClick={() => onSurfaceTabChange("runs")}
+          onClick={() => openSurfaceTab("runs")}
           type="button"
         >
           {labels.runsPageLabel}
@@ -155,7 +188,7 @@ export function WorkbenchWorkflowSidebar({
             </div>
             <p className="card-copy">{labels.catalogHint}</p>
             <div className="button-row button-row--adaptive">
-              <button onClick={() => onSurfaceTabChange("catalog")} type="button">
+              <button onClick={() => openSurfaceTab("catalog")} type="button">
                 {labels.catalogPageLabel}
               </button>
             </div>
@@ -166,7 +199,7 @@ export function WorkbenchWorkflowSidebar({
             </div>
             <p className="card-copy">{labels.builderHint}</p>
             <div className="button-row">
-              <button onClick={() => onSurfaceTabChange("builder")} type="button">
+              <button onClick={() => openSurfaceTab("builder")} type="button">
                 {labels.builderPageLabel}
               </button>
             </div>
@@ -177,7 +210,7 @@ export function WorkbenchWorkflowSidebar({
             </div>
             <p className="card-copy">{labels.runsHint}</p>
             <div className="button-row">
-              <button onClick={() => onSurfaceTabChange("runs")} type="button">
+              <button onClick={() => openSurfaceTab("runs")} type="button">
                 {labels.runsPageLabel}
               </button>
             </div>
@@ -228,61 +261,85 @@ export function WorkbenchWorkflowSidebar({
           </div>
           {filteredWorkflowCatalogEntries.length === 0 ? <p className="card-copy">{labels.emptyCatalogLabel}</p> : null}
           <div className="runtime-overview-grid">
-            {filteredWorkflowCatalogEntries.map((workflow) => (
-              <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={workflow.id}>
-                <div className="card-head">
-                  <h2>{workflow.name}</h2>
-                  <span className={`status-pill status-pill--${selectedWorkflowId === workflow.id ? "good" : "watch"}`}>
-                    {workflow.local ? labels.localWorkflowBadgeLabel : workflow.version}
-                  </span>
-                </div>
-                <p className="card-copy">{workflow.summary}</p>
-                {workflow.local ? (
-                  <div className="sidebar-list">
-                    <div className="sidebar-list__row">
-                      <span>{labels.localWorkflowSourceLabel}</span>
-                      <strong>{workflow.local.source_workflow_name ?? workflow.local.source_workflow_id ?? "--"}</strong>
-                    </div>
-                    <div className="sidebar-list__row">
-                      <span>{labels.localWorkflowPromotedAtLabel}</span>
-                      <strong>{formatPromotedAt(workflow.local.promoted_at)}</strong>
-                    </div>
-                    {workflow.local.variant_of_workflow_name || workflow.local.variant_of_workflow_id ? (
+            {filteredWorkflowCatalogEntries.map((workflow) => {
+              const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
+              return (
+                <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={workflow.id}>
+                  <div className="card-head">
+                    <h2>{workflow.name}</h2>
+                    <span className={`status-pill status-pill--${selectedWorkflowId === workflow.id ? "good" : "watch"}`}>
+                      {workflow.local ? labels.localWorkflowBadgeLabel : workflow.version}
+                    </span>
+                  </div>
+                  <p className="card-copy">{workflow.summary}</p>
+                  {workflow.local ? (
+                    <div className="sidebar-list">
                       <div className="sidebar-list__row">
-                        <span>{labels.localWorkflowVariantOfLabel}</span>
-                        <strong>{workflow.local.variant_of_workflow_name ?? workflow.local.variant_of_workflow_id}</strong>
+                        <span>{labels.localWorkflowSourceLabel}</span>
+                        <strong>{workflow.local.source_workflow_name ?? workflow.local.source_workflow_id ?? "--"}</strong>
                       </div>
+                      <div className="sidebar-list__row">
+                        <span>{labels.localWorkflowPromotedAtLabel}</span>
+                        <strong>{formatPromotedAt(workflow.local.promoted_at)}</strong>
+                      </div>
+                      {workflow.local.variant_of_workflow_name || workflow.local.variant_of_workflow_id ? (
+                        <div className="sidebar-list__row">
+                          <span>{labels.localWorkflowVariantOfLabel}</span>
+                          <strong>{workflow.local.variant_of_workflow_name ?? workflow.local.variant_of_workflow_id}</strong>
+                        </div>
+                      ) : null}
+                      {workflow.local.imported_from_package_id ? (
+                        <div className="sidebar-list__row">
+                          <span>{labels.localWorkflowPackageIdLabel}</span>
+                          <strong>{workflow.local.imported_from_package_id}</strong>
+                        </div>
+                      ) : null}
+                      {workflow.local.imported_from_package_version ? (
+                        <div className="sidebar-list__row">
+                          <span>{labels.localWorkflowPackageVersionLabel}</span>
+                          <strong>{workflow.local.imported_from_package_version}</strong>
+                        </div>
+                      ) : null}
+                      {localWorkflowTags ? (
+                        <div className="sidebar-list__row">
+                          <span>{labels.localWorkflowTagsLabel}</span>
+                          <strong>{localWorkflowTags}</strong>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
+                  <div className="button-row button-row--adaptive">
+                    <button
+                      onClick={() => {
+                        onSelectWorkflow(workflow.id);
+                        onSurfaceTabChange("builder");
+                      }}
+                      type="button"
+                    >
+                      {labels.selectForBuilderLabel}
+                    </button>
+                    <button onClick={() => onRunWorkflowCatalog(workflow.id)} type="button">
+                      {labels.runLabel}
+                    </button>
+                    {workflow.local ? (
+                      <button onClick={() => deleteCatalogLocalWorkflow(workflow)} type="button">
+                        {labels.localWorkflowDeleteLabel}
+                      </button>
                     ) : null}
                   </div>
-                ) : null}
-                {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
-                <div className="button-row button-row--adaptive">
-                  <button
-                    onClick={() => {
-                      onSelectWorkflow(workflow.id);
-                      onSurfaceTabChange("builder");
-                    }}
-                    type="button"
-                  >
-                    {labels.selectForBuilderLabel}
-                  </button>
-                  <button onClick={() => onRunWorkflowCatalog(workflow.id)} type="button">
-                    {labels.runLabel}
-                  </button>
-                  {workflow.local ? (
-                    <button onClick={() => deleteCatalogLocalWorkflow(workflow)} type="button">
-                      {labels.localWorkflowDeleteLabel}
-                    </button>
-                  ) : null}
-                </div>
-              </section>
-            ))}
+                </section>
+              );
+            })}
           </div>
         </section>
       ) : null}
 
       {surfaceTab === "builder" ? (
         <WorkbenchWorkflowBuilderCard
+          currentHeatPlaneModel={currentHeatPlaneModel}
+          currentPlaneModel={currentPlaneModel}
+          currentStudyKind={currentStudyKind}
           labels={labels}
           operatorDescriptors={workflowOperatorDescriptors}
           onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}

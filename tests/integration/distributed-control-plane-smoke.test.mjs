@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
+const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
 const ORCHESTRATOR_URL = "http://127.0.0.1:4000";
 const CONTROL_TOKEN = "integration-control-token";
 const CLUSTER_TOKEN = "integration-cluster-token";
@@ -22,7 +22,7 @@ const SECURITY_ENV = {
 };
 
 function runKyuubiki(args, extraEnv = {}) {
-  return execFileSync("zsh", [ENTRYPOINT, ...args], {
+  return execFileSync("node", [ENTRYPOINT, ...args], {
     cwd: ROOT,
     stdio: "pipe",
     encoding: "utf8",

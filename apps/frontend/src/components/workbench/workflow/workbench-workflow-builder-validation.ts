@@ -14,6 +14,7 @@ import {
   resolveWorkflowConditionConfig,
   WORKFLOW_CONDITION_OPERATORS,
 } from "@/components/workbench/workflow/workbench-workflow-condition";
+import { hasBridgeSeedModelConfig } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
@@ -293,6 +294,31 @@ function validateRuntimeSupport(graph: WorkflowGraphDefinition): WorkflowGraphVa
   return issues;
 }
 
+function validateBridgeConfigs(graph: WorkflowGraphDefinition): WorkflowGraphValidationIssue[] {
+  const issues: WorkflowGraphValidationIssue[] = [];
+  for (const node of graph.nodes) {
+    if (!node.operator_id?.startsWith("bridge.")) continue;
+    if (
+      hasBridgeSeedModelConfig(
+        node.operator_id,
+        node.config as Record<string, unknown> | null | undefined,
+      )
+    ) {
+      continue;
+    }
+    issues.push({
+      id: `bridge:seed-model:${node.id}`,
+      level: "warning",
+      message:
+        node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d"
+          ? `Bridge node "${node.id}" is missing config.seed_model for the downstream heat quad seed model.`
+          : `Bridge node "${node.id}" is missing downstream thermo seed-model fields in config.`,
+      locate: { kind: "node", nodeId: node.id },
+    });
+  }
+  return issues;
+}
+
 export function validateWorkflowGraphDefinition(
   graph: WorkflowGraphDefinition | null,
   entryInputs: WorkflowCatalogEntryArtifact[],
@@ -421,6 +447,7 @@ export function validateWorkflowGraphDefinition(
   }
 
   issues.push(...validateRuntimeSupport(graph));
+  issues.push(...validateBridgeConfigs(graph));
   issues.push(...validateCatalogArtifacts(graph, entryInputs, "entry"));
   issues.push(...validateCatalogArtifacts(graph, outputArtifacts, "output"));
   issues.push(...validateOperatorDescriptorContracts(graph, operatorDescriptors));

@@ -142,7 +142,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   defp fetch_port(attrs, key) do
     case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
-      value when is_integer(value) and value > 0 -> {:ok, value}
+      value when is_integer(value) and value > 0 ->
+        {:ok, value}
+
       value when is_binary(value) ->
         case Integer.parse(value) do
           {port, ""} when port > 0 -> {:ok, port}
@@ -163,7 +165,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   defp optional_integer(attrs, key) do
     case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
-      value when is_integer(value) and value > 0 -> value
+      value when is_integer(value) and value > 0 ->
+        value
+
       value when is_binary(value) ->
         case Integer.parse(value) do
           {integer, ""} when integer > 0 -> integer
@@ -229,7 +233,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   defp optional_health_score(attrs, key) do
     case Map.get(attrs, key) || Map.get(attrs, String.to_atom(key)) do
-      value when is_integer(value) and value >= 0 and value <= 100 -> value
+      value when is_integer(value) and value >= 0 and value <= 100 ->
+        value
+
       value when is_binary(value) ->
         case Integer.parse(value) do
           {score, ""} when score >= 0 and score <= 100 -> score
@@ -247,7 +253,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
     agents
     |> Map.values()
-    |> Enum.filter(fn agent -> DateTime.diff(now, agent.last_seen_at, :millisecond) <= limit_ms end)
+    |> Enum.filter(fn agent ->
+      DateTime.diff(now, agent.last_seen_at, :millisecond) <= limit_ms
+    end)
     |> sort_agents()
   end
 

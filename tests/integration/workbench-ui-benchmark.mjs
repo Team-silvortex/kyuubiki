@@ -29,6 +29,89 @@ async function waitForNextPaint(page) {
   );
 }
 
+async function readWorkflowPerformance(page) {
+  return page.evaluate(() => {
+    const workflowPerf = window.__kyuubikiPerf?.workflow;
+    return {
+      "workflow-surface:catalog": workflowPerf?.surfaceMeasures?.catalog ?? null,
+      "workflow-surface:builder": workflowPerf?.surfaceMeasures?.builder ?? null,
+      "workflow-surface:runs": workflowPerf?.surfaceMeasures?.runs ?? null,
+      "workflow-trace-card": workflowPerf?.traceCardMs ?? null,
+    };
+  });
+}
+
+async function injectWorkflowRun(page) {
+  await page.waitForFunction(() => Boolean(window.__kyuubikiWorkflowDebug?.getState));
+  await page.evaluate(() => {
+    const debug = window.__kyuubikiWorkflowDebug;
+    const state = debug?.getState();
+    const workflowId = state?.selectedWorkflowId ?? state?.catalogWorkflowIds?.[0] ?? null;
+    if (!debug || !workflowId) throw new Error("workflow debug bridge unavailable");
+    debug.setSelectedWorkflowId(workflowId);
+    debug.replaceRuns([
+      {
+        jobId: "bench-workflow-run",
+        workflowId,
+        status: "completed",
+        progress: 1,
+        currentNode: "export_json",
+        summary: "ux benchmark run",
+        updatedAt: new Date().toISOString(),
+        skippedNodes: ["branch_skip"],
+        branchDecisions: [
+          {
+            node_id: "branch_gate",
+            chosen_output: "if_true",
+            predicate_result: true,
+          },
+        ],
+        nodeRuns: [
+          {
+            node_id: "solve_core",
+            kind: "operator",
+            operator_id: "mechanical.solve",
+            status: "completed",
+            consumed_artifacts: ["mesh.json", "loads.json"],
+            produced_artifacts: ["displacement.json"],
+          },
+          {
+            node_id: "export_json",
+            kind: "operator",
+            operator_id: "dataset.export_json",
+            status: "completed",
+            consumed_artifacts: ["displacement.json"],
+            produced_artifacts: ["json_output.json"],
+          },
+        ],
+        artifactLineage: [
+          {
+            artifact_key: "displacement.json",
+            node_id: "solve_core",
+            port_id: "displacement",
+            source_artifacts: ["mesh.json", "loads.json"],
+          },
+          {
+            artifact_key: "json_output.json",
+            node_id: "export_json",
+            port_id: "file",
+            source_artifacts: ["displacement.json"],
+          },
+        ],
+      },
+    ]);
+  });
+  await page.waitForFunction(() => (window.__kyuubikiWorkflowDebug?.getState()?.workflowRunCount ?? 0) > 0);
+}
+
+async function setWorkflowSurfaceTab(page, tab) {
+  await page.evaluate((nextTab) => {
+    const debug = window.__kyuubikiWorkflowDebug;
+    if (!debug) throw new Error("workflow debug bridge unavailable");
+    debug.setSurfaceTab(nextTab);
+  }, tab);
+}
+
 async function openSample(page, domainLabel, sampleLabel, importedModelLabel, studyLabel) {
   const steps = [];
   steps.push(
@@ -126,9 +209,10 @@ async function runWorkflowCase(browser) {
         await page.getByRole("button", { name: "Catalog" }).first().waitFor({ state: "visible", timeout: 30_000 });
       }),
     );
+    const workflowTabs = page.locator(".panel-tabs--editor").first();
     steps.push(
       await measureStep("open_workflow_catalog", async () => {
-        await page.getByRole("button", { name: "Catalog" }).first().click();
+        await workflowTabs.getByRole("button", { name: "Catalog" }).click();
         await page.getByText("Workflow Catalog").first().waitFor({ state: "visible", timeout: 30_000 });
       }),
     );
@@ -140,19 +224,29 @@ async function runWorkflowCase(browser) {
           await waitForNextPaint(page);
           return;
         }
-        await page.getByRole("button", { name: "Builder" }).first().click();
+        await workflowTabs.getByRole("button", { name: "Builder" }).click();
         await waitForNextPaint(page);
       }),
     );
+    await injectWorkflowRun(page);
     steps.push(
       await measureStep("open_workflow_runs", async () => {
-        await page.getByRole("button", { name: "Runs" }).first().click();
+        await setWorkflowSurfaceTab(page, "runs");
+        await page.waitForFunction(
+          () =>
+            (document.body.innerText || "").includes("recent node activity") ||
+            (document.body.innerText || "").includes("latest branch"),
+          undefined,
+          { timeout: 30_000 },
+        );
         await waitForNextPaint(page);
       }),
     );
+    const runsPerfMarks = await readWorkflowPerformance(page);
     steps.push(
       await measureStep("return_workflow_builder", async () => {
-        await page.getByRole("button", { name: "Builder" }).first().click();
+        await setWorkflowSurfaceTab(page, "builder");
+        await waitForNextPaint(page);
         await waitForNextPaint(page);
       }),
     );
@@ -161,6 +255,8 @@ async function runWorkflowCase(browser) {
       domain: "Workflow",
       sample: "Builder surface",
       bootstrap_ms: load.duration_ms,
+      runs_perf_marks: runsPerfMarks,
+      perf_marks: await readWorkflowPerformance(page),
       steps,
       total_ms: round(load.duration_ms + steps.reduce((sum, step) => sum + step.duration_ms, 0)),
     };

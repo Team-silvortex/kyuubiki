@@ -149,10 +149,19 @@ fn runs_condition_branch_and_skips_inactive_path() {
     assert!(run.branch_decisions[0].predicate_result);
     assert_eq!(run.node_runs.len(), 4);
     assert_eq!(run.node_runs[0].node_id, "summary_input");
-    assert_eq!(run.node_runs[0].produced_artifacts, vec!["summary_input.value".to_string()]);
+    assert_eq!(
+        run.node_runs[0].produced_artifacts,
+        vec!["summary_input.value".to_string()]
+    );
     assert_eq!(run.node_runs[1].node_id, "gate");
-    assert_eq!(run.node_runs[1].consumed_artifacts, vec!["summary_input.value".to_string()]);
-    assert_eq!(run.node_runs[1].produced_artifacts, vec!["gate.if_true".to_string()]);
+    assert_eq!(
+        run.node_runs[1].consumed_artifacts,
+        vec!["summary_input.value".to_string()]
+    );
+    assert_eq!(
+        run.node_runs[1].produced_artifacts,
+        vec!["gate.if_true".to_string()]
+    );
     assert_eq!(run.node_runs[3].node_id, "false_output");
     assert!(run.artifacts.contains_key("gate.if_true"));
     assert!(run.artifacts.contains_key("true_output.result"));
@@ -160,7 +169,10 @@ fn runs_condition_branch_and_skips_inactive_path() {
     assert!(!run.artifacts.contains_key("false_output.result"));
     assert_eq!(run.artifact_lineage.len(), 3);
     assert_eq!(run.artifact_lineage[1].artifact_key, "gate.if_true");
-    assert_eq!(run.artifact_lineage[1].source_artifacts, vec!["summary_input.value".to_string()]);
+    assert_eq!(
+        run.artifact_lineage[1].source_artifacts,
+        vec!["summary_input.value".to_string()]
+    );
 }
 
 #[test]
@@ -300,10 +312,12 @@ fn merges_active_condition_branch_back_into_single_lane() {
     assert_eq!(run.branch_decisions.len(), 1);
     assert_eq!(run.branch_decisions[0].chosen_output, "if_true");
     assert_eq!(run.node_runs.len(), 4);
-    assert!(run
-        .artifact_lineage
-        .iter()
-        .any(|entry| entry.artifact_key == "join.merged" && entry.source_artifacts == vec!["gate.if_true".to_string()]));
+    assert!(
+        run.artifact_lineage
+            .iter()
+            .any(|entry| entry.artifact_key == "join.merged"
+                && entry.source_artifacts == vec!["gate.if_true".to_string()])
+    );
     assert_eq!(
         run.artifacts.get("join.merged"),
         run.artifacts.get("gate.if_true")

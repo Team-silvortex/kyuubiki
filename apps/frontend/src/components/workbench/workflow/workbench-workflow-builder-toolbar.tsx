@@ -47,6 +47,7 @@ export function WorkbenchWorkflowBuilderToolbar({
   onGraphFileChange,
   onDatasetFileChange,
 }: WorkbenchWorkflowBuilderToolbarProps) {
+  const localWorkflowTags = selectedWorkflow.local?.tags?.filter(Boolean).join(", ") ?? null;
   const promotedAt = selectedWorkflow.local?.promoted_at
     ? new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(
         new Date(selectedWorkflow.local.promoted_at),
@@ -83,6 +84,24 @@ export function WorkbenchWorkflowBuilderToolbar({
             <div className="sidebar-list__row">
               <span>{labels.localWorkflowVariantOfLabel}</span>
               <strong>{selectedWorkflow.local.variant_of_workflow_name ?? selectedWorkflow.local.variant_of_workflow_id}</strong>
+            </div>
+          ) : null}
+          {selectedWorkflow.local.imported_from_package_id ? (
+            <div className="sidebar-list__row">
+              <span>{labels.localWorkflowPackageIdLabel}</span>
+              <strong>{selectedWorkflow.local.imported_from_package_id}</strong>
+            </div>
+          ) : null}
+          {selectedWorkflow.local.imported_from_package_version ? (
+            <div className="sidebar-list__row">
+              <span>{labels.localWorkflowPackageVersionLabel}</span>
+              <strong>{selectedWorkflow.local.imported_from_package_version}</strong>
+            </div>
+          ) : null}
+          {localWorkflowTags ? (
+            <div className="sidebar-list__row">
+              <span>{labels.localWorkflowTagsLabel}</span>
+              <strong>{localWorkflowTags}</strong>
             </div>
           ) : null}
         </div>

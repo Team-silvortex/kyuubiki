@@ -3,9 +3,9 @@
 import type { WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 
-const WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY = "kyuubiki.workbench.workflowSnapshots.index.v1";
-const WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX = "kyuubiki.workbench.workflowSnapshots.payload.v1:";
-const WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT = 20;
+export const WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY = "kyuubiki.workbench.workflowSnapshots.index.v1";
+export const WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX = "kyuubiki.workbench.workflowSnapshots.payload.v1:";
+export const WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT = 20;
 const WORKBENCH_WORKFLOW_SNAPSHOT_COOLDOWN_MS = 4000;
 const WORKBENCH_WORKFLOW_SNAPSHOT_FALLBACK_DELAY_MS = 120;
 const WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_MAX_BYTES = 180000;
@@ -262,4 +262,26 @@ export function removeStoredWorkflowSnapshot(snapshotId: string) {
   pendingSnapshotPayloads.delete(snapshotId);
   window.localStorage.removeItem(snapshotPayloadKey(snapshotId));
   writeSnapshotIndex(readSnapshotIndex().filter((entry) => entry.id !== snapshotId));
+}
+
+export function removeStoredWorkflowSnapshotsByWorkflowId(workflowId: string) {
+  if (typeof window === "undefined") return;
+  const snapshots = readSnapshotIndex().filter((entry) => entry.workflowId === workflowId);
+  for (const snapshot of snapshots) {
+    cancelPendingSnapshotWrite(snapshot.id);
+    pendingSnapshotPayloads.delete(snapshot.id);
+    window.localStorage.removeItem(snapshotPayloadKey(snapshot.id));
+  }
+  writeSnapshotIndex(readSnapshotIndex().filter((entry) => entry.workflowId !== workflowId));
+}
+
+export function removeStoredWorkflowSummaryOnlySnapshots(workflowId: string) {
+  if (typeof window === "undefined") return;
+  const snapshots = readSnapshotIndex().filter((entry) => entry.workflowId === workflowId && entry.payloadState === "summary_only");
+  for (const snapshot of snapshots) {
+    cancelPendingSnapshotWrite(snapshot.id);
+    pendingSnapshotPayloads.delete(snapshot.id);
+    window.localStorage.removeItem(snapshotPayloadKey(snapshot.id));
+  }
+  writeSnapshotIndex(readSnapshotIndex().filter((entry) => !(entry.workflowId === workflowId && entry.payloadState === "summary_only")));
 }

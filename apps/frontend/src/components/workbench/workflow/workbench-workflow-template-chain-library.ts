@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
-import { createElectrostaticToHeatBridgeContract } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 
 const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY =
   "kyuubiki.workflow.templateChainLibrary.v1";
@@ -88,7 +88,11 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     tags: ["heat", "thermal", "bridge", "coupled", "2d"],
     templates: [
       { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
-      { kind: "transform", operatorId: "bridge.temperature_field_to_thermo_quad_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.temperature_field_to_thermo_quad_2d",
+        config: createBridgeConfigForOperator("bridge.temperature_field_to_thermo_quad_2d") ?? undefined,
+      },
       { kind: "solve", operatorId: "solve.thermal_plane_quad_2d" },
     ],
   },
@@ -103,7 +107,7 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
       {
         kind: "transform",
         operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
-        config: { contract: createElectrostaticToHeatBridgeContract() },
+        config: createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_quad_2d") ?? undefined,
       },
       { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
     ],

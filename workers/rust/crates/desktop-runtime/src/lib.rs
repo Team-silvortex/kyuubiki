@@ -176,31 +176,43 @@ pub fn run_workspace_command(args: &[&str]) -> Result<String, String> {
 }
 
 pub fn service_status() -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", "status"])
+    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "status"])
 }
 
 pub fn service_start(mode: ServiceMode) -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", mode.start_command()])
+    run_workspace_command(&[
+        "node",
+        "./scripts/kyuubiki-runtime.mjs",
+        mode.start_command(),
+    ])
 }
 
 pub fn service_restart(mode: ServiceMode) -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", mode.restart_command()])
+    run_workspace_command(&[
+        "node",
+        "./scripts/kyuubiki-runtime.mjs",
+        mode.restart_command(),
+    ])
 }
 
 pub fn service_stop() -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", "stop"])
+    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "stop"])
 }
 
 pub fn hot_service_status() -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", "hot-status"])
+    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "hot-status"])
 }
 
 pub fn hot_service_start(mode: HotServiceMode) -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", mode.start_command()])
+    run_workspace_command(&[
+        "node",
+        "./scripts/kyuubiki-runtime.mjs",
+        mode.start_command(),
+    ])
 }
 
 pub fn hot_service_stop() -> Result<String, String> {
-    run_workspace_command(&["zsh", "./scripts/kyuubiki", "hot-stop"])
+    run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "hot-stop"])
 }
 
 pub fn log_path_for(service: &str) -> Result<PathBuf, String> {

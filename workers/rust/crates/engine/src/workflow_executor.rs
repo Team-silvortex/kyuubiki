@@ -133,7 +133,9 @@ pub fn evaluate_condition_operator(payload: &Value, config: &Value) -> Result<bo
             let right = predicate
                 .get("value")
                 .and_then(Value::as_f64)
-                .ok_or_else(|| format!("condition operator {operator} expects numeric config.value"))?;
+                .ok_or_else(|| {
+                    format!("condition operator {operator} expects numeric config.value")
+                })?;
             Ok(match operator {
                 "gt" => left > right,
                 "gte" => left >= right,
@@ -145,12 +147,16 @@ pub fn evaluate_condition_operator(payload: &Value, config: &Value) -> Result<bo
         "contains" => {
             let right = predicate.get("value").unwrap_or(&Value::Null);
             match target {
-                Value::String(text) => Ok(right.as_str().is_some_and(|needle| text.contains(needle))),
+                Value::String(text) => {
+                    Ok(right.as_str().is_some_and(|needle| text.contains(needle)))
+                }
                 Value::Array(items) => Ok(items.iter().any(|item| item == right)),
                 _ => Err("condition operator contains expects string or array input".to_string()),
             }
         }
-        _ => Err(format!("unsupported condition operator in first executor: {operator}")),
+        _ => Err(format!(
+            "unsupported condition operator in first executor: {operator}"
+        )),
     }
 }
 

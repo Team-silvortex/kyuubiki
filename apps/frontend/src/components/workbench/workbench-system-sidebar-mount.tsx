@@ -1,27 +1,26 @@
 "use client";
 
 import type { Dispatch, MouseEvent, ReactNode, SetStateAction } from "react";
-
 import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchSystemDataMount } from "@/components/workbench/workbench-system-data-mount";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
+import { WorkbenchSystemInstallLayoutCard } from "@/components/workbench/system/workbench-system-install-layout-card";
+import { WorkbenchSystemInstallPolicyCard } from "@/components/workbench/system/workbench-system-install-policy-card";
+import { buildSystemWorkflowPolicyAction } from "@/components/workbench/system/workbench-system-workflow-bridge";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
-import type {
-  WorkbenchScriptActionLogEntry,
-  WorkbenchScriptSnapshot,
-} from "@/lib/scripting/workbench-script-runtime";
-import type {
-  WorkbenchSecurityAuditRisk,
-  WorkbenchSecurityAuditSource,
-} from "@/lib/workbench/security-audit";
+import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
+import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 
 type WorkbenchSystemSidebarMountProps = {
   t: WorkbenchCopy;
   systemPanelTab: "config" | "scripts" | "runtime" | "data";
   handleSystemPanelTabChange: (tab: "config" | "scripts" | "runtime" | "data") => void;
+  setSidebarSection: (section: "study" | "model" | "workflow" | "library" | "system") => void;
+  handleWorkflowPanelTabChange: (tab: WorkflowSurfaceTab) => void;
   healthStatus: string | undefined;
   healthProtocolOnline: boolean;
   healthWatchdogOnline: boolean;
@@ -29,14 +28,7 @@ type WorkbenchSystemSidebarMountProps = {
   runtimeBackendRows: Array<{ label: string; value: ReactNode }>;
   runtimeProtocolRows: Array<{ label: string; value: ReactNode }>;
   runtimeProtocolMethods?: string[];
-  securityUi: {
-    security: string;
-    configured: string;
-    notConfigured: string;
-    controlPlaneToken: string;
-    clusterToken: string;
-    directMeshToken: string;
-  };
+  securityUi: { security: string; configured: string; notConfigured: string; controlPlaneToken: string; clusterToken: string; directMeshToken: string };
   runtimeSecurityRows: Array<{ label: string; value: ReactNode }>;
   runtimeAuditSummaryRows: Array<{ label: string; value: string }>;
   runtimeAuditTrendBars: Array<{ key: string; label: string; value: string; ratio: number }>;
@@ -51,24 +43,14 @@ type WorkbenchSystemSidebarMountProps = {
   securityEventStatusFilter: "" | "allowed" | "blocked";
   securityEventActionFilter: string;
   setSecurityEventWindowFilter: (value: SecurityEventWindow) => void;
-  setSecurityEventSourceFilter: (
-    value: WorkbenchSecurityAuditSource | "hub-assistant" | "",
-  ) => void;
+  setSecurityEventSourceFilter: (value: WorkbenchSecurityAuditSource | "hub-assistant" | "") => void;
   setSecurityEventRiskFilter: (value: WorkbenchSecurityAuditRisk | "") => void;
   setSecurityEventStatusFilter: (value: "" | "allowed" | "blocked") => void;
   setSecurityEventActionFilter: (value: string) => void;
   refreshSecurityEvents: () => Promise<void>;
   downloadSecurityEventExport: () => Promise<void>;
   downloadSecurityEventCsvExport: () => Promise<void>;
-  runtimeAuditEntries: Array<{
-    id: string;
-    at: string;
-    action: string;
-    source: string;
-    risk: string;
-    status: string;
-    note: string;
-  }>;
+  runtimeAuditEntries: Array<{ id: string; at: string; action: string; source: string; risk: string; status: string; note: string }>;
   protocolAgents: Array<unknown>;
   protocolAgentCards: Array<{
     id: string;
@@ -188,6 +170,8 @@ export function WorkbenchSystemSidebarMount({
   t,
   systemPanelTab,
   handleSystemPanelTabChange,
+  setSidebarSection,
+  handleWorkflowPanelTabChange,
   healthStatus,
   healthProtocolOnline,
   healthWatchdogOnline,
@@ -313,95 +297,123 @@ export function WorkbenchSystemSidebarMount({
       configOverviewHint={t.settingsConfigHint}
       scriptsOverviewHint={t.settingsScriptsHint}
       configContent={
-        <WorkbenchSystemConfigCard
-          title={t.settings}
-          status={healthStatus === "ok" ? t.online : t.offline}
-          workspacePageLabel={t.workspace}
-          routingPageLabel={t.routing}
-          accessPageLabel={t.access}
-          packsPageLabel={t.packs}
-          themeLabel={t.theme}
-          languageLabel={t.language}
-          languagePacksTitle={t.languagePacksTitle}
-          languagePacksHint={t.languagePacksHint}
-          languagePacksEmptyLabel={t.languagePacksEmptyLabel}
-          languagePackNameLabel={t.languagePackName}
-          languagePackVersionLabel={t.languagePackVersion}
-          languagePackSourceImportedLabel={t.languagePackSourceImported}
-          languagePackSourceDownloadedLabel={t.languagePackSourceDownloaded}
-          languagePackDownloadTemplateLabel={t.languagePackDownloadTemplate}
-          languagePackExportInstalledLabel={t.languagePackExportInstalled}
-          languagePackImportLabel={t.languagePackImport}
-          languagePackRemoveLabel={t.languagePackRemove}
-          languagePackCatalogTitle={t.languagePackCatalogTitle}
-          languagePackCatalogHint={t.languagePackCatalogHint}
-          languagePackCatalogActionLabel={t.languagePackCatalogAction}
-          frontendModeLabel={t.frontendMode}
-          directMeshStrategyLabel={t.directMeshStrategy}
-          directMeshEndpointsLabel={t.directMeshEndpoints}
-          directMeshEndpointsHelp={t.directMeshEndpointsHelp}
-          controlPlaneTokenLabel={securityUi.controlPlaneToken}
-          controlPlaneTokenHelp={t.controlPlaneTokenHelp}
-          controlPlaneTokenPlaceholder={t.controlPlaneTokenPlaceholder}
-          clusterTokenLabel={securityUi.clusterToken}
-          clusterTokenHelp={t.clusterTokenHelp}
-          clusterTokenPlaceholder={t.clusterTokenPlaceholder}
-          directMeshTokenLabel={securityUi.directMeshToken}
-          directMeshTokenHelp={t.directMeshTokenHelp}
-          directMeshTokenPlaceholder={t.directMeshTokenPlaceholder}
-          shortcutHintsLabel={t.shortcutHints}
-          shortcutHintsHelp={t.shortcutHintsHelp}
-          immersiveGuardLabel={t.immersiveGuard}
-          immersiveGuardHelp={t.immersiveGuardHelp}
-          browserLimitsNote={t.browserLimitsNote}
-          exportDatabaseLabel={t.exportDatabase}
-          theme={theme}
-          language={language}
-          frontendRuntimeMode={frontendRuntimeMode}
-          directMeshSelectionMode={directMeshSelectionMode}
-          directMeshEndpointsText={directMeshEndpointsText}
-          controlPlaneApiToken={controlPlaneApiToken}
-          clusterApiToken={clusterApiToken}
-          directMeshApiToken={directMeshApiToken}
-          showShortcutHints={showShortcutHints}
-          immersiveGuardrails={immersiveGuardrails}
-          themeOptions={[
-            { value: "linen", label: t.themes.linen },
-            { value: "marine", label: t.themes.marine },
-            { value: "graphite", label: t.themes.graphite },
-          ]}
-          languageOptions={[
-            { value: "en", label: t.languages.en },
-            { value: "zh", label: t.languages.zh },
-            { value: "ja", label: t.languages.ja },
-            { value: "es", label: t.languages.es },
-          ]}
-          installedLanguagePacks={languagePacks}
-          catalogLanguagePacks={languagePackCatalogRows}
-          frontendModeOptions={[
-            { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
-            { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
-          ]}
-          directMeshStrategyOptions={[
-            { value: "healthiest", label: t.directMeshStrategies.healthiest },
-            { value: "first_reachable", label: t.directMeshStrategies.first_reachable },
-          ]}
-          onThemeChange={setTheme}
-          onLanguageChange={handleLanguageChange}
-          onDownloadLanguagePackTemplate={handleDownloadLanguagePackTemplate}
-          onExportInstalledLanguagePack={handleExportInstalledLanguagePack}
-          onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
-          onRemoveLanguagePack={handleRemoveLanguagePack}
-          onFrontendRuntimeModeChange={setFrontendRuntimeMode}
-          onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
-          onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
-          onControlPlaneApiTokenChange={setControlPlaneApiToken}
-          onClusterApiTokenChange={setClusterApiToken}
-          onDirectMeshApiTokenChange={setDirectMeshApiToken}
-          onShowShortcutHintsChange={setShowShortcutHints}
-          onImmersiveGuardrailsChange={setImmersiveGuardrails}
-          onExportDatabase={() => void downloadDatabaseSnapshot()}
-        />
+        <div className="sidebar-stack">
+          <WorkbenchSystemConfigCard
+            title={t.settings}
+            status={healthStatus === "ok" ? t.online : t.offline}
+            workspacePageLabel={t.workspace}
+            routingPageLabel={t.routing}
+            accessPageLabel={t.access}
+            packsPageLabel={t.packs}
+            themeLabel={t.theme}
+            languageLabel={t.language}
+            languagePacksTitle={t.languagePacksTitle}
+            languagePacksHint={t.languagePacksHint}
+            languagePacksEmptyLabel={t.languagePacksEmptyLabel}
+            languagePackNameLabel={t.languagePackName}
+            languagePackVersionLabel={t.languagePackVersion}
+            languagePackSourceImportedLabel={t.languagePackSourceImported}
+            languagePackSourceDownloadedLabel={t.languagePackSourceDownloaded}
+            languagePackDownloadTemplateLabel={t.languagePackDownloadTemplate}
+            languagePackExportInstalledLabel={t.languagePackExportInstalled}
+            languagePackImportLabel={t.languagePackImport}
+            languagePackRemoveLabel={t.languagePackRemove}
+            languagePackCatalogTitle={t.languagePackCatalogTitle}
+            languagePackCatalogHint={t.languagePackCatalogHint}
+            languagePackCatalogActionLabel={t.languagePackCatalogAction}
+            frontendModeLabel={t.frontendMode}
+            directMeshStrategyLabel={t.directMeshStrategy}
+            directMeshEndpointsLabel={t.directMeshEndpoints}
+            directMeshEndpointsHelp={t.directMeshEndpointsHelp}
+            controlPlaneTokenLabel={securityUi.controlPlaneToken}
+            controlPlaneTokenHelp={t.controlPlaneTokenHelp}
+            controlPlaneTokenPlaceholder={t.controlPlaneTokenPlaceholder}
+            clusterTokenLabel={securityUi.clusterToken}
+            clusterTokenHelp={t.clusterTokenHelp}
+            clusterTokenPlaceholder={t.clusterTokenPlaceholder}
+            directMeshTokenLabel={securityUi.directMeshToken}
+            directMeshTokenHelp={t.directMeshTokenHelp}
+            directMeshTokenPlaceholder={t.directMeshTokenPlaceholder}
+            shortcutHintsLabel={t.shortcutHints}
+            shortcutHintsHelp={t.shortcutHintsHelp}
+            immersiveGuardLabel={t.immersiveGuard}
+            immersiveGuardHelp={t.immersiveGuardHelp}
+            browserLimitsNote={t.browserLimitsNote}
+            exportDatabaseLabel={t.exportDatabase}
+            theme={theme}
+            language={language}
+            frontendRuntimeMode={frontendRuntimeMode}
+            directMeshSelectionMode={directMeshSelectionMode}
+            directMeshEndpointsText={directMeshEndpointsText}
+            controlPlaneApiToken={controlPlaneApiToken}
+            clusterApiToken={clusterApiToken}
+            directMeshApiToken={directMeshApiToken}
+            showShortcutHints={showShortcutHints}
+            immersiveGuardrails={immersiveGuardrails}
+            themeOptions={[
+              { value: "linen", label: t.themes.linen },
+              { value: "marine", label: t.themes.marine },
+              { value: "graphite", label: t.themes.graphite },
+            ]}
+            languageOptions={[
+              { value: "en", label: t.languages.en },
+              { value: "zh", label: t.languages.zh },
+              { value: "ja", label: t.languages.ja },
+              { value: "es", label: t.languages.es },
+            ]}
+            installedLanguagePacks={languagePacks}
+            catalogLanguagePacks={languagePackCatalogRows}
+            frontendModeOptions={[
+              { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },
+              { value: "direct_mesh_gui", label: t.frontendModes.direct_mesh_gui },
+            ]}
+            directMeshStrategyOptions={[
+              { value: "healthiest", label: t.directMeshStrategies.healthiest },
+              { value: "first_reachable", label: t.directMeshStrategies.first_reachable },
+            ]}
+            onThemeChange={setTheme}
+            onLanguageChange={handleLanguageChange}
+            onDownloadLanguagePackTemplate={handleDownloadLanguagePackTemplate}
+            onExportInstalledLanguagePack={handleExportInstalledLanguagePack}
+            onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
+            onRemoveLanguagePack={handleRemoveLanguagePack}
+            onFrontendRuntimeModeChange={setFrontendRuntimeMode}
+            onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
+            onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
+            onControlPlaneApiTokenChange={setControlPlaneApiToken}
+            onClusterApiTokenChange={setClusterApiToken}
+            onDirectMeshApiTokenChange={setDirectMeshApiToken}
+            onShowShortcutHintsChange={setShowShortcutHints}
+            onImmersiveGuardrailsChange={setImmersiveGuardrails}
+            onExportDatabase={() => void downloadDatabaseSnapshot()}
+          />
+          <WorkbenchSystemInstallLayoutCard
+            title={t.workflowPackageInstallRulesTitle}
+            hint={t.workflowPackageManifestNoneLabel}
+            storageScopeLabel={t.workflowPackageInstallRulesStorageScopeLabel}
+            localPathLabel={t.workflowPackageInstallRulesLocalPathLabel}
+            snapshotPathLabel={t.workflowPackageInstallRulesSnapshotPathLabel}
+            snapshotPayloadPathLabel={t.workflowPackageInstallRulesSnapshotPayloadPathLabel}
+            maintenancePathLabel={t.workflowPackageInstallRulesMaintenancePathLabel}
+            snapshotLimitLabel={t.workflowPackageInstallRulesSnapshotLabel}
+          />
+          <WorkbenchSystemInstallPolicyCard
+            title={t.settingsInstallPolicyTitle}
+            hint={t.settingsInstallPolicyHint}
+            integrityLabel={t.workflowValidationTitle}
+            integrityValue={t.settingsInstallPolicyIntegrityValue}
+            integrityAction={buildSystemWorkflowPolicyAction(t, setSidebarSection, handleWorkflowPanelTabChange, "validation", "watch")}
+            updateLabel={t.workflowPackageInstallRulesPortabilityLabel}
+            updateValue={t.settingsInstallPolicyUpdateValue}
+            updateAction={buildSystemWorkflowPolicyAction(t, setSidebarSection, handleWorkflowPanelTabChange, "package-policy", "good")}
+            cleanupLabel={t.workflowPackageInstallRulesCleanupLabel}
+            cleanupValue={t.workflowLocalWorkflowDeletedLabel}
+            cleanupAction={buildSystemWorkflowPolicyAction(t, setSidebarSection, handleWorkflowPanelTabChange, "snapshots", "watch")}
+            formatLabel={t.workflowPackageInstallRulesFormatLabel}
+            formatValue="kyuubiki.workflow-package v1 + workflow dataset contract JSON"
+            formatAction={buildSystemWorkflowPolicyAction(t, setSidebarSection, handleWorkflowPanelTabChange, "package-policy", "good")}
+          />
+        </div>
       }
       scriptsContent={
         <WorkbenchScriptPanel

@@ -29,11 +29,13 @@ defmodule KyuubikiWeb.Jobs.Watchdog do
       active_jobs: Enum.count(jobs, &(&1.status in @active_statuses)),
       stalled_jobs:
         Enum.count(jobs, fn job ->
-          job.status == :failed and is_binary(job.message) and String.contains?(job.message, "watchdog marked job stalled")
+          job.status == :failed and is_binary(job.message) and
+            String.contains?(job.message, "watchdog marked job stalled")
         end),
       timed_out_jobs:
         Enum.count(jobs, fn job ->
-          job.status == :failed and is_binary(job.message) and String.contains?(job.message, "watchdog timed out job")
+          job.status == :failed and is_binary(job.message) and
+            String.contains?(job.message, "watchdog timed out job")
         end)
     }
   end

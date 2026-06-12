@@ -1,5 +1,5 @@
-SHELL := /bin/zsh
-ENTRYPOINT := zsh ./scripts/kyuubiki
+SHELL := /bin/sh
+ENTRYPOINT := ./scripts/kyuubiki
 
 .PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
@@ -79,7 +79,7 @@ help:
 	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline"
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
-	@echo "  zsh ./scripts/kyuubiki help    Show the unified local entrypoint"
+	@echo "  ./scripts/kyuubiki help        Show the unified local entrypoint"
 	@echo "  KYUUBIKI_STORAGE_BACKEND=postgres DATABASE_URL=ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev make start"
 	@echo "  cp .env.example .env.local && make restart"
 

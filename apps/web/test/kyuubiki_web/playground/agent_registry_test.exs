@@ -63,7 +63,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
 
     assert agent.health_score == 88
     assert agent.methods == ["solve_truss_2d", "cancel_job"]
-    assert [%{id: "truss-2d", methods: ["solve_truss_2d"], tags: ["truss", "2d"]}] = agent.capabilities
+
+    assert [%{id: "truss-2d", methods: ["solve_truss_2d"], tags: ["truss", "2d"]}] =
+             agent.capabilities
 
     endpoint = hd(AgentRegistry.active_endpoints())
     assert endpoint.health_score == 88

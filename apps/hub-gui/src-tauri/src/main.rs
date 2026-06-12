@@ -373,9 +373,9 @@ fn desktop_status_text(target: Option<String>) -> String {
         }
         lines.push(String::new());
         lines.push("next steps:".to_string());
-        lines.push("  - Stage every platform scaffold: zsh ./scripts/kyuubiki desktop-stage all".to_string());
-        lines.push("  - Build this host's desktop bundles: zsh ./scripts/kyuubiki desktop-build-host".to_string());
-        lines.push("  - Verify manifests and icon inputs: zsh ./scripts/kyuubiki desktop-verify all".to_string());
+        lines.push("  - Stage every platform scaffold: ./scripts/kyuubiki desktop-stage all".to_string());
+        lines.push("  - Build this host's desktop bundles: ./scripts/kyuubiki desktop-build-host".to_string());
+        lines.push("  - Verify manifests and icon inputs: ./scripts/kyuubiki desktop-verify all".to_string());
         lines.push("  - Review staged bundle manifests under: dist/<host>/desktop/*/artifacts.json".to_string());
         return lines.join("\n");
     }
@@ -387,15 +387,15 @@ fn desktop_status_text(target: Option<String>) -> String {
 
     if desktop_runtime_stage_status(platform) == "missing" {
         lines.push(format!(
-            "  - Stage runtime + desktop manifests: zsh ./scripts/kyuubiki desktop-stage {}",
+            "  - Stage runtime + desktop manifests: ./scripts/kyuubiki desktop-stage {}",
             platform.as_str()
         ));
     }
 
     if platform == host {
-        lines.push("  - Build host-native Tauri bundles: zsh ./scripts/kyuubiki desktop-build-host".to_string());
+        lines.push("  - Build host-native Tauri bundles: ./scripts/kyuubiki desktop-build-host".to_string());
         lines.push(format!(
-            "  - Run the full host release pass: zsh ./scripts/kyuubiki desktop-release {}",
+            "  - Run the full host release pass: ./scripts/kyuubiki desktop-release {}",
             platform.as_str()
         ));
         lines.push(format!(
@@ -409,7 +409,7 @@ fn desktop_status_text(target: Option<String>) -> String {
             platform.as_str()
         ));
         lines.push(format!(
-            "  - Verify staged rollout descriptors: zsh ./scripts/kyuubiki desktop-verify {}",
+            "  - Verify staged rollout descriptors: ./scripts/kyuubiki desktop-verify {}",
             platform.as_str()
         ));
     }
@@ -495,7 +495,7 @@ fn launch_desktop_dev_app(app_dir: &str, label: &str) -> Result<String, String> 
             .current_dir(&dir);
         cmd
     } else {
-        let mut cmd = Command::new("zsh");
+        let mut cmd = Command::new("sh");
         cmd.arg("-lc")
             .arg("npm run tauri:dev")
             .current_dir(&dir);

@@ -27,7 +27,9 @@ defmodule KyuubikiWeb.Workloads do
           project_job_ids = MapSet.new(Enum.map(project_jobs, & &1["job_id"]))
 
           project_results =
-            Enum.filter(results, fn result -> MapSet.member?(project_job_ids, result["job_id"]) end)
+            Enum.filter(results, fn result ->
+              MapSet.member?(project_job_ids, result["job_id"])
+            end)
 
           %{
             "label" => project["name"],
@@ -56,7 +58,9 @@ defmodule KyuubikiWeb.Workloads do
       versions = Enum.flat_map(models, &list_versions_for_model/1)
       jobs = project_jobs(project_id)
       job_ids = MapSet.new(Enum.map(jobs, & &1["job_id"]))
-      results = Enum.filter(Analysis.list_results()["results"], &MapSet.member?(job_ids, &1["job_id"]))
+
+      results =
+        Enum.filter(Analysis.list_results()["results"], &MapSet.member?(job_ids, &1["job_id"]))
 
       {:ok,
        %{
@@ -154,7 +158,10 @@ defmodule KyuubikiWeb.Workloads do
       models
       |> Enum.find_value(fn model ->
         latest_id = model["latest_version_id"]
-        if latest_id && Enum.any?(versions, &(&1["version_id"] == latest_id)), do: latest_id, else: nil
+
+        if latest_id && Enum.any?(versions, &(&1["version_id"] == latest_id)),
+          do: latest_id,
+          else: nil
       end)
 
     preferred || (List.first(versions) || %{})["version_id"]

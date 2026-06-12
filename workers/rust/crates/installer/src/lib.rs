@@ -4,6 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+mod cross_platform;
 mod integrity;
 mod integrity_contract;
 mod release;
@@ -11,6 +12,9 @@ mod release;
 mod tests;
 mod update_catalog;
 
+pub use cross_platform::{
+    CrossPlatformAuditIssue, CrossPlatformAuditReport, cross_platform_audit_report,
+};
 pub use integrity::{
     InstallationIntegrityEntry, InstallationIntegrityReport, IntegrityContractRule,
     ResidueCandidate, VersionAlignmentCheck, installation_integrity_report, repair_installation,
@@ -18,7 +22,8 @@ pub use integrity::{
 pub(crate) use integrity_contract::{IntegrityContract, contract_path, load_integrity_contract};
 pub(crate) use release::{
     build_desktop_app_manifest, build_desktop_readme, build_launch_manifest,
-    build_release_manifest, build_release_readme, write_release_scripts,
+    build_release_manifest, build_release_readme, expected_release_script_contents,
+    write_release_scripts,
 };
 pub use update_catalog::{
     UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep, UpdateArtifactRef,
@@ -112,6 +117,7 @@ pub fn print_help() {
         "  help             Show this help\n",
         "  doctor           Check local prerequisites for the current platform\n",
         "  installation-integrity  Validate install layout, versions, and residue\n",
+        "  cross-platform-audit  Validate dist/ parity across macOS, Linux, and Windows\n",
         "  update-plan      Show the unified channel-based update target\n",
         "  update-preview   Show pre-apply checks and blockers for a channel update\n",
         "  repair-installation     Recreate layout and clean removable residue\n",
@@ -545,15 +551,15 @@ impl Platform {
 
     fn default_shell(self) -> &'static str {
         match self {
-            Self::Windows => "powershell",
-            Self::Macos | Self::Linux => "zsh",
+            Self::Windows => "cmd",
+            Self::Macos | Self::Linux => "sh",
         }
     }
 
     fn entrypoint_command(self) -> &'static str {
         match self {
-            Self::Windows => "zsh ./scripts/kyuubiki",
-            Self::Macos | Self::Linux => "zsh ./scripts/kyuubiki",
+            Self::Windows => "./scripts/start.cmd",
+            Self::Macos | Self::Linux => "./scripts/start.sh",
         }
     }
 

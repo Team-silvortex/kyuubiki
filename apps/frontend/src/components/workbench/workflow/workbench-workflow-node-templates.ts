@@ -6,7 +6,7 @@ import type {
   WorkflowGraphNode,
   WorkflowGraphPort,
 } from "@/lib/api";
-import { createElectrostaticToHeatBridgeContract } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
 import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";
 
@@ -332,6 +332,7 @@ const PRESETS: WorkflowNodeTemplatePreset[] = [
     kind: "transform",
     label: "Bridge heat result to thermo model",
     operatorId: "bridge.temperature_field_to_thermo_quad_2d",
+    config: createBridgeConfigForOperator("bridge.temperature_field_to_thermo_quad_2d") ?? undefined,
     inputs: [{ id: "heat_result", artifact_type: "result/heat_plane_quad_2d", description: "Heat quad result", dataset_value: "heat_result" }],
     outputs: [{ id: "thermo_model", artifact_type: "study_model/thermal_plane_quad_2d", description: "Thermo-mechanical quad model", dataset_value: "thermo_model" }],
   },
@@ -340,7 +341,7 @@ const PRESETS: WorkflowNodeTemplatePreset[] = [
     kind: "transform",
     label: "Bridge electrostatic field to heat model",
     operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
-    config: { contract: createElectrostaticToHeatBridgeContract() },
+    config: createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_quad_2d") ?? undefined,
     inputs: [{
       id: "electrostatic_result",
       artifact_type: "result/electrostatic_plane_quad_2d",

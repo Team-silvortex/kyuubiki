@@ -10,6 +10,8 @@ export { WorkbenchTruss3dTreeCard } from "./model/workbench-truss3d-tree-card";
 export { WorkbenchDataAdminPanel } from "./system/workbench-data-admin-panel";
 export { WorkbenchProtocolAgentsCard } from "./system/workbench-protocol-agents-card";
 export { WorkbenchSystemConfigCard } from "./system/workbench-system-config-card";
+export { WorkbenchSystemInstallLayoutCard } from "./system/workbench-system-install-layout-card";
+export { WorkbenchSystemInstallPolicyCard } from "./system/workbench-system-install-policy-card";
 export { WorkbenchSystemMetricsCard } from "./system/workbench-system-metrics-card";
 export { WorkbenchSystemRuntimePanel } from "./system/workbench-system-runtime-panel";
 export { WorkbenchSystemSidebar } from "./system/workbench-system-sidebar";

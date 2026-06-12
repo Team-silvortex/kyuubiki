@@ -80,11 +80,15 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         workflowCatalogBusy={props.workflowCatalogBusy}
         selectedWorkflowId={props.selectedWorkflowId}
         selectedWorkflow={props.selectedWorkflow}
+        currentStudyKind={props.currentStudyKind}
+        currentHeatPlaneModel={props.currentHeatPlaneModel}
+        currentPlaneModel={props.currentPlaneModel}
         latestJob={props.job}
         latestWorkflowSummary={props.latestWorkflowSummary}
         workflowRuns={props.workflowRuns}
         refreshWorkflowCatalog={props.refreshWorkflowCatalog}
         setSelectedWorkflowId={props.setSelectedWorkflowId}
+        setWorkflowRuns={props.setWorkflowRuns}
         runWorkflowCatalogEntry={props.runWorkflowCatalogEntry}
         runWorkflowDraft={props.runWorkflowDraft}
         openHistoryJob={props.openHistoryJob}
@@ -143,6 +147,8 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         t={props.t}
         systemPanelTab={props.systemPanelTab === "assistant" ? "config" : props.systemPanelTab}
         handleSystemPanelTabChange={props.handleSystemPanelTabChange}
+        setSidebarSection={props.setSidebarSection}
+        handleWorkflowPanelTabChange={props.handleWorkflowPanelTabChange}
         healthStatus={props.health?.status}
         healthProtocolOnline={Boolean(props.health?.protocol)}
         healthWatchdogOnline={Boolean(props.health?.watchdog)}

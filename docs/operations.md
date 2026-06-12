@@ -161,7 +161,7 @@ Minimum Ubuntu setup:
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential pkg-config libssl-dev screen curl git zsh
+sudo apt install -y build-essential pkg-config libssl-dev screen curl git
 curl https://sh.rustup.rs -sSf | sh -s -- -y
 source "$HOME/.cargo/env"
 git clone <your-repo-url> ~/kyuubiki
@@ -175,7 +175,7 @@ If you want the agent to survive your shell session:
 ```bash
 cd ~/kyuubiki
 screen -S kyuubiki-agent-5001 -X quit >/dev/null 2>&1 || true
-screen -dmS kyuubiki-agent-5001 zsh -lc './scripts/kyuubiki agent -- --port 5001'
+screen -dmS kyuubiki-agent-5001 sh -lc './scripts/kyuubiki agent -- --port 5001'
 ```
 
 Laptop-side local orchestrator changes:

@@ -28,8 +28,8 @@ pub fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, Strin
     let target_host = validate_ssh_identity(&payload.target_host, "target host")?;
     let target = format!("{}@{}", ssh_user, target_host);
     let remote_command = format!(
-        "cd {} && zsh ./scripts/kyuubiki install bootstrap",
-        shell_escape(&payload.remote_workspace)
+        "cd {workspace} && cargo run -p kyuubiki-installer --manifest-path workers/rust/Cargo.toml -- bootstrap",
+        workspace = shell_escape(&payload.remote_workspace)
     );
 
     run_remote_ssh(payload.ssh_port, &target, &remote_command)
@@ -42,7 +42,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
     let target = format!("{}@{}", ssh_user, target_host);
     let screen_name = format!("kyuubiki_remote_agent_{}", payload.agent_port);
     let remote_command = format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} zsh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
+        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
         workspace = shell_escape(&payload.remote_workspace),
         screen = shell_escape(&screen_name),
         orchestrator = shell_escape(&payload.orchestrator_url),

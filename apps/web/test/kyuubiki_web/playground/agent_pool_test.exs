@@ -182,7 +182,9 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
     )
 
     assert :ok = AgentPool.reload()
-    assert :ok = AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
+
+    assert :ok =
+             AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
 
     assert Enum.map(AgentPool.checkout_endpoints(), & &1.id) == ["agent-b", "agent-c", "agent-a"]
 
@@ -208,7 +210,10 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
     )
 
     assert :ok = AgentPool.reload()
-    assert :ok = AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
+
+    assert :ok =
+             AgentPool.report_failure(%{id: "agent-a", host: "127.0.0.1", port: 5101}, :timeout)
+
     assert :ok = AgentPool.report_success(%{id: "agent-a", host: "127.0.0.1", port: 5101})
 
     endpoint = hd(AgentPool.endpoints())

@@ -5,8 +5,8 @@ use crate::workflow_executor::{
     run_transform_operator, transform_operator_accepts_partial_inputs,
 };
 use kyuubiki_protocol::{
-    WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest, WorkflowGraphRunResult,
-    WorkflowNodeKind, WorkflowNodeRunStatus, WorkflowNodeRunTrace,
+    WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest,
+    WorkflowGraphRunResult, WorkflowNodeKind, WorkflowNodeRunStatus, WorkflowNodeRunTrace,
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -59,9 +59,9 @@ pub fn run_workflow_graph(
                 .as_deref()
                 .is_some_and(transform_operator_accepts_partial_inputs);
             let ready = if supports_partial_inputs {
-                incoming
-                    .iter()
-                    .any(|edge| artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port)))
+                incoming.iter().any(|edge| {
+                    artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port))
+                })
             } else {
                 incoming.iter().all(|edge| {
                     artifacts.contains_key(&artifact_key(&edge.from.node, &edge.from.port))
@@ -210,15 +210,12 @@ pub fn run_workflow_graph(
                 WorkflowNodeKind::Output => {
                     for edge in incoming {
                         let source_key = artifact_key(&edge.from.node, &edge.from.port);
-                        let value = artifacts
-                            .get(&source_key)
-                            .cloned()
-                            .ok_or_else(|| {
-                                format!(
-                                    "workflow output node {} could not read {}.{}",
-                                    node.id, edge.from.node, edge.from.port
-                                )
-                            })?;
+                        let value = artifacts.get(&source_key).cloned().ok_or_else(|| {
+                            format!(
+                                "workflow output node {} could not read {}.{}",
+                                node.id, edge.from.node, edge.from.port
+                            )
+                        })?;
                         let key = artifact_key(&node.id, &edge.to.port);
                         artifacts.insert(key.clone(), value);
                         produced_artifacts.push(key.clone());

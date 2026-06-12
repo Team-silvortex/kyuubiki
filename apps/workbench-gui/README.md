@@ -37,8 +37,8 @@ It is intentionally thin:
 - `make package-desktop PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-verify PLATFORM=macos|linux|windows`
-- `zsh ./scripts/kyuubiki build-workbench-gui macos|linux|windows`
-- `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
+- `./scripts/kyuubiki build-workbench-gui macos|linux|windows`
+- `./scripts/kyuubiki package-desktop macos|linux|windows`
 
 ## Validation
 

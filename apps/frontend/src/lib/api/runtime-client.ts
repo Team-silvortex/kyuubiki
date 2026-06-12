@@ -6,12 +6,28 @@ import type {
   JobHistoryPayload,
   JobState,
   ProtocolAgentListPayload,
+  WorkflowCatalogQuery,
   WorkflowCatalogPayload,
   WorkflowGraphDefinition,
   WorkflowGraphJobResult,
+  WorkflowOperatorCatalogQuery,
   WorkflowOperatorCatalogPayload,
 } from "./index";
 import { requestJson } from "./core";
+
+function appendQuery(url: string, query?: Record<string, string | undefined>) {
+  if (!query) return url;
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      params.set(key, value);
+    }
+  }
+
+  const search = params.toString();
+  return search ? `${url}?${search}` : url;
+}
 
 export function fetchJobStatus<TResult>(jobId: string): Promise<JobEnvelope<TResult>> {
   return requestJson<JobEnvelope<TResult>>(`/api/v1/jobs/${jobId}`, {
@@ -27,15 +43,19 @@ export function fetchJobHistory(): Promise<JobHistoryPayload> {
   });
 }
 
-export function fetchWorkflowCatalog(): Promise<WorkflowCatalogPayload> {
-  return requestJson<WorkflowCatalogPayload>("/api/v1/workflows/catalog", {
+export function fetchWorkflowCatalog(
+  query?: WorkflowCatalogQuery,
+): Promise<WorkflowCatalogPayload> {
+  return requestJson<WorkflowCatalogPayload>(appendQuery("/api/v1/workflows/catalog", query), {
     method: "GET",
     cache: "no-store",
   });
 }
 
-export function fetchWorkflowOperators(): Promise<WorkflowOperatorCatalogPayload> {
-  return requestJson<WorkflowOperatorCatalogPayload>("/api/v1/operators", {
+export function fetchWorkflowOperators(
+  query?: WorkflowOperatorCatalogQuery,
+): Promise<WorkflowOperatorCatalogPayload> {
+  return requestJson<WorkflowOperatorCatalogPayload>(appendQuery("/api/v1/operators", query), {
     method: "GET",
     cache: "no-store",
   });

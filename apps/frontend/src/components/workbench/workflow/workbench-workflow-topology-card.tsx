@@ -1,7 +1,7 @@
 "use client";
-
 import { useState } from "react";
 import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowOperatorDescriptor, WorkflowGraphPort } from "@/lib/api";
+import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
   listWorkflowNodeTemplatePresets,
@@ -25,12 +25,14 @@ import {
   getWorkflowNodeTemplateSyncImpact,
   listAutoReconnectEdgeIds,
 } from "@/components/workbench/workflow/workbench-workflow-template-impact";
-
 type WorkbenchWorkflowTopologyCardProps = {
   labels: WorkflowSidebarLabels;
   operatorDescriptors?: WorkflowOperatorDescriptor[];
   selectedNodes: WorkflowGraphNode[];
   selectedEdges: WorkflowGraphEdge[];
+  currentStudyKind: StudyKind;
+  currentHeatPlaneModel: HeatPlaneStudyJobInput;
+  currentPlaneModel: PlaneStudyJobInput;
   highlightedEdgeIds?: string[];
   highlightedNodeIds?: string[];
   focusedNodeId?: string | null;
@@ -48,9 +50,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   onRemoveEdge: (edgeId: string) => void;
   onUpdateEdge: (edgeId: string, updater: (edge: WorkflowGraphEdge) => WorkflowGraphEdge) => void;
 };
-
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
-
 function WorkbenchWorkflowPortEditor(props: {
   labels: WorkflowSidebarLabels;
   nodeId: string;
@@ -126,7 +126,6 @@ function WorkbenchWorkflowPortEditor(props: {
     </div>
   );
 }
-
 function getSuggestedPorts(
   ports: WorkflowGraphPort[],
   edge: WorkflowGraphEdge,
@@ -136,20 +135,16 @@ function getSuggestedPorts(
     ? ports.filter((port) => port.dataset_value === edge.dataset_value)
     : [];
   if (datasetMatched.length > 0) return datasetMatched;
-
   const artifactMatched = edge.artifact_type
     ? ports.filter((port) => port.artifact_type === edge.artifact_type)
     : [];
   if (artifactMatched.length > 0) return artifactMatched;
-
   if (direction === "outputs" && edge.artifact_type) {
     const looseOutputs = ports.filter((port) => port.artifact_type === edge.artifact_type);
     if (looseOutputs.length > 0) return looseOutputs;
   }
-
   return ports;
 }
-
 function buildEdgeHighlightStyle(
   edgeId: string,
   focusedEdgeId: string | null | undefined,
@@ -164,7 +159,6 @@ function buildEdgeHighlightStyle(
     boxShadow: highlighted ? "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" : undefined,
   };
 }
-
 function buildNodeHighlightStyle(nodeId: string, focusedNodeId: string | null | undefined, highlightedNodeIds: string[]) {
   const highlighted = highlightedNodeIds.includes(nodeId);
   if (!highlighted && focusedNodeId !== nodeId) return undefined;
@@ -172,12 +166,14 @@ function buildNodeHighlightStyle(nodeId: string, focusedNodeId: string | null | 
     ? { outline: "2px solid rgba(34, 197, 94, 0.9)", outlineOffset: "2px", boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" }
     : { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" };
 }
-
 export function WorkbenchWorkflowTopologyCard({
   labels,
   operatorDescriptors,
   selectedNodes,
   selectedEdges,
+  currentStudyKind,
+  currentHeatPlaneModel,
+  currentPlaneModel,
   highlightedEdgeIds = [],
   highlightedNodeIds = [],
   focusedNodeId,
@@ -418,6 +414,9 @@ export function WorkbenchWorkflowTopologyCard({
                 />
                 <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={selectedEdges} />
                 <WorkbenchWorkflowBridgeContractEditor
+                  currentHeatPlaneModel={currentHeatPlaneModel as unknown as Record<string, unknown>}
+                  currentPlaneModel={currentPlaneModel as unknown as Record<string, unknown>}
+                  currentStudyKind={currentStudyKind}
                   labels={labels}
                   node={node}
                   selectedNodes={selectedNodes}

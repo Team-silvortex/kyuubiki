@@ -3,310 +3,221 @@ defmodule KyuubikiWeb.Analysis do
   Asynchronous orchestration for FEM study jobs.
   """
 
+  alias KyuubikiWeb.AnalysisExports
+  alias KyuubikiWeb.AnalysisJobRecords
+  alias KyuubikiWeb.AnalysisJobSupport
   alias KyuubikiWeb.AnalysisResultStore
+  alias KyuubikiWeb.FemModelNormalizer
   alias KyuubikiWeb.Jobs.Store
-  alias KyuubikiWeb.Library
   alias KyuubikiWeb.Playground.AgentClient
-  alias KyuubikiWeb.SecurityEvents.Store, as: SecurityEventStore
+  alias KyuubikiWeb.WorkflowGraphRunner
+  alias KyuubikiWeb.WorkflowOperatorCatalog
+  alias KyuubikiWeb.WorkflowOperatorRuntime
+  alias KyuubikiWeb.WorkflowTemplateCatalog
 
   @spec submit_axial_bar(map()) :: {:ok, map()} | {:error, term()}
-  def submit_axial_bar(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_axial_bar(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_bar_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_axial_bar(params) when is_map(params),
+    do: submit_solver_job(params, &FemModelNormalizer.normalize_axial_bar/1, "solve_bar_1d")
 
   @spec submit_thermal_bar_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_bar_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_bar_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_bar_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_thermal_bar_1d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_thermal_bar_1d/1,
+        "solve_thermal_bar_1d"
+      )
 
   @spec submit_heat_bar_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_heat_bar_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_heat_bar_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_heat_bar_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_heat_bar_1d(params) when is_map(params),
+    do:
+      submit_solver_job(params, &FemModelNormalizer.normalize_heat_bar_1d/1, "solve_heat_bar_1d")
 
   @spec submit_electrostatic_bar_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_electrostatic_bar_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_electrostatic_bar_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_electrostatic_bar_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_electrostatic_bar_1d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_electrostatic_bar_1d/1,
+        "solve_electrostatic_bar_1d"
+      )
 
   @spec submit_electrostatic_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_electrostatic_plane_triangle_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_electrostatic_plane_triangle_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_electrostatic_plane_triangle_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_electrostatic_plane_triangle_2d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_electrostatic_plane_triangle_2d/1,
+        "solve_electrostatic_plane_triangle_2d"
+      )
 
   @spec submit_electrostatic_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_electrostatic_plane_quad_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_electrostatic_plane_quad_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_electrostatic_plane_quad_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_electrostatic_plane_quad_2d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_electrostatic_plane_quad_2d/1,
+        "solve_electrostatic_plane_quad_2d"
+      )
 
   @spec submit_heat_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_heat_plane_triangle_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_heat_plane_triangle_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_heat_plane_triangle_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_heat_plane_triangle_2d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_heat_plane_triangle_2d/1,
+        "solve_heat_plane_triangle_2d"
+      )
 
   @spec submit_heat_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_heat_plane_quad_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_heat_plane_quad_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_heat_plane_quad_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_heat_plane_quad_2d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_heat_plane_quad_2d/1,
+        "solve_heat_plane_quad_2d"
+      )
 
   @spec submit_thermal_truss_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_truss_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_truss_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_truss_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_thermal_truss_2d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_thermal_truss_2d/1,
+        "solve_thermal_truss_2d"
+      )
 
   @spec submit_thermal_truss_3d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_truss_3d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_truss_3d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_truss_3d", normalized)
-      {:ok, serialize_payload(job)}
-    end
-  end
+  def submit_thermal_truss_3d(params) when is_map(params),
+    do:
+      submit_solver_job(
+        params,
+        &FemModelNormalizer.normalize_thermal_truss_3d/1,
+        "solve_thermal_truss_3d"
+      )
 
   @spec submit_beam_1d(map()) :: {:ok, map()} | {:error, term()}
   def submit_beam_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_beam_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_beam_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_beam_1d/1, "solve_beam_1d")
   end
 
   @spec submit_thermal_beam_1d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_beam_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_beam_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_beam_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_beam_1d/1, "solve_thermal_beam_1d")
   end
 
   @spec submit_torsion_1d(map()) :: {:ok, map()} | {:error, term()}
   def submit_torsion_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_torsion_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_torsion_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_torsion_1d/1, "solve_torsion_1d")
   end
 
   @spec submit_spring_1d(map()) :: {:ok, map()} | {:error, term()}
   def submit_spring_1d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_spring_1d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_spring_1d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_spring_1d/1, "solve_spring_1d")
   end
 
   @spec submit_spring_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_spring_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_spring_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_spring_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_spring_2d/1, "solve_spring_2d")
   end
 
   @spec submit_spring_3d(map()) :: {:ok, map()} | {:error, term()}
   def submit_spring_3d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_spring_3d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_spring_3d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_spring_3d/1, "solve_spring_3d")
   end
 
   @spec submit_truss_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_truss_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_truss_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_truss_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_truss_2d/1, "solve_truss_2d")
   end
 
   @spec submit_truss_3d(map()) :: {:ok, map()} | {:error, term()}
   def submit_truss_3d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_truss_3d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_truss_3d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_truss_3d/1, "solve_truss_3d")
   end
 
   @spec submit_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_triangle_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_plane_triangle_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_plane_triangle_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_plane_triangle_2d/1, "solve_plane_triangle_2d")
   end
 
   @spec submit_thermal_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_plane_triangle_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_plane_triangle_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_plane_triangle_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_plane_triangle_2d/1, "solve_thermal_plane_triangle_2d")
   end
 
   @spec submit_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_quad_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_plane_quad_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_plane_quad_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_plane_quad_2d/1, "solve_plane_quad_2d")
   end
 
   @spec submit_thermal_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_plane_quad_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_plane_quad_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_plane_quad_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_plane_quad_2d/1, "solve_thermal_plane_quad_2d")
   end
 
   @spec submit_frame_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_frame_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_frame_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_frame_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_frame_2d/1, "solve_frame_2d")
   end
 
   @spec submit_frame_3d(map()) :: {:ok, map()} | {:error, term()}
   def submit_frame_3d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_frame_3d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_frame_3d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_frame_3d/1, "solve_frame_3d")
   end
 
   @spec submit_thermal_frame_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_frame_2d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_frame_2d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_frame_2d", normalized)
-      {:ok, serialize_payload(job)}
-    end
+    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_frame_2d/1, "solve_thermal_frame_2d")
   end
 
   @spec submit_thermal_frame_3d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_frame_3d(params) when is_map(params) do
-    with {:ok, normalized} <- normalize_thermal_frame_3d(params),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
-      start_background_job(job.job_id, "solve_thermal_frame_3d", normalized)
-      {:ok, serialize_payload(job)}
+    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_frame_3d/1, "solve_thermal_frame_3d")
+  end
+
+  defp submit_solver_job(params, normalizer, method)
+       when is_map(params) and is_function(normalizer, 1) and is_binary(method) do
+    with {:ok, normalized} <- normalizer.(params),
+         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
+         {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
+      start_background_job(job.job_id, method, normalized)
+      {:ok, AnalysisJobSupport.serialize_payload(job)}
     end
   end
 
-  @spec list_workflow_catalog() :: map()
-  def list_workflow_catalog do
-    %{"workflows" => built_in_workflow_catalog()}
-  end
+  @spec list_workflow_catalog(map()) :: map()
+  def list_workflow_catalog(filters \\ %{}) when is_map(filters),
+    do: %{"workflows" => WorkflowTemplateCatalog.list(filters)}
 
-  @spec list_operator_catalog() :: map()
-  def list_operator_catalog do
-    %{"operators" => built_in_operator_catalog()}
-  end
+  @spec list_operator_catalog(map()) :: map()
+  def list_operator_catalog(filters \\ %{}) when is_map(filters),
+    do: %{"operators" => WorkflowOperatorCatalog.list(filters)}
 
   @spec fetch_workflow_catalog_entry(String.t()) :: {:ok, map()} | {:error, term()}
-  def fetch_workflow_catalog_entry(workflow_id) when is_binary(workflow_id) do
-    case Enum.find(built_in_workflow_catalog(), &(&1["id"] == workflow_id)) do
-      nil -> {:error, {:workflow_not_found, workflow_id}}
-      workflow -> {:ok, %{"workflow" => workflow}}
-    end
-  end
+  def fetch_workflow_catalog_entry(workflow_id) when is_binary(workflow_id),
+    do: WorkflowTemplateCatalog.fetch(workflow_id)
 
   @spec fetch_operator_catalog_entry(String.t()) :: {:ok, map()} | {:error, term()}
-  def fetch_operator_catalog_entry(operator_id) when is_binary(operator_id) do
-    case Enum.find(built_in_operator_catalog(), &(&1["id"] == operator_id)) do
-      nil -> {:error, {:operator_not_found, operator_id}}
-      operator -> {:ok, %{"operator" => operator}}
-    end
-  end
+  def fetch_operator_catalog_entry(operator_id) when is_binary(operator_id),
+    do: WorkflowOperatorCatalog.fetch(operator_id)
 
   @spec run_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def run_workflow_graph(params) when is_map(params) do
-    normalized = stringify_keys(params)
+    normalized = AnalysisJobSupport.stringify_keys(params)
 
     with %{} = graph <- Map.get(normalized, "graph"),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
-         {:ok, completed_nodes, artifacts} <- execute_workflow_graph(graph, input_artifacts) do
+         {:ok, result} <- execute_workflow_graph(graph, input_artifacts) do
       {:ok,
        %{
          "workflow_id" => Map.get(graph, "id"),
-         "completed_nodes" => completed_nodes,
-         "artifacts" => artifacts
+         "completed_nodes" => Map.get(result, "completed_nodes", []),
+         "skipped_nodes" => Map.get(result, "skipped_nodes", []),
+         "branch_decisions" => Map.get(result, "branch_decisions", []),
+         "node_runs" => Map.get(result, "node_runs", []),
+         "artifact_lineage" => Map.get(result, "artifact_lineage", []),
+         "artifacts" => Map.get(result, "artifacts", %{})
        }}
     else
       nil -> {:error, :invalid_workflow_graph_request}
@@ -319,9 +230,9 @@ defmodule KyuubikiWeb.Analysis do
   @spec submit_catalog_workflow(String.t(), map()) :: {:ok, map()} | {:error, term()}
   def submit_catalog_workflow(workflow_id, params)
       when is_binary(workflow_id) and is_map(params) do
-    normalized = stringify_keys(params)
+    normalized = AnalysisJobSupport.stringify_keys(params)
 
-    with {:ok, graph} <- workflow_graph_by_id(workflow_id),
+    with {:ok, graph} <- WorkflowTemplateCatalog.graph_by_id(workflow_id),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, payload} <-
            submit_workflow_graph(%{
@@ -342,12 +253,12 @@ defmodule KyuubikiWeb.Analysis do
 
   @spec submit_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def submit_workflow_graph(params) when is_map(params) do
-    normalized = stringify_keys(params)
+    normalized = AnalysisJobSupport.stringify_keys(params)
 
     with %{} = graph <- Map.get(normalized, "graph"),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
-         {:ok, job_context} <- derive_job_context(params),
-         {:ok, job} <- create_job(job_context) do
+         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
+         {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
       :ok =
         AnalysisResultStore.put(job.job_id, %{
           "workflow_id" => Map.get(graph, "id"),
@@ -358,7 +269,7 @@ defmodule KyuubikiWeb.Analysis do
         })
 
       start_background_workflow_job(job.job_id, graph, input_artifacts)
-      {:ok, serialize_payload(job)}
+      {:ok, AnalysisJobSupport.serialize_payload(job)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
       [] -> {:error, :invalid_workflow_graph_request}
@@ -368,1818 +279,66 @@ defmodule KyuubikiWeb.Analysis do
   end
 
   @spec fetch_job(String.t()) :: {:ok, map()} | {:error, term()}
-  def fetch_job(job_id) when is_binary(job_id) do
-    case Store.get(job_id) do
-      {:ok, job} ->
-        payload = serialize_payload(job)
-
-        case AnalysisResultStore.get(job_id) do
-          {:ok, result} ->
-            {:ok, payload |> put_has_result(true) |> Map.put("result", result)}
-
-          :error ->
-            {:ok, payload}
-        end
-
-      :error ->
-        {:error, {:job_not_found, job_id}}
-    end
-  end
+  def fetch_job(job_id) when is_binary(job_id), do: AnalysisJobRecords.fetch_job(job_id)
 
   @spec list_jobs() :: map()
-  def list_jobs do
-    jobs =
-      Store.list()
-      |> Enum.map(fn job ->
-        has_result? = match?({:ok, _result}, AnalysisResultStore.get(job.job_id))
+  def list_jobs, do: AnalysisJobRecords.list_jobs()
 
-        job
-        |> serialize_job()
-        |> Map.put("has_result", has_result?)
-      end)
+  def update_job(job_id, attrs) when is_binary(job_id) and is_map(attrs),
+    do: AnalysisJobRecords.update_job(job_id, attrs)
 
-    %{"jobs" => jobs}
-  end
+  def cancel_job(job_id) when is_binary(job_id), do: AnalysisJobRecords.cancel_job(job_id)
 
-  def update_job(job_id, attrs) when is_binary(job_id) and is_map(attrs) do
-    case Store.update_metadata(job_id, attrs) do
-      {:ok, job} -> {:ok, serialize_payload(job)}
-      {:error, _reason} = error -> error
-    end
-  end
+  def delete_job(job_id) when is_binary(job_id), do: AnalysisJobRecords.delete_job(job_id)
 
-  def cancel_job(job_id) when is_binary(job_id) do
-    case Store.get(job_id) do
-      {:ok, job} ->
-        if job.status in [:completed, :failed, :cancelled] do
-          {:ok, serialize_payload(job)}
-        else
-          _ =
-            Store.apply_progress(%{
-              job_id: job_id,
-              stage: "cancelled",
-              progress: job.progress,
-              message: "job cancelled by operator"
-            })
+  def list_results, do: AnalysisJobRecords.list_results()
 
-          _ = AgentClient.cancel_job(job_id)
-          fetch_job(job_id)
-        end
-
-      :error ->
-        {:error, {:job_not_found, job_id}}
-    end
-  end
-
-  def delete_job(job_id) when is_binary(job_id) do
-    _ = AnalysisResultStore.delete(job_id)
-
-    case Store.delete(job_id) do
-      {:ok, job} -> {:ok, %{"job" => serialize_job(job), "deleted" => true}}
-      {:error, _reason} = error -> error
-    end
-  end
-
-  def list_results do
-    %{"results" => AnalysisResultStore.list()}
-  end
-
-  def fetch_result(job_id) when is_binary(job_id) do
-    case AnalysisResultStore.get(job_id) do
-      {:ok, result} -> {:ok, %{"job_id" => job_id, "result" => result}}
-      :error -> {:error, {:result_not_found, job_id}}
-    end
-  end
+  def fetch_result(job_id) when is_binary(job_id), do: AnalysisJobRecords.fetch_result(job_id)
 
   def fetch_result_chunk(job_id, kind, params \\ %{})
       when is_binary(job_id) and is_binary(kind) and is_map(params) do
-    with {:ok, result} <- fetch_raw_result(job_id),
-         {:ok, items} <- fetch_chunk_source(result, kind),
-         {:ok, offset} <- normalize_chunk_integer(params, "offset", 0),
-         {:ok, limit} <- normalize_chunk_integer(params, "limit", 200) do
-      safe_offset = min(offset, length(items))
-      safe_limit = max(limit, 1)
-      chunk = items |> Enum.drop(safe_offset) |> Enum.take(safe_limit)
-
-      {:ok,
-       %{
-         "job_id" => job_id,
-         "kind" => kind,
-         "offset" => safe_offset,
-         "limit" => safe_limit,
-         "returned" => length(chunk),
-         "total" => length(items),
-         "items" => chunk
-       }}
-    end
+    AnalysisJobRecords.fetch_result_chunk(job_id, kind, params)
   end
 
-  def update_result(job_id, result) when is_binary(job_id) and is_map(result) do
-    :ok = AnalysisResultStore.update(job_id, result)
-    fetch_result(job_id)
-  end
+  def update_result(job_id, result) when is_binary(job_id) and is_map(result),
+    do: AnalysisJobRecords.update_result(job_id, result)
 
-  def delete_result(job_id) when is_binary(job_id) do
-    case AnalysisResultStore.delete(job_id) do
-      {:ok, result} -> {:ok, %{"job_id" => job_id, "result" => result, "deleted" => true}}
-      {:error, _reason} = error -> error
-    end
-  end
+  def delete_result(job_id) when is_binary(job_id), do: AnalysisJobRecords.delete_result(job_id)
 
-  def create_security_event(attrs) when is_map(attrs) do
-    case SecurityEventStore.create(attrs) do
-      {:ok, event} -> {:ok, %{"event" => event}}
-      {:error, _reason} = error -> error
-    end
-  end
+  def create_security_event(attrs) when is_map(attrs), do: AnalysisExports.create_security_event(attrs)
 
-  def list_security_events(filters \\ %{}) when is_map(filters) do
-    %{"events" => SecurityEventStore.list(filters)}
-  end
+  def list_security_events(filters \\ %{}) when is_map(filters),
+    do: AnalysisExports.list_security_events(filters)
 
-  def export_security_events(filters \\ %{}) when is_map(filters) do
-    events = SecurityEventStore.list(filters)
+  def export_security_events(filters \\ %{}) when is_map(filters),
+    do: AnalysisExports.export_security_events(filters)
 
-    summary =
-      Enum.reduce(
-        events,
-        %{"total" => length(events), "by_source" => %{}, "by_risk" => %{}, "by_status" => %{}},
-        fn event, acc ->
-          acc
-          |> put_in(
-            ["by_source", event["source"]],
-            get_in(acc, ["by_source", event["source"]]) |> Kernel.||(0) |> Kernel.+(1)
-          )
-          |> put_in(
-            ["by_risk", event["risk"]],
-            get_in(acc, ["by_risk", event["risk"]]) |> Kernel.||(0) |> Kernel.+(1)
-          )
-          |> put_in(
-            ["by_status", event["status"]],
-            get_in(acc, ["by_status", event["status"]]) |> Kernel.||(0) |> Kernel.+(1)
-          )
-        end
-      )
+  def export_security_events_csv(filters \\ %{}) when is_map(filters),
+    do: AnalysisExports.export_security_events_csv(filters)
 
-    %{
-      "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
-      "schema" => %{
-        "name" => "kyuubiki.security-events.export/v1",
-        "version" => 1,
-        "fields" => [
-          %{"name" => "event_id", "type" => "string"},
-          %{"name" => "event_type", "type" => "string"},
-          %{"name" => "source", "type" => "string"},
-          %{"name" => "action", "type" => "string"},
-          %{"name" => "risk", "type" => "string"},
-          %{"name" => "status", "type" => "string"},
-          %{"name" => "note", "type" => "string|null"},
-          %{"name" => "context", "type" => "object"},
-          %{"name" => "occurred_at", "type" => "datetime"},
-          %{"name" => "inserted_at", "type" => "datetime|null"},
-          %{"name" => "updated_at", "type" => "datetime|null"}
-        ]
-      },
-      "filters" => normalize_export_filters(filters),
-      "summary" => summary,
-      "events" => events
-    }
-  end
+  def export_database, do: AnalysisExports.export_database()
 
-  def export_security_events_csv(filters \\ %{}) when is_map(filters) do
-    events = SecurityEventStore.list(filters)
-
-    rows = [
-      [
-        "event_id",
-        "event_type",
-        "source",
-        "action",
-        "risk",
-        "status",
-        "note",
-        "study_kind",
-        "project_id",
-        "model_version_id",
-        "occurred_at",
-        "inserted_at",
-        "updated_at"
-      ]
-      | Enum.map(events, fn event ->
-          context = event["context"] || %{}
-
-          [
-            event["event_id"],
-            event["event_type"],
-            event["source"],
-            event["action"],
-            event["risk"],
-            event["status"],
-            event["note"],
-            context["study_kind"],
-            context["project_id"],
-            context["model_version_id"],
-            event["occurred_at"],
-            event["inserted_at"],
-            event["updated_at"]
-          ]
-        end)
-    ]
-
-    rows
-    |> Enum.map_join("\n", fn row -> Enum.map_join(row, ",", &csv_escape/1) end)
-    |> Kernel.<>("\n")
-  end
-
-  def export_database do
-    {:ok, projects} = Library.list_projects()
-    models = Enum.flat_map(projects, &Map.get(&1, "models", []))
-
-    model_versions =
-      models
-      |> Enum.flat_map(fn model ->
-        case Library.list_versions(model["model_id"]) do
-          {:ok, versions} -> versions
-          _ -> []
-        end
-      end)
-
-    %{
-      "exported_at" => DateTime.utc_now(:second) |> DateTime.to_iso8601(),
-      "projects" => projects,
-      "models" => models,
-      "model_versions" => model_versions,
-      "jobs" => list_jobs()["jobs"],
-      "results" => list_results()["results"],
-      "security_events" => list_security_events()["events"]
-    }
-  end
-
-  defp normalize_export_filters(filters) do
-    filters
-    |> Map.take([
-      "source",
-      "risk",
-      "status",
-      "action",
-      "study_kind",
-      "project_id",
-      "model_version_id",
-      "occurred_after",
-      "occurred_before",
-      "limit"
-    ])
-    |> Enum.reject(fn {_key, value} -> is_nil(value) or value == "" end)
-    |> Map.new()
-  end
-
-  defp csv_escape(nil), do: ""
-
-  defp csv_escape(value) when is_binary(value) do
-    escaped = String.replace(value, "\"", "\"\"")
-
-    if String.contains?(escaped, [",", "\"", "\n", "\r"]) do
-      ~s("#{escaped}")
-    else
-      escaped
-    end
-  end
-
-  defp csv_escape(value), do: value |> to_string() |> csv_escape()
-
-  defp built_in_operator_catalog do
-    [
-      built_in_solver_descriptor(
-        "solve.frame_3d",
-        "mechanical",
-        "frame_3d",
-        "Solve a 3D frame model with six-DOF nodes and verified baseline coverage.",
-        ["verified", "mechanical", "frame", "3d"]
-      ),
-      built_in_solver_descriptor(
-        "solve.thermal_frame_3d",
-        "thermo_mechanical",
-        "thermal_frame_3d",
-        "Solve a thermal 3D frame model with restrained expansion and temperature gradients.",
-        ["verified", "thermo_mechanical", "frame", "3d"]
-      ),
-      built_in_solver_descriptor(
-        "solve.electrostatic_bar_1d",
-        "electromagnetic",
-        "electrostatic_bar_1d",
-        "Solve a 1D electrostatic bar model and expose potential, field, and flux results.",
-        ["verified", "electromagnetic", "electrostatic", "bar", "1d"]
-      ),
-      built_in_solver_descriptor(
-        "solve.electrostatic_plane_triangle_2d",
-        "electromagnetic",
-        "electrostatic_plane_triangle_2d",
-        "Solve a 2D electrostatic triangle model and expose potential, field, and flux results.",
-        ["verified", "electromagnetic", "electrostatic", "plane", "triangle", "2d"]
-      ),
-      built_in_solver_descriptor(
-        "solve.electrostatic_plane_quad_2d",
-        "electromagnetic",
-        "electrostatic_plane_quad_2d",
-        "Solve a 2D electrostatic quad model and expose potential, field, and flux results.",
-        ["verified", "electromagnetic", "electrostatic", "plane", "quad", "2d"]
-      ),
-      built_in_solver_descriptor(
-        "solve.heat_plane_quad_2d",
-        "thermal",
-        "heat_plane_quad_2d",
-        "Solve a 2D heat-conduction quad model and expose verified temperature/flux fields.",
-        ["verified", "thermal", "heat", "plane", "2d"]
-      ),
-      built_in_solver_descriptor(
-        "solve.thermal_truss_3d",
-        "thermo_mechanical",
-        "thermal_truss_3d",
-        "Solve a thermal 3D truss model with expansion-driven axial response.",
-        ["verified", "thermo_mechanical", "truss", "3d"]
-      ),
-      built_in_bridge_descriptor(
-        "bridge.temperature_field_to_thermo_quad_2d",
-        "thermo_mechanical",
-        "thermal_plane_quad_2d",
-        "Bridge a heat quad temperature field into a thermal quad structural model.",
-        ["workflow_bridge", "temperature_field", "quad", "2d"],
-        %{"schema" => "kyuubiki.bridge-contract.heat_to_thermo.v1", "version" => "1"},
-        %{
-          "seed_model" => thermo_quad_seed_model_example(),
-          "contract" => heat_to_thermo_bridge_contract_example()
-        }
-      ),
-      %{
-        "id" => "bridge.electrostatic_field_to_heat_quad_2d",
-        "version" => "1.0.0",
-        "domain" => "electromagnetic",
-        "family" => "electrostatic_to_heat_quad_2d",
-        "kind" => "workflow_bridge",
-        "summary" =>
-          "Bridge electrostatic quad field magnitudes into nodal heat loads for a downstream heat quad model.",
-        "capability_tags" => ["workflow_bridge", "electrostatic", "heat", "quad", "2d"],
-        "origin" => "built_in",
-        "input_schema" => %{
-          "schema" => "kyuubiki.operator.electrostatic_to_heat_quad_2d.bridge_input",
-          "version" => "1"
-        },
-        "output_schema" => %{
-          "schema" => "kyuubiki.operator.electrostatic_to_heat_quad_2d.bridge_output",
-          "version" => "1"
-        },
-        "config_schema" => %{
-          "schema" => "kyuubiki.bridge-contract.electrostatic_to_heat.v1",
-          "version" => "1"
-        },
-        "config_example" => %{
-          "contract" => electrostatic_to_heat_bridge_contract_example(50.0)
-        },
-        "inputs" => [
-          %{
-            "id" => "electrostatic_result",
-            "artifact_type" => "result/electrostatic_plane_quad_2d",
-            "description" => "Electrostatic quad result payload to bridge from",
-            "dataset_value" => "electrostatic_result",
-            "schema_ref" => %{
-              "schema" => "kyuubiki.operator.electrostatic_plane_quad_2d.output",
-              "version" => "1"
-            }
-          }
-        ],
-        "outputs" => [
-          %{
-            "id" => "heat_model",
-            "artifact_type" => "study_model/heat_plane_quad_2d",
-            "description" => "Heat quad model with bridged nodal heat loads",
-            "dataset_value" => "heat_model",
-            "schema_ref" => %{
-              "schema" => "kyuubiki.operator.heat_plane_quad_2d.input",
-              "version" => "1"
-            }
-          }
-        ],
-        "validation" =>
-          verified_operator_validation_profile(
-            "electrostatic_to_heat_quad_2d",
-            ["workflow_graph", "catalog_job"]
-          )
-      },
-      built_in_extract_descriptor(
-        "extract.result_summary",
-        "multi_domain",
-        "result_summary",
-        "Extract a compact summary from a solver result artifact.",
-        ["extract", "summary", "headless_safe"]
-      ),
-      built_in_export_descriptor(
-        "export.summary_json",
-        "multi_domain",
-        "summary_json",
-        "Export a compact summary artifact as structured JSON content.",
-        ["export", "json", "summary", "headless_safe"]
-      ),
-      built_in_export_descriptor(
-        "export.summary_csv",
-        "multi_domain",
-        "summary_csv",
-        "Export a compact summary artifact as CSV text for downstream delivery.",
-        ["export", "csv", "summary", "headless_safe"]
-      )
-    ]
-  end
-
-  defp built_in_workflow_catalog do
-    [
-      %{
-        "id" => "workflow.electrostatic-to-heat-quad-2d",
-        "name" => "Electrostatic to heat quad",
-        "version" => "1.0.0",
-        "summary" =>
-          "Solves an electrostatic quad model, bridges field magnitude into a heat quad study, then extracts and exports a heat summary.",
-        "graph" => electrostatic_to_heat_quad_graph(),
-        "entry_inputs" => [
-          %{
-            "node_id" => "electrostatic_model",
-            "artifact_type" => "study_model/electrostatic_plane_quad_2d",
-            "description" =>
-              "Electrostatic plane quad study model used as the workflow entry artifact."
-          }
-        ],
-        "output_artifacts" => [
-          %{
-            "node_id" => "json_output",
-            "artifact_type" => "export/json",
-            "description" => "JSON-encoded heat summary after bridging the electrostatic field."
-          }
-        ]
-      },
-      %{
-        "id" => "workflow.electrostatic-plane-quad-2d",
-        "name" => "Electrostatic plane quad",
-        "version" => "1.0.0",
-        "summary" =>
-          "Solves a 2D electrostatic quad model, extracts the peak field metrics, and exports a JSON summary artifact.",
-        "graph" => electrostatic_plane_quad_graph(),
-        "entry_inputs" => [
-          %{
-            "node_id" => "electrostatic_model",
-            "artifact_type" => "study_model/electrostatic_plane_quad_2d",
-            "description" =>
-              "Electrostatic plane quad study model used as the workflow entry artifact."
-          }
-        ],
-        "output_artifacts" => [
-          %{
-            "node_id" => "json_output",
-            "artifact_type" => "export/json",
-            "description" => "JSON-encoded summary for the electrostatic quad solve."
-          }
-        ]
-      },
-      %{
-        "id" => "workflow.heat-to-thermo-quad-2d",
-        "name" => "Heat to thermo quad",
-        "version" => "1.0.0",
-        "summary" =>
-          "Solves a heat plane quad model, bridges the temperature field into a thermo-mechanical quad model, then extracts and exports a summary.",
-        "graph" => heat_to_thermo_quad_graph(),
-        "entry_inputs" => [
-          %{
-            "node_id" => "heat_model",
-            "artifact_type" => "study_model/heat_plane_quad_2d",
-            "description" => "Heat plane quad study model used as the workflow entry artifact."
-          }
-        ],
-        "output_artifacts" => [
-          %{
-            "node_id" => "json_output",
-            "artifact_type" => "export/json",
-            "description" => "JSON-encoded result summary for the final thermo-mechanical solve."
-          }
-        ]
-      }
-    ]
-  end
-
-  defp built_in_solver_descriptor(id, domain, family, summary, capability_tags) do
-    %{
-      "id" => id,
-      "version" => "1.0.0",
-      "domain" => domain,
-      "family" => family,
-      "kind" => "solver",
-      "summary" => summary,
-      "capability_tags" => capability_tags,
-      "origin" => "built_in",
-      "input_schema" => %{"schema" => "kyuubiki.operator.#{family}.input", "version" => "1"},
-      "output_schema" => %{"schema" => "kyuubiki.operator.#{family}.output", "version" => "1"},
-      "inputs" => [
-        operator_port_descriptor(
-          "model",
-          "model/#{family}",
-          "Primary operator model input",
-          "model",
-          "kyuubiki.operator.#{family}.input"
-        )
-      ],
-      "outputs" => [
-        operator_port_descriptor(
-          "result",
-          "result/#{family}",
-          "Primary operator result output",
-          "result",
-          "kyuubiki.operator.#{family}.output"
-        )
-      ],
-      "validation" =>
-        verified_operator_validation_profile(family, ["workflow_graph", "orchestrated_api"])
-    }
-  end
-
-  defp built_in_bridge_descriptor(
-         id,
-         domain,
-         family,
-         summary,
-         capability_tags,
-         config_schema,
-         config_example
-       ) do
-    base = %{
-      "id" => id,
-      "version" => "1.0.0",
-      "domain" => domain,
-      "family" => family,
-      "kind" => "workflow_bridge",
-      "summary" => summary,
-      "capability_tags" => capability_tags,
-      "origin" => "built_in",
-      "input_schema" => %{
-        "schema" => "kyuubiki.operator.#{family}.bridge_input",
-        "version" => "1"
-      },
-      "output_schema" => %{
-        "schema" => "kyuubiki.operator.#{family}.bridge_output",
-        "version" => "1"
-      },
-      "inputs" => [
-        operator_port_descriptor(
-          "source",
-          "result/#{family}_bridge_source",
-          "Upstream workflow bridge payload",
-          "upstream_result",
-          "kyuubiki.operator.#{family}.bridge_input"
-        )
-      ],
-      "outputs" => [
-        operator_port_descriptor(
-          "bridged_model",
-          "model/#{family}",
-          "Downstream bridged model payload",
-          "bridged_model",
-          "kyuubiki.operator.#{family}.bridge_output"
-        )
-      ],
-      "validation" =>
-        verified_operator_validation_profile(family, ["workflow_graph", "catalog_job"])
-    }
-
-    base
-    |> maybe_put_descriptor_field("config_schema", config_schema)
-    |> maybe_put_descriptor_field("config_example", config_example)
-  end
-
-  defp built_in_extract_descriptor(id, domain, family, summary, capability_tags) do
-    %{
-      "id" => id,
-      "version" => "1.0.0",
-      "domain" => domain,
-      "family" => family,
-      "kind" => "extract",
-      "summary" => summary,
-      "capability_tags" => capability_tags,
-      "origin" => "built_in",
-      "input_schema" => %{
-        "schema" => "kyuubiki.operator.#{family}.extract_input",
-        "version" => "1"
-      },
-      "output_schema" => %{
-        "schema" => "kyuubiki.operator.#{family}.extract_output",
-        "version" => "1"
-      },
-      "inputs" => [
-        operator_port_descriptor(
-          "result",
-          "result/any",
-          "Result payload to extract from",
-          "result",
-          "kyuubiki.operator.#{family}.extract_input"
-        )
-      ],
-      "outputs" => [
-        operator_port_descriptor(
-          "summary",
-          "extract/#{family}",
-          "Extracted summary payload",
-          "summary",
-          "kyuubiki.operator.#{family}.extract_output"
-        )
-      ],
-      "validation" =>
-        verified_operator_validation_profile(family, ["workflow_graph", "draft_builder"])
-    }
-  end
-
-  defp built_in_export_descriptor(id, domain, family, summary, capability_tags) do
-    %{
-      "id" => id,
-      "version" => "1.0.0",
-      "domain" => domain,
-      "family" => family,
-      "kind" => "export",
-      "summary" => summary,
-      "capability_tags" => capability_tags,
-      "origin" => "built_in",
-      "input_schema" => %{
-        "schema" => "kyuubiki.operator.#{family}.export_input",
-        "version" => "1"
-      },
-      "output_schema" => %{
-        "schema" => "kyuubiki.operator.#{family}.export_output",
-        "version" => "1"
-      },
-      "inputs" => [
-        operator_port_descriptor(
-          "summary",
-          "extract/result_summary",
-          "Summary payload to export",
-          "summary",
-          "kyuubiki.operator.#{family}.export_input"
-        )
-      ],
-      "outputs" => [
-        operator_port_descriptor(
-          "export_artifact",
-          "export/#{family}",
-          "Exported delivery artifact",
-          "export_artifact",
-          "kyuubiki.operator.#{family}.export_output"
-        )
-      ],
-      "validation" =>
-        verified_operator_validation_profile(family, ["workflow_graph", "draft_builder"])
-    }
-  end
-
-  defp operator_port_descriptor(id, artifact_type, description, dataset_value, schema_ref) do
-    %{
-      "id" => id,
-      "artifact_type" => artifact_type,
-      "description" => description,
-      "dataset_value" => dataset_value,
-      "schema_ref" => %{"schema" => schema_ref, "version" => "1"}
-    }
-  end
-
-  defp verified_operator_validation_profile(family, smoke_paths) do
-    %{
-      "baseline_status" => "verified",
-      "baseline_cases" => ["#{family}_baseline"],
-      "smoke_paths" => smoke_paths
-    }
-  end
-
-  defp workflow_graph_by_id("workflow.electrostatic-to-heat-quad-2d"),
-    do: {:ok, electrostatic_to_heat_quad_graph()}
-
-  defp workflow_graph_by_id("workflow.electrostatic-plane-quad-2d"),
-    do: {:ok, electrostatic_plane_quad_graph()}
-
-  defp workflow_graph_by_id("workflow.heat-to-thermo-quad-2d"),
-    do: {:ok, heat_to_thermo_quad_graph()}
-
-  defp workflow_graph_by_id(workflow_id), do: {:error, {:workflow_not_found, workflow_id}}
-
-  defp electrostatic_plane_quad_graph do
-    %{
-      "schema_version" => "kyuubiki.workflow-graph/v1",
-      "id" => "workflow.electrostatic-plane-quad-2d",
-      "name" => "Electrostatic plane quad",
-      "version" => "1.0.0",
-      "entry_nodes" => ["electrostatic_model"],
-      "output_nodes" => ["json_output"],
-      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
-      "nodes" => [
-        %{
-          "id" => "electrostatic_model",
-          "kind" => "input",
-          "outputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "solve_electrostatic",
-          "kind" => "solve",
-          "operator_id" => "solve.electrostatic_plane_quad_2d",
-          "inputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
-          ],
-          "outputs" => [
-            %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "extract_summary",
-          "kind" => "extract",
-          "operator_id" => "extract.result_summary",
-          "config" => %{
-            "fields" => ["max_potential", "max_electric_field", "max_flux_density"]
-          },
-          "inputs" => [
-            %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
-          ],
-          "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
-        },
-        %{
-          "id" => "export_json",
-          "kind" => "export",
-          "operator_id" => "export.summary_json",
-          "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
-          "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
-        },
-        %{
-          "id" => "json_output",
-          "kind" => "output",
-          "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
-          "outputs" => []
-        }
-      ],
-      "edges" => [
-        %{
-          "id" => "e0",
-          "from" => %{"node" => "electrostatic_model", "port" => "model"},
-          "to" => %{"node" => "solve_electrostatic", "port" => "model"},
-          "artifact_type" => "study_model/electrostatic_plane_quad_2d"
-        },
-        %{
-          "id" => "e1",
-          "from" => %{"node" => "solve_electrostatic", "port" => "result"},
-          "to" => %{"node" => "extract_summary", "port" => "result"},
-          "artifact_type" => "result/electrostatic_plane_quad_2d"
-        },
-        %{
-          "id" => "e2",
-          "from" => %{"node" => "extract_summary", "port" => "summary"},
-          "to" => %{"node" => "export_json", "port" => "summary"},
-          "artifact_type" => "report/summary"
-        },
-        %{
-          "id" => "e3",
-          "from" => %{"node" => "export_json", "port" => "json"},
-          "to" => %{"node" => "json_output", "port" => "json"},
-          "artifact_type" => "export/json"
-        }
-      ]
-    }
-  end
-
-  defp electrostatic_to_heat_quad_graph do
-    %{
-      "schema_version" => "kyuubiki.workflow-graph/v1",
-      "id" => "workflow.electrostatic-to-heat-quad-2d",
-      "name" => "Electrostatic to heat quad",
-      "version" => "1.0.0",
-      "entry_nodes" => ["electrostatic_model"],
-      "output_nodes" => ["json_output"],
-      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
-      "nodes" => [
-        %{
-          "id" => "electrostatic_model",
-          "kind" => "input",
-          "outputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "solve_electrostatic",
-          "kind" => "solve",
-          "operator_id" => "solve.electrostatic_plane_quad_2d",
-          "inputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/electrostatic_plane_quad_2d"}
-          ],
-          "outputs" => [
-            %{"id" => "result", "artifact_type" => "result/electrostatic_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "bridge_field_to_heat",
-          "kind" => "transform",
-          "operator_id" => "bridge.electrostatic_field_to_heat_quad_2d",
-          "config" => %{
-            "seed_model" => %{
-              "nodes" => [
-                %{
-                  "id" => "n0",
-                  "x" => 0.0,
-                  "y" => 0.0,
-                  "fix_temperature" => true,
-                  "temperature" => 20.0,
-                  "heat_load" => 0.0
-                },
-                %{
-                  "id" => "n1",
-                  "x" => 1.0,
-                  "y" => 0.0,
-                  "fix_temperature" => false,
-                  "temperature" => 0.0,
-                  "heat_load" => 0.0
-                },
-                %{
-                  "id" => "n2",
-                  "x" => 1.0,
-                  "y" => 1.0,
-                  "fix_temperature" => false,
-                  "temperature" => 0.0,
-                  "heat_load" => 0.0
-                },
-                %{
-                  "id" => "n3",
-                  "x" => 0.0,
-                  "y" => 1.0,
-                  "fix_temperature" => true,
-                  "temperature" => 20.0,
-                  "heat_load" => 0.0
-                }
-              ],
-              "elements" => [
-                %{
-                  "id" => "hq0",
-                  "node_i" => 0,
-                  "node_j" => 1,
-                  "node_k" => 2,
-                  "node_l" => 3,
-                  "thickness" => 0.02,
-                  "conductivity" => 45.0
-                }
-              ]
-            },
-            "contract" => electrostatic_to_heat_bridge_contract_example(50.0)
-          },
-          "inputs" => [
-            %{
-              "id" => "electrostatic_result",
-              "artifact_type" => "result/electrostatic_plane_quad_2d"
-            }
-          ],
-          "outputs" => [
-            %{"id" => "heat_model", "artifact_type" => "study_model/heat_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "solve_heat",
-          "kind" => "solve",
-          "operator_id" => "solve.heat_plane_quad_2d",
-          "inputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
-          ],
-          "outputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}]
-        },
-        %{
-          "id" => "extract_summary",
-          "kind" => "extract",
-          "operator_id" => "extract.result_summary",
-          "config" => %{"fields" => ["max_temperature", "max_heat_flux"]},
-          "inputs" => [
-            %{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}
-          ],
-          "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
-        },
-        %{
-          "id" => "export_json",
-          "kind" => "export",
-          "operator_id" => "export.summary_json",
-          "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
-          "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
-        },
-        %{
-          "id" => "json_output",
-          "kind" => "output",
-          "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
-          "outputs" => []
-        }
-      ],
-      "edges" => [
-        %{
-          "id" => "e0",
-          "from" => %{"node" => "electrostatic_model", "port" => "model"},
-          "to" => %{"node" => "solve_electrostatic", "port" => "model"},
-          "artifact_type" => "study_model/electrostatic_plane_quad_2d"
-        },
-        %{
-          "id" => "e1",
-          "from" => %{"node" => "solve_electrostatic", "port" => "result"},
-          "to" => %{"node" => "bridge_field_to_heat", "port" => "electrostatic_result"},
-          "artifact_type" => "result/electrostatic_plane_quad_2d"
-        },
-        %{
-          "id" => "e2",
-          "from" => %{"node" => "bridge_field_to_heat", "port" => "heat_model"},
-          "to" => %{"node" => "solve_heat", "port" => "model"},
-          "artifact_type" => "study_model/heat_plane_quad_2d"
-        },
-        %{
-          "id" => "e3",
-          "from" => %{"node" => "solve_heat", "port" => "result"},
-          "to" => %{"node" => "extract_summary", "port" => "result"},
-          "artifact_type" => "result/heat_plane_quad_2d"
-        },
-        %{
-          "id" => "e4",
-          "from" => %{"node" => "extract_summary", "port" => "summary"},
-          "to" => %{"node" => "export_json", "port" => "summary"},
-          "artifact_type" => "report/summary"
-        },
-        %{
-          "id" => "e5",
-          "from" => %{"node" => "export_json", "port" => "json"},
-          "to" => %{"node" => "json_output", "port" => "json"},
-          "artifact_type" => "export/json"
-        }
-      ]
-    }
-  end
-
-  defp heat_to_thermo_quad_graph do
-    %{
-      "schema_version" => "kyuubiki.workflow-graph/v1",
-      "id" => "workflow.heat-to-thermo-quad-2d",
-      "name" => "Heat to thermo quad",
-      "version" => "1.0.0",
-      "entry_nodes" => ["heat_model"],
-      "output_nodes" => ["json_output"],
-      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
-      "nodes" => [
-        %{
-          "id" => "heat_model",
-          "kind" => "input",
-          "outputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "solve_heat",
-          "kind" => "solve",
-          "operator_id" => "solve.heat_plane_quad_2d",
-          "inputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/heat_plane_quad_2d"}
-          ],
-          "outputs" => [%{"id" => "result", "artifact_type" => "result/heat_plane_quad_2d"}]
-        },
-        %{
-          "id" => "bridge_temperature",
-          "kind" => "transform",
-          "operator_id" => "bridge.temperature_field_to_thermo_quad_2d",
-          "config" => %{
-            "seed_model" => thermo_quad_seed_model_example(),
-            "contract" => heat_to_thermo_bridge_contract_example()
-          },
-          "inputs" => [
-            %{"id" => "heat_result", "artifact_type" => "result/heat_plane_quad_2d"}
-          ],
-          "outputs" => [
-            %{
-              "id" => "thermo_model",
-              "artifact_type" => "study_model/thermal_plane_quad_2d"
-            }
-          ]
-        },
-        %{
-          "id" => "solve_thermo",
-          "kind" => "solve",
-          "operator_id" => "solve.thermal_plane_quad_2d",
-          "inputs" => [
-            %{"id" => "model", "artifact_type" => "study_model/thermal_plane_quad_2d"}
-          ],
-          "outputs" => [
-            %{"id" => "result", "artifact_type" => "result/thermal_plane_quad_2d"}
-          ]
-        },
-        %{
-          "id" => "extract_summary",
-          "kind" => "extract",
-          "operator_id" => "extract.result_summary",
-          "inputs" => [
-            %{"id" => "result", "artifact_type" => "result/thermal_plane_quad_2d"}
-          ],
-          "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
-        },
-        %{
-          "id" => "export_json",
-          "kind" => "export",
-          "operator_id" => "export.summary_json",
-          "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
-          "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
-        },
-        %{
-          "id" => "json_output",
-          "kind" => "output",
-          "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
-          "outputs" => []
-        }
-      ],
-      "edges" => [
-        %{
-          "id" => "e0",
-          "from" => %{"node" => "heat_model", "port" => "model"},
-          "to" => %{"node" => "solve_heat", "port" => "model"},
-          "artifact_type" => "study_model/heat_plane_quad_2d"
-        },
-        %{
-          "id" => "e1",
-          "from" => %{"node" => "solve_heat", "port" => "result"},
-          "to" => %{"node" => "bridge_temperature", "port" => "heat_result"},
-          "artifact_type" => "result/heat_plane_quad_2d"
-        },
-        %{
-          "id" => "e2",
-          "from" => %{"node" => "bridge_temperature", "port" => "thermo_model"},
-          "to" => %{"node" => "solve_thermo", "port" => "model"},
-          "artifact_type" => "study_model/thermal_plane_quad_2d"
-        },
-        %{
-          "id" => "e3",
-          "from" => %{"node" => "solve_thermo", "port" => "result"},
-          "to" => %{"node" => "extract_summary", "port" => "result"},
-          "artifact_type" => "result/thermal_plane_quad_2d"
-        },
-        %{
-          "id" => "e4",
-          "from" => %{"node" => "extract_summary", "port" => "summary"},
-          "to" => %{"node" => "export_json", "port" => "summary"},
-          "artifact_type" => "report/summary"
-        },
-        %{
-          "id" => "e5",
-          "from" => %{"node" => "export_json", "port" => "json"},
-          "to" => %{"node" => "json_output", "port" => "json"},
-          "artifact_type" => "export/json"
-        }
-      ]
-    }
-  end
 
   defp execute_workflow_graph(graph, input_artifacts) do
     execute_workflow_graph(graph, input_artifacts, nil)
   end
 
-  defp execute_workflow_graph(
-         %{"nodes" => nodes} = graph,
-         input_artifacts,
-         progress_callback
-       )
-       when is_list(nodes) and is_map(input_artifacts) and
+  defp execute_workflow_graph(%{} = graph, input_artifacts, progress_callback)
+       when is_map(input_artifacts) and
               (is_nil(progress_callback) or is_function(progress_callback, 1)) do
-    edges = Map.get(graph, "edges", [])
-
-    do_execute_workflow_graph(
-      nodes,
-      edges,
+    WorkflowGraphRunner.run(
+      graph,
       input_artifacts,
-      MapSet.new(),
-      [],
-      %{},
-      progress_callback
+      progress_callback: progress_callback,
+      execute_solve: &WorkflowOperatorRuntime.run_solve_operator/2,
+      execute_transform: &WorkflowOperatorRuntime.run_transform_operator/3,
+      execute_extract: &WorkflowOperatorRuntime.run_extract_operator/3,
+      execute_export: &WorkflowOperatorRuntime.run_export_operator/3
     )
   end
 
   defp execute_workflow_graph(_graph, _input_artifacts, _progress_callback),
     do: {:error, :invalid_workflow_graph}
-
-  defp do_execute_workflow_graph(
-         nodes,
-         edges,
-         input_artifacts,
-         completed,
-         ordered,
-         artifacts,
-         progress_callback
-       ) do
-    {next_completed, next_ordered, next_artifacts, progressed?} =
-      Enum.reduce(nodes, {completed, ordered, artifacts, false}, fn node,
-                                                                    {done, order, acc, moved?} ->
-        node_id = Map.get(node, "id")
-
-        cond do
-          MapSet.member?(done, node_id) ->
-            {done, order, acc, moved?}
-
-          true ->
-            incoming = Enum.filter(edges, &(get_in(&1, ["to", "node"]) == node_id))
-            kind = Map.get(node, "kind")
-            ready? = kind == "input" or Enum.all?(incoming, &Map.has_key?(acc, edge_from_key(&1)))
-
-            if ready? do
-              case execute_workflow_node(node, incoming, input_artifacts, acc) do
-                {:ok, updated_artifacts} ->
-                  next_order = order ++ [node_id]
-                  next_done = MapSet.put(done, node_id)
-
-                  if is_function(progress_callback, 1) do
-                    progress_callback.(%{
-                      "node_id" => node_id,
-                      "completed_nodes" => length(next_order),
-                      "total_nodes" => length(nodes)
-                    })
-                  end
-
-                  {
-                    next_done,
-                    next_order,
-                    updated_artifacts,
-                    true
-                  }
-
-                {:error, reason} ->
-                  throw({:workflow_node_error, node_id, reason})
-              end
-            else
-              {done, order, acc, moved?}
-            end
-        end
-      end)
-
-    if MapSet.size(next_completed) == length(nodes) do
-      {:ok, next_ordered, next_artifacts}
-    else
-      if progressed? do
-        do_execute_workflow_graph(
-          nodes,
-          edges,
-          input_artifacts,
-          next_completed,
-          next_ordered,
-          next_artifacts,
-          progress_callback
-        )
-      else
-        pending =
-          nodes
-          |> Enum.map(&Map.get(&1, "id"))
-          |> Enum.reject(&MapSet.member?(next_completed, &1))
-
-        {:error, {:workflow_stalled, pending}}
-      end
-    end
-  catch
-    {:workflow_node_error, node_id, reason} ->
-      {:error, {:workflow_node_error, node_id, reason}}
-
-    {:workflow_cancelled, node_id} ->
-      {:error, {:workflow_cancelled, node_id}}
-  end
-
-  defp execute_workflow_node(
-         %{"kind" => "input", "id" => node_id} = node,
-         _incoming,
-         inputs,
-         artifacts
-       ) do
-    case Map.fetch(inputs, node_id) do
-      {:ok, value} ->
-        updated =
-          Enum.reduce(Map.get(node, "outputs", []), artifacts, fn output, acc ->
-            Map.put(acc, artifact_key(node_id, Map.get(output, "id")), value)
-          end)
-
-        {:ok, updated}
-
-      :error ->
-        {:error, :missing_input_artifact}
-    end
-  end
-
-  defp execute_workflow_node(%{"kind" => "solve"} = node, incoming, _inputs, artifacts) do
-    with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
-         {:ok, result} <- run_workflow_solve_operator(operator_id, payload) do
-      {:ok, publish_node_outputs(node, result, artifacts)}
-    end
-  end
-
-  defp execute_workflow_node(%{"kind" => "transform"} = node, incoming, _inputs, artifacts) do
-    with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
-         {:ok, result} <-
-           run_workflow_transform_operator(operator_id, payload, Map.get(node, "config")) do
-      {:ok, publish_node_outputs(node, result, artifacts)}
-    end
-  end
-
-  defp execute_workflow_node(%{"kind" => "extract"} = node, incoming, _inputs, artifacts) do
-    with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
-         {:ok, result} <-
-           run_workflow_extract_operator(operator_id, payload, Map.get(node, "config")) do
-      {:ok, publish_node_outputs(node, result, artifacts)}
-    end
-  end
-
-  defp execute_workflow_node(%{"kind" => "export"} = node, incoming, _inputs, artifacts) do
-    with {:ok, operator_id} <- fetch_operator_id(node),
-         {:ok, payload} <- resolve_single_input_payload(node, incoming, artifacts),
-         {:ok, result} <-
-           run_workflow_export_operator(operator_id, payload, Map.get(node, "config")) do
-      {:ok, publish_node_outputs(node, result, artifacts)}
-    end
-  end
-
-  defp execute_workflow_node(%{"kind" => "output"} = node, incoming, _inputs, artifacts) do
-    updated =
-      Enum.reduce(incoming, artifacts, fn edge, acc ->
-        Map.put(
-          acc,
-          artifact_key(Map.get(node, "id"), get_in(edge, ["to", "port"])),
-          Map.fetch!(acc, edge_from_key(edge))
-        )
-      end)
-
-    {:ok, updated}
-  end
-
-  defp execute_workflow_node(%{"kind" => kind}, _incoming, _inputs, _artifacts),
-    do: {:error, {:unsupported_workflow_node_kind, kind}}
-
-  defp fetch_operator_id(%{"operator_id" => operator_id})
-       when is_binary(operator_id) and operator_id != "",
-       do: {:ok, operator_id}
-
-  defp fetch_operator_id(_node), do: {:error, :missing_operator_id}
-
-  defp resolve_single_input_payload(%{"id" => node_id}, incoming, artifacts) do
-    case incoming do
-      [first | _] ->
-        key = edge_from_key(first)
-
-        case Map.fetch(artifacts, key) do
-          {:ok, value} -> {:ok, value}
-          :error -> {:error, {:missing_upstream_artifact, key}}
-        end
-
-      [] ->
-        {:error, {:missing_workflow_input, node_id}}
-    end
-  end
-
-  defp publish_node_outputs(node, value, artifacts) do
-    Enum.reduce(Map.get(node, "outputs", []), artifacts, fn output, acc ->
-      Map.put(acc, artifact_key(Map.get(node, "id"), Map.get(output, "id")), value)
-    end)
-  end
-
-  defp run_workflow_solve_operator("solve.electrostatic_plane_quad_2d", payload)
-       when is_map(payload) do
-    AgentClient.solve_electrostatic_plane_quad_2d(payload)
-  end
-
-  defp run_workflow_solve_operator("solve.heat_plane_quad_2d", payload) when is_map(payload) do
-    AgentClient.solve_heat_plane_quad_2d(payload)
-  end
-
-  defp run_workflow_solve_operator("solve.thermal_plane_quad_2d", payload) when is_map(payload) do
-    AgentClient.solve_thermal_plane_quad_2d(payload)
-  end
-
-  defp run_workflow_solve_operator(operator_id, _payload),
-    do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
-
-  defp run_workflow_transform_operator(
-         "bridge.temperature_field_to_thermo_quad_2d",
-         heat_result,
-         %{"seed_model" => thermo_seed_model} = config
-       )
-       when is_map(heat_result) and is_map(thermo_seed_model) and is_map(config) do
-    with {:ok, bridge_contract} <- resolve_heat_to_thermo_bridge_contract(config) do
-      bridge_heat_result_to_thermal_plane_quad_model(
-        heat_result,
-        thermo_seed_model,
-        bridge_contract
-      )
-    end
-  end
-
-  defp run_workflow_transform_operator(
-         "bridge.temperature_field_to_thermo_quad_2d",
-         heat_result,
-         thermo_seed_model
-       )
-       when is_map(heat_result) and is_map(thermo_seed_model) do
-    bridge_heat_result_to_thermal_plane_quad_model(heat_result, thermo_seed_model)
-  end
-
-  defp run_workflow_transform_operator(
-         "bridge.electrostatic_field_to_heat_quad_2d",
-         electrostatic_result,
-         %{"seed_model" => heat_seed_model} = config
-       )
-       when is_map(electrostatic_result) and is_map(heat_seed_model) and is_map(config) do
-    with {:ok, bridge_contract} <- resolve_electrostatic_to_heat_bridge_contract(config) do
-      bridge_electrostatic_result_to_heat_plane_quad_model(
-        electrostatic_result,
-        heat_seed_model,
-        bridge_contract
-      )
-    end
-  end
-
-  defp run_workflow_transform_operator(operator_id, _payload, _config),
-    do: {:error, {:unsupported_workflow_transform_operator, operator_id}}
-
-  defp run_workflow_extract_operator("extract.result_summary", payload, config)
-       when is_map(payload) do
-    extract_result_summary(payload, config || %{})
-  end
-
-  defp run_workflow_extract_operator(operator_id, _payload, _config),
-    do: {:error, {:unsupported_workflow_extract_operator, operator_id}}
-
-  defp run_workflow_export_operator("export.summary_json", payload, _config)
-       when is_map(payload) do
-    export_summary_json(payload)
-  end
-
-  defp run_workflow_export_operator("export.summary_csv", payload, config) when is_map(payload) do
-    export_summary_csv(payload, config || %{})
-  end
-
-  defp run_workflow_export_operator(operator_id, _payload, _config),
-    do: {:error, {:unsupported_workflow_export_operator, operator_id}}
-
-  defp extract_result_summary(payload, config) when is_map(payload) and is_map(config) do
-    requested_fields =
-      case Map.get(config, "fields") do
-        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
-        _ -> nil
-      end
-
-    summary =
-      cond do
-        is_list(requested_fields) ->
-          Enum.reduce(requested_fields, %{}, fn field, acc ->
-            case Map.fetch(payload, field) do
-              {:ok, value} -> Map.put(acc, field, value)
-              :error -> acc
-            end
-          end)
-
-        true ->
-          payload
-          |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "max_") end)
-          |> Map.new()
-      end
-
-    if map_size(summary) == 0 do
-      {:error, :empty_summary}
-    else
-      {:ok, summary}
-    end
-  end
-
-  defp export_summary_json(payload) when is_map(payload) do
-    {:ok,
-     %{
-       "format" => "json",
-       "content_type" => "application/json",
-       "content" => Jason.encode!(payload)
-     }}
-  end
-
-  defp export_summary_csv(payload, config) when is_map(payload) and is_map(config) do
-    requested_fields =
-      case Map.get(config, "fields") do
-        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
-        _ -> nil
-      end
-
-    rows =
-      if is_list(requested_fields) do
-        Enum.reduce(requested_fields, [["key", "value"]], fn field, acc ->
-          case Map.fetch(payload, field) do
-            {:ok, value} -> acc ++ [[field, value]]
-            :error -> acc
-          end
-        end)
-      else
-        [["key", "value"]] ++ Enum.map(payload, fn {key, value} -> [key, value] end)
-      end
-
-    if length(rows) == 1 do
-      {:error, :empty_export}
-    else
-      content =
-        rows
-        |> Enum.map_join("\n", fn row -> Enum.map_join(row, ",", &csv_escape/1) end)
-        |> Kernel.<>("\n")
-
-      {:ok,
-       %{
-         "format" => "csv",
-         "content_type" => "text/csv",
-         "content" => content
-       }}
-    end
-  end
-
-  defp bridge_heat_result_to_thermal_plane_quad_model(
-         %{"nodes" => heat_nodes, "input" => %{"elements" => heat_elements}},
-         %{"nodes" => thermo_nodes, "elements" => thermo_elements} = thermo_seed_model
-       )
-       when is_list(heat_nodes) and is_list(heat_elements) and is_list(thermo_nodes) and
-              is_list(thermo_elements) do
-    cond do
-      length(heat_nodes) != length(thermo_nodes) ->
-        {:error, :node_count_mismatch}
-
-      length(heat_elements) != length(thermo_elements) ->
-        {:error, :element_count_mismatch}
-
-      true ->
-        bridged_nodes =
-          Enum.zip(heat_nodes, thermo_nodes)
-          |> Enum.reduce_while([], fn {heat_node, thermo_node}, acc ->
-            if close_enough?(Map.get(heat_node, "x"), Map.get(thermo_node, "x")) and
-                 close_enough?(Map.get(heat_node, "y"), Map.get(thermo_node, "y")) do
-              {:cont,
-               acc ++
-                 [
-                   Map.put(thermo_node, "temperature_delta", Map.get(heat_node, "temperature"))
-                 ]}
-            else
-              {:halt, :mismatch}
-            end
-          end)
-
-        case bridged_nodes do
-          :mismatch -> {:error, :node_alignment_mismatch}
-          nodes -> {:ok, Map.put(thermo_seed_model, "nodes", nodes)}
-        end
-    end
-  end
-
-  defp bridge_heat_result_to_thermal_plane_quad_model(_heat_result, _thermo_seed_model),
-    do: {:error, :invalid_bridge_payload}
-
-  defp bridge_heat_result_to_thermal_plane_quad_model(
-         %{"nodes" => heat_nodes, "input" => %{"elements" => heat_elements}},
-         %{"nodes" => thermo_nodes, "elements" => thermo_elements} = thermo_seed_model,
-         bridge_contract
-       )
-       when is_list(heat_nodes) and is_list(heat_elements) and is_list(thermo_nodes) and
-              is_list(thermo_elements) do
-    cond do
-      length(heat_nodes) != length(thermo_nodes) ->
-        {:error, :node_count_mismatch}
-
-      length(heat_elements) != length(thermo_elements) ->
-        {:error, :element_count_mismatch}
-
-      true ->
-        bridged_nodes =
-          Enum.zip(heat_nodes, thermo_nodes)
-          |> Enum.reduce_while([], fn {heat_node, thermo_node}, acc ->
-            if close_enough?(Map.get(heat_node, "x"), Map.get(thermo_node, "x")) and
-                 close_enough?(Map.get(heat_node, "y"), Map.get(thermo_node, "y")) do
-              {:cont,
-               acc ++
-                 [
-                   Map.put(
-                     thermo_node,
-                     bridge_contract.target_field,
-                     normalize_numeric_value(
-                       Map.get(heat_node, bridge_contract.source_field, bridge_contract.default_value)
-                     ) * bridge_contract.scale
-                   )
-                 ]}
-            else
-              {:halt, :mismatch}
-            end
-          end)
-
-        case bridged_nodes do
-          :mismatch -> {:error, :node_alignment_mismatch}
-          nodes -> {:ok, Map.put(thermo_seed_model, "nodes", nodes)}
-        end
-    end
-  end
-
-  defp bridge_heat_result_to_thermal_plane_quad_model(_heat_result, _thermo_seed_model, _bridge_contract),
-    do: {:error, :invalid_bridge_payload}
-
-  defp bridge_electrostatic_result_to_heat_plane_quad_model(
-         %{"nodes" => electrostatic_nodes, "elements" => electrostatic_elements},
-         %{"nodes" => heat_nodes, "elements" => heat_elements} = heat_seed_model,
-         bridge_contract
-       )
-       when is_list(electrostatic_nodes) and is_list(electrostatic_elements) and
-              is_list(heat_nodes) and is_list(heat_elements) do
-    cond do
-      length(electrostatic_nodes) != length(heat_nodes) ->
-        {:error, :node_count_mismatch}
-
-      true ->
-        with :ok <- ensure_node_alignment(electrostatic_nodes, heat_nodes),
-             nodal_heat_loads <-
-               derive_nodal_target_field(
-                 electrostatic_elements,
-                 length(heat_nodes),
-                 bridge_contract
-               ) do
-          bridged_nodes =
-            Enum.with_index(heat_nodes)
-            |> Enum.map(fn {heat_node, index} ->
-              Map.put(
-                heat_node,
-                bridge_contract.target_field,
-                Enum.at(nodal_heat_loads, index, bridge_contract.default_value)
-              )
-            end)
-
-          {:ok, Map.put(heat_seed_model, "nodes", bridged_nodes)}
-        end
-    end
-  end
-
-  defp bridge_electrostatic_result_to_heat_plane_quad_model(_result, _seed_model, _bridge_contract),
-    do: {:error, :invalid_bridge_payload}
-
-  defp resolve_electrostatic_to_heat_bridge_contract(config) when is_map(config) do
-    contract = Map.get(config, "contract", %{})
-
-    with {:ok, source_field} <-
-           normalize_contract_string(
-             get_in(contract, ["source", "field"]) || "electric_field_magnitude",
-             :invalid_bridge_contract_source_field
-           ),
-         {:ok, distribution} <-
-           normalize_contract_string(
-             get_in(contract, ["source", "distribution"]) || "element_to_nodes",
-             :invalid_bridge_contract_distribution
-           ),
-         :ok <- validate_bridge_distribution(distribution),
-         {:ok, node_index_fields} <-
-           normalize_node_index_fields(
-             get_in(contract, ["source", "node_index_fields"]) ||
-               ["node_i", "node_j", "node_k", "node_l"]
-           ),
-         {:ok, scale} <-
-           normalize_bridge_scale(
-             get_in(contract, ["transform", "scale"]) || Map.get(config, "field_to_heat_scale")
-           ),
-         {:ok, reduction} <-
-           normalize_contract_string(
-             get_in(contract, ["transform", "reduction"]) || "mean",
-             :invalid_bridge_contract_reduction
-           ),
-         :ok <- validate_bridge_reduction(reduction),
-         {:ok, default_value} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0),
-         {:ok, target_field} <-
-           normalize_contract_string(
-             get_in(contract, ["target", "field"]) || "heat_load",
-             :invalid_bridge_contract_target_field
-           ) do
-      {:ok,
-       %{
-         source_field: source_field,
-         distribution: distribution,
-         node_index_fields: node_index_fields,
-         scale: scale,
-         reduction: reduction,
-         default_value: default_value,
-         target_field: target_field
-       }}
-    end
-  end
-
-  defp resolve_electrostatic_to_heat_bridge_contract(_config),
-    do: {:error, :invalid_bridge_contract}
-
-  defp resolve_heat_to_thermo_bridge_contract(config) when is_map(config) do
-    contract = Map.get(config, "contract", %{})
-
-    with {:ok, source_field} <-
-           normalize_contract_string(
-             get_in(contract, ["source", "field"]) || "temperature",
-             :invalid_bridge_contract_source_field
-           ),
-         {:ok, target_field} <-
-           normalize_contract_string(
-             get_in(contract, ["target", "field"]) || "temperature_delta",
-             :invalid_bridge_contract_target_field
-           ),
-         {:ok, scale} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "scale"]) || 1.0),
-         {:ok, default_value} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0) do
-      {:ok,
-       %{
-         source_field: source_field,
-         target_field: target_field,
-         scale: scale,
-         default_value: default_value
-       }}
-    end
-  end
-
-  defp resolve_heat_to_thermo_bridge_contract(_config),
-    do: {:error, :invalid_bridge_contract}
-
-  defp electrostatic_to_heat_bridge_contract_example(scale) do
-    %{
-      "version" => "kyuubiki.bridge-contract/v1",
-      "source" => %{
-        "field" => "electric_field_magnitude",
-        "distribution" => "element_to_nodes",
-        "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
-      },
-      "transform" => %{
-        "scale" => scale,
-        "reduction" => "mean",
-        "default_value" => 0.0
-      },
-      "target" => %{"field" => "heat_load"}
-    }
-  end
-
-  defp heat_to_thermo_bridge_contract_example do
-    %{
-      "version" => "kyuubiki.bridge-contract/v1",
-      "source" => %{"field" => "temperature"},
-      "transform" => %{"scale" => 1.0, "default_value" => 0.0},
-      "target" => %{"field" => "temperature_delta"}
-    }
-  end
-
-  defp thermo_quad_seed_model_example do
-    %{
-      "nodes" => [
-        %{
-          "id" => "h0",
-          "x" => 0.0,
-          "y" => 0.0,
-          "fix_x" => true,
-          "fix_y" => true,
-          "temperature_delta" => 0.0
-        },
-        %{
-          "id" => "h1",
-          "x" => 1.0,
-          "y" => 0.0,
-          "fix_x" => false,
-          "fix_y" => false,
-          "temperature_delta" => 0.0
-        },
-        %{
-          "id" => "h2",
-          "x" => 1.0,
-          "y" => 1.0,
-          "fix_x" => false,
-          "fix_y" => false,
-          "temperature_delta" => 0.0
-        },
-        %{
-          "id" => "h3",
-          "x" => 0.0,
-          "y" => 1.0,
-          "fix_x" => true,
-          "fix_y" => true,
-          "temperature_delta" => 0.0
-        }
-      ],
-      "elements" => [
-        %{
-          "id" => "tq0",
-          "node_i" => 0,
-          "node_j" => 1,
-          "node_k" => 2,
-          "node_l" => 3,
-          "thickness" => 0.02,
-          "youngs_modulus" => 210.0e9,
-          "poisson_ratio" => 0.3,
-          "thermal_expansion" => 11.0e-6
-        }
-      ]
-    }
-  end
-
-  defp maybe_put_descriptor_field(descriptor, _key, nil), do: descriptor
-  defp maybe_put_descriptor_field(descriptor, key, value), do: Map.put(descriptor, key, value)
-
-  defp ensure_node_alignment(source_nodes, target_nodes) do
-    source_nodes
-    |> Enum.zip(target_nodes)
-    |> Enum.reduce_while(:ok, fn {source_node, target_node}, _acc ->
-      if close_enough?(Map.get(source_node, "x"), Map.get(target_node, "x")) and
-           close_enough?(Map.get(source_node, "y"), Map.get(target_node, "y")) do
-        {:cont, :ok}
-      else
-        {:halt, {:error, :node_alignment_mismatch}}
-      end
-    end)
-  end
-
-  defp normalize_bridge_scale(nil), do: {:ok, 1.0}
-  defp normalize_bridge_scale(scale) when is_number(scale), do: {:ok, scale}
-  defp normalize_bridge_scale(_scale), do: {:error, :invalid_bridge_scale}
-
-  defp normalize_contract_string(value, _reason)
-       when is_binary(value) and value != "",
-       do: {:ok, value}
-
-  defp normalize_contract_string(_value, reason), do: {:error, reason}
-
-  defp validate_bridge_distribution("element_to_nodes"), do: :ok
-  defp validate_bridge_distribution(_distribution), do: {:error, :unsupported_bridge_distribution}
-
-  defp validate_bridge_reduction("mean"), do: :ok
-  defp validate_bridge_reduction("sum"), do: :ok
-  defp validate_bridge_reduction(_reduction), do: {:error, :unsupported_bridge_reduction}
-
-  defp normalize_node_index_fields(fields) when is_list(fields) do
-    normalized =
-      fields
-      |> Enum.filter(&(is_binary(&1) and &1 != ""))
-      |> Enum.uniq()
-
-    if normalized == [] do
-      {:error, :invalid_bridge_contract_node_index_fields}
-    else
-      {:ok, normalized}
-    end
-  end
-
-  defp normalize_node_index_fields(_fields),
-    do: {:error, :invalid_bridge_contract_node_index_fields}
-
-  defp derive_nodal_target_field(
-         elements,
-         node_count,
-         %{source_field: source_field, node_index_fields: node_index_fields, scale: scale} =
-           bridge_contract
-       ) do
-    {totals, counts} =
-      Enum.reduce(
-        elements,
-        {List.duplicate(0.0, node_count), List.duplicate(0, node_count)},
-        fn element, {totals, counts} ->
-          magnitude =
-            element
-            |> Map.get(source_field, bridge_contract.default_value)
-            |> normalize_numeric_value()
-
-          node_indexes = Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
-
-          Enum.reduce(node_indexes, {totals, counts}, fn node_index, {totals_acc, counts_acc} ->
-            {
-              List.update_at(totals_acc, node_index, &(&1 + magnitude * scale)),
-              List.update_at(counts_acc, node_index, &(&1 + 1))
-            }
-          end)
-        end
-      )
-
-    reduce_nodal_values(totals, counts, bridge_contract)
-  end
-
-  defp reduce_nodal_values(totals, counts, %{reduction: "sum", default_value: default_value}) do
-    Enum.zip(totals, counts)
-    |> Enum.map(fn
-      {_total, 0} -> default_value
-      {total, _count} -> total
-    end)
-  end
-
-  defp reduce_nodal_values(totals, counts, %{default_value: default_value}) do
-    Enum.zip(totals, counts)
-    |> Enum.map(fn
-      {_total, 0} -> default_value
-      {total, count} -> total / count
-    end)
-  end
-
-  defp normalize_numeric_value(value) when is_number(value), do: value
-  defp normalize_numeric_value(_value), do: 0.0
-
-  defp close_enough?(left, right) when is_number(left) and is_number(right),
-    do: abs(left - right) <= 1.0e-9
-
-  defp close_enough?(_, _), do: false
-
-  defp edge_from_key(edge),
-    do: artifact_key(get_in(edge, ["from", "node"]), get_in(edge, ["from", "port"]))
-
-  defp artifact_key(node_id, port_id) when is_binary(node_id) and is_binary(port_id),
-    do: "#{node_id}.#{port_id}"
 
   defp start_background_job(job_id, method, params) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
@@ -2255,15 +414,19 @@ defmodule KyuubikiWeb.Analysis do
       end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
-      {:ok, {:ok, completed_nodes, artifacts}} ->
+      {:ok, {:ok, result}} ->
         unless cancelled?(job_id) do
           :ok =
             AnalysisResultStore.put(job_id, %{
               "workflow_id" => Map.get(graph, "id"),
               "current_node" => nil,
               "progress_events" => workflow_progress_events(job_id),
-              "completed_nodes" => completed_nodes,
-              "artifacts" => artifacts
+              "completed_nodes" => Map.get(result, "completed_nodes", []),
+              "skipped_nodes" => Map.get(result, "skipped_nodes", []),
+              "branch_decisions" => Map.get(result, "branch_decisions", []),
+              "node_runs" => Map.get(result, "node_runs", []),
+              "artifact_lineage" => Map.get(result, "artifact_lineage", []),
+              "artifacts" => Map.get(result, "artifacts", %{})
             })
 
           _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
@@ -2382,469 +545,4 @@ defmodule KyuubikiWeb.Analysis do
     |> Keyword.get(:job_timeout_ms, 120_000)
   end
 
-  defp create_job(attrs) do
-    Store.create(%{
-      job_id: random_id(),
-      project_id: Map.get(attrs, :project_id, random_id()),
-      model_version_id: Map.get(attrs, :model_version_id),
-      simulation_case_id: Map.get(attrs, :simulation_case_id, random_id())
-    })
-  end
-
-  defp derive_job_context(params) when is_map(params) do
-    project_id = fetch_optional_string(params, ["project_id", :project_id])
-    model_version_id = fetch_optional_string(params, ["model_version_id", :model_version_id])
-
-    cond do
-      is_binary(model_version_id) and model_version_id != "" ->
-        case Library.get_version(model_version_id) do
-          {:ok, version} ->
-            {:ok,
-             %{
-               project_id: version["project_id"],
-               model_version_id: version["version_id"],
-               simulation_case_id: version["version_id"]
-             }}
-
-          :error ->
-            {:error, {:model_version_not_found, model_version_id}}
-        end
-
-      is_binary(project_id) and project_id != "" ->
-        {:ok, %{project_id: project_id}}
-
-      true ->
-        {:ok, %{}}
-    end
-  end
-
-  defp serialize_payload(job) do
-    %{"job" => serialize_job(job) |> Map.put("has_result", false)}
-  end
-
-  defp fetch_raw_result(job_id) do
-    case AnalysisResultStore.get(job_id) do
-      {:ok, result} -> {:ok, result}
-      :error -> {:error, {:result_not_found, job_id}}
-    end
-  end
-
-  defp fetch_chunk_source(result, "nodes") when is_map(result) do
-    case Map.get(result, "nodes") do
-      items when is_list(items) -> {:ok, items}
-      _ -> {:error, {:unsupported_chunk_kind, "nodes"}}
-    end
-  end
-
-  defp fetch_chunk_source(result, "elements") when is_map(result) do
-    case Map.get(result, "elements") do
-      items when is_list(items) -> {:ok, items}
-      _ -> {:error, {:unsupported_chunk_kind, "elements"}}
-    end
-  end
-
-  defp fetch_chunk_source(_result, kind), do: {:error, {:unsupported_chunk_kind, kind}}
-
-  defp normalize_chunk_integer(params, key, default) do
-    case Map.get(params, key, default) do
-      value when is_integer(value) and value >= 0 ->
-        {:ok, value}
-
-      value when is_binary(value) ->
-        case Integer.parse(value) do
-          {parsed, ""} when parsed >= 0 -> {:ok, parsed}
-          _ -> {:error, {:invalid_chunk_param, key}}
-        end
-
-      _ ->
-        {:error, {:invalid_chunk_param, key}}
-    end
-  end
-
-  defp serialize_job(job) do
-    %{
-      "job_id" => job.job_id,
-      "project_id" => job.project_id,
-      "model_version_id" => job.model_version_id,
-      "simulation_case_id" => job.simulation_case_id,
-      "worker_id" => job.worker_id,
-      "message" => job.message,
-      "status" => Atom.to_string(job.status),
-      "progress" => job.progress,
-      "residual" => job.residual,
-      "iteration" => job.iteration,
-      "created_at" => DateTime.to_iso8601(job.created_at),
-      "updated_at" => DateTime.to_iso8601(job.updated_at)
-    }
-  end
-
-  defp put_has_result(payload, value) do
-    update_in(payload, ["job"], &Map.put(&1, "has_result", value))
-  end
-
-  defp normalize_axial_bar(params) do
-    with {:ok, length} <- fetch_number(params, ["length", :length]),
-         {:ok, area} <- fetch_number(params, ["area", :area]),
-         {:ok, elements} <- fetch_number(params, ["elements", :elements]),
-         {:ok, tip_force} <- fetch_number(params, ["tip_force", :tip_force]),
-         {:ok, youngs_modulus_gpa} <-
-           fetch_number(params, ["youngs_modulus_gpa", :youngs_modulus_gpa]) do
-      {:ok,
-       %{
-         "length" => length,
-         "area" => area,
-         "elements" => round(elements),
-         "tip_force" => tip_force,
-         "youngs_modulus" => youngs_modulus_gpa * 1.0e9
-       }}
-    end
-  end
-
-  defp normalize_truss_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_truss_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_truss_2d(_params), do: {:error, :invalid_truss_model}
-
-  defp normalize_thermal_truss_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_truss_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_truss_2d(_params), do: {:error, :invalid_thermal_truss_model}
-
-  defp normalize_truss_3d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_truss_3d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_truss_3d(_params), do: {:error, :invalid_truss_3d_model}
-
-  defp normalize_thermal_truss_3d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_truss_3d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_truss_3d(_params), do: {:error, :invalid_thermal_truss_3d_model}
-
-  defp normalize_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_plane_triangle_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_plane_triangle_2d(_params), do: {:error, :invalid_plane_model}
-
-  defp normalize_thermal_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_plane_triangle_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_plane_triangle_2d(_params), do: {:error, :invalid_thermal_plane_model}
-
-  defp normalize_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_plane_quad_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_plane_quad_2d(_params), do: {:error, :invalid_plane_quad_model}
-
-  defp normalize_thermal_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_plane_quad_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_plane_quad_2d(_params), do: {:error, :invalid_thermal_plane_quad_model}
-
-  defp normalize_beam_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_beam_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_beam_1d(_params), do: {:error, :invalid_beam_model}
-
-  defp normalize_thermal_beam_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_beam_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_beam_1d(_params), do: {:error, :invalid_thermal_beam_model}
-
-  defp normalize_thermal_bar_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_bar_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_bar_1d(_params), do: {:error, :invalid_thermal_bar_model}
-
-  defp normalize_heat_bar_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_heat_bar_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_heat_bar_1d(_params), do: {:error, :invalid_heat_bar_model}
-
-  defp normalize_electrostatic_bar_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_electrostatic_bar_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_electrostatic_bar_1d(_params),
-    do: {:error, :invalid_electrostatic_bar_model}
-
-  defp normalize_electrostatic_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  defp normalize_electrostatic_plane_triangle_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{nodes: nodes, elements: elements}}
-
-  defp normalize_electrostatic_plane_triangle_2d(_params),
-    do: {:error, :invalid_electrostatic_plane_triangle_model}
-
-  defp normalize_electrostatic_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  defp normalize_electrostatic_plane_quad_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{nodes: nodes, elements: elements}}
-
-  defp normalize_electrostatic_plane_quad_2d(_params),
-    do: {:error, :invalid_electrostatic_plane_quad_model}
-
-  defp normalize_heat_plane_triangle_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  defp normalize_heat_plane_triangle_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{nodes: nodes, elements: elements}}
-
-  defp normalize_heat_plane_triangle_2d(_params), do: {:error, :invalid_heat_plane_triangle_model}
-
-  defp normalize_heat_plane_quad_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{"nodes" => nodes, "elements" => elements}}
-
-  defp normalize_heat_plane_quad_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements),
-       do: {:ok, %{nodes: nodes, elements: elements}}
-
-  defp normalize_heat_plane_quad_2d(_params), do: {:error, :invalid_heat_plane_quad_model}
-
-  defp normalize_torsion_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_torsion_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_torsion_1d(_params), do: {:error, :invalid_torsion_model}
-
-  defp normalize_spring_1d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_spring_1d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_spring_1d(_params), do: {:error, :invalid_spring_model}
-
-  defp normalize_spring_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_spring_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_spring_2d(_params), do: {:error, :invalid_spring_2d_model}
-
-  defp normalize_spring_3d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_spring_3d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_spring_3d(_params), do: {:error, :invalid_spring_3d_model}
-
-  defp normalize_frame_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_frame_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_frame_2d(_params), do: {:error, :invalid_frame_model}
-
-  defp normalize_frame_3d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_frame_3d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_frame_3d(_params), do: {:error, :invalid_frame_3d_model}
-
-  defp normalize_thermal_frame_2d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_frame_2d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_frame_2d(_params), do: {:error, :invalid_thermal_frame_model}
-
-  defp normalize_thermal_frame_3d(%{"nodes" => nodes, "elements" => elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_frame_3d(%{nodes: nodes, elements: elements})
-       when is_list(nodes) and is_list(elements) do
-    {:ok, %{"nodes" => nodes, "elements" => elements}}
-  end
-
-  defp normalize_thermal_frame_3d(_params), do: {:error, :invalid_thermal_frame_3d_model}
-
-  defp random_id do
-    :crypto.strong_rand_bytes(8) |> Base.encode16(case: :lower)
-  end
-
-  defp fetch_number(params, [key | rest]) do
-    case Map.fetch(params, key) do
-      {:ok, value} -> cast_number(value)
-      :error -> fetch_number(params, rest)
-    end
-  end
-
-  defp fetch_number(_params, []), do: {:error, :missing_parameter}
-
-  defp fetch_optional_string(params, [key | rest]) do
-    case Map.fetch(params, key) do
-      {:ok, value} when is_binary(value) ->
-        trimmed = String.trim(value)
-
-        if byte_size(trimmed) > 0 do
-          trimmed
-        else
-          fetch_optional_string(params, rest)
-        end
-
-      _ ->
-        fetch_optional_string(params, rest)
-    end
-  end
-
-  defp fetch_optional_string(_params, []), do: nil
-
-  defp cast_number(value) when is_integer(value), do: {:ok, value * 1.0}
-  defp cast_number(value) when is_float(value), do: {:ok, value}
-
-  defp cast_number(value) when is_binary(value) do
-    case Float.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> {:error, :invalid_parameter}
-    end
-  end
-
-  defp cast_number(_value), do: {:error, :invalid_parameter}
-
-  defp stringify_keys(value) when is_list(value), do: Enum.map(value, &stringify_keys/1)
-
-  defp stringify_keys(value) when is_map(value) do
-    value
-    |> Enum.map(fn {key, nested} -> {to_string(key), stringify_keys(nested)} end)
-    |> Map.new()
-  end
-
-  defp stringify_keys(value), do: value
 end

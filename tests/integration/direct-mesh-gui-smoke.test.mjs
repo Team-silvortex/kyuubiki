@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const ENTRYPOINT = `${ROOT}/scripts/kyuubiki`;
+const ENTRYPOINT = `${ROOT}/scripts/kyuubiki-runtime.mjs`;
 const FRONTEND_URL = "http://127.0.0.1:3000";
 const DIRECT_MESH_TOKEN = "integration-direct-mesh-token";
 const DIRECT_MESH_ENDPOINTS = ["127.0.0.1:5001", "127.0.0.1:5002"];
@@ -17,7 +17,7 @@ const DIRECT_MESH_ENV = {
 };
 
 function runKyuubiki(args, extraEnv = {}) {
-  return execFileSync("zsh", [ENTRYPOINT, ...args], {
+  return execFileSync("node", [ENTRYPOINT, ...args], {
     cwd: ROOT,
     stdio: "pipe",
     encoding: "utf8",

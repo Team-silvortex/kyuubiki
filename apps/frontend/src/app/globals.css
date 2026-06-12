@@ -861,6 +861,52 @@ html[data-theme="graphite"] .immersive-switches {
   overflow-wrap: anywhere;
 }
 
+.system-policy-card__list {
+  gap: 10px;
+}
+
+.system-policy-entry {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--panel-soft) 88%, white 12%), rgba(255, 255, 255, 0.46));
+}
+
+.system-policy-entry .card-copy {
+  margin: 0;
+}
+
+.system-policy-entry .button-row {
+  margin-top: 0;
+}
+
+.workflow-builder-focus-target {
+  position: relative;
+  border-color: color-mix(in srgb, var(--accent) 68%, var(--line));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 52%, transparent),
+    0 0 0 8px color-mix(in srgb, var(--accent) 10%, transparent);
+  animation: workflow-builder-focus-pulse 1.8s ease-out;
+}
+
+@keyframes workflow-builder-focus-pulse {
+  0% {
+    transform: translateY(-2px);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 80%, transparent),
+      0 0 0 14px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent) 0%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
 .runtime-overview-grid {
   display: grid;
   gap: 12px;

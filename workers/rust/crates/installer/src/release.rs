@@ -4,50 +4,65 @@ use std::path::Path;
 use crate::{Platform, escape_json};
 
 pub(crate) fn write_release_scripts(release_dir: &Path, platform: Platform) -> Result<(), String> {
-    let scripts_dir = release_dir.join("scripts");
-
-    if platform == Platform::Windows {
-        write_text_file(
-            &scripts_dir.join("start.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki start\r\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("stop.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki stop\r\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("status.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki status\r\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("export-db.cmd"),
-            "@echo off\r\ncd /d %~dp0\\..\\..\r\nzsh ./scripts/kyuubiki export-db > .\\exports\\kyuubiki-database.json\r\n",
-        )?;
-    } else {
-        write_text_file(
-            &scripts_dir.join("start.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki start\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("stop.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki stop\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("status.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki status\n",
-        )?;
-        write_text_file(
-            &scripts_dir.join("export-db.sh"),
-            "#!/bin/zsh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nzsh ./scripts/kyuubiki export-db > ./dist/exports/kyuubiki-database.json\n",
-        )?;
+    for (relative, contents) in expected_release_script_contents(platform) {
+        write_text_file(&release_dir.join(relative), &contents)?;
     }
 
     Ok(())
 }
 
+pub(crate) fn expected_release_script_contents(platform: Platform) -> Vec<(String, String)> {
+    if platform == Platform::Windows {
+        return vec![
+            (
+                "scripts/start.cmd".to_string(),
+                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs start\r\n".to_string(),
+            ),
+            (
+                "scripts/stop.cmd".to_string(),
+                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs stop\r\n".to_string(),
+            ),
+            (
+                "scripts/status.cmd".to_string(),
+                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs status\r\n".to_string(),
+            ),
+            (
+                "scripts/export-db.cmd".to_string(),
+                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs export-db > .\\dist\\windows\\exports\\kyuubiki-database.json\r\n"
+                    .to_string(),
+            ),
+        ];
+    }
+
+    vec![
+        (
+            "scripts/start.sh".to_string(),
+            "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs start\n"
+                .to_string(),
+        ),
+        (
+            "scripts/stop.sh".to_string(),
+            "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs stop\n"
+                .to_string(),
+        ),
+        (
+            "scripts/status.sh".to_string(),
+            "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs status\n"
+                .to_string(),
+        ),
+        (
+            "scripts/export-db.sh".to_string(),
+            format!(
+                "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs export-db > ./dist/{}/exports/kyuubiki-database.json\n",
+                platform.as_str()
+            ),
+        ),
+    ]
+}
+
 pub(crate) fn build_release_manifest(
-    root: &Path,
-    release_dir: &Path,
+    _root: &Path,
+    _release_dir: &Path,
     platform: Platform,
 ) -> String {
     format!(
@@ -75,12 +90,12 @@ pub(crate) fn build_release_manifest(
             "}}\n"
         ),
         platform = platform.as_str(),
-        release_dir = escape_json(&release_dir.display().to_string()),
-        workspace = escape_json(&root.display().to_string()),
+        release_dir = escape_json(portable_release_dir()),
+        workspace = portable_workspace_hint(),
     )
 }
 
-pub(crate) fn build_launch_manifest(root: &Path, platform: Platform) -> String {
+pub(crate) fn build_launch_manifest(_root: &Path, platform: Platform) -> String {
     format!(
         concat!(
             "{{\n",
@@ -101,7 +116,7 @@ pub(crate) fn build_launch_manifest(root: &Path, platform: Platform) -> String {
         ),
         platform = platform.as_str(),
         shell = platform.default_shell(),
-        workspace = escape_json(&root.display().to_string()),
+        workspace = portable_workspace_hint(),
         entry = escape_json(platform.entrypoint_command()),
     )
 }
@@ -196,4 +211,12 @@ pub(crate) fn build_desktop_app_manifest(app: &str, platform: Platform) -> Strin
 fn write_text_file(path: &Path, contents: &str) -> Result<(), String> {
     fs::write(path, contents)
         .map_err(|error| format!("failed to write {}: {error}", path.display()))
+}
+
+fn portable_release_dir() -> &'static str {
+    "."
+}
+
+fn portable_workspace_hint() -> &'static str {
+    "../.."
 }

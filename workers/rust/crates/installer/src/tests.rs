@@ -2,8 +2,9 @@ use std::fs;
 use std::path::Path;
 
 use crate::{
-    Platform, build_release_manifest, parse_agent_endpoints, parse_agent_manifest, parse_platform,
-    unified_update_plan, unified_update_preview,
+    Platform, build_launch_manifest, build_release_manifest, cross_platform_audit_report,
+    parse_agent_endpoints, parse_agent_manifest, parse_platform, unified_update_plan,
+    unified_update_preview,
 };
 
 #[test]
@@ -23,6 +24,17 @@ fn release_manifest_contains_expected_schema() {
     );
     assert!(manifest.contains("\"schema_version\": \"kyuubiki.release/v1\""));
     assert!(manifest.contains("\"platform\": \"macos\""));
+    assert!(manifest.contains("\"release_dir\": \".\""));
+    assert!(manifest.contains("\"workspace\": \"../..\""));
+}
+
+#[test]
+fn launch_manifest_uses_portable_entrypoints() {
+    let macos_manifest = build_launch_manifest(Path::new("/tmp/workspace"), Platform::Macos);
+    let windows_manifest = build_launch_manifest(Path::new("/tmp/workspace"), Platform::Windows);
+    assert!(macos_manifest.contains("\"entrypoint\": \"./scripts/start.sh\""));
+    assert!(windows_manifest.contains("\"entrypoint\": \"./scripts/start.cmd\""));
+    assert!(windows_manifest.contains("\"shell\": \"cmd\""));
 }
 
 #[test]
@@ -81,4 +93,10 @@ fn unified_update_preview_reports_noop_for_current_channel() {
     assert_eq!(preview.channel, "stable");
     assert_eq!(preview.target_version, "1.5.0");
     assert_eq!(preview.overall_status, "noop");
+}
+
+#[test]
+fn cross_platform_audit_runs() {
+    let report = cross_platform_audit_report();
+    assert_eq!(report.checked_platforms.len(), 3);
 }

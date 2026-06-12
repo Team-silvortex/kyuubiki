@@ -47,8 +47,8 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 - `make desktop-status PLATFORM=all`
 - `make desktop-build-host`
 - `make desktop-verify PLATFORM=macos|linux|windows`
-- `zsh ./scripts/kyuubiki build-hub-gui macos|linux|windows`
-- `zsh ./scripts/kyuubiki package-desktop macos|linux|windows`
+- `./scripts/kyuubiki build-hub-gui macos|linux|windows`
+- `./scripts/kyuubiki package-desktop macos|linux|windows`
 
 ## Validation
 

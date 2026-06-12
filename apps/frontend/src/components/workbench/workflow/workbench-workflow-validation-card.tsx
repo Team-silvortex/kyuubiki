@@ -27,7 +27,7 @@ export function WorkbenchWorkflowValidationCard({
   const recentSummaryPreview = recentFixSummary.slice(0, 4);
   const recentSummaryMoreCount = recentFixSummary.length - recentSummaryPreview.length;
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workflow-validation-card="card">
       <div className="card-head">
         <h2>{labels.validationTitle}</h2>
         <span className={`status-pill status-pill--${validationIssues.length > 0 ? "watch" : "good"}`}>

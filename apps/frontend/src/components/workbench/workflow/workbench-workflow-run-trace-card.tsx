@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import {
   downloadHtmlArtifact,
   slugifyWorkflowAssetName,
 } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
+import { measureWorkflowTraceCardReady } from "@/components/workbench/workflow/workbench-workflow-perf";
 import { buildWorkflowRunAuditReportHtml } from "@/components/workbench/workflow/workbench-workflow-run-trace-report";
 import type { WorkflowRunRecord, WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { WorkflowCatalogEntry, WorkflowOperatorDescriptor } from "@/lib/api";
@@ -42,6 +44,20 @@ export function WorkbenchWorkflowRunTraceCard({
   const latestSkipped = run.skippedNodes?.slice(0, 3) ?? [];
   const recentNodes = run.nodeRuns?.slice(-3).reverse() ?? [];
   const recentLineage = run.artifactLineage?.slice(-3).reverse() ?? [];
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof performance === "undefined") return;
+    const startedAt = performance.now();
+    let disposed = false;
+    const handle = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        if (!disposed) measureWorkflowTraceCardReady(startedAt);
+      });
+    });
+    return () => {
+      disposed = true;
+      window.cancelAnimationFrame(handle);
+    };
+  }, [run.jobId, recentNodes.length, recentLineage.length, latestSkipped.length, latestBranch?.node_id]);
   function exportTraceReport() {
     const workflowSlug = slugifyWorkflowAssetName(run.workflowId);
     downloadHtmlArtifact(

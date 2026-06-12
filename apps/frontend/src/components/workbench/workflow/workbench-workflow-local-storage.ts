@@ -2,8 +2,9 @@
 
 import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
+import { buildWorkflowPackageSearchIndex } from "@/components/workbench/workflow/workbench-workflow-package";
 
-const WORKBENCH_LOCAL_WORKFLOWS_KEY = "kyuubiki.workbench.workflowLibrary.v1";
+export const WORKBENCH_LOCAL_WORKFLOWS_KEY = "kyuubiki.workbench.workflowLibrary.v1";
 
 export type StoredLocalWorkflow = {
   id: string;
@@ -18,6 +19,9 @@ export type StoredLocalWorkflow = {
   variantOfWorkflowName?: string;
   graph: WorkflowGraphDefinition;
   inputArtifactTexts?: Record<string, string>;
+  tags?: string[];
+  importedFromPackageId?: string;
+  importedFromPackageVersion?: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -70,6 +74,18 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
             typeof entry.variantOfWorkflowName === "string" ? entry.variantOfWorkflowName : undefined,
           graph,
           inputArtifactTexts: asStringRecord(entry.inputArtifactTexts),
+          tags:
+            Array.isArray(entry.tags) && entry.tags.every((value) => typeof value === "string")
+              ? (entry.tags as string[])
+              : undefined,
+          importedFromPackageId:
+            typeof entry.importedFromPackageId === "string"
+              ? entry.importedFromPackageId
+              : undefined,
+          importedFromPackageVersion:
+            typeof entry.importedFromPackageVersion === "string"
+              ? entry.importedFromPackageVersion
+              : undefined,
         },
       ];
     });
@@ -105,6 +121,14 @@ export function saveStoredLocalWorkflow(params: {
   workflowName: string;
   graph: WorkflowGraphDefinition;
   inputArtifactTexts?: Record<string, string>;
+  summary?: string;
+  notes?: string;
+  tags?: string[];
+  importedFromPackageId?: string;
+  importedFromPackageVersion?: string;
+  sourceWorkflowName?: string;
+  variantOfWorkflowId?: string;
+  variantOfWorkflowName?: string;
 }): StoredLocalWorkflow {
   const baseName = params.graph.name?.trim() || params.workflowName.trim() || params.graph.id;
   const nextId = buildLocalWorkflowId(baseName);
@@ -116,14 +140,19 @@ export function saveStoredLocalWorkflow(params: {
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
     sourceWorkflowId: params.sourceWorkflowId,
-    sourceWorkflowName: params.workflowName,
+    sourceWorkflowName: params.sourceWorkflowName ?? params.workflowName,
     name: nextGraph.name,
-    summary: `Local workflow promoted from ${params.workflowName}.`,
-    notes: "",
+    summary: params.summary?.trim() || `Local workflow promoted from ${params.workflowName}.`,
+    notes: params.notes?.trim() ?? "",
     version: "local",
     promotedAt: new Date().toISOString(),
+    variantOfWorkflowId: params.variantOfWorkflowId,
+    variantOfWorkflowName: params.variantOfWorkflowName,
     graph: nextGraph,
     inputArtifactTexts: params.inputArtifactTexts,
+    tags: params.tags,
+    importedFromPackageId: params.importedFromPackageId,
+    importedFromPackageVersion: params.importedFromPackageVersion,
   };
   const next = [nextRecord, ...readStoredLocalWorkflows()].slice(0, 40);
   writeStoredLocalWorkflows(next);
@@ -190,6 +219,9 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
     variantOfWorkflowName: current.name,
     graph: nextGraph,
     inputArtifactTexts: current.inputArtifactTexts,
+    tags: current.tags,
+    importedFromPackageId: current.importedFromPackageId,
+    importedFromPackageVersion: current.importedFromPackageVersion,
   };
   const next = [nextRecord, ...readStoredLocalWorkflows()].slice(0, 40);
   writeStoredLocalWorkflows(next);
@@ -201,23 +233,35 @@ export function findStoredLocalWorkflow(workflowId: string): StoredLocalWorkflow
 }
 
 export function buildStoredLocalWorkflowCatalogEntries(): WorkflowCatalogEntry[] {
-  return listStoredLocalWorkflows().map((entry) => ({
-    id: entry.id,
-    name: entry.name,
-    version: entry.version,
-    summary: entry.summary,
-    graph: cloneWorkflowGraph(entry.graph),
-    entry_inputs: entry.graph.entry_inputs ?? [],
-    output_artifacts: entry.graph.output_artifacts ?? [],
-    local: {
-      storage_id: entry.id,
-      source_workflow_id: entry.sourceWorkflowId,
-      source_workflow_name: entry.sourceWorkflowName,
-      input_artifact_texts: entry.inputArtifactTexts,
-      promoted_at: entry.promotedAt,
-      variant_of_workflow_id: entry.variantOfWorkflowId,
-      variant_of_workflow_name: entry.variantOfWorkflowName,
-      notes: entry.notes,
-    },
-  }));
+  return listStoredLocalWorkflows().map((entry) => {
+    const searchIndex = buildWorkflowPackageSearchIndex({
+      graph: entry.graph,
+      tags: entry.tags,
+    });
+
+    return {
+      id: entry.id,
+      name: entry.name,
+      version: entry.version,
+      summary: entry.summary,
+      domains: searchIndex.domains,
+      capability_tags: searchIndex.capability_tags,
+      graph: cloneWorkflowGraph(entry.graph),
+      entry_inputs: entry.graph.entry_inputs ?? [],
+      output_artifacts: entry.graph.output_artifacts ?? [],
+      local: {
+        storage_id: entry.id,
+        source_workflow_id: entry.sourceWorkflowId,
+        source_workflow_name: entry.sourceWorkflowName,
+        input_artifact_texts: entry.inputArtifactTexts,
+        promoted_at: entry.promotedAt,
+        variant_of_workflow_id: entry.variantOfWorkflowId,
+        variant_of_workflow_name: entry.variantOfWorkflowName,
+        notes: entry.notes,
+        tags: entry.tags,
+        imported_from_package_id: entry.importedFromPackageId,
+        imported_from_package_version: entry.importedFromPackageVersion,
+      },
+    };
+  });
 }
