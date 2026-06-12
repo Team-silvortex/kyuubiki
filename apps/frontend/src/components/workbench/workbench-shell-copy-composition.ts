@@ -201,6 +201,7 @@ export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
     validationOkLabel: t.workflowValidationOkLabel,
     validationFixLabel: t.workflowValidationFixLabel,
     validationFixAllLabel: t.workflowValidationFixAllLabel,
+    validationPreviewLabel: t.workflowValidationPreviewLabel,
     validationLocateLabel: t.workflowValidationLocateLabel,
     validationAutoFixedLabel: t.workflowValidationAutoFixedLabel,
     validationFixPreviewLabel: t.workflowValidationFixPreviewLabel,

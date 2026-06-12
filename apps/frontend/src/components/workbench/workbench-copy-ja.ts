@@ -235,6 +235,7 @@ export const copyJa = {
     workflowValidationOkLabel: "graph と dataset contract の不整合は見つかりませんでした。",
     workflowValidationFixLabel: "修正を適用",
     workflowValidationFixAllLabel: "修正を一括適用",
+    workflowValidationPreviewLabel: "修正をプレビュー",
     workflowValidationLocateLabel: "場所を開く",
     workflowValidationAutoFixedLabel: "workflow の問題を {count} 件自動修正しました。",
     workflowValidationFixPreviewLabel: "{count} 件の workflow 問題をまとめて自動修正します:",

@@ -20,22 +20,21 @@ import { buildWorkflowValidationHighlightPlan } from "@/components/workbench/wor
 import { buildWorkflowValidationFixSummary } from "@/components/workbench/workflow/workbench-workflow-validation-summary";
 import { useWorkflowBuilderFocus } from "@/components/workbench/workflow/workbench-workflow-builder-focus";
 import { WorkbenchWorkflowFocusStrip } from "@/components/workbench/workflow/workbench-workflow-focus-strip";
+import { useWorkflowPolicyFeedback } from "@/components/workbench/workflow/workbench-workflow-policy-feedback";
 import { listStoredWorkflowSnapshots, loadStoredWorkflowSnapshot, removeStoredWorkflowSnapshot, removeStoredWorkflowSnapshotsByWorkflowId, removeStoredWorkflowSummaryOnlySnapshots, saveStoredWorkflowSnapshot, type StoredWorkflowSnapshotSummary } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 import { describeWorkflowNodeTemplateSyncImpact, getWorkflowNodeTemplateSyncImpact, listAutoReconnectEdgeIds } from "@/components/workbench/workflow/workbench-workflow-template-impact";
+import { WorkbenchWorkflowDiagnosticsPlane } from "@/components/workbench/workflow/workbench-workflow-diagnostics-plane";
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowControlFlowPlaneCard } from "@/components/workbench/workflow/workbench-workflow-control-flow-plane-card";
 import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card";
-import { WorkbenchWorkflowIntegrityCard } from "@/components/workbench/workflow/workbench-workflow-integrity-card";
 import { buildWorkflowIntegrityReport, type WorkflowIntegrityIssue } from "@/components/workbench/workflow/workbench-workflow-integrity";
 import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card";
 import { WorkbenchWorkflowPackageManifestCard } from "@/components/workbench/workflow/workbench-workflow-package-manifest-card";
-import { WorkbenchWorkflowPackageInstallCard } from "@/components/workbench/workflow/workbench-workflow-package-install-card";
 import { buildWorkflowPackageInstallReport, scanWorkflowPackageResiduals } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
 import { WorkbenchWorkflowSnapshotCard } from "@/components/workbench/workflow/workbench-workflow-snapshot-card";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
 import { WorkbenchWorkflowTopologyCard } from "@/components/workbench/workflow/workbench-workflow-topology-card";
 import { readWorkflowTemplateChainPreferences, writeWorkflowTemplateChainPreferences } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
-import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
   selectedWorkflow: WorkflowCatalogEntry | null;
@@ -46,8 +45,7 @@ type WorkbenchWorkflowBuilderCardProps = {
   onRefreshWorkflowCatalog: () => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
   onRunWorkflowDraft: (workflowId: string, graph: WorkflowGraphDefinition, inputArtifacts: Record<string, unknown>) => void; traceFocusNodeId?: string | null; traceFocusToken?: number; traceFocusBranchNodeId?: string | null; traceFocusBranchOutputId?: string | null; traceFocusBranchToken?: number; traceFocusDatasetNodeId?: string | null; traceFocusDatasetPortId?: string | null; traceFocusDatasetToken?: number;
-};
-export function WorkbenchWorkflowBuilderCard({
+}; export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
   operatorDescriptors,
@@ -65,27 +63,14 @@ export function WorkbenchWorkflowBuilderCard({
   traceFocusDatasetNodeId,
   traceFocusDatasetPortId,
   traceFocusDatasetToken,
-}: WorkbenchWorkflowBuilderCardProps) {
-  const [draftGraph, setDraftGraph] = useState<WorkflowGraphDefinition | null>(null);
-  const [draftInputTexts, setDraftInputTexts] = useState<Record<string, string>>({});
-  const [selectedDatasetValueId, setSelectedDatasetValueId] = useState<string | null>(null);
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-  const [savedDrafts, setSavedDrafts] = useState<StoredWorkflowDraft[]>([]);
-  const [savedSnapshots, setSavedSnapshots] = useState<StoredWorkflowSnapshotSummary[]>([]);
-  const [recentFixSummary, setRecentFixSummary] = useState<string[]>([]);
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-  const [focusedEdgeId, setFocusedEdgeId] = useState<string | null>(null);
-  const [focusedArtifactKey, setFocusedArtifactKey] = useState<string | null>(null);
-  const [focusedDatasetValueId, setFocusedDatasetValueId] = useState<string | null>(null);
-  const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]);
-  const [highlightedEdgeIds, setHighlightedEdgeIds] = useState<string[]>([]);
-  const [highlightedArtifactKeys, setHighlightedArtifactKeys] = useState<string[]>([]);
-  const [highlightDatasetEditor, setHighlightDatasetEditor] = useState(false);
-  const [importedPackage, setImportedPackage] = useState<WorkflowPackage | null>(null);
-  const graphInputRef = useRef<HTMLInputElement | null>(null);
-  const datasetInputRef = useRef<HTMLInputElement | null>(null);
-  const builderRootRef = useRef<HTMLElement | null>(null);
+}: WorkbenchWorkflowBuilderCardProps) { const [draftGraph, setDraftGraph] = useState<WorkflowGraphDefinition | null>(null), [draftInputTexts, setDraftInputTexts] = useState<Record<string, string>>({}), [selectedDatasetValueId, setSelectedDatasetValueId] = useState<string | null>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null), [savedDrafts, setSavedDrafts] = useState<StoredWorkflowDraft[]>([]), [savedSnapshots, setSavedSnapshots] = useState<StoredWorkflowSnapshotSummary[]>([]), [recentFixSummary, setRecentFixSummary] = useState<string[]>([]);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null), [focusedEdgeId, setFocusedEdgeId] = useState<string | null>(null);
+  const [focusedArtifactKey, setFocusedArtifactKey] = useState<string | null>(null), [focusedDatasetValueId, setFocusedDatasetValueId] = useState<string | null>(null);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]), [highlightedEdgeIds, setHighlightedEdgeIds] = useState<string[]>([]), [highlightedArtifactKeys, setHighlightedArtifactKeys] = useState<string[]>([]), [highlightDatasetEditor, setHighlightDatasetEditor] = useState(false), [importedPackage, setImportedPackage] = useState<WorkflowPackage | null>(null);
+  const graphInputRef = useRef<HTMLInputElement | null>(null), datasetInputRef = useRef<HTMLInputElement | null>(null), builderRootRef = useRef<HTMLElement | null>(null);
   const activeFocusTarget = useWorkflowBuilderFocus(builderRootRef);
+  const { policyFeedback, setPolicyFeedback } = useWorkflowPolicyFeedback();
   function resetBuilderFocus() { setFocusedNodeId(null); setFocusedEdgeId(null); setFocusedArtifactKey(null); setFocusedDatasetValueId(null); setHighlightedNodeIds([]); setHighlightedEdgeIds([]); setHighlightedArtifactKeys([]); setHighlightDatasetEditor(false); }
   function flashHighlightedEdges(edgeIds: string[]) {
     if (edgeIds.length === 0) return;
@@ -147,6 +132,7 @@ export function WorkbenchWorkflowBuilderCard({
     setImportMessage(null);
     setImportedPackage(null);
     setRecentFixSummary([]);
+    setPolicyFeedback(null);
     resetBuilderFocus();
     setSavedDrafts(selectedWorkflow ? listStoredWorkflowDrafts(selectedWorkflow.id) : []);
     setSavedSnapshots(selectedWorkflow ? listStoredWorkflowSnapshots(selectedWorkflow.id) : []);
@@ -557,7 +543,7 @@ export function WorkbenchWorkflowBuilderCard({
   if (!selectedWorkflow) return <section className="sidebar-card sidebar-card--compact"><p className="card-copy">{labels.noSelectionLabel}</p></section>;
   return (
     <section className="sidebar-card sidebar-card--compact" ref={builderRootRef}>
-      <WorkbenchWorkflowFocusStrip activeTarget={activeFocusTarget} labels={labels} />
+      <WorkbenchWorkflowFocusStrip activeTarget={activeFocusTarget} feedback={policyFeedback} labels={labels} />
       <WorkbenchWorkflowBuilderToolbar
         canExportDataset={Boolean(selectedDatasetContract)}
         canRunDraft={canRunDraft}
@@ -581,11 +567,26 @@ export function WorkbenchWorkflowBuilderCard({
       />
       <WorkbenchWorkflowDraftCard drafts={savedDrafts} labels={labels} onDeleteDraft={deleteSavedDraft} onLoadDraft={loadSavedDraft} onSaveDraft={saveCurrentDraft} />
       <WorkbenchWorkflowPackageManifestCard importedPackage={importedPackage} labels={labels} workflow={selectedWorkflow} />
-      <WorkbenchWorkflowPackageInstallCard importedPackage={importedPackage} labels={labels} onExportReport={exportPackageInstallReport} onLocateResidual={locatePackageResidual} onRepairResidual={repairPackageResidual} onScanResiduals={scanPackageResiduals} residuals={packageResiduals} snapshotCount={savedSnapshots.length} summaryOnlySnapshotCount={integrityReport.summaryOnlySnapshotCount} workflow={selectedWorkflow} />
+      <WorkbenchWorkflowDiagnosticsPlane
+        importedPackage={importedPackage}
+        integrityReport={integrityReport}
+        labels={labels}
+        onApplyAllValidationFixes={applyAllValidationFixes}
+        onApplyValidationFix={applyValidationFix}
+        onExportPackageInstallReport={exportPackageInstallReport}
+        onLocateIntegrityIssue={locateIntegrityIssue}
+        onLocatePackageResidual={locatePackageResidual}
+        onLocateValidationIssue={locateValidationIssue}
+        onRepairPackageResidual={repairPackageResidual}
+        onScanPackageResiduals={scanPackageResiduals}
+        packageResiduals={packageResiduals}
+        recentFixSummary={recentFixSummary}
+        snapshotCount={savedSnapshots.length}
+        validationIssues={validationIssues}
+        workflow={selectedWorkflow}
+      />
       {selectedWorkflow.local ? <WorkbenchWorkflowLocalMetadataCard labels={labels} onSave={saveCurrentLocalWorkflowMetadata} workflow={selectedWorkflow} /> : null}
       <WorkbenchWorkflowInputArtifactsCard entryInputs={selectedEntryInputs} inputTexts={draftInputTexts} invalidKeys={parsedDraftInputs.invalidKeys} labels={labels} onChangeInputText={updateDraftInputText} />
-      <WorkbenchWorkflowValidationCard labels={labels} recentFixSummary={recentFixSummary} onApplyAllValidationFixes={applyAllValidationFixes} onApplyValidationFix={applyValidationFix} onLocateValidationIssue={locateValidationIssue} validationIssues={validationIssues} />
-      <WorkbenchWorkflowIntegrityCard onLocateIssue={locateIntegrityIssue} report={integrityReport} />
       <WorkbenchWorkflowSnapshotCard labels={labels} onDeleteSnapshot={deleteSnapshot} onRestoreSnapshot={restoreSnapshot} snapshots={savedSnapshots} />
       <WorkbenchWorkflowGraphSummaryCard focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedEdgeIds={highlightedEdgeIds} highlightedNodeIds={highlightedNodeIds} labels={labels} selectedEdges={selectedEdges} selectedEntryInputsCount={selectedEntryInputs.length} selectedNodes={selectedNodes} selectedOutputArtifactsCount={selectedOutputArtifacts.length} />
       <WorkbenchWorkflowControlFlowPlaneCard labels={labels} operatorDescriptors={operatorDescriptors} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} invalidInputCount={parsedDraftInputs.invalidKeys.length} traceFocusBranchNodeId={traceFocusBranchNodeId} traceFocusBranchOutputId={traceFocusBranchOutputId} traceFocusBranchToken={traceFocusBranchToken} onAddConditionNode={() => topologyActions.addNode({ kind: "condition" })} onAddMergeNode={() => topologyActions.addNode({ kind: "transform", operatorId: "transform.first_available" })} onAddNode={topologyActions.addNode} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onInsertControlFlowPlane={topologyActions.insertControlFlowPlane} onSetControlFlowEdge={topologyActions.setControlFlowEdge} />

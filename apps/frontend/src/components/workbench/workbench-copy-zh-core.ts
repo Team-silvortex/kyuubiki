@@ -259,6 +259,7 @@ export const copyZhCore = {
     workflowValidationOkLabel: "没有发现 graph 或 dataset contract 不一致。",
     workflowValidationFixLabel: "应用修正",
     workflowValidationFixAllLabel: "全部自动修正",
+    workflowValidationPreviewLabel: "预览修正",
     workflowValidationLocateLabel: "定位",
     workflowValidationAutoFixedLabel: "已自动修正 {count} 条工作流问题。",
     workflowValidationFixPreviewLabel: "本次将自动修正 {count} 条工作流问题：",

@@ -259,6 +259,7 @@ export const copyEnCore = {
     workflowValidationOkLabel: "No graph or dataset contract mismatches found.",
     workflowValidationFixLabel: "Apply fix",
     workflowValidationFixAllLabel: "Apply all fixes",
+    workflowValidationPreviewLabel: "Preview fixes",
     workflowValidationLocateLabel: "Locate",
     workflowValidationAutoFixedLabel: "Auto-fixed {count} workflow issues.",
     workflowValidationFixPreviewLabel: "Auto-fix will apply to {count} workflow issues:",

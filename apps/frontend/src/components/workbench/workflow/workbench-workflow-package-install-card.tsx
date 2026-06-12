@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import {
   listStoredWorkflowPackageMaintenanceHistory,
@@ -11,6 +11,10 @@ import {
 import { WORKBENCH_LOCAL_WORKFLOWS_KEY } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import type { WorkflowPackageResidualRecord } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
+import {
+  publishWorkflowPolicyActionFeedback,
+  useWorkflowPolicyAction,
+} from "@/components/workbench/workflow/workbench-workflow-policy-actions";
 import { WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY, WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
@@ -121,6 +125,34 @@ export function WorkbenchWorkflowPackageInstallCard({
       return next;
     });
   }
+  const scanResidualsWithHistory = useCallback(() => {
+    const receipt = onScanResiduals();
+    appendHistory("scan", receipt);
+    publishWorkflowPolicyActionFeedback(
+      "scan-package-residuals",
+      "complete",
+      receipt[0] ?? labels.packageInstallRulesResidualsCleanLabel,
+    );
+  }, [labels.packageInstallRulesResidualsCleanLabel, onScanResiduals]);
+  const previewSafeRepairs = useCallback(() => {
+    const ids = residuals.filter((entry) => entry.auto_fixable).map((entry) => entry.id);
+    if (ids.length === 0) return;
+    setPreviewResidualIds(ids);
+    publishWorkflowPolicyActionFeedback(
+      "preview-package-repairs",
+      "ready",
+      `${labels.packageInstallRulesPreviewTitle} (${ids.length})`,
+    );
+  }, [labels.packageInstallRulesPreviewTitle, residuals]);
+  useWorkflowPolicyAction((action) => {
+    if (action === "scan-package-residuals") {
+      scanResidualsWithHistory();
+      return;
+    }
+    if (action === "preview-package-repairs") {
+      previewSafeRepairs();
+    }
+  });
 
   return (
     <section className="sidebar-card sidebar-card--compact" data-workflow-package-policy-card="card">
@@ -167,7 +199,7 @@ export function WorkbenchWorkflowPackageInstallCard({
         </div>
       ) : null}
       {previewResiduals.length > 0 ? (
-        <div className="sidebar-card sidebar-card--compact" style={{ marginTop: "0.75rem" }}>
+        <div className="sidebar-card sidebar-card--compact workflow-preview-panel" style={{ marginTop: "0.75rem" }}>
           <div className="card-head">
             <h2>{labels.packageInstallRulesPreviewTitle}</h2>
             <span className="status-pill status-pill--watch">{previewResiduals.length}</span>
@@ -207,8 +239,8 @@ export function WorkbenchWorkflowPackageInstallCard({
         )}
       </div>
       <div className="button-row button-row--adaptive">
-        <button onClick={() => appendHistory("scan", onScanResiduals())} type="button">{labels.packageInstallRulesScanLabel}</button>
-        <button disabled={autoFixableCount === 0} onClick={() => setPreviewResidualIds(residuals.filter((entry) => entry.auto_fixable).map((entry) => entry.id))} type="button">{labels.packageInstallRulesRepairLabel}</button>
+        <button onClick={scanResidualsWithHistory} type="button">{labels.packageInstallRulesScanLabel}</button>
+        <button disabled={autoFixableCount === 0} onClick={previewSafeRepairs} type="button">{labels.packageInstallRulesRepairLabel}</button>
         <button onClick={() => onExportReport(history.map(({ at, kind, lines }) => ({ at, kind, lines })))} type="button">{labels.packageInstallRulesExportLabel}</button>
       </div>
     </section>

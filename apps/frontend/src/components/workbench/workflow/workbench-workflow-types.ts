@@ -231,6 +231,7 @@ export type WorkflowSidebarLabels = {
   validationOkLabel: string;
   validationFixLabel: string;
   validationFixAllLabel: string;
+  validationPreviewLabel: string;
   validationLocateLabel: string;
   validationAutoFixedLabel: string;
   validationFixPreviewLabel: string;
