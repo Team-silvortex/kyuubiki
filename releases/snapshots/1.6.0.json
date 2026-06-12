@@ -1,11 +1,11 @@
 {
-  "version": "1.5.0",
+  "version": "1.6.0",
   "codename": "tamamono",
   "line": "1.x",
   "status": "current",
-  "date": "2026-06-11",
-  "git_commit": "9cd9030603d1ae1687dea501249b89d87e19afc2",
-  "summary": "TODO: summarize tamamono 1.5.0.",
+  "date": "2026-06-12",
+  "git_commit": "fdfbb65bc5946ad6328d7a7a68d600b30ed891ea",
+  "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",
   "docs": {
     "current_line": "docs/current-line.md",
     "version_line": "docs/version-line.md",
@@ -17,51 +17,63 @@
   },
   "product_surfaces": {
     "frontend_workbench": {
-      "version": "1.5.0",
+      "version": "1.6.0",
       "notes": [
-        "TODO: describe frontend/workbench changes."
+        "System install policy can now jump into Workflow Builder targets and trigger safe preview or scan actions",
+        "Workflow Builder now groups validation, component integrity, and package-install maintenance into one diagnostics plane",
+        "Validation and package maintenance both expose preview-first panels instead of burying repair intent inside plain list rows"
       ]
     },
     "hub_gui": {
-      "version": "1.5.0",
+      "version": "1.6.0",
       "notes": [
-        "TODO: describe Hub desktop-shell changes."
+        "Hub shell, packaged docs, and release-facing version badges now report the tamamono 1.6.0 shipping line"
       ]
     },
     "workbench_gui": {
-      "version": "1.5.0",
+      "version": "1.6.0",
       "notes": [
-        "TODO: describe Workbench desktop-shell changes."
+        "Workbench desktop shell and bundled assets now align with the 1.6.0 line and visible product-version contract"
       ]
     },
     "installer_gui": {
-      "version": "1.5.0",
+      "version": "1.6.0",
       "notes": [
-        "TODO: describe Installer desktop-shell changes."
+        "Installer update and integrity panels now speak the 1.6.0 contract and keep visible version alignment with release metadata"
       ]
     },
     "web_api": {
-      "version": "1.5.0",
+      "version": "1.6.0",
       "notes": [
-        "TODO: describe API/control-plane changes."
+        "Shared workflow metadata defaults, language-pack defaults, and release-facing update catalogs now align to 1.6.0"
       ]
     }
   },
   "workflow_builder": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "active",
+    "capabilities": [
+      "system-to-builder focus routing for validation, package policy, and snapshots",
+      "focus strip feedback for policy-triggered scan and preview actions",
+      "diagnostics plane that groups validation, integrity, and package maintenance",
+      "preview-first validation panel for batch fixes",
+      "preview-first package repair panel for safe residual cleanup"
+    ]
   },
   "operator_sdk": {
-    "status": "TODO",
-    "capabilities": []
+    "status": "active",
+    "capabilities": [
+      "workflow dataset and graph metadata defaults now align to the 1.6.0 line",
+      "release-facing docs and language-pack examples stay version-aligned with shipped workflow metadata",
+      "headless and packaged update surfaces share one visible shipping-version contract"
+    ]
   },
   "desktop_artifacts": {
     "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.5.0_aarch64.dmg",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.6.0_aarch64.dmg",
     "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.5.0_aarch64.dmg",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.6.0_aarch64.dmg",
     "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.5.0_aarch64.dmg"
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.6.0_aarch64.dmg"
   },
   "verification": {
     "git_worktree": {
@@ -111,44 +123,52 @@
         " M docs/version-line.md",
         " M releases/README.md",
         " M releases/index.json",
-        " M releases/snapshots/1.4.0.json",
         " M releases/update-catalog.json",
         " M scripts/build-installation-integrity-docs.mjs",
         " M scripts/create-release-snapshot.mjs",
-        " M scripts/kyuubiki",
+        " M scripts/kyuubiki-legacy.zsh",
         " M workers/rust/Cargo.toml",
         " M workers/rust/crates/installer/src/integrity.rs",
         " M workers/rust/crates/installer/src/tests.rs",
-        "?? releases/snapshots/1.5.0.json"
+        "?? releases/snapshots/1.6.0.json"
       ]
     },
     "desktop_bundle_versions": {
-      "hub": "1.5.0",
-      "workbench": "1.5.0",
-      "installer": "1.5.0"
+      "hub": "1.6.0",
+      "workbench": "1.6.0",
+      "installer": "1.6.0"
     },
     "collected_desktop_bundle_versions": {
       "hub": {
-        "short_version": "1.5.0",
-        "build_version": "1.5.0",
+        "short_version": "1.6.0",
+        "build_version": "1.6.0",
         "source": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app/Contents/Info.plist"
       },
       "workbench": {
-        "short_version": "1.5.0",
-        "build_version": "1.5.0",
+        "short_version": "1.6.0",
+        "build_version": "1.6.0",
         "source": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app/Contents/Info.plist"
       },
       "installer": {
-        "short_version": "1.5.0",
-        "build_version": "1.5.0",
+        "short_version": "1.6.0",
+        "build_version": "1.6.0",
         "source": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app/Contents/Info.plist"
       }
     },
-    "frontend_checks": [],
-    "web_checks": [],
-    "rust_checks": [],
+    "frontend_checks": [
+      "npx tsc --noEmit --incremental false",
+      "npm run check:file-lines"
+    ],
+    "web_checks": [
+      "mix test test/kyuubiki_web/api/router_test.exs (blocked in sandbox: Mix.PubSub could not open TCP socket, reason :eperm)"
+    ],
+    "rust_checks": [
+      "cargo test -p kyuubiki-protocol --lib",
+      "cargo test -p kyuubiki-engine --lib"
+    ],
     "repo_checks": [
-      "git diff --check"
+      "git diff --check",
+      "rg -n \"1\\.5\\.0|1\\.5\\.1|tamamono 1\\.5|tamamono:1\\.5\" . --glob '!**/node_modules/**' --glob '!**/.next/**'"
     ]
   }
 }

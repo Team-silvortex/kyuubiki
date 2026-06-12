@@ -135,7 +135,7 @@ export function saveStoredLocalWorkflow(params: {
   const nextGraph = cloneWorkflowGraph(params.graph);
   nextGraph.id = nextId;
   nextGraph.name = `${baseName} Local`;
-  nextGraph.version = "tamamono 1.5.0 local";
+  nextGraph.version = "tamamono 1.6.0 local";
 
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
@@ -205,7 +205,7 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
   const nextGraph = cloneWorkflowGraph(current.graph);
   nextGraph.id = nextId;
   nextGraph.name = baseName;
-  nextGraph.version = "tamamono 1.5.0 local";
+  nextGraph.version = "tamamono 1.6.0 local";
   const nextRecord: StoredLocalWorkflow = {
     id: nextId,
     sourceWorkflowId: current.sourceWorkflowId,

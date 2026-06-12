@@ -43,7 +43,7 @@ to replace the keys it cares about.
   "id": "fr-custom-pack",
   "language": "fr",
   "name": "French custom pack",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
   "description": "Overrides a few high-traffic labels first.",

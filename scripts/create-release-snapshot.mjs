@@ -1,21 +1,34 @@
 #!/usr/bin/env node
 
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-
-const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const releasesDir = path.join(rootDir, "releases");
-const snapshotsDir = path.join(releasesDir, "snapshots");
-const indexPath = path.join(releasesDir, "index.json");
+import {
+  desktopArtifactPaths,
+  git,
+  gitStatusLines,
+  installationIntegrityContractPath,
+  isoDate,
+  packageVersion,
+  readDesktopBundleVersion,
+  readJson,
+  releaseIndexPath,
+  releaseLineLabel,
+  rootDir,
+  snapshotFilePath,
+  snapshotRelativePath,
+  snapshotsDir,
+  syncCurrentReleaseContracts,
+  updateChannelsPath,
+  writeJson,
+} from "./release-metadata.mjs";
 
 function usage() {
   console.log(`Usage:
   node ./scripts/create-release-snapshot.mjs <version> [--status current|staged|archived] [--codename tamamono] [--line 1.x] [--dry-run] [--force]
 
 Examples:
-  node ./scripts/create-release-snapshot.mjs 1.5.1 --status staged --dry-run
-  node ./scripts/create-release-snapshot.mjs 1.5.1 --status current
+  node ./scripts/create-release-snapshot.mjs 1.6.1 --status staged --dry-run
+  node ./scripts/create-release-snapshot.mjs 1.6.1 --status current
 `);
 }
 
@@ -70,80 +83,8 @@ function parseArgs(argv) {
   return options;
 }
 
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
-
-function writeJson(filePath, value) {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function git(args) {
-  return execFileSync("git", args, { cwd: rootDir, encoding: "utf8" }).trim();
-}
-
-function gitStatusLines() {
-  const output = git(["status", "--short"]);
-  if (!output) {
-    return [];
-  }
-
-  return output
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter(Boolean);
-}
-
-function isoDate() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function packageVersion(relativePath) {
-  return readJson(path.join(rootDir, relativePath)).version;
-}
-
-function readDesktopBundleVersion(appRelativePath) {
-  const infoPlistPath = path.join(rootDir, appRelativePath, "Contents", "Info.plist");
-  if (!fs.existsSync(infoPlistPath)) {
-    return null;
-  }
-
-  try {
-    const shortVersion = execFileSync(
-      "plutil",
-      ["-extract", "CFBundleShortVersionString", "raw", "-o", "-", infoPlistPath],
-      { cwd: rootDir, encoding: "utf8" },
-    ).trim();
-    const buildVersion = execFileSync(
-      "plutil",
-      ["-extract", "CFBundleVersion", "raw", "-o", "-", infoPlistPath],
-      { cwd: rootDir, encoding: "utf8" },
-    ).trim();
-
-    return {
-      short_version: shortVersion || null,
-      build_version: buildVersion || null,
-      source: path.relative(rootDir, infoPlistPath),
-    };
-  } catch {
-    return null;
-  }
-}
-
 function buildSnapshot(version, options) {
-  const desktopArtifacts = {
-    hub_app: "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-    hub_dmg: `apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_${version}_aarch64.dmg`,
-    workbench_app: "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-    workbench_dmg: `apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_${version}_aarch64.dmg`,
-    installer_app: "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-    installer_dmg: `apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_${version}_aarch64.dmg`,
-  };
-
+  const desktopArtifacts = desktopArtifactPaths(version);
   const collectedDesktopBundleVersions = {
     hub: readDesktopBundleVersion(desktopArtifacts.hub_app),
     workbench: readDesktopBundleVersion(desktopArtifacts.workbench_app),
@@ -219,24 +160,23 @@ function buildSnapshot(version, options) {
 }
 
 function updateIndex(version, options) {
-  const index = fs.existsSync(indexPath)
-    ? readJson(indexPath)
-    : { line: `${options.codename} ${options.line}`, current_version: version, snapshots: [] };
-  const snapshotPath = `snapshots/${version}.json`;
+  const index = fs.existsSync(releaseIndexPath)
+    ? readJson(releaseIndexPath)
+    : { line: releaseLineLabel(options.codename, options.line), current_version: version, snapshots: [] };
   const entry = {
     version,
     status: options.status,
     date: isoDate(),
     codename: options.codename,
     line: options.line,
-    snapshot_path: snapshotPath,
+    snapshot_path: snapshotRelativePath(version),
   };
 
   const nextSnapshots = (index.snapshots ?? []).filter((item) => item.version !== version);
   nextSnapshots.unshift(entry);
 
   return {
-    line: `${options.codename} ${options.line}`,
+    line: releaseLineLabel(options.codename, options.line),
     current_version: options.status === "current" ? version : index.current_version ?? version,
     snapshots: nextSnapshots,
   };
@@ -249,7 +189,7 @@ function main() {
     process.exit(options.version ? 0 : 1);
   }
 
-  const snapshotPath = path.join(snapshotsDir, `${options.version}.json`);
+  const snapshotPath = snapshotFilePath(options.version);
   if (fs.existsSync(snapshotPath) && !options.force) {
     throw new Error(`Snapshot already exists at ${path.relative(rootDir, snapshotPath)}. Use --force to overwrite.`);
   }
@@ -260,7 +200,7 @@ function main() {
   if (options.dryRun) {
     console.log(JSON.stringify({
       snapshot_path: path.relative(rootDir, snapshotPath),
-      index_path: path.relative(rootDir, indexPath),
+      index_path: path.relative(rootDir, releaseIndexPath),
       snapshot,
       index: nextIndex,
     }, null, 2));
@@ -269,11 +209,23 @@ function main() {
 
   fs.mkdirSync(snapshotsDir, { recursive: true });
   writeJson(snapshotPath, snapshot);
-  writeJson(indexPath, nextIndex);
+  writeJson(releaseIndexPath, nextIndex);
+
+  if (options.status === "current") {
+    syncCurrentReleaseContracts({
+      version: options.version,
+      codename: options.codename,
+      line: options.line,
+    });
+  }
 
   console.log(`Created release snapshot scaffold for ${options.version}`);
   console.log(`- ${path.relative(rootDir, snapshotPath)}`);
-  console.log(`- ${path.relative(rootDir, indexPath)}`);
+  console.log(`- ${path.relative(rootDir, releaseIndexPath)}`);
+  if (options.status === "current") {
+    console.log(`- ${path.relative(rootDir, updateChannelsPath)}`);
+    console.log(`- ${path.relative(rootDir, installationIntegrityContractPath)}`);
+  }
 }
 
 try {

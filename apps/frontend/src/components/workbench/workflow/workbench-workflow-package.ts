@@ -3,6 +3,7 @@
 import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import type { WorkflowTemplateChainPreferenceSnapshot } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
+import type { WorkflowCatalogEntryArtifact } from "@/lib/api";
 
 export type WorkflowPackageSearchIndex = {
   domains: string[];
@@ -10,6 +11,24 @@ export type WorkflowPackageSearchIndex = {
   operator_ids: string[];
   entry_artifacts: string[];
   output_artifacts: string[];
+};
+
+export type WorkflowPackageContractEntry = {
+  node_id: string;
+  artifact_type: string;
+  description?: string;
+  dataset_value?: string;
+  semantic_type?: string;
+  schema_ref?: string;
+};
+
+export type WorkflowPackageContractManifest = {
+  dataset_schema?: string;
+  dataset_contract_id?: string;
+  dataset_contract_version?: string;
+  dataset_value_ids: string[];
+  entry_contracts: WorkflowPackageContractEntry[];
+  output_contracts: WorkflowPackageContractEntry[];
 };
 
 export type WorkflowPackage = {
@@ -22,6 +41,7 @@ export type WorkflowPackage = {
   package_version?: string;
   exported_at: string;
   search_index: WorkflowPackageSearchIndex;
+  contract_manifest: WorkflowPackageContractManifest;
   workflow: {
     id: string;
     source_workflow_id?: string;
@@ -97,6 +117,62 @@ function deriveCapabilityTagsFromGraph(graph: WorkflowGraphDefinition) {
   ]);
 }
 
+function formatSchemaRef(value?: { schema: string; version: string } | null) {
+  if (!value?.schema || !value?.version) return undefined;
+  return `${value.schema}@${value.version}`;
+}
+
+function buildArtifactContractEntries(params: {
+  artifacts: WorkflowCatalogEntryArtifact[];
+  graph: WorkflowGraphDefinition;
+}) {
+  const values = params.graph.dataset_contract?.values ?? [];
+  const valueMap = new Map(values.map((value) => [value.id, value] as const));
+
+  return params.artifacts.map((artifact) => {
+    const node = params.graph.nodes.find((entry) => entry.id === artifact.node_id);
+    const ports = [
+      ...(node?.inputs ?? []),
+      ...(node?.outputs ?? []),
+    ];
+    const matchedPort = ports.find((port) => port.artifact_type === artifact.artifact_type);
+    const matchedValue =
+      (matchedPort?.dataset_value ? valueMap.get(matchedPort.dataset_value) : null) ??
+      values.find((value) => value.semantic_type === artifact.artifact_type) ??
+      null;
+
+    return {
+      node_id: artifact.node_id,
+      artifact_type: artifact.artifact_type,
+      description: artifact.description,
+      dataset_value: matchedPort?.dataset_value ?? matchedValue?.id,
+      semantic_type: matchedValue?.semantic_type,
+      schema_ref: formatSchemaRef(matchedValue?.schema_ref),
+    };
+  });
+}
+
+export function buildWorkflowPackageContractManifest(
+  graph: WorkflowGraphDefinition,
+): WorkflowPackageContractManifest {
+  const datasetValues = graph.dataset_contract?.values ?? [];
+
+  return {
+    dataset_schema: graph.dataset_contract?.schema_version,
+    dataset_contract_id: graph.dataset_contract?.id,
+    dataset_contract_version: graph.dataset_contract?.version,
+    dataset_value_ids: datasetValues.map((value) => value.id),
+    entry_contracts: buildArtifactContractEntries({
+      artifacts: graph.entry_inputs ?? [],
+      graph,
+    }),
+    output_contracts: buildArtifactContractEntries({
+      artifacts: graph.output_artifacts ?? [],
+      graph,
+    }),
+  };
+}
+
 export function buildWorkflowPackageSearchIndex(params: {
   workflow?: Pick<WorkflowCatalogEntry, "domains" | "capability_tags"> | null;
   graph: WorkflowGraphDefinition;
@@ -143,6 +219,7 @@ export function buildWorkflowPackage(params: {
       graph: params.graph,
       tags,
     }),
+    contract_manifest: buildWorkflowPackageContractManifest(params.graph),
     workflow: {
       id: params.graph.id,
       source_workflow_id:
@@ -194,6 +271,63 @@ export function asWorkflowPackage(value: unknown): WorkflowPackage | null {
           output_artifacts: asStringArray(value.search_index.output_artifacts) ?? [],
         }
       : buildWorkflowPackageSearchIndex({ graph, tags: asStringArray(value.tags) }),
+    contract_manifest: isRecord(value.contract_manifest)
+      ? {
+          dataset_schema:
+            typeof value.contract_manifest.dataset_schema === "string"
+              ? value.contract_manifest.dataset_schema
+              : undefined,
+          dataset_contract_id:
+            typeof value.contract_manifest.dataset_contract_id === "string"
+              ? value.contract_manifest.dataset_contract_id
+              : undefined,
+          dataset_contract_version:
+            typeof value.contract_manifest.dataset_contract_version === "string"
+              ? value.contract_manifest.dataset_contract_version
+              : undefined,
+          dataset_value_ids: asStringArray(value.contract_manifest.dataset_value_ids) ?? [],
+          entry_contracts: Array.isArray(value.contract_manifest.entry_contracts)
+            ? value.contract_manifest.entry_contracts.flatMap((entry) =>
+                isRecord(entry) && typeof entry.node_id === "string" && typeof entry.artifact_type === "string"
+                  ? [
+                      {
+                        node_id: entry.node_id,
+                        artifact_type: entry.artifact_type,
+                        description:
+                          typeof entry.description === "string" ? entry.description : undefined,
+                        dataset_value:
+                          typeof entry.dataset_value === "string" ? entry.dataset_value : undefined,
+                        semantic_type:
+                          typeof entry.semantic_type === "string" ? entry.semantic_type : undefined,
+                        schema_ref:
+                          typeof entry.schema_ref === "string" ? entry.schema_ref : undefined,
+                      },
+                    ]
+                  : [],
+              )
+            : [],
+          output_contracts: Array.isArray(value.contract_manifest.output_contracts)
+            ? value.contract_manifest.output_contracts.flatMap((entry) =>
+                isRecord(entry) && typeof entry.node_id === "string" && typeof entry.artifact_type === "string"
+                  ? [
+                      {
+                        node_id: entry.node_id,
+                        artifact_type: entry.artifact_type,
+                        description:
+                          typeof entry.description === "string" ? entry.description : undefined,
+                        dataset_value:
+                          typeof entry.dataset_value === "string" ? entry.dataset_value : undefined,
+                        semantic_type:
+                          typeof entry.semantic_type === "string" ? entry.semantic_type : undefined,
+                        schema_ref:
+                          typeof entry.schema_ref === "string" ? entry.schema_ref : undefined,
+                      },
+                    ]
+                  : [],
+              )
+            : [],
+        }
+      : buildWorkflowPackageContractManifest(graph),
     workflow: {
       id: typeof value.workflow.id === "string" ? value.workflow.id : graph.id,
       source_workflow_id:

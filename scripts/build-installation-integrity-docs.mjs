@@ -2,54 +2,53 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "..");
-const contractPath = path.join(repoRoot, "deploy", "installation-integrity-contract.json");
-const docsOutputPath = path.join(repoRoot, "docs", "installation-integrity-contract.html");
-const hubOutputPath = path.join(repoRoot, "apps", "hub-gui", "ui", "docs", "installation-integrity.html");
-
-const docsCssHref = "../apps/hub-gui/ui/docs/docs.css";
-const hubCssHref = "./docs.css";
-const docsJsonHref = "../deploy/installation-integrity-contract.json";
-const hubJsonHref = "../../../../deploy/installation-integrity-contract.json";
+import {
+  installationIntegrityContractPath,
+  installationIntegrityDocs,
+  readJson,
+  rootDir,
+  updateChannelsPath,
+} from "./release-metadata.mjs";
 
 async function main() {
-  const contract = JSON.parse(await fs.readFile(contractPath, "utf8"));
+  const contractSource = readJson(installationIntegrityContractPath);
+  const channelContract = readJson(updateChannelsPath);
+  const contract = {
+    ...contractSource,
+    shipping_version: contractSource.shipping_version ?? channelContract.shipping_version,
+  };
   const docsHtml = renderHtml(contract, {
     title: "Installation Integrity Contract",
     kicker: "Installation Contract",
-    cssHref: docsCssHref,
+    cssHref: installationIntegrityDocs.docsCssHref,
     backHref: "./README.md",
     backLabel: "Back to docs readme",
-    jsonHref: docsJsonHref,
+    jsonHref: installationIntegrityDocs.docsJsonHref,
     jsonLabel: "Open JSON source",
   });
   const hubHtml = renderHtml(contract, {
     title: "Installation Integrity Contract",
     kicker: "Installation Contract",
-    cssHref: hubCssHref,
+    cssHref: installationIntegrityDocs.hubCssHref,
     backHref: "./index.html",
     backLabel: "Back to docs home",
-    jsonHref: hubJsonHref,
+    jsonHref: installationIntegrityDocs.hubJsonHref,
     jsonLabel: "Open JSON source",
   });
 
-  await fs.writeFile(docsOutputPath, docsHtml);
-  await fs.writeFile(hubOutputPath, hubHtml);
+  await fs.writeFile(installationIntegrityDocs.docsOutputPath, docsHtml);
+  await fs.writeFile(installationIntegrityDocs.hubOutputPath, hubHtml);
 
   process.stdout.write(
     [
-      `wrote ${path.relative(repoRoot, docsOutputPath)}`,
-      `wrote ${path.relative(repoRoot, hubOutputPath)}`,
+      `wrote ${path.relative(rootDir, installationIntegrityDocs.docsOutputPath)}`,
+      `wrote ${path.relative(rootDir, installationIntegrityDocs.hubOutputPath)}`,
     ].join("\n"),
   );
 }
 
 function renderHtml(contract, options) {
-  const version = escapeHtml(contract.shipping_version || "1.5.0");
+  const version = escapeHtml(contract.shipping_version || "unknown");
   const productLine = escapeHtml(contract.product_line || "tamamono 1.x");
   const schemaVersion = escapeHtml(contract.schema_version || "kyuubiki.installation-contract/v1");
   const requiredLayout = Array.isArray(contract.required_layout) ? contract.required_layout : [];

@@ -1,7 +1,10 @@
 "use client";
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
-import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
+import type {
+  WorkflowPackage,
+  WorkflowPackageContractEntry,
+} from "@/components/workbench/workflow/workbench-workflow-package";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowPackageManifestCardProps = {
@@ -23,6 +26,21 @@ function formatDateTime(value?: string) {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+}
+
+function formatContractEntries(entries: WorkflowPackageContractEntry[]) {
+  if (entries.length === 0) return "--";
+  return entries
+    .map((entry) =>
+      [
+        entry.artifact_type,
+        entry.dataset_value ? `dataset:${entry.dataset_value}` : null,
+        entry.schema_ref,
+      ]
+        .filter(Boolean)
+        .join(" -> "),
+    )
+    .join(", ");
 }
 
 export function WorkbenchWorkflowPackageManifestCard({
@@ -49,6 +67,18 @@ export function WorkbenchWorkflowPackageManifestCard({
   const mountedOutputArtifacts =
     importedPackage?.search_index.output_artifacts ??
     workflow.output_artifacts.map((entry) => entry.artifact_type);
+  const contractManifest =
+    importedPackage?.contract_manifest ??
+    (workflow.graph
+      ? {
+          dataset_schema: workflow.graph.dataset_contract?.schema_version,
+          dataset_contract_id: workflow.graph.dataset_contract?.id,
+          dataset_contract_version: workflow.graph.dataset_contract?.version,
+          dataset_value_ids: workflow.graph.dataset_contract?.values.map((value) => value.id) ?? [],
+          entry_contracts: [],
+          output_contracts: [],
+        }
+      : null);
 
   if (!mountedPackageId) {
     return (
@@ -94,6 +124,14 @@ export function WorkbenchWorkflowPackageManifestCard({
           <strong>{formatList(mountedDomains)}</strong>
         </div>
         <div className="sidebar-list__row">
+          <span>{labels.datasetSchemaLabel}</span>
+          <strong>
+            {contractManifest?.dataset_contract_id
+              ? `${contractManifest.dataset_contract_id}@${contractManifest.dataset_contract_version ?? "1"}`
+              : contractManifest?.dataset_schema ?? "--"}
+          </strong>
+        </div>
+        <div className="sidebar-list__row">
           <span>{labels.packageManifestCapabilitiesLabel}</span>
           <strong>{formatList(mountedCapabilities)}</strong>
         </div>
@@ -108,6 +146,14 @@ export function WorkbenchWorkflowPackageManifestCard({
         <div className="sidebar-list__row">
           <span>{labels.packageManifestOutputArtifactsLabel}</span>
           <strong>{formatList(mountedOutputArtifacts)}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>{labels.operatorInputSchemaLabel}</span>
+          <strong>{formatContractEntries(contractManifest?.entry_contracts ?? [])}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>{labels.operatorOutputSchemaLabel}</span>
+          <strong>{formatContractEntries(contractManifest?.output_contracts ?? [])}</strong>
         </div>
       </div>
     </section>

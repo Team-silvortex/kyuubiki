@@ -234,7 +234,7 @@ export function WorkbenchWorkflowTemplateChainActions({
                 ? labels.insertElectrostaticBridgeHeatLabel
                 : chainId === "electrostatic_summary"
                   ? labels.insertElectrostaticSolveExportLabel
-                  : chainId;
+                  : chain.label;
   }
   function saveCurrentSelectionAsChain() {
     if (selectedNodes.length === 0) return;

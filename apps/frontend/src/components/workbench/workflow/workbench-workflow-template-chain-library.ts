@@ -113,6 +113,57 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     ],
   },
   {
+    id: "electrostatic_heat_thermo_summary",
+    label: "electrostatic -> heat -> thermo summary",
+    source: "built-in",
+    summary:
+      "Full coupled chain from electrostatic field, through heat loading, into thermo-mechanical solve and summary export.",
+    tags: [
+      "electromagnetic",
+      "electrostatic",
+      "heat",
+      "thermal",
+      "thermo_mechanical",
+      "bridge",
+      "coupled",
+      "summary",
+      "2d",
+    ],
+    templates: [
+      { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
+        config:
+          createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_quad_2d") ??
+          undefined,
+      },
+      { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.temperature_field_to_thermo_quad_2d",
+        config:
+          createBridgeConfigForOperator("bridge.temperature_field_to_thermo_quad_2d") ??
+          undefined,
+      },
+      { kind: "solve", operatorId: "solve.thermal_plane_quad_2d" },
+      {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: {
+          fields: [
+            "max_displacement",
+            "max_stress",
+            "max_temperature",
+            "max_temperature_delta",
+            "max_temperature_gradient",
+          ],
+        },
+      },
+      { kind: "export", operatorId: "export.summary_json" },
+    ],
+  },
+  {
     id: "electrostatic_summary",
     label: "electrostatic summary",
     source: "built-in",

@@ -135,7 +135,7 @@ Unified updates now follow the same source-of-truth posture:
 This gives the project a Docker-like update model:
 
 - human-facing tags such as `tamamono:stable`
-- concrete immutable shipped versions such as `1.5.0`
+- concrete immutable shipped versions such as `1.6.0`
 - visible rollout rules instead of hidden cleanup or migration behavior
 - one shared update description for CLI, installer GUI, and docs surfaces
 

@@ -1,32 +1,17 @@
 #!/usr/bin/env node
 
-import fs from "node:fs";
 import path from "node:path";
-
-const rootDir = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-const releaseIndexPath = path.join(rootDir, "releases/index.json");
-const channelsPath = path.join(rootDir, "deploy/update-channels.json");
-const outputCatalogPath = path.join(rootDir, "releases/update-catalog.json");
-const outputDocsPaths = [
-  path.join(rootDir, "docs/update-catalog.html"),
-  path.join(rootDir, "apps/hub-gui/ui/docs/update-catalog.html"),
-];
-
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, "utf8"));
-}
-
-function writeJson(filePath, value) {
-  fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`);
-}
-
-function writeText(filePath, value) {
-  fs.writeFileSync(filePath, value);
-}
-
-function fileExists(relativePath) {
-  return fs.existsSync(path.join(rootDir, relativePath));
-}
+import {
+  fileExists,
+  readJson,
+  releaseIndexPath,
+  rootDir,
+  updateCatalogDocPaths,
+  updateCatalogPath,
+  updateChannelsPath,
+  writeJson,
+  writeText,
+} from "./release-metadata.mjs";
 
 function artifactEntry(product, key, relativePath) {
   const kind = key.split("_").pop();
@@ -65,7 +50,7 @@ function collectArtifacts(snapshot) {
 
 function buildCatalog() {
   const releaseIndex = readJson(releaseIndexPath);
-  const channels = readJson(channelsPath);
+  const channels = readJson(updateChannelsPath);
   const snapshotsByVersion = new Map();
 
   for (const entry of releaseIndex.snapshots ?? []) {
@@ -134,7 +119,7 @@ function buildCatalog() {
     line: channels.line ?? releaseIndex.line,
     source: {
       release_index: "releases/index.json",
-      channel_contract: "deploy/update-channels.json",
+      channel_contract: path.relative(rootDir, updateChannelsPath),
     },
     channels: catalogChannels,
     versions,
@@ -240,12 +225,12 @@ function renderHtml(catalog) {
 }
 
 const catalog = buildCatalog();
-writeJson(outputCatalogPath, catalog);
-for (const filePath of outputDocsPaths) {
+writeJson(updateCatalogPath, catalog);
+for (const filePath of updateCatalogDocPaths) {
   writeText(filePath, renderHtml(catalog));
 }
 
-console.log(`wrote ${path.relative(rootDir, outputCatalogPath)}`);
-for (const filePath of outputDocsPaths) {
+console.log(`wrote ${path.relative(rootDir, updateCatalogPath)}`);
+for (const filePath of updateCatalogDocPaths) {
   console.log(`wrote ${path.relative(rootDir, filePath)}`);
 }
