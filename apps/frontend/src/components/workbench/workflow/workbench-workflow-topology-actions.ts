@@ -19,6 +19,7 @@ import {
   listWorkflowTemplateDatasetValues,
   type WorkflowNodeTemplateSelection,
 } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 type SetDraftGraph = Dispatch<SetStateAction<WorkflowGraphDefinition | null>>;
@@ -158,6 +159,29 @@ function appendConnectedNode(
   return createdNode;
 }
 
+function connectNodes(
+  graph: WorkflowGraphDefinition,
+  sourceNode: WorkflowGraphNode,
+  targetNode: WorkflowGraphNode,
+  sourcePortId?: string,
+  targetPortId?: string,
+) {
+  const ports =
+    sourcePortId && targetPortId
+      ? { sourcePort: findPort(sourceNode, "outputs", sourcePortId), targetPort: findPort(targetNode, "inputs", targetPortId) }
+      : pickConnectedPorts(sourceNode, targetNode);
+  const baseEdge = buildDraftEdge((graph.edges ?? []).length + 1, [sourceNode, targetNode]);
+  const connectedEdge = syncEdgeFromPorts(
+    {
+      ...baseEdge,
+      from: { node: sourceNode.id, port: sourcePortId ?? ports.sourcePort?.id ?? baseEdge.from.port },
+      to: { node: targetNode.id, port: targetPortId ?? ports.targetPort?.id ?? baseEdge.to.port },
+    },
+    graph.nodes,
+  );
+  graph.edges = [...(graph.edges ?? []), connectedEdge];
+}
+
 function connectNodesByPorts(
   graph: WorkflowGraphDefinition,
   sourceNodeId: string,
@@ -165,16 +189,54 @@ function connectNodesByPorts(
   targetNodeId: string,
   targetPortId: string,
 ) {
-  const baseEdge = buildDraftEdge((graph.edges ?? []).length + 1, graph.nodes);
-  const connectedEdge = syncEdgeFromPorts(
-    {
-      ...baseEdge,
-      from: { node: sourceNodeId, port: sourcePortId },
-      to: { node: targetNodeId, port: targetPortId },
-    },
-    graph.nodes,
-  );
-  graph.edges = [...(graph.edges ?? []), connectedEdge];
+  const sourceNode = findNode(graph.nodes, sourceNodeId);
+  const targetNode = findNode(graph.nodes, targetNodeId);
+  if (!sourceNode || !targetNode) return;
+  connectNodes(graph, sourceNode, targetNode, sourcePortId, targetPortId);
+}
+
+function appendTemplateChainNodes(
+  graph: WorkflowGraphDefinition,
+  templates: WorkflowNodeTemplateSelection[],
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
+  const createdNodes: WorkflowGraphNode[] = [];
+  for (const template of templates) {
+    const createdNode = buildDraftNode(graph.nodes.length + 1, template, operatorDescriptors);
+    graph.nodes = [...graph.nodes, createdNode];
+    ensureTemplateDatasetValues(graph, template, operatorDescriptors);
+    createdNodes.push(createdNode);
+  }
+  return createdNodes;
+}
+
+function appendLinearTemplateChain(
+  graph: WorkflowGraphDefinition,
+  sourceNode: WorkflowGraphNode | null,
+  templates: WorkflowNodeTemplateSelection[],
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
+  let previousNode = sourceNode;
+  for (const template of templates) {
+    previousNode = appendConnectedNode(graph, previousNode, template, operatorDescriptors);
+  }
+}
+
+function appendGraphTemplateChain(
+  graph: WorkflowGraphDefinition,
+  sourceNode: WorkflowGraphNode | null,
+  chain: WorkflowTemplateChainDefinition,
+  operatorDescriptors?: WorkflowOperatorDescriptor[],
+) {
+  const createdNodes = appendTemplateChainNodes(graph, chain.templates, operatorDescriptors);
+  if (createdNodes.length === 0) return;
+  if (sourceNode) connectNodes(graph, sourceNode, createdNodes[0]);
+  for (const connection of chain.connections ?? []) {
+    const fromNode = createdNodes[connection.from];
+    const toNode = createdNodes[connection.to];
+    if (!fromNode || !toNode) continue;
+    connectNodes(graph, fromNode, toNode, connection.fromPort, connection.toPort);
+  }
 }
 
 function upsertControlFlowEdge(
@@ -293,7 +355,7 @@ export function createWorkflowTopologyActions(
   }
 
   function insertTemplateChain(
-    templates: WorkflowNodeTemplateSelection[],
+    chain: WorkflowTemplateChainDefinition,
     sourceNodeId?: string | null,
   ) {
     setDraftGraph((current) => {
@@ -301,10 +363,12 @@ export function createWorkflowTopologyActions(
       const next = cloneWorkflowGraph(current);
       if (!next) return current;
 
-      let previousNode =
+      const sourceNode =
         sourceNodeId ? next.nodes.find((node) => node.id === sourceNodeId) ?? null : null;
-      for (const template of templates) {
-        previousNode = appendConnectedNode(next, previousNode, template, operatorDescriptors);
+      if (chain.connections?.length) {
+        appendGraphTemplateChain(next, sourceNode, chain, operatorDescriptors);
+      } else {
+        appendLinearTemplateChain(next, sourceNode, chain.templates, operatorDescriptors);
       }
       return next;
     });

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki Rendering Roadmap</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Rendering Roadmap</div>
+        <h1>tamamono 1.x render capability upgrade path</h1>
+        <p class="docs-copy">
+          This page turns the current rendering reality into a concrete staged plan.
+          The goal is not to chase visual polish first. The goal is to let advanced
+          multi-operator simulation features stay truthful, scalable, and eventually
+          viewport-native.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Current line: tamamono 1.6.x</span>
+          <span class="docs-chip">North star: FEM-side Blender viewport</span>
+          <span class="docs-chip">Status: planning contract</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./README.md">Back to docs readme</a>
+          <a class="docs-link" href="./fem-blender-roadmap.md">Open product north star</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <div class="docs-kicker">assessment</div>
+          <h2>Current rendering posture</h2>
+          <p class="docs-copy">
+            The current workbench renderer is already good enough for operator growth,
+            workflow debugging, and moderate result inspection. It is not yet a true
+            simulation viewport engine. Most visible rendering still runs through
+            SVG-driven view components and progressive DOM budgeting rather than a
+            dedicated field renderer.
+          </p>
+          <ul class="docs-list">
+            <li><strong>strong today</strong>: workflow editing, scalar-field selection, result summaries, moderate 2D and truss inspection</li>
+            <li><strong>acceptable with caution</strong>: larger studies that rely on progressive batch reveal instead of full interactive density</li>
+            <li><strong>not ready yet</strong>: dense plane-field clouds, layered electrostatic plus thermal plus thermo overlays, smooth deform-plus-field playback, Blender-class viewport feel</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">evidence</div>
+          <h2>Why this assessment is concrete</h2>
+          <ul class="docs-list">
+            <li><strong>viewport dispatch</strong>: <code>apps/frontend/src/components/workbench/workbench-viewport.tsx</code> selects SVG-oriented renderers for axial, line, plane, and truss3d views</li>
+            <li><strong>render strategy</strong>: progressive reveal is handled by <code>requestAnimationFrame</code> plus <code>renderBatchSize</code> instead of a persistent GPU scene graph</li>
+            <li><strong>field surface</strong>: result fields are already broad in <code>workbench-viewport-core.ts</code>, which means the data model is moving faster than the viewport substrate</li>
+            <li><strong>result chunking</strong>: <code>chunkDirectMeshResult</code> in <code>apps/frontend/src/lib/direct-mesh/results.ts</code> shows that large-result access is already becoming a concern</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">rule</div>
+          <h2>Decision rule for the next minors</h2>
+          <p class="docs-copy">
+            Keep shipping operator and workflow capability now, but do not pretend the
+            current SVG viewport is the final answer for high-density simulation
+            visuals. New advanced physics features may land before the final render
+            substrate does, as long as they remain inspectable, testable, and
+            performance-bounded.
+          </p>
+        </article>
+      </section>
+
+      <section class="docs-grid">
+        <article class="docs-card">
+          <div class="docs-kicker">1.6.x</div>
+          <h2>Stabilize the current viewport contract</h2>
+          <p class="docs-copy">
+            Finish the separation between simulation truth and visual representation.
+            This is the last stage where SVG remains the primary renderer for most
+            result views.
+          </p>
+          <h3>Must land</h3>
+          <ul class="docs-list">
+            <li><strong>result surface contract</strong>: define which result fields are viewable, selectable, exportable, and benchmarked per study family</li>
+            <li><strong>render diagnostics</strong>: expose node count, element count, render-window limits, and progressive-render state in the workbench UI</li>
+            <li><strong>field fallback policy</strong>: when density is too high, fall back to summary, hotspot, slice, or sampled views instead of freezing the viewport</li>
+            <li><strong>selection integrity</strong>: keep picking, node focus, element focus, and workflow trace links stable even under partial render budgets</li>
+          </ul>
+          <h3>Must not attempt yet</h3>
+          <ul class="docs-list">
+            <li>full viewport rewrite</li>
+            <li>unbounded multi-layer overlay rendering</li>
+            <li>cinematic animation polish before field correctness</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">1.7.x</div>
+          <h2>Introduce a dedicated plane-field renderer</h2>
+          <p class="docs-copy">
+            This is the real turning point. The highest pressure area is not the whole
+            workbench at once. It is 2D plane-field rendering for dense scalar and
+            vector results.
+          </p>
+          <h3>Must land</h3>
+          <ul class="docs-list">
+            <li><strong>new render lane</strong>: add a dedicated plane-result subrenderer on <code>Canvas</code>, <code>WebGL</code>, or <code>WebGPU</code>, without rewriting all workbench chrome</li>
+            <li><strong>triangle and quad support</strong>: same field view path must support heat, electrostatic, structural plane, and thermo plane studies</li>
+            <li><strong>palette contract</strong>: unify contour palette, clamps, outlier handling, legend generation, and no-data behavior</li>
+            <li><strong>deformation composition</strong>: allow deform-only, field-only, and deform-plus-field modes without duplicating simulation transforms</li>
+            <li><strong>render benchmarks</strong>: establish practical targets for small, medium, and stress-case plane meshes</li>
+          </ul>
+          <h3>Success condition</h3>
+          <p class="docs-copy">
+            Advanced plane operators become believable because the viewport can display
+            dense fields directly instead of reducing everything to sampled SVG shapes.
+          </p>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">1.8.x</div>
+          <h2>Make multi-physics visualization composable</h2>
+          <p class="docs-copy">
+            Once plane-field rendering is real, the next step is controlled layering.
+            This is where electrostatic-to-heat-to-thermo chains start feeling like a
+            native simulation language instead of several separate reports.
+          </p>
+          <h3>Must land</h3>
+          <ul class="docs-list">
+            <li><strong>layer stack</strong>: explicit visibility and order for deformation, scalar field, vector glyphs, constraints, loads, selection, and warnings</li>
+            <li><strong>workflow-linked views</strong>: clicking a workflow node can drive the active result layer without rebuilding the whole viewport state</li>
+            <li><strong>cross-operator comparison</strong>: let users compare source field, bridged field, and downstream response inside one visual session</li>
+            <li><strong>snapshot discipline</strong>: viewport state snapshots must stay bounded in memory and intelligible in audit exports</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">1.9.x+</div>
+          <h2>Converge toward a true FEM creation viewport</h2>
+          <p class="docs-copy">
+            Only after the field renderer and layer system exist should the project
+            lean into heavier viewport ambitions.
+          </p>
+          <ul class="docs-list">
+            <li><strong>space-view maturity</strong>: improve 3D structural rendering, clipping, and density-aware picking</li>
+            <li><strong>material and operator previews</strong>: shader-like previews for workflow templates, operator packs, and reusable composite assets</li>
+            <li><strong>interactive analysis modes</strong>: probes, cuts, path plots, temporal comparisons, and guided diagnosis surfaces</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <div class="docs-kicker">scope</div>
+          <h2>What can ship now without waiting</h2>
+          <ul class="docs-list">
+            <li><strong>operators</strong>: new electrostatic, heat, thermal, and transform operators</li>
+            <li><strong>bridge contracts</strong>: richer cross-operator field transfer rules and reduction policies</li>
+            <li><strong>workflow features</strong>: graph insertion, composite templates, run traces, benchmark hooks, audit exports</li>
+            <li><strong>SDK growth</strong>: headless workflow and operator execution contracts</li>
+          </ul>
+          <p class="docs-copy">
+            These stay valid because the rendering layer is a consumer of simulation
+            truth, not the truth itself.
+          </p>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">guardrails</div>
+          <h2>What would be a mistake right now</h2>
+          <ul class="docs-list">
+            <li><strong>mistake 1</strong>: treating SVG batching as a permanent high-density rendering solution</li>
+            <li><strong>mistake 2</strong>: coupling workflow semantics to whatever the current viewport can easily draw</li>
+            <li><strong>mistake 3</strong>: shipping heavy visual layering before a memory and snapshot budget exists</li>
+            <li><strong>mistake 4</strong>: benchmarking only solver time while ignoring result-surface cost</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">benchmarks</div>
+          <h2>Render metrics that should become first-class</h2>
+          <ul class="docs-list">
+            <li><strong>time to first view</strong>: time until a user sees a meaningful result surface</li>
+            <li><strong>time to full detail</strong>: time until all intended layers are available</li>
+            <li><strong>interactive floor</strong>: pointer and selection responsiveness while the viewport is busy</li>
+            <li><strong>memory ceiling</strong>: viewport plus snapshot memory under repeated workflow runs</li>
+            <li><strong>degrade quality</strong>: whether fallback modes stay honest instead of silently dropping important context</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <div class="docs-kicker">bottom line</div>
+          <h2>Simple project stance</h2>
+          <p class="docs-copy">
+            The current renderer is enough to support serious operator progress.
+            It is not enough to be the final host for the most advanced simulation
+            features. So the correct strategy is not to pause feature work. The
+            correct strategy is to keep advancing operators while preparing a
+            dedicated field-render lane in the next minor line.
+          </p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

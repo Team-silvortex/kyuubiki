@@ -310,7 +310,8 @@ function validateBridgeConfigs(graph: WorkflowGraphDefinition): WorkflowGraphVal
       id: `bridge:seed-model:${node.id}`,
       level: "warning",
       message:
-        node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d"
+        node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" ||
+        node.operator_id === "bridge.electrostatic_field_to_heat_triangle_2d"
           ? `Bridge node "${node.id}" is missing config.seed_model for the downstream heat quad seed model.`
           : `Bridge node "${node.id}" is missing downstream thermo seed-model fields in config.`,
       locate: { kind: "node", nodeId: node.id },

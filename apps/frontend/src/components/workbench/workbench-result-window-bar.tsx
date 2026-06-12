@@ -2,8 +2,14 @@
 
 import type { WorkbenchCopy } from "./workbench-copy";
 import type { PlaneResultField } from "./workbench-defaults";
+import type { ViewportRenderStrategy } from "./workbench-render-diagnostics";
+import {
+  prioritizedBeamFields,
+  prioritizedFrameFields,
+  prioritizedPlaneFields,
+} from "./workbench-result-field-priority";
 import type { ResultWindowState } from "./workbench-result-window-controller";
-import type { BeamResultField, FrameResultField } from "./workbench-types";
+import type { BeamResultField, FrameResultField, StudyKind } from "./workbench-types";
 
 type ResultWindowJump = {
   label: string;
@@ -36,11 +42,45 @@ type WorkbenchResultWindowBarProps = {
   planeResultField: PlaneResultField;
   frameResultField: FrameResultField;
   beamResultField: BeamResultField;
+  renderStrategy: ViewportRenderStrategy;
   setPlaneResultField: (value: PlaneResultField) => void;
   setFrameResultField: (value: FrameResultField) => void;
   setBeamResultField: (value: BeamResultField) => void;
   setResultWindowOffset: (updater: number | ((current: number) => number)) => void;
   clampChunkOffset: (offset: number, total: number, limit: number) => number;
+};
+
+const planeFieldLabels: Record<PlaneResultField, (t: WorkbenchCopy) => string> = {
+  von_mises: (t) => t.planeViewVonMises,
+  principal_stress_1: (t) => t.planeViewPrincipal1,
+  max_in_plane_shear: (t) => t.planeViewMaxShear,
+  average_temperature: (t) => t.maxTemperature,
+  average_temperature_delta: (t) => t.temperatureDelta,
+  temperature_gradient_x: (t) => t.temperatureGradientX,
+  temperature_gradient_y: (t) => t.temperatureGradientY,
+  heat_flux_x: (t) => t.heatFluxX,
+  heat_flux_y: (t) => t.heatFluxY,
+  heat_flux_magnitude: (t) => t.maxHeatFlux,
+  thermal_strain: (t) => t.thermalStrain,
+  mechanical_strain: (t) => t.mechanicalStrain,
+};
+
+const frameFieldLabels: Record<FrameResultField, (t: WorkbenchCopy) => string> = {
+  axial_stress: (t) => t.stress,
+  max_bending_stress: (t) => t.bendingStress,
+  max_combined_stress: (t) => t.combinedStress,
+  moment: (t) => t.maxMoment,
+  average_temperature_delta: (t) => t.temperatureDelta,
+  temperature_gradient_y: (t) => t.temperatureGradientY,
+  thermal_curvature: (t) => t.thermalCurvature,
+};
+
+const beamFieldLabels: Record<BeamResultField, (t: WorkbenchCopy) => string> = {
+  max_bending_stress: (t) => t.bendingStress,
+  shear_force: (t) => t.shearForce,
+  moment: (t) => t.maxMoment,
+  temperature_gradient_y: (t) => t.temperatureGradientY,
+  thermal_curvature: (t) => t.thermalCurvature,
 };
 
 export function WorkbenchResultWindowBar({
@@ -69,6 +109,7 @@ export function WorkbenchResultWindowBar({
   planeResultField,
   frameResultField,
   beamResultField,
+  renderStrategy,
   setPlaneResultField,
   setFrameResultField,
   setBeamResultField,
@@ -76,6 +117,11 @@ export function WorkbenchResultWindowBar({
   clampChunkOffset,
 }: WorkbenchResultWindowBarProps) {
   if (!activeResultWindow) return null;
+
+  const focusOnly = renderStrategy === "focus";
+  const planeFields = prioritizedPlaneFields(studyKind as StudyKind, renderStrategy);
+  const frameFields = prioritizedFrameFields(studyKind as StudyKind, renderStrategy);
+  const beamFields = prioritizedBeamFields(studyKind as StudyKind, renderStrategy);
 
   return (
     <div className="viewport-window-bar">
@@ -93,119 +139,63 @@ export function WorkbenchResultWindowBar({
         <span>
           {t.totalElements}: {activeResultWindow.totalElements}
         </span>
+        {focusOnly ? <span>{t.renderFocusFieldHint}</span> : null}
       </div>
       <div className="button-row">
         {isPlane && planeResult ? (
           <>
-            {isHeatPlane ? (
-              <>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "average_temperature" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("average_temperature")} type="button">
-                  {t.maxTemperature}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "temperature_gradient_x" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("temperature_gradient_x")} type="button">
-                  {t.temperatureGradientX}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "temperature_gradient_y" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("temperature_gradient_y")} type="button">
-                  {t.temperatureGradientY}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "heat_flux_x" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("heat_flux_x")} type="button">
-                  {t.heatFluxX}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "heat_flux_y" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("heat_flux_y")} type="button">
-                  {t.heatFluxY}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "heat_flux_magnitude" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("heat_flux_magnitude")} type="button">
-                  {t.maxHeatFlux}
-                </button>
-              </>
-            ) : (
-              <>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "von_mises" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("von_mises")} type="button">
-                  {t.planeViewVonMises}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "principal_stress_1" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("principal_stress_1")} type="button">
-                  {t.planeViewPrincipal1}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "max_in_plane_shear" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("max_in_plane_shear")} type="button">
-                  {t.planeViewMaxShear}
-                </button>
-              </>
-            )}
-            {isThermalPlaneTriangle || isThermalPlaneQuad ? (
-              <>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "average_temperature_delta" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("average_temperature_delta")} type="button">
-                  {t.temperatureDelta}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "thermal_strain" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("thermal_strain")} type="button">
-                  {t.thermalStrain}
-                </button>
-                <button className={`ghost-button ghost-button--compact${planeResultField === "mechanical_strain" ? " ghost-button--active" : ""}`} onClick={() => setPlaneResultField("mechanical_strain")} type="button">
-                  {t.mechanicalStrain}
-                </button>
-              </>
-            ) : null}
+            {planeFields.map((field) => (
+              <button
+                key={field}
+                className={`ghost-button ghost-button--compact${planeResultField === field ? " ghost-button--active" : ""}`}
+                onClick={() => setPlaneResultField(field)}
+                type="button"
+              >
+                {planeFieldLabels[field](t)}
+              </button>
+            ))}
           </>
         ) : null}
         {isFrameLike && activeFrameLikeResult ? (
           <>
-            <button className={`ghost-button ghost-button--compact${frameResultField === "axial_stress" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("axial_stress")} type="button">
-              {t.stress}
-            </button>
-            <button className={`ghost-button ghost-button--compact${frameResultField === "max_bending_stress" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("max_bending_stress")} type="button">
-              {t.bendingStress}
-            </button>
-            <button className={`ghost-button ghost-button--compact${frameResultField === "max_combined_stress" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("max_combined_stress")} type="button">
-              {t.combinedStress}
-            </button>
-            <button className={`ghost-button ghost-button--compact${frameResultField === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("moment")} type="button">
-              {t.maxMoment}
-            </button>
-            {isThermalFrame ? (
-              <>
-                <button className={`ghost-button ghost-button--compact${frameResultField === "average_temperature_delta" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("average_temperature_delta")} type="button">
-                  {t.temperatureDelta}
-                </button>
-                <button className={`ghost-button ghost-button--compact${frameResultField === "temperature_gradient_y" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("temperature_gradient_y")} type="button">
-                  {t.temperatureGradientY}
-                </button>
-                <button className={`ghost-button ghost-button--compact${frameResultField === "thermal_curvature" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("thermal_curvature")} type="button">
-                  {t.thermalCurvature}
-                </button>
-              </>
-            ) : null}
+            {frameFields.map((field) => (
+              <button
+                key={field}
+                className={`ghost-button ghost-button--compact${frameResultField === field ? " ghost-button--active" : ""}`}
+                onClick={() => setFrameResultField(field)}
+                type="button"
+              >
+                {studyKind === "torsion_1d" && field === "max_bending_stress" ? t.torsionStress : frameFieldLabels[field](t)}
+              </button>
+            ))}
           </>
         ) : null}
         {isBeam && activeBeamLikeResult ? (
           <>
-            <button className={`ghost-button ghost-button--compact${beamResultField === "max_bending_stress" ? " ghost-button--active" : ""}`} onClick={() => setBeamResultField("max_bending_stress")} type="button">
-              {t.bendingStress}
-            </button>
-            <button className={`ghost-button ghost-button--compact${beamResultField === "shear_force" ? " ghost-button--active" : ""}`} onClick={() => setBeamResultField("shear_force")} type="button">
-              {t.shearForce}
-            </button>
-            <button className={`ghost-button ghost-button--compact${beamResultField === "moment" ? " ghost-button--active" : ""}`} onClick={() => setBeamResultField("moment")} type="button">
-              {t.maxMoment}
-            </button>
-            {studyKind === "thermal_beam_1d" ? (
-              <>
-                <button className={`ghost-button ghost-button--compact${beamResultField === "temperature_gradient_y" ? " ghost-button--active" : ""}`} onClick={() => setBeamResultField("temperature_gradient_y")} type="button">
-                  {t.temperatureGradientY}
-                </button>
-                <button className={`ghost-button ghost-button--compact${beamResultField === "thermal_curvature" ? " ghost-button--active" : ""}`} onClick={() => setBeamResultField("thermal_curvature")} type="button">
-                  {t.thermalCurvature}
-                </button>
-              </>
-            ) : null}
+            {beamFields.map((field) => (
+              <button
+                key={field}
+                className={`ghost-button ghost-button--compact${beamResultField === field ? " ghost-button--active" : ""}`}
+                onClick={() => setBeamResultField(field)}
+                type="button"
+              >
+                {beamFieldLabels[field](t)}
+              </button>
+            ))}
           </>
         ) : null}
         {isTorsion && torsionResult ? (
           <>
-            <button className={`ghost-button ghost-button--compact${frameResultField === "max_bending_stress" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("max_bending_stress")} type="button">
-              {t.torsionStress}
-            </button>
-            <button className={`ghost-button ghost-button--compact${frameResultField === "moment" ? " ghost-button--active" : ""}`} onClick={() => setFrameResultField("moment")} type="button">
-              {t.maxTorque}
-            </button>
+            {frameFields.map((field) => (
+              <button
+                key={field}
+                className={`ghost-button ghost-button--compact${frameResultField === field ? " ghost-button--active" : ""}`}
+                onClick={() => setFrameResultField(field)}
+                type="button"
+              >
+                {field === "max_bending_stress" ? t.torsionStress : t.maxTorque}
+              </button>
+            ))}
           </>
         ) : null}
         {resultWindowJumps.map((jump) => (

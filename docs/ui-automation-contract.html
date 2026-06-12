@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki UI Automation Contract</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #111318;
+        --panel: #1a1d24;
+        --panel-2: #20242d;
+        --text: #ecf1ff;
+        --muted: #95a0ba;
+        --accent: #f3a43b;
+        --line: #313846;
+        --good: #7fd7a7;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "SF Mono", "IBM Plex Mono", "Roboto Mono", monospace;
+        background:
+          radial-gradient(circle at top, rgba(243, 164, 59, 0.18), transparent 28%),
+          linear-gradient(180deg, #12151c, #0c0e13 72%);
+        color: var(--text);
+      }
+
+      main {
+        width: min(1080px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 40px 0 72px;
+      }
+
+      h1, h2 { margin: 0; }
+      p, li { color: var(--muted); line-height: 1.6; }
+      .hero, .panel {
+        background: linear-gradient(180deg, rgba(32, 36, 45, 0.95), rgba(22, 25, 32, 0.95));
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+      }
+      .hero { padding: 28px; margin-bottom: 20px; }
+      .eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: 0.16em; font-size: 12px; }
+      .grid { display: grid; gap: 20px; grid-template-columns: 1.2fr 1fr; }
+      .panel { padding: 24px; }
+      .meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+      .meta span {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(243, 164, 59, 0.12);
+        color: var(--text);
+        border: 1px solid rgba(243, 164, 59, 0.22);
+      }
+      table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+      th, td {
+        text-align: left;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th { color: var(--good); font-weight: 600; }
+      code {
+        font-family: inherit;
+        background: var(--panel-2);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 2px 6px;
+        color: var(--text);
+      }
+      ul { margin: 12px 0 0; padding-left: 18px; }
+      @media (max-width: 820px) {
+        .grid { grid-template-columns: 1fr; }
+        main { width: min(100vw - 20px, 1080px); padding-top: 20px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="eyebrow">tamamono 1.6.x</div>
+        <h1>Kyuubiki Workbench UI Automation Contract</h1>
+        <p>
+          This contract defines the stable product-owned DOM anchors for the built-in
+          workbench shell. It exists so wasm Python automation and headless control
+          tooling can target fixed UI surfaces without depending on translated copy,
+          visual styling, or user-customized layout.
+        </p>
+        <div class="meta">
+          <span>Contract version: 1</span>
+          <span>Product-owned shell: yes</span>
+          <span>User-extensible UI shell: no</span>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Rules</h2>
+          <ul>
+            <li>The workbench shell structure is product-owned and not user-extensible.</li>
+            <li>Automation must target stable <code>data-*</code> selectors from this contract instead of visual text.</li>
+            <li>Built-in sidebar, inspector, console, viewport, and runtime panels remain product-owned surfaces.</li>
+            <li>Workflow, operator, and dataset extensions may change content, but not the shell selector contract.</li>
+            <li>Breaking changes to these selectors require a contract version bump.</li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <h2>Intended Consumers</h2>
+          <ul>
+            <li>Built-in wasm Python automation running in the frontend.</li>
+            <li>Headless SDK layers that need cross-surface UI assertions.</li>
+            <li>Regression checks for fixed shell layout and control-plane navigation.</li>
+          </ul>
+        </section>
+      </div>
+
+      <section class="panel" style="margin-top: 20px;">
+        <h2>Stable Selectors</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Selector</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>shell</td><td><code>[data-workbench-shell="root"]</code></td></tr>
+            <tr><td>sidebar</td><td><code>[data-workbench-panel="sidebar"]</code></td></tr>
+            <tr><td>sidebarSection(section)</td><td><code>[data-workbench-sidebar-section="${section}"]</code></td></tr>
+            <tr><td>inspector</td><td><code>[data-workbench-panel="inspector"]</code></td></tr>
+            <tr><td>console</td><td><code>[data-workbench-panel="console"]</code></td></tr>
+            <tr><td>viewportPanel</td><td><code>[data-workbench-panel="viewport"]</code></td></tr>
+            <tr><td>viewportStage</td><td><code>[data-workbench-viewport="stage"]</code></td></tr>
+            <tr><td>runtimePanel</td><td><code>[data-workbench-runtime="panel"]</code></td></tr>
+            <tr><td>runtimeTabs</td><td><code>[data-workbench-runtime="tabs"]</code></td></tr>
+            <tr><td>runtimeTab(page)</td><td><code>[data-workbench-runtime-tab="${page}"]</code></td></tr>
+            <tr><td>controlWindow</td><td><code>[data-workbench-control-window="root"]</code></td></tr>
+            <tr><td>controlWindowTabs</td><td><code>[data-workbench-control-window="tabs"]</code></td></tr>
+            <tr><td>controlWindowTab(mode)</td><td><code>[data-workbench-control-mode-tab="${mode}"]</code></td></tr>
+            <tr><td>controlWindowSnapshotMeta</td><td><code>[data-workbench-control-window="snapshot-meta"]</code></td></tr>
+            <tr><td>controlWindowMetrics</td><td><code>[data-workbench-control-window="metrics"]</code></td></tr>
+            <tr><td>controlWindowActions</td><td><code>[data-workbench-control-window="actions"]</code></td></tr>
+            <tr><td>controlWindowExportButton</td><td><code>[data-workbench-control-action="export-snapshot"]</code></td></tr>
+            <tr><td>controlWindowImportInput</td><td><code>[data-workbench-control-action="import-snapshot"]</code></td></tr>
+            <tr><td>controlWindowResetButton</td><td><code>[data-workbench-control-action="reset-snapshot-source"]</code></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

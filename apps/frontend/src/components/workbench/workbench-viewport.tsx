@@ -21,6 +21,12 @@ import {
   renderPlaneViewport,
   renderTruss3dViewport,
 } from "@/components/workbench/workbench-viewport-renderers";
+import {
+  buildViewportRenderDiagnostics,
+  strategyInitialRenderBudget,
+  strategyRenderBatchSize,
+  type ViewportRenderDiagnostics,
+} from "@/components/workbench/workbench-render-diagnostics";
 
 function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   const {
@@ -99,6 +105,8 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     trussTitle,
     viewportPixelWidth,
     workspaceBadge,
+    onRenderDiagnosticsChange,
+    renderStrategy = "auto",
   } = props;
 
   const svgStyle = viewportPixelWidth ? { width: `${viewportPixelWidth}px`, minWidth: `${viewportPixelWidth}px` } : undefined;
@@ -148,12 +156,12 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
       planeNodes: planeNodes.length,
     };
 
-    setTrussElementRenderLimit(initialRenderBudget(targets.trussElements));
-    setTrussNodeRenderLimit(initialRenderBudget(targets.trussNodes));
-    setTruss3dElementRenderLimit(initialRenderBudget(targets.truss3dElements));
-    setTruss3dNodeRenderLimit(initialRenderBudget(targets.truss3dNodes));
-    setPlaneElementRenderLimit(initialRenderBudget(targets.planeElements));
-    setPlaneNodeRenderLimit(initialRenderBudget(targets.planeNodes));
+    setTrussElementRenderLimit(strategyInitialRenderBudget(targets.trussElements, renderStrategy));
+    setTrussNodeRenderLimit(strategyInitialRenderBudget(targets.trussNodes, renderStrategy));
+    setTruss3dElementRenderLimit(strategyInitialRenderBudget(targets.truss3dElements, renderStrategy));
+    setTruss3dNodeRenderLimit(strategyInitialRenderBudget(targets.truss3dNodes, renderStrategy));
+    setPlaneElementRenderLimit(strategyInitialRenderBudget(targets.planeElements, renderStrategy));
+    setPlaneNodeRenderLimit(strategyInitialRenderBudget(targets.planeNodes, renderStrategy));
 
     if (progressiveRenderFrameRef.current !== null) {
       window.cancelAnimationFrame(progressiveRenderFrameRef.current);
@@ -162,32 +170,32 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     const advance = () => {
       let complete = true;
       setTrussElementRenderLimit((current) => {
-        const next = Math.min(targets.trussElements, current + renderBatchSize(targets.trussElements));
+        const next = Math.min(targets.trussElements, current + strategyRenderBatchSize(targets.trussElements, renderStrategy));
         complete &&= next >= targets.trussElements;
         return next;
       });
       setTrussNodeRenderLimit((current) => {
-        const next = Math.min(targets.trussNodes, current + renderBatchSize(targets.trussNodes));
+        const next = Math.min(targets.trussNodes, current + strategyRenderBatchSize(targets.trussNodes, renderStrategy));
         complete &&= next >= targets.trussNodes;
         return next;
       });
       setTruss3dElementRenderLimit((current) => {
-        const next = Math.min(targets.truss3dElements, current + renderBatchSize(targets.truss3dElements));
+        const next = Math.min(targets.truss3dElements, current + strategyRenderBatchSize(targets.truss3dElements, renderStrategy));
         complete &&= next >= targets.truss3dElements;
         return next;
       });
       setTruss3dNodeRenderLimit((current) => {
-        const next = Math.min(targets.truss3dNodes, current + renderBatchSize(targets.truss3dNodes));
+        const next = Math.min(targets.truss3dNodes, current + strategyRenderBatchSize(targets.truss3dNodes, renderStrategy));
         complete &&= next >= targets.truss3dNodes;
         return next;
       });
       setPlaneElementRenderLimit((current) => {
-        const next = Math.min(targets.planeElements, current + renderBatchSize(targets.planeElements));
+        const next = Math.min(targets.planeElements, current + strategyRenderBatchSize(targets.planeElements, renderStrategy));
         complete &&= next >= targets.planeElements;
         return next;
       });
       setPlaneNodeRenderLimit((current) => {
-        const next = Math.min(targets.planeNodes, current + renderBatchSize(targets.planeNodes));
+        const next = Math.min(targets.planeNodes, current + strategyRenderBatchSize(targets.planeNodes, renderStrategy));
         complete &&= next >= targets.planeNodes;
         return next;
       });
@@ -200,12 +208,12 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     };
 
     const needsProgressive =
-      targets.trussElements > initialRenderBudget(targets.trussElements) ||
-      targets.trussNodes > initialRenderBudget(targets.trussNodes) ||
-      targets.truss3dElements > initialRenderBudget(targets.truss3dElements) ||
-      targets.truss3dNodes > initialRenderBudget(targets.truss3dNodes) ||
-      targets.planeElements > initialRenderBudget(targets.planeElements) ||
-      targets.planeNodes > initialRenderBudget(targets.planeNodes);
+      targets.trussElements > strategyInitialRenderBudget(targets.trussElements, renderStrategy) ||
+      targets.trussNodes > strategyInitialRenderBudget(targets.trussNodes, renderStrategy) ||
+      targets.truss3dElements > strategyInitialRenderBudget(targets.truss3dElements, renderStrategy) ||
+      targets.truss3dNodes > strategyInitialRenderBudget(targets.truss3dNodes, renderStrategy) ||
+      targets.planeElements > strategyInitialRenderBudget(targets.planeElements, renderStrategy) ||
+      targets.planeNodes > strategyInitialRenderBudget(targets.planeNodes, renderStrategy);
 
     if (needsProgressive) {
       progressiveRenderFrameRef.current = window.requestAnimationFrame(advance);
@@ -224,11 +232,61 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     displayTruss3dNodes.length,
     planeElements.length,
     planeNodes.length,
+    renderStrategy,
   ]);
-
   useEffect(() => {
     setCamera((current) => ({ ...cameraForPreset(activeViewPreset), zoom: current.zoom }));
   }, [activeViewPreset]);
+
+  useEffect(() => {
+    if (!onRenderDiagnosticsChange) return;
+    onRenderDiagnosticsChange(
+      buildViewportRenderDiagnostics({
+        studyKind,
+        strategy: renderStrategy,
+        axialNodeCount: axialNodes.length,
+        lineNodeCount: displayTrussNodes.length,
+        lineElementCount: displayTrussElements.length,
+        lineVisibleNodeCount: visibleTrussNodes.length,
+        lineVisibleElementCount: visibleTrussElements.length,
+        lineProgressiveActive: trussNodeRenderLimit < displayTrussNodes.length || trussElementRenderLimit < displayTrussElements.length,
+        spaceNodeCount: displayTruss3dNodes.length,
+        spaceElementCount: displayTruss3dElements.length,
+        spaceVisibleNodeCount: visibleTruss3dNodes.length,
+        spaceVisibleElementCount: visibleTruss3dElements.length,
+        spaceProgressiveActive:
+          truss3dNodeRenderLimit < displayTruss3dNodes.length || truss3dElementRenderLimit < displayTruss3dElements.length,
+        planeNodeCount: planeNodes.length,
+        planeElementCount: planeElements.length,
+        planeVisibleNodeCount: visiblePlaneNodes.length,
+        planeVisibleElementCount: visiblePlaneElements.length,
+        planeProgressiveActive: planeNodeRenderLimit < planeNodes.length || planeElementRenderLimit < planeElements.length,
+      }),
+    );
+  }, [
+    axialNodes.length,
+    displayTruss3dElements.length,
+    displayTruss3dNodes.length,
+    displayTrussElements.length,
+    displayTrussNodes.length,
+    onRenderDiagnosticsChange,
+    planeElements.length,
+    planeNodes.length,
+    planeElementRenderLimit,
+    planeNodeRenderLimit,
+    renderStrategy,
+    studyKind,
+    truss3dElementRenderLimit,
+    truss3dNodeRenderLimit,
+    trussElementRenderLimit,
+    trussNodeRenderLimit,
+    visiblePlaneElements.length,
+    visiblePlaneNodes.length,
+    visibleTruss3dElements.length,
+    visibleTruss3dNodes.length,
+    visibleTrussElements.length,
+    visibleTrussNodes.length,
+  ]);
 
   const handle3dPointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
     if (boxSelectMode) {

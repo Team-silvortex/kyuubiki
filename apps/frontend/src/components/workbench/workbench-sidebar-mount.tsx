@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 
+import { WorkbenchAppRail } from "@/components/workbench/workbench-app-rail";
+import { WorkbenchSidebarPanel } from "@/components/workbench/workbench-sidebar-panel";
 import type { SidebarSection } from "@/components/workbench/workbench-types";
 
 type RailItem = {
@@ -41,43 +43,24 @@ export function WorkbenchSidebarMount({
 }: WorkbenchSidebarMountProps) {
   return (
     <>
-      <aside className="app-rail panel">
-        <div className="rail-brand">
-          <img alt={`${shortTitle} mark`} className="rail-brand__mark" src="/kyuubiki.png" />
-          <strong>{shortTitle}</strong>
-          <span>tamamono 1.6.0</span>
-        </div>
-        <div className="rail-nav">
-          {railItems.map((item) => (
-            <button
-              key={item.key}
-              className={`rail-button${sidebarSection === item.key ? " rail-button--active" : ""}`}
-              onClick={() => onSidebarSectionChange(item.key)}
-              type="button"
-            >
-              <span>{item.symbol}</span>
-              <small>{item.label}</small>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      <aside className="workspace-sidebar panel">
-        <div className="sidebar-header">
-          <div className="sidebar-header__brand">
-            <img alt={`${shortTitle} mark`} className="sidebar-header__mark" src="/kyuubiki.png" />
-            <p className="eyebrow">{roleLabel}</p>
-          </div>
-          <h1>{title}</h1>
-          <p>{subtitle}</p>
-        </div>
-
-        {sidebarSection === "study" ? studySection : null}
-        {sidebarSection === "model" ? modelSection : null}
-        {sidebarSection === "workflow" ? workflowSection : null}
-        {sidebarSection === "library" ? librarySection : null}
-        {sidebarSection === "system" ? systemSection : null}
-      </aside>
+      <WorkbenchAppRail
+        shortTitle={shortTitle}
+        railItems={railItems}
+        sidebarSection={sidebarSection}
+        onSidebarSectionChange={onSidebarSectionChange}
+      />
+      <WorkbenchSidebarPanel
+        shortTitle={shortTitle}
+        roleLabel={roleLabel}
+        title={title}
+        subtitle={subtitle}
+        sidebarSection={sidebarSection}
+        studySection={studySection}
+        modelSection={modelSection}
+        workflowSection={workflowSection}
+        librarySection={librarySection}
+        systemSection={systemSection}
+      />
     </>
   );
 }

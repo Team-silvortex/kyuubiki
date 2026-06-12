@@ -10,7 +10,7 @@ import { createBridgeConfigForOperator } from "@/components/workbench/workflow/w
 import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
 import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";
 
-type WorkflowNodeTemplatePreset = {
+export type WorkflowNodeTemplatePreset = {
   id: string;
   kind: string;
   label: string;
@@ -440,6 +440,10 @@ function buildPortsFromOperatorDescriptor(
     config:
       descriptor.id === "extract.result_summary"
         ? { fields: ["max_displacement", "max_stress"] }
+        : descriptor.id === "transform.merge_summary_pair"
+          ? { left_prefix: "left", right_prefix: "right", include_source_count: false }
+        : descriptor.id.startsWith("bridge.")
+          ? createBridgeConfigForOperator(descriptor.id) ?? undefined
         : undefined,
     inputs: descriptor.inputs.map((port) => ({
       id: port.id,

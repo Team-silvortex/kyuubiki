@@ -10,6 +10,7 @@ export type WorkflowTemplateChainDefinition = {
   id: string;
   label: string;
   templates: WorkflowNodeTemplateSelection[];
+  connections?: WorkflowTemplateChainConnection[];
   summary?: string;
   version?: string;
   tags?: string[];
@@ -17,7 +18,112 @@ export type WorkflowTemplateChainDefinition = {
   source: "built-in" | "imported";
 };
 
+export type WorkflowTemplateChainConnection = {
+  from: number;
+  to: number;
+  fromPort?: string;
+  toPort?: string;
+};
+
+function buildSummaryTemplateChain(params: {
+  id: string;
+  label: string;
+  summary: string;
+  tags: string[];
+  solveOperatorId: string;
+  fields: string[];
+}): WorkflowTemplateChainDefinition {
+  return {
+    id: params.id,
+    label: params.label,
+    source: "built-in",
+    summary: params.summary,
+    tags: params.tags,
+    templates: [
+      { kind: "solve", operatorId: params.solveOperatorId },
+      {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: { fields: params.fields },
+      },
+      { kind: "export", operatorId: "export.summary_json" },
+    ],
+  };
+}
+
 const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
+  buildSummaryTemplateChain({
+    id: "bar_1d_summary",
+    label: "bar_1d summary",
+    summary: "Bar 1D solve and summary export.",
+    tags: ["bar", "1d", "summary", "structural"],
+    solveOperatorId: "solve.bar_1d",
+    fields: ["max_displacement", "max_stress"],
+  }),
+  buildSummaryTemplateChain({
+    id: "thermal_bar_1d_summary",
+    label: "thermal_bar_1d summary",
+    summary: "Thermal bar 1D solve and thermo-mechanical summary export.",
+    tags: ["thermal", "bar", "1d", "summary", "coupled"],
+    solveOperatorId: "solve.thermal_bar_1d",
+    fields: ["max_displacement", "max_stress", "max_axial_force", "max_temperature_delta"],
+  }),
+  buildSummaryTemplateChain({
+    id: "heat_bar_1d_summary",
+    label: "heat_bar_1d summary",
+    summary: "Heat bar 1D solve and summary export.",
+    tags: ["heat", "bar", "1d", "summary", "thermal"],
+    solveOperatorId: "solve.heat_bar_1d",
+    fields: ["max_temperature", "max_heat_flux"],
+  }),
+  buildSummaryTemplateChain({
+    id: "heat_plane_triangle_2d_summary",
+    label: "heat_plane_triangle_2d summary",
+    summary: "Heat plane triangle 2D solve and summary export.",
+    tags: ["heat", "plane", "triangle", "2d", "summary"],
+    solveOperatorId: "solve.heat_plane_triangle_2d",
+    fields: ["max_temperature", "max_heat_flux"],
+  }),
+  buildSummaryTemplateChain({
+    id: "thermal_truss_2d_summary",
+    label: "thermal_truss_2d summary",
+    summary: "Thermal truss 2D solve and coupled summary export.",
+    tags: ["thermal", "truss", "2d", "summary", "coupled"],
+    solveOperatorId: "solve.thermal_truss_2d",
+    fields: ["max_displacement", "max_stress", "max_axial_force", "max_temperature_delta"],
+  }),
+  buildSummaryTemplateChain({
+    id: "torsion_1d_summary",
+    label: "torsion_1d summary",
+    summary: "Torsion 1D solve and summary export.",
+    tags: ["torsion", "1d", "summary", "structural"],
+    solveOperatorId: "solve.torsion_1d",
+    fields: ["max_rotation", "max_torque", "max_stress"],
+  }),
+  buildSummaryTemplateChain({
+    id: "plane_triangle_2d_summary",
+    label: "plane_triangle_2d summary",
+    summary: "Plane triangle 2D solve and summary export.",
+    tags: ["plane", "triangle", "2d", "summary", "structural"],
+    solveOperatorId: "solve.plane_triangle_2d",
+    fields: ["max_displacement", "max_stress"],
+  }),
+  buildSummaryTemplateChain({
+    id: "thermal_plane_triangle_2d_summary",
+    label: "thermal_plane_triangle_2d summary",
+    summary: "Thermal plane triangle 2D solve and coupled summary export.",
+    tags: ["thermal", "plane", "triangle", "2d", "summary", "coupled"],
+    solveOperatorId: "solve.thermal_plane_triangle_2d",
+    fields: ["max_displacement", "max_stress", "max_temperature_delta"],
+  }),
+  buildSummaryTemplateChain({
+    id: "plane_quad_2d_summary",
+    label: "plane_quad_2d summary",
+    summary: "Plane quad 2D solve and summary export.",
+    tags: ["plane", "quad", "2d", "summary", "structural"],
+    solveOperatorId: "solve.plane_quad_2d",
+    fields: ["max_displacement", "max_stress"],
+  }),
   {
     id: "frame_2d_summary",
     label: "frame_2d summary",
@@ -97,6 +203,28 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     ],
   },
   {
+    id: "heat_triangle_bridge_thermo_triangle",
+    label: "heat triangle -> bridge -> thermo triangle",
+    source: "built-in",
+    summary: "Heat field bridge into thermo-mechanical plane triangle solve.",
+    tags: ["heat", "thermal", "bridge", "triangle", "coupled", "2d"],
+    templates: [
+      { kind: "solve", operatorId: "solve.heat_plane_triangle_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.temperature_field_to_thermo_triangle_2d",
+        config: createBridgeConfigForOperator("bridge.temperature_field_to_thermo_triangle_2d") ?? undefined,
+      },
+      { kind: "solve", operatorId: "solve.thermal_plane_triangle_2d" },
+      {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: { fields: ["max_displacement", "max_stress", "max_temperature_delta"] },
+      },
+      { kind: "export", operatorId: "export.summary_json" },
+    ],
+  },
+  {
     id: "electrostatic_bridge_heat",
     label: "electrostatic -> bridge -> heat",
     source: "built-in",
@@ -110,6 +238,74 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
         config: createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_quad_2d") ?? undefined,
       },
       { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
+    ],
+  },
+  {
+    id: "electrostatic_triangle_bridge_heat_triangle",
+    label: "electrostatic triangle -> bridge -> heat triangle",
+    source: "built-in",
+    summary: "Electrostatic triangle field bridge into heat plane triangle solve.",
+    tags: ["electrostatic", "heat", "bridge", "triangle", "coupled", "2d"],
+    templates: [
+      { kind: "solve", operatorId: "solve.electrostatic_plane_triangle_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.electrostatic_field_to_heat_triangle_2d",
+        config:
+          createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_triangle_2d") ??
+          undefined,
+      },
+      { kind: "solve", operatorId: "solve.heat_plane_triangle_2d" },
+      {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: { fields: ["max_temperature", "max_heat_flux"] },
+      },
+      { kind: "export", operatorId: "export.summary_json" },
+    ],
+  },
+  {
+    id: "electrostatic_triangle_heat_thermo_triangle_summary",
+    label: "electrostatic triangle -> heat triangle -> thermo triangle summary",
+    source: "built-in",
+    summary:
+      "Full coupled triangle chain from electrostatic field, through heat loading, into thermo-mechanical solve and summary export.",
+    tags: [
+      "electromagnetic",
+      "electrostatic",
+      "heat",
+      "thermal",
+      "thermo_mechanical",
+      "bridge",
+      "triangle",
+      "coupled",
+      "summary",
+      "2d",
+    ],
+    templates: [
+      { kind: "solve", operatorId: "solve.electrostatic_plane_triangle_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.electrostatic_field_to_heat_triangle_2d",
+        config:
+          createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_triangle_2d") ??
+          undefined,
+      },
+      { kind: "solve", operatorId: "solve.heat_plane_triangle_2d" },
+      {
+        kind: "transform",
+        operatorId: "bridge.temperature_field_to_thermo_triangle_2d",
+        config:
+          createBridgeConfigForOperator("bridge.temperature_field_to_thermo_triangle_2d") ??
+          undefined,
+      },
+      { kind: "solve", operatorId: "solve.thermal_plane_triangle_2d" },
+      {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: { fields: ["max_displacement", "max_stress", "max_temperature_delta"] },
+      },
+      { kind: "export", operatorId: "export.summary_json" },
     ],
   },
   {
@@ -132,6 +328,11 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     templates: [
       { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
       {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: { fields: ["max_potential", "max_electric_field"] },
+      },
+      {
         kind: "transform",
         operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
         config:
@@ -139,6 +340,11 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
           undefined,
       },
       { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
+      {
+        kind: "extract",
+        operatorId: "extract.result_summary",
+        config: { fields: ["max_temperature", "max_heat_flux"] },
+      },
       {
         kind: "transform",
         operatorId: "bridge.temperature_field_to_thermo_quad_2d",
@@ -154,13 +360,36 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
           fields: [
             "max_displacement",
             "max_stress",
-            "max_temperature",
             "max_temperature_delta",
             "max_temperature_gradient",
           ],
         },
       },
+      {
+        kind: "transform",
+        operatorId: "transform.merge_summary_pair",
+        config: { left_prefix: "electrostatic", right_prefix: "heat", include_source_count: false },
+      },
+      {
+        kind: "transform",
+        operatorId: "transform.merge_summary_pair",
+        config: { left_prefix: "", right_prefix: "thermo", include_source_count: false },
+      },
       { kind: "export", operatorId: "export.summary_json" },
+    ],
+    connections: [
+      { from: 0, to: 1 },
+      { from: 0, to: 2 },
+      { from: 2, to: 3 },
+      { from: 3, to: 4 },
+      { from: 3, to: 5 },
+      { from: 5, to: 6 },
+      { from: 6, to: 7 },
+      { from: 1, to: 8, toPort: "left" },
+      { from: 4, to: 8, toPort: "right" },
+      { from: 8, to: 9, toPort: "left" },
+      { from: 7, to: 9, toPort: "right" },
+      { from: 9, to: 10 },
     ],
   },
   {
@@ -181,6 +410,32 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
       { kind: "export", operatorId: "export.summary_json" },
     ],
   },
+  {
+    id: "electrostatic_hotspot_alert",
+    label: "electrostatic hotspot alert",
+    source: "built-in",
+    summary: "Electrostatic solve, hotspot extraction, and markdown alert export.",
+    tags: ["electrostatic", "hotspot", "alert", "field", "2d"],
+    templates: [
+      { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
+      {
+        kind: "extract",
+        operatorId: "extract.field_hotspots",
+        config: { source: "elements", field: "electric_field_magnitude", output_prefix: "field", percentile: 90 },
+      },
+      {
+        kind: "export",
+        operatorId: "export.alert_markdown",
+        config: {
+          title: "Electrostatic Hotspot Alert",
+          severity: "warning",
+          summary: "Hotspot candidates were detected in the electrostatic field.",
+          fields: ["field_threshold", "field_hotspot_count", "field_hotspot_fraction"],
+        },
+      },
+    ],
+  },
+  { id: "electrostatic_hotspot_guard", label: "electrostatic hotspot guard", source: "built-in", summary: "Route hotspot summaries into alert or clear markdown output.", tags: ["electrostatic", "hotspot", "condition", "alert", "2d"], templates: [{ kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" }, { kind: "extract", operatorId: "extract.field_hotspots", config: { source: "elements", field: "electric_field_magnitude", output_prefix: "field", percentile: 90 } }, { kind: "condition", config: { predicate: { path: "field_hotspot_count", operator: "gt", value: 0 } } }, { kind: "export", operatorId: "export.alert_markdown", config: { title: "Electrostatic Hotspot Alert", severity: "warning", summary: "Hotspot candidates exceeded the workflow threshold.", fields: ["field_hotspot_count", "field_hotspot_fraction", "field_threshold"] } }, { kind: "export", operatorId: "export.alert_markdown", config: { title: "Electrostatic Field Clear", severity: "info", summary: "Hotspot count stayed within the configured workflow threshold.", fields: ["field_hotspot_count", "field_hotspot_fraction", "field_threshold"] } }, { kind: "transform", operatorId: "transform.first_available" }, { kind: "output" }], connections: [{ from: 0, to: 1 }, { from: 1, to: 2 }, { from: 2, to: 3, fromPort: "if_true" }, { from: 2, to: 4, fromPort: "if_false" }, { from: 3, to: 5, toPort: "left" }, { from: 4, to: 5, toPort: "right" }, { from: 5, to: 6 }] },
   {
     id: "condition_branch_merge_export",
     label: "condition -> branch -> merge",

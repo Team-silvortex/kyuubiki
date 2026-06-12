@@ -132,9 +132,11 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           planeResultField={props.planeResultField}
           frameResultField={props.frameResultField}
           beamResultField={props.beamResultField}
+          renderStrategy={props.renderStrategy}
           setPlaneResultField={props.setPlaneResultField}
           setFrameResultField={props.setFrameResultField}
           setBeamResultField={props.setBeamResultField}
+          setRenderStrategy={props.setRenderStrategy}
           setResultWindowOffset={props.setResultWindowOffset}
           clampChunkOffset={props.clampChunkOffset}
           shouldStretchSpaceViewport={props.shouldStretchSpaceViewport}

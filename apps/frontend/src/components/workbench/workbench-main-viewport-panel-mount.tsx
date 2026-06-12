@@ -1,15 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { WorkbenchImmersiveLibraryDrawer } from "@/components/workbench/workbench-immersive-library-drawer";
+import { WorkbenchRenderDiagnosticsBar } from "@/components/workbench/workbench-render-diagnostics-bar";
 import { WorkbenchResultWindowBar } from "@/components/workbench/workbench-result-window-bar";
 import { WorkbenchViewportDock } from "@/components/workbench/workbench-viewport-dock";
 import { WorkbenchViewportHeadActions } from "@/components/workbench/workbench-viewport-head-actions";
 import { WorkbenchViewportMount } from "@/components/workbench/workbench-viewport-mount";
 import { WorkbenchViewportPanel } from "@/components/workbench/workbench-viewport-panel";
+import type { ViewportRenderDiagnostics } from "@/components/workbench/workbench-render-diagnostics";
 
 type WorkbenchMainViewportPanelMountProps = Record<string, any>;
 
 export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPanelMountProps) {
+  const [renderDiagnostics, setRenderDiagnostics] = useState<ViewportRenderDiagnostics | null>(null);
+
   return (
     <WorkbenchViewportPanel
       viewportPanelRef={props.viewportPanelRef}
@@ -117,11 +122,21 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
           planeResultField={props.planeResultField}
           frameResultField={props.frameResultField}
           beamResultField={props.beamResultField}
+          renderStrategy={props.renderStrategy}
           setPlaneResultField={props.setPlaneResultField}
           setFrameResultField={props.setFrameResultField}
           setBeamResultField={props.setBeamResultField}
           setResultWindowOffset={props.setResultWindowOffset}
           clampChunkOffset={props.clampChunkOffset}
+        />
+      }
+      diagnosticsBar={
+        <WorkbenchRenderDiagnosticsBar
+          t={props.t}
+          diagnostics={renderDiagnostics}
+          resultWindow={props.activeResultWindow}
+          renderStrategy={props.renderStrategy}
+          onRenderStrategyChange={props.setRenderStrategy}
         />
       }
       isTruss3d={props.isTruss3d}
@@ -227,6 +242,8 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
           handleTruss3dShowGridChange={props.handleTruss3dShowGridChange}
           handleTruss3dShowLabelsChange={props.handleTruss3dShowLabelsChange}
           handleTruss3dShowNodesChange={props.handleTruss3dShowNodesChange}
+          onRenderDiagnosticsChange={setRenderDiagnostics}
+          renderStrategy={props.renderStrategy}
           handleTruss3dBoxSelectModeChange={props.handleTruss3dBoxSelectModeChange}
         />
       }

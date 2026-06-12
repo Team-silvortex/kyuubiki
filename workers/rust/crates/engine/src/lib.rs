@@ -4,6 +4,7 @@ mod chunking;
 mod workflow;
 mod workflow_contract;
 mod workflow_executor;
+mod workflow_reporting;
 
 #[cfg(test)]
 mod tests;

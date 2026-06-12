@@ -1,28 +1,46 @@
 use crate::bridge::{
     bridge_electrostatic_result_to_heat_plane_quad_model,
-    bridge_heat_result_to_thermal_plane_quad_model, resolve_electrostatic_to_heat_bridge_contract,
+    bridge_electrostatic_result_to_heat_plane_triangle_model,
+    bridge_heat_result_to_thermal_plane_quad_model,
+    bridge_heat_result_to_thermal_plane_triangle_model,
+    resolve_electrostatic_to_heat_bridge_contract,
+};
+use crate::workflow_reporting::{
+    export_alert_markdown, export_summary_csv, export_summary_json, extract_field_hotspots,
+    extract_field_statistics, extract_result_summary, merge_summary_pair,
 };
 use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
+    AnalysisResult, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatPlaneQuad2dRequest, SolveSpring1dRequest,
-    SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBeam1dRequest,
-    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
-    SolveThermalTruss3dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
+    SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
+    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use serde_json::Value;
 use std::collections::BTreeMap;
 
 const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
+    "solve.bar_1d",
+    "solve.thermal_bar_1d",
+    "solve.heat_bar_1d",
     "solve.electrostatic_bar_1d",
     "solve.electrostatic_plane_triangle_2d",
     "solve.electrostatic_plane_quad_2d",
+    "solve.heat_plane_triangle_2d",
     "solve.heat_plane_quad_2d",
+    "solve.thermal_truss_2d",
     "solve.frame_3d",
+    "solve.plane_triangle_2d",
+    "solve.thermal_plane_triangle_2d",
+    "solve.plane_quad_2d",
     "solve.thermal_frame_3d",
     "solve.thermal_plane_quad_2d",
     "solve.thermal_truss_3d",
+    "solve.torsion_1d",
     "solve.spring_1d",
     "solve.spring_2d",
     "solve.spring_3d",
@@ -36,13 +54,21 @@ const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
 
 const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "bridge.temperature_field_to_thermo_quad_2d",
+    "bridge.temperature_field_to_thermo_triangle_2d",
     "bridge.electrostatic_field_to_heat_quad_2d",
+    "bridge.electrostatic_field_to_heat_triangle_2d",
     "transform.first_available",
+    "transform.merge_summary_pair",
 ];
 
-const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &["extract.result_summary"];
+const SUPPORTED_EXTRACT_OPERATORS: &[&str] =
+    &["extract.result_summary", "extract.field_statistics", "extract.field_hotspots"];
 
-const SUPPORTED_EXPORT_OPERATORS: &[&str] = &["export.summary_json", "export.summary_csv"];
+const SUPPORTED_EXPORT_OPERATORS: &[&str] = &[
+    "export.summary_json",
+    "export.summary_csv",
+    "export.alert_markdown",
+];
 
 pub fn artifact_key(node_id: &str, port_id: &str) -> String {
     format!("{node_id}.{port_id}")
@@ -103,6 +129,37 @@ pub fn resolve_first_available_input_payload(
 
 pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
     operator_id == "transform.first_available"
+}
+
+pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
+    operator_id == "transform.merge_summary_pair"
+}
+
+pub fn resolve_named_input_payloads(
+    node: &kyuubiki_protocol::WorkflowNode,
+    incoming: &[&kyuubiki_protocol::WorkflowEdge],
+    artifacts: &BTreeMap<String, Value>,
+) -> Result<Value, String> {
+    let mut payload = serde_json::Map::new();
+    for edge in incoming {
+        let artifact = artifacts
+            .get(&artifact_key(&edge.from.node, &edge.from.port))
+            .cloned()
+            .ok_or_else(|| {
+                format!(
+                    "workflow node {} could not resolve input from {}.{}",
+                    node.id, edge.from.node, edge.from.port
+                )
+            })?;
+        payload.insert(edge.to.port.clone(), artifact);
+    }
+    if payload.is_empty() {
+        return Err(format!(
+            "workflow node {} requires at least one resolved named input artifact",
+            node.id
+        ));
+    }
+    Ok(Value::Object(payload))
 }
 
 pub fn evaluate_condition_operator(payload: &Value, config: &Value) -> Result<bool, String> {
@@ -189,6 +246,33 @@ fn is_truthy(value: &Value) -> bool {
 
 pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, String> {
     match operator_id {
+        "solve.bar_1d" => {
+            let request: SolveBarRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::Bar1d(request))? {
+                AnalysisResult::Bar1d(result) => result,
+                _ => unreachable!("solve.bar_1d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.thermal_bar_1d" => {
+            let request: SolveThermalBar1dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::ThermalBar1d(request))? {
+                AnalysisResult::ThermalBar1d(result) => result,
+                _ => unreachable!("solve.thermal_bar_1d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.heat_bar_1d" => {
+            let request: SolveHeatBar1dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::HeatBar1d(request))? {
+                AnalysisResult::HeatBar1d(result) => result,
+                _ => unreachable!("solve.heat_bar_1d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
         "solve.electrostatic_bar_1d" => {
             let request: SolveElectrostaticBar1dRequest =
                 serde_json::from_value(payload).map_err(|err| err.to_string())?;
@@ -218,12 +302,30 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             };
             serde_json::to_value(result).map_err(|err| err.to_string())
         }
+        "solve.heat_plane_triangle_2d" => {
+            let request: SolveHeatPlaneTriangle2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::HeatPlaneTriangle2d(request))? {
+                AnalysisResult::HeatPlaneTriangle2d(result) => result,
+                _ => unreachable!("solve.heat_plane_triangle_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
         "solve.heat_plane_quad_2d" => {
             let request: SolveHeatPlaneQuad2dRequest =
                 serde_json::from_value(payload).map_err(|err| err.to_string())?;
             let result = match solve(EngineSolveRequest::HeatPlaneQuad2d(request))? {
                 AnalysisResult::HeatPlaneQuad2d(result) => result,
                 _ => unreachable!("solve.heat_plane_quad_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.thermal_truss_2d" => {
+            let request: SolveThermalTruss2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::ThermalTruss2d(request))? {
+                AnalysisResult::ThermalTruss2d(result) => result,
+                _ => unreachable!("solve.thermal_truss_2d returned unexpected result"),
             };
             serde_json::to_value(result).map_err(|err| err.to_string())
         }
@@ -245,6 +347,33 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             };
             serde_json::to_value(result).map_err(|err| err.to_string())
         }
+        "solve.plane_triangle_2d" => {
+            let request: SolvePlaneTriangle2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::PlaneTriangle2d(request))? {
+                AnalysisResult::PlaneTriangle2d(result) => result,
+                _ => unreachable!("solve.plane_triangle_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.thermal_plane_triangle_2d" => {
+            let request: SolveThermalPlaneTriangle2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::ThermalPlaneTriangle2d(request))? {
+                AnalysisResult::ThermalPlaneTriangle2d(result) => result,
+                _ => unreachable!("solve.thermal_plane_triangle_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.plane_quad_2d" => {
+            let request: SolvePlaneQuad2dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::PlaneQuad2d(request))? {
+                AnalysisResult::PlaneQuad2d(result) => result,
+                _ => unreachable!("solve.plane_quad_2d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
         "solve.thermal_plane_quad_2d" => {
             let request: SolveThermalPlaneQuad2dRequest =
                 serde_json::from_value(payload).map_err(|err| err.to_string())?;
@@ -260,6 +389,15 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             let result = match solve(EngineSolveRequest::ThermalTruss3d(request))? {
                 AnalysisResult::ThermalTruss3d(result) => result,
                 _ => unreachable!("solve.thermal_truss_3d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.torsion_1d" => {
+            let request: SolveTorsion1dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::Torsion1d(request))? {
+                AnalysisResult::Torsion1d(result) => result,
+                _ => unreachable!("solve.torsion_1d returned unexpected result"),
             };
             serde_json::to_value(result).map_err(|err| err.to_string())
         }
@@ -364,6 +502,16 @@ pub fn run_transform_operator(
                 bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &thermo_seed_model)?;
             serde_json::to_value(bridged).map_err(|err| err.to_string())
         }
+        "bridge.temperature_field_to_thermo_triangle_2d" => {
+            let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let thermo_seed_model: SolveThermalPlaneTriangle2dRequest =
+                serde_json::from_value(config).map_err(|err| err.to_string())?;
+            let bridged = bridge_heat_result_to_thermal_plane_triangle_model(
+                &heat_result,
+                &thermo_seed_model,
+            )?;
+            serde_json::to_value(bridged).map_err(|err| err.to_string())
+        }
         "bridge.electrostatic_field_to_heat_quad_2d" => {
             let electrostatic_result =
                 serde_json::from_value(payload).map_err(|err| err.to_string())?;
@@ -380,7 +528,25 @@ pub fn run_transform_operator(
             )?;
             serde_json::to_value(bridged).map_err(|err| err.to_string())
         }
+        "bridge.electrostatic_field_to_heat_triangle_2d" => {
+            let electrostatic_result =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let seed_model_value = config.get("seed_model").cloned().ok_or_else(|| {
+                "bridge.electrostatic_field_to_heat_triangle_2d requires config.seed_model"
+                    .to_string()
+            })?;
+            let heat_seed_model: SolveHeatPlaneTriangle2dRequest =
+                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
+            let contract = resolve_electrostatic_to_heat_bridge_contract(&config)?;
+            let bridged = bridge_electrostatic_result_to_heat_plane_triangle_model(
+                &electrostatic_result,
+                &heat_seed_model,
+                &contract,
+            )?;
+            serde_json::to_value(bridged).map_err(|err| err.to_string())
+        }
         "transform.first_available" => Ok(payload),
+        "transform.merge_summary_pair" => merge_summary_pair(payload, config),
         _ => Err(format!(
             "unsupported transform operator in first executor: {operator_id}"
         )),
@@ -394,6 +560,8 @@ pub fn run_extract_operator(
 ) -> Result<Value, String> {
     match operator_id {
         "extract.result_summary" => extract_result_summary(payload, config),
+        "extract.field_statistics" => extract_field_statistics(payload, config),
+        "extract.field_hotspots" => extract_field_hotspots(payload, config),
         _ => Err(format!(
             "unsupported extract operator in first executor: {operator_id}"
         )),
@@ -408,114 +576,9 @@ pub fn run_export_operator(
     match operator_id {
         "export.summary_json" => export_summary_json(payload),
         "export.summary_csv" => export_summary_csv(payload, config),
+        "export.alert_markdown" => export_alert_markdown(payload, config),
         _ => Err(format!(
             "unsupported export operator in first executor: {operator_id}"
         )),
-    }
-}
-
-fn extract_result_summary(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload
-        .as_object()
-        .ok_or_else(|| "extract.result_summary expects an object payload".to_string())?;
-
-    let requested_fields = config
-        .get("fields")
-        .and_then(Value::as_array)
-        .map(|fields| {
-            fields
-                .iter()
-                .filter_map(Value::as_str)
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-        });
-
-    let mut summary = serde_json::Map::new();
-    if let Some(fields) = requested_fields {
-        for field in fields {
-            if let Some(value) = object.get(&field) {
-                summary.insert(field, value.clone());
-            }
-        }
-    } else {
-        for (key, value) in object {
-            if key.starts_with("max_") {
-                summary.insert(key.clone(), value.clone());
-            }
-        }
-    }
-
-    if summary.is_empty() {
-        return Err("extract.result_summary did not find any summary fields".to_string());
-    }
-
-    Ok(Value::Object(summary))
-}
-
-fn export_summary_json(payload: Value) -> Result<Value, String> {
-    if !payload.is_object() {
-        return Err("export.summary_json expects an object payload".to_string());
-    }
-    let content = serde_json::to_string_pretty(&payload).map_err(|err| err.to_string())?;
-    Ok(serde_json::json!({
-        "format": "json",
-        "content_type": "application/json",
-        "content": content
-    }))
-}
-
-fn export_summary_csv(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload
-        .as_object()
-        .ok_or_else(|| "export.summary_csv expects an object payload".to_string())?;
-
-    let requested_fields = config
-        .get("fields")
-        .and_then(Value::as_array)
-        .map(|fields| {
-            fields
-                .iter()
-                .filter_map(Value::as_str)
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-        });
-
-    let mut rows = vec!["key,value".to_string()];
-    if let Some(fields) = requested_fields {
-        for field in fields {
-            if let Some(value) = object.get(&field) {
-                rows.push(format!("{},{}", field, csv_cell(value)));
-            }
-        }
-    } else {
-        for (key, value) in object {
-            rows.push(format!("{},{}", key, csv_cell(value)));
-        }
-    }
-
-    if rows.len() == 1 {
-        return Err("export.summary_csv did not find any exportable fields".to_string());
-    }
-
-    Ok(serde_json::json!({
-        "format": "csv",
-        "content_type": "text/csv",
-        "content": rows.join("\n")
-    }))
-}
-
-fn csv_cell(value: &Value) -> String {
-    match value {
-        Value::Null => "".to_string(),
-        Value::Bool(boolean) => boolean.to_string(),
-        Value::Number(number) => number.to_string(),
-        Value::String(string) => {
-            if string.contains([',', '"', '\n']) {
-                format!("\"{}\"", string.replace('"', "\"\""))
-            } else {
-                string.clone()
-            }
-        }
-        other => serde_json::to_string(other).unwrap_or_else(|_| "\"<invalid>\"".to_string()),
     }
 }

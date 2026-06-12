@@ -5,6 +5,7 @@ import { buildWorkbenchActiveResultState } from "@/components/workbench/workbenc
 import { humanizeSolverFailure } from "@/components/workbench/workbench-copy";
 import { buildWorkbenchResultDerivedData } from "@/components/workbench/workbench-result-derived";
 import { buildWorkbenchSidebarDerived } from "@/components/workbench/workbench-sidebar-derived";
+import { strategyHotspotLimit } from "@/components/workbench/workbench-render-diagnostics";
 import {
   heartbeatStatus,
   heartbeatTone,
@@ -127,7 +128,7 @@ export function useWorkbenchStudyResultDerived(props: Record<string, any>) {
     displayTrussElements: activeResultState.displayTrussElements,
     activeLineResultField,
     selectedElement: props.selectedElement,
-    planeHotspotLimit: props.planeHotspotLimit,
+    planeHotspotLimit: strategyHotspotLimit(props.planeHotspotLimit, props.renderStrategy),
     selectedNode: props.selectedNode,
     displayTrussNodes: activeResultState.displayTrussNodes,
     displayTruss3dNodes: activeResultState.displayTruss3dNodes,

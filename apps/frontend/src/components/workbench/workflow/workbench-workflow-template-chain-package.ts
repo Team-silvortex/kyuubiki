@@ -1,7 +1,10 @@
 "use client";
 
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
-import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
+import type {
+  WorkflowTemplateChainConnection,
+  WorkflowTemplateChainDefinition,
+} from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
 
 export type WorkflowTemplateChainPackage = {
   format: "kyuubiki.workflow-template-chain-package";
@@ -13,6 +16,7 @@ export type WorkflowTemplateChainPackage = {
   package_version?: string;
   exported_at: string;
   templates: WorkflowNodeTemplateSelection[];
+  connections?: WorkflowTemplateChainConnection[];
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -38,6 +42,21 @@ function asStringArray(value: unknown): string[] | undefined {
   return tags.length === 0 ? undefined : tags;
 }
 
+function asConnections(
+  value: unknown,
+): WorkflowTemplateChainConnection[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const connections = value.filter(
+    (entry): entry is WorkflowTemplateChainConnection =>
+      isRecord(entry) &&
+      typeof entry.from === "number" &&
+      typeof entry.to === "number" &&
+      (typeof entry.fromPort === "string" || entry.fromPort === undefined) &&
+      (typeof entry.toPort === "string" || entry.toPort === undefined),
+  );
+  return connections.length === value.length ? connections : undefined;
+}
+
 export function buildWorkflowTemplateChainPackage(
   chain: WorkflowTemplateChainDefinition,
 ): WorkflowTemplateChainPackage {
@@ -51,6 +70,7 @@ export function buildWorkflowTemplateChainPackage(
     package_version: chain.version ?? "1.0.0",
     exported_at: new Date().toISOString(),
     templates: chain.templates,
+    connections: chain.connections,
   };
 }
 
@@ -80,6 +100,7 @@ export function asWorkflowTemplateChainPackage(
     exported_at:
       typeof value.exported_at === "string" ? value.exported_at : new Date().toISOString(),
     templates,
+    connections: asConnections(value.connections),
   };
 }
 
@@ -93,5 +114,6 @@ export function packageToWorkflowTemplateChainDefinition(
     tags: pkg.tags,
     version: pkg.package_version,
     templates: pkg.templates,
+    connections: pkg.connections,
   };
 }

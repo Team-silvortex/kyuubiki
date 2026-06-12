@@ -19,6 +19,11 @@ Then branch by intent:
   Long-range `tamamono 1.x` roadmap.
 - `fem-blender-roadmap.md`
   Product north star and staged path toward becoming the Blender of FEM.
+- `rendering-roadmap.html`
+  Render-capability upgrade path from the current SVG viewport toward a
+  dedicated simulation field renderer.
+- `ui-automation-contract.html`
+  Product-owned DOM automation contract for the built-in workbench shell.
 - `accuracy-plan.md`
   Quality direction and verification policy.
 - `accuracy-baselines.md`
@@ -92,11 +97,19 @@ Then branch by intent:
   Workbench visual language, layout rules, and interaction feel.
 - `frontend-implementation.md`
   Frontend component boundaries, state placement, naming, and performance rules.
+- `ui-automation-contract.html`
+  Human-readable contract for stable automation selectors used by wasm Python
+  and headless control tooling.
+- `ui-automation-contract.json`
+  Machine-readable selector map and rules for the built-in workbench UI shell.
 - `language-packs.md`
   Local-first language-pack format, override behavior, and the future remote
   delivery shape for Workbench UI translation packs.
 - `fem-blender-roadmap.md`
   Long-range product shape for turning Kyuubiki into a full FEM creation platform.
+- `rendering-roadmap.html`
+  Concrete rendering-capability staging for `1.6.x` through later `1.x`
+  minors, including what can ship before a dedicated field renderer exists.
 
 ### Operate and deploy
 
@@ -116,6 +129,9 @@ Then branch by intent:
 - `update-catalog.html`
   Generated operator-facing view of the unified update tags, release channels,
   and shipped version bindings.
+- `rendering-roadmap.html`
+  Human-facing staging map for viewport limits, field-render priorities, and
+  future multi-physics visualization work.
 
 ### Directory entrypoints
 
@@ -134,7 +150,7 @@ Then branch by intent:
 ## Suggested Reading Paths
 
 - Browser/frontend work:
-  `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md`
+  `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
 - Orchestrator/control-plane work:
   `philosophy.md` -> `system-overview.md` -> `operations.md`
 - Rust solver/agent work:

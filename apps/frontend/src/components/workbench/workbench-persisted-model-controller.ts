@@ -4,7 +4,7 @@ import { applyImportedWorkbenchModel } from "@/components/workbench/workbench-mo
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api";
 import { parsePlaygroundModel } from "@/lib/models";
 import { parseProjectBundleFile } from "@/lib/projects";
-import { saveWorkbenchMacroPreset } from "@/lib/scripting/workbench-script-runtime";
+import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
 
 type PersistedModelEffects = {
   setLoadedModelName: (value: string) => void;
@@ -133,6 +133,19 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
         });
       } catch {
         // Ignore malformed preset payloads so model/project import stays usable.
+      }
+    }
+    for (const preset of bundle.snippet_presets ?? []) {
+      try {
+        saveWorkbenchSnippetPreset({
+          projectId: createdProject.project.project_id,
+          presetId: preset.presetId,
+          snippetId: preset.snippetId,
+          name: preset.name,
+          parameters: preset.parameters,
+        });
+      } catch {
+        // Ignore malformed snippet preset payloads so model/project import stays usable.
       }
     }
 

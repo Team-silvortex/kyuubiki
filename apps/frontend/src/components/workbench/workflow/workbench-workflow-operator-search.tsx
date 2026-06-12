@@ -1,27 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { WorkflowOperatorDescriptor } from "@/lib/api";
+import type { WorkflowGraphNode, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
   buildOperatorOptionLabel,
   sortWorkflowOperatorOptionPresets,
 } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
-
-type WorkflowOperatorOptionPreset = {
-  id: string;
-  label: string;
-  operatorId?: string;
-};
+import {
+  buildWorkflowOperatorPresetRecommendations,
+} from "@/components/workbench/workflow/workbench-workflow-operator-compatibility";
+import type { WorkflowNodeTemplatePreset } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 
 const RECENT_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.recentOperators";
 const FAVORITE_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.favoriteOperators";
 
 function groupWorkflowOperatorOptionPresets(
-  presets: WorkflowOperatorOptionPreset[],
+  presets: WorkflowNodeTemplatePreset[],
   operatorDescriptorMap: Map<string, WorkflowOperatorDescriptor>,
 ) {
-  const groups = new Map<string, WorkflowOperatorOptionPreset[]>();
+  const groups = new Map<string, WorkflowNodeTemplatePreset[]>();
   for (const preset of presets) {
     const descriptor = preset.operatorId
       ? operatorDescriptorMap.get(preset.operatorId)
@@ -33,7 +31,7 @@ function groupWorkflowOperatorOptionPresets(
 }
 
 export function filterWorkflowOperatorOptionPresets(
-  presets: WorkflowOperatorOptionPreset[],
+  presets: WorkflowNodeTemplatePreset[],
   operatorDescriptorMap: Map<string, WorkflowOperatorDescriptor>,
   query: string,
   filters?: {
@@ -84,9 +82,10 @@ export function WorkbenchWorkflowOperatorSearch(props: {
   domainFilter: string;
   validationFilter: string;
   capabilityFilter: string;
-  filteredPresets: WorkflowOperatorOptionPreset[];
+  filteredPresets: WorkflowNodeTemplatePreset[];
   availableDomains: string[];
   availableCapabilities: string[];
+  selectedSourceNode?: WorkflowGraphNode | null;
   operatorDescriptorMap: Map<string, WorkflowOperatorDescriptor>;
   onOperatorIdChange: (value: string) => void;
   onQueryChange: (value: string) => void;
@@ -105,6 +104,7 @@ export function WorkbenchWorkflowOperatorSearch(props: {
     filteredPresets,
     availableDomains,
     availableCapabilities,
+    selectedSourceNode,
     operatorDescriptorMap,
     onOperatorIdChange,
     onQueryChange,
@@ -148,7 +148,7 @@ export function WorkbenchWorkflowOperatorSearch(props: {
           filteredPresets.find((preset) => preset.operatorId === operatorId),
         )
         .filter(Boolean)
-        .slice(0, 8) as WorkflowOperatorOptionPreset[],
+        .slice(0, 8) as WorkflowNodeTemplatePreset[],
     [favoriteOperatorIds, filteredPresets],
   );
   const recentPresets = useMemo(
@@ -158,8 +158,17 @@ export function WorkbenchWorkflowOperatorSearch(props: {
           filteredPresets.find((preset) => preset.operatorId === operatorId),
         )
         .filter(Boolean)
-        .slice(0, 6) as WorkflowOperatorOptionPreset[],
+        .slice(0, 6) as WorkflowNodeTemplatePreset[],
     [filteredPresets, recentOperatorIds],
+  );
+  const compatiblePresets = useMemo(
+    () =>
+      buildWorkflowOperatorPresetRecommendations({
+        operatorDescriptorMap,
+        presets: filteredPresets,
+        sourceNode: selectedSourceNode ?? null,
+      }),
+    [filteredPresets, operatorDescriptorMap, selectedSourceNode],
   );
   const activeFilters = [
     query.trim() ? `${labels.operatorSearchLabel}: ${query.trim()}` : null,
@@ -333,6 +342,40 @@ export function WorkbenchWorkflowOperatorSearch(props: {
                 >
                   {preset.label}
                 </button>
+              ) : null,
+            )}
+          </div>
+        </div>
+      ) : null}
+      {compatiblePresets.length > 0 ? (
+        <div className="sidebar-list">
+          <div className="sidebar-list__row">
+            <span>Recommended next operators</span>
+            <strong>{compatiblePresets.length}</strong>
+          </div>
+          <div style={{ display: "grid", gap: "0.45rem" }}>
+            {compatiblePresets.map(({ preset, reason }) =>
+              preset.operatorId ? (
+                <div key={`compatible:${preset.id}`} style={{ display: "grid", gap: "0.2rem" }}>
+                  <div className="button-row button-row--adaptive">
+                    <button
+                      onClick={() => {
+                        rememberOperator(preset.operatorId!);
+                        onQuickInsert(preset.operatorId!);
+                      }}
+                      type="button"
+                    >
+                      {preset.label}
+                    </button>
+                    <button
+                      onClick={() => toggleFavoriteOperator(preset.operatorId!)}
+                      type="button"
+                    >
+                      {favoriteLabel(preset.operatorId!)}
+                    </button>
+                  </div>
+                  <span className="card-copy">{reason}</span>
+                </div>
               ) : null,
             )}
           </div>

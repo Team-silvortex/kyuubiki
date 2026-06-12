@@ -6,11 +6,17 @@ import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-pa
 import { WorkbenchSystemDataMount } from "@/components/workbench/workbench-system-data-mount";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
+import {
+  buildWorkbenchSystemControlModeCopy,
+  buildWorkbenchSystemControlTopologySummary,
+  buildWorkbenchSystemTopologySnapshot,
+} from "@/components/workbench/system/workbench-system-control-mode-contract";
 import { WorkbenchSystemInstallLayoutCard } from "@/components/workbench/system/workbench-system-install-layout-card";
 import { WorkbenchSystemInstallPolicyMount } from "@/components/workbench/system/workbench-system-install-policy-mount";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
+import type { ProtocolAgentDescriptor } from "@/lib/api";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 
@@ -283,6 +289,25 @@ export function WorkbenchSystemSidebarMount({
   setMessage,
   refreshJobHistory,
 }: WorkbenchSystemSidebarMountProps) {
+  const controlWindowCopy = buildWorkbenchSystemControlModeCopy(language, frontendRuntimeMode);
+  const controlWindowTopology = buildWorkbenchSystemControlTopologySummary({
+    frontendRuntimeMode,
+    directMeshSelectionMode,
+    directMeshEndpointsText,
+    protocolAgents: protocolAgents as ProtocolAgentDescriptor[],
+    protocolOnline: healthProtocolOnline,
+    securityConfigured: healthSecurityApiTokenConfigured,
+    auditCount: runtimeAuditEntries.length,
+    copy: controlWindowCopy,
+  });
+  const controlWindowSnapshot = buildWorkbenchSystemTopologySnapshot({
+    frontendRuntimeMode,
+    directMeshSelectionMode,
+    directMeshEndpointsText,
+    protocolAgents: protocolAgents as ProtocolAgentDescriptor[],
+    topology: controlWindowTopology,
+  });
+
   return (
     <WorkbenchSystemSidebar
       systemPanelTab={systemPanelTab}
@@ -425,6 +450,7 @@ export function WorkbenchSystemSidebarMount({
           backendTitle={t.backend}
           backendStatus={healthStatus ?? t.offline}
           backendRows={runtimeBackendRows}
+          controlWindow={{ copy: controlWindowCopy, topology: controlWindowTopology, snapshot: controlWindowSnapshot }}
           protocolsTitle={t.protocols}
           protocolsStatus={healthProtocolOnline ? t.online : t.offline}
           protocolRows={runtimeProtocolRows}

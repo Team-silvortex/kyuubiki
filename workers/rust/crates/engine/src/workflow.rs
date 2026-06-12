@@ -1,8 +1,9 @@
 use crate::workflow_contract::validate_workflow_dataset_contract;
 use crate::workflow_executor::{
     artifact_key, evaluate_condition_operator, resolve_first_available_input_payload,
-    resolve_single_input_payload, run_export_operator, run_extract_operator, run_solve_operator,
-    run_transform_operator, transform_operator_accepts_partial_inputs,
+    resolve_named_input_payloads, resolve_single_input_payload, run_export_operator,
+    run_extract_operator, run_solve_operator, run_transform_operator,
+    transform_operator_accepts_partial_inputs, transform_operator_requires_port_map,
 };
 use kyuubiki_protocol::{
     WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest,
@@ -143,6 +144,8 @@ pub fn run_workflow_graph(
                     })?;
                     let payload = if transform_operator_accepts_partial_inputs(operator_id) {
                         resolve_first_available_input_payload(node, &incoming, &artifacts)?
+                    } else if transform_operator_requires_port_map(operator_id) {
+                        resolve_named_input_payloads(node, &incoming, &artifacts)?
                     } else {
                         resolve_single_input_payload(node, &incoming, &artifacts)?
                     };

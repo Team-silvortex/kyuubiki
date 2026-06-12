@@ -28,7 +28,7 @@ import type {
   Truss3dJobInput,
   ProjectRecord,
 } from "@/lib/api";
-import type { WorkbenchMacroPresetRecord } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkbenchMacroPresetRecord, WorkbenchScriptSnippetPresetRecord } from "@/lib/scripting/workbench-script-runtime";
 import {
   PROJECT_SCHEMA_VERSION,
   defaultProjectFileManifest,
@@ -141,6 +141,7 @@ export function exportProjectBundle(payload: {
   activeVersionId?: string | null;
   workspaceSnapshot?: Record<string, unknown> | null;
   automationPresets?: WorkbenchMacroPresetRecord[];
+  snippetPresets?: WorkbenchScriptSnippetPresetRecord[];
   assetCatalog?: ProjectAssetMetaRecord[];
   assetReferences?: ProjectAssetReferenceRecord[];
   jobs?: JobState[];
@@ -158,6 +159,7 @@ export function exportProjectBundle(payload: {
       active_version_id: payload.activeVersionId ?? null,
       workspace_snapshot: payload.workspaceSnapshot ?? null,
       automation_presets: payload.automationPresets ?? [],
+      snippet_presets: payload.snippetPresets ?? [],
       asset_catalog: payload.assetCatalog ?? [],
       asset_references: payload.assetReferences ?? [],
       jobs: payload.jobs ?? [],

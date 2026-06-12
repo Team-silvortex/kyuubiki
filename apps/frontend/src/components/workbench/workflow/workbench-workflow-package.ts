@@ -31,6 +31,20 @@ export type WorkflowPackageContractManifest = {
   output_contracts: WorkflowPackageContractEntry[];
 };
 
+export type WorkflowPackageBridgeSeedSummary = {
+  operator_id: string;
+  node_count: number;
+  element_count: number;
+  contract_version?: string;
+};
+
+export type WorkflowPackageRuntimeManifest = {
+  required_operator_ids: string[];
+  sample_input_node_ids: string[];
+  included_input_text_node_ids: string[];
+  bridge_seed_summaries: WorkflowPackageBridgeSeedSummary[];
+};
+
 export type WorkflowPackage = {
   format: "kyuubiki.workflow-package";
   version: 1;
@@ -42,6 +56,7 @@ export type WorkflowPackage = {
   exported_at: string;
   search_index: WorkflowPackageSearchIndex;
   contract_manifest: WorkflowPackageContractManifest;
+  runtime_manifest: WorkflowPackageRuntimeManifest;
   workflow: {
     id: string;
     source_workflow_id?: string;
@@ -173,6 +188,51 @@ export function buildWorkflowPackageContractManifest(
   };
 }
 
+function asNodeRecord(value: unknown) {
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+export function buildWorkflowPackageRuntimeManifest(params: {
+  graph: WorkflowGraphDefinition;
+  inputArtifactTexts?: Record<string, string>;
+}): WorkflowPackageRuntimeManifest {
+  const requiredOperatorIds = uniqueSorted(
+    params.graph.nodes.map((node) => node.operator_id).filter((value): value is string => typeof value === "string"),
+  );
+  const sampleInputNodeIds = uniqueSorted(
+    (params.graph.entry_inputs ?? []).map((artifact) => artifact.node_id),
+  );
+  const includedInputTextNodeIds = uniqueSorted(
+    Object.keys(params.inputArtifactTexts ?? {}),
+  );
+  const bridgeSeedSummaries = params.graph.nodes.flatMap((node) => {
+    if (!node.operator_id?.startsWith("bridge.")) return [];
+    const config = asNodeRecord(node.config);
+    const seedModel = config?.seed_model
+      ? asNodeRecord(config.seed_model)
+      : config;
+    const nodes = Array.isArray(seedModel?.nodes) ? seedModel.nodes : [];
+    const elements = Array.isArray(seedModel?.elements) ? seedModel.elements : [];
+    const contract = asNodeRecord(config?.contract);
+    return [
+      {
+        operator_id: node.operator_id,
+        node_count: nodes.length,
+        element_count: elements.length,
+        contract_version:
+          typeof contract?.version === "string" ? contract.version : undefined,
+      },
+    ];
+  });
+
+  return {
+    required_operator_ids: requiredOperatorIds,
+    sample_input_node_ids: sampleInputNodeIds,
+    included_input_text_node_ids: includedInputTextNodeIds,
+    bridge_seed_summaries: bridgeSeedSummaries,
+  };
+}
+
 export function buildWorkflowPackageSearchIndex(params: {
   workflow?: Pick<WorkflowCatalogEntry, "domains" | "capability_tags"> | null;
   graph: WorkflowGraphDefinition;
@@ -220,6 +280,10 @@ export function buildWorkflowPackage(params: {
       tags,
     }),
     contract_manifest: buildWorkflowPackageContractManifest(params.graph),
+    runtime_manifest: buildWorkflowPackageRuntimeManifest({
+      graph: params.graph,
+      inputArtifactTexts: params.inputArtifactTexts,
+    }),
     workflow: {
       id: params.graph.id,
       source_workflow_id:
@@ -328,6 +392,39 @@ export function asWorkflowPackage(value: unknown): WorkflowPackage | null {
             : [],
         }
       : buildWorkflowPackageContractManifest(graph),
+    runtime_manifest: isRecord(value.runtime_manifest)
+      ? {
+          required_operator_ids:
+            asStringArray(value.runtime_manifest.required_operator_ids) ?? [],
+          sample_input_node_ids:
+            asStringArray(value.runtime_manifest.sample_input_node_ids) ?? [],
+          included_input_text_node_ids:
+            asStringArray(value.runtime_manifest.included_input_text_node_ids) ?? [],
+          bridge_seed_summaries: Array.isArray(value.runtime_manifest.bridge_seed_summaries)
+            ? value.runtime_manifest.bridge_seed_summaries.flatMap((entry) =>
+                isRecord(entry) &&
+                typeof entry.operator_id === "string" &&
+                typeof entry.node_count === "number" &&
+                typeof entry.element_count === "number"
+                  ? [
+                      {
+                        operator_id: entry.operator_id,
+                        node_count: entry.node_count,
+                        element_count: entry.element_count,
+                        contract_version:
+                          typeof entry.contract_version === "string"
+                            ? entry.contract_version
+                            : undefined,
+                      },
+                    ]
+                  : [],
+              )
+            : [],
+        }
+      : buildWorkflowPackageRuntimeManifest({
+          graph,
+          inputArtifactTexts: asStringRecord(value.workflow.input_artifact_texts),
+        }),
     workflow: {
       id: typeof value.workflow.id === "string" ? value.workflow.id : graph.id,
       source_workflow_id:

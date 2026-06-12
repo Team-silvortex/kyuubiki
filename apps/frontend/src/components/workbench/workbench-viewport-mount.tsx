@@ -3,6 +3,7 @@
 import { WorkbenchViewport } from "./workbench-viewport";
 import type { WorkbenchCopy } from "./workbench-copy";
 import type { DisplayTruss3dElement, DisplayTruss3dNode, DisplayTrussElement, DisplayTrussNode } from "./workbench-defaults";
+import type { ViewportRenderDiagnostics, ViewportRenderStrategy } from "./workbench-render-diagnostics";
 import type { BeamResultField } from "./workbench-types";
 import type { PlaneElement, PlaneNode, PlaneResultField } from "./workbench-viewport-core";
 import type { LineResultField } from "./workbench-viewport-core";
@@ -106,6 +107,8 @@ type WorkbenchViewportMountProps = {
   handleTruss3dShowLabelsChange: React.ComponentProps<typeof WorkbenchViewport>["onShowLabelsChange"];
   handleTruss3dShowNodesChange: React.ComponentProps<typeof WorkbenchViewport>["onShowNodesChange"];
   handleTruss3dBoxSelectModeChange: React.ComponentProps<typeof WorkbenchViewport>["onBoxSelectModeChange"];
+  onRenderDiagnosticsChange?: (diagnostics: ViewportRenderDiagnostics) => void;
+  renderStrategy?: ViewportRenderStrategy;
 };
 
 export function WorkbenchViewportMount({
@@ -207,6 +210,8 @@ export function WorkbenchViewportMount({
   handleTruss3dShowLabelsChange,
   handleTruss3dShowNodesChange,
   handleTruss3dBoxSelectModeChange,
+  onRenderDiagnosticsChange,
+  renderStrategy,
 }: WorkbenchViewportMountProps) {
   return (
     <WorkbenchViewport
@@ -363,6 +368,8 @@ export function WorkbenchViewportMount({
       onShowNodesChange={handleTruss3dShowNodesChange}
       onBoxSelectModeChange={handleTruss3dBoxSelectModeChange}
       viewportPixelWidth={viewportPixelWidth}
+      onRenderDiagnosticsChange={onRenderDiagnosticsChange}
+      renderStrategy={renderStrategy}
     />
   );
 }

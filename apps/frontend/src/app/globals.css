@@ -315,6 +315,17 @@ button {
   position: relative;
 }
 
+.workbench-shell__rail,
+.workbench-shell__sidebar,
+.workbench-shell__workspace {
+  min-width: 0;
+  min-height: 0;
+}
+
+.workbench-shell__workspace {
+  display: contents;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: var(--editor-radius);
@@ -772,6 +783,40 @@ button {
   background: var(--panel-soft);
 }
 
+.viewport-render-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 8px 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-soft) 82%, var(--accent) 18%);
+}
+
+.viewport-render-bar__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: center;
+  min-width: 0;
+}
+
+.viewport-render-bar__meta strong {
+  font-size: 0.9rem;
+}
+
+.viewport-render-bar__meta span {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.viewport-render-bar .button-row {
+  gap: 6px;
+}
+
 .viewport-window-bar__meta {
   display: flex;
   flex-wrap: wrap;
@@ -1117,6 +1162,8 @@ html[data-theme="graphite"] .inline-field input {
 
 .workspace-main {
   display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: start;
   gap: 10px;
   min-width: 0;
 }
@@ -1132,18 +1179,44 @@ html[data-theme="graphite"] .inline-field input {
 }
 
 .canvas-layout {
-  min-width: 0;
-}
-
-.canvas-layout--split {
   display: grid;
-  grid-template-columns: minmax(240px, 296px) minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
   padding: 12px 14px 14px;
 }
 
+.canvas-layout--split {
+  grid-template-columns: minmax(240px, 296px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.canvas-layout__dock,
+.canvas-layout__main,
+.canvas-layout__chrome,
+.canvas-layout__viewport {
+  min-width: 0;
+}
+
+.canvas-layout__main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.canvas-layout__chrome {
+  display: grid;
+  gap: 10px;
+}
+
+.canvas-layout__viewport {
+  min-height: 0;
+}
+
 .canvas-stage {
+  height: 100%;
   min-width: 0;
   overflow: auto;
   scrollbar-width: thin;
@@ -2081,6 +2154,52 @@ th {
   font-size: 0.72rem;
 }
 
+.control-mode-window {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(217, 131, 44, 0.2);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
+    linear-gradient(180deg, rgba(24, 34, 40, 0.82), rgba(12, 18, 23, 0.9));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22);
+}
+
+.control-mode-window__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.control-mode-window__head strong,
+.control-mode-window__head span,
+.control-mode-window__hint,
+.control-mode-window__foot {
+  display: block;
+}
+
+.control-mode-window__head strong {
+  font-size: 0.95rem;
+}
+
+.control-mode-window__head span,
+.control-mode-window__hint,
+.control-mode-window__foot {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.control-mode-window__hint,
+.control-mode-window__foot {
+  margin: 0;
+}
+
 html[data-theme="graphite"] .assistant-panel__modebar {
   background: linear-gradient(180deg, rgba(21, 26, 35, 0.98), rgba(21, 26, 35, 0.88));
 }
@@ -2098,6 +2217,10 @@ html[data-theme="graphite"] .assistant-float-panel {
 @media (max-width: 1380px) {
   .workbench-shell {
     grid-template-columns: 88px 320px minmax(0, 1fr);
+  }
+
+  .workbench-shell__workspace {
+    display: contents;
   }
 
   .workspace-inspector {
@@ -2119,6 +2242,10 @@ html[data-theme="graphite"] .assistant-float-panel {
 @media (max-width: 1100px) {
   .workbench-shell {
     grid-template-columns: 1fr;
+  }
+
+  .workbench-shell__workspace {
+    display: contents;
   }
 
   .app-rail {
@@ -2180,6 +2307,8 @@ html[data-theme="graphite"] .assistant-float-panel {
 @media (max-width: 780px) {
   .sidebar-list__row,
   .viewport-window-bar,
+  .viewport-render-bar,
+  .control-mode-window__head,
   .card-subhead,
   .audit-trend-meta {
     display: grid;

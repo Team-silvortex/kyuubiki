@@ -126,7 +126,11 @@ function WorkbenchInspectorInner({
   const isFrame = studyKind === "frame_2d" || studyKind === "thermal_frame_2d";
 
   return (
-    <aside className="workspace-inspector panel">
+    <aside
+      className="workspace-inspector panel"
+      data-workbench-panel="inspector"
+      data-workbench-surface="built-in"
+    >
       <div className="panel-head">
         <h2>{t.overview}</h2>
         <span>{isPending ? t.busy : t.ready}</span>

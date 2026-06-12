@@ -43,6 +43,28 @@ function formatContractEntries(entries: WorkflowPackageContractEntry[]) {
     .join(", ");
 }
 
+function formatBridgeSeedSummaries(
+  values: Array<{
+    operator_id: string;
+    node_count: number;
+    element_count: number;
+    contract_version?: string;
+  }>,
+) {
+  if (values.length === 0) return "--";
+  return values
+    .map((value) =>
+      [
+        value.operator_id,
+        `${value.node_count}n/${value.element_count}e`,
+        value.contract_version,
+      ]
+        .filter(Boolean)
+        .join(" -> "),
+    )
+    .join(", ");
+}
+
 export function WorkbenchWorkflowPackageManifestCard({
   labels,
   workflow,
@@ -77,6 +99,23 @@ export function WorkbenchWorkflowPackageManifestCard({
           dataset_value_ids: workflow.graph.dataset_contract?.values.map((value) => value.id) ?? [],
           entry_contracts: [],
           output_contracts: [],
+        }
+      : null);
+  const runtimeManifest =
+    importedPackage?.runtime_manifest ??
+    (workflow.graph
+      ? {
+          required_operator_ids:
+            workflow.graph.nodes
+              .map((node) => node.operator_id)
+              .filter((value): value is string => typeof value === "string") ?? [],
+          sample_input_node_ids: workflow.entry_inputs.map((entry) => entry.node_id),
+          included_input_text_node_ids: Object.keys(
+            importedPackage?.workflow.input_artifact_texts ??
+              workflow.local?.input_artifact_texts ??
+              {},
+          ),
+          bridge_seed_summaries: [],
         }
       : null);
 
@@ -137,7 +176,7 @@ export function WorkbenchWorkflowPackageManifestCard({
         </div>
         <div className="sidebar-list__row">
           <span>{labels.packageManifestOperatorsLabel}</span>
-          <strong>{formatList(mountedOperators)}</strong>
+          <strong>{formatList(runtimeManifest?.required_operator_ids ?? mountedOperators)}</strong>
         </div>
         <div className="sidebar-list__row">
           <span>{labels.packageManifestEntryArtifactsLabel}</span>
@@ -154,6 +193,14 @@ export function WorkbenchWorkflowPackageManifestCard({
         <div className="sidebar-list__row">
           <span>{labels.operatorOutputSchemaLabel}</span>
           <strong>{formatContractEntries(contractManifest?.output_contracts ?? [])}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>{labels.inputArtifactsTitle}</span>
+          <strong>{formatList(runtimeManifest?.included_input_text_node_ids)}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>{labels.bridgeContractTitle}</span>
+          <strong>{formatBridgeSeedSummaries(runtimeManifest?.bridge_seed_summaries ?? [])}</strong>
         </div>
       </div>
     </section>

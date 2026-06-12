@@ -13,7 +13,7 @@ import {
 } from "@/components/workbench/workbench-persisted-model-controller";
 import type { JobResultRecord } from "@/lib/api";
 import { exportProjectBundle } from "@/lib/models/modeler";
-import { listWorkbenchMacroPresets } from "@/lib/scripting/workbench-script-runtime";
+import { listWorkbenchMacroPresets, listWorkbenchSnippetPresets } from "@/lib/scripting/workbench-script-runtime";
 
 type ProjectStorageControllerDeps = {
   t: any;
@@ -189,6 +189,7 @@ export function createWorkbenchProjectStorageController({
         activeVersionId: selectedVersionId,
         workspaceSnapshot: serializeCurrentModel(),
         automationPresets: listWorkbenchMacroPresets(selectedProject.project_id),
+        snippetPresets: listWorkbenchSnippetPresets(selectedProject.project_id),
         jobs: jobHistory,
         results,
       }),

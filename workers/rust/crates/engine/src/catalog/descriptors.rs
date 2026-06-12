@@ -32,16 +32,16 @@ pub fn built_in_solver_descriptor(
         },
         inputs: vec![operator_port_descriptor(
             "model",
-            &format!("model/{family}"),
+            &format!("study_model/{family}"),
             "Primary operator model input",
-            Some("model"),
+            Some(&format!("{family}_model")),
             Some(&format!("kyuubiki.operator.{family}.input")),
         )],
         outputs: vec![operator_port_descriptor(
             "result",
             &format!("result/{family}"),
             "Primary operator result output",
-            Some("result"),
+            Some(&format!("{family}_result")),
             Some(&format!("kyuubiki.operator.{family}.output")),
         )],
         validation: verified_operator_validation_profile(
@@ -99,6 +99,58 @@ pub fn built_in_bridge_descriptor(
     }
 }
 
+pub fn built_in_explicit_bridge_descriptor(
+    id: &str,
+    domain: &str,
+    family: &str,
+    summary: &str,
+    capability_tags: &[&str],
+    input_artifact_type: &str,
+    input_dataset_value: &str,
+    output_artifact_type: &str,
+    output_dataset_value: &str,
+) -> OperatorDescriptor {
+    OperatorDescriptor {
+        id: id.to_string(),
+        version: "1.0.0".to_string(),
+        domain: domain.to_string(),
+        family: family.to_string(),
+        kind: OperatorKind::WorkflowBridge,
+        summary: summary.to_string(),
+        capability_tags: capability_tags
+            .iter()
+            .map(|tag| (*tag).to_string())
+            .collect(),
+        origin: OperatorOrigin::BuiltIn,
+        input_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.bridge_input"),
+            version: "1".to_string(),
+        },
+        output_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.bridge_output"),
+            version: "1".to_string(),
+        },
+        inputs: vec![operator_port_descriptor(
+            "source",
+            input_artifact_type,
+            "Upstream workflow bridge payload",
+            Some(input_dataset_value),
+            Some(&format!("kyuubiki.operator.{family}.bridge_input")),
+        )],
+        outputs: vec![operator_port_descriptor(
+            "bridged_model",
+            output_artifact_type,
+            "Downstream bridged model payload",
+            Some(output_dataset_value),
+            Some(&format!("kyuubiki.operator.{family}.bridge_output")),
+        )],
+        validation: verified_operator_validation_profile(
+            family,
+            &["workflow_graph", "catalog_job"],
+        ),
+    }
+}
+
 pub fn built_in_transform_descriptor(
     id: &str,
     domain: &str,
@@ -147,6 +199,69 @@ pub fn built_in_transform_descriptor(
             "artifact/json",
             "Merged branch payload",
             Some("merged"),
+            Some(&format!("kyuubiki.operator.{family}.transform_output")),
+        )],
+        validation: verified_operator_validation_profile(
+            family,
+            &["workflow_graph", "draft_builder"],
+        ),
+    }
+}
+
+pub fn built_in_explicit_transform_descriptor(
+    id: &str,
+    domain: &str,
+    family: &str,
+    summary: &str,
+    capability_tags: &[&str],
+    left_artifact_type: &str,
+    left_dataset_value: &str,
+    right_artifact_type: &str,
+    right_dataset_value: &str,
+    output_artifact_type: &str,
+    output_dataset_value: &str,
+) -> OperatorDescriptor {
+    OperatorDescriptor {
+        id: id.to_string(),
+        version: "1.0.0".to_string(),
+        domain: domain.to_string(),
+        family: family.to_string(),
+        kind: OperatorKind::Transform,
+        summary: summary.to_string(),
+        capability_tags: capability_tags
+            .iter()
+            .map(|tag| (*tag).to_string())
+            .collect(),
+        origin: OperatorOrigin::BuiltIn,
+        input_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.transform_input"),
+            version: "1".to_string(),
+        },
+        output_schema: OperatorSchemaRef {
+            schema: format!("kyuubiki.operator.{family}.transform_output"),
+            version: "1".to_string(),
+        },
+        inputs: vec![
+            operator_port_descriptor(
+                "left",
+                left_artifact_type,
+                "Primary branch input payload",
+                Some(left_dataset_value),
+                Some(&format!("kyuubiki.operator.{family}.transform_input")),
+            ),
+            operator_port_descriptor(
+                "right",
+                right_artifact_type,
+                "Secondary branch input payload",
+                Some(right_dataset_value),
+                Some(&format!("kyuubiki.operator.{family}.transform_input")),
+            ),
+        ],
+        outputs: vec![operator_port_descriptor(
+            "merged",
+            output_artifact_type,
+            "Merged branch payload",
+            Some(output_dataset_value),
             Some(&format!("kyuubiki.operator.{family}.transform_output")),
         )],
         validation: verified_operator_validation_profile(

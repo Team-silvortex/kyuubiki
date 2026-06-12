@@ -98,3 +98,15 @@ export type WorkbenchMacroPresetRecord = {
   updatedAt: string;
 };
 
+export type WorkbenchScriptSnippetParameterValue = string | number | boolean;
+
+export type WorkbenchScriptSnippetParameters = Record<string, WorkbenchScriptSnippetParameterValue>;
+
+export type WorkbenchScriptSnippetPresetRecord = {
+  presetId: string;
+  projectId: string;
+  snippetId: string;
+  name: string;
+  parameters: WorkbenchScriptSnippetParameters;
+  updatedAt: string;
+};

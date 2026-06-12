@@ -25,6 +25,7 @@ import {
   type DirectMeshExecutionState,
   type PlaneResultField,
 } from "@/components/workbench/workbench-defaults";
+import type { ViewportRenderStrategy } from "@/components/workbench/workbench-render-diagnostics";
 import {
   type BeamResultField,
   type FrameResultField,
@@ -144,6 +145,7 @@ export function useWorkbenchWorkspaceState(params: {
   const [frameResultField, setFrameResultField] = useState<FrameResultField>("max_combined_stress");
   const [beamResultField, setBeamResultField] = useState<BeamResultField>("max_bending_stress");
   const [planeHotspotLimit, setPlaneHotspotLimit] = useState(5);
+  const [renderStrategy, setRenderStrategy] = useState<ViewportRenderStrategy>("auto");
   const [focusedPlaneElement, setFocusedPlaneElement] = useState<number | null>(null);
   const [focusedFrameElement, setFocusedFrameElement] = useState<number | null>(null);
   const [result, setResult] = useState<WorkbenchResult>(null);
@@ -252,6 +254,8 @@ export function useWorkbenchWorkspaceState(params: {
     setBeamResultField,
     planeHotspotLimit,
     setPlaneHotspotLimit,
+    renderStrategy,
+    setRenderStrategy,
     focusedPlaneElement,
     setFocusedPlaneElement,
     focusedFrameElement,

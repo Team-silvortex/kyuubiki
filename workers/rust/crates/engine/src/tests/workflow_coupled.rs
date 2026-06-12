@@ -405,7 +405,10 @@ fn runs_electrostatic_to_heat_to_thermo_summary_workflow_graph() {
     })
     .expect("electrostatic -> heat -> thermo summary workflow should run");
 
-    assert_eq!(run.workflow_id, "workflow.electrostatic-heat-thermo-summary");
+    assert_eq!(
+        run.workflow_id,
+        "workflow.electrostatic-heat-thermo-summary"
+    );
     assert_eq!(run.completed_nodes.len(), 9);
 
     let heat_model: SolveHeatPlaneQuad2dRequest = serde_json::from_value(

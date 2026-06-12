@@ -1,6 +1,7 @@
 "use client";
 
 import type { PointerEvent as ReactPointerEvent } from "react";
+import type { ViewportRenderDiagnostics, ViewportRenderStrategy } from "./workbench-render-diagnostics";
 
 type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 export type StudyKind =
@@ -240,6 +241,8 @@ export type WorkbenchViewportProps = {
   onShowNodesChange: (value: boolean) => void;
   onBoxSelectModeChange: (value: boolean) => void;
   viewportPixelWidth?: number;
+  onRenderDiagnosticsChange?: (diagnostics: ViewportRenderDiagnostics) => void;
+  renderStrategy?: ViewportRenderStrategy;
 };
 
 export const VIEWPORT_CLIP = { x: 48, y: 76, width: 884, height: 340 };

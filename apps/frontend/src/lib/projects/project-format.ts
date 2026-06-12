@@ -1,6 +1,7 @@
 import JSZip from "jszip";
-import type { WorkbenchMacroPresetRecord } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkbenchMacroPresetRecord, WorkbenchScriptSnippetPresetRecord } from "@/lib/scripting/workbench-script-runtime";
 import type { JobResultRecord, ModelRecord, ModelVersionRecord, ProjectRecord } from "@/lib/api";
+import { extractAnalysisMetadata } from "@/lib/projects/project-format-analysis";
 
 export const PROJECT_SCHEMA_VERSION = "kyuubiki.project/v2";
 export const LEGACY_PROJECT_SCHEMA_VERSION = "kyuubiki.project/v1";
@@ -20,6 +21,7 @@ const WORKSPACE_SNAPSHOT_PATH = "workspace/current-model.json";
 const STANDARD_WORKSPACE_SNAPSHOT_PATH = `${STANDARD_WORKSPACE_DIRECTORY}/current-model.json`;
 const STANDARD_WORKSPACE_SETTINGS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/workspace.json`;
 const STANDARD_AUTOMATION_PRESETS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/automation-presets.json`;
+const STANDARD_SNIPPET_PRESETS_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/snippet-presets.json`;
 const STANDARD_ASSET_CATALOG_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/asset-catalog.json`;
 const STANDARD_ASSET_REFERENCES_PATH = `${STANDARD_PROJECT_SETTINGS_DIRECTORY}/asset-references.json`;
 const JOBS_INDEX_PATH = "jobs/jobs.json";
@@ -35,6 +37,7 @@ export type ProjectFileManifest = {
   workspace_settings_path: string;
   workspace_snapshot_path: string;
   automation_presets_path: string;
+  snippet_presets_path: string;
   asset_catalog_path: string;
   asset_references_path: string;
   model_directory: string;
@@ -51,6 +54,7 @@ export type ProjectAssetMetaRecord = {
     | "workspace_settings"
     | "workspace_snapshot"
     | "automation_preset"
+    | "snippet_preset"
     | "model"
     | "model_version"
     | "job"
@@ -64,37 +68,6 @@ export type ProjectAssetMetaRecord = {
   thermal_intent?: string[];
 };
 
-function extractAnalysisMetadata(value: unknown): {
-  analysis_domain?: "mechanical" | "thermal" | "thermo_mechanical";
-  analysis_family?: "axial_and_springs" | "beams_and_frames" | "trusses" | "planes";
-  thermal_intent?: string[];
-} {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-  const metadata = (value as { analysis_metadata?: unknown }).analysis_metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
-    return {};
-  }
-  const record = metadata as {
-    domain?: unknown;
-    family?: unknown;
-    thermal_intent?: unknown;
-  };
-  return {
-    analysis_domain:
-      record.domain === "mechanical" || record.domain === "thermal" || record.domain === "thermo_mechanical" ? record.domain : undefined,
-    analysis_family:
-      record.family === "axial_and_springs" ||
-      record.family === "beams_and_frames" ||
-      record.family === "trusses" ||
-      record.family === "planes"
-        ? record.family
-        : undefined,
-    thermal_intent: Array.isArray(record.thermal_intent) ? record.thermal_intent.filter((item): item is string => typeof item === "string") : undefined,
-  };
-}
-
 export type ProjectAssetReferenceRecord = {
   from_guid: string;
   relation:
@@ -104,6 +77,7 @@ export type ProjectAssetReferenceRecord = {
     | "workspace_snapshot_of"
     | "workspace_settings_for"
     | "automation_for"
+    | "snippet_for"
     | "version_of"
     | "job_for_project"
     | "job_for_version"
@@ -122,6 +96,7 @@ export type ProjectBundle = {
   active_version_id?: string | null;
   workspace_snapshot?: Record<string, unknown> | null;
   automation_presets?: WorkbenchMacroPresetRecord[];
+  snippet_presets?: WorkbenchScriptSnippetPresetRecord[];
   asset_catalog?: ProjectAssetMetaRecord[];
   asset_references?: ProjectAssetReferenceRecord[];
   jobs?: Array<Record<string, unknown>>;
@@ -137,6 +112,7 @@ export function defaultProjectFileManifest(): ProjectFileManifest {
     workspace_settings_path: STANDARD_WORKSPACE_SETTINGS_PATH,
     workspace_snapshot_path: STANDARD_WORKSPACE_SNAPSHOT_PATH,
     automation_presets_path: STANDARD_AUTOMATION_PRESETS_PATH,
+    snippet_presets_path: STANDARD_SNIPPET_PRESETS_PATH,
     asset_catalog_path: STANDARD_ASSET_CATALOG_PATH,
     asset_references_path: STANDARD_ASSET_REFERENCES_PATH,
     model_directory: STANDARD_MODELS_DIRECTORY,
@@ -166,6 +142,7 @@ function normalizeBundle(raw: Partial<ProjectBundle>): ProjectBundle {
     active_version_id: raw.active_version_id ?? null,
     workspace_snapshot: raw.workspace_snapshot ?? null,
     automation_presets: raw.automation_presets ?? [],
+    snippet_presets: raw.snippet_presets ?? [],
     asset_catalog: raw.asset_catalog ?? [],
     asset_references: raw.asset_references ?? [],
     jobs: raw.jobs ?? [],
@@ -263,6 +240,17 @@ function buildProjectAssetCatalog(bundle: ProjectBundle, fileManifest: ProjectFi
       updated_at: preset.updatedAt,
     });
   });
+  (bundle.snippet_presets ?? []).forEach((preset) => {
+    catalog.push({
+      guid: stableAssetGuid(`snippet-preset:${preset.presetId}`),
+      meta_version: "kyuubiki.asset-meta/v1",
+      kind: "snippet_preset",
+      path: fileManifest.snippet_presets_path,
+      source_id: preset.presetId,
+      name: preset.name,
+      updated_at: preset.updatedAt,
+    });
+  });
 
   (bundle.jobs ?? []).forEach((job) => {
     const jobId = typeof job.job_id === "string" ? job.job_id : "job";
@@ -348,6 +336,12 @@ function buildProjectAssetReferences(bundle: ProjectBundle, assetCatalog: Projec
       refs.push({ from_guid: projectGuid, relation: "automation_for", to_guid: presetGuid });
     }
   });
+  (bundle.snippet_presets ?? []).forEach((preset) => {
+    const presetGuid = guidByKindAndSource.get(`snippet_preset:${preset.presetId}`);
+    if (projectGuid && presetGuid) {
+      refs.push({ from_guid: projectGuid, relation: "snippet_for", to_guid: presetGuid });
+    }
+  });
 
   (bundle.jobs ?? []).forEach((job) => {
     const jobId = typeof job.job_id === "string" ? job.job_id : null;
@@ -402,6 +396,12 @@ export async function parseProjectBundleFile(file: File): Promise<ProjectBundle>
       const automationPresets = zip.file(fileManifest.automation_presets_path);
       if (automationPresets) {
         bundle.automation_presets = JSON.parse(await automationPresets.async("string")) as WorkbenchMacroPresetRecord[];
+      }
+    }
+    if ((bundle.snippet_presets?.length ?? 0) === 0) {
+      const snippetPresets = zip.file(fileManifest.snippet_presets_path);
+      if (snippetPresets) {
+        bundle.snippet_presets = JSON.parse(await snippetPresets.async("string")) as WorkbenchScriptSnippetPresetRecord[];
       }
     }
 
@@ -469,6 +469,9 @@ export async function exportProjectBundleZip(bundleJson: string): Promise<Blob> 
 
   if ((bundle.automation_presets?.length ?? 0) > 0) {
     zip.file(fileManifest.automation_presets_path, JSON.stringify(bundle.automation_presets, null, 2));
+  }
+  if ((bundle.snippet_presets?.length ?? 0) > 0) {
+    zip.file(fileManifest.snippet_presets_path, JSON.stringify(bundle.snippet_presets, null, 2));
   }
 
   zip.file(fileManifest.asset_catalog_path, JSON.stringify(assetCatalog, null, 2));
@@ -539,6 +542,10 @@ export async function exportProjectBundleZip(bundleJson: string): Promise<Blob> 
     const presetMetas = assetCatalog.filter((entry) => entry.kind === "automation_preset");
     zip.file(`${fileManifest.automation_presets_path}.meta`, JSON.stringify(presetMetas, null, 2));
   }
+  if ((bundle.snippet_presets?.length ?? 0) > 0) {
+    const presetMetas = assetCatalog.filter((entry) => entry.kind === "snippet_preset");
+    zip.file(`${fileManifest.snippet_presets_path}.meta`, JSON.stringify(presetMetas, null, 2));
+  }
 
   zip.file(
     "README.txt",
@@ -556,6 +563,7 @@ export async function exportProjectBundleZip(bundleJson: string): Promise<Blob> 
       `  ${fileManifest.workspace_settings_path}`,
       `  ${fileManifest.workspace_snapshot_path}`,
       `  ${fileManifest.automation_presets_path}`,
+      `  ${fileManifest.snippet_presets_path}`,
       `  ${fileManifest.asset_catalog_path}`,
       `  ${fileManifest.asset_references_path}`,
       `  ${fileManifest.job_directory}/index.json`,

@@ -1,9 +1,11 @@
 "use client";
 
 import { useWorkbenchCoreComposition } from "@/components/workbench/workbench-core-composition";
+import { WorkbenchAppRail } from "@/components/workbench/workbench-app-rail";
 import { WorkbenchMainShellMount } from "@/components/workbench/workbench-main-shell-mount";
 import { useWorkbenchRootState } from "@/components/workbench/workbench-root-state";
-import { WorkbenchSidebarMount } from "@/components/workbench/workbench-sidebar-mount";
+import { WorkbenchShellFrame } from "@/components/workbench/workbench-shell-frame";
+import { WorkbenchSidebarPanel } from "@/components/workbench/workbench-sidebar-panel";
 import {
   cancelJob,
   createModel,
@@ -63,9 +65,30 @@ export function Workbench() {
   });
 
   return (
-    <div className="workbench-shell">
-      <WorkbenchSidebarMount {...sidebarMountProps} />
-      <WorkbenchMainShellMount {...mainShellMountProps} />
-    </div>
+    <WorkbenchShellFrame
+      rail={
+        <WorkbenchAppRail
+          shortTitle={sidebarMountProps.shortTitle}
+          railItems={sidebarMountProps.railItems}
+          sidebarSection={sidebarMountProps.sidebarSection}
+          onSidebarSectionChange={sidebarMountProps.onSidebarSectionChange}
+        />
+      }
+      sidebar={
+        <WorkbenchSidebarPanel
+          shortTitle={sidebarMountProps.shortTitle}
+          roleLabel={sidebarMountProps.roleLabel}
+          title={sidebarMountProps.title}
+          subtitle={sidebarMountProps.subtitle}
+          sidebarSection={sidebarMountProps.sidebarSection}
+          studySection={sidebarMountProps.studySection}
+          modelSection={sidebarMountProps.modelSection}
+          workflowSection={sidebarMountProps.workflowSection}
+          librarySection={sidebarMountProps.librarySection}
+          systemSection={sidebarMountProps.systemSection}
+        />
+      }
+      workspace={<WorkbenchMainShellMount {...mainShellMountProps} />}
+    />
   );
 }

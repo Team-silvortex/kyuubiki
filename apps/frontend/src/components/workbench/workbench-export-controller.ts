@@ -3,7 +3,7 @@
 import { downloadBlobFile, downloadTextFile } from "@/components/workbench/workbench-file-helpers";
 import { SECURITY_EVENT_WINDOW_MS, type SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkbenchLanguage } from "@/components/workbench/workbench-copy";
-import type { WorkbenchMacroPresetRecord } from "@/lib/scripting/workbench-script-runtime";
+import type { WorkbenchMacroPresetRecord, WorkbenchScriptSnippetPresetRecord } from "@/lib/scripting/workbench-script-runtime";
 import {
   exportSecurityEvents,
   exportSecurityEventsCsv,
@@ -167,9 +167,10 @@ export async function buildWorkbenchProjectBundleJson(params: {
   activeVersionId: string | null;
   workspaceSnapshot: Record<string, unknown>;
   automationPresets: WorkbenchMacroPresetRecord[];
+  snippetPresets: WorkbenchScriptSnippetPresetRecord[];
   labels: { projectRequired: string };
 }) {
-  const { project, models, jobs, results, activeModelId, activeVersionId, workspaceSnapshot, automationPresets, labels } =
+  const { project, models, jobs, results, activeModelId, activeVersionId, workspaceSnapshot, automationPresets, snippetPresets, labels } =
     params;
   if (!project) {
     throw new Error(labels.projectRequired);
@@ -185,6 +186,7 @@ export async function buildWorkbenchProjectBundleJson(params: {
       activeVersionId,
       workspaceSnapshot,
       automationPresets,
+      snippetPresets,
     },
     null,
     2,

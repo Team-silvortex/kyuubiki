@@ -60,8 +60,8 @@ export function buildOperatorOptionLabel(
   return statusLabel === "--" ? presetLabel : `${presetLabel} [${statusLabel}]`;
 }
 
-export function sortWorkflowOperatorOptionPresets(
-  presets: WorkflowOperatorOptionPreset[],
+export function sortWorkflowOperatorOptionPresets<T extends WorkflowOperatorOptionPreset>(
+  presets: T[],
   operatorDescriptorMap: Map<string, WorkflowOperatorDescriptor>,
 ) {
   return [...presets].sort((left, right) => {

@@ -3,10 +3,8 @@ import { useState } from "react";
 import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowOperatorDescriptor, WorkflowGraphPort } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
-import {
-  listWorkflowNodeTemplatePresets,
-  type WorkflowNodeTemplateSelection,
-} from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import { listWorkflowNodeTemplatePresets, type WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
 import {
   buildOperatorOptionLabel,
   sortWorkflowOperatorOptionPresets,
@@ -40,7 +38,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   onAddNode: (template?: WorkflowNodeTemplateSelection) => void;
   onAddConnectedNode: (sourceNodeId: string, template?: WorkflowNodeTemplateSelection) => void;
   onSyncNodeTemplate: (nodeId: string, template?: WorkflowNodeTemplateSelection) => void;
-  onInsertTemplateChain: (templates: WorkflowNodeTemplateSelection[], sourceNodeId?: string | null) => void;
+  onInsertTemplateChain: (chain: WorkflowTemplateChainDefinition, sourceNodeId?: string | null) => void;
   onRemoveNode: (nodeId: string) => void;
   onUpdateNode: (nodeId: string, updater: (node: WorkflowGraphNode) => WorkflowGraphNode) => void;
   onAddNodePort: (nodeId: string, direction: "inputs" | "outputs") => void;
@@ -288,6 +286,7 @@ export function WorkbenchWorkflowTopologyCard({
           }}
           onValidationFilterChange={setNextOperatorValidationFilter}
           query={nextOperatorSearchQuery}
+          selectedSourceNode={selectedNodes[0] ?? null}
           validationFilter={nextOperatorValidationFilter}
         />
         <button

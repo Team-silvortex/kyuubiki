@@ -213,28 +213,34 @@ export function WorkbenchConsoleMount({
             : planeElements) as WorkbenchConsoleElement[];
 
   return (
-    <WorkbenchConsole
-      sidebarSection={sidebarSection}
-      title={sidebarSection === "model" ? t.nodeTable : t.report}
-      subtitle={message}
-      modelMessageTitle={t.dragNode}
-      reportMessageTitle={t.messages}
-      message={message}
-      dragNodeLabel={t.dragNode}
-      noNodeSelectedLabel={t.noNodeSelected}
-      loadCaseLabel={t.loadCase}
-      diagnosticsLabel={t.diagnostics}
-      selectedNodeId={selectedNodeId}
-      selectedNodeX={selectedNodeX}
-      selectedNodeY={selectedNodeY}
-      selectedNodeLoadY={selectedNodeLoadY}
-      selectedNodeIssueCount={selectedNodeIssueCount}
-      elementTitle={elementTitle}
-      spanLabel={t.span}
-      stressLabel={stressLabel}
-      axialForceLabel={axialForceLabel}
-      isFrame={isFrameLike || isBeam || isTorsion}
-      elements={elements}
-    />
+    <div
+      data-workbench-console="mount"
+      data-workbench-panel="console"
+      data-workbench-surface="built-in"
+    >
+      <WorkbenchConsole
+        sidebarSection={sidebarSection}
+        title={sidebarSection === "model" ? t.nodeTable : t.report}
+        subtitle={message}
+        modelMessageTitle={t.dragNode}
+        reportMessageTitle={t.messages}
+        message={message}
+        dragNodeLabel={t.dragNode}
+        noNodeSelectedLabel={t.noNodeSelected}
+        loadCaseLabel={t.loadCase}
+        diagnosticsLabel={t.diagnostics}
+        selectedNodeId={selectedNodeId}
+        selectedNodeX={selectedNodeX}
+        selectedNodeY={selectedNodeY}
+        selectedNodeLoadY={selectedNodeLoadY}
+        selectedNodeIssueCount={selectedNodeIssueCount}
+        elementTitle={elementTitle}
+        spanLabel={t.span}
+        stressLabel={stressLabel}
+        axialForceLabel={axialForceLabel}
+        isFrame={isFrameLike || isBeam || isTorsion}
+        elements={elements}
+      />
+    </div>
   );
 }

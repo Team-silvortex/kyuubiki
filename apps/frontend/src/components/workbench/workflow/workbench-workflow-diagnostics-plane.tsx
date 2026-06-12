@@ -4,6 +4,8 @@ import type { WorkflowCatalogEntry } from "@/lib/api";
 import { WorkbenchWorkflowIntegrityCard } from "@/components/workbench/workflow/workbench-workflow-integrity-card";
 import type { WorkflowIntegrityIssue, WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
 import { WorkbenchWorkflowPackageInstallCard } from "@/components/workbench/workflow/workbench-workflow-package-install-card";
+import { WorkbenchWorkflowPackageImportDiagnosticsCard } from "@/components/workbench/workflow/workbench-workflow-package-import-diagnostics-card";
+import type { WorkflowPackageImportDiagnostic } from "@/components/workbench/workflow/workbench-workflow-package-adapter";
 import type { WorkflowPackageResidualRecord } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
 import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
@@ -18,6 +20,7 @@ type WorkbenchWorkflowDiagnosticsPlaneProps = {
   recentFixSummary: string[];
   integrityReport: WorkflowIntegrityReport;
   packageResiduals: WorkflowPackageResidualRecord[];
+  importDiagnostics: WorkflowPackageImportDiagnostic[];
   snapshotCount: number;
   onApplyAllValidationFixes: () => void;
   onApplyValidationFix: (issueId: string) => void;
@@ -27,6 +30,7 @@ type WorkbenchWorkflowDiagnosticsPlaneProps = {
   onScanPackageResiduals: () => string[];
   onRepairPackageResidual: (residualId: string) => string[];
   onLocatePackageResidual: (residualId: string) => void;
+  onLocateImportDiagnostic: (diagnostic: WorkflowPackageImportDiagnostic) => void;
 };
 
 export function WorkbenchWorkflowDiagnosticsPlane({
@@ -37,6 +41,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   recentFixSummary,
   integrityReport,
   packageResiduals,
+  importDiagnostics,
   snapshotCount,
   onApplyAllValidationFixes,
   onApplyValidationFix,
@@ -46,6 +51,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   onScanPackageResiduals,
   onRepairPackageResidual,
   onLocatePackageResidual,
+  onLocateImportDiagnostic,
 }: WorkbenchWorkflowDiagnosticsPlaneProps) {
   return (
     <section className="workflow-diagnostics-plane">
@@ -61,6 +67,10 @@ export function WorkbenchWorkflowDiagnosticsPlane({
         <div className="sidebar-list__row">
           <span>{labels.packageInstallRulesResidualsLabel}</span>
           <strong>{packageResiduals.length}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>Package import diagnostics</span>
+          <strong>{importDiagnostics.length}</strong>
         </div>
       </div>
       <div className="workflow-diagnostics-plane__cards">
@@ -85,6 +95,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
           summaryOnlySnapshotCount={integrityReport.summaryOnlySnapshotCount}
           workflow={workflow}
         />
+        <WorkbenchWorkflowPackageImportDiagnosticsCard diagnostics={importDiagnostics} onLocateDiagnostic={onLocateImportDiagnostic} />
       </div>
     </section>
   );

@@ -17,6 +17,7 @@ declare global {
       state_json: () => string;
       actions_json: () => string;
       macros_json: () => string;
+      ui_contract_json: () => string;
       log: (message: string) => void;
       sleep: (seconds?: number) => Promise<void>;
     };
@@ -89,10 +90,14 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 # - state: current frontend snapshot (dict)
 # - actions: action catalog (list[dict])
 # - macros: macro catalog (list[dict])
+# - ui_contract: stable built-in UI automation contract (dict)
 # - ky.log(*parts)
 # - await ky.invoke("action/id", payload_dict)
 # - await ky.run_macro("macro/id", payload_dict)
 # - await ky.run_macro_definition(macro_dict)
+# - ky.ui_selector("runtimeTab", "control")
+# - ky.query_selector("runtimePanel")
+# - ky.query_selector_all("runtimeTab", "overview")
 # - await ky.sleep(seconds)
 # - await ky.wait_until(...)
 # - await ky.wait_for_job_done()
@@ -100,6 +105,7 @@ export const DEFAULT_WORKBENCH_PYTHON = `# Kyuubiki frontend automation
 
 ky.log("Current study:", state["studyKind"])
 ky.log("Current sidebar:", state["sidebarSection"])
+ky.log("UI contract version:", ui_contract["contractVersion"])
 
 # Example: refresh runtime surfaces first.
 await ky.invoke("runtime/refreshAll")
@@ -129,8 +135,35 @@ class _KyuubikiBridge:
     def macros(self):
         return json.loads(__kyuubikiBridge.macros_json())
 
+    def ui_contract(self):
+        return json.loads(__kyuubikiBridge.ui_contract_json())
+
     def log(self, *parts):
         __kyuubikiBridge.log(" ".join(str(part) for part in parts))
+
+    def ui_selector(self, key, value=None):
+        contract = self.ui_contract()
+        selectors = contract.get("selectors", {})
+        if key in selectors:
+            return selectors[key]
+        for entry in contract.get("parameterizedSelectors", []):
+            if entry.get("key") != key:
+                continue
+            if value is None:
+                raise ValueError(f"Selector '{key}' requires a value for {entry.get('parameter')}")
+            return str(entry.get("template", "")).replace("\${" + str(entry.get("parameter")) + "}", str(value))
+        raise KeyError(f"Unknown selector key: {key}")
+
+    def query_selector(self, key, value=None):
+        from js import document
+        return document.querySelector(self.ui_selector(key, value))
+
+    def query_selector_all(self, key, value=None):
+        from js import document
+        return document.querySelectorAll(self.ui_selector(key, value))
+
+    def selector_exists(self, key, value=None):
+        return self.query_selector(key, value) is not None
 
     async def invoke(self, action, payload=None):
         if payload is None:
@@ -187,6 +220,6 @@ ky = _KyuubikiBridge()
 state = ky.state()
 actions = ky.actions()
 macros = ky.macros()
+ui_contract = ky.ui_contract()
 `;
 }
-

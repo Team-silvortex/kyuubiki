@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction, type UIEvent as ReactUIEvent } from "react";
+import { strategyResultWindowLimit, type ViewportRenderStrategy } from "@/components/workbench/workbench-render-diagnostics";
 import { fetchDirectMeshResultChunk, fetchResultChunk, type FrontendRuntimeMode, type ResultChunkPayload } from "@/lib/api";
 import {
   clampChunkOffset,
@@ -75,6 +76,7 @@ type UseWorkbenchResultWindowControllerArgs = {
   result: unknown;
   resultWindow: ResultWindowState | null;
   resultWindowLimit: number;
+  renderStrategy: ViewportRenderStrategy;
   resultWindowMaxTotal: number;
   resultWindowOffset: number;
   setCanvasViewportWidth: Dispatch<SetStateAction<number>>;
@@ -135,6 +137,7 @@ export function useWorkbenchResultWindowController({
   result,
   resultWindow,
   resultWindowLimit,
+  renderStrategy,
   resultWindowMaxTotal,
   resultWindowOffset,
   setCanvasViewportWidth,
@@ -169,9 +172,9 @@ export function useWorkbenchResultWindowController({
 
   useEffect(() => {
     setResultWindowOffset(0);
-    setResultWindowLimit(RESULT_WINDOW_BASE_SIZE);
+    setResultWindowLimit(strategyResultWindowLimit(RESULT_WINDOW_BASE_SIZE, renderStrategy));
     chunkCacheRef.current.clear();
-  }, [jobId, setResultWindowLimit, setResultWindowOffset, studyKind]);
+  }, [jobId, renderStrategy, setResultWindowLimit, setResultWindowOffset, studyKind]);
 
   useEffect(() => {
     return () => {
@@ -212,7 +215,11 @@ export function useWorkbenchResultWindowController({
       return;
     }
 
-    const limit = computeResultWindowSize(totalItems, canvasViewportWidth);
+    const limit = strategyResultWindowLimit(
+      computeResultWindowSize(totalItems, canvasViewportWidth),
+      renderStrategy,
+      totalItems,
+    );
     if (resultWindowLimit !== limit) {
       setResultWindowLimit(limit);
     }
@@ -336,6 +343,7 @@ export function useWorkbenchResultWindowController({
     requestTimedOutLabel,
     result,
     resultWindowLimit,
+    renderStrategy,
     resultWindowOffset,
     setMessage,
     setResultWindow,

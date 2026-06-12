@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
+  resolveHeatPlaneTriangle2dJobInput,
   resolveHeatPlaneQuad2dJobInput,
+  resolveThermalPlaneTriangle2dJobInput,
   resolveThermalPlaneQuad2dJobInput,
+  type HeatPlaneTriangle2dJobInput,
   type HeatPlaneQuad2dJobInput,
+  type ThermalPlaneTriangle2dJobInput,
   type ThermalPlaneQuad2dJobInput,
   type WorkflowGraphNode,
 } from "@/lib/api";
@@ -27,11 +31,9 @@ type WorkbenchWorkflowBridgeContractEditorProps = {
 };
 
 type SeedModelRecord = Record<string, unknown>;
-
 function asObjectRecord(value: unknown): SeedModelRecord | null {
   return typeof value === "object" && value !== null ? (value as SeedModelRecord) : null;
 }
-
 function asObjectArray(value: unknown) {
   return Array.isArray(value) ? value.map((entry) => asObjectRecord(entry)).filter(Boolean) as SeedModelRecord[] : [];
 }
@@ -60,7 +62,10 @@ function updateBridgeSeedModel(
   node: WorkflowGraphNode,
   nextSeedModel: Record<string, unknown>,
 ) {
-  if (node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d") {
+  if (
+    node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" ||
+    node.operator_id === "bridge.electrostatic_field_to_heat_triangle_2d"
+  ) {
     return {
       ...node,
       config: {
@@ -69,7 +74,10 @@ function updateBridgeSeedModel(
       },
     };
   }
-  if (node.operator_id === "bridge.temperature_field_to_thermo_quad_2d") {
+  if (
+    node.operator_id === "bridge.temperature_field_to_thermo_quad_2d" ||
+    node.operator_id === "bridge.temperature_field_to_thermo_triangle_2d"
+  ) {
     return {
       ...node,
       config: nextSeedModel,
@@ -83,7 +91,19 @@ function summarizeSeedModel(seedModel: Record<string, unknown> | null) {
   const elements = Array.isArray(seedModel?.elements) ? seedModel.elements.length : 0;
   return { nodes, elements };
 }
+function describeSeedModelTarget(operatorId?: string | null) {
+  if (operatorId === "bridge.electrostatic_field_to_heat_quad_2d") return "heat plane quad";
+  if (operatorId === "bridge.electrostatic_field_to_heat_triangle_2d") return "heat plane triangle";
+  if (operatorId === "bridge.temperature_field_to_thermo_triangle_2d") return "thermal plane triangle";
+  return "thermal plane quad";
+}
 
+function importableBridgeWorkspaceStudyKind(operatorId?: string | null) {
+  if (operatorId === "bridge.electrostatic_field_to_heat_quad_2d") return "heat_plane_quad_2d";
+  if (operatorId === "bridge.electrostatic_field_to_heat_triangle_2d") return "heat_plane_triangle_2d";
+  if (operatorId === "bridge.temperature_field_to_thermo_triangle_2d") return "thermal_plane_triangle_2d";
+  return operatorId === "bridge.temperature_field_to_thermo_quad_2d" ? "thermal_plane_quad_2d" : null;
+}
 function updateSeedModelCollectionField(
   node: WorkflowGraphNode,
   collection: "nodes" | "elements",
@@ -141,10 +161,7 @@ export function WorkbenchWorkflowBridgeContractEditor({
     resolvedSeedModel as Record<string, unknown> | null,
   );
   const canImportCurrentWorkspaceModel =
-    (node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" &&
-      currentStudyKind === "heat_plane_quad_2d") ||
-    (node.operator_id === "bridge.temperature_field_to_thermo_quad_2d" &&
-      currentStudyKind === "thermal_plane_quad_2d");
+    importableBridgeWorkspaceStudyKind(node.operator_id) === currentStudyKind;
   const seedModelNodes = asObjectArray(resolvedSeedModel?.nodes);
   const seedModelElements = asObjectArray(resolvedSeedModel?.elements);
   const previewSummary =
@@ -165,22 +182,30 @@ export function WorkbenchWorkflowBridgeContractEditor({
     setSeedModelError(null);
   }
   function importCurrentWorkspaceModel() {
-    if (
-      node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" &&
-      currentStudyKind === "heat_plane_quad_2d"
-    ) {
+    if (node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" && currentStudyKind === "heat_plane_quad_2d") {
       const nextSeedModel = resolveHeatPlaneQuad2dJobInput(
         currentHeatPlaneModel as HeatPlaneQuad2dJobInput,
       ) as unknown as Record<string, unknown>;
       onUpdateNode(node.id, (current) => updateBridgeSeedModel(current, nextSeedModel));
       return;
     }
-    if (
-      node.operator_id === "bridge.temperature_field_to_thermo_quad_2d" &&
-      currentStudyKind === "thermal_plane_quad_2d"
-    ) {
+    if (node.operator_id === "bridge.electrostatic_field_to_heat_triangle_2d" && currentStudyKind === "heat_plane_triangle_2d") {
+      const nextSeedModel = resolveHeatPlaneTriangle2dJobInput(
+        currentHeatPlaneModel as HeatPlaneTriangle2dJobInput,
+      ) as unknown as Record<string, unknown>;
+      onUpdateNode(node.id, (current) => updateBridgeSeedModel(current, nextSeedModel));
+      return;
+    }
+    if (node.operator_id === "bridge.temperature_field_to_thermo_quad_2d" && currentStudyKind === "thermal_plane_quad_2d") {
       const nextSeedModel = resolveThermalPlaneQuad2dJobInput(
         currentPlaneModel as ThermalPlaneQuad2dJobInput,
+      ) as unknown as Record<string, unknown>;
+      onUpdateNode(node.id, (current) => updateBridgeSeedModel(current, nextSeedModel));
+      return;
+    }
+    if (node.operator_id === "bridge.temperature_field_to_thermo_triangle_2d" && currentStudyKind === "thermal_plane_triangle_2d") {
+      const nextSeedModel = resolveThermalPlaneTriangle2dJobInput(
+        currentPlaneModel as ThermalPlaneTriangle2dJobInput,
       ) as unknown as Record<string, unknown>;
       onUpdateNode(node.id, (current) => updateBridgeSeedModel(current, nextSeedModel));
     }
@@ -320,7 +345,7 @@ export function WorkbenchWorkflowBridgeContractEditor({
         <div className="sidebar-list">
           <div className="sidebar-list__row">
             <span>{labels.bridgeSeedModelSummaryLabel}</span>
-            <strong>{node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" ? "heat plane quad" : "thermal plane quad"}</strong>
+            <strong>{describeSeedModelTarget(node.operator_id)}</strong>
           </div>
           <div className="sidebar-list__row">
             <span>{labels.bridgeSeedModelNodeCountLabel}</span>
@@ -381,7 +406,7 @@ export function WorkbenchWorkflowBridgeContractEditor({
                     value={typeof seedNode.y === "number" ? seedNode.y : 0}
                   />
                 </label>
-                {node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" ? (
+                {node.operator_id?.startsWith("bridge.electrostatic_field_to_heat_") ? (
                   <>
                     <label>
                       <span>temperature</span>
@@ -523,7 +548,7 @@ export function WorkbenchWorkflowBridgeContractEditor({
                     />
                   </label>
                 ))}
-                {(node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d"
+                {(node.operator_id?.startsWith("bridge.electrostatic_field_to_heat_")
                   ? ["conductivity"]
                   : ["youngs_modulus", "poisson_ratio", "thermal_expansion", "material_id"]
                 ).map((field) => (
