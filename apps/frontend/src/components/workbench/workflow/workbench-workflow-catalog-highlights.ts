@@ -4,9 +4,16 @@ import type { WorkflowCatalogEntry } from "@/lib/api";
 
 export const PINNED_WORKFLOW_IDS = [
   "workflow.electrostatic-plane-quad-2d",
+  "workflow.electrostatic-plane-quad-field-statistics-json",
+  "workflow.electrostatic-preheat-guard-markdown",
+  "workflow.electrostatic-preheat-guard-heat-json",
   "workflow.electrostatic-plane-triangle-summary-json",
+  "workflow.electrostatic-triangle-preheat-guard-markdown",
+  "workflow.electrostatic-triangle-preheat-guard-heat-json",
   "workflow.electrostatic-to-heat-quad-2d",
+  "workflow.electrostatic-quad-triangle-compare-json",
   "workflow.electrostatic-to-heat-triangle-2d",
+  "workflow.electrostatic-heat-thermo-summary-json",
   "workflow.electrostatic-heat-thermo-triangle-summary-json",
   "workflow.heat-to-thermo-quad-2d",
   "workflow.plane-quad-2d-summary-json",

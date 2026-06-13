@@ -2,9 +2,13 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowCatalogSupport
+  alias KyuubikiWeb.WorkflowTemplateElectromagneticEntries
+  alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries
 
   def list do
-    [
+    WorkflowTemplateElectromagneticEntries.list() ++
+      WorkflowTemplateElectromagneticGuardEntries.list() ++
+      [
       electrostatic_to_heat_quad_entry(),
       electrostatic_plane_quad_entry(),
       electrostatic_plane_quad_hotspot_alert_entry(),

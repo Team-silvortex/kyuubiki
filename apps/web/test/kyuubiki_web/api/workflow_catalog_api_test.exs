@@ -19,6 +19,13 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
              MapSet.new([
                "workflow.electrostatic-to-heat-quad-2d",
                "workflow.electrostatic-plane-quad-2d",
+               "workflow.electrostatic-plane-quad-field-statistics-json",
+               "workflow.electrostatic-preheat-guard-markdown",
+               "workflow.electrostatic-preheat-guard-heat-json",
+               "workflow.electrostatic-triangle-preheat-guard-markdown",
+               "workflow.electrostatic-triangle-preheat-guard-heat-json",
+               "workflow.electrostatic-quad-triangle-compare-json",
+               "workflow.electrostatic-heat-thermo-summary-json",
                "workflow.heat-to-thermo-quad-2d"
              ]),
              workflow_ids
@@ -27,6 +34,31 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     electrostatic_heat_workflow =
       Enum.find(workflows, fn workflow ->
         workflow["id"] == "workflow.electrostatic-to-heat-quad-2d"
+      end)
+
+    electrostatic_heat_thermo_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-heat-thermo-summary-json"
+      end)
+
+    electrostatic_field_statistics_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-plane-quad-field-statistics-json"
+      end)
+
+    electrostatic_compare_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-quad-triangle-compare-json"
+      end)
+
+    electrostatic_guard_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-preheat-guard-markdown"
+      end)
+
+    electrostatic_guard_heat_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-preheat-guard-heat-json"
       end)
 
     electrostatic_workflow =
@@ -41,6 +73,22 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert electrostatic_heat_workflow["name"] == "Electrostatic to heat quad"
     assert electrostatic_heat_workflow["version"] == "1.0.0"
+    assert electrostatic_field_statistics_workflow["name"] ==
+             "Electrostatic plane quad field statistics JSON"
+
+    assert electrostatic_compare_workflow["name"] ==
+             "Electrostatic quad triangle compare JSON"
+
+    assert electrostatic_guard_workflow["name"] ==
+             "Electrostatic pre-heat guard markdown"
+
+    assert electrostatic_guard_heat_workflow["name"] ==
+             "Electrostatic pre-heat guard -> heat JSON"
+
+    assert electrostatic_heat_thermo_workflow["name"] ==
+             "Electrostatic heat thermo quad summary JSON"
+
+    assert electrostatic_heat_thermo_workflow["version"] == "1.0.0"
     assert electrostatic_workflow["name"] == "Electrostatic plane quad"
     assert electrostatic_workflow["version"] == "1.0.0"
     assert workflow["name"] == "Heat to thermo quad"
@@ -81,6 +129,73 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert electrostatic_heat_fetched["id"] == "workflow.electrostatic-to-heat-quad-2d"
     assert electrostatic_heat_fetched["graph"]["output_nodes"] == ["json_output"]
+
+    electrostatic_heat_thermo_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-heat-thermo-summary-json")
+      |> Router.call(@opts)
+
+    assert electrostatic_heat_thermo_fetch_conn.status == 200
+
+    electrostatic_heat_thermo_fetched =
+      Jason.decode!(electrostatic_heat_thermo_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_heat_thermo_fetched["id"] ==
+             "workflow.electrostatic-heat-thermo-summary-json"
+
+    assert electrostatic_heat_thermo_fetched["graph"]["output_nodes"] == ["json_output"]
+
+    electrostatic_statistics_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-plane-quad-field-statistics-json")
+      |> Router.call(@opts)
+
+    assert electrostatic_statistics_fetch_conn.status == 200
+
+    electrostatic_statistics_fetched =
+      Jason.decode!(electrostatic_statistics_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_statistics_fetched["id"] ==
+             "workflow.electrostatic-plane-quad-field-statistics-json"
+
+    electrostatic_compare_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-quad-triangle-compare-json")
+      |> Router.call(@opts)
+
+    assert electrostatic_compare_fetch_conn.status == 200
+
+    electrostatic_compare_fetched =
+      Jason.decode!(electrostatic_compare_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_compare_fetched["id"] ==
+             "workflow.electrostatic-quad-triangle-compare-json"
+
+    electrostatic_guard_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-preheat-guard-markdown")
+      |> Router.call(@opts)
+
+    assert electrostatic_guard_fetch_conn.status == 200
+
+    electrostatic_guard_fetched =
+      Jason.decode!(electrostatic_guard_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_guard_fetched["id"] ==
+             "workflow.electrostatic-preheat-guard-markdown"
+
+    electrostatic_guard_heat_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-preheat-guard-heat-json")
+      |> Router.call(@opts)
+
+    assert electrostatic_guard_heat_fetch_conn.status == 200
+
+    electrostatic_guard_heat_fetched =
+      Jason.decode!(electrostatic_guard_heat_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_guard_heat_fetched["id"] ==
+             "workflow.electrostatic-preheat-guard-heat-json"
   end
 
   test "filters workflow catalog by query contract fields" do
