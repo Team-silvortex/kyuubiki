@@ -201,6 +201,10 @@ export function buildDisplayThermalTruss3dElements(
       strain: element.total_strain,
       stress: element.stress,
       axial_force: element.axial_force,
+      average_temperature_delta: element.average_temperature_delta,
+      thermal_strain: element.thermal_strain,
+      mechanical_strain: element.mechanical_strain,
+      total_strain: element.total_strain,
       material_id: model.elements[element.index]?.material_id,
     }));
   }
@@ -220,6 +224,10 @@ export function buildDisplayThermalTruss3dElements(
       strain: 0,
       stress: 0,
       axial_force: 0,
+      average_temperature_delta: 0,
+      thermal_strain: 0,
+      mechanical_strain: 0,
+      total_strain: 0,
       material_id: element.material_id,
     };
   });

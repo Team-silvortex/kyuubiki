@@ -155,6 +155,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           isThermal={props.isThermal}
           hiddenMaterialIds={props.hiddenMaterialIds}
           frameLegendText={props.frameLegendText}
+          truss3dLegendText={props.truss3dLegendText}
           planeLegendText={props.planeLegendText}
           axialNodes={props.axialNodes}
           axialLength={props.axialLength}
@@ -171,6 +172,7 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
           trussBounds={props.trussBounds}
           planeBounds={props.planeBounds}
           trussResult={props.trussResult}
+          truss3dResult={props.truss3dResult}
           thermalTrussResult={props.thermalTrussResult}
           heatBarResult={props.heatBarResult}
           thermalBarResult={props.thermalBarResult}

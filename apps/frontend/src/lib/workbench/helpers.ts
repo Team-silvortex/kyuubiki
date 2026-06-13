@@ -2,6 +2,8 @@ import { buildStudyModelPayload } from "@/lib/models";
 import type {
   AxialBarJobInput,
   Beam1dJobInput,
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   FrontendRuntimeMode,
   HeatBar1dJobInput,
@@ -95,7 +97,7 @@ export type WorkbenchSettingsInput = {
   assistantModel: string;
 };
 
-type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "electrostatic_plane_triangle_2d" | "electrostatic_plane_quad_2d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
 type AxialFormLike = {
   length: number;
@@ -294,6 +296,8 @@ export function serializeCurrentModel(
   thermalTruss3dModel: ThermalTruss3dJobInput,
   truss3dModel: Truss3dJobInput,
   planeModel:
+    | ElectrostaticPlaneTriangle2dJobInput
+    | ElectrostaticPlaneQuad2dJobInput
     | PlaneTriangle2dJobInput
     | PlaneQuad2dJobInput
     | ThermalPlaneTriangle2dJobInput
@@ -315,6 +319,8 @@ export function serializeCurrentModel(
         ? axialForm.youngsModulusGpa
         : studyKind === "heat_bar_1d"
           ? 0
+        : studyKind === "electrostatic_plane_triangle_2d" || studyKind === "electrostatic_plane_quad_2d"
+          ? 0
         : studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d"
           ? 0
         : studyKind === "thermal_bar_1d"
@@ -334,10 +340,10 @@ export function serializeCurrentModel(
             : studyKind === "beam_1d"
               ? round((beamModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
             : studyKind === "torsion_1d"
-              ? 0
+            ? 0
             : studyKind === "frame_2d"
               ? round((frameModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9)
-            : round((planeModel.elements[0]?.youngs_modulus ?? 0) / 1.0e9),
+            : round((((planeModel.elements[0] as { youngs_modulus?: number } | undefined)?.youngs_modulus ?? 0)) / 1.0e9),
     materials:
       studyKind === "truss_2d"
         ? trussModel.materials
@@ -361,6 +367,8 @@ export function serializeCurrentModel(
             ? frameModel.materials
           : studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d"
             ? heatPlaneModel.materials
+          : studyKind === "electrostatic_plane_triangle_2d" || studyKind === "electrostatic_plane_quad_2d"
+            ? planeModel.materials
           : studyKind === "plane_triangle_2d" ||
             studyKind === "plane_quad_2d" ||
             studyKind === "thermal_plane_triangle_2d" ||
@@ -376,6 +384,9 @@ export function serializeCurrentModel(
       studyKind === "heat_plane_triangle_2d" ||
       studyKind === "heat_plane_quad_2d"
         ? heatPlaneModel
+      : studyKind === "electrostatic_plane_triangle_2d" ||
+        studyKind === "electrostatic_plane_quad_2d"
+        ? planeModel
       : studyKind === "plane_triangle_2d" ||
       studyKind === "plane_quad_2d" ||
       studyKind === "thermal_plane_triangle_2d" ||

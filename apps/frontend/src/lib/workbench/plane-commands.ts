@@ -1,4 +1,6 @@
 import type {
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   HeatPlaneQuad2dJobInput,
   HeatPlaneTriangle2dJobInput,
   PlaneQuad2dJobInput,
@@ -8,6 +10,8 @@ import type {
 } from "@/lib/api";
 
 type PlaneStudyJobInput =
+  | ElectrostaticPlaneTriangle2dJobInput
+  | ElectrostaticPlaneQuad2dJobInput
   | HeatPlaneTriangle2dJobInput
   | HeatPlaneQuad2dJobInput
   | PlaneTriangle2dJobInput
@@ -18,7 +22,20 @@ type PlaneStudyJobInput =
 export function updatePlaneNode<T extends PlaneStudyJobInput>(
   model: T,
   selectedNode: number | null,
-  key: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta" | "fix_temperature" | "temperature" | "heat_load",
+  key:
+    | "x"
+    | "y"
+    | "load_x"
+    | "load_y"
+    | "fix_x"
+    | "fix_y"
+    | "temperature_delta"
+    | "fix_temperature"
+    | "temperature"
+    | "heat_load"
+    | "fix_potential"
+    | "potential"
+    | "charge_density",
   value: number | boolean,
 ) {
   if (selectedNode === null) return model;
@@ -33,7 +50,7 @@ export function updatePlaneNode<T extends PlaneStudyJobInput>(
 export function updatePlaneElement<T extends PlaneStudyJobInput>(
   model: T,
   selectedElement: number | null,
-  key: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity",
+  key: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity" | "permittivity",
   value: number,
 ) {
   if (selectedElement === null) return model;

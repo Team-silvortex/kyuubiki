@@ -1,7 +1,9 @@
 "use client";
 
+import type { StudyKind } from "@/components/workbench/workbench-types";
+
 export type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
-export type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
+export type { StudyKind };
 
 export type TrussSuggestion = {
   id: string;
@@ -66,6 +68,9 @@ export type PlaneNodeSelection = {
   y: number;
   load_x: number;
   load_y: number;
+  potential?: number;
+  charge_density?: number;
+  fix_potential?: boolean;
   fix_temperature?: boolean;
   temperature?: number;
   heat_load?: number;
@@ -82,6 +87,7 @@ export type PlaneElementSelection = {
   node_j: number;
   node_k: number;
   node_l?: number;
+  permittivity?: number;
   thermal_expansion?: number;
   conductivity?: number;
   average_temperature?: number;
@@ -90,6 +96,15 @@ export type PlaneElementSelection = {
   heat_flux_x?: number;
   heat_flux_y?: number;
   heat_flux_magnitude?: number;
+  average_potential?: number;
+  potential_gradient_x?: number;
+  potential_gradient_y?: number;
+  electric_field_x?: number;
+  electric_field_y?: number;
+  electric_field_magnitude?: number;
+  electric_flux_density_x?: number;
+  electric_flux_density_y?: number;
+  electric_flux_density_magnitude?: number;
   average_temperature_delta?: number;
   thermal_strain?: number;
   mechanical_strain_x?: number;
@@ -199,12 +214,22 @@ export type InspectorLabels = {
   temperatureDelta: string;
   temperature: string;
   averageTemperature: string;
+  averagePotential: string;
   maxTemperature: string;
   conductivity: string;
+  permittivity: string;
   fixTemperature: string;
+  fixPotential: string;
   heatLoad: string;
   temperatureGradientX: string;
   temperatureGradientY: string;
+  potential: string;
+  chargeDensity: string;
+  potentialGradient: string;
+  electricField: string;
+  electricFieldMagnitude: string;
+  electricFluxDensity: string;
+  electricFluxDensityMagnitude: string;
   maxHeatFlux: string;
   heatFluxX: string;
   heatFluxY: string;
@@ -313,8 +338,8 @@ export type WorkbenchInspectorProps = {
   onUpdateSelectedTruss3dNode: (field: "x" | "y" | "z" | "load_x" | "load_y" | "load_z" | "fix_x" | "fix_y" | "fix_z", value: number | boolean) => void;
   onUpdateSelectedTruss3dElement: (field: "area" | "youngs_modulus", value: number) => void;
   onAssignSelectedTruss3dElementMaterial: (materialId: string) => void;
-  onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta" | "fix_temperature" | "temperature" | "heat_load", value: number | boolean) => void;
-  onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity", value: number) => void;
+  onUpdateSelectedPlaneNode: (field: "x" | "y" | "load_x" | "load_y" | "fix_x" | "fix_y" | "temperature_delta" | "fix_temperature" | "temperature" | "heat_load" | "fix_potential" | "potential" | "charge_density", value: number | boolean) => void;
+  onUpdateSelectedPlaneElement: (field: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity" | "permittivity", value: number) => void;
   onAssignSelectedPlaneElementMaterial: (materialId: string) => void;
   onUpdateSelectedFrameNode: (field: "x" | "y" | "load_x" | "load_y" | "moment_z" | "fix_x" | "fix_y" | "fix_rz" | "temperature_delta", value: number | boolean) => void;
   onUpdateSelectedFrameElement: (

@@ -92,9 +92,12 @@ export function buildWorkbenchAdminDataEffects(args: BuildAdminContextEffectsArg
 export function buildWorkbenchStudyFlags(studyKind: string) {
   const isAxial = studyKind === "axial_bar_1d";
   const isHeatBar = studyKind === "heat_bar_1d";
+  const isElectrostaticPlaneTriangle = studyKind === "electrostatic_plane_triangle_2d";
+  const isElectrostaticPlaneQuad = studyKind === "electrostatic_plane_quad_2d";
   const isHeatPlaneTriangle = studyKind === "heat_plane_triangle_2d";
   const isHeatPlaneQuad = studyKind === "heat_plane_quad_2d";
   const isHeatPlane = isHeatPlaneTriangle || isHeatPlaneQuad;
+  const isElectrostaticPlane = isElectrostaticPlaneTriangle || isElectrostaticPlaneQuad;
   const isThermalBar = studyKind === "thermal_bar_1d";
   const isThermalBeam = studyKind === "thermal_beam_1d";
   const isThermalFrame = studyKind === "thermal_frame_2d";
@@ -115,6 +118,7 @@ export function buildWorkbenchStudyFlags(studyKind: string) {
   const isFrameLike = isFrame || isThermalFrame;
   const isPlane =
     isHeatPlane ||
+    isElectrostaticPlane ||
     studyKind === "plane_triangle_2d" ||
     studyKind === "plane_quad_2d" ||
     isThermalPlaneTriangle ||
@@ -123,6 +127,9 @@ export function buildWorkbenchStudyFlags(studyKind: string) {
   return {
     isAxial,
     isHeatBar,
+    isElectrostaticPlaneTriangle,
+    isElectrostaticPlaneQuad,
+    isElectrostaticPlane,
     isHeatPlaneTriangle,
     isHeatPlaneQuad,
     isHeatPlane,

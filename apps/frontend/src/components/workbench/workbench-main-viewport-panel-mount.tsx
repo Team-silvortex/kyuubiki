@@ -170,6 +170,7 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
           isThermal={props.isThermal}
           hiddenMaterialIds={props.hiddenMaterialIds}
           frameLegendText={props.frameLegendText}
+          truss3dLegendText={props.truss3dLegendText}
           planeLegendText={props.planeLegendText}
           axialNodes={props.axialNodes}
           axialLength={props.axialLength}
@@ -186,6 +187,7 @@ export function WorkbenchMainViewportPanelMount(props: WorkbenchMainViewportPane
           trussBounds={props.trussBounds}
           planeBounds={props.planeBounds}
           trussResult={props.trussResult}
+          truss3dResult={props.truss3dResult}
           thermalTrussResult={props.thermalTrussResult}
           activeFrameLikeResult={props.activeFrameLikeResult}
           activeBeamLikeResult={props.activeBeamLikeResult}

@@ -1,6 +1,8 @@
 import type { Dispatch, SetStateAction } from "react";
 import type {
   Beam1dJobInput,
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
   HeatPlaneQuad2dJobInput,
@@ -24,6 +26,8 @@ import type { ParametricPanelConfig, ParametricTrussConfig } from "@/lib/models"
 export type WorkbenchStudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "electrostatic_plane_triangle_2d"
+  | "electrostatic_plane_quad_2d"
   | "heat_plane_triangle_2d"
   | "heat_plane_quad_2d"
   | "thermal_bar_1d"
@@ -66,7 +70,7 @@ export type WorkbenchSnapshot = {
   trussModel: Truss2dJobInput;
   thermalTruss3dModel: ThermalTruss3dJobInput;
   truss3dModel: Truss3dJobInput;
-  planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput;
+  planeModel: PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ElectrostaticPlaneTriangle2dJobInput | ElectrostaticPlaneQuad2dJobInput;
   frameModel: Frame2dJobInput;
   beamModel: Beam1dJobInput;
   torsionModel: Torsion1dJobInput;
@@ -108,7 +112,7 @@ type SnapshotSetters = {
   setTrussModel: Dispatch<SetStateAction<Truss2dJobInput>>;
   setThermalTruss3dModel: Dispatch<SetStateAction<ThermalTruss3dJobInput>>;
   setTruss3dModel: Dispatch<SetStateAction<Truss3dJobInput>>;
-  setPlaneModel: Dispatch<SetStateAction<PlaneTriangle2dJobInput | PlaneQuad2dJobInput>>;
+  setPlaneModel: Dispatch<SetStateAction<PlaneTriangle2dJobInput | PlaneQuad2dJobInput | ElectrostaticPlaneTriangle2dJobInput | ElectrostaticPlaneQuad2dJobInput>>;
   setFrameModel: Dispatch<SetStateAction<Frame2dJobInput>>;
   setBeamModel: Dispatch<SetStateAction<Beam1dJobInput>>;
   setTorsionModel: Dispatch<SetStateAction<Torsion1dJobInput>>;

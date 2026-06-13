@@ -5,6 +5,8 @@ import type { WorkbenchStudyKind } from "@/lib/workbench/history";
 export const WORKBENCH_STUDY_KINDS = [
   "axial_bar_1d",
   "heat_bar_1d",
+  "electrostatic_plane_triangle_2d",
+  "electrostatic_plane_quad_2d",
   "heat_plane_triangle_2d",
   "heat_plane_quad_2d",
   "thermal_bar_1d",
@@ -47,8 +49,10 @@ type StudyKindResetFactoryArgs = {
   ensureBeamModelMaterials: (model: any, materialValue: string) => any;
   ensureFrameModelMaterials: (model: any, materialValue: string) => any;
   defaultPlaneQuad: any;
+  defaultElectrostaticPlaneQuad: any;
   defaultThermalPlaneQuad: any;
   defaultPlaneTriangle: any;
+  defaultElectrostaticPlaneTriangle: any;
   defaultThermalPlaneTriangle: any;
   defaultHeatBar1d: any;
   defaultHeatPlaneQuad: any;
@@ -98,8 +102,10 @@ export function createStudyKindResetHandlers({
   ensureBeamModelMaterials,
   ensureFrameModelMaterials,
   defaultPlaneQuad,
+  defaultElectrostaticPlaneQuad,
   defaultThermalPlaneQuad,
   defaultPlaneTriangle,
+  defaultElectrostaticPlaneTriangle,
   defaultThermalPlaneTriangle,
   defaultHeatBar1d,
   defaultHeatPlaneQuad,
@@ -118,8 +124,10 @@ export function createStudyKindResetHandlers({
 }: StudyKindResetFactoryArgs): Partial<Record<WorkbenchStudyKind, () => void>> {
   return {
     plane_quad_2d: () => setPlaneModel(ensurePlaneModelMaterials(defaultPlaneQuad, activeMaterial)),
+    electrostatic_plane_quad_2d: () => setPlaneModel(defaultElectrostaticPlaneQuad),
     thermal_plane_quad_2d: () => setPlaneModel(ensurePlaneModelMaterials(defaultThermalPlaneQuad, activeMaterial)),
     plane_triangle_2d: () => setPlaneModel(ensurePlaneModelMaterials(defaultPlaneTriangle, activeMaterial)),
+    electrostatic_plane_triangle_2d: () => setPlaneModel(defaultElectrostaticPlaneTriangle),
     thermal_plane_triangle_2d: () => setPlaneModel(ensurePlaneModelMaterials(defaultThermalPlaneTriangle, activeMaterial)),
     heat_bar_1d: () => setHeatBarModel(defaultHeatBar1d),
     heat_plane_quad_2d: () => {

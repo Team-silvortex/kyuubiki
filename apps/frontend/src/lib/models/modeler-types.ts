@@ -25,6 +25,8 @@ export const MODEL_SCHEMA_VERSION = "kyuubiki.model/v1";
 export type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "electrostatic_plane_triangle_2d"
+  | "electrostatic_plane_quad_2d"
   | "heat_plane_triangle_2d"
   | "heat_plane_quad_2d"
   | "thermal_bar_1d"

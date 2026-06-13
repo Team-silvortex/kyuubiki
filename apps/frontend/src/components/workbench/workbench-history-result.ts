@@ -3,6 +3,8 @@
 import type {
   AxialBarResult,
   Beam1dResult,
+  ElectrostaticPlaneQuad2dResult,
+  ElectrostaticPlaneTriangle2dResult,
   Frame2dResult,
   HeatBar1dResult,
   HeatPlaneQuad2dResult,
@@ -81,6 +83,8 @@ type HistoryOpenEffects = {
 type HistoryJobResult =
   | AxialBarResult
   | HeatBar1dResult
+  | ElectrostaticPlaneTriangle2dResult
+  | ElectrostaticPlaneQuad2dResult
   | HeatPlaneTriangle2dResult
   | HeatPlaneQuad2dResult
   | ThermalBar1dResult
@@ -188,6 +192,14 @@ function isPlaneResult(
   );
 }
 
+function isElectrostaticPlaneTriangle2dResult(value: unknown): value is ElectrostaticPlaneTriangle2dResult {
+  return typeof value === "object" && value !== null && "max_electric_field" in value && "input" in value && Array.isArray((value as ElectrostaticPlaneTriangle2dResult).elements) && (value as ElectrostaticPlaneTriangle2dResult).elements.every((element) => !("node_l" in element));
+}
+
+function isElectrostaticPlaneQuad2dResult(value: unknown): value is ElectrostaticPlaneQuad2dResult {
+  return typeof value === "object" && value !== null && "max_electric_field" in value && "input" in value && Array.isArray((value as ElectrostaticPlaneQuad2dResult).elements) && (value as ElectrostaticPlaneQuad2dResult).elements.some((element) => "node_l" in element);
+}
+
 export function applyHistoryJobPayload(
   payload: { job: JobEnvelope["job"]; result?: HistoryJobResult | null },
   effects: HistoryOpenEffects,
@@ -274,6 +286,20 @@ export function applyHistoryJobPayload(
     effects.setStudyKind("heat_plane_quad_2d");
     effects.setHeatPlaneModel(nonWorkflowResult.input);
     effects.setPlaneResultField("average_temperature");
+    openWorkspaceStudy("controls");
+  }
+
+  if (isElectrostaticPlaneTriangle2dResult(nonWorkflowResult)) {
+    recordHistory(copy.historyAction);
+    effects.setStudyKind("electrostatic_plane_triangle_2d");
+    effects.setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
+    openWorkspaceStudy("controls");
+  }
+
+  if (isElectrostaticPlaneQuad2dResult(nonWorkflowResult)) {
+    recordHistory(copy.historyAction);
+    effects.setStudyKind("electrostatic_plane_quad_2d");
+    effects.setPlaneModel(ensurePlaneModelMaterials(nonWorkflowResult.input, activeMaterial));
     openWorkspaceStudy("controls");
   }
 

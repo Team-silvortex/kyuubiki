@@ -14,8 +14,10 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-plane-quad-field-statistics-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-markdown")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-heat-json")
+    assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-heat-thermo-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-triangle-preheat-guard-markdown")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-triangle-preheat-guard-heat-json")
+    assert MapSet.member?(workflow_ids, "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json")
     assert MapSet.member?(workflow_ids, "workflow.heat-plane-triangle-summary-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-to-heat-triangle-2d")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-quad-triangle-compare-json")
@@ -174,5 +176,49 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
              &(&1["operator_id"] == "bridge.electrostatic_field_to_heat_quad_2d")
            )
     assert Enum.any?(guard_heat_graph["nodes"], &(&1["operator_id"] == "solve.heat_plane_quad_2d"))
+
+    assert {:ok, %{"id" => "workflow.electrostatic-preheat-guard-heat-thermo-json"} = guard_heat_thermo_graph} =
+             WorkflowTemplateCatalog.graph_by_id(
+               "workflow.electrostatic-preheat-guard-heat-thermo-json"
+             )
+
+    assert Enum.any?(guard_heat_thermo_graph["nodes"], &(&1["kind"] == "condition"))
+
+    assert Enum.any?(
+             guard_heat_thermo_graph["nodes"],
+             &(&1["operator_id"] == "bridge.electrostatic_field_to_heat_quad_2d")
+           )
+
+    assert Enum.any?(
+             guard_heat_thermo_graph["nodes"],
+             &(&1["operator_id"] == "bridge.temperature_field_to_thermo_quad_2d")
+           )
+
+    assert Enum.any?(
+             guard_heat_thermo_graph["nodes"],
+             &(&1["operator_id"] == "solve.thermal_plane_quad_2d")
+           )
+
+    assert {:ok, %{"id" => "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"} = triangle_guard_heat_thermo_graph} =
+             WorkflowTemplateCatalog.graph_by_id(
+               "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
+             )
+
+    assert Enum.any?(triangle_guard_heat_thermo_graph["nodes"], &(&1["kind"] == "condition"))
+
+    assert Enum.any?(
+             triangle_guard_heat_thermo_graph["nodes"],
+             &(&1["operator_id"] == "bridge.electrostatic_field_to_heat_triangle_2d")
+           )
+
+    assert Enum.any?(
+             triangle_guard_heat_thermo_graph["nodes"],
+             &(&1["operator_id"] == "bridge.temperature_field_to_thermo_triangle_2d")
+           )
+
+    assert Enum.any?(
+             triangle_guard_heat_thermo_graph["nodes"],
+             &(&1["operator_id"] == "solve.thermal_plane_triangle_2d")
+           )
   end
 end

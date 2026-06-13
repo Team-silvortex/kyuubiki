@@ -7,6 +7,8 @@ type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
 export type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "electrostatic_plane_triangle_2d"
+  | "electrostatic_plane_quad_2d"
   | "heat_plane_triangle_2d"
   | "heat_plane_quad_2d"
   | "thermal_bar_1d"
@@ -31,6 +33,15 @@ export type PlaneResultField =
   | "von_mises"
   | "principal_stress_1"
   | "max_in_plane_shear"
+  | "average_potential"
+  | "potential_gradient_x"
+  | "potential_gradient_y"
+  | "electric_field_x"
+  | "electric_field_y"
+  | "electric_field_magnitude"
+  | "electric_flux_density_x"
+  | "electric_flux_density_y"
+  | "electric_flux_density_magnitude"
   | "average_temperature"
   | "average_temperature_delta"
   | "temperature_gradient_x"
@@ -95,6 +106,7 @@ export type DisplayTruss3dNode = {
   ux: number;
   uy: number;
   uz: number;
+  temperature_delta?: number;
 };
 
 export type DisplayTruss3dElement = {
@@ -106,6 +118,10 @@ export type DisplayTruss3dElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  average_temperature_delta?: number;
+  thermal_strain?: number;
+  mechanical_strain?: number;
+  total_strain?: number;
   material_id?: string;
 };
 
@@ -116,6 +132,9 @@ export type PlaneNode = {
   y: number;
   ux: number;
   uy: number;
+  potential?: number;
+  charge_density?: number;
+  fix_potential?: boolean;
   fix_x: boolean;
   fix_y: boolean;
   load_x: number;
@@ -139,6 +158,15 @@ export type PlaneElement = {
   heat_flux_x?: number;
   heat_flux_y?: number;
   heat_flux_magnitude?: number;
+  average_potential?: number;
+  potential_gradient_x?: number;
+  potential_gradient_y?: number;
+  electric_field_x?: number;
+  electric_field_y?: number;
+  electric_field_magnitude?: number;
+  electric_flux_density_x?: number;
+  electric_flux_density_y?: number;
+  electric_flux_density_magnitude?: number;
   thermal_strain?: number;
   mechanical_strain_x?: number;
   mechanical_strain_y?: number;
@@ -173,6 +201,7 @@ export type WorkbenchViewportProps = {
   trussTitle: string;
   trussLegend?: string;
   truss3dTitle: string;
+  truss3dLegend?: string;
   planeTitle: string;
   planeLegend: string;
   axialNodes: Array<{ x: number; displacement: number }>;

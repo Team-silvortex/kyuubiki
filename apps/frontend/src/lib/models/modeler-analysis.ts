@@ -1,4 +1,6 @@
 import type {
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   HeatBar1dJobInput,
   HeatPlaneQuad2dJobInput,
   HeatPlaneTriangle2dJobInput,
@@ -68,6 +70,8 @@ export function buildAnalysisMetadata(
     thermalTruss?: ThermalTruss2dJobInput;
     thermalTruss3d?: ThermalTruss3dJobInput;
     plane?:
+      | ElectrostaticPlaneTriangle2dJobInput
+      | ElectrostaticPlaneQuad2dJobInput
       | PlaneTriangle2dJobInput
       | PlaneQuad2dJobInput
       | ThermalPlaneTriangle2dJobInput

@@ -3,6 +3,8 @@ import type { StudyDomainKey, StudyFamilyKey } from "@/lib/workbench/view-models
 export type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "electrostatic_plane_triangle_2d"
+  | "electrostatic_plane_quad_2d"
   | "heat_plane_triangle_2d"
   | "heat_plane_quad_2d"
   | "thermal_bar_1d"
@@ -121,6 +123,14 @@ export function buildStudyKindOptionGroups({
       domainKey: "thermal",
       label: families.planes,
       options: [
+        { value: "electrostatic_plane_triangle_2d" as const, label: kinds.electrostatic_plane_triangle_2d },
+        { value: "electrostatic_plane_quad_2d" as const, label: kinds.electrostatic_plane_quad_2d },
+      ],
+    },
+    {
+      domainKey: "thermal",
+      label: families.planes,
+      options: [
         { value: "heat_plane_triangle_2d" as const, label: kinds.heat_plane_triangle_2d },
         { value: "heat_plane_quad_2d" as const, label: kinds.heat_plane_quad_2d },
       ],
@@ -144,6 +154,8 @@ export function buildStudyKindOptions(kinds: Record<StudyKind, string>) {
   return [
     { value: "axial_bar_1d" as const, label: kinds.axial_bar_1d },
     { value: "heat_bar_1d" as const, label: kinds.heat_bar_1d },
+    { value: "electrostatic_plane_triangle_2d" as const, label: kinds.electrostatic_plane_triangle_2d },
+    { value: "electrostatic_plane_quad_2d" as const, label: kinds.electrostatic_plane_quad_2d },
     { value: "heat_plane_triangle_2d" as const, label: kinds.heat_plane_triangle_2d },
     { value: "heat_plane_quad_2d" as const, label: kinds.heat_plane_quad_2d },
     { value: "thermal_bar_1d" as const, label: kinds.thermal_bar_1d },

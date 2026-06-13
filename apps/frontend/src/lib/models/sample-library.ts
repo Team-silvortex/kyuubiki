@@ -4,6 +4,8 @@ export type SampleEntry = {
   kind:
     | "axial_bar_1d"
     | "heat_bar_1d"
+    | "electrostatic_plane_triangle_2d"
+    | "electrostatic_plane_quad_2d"
     | "heat_plane_triangle_2d"
     | "heat_plane_quad_2d"
     | "thermal_bar_1d"
@@ -48,6 +50,20 @@ export const SAMPLE_LIBRARY: SampleEntry[] = [
     kind: "heat_bar_1d",
     href: "/models/heat-bar-source-1d.json",
     summary: "1D conduction bar with prescribed end temperatures and nodal heat sources. Thermal intent: conduction plus heat-source field.",
+  },
+  {
+    id: "electrostatic-plane-triangle-2d",
+    name: "Electrostatic Plane Triangle 2D",
+    kind: "electrostatic_plane_triangle_2d",
+    href: "/models/electrostatic-plane-triangle-2d.json",
+    summary: "Triangular electrostatic patch with fixed-potential boundary nodes and a charged free node for field-gradient checks.",
+  },
+  {
+    id: "electrostatic-plane-quad-2d",
+    name: "Electrostatic Plane Quad 2D",
+    kind: "electrostatic_plane_quad_2d",
+    href: "/models/electrostatic-plane-quad-2d.json",
+    summary: "Single quad electrostatic plate with driven potential difference and dielectric thickness for electric-field and flux-density checks.",
   },
   {
     id: "heat-plane-triangle-2d",

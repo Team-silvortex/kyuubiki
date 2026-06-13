@@ -8,6 +8,7 @@ const copyEn = {
 
 export const copyJa = {
     ...copyEn,
+    permittivity: "誘電率",
     roleLabel: "解析シェル",
     title: "構造解析ワークベンチ",
     subtitle: "モデリング、オーケストレーション、結果レビューを一つにまとめた作業面です。",

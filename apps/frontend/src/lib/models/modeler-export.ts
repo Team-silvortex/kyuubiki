@@ -1,6 +1,8 @@
 import type {
   AxialBarJobInput,
   Beam1dJobInput,
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
   HeatPlaneQuad2dJobInput,
@@ -49,6 +51,8 @@ type ExportStudyPayload = {
   thermalTruss?: ThermalTruss2dJobInput;
   thermalTruss3d?: ThermalTruss3dJobInput;
   plane?:
+    | ElectrostaticPlaneTriangle2dJobInput
+    | ElectrostaticPlaneQuad2dJobInput
     | PlaneTriangle2dJobInput
     | PlaneQuad2dJobInput
     | ThermalPlaneTriangle2dJobInput
@@ -80,7 +84,7 @@ export function exportStudyModel(kind: StudyKind, payload: ExportStudyPayload): 
   if (kind === "heat_bar_1d" && payload.heatBar) {
     return JSON.stringify({ kind, model_schema_version: MODEL_SCHEMA_VERSION, name: payload.name, analysis_metadata: buildAnalysisMetadata(kind, payload), nodes: payload.heatBar.nodes, elements: payload.heatBar.elements }, null, 2);
   }
-  if ((kind === "heat_plane_triangle_2d" || kind === "heat_plane_quad_2d" || kind === "plane_triangle_2d" || kind === "plane_quad_2d" || kind === "thermal_plane_triangle_2d" || kind === "thermal_plane_quad_2d") && payload.plane) {
+  if ((kind === "heat_plane_triangle_2d" || kind === "heat_plane_quad_2d" || kind === "electrostatic_plane_triangle_2d" || kind === "electrostatic_plane_quad_2d" || kind === "plane_triangle_2d" || kind === "plane_quad_2d" || kind === "thermal_plane_triangle_2d" || kind === "thermal_plane_quad_2d") && payload.plane) {
     return JSON.stringify({
       kind,
       model_schema_version: MODEL_SCHEMA_VERSION,

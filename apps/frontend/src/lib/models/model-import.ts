@@ -10,6 +10,8 @@ import {
   parseTorsion1dV1,
 } from "@/lib/models/model-import-line";
 import {
+  parseElectrostaticPlaneQuad2dV1,
+  parseElectrostaticPlaneTriangle2dV1,
   parseFrame2dV1,
   parseHeatPlaneQuad2dV1,
   parseHeatPlaneTriangle2dV1,
@@ -41,12 +43,16 @@ export function parsePlaygroundModel(text: string): ImportedModel {
         : "axial_bar_1d";
 
   switch (kind) {
+    case "electrostatic_plane_triangle_2d":
+      return parseElectrostaticPlaneTriangle2dV1(raw);
     case "plane_triangle_2d":
       return parsePlaneTriangle2dV1(raw);
     case "heat_plane_triangle_2d":
       return parseHeatPlaneTriangle2dV1(raw);
     case "thermal_plane_triangle_2d":
       return parseThermalPlaneTriangle2dV1(raw);
+    case "electrostatic_plane_quad_2d":
+      return parseElectrostaticPlaneQuad2dV1(raw);
     case "plane_quad_2d":
       return parsePlaneQuad2dV1(raw);
     case "heat_plane_quad_2d":

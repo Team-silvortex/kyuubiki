@@ -1,6 +1,8 @@
 import { createMaterialDefinition } from "@/lib/materials";
 import type {
   DirectMeshSelectionMode,
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
   HeatPlaneQuad2dJobInput,
@@ -79,6 +81,7 @@ export type DisplayTruss3dNode = {
   ux: number;
   uy: number;
   uz: number;
+  temperature_delta?: number;
 };
 
 export type DisplayTruss3dElement = {
@@ -90,6 +93,10 @@ export type DisplayTruss3dElement = {
   strain: number;
   stress: number;
   axial_force: number;
+  average_temperature_delta?: number;
+  thermal_strain?: number;
+  mechanical_strain?: number;
+  total_strain?: number;
   material_id?: string;
 };
 
@@ -115,6 +122,15 @@ export type PlaneResultField =
   | "von_mises"
   | "principal_stress_1"
   | "max_in_plane_shear"
+  | "average_potential"
+  | "potential_gradient_x"
+  | "potential_gradient_y"
+  | "electric_field_x"
+  | "electric_field_y"
+  | "electric_field_magnitude"
+  | "electric_flux_density_x"
+  | "electric_flux_density_y"
+  | "electric_flux_density_magnitude"
   | "average_temperature"
   | "average_temperature_delta"
   | "temperature_gradient_x"
@@ -124,6 +140,54 @@ export type PlaneResultField =
   | "heat_flux_magnitude"
   | "thermal_strain"
   | "mechanical_strain";
+
+export type PlaneNodeDisplay = {
+  index: number;
+  id: string;
+  x: number;
+  y: number;
+  ux: number;
+  uy: number;
+  potential?: number;
+  charge_density?: number;
+  fix_potential?: boolean;
+  fix_x: boolean;
+  fix_y: boolean;
+  load_x: number;
+  load_y: number;
+};
+
+export type PlaneElementDisplay = {
+  index: number;
+  id: string;
+  node_i: number;
+  node_j: number;
+  node_k: number;
+  node_l?: number;
+  von_mises?: number;
+  principal_stress_1?: number;
+  max_in_plane_shear?: number;
+  average_temperature?: number;
+  average_temperature_delta?: number;
+  temperature_gradient_x?: number;
+  temperature_gradient_y?: number;
+  heat_flux_x?: number;
+  heat_flux_y?: number;
+  heat_flux_magnitude?: number;
+  average_potential?: number;
+  potential_gradient_x?: number;
+  potential_gradient_y?: number;
+  electric_field_x?: number;
+  electric_field_y?: number;
+  electric_field_magnitude?: number;
+  electric_flux_density_x?: number;
+  electric_flux_density_y?: number;
+  electric_flux_density_magnitude?: number;
+  thermal_strain?: number;
+  mechanical_strain_x?: number;
+  mechanical_strain_y?: number;
+  material_id?: string;
+};
 
 export type DirectMeshExecutionState = {
   endpoint: string;
@@ -261,6 +325,25 @@ export const defaultHeatPlaneQuad: HeatPlaneQuad2dJobInput = {
   elements: [
     { id: "hq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.02, conductivity: 45 },
   ],
+};
+
+export const defaultElectrostaticPlaneTriangle: ElectrostaticPlaneTriangle2dJobInput = {
+  nodes: [
+    { id: "et0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
+    { id: "et1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
+    { id: "et2", x: 0, y: 1, fix_potential: false, potential: 0, charge_density: 0 },
+  ],
+  elements: [{ id: "ept0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.05, permittivity: 2 }],
+};
+
+export const defaultElectrostaticPlaneQuad: ElectrostaticPlaneQuad2dJobInput = {
+  nodes: [
+    { id: "ep0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
+    { id: "ep1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
+    { id: "ep2", x: 1, y: 1, fix_potential: true, potential: 0, charge_density: 0 },
+    { id: "ep3", x: 0, y: 1, fix_potential: true, potential: 10, charge_density: 0 },
+  ],
+  elements: [{ id: "epq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.05, permittivity: 2 }],
 };
 
 export const defaultTruss3d: Truss3dJobInput = {
@@ -469,4 +552,3 @@ export const defaultThermalFrame2d: ThermalFrame2dJobInput = {
     { id: "tc1", node_i: 2, node_j: 3, area: 0.018, youngs_modulus: 210e9, moment_of_inertia: 1.8e-4, section_modulus: 1.6e-3, thermal_expansion: 1.2e-5, section_depth: 0.32, temperature_gradient_y: 0, material_id: "mat-1" },
   ],
 };
-

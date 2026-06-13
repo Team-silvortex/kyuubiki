@@ -18,9 +18,9 @@ import {
 import {
   renderAxialViewport,
   renderLineViewport,
-  renderPlaneViewport,
-  renderTruss3dViewport,
 } from "@/components/workbench/workbench-viewport-renderers";
+import { WorkbenchPlaneViewport } from "@/components/workbench/workbench-plane-viewport";
+import { WorkbenchTruss3dWebglViewport } from "@/components/workbench/workbench-truss3d-webgl-viewport";
 import {
   buildViewportRenderDiagnostics,
   strategyInitialRenderBudget,
@@ -100,6 +100,7 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
     trussElementColors,
     trussHotspotNodes,
     trussLegend,
+    truss3dLegend,
     trussNodeIssues,
     trussResult,
     trussTitle,
@@ -492,83 +493,88 @@ function WorkbenchViewportInner(props: WorkbenchViewportProps) {
   }
 
   if (studyKind === "truss_3d" || studyKind === "thermal_truss_3d" || studyKind === "spring_3d") {
-    return renderTruss3dViewport({
-      activeViewPreset,
-      boxSelectMode,
-      camera,
-      displayTruss3dElements,
-      displayTruss3dNodes,
-      draftStartNode,
-      draftStartNodeIndex,
-      gridExtent,
-      gridStep,
-      handle3dKeyDown,
-      handle3dPointerDown,
-      handle3dPointerMove,
-      handle3dWheel,
-      hiddenTruss3dMaterialIds,
-      hoveredTruss3dNode,
-      immersiveViewport,
-      isModelMode,
-      memberDraftNodes,
-      onSelectTruss3dElement,
-      onSelectTruss3dNode,
-      onUpdateTruss3dNodePosition,
-      projected3d,
-      projectionMode,
-      selected3dNodeData,
-      selectedTruss3dElement,
-      selectedTruss3dNode,
-      selectedTruss3dNodeIndices,
-      selectionRect,
-      setHoveredTruss3dNode,
-      showGrid,
-      showLabels,
-      showNodes,
-      stop3dPointer,
-      svgStyle,
-      truss3dElementColors,
-      truss3dLabelStep,
-      truss3dLinkMode,
-      truss3dTitle,
-      visibleTruss3dElements,
-      visibleTruss3dNodes,
-      workspaceBadge,
-      startAxisDrag: (axis, event) => {
-        dragAxisRef.current = axis;
-        pointerRef.current = { x: event.clientX, y: event.clientY };
-      },
-      startNodeDrag: (index, event) => {
-        dragNode3dRef.current = index;
-        pointerRef.current = { x: event.clientX, y: event.clientY };
-      },
-    });
+    return (
+      <WorkbenchTruss3dWebglViewport
+        activeViewPreset={activeViewPreset}
+        boxSelectMode={boxSelectMode}
+        camera={camera}
+        displayTruss3dNodes={displayTruss3dNodes}
+        draftStartNode={draftStartNode}
+        draftStartNodeIndex={draftStartNodeIndex}
+        gridExtent={gridExtent}
+        gridStep={gridStep}
+        handle3dKeyDown={handle3dKeyDown}
+        handle3dPointerDown={handle3dPointerDown}
+        handle3dPointerMove={handle3dPointerMove}
+        handle3dWheel={handle3dWheel}
+        hiddenTruss3dMaterialIds={hiddenTruss3dMaterialIds}
+        hoveredTruss3dNode={hoveredTruss3dNode}
+        immersiveViewport={immersiveViewport}
+        isModelMode={isModelMode}
+        memberDraftNodes={memberDraftNodes}
+        onSelectTruss3dElement={onSelectTruss3dElement}
+        onSelectTruss3dNode={onSelectTruss3dNode}
+        projected3d={projected3d}
+        projectionMode={projectionMode}
+        selected3dNodeData={selected3dNodeData}
+        selectedTruss3dElement={selectedTruss3dElement}
+        selectedTruss3dNode={selectedTruss3dNode}
+        selectedTruss3dNodeIndices={selectedTruss3dNodeIndices}
+        studyKind={studyKind}
+        selectionRect={selectionRect}
+        setHoveredTruss3dNode={setHoveredTruss3dNode}
+        showGrid={showGrid}
+        showLabels={showLabels}
+        showNodes={showNodes}
+        stop3dPointer={stop3dPointer}
+        svgStyle={svgStyle}
+        truss3dElementColors={truss3dElementColors}
+        truss3dLabelStep={truss3dLabelStep}
+        truss3dLinkMode={truss3dLinkMode}
+        truss3dTitle={truss3dTitle}
+        truss3dLegend={truss3dLegend}
+        visibleTruss3dElements={visibleTruss3dElements}
+        visibleTruss3dNodes={visibleTruss3dNodes}
+        workspaceBadge={workspaceBadge}
+        startAxisDrag={(axis, event) => {
+          dragAxisRef.current = axis;
+          pointerRef.current = { x: event.clientX, y: event.clientY };
+        }}
+        startNodeDrag={(index, event) => {
+          dragNode3dRef.current = index;
+          pointerRef.current = { x: event.clientX, y: event.clientY };
+        }}
+      />
+    );
   }
 
-  return renderPlaneViewport({
-    focusedPlaneElement,
-    hiddenPlaneMaterialIds,
-    isModelMode,
-    onSelectPlaneElement,
-    onSelectPlaneNode,
-    planeBounds,
-    planeDeformedStep,
-    planeElementColors,
-    planeElements,
-    planeLegend,
-    planeNodeLabelStep,
-    planeNodeMarkerStep,
-    planeNodes,
-    planeResult,
-    planeResultField,
-    planeResultFieldMax,
-    planeTitle,
-    selectedElement,
-    selectedPlaneNodeId,
-    svgStyle,
-    visiblePlaneElements,
-    visiblePlaneNodes,
-  });
+  return (
+    <WorkbenchPlaneViewport
+      focusedPlaneElement={focusedPlaneElement}
+      hiddenPlaneMaterialIds={hiddenPlaneMaterialIds}
+      isModelMode={isModelMode}
+      onSelectPlaneElement={onSelectPlaneElement}
+      onSelectPlaneNode={onSelectPlaneNode}
+      planeBounds={planeBounds}
+      planeDeformedStep={planeDeformedStep}
+      planeElementColors={planeElementColors}
+      planeElements={planeElements}
+      planeLegend={planeLegend}
+      planeNodeLabelStep={planeNodeLabelStep}
+      planeNodeMarkerStep={planeNodeMarkerStep}
+      planeNodes={planeNodes}
+      planeResult={planeResult}
+      planeResultField={planeResultField}
+      planeResultFieldMax={planeResultFieldMax}
+      planeTitle={planeTitle}
+      selectedElement={selectedElement}
+      selectedPlaneNodeId={selectedPlaneNodeId}
+      studyKind={studyKind}
+      svgStyle={svgStyle}
+      visiblePlaneElements={visiblePlaneElements}
+      visiblePlaneNodes={visiblePlaneNodes}
+    />
+  );
 }
 
 export const WorkbenchViewport = memo(WorkbenchViewportInner);

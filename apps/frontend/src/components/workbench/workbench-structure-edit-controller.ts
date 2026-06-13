@@ -299,7 +299,10 @@ export function createWorkbenchStructureEditController(deps: StructureController
       | "temperature_delta"
       | "fix_temperature"
       | "temperature"
-      | "heat_load",
+      | "heat_load"
+      | "fix_potential"
+      | "potential"
+      | "charge_density",
     value: number | boolean,
   ) => {
     if (selectedNode === null) return;
@@ -313,7 +316,7 @@ export function createWorkbenchStructureEditController(deps: StructureController
   };
 
   const updateSelectedPlaneElement = (
-    key: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity",
+    key: "thickness" | "youngs_modulus" | "poisson_ratio" | "thermal_expansion" | "conductivity" | "permittivity",
     value: number,
   ) => {
     if (selectedElement === null) return;

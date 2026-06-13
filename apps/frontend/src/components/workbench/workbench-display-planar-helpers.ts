@@ -1,4 +1,8 @@
 import type {
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneQuad2dResult,
+  ElectrostaticPlaneTriangle2dJobInput,
+  ElectrostaticPlaneTriangle2dResult,
   Frame2dJobInput,
   Frame2dResult,
   HeatBar1dJobInput,
@@ -15,6 +19,8 @@ import type {
 import type {
   DisplayTrussElement,
   DisplayTrussNode,
+  PlaneElementDisplay,
+  PlaneNodeDisplay,
 } from "@/components/workbench/workbench-defaults";
 
 export function buildDisplayTrussNodes(
@@ -297,6 +303,44 @@ export function buildDisplayHeatBarElements(
     shear_force_j: 0,
     moment_j: 0,
   }));
+}
+
+export function buildDisplayElectrostaticPlaneNodes(
+  model: ElectrostaticPlaneTriangle2dJobInput | ElectrostaticPlaneQuad2dJobInput,
+  result: ElectrostaticPlaneTriangle2dResult | ElectrostaticPlaneQuad2dResult | null,
+  windowNodes?: ElectrostaticPlaneTriangle2dResult["nodes"] | ElectrostaticPlaneQuad2dResult["nodes"],
+): PlaneNodeDisplay[] {
+  const nodes = windowNodes ?? result?.nodes;
+  if (nodes) {
+    return nodes.map((node, index) => ({
+      index: typeof node.index === "number" ? node.index : index,
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      ux: 0,
+      uy: 0,
+      potential: node.potential,
+      charge_density: node.charge_density,
+      fix_potential: model.nodes[node.index]?.fix_potential ?? false,
+      fix_x: false,
+      fix_y: false,
+      load_x: 0,
+      load_y: 0,
+    }));
+  }
+  return model.nodes.map((node, index) => ({ index, id: node.id, x: node.x, y: node.y, ux: 0, uy: 0, potential: node.potential ?? 0, charge_density: node.charge_density ?? 0, fix_potential: node.fix_potential, fix_x: false, fix_y: false, load_x: 0, load_y: 0 }));
+}
+
+export function buildDisplayElectrostaticPlaneElements(
+  model: ElectrostaticPlaneTriangle2dJobInput | ElectrostaticPlaneQuad2dJobInput,
+  result: ElectrostaticPlaneTriangle2dResult | ElectrostaticPlaneQuad2dResult | null,
+  windowElements?: ElectrostaticPlaneTriangle2dResult["elements"] | ElectrostaticPlaneQuad2dResult["elements"],
+): PlaneElementDisplay[] {
+  const elements = windowElements ?? result?.elements;
+  if (elements) {
+    return elements.map((element) => ({ ...element, material_id: model.elements[element.index]?.material_id }));
+  }
+  return model.elements.map((element, index) => ({ index, id: element.id, node_i: element.node_i, node_j: element.node_j, node_k: element.node_k, node_l: "node_l" in element ? element.node_l : undefined, average_potential: 0, potential_gradient_x: 0, potential_gradient_y: 0, electric_field_x: 0, electric_field_y: 0, electric_field_magnitude: 0, electric_flux_density_x: 0, electric_flux_density_y: 0, electric_flux_density_magnitude: 0, material_id: element.material_id }));
 }
 
 export function buildDisplayThermalTrussNodes(

@@ -5,7 +5,6 @@ import {
   lineInsideViewport,
   planeStressFill,
   pointInsideViewport,
-  polygonInsideViewport,
   projectTruss3dPoint,
   toSvgPoint,
   type CameraState,
@@ -14,12 +13,9 @@ import {
   type DisplayTrussElement,
   type DisplayTrussNode,
   type LineResultField,
-  type PlaneElement,
-  type PlaneNode,
-  type PlaneResultField,
   type ProjectionMode,
-  type Bounds,
   VIEWPORT_CLIP,
+  type Bounds,
 } from "@/components/workbench/workbench-viewport-core";
 
 function renderSupportGlyph(
@@ -261,134 +257,6 @@ export function renderLineViewport({
               />
               {showLabel ? <text x={point.x + 12} y={point.y - 10} className="node-label">{node.id}</text> : null}
               {trussResult && pointInsideViewport(deformed, 80) ? <circle cx={deformed.x} cy={deformed.y} r={5} className="node-deformed" /> : null}
-            </g>
-          );
-        })}
-      </g>
-    </svg>
-  );
-}
-
-export function renderPlaneViewport({
-  focusedPlaneElement,
-  hiddenPlaneMaterialIds,
-  isModelMode,
-  onSelectPlaneElement,
-  onSelectPlaneNode,
-  planeBounds,
-  planeElementColors,
-  planeElements,
-  planeLegend,
-  planeNodeLabelStep,
-  planeNodeMarkerStep,
-  planeNodes,
-  planeResult,
-  planeResultField,
-  planeResultFieldMax,
-  planeTitle,
-  planeDeformedStep,
-  selectedElement,
-  selectedPlaneNodeId,
-  svgStyle,
-  visiblePlaneElements,
-  visiblePlaneNodes,
-}: {
-  focusedPlaneElement: number | null;
-  hiddenPlaneMaterialIds: string[];
-  isModelMode: boolean;
-  onSelectPlaneElement: (index: number) => void;
-  onSelectPlaneNode: (index: number) => void;
-  planeBounds: Bounds;
-  planeElementColors: string[];
-  planeElements: PlaneElement[];
-  planeLegend: string;
-  planeNodeLabelStep: number;
-  planeNodeMarkerStep: number;
-  planeNodes: PlaneNode[];
-  planeResult: boolean;
-  planeResultField: PlaneResultField;
-  planeResultFieldMax: number;
-  planeTitle: string;
-  planeDeformedStep: number;
-  selectedElement: number | null;
-  selectedPlaneNodeId: string | null;
-  svgStyle?: { width: string; minWidth: string };
-  visiblePlaneElements: PlaneElement[];
-  visiblePlaneNodes: PlaneNode[];
-}) {
-  return (
-    <svg viewBox="0 0 980 460" className="viewport-svg" style={svgStyle} aria-label="2d plane triangle response">
-      <defs><clipPath id="viewportClipPlane"><rect x={VIEWPORT_CLIP.x} y={VIEWPORT_CLIP.y} width={VIEWPORT_CLIP.width} height={VIEWPORT_CLIP.height} rx="22" /></clipPath></defs>
-      <rect x="16" y="16" width="948" height="428" rx="26" className="viewport-frame" />
-      <text x="48" y="58" className="svg-title">{planeTitle}</text>
-      {planeResult ? <text x="760" y="58" className="svg-copy svg-copy--muted">{planeLegend}</text> : null}
-      <g clipPath="url(#viewportClipPlane)">
-        {visiblePlaneElements.map((element) => {
-          if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return null;
-          const nodeIndices = typeof element.node_l === "number" ? [element.node_i, element.node_j, element.node_k, element.node_l] : [element.node_i, element.node_j, element.node_k];
-          const points = nodeIndices.map((nodeIndex) => toSvgPoint(planeNodes[nodeIndex], planeBounds));
-          if (!polygonInsideViewport(points)) return null;
-          return (
-            <polygon
-              key={`plane-${element.id}`}
-              points={points.map((point) => `${point.x},${point.y}`).join(" ")}
-              className={`plane-triangle${selectedElement === element.index ? " plane-triangle--active" : ""}${focusedPlaneElement === element.index ? " plane-triangle--focused" : ""}`}
-              style={{
-                fill: planeResult
-                  ? planeStressFill(
-                      planeResultField === "average_temperature"
-                        ? Math.abs(element.average_temperature ?? 0)
-                        : planeResultField === "average_temperature_delta"
-                          ? Math.abs(element.average_temperature_delta ?? 0)
-                          : planeResultField === "temperature_gradient_x"
-                            ? Math.abs(element.temperature_gradient_x ?? 0)
-                            : planeResultField === "temperature_gradient_y"
-                              ? Math.abs(element.temperature_gradient_y ?? 0)
-                              : planeResultField === "heat_flux_x"
-                                ? Math.abs(element.heat_flux_x ?? 0)
-                                : planeResultField === "heat_flux_y"
-                                  ? Math.abs(element.heat_flux_y ?? 0)
-                                  : planeResultField === "heat_flux_magnitude"
-                                    ? Math.abs(element.heat_flux_magnitude ?? 0)
-                                    : planeResultField === "thermal_strain"
-                                      ? Math.abs(element.thermal_strain ?? 0)
-                                      : planeResultField === "mechanical_strain"
-                                        ? Math.max(Math.abs(element.mechanical_strain_x ?? 0), Math.abs(element.mechanical_strain_y ?? 0))
-                                        : planeResultField === "principal_stress_1"
-                                          ? Math.abs(element.principal_stress_1 ?? 0)
-                                          : planeResultField === "max_in_plane_shear"
-                                            ? Math.abs(element.max_in_plane_shear ?? 0)
-                                            : Math.abs(element.von_mises ?? 0),
-                      planeResultFieldMax,
-                    )
-                  : planeElementColors[element.index],
-              }}
-              onPointerDown={() => { if (isModelMode) onSelectPlaneElement(element.index); }}
-            />
-          );
-        })}
-        {planeResult
-          ? visiblePlaneElements.flatMap((element, index) => {
-              if (element.material_id && hiddenPlaneMaterialIds.includes(element.material_id)) return [];
-              if (index % planeDeformedStep !== 0) return [];
-              const nodeIndices = typeof element.node_l === "number" ? [element.node_i, element.node_j, element.node_k, element.node_l] : [element.node_i, element.node_j, element.node_k];
-              const points = nodeIndices.map((nodeIndex) => toSvgPoint({ x: planeNodes[nodeIndex].x + planeNodes[nodeIndex].ux * 5000, y: planeNodes[nodeIndex].y + planeNodes[nodeIndex].uy * 5000 }, planeBounds));
-              if (!polygonInsideViewport(points, 70)) return [];
-              return <polygon key={`plane-def-${element.id}`} points={points.map((point) => `${point.x},${point.y}`).join(" ")} className="plane-triangle plane-triangle--deformed" />;
-            })
-          : null}
-        {visiblePlaneNodes.flatMap((node, index) => {
-          const point = toSvgPoint(node, planeBounds);
-          if (!pointInsideViewport(point, 18)) return [];
-          const showLabel = index % planeNodeLabelStep === 0 || selectedPlaneNodeId === node.id;
-          const showMarker = index % planeNodeMarkerStep === 0 || showLabel;
-          if (!showMarker) return [];
-          return (
-            <g key={node.id}>
-              {renderSupportGlyph(point, node, `plane-support-${node.id}`)}
-              {renderLoadGlyph(point, node, `plane-load-${node.id}`)}
-              <circle cx={point.x} cy={point.y} r={selectedPlaneNodeId === node.id ? 8 : 6} className={`node-base${selectedPlaneNodeId === node.id ? " node-base--active" : ""}`} onPointerDown={() => { if (isModelMode) onSelectPlaneNode(node.index); }} />
-              {showLabel ? <text x={point.x + 10} y={point.y - 10} className="node-label">{node.id}</text> : null}
             </g>
           );
         })}

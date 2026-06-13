@@ -4,11 +4,12 @@ import type { PlaneResultField } from "./workbench-defaults";
 import type { ViewportRenderStrategy } from "./workbench-render-diagnostics";
 import type { BeamResultField, FrameResultField, StudyKind } from "./workbench-types";
 
-type PlaneFamily = "structural_plane" | "heat_plane" | "thermal_plane";
+type PlaneFamily = "structural_plane" | "heat_plane" | "thermal_plane" | "electrostatic_plane";
 type LineFamily = "frame" | "thermal_frame" | "beam" | "thermal_beam" | "torsion";
 
 function planeFamilyForStudyKind(studyKind: StudyKind): PlaneFamily | null {
   if (studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d") return "heat_plane";
+  if (studyKind === "electrostatic_plane_triangle_2d" || studyKind === "electrostatic_plane_quad_2d") return "electrostatic_plane";
   if (studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d") return "thermal_plane";
   if (studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d") return "structural_plane";
   return null;
@@ -65,6 +66,12 @@ export function prioritizedPlaneFields(studyKind: StudyKind, strategy: ViewportR
       "thermal_strain",
       "mechanical_strain",
     ];
+  }
+
+  if (family === "electrostatic_plane") {
+    if (strategy === "focus") return ["electric_field_magnitude", "average_potential"];
+    if (strategy === "progressive") return ["electric_field_magnitude", "average_potential", "electric_flux_density_magnitude", "potential_gradient_x"];
+    return ["electric_field_magnitude", "average_potential", "electric_flux_density_magnitude", "potential_gradient_x", "potential_gradient_y", "electric_field_x", "electric_field_y"];
   }
 
   if (strategy === "focus") return ["von_mises"];

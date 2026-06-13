@@ -21,6 +21,8 @@ import { resetActiveResult } from "@/components/workbench/workbench-file-helpers
 import {
   isAxialResult,
   isBeam1dResult,
+  isElectrostaticPlaneQuad2dResult,
+  isElectrostaticPlaneTriangle2dResult,
   isFrame2dResult,
   isHeatBar1dResult,
   isHeatPlaneQuad2dResult,
@@ -60,6 +62,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
       isAxialResult,
       isTrussResult,
       isHeatBar1dResult,
+      isElectrostaticPlaneQuad2dResult,
+      isElectrostaticPlaneTriangle2dResult,
       isHeatPlaneQuad2dResult,
       isHeatPlaneTriangle2dResult,
       isThermalBar1dResult,

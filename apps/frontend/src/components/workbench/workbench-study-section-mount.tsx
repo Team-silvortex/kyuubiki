@@ -3,7 +3,8 @@
 import type { ReactNode } from "react";
 
 import { WorkbenchStudySidebar } from "@/components/workbench/study/workbench-study-sidebar";
-import type { StudyDomainOption, StudyKind, StudyKindOptionGroup } from "@/lib/workbench/view-models";
+import type { StudyDomainOption, StudyKindOptionGroup } from "@/lib/workbench/view-models";
+import type { StudyKind } from "@/components/workbench/workbench-types";
 
 type StudySidebarRow = {
   label: string;

@@ -1,5 +1,7 @@
 import type {
   Beam1dJobInput,
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
   HeatPlaneQuad2dJobInput,
@@ -36,6 +38,8 @@ export type ImportedThermalBar1dModel = { kind: "thermal_bar_1d"; name: string; 
 export type ImportedHeatBar1dModel = { kind: "heat_bar_1d"; name: string; model: HeatBar1dJobInput };
 export type ImportedHeatPlaneTriangle2dModel = { kind: "heat_plane_triangle_2d"; name: string; model: HeatPlaneTriangle2dJobInput };
 export type ImportedHeatPlaneQuad2dModel = { kind: "heat_plane_quad_2d"; name: string; model: HeatPlaneQuad2dJobInput };
+export type ImportedElectrostaticPlaneTriangle2dModel = { kind: "electrostatic_plane_triangle_2d"; name: string; material: string; model: ElectrostaticPlaneTriangle2dJobInput };
+export type ImportedElectrostaticPlaneQuad2dModel = { kind: "electrostatic_plane_quad_2d"; name: string; material: string; model: ElectrostaticPlaneQuad2dJobInput };
 export type ImportedThermalBeam1dModel = { kind: "thermal_beam_1d"; name: string; material: string; youngsModulusGpa: number; model: ThermalBeam1dJobInput };
 export type ImportedThermalFrame2dModel = { kind: "thermal_frame_2d"; name: string; material: string; youngsModulusGpa: number; model: ThermalFrame2dJobInput };
 export type ImportedThermalTruss2dModel = { kind: "thermal_truss_2d"; name: string; material: string; youngsModulusGpa: number; model: ThermalTruss2dJobInput };
@@ -58,6 +62,8 @@ export type ImportedModel =
   | ImportedHeatBar1dModel
   | ImportedHeatPlaneTriangle2dModel
   | ImportedHeatPlaneQuad2dModel
+  | ImportedElectrostaticPlaneTriangle2dModel
+  | ImportedElectrostaticPlaneQuad2dModel
   | ImportedThermalBar1dModel
   | ImportedThermalBeam1dModel
   | ImportedThermalFrame2dModel

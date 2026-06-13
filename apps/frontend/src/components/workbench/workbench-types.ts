@@ -1,5 +1,7 @@
 import type {
   Beam1dJobInput,
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   HeatBar1dJobInput,
   HeatPlaneQuad2dJobInput,
@@ -29,6 +31,8 @@ export type SidebarSection = "study" | "model" | "workflow" | "library" | "syste
 export type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "electrostatic_plane_triangle_2d"
+  | "electrostatic_plane_quad_2d"
   | "heat_plane_triangle_2d"
   | "heat_plane_quad_2d"
   | "thermal_bar_1d"
@@ -50,6 +54,8 @@ export type StudyKind =
   | "frame_2d";
 
 export type PlaneStudyJobInput =
+  | ElectrostaticPlaneTriangle2dJobInput
+  | ElectrostaticPlaneQuad2dJobInput
   | PlaneTriangle2dJobInput
   | PlaneQuad2dJobInput
   | ThermalPlaneTriangle2dJobInput

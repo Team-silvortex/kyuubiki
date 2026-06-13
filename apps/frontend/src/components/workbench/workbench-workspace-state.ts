@@ -4,6 +4,8 @@ import { useState } from "react";
 import {
   defaultAxial,
   defaultBeam1d,
+  defaultElectrostaticPlaneQuad,
+  defaultElectrostaticPlaneTriangle,
   defaultFrame2d,
   defaultHeatBar1d,
   defaultHeatPlaneTriangle,
@@ -46,6 +48,8 @@ import {
 import {
   type AxialBarResult,
   type Beam1dResult,
+  type ElectrostaticPlaneQuad2dResult,
+  type ElectrostaticPlaneTriangle2dResult,
   type Frame2dResult,
   type HeatBar1dResult,
   type HeatPlaneQuad2dResult,
@@ -94,6 +98,8 @@ type WorkbenchResult =
   | Beam1dResult
   | Frame2dResult
   | HeatBar1dResult
+  | ElectrostaticPlaneQuad2dResult
+  | ElectrostaticPlaneTriangle2dResult
   | HeatPlaneQuad2dResult
   | HeatPlaneTriangle2dResult
   | PlaneQuad2dResult
@@ -167,6 +173,8 @@ export function useWorkbenchWorkspaceState(params: {
   const [hiddenMaterials, setHiddenMaterials] = useState<Record<StudyKind, string[]>>({
     axial_bar_1d: [],
     heat_bar_1d: [],
+    electrostatic_plane_triangle_2d: [],
+    electrostatic_plane_quad_2d: [],
     heat_plane_triangle_2d: [],
     heat_plane_quad_2d: [],
     thermal_bar_1d: [],

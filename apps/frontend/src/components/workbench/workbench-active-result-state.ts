@@ -98,6 +98,8 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
   const thermalFrameResult = isThermalFrame && props.isThermalFrame2dResult(result) ? result : null;
   const thermalTrussResult = isThermalTruss2d && props.isThermalTruss2dResult(result) ? result : null;
   const thermalTruss3dResult = isThermalTruss3d && props.isThermalTruss3dResult(result) ? result : null;
+  const electrostaticPlaneTriangleResult = studyKind === "electrostatic_plane_triangle_2d" && props.isElectrostaticPlaneTriangle2dResult(result) ? result : null;
+  const electrostaticPlaneQuadResult = studyKind === "electrostatic_plane_quad_2d" && props.isElectrostaticPlaneQuad2dResult(result) ? result : null;
   const springResult = isSpring1d && props.isSpring1dResult(result) ? result : null;
   const spring2dResult = isSpring2d && props.isSpring2dResult(result) ? result : null;
   const spring3dResult = isSpring3d && props.isSpring3dResult(result) ? result : null;
@@ -113,6 +115,7 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
   const activeFrameLikeResult = isThermalFrame ? thermalFrameResult : frameResult;
   const activeFrameLikeModel = isThermalFrame ? thermalFrameModel : frameModel;
   const planeResult = !isHeatPlane && isPlane && props.isPlaneResult(result) ? result : null;
+  const electrostaticPlaneResult = electrostaticPlaneTriangleResult ?? electrostaticPlaneQuadResult;
   const activePlaneInputModel = isHeatPlane ? heatPlaneModel : planeModel;
   const activeResultWindow =
     resultWindow && job?.job_id === resultWindow.jobId && studyKind === resultWindow.studyKind ? resultWindow : null;
@@ -148,6 +151,8 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
   const planeWindowNodes =
     activeResultWindow?.studyKind === "heat_plane_triangle_2d" ||
     activeResultWindow?.studyKind === "heat_plane_quad_2d" ||
+    activeResultWindow?.studyKind === "electrostatic_plane_triangle_2d" ||
+    activeResultWindow?.studyKind === "electrostatic_plane_quad_2d" ||
     activeResultWindow?.studyKind === "plane_triangle_2d" ||
     activeResultWindow?.studyKind === "plane_quad_2d" ||
     activeResultWindow?.studyKind === "thermal_plane_triangle_2d" ||
@@ -157,6 +162,8 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
   const planeWindowElements =
     activeResultWindow?.studyKind === "heat_plane_triangle_2d" ||
     activeResultWindow?.studyKind === "heat_plane_quad_2d" ||
+    activeResultWindow?.studyKind === "electrostatic_plane_triangle_2d" ||
+    activeResultWindow?.studyKind === "electrostatic_plane_quad_2d" ||
     activeResultWindow?.studyKind === "plane_triangle_2d" ||
     activeResultWindow?.studyKind === "plane_quad_2d" ||
     activeResultWindow?.studyKind === "thermal_plane_triangle_2d" ||
@@ -271,7 +278,7 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
 
   const activePlaneResult = isHeatPlane
     ? (isHeatPlaneTriangle ? heatPlaneTriangleResult : heatPlaneQuadResult)
-    : planeResult;
+    : electrostaticPlaneResult ?? planeResult;
   const planeNodes =
     (planeWindowNodes ?? activePlaneResult?.nodes)?.map((node: any, index: number) => ({
       ...activePlaneInputModel.nodes[node.index ?? index],
@@ -361,6 +368,7 @@ export function buildWorkbenchActiveResultState(props: Record<string, any>) {
     activeFrameLikeResult,
     activeFrameLikeModel,
     planeResult,
+    electrostaticPlaneResult,
     activePlaneInputModel,
     activeResultWindow,
     trussDiagnostics,

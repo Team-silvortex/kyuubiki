@@ -93,6 +93,13 @@ export function applyImportedWorkbenchModel(imported: ImportedWorkbenchModel, ef
     return;
   }
 
+  if (imported.kind === "electrostatic_plane_triangle_2d" || imported.kind === "electrostatic_plane_quad_2d") {
+    effects.setStudyKind(imported.kind);
+    effects.setPlaneModel(ensurePlaneModelMaterials(imported.model, imported.material));
+    effects.setActiveMaterial(imported.material);
+    return;
+  }
+
   if (imported.kind === "thermal_bar_1d") {
     effects.setStudyKind("thermal_bar_1d");
     effects.setThermalBarModel(imported.model);

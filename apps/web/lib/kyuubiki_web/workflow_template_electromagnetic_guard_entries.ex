@@ -291,6 +291,22 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
         input_node(entry_node_id, "model", entry_artifact_type),
         solve_node("solve_electrostatic", solve_operator_id, entry_artifact_type, solve_result_artifact_type),
         %{
+          "id" => "gate",
+          "kind" => "condition",
+          "config" => %{
+            "predicate" => %{
+              "path" => "max_electric_field",
+              "operator" => "gt",
+              "value" => 8.0
+            }
+          },
+          "inputs" => [%{"id" => "value", "artifact_type" => solve_result_artifact_type}],
+          "outputs" => [
+            %{"id" => "if_true", "artifact_type" => solve_result_artifact_type},
+            %{"id" => "if_false", "artifact_type" => solve_result_artifact_type}
+          ]
+        },
+        %{
           "id" => "field_hotspots",
           "kind" => "extract",
           "operator_id" => "extract.field_hotspots",
@@ -304,22 +320,6 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
           },
           "inputs" => [%{"id" => "result", "artifact_type" => solve_result_artifact_type}],
           "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
-        },
-        %{
-          "id" => "gate",
-          "kind" => "condition",
-          "config" => %{
-            "predicate" => %{
-              "path" => "field_hotspot_count",
-              "operator" => "gt",
-              "value" => 0
-            }
-          },
-          "inputs" => [%{"id" => "value", "artifact_type" => "report/summary"}],
-          "outputs" => [
-            %{"id" => "if_true", "artifact_type" => "report/summary"},
-            %{"id" => "if_false", "artifact_type" => "report/summary"}
-          ]
         },
         %{
           "id" => "bridge_field_to_heat",
@@ -367,12 +367,12 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries do
       ],
       "edges" => [
         edge("e0", entry_node_id, "model", "solve_electrostatic", "model", entry_artifact_type),
-        edge("e1", "solve_electrostatic", "result", "field_hotspots", "result", solve_result_artifact_type),
-        edge("e2", "field_hotspots", "summary", "gate", "value", "report/summary"),
-        edge("e3", "solve_electrostatic", "result", "bridge_field_to_heat", "electrostatic_result", solve_result_artifact_type),
+        edge("e1", "solve_electrostatic", "result", "gate", "value", solve_result_artifact_type),
+        edge("e2", "gate", "if_true", "field_hotspots", "result", solve_result_artifact_type),
+        edge("e3", "gate", "if_false", "bridge_field_to_heat", "electrostatic_result", solve_result_artifact_type),
         edge("e4", "bridge_field_to_heat", "heat_model", "solve_heat", "model", heat_model_artifact_type),
         edge("e5", "solve_heat", "result", "extract_heat_summary", "result", heat_result_artifact_type),
-        edge("e6", "gate", "if_true", "merge_summary", "left", "report/summary"),
+        edge("e6", "field_hotspots", "summary", "merge_summary", "left", "report/summary"),
         edge("e7", "extract_heat_summary", "summary", "merge_summary", "right", "report/summary"),
         edge("e8", "merge_summary", "result", "export_json", "summary", "report/summary"),
         edge("e9", "export_json", "json", "json_output", "json", "export/json")

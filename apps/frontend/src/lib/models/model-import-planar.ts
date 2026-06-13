@@ -1,4 +1,6 @@
 import type {
+  ElectrostaticPlaneQuad2dJobInput,
+  ElectrostaticPlaneTriangle2dJobInput,
   Frame2dJobInput,
   HeatPlaneQuad2dJobInput,
   HeatPlaneTriangle2dJobInput,
@@ -11,6 +13,8 @@ import type {
   Truss2dJobInput,
 } from "@/lib/api";
 import type {
+  ImportedElectrostaticPlaneQuad2dModel,
+  ImportedElectrostaticPlaneTriangle2dModel,
   ImportedFrame2dModel,
   ImportedHeatPlaneQuad2dModel,
   ImportedHeatPlaneTriangle2dModel,
@@ -84,6 +88,10 @@ function parseHeatPlaneNode(raw: unknown, index: number): HeatPlaneTriangle2dJob
   const node = (raw ?? {}) as Record<string, unknown>;
   return { id: requiredString(node.id, `nodes[${index}].id`), x: numberOrZero(node.x), y: numberOrZero(node.y), fix_temperature: Boolean(node.fix_temperature), temperature: numberOrZero(node.temperature), heat_load: numberOrZero(node.heat_load) };
 }
+function parseElectrostaticPlaneNode(raw: unknown, index: number): ElectrostaticPlaneTriangle2dJobInput["nodes"][number] {
+  const node = (raw ?? {}) as Record<string, unknown>;
+  return { id: requiredString(node.id, `nodes[${index}].id`), x: numberOrZero(node.x), y: numberOrZero(node.y), fix_potential: Boolean(node.fix_potential), potential: numberOrZero(node.potential), charge_density: numberOrZero(node.charge_density) };
+}
 function parsePlaneElement(raw: unknown, index: number): PlaneTriangle2dJobInput["elements"][number] {
   const element = (raw ?? {}) as Record<string, unknown>;
   return { id: requiredString(element.id, `elements[${index}].id`), node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`), node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`), node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`), thickness: requiredNumber(element.thickness, `elements[${index}].thickness`), youngs_modulus: requiredNumber(element.youngs_modulus, `elements[${index}].youngs_modulus`), poisson_ratio: numberOrZero(element.poisson_ratio), material_id: optionalString(element.material_id) };
@@ -107,6 +115,14 @@ function parseHeatPlaneTriangleElement(raw: unknown, index: number): HeatPlaneTr
 function parseHeatPlaneQuadElement(raw: unknown, index: number): HeatPlaneQuad2dJobInput["elements"][number] {
   const element = (raw ?? {}) as Record<string, unknown>;
   return { id: requiredString(element.id, `elements[${index}].id`), node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`), node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`), node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`), node_l: requiredNonNegativeInteger(element.node_l, `elements[${index}].node_l`), thickness: requiredNumber(element.thickness, `elements[${index}].thickness`), conductivity: requiredNumber(element.conductivity, `elements[${index}].conductivity`), material_id: optionalString(element.material_id) };
+}
+function parseElectrostaticPlaneTriangleElement(raw: unknown, index: number): ElectrostaticPlaneTriangle2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return { id: requiredString(element.id, `elements[${index}].id`), node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`), node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`), node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`), thickness: requiredNumber(element.thickness, `elements[${index}].thickness`), permittivity: requiredNumber(element.permittivity, `elements[${index}].permittivity`), material_id: optionalString(element.material_id) };
+}
+function parseElectrostaticPlaneQuadElement(raw: unknown, index: number): ElectrostaticPlaneQuad2dJobInput["elements"][number] {
+  const element = (raw ?? {}) as Record<string, unknown>;
+  return { id: requiredString(element.id, `elements[${index}].id`), node_i: requiredNonNegativeInteger(element.node_i, `elements[${index}].node_i`), node_j: requiredNonNegativeInteger(element.node_j, `elements[${index}].node_j`), node_k: requiredNonNegativeInteger(element.node_k, `elements[${index}].node_k`), node_l: requiredNonNegativeInteger(element.node_l, `elements[${index}].node_l`), thickness: requiredNumber(element.thickness, `elements[${index}].thickness`), permittivity: requiredNumber(element.permittivity, `elements[${index}].permittivity`), material_id: optionalString(element.material_id) };
 }
 export function parsePlaneTriangle2dV1(raw: Record<string, unknown>): ImportedPlaneTriangle2dModel {
   const material = normalizeMaterial(raw.material);
@@ -167,6 +183,30 @@ export function parseHeatPlaneQuad2dV1(raw: Record<string, unknown>): ImportedHe
   if (nodes.length < 4) throw new Error("nodes must contain at least four entries");
   if (elements.length < 1) throw new Error("elements must contain at least one entry");
   return { kind: "heat_plane_quad_2d", name: typeof raw.name === "string" ? raw.name : "imported-heat-plane-quad", model: { nodes, elements } };
+}
+export function parseElectrostaticPlaneTriangle2dV1(raw: Record<string, unknown>): ImportedElectrostaticPlaneTriangle2dModel {
+  const material = normalizeMaterial(raw.material);
+  const materials = parseMaterials(raw, material, 1);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseElectrostaticPlaneNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseElectrostaticPlaneTriangleElement).map((element) => ({ ...element, material_id: element.material_id ?? defaultMaterialId }))
+    : [];
+  if (nodes.length < 3) throw new Error("nodes must contain at least three entries");
+  if (elements.length < 1) throw new Error("elements must contain at least one entry");
+  return { kind: "electrostatic_plane_triangle_2d", name: typeof raw.name === "string" ? raw.name : "imported-electrostatic-plane", material, model: { nodes, elements, materials } };
+}
+export function parseElectrostaticPlaneQuad2dV1(raw: Record<string, unknown>): ImportedElectrostaticPlaneQuad2dModel {
+  const material = normalizeMaterial(raw.material);
+  const materials = parseMaterials(raw, material, 1);
+  const nodes = Array.isArray(raw.nodes) ? raw.nodes.map(parseElectrostaticPlaneNode) : [];
+  const defaultMaterialId = materials[0]?.id;
+  const elements = Array.isArray(raw.elements)
+    ? raw.elements.map(parseElectrostaticPlaneQuadElement).map((element) => ({ ...element, material_id: element.material_id ?? defaultMaterialId }))
+    : [];
+  if (nodes.length < 4) throw new Error("nodes must contain at least four entries");
+  if (elements.length < 1) throw new Error("elements must contain at least one entry");
+  return { kind: "electrostatic_plane_quad_2d", name: typeof raw.name === "string" ? raw.name : "imported-electrostatic-plane-quad", material, model: { nodes, elements, materials } };
 }
 
 function parseFrame2dNode(raw: unknown, index: number): Frame2dJobInput["nodes"][number] {

@@ -1,6 +1,8 @@
 import type {
   AxialBarResult,
   Beam1dResult,
+  ElectrostaticPlaneQuad2dResult,
+  ElectrostaticPlaneTriangle2dResult,
   Frame2dResult,
   HeatBar1dResult,
   HeatPlaneQuad2dResult,
@@ -32,6 +34,15 @@ type PlaneResultField =
   | "von_mises"
   | "principal_stress_1"
   | "max_in_plane_shear"
+  | "average_potential"
+  | "potential_gradient_x"
+  | "potential_gradient_y"
+  | "electric_field_x"
+  | "electric_field_y"
+  | "electric_field_magnitude"
+  | "electric_flux_density_x"
+  | "electric_flux_density_y"
+  | "electric_flux_density_magnitude"
   | "average_temperature"
   | "average_temperature_delta"
   | "temperature_gradient_x"
@@ -175,6 +186,14 @@ export function isHeatPlaneQuad2dResult(
     Array.isArray((value as HeatPlaneQuad2dResult).elements) &&
     (value as HeatPlaneQuad2dResult).elements.some((element) => "node_l" in element)
   );
+}
+
+export function isElectrostaticPlaneTriangle2dResult(value: unknown): value is ElectrostaticPlaneTriangle2dResult {
+  return typeof value === "object" && value !== null && "max_potential" in value && "max_electric_field" in value && "elements" in value && Array.isArray((value as ElectrostaticPlaneTriangle2dResult).elements) && (value as ElectrostaticPlaneTriangle2dResult).elements.every((element) => !("node_l" in element));
+}
+
+export function isElectrostaticPlaneQuad2dResult(value: unknown): value is ElectrostaticPlaneQuad2dResult {
+  return typeof value === "object" && value !== null && "max_potential" in value && "max_electric_field" in value && "elements" in value && Array.isArray((value as ElectrostaticPlaneQuad2dResult).elements) && (value as ElectrostaticPlaneQuad2dResult).elements.some((element) => "node_l" in element);
 }
 
 export function isThermalTruss2dResult(
@@ -323,6 +342,8 @@ export function isThermalFrame2dResult(
 export function isPlaneResult(
   value: unknown,
 ): value is
+  | ElectrostaticPlaneTriangle2dResult
+  | ElectrostaticPlaneQuad2dResult
   | PlaneTriangle2dResult
   | PlaneQuad2dResult
   | ThermalPlaneTriangle2dResult
@@ -365,9 +386,18 @@ export function planeResultFieldValue(
     principal_stress_1?: number;
     max_in_plane_shear?: number;
     average_temperature?: number;
+    average_potential?: number;
     average_temperature_delta?: number;
+    potential_gradient_x?: number;
+    potential_gradient_y?: number;
     temperature_gradient_x?: number;
     temperature_gradient_y?: number;
+    electric_field_x?: number;
+    electric_field_y?: number;
+    electric_field_magnitude?: number;
+    electric_flux_density_x?: number;
+    electric_flux_density_y?: number;
+    electric_flux_density_magnitude?: number;
     heat_flux_x?: number;
     heat_flux_y?: number;
     heat_flux_magnitude?: number;
@@ -377,6 +407,15 @@ export function planeResultFieldValue(
   },
   field: PlaneResultField,
 ) {
+  if (field === "average_potential") return Math.abs(element.average_potential ?? 0);
+  if (field === "potential_gradient_x") return Math.abs(element.potential_gradient_x ?? 0);
+  if (field === "potential_gradient_y") return Math.abs(element.potential_gradient_y ?? 0);
+  if (field === "electric_field_x") return Math.abs(element.electric_field_x ?? 0);
+  if (field === "electric_field_y") return Math.abs(element.electric_field_y ?? 0);
+  if (field === "electric_field_magnitude") return Math.abs(element.electric_field_magnitude ?? 0);
+  if (field === "electric_flux_density_x") return Math.abs(element.electric_flux_density_x ?? 0);
+  if (field === "electric_flux_density_y") return Math.abs(element.electric_flux_density_y ?? 0);
+  if (field === "electric_flux_density_magnitude") return Math.abs(element.electric_flux_density_magnitude ?? 0);
   if (field === "average_temperature") return Math.abs(element.average_temperature ?? 0);
   if (field === "average_temperature_delta") {
     return Math.abs(element.average_temperature_delta ?? 0);

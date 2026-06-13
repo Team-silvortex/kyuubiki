@@ -207,9 +207,40 @@ export function useWorkbenchVisualDerived({
     ],
   );
 
+  const hasTruss3dResult = Boolean(
+    (isSpring3d && spring3dResult) ||
+      (isThermalTruss3d && thermalTruss3dResult) ||
+      (isTruss3d && truss3dResult),
+  );
+
+  const truss3dResultFieldMax = useMemo(
+    () =>
+      Math.max(
+        ...displayTruss3dElements.map((element) =>
+          Math.abs(isSpring3d ? element.axial_force : element.stress),
+        ),
+        0,
+      ),
+    [displayTruss3dElements, isSpring3d],
+  );
+
   const truss3dElementColors = useMemo(
-    () => displayTruss3dElements.map((element) => materialColorMap.get(element.material_id ?? "") ?? "#1677a3"),
-    [displayTruss3dElements, materialColorMap],
+    () =>
+      displayTruss3dElements.map((element) =>
+        hasTruss3dResult
+          ? planeStressFill(
+              Math.abs(isSpring3d ? element.axial_force : element.stress),
+              truss3dResultFieldMax,
+            )
+          : materialColorMap.get(element.material_id ?? "") ?? "#1677a3",
+      ),
+    [
+      displayTruss3dElements,
+      hasTruss3dResult,
+      isSpring3d,
+      materialColorMap,
+      truss3dResultFieldMax,
+    ],
   );
 
   const planeElementColors = useMemo(

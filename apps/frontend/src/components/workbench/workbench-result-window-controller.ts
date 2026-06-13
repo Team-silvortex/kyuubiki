@@ -17,6 +17,8 @@ import {
 type StudyKind =
   | "axial_bar_1d"
   | "heat_bar_1d"
+  | "electrostatic_plane_triangle_2d"
+  | "electrostatic_plane_quad_2d"
   | "heat_plane_triangle_2d"
   | "heat_plane_quad_2d"
   | "thermal_bar_1d"
@@ -51,6 +53,8 @@ type ResultWindowGuards = {
   isAxialResult: (value: unknown) => boolean;
   isTrussResult: (value: unknown) => boolean;
   isHeatBar1dResult: (value: unknown) => boolean;
+  isElectrostaticPlaneQuad2dResult: (value: unknown) => boolean;
+  isElectrostaticPlaneTriangle2dResult: (value: unknown) => boolean;
   isHeatPlaneQuad2dResult: (value: unknown) => boolean;
   isHeatPlaneTriangle2dResult: (value: unknown) => boolean;
   isThermalBar1dResult: (value: unknown) => boolean;
@@ -96,6 +100,10 @@ function resolveResultWindowStudyKind(
     ? "truss_2d"
     : guards.isHeatBar1dResult(result)
       ? "heat_bar_1d"
+      : guards.isElectrostaticPlaneQuad2dResult(result)
+        ? "electrostatic_plane_quad_2d"
+        : guards.isElectrostaticPlaneTriangle2dResult(result)
+          ? "electrostatic_plane_triangle_2d"
       : guards.isHeatPlaneQuad2dResult(result)
         ? "heat_plane_quad_2d"
         : guards.isHeatPlaneTriangle2dResult(result)
@@ -151,6 +159,8 @@ export function useWorkbenchResultWindowController({
     isAxialResult,
     isTrussResult,
     isHeatBar1dResult,
+    isElectrostaticPlaneQuad2dResult,
+    isElectrostaticPlaneTriangle2dResult,
     isHeatPlaneQuad2dResult,
     isHeatPlaneTriangle2dResult,
     isThermalBar1dResult,
@@ -228,6 +238,8 @@ export function useWorkbenchResultWindowController({
       isAxialResult,
       isTrussResult,
       isHeatBar1dResult,
+      isElectrostaticPlaneQuad2dResult,
+      isElectrostaticPlaneTriangle2dResult,
       isHeatPlaneQuad2dResult,
       isHeatPlaneTriangle2dResult,
       isThermalBar1dResult,
@@ -328,6 +340,8 @@ export function useWorkbenchResultWindowController({
     isBeam1dResult,
     isFrame2dResult,
     isHeatBar1dResult,
+    isElectrostaticPlaneQuad2dResult,
+    isElectrostaticPlaneTriangle2dResult,
     isHeatPlaneQuad2dResult,
     isHeatPlaneTriangle2dResult,
     isSpring1dResult,

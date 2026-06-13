@@ -1,9 +1,8 @@
 "use client";
 
-import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
+import type { WorkflowCatalogEntry, WorkflowCatalogEntryArtifact, WorkflowGraphDefinition } from "@/lib/api";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import type { WorkflowTemplateChainPreferenceSnapshot } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
-import type { WorkflowCatalogEntryArtifact } from "@/lib/api";
 
 export type WorkflowPackageSearchIndex = {
   domains: string[];

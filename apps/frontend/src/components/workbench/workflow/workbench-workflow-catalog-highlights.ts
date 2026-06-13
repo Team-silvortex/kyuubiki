@@ -1,15 +1,17 @@
 "use client";
 
-import type { WorkflowCatalogEntry } from "@/lib/api";
+import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 
 export const PINNED_WORKFLOW_IDS = [
   "workflow.electrostatic-plane-quad-2d",
   "workflow.electrostatic-plane-quad-field-statistics-json",
   "workflow.electrostatic-preheat-guard-markdown",
   "workflow.electrostatic-preheat-guard-heat-json",
+  "workflow.electrostatic-preheat-guard-heat-thermo-json",
   "workflow.electrostatic-plane-triangle-summary-json",
   "workflow.electrostatic-triangle-preheat-guard-markdown",
   "workflow.electrostatic-triangle-preheat-guard-heat-json",
+  "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
   "workflow.electrostatic-to-heat-quad-2d",
   "workflow.electrostatic-quad-triangle-compare-json",
   "workflow.electrostatic-to-heat-triangle-2d",
@@ -56,7 +58,7 @@ function detectMaturity(tags: string[]) {
   return "catalog";
 }
 
-function countKind(nodes: WorkflowCatalogEntry["graph"]["nodes"], kind: string) {
+function countKind(nodes: WorkflowGraphDefinition["nodes"] | undefined, kind: string) {
   return nodes?.filter((node) => node.kind === kind).length ?? 0;
 }
 

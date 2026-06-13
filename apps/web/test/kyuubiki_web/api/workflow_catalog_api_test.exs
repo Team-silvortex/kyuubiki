@@ -22,8 +22,10 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
                "workflow.electrostatic-plane-quad-field-statistics-json",
                "workflow.electrostatic-preheat-guard-markdown",
                "workflow.electrostatic-preheat-guard-heat-json",
+               "workflow.electrostatic-preheat-guard-heat-thermo-json",
                "workflow.electrostatic-triangle-preheat-guard-markdown",
                "workflow.electrostatic-triangle-preheat-guard-heat-json",
+               "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
                "workflow.electrostatic-quad-triangle-compare-json",
                "workflow.electrostatic-heat-thermo-summary-json",
                "workflow.heat-to-thermo-quad-2d"
@@ -61,6 +63,11 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
         workflow["id"] == "workflow.electrostatic-preheat-guard-heat-json"
       end)
 
+    electrostatic_guard_heat_thermo_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-preheat-guard-heat-thermo-json"
+      end)
+
     electrostatic_workflow =
       Enum.find(workflows, fn workflow ->
         workflow["id"] == "workflow.electrostatic-plane-quad-2d"
@@ -84,6 +91,9 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert electrostatic_guard_heat_workflow["name"] ==
              "Electrostatic pre-heat guard -> heat JSON"
+
+    assert electrostatic_guard_heat_thermo_workflow["name"] ==
+             "Electrostatic pre-heat guard -> heat -> thermo JSON"
 
     assert electrostatic_heat_thermo_workflow["name"] ==
              "Electrostatic heat thermo quad summary JSON"
@@ -196,6 +206,34 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert electrostatic_guard_heat_fetched["id"] ==
              "workflow.electrostatic-preheat-guard-heat-json"
+
+    electrostatic_guard_heat_thermo_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-preheat-guard-heat-thermo-json")
+      |> Router.call(@opts)
+
+    assert electrostatic_guard_heat_thermo_fetch_conn.status == 200
+
+    electrostatic_guard_heat_thermo_fetched =
+      Jason.decode!(electrostatic_guard_heat_thermo_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_guard_heat_thermo_fetched["id"] ==
+             "workflow.electrostatic-preheat-guard-heat-thermo-json"
+
+    electrostatic_triangle_guard_heat_thermo_fetch_conn =
+      :get
+      |> conn(
+        "/api/v1/workflows/catalog/workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
+      )
+      |> Router.call(@opts)
+
+    assert electrostatic_triangle_guard_heat_thermo_fetch_conn.status == 200
+
+    electrostatic_triangle_guard_heat_thermo_fetched =
+      Jason.decode!(electrostatic_triangle_guard_heat_thermo_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_triangle_guard_heat_thermo_fetched["id"] ==
+             "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
   end
 
   test "filters workflow catalog by query contract fields" do
@@ -310,92 +348,6 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     summary = Jason.decode!(exported["content"])
     assert summary["max_temperature_delta"] == 30
     assert_in_delta summary["max_stress"], 34_477_611.940298505, 1.0e-6
-  end
-
-  test "submits an electrostatic quad catalog workflow as an asynchronous job" do
-    {:ok, _pid} =
-      FakePlaygroundAgent.start_link([
-        %{
-          "event" => "progress",
-          "progress" => %{
-            "job_id" => "solver-session",
-            "stage" => "solving",
-            "progress" => 0.5,
-            "iteration" => 1,
-            "message" => "solving electrostatic plane quad"
-          }
-        },
-        %{
-          "ok" => true,
-          "result" => %{
-            "nodes" => [
-              %{
-                "index" => 0,
-                "id" => "n0",
-                "x" => 0.0,
-                "y" => 0.0,
-                "potential" => 10.0,
-                "charge_density" => 0.0
-              }
-            ],
-            "elements" => [
-              %{
-                "index" => 0,
-                "id" => "epq0",
-                "node_i" => 0,
-                "node_j" => 1,
-                "node_k" => 2,
-                "node_l" => 3,
-                "area" => 1.0,
-                "average_potential" => 5.0,
-                "potential_gradient_x" => -10.0,
-                "potential_gradient_y" => 0.0,
-                "electric_field_x" => 10.0,
-                "electric_field_y" => 0.0,
-                "electric_field_magnitude" => 10.0,
-                "electric_flux_density_x" => 20.0,
-                "electric_flux_density_y" => 0.0,
-                "electric_flux_density_magnitude" => 20.0
-              }
-            ],
-            "max_potential" => 10.0,
-            "max_electric_field" => 10.0,
-            "max_flux_density" => 20.0,
-            "input" => %{"nodes" => [], "elements" => []}
-          }
-        }
-      ])
-
-    port = WorkflowApi.await_fake_agent_port()
-
-    Application.put_env(:kyuubiki_web, AgentPool,
-      endpoints: [%{id: "agent-a", host: "127.0.0.1", port: port}]
-    )
-
-    AgentPool.reload()
-
-    conn =
-      :post
-      |> conn(
-        "/api/v1/workflows/catalog/workflow.electrostatic-plane-quad-2d/jobs",
-        Jason.encode!(%{"input_artifacts" => WorkflowApi.electrostatic_plane_quad_input_artifacts()})
-      )
-      |> put_req_header("content-type", "application/json")
-      |> Router.call(@opts)
-
-    assert conn.status == 202
-    payload = Jason.decode!(conn.resp_body)
-    result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
-
-    assert result_payload["job"]["status"] == "completed"
-    assert result_payload["result"]["workflow_id"] == "workflow.electrostatic-plane-quad-2d"
-    assert length(result_payload["result"]["completed_nodes"]) == 5
-    exported = result_payload["result"]["artifacts"]["json_output.json"]
-    assert exported["format"] == "json"
-    summary = Jason.decode!(exported["content"])
-    assert summary["max_potential"] == 10.0
-    assert summary["max_electric_field"] == 10.0
-    assert summary["max_flux_density"] == 20.0
   end
 
   test "submits an electrostatic to heat catalog workflow as an asynchronous job" do

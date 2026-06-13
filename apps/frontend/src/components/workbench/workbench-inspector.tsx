@@ -20,6 +20,10 @@ import type {
   WorkbenchInspectorProps,
 } from "./workbench-inspector-types";
 
+function formatInspectorMetric(value: number | undefined) {
+  return typeof value === "number" ? value.toExponential(3) : "--";
+}
+
 function WorkbenchInspectorInner({
   t,
   reportScopeLabel,
@@ -115,15 +119,23 @@ function WorkbenchInspectorInner({
   const isTruss = studyKind === "truss_2d" || studyKind === "thermal_truss_2d";
   const isTruss3d = studyKind === "truss_3d" || studyKind === "thermal_truss_3d";
   const isSpring3d = studyKind === "spring_3d";
+  const isElectrostaticPlane =
+    studyKind === "electrostatic_plane_triangle_2d" || studyKind === "electrostatic_plane_quad_2d";
   const isHeatPlane = studyKind === "heat_plane_triangle_2d" || studyKind === "heat_plane_quad_2d";
   const isThermalPlane = studyKind === "thermal_plane_triangle_2d" || studyKind === "thermal_plane_quad_2d";
-  const isPlane = isHeatPlane || studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" || isThermalPlane;
+  const isPlane =
+    isHeatPlane || isElectrostaticPlane || studyKind === "plane_triangle_2d" || studyKind === "plane_quad_2d" || isThermalPlane;
   const isHeatBar = studyKind === "heat_bar_1d";
   const isThermal = studyKind === "thermal_bar_1d" || studyKind === "thermal_truss_2d" || studyKind === "thermal_truss_3d";
   const isSpring = studyKind === "spring_1d" || studyKind === "spring_2d" || studyKind === "spring_3d";
   const isBeam = studyKind === "beam_1d" || studyKind === "thermal_beam_1d";
   const isTorsion = studyKind === "torsion_1d";
   const isFrame = studyKind === "frame_2d" || studyKind === "thermal_frame_2d";
+  const hasPlaneElectrostaticNode = typeof selectedPlaneNodeData?.potential === "number" || typeof selectedPlaneNodeData?.charge_density === "number";
+  const hasPlaneElectrostaticElement =
+    typeof selectedPlaneElementData?.average_potential === "number" ||
+    typeof selectedPlaneElementData?.electric_field_magnitude === "number" ||
+    typeof selectedPlaneElementData?.electric_flux_density_magnitude === "number";
 
   return (
     <aside
@@ -220,6 +232,12 @@ function WorkbenchInspectorInner({
                     <label><span>{t.heatLoad}</span><input type="number" step={1} value={selectedPlaneNodeData.heat_load ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("heat_load", Number(event.target.value))} /></label>
                     <label className="toggle-row"><span>{t.fixTemperature}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_temperature ?? false} onChange={(event) => onUpdateSelectedPlaneNode("fix_temperature", event.target.checked)} /></label>
                   </>
+                ) : isElectrostaticPlane ? (
+                  <>
+                    <label><span>{t.potential}</span><input type="number" step={0.1} value={selectedPlaneNodeData.potential ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("potential", Number(event.target.value))} /></label>
+                    <label><span>{t.chargeDensity}</span><input type="number" step={0.1} value={selectedPlaneNodeData.charge_density ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("charge_density", Number(event.target.value))} /></label>
+                    <label className="toggle-row"><span>{t.fixPotential}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_potential ?? false} onChange={(event) => onUpdateSelectedPlaneNode("fix_potential", event.target.checked)} /></label>
+                  </>
                 ) : (
                   <>
                     <label><span>{t.loadX}</span><input type="number" step={100} value={selectedPlaneNodeData.load_x} onChange={(event) => onUpdateSelectedPlaneNode("load_x", Number(event.target.value))} /></label>
@@ -229,9 +247,12 @@ function WorkbenchInspectorInner({
                 {!isHeatPlane && "temperature_delta" in selectedPlaneNodeData ? (
                   <label><span>{t.temperatureDelta}</span><input type="number" step={1} value={selectedPlaneNodeData.temperature_delta ?? 0} onChange={(event) => onUpdateSelectedPlaneNode("temperature_delta", Number(event.target.value))} /></label>
                 ) : null}
+                {hasPlaneElectrostaticNode && !isElectrostaticPlane ? <label><span>{t.potential}</span><input value={formatInspectorMetric(selectedPlaneNodeData.potential)} readOnly /></label> : null}
+                {hasPlaneElectrostaticNode && !isElectrostaticPlane ? <label><span>{t.chargeDensity}</span><input value={formatInspectorMetric(selectedPlaneNodeData.charge_density)} readOnly /></label> : null}
+                {typeof selectedPlaneNodeData.fix_potential === "boolean" && !isElectrostaticPlane ? <label className="toggle-row"><span>{t.fixPotential}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_potential} readOnly /></label> : null}
                 {!isHeatPlane ? <label><span>{t.displacementMagnitude}</span><input value={typeof selectedPlaneNodeData.displacement_magnitude === "number" ? selectedPlaneNodeData.displacement_magnitude.toExponential(3) : "--"} readOnly /></label> : null}
-                {!isHeatPlane ? <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_x} onChange={(event) => onUpdateSelectedPlaneNode("fix_x", event.target.checked)} /></label> : null}
-                {!isHeatPlane ? <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_y} onChange={(event) => onUpdateSelectedPlaneNode("fix_y", event.target.checked)} /></label> : null}
+                {!isHeatPlane && !isElectrostaticPlane ? <label className="toggle-row"><span>{t.fixX}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_x} onChange={(event) => onUpdateSelectedPlaneNode("fix_x", event.target.checked)} /></label> : null}
+                {!isHeatPlane && !isElectrostaticPlane ? <label className="toggle-row"><span>{t.fixY}</span><input type="checkbox" checked={selectedPlaneNodeData.fix_y} onChange={(event) => onUpdateSelectedPlaneNode("fix_y", event.target.checked)} /></label> : null}
               </div>
             ) : isPlane && selectedPlaneElementData ? (
               <div className="form-grid compact">
@@ -249,6 +270,20 @@ function WorkbenchInspectorInner({
                     <label><span>{t.heatFluxX}</span><input value={typeof selectedPlaneElementData.heat_flux_x === "number" ? selectedPlaneElementData.heat_flux_x.toExponential(3) : "--"} readOnly /></label>
                     <label><span>{t.heatFluxY}</span><input value={typeof selectedPlaneElementData.heat_flux_y === "number" ? selectedPlaneElementData.heat_flux_y.toExponential(3) : "--"} readOnly /></label>
                     <label><span>{t.maxHeatFlux}</span><input value={typeof selectedPlaneElementData.heat_flux_magnitude === "number" ? selectedPlaneElementData.heat_flux_magnitude.toExponential(3) : "--"} readOnly /></label>
+                  </>
+                ) : isElectrostaticPlane ? (
+                  <>
+                    <label>
+                      <span>{materialLabel}</span>
+                      <select value={planeElementMaterialId} onChange={(event) => onAssignSelectedPlaneElementMaterial(event.target.value)}>
+                        {materialOptions.map((option) => (
+                          <option key={option.id} value={option.id}>{option.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label><span>{t.electricFluxDensity}</span><input value={`${formatInspectorMetric(selectedPlaneElementData.electric_flux_density_x)} / ${formatInspectorMetric(selectedPlaneElementData.electric_flux_density_y)}`} readOnly /></label>
+                    <label><span>{t.electricField}</span><input value={`${formatInspectorMetric(selectedPlaneElementData.electric_field_x)} / ${formatInspectorMetric(selectedPlaneElementData.electric_field_y)}`} readOnly /></label>
+                    <label><span>{t.permittivity}</span><input type="number" step={0.1} value={selectedPlaneElementData.permittivity ?? 0} onChange={(event) => onUpdateSelectedPlaneElement("permittivity", Number(event.target.value))} /></label>
                   </>
                 ) : (
                   <>
@@ -273,6 +308,12 @@ function WorkbenchInspectorInner({
                     <label><span>{t.totalStrain}</span><input value={typeof selectedPlaneElementData.total_strain_x === "number" || typeof selectedPlaneElementData.total_strain_y === "number" ? `${(selectedPlaneElementData.total_strain_x ?? 0).toExponential(3)} / ${(selectedPlaneElementData.total_strain_y ?? 0).toExponential(3)}` : "--"} readOnly /></label>
                   </>
                 ) : null}
+                {hasPlaneElectrostaticElement ? <label><span>{t.averagePotential}</span><input value={formatInspectorMetric(selectedPlaneElementData.average_potential)} readOnly /></label> : null}
+                {hasPlaneElectrostaticElement ? <label><span>{t.potentialGradient}</span><input value={`${formatInspectorMetric(selectedPlaneElementData.potential_gradient_x)} / ${formatInspectorMetric(selectedPlaneElementData.potential_gradient_y)}`} readOnly /></label> : null}
+                {hasPlaneElectrostaticElement ? <label><span>{t.electricField}</span><input value={`${formatInspectorMetric(selectedPlaneElementData.electric_field_x)} / ${formatInspectorMetric(selectedPlaneElementData.electric_field_y)}`} readOnly /></label> : null}
+                {hasPlaneElectrostaticElement ? <label><span>{t.electricFieldMagnitude}</span><input value={formatInspectorMetric(selectedPlaneElementData.electric_field_magnitude)} readOnly /></label> : null}
+                {hasPlaneElectrostaticElement ? <label><span>{t.electricFluxDensity}</span><input value={`${formatInspectorMetric(selectedPlaneElementData.electric_flux_density_x)} / ${formatInspectorMetric(selectedPlaneElementData.electric_flux_density_y)}`} readOnly /></label> : null}
+                {hasPlaneElectrostaticElement ? <label><span>{t.electricFluxDensityMagnitude}</span><input value={formatInspectorMetric(selectedPlaneElementData.electric_flux_density_magnitude)} readOnly /></label> : null}
                 {!isHeatPlane ? <label><span>{t.principalStress1}</span><input value={typeof selectedPlaneElementData.principal_stress_1 === "number" ? selectedPlaneElementData.principal_stress_1.toExponential(3) : "--"} readOnly /></label> : null}
                 {!isHeatPlane ? <label><span>{t.principalStress2}</span><input value={typeof selectedPlaneElementData.principal_stress_2 === "number" ? selectedPlaneElementData.principal_stress_2.toExponential(3) : "--"} readOnly /></label> : null}
                 {!isHeatPlane ? <label><span>{t.maxInPlaneShear}</span><input value={typeof selectedPlaneElementData.max_in_plane_shear === "number" ? selectedPlaneElementData.max_in_plane_shear.toExponential(3) : "--"} readOnly /></label> : null}

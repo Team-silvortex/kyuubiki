@@ -65,6 +65,8 @@ export function classifyStudyKindFamily(kind: string): StudyFamilyKey {
     case "thermal_truss_2d":
     case "thermal_truss_3d":
       return "trusses";
+    case "electrostatic_plane_triangle_2d":
+    case "electrostatic_plane_quad_2d":
     case "thermal_plane_triangle_2d":
     case "thermal_plane_quad_2d":
     case "heat_plane_triangle_2d":
@@ -312,6 +314,8 @@ export function buildStudyControlsRows({
   studyKind:
     | "axial_bar_1d"
     | "heat_bar_1d"
+    | "electrostatic_plane_triangle_2d"
+    | "electrostatic_plane_quad_2d"
     | "heat_plane_triangle_2d"
     | "heat_plane_quad_2d"
     | "thermal_bar_1d"

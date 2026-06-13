@@ -62,7 +62,25 @@ export function buildWorkbenchResultDerivedData(props: Record<string, any>) {
   );
 
   const planeResultFieldLabel =
-    planeResultField === "average_temperature"
+    planeResultField === "average_potential"
+      ? t.averagePotential
+      : planeResultField === "potential_gradient_x"
+        ? `${t.potentialGradient} X`
+        : planeResultField === "potential_gradient_y"
+          ? `${t.potentialGradient} Y`
+          : planeResultField === "electric_field_x"
+            ? `${t.electricField} X`
+            : planeResultField === "electric_field_y"
+              ? `${t.electricField} Y`
+              : planeResultField === "electric_field_magnitude"
+                ? t.electricFieldMagnitude
+                : planeResultField === "electric_flux_density_x"
+                  ? `${t.electricFluxDensity} X`
+                  : planeResultField === "electric_flux_density_y"
+                    ? `${t.electricFluxDensity} Y`
+                    : planeResultField === "electric_flux_density_magnitude"
+                      ? t.electricFluxDensityMagnitude
+      : planeResultField === "average_temperature"
       ? t.maxTemperature
       : planeResultField === "average_temperature_delta"
         ? t.temperatureDelta
@@ -87,7 +105,25 @@ export function buildWorkbenchResultDerivedData(props: Record<string, any>) {
                           : t.planeViewVonMises;
 
   const planeLegendText =
-    planeResultField === "average_temperature"
+    planeResultField === "average_potential"
+      ? `${t.averagePotential} · ${t.planeResultLegend}`
+      : planeResultField === "potential_gradient_x"
+        ? `${t.potentialGradient} X · ${t.planeResultLegend}`
+        : planeResultField === "potential_gradient_y"
+          ? `${t.potentialGradient} Y · ${t.planeResultLegend}`
+          : planeResultField === "electric_field_x"
+            ? `${t.electricField} X · ${t.planeResultLegend}`
+            : planeResultField === "electric_field_y"
+              ? `${t.electricField} Y · ${t.planeResultLegend}`
+              : planeResultField === "electric_field_magnitude"
+                ? `${t.electricFieldMagnitude} · ${t.planeResultLegend}`
+                : planeResultField === "electric_flux_density_x"
+                  ? `${t.electricFluxDensity} X · ${t.planeResultLegend}`
+                  : planeResultField === "electric_flux_density_y"
+                    ? `${t.electricFluxDensity} Y · ${t.planeResultLegend}`
+                    : planeResultField === "electric_flux_density_magnitude"
+                      ? `${t.electricFluxDensityMagnitude} · ${t.planeResultLegend}`
+      : planeResultField === "average_temperature"
       ? `${t.maxTemperature} · ${t.planeResultLegend}`
       : planeResultField === "average_temperature_delta"
         ? `${t.temperatureDelta} · ${t.planeResultLegend}`
@@ -135,6 +171,8 @@ export function buildWorkbenchResultDerivedData(props: Record<string, any>) {
                   : t.combinedStress;
 
   const frameLegendText = `${frameResultFieldLabel} · ${t.planeResultLegend}`;
+  const truss3dResultFieldLabel = isSpring ? t.axialForce : t.stress;
+  const truss3dLegendText = `${truss3dResultFieldLabel} · ${t.planeResultLegend}`;
 
   const frameTreeValueLabel =
     activeLineResultField === "average_temperature_delta"
@@ -224,6 +262,8 @@ export function buildWorkbenchResultDerivedData(props: Record<string, any>) {
     planeLegendText,
     frameResultFieldLabel,
     frameLegendText,
+    truss3dResultFieldLabel,
+    truss3dLegendText,
     frameTreeValueLabel,
     planeHotspotElements,
     planeThermalRows,

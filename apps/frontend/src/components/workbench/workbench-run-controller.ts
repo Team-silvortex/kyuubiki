@@ -2,6 +2,8 @@ import type { MutableRefObject } from "react";
 import {
   createAxialBarJob,
   createBeam1dJob,
+  createElectrostaticPlaneQuad2dJob,
+  createElectrostaticPlaneTriangle2dJob,
   createDirectMeshSolve,
   createFrame2dJob,
   createHeatBar1dJob,
@@ -24,6 +26,8 @@ import {
   createTruss3dJob,
   fetchJobStatus,
   resolveBeam1dJobInput,
+  resolveElectrostaticPlaneQuad2dJobInput,
+  resolveElectrostaticPlaneTriangle2dJobInput,
   resolveFrame2dJobInput,
   resolveHeatBar1dJobInput,
   resolveHeatPlaneQuad2dJobInput,
@@ -45,6 +49,10 @@ import {
   resolveTruss3dJobInput,
   type AxialBarResult,
   type Beam1dResult,
+  type ElectrostaticPlaneQuad2dJobInput,
+  type ElectrostaticPlaneQuad2dResult,
+  type ElectrostaticPlaneTriangle2dJobInput,
+  type ElectrostaticPlaneTriangle2dResult,
   type DirectMeshSelectionMode,
   type Frame2dResult,
   type FrontendRuntimeMode,
@@ -106,6 +114,8 @@ import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 type AnyStudyResult =
   | AxialBarResult
   | HeatBar1dResult
+  | ElectrostaticPlaneTriangle2dResult
+  | ElectrostaticPlaneQuad2dResult
   | HeatPlaneTriangle2dResult
   | HeatPlaneQuad2dResult
   | ThermalBar1dResult
@@ -204,7 +214,11 @@ async function pollWorkbenchJob({
         kind === "axial_bar_1d"
           ? await fetchJobStatus<AxialBarResult>(jobId)
           : kind === "heat_bar_1d"
-            ? await fetchJobStatus<HeatBar1dResult>(jobId)
+          ? await fetchJobStatus<HeatBar1dResult>(jobId)
+          : kind === "electrostatic_plane_triangle_2d"
+            ? await fetchJobStatus<ElectrostaticPlaneTriangle2dResult>(jobId)
+            : kind === "electrostatic_plane_quad_2d"
+              ? await fetchJobStatus<ElectrostaticPlaneQuad2dResult>(jobId)
             : kind === "thermal_bar_1d"
               ? await fetchJobStatus<ThermalBar1dResult>(jobId)
               : kind === "thermal_beam_1d"
@@ -345,6 +359,21 @@ export async function runWorkbenchAnalysis({
                 endpoints,
                 directMeshSelectionMode,
               )
+            : studyKind === "electrostatic_plane_quad_2d"
+              ? await createDirectMeshSolve<ElectrostaticPlaneQuad2dResult>(
+                  "electrostatic_plane_quad_2d",
+                  resolveElectrostaticPlaneQuad2dJobInput(planeModel as ElectrostaticPlaneQuad2dJobInput) as unknown as Record<string, unknown>,
+                  endpoints,
+                  directMeshSelectionMode,
+                )
+              : studyKind === "electrostatic_plane_triangle_2d"
+                ? await createDirectMeshSolve<ElectrostaticPlaneTriangle2dResult>(
+                    "electrostatic_plane_triangle_2d",
+                    resolveElectrostaticPlaneTriangle2dJobInput(planeModel as ElectrostaticPlaneTriangle2dJobInput) as unknown as Record<string, unknown>,
+                    endpoints,
+                    directMeshSelectionMode,
+                  )
+                
             : studyKind === "heat_plane_triangle_2d"
               ? await createDirectMeshSolve<HeatPlaneTriangle2dResult>(
                   "heat_plane_triangle_2d",
@@ -494,6 +523,10 @@ export async function runWorkbenchAnalysis({
       ? await createAxialBarJob({ ...toAxialInput(axialForm), ...jobContext })
       : studyKind === "heat_bar_1d"
         ? await createHeatBar1dJob(resolveHeatBar1dJobInput({ ...heatBarModel, ...jobContext }))
+        : studyKind === "electrostatic_plane_quad_2d"
+          ? await createElectrostaticPlaneQuad2dJob(resolveElectrostaticPlaneQuad2dJobInput({ ...(planeModel as ElectrostaticPlaneQuad2dJobInput), ...jobContext }))
+          : studyKind === "electrostatic_plane_triangle_2d"
+            ? await createElectrostaticPlaneTriangle2dJob(resolveElectrostaticPlaneTriangle2dJobInput({ ...(planeModel as ElectrostaticPlaneTriangle2dJobInput), ...jobContext }))
         : studyKind === "heat_plane_quad_2d"
           ? await createHeatPlaneQuad2dJob(resolveHeatPlaneQuad2dJobInput({ ...(heatPlaneModel as HeatPlaneQuad2dJobInput), ...jobContext }))
           : studyKind === "heat_plane_triangle_2d"

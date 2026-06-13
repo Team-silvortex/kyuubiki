@@ -34,6 +34,7 @@ type WorkbenchViewportMountProps = {
   isThermal: boolean;
   hiddenMaterialIds: string[];
   frameLegendText?: string;
+  truss3dLegendText?: string;
   planeLegendText: string;
   axialNodes: Array<{ x: number; displacement: number }>;
   axialLength: number;
@@ -50,6 +51,7 @@ type WorkbenchViewportMountProps = {
   trussBounds: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number };
   planeBounds: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number };
   trussResult: unknown;
+  truss3dResult: unknown;
   thermalTrussResult: unknown;
   activeFrameLikeResult: unknown;
   activeBeamLikeResult: unknown;
@@ -137,6 +139,7 @@ export function WorkbenchViewportMount({
   isThermal,
   hiddenMaterialIds,
   frameLegendText,
+  truss3dLegendText,
   planeLegendText,
   axialNodes,
   axialLength,
@@ -153,6 +156,7 @@ export function WorkbenchViewportMount({
   trussBounds,
   planeBounds,
   trussResult,
+  truss3dResult,
   thermalTrussResult,
   activeFrameLikeResult,
   activeBeamLikeResult,
@@ -256,6 +260,11 @@ export function WorkbenchViewportMount({
         (isSpring2d && spring2dResult) ||
         (isSpring3d && spring3dResult)
           ? frameLegendText
+          : undefined
+      }
+      truss3dLegend={
+        Boolean(truss3dResult) || Boolean(thermalTruss3dResult) || Boolean(spring3dResult)
+          ? truss3dLegendText
           : undefined
       }
       truss3dTitle={t.kinds[isSpring3d ? "spring_3d" : isThermalTruss3d ? "thermal_truss_3d" : "truss_3d"]}
