@@ -29,6 +29,13 @@ surfaces:
 - `Installer`
   bootstrap and heavier deployment setup surface
 
+Those GUI surfaces and runtime layers are intentionally not the same thing.
+
+- `Hub` is the system entrypoint, not the control plane
+- `Workbench` is the engineering workflow surface, not the runtime fleet manager
+- `Installer` is the deployment/lifecycle surface, not the modeling surface
+- `agent` and `runtime` layers are execution peers, not frontend submodules
+
 ## Repository anchor
 
 Those runtime layers map cleanly onto the monorepo:
@@ -55,6 +62,27 @@ That design keeps the desktop entrypoint compatible with:
 - remote control planes
 - several control-plane targets in one operator session
 - local bundle and packaging work even when no control plane is running
+
+See [app-runtime-boundaries.md](app-runtime-boundaries.md)
+for the stricter role split.
+
+## Product boundary
+
+At the product level, each major surface owns a different concern:
+
+- `Hub`
+  global workload shell, runtime target overview, launch surface
+- `Workbench`
+  concrete modeling, workflow, and result interaction surface
+- `Installer`
+  deployment, installation, integrity, update, and cleanup surface
+- `Runtime / agents`
+  protocol-driven execution and compute surface
+
+That boundary matters because it prevents two common failures:
+
+- frontend code quietly becoming the runtime architecture
+- runtime code quietly absorbing UI-specific assumptions
 
 ## Runtime split
 
@@ -114,6 +142,9 @@ Peer mesh mode currently covers:
 - chunked large-result review
 - direct mesh runtime selection
 
+The frontend may observe and command runtimes, but it should not define runtime
+shape or agent architecture.
+
 ### Control plane
 
 - job submission
@@ -134,6 +165,10 @@ rather than as the desktop shell itself.
 - framed solver RPC
 - progress and heartbeat frames
 - cluster self-description
+
+The solver/runtime layer should remain usable through Hub, Workbench,
+Installer-driven flows, or headless SDK clients without inheriting frontend
+implementation details.
 
 ## Shared contracts
 

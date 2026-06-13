@@ -2,6 +2,24 @@
 
 Use this checklist when preparing desktop-facing `kyuubiki` deliverables.
 
+Use this page as the execution checklist:
+
+- preflight review
+- platform-by-platform verification
+- release ordering
+- final artifact naming and publication checks
+
+Do not use this page as the main source for:
+
+- runtime mode selection
+- packaging architecture explanation
+- generated output ownership rules
+
+Those belong to:
+
+- [operations.md](operations.md)
+- [packaging-and-deployment.md](packaging-and-deployment.md)
+
 It covers:
 
 - `hub-gui`

@@ -3,15 +3,15 @@
 This app is the desktop installer and operator shell for `kyuubiki`.
 
 It wraps the Rust installer/runtime commands in a Tauri GUI and is the most
-operator-facing surface in the repository.
+deployment- and lifecycle-focused surface in the repository.
 
 ## Responsibilities
 
 - setup and environment authoring
-- local/cloud/distributed deployment mode configuration
-- service lifecycle actions
-- release staging
-- desktop installer packaging
+- runtime and agent install / uninstall flows
+- local/cloud/distributed deployment configuration
+- lifecycle, repair, cleanup, and integrity actions
+- release staging and desktop installer packaging
 - security/runtime settings input
 
 ## Main paths

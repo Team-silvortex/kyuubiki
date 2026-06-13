@@ -9,10 +9,11 @@ desktop launch flows.
 
 The most important boundary to keep stable is this:
 
-- `Hub` manages runtimes
-- `orchestrator/control plane` is one managed runtime target
-- `Workbench` is a launched engineering surface
-- `solver agents` are managed compute peers
+- `Hub` is the system entrypoint and workload shell
+- `Workbench` is the engineering workflow surface
+- `Installer` is the deployment and lifecycle surface
+- `orchestrator/control plane` is one managed runtime target family
+- `solver agents` are managed compute peers in the runtime domain
 
 That means the Hub must not collapse into the control plane. It can start a
 local control plane, connect to a remote one, switch across several of them, or
@@ -44,14 +45,14 @@ At that scale, the user needs three distinct layers:
 
 The Hub should own:
 
+- entry into `Workbench`, `Installer`, and future system surfaces
+- global workload visibility
 - project launcher and recent-work map
-- local runtime lifecycle
-- remote/distributed runtime registration and health
+- runtime target overview
+- remote/distributed runtime health
 - deployment mode switching
-- environment validation and repair guidance
 - logs, watchdog state, and health overview
 - benchmark and diagnostics launch
-- entry into `Workbench`, `Installer`, and future admin surfaces
 
 ### `Kyuubiki Workbench`
 
@@ -64,24 +65,26 @@ The Workbench should own:
 - immersive editing
 - project-level engineering workflows
 
-### `Installer / Operator` workflows
+### `Installer`
 
-The Hub should absorb more of the day-to-day operator shell role over time.
-
-The current `installer-gui` still remains valuable for:
+The Installer should own:
 
 - bootstrap
+- runtime install and uninstall
+- agent install and uninstall
 - deployment authoring
+- path/storage visibility
+- integrity checking, repair, update, and cleanup
 - cross-platform packaging and release staging
 
-But the long-term direction is:
+The long-term direction is:
 
-- `installer-gui`
-  setup and heavy deployment tooling
 - `hub-gui`
-  everyday desktop entrypoint
+  everyday desktop entrypoint and workload shell
 - `workbench-gui`
   focused engineering surface
+- `installer-gui`
+  setup, deployment, and runtime/agent lifecycle tooling
 
 ## Information architecture
 
@@ -153,6 +156,9 @@ Each target should expose:
 This split matters because it keeps the Hub useful even when the control plane
 is absent, remote, restarting, or one of several managed targets.
 
+It also keeps the Hub from absorbing deployment-authoring or workflow-editing
+responsibilities that belong elsewhere.
+
 ## Initial repository shape
 
 The Hub should live in:
@@ -186,14 +192,15 @@ Recommended structure:
 
 ### Phase 3
 
-- gradually move operator day-to-day tasks from `installer-gui` into Hub
-- keep installer for bootstrap and heavier deployment flows
-- reduce duplicated lifecycle controls between shells
+- keep Hub as the daily workload shell
+- keep Installer as the dedicated deployment and lifecycle shell
+- reduce duplicated controls while preserving the role boundary
 
 ## Non-goals for the first cut
 
 - replacing the browser workbench
 - embedding every operator workflow immediately
 - rewriting installer/runtime logic that already works
+- merging Hub and Installer into one undifferentiated surface
 
 The Hub should start as a clear orchestration shell, not as a second giant app.

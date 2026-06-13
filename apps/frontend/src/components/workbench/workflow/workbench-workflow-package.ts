@@ -38,11 +38,32 @@ export type WorkflowPackageBridgeSeedSummary = {
   contract_version?: string;
 };
 
+export type WorkflowPackageOperatorFetchEntry = {
+  operator_id: string;
+  execution_mode: "orchestra_fetch" | "orchestra_only";
+  source_ref: string;
+  package_ref?: string;
+  package_version?: string;
+  integrity?: string;
+  placement_tags: string[];
+  required_capabilities: string[];
+  cache_scope: "ephemeral" | "job" | "session";
+};
+
+export type WorkflowPackageDispatchPolicy = {
+  authority_mode: "central_operator_library";
+  agent_cache_policy: "ephemeral_fetch";
+  missing_operator_behavior: "fetch_from_orchestra";
+  agent_library_replication: "forbidden";
+};
+
 export type WorkflowPackageRuntimeManifest = {
   required_operator_ids: string[];
   sample_input_node_ids: string[];
   included_input_text_node_ids: string[];
   bridge_seed_summaries: WorkflowPackageBridgeSeedSummary[];
+  dispatch_policy: WorkflowPackageDispatchPolicy;
+  operator_fetch_plan: WorkflowPackageOperatorFetchEntry[];
 };
 
 export type WorkflowPackage = {
@@ -75,13 +96,11 @@ export type WorkflowPackage = {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
-
 function asStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const values = value.filter((entry): entry is string => typeof entry === "string");
   return values.length > 0 ? values : undefined;
 }
-
 function asStringRecord(value: unknown): Record<string, string> | undefined {
   if (!isRecord(value)) return undefined;
   return Object.fromEntries(
@@ -90,7 +109,6 @@ function asStringRecord(value: unknown): Record<string, string> | undefined {
     ),
   ) as Record<string, string>;
 }
-
 function asStringArrayRecord(value: unknown): Record<string, string[]> | undefined {
   if (!isRecord(value)) return undefined;
   const entries = Object.entries(value).flatMap(([key, entryValue]) => {
@@ -236,11 +254,30 @@ export function buildWorkflowPackageRuntimeManifest(params: {
     ];
   });
 
+  const operatorFetchPlan = requiredOperatorIds.map((operatorId) => ({
+    operator_id: operatorId,
+    execution_mode: "orchestra_fetch" as const,
+    source_ref: `orchestra://operator/${operatorId}`,
+    package_ref: `orchestra://operator-package/${operatorId}`,
+    package_version: "library-managed",
+    integrity: undefined,
+    placement_tags: deriveOperatorPlacementTags(operatorId),
+    required_capabilities: deriveOperatorRequiredCapabilities(operatorId),
+    cache_scope: "job" as const,
+  }));
+
   return {
     required_operator_ids: requiredOperatorIds,
     sample_input_node_ids: sampleInputNodeIds,
     included_input_text_node_ids: includedInputTextNodeIds,
     bridge_seed_summaries: bridgeSeedSummaries,
+    dispatch_policy: {
+      authority_mode: "central_operator_library",
+      agent_cache_policy: "ephemeral_fetch",
+      missing_operator_behavior: "fetch_from_orchestra",
+      agent_library_replication: "forbidden",
+    },
+    operator_fetch_plan: operatorFetchPlan,
   };
 }
 
@@ -435,6 +472,67 @@ export function asWorkflowPackage(value: unknown): WorkflowPackage | null {
                   : [],
               )
             : [],
+          dispatch_policy:
+            isRecord(value.runtime_manifest.dispatch_policy) &&
+            value.runtime_manifest.dispatch_policy.authority_mode ===
+              "central_operator_library" &&
+            value.runtime_manifest.dispatch_policy.agent_cache_policy ===
+              "ephemeral_fetch" &&
+            value.runtime_manifest.dispatch_policy.missing_operator_behavior ===
+              "fetch_from_orchestra" &&
+            value.runtime_manifest.dispatch_policy.agent_library_replication ===
+              "forbidden"
+              ? {
+                  authority_mode: "central_operator_library",
+                  agent_cache_policy: "ephemeral_fetch",
+                  missing_operator_behavior: "fetch_from_orchestra",
+                  agent_library_replication: "forbidden",
+                }
+              : {
+                  authority_mode: "central_operator_library",
+                  agent_cache_policy: "ephemeral_fetch",
+                  missing_operator_behavior: "fetch_from_orchestra",
+                  agent_library_replication: "forbidden",
+                },
+          operator_fetch_plan: Array.isArray(value.runtime_manifest.operator_fetch_plan)
+            ? value.runtime_manifest.operator_fetch_plan.flatMap((entry) =>
+                isRecord(entry) &&
+                typeof entry.operator_id === "string" &&
+                (entry.execution_mode === "orchestra_fetch" ||
+                  entry.execution_mode === "orchestra_only") &&
+                typeof entry.source_ref === "string" &&
+                (entry.cache_scope === "ephemeral" ||
+                  entry.cache_scope === "job" ||
+                  entry.cache_scope === "session")
+                  ? [
+                      {
+                        operator_id: entry.operator_id,
+                        execution_mode: entry.execution_mode,
+                        source_ref: entry.source_ref,
+                        package_ref:
+                          typeof entry.package_ref === "string"
+                            ? entry.package_ref
+                            : undefined,
+                        package_version:
+                          typeof entry.package_version === "string"
+                            ? entry.package_version
+                            : undefined,
+                        integrity:
+                          typeof entry.integrity === "string"
+                            ? entry.integrity
+                            : undefined,
+                        placement_tags: asStringArray(entry.placement_tags) ?? [],
+                        required_capabilities:
+                          asStringArray(entry.required_capabilities) ?? [],
+                        cache_scope: entry.cache_scope,
+                      },
+                    ]
+                  : [],
+              )
+            : buildWorkflowPackageRuntimeManifest({
+                graph,
+                inputArtifactTexts: asStringRecord(value.workflow.input_artifact_texts),
+              }).operator_fetch_plan,
         }
       : buildWorkflowPackageRuntimeManifest({
           graph,
@@ -472,4 +570,31 @@ export function asWorkflowPackage(value: unknown): WorkflowPackage | null {
       ),
     },
   };
+}
+
+function deriveOperatorPlacementTags(operatorId: string) {
+  const normalized = operatorId.toLowerCase();
+  return uniqueSorted([
+    normalized.includes("electrostatic") ? "electromagnetic" : undefined,
+    normalized.includes("thermal") ? "thermo_mechanical" : undefined,
+    normalized.includes("heat") ? "thermal" : undefined,
+    normalized.includes("frame") ? "frame" : undefined,
+    normalized.includes("truss") ? "truss" : undefined,
+    normalized.includes("plane") ? "mesh" : undefined,
+    normalized.includes("bridge.") ? "bridge" : undefined,
+    normalized.includes("extract.") ? "postprocess" : undefined,
+    normalized.includes("transform.") ? "transform" : undefined,
+    normalized.includes("export.") ? "export" : undefined,
+  ]);
+}
+
+function deriveOperatorRequiredCapabilities(operatorId: string) {
+  const normalized = operatorId.toLowerCase();
+  return uniqueSorted([
+    normalized.startsWith("solve.") ? "solver_rpc" : undefined,
+    normalized.startsWith("bridge.") ? "workflow_bridge_runtime" : undefined,
+    normalized.startsWith("transform.") ? "workflow_transform_runtime" : undefined,
+    normalized.startsWith("extract.") ? "workflow_extract_runtime" : undefined,
+    normalized.startsWith("export.") ? "workflow_export_runtime" : undefined,
+  ]);
 }

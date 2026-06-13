@@ -52,7 +52,7 @@ See also:
 - modeling UI
 - result browsing
 - immersive 3D editing
-- installer-independent browser client
+- workflow-focused browser client
 - `src/components/workbench` for domain surfaces
 - `src/components/ui` for reusable UI primitives
 
@@ -79,14 +79,17 @@ See also:
 
 - Tauri installer GUI
 - environment setup
-- local/cloud/distributed launch flows
+- runtime and agent deployment management
+- local/cloud/distributed bootstrap flows
+- update, repair, cleanup, and integrity operations
 - remote bootstrap and remote agent control
 
 ### `apps/hub-gui`
 
 - Tauri desktop hub shell
+- system entrypoint and workload shell
 - project launch surface
-- runtime control and operator overview
+- runtime target overview and operator visibility
 - intended to sit above installer and workbench in the desktop product split
 
 ### `apps/workbench-gui`
@@ -157,6 +160,8 @@ directories.
 ## Stable Boundaries
 
 - Frontend should depend on APIs and schemas, not Elixir internals.
+- Hub, Workbench, and Installer should remain separate product surfaces even
+  when they expose overlapping runtime visibility.
 - Orchestrator should depend on RPC/protocol boundaries, not UI internals.
 - Solver/runtime crates should not depend on browser or Phoenix concerns.
 - Deployment descriptors should live in `deploy/`, not be scattered through

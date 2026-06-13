@@ -9,6 +9,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           required(:id) => String.t(),
           required(:host) => String.t(),
           required(:port) => pos_integer(),
+          required(:control_mode) => String.t(),
+          required(:orch_id) => String.t() | nil,
+          required(:orch_session_id) => String.t() | nil,
           optional(:cluster_id) => String.t(),
           optional(:fingerprint) => String.t(),
           optional(:role) => String.t(),
@@ -63,7 +66,10 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   @impl true
   def handle_call({:register, attrs}, _from, state) do
-    with {:ok, agent} <- build_agent(attrs) do
+    current = Map.get(state.agents, agent_id_from_attrs(attrs))
+
+    with {:ok, agent} <- build_agent(attrs),
+         :ok <- validate_control_transition(current, agent) do
       agents = Map.put(state.agents, agent.id, agent)
       {:reply, {:ok, agent}, %{state | agents: agents}}
     else
@@ -74,7 +80,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   def handle_call({:heartbeat, agent_id, attrs}, _from, state) do
     current = Map.get(state.agents, agent_id, %{id: agent_id})
 
-    with {:ok, agent} <- build_agent(Map.merge(current, attrs |> Map.put("id", agent_id))) do
+    with {:ok, agent} <- build_agent(merge_heartbeat_attrs(current, attrs, agent_id)),
+         :ok <- validate_control_transition(Map.get(state.agents, agent_id), agent) do
       agents = Map.put(state.agents, agent.id, agent)
       {:reply, {:ok, agent}, %{state | agents: agents}}
     else
@@ -110,7 +117,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   defp build_agent(attrs) do
     with {:ok, id} <- fetch_string(attrs, "id"),
          {:ok, host} <- fetch_string(attrs, "host"),
-         {:ok, port} <- fetch_port(attrs, "port") do
+         {:ok, port} <- fetch_port(attrs, "port"),
+         {:ok, control_mode, orch_id, orch_session_id} <- build_control_binding(attrs) do
       now = DateTime.utc_now()
 
       {:ok,
@@ -118,6 +126,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          id: id,
          host: host,
          port: port,
+         control_mode: control_mode,
+         orch_id: orch_id,
+         orch_session_id: orch_session_id,
          cluster_id: optional_string(attrs, "cluster_id"),
          fingerprint: optional_string(attrs, "fingerprint"),
          role: optional_string(attrs, "role"),
@@ -131,6 +142,100 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          last_seen_at: now
        }}
     end
+  end
+
+  defp build_control_binding(attrs) do
+    control_mode = optional_string(attrs, "control_mode") || "orch_managed"
+    orch_id = optional_string(attrs, "orch_id") || default_orch_id(control_mode)
+    orch_session_id = optional_string(attrs, "orch_session_id")
+
+    case control_mode do
+      "orch_managed" ->
+        if is_binary(orch_id) and orch_id != "" do
+          {:ok, control_mode, orch_id, orch_session_id}
+        else
+          {:error, {:invalid_agent_control, :orch_id_required}}
+        end
+
+      "offline_mesh" ->
+        if orch_id == nil and orch_session_id == nil do
+          {:ok, control_mode, nil, nil}
+        else
+          {:error, {:invalid_agent_control, :offline_mesh_cannot_bind_orchestra}}
+        end
+
+      _ ->
+        {:error, {:invalid_agent_control, :control_mode}}
+    end
+  end
+
+  defp default_orch_id("orch_managed"), do: "orchestra/default"
+  defp default_orch_id(_control_mode), do: nil
+
+  defp validate_control_transition(nil, _agent), do: :ok
+
+  defp validate_control_transition(current, next_agent) do
+    current_binding = control_binding(current)
+    next_binding = control_binding(next_agent)
+
+    cond do
+      current_binding.control_mode == "offline_mesh" and
+          next_binding.control_mode == "offline_mesh" ->
+        :ok
+
+      current_binding.control_mode == "orch_managed" and
+        next_binding.control_mode == "orch_managed" and
+        current_binding.orch_id == next_binding.orch_id and
+          compatible_orch_session?(current_binding.orch_session_id, next_binding.orch_session_id) ->
+        :ok
+
+      true ->
+        {:error,
+         {:agent_control_conflict,
+          %{
+            agent_id: next_agent.id,
+            current: current_binding,
+            attempted: next_binding
+          }}}
+    end
+  end
+
+  defp compatible_orch_session?(current_session_id, next_session_id)
+
+  defp compatible_orch_session?(_current_session_id, nil), do: true
+  defp compatible_orch_session?(nil, _next_session_id), do: true
+  defp compatible_orch_session?(session_id, session_id), do: true
+  defp compatible_orch_session?(_current_session_id, _next_session_id), do: false
+
+  defp control_binding(agent) do
+    %{
+      control_mode:
+        Map.get(agent, :control_mode) || Map.get(agent, "control_mode") || "orch_managed",
+      orch_id: Map.get(agent, :orch_id) || Map.get(agent, "orch_id") || "orchestra/default",
+      orch_session_id: Map.get(agent, :orch_session_id) || Map.get(agent, "orch_session_id")
+    }
+  end
+
+  defp agent_id_from_attrs(attrs) do
+    Map.get(attrs, "id") || Map.get(attrs, :id)
+  end
+
+  defp merge_heartbeat_attrs(current, attrs, agent_id) do
+    attrs =
+      case Map.get(attrs, "control_mode") || Map.get(attrs, :control_mode) do
+        "offline_mesh" ->
+          attrs
+          |> Map.put("orch_id", nil)
+          |> Map.put("orch_session_id", nil)
+          |> Map.put(:orch_id, nil)
+          |> Map.put(:orch_session_id, nil)
+
+        _ ->
+          attrs
+      end
+
+    current
+    |> Map.merge(attrs |> Map.put("id", agent_id))
   end
 
   defp fetch_string(attrs, key) do
@@ -268,6 +373,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       id: agent.id,
       host: agent.host,
       port: agent.port,
+      control_mode: agent.control_mode,
+      orch_id: agent.orch_id,
+      orch_session_id: agent.orch_session_id,
       cluster_id: agent.cluster_id,
       fingerprint: agent.fingerprint,
       role: agent.role,

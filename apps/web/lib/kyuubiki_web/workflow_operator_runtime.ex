@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
+  alias KyuubikiWeb.WorkflowReportingRuntime
   alias KyuubikiWeb.WorkflowSolverRegistry
 
   def run_solve_operator(operator_id, payload) when is_map(payload) do
@@ -101,115 +102,68 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   def run_transform_operator("transform.first_available", payload, _config), do: {:ok, payload}
 
+  def run_transform_operator(operator_id, payload, config) when is_map(payload) do
+    case operator_id do
+      "transform.merge_summary_pair" ->
+        WorkflowReportingRuntime.merge_summary_pair(payload, config || %{})
+
+      "transform.compare_summary_pair" ->
+        WorkflowReportingRuntime.compare_summary_pair(payload, config || %{})
+
+      "transform.aggregate_summary_collection" ->
+        WorkflowReportingRuntime.aggregate_summary_collection(payload, config || %{})
+
+      "transform.normalize_summary_fields" when is_map(config) ->
+        WorkflowReportingRuntime.normalize_summary_fields(payload, config)
+
+      "transform.select_best_summary" when is_map(config) ->
+        WorkflowReportingRuntime.select_best_summary(payload, config)
+
+      _ ->
+        {:error, {:unsupported_workflow_transform_operator, operator_id}}
+    end
+  end
+
   def run_transform_operator(operator_id, _payload, _config),
     do: {:error, {:unsupported_workflow_transform_operator, operator_id}}
 
-  def run_extract_operator("extract.result_summary", payload, config) when is_map(payload) do
-    extract_result_summary(payload, config || %{})
+  def run_extract_operator(operator_id, payload, config) when is_map(payload) do
+    case operator_id do
+      "extract.result_summary" ->
+        WorkflowReportingRuntime.extract_result_summary(payload, config || %{})
+
+      "extract.field_statistics" ->
+        WorkflowReportingRuntime.extract_field_statistics(payload, config || %{})
+
+      "extract.field_hotspots" ->
+        WorkflowReportingRuntime.extract_field_hotspots(payload, config || %{})
+
+      _ ->
+        {:error, {:unsupported_workflow_extract_operator, operator_id}}
+    end
   end
 
   def run_extract_operator(operator_id, _payload, _config),
     do: {:error, {:unsupported_workflow_extract_operator, operator_id}}
 
-  def run_export_operator("export.summary_json", payload, _config) when is_map(payload) do
-    export_summary_json(payload)
-  end
+  def run_export_operator(operator_id, payload, config) when is_map(payload) do
+    case operator_id do
+      "export.summary_json" ->
+        WorkflowReportingRuntime.export_summary_json(payload)
 
-  def run_export_operator("export.summary_csv", payload, config) when is_map(payload) do
-    export_summary_csv(payload, config || %{})
+      "export.summary_csv" ->
+        WorkflowReportingRuntime.export_summary_csv(payload, config || %{})
+
+      "export.alert_markdown" ->
+        WorkflowReportingRuntime.export_alert_markdown(payload, config || %{})
+
+      _ ->
+        {:error, {:unsupported_workflow_export_operator, operator_id}}
+    end
   end
 
   def run_export_operator(operator_id, _payload, _config),
     do: {:error, {:unsupported_workflow_export_operator, operator_id}}
-
-  defp extract_result_summary(payload, config) when is_map(payload) and is_map(config) do
-    requested_fields =
-      case Map.get(config, "fields") do
-        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
-        _ -> nil
-      end
-
-    summary =
-      cond do
-        is_list(requested_fields) ->
-          Enum.reduce(requested_fields, %{}, fn field, acc ->
-            case Map.fetch(payload, field) do
-              {:ok, value} -> Map.put(acc, field, value)
-              :error -> acc
-            end
-          end)
-
-        true ->
-          payload
-          |> Enum.filter(fn {key, _value} -> String.starts_with?(key, "max_") end)
-          |> Map.new()
-      end
-
-    if map_size(summary) == 0 do
-      {:error, :empty_summary}
-    else
-      {:ok, summary}
-    end
-  end
-
-  defp export_summary_json(payload) when is_map(payload) do
-    {:ok,
-     %{
-       "format" => "json",
-       "content_type" => "application/json",
-       "content" => Jason.encode!(payload)
-     }}
-  end
-
-  defp export_summary_csv(payload, config) when is_map(payload) and is_map(config) do
-    requested_fields =
-      case Map.get(config, "fields") do
-        fields when is_list(fields) -> Enum.filter(fields, &is_binary/1)
-        _ -> nil
-      end
-
-    rows =
-      if is_list(requested_fields) do
-        Enum.reduce(requested_fields, [["key", "value"]], fn field, acc ->
-          case Map.fetch(payload, field) do
-            {:ok, value} -> acc ++ [[field, value]]
-            :error -> acc
-          end
-        end)
-      else
-        [["key", "value"]] ++ Enum.map(payload, fn {key, value} -> [key, value] end)
-      end
-
-    if length(rows) == 1 do
-      {:error, :empty_export}
-    else
-      content =
-        rows
-        |> Enum.map_join("\n", fn row -> Enum.map_join(row, ",", &csv_escape/1) end)
-        |> Kernel.<>("\n")
-
-      {:ok,
-       %{
-         "format" => "csv",
-         "content_type" => "text/csv",
-         "content" => content
-       }}
-    end
-  end
-
-  defp csv_escape(nil), do: ""
-
-  defp csv_escape(value) when is_binary(value) do
-    escaped = String.replace(value, "\"", "\"\"")
-
-    if String.contains?(escaped, [",", "\"", "\n", "\r"]) do
-      ~s("#{escaped}")
-    else
-      escaped
-    end
-  end
-
-  defp csv_escape(value), do: value |> to_string() |> csv_escape()
 
   defp solve_runtime_client do
     Application.get_env(:kyuubiki_web, __MODULE__, [])

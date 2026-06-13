@@ -9,6 +9,24 @@ Use it when you need to answer:
 - which command should be used for local packaging
 - which output is source-of-truth vs generated
 
+Use this page for build and artifact mechanics:
+
+- component build entrypoints
+- packaging entrypoints
+- generated output paths
+- staging layout and output semantics
+
+Do not use this page as the main source for:
+
+- runtime operating modes
+- environment-switch troubleshooting
+- the final human release checklist
+
+Those belong to:
+
+- [operations.md](operations.md)
+- [desktop-release-checklist.md](desktop-release-checklist.md)
+
 ## Component matrix
 
 | Component | Role | Main build command | Main output path |

@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
 
   def run(graph, input_artifacts, opts \\ [])
+
   def run(graph, input_artifacts, opts)
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
     with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
@@ -114,6 +115,20 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
        do: true
 
   defp transform_operator_accepts_partial_inputs?(_node), do: false
+
+  defp transform_operator_requires_port_map?(%{
+         "kind" => "transform",
+         "operator_id" => operator_id
+       })
+       when operator_id in [
+              "transform.merge_summary_pair",
+              "transform.compare_summary_pair",
+              "transform.aggregate_summary_collection",
+              "transform.select_best_summary"
+            ],
+       do: true
+
+  defp transform_operator_requires_port_map?(_node), do: false
 
   defp unresolved_missing_inputs?(incoming, artifacts, completed, skipped) do
     Enum.any?(incoming, fn edge ->
@@ -274,7 +289,34 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         edge -> {:ok, Map.fetch!(artifacts, edge_from_key(edge))}
       end
     else
-      resolve_single_input_payload(node, incoming, artifacts)
+      if transform_operator_requires_port_map?(node) do
+        resolve_named_transform_payload(node, incoming, artifacts)
+      else
+        resolve_single_input_payload(node, incoming, artifacts)
+      end
+    end
+  end
+
+  defp resolve_named_transform_payload(%{"id" => node_id}, incoming, artifacts) do
+    payload =
+      Enum.reduce_while(incoming, %{}, fn edge, acc ->
+        key = edge_from_key(edge)
+
+        case Map.fetch(artifacts, key) do
+          {:ok, value} -> {:cont, Map.put(acc, get_in(edge, ["to", "port"]), value)}
+          :error -> {:halt, {:error, {:missing_upstream_artifact, key}}}
+        end
+      end)
+
+    case payload do
+      {:error, _reason} = error ->
+        error
+
+      payload when map_size(payload) == 0 ->
+        {:error, {:missing_workflow_input, node_id}}
+
+      payload ->
+        {:ok, payload}
     end
   end
 

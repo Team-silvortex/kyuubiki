@@ -212,4 +212,97 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
     assert payload["artifacts"]["join.merged"] == payload["artifacts"]["gate.if_true"]
     assert get_in(payload, ["artifacts", "merged_output.result", "summary", "max_stress"]) == 12.0
   end
+
+  test "runs a multi-input summary comparison transform through the workflow graph" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/run",
+        Jason.encode!(%{
+          "graph" => %{
+            "schema_version" => "kyuubiki.workflow-graph/v1",
+            "id" => "workflow.summary-compare",
+            "name" => "Summary compare",
+            "version" => "1.0.0",
+            "entry_nodes" => ["baseline_input", "candidate_input"],
+            "output_nodes" => ["compared_output"],
+            "nodes" => [
+              %{
+                "id" => "baseline_input",
+                "kind" => "input",
+                "outputs" => [%{"id" => "summary", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "candidate_input",
+                "kind" => "input",
+                "outputs" => [%{"id" => "summary", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "compare",
+                "kind" => "transform",
+                "operator_id" => "transform.compare_summary_pair",
+                "config" => %{
+                  "left_prefix" => "force",
+                  "right_prefix" => "thermal"
+                },
+                "inputs" => [
+                  %{"id" => "left", "artifact_type" => "artifact/json"},
+                  %{"id" => "right", "artifact_type" => "artifact/json"}
+                ],
+                "outputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "compared_output",
+                "kind" => "output",
+                "inputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}],
+                "outputs" => []
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => "baseline-to-compare",
+                "from" => %{"node" => "baseline_input", "port" => "summary"},
+                "to" => %{"node" => "compare", "port" => "left"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "candidate-to-compare",
+                "from" => %{"node" => "candidate_input", "port" => "summary"},
+                "to" => %{"node" => "compare", "port" => "right"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "compare-to-output",
+                "from" => %{"node" => "compare", "port" => "result"},
+                "to" => %{"node" => "compared_output", "port" => "result"},
+                "artifact_type" => "artifact/json"
+              }
+            ]
+          },
+          "input_artifacts" => %{
+            "baseline_input" => %{"summary" => %{"max_stress" => 10.0, "max_temperature" => 40.0}},
+            "candidate_input" => %{
+              "summary" => %{"max_stress" => 15.0, "max_temperature" => 44.0}
+            }
+          }
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["completed_nodes"] == [
+             "baseline_input",
+             "candidate_input",
+             "compare",
+             "compared_output"
+           ]
+
+    assert payload["skipped_nodes"] == []
+    assert get_in(payload, ["artifacts", "compare.result", "delta_max_stress"]) == 5.0
+    assert get_in(payload, ["artifacts", "compare.result", "force_max_temperature"]) == 40.0
+    assert get_in(payload, ["artifacts", "compare.result", "thermal_max_temperature"]) == 44.0
+  end
 end

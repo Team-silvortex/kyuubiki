@@ -63,6 +63,10 @@ Then branch by intent:
   release posture.
 - `system-overview.md`
   Full runtime map across GUI, control plane, and solver data plane.
+- `app-runtime-boundaries.md`
+  Hard role split between Hub, Workbench, Installer, and runtime/agent layers.
+- `architecture-red-lines.md`
+  Practical do-not-cross checklist for keeping product and runtime layers clean.
 - `philosophy.md`
   Shared product, engineering, and review principles across all layers.
 - `hub-architecture.md`
@@ -166,6 +170,8 @@ Then branch by intent:
 
 - Browser/frontend work:
   `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
+- Desktop product boundary work:
+  `system-overview.md` -> `app-runtime-boundaries.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
 - Orchestrator/control-plane work:
   `philosophy.md` -> `system-overview.md` -> `operations.md`
 - Rust solver/agent work:

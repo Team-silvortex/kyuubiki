@@ -3,6 +3,24 @@
 This document collects the current operational modes and the most important
 environment switches.
 
+Use this page for runtime behavior:
+
+- deployment modes
+- discovery modes
+- watchdog and security controls
+- operator-facing runtime entrypoints
+
+Do not use this page as the main source for:
+
+- build output locations
+- packaging artifact layout
+- step-by-step desktop release execution
+
+Those belong to:
+
+- [packaging-and-deployment.md](packaging-and-deployment.md)
+- [desktop-release-checklist.md](desktop-release-checklist.md)
+
 It now reflects the `tamamono 1.x` product shape:
 
 - `Hub` as the desktop operator shell
@@ -115,7 +133,7 @@ Build, packaging, desktop-release, and benchmark command matrices are kept in:
 
 For operator-facing desktop control, Hub now mirrors several of these flows:
 
-- desktop readiness and release staging
+- desktop readiness and selected runtime-oriented staging visibility
 - local / cloud / distributed hot-reload loop control
 - runtime watch for stack and hot-loop logs
 - local workload-catalog sync against the control plane

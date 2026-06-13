@@ -1,25 +1,27 @@
 # Hub GUI
 
-This app is the unified desktop launcher and operator shell for `kyuubiki`.
+This app is the unified desktop entrypoint and workload shell for `kyuubiki`.
 
 In the `tamamono 1.x` product shape, Hub is the everyday desktop entrypoint
-for launch, runtime control, bundle operations, and operator guidance.
+for launch, runtime target overview, bundle intake, and operator guidance.
 
 It sits above:
 
 - [installer-gui](../installer-gui)
 - [workbench-gui](../workbench-gui)
 
-Its job is not to replace the modeling workbench. Its job is to sit above the
-runtime surfaces and give one short runway into the right next shell.
+Its job is not to replace the modeling workbench or the deployment installer.
+Its job is to sit above those runtime-facing surfaces and give one short runway
+into the right next shell.
 
 ## Responsibilities
 
 - desktop entry shell for `Workbench`, `Installer`, and runtime-facing tools
 - local and remote workload intake through bundle tools and workload catalogs
-- runtime lifecycle control, health overview, and operator-facing diagnostics
+- runtime target overview, health visibility, and operator-facing diagnostics
 - guided assistant entrypoint with local hints and optional model-backed plans
-- desktop packaging readiness, stage/verify flows, and host-build checks
+- desktop packaging readiness and short preflight checks before handing off to
+  `Installer` for heavier deployment work
 
 Quick launch behavior now prefers an already-built host desktop bundle when one
 exists, and falls back to the repo-local `tauri:dev` shell during development.

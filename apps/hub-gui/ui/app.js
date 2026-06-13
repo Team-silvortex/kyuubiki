@@ -8,6 +8,74 @@ import {
   setText,
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
+import {
+  currentProjectBundleComparePayload as buildCurrentProjectBundleComparePayload,
+  currentProjectBundleOutputPayload as buildCurrentProjectBundleOutputPayload,
+  currentProjectBundlePayload as buildCurrentProjectBundlePayload,
+  runProjectBundleAction as executeProjectBundleAction,
+} from "./hub-project-bundles.js";
+import { runHubProjectAction } from "./hub-project-actions.js";
+import { runHubRuntimeAction } from "./hub-runtime-actions.js";
+import { runHubDesktopAction } from "./hub-desktop-actions.js";
+import {
+  builtInWorkflowSampleInputArtifacts as buildBuiltInWorkflowSampleInputArtifacts,
+  describeWorkflowSummary as buildWorkflowSummaryDescription,
+  fetchWorkflowCatalog as fetchWorkflowCatalogPanel,
+  renderWorkflowCatalog as renderWorkflowCatalogPanel,
+  runWorkflowCatalogSample as runWorkflowCatalogSamplePanel,
+  waitForWorkflowJob as waitForWorkflowCatalogJob,
+} from "./hub-workflow-catalog.js";
+import {
+  applyAssistantBundlePayload as applyAssistantBundlePayloadEngine,
+  assistantHostRequiresTrust as assistantHostRequiresTrustEngine,
+  assistantTrustHostOrigin as assistantTrustHostOriginEngine,
+  confirmHubAssistantAction as confirmHubAssistantActionEngine,
+  ensureAssistantHostTrust as ensureAssistantHostTrustEngine,
+  ensureRemoteHostTrust as ensureRemoteHostTrustEngine,
+  executeHubAssistantAction as executeHubAssistantActionEngine,
+  executeHubAssistantPlan as executeHubAssistantPlanEngine,
+  renderHubAssistantPlan as renderHubAssistantPlanEngine,
+  requestHubAssistantPlan as requestHubAssistantPlanEngine,
+} from "./hub-assistant-engine.js";
+import {
+  buildHubDesktopActionContext,
+  buildHubProjectActionContext,
+  buildHubRuntimeActionContext,
+  buildHubWorkloadActionContext,
+} from "./hub-action-contexts.js";
+import {
+  buildHubAssistantLocalCards as buildHubAssistantLocalCardsModule,
+  buildLocalGuideResponse as buildLocalGuideResponseModule,
+  extractAssistantJsonBlock as extractAssistantJsonBlockModule,
+  renderHubAssistantLocalCards as renderHubAssistantLocalCardsModule,
+} from "./hub-assistant-local.js";
+import {
+  inferDownloadFilename as deriveDownloadFilename,
+  loadHubWorkloadLibrary as loadStoredHubWorkloadLibrary,
+  mergeHubWorkloadLibrary as mergeStoredHubWorkloadLibrary,
+  normalizeHubWorkloadEntry as normalizeStoredHubWorkloadEntry,
+  normalizeRemoteWorkloadCatalogPayload as buildNormalizedRemoteWorkloadCatalogPayload,
+  persistHubWorkloadLibrary as persistStoredHubWorkloadLibrary,
+  projectSummaryFromInspectPayload as parseProjectSummaryFromInspectPayload,
+  validateHubCatalogUrl as validateWorkloadCatalogUrl,
+  validateRemoteWorkloadCatalogPayload as validateWorkloadCatalogPayload,
+  workloadDomainLabel as resolveWorkloadDomainLabel,
+  workloadFamilyLabel as resolveWorkloadFamilyLabel,
+  workloadIdentity as buildWorkloadIdentity,
+  workloadProvenanceHost as resolveWorkloadProvenanceHost,
+  workloadProvenanceLabel as resolveWorkloadProvenanceLabel,
+  workloadSourceBadge as resolveWorkloadSourceBadge,
+} from "./hub-workload-library.js";
+import { runHubWorkloadAction } from "./hub-workload-actions.js";
+import {
+  copySanitizedRuntimeLogToClipboard,
+  inferHotRuntimeState as inferHotRuntimeStateHelper,
+  refreshDesktopStatusPanel,
+  refreshHotRuntimeStatusPanel,
+  refreshRuntimeLogPanel,
+  refreshRuntimeStatusPanel,
+  sanitizeRuntimeLogForClipboard as sanitizeRuntimeLogForClipboardHelper,
+} from "./hub-runtime-helpers.js";
 
 const HUB_I18N = {
   en: {
@@ -168,15 +236,15 @@ const HUB_I18N = {
         bootstrap: {
           label: "Release prep",
           title: "Bootstrap",
-          copy: "Use the same panel for validation, doctor passes, and package staging so preflight work is easy to repeat.",
+          copy: "Use Hub for validation and readiness checks, then move into Installer for deployment and packaging work.",
           validate: "Validate env",
-          stage: "Prepare manifests",
+          stage: "Open Installer",
           doctor: "Run doctor",
         },
         release: {
           label: "Suggested deploy path",
-          title: "Mode, verify, package",
-          copy: "Switch posture first, validate next, then move into desktop packaging and verification from the Tools section.",
+          title: "Mode, validate, hand off",
+          copy: "Switch posture first, validate next, then hand off to Installer for packaging, repair, and release work.",
         },
       },
       observe: {
@@ -216,33 +284,31 @@ const HUB_I18N = {
       tools: {
         tabs: ["Packages", "Status", "Output"],
         overview: [
-          { label: "Diagnostics", title: "Read the platform first", copy: "Desktop readiness, benchmarks, and bundle validation sit next to packaging so the release story stays connected." },
-          { label: "Packaging", title: "One platform selector, one path", copy: "Use one target selector for status, staging, host builds, and verification instead of jumping across disconnected surfaces." },
-          { label: "Operational outputs", title: "Keep logs and results nearby", copy: "Status and operation output stay together so packaging work is easier to audit while you iterate." },
+          { label: "Diagnostics", title: "Read the platform first", copy: "Desktop readiness, benchmarks, and bundle validation stay visible before you hand off heavier packaging work." },
+          { label: "Installer handoff", title: "Readiness here, heavy actions there", copy: "Use Hub for visibility and short checks, then open Installer for stage, build, verify, and cleanup flows." },
+          { label: "Operational outputs", title: "Keep logs and results nearby", copy: "Status and operation output stay together so handoff decisions stay easy to audit while you iterate." },
         ],
         packages: {
-          label: "Platform actions",
-          title: "Diagnostics and packaging",
-          copy: "Use the same tool surface for local diagnostics, bundle validation, and platform-specific desktop packaging.",
+          label: "Platform checks",
+          title: "Diagnostics and readiness",
+          copy: "Use Hub for local diagnostics, bundle validation, and desktop readiness before opening Installer for heavier packaging work.",
           platform: "Target platform",
           benchmark: "Run benchmark",
           validate: "Validate project bundle",
           export: "Export database",
           status: "Desktop status",
-          stage: "Stage desktop package",
-          build: "Build host bundles",
-          verify: "Verify desktop release",
+          stage: "Open Installer",
           stop: "Stop local stack",
         },
         status: {
           label: "Readiness",
           title: "Desktop status",
-          copy: "Use this output as the short readiness wall before you stage, build, or verify host bundles.",
+          copy: "Use this output as the short readiness wall before handing packaging, repair, or verification work to Installer.",
         },
         output: {
           label: "Operations",
           title: "Tool output",
-          copy: "Keep packaging and diagnostics output close by so release work remains inspectable while it runs.",
+          copy: "Keep diagnostics and supporting output close by so Installer handoff stays inspectable.",
         },
       },
     },
@@ -634,15 +700,15 @@ const HUB_I18N = {
         bootstrap: {
           label: "发布预备",
           title: "预备",
-          copy: "把验证、doctor 检查和包 staging 放在同一个面板里，让 preflight 工作更容易重复。",
+          copy: "在 Hub 里做验证和就绪检查，然后进入 Installer 处理部署和打包工作。",
           validate: "验证环境",
-          stage: "准备 manifest",
+          stage: "打开 Installer",
           doctor: "运行 doctor",
         },
         release: {
           label: "推荐部署路径",
-          title: "模式、验证、打包",
-          copy: "先切运行姿态，再验证，然后从 Tools 进入桌面打包和校验。",
+          title: "模式、验证、交接",
+          copy: "先切运行姿态，再验证，然后交给 Installer 处理打包、修复和发布工作。",
         },
       },
       observe: {
@@ -682,33 +748,31 @@ const HUB_I18N = {
       tools: {
         tabs: ["打包", "状态", "输出"],
         overview: [
-          { label: "诊断", title: "先读平台状态", copy: "桌面就绪度、benchmark 和 bundle 验证放在打包旁边，让发布故事保持连贯。" },
-          { label: "打包", title: "一个平台选择器，一条路径", copy: "状态、staging、host build 和 verify 共用同一套目标选择，不再在断裂的面板间跳转。" },
-          { label: "操作输出", title: "让日志和结果留在手边", copy: "状态和操作输出放在一起，让打包工作在迭代时更容易审阅。" },
+          { label: "诊断", title: "先读平台状态", copy: "桌面就绪度、benchmark 和 bundle 验证会先显示出来，再决定是否把更重的打包工作交给 Installer。" },
+          { label: "交给 Installer", title: "这里看就绪，那边做重动作", copy: "Hub 负责可见性和短检查，Installer 负责 stage、build、verify 和 cleanup 流程。" },
+          { label: "操作输出", title: "让日志和结果留在手边", copy: "状态和操作输出放在一起，让交接判断时更容易审阅。" },
         ],
         packages: {
-          label: "平台动作",
-          title: "诊断与打包",
-          copy: "把本地诊断、bundle 验证和按平台桌面打包放在同一个工具面里。",
+          label: "平台检查",
+          title: "诊断与就绪度",
+          copy: "Hub 负责本地诊断、bundle 验证和桌面就绪度；更重的打包工作交给 Installer。",
           platform: "目标平台",
           benchmark: "运行 benchmark",
           validate: "验证项目 bundle",
           export: "导出数据库",
           status: "桌面状态",
-          stage: "staging 桌面包",
-          build: "构建 host bundles",
-          verify: "验证桌面发布",
+          stage: "打开 Installer",
           stop: "停止本地栈",
         },
         status: {
           label: "就绪度",
           title: "桌面状态",
-          copy: "把这份输出当成短就绪墙，再决定是否做 stage、build 或 verify。",
+          copy: "把这份输出当成短就绪墙，再决定是否把打包、修复或验证工作交给 Installer。",
         },
         output: {
           label: "操作输出",
           title: "工具输出",
-          copy: "让打包和诊断输出留在手边，这样发布工作在运行时也可检查。",
+          copy: "让诊断和辅助输出留在手边，这样交给 Installer 前后都容易检查。",
         },
       },
     },
@@ -881,7 +945,7 @@ const HUB_I18N = {
       guideDocs: "把 `首页 > 文档` 当成单一文档入口。先看 `文档索引`，只有在明确问题类型后，再进入 `当前版本线`、`Operations` 或 `故障排查`。",
       guideRuntime: "当你需要改变 loop 时去 `运行时`；当你只是想扫一眼或复制状态时去 `观察`。`本地运行时` 负责短健康读，`Hot loop` 看开发 tail，`Stack watch` 看脱敏后的运行时日志。",
       guideLibrary: "工作负载入口在 `首页 > 库`。`同步本地控制平面` 会拉入第一方工作，`同步远程目录` 会带入远端条目，domain/family 筛选则帮助你在进入 Workbench 前先把 shelf 收窄。",
-      guidePackaging: "当你需要发布布局或工作站 bootstrap 时去 `Installer`。在 Hub 里，`工具 > Packages` 用来执行构建动作，`Status` 是 readiness 墙，`Output` 看打包输出。在当前自动化会话里，`.app` 一般可靠，而 `.dmg` 仍可能因为 `hdiutil` 的会话敏感性而显示 partial。",
+      guidePackaging: "当你需要发布布局、工作站 bootstrap、打包、修复或验证时，就去 `Installer`。在 Hub 里，`工具 > Packages` 现在主要承担就绪度和诊断，`Status` 是 readiness 墙，`Output` 看辅助日志。",
       guideFailure: "如果某件事看起来是 partial，先走最短路径：`观察 > 健康` 看运行时问题，`工具 > Status` 看桌面打包就绪度，`Bundle 工具 > 检查` 看项目 bundle 结构。然后再判断问题属于 runtime、bundle 还是 packaging。",
       guideFallback: "本地向导可以帮你处理第一步、bundle 检查、运行时健康、Workbench 打开、工作负载导入和桌面打包这些问题。可以直接围绕这些提问。",
       cardBundlePathTitle: "先填入 bundle 路径",
@@ -1100,15 +1164,15 @@ const HUB_I18N = {
         bootstrap: {
           label: "リリース準備",
           title: "ブートストラップ",
-          copy: "検証、doctor、パッケージ staging を同じ面に集め、preflight を繰り返しやすくします。",
+          copy: "Hub で検証と readiness を確認し、その後 Installer で deployment と packaging を進めます。",
           validate: "環境を確認",
-          stage: "manifest を準備",
+          stage: "Installer を開く",
           doctor: "doctor を実行",
         },
         release: {
           label: "推奨デプロイ経路",
-          title: "モード、検証、パッケージ",
-          copy: "まず姿勢を切り替え、次に確認し、その後 Tools からデスクトップ packaging と verification に進みます。",
+          title: "モード、検証、引き継ぎ",
+          copy: "まず姿勢を切り替え、次に確認し、その後 Installer に packaging・repair・release 作業を引き渡します。",
         },
       },
       observe: {
@@ -1148,33 +1212,31 @@ const HUB_I18N = {
       tools: {
         tabs: ["パッケージ", "状態", "出力"],
         overview: [
-          { label: "診断", title: "まずプラットフォームを読む", copy: "desktop readiness、benchmark、bundle validation を packaging の横に置き、リリースの流れをつなげます。" },
-          { label: "パッケージング", title: "一つの platform selector、一つの経路", copy: "status、staging、host build、verify を一つの target selector で進め、断片化した面を行き来しません。" },
-          { label: "操作出力", title: "ログと結果を近くに置く", copy: "status と operation output を近くに置き、パッケージ作業を監査しやすくします。" },
+          { label: "診断", title: "まずプラットフォームを読む", copy: "desktop readiness、benchmark、bundle validation を先に見て、重い packaging 作業を Installer に渡す前提を保ちます。" },
+          { label: "Installer への引き継ぎ", title: "ここで readiness、向こうで重い作業", copy: "Hub は可視化と短いチェック、Installer は stage・build・verify・cleanup を担当します。" },
+          { label: "操作出力", title: "ログと結果を近くに置く", copy: "status と operation output を近くに置き、引き継ぎ判断を監査しやすくします。" },
         ],
         packages: {
-          label: "プラットフォーム操作",
-          title: "診断とパッケージング",
-          copy: "ローカル診断、bundle validation、プラットフォーム別の desktop packaging を同じツール面で扱います。",
+          label: "プラットフォーム確認",
+          title: "診断と readiness",
+          copy: "Hub ではローカル診断、bundle validation、desktop readiness を扱い、重い packaging 作業は Installer に渡します。",
           platform: "対象プラットフォーム",
           benchmark: "benchmark を実行",
           validate: "project bundle を検証",
           export: "データベースを出力",
           status: "desktop status",
-          stage: "desktop package を stage",
-          build: "host bundles を build",
-          verify: "desktop release を verify",
+          stage: "Installer を開く",
           stop: "ローカル stack を停止",
         },
         status: {
           label: "準備状況",
           title: "Desktop status",
-          copy: "stage、build、verify の前に、この出力を短い readiness wall として使います。",
+          copy: "packaging・repair・verification を Installer に渡す前に、この出力を短い readiness wall として使います。",
         },
         output: {
           label: "操作出力",
           title: "Tool output",
-          copy: "packaging と diagnostics の出力を近くに置き、リリース作業を実行中でも確認できるようにします。",
+          copy: "diagnostics と補助出力を近くに置き、Installer への引き継ぎ判断を確認しやすくします。",
         },
       },
     },
@@ -1347,7 +1409,7 @@ const HUB_I18N = {
       guideDocs: "`ホーム > Guides` を単一のドキュメント棚として使ってください。まず `Docs index` を見て、質問の種類が分かってから `Current line`、`Operations`、`Troubleshooting` に進みます。",
       guideRuntime: "loop を変えたいなら `Runtimes`、状態を見たりコピーしたりするだけなら `Observe` を使います。`Local runtime` は短い health 読み、`Hot loop` は開発 tail、`Stack watch` はサニタイズ済み runtime ログです。",
       guideLibrary: "workload の取り込みは `ホーム > Library` です。`Sync local control plane` は第一者の作業を取り込み、`Sync remote catalog` はリモート項目を取り込み、domain/family filter で Workbench を開く前に棚を絞れます。",
-      guidePackaging: "`Installer` は release layout や workstation bootstrap が必要なときに使います。Hub では `Tools > Packages` が build アクション、`Status` が readiness wall、`Output` が packaging ログです。この自動化セッションでは `.app` は信頼しやすい一方、`.dmg` は `hdiutil` のセッション依存で partial のままになることがあります。",
+      guidePackaging: "release layout、workstation bootstrap、packaging、repair、verification が必要なときは `Installer` を使ってください。Hub の `Tools > Packages` は readiness と diagnostics、`Status` は readiness wall、`Output` は補助ログの置き場です。",
       guideFailure: "何かが partial に見えるなら、まず最短面を見てください。`Observe > Health` で runtime、`Tools > Status` で desktop packaging readiness、`Bundle tools > Inspect` で project bundle の形を見て、それが runtime・bundle・packaging のどれかを判断します。",
       guideFallback: "ローカルガイドは、最初の一歩、bundle 確認、runtime の健康、Workbench 起動、workload library の取り込み、desktop packaging について手伝えます。そのあたりを直接聞いてください。",
       cardBundlePathTitle: "まず bundle パスを入れる",
@@ -1679,9 +1741,6 @@ const HUB_DIRECT_ACTION_RISK = {
   "hot-start-cloud": "sensitive",
   "hot-start-distributed": "sensitive",
   "hot-stop": "sensitive",
-  "desktop-stage": "sensitive",
-  "desktop-verify": "sensitive",
-  "desktop-build-host": "high",
   "project-normalize": "sensitive",
   "project-unpack": "sensitive",
   "project-pack": "high",
@@ -1696,9 +1755,9 @@ const HUB_ASSISTANT_ACTIONS = [
   { id: "hub/openTroubleshootingDoc", summary: "Open the troubleshooting guide.", payloadExample: {} },
   { id: "hub/startLocal", summary: "Start the local stack.", payloadExample: {} },
   { id: "hub/validateEnv", summary: "Validate the desktop environment.", payloadExample: {} },
-  { id: "hub/desktopStage", summary: "Prepare desktop manifests for the selected platform.", payloadExample: {} },
-  { id: "hub/desktopBuildHost", summary: "Build host bundles for the current machine.", payloadExample: {} },
-  { id: "hub/desktopVerify", summary: "Verify the current desktop release staging area.", payloadExample: {} },
+  { id: "hub/desktopStage", summary: "Open Installer for desktop staging work.", payloadExample: {} },
+  { id: "hub/desktopBuildHost", summary: "Open Installer for host-bundle build work.", payloadExample: {} },
+  { id: "hub/desktopVerify", summary: "Open Installer for desktop verification work.", payloadExample: {} },
   { id: "hub/setBundleContext", summary: "Fill Hub bundle path inputs.", payloadExample: { path: "", comparePath: "", out: "" } },
   { id: "hub/projectInspect", summary: "Inspect the selected project bundle.", payloadExample: { path: "" } },
   { id: "hub/projectValidate", summary: "Validate the selected project bundle.", payloadExample: { path: "" } },
@@ -2544,20 +2603,11 @@ function persistHubRecents(recents) {
 }
 
 function loadHubWorkloadLibrary() {
-  try {
-    const raw = window.localStorage.getItem(HUB_WORKLOAD_LIBRARY_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return loadStoredHubWorkloadLibrary(HUB_WORKLOAD_LIBRARY_KEY);
 }
 
 function persistHubWorkloadLibrary(entries) {
-  window.localStorage.setItem(
-    HUB_WORKLOAD_LIBRARY_KEY,
-    JSON.stringify(entries.slice(0, HUB_WORKLOAD_LIBRARY_LIMIT)),
-  );
+  persistStoredHubWorkloadLibrary(HUB_WORKLOAD_LIBRARY_KEY, entries, HUB_WORKLOAD_LIBRARY_LIMIT);
 }
 
 function appendTextElement(parent, tagName, text, className) {
@@ -2580,85 +2630,19 @@ function appendAssistantCardHeader(parent, title, badgeText, badgeClassName) {
 }
 
 function workloadIdentity(entry) {
-  return [
-    String(entry?.sourceKind || "").trim(),
-    String(entry?.bundlePath || "").trim(),
-    String(entry?.downloadUrl || "").trim(),
-    String(entry?.projectId || "").trim(),
-  ].join("::");
+  return buildWorkloadIdentity(entry);
 }
 
 function normalizeHubWorkloadEntry(entry) {
-  const label = String(entry?.label || entry?.projectName || "").trim();
-  const sourceKind = String(entry?.sourceKind || "").trim() || "local-bundle";
-  const bundlePath = String(entry?.bundlePath || "").trim();
-  const downloadUrl = String(entry?.downloadUrl || "").trim();
-  const projectId = String(entry?.projectId || "").trim();
-  const projectName = String(entry?.projectName || "").trim();
-
-  if (!label && !bundlePath && !downloadUrl && !projectId) {
-    return null;
-  }
-
-  return {
-    id: String(entry?.id || `workload-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`),
-    label: label || projectName || bundlePath || downloadUrl || "workload",
-    note: String(entry?.note || "").trim(),
-    sourceKind,
-    sourceLabel: String(entry?.sourceLabel || "").trim(),
-    bundlePath,
-    downloadUrl,
-    projectId,
-    projectName,
-    schema: String(entry?.schema || "").trim(),
-    layout: String(entry?.layout || "").trim(),
-    modelCount: Number.isFinite(Number(entry?.modelCount)) ? Number(entry.modelCount) : 0,
-    versionCount: Number.isFinite(Number(entry?.versionCount)) ? Number(entry.versionCount) : 0,
-    jobCount: Number.isFinite(Number(entry?.jobCount)) ? Number(entry.jobCount) : 0,
-    resultCount: Number.isFinite(Number(entry?.resultCount)) ? Number(entry.resultCount) : 0,
-    analysisDomains: Array.isArray(entry?.analysisDomains)
-      ? entry.analysisDomains.filter((value) => typeof value === "string")
-      : Array.isArray(entry?.analysis_domains)
-        ? entry.analysis_domains.filter((value) => typeof value === "string")
-        : [],
-    analysisFamilies: Array.isArray(entry?.analysisFamilies)
-      ? entry.analysisFamilies.filter((value) => typeof value === "string")
-      : Array.isArray(entry?.analysis_families)
-        ? entry.analysis_families.filter((value) => typeof value === "string")
-        : [],
-    thermalIntents: Array.isArray(entry?.thermalIntents)
-      ? entry.thermalIntents.filter((value) => typeof value === "string")
-      : Array.isArray(entry?.thermal_intents)
-        ? entry.thermal_intents.filter((value) => typeof value === "string")
-        : [],
-    downloadedAt: String(entry?.downloadedAt || "").trim(),
-    attachedAt: String(entry?.attachedAt || "").trim(),
-    addedAt: String(entry?.addedAt || "").trim() || new Date().toISOString(),
-    updatedAt: String(entry?.updatedAt || "").trim() || new Date().toISOString(),
-  };
+  return normalizeStoredHubWorkloadEntry(entry);
 }
 
 function mergeHubWorkloadLibrary(existingEntries, incomingEntries) {
-  const merged = [];
-
-  for (const candidate of [...incomingEntries, ...existingEntries]) {
-    const normalized = normalizeHubWorkloadEntry(candidate);
-    if (!normalized) {
-      continue;
-    }
-
-    const duplicateIndex = merged.findIndex((entry) => workloadIdentity(entry) === workloadIdentity(normalized));
-    if (duplicateIndex >= 0) {
-      continue;
-    }
-
-    merged.push(normalized);
-    if (merged.length >= HUB_WORKLOAD_LIBRARY_LIMIT) {
-      break;
-    }
-  }
-
-  return merged;
+  return mergeStoredHubWorkloadLibrary(
+    existingEntries,
+    incomingEntries,
+    HUB_WORKLOAD_LIBRARY_LIMIT,
+  );
 }
 
 function loadHubAssistantSettings() {
@@ -3036,13 +3020,7 @@ function formatHubOperatorError(error, options = {}) {
 }
 
 function inferDownloadFilename(url, fallback = "kyuubiki-workload.kyuubiki") {
-  try {
-    const parsed = new URL(String(url || "").trim());
-    const pathname = parsed.pathname.split("/").filter(Boolean).at(-1);
-    return pathname || fallback;
-  } catch {
-    return fallback;
-  }
+  return deriveDownloadFilename(url, fallback);
 }
 
 function downloadHubBlob(filename, blob) {
@@ -3057,86 +3035,23 @@ function downloadHubBlob(filename, blob) {
 }
 
 function workloadSourceBadge(entry) {
-  if (entry.sourceKind === "remote-catalog" && entry.bundlePath) {
-    return ["attached local", "desktop-shell-state desktop-shell-state--healthy"];
-  }
-
-  if (entry.sourceKind === "remote-catalog" && entry.downloadedAt) {
-    return ["downloaded", "desktop-shell-state desktop-shell-state--warning"];
-  }
-
-  switch (entry.sourceKind) {
-    case "remote-catalog":
-      return ["remote catalog", "desktop-shell-state desktop-shell-state--healthy"];
-    case "imported-library":
-      return ["imported", "desktop-shell-state desktop-shell-state--warning"];
-    default:
-      return ["local bundle", "desktop-shell-state desktop-shell-state--idle"];
-  }
+  return resolveWorkloadSourceBadge(entry);
 }
 
 function workloadProvenanceLabel(entry) {
-  if (entry.sourceKind === "remote-catalog") {
-    if (entry.sourceLabel === "Kyuubiki Control Plane") {
-      return "first-party control plane catalog";
-    }
-    const hostHint = workloadProvenanceHost(entry.sourceLabel || entry.downloadUrl || "");
-    if (hostHint) {
-      return `custom remote catalog · ${hostHint}`;
-    }
-    return `custom remote catalog${entry.sourceLabel ? ` · ${entry.sourceLabel}` : ""}`;
-  }
-
-  if (entry.sourceKind === "imported-library") {
-    return "imported library snapshot";
-  }
-
-  if (entry.sourceLabel) {
-    return entry.sourceLabel;
-  }
-
-  return "Hub local registration";
+  return resolveWorkloadProvenanceLabel(entry);
 }
 
 function workloadProvenanceHost(value) {
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    return "";
-  }
-
-  try {
-    return new URL(normalized).host;
-  } catch {
-    return "";
-  }
+  return resolveWorkloadProvenanceHost(value);
 }
 
 function workloadDomainLabel(domain) {
-  switch (domain) {
-    case "mechanical":
-      return "Mechanical";
-    case "thermal":
-      return "Thermal";
-    case "thermo_mechanical":
-      return "Thermo-mechanical";
-    default:
-      return String(domain || "").trim();
-  }
+  return resolveWorkloadDomainLabel(domain);
 }
 
 function workloadFamilyLabel(family) {
-  switch (family) {
-    case "axial_and_springs":
-      return "Axial & Springs";
-    case "beams_and_frames":
-      return "Beams & Frames";
-    case "trusses":
-      return "Trusses";
-    case "planes":
-      return "Planes";
-    default:
-      return String(family || "").trim();
-  }
+  return resolveWorkloadFamilyLabel(family);
 }
 
 function markHubWorkloadDownloaded(entry) {
@@ -3463,20 +3378,7 @@ function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
 }
 
 function projectSummaryFromInspectPayload(raw) {
-  const parsed = JSON.parse(raw);
-  return {
-    projectId: String(parsed?.project_id || "").trim(),
-    projectName: String(parsed?.project_name || "").trim(),
-    schema: String(parsed?.schema || "").trim(),
-    layout: String(parsed?.layout || "").trim(),
-    modelCount: Number(parsed?.model_count || 0),
-    versionCount: Number(parsed?.version_count || 0),
-    jobCount: Number(parsed?.job_count || 0),
-    resultCount: Number(parsed?.result_count || 0),
-    analysisDomains: Array.isArray(parsed?.analysis_domains) ? parsed.analysis_domains.filter((value) => typeof value === "string") : [],
-    analysisFamilies: Array.isArray(parsed?.analysis_families) ? parsed.analysis_families.filter((value) => typeof value === "string") : [],
-    thermalIntents: Array.isArray(parsed?.thermal_intents) ? parsed.thermal_intents.filter((value) => typeof value === "string") : [],
-  };
+  return parseProjectSummaryFromInspectPayload(raw);
 }
 
 async function registerCurrentBundleAsWorkload() {
@@ -3513,142 +3415,15 @@ async function registerCurrentBundleAsWorkload() {
 }
 
 function validateHubCatalogUrl(value) {
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    return { ok: false, reason: "Fill in a workload catalog URL first." };
-  }
-
-  try {
-    const parsed = new URL(normalized);
-    const protocol = parsed.protocol.toLowerCase();
-    const hostname = parsed.hostname.toLowerCase();
-    const isLoopback =
-      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
-    if (protocol === "https:" || (protocol === "http:" && isLoopback)) {
-      return { ok: true, normalized };
-    }
-    return {
-      ok: false,
-      reason: "Catalog URL must use https, or http only for localhost / 127.0.0.1 / ::1.",
-    };
-  } catch {
-    return { ok: false, reason: "Catalog URL must be a valid absolute URL." };
-  }
+  return validateWorkloadCatalogUrl(value);
 }
 
 function validateRemoteWorkloadCatalogPayload(payload) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    return { ok: false, reason: "Catalog payload must be a JSON object." };
-  }
-
-  if (payload.schema_version !== "kyuubiki.workload-catalog/v1") {
-    return {
-      ok: false,
-      reason: "Catalog schema_version must be kyuubiki.workload-catalog/v1.",
-    };
-  }
-
-  if (!Array.isArray(payload.workloads)) {
-    return { ok: false, reason: "Catalog workloads must be an array." };
-  }
-
-  for (const [index, workload] of payload.workloads.entries()) {
-    if (!workload || typeof workload !== "object" || Array.isArray(workload)) {
-      return { ok: false, reason: `Workload ${index + 1} must be an object.` };
-    }
-
-    if (!String(workload.label || "").trim()) {
-      return { ok: false, reason: `Workload ${index + 1} is missing label.` };
-    }
-
-    const hasRequiredLocator =
-      String(workload.download_url || "").trim() ||
-      String(workload.bundle_path || "").trim() ||
-      String(workload.project_id || "").trim();
-    if (!hasRequiredLocator) {
-    return {
-      ok: false,
-      reason: `Workload ${index + 1} must define download_url, bundle_path, or project_id.`,
-    };
-  }
-
-    if (
-      workload.analysis_domains !== undefined &&
-      (!Array.isArray(workload.analysis_domains) ||
-        workload.analysis_domains.some(
-          (value) =>
-            typeof value !== "string" ||
-            !["mechanical", "thermal", "thermo_mechanical"].includes(value),
-        ))
-    ) {
-      return {
-        ok: false,
-        reason: `Workload ${index + 1} has invalid analysis_domains.`,
-      };
-    }
-
-    if (
-      workload.analysis_families !== undefined &&
-      (!Array.isArray(workload.analysis_families) ||
-        workload.analysis_families.some(
-          (value) =>
-            typeof value !== "string" ||
-            !["axial_and_springs", "beams_and_frames", "trusses", "planes"].includes(value),
-        ))
-    ) {
-      return {
-        ok: false,
-        reason: `Workload ${index + 1} has invalid analysis_families.`,
-      };
-    }
-
-    if (
-      workload.thermal_intents !== undefined &&
-      (!Array.isArray(workload.thermal_intents) ||
-        workload.thermal_intents.some((value) => typeof value !== "string"))
-    ) {
-      return {
-        ok: false,
-        reason: `Workload ${index + 1} has invalid thermal_intents.`,
-      };
-    }
-  }
-
-  return { ok: true };
+  return validateWorkloadCatalogPayload(payload);
 }
 
 function normalizeRemoteWorkloadCatalogPayload(payload, catalogUrl) {
-  const list = Array.isArray(payload)
-    ? payload
-    : Array.isArray(payload?.workloads)
-      ? payload.workloads
-      : Array.isArray(payload?.items)
-        ? payload.items
-        : [];
-
-  return list
-    .map((entry) =>
-      normalizeHubWorkloadEntry({
-        label: entry?.label || entry?.name || entry?.projectName || entry?.project_name,
-        note: entry?.note || entry?.description || `Synced from ${catalogUrl}`,
-        sourceKind: "remote-catalog",
-        sourceLabel: entry?.sourceLabel || payload?.sourceLabel || catalogUrl,
-        bundlePath: entry?.bundlePath || entry?.bundle_path || "",
-        downloadUrl: entry?.downloadUrl || entry?.download_url || catalogUrl,
-        projectId: entry?.projectId || entry?.project_id || "",
-        projectName: entry?.projectName || entry?.project_name || "",
-        schema: entry?.schema || "",
-        layout: entry?.layout || "",
-        modelCount: entry?.modelCount || entry?.model_count || 0,
-        versionCount: entry?.versionCount || entry?.version_count || 0,
-        jobCount: entry?.jobCount || entry?.job_count || 0,
-        resultCount: entry?.resultCount || entry?.result_count || 0,
-        analysisDomains: entry?.analysisDomains || entry?.analysis_domains || [],
-        analysisFamilies: entry?.analysisFamilies || entry?.analysis_families || [],
-        thermalIntents: entry?.thermalIntents || entry?.thermal_intents || [],
-      }),
-    )
-    .filter(Boolean);
+  return buildNormalizedRemoteWorkloadCatalogPayload(payload, catalogUrl);
 }
 
 async function syncRemoteWorkloadCatalog(urlOverride = "") {
@@ -4345,42 +4120,18 @@ async function rerunProjectActionEntry(entry) {
 }
 
 async function runProjectBundleAction({ action, command, payload, outputTarget, successOutput }) {
-  const executedAt = new Date().toISOString();
-  const tauriPayload =
-    command === "guarded_mutation_action"
-      ? {
-          action: PROJECT_ACTION_LABELS[action] ? `project_bundle_${action.split(" ").at(-1)}` : "",
-          ...payload,
-        }
-      : payload;
-
-  try {
-    const result = await invokeTauri(command, { payload: tauriPayload });
-    saveProjectBundleRecents({
-      action,
-      bundlePath: elements.projectBundlePath?.value,
-      comparePath: elements.projectBundleComparePath?.value,
-      outputPath: elements.projectBundleOutPath?.value,
-      status: "ok",
-      note: result,
-      executedAt,
-    });
-    outputTarget(result);
-    setBusy(false, "ready");
-  } catch (error) {
-    const message = String(error);
-    saveProjectBundleRecents({
-      action,
-      bundlePath: elements.projectBundlePath?.value,
-      comparePath: elements.projectBundleComparePath?.value,
-      outputPath: elements.projectBundleOutPath?.value,
-      status: "failed",
-      note: message,
-      executedAt,
-    });
-    outputTarget(message);
-    setBusy(false, "failed");
-  }
+  return executeProjectBundleAction({
+    action,
+    command,
+    payload,
+    invokeTauri,
+    saveProjectBundleRecents,
+    outputTarget,
+    elements,
+    setBusy,
+    projectActionLabels: PROJECT_ACTION_LABELS,
+    successOutput,
+  });
 }
 
 async function invokeGuardedMutation(action, payload = {}) {
@@ -4578,19 +4329,13 @@ function clearHotRuntimeLogView() {
 }
 
 function sanitizeRuntimeLogForClipboard(text) {
-  return String(text || "")
-    .replace(/(authorization\s*[:=]\s*)(bearer\s+)?([^\s]+)/giu, "$1[redacted]")
-    .replace(/(api[_-]?key\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]")
-    .replace(/(token\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]")
-    .replace(/(password\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]")
-    .replace(/(secret\s*[:=]\s*)([^\s]+)/giu, "$1[redacted]");
+  return sanitizeRuntimeLogForClipboardHelper(text);
 }
 
 async function copyHotRuntimeLogView() {
-  const text = sanitizeRuntimeLogForClipboard(
+  await copySanitizedRuntimeLogToClipboard(
     String(elements.hotRuntimeLogOutput?.textContent || "").trim(),
   );
-  await navigator.clipboard.writeText(text);
 }
 
 function renderHotRuntimeLogFollowState() {
@@ -4605,17 +4350,7 @@ function renderObserveRuntimeLogFollowState() {
 }
 
 function inferHotRuntimeState(rendered) {
-  const text = String(rendered || "");
-  const running = /hot-loop:\s+running/i.test(text);
-  const stopped = /hot-loop:\s+stopped/i.test(text);
-  const modeMatch =
-    /started managed hot-reload loop \((cloud|distributed|local)\)/i.exec(text)
-    || /Mode\W*(cloud|distributed|local)/i.exec(text);
-
-  return {
-    status: running ? "running" : stopped ? "idle" : "unknown",
-    mode: modeMatch?.[1] || elements.hotRuntimeMode?.textContent?.trim() || "local",
-  };
+  return inferHotRuntimeStateHelper(rendered, elements.hotRuntimeMode?.textContent?.trim() || "local");
 }
 
 function currentHotRuntimeStatus() {
@@ -4771,258 +4506,64 @@ function setProjectsPage(page) {
 }
 
 function builtInWorkflowSampleInputArtifacts(workflowId) {
-  switch (workflowId) {
-    case "workflow.heat-to-thermo-quad-2d":
-      return {
-        heat_model: {
-          nodes: [
-            { id: "h0", x: 0.0, y: 0.0, fix_temperature: true, temperature: 100.0, heat_load: 0.0 },
-            { id: "h1", x: 1.0, y: 0.0, fix_temperature: false, temperature: 0.0, heat_load: 0.0 },
-            { id: "h2", x: 1.0, y: 1.0, fix_temperature: true, temperature: 20.0, heat_load: 0.0 },
-            { id: "h3", x: 0.0, y: 1.0, fix_temperature: true, temperature: 20.0, heat_load: 0.0 },
-          ],
-          elements: [
-            {
-              id: "hq0",
-              node_i: 0,
-              node_j: 1,
-              node_k: 2,
-              node_l: 3,
-              thickness: 0.02,
-              conductivity: 45.0,
-            },
-          ],
-        },
-      };
-    default:
-      return null;
-  }
+  return buildBuiltInWorkflowSampleInputArtifacts(workflowId);
 }
 
 function describeWorkflowSummary(resultPayload) {
-  const exported = resultPayload?.result?.artifacts?.["json_output.json"];
-  if (!exported?.content) {
-    return "no exported summary";
-  }
-
-  try {
-    const summary = JSON.parse(exported.content);
-    return Object.entries(summary)
-      .slice(0, 3)
-      .map(([key, value]) => `${key}=${value}`)
-      .join(" · ");
-  } catch (_error) {
-    return "exported summary is not valid JSON";
-  }
+  return buildWorkflowSummaryDescription(resultPayload);
 }
 
 async function waitForWorkflowJob(jobId, options = {}) {
-  const timeoutMs = Number(options.timeoutMs || 30_000);
-  const intervalMs = Number(options.intervalMs || 700);
-  const baseUrl = currentOrchestratorBaseUrl().replace(/\/+$/u, "");
-  const startedAt = Date.now();
-
-  while (Date.now() - startedAt < timeoutMs) {
-    const response = await fetch(`${baseUrl}/api/v1/jobs/${encodeURIComponent(jobId)}`);
-    if (!response.ok) {
-      throw new Error(`workflow job lookup failed (${response.status})`);
-    }
-
-    const payload = await response.json();
-    const status = String(payload?.job?.status || "").trim();
-    if (status === "completed") {
-      return payload;
-    }
-    if (status === "failed" || status === "cancelled") {
-      throw new Error(
-        hubMessage(localizedWorkflowCatalogLabel("workflowCatalogFailed"), {
-          workflow: payload?.result?.workflow_id || payload?.job?.job_type || "workflow",
-          status,
-        }),
-      );
-    }
-
-    setWorkflowCatalogOutput(
-      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogPolling"), { job: jobId }),
-    );
-    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
-  }
-
-  throw new Error(`workflow job ${jobId} timed out`);
+  return waitForWorkflowCatalogJob(jobId, {
+    ...options,
+    currentOrchestratorBaseUrl,
+    hubMessage,
+    localizedWorkflowCatalogLabel,
+    setWorkflowCatalogOutput,
+  });
 }
 
 async function runWorkflowCatalogSample(entry) {
-  const workflowId = String(entry?.id || "").trim();
-  const inputArtifacts = builtInWorkflowSampleInputArtifacts(workflowId);
-  if (!workflowId || !inputArtifacts) {
-    setWorkflowCatalogOutput(
-      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogUnsupported"), {
-        workflow: workflowId || "unknown",
-      }),
-    );
-    return;
-  }
-
-  state.workflowCatalogBusy = true;
-  renderWorkflowCatalog();
-  applyDesktopState(elements.actionState, "running", { kind: "activity" });
-
-  try {
-    const response = await fetch(
-      `${currentWorkflowCatalogUrl().replace(/\/+$/u, "")}/${encodeURIComponent(workflowId)}/jobs`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ input_artifacts: inputArtifacts }),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`workflow submit failed (${response.status})`);
-    }
-
-    const payload = await response.json();
-    const jobId = String(payload?.job?.job_id || "").trim();
-    const queuedMessage = hubMessage(localizedWorkflowCatalogLabel("workflowCatalogQueued"), {
-      workflow: workflowId,
-      job: jobId || "--",
-    });
-    setWorkflowCatalogOutput(queuedMessage);
-    setOperationOutput(queuedMessage);
-
-    if (!jobId) {
-      throw new Error("workflow submit returned no job id");
-    }
-
-    const resultPayload = await waitForWorkflowJob(jobId);
-    const completedNodes = Array.isArray(resultPayload?.result?.completed_nodes)
-      ? resultPayload.result.completed_nodes
-      : [];
-    const completedMessage = hubMessage(localizedWorkflowCatalogLabel("workflowCatalogCompleted"), {
-      workflow: workflowId,
-      count: completedNodes.length,
-      summary: describeWorkflowSummary(resultPayload),
-    });
-    setWorkflowCatalogOutput(completedMessage);
-    setOperationOutput(completedMessage);
-    applyDesktopState(elements.actionState, "ready", { kind: "activity" });
-  } catch (error) {
-    setWorkflowCatalogOutput(formatHubOperatorError(error, {
-      actionLabel: "Running this workflow sample",
-    }));
-    applyDesktopState(elements.actionState, "failed", { kind: "activity" });
-  } finally {
-    state.workflowCatalogBusy = false;
-    renderWorkflowCatalog();
-  }
+  return runWorkflowCatalogSamplePanel(entry, {
+    state,
+    applyDesktopState,
+    actionState: elements.actionState,
+    currentWorkflowCatalogUrl,
+    currentOrchestratorBaseUrl,
+    hubMessage,
+    localizedWorkflowCatalogLabel,
+    setWorkflowCatalogOutput,
+    setOperationOutput,
+    formatHubOperatorError,
+    renderWorkflowCatalog,
+  });
 }
 
 async function fetchWorkflowCatalog(options = {}) {
-  const silent = options?.silent === true;
-  if (state.workflowCatalogBusy) {
-    return;
-  }
-
-  state.workflowCatalogBusy = true;
-  renderWorkflowCatalog();
-  if (!silent) {
-    setWorkflowCatalogOutput(localizedWorkflowCatalogLabel("workflowCatalogLoading"));
-    applyDesktopState(elements.actionState, "running", { kind: "activity" });
-  }
-
-  try {
-    const response = await fetch(currentWorkflowCatalogUrl());
-    if (!response.ok) {
-      throw new Error(`workflow catalog fetch failed (${response.status})`);
-    }
-
-    const payload = await response.json();
-    state.workflowCatalog = Array.isArray(payload?.workflows) ? payload.workflows : [];
-    renderWorkflowCatalog();
-    if (!silent) {
-      const loadedMessage = hubMessage(localizedWorkflowCatalogLabel("workflowCatalogLoaded"), {
-        count: state.workflowCatalog.length,
-      });
-      setWorkflowCatalogOutput(loadedMessage);
-      setOperationOutput(loadedMessage);
-      applyDesktopState(elements.actionState, "ready", { kind: "activity" });
-    }
-  } catch (error) {
-    if (!silent) {
-      setWorkflowCatalogOutput(formatHubOperatorError(error, {
-        actionLabel: "Loading the workflow catalog",
-      }));
-      applyDesktopState(elements.actionState, "failed", { kind: "activity" });
-    }
-  } finally {
-    state.workflowCatalogBusy = false;
-    renderWorkflowCatalog();
-  }
+  return fetchWorkflowCatalogPanel({
+    ...options,
+    state,
+    renderWorkflowCatalog,
+    setWorkflowCatalogOutput,
+    setOperationOutput,
+    applyDesktopState,
+    actionState: elements.actionState,
+    currentWorkflowCatalogUrl,
+    hubMessage,
+    localizedWorkflowCatalogLabel,
+    formatHubOperatorError,
+  });
 }
 
 function renderWorkflowCatalog(entries = state.workflowCatalog) {
-  if (!elements.workflowCatalogList) {
-    return;
-  }
-
-  elements.workflowCatalogList.innerHTML = "";
-  if (!entries.length) {
-    renderEmptyHistoryState(
-      elements.workflowCatalogList,
-      localizedWorkflowCatalogLabel("workflowCatalogEmpty"),
-    );
-    return;
-  }
-
-  entries.forEach((entry) => {
-    const shell = document.createElement("div");
-    shell.className = "hub-history-item";
-
-    const summary = document.createElement("div");
-    summary.className = "hub-history-item__summary";
-    const heading = document.createElement("div");
-    heading.className = "hub-history-item__heading";
-    appendTextElement(heading, "strong", entry.name || entry.id || "workflow");
-    const meta = document.createElement("div");
-    meta.className = "hub-history-item__meta";
-    appendTextElement(meta, "span", entry.id || "--", "desktop-shell-chip");
-    appendTextElement(meta, "span", entry.version || "v1", "desktop-shell-chip");
-    heading.appendChild(meta);
-    summary.appendChild(heading);
-    appendTextElement(summary, "span", entry.summary || "named workflow");
-    appendTextElement(
-      summary,
-      "span",
-      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogEntryInputs"), {
-        inputs: Object.keys(entry.entry_inputs || {}).join(", ") || "--",
-      }),
-      "hub-history-item__alias",
-    );
-    appendTextElement(
-      summary,
-      "span",
-      hubMessage(localizedWorkflowCatalogLabel("workflowCatalogOutputs"), {
-        outputs: Array.isArray(entry.output_artifacts) ? entry.output_artifacts.join(", ") : "--",
-      }),
-      "hub-history-item__provenance",
-    );
-
-    const controls = document.createElement("div");
-    controls.className = "hub-history-item__controls";
-    const runButton = document.createElement("button");
-    runButton.type = "button";
-    runButton.className = "desktop-shell-button-ghost";
-    runButton.textContent = localizedWorkflowCatalogLabel("workflowCatalogRun");
-    runButton.disabled = state.workflowCatalogBusy;
-    runButton.addEventListener("click", () => {
-      void runWorkflowCatalogSample(entry);
-    });
-    controls.appendChild(runButton);
-
-    shell.append(summary, controls);
-    elements.workflowCatalogList.appendChild(shell);
+  return renderWorkflowCatalogPanel(entries, {
+    workflowCatalogList: elements.workflowCatalogList,
+    workflowCatalogBusy: state.workflowCatalogBusy,
+    renderEmptyHistoryState,
+    localizedWorkflowCatalogLabel,
+    appendTextElement,
+    hubMessage,
+    runWorkflowCatalogSample,
   });
 }
 
@@ -5066,21 +4607,15 @@ function setAssistantPanelOpen(open) {
 }
 
 function currentProjectBundlePayload() {
-  return { path: elements.projectBundlePath?.value || "" };
+  return buildCurrentProjectBundlePayload(elements);
 }
 
 function currentProjectBundleOutputPayload() {
-  return {
-    path: elements.projectBundlePath?.value || "",
-    out: elements.projectBundleOutPath?.value || "",
-  };
+  return buildCurrentProjectBundleOutputPayload(elements);
 }
 
 function currentProjectBundleComparePayload() {
-  return {
-    leftPath: elements.projectBundlePath?.value || "",
-    rightPath: elements.projectBundleComparePath?.value || "",
-  };
+  return buildCurrentProjectBundleComparePayload(elements);
 }
 
 function currentAssistantSnapshot() {
@@ -5154,209 +4689,52 @@ function toggleHubDensityPanel(id) {
 }
 
 function buildHubAssistantLocalCards() {
-  const snapshot = currentAssistantSnapshot();
-  const cards = [];
-
-  if (!snapshot.bundlePath) {
-    cards.push({
-      id: "bundle-path",
-      title: hubDynamic("cardBundlePathTitle"),
-      summary: hubDynamic("cardBundlePathSummary"),
-      actionLabel: hubCopy().home.quick.bundlesTitle,
-      tone: "watch",
-      onAction: () => {
-        setSection("projects");
-        setProjectsPage("bundles");
-        elements.projectBundlePath?.focus();
-        setProjectBundleOutput(hubDynamic("focusedBundleField"));
-      },
-    });
-  }
-
-  if (!/ready|healthy/i.test(snapshot.runtimeStatus)) {
-    cards.push({
-      id: "start-local",
-      title: hubDynamic("cardStartLocalTitle"),
-      summary: hubDynamic("cardStartLocalSummary"),
-      actionLabel: hubCopy().shell.startLocal,
-      tone: "risk",
-      onAction: () => {
-        void runAction("start-local");
-      },
-    });
-  }
-
-  if (snapshot.bundlePath) {
-    cards.push({
-      id: "inspect-bundle",
-      title: hubDynamic("cardInspectTitle"),
-      summary: hubDynamic("cardInspectSummary"),
-      actionLabel: hubCopy().bundles.inspect,
-      tone: "good",
-      onAction: () => {
-        void runAction("project-inspect");
-      },
-    });
-  }
-
-  if (snapshot.bundlePath && snapshot.outputPath) {
-    cards.push({
-      id: "normalize-bundle",
-      title: hubDynamic("cardNormalizeTitle"),
-      summary: hubDynamic("cardNormalizeSummary"),
-      actionLabel: hubCopy().bundles.normalize,
-      tone: "good",
-      onAction: () => {
-        void runAction("project-normalize");
-      },
-    });
-  }
-
-  if (snapshot.bundlePath && snapshot.comparePath) {
-    cards.push({
-      id: "diff-bundles",
-      title: hubDynamic("cardDiffTitle"),
-      summary: hubDynamic("cardDiffSummary"),
-      actionLabel: hubCopy().bundles.diff,
-      tone: "watch",
-      onAction: () => {
-        void runAction("project-diff");
-      },
-    });
-  }
-
-  cards.push({
-    id: "open-guides",
-    title: hubDynamic("cardGuidesTitle"),
-    summary: hubDynamic("cardGuidesSummary"),
-    actionLabel: hubCopy().home.tabs.guides,
-    tone: "watch",
-    onAction: () => {
-      setSection("projects");
-      setProjectsPage("guides");
-      setProjectBundleOutput(hubDynamic("focusedGuidesPage"));
-    },
+  return buildHubAssistantLocalCardsModule({
+    currentAssistantSnapshot,
+    hubDynamic,
+    homeBundlesTitle: hubCopy().home.quick.bundlesTitle,
+    shellStartLocal: hubCopy().shell.startLocal,
+    bundleInspect: hubCopy().bundles.inspect,
+    bundleNormalize: hubCopy().bundles.normalize,
+    bundleDiff: hubCopy().bundles.diff,
+    homeGuidesTitle: hubCopy().home.tabs.guides,
+    shellOpenWorkbench: hubCopy().shell.openWorkbench,
+    setSection,
+    setProjectsPage,
+    projectBundlePath: elements.projectBundlePath,
+    setProjectBundleOutput,
+    runAction,
   });
-
-  cards.push({
-    id: "open-workbench",
-    title: hubDynamic("cardWorkbenchTitle"),
-    summary: hubDynamic("cardWorkbenchSummary"),
-    actionLabel: hubCopy().shell.openWorkbench,
-    tone: "good",
-    onAction: () => {
-      void runAction("open-workbench");
-    },
-  });
-
-  return cards.slice(0, 5);
 }
 
 function renderHubAssistantLocalCards() {
-  if (!elements.assistantLocalCards) {
-    return;
-  }
-
-  const cards = buildHubAssistantLocalCards();
-  elements.assistantLocalCards.innerHTML = "";
-  if (!cards.length) {
-    renderEmptyHistoryState(elements.assistantLocalCards, hubDynamic("assistantNoUrgent"));
-    return;
-  }
-
-  cards.forEach((card) => {
-    const article = document.createElement("article");
-    article.className = "hub-list__card";
-    appendAssistantCardHeader(
-      article,
-      card.title,
-      card.tone,
-      `desktop-shell-state desktop-shell-state--${
-        card.tone === "risk" ? "danger" : card.tone === "watch" ? "warning" : "healthy"
-      }`,
-    );
-    appendTextElement(article, "p", card.summary, "desktop-shell-note");
-    const buttonRow = document.createElement("div");
-    buttonRow.className = "desktop-shell-action-row";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "desktop-shell-button-ghost";
-    button.textContent = card.actionLabel;
-    button.addEventListener("click", card.onAction);
-    buttonRow.appendChild(button);
-    article.appendChild(buttonRow);
-    elements.assistantLocalCards.appendChild(article);
+  return renderHubAssistantLocalCardsModule({
+    assistantLocalCards: elements.assistantLocalCards,
+    renderEmptyHistoryState,
+    hubDynamic,
+    appendAssistantCardHeader,
+    appendTextElement,
+    currentAssistantSnapshot,
+    homeBundlesTitle: hubCopy().home.quick.bundlesTitle,
+    shellStartLocal: hubCopy().shell.startLocal,
+    bundleInspect: hubCopy().bundles.inspect,
+    bundleNormalize: hubCopy().bundles.normalize,
+    bundleDiff: hubCopy().bundles.diff,
+    homeGuidesTitle: hubCopy().home.tabs.guides,
+    shellOpenWorkbench: hubCopy().shell.openWorkbench,
+    setSection,
+    setProjectsPage,
+    projectBundlePath: elements.projectBundlePath,
+    setProjectBundleOutput,
+    runAction,
   });
 }
 
-function buildLocalGuideContext() {
-  const snapshot = currentAssistantSnapshot();
-  return {
-    section: snapshot.activeSection,
-    runtimeReady: /ready|healthy/i.test(snapshot.runtimeStatus),
-    hasBundle: Boolean(snapshot.bundlePath),
-    hasCompare: Boolean(snapshot.comparePath),
-    hasOutput: Boolean(snapshot.outputPath),
-    bundlePath: snapshot.bundlePath,
-  };
-}
-
 function buildLocalGuideResponse(query) {
-  const normalized = String(query || "").trim().toLowerCase();
-  const context = buildLocalGuideContext();
-
-  if (!normalized) {
-    return hubDynamic("assistantPromptEmpty");
-  }
-
-  if (/first|start|begin|fresh|what should i do/.test(normalized)) {
-    if (!context.runtimeReady) {
-      return hubDynamic("guideFirstNoRuntime");
-    }
-    if (!context.hasBundle) {
-      return hubDynamic("guideFirstNoBundle");
-    }
-    return hubDynamic("guideFirstReady");
-  }
-
-  if (/inspect|bundle|validate|normalize|diff|pack|unpack/.test(normalized)) {
-    if (!context.hasBundle) {
-      return hubDynamic("guideBundleNoPath");
-    }
-    if (/normalize/.test(normalized) && !context.hasOutput) {
-      return hubDynamic("guideNormalizeNoOutput");
-    }
-    if (/diff/.test(normalized) && !context.hasCompare) {
-      return hubDynamic("guideDiffNoCompare");
-    }
-    return hubDynamic("guideBundleGeneral");
-  }
-
-  if (/workbench|analysis|open/.test(normalized)) {
-    return hubDynamic("guideWorkbench");
-  }
-
-  if (/docs|guide|read|document|manual|help/.test(normalized)) {
-    return hubDynamic("guideDocs");
-  }
-
-  if (/runtime|stack|agent|hot|observe|log/.test(normalized)) {
-    return hubDynamic("guideRuntime");
-  }
-
-  if (/catalog|library|workload|remote/.test(normalized)) {
-    return hubDynamic("guideLibrary");
-  }
-
-  if (/installer|package|packaging|desktop|dmg|build/.test(normalized)) {
-    return hubDynamic("guidePackaging");
-  }
-
-  if (/partial|failed|error|warning/.test(normalized)) {
-    return hubDynamic("guideFailure");
-  }
-
-  return hubDynamic("guideFallback");
+  return buildLocalGuideResponseModule(query, {
+    currentAssistantSnapshot,
+    hubDynamic,
+  });
 }
 
 function answerWithLocalGuide() {
@@ -5365,18 +4743,7 @@ function answerWithLocalGuide() {
 }
 
 function extractAssistantJsonBlock(value) {
-  const fenced = value.match(/```json\s*([\s\S]*?)```/i);
-  if (fenced?.[1]) {
-    return fenced[1].trim();
-  }
-
-  const firstBrace = value.indexOf("{");
-  const lastBrace = value.lastIndexOf("}");
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    return value.slice(firstBrace, lastBrace + 1);
-  }
-
-  return value.trim();
+  return extractAssistantJsonBlockModule(value);
 }
 
 function validateAssistantBaseUrl(value) {
@@ -5432,374 +4799,102 @@ function updateAssistantEndpointPolicy() {
 }
 
 function assistantTrustHostOrigin(baseUrl) {
-  try {
-    return new URL(baseUrl).origin.toLowerCase();
-  } catch {
-    return "";
-  }
+  return assistantTrustHostOriginEngine(baseUrl);
 }
 
 function assistantHostRequiresTrust(baseUrl) {
-  try {
-    const parsed = new URL(baseUrl);
-    const protocol = parsed.protocol.toLowerCase();
-    const hostname = parsed.hostname.toLowerCase();
-    const isLoopback =
-      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
-    return protocol === "https:" && !isLoopback;
-  } catch {
-    return false;
-  }
+  return assistantHostRequiresTrustEngine(baseUrl);
 }
 
 function ensureAssistantHostTrust(baseUrl, apiKey) {
-  if (!assistantHostRequiresTrust(baseUrl)) {
-    return true;
-  }
-
-  const origin = assistantTrustHostOrigin(baseUrl);
-  if (!origin) {
-    return false;
-  }
-
-  if (state.assistantTrustedHosts.has(origin)) {
-    return true;
-  }
-
-  const approved = window.confirm(
-    `This assistant request will send${apiKey ? " your API key and" : ""} the prompt directly to ${origin}.\n\nOnly continue if you trust this host.`,
-  );
-  if (!approved) {
-    return false;
-  }
-
-  state.assistantTrustedHosts.add(origin);
-  persistHubAssistantTrustedHosts(state.assistantTrustedHosts);
-  return true;
+  return ensureAssistantHostTrustEngine(baseUrl, apiKey, {
+    trustedHosts: state.assistantTrustedHosts,
+    persistTrustedHosts: persistHubAssistantTrustedHosts,
+    confirm: window.confirm.bind(window),
+  });
 }
 
 function ensureRemoteHostTrust(baseUrl, label) {
-  if (!assistantHostRequiresTrust(baseUrl)) {
-    return true;
-  }
-
-  const origin = assistantTrustHostOrigin(baseUrl);
-  if (!origin) {
-    return false;
-  }
-
-  if (state.remoteTrustedHosts.has(origin)) {
-    return true;
-  }
-
-  const approved = window.confirm(
-    `${label} will contact ${origin} directly.\n\nOnly continue if you trust this remote host.`,
-  );
-  if (!approved) {
-    return false;
-  }
-
-  state.remoteTrustedHosts.add(origin);
-  persistHubTrustedHosts(HUB_REMOTE_TRUSTED_HOSTS_KEY, state.remoteTrustedHosts);
-  return true;
+  return ensureRemoteHostTrustEngine(baseUrl, label, {
+    trustedHosts: state.remoteTrustedHosts,
+    persistTrustedHosts: (trustedHosts) => persistHubTrustedHosts(HUB_REMOTE_TRUSTED_HOSTS_KEY, trustedHosts),
+    confirm: window.confirm.bind(window),
+  });
 }
 
 async function requestHubAssistantPlan() {
-  const baseUrl = elements.assistantBaseUrl?.value?.trim() || "";
-  const model = elements.assistantModelName?.value?.trim() || "";
-  const prompt = elements.assistantPrompt?.value?.trim() || "";
-  const apiKey = elements.assistantApiKey?.value?.trim() || "";
-  const baseUrlValidation = validateAssistantBaseUrl(baseUrl);
-
-  if (!baseUrlValidation.ok || !model) {
-    throw new Error(baseUrlValidation.reason || "Fill in the assistant base URL and model before requesting a plan.");
-  }
-
-  if (!ensureAssistantHostTrust(baseUrlValidation.normalized, apiKey)) {
-    throw new Error("assistant request cancelled before contacting the configured host");
-  }
-
-  const response = await fetch(`${baseUrlValidation.normalized.replace(/\/+$/, "")}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are the Kyuubiki Hub assistant. Return strict JSON with keys summary, rationale, suggested_actions. suggested_actions must be an array of objects with action, payload, reason. Only suggest actions from the provided Hub action catalog. Keep it concise, safe, and onboarding-oriented.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify(
-            {
-              prompt,
-              snapshot: currentAssistantSnapshot(),
-              action_catalog: HUB_ASSISTANT_ACTIONS,
-              local_hints: buildHubAssistantLocalCards().map((card) => ({
-                id: card.id,
-                title: card.title,
-                summary: card.summary,
-                actionLabel: card.actionLabel,
-              })),
-            },
-            null,
-            2,
-          ),
-        },
-      ],
-    }),
+  return requestHubAssistantPlanEngine({
+    assistantBaseUrl: elements.assistantBaseUrl,
+    assistantModelName: elements.assistantModelName,
+    assistantPrompt: elements.assistantPrompt,
+    assistantApiKey: elements.assistantApiKey,
+    validateAssistantBaseUrl,
+    assistantTrustedHosts: state.assistantTrustedHosts,
+    persistAssistantTrustedHosts: persistHubAssistantTrustedHosts,
+    confirm: window.confirm.bind(window),
+    currentAssistantSnapshot,
+    assistantActions: HUB_ASSISTANT_ACTIONS,
+    buildHubAssistantLocalCards,
+    extractAssistantJsonBlock,
   });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`assistant request failed (${response.status}): ${body.slice(0, 240)}`);
-  }
-
-  const payload = await response.json();
-  const content = payload?.choices?.[0]?.message?.content;
-  if (!content) {
-    throw new Error("assistant response did not include a message body");
-  }
-
-  const parsed = JSON.parse(extractAssistantJsonBlock(content));
-  return {
-    summary: String(parsed?.summary || ""),
-    rationale: String(parsed?.rationale || ""),
-    suggested_actions: Array.isArray(parsed?.suggested_actions)
-      ? parsed.suggested_actions.map((entry) => ({
-          action: String(entry?.action || ""),
-          payload: entry && typeof entry.payload === "object" && entry.payload ? entry.payload : {},
-          reason: String(entry?.reason || ""),
-        }))
-      : [],
-  };
 }
 
 function renderHubAssistantPlan() {
-  if (!elements.assistantPlanActions) {
-    return;
-  }
-
-  const plan = state.assistantPlan;
-  elements.assistantPlanActions.innerHTML = "";
-  if (!plan) {
-    renderEmptyHistoryState(elements.assistantPlanActions, hubDynamic("assistantNoPlan"));
-    return;
-  }
-
-  const summaryCard = document.createElement("article");
-  summaryCard.className = "hub-list__card";
-  appendAssistantCardHeader(summaryCard, plan.summary || hubDynamic("modelPlanTitle"), `${plan.suggested_actions.length} actions`);
-  appendTextElement(
-    summaryCard,
-    "p",
-    plan.rationale || hubDynamic("noRationale"),
-    "desktop-shell-note",
-  );
-  elements.assistantPlanActions.appendChild(summaryCard);
-
-  if (!plan.suggested_actions.length) {
-    renderEmptyHistoryState(elements.assistantPlanActions, hubDynamic("assistantNoExecutable"));
-    return;
-  }
-
-  plan.suggested_actions.forEach((entry) => {
-    const article = document.createElement("article");
-    article.className = "hub-list__card";
-    appendAssistantCardHeader(
-      article,
-      entry.action,
-      assistantRiskLevel(entry.action),
-      assistantRiskStateClass(assistantRiskLevel(entry.action)),
-    );
-    appendTextElement(article, "p", entry.reason || hubDynamic("noRationale"), "desktop-shell-note");
-    appendTextElement(article, "code", JSON.stringify(entry.payload || {}, null, 2));
-    const row = document.createElement("div");
-    row.className = "desktop-shell-action-row";
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "desktop-shell-button-ghost";
-    button.textContent = hubDynamic("actionRun");
-    button.addEventListener("click", () => {
-      void executeHubAssistantAction(entry.action, entry.payload || {});
-    });
-    row.appendChild(button);
-    article.appendChild(row);
-    elements.assistantPlanActions.appendChild(article);
+  return renderHubAssistantPlanEngine({
+    assistantPlanActions: elements.assistantPlanActions,
+    assistantPlan: state.assistantPlan,
+    renderEmptyHistoryState,
+    hubDynamic,
+    appendAssistantCardHeader,
+    appendTextElement,
+    assistantRiskLevel,
+    assistantRiskStateClass,
+    executeHubAssistantAction,
   });
 }
 
 function confirmHubAssistantAction(action, source = "assistant") {
-  const risk = assistantRiskLevel(action);
-  if (risk === "low") {
-    return true;
-  }
-
-  const note = source === "plan" ? "model plan action" : "assistant action";
-  rememberHubAssistantAudit({ action, risk, status: "prompted", source, note });
-  const message =
-    risk === "high"
-      ? `High-risk ${note}: ${action}\n\nThis may launch builds or rewrite bundle outputs.\n\nContinue?`
-      : `Sensitive ${note}: ${action}\n\nPlease confirm before the Hub continues.\n\nContinue?`;
-  const approved = window.confirm(message);
-  rememberHubAssistantAudit({
-    action,
-    risk,
-    status: approved ? "confirmed" : "cancelled",
-    source,
-    note,
+  return confirmHubAssistantActionEngine(action, source, {
+    assistantRiskLevel,
+    rememberHubAssistantAudit,
+    confirm: window.confirm.bind(window),
   });
-  return approved;
 }
 
 function applyAssistantBundlePayload(payload) {
-  if (typeof payload?.path === "string") {
-    elements.projectBundlePath.value = payload.path;
-  }
-  if (typeof payload?.comparePath === "string" || typeof payload?.rightPath === "string") {
-    elements.projectBundleComparePath.value = String(payload.comparePath ?? payload.rightPath ?? "");
-  }
-  if (typeof payload?.out === "string") {
-    elements.projectBundleOutPath.value = payload.out;
-  }
+  return applyAssistantBundlePayloadEngine(payload, {
+    projectBundlePath: elements.projectBundlePath,
+    projectBundleComparePath: elements.projectBundleComparePath,
+    projectBundleOutPath: elements.projectBundleOutPath,
+  });
 }
 
 async function executeHubAssistantAction(action, payload = {}, source = "assistant") {
-  const risk = assistantRiskLevel(action);
-  if (!confirmHubAssistantAction(action, source)) {
-    setAssistantOutput(hubDynamic("assistantCancelled", { action }));
-    return;
-  }
-
-  switch (action) {
-    case "hub/focusSection":
-      setSection(typeof payload.section === "string" ? payload.section : "projects");
-      setAssistantOutput(
-        hubDynamic("assistantFocusedSection", {
-          section: typeof payload.section === "string" ? payload.section : "projects",
-        }),
-      );
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "focused Hub section" });
-      return;
-    case "hub/openWorkbench":
-      await runActionWithOptions("open-workbench", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Workbench shell" });
-      return;
-    case "hub/openInstaller":
-      await runActionWithOptions("open-installer", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened Installer shell" });
-      return;
-    case "hub/openDocsIndex":
-      await runActionWithOptions("open-docs-index", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened docs index" });
-      return;
-    case "hub/openCurrentLineDoc":
-      await runActionWithOptions("open-current-line-doc", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened current-line document" });
-      return;
-    case "hub/openOperationsDoc":
-      await runActionWithOptions("open-operations-doc", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened operations guide" });
-      return;
-    case "hub/openTroubleshootingDoc":
-      await runActionWithOptions("open-troubleshooting-doc", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "opened troubleshooting guide" });
-      return;
-    case "hub/startLocal":
-      await runActionWithOptions("start-local", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "started local stack" });
-      return;
-    case "hub/validateEnv":
-      await runActionWithOptions("validate-env", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated environment" });
-      return;
-    case "hub/desktopStage":
-      await runActionWithOptions("desktop-stage", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "staged desktop release" });
-      return;
-    case "hub/desktopBuildHost":
-      await runActionWithOptions("desktop-build-host", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "built host desktop bundles" });
-      return;
-    case "hub/desktopVerify":
-      await runActionWithOptions("desktop-verify", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "verified desktop release" });
-      return;
-    case "hub/setBundleContext":
-      applyAssistantBundlePayload(payload);
-      renderAssistantContext();
-      setAssistantOutput(hubDynamic("assistantUpdatedBundle"));
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "updated bundle inputs" });
-      return;
-    case "hub/projectInspect":
-      applyAssistantBundlePayload(payload);
-      await runActionWithOptions("project-inspect", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "inspected project bundle" });
-      return;
-    case "hub/projectValidate":
-      applyAssistantBundlePayload(payload);
-      await runActionWithOptions("project-validate", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "validated project bundle" });
-      return;
-    case "hub/projectNormalize":
-      applyAssistantBundlePayload(payload);
-      await runActionWithOptions("project-normalize", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "normalized project bundle" });
-      return;
-    case "hub/projectUnpack":
-      applyAssistantBundlePayload(payload);
-      await runActionWithOptions("project-unpack", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "unpacked project bundle" });
-      return;
-    case "hub/projectPack":
-      applyAssistantBundlePayload(payload);
-      await runActionWithOptions("project-pack", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "packed project bundle" });
-      return;
-    case "hub/projectDiff":
-      applyAssistantBundlePayload(payload);
-      await runActionWithOptions("project-diff", { skipConfirmation: true });
-      rememberHubAssistantAudit({ action, risk, status: "completed", source, note: "diffed project bundles" });
-      return;
-    default:
-      rememberHubAssistantAudit({ action, risk, status: "failed", source, note: "unknown assistant action" });
-      throw new Error(`Unknown assistant action: ${action}`);
-  }
+  return executeHubAssistantActionEngine(action, payload, source, {
+    assistantRiskLevel,
+    setAssistantOutput,
+    hubDynamic,
+    setSection,
+    rememberHubAssistantAudit,
+    runActionWithOptions,
+    renderAssistantContext,
+    projectBundlePath: elements.projectBundlePath,
+    projectBundleComparePath: elements.projectBundleComparePath,
+    projectBundleOutPath: elements.projectBundleOutPath,
+    confirm: window.confirm.bind(window),
+  });
 }
 
 async function executeHubAssistantPlan() {
-  if (!state.assistantPlan?.suggested_actions?.length) {
-    setAssistantOutput(hubDynamic("assistantNoPlanToExecute"));
-    return;
-  }
-
-  if (!elements.assistantApprovePlan?.checked) {
-    setAssistantOutput(hubDynamic("assistantReviewFirst"));
-    return;
-  }
-
-  for (const entry of state.assistantPlan.suggested_actions) {
-    try {
-      await executeHubAssistantAction(entry.action, entry.payload || {}, "plan");
-    } catch (error) {
-      rememberHubAssistantAudit({
-        action: entry.action,
-        risk: assistantRiskLevel(entry.action),
-        status: "failed",
-        source: "plan",
-        note: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  }
-  setAssistantOutput(hubDynamic("assistantExecuteCount", { count: state.assistantPlan.suggested_actions.length }));
+  return executeHubAssistantPlanEngine({
+    assistantPlan: state.assistantPlan,
+    assistantApprovePlan: elements.assistantApprovePlan,
+    setAssistantOutput,
+    hubDynamic,
+    executeHubAssistantAction,
+    rememberHubAssistantAudit,
+    assistantRiskLevel,
+  });
 }
 
 function setBusy(isBusy, label = "idle") {
@@ -5869,123 +4964,70 @@ async function loadEnvironment() {
 }
 
 async function refreshRuntimeStatus() {
-  try {
-    const payload = await invokeTauri("service_status");
-    setRuntimeStatusOutput(payload.rendered);
-    applyDesktopState(elements.localRuntimeStatus, payload.rendered, { kind: "health" });
-    applyDesktopState(elements.observeRuntimeStatus, payload.rendered, { kind: "health" });
-  } catch (error) {
-    const message = String(error);
-    setRuntimeStatusOutput(message);
-    applyDesktopState(elements.localRuntimeStatus, message, { kind: "health" });
-    applyDesktopState(elements.observeRuntimeStatus, message, { kind: "health" });
-  }
+  await refreshRuntimeStatusPanel({
+    invokeTauri,
+    setRuntimeStatusOutput,
+    applyDesktopState,
+    localRuntimeStatus: elements.localRuntimeStatus,
+    observeRuntimeStatus: elements.observeRuntimeStatus,
+  });
   renderAssistantContext();
   renderHubAssistantLocalCards();
 }
 
 async function refreshHotRuntimeStatus() {
-  try {
-    const payload = await invokeTauri("hot_service_status");
-    setHotRuntimeStatusOutput(payload.rendered);
-    const inferred = inferHotRuntimeState(payload.rendered);
-    applyDesktopState(elements.hotRuntimeStatus, inferred.status, { kind: "activity" });
-    applyDesktopState(elements.observeHotStatus, inferred.status, { kind: "activity" });
-    if (elements.hotRuntimeMode) {
-      elements.hotRuntimeMode.textContent = inferred.mode;
-    }
-    if (elements.observeHotMode) {
-      elements.observeHotMode.textContent = inferred.mode;
-    }
-    syncHotRuntimeLogPolling();
-    await refreshHotRuntimeLog({ silent: true });
-  } catch (error) {
-    const message = String(error);
-    setHotRuntimeStatusOutput(message);
-    applyDesktopState(elements.hotRuntimeStatus, "failed", { kind: "activity" });
-    applyDesktopState(elements.observeHotStatus, "failed", { kind: "activity" });
-    syncHotRuntimeLogPolling();
-  }
+  await refreshHotRuntimeStatusPanel({
+    invokeTauri,
+    setHotRuntimeStatusOutput,
+    applyDesktopState,
+    hotRuntimeStatus: elements.hotRuntimeStatus,
+    observeHotStatus: elements.observeHotStatus,
+    hotRuntimeMode: elements.hotRuntimeMode,
+    observeHotMode: elements.observeHotMode,
+    syncHotRuntimeLogPolling,
+    refreshHotRuntimeLog,
+  });
 }
 
 async function refreshHotRuntimeLog(options = {}) {
-  const silent = options?.silent === true;
-  const service = currentHotRuntimeLogService();
-
-  if (state.hotLogRefreshInFlight) {
-    return;
-  }
-
-  state.hotLogRefreshInFlight = true;
-
-  try {
-    const payload = await invokeTauri("read_runtime_log", {
-      payload: { service },
-    });
-    const rendered = String(payload?.rendered || "").trim();
-    setHotRuntimeLogOutput(rendered || hubDynamic("noLogLines", { service }));
-  } catch (error) {
-    if (!silent) {
-      setHotRuntimeLogOutput(formatHubOperatorError(error, {
-        actionLabel: "Reading runtime logs",
-        context: "log-read",
-        service,
-      }));
-    }
-  } finally {
-    state.hotLogRefreshInFlight = false;
-  }
+  await refreshRuntimeLogPanel({
+    invokeTauri,
+    state,
+    inFlightKey: "hotLogRefreshInFlight",
+    service: currentHotRuntimeLogService(),
+    silent: options?.silent === true,
+    setOutput: setHotRuntimeLogOutput,
+    hubDynamic,
+    formatHubOperatorError,
+  });
 }
 
 async function refreshObserveRuntimeLog(options = {}) {
-  const silent = options?.silent === true;
-  const service = currentObserveRuntimeLogService();
-
-  if (state.runtimeLogRefreshInFlight) {
-    return;
-  }
-
-  state.runtimeLogRefreshInFlight = true;
-
-  try {
-    const payload = await invokeTauri("read_runtime_log", {
-      payload: { service },
-    });
-    const rendered = String(payload?.rendered || "").trim();
-    setObserveRuntimeLogOutput(rendered || hubDynamic("noLogLines", { service }));
-  } catch (error) {
-    if (!silent) {
-      setObserveRuntimeLogOutput(formatHubOperatorError(error, {
-        actionLabel: "Reading runtime logs",
-        context: "log-read",
-        service,
-      }));
-    }
-  } finally {
-    state.runtimeLogRefreshInFlight = false;
-  }
+  await refreshRuntimeLogPanel({
+    invokeTauri,
+    state,
+    inFlightKey: "runtimeLogRefreshInFlight",
+    service: currentObserveRuntimeLogService(),
+    silent: options?.silent === true,
+    setOutput: setObserveRuntimeLogOutput,
+    hubDynamic,
+    formatHubOperatorError,
+  });
 }
 
 async function copyObserveRuntimeLogView() {
-  const text = sanitizeRuntimeLogForClipboard(
+  await copySanitizedRuntimeLogToClipboard(
     String(elements.observeRuntimeLogOutput?.textContent || "").trim(),
   );
-  await navigator.clipboard.writeText(text);
 }
 
 async function refreshDesktopStatusOutput() {
-  try {
-    setDesktopStatusOutput(
-      await invokeTauri("desktop_status", {
-        payload: { platform: elements.releasePlatform?.value || state.hostPlatform },
-      }),
-    );
-  } catch (error) {
-    setDesktopStatusOutput(formatHubOperatorError(error, {
-      actionLabel: "Refreshing desktop packaging status",
-      context: "desktop-status",
-    }));
-  }
+  await refreshDesktopStatusPanel({
+    invokeTauri,
+    platform: elements.releasePlatform?.value || state.hostPlatform,
+    setDesktopStatusOutput,
+    formatHubOperatorError,
+  });
 }
 
 async function runAction(action) {
@@ -6019,230 +5061,64 @@ async function runActionWithOptions(action, options = {}) {
   setBusy(true, "running");
 
   try {
+    if (await runHubProjectAction(action, buildHubProjectActionContext({
+      invokeTauri,
+      setOperationOutput,
+      setSection,
+      setProjectsPage,
+      setBusy,
+      runProjectBundleAction,
+      currentProjectBundlePayload,
+      currentProjectBundleOutputPayload,
+      currentProjectBundleComparePayload,
+      setProjectBundleOutput,
+    }))) {
+      return;
+    }
+
+    if (await runHubRuntimeAction(action, buildHubRuntimeActionContext({
+      invokeGuardedMutation,
+      setOperationOutput,
+      refreshRuntimeStatus,
+      refreshHotRuntimeStatus,
+      refreshHotRuntimeLog,
+      refreshObserveRuntimeLog,
+      copyHotRuntimeLogView,
+      copyObserveRuntimeLogView,
+      clearHotRuntimeLogView,
+      currentHotRuntimeLogService,
+      currentObserveRuntimeLogService,
+      hubDynamic,
+      setBusy,
+    }))) {
+      return;
+    }
+
+    if (await runHubWorkloadAction(action, buildHubWorkloadActionContext({
+      registerCurrentBundleAsWorkload,
+      syncLocalControlPlaneWorkloads,
+      syncRemoteWorkloadCatalog,
+      exportHubWorkloadLibrary,
+      clearHubWorkloadLibrary,
+      fetchWorkflowCatalog,
+      workloadImportInput: elements.workloadImportInput,
+      setBusy,
+    }))) {
+      return;
+    }
+
+    if (await runHubDesktopAction(action, buildHubDesktopActionContext({
+      invokeTauri,
+      setOperationOutput,
+      setSection,
+      setBusy,
+      refreshDesktopStatusOutput,
+      hubDynamic,
+    }))) {
+      return;
+    }
+
     switch (action) {
-      case "open-workbench":
-        setOperationOutput(await invokeTauri("launch_workbench_gui"));
-        setSection("projects");
-        setBusy(false, "ready");
-        return;
-      case "open-installer":
-        setOperationOutput(await invokeTauri("launch_installer_gui"));
-        setSection("deploy");
-        setBusy(false, "ready");
-        return;
-      case "open-docs-index":
-        setOperationOutput(await invokeTauri("open_docs_index"));
-        setSection("projects");
-        setProjectsPage("guides");
-        setBusy(false, "ready");
-        return;
-      case "open-current-line-doc":
-        setOperationOutput(await invokeTauri("open_current_line_doc"));
-        setSection("projects");
-        setProjectsPage("guides");
-        setBusy(false, "ready");
-        return;
-      case "open-operations-doc":
-        setOperationOutput(await invokeTauri("open_operations_doc"));
-        setSection("projects");
-        setProjectsPage("guides");
-        setBusy(false, "ready");
-        return;
-      case "open-troubleshooting-doc":
-        setOperationOutput(await invokeTauri("open_troubleshooting_doc"));
-        setSection("projects");
-        setProjectsPage("guides");
-        setBusy(false, "ready");
-        return;
-      case "project-inspect":
-        await runProjectBundleAction({
-          action: "project inspect",
-          command: "project_bundle_inspect",
-          payload: currentProjectBundlePayload(),
-          outputTarget: setProjectBundleOutput,
-        });
-        return;
-      case "project-validate":
-        await runProjectBundleAction({
-          action: "project validate",
-          command: "project_bundle_validate",
-          payload: currentProjectBundlePayload(),
-          outputTarget: setProjectBundleOutput,
-        });
-        return;
-      case "project-normalize":
-        await runProjectBundleAction({
-          action: "project normalize",
-          command: "guarded_mutation_action",
-          payload: currentProjectBundleOutputPayload(),
-          outputTarget: setProjectBundleOutput,
-        });
-        return;
-      case "project-unpack":
-        await runProjectBundleAction({
-          action: "project unpack",
-          command: "guarded_mutation_action",
-          payload: currentProjectBundleOutputPayload(),
-          outputTarget: setProjectBundleOutput,
-        });
-        return;
-      case "project-pack":
-        await runProjectBundleAction({
-          action: "project pack",
-          command: "guarded_mutation_action",
-          payload: currentProjectBundleOutputPayload(),
-          outputTarget: setProjectBundleOutput,
-        });
-        return;
-      case "project-diff":
-        await runProjectBundleAction({
-          action: "project diff",
-          command: "project_bundle_diff",
-          payload: currentProjectBundleComparePayload(),
-          outputTarget: setProjectBundleOutput,
-        });
-        return;
-      case "workload-register-local":
-        await registerCurrentBundleAsWorkload();
-        setBusy(false, "ready");
-        return;
-      case "workload-sync-local":
-        await syncLocalControlPlaneWorkloads();
-        setBusy(false, "ready");
-        return;
-      case "workload-sync-remote":
-        await syncRemoteWorkloadCatalog();
-        setBusy(false, "ready");
-        return;
-      case "workload-export-library":
-        exportHubWorkloadLibrary();
-        setBusy(false, "ready");
-        return;
-      case "workload-import-library":
-        elements.workloadImportInput?.click();
-        setBusy(false, "idle");
-        return;
-      case "workload-clear-library":
-        clearHubWorkloadLibrary();
-        setBusy(false, "ready");
-        return;
-      case "workflow-catalog-refresh":
-        await fetchWorkflowCatalog();
-        setBusy(false, "ready");
-        return;
-      case "start-local":
-        setOperationOutput(await invokeGuardedMutation("service_start", { mode: "local" }));
-        await refreshRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "hot-start-local":
-        setOperationOutput(await invokeGuardedMutation("hot_service_start", { mode: "local" }));
-        await refreshHotRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "hot-start-cloud":
-        setOperationOutput(await invokeGuardedMutation("hot_service_start", { mode: "cloud" }));
-        await refreshHotRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "hot-start-distributed":
-        setOperationOutput(await invokeGuardedMutation("hot_service_start", { mode: "distributed" }));
-        await refreshHotRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "hot-refresh-status":
-        await refreshHotRuntimeStatus();
-        setOperationOutput(hubDynamic("hotStatusRefreshed"));
-        setBusy(false, "ready");
-        return;
-      case "hot-refresh-log":
-        await refreshHotRuntimeLog();
-        setOperationOutput(hubDynamic("hotLogRefreshed", { service: elements.hotRuntimeLogService?.value || "hot-stack" }));
-        setBusy(false, "ready");
-        return;
-      case "hot-copy-log-view":
-        await copyHotRuntimeLogView();
-        setOperationOutput(hubDynamic("hotLogCopied", { service: elements.hotRuntimeLogService?.value || "hot-stack" }));
-        setBusy(false, "ready");
-        return;
-      case "observe-refresh-runtime-log":
-        await refreshObserveRuntimeLog();
-        setOperationOutput(hubDynamic("runtimeLogRefreshed", { service: elements.observeRuntimeLogService?.value || "frontend" }));
-        setBusy(false, "ready");
-        return;
-      case "observe-copy-runtime-log":
-        await copyObserveRuntimeLogView();
-        setOperationOutput(hubDynamic("runtimeLogCopied", { service: elements.observeRuntimeLogService?.value || "frontend" }));
-        setBusy(false, "ready");
-        return;
-      case "hot-clear-log-view":
-        clearHotRuntimeLogView();
-        setOperationOutput(hubDynamic("hotLogCleared", { service: elements.hotRuntimeLogService?.value || "hot-stack" }));
-        setBusy(false, "idle");
-        return;
-      case "hot-stop":
-        setOperationOutput(await invokeGuardedMutation("hot_service_stop"));
-        await refreshHotRuntimeStatus();
-        setBusy(false, "idle");
-        return;
-      case "start-cloud":
-        setOperationOutput(await invokeGuardedMutation("service_start", { mode: "cloud" }));
-        await refreshRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "start-distributed":
-        setOperationOutput(await invokeGuardedMutation("service_start", { mode: "distributed" }));
-        await refreshRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "restart-local":
-        setOperationOutput(await invokeGuardedMutation("service_restart", { mode: "local" }));
-        await refreshRuntimeStatus();
-        setBusy(false, "ready");
-        return;
-      case "stop-stack":
-        setOperationOutput(await invokeGuardedMutation("service_stop"));
-        await refreshRuntimeStatus();
-        setBusy(false, "idle");
-        return;
-      case "validate-env":
-        setOperationOutput(await invokeGuardedMutation("validate_env"));
-        setBusy(false, "ready");
-        return;
-      case "run-doctor": {
-        const payload = await invokeTauri("doctor_report");
-        setOperationOutput(payload.rendered);
-        setBusy(false, "ready");
-        return;
-      }
-      case "desktop-stage":
-        setOperationOutput(
-          await invokeGuardedMutation("desktop_stage", {
-            platform: elements.releasePlatform?.value || state.hostPlatform,
-          }),
-        );
-        await refreshDesktopStatusOutput();
-        setBusy(false, "ready");
-        return;
-      case "desktop-status":
-        await refreshDesktopStatusOutput();
-        setOperationOutput(hubDynamic("packagingRefreshed"));
-        setBusy(false, "ready");
-        return;
-      case "desktop-verify":
-        setOperationOutput(
-          await invokeGuardedMutation("desktop_verify", {
-            platform: elements.releasePlatform?.value || state.hostPlatform,
-          }),
-        );
-        await refreshDesktopStatusOutput();
-        setBusy(false, "ready");
-        return;
-      case "desktop-build-host":
-        setOperationOutput(await invokeGuardedMutation("desktop_build_host"));
-        await refreshDesktopStatusOutput();
-        setBusy(false, "ready");
-        return;
       default:
         setBusy(false, "idle");
         return;
