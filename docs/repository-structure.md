@@ -41,7 +41,7 @@ See also:
 
 - [scripts/README.md](../scripts/README.md)
 - [tmp/README.md](../tmp/README.md)
-- [dist/README.md](../dist/README.md)
+- [releases/README.md](../releases/README.md)
 - [tests/integration/README.md](../tests/integration/README.md)
 
 ## Application Layer

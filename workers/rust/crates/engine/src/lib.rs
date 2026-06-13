@@ -5,6 +5,7 @@ mod workflow;
 mod workflow_contract;
 mod workflow_executor;
 mod workflow_reporting;
+mod workflow_summary_transforms;
 
 #[cfg(test)]
 mod tests;

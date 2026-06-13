@@ -167,10 +167,58 @@ export type WorkflowCatalogPayload = {
   workflows: WorkflowCatalogEntry[];
 };
 
+export type WorkflowProgressEvent = {
+  stage:
+    | "queued"
+    | "preprocessing"
+    | "partitioning"
+    | "solving"
+    | "postprocessing"
+    | "completed"
+    | "failed"
+    | "cancelled";
+  progress: number;
+  message?: string | null;
+  node_id?: string | null;
+  kind?: string | null;
+  emitted_at?: string | null;
+};
+
+export type WorkflowSummaryArtifactFieldValue =
+  | string
+  | number
+  | boolean
+  | null;
+
+export type WorkflowSummaryArtifactPayload = {
+  contract_version: string;
+  summary_kind?: string;
+  source_operator_id?: string;
+  source_artifact_type?: string;
+  field_namespace?: string;
+  fields: Record<string, WorkflowSummaryArtifactFieldValue>;
+  metadata?: Record<string, string | number | boolean | null>;
+};
+
+export type WorkflowGraphArtifactEnvelope = {
+  artifact_key?: string;
+  artifact_type?: string;
+  dataset_value?: string;
+  node_id?: string;
+  port_id?: string;
+  encoding?: string;
+  schema_ref?: WorkflowOperatorSchemaRef | null;
+  contract_version?: string;
+  payload?: unknown;
+  content?: unknown;
+};
+
+export type WorkflowGraphArtifactValue = WorkflowGraphArtifactEnvelope | unknown;
+
 export type WorkflowGraphJobResult = {
   workflow_id: string;
   current_node?: string | null;
-  progress_events?: Array<Record<string, unknown>>;
+  progress_events?: WorkflowProgressEvent[];
   completed_nodes: string[];
   skipped_nodes?: string[];
   branch_decisions?: Array<{
@@ -192,5 +240,5 @@ export type WorkflowGraphJobResult = {
     port_id: string;
     source_artifacts?: string[];
   }>;
-  artifacts: Record<string, unknown>;
+  artifacts: Record<string, WorkflowGraphArtifactValue>;
 };

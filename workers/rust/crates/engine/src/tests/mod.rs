@@ -17,3 +17,7 @@ mod workflow_solver_extended;
 mod workflow_solver_structural;
 mod workflow_solver_templates;
 mod workflow_summary_merge;
+mod workflow_summary_compare;
+mod workflow_summary_aggregate;
+mod workflow_summary_normalize;
+mod workflow_summary_select;

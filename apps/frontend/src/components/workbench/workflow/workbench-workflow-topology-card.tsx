@@ -1,28 +1,17 @@
 "use client";
-import { useState } from "react";
-import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowOperatorDescriptor, WorkflowGraphPort } from "@/lib/api";
+
+import { useMemo, useState } from "react";
+import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowGraphPort, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import { listWorkflowNodeTemplatePresets, type WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
-import {
-  buildOperatorOptionLabel,
-  sortWorkflowOperatorOptionPresets,
-  WorkbenchWorkflowOperatorDescriptorSummary,
-} from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
-import {
-  filterWorkflowOperatorOptionPresets,
-  WorkbenchWorkflowOperatorSearch,
-} from "@/components/workbench/workflow/workbench-workflow-operator-search";
-import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
-import { WorkbenchWorkflowConditionEditor } from "@/components/workbench/workflow/workbench-workflow-condition-editor";
-import { WorkbenchWorkflowControlFlowHint } from "@/components/workbench/workflow/workbench-workflow-control-flow-hint";
+import { sortWorkflowOperatorOptionPresets, WorkbenchWorkflowOperatorDescriptorSummary } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
+import { filterWorkflowOperatorOptionPresets, WorkbenchWorkflowOperatorSearch } from "@/components/workbench/workflow/workbench-workflow-operator-search";
 import { WorkbenchWorkflowTemplateChainActions } from "@/components/workbench/workflow/workbench-workflow-template-chain-actions";
-import {
-  describeWorkflowNodeTemplateSyncImpact,
-  getWorkflowNodeTemplateSyncImpact,
-  listAutoReconnectEdgeIds,
-} from "@/components/workbench/workflow/workbench-workflow-template-impact";
+import { describeWorkflowNodeTemplateSyncImpact, getWorkflowNodeTemplateSyncImpact, listAutoReconnectEdgeIds } from "@/components/workbench/workflow/workbench-workflow-template-impact";
+import { WorkbenchWorkflowTopologyEdgeSection, WorkbenchWorkflowTopologyNodeSection } from "@/components/workbench/workflow/workbench-workflow-topology-sections";
+
 type WorkbenchWorkflowTopologyCardProps = {
   labels: WorkflowSidebarLabels;
   operatorDescriptors?: WorkflowOperatorDescriptor[];
@@ -48,94 +37,13 @@ type WorkbenchWorkflowTopologyCardProps = {
   onRemoveEdge: (edgeId: string) => void;
   onUpdateEdge: (edgeId: string, updater: (edge: WorkflowGraphEdge) => WorkflowGraphEdge) => void;
 };
+
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
-function WorkbenchWorkflowPortEditor(props: {
-  labels: WorkflowSidebarLabels;
-  nodeId: string;
-  ports: WorkflowGraphPort[];
-  direction: "inputs" | "outputs";
-  title: string;
-  locked?: boolean;
-  onAdd: () => void;
-  onRemove: (portId: string) => void;
-  onUpdate: (portId: string, updater: (port: WorkflowGraphPort) => WorkflowGraphPort) => void;
-}) {
-  const { labels, nodeId, ports, direction, title, locked = false, onAdd, onRemove, onUpdate } = props;
-  return (
-    <div className="sidebar-stack">
-      <div className="card-head">
-        <h3>{title}</h3>
-        {locked ? (
-          <span className="status-pill status-pill--watch">descriptor</span>
-        ) : (
-          <button onClick={onAdd} type="button">
-            {direction === "inputs" ? labels.addInputPortLabel : labels.addOutputPortLabel}
-          </button>
-        )}
-      </div>
-      {ports.map((port) => (
-        <div className="form-grid compact" key={`${nodeId}:${direction}:${port.id}`}>
-          <label>
-            <span>{labels.portIdLabel}</span>
-            <input
-              disabled={locked}
-              onChange={(event) =>
-                onUpdate(port.id, (current) => ({
-                  ...current,
-                  id: event.target.value,
-                }))
-              }
-              value={port.id}
-            />
-          </label>
-          <label>
-            <span>{labels.artifactTypeLabel}</span>
-            <input
-              disabled={locked}
-              onChange={(event) =>
-                onUpdate(port.id, (current) => ({
-                  ...current,
-                  artifact_type: event.target.value,
-                }))
-              }
-              value={port.artifact_type}
-            />
-          </label>
-          <label>
-            <span>{labels.artifactDescriptionLabel}</span>
-            <input
-              disabled={locked}
-              onChange={(event) =>
-                onUpdate(port.id, (current) => ({
-                  ...current,
-                  description: event.target.value || undefined,
-                }))
-              }
-              value={port.description ?? ""}
-            />
-          </label>
-          {locked ? null : (
-            <button onClick={() => onRemove(port.id)} type="button">
-              {labels.removePortLabel}
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-function getSuggestedPorts(
-  ports: WorkflowGraphPort[],
-  edge: WorkflowGraphEdge,
-  direction: "inputs" | "outputs",
-) {
-  const datasetMatched = edge.dataset_value
-    ? ports.filter((port) => port.dataset_value === edge.dataset_value)
-    : [];
+
+function getSuggestedPorts(ports: WorkflowGraphPort[], edge: WorkflowGraphEdge, direction: "inputs" | "outputs") {
+  const datasetMatched = edge.dataset_value ? ports.filter((port) => port.dataset_value === edge.dataset_value) : [];
   if (datasetMatched.length > 0) return datasetMatched;
-  const artifactMatched = edge.artifact_type
-    ? ports.filter((port) => port.artifact_type === edge.artifact_type)
-    : [];
+  const artifactMatched = edge.artifact_type ? ports.filter((port) => port.artifact_type === edge.artifact_type) : [];
   if (artifactMatched.length > 0) return artifactMatched;
   if (direction === "outputs" && edge.artifact_type) {
     const looseOutputs = ports.filter((port) => port.artifact_type === edge.artifact_type);
@@ -143,27 +51,7 @@ function getSuggestedPorts(
   }
   return ports;
 }
-function buildEdgeHighlightStyle(
-  edgeId: string,
-  focusedEdgeId: string | null | undefined,
-  highlightedEdgeIds: string[],
-  localHighlightedEdgeIds: string[],
-) {
-  const highlighted = highlightedEdgeIds.includes(edgeId) || localHighlightedEdgeIds.includes(edgeId);
-  if (!highlighted && focusedEdgeId !== edgeId) return undefined;
-  return {
-    outline: highlighted ? "2px solid rgba(34, 197, 94, 0.9)" : "2px solid var(--accent, #4f46e5)",
-    outlineOffset: "2px",
-    boxShadow: highlighted ? "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" : undefined,
-  };
-}
-function buildNodeHighlightStyle(nodeId: string, focusedNodeId: string | null | undefined, highlightedNodeIds: string[]) {
-  const highlighted = highlightedNodeIds.includes(nodeId);
-  if (!highlighted && focusedNodeId !== nodeId) return undefined;
-  return highlighted
-    ? { outline: "2px solid rgba(34, 197, 94, 0.9)", outlineOffset: "2px", boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" }
-    : { outline: "2px solid var(--accent, #4f46e5)", outlineOffset: "2px" };
-}
+
 export function WorkbenchWorkflowTopologyCard({
   labels,
   operatorDescriptors,
@@ -196,44 +84,63 @@ export function WorkbenchWorkflowTopologyCard({
   const [nextOperatorValidationFilter, setNextOperatorValidationFilter] = useState("");
   const [nextOperatorCapabilityFilter, setNextOperatorCapabilityFilter] = useState("");
   const [localHighlightedEdgeIds, setLocalHighlightedEdgeIds] = useState<string[]>([]);
-  const nextKindTemplates = listWorkflowNodeTemplatePresets(nextNodeKind, operatorDescriptors);
+  const operatorDescriptorMap = useMemo(() => new Map((operatorDescriptors ?? []).map((descriptor) => [descriptor.id, descriptor] as const)), [operatorDescriptors]);
+  const selectedNodeMap = useMemo(() => new Map(selectedNodes.map((node) => [node.id, node] as const)), [selectedNodes]);
+  const nextKindTemplates = useMemo(() => listWorkflowNodeTemplatePresets(nextNodeKind, operatorDescriptors), [nextNodeKind, operatorDescriptors]);
   const nextOperatorTemplates = nextKindTemplates.filter((preset) => preset.operatorId);
-  const selectedSourceNodeId = selectedNodes[0]?.id ?? null;
-  const operatorDescriptorMap = new Map(
-    (operatorDescriptors ?? []).map((descriptor) => [descriptor.id, descriptor] as const),
-  );
-  const availableDomains = [...new Set(nextOperatorTemplates.map((preset) => {
+  const nodeSelectOptions = useMemo(() => selectedNodes.map((node) => ({ id: node.id })), [selectedNodes]);
+  const nodeOperatorPresetMap = useMemo(() => {
+    const byKind = new Map<string, ReturnType<typeof sortWorkflowOperatorOptionPresets>>();
+    for (const kind of new Set(selectedNodes.map((node) => node.kind))) {
+      byKind.set(kind, sortWorkflowOperatorOptionPresets(listWorkflowNodeTemplatePresets(kind, operatorDescriptors).filter((preset) => preset.operatorId), operatorDescriptorMap));
+    }
+    return byKind;
+  }, [operatorDescriptorMap, operatorDescriptors, selectedNodes]);
+  const controlFlowEdgesByNode = useMemo(() => {
+    const byNode = new Map<string, WorkflowGraphEdge[]>();
+    for (const node of selectedNodes) byNode.set(node.id, []);
+    for (const edge of selectedEdges) {
+      if (byNode.has(edge.from.node)) byNode.get(edge.from.node)?.push(edge);
+      if (edge.to.node !== edge.from.node && byNode.has(edge.to.node)) byNode.get(edge.to.node)?.push(edge);
+    }
+    return byNode;
+  }, [selectedEdges, selectedNodes]);
+  const bridgePeerNodesByNode = useMemo(() => {
+    const byNode = new Map<string, WorkflowGraphNode[]>();
+    for (const node of selectedNodes) {
+      const outputTypes = new Set((node.outputs ?? []).map((port) => port.artifact_type));
+      byNode.set(node.id, selectedNodes.filter((entry) => (entry.inputs ?? []).some((port) => outputTypes.has(port.artifact_type))));
+    }
+    return byNode;
+  }, [selectedNodes]);
+  const availableDomains = useMemo(() => [...new Set(nextOperatorTemplates.map((preset) => {
     const descriptor = preset.operatorId ? operatorDescriptorMap.get(preset.operatorId) : undefined;
     return descriptor?.domain;
-  }).filter(Boolean))] as string[];
-  const availableCapabilities = [...new Set(nextOperatorTemplates.flatMap((preset) => {
+  }).filter(Boolean))] as string[], [nextOperatorTemplates, operatorDescriptorMap]);
+  const availableCapabilities = useMemo(() => [...new Set(nextOperatorTemplates.flatMap((preset) => {
     const descriptor = preset.operatorId ? operatorDescriptorMap.get(preset.operatorId) : undefined;
     return descriptor?.capability_tags ?? [];
-  }))];
-  const nextOperatorDescriptor = nextOperatorId
-    ? operatorDescriptorMap.get(nextOperatorId)
-    : undefined;
-  const sortedNextOperatorTemplates = filterWorkflowOperatorOptionPresets(
-    nextOperatorTemplates,
-    operatorDescriptorMap,
-    nextOperatorSearchQuery,
-    {
-      domain: nextOperatorDomainFilter,
-      validation: nextOperatorValidationFilter,
-      capability: nextOperatorCapabilityFilter,
-    },
+  }))], [nextOperatorTemplates, operatorDescriptorMap]);
+  const nextOperatorDescriptor = nextOperatorId ? operatorDescriptorMap.get(nextOperatorId) : undefined;
+  const sortedNextOperatorTemplates = useMemo(() => filterWorkflowOperatorOptionPresets(nextOperatorTemplates, operatorDescriptorMap, nextOperatorSearchQuery, { domain: nextOperatorDomainFilter, validation: nextOperatorValidationFilter, capability: nextOperatorCapabilityFilter }), [nextOperatorTemplates, operatorDescriptorMap, nextOperatorSearchQuery, nextOperatorDomainFilter, nextOperatorValidationFilter, nextOperatorCapabilityFilter]);
+  const edgeViewModels = useMemo(
+    () =>
+      selectedEdges.map((edge) => {
+        const sourceNode = selectedNodeMap.get(edge.from.node);
+        const targetNode = selectedNodeMap.get(edge.to.node);
+        return {
+          edge,
+          isFocused: focusedEdgeId === edge.id,
+          isHighlighted: highlightedEdgeIds.includes(edge.id),
+          isLocallyHighlighted: localHighlightedEdgeIds.includes(edge.id),
+          sourcePorts: getSuggestedPorts(sourceNode?.outputs ?? [], edge, "outputs"),
+          targetPorts: getSuggestedPorts(targetNode?.inputs ?? [], edge, "inputs"),
+        };
+      }),
+    [focusedEdgeId, highlightedEdgeIds, localHighlightedEdgeIds, selectedEdges, selectedNodeMap],
   );
-  const getPortOptions = (
-    node: WorkflowGraphNode | undefined,
-    direction: "inputs" | "outputs",
-  ) => node?.[direction] ?? [];
   const confirmNodeTemplateSync = (node: WorkflowGraphNode, operatorId?: string) => {
-    const impact = getWorkflowNodeTemplateSyncImpact(
-      { nodes: selectedNodes, edges: selectedEdges },
-      node.id,
-      { kind: node.kind, operatorId },
-      operatorDescriptors ?? [],
-    );
+    const impact = getWorkflowNodeTemplateSyncImpact({ nodes: selectedNodes, edges: selectedEdges }, node.id, { kind: node.kind, operatorId }, operatorDescriptors ?? []);
     const preview = describeWorkflowNodeTemplateSyncImpact(impact);
     const accepted = preview ? window.confirm(preview) : true;
     if (accepted) {
@@ -251,20 +158,14 @@ export function WorkbenchWorkflowTopologyCard({
       <div className="card-head">
         <h2>{labels.topologyEditorTitle}</h2>
         <div className="button-row">
-          <button onClick={onAddEdge} type="button">
-            {labels.addEdgeLabel}
-          </button>
+          <button onClick={onAddEdge} type="button">{labels.addEdgeLabel}</button>
         </div>
       </div>
       <div className="form-grid compact">
         <label>
           <span>{labels.kindLabel}</span>
           <select onChange={(event) => setNextNodeKind(event.target.value)} value={nextNodeKind}>
-            {NODE_KIND_OPTIONS.map((kind) => (
-              <option key={kind} value={kind}>
-                {kind}
-              </option>
-            ))}
+            {NODE_KIND_OPTIONS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
           </select>
         </label>
         <WorkbenchWorkflowOperatorSearch
@@ -280,317 +181,62 @@ export function WorkbenchWorkflowTopologyCard({
           onDomainFilterChange={setNextOperatorDomainFilter}
           onOperatorIdChange={setNextOperatorId}
           onQueryChange={setNextOperatorSearchQuery}
-          onQuickInsert={(operatorId) => {
-            setNextOperatorId(operatorId);
-            onAddNode({ kind: nextNodeKind, operatorId });
-          }}
+          onQuickInsert={(operatorId) => { setNextOperatorId(operatorId); onAddNode({ kind: nextNodeKind, operatorId }); }}
           onValidationFilterChange={setNextOperatorValidationFilter}
           query={nextOperatorSearchQuery}
           selectedSourceNode={selectedNodes[0] ?? null}
           validationFilter={nextOperatorValidationFilter}
         />
-        <button
-          onClick={() =>
-            onAddNode({
-              kind: nextNodeKind,
-              operatorId: nextOperatorId || undefined,
-            })
-          }
-          type="button"
-        >
-          {labels.addNodeLabel}
-        </button>
+        <button onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>
       </div>
-      <WorkbenchWorkflowOperatorDescriptorSummary
-        descriptor={nextOperatorDescriptor}
-        labels={labels}
-      />
-      <WorkbenchWorkflowTemplateChainActions
-        labels={labels}
-        onInsertTemplateChain={onInsertTemplateChain}
-        selectedSourceNodeId={selectedSourceNodeId}
-        selectedNodes={selectedNodes}
-      />
+      <WorkbenchWorkflowOperatorDescriptorSummary descriptor={nextOperatorDescriptor} labels={labels} />
+      <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={selectedNodes[0]?.id ?? null} selectedNodes={selectedNodes} />
       <div className="sidebar-stack">
-        {selectedNodes.map((node) => {
-          const operatorDescriptor = node.operator_id
-            ? operatorDescriptorMap.get(node.operator_id)
-            : undefined;
-          const templateLocked = Boolean(operatorDescriptor);
-
-          return (
-            <section
-              className="sidebar-card sidebar-card--compact"
-              data-workflow-node-id={node.id}
-              key={node.id}
-              style={buildNodeHighlightStyle(node.id, focusedNodeId, highlightedNodeIds)}
-            >
-                <div className="card-head">
-                  <h2>{node.id}</h2>
-                  <div className="button-row">
-                    <button
-                      onClick={() =>
-                        onAddConnectedNode(node.id, {
-                          kind: nextNodeKind,
-                          operatorId: nextOperatorId || undefined,
-                        })
-                      }
-                      type="button"
-                    >
-                      {labels.addConnectedNodeLabel}
-                    </button>
-                    <button onClick={() => onRemoveNode(node.id)} type="button">
-                      {labels.removeNodeLabel}
-                    </button>
-                  </div>
-                </div>
-                <div className="form-grid compact">
-                  <label>
-                    <span>{labels.nodeIdLabel}</span>
-                    <input
-                      onChange={(event) =>
-                        onUpdateNode(node.id, (current) => ({
-                          ...current,
-                          id: event.target.value,
-                        }))
-                      }
-                      value={node.id}
-                    />
-                  </label>
-                  <label>
-                    <span>{labels.kindLabel}</span>
-                    <input
-                      disabled={templateLocked}
-                      onChange={(event) =>
-                        onUpdateNode(node.id, (current) => ({
-                          ...current,
-                          kind: event.target.value,
-                        }))
-                      }
-                      value={node.kind}
-                    />
-                  </label>
-                  <label>
-                    <span>{labels.operatorLabel}</span>
-                    <input
-                      list={`workflow-node-operators-${node.id}`}
-                      onChange={(event) =>
-                        confirmNodeTemplateSync(node, event.target.value || undefined)
-                          ? onSyncNodeTemplate(node.id, {
-                              kind: node.kind,
-                              operatorId: event.target.value || undefined,
-                            })
-                          : undefined
-                      }
-                      value={node.operator_id ?? ""}
-                    />
-                    <datalist id={`workflow-node-operators-${node.id}`}>
-                      {sortWorkflowOperatorOptionPresets(
-                        listWorkflowNodeTemplatePresets(node.kind, operatorDescriptors).filter(
-                          (preset) => preset.operatorId,
-                        ),
-                        operatorDescriptorMap,
-                      )
-                        .map((preset) => (
-                          <option
-                            key={preset.id}
-                            label={buildOperatorOptionLabel(
-                              labels,
-                              preset.label,
-                              preset.operatorId
-                                ? operatorDescriptorMap.get(preset.operatorId)
-                                : undefined,
-                            )}
-                            value={preset.operatorId}
-                          />
-                        ))}
-                    </datalist>
-                  </label>
-                </div>
-                <WorkbenchWorkflowOperatorDescriptorSummary
-                  descriptor={operatorDescriptor}
-                  labels={labels}
-                />
-                <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={selectedEdges} />
-                <WorkbenchWorkflowBridgeContractEditor
-                  currentHeatPlaneModel={currentHeatPlaneModel as unknown as Record<string, unknown>}
-                  currentPlaneModel={currentPlaneModel as unknown as Record<string, unknown>}
-                  currentStudyKind={currentStudyKind}
-                  labels={labels}
-                  node={node}
-                  selectedNodes={selectedNodes}
-                  onUpdateNode={onUpdateNode}
-                />
-                <WorkbenchWorkflowConditionEditor labels={labels} node={node} onUpdateNode={onUpdateNode} />
-                <WorkbenchWorkflowPortEditor
-                  direction="inputs"
-                  labels={labels}
-                  locked={templateLocked}
-                  nodeId={node.id}
-                  onAdd={() => onAddNodePort(node.id, "inputs")}
-                  onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)}
-                  onUpdate={(portId, updater) => onUpdateNodePort(node.id, "inputs", portId, updater)}
-                  ports={node.inputs ?? []}
-                  title={labels.inputsTitle}
-                />
-                <WorkbenchWorkflowPortEditor
-                  direction="outputs"
-                  labels={labels}
-                  locked={templateLocked}
-                  nodeId={node.id}
-                  onAdd={() => onAddNodePort(node.id, "outputs")}
-                  onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)}
-                  onUpdate={(portId, updater) => onUpdateNodePort(node.id, "outputs", portId, updater)}
-                  ports={node.outputs ?? []}
-                  title={labels.outputsTitle}
-                />
-            </section>
-          );
-        })}
+        {selectedNodes.map((node) => (
+          <WorkbenchWorkflowTopologyNodeSection
+            bridgePeerNodes={bridgePeerNodesByNode.get(node.id) ?? []}
+            controlFlowEdges={controlFlowEdgesByNode.get(node.id) ?? []}
+            currentHeatPlaneModel={currentHeatPlaneModel}
+            currentPlaneModel={currentPlaneModel}
+            currentStudyKind={currentStudyKind}
+            isFocused={focusedNodeId === node.id}
+            isHighlighted={highlightedNodeIds.includes(node.id)}
+            key={node.id}
+            labels={labels}
+            nextNodeKind={nextNodeKind}
+            nextOperatorId={nextOperatorId}
+            node={node}
+            nodeOperatorPresets={nodeOperatorPresetMap.get(node.kind) ?? []}
+            onAddConnectedNode={onAddConnectedNode}
+            onAddNodePort={onAddNodePort}
+            onConfirmNodeTemplateSync={confirmNodeTemplateSync}
+            onRemoveNode={onRemoveNode}
+            onRemoveNodePort={onRemoveNodePort}
+            onSyncNodeTemplate={onSyncNodeTemplate}
+            onUpdateNode={onUpdateNode}
+            onUpdateNodePort={onUpdateNodePort}
+            operatorDescriptor={node.operator_id ? operatorDescriptorMap.get(node.operator_id) : undefined}
+            operatorDescriptorMap={operatorDescriptorMap}
+          />
+        ))}
       </div>
-
       <div className="sidebar-stack">
-        {selectedEdges.map((edge) => {
-          const sourceNode = selectedNodes.find((node) => node.id === edge.from.node);
-          const targetNode = selectedNodes.find((node) => node.id === edge.to.node);
-          const sourcePorts = getSuggestedPorts(
-            getPortOptions(sourceNode, "outputs"),
-            edge,
-            "outputs",
-          );
-          const targetPorts = getSuggestedPorts(
-            getPortOptions(targetNode, "inputs"),
-            edge,
-            "inputs",
-          );
-          return (
-            <section
-              className="sidebar-card sidebar-card--compact"
-              data-workflow-edge-id={edge.id}
-              key={edge.id}
-              style={buildEdgeHighlightStyle(edge.id, focusedEdgeId, highlightedEdgeIds, localHighlightedEdgeIds)}
-            >
-              <div className="card-head">
-                <h2>{edge.id}</h2>
-                <button onClick={() => onRemoveEdge(edge.id)} type="button">
-                  {labels.removeEdgeLabel}
-                </button>
-              </div>
-              <div className="form-grid compact">
-                <label>
-                  <span>{labels.edgeIdLabel}</span>
-                  <input
-                    onChange={(event) =>
-                      onUpdateEdge(edge.id, (current) => ({
-                        ...current,
-                        id: event.target.value,
-                      }))
-                    }
-                    value={edge.id}
-                  />
-                </label>
-                <label>
-                  <span>{labels.fromLabel}</span>
-                  <select
-                    onChange={(event) =>
-                      onUpdateEdge(edge.id, (current) => ({
-                        ...current,
-                        from: {
-                          node: event.target.value,
-                          port:
-                            selectedNodes.find((node) => node.id === event.target.value)?.outputs?.[0]
-                              ?.id ?? "",
-                        },
-                      }))
-                    }
-                    value={edge.from.node}
-                  >
-                    <option value="">--</option>
-                    {selectedNodes.map((node) => (
-                      <option key={`from:${node.id}`} value={node.id}>
-                        {node.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>{labels.portIdLabel}</span>
-                  <select
-                    onChange={(event) =>
-                      onUpdateEdge(edge.id, (current) => ({
-                        ...current,
-                        from: { ...current.from, port: event.target.value },
-                      }))
-                    }
-                    value={edge.from.port}
-                  >
-                    <option value="">--</option>
-                    {sourcePorts.map((port: WorkflowGraphPort) => (
-                      <option key={`from:${edge.id}:${port.id}`} value={port.id}>
-                        {port.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>{labels.toLabel}</span>
-                  <select
-                    onChange={(event) =>
-                      onUpdateEdge(edge.id, (current) => ({
-                        ...current,
-                        to: {
-                          node: event.target.value,
-                          port:
-                            selectedNodes.find((node) => node.id === event.target.value)?.inputs?.[0]
-                              ?.id ?? "",
-                        },
-                      }))
-                    }
-                    value={edge.to.node}
-                  >
-                    <option value="">--</option>
-                    {selectedNodes.map((node) => (
-                      <option key={`to:${node.id}`} value={node.id}>
-                        {node.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>{labels.portIdLabel}</span>
-                  <select
-                    onChange={(event) =>
-                      onUpdateEdge(edge.id, (current) => ({
-                        ...current,
-                        to: { ...current.to, port: event.target.value },
-                      }))
-                    }
-                    value={edge.to.port}
-                  >
-                    <option value="">--</option>
-                    {targetPorts.map((port: WorkflowGraphPort) => (
-                      <option key={`to:${edge.id}:${port.id}`} value={port.id}>
-                        {port.id}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  <span>{labels.artifactTypeLabel}</span>
-                  <input
-                    onChange={(event) =>
-                      onUpdateEdge(edge.id, (current) => ({
-                        ...current,
-                        artifact_type: event.target.value,
-                      }))
-                    }
-                    value={edge.artifact_type}
-                  />
-                </label>
-              </div>
-            </section>
-          );
-        })}
+        {edgeViewModels.map(({ edge, isFocused, isHighlighted, isLocallyHighlighted, sourcePorts, targetPorts }) => (
+          <WorkbenchWorkflowTopologyEdgeSection
+            edge={edge}
+            isFocused={isFocused}
+            isHighlighted={isHighlighted}
+            isLocallyHighlighted={isLocallyHighlighted}
+            key={edge.id}
+            labels={labels}
+            nodeSelectOptions={nodeSelectOptions}
+            onRemoveEdge={onRemoveEdge}
+            onUpdateEdge={onUpdateEdge}
+            selectedNodeMap={selectedNodeMap}
+            sourcePorts={sourcePorts}
+            targetPorts={targetPorts}
+          />
+        ))}
       </div>
     </section>
   );

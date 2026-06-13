@@ -180,4 +180,4 @@ When preparing a release, keep the order stable:
   perform a full cross-platform bundle build.
 - The source of truth for bundle metadata is:
   - [docs/packaging-and-deployment.md](packaging-and-deployment.md)
-  - [dist/README.md](../dist/README.md)
+  - [releases/README.md](../releases/README.md)

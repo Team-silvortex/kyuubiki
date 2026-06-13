@@ -31,3 +31,9 @@ Crate-level test expectations stay close to the code:
 
 Prefer colocated crate tests so runtime behavior stays near the code it
 validates.
+
+## Layout skeletons
+
+- `linux/`
+  repository-visible Linux install-layout skeleton used to keep expected
+  runtime paths explicit even when no packaged output is committed yet

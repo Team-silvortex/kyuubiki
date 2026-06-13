@@ -419,6 +419,19 @@ fn runs_electrostatic_to_heat_to_thermo_summary_workflow_graph() {
     )
     .expect("heat model should decode");
     assert!(heat_model.nodes.iter().all(|node| node.heat_load > 0.0));
+    let heat_diagnostics = run
+        .artifacts
+        .get("bridge_field_to_heat.heat_model")
+        .and_then(|value| value.get("__bridge_diagnostics"))
+        .expect("bridged heat model should expose bridge diagnostics");
+    assert_eq!(
+        heat_diagnostics.get("mapped_count"),
+        Some(&serde_json::json!(4))
+    );
+    assert_eq!(
+        heat_diagnostics.get("target_field"),
+        Some(&serde_json::json!("heat_load"))
+    );
 
     let thermo_model: SolveThermalPlaneQuad2dRequest = serde_json::from_value(
         run.artifacts
@@ -432,6 +445,19 @@ fn runs_electrostatic_to_heat_to_thermo_summary_workflow_graph() {
             .nodes
             .iter()
             .any(|node| node.temperature_delta > 30.0)
+    );
+    let thermo_diagnostics = run
+        .artifacts
+        .get("bridge_temperature.thermo_model")
+        .and_then(|value| value.get("__bridge_diagnostics"))
+        .expect("bridged thermo model should expose bridge diagnostics");
+    assert_eq!(
+        thermo_diagnostics.get("mapped_count"),
+        Some(&serde_json::json!(4))
+    );
+    assert_eq!(
+        thermo_diagnostics.get("target_field"),
+        Some(&serde_json::json!("temperature_delta"))
     );
 
     let exported_summary = run

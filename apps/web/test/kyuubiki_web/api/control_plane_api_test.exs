@@ -1,0 +1,274 @@
+defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
+  use KyuubikiWeb.TestSupport.ApiRouterCase
+
+  test "exposes orchestrator health" do
+    conn =
+      :get
+      |> conn("/api/health")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["service"] == "kyuubiki-orchestrator"
+    assert payload["status"] == "ok"
+    assert payload["protocol"]["program"] == "kyuubiki-orchestrator"
+    assert payload["protocol"]["compatible_solver_rpc"]["name"] == "kyuubiki.solver-rpc/v1"
+    assert payload["deployment"]["mode"] == "local"
+    assert payload["deployment"]["discovery"] == "static"
+    assert payload["remote_solver_registry"]["active_agents"] == 0
+    assert payload["transport"]["http"] == 4000
+    assert payload["transport"]["solver_agent_tcp"] == 5001
+  end
+
+  test "exposes decoupled protocol descriptors for control plane and solver rpc" do
+    conn =
+      :get
+      |> conn("/api/v1/protocol")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["program"] == "kyuubiki-orchestrator"
+    assert payload["protocol"]["name"] == "kyuubiki.control-plane/http-v1"
+    assert payload["compatible_solver_rpc"]["name"] == "kyuubiki.solver-rpc/v1"
+
+    conn =
+      :get
+      |> conn("/api/v1/protocol/solver-rpc")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert "describe_agent" in payload["methods"]
+    assert payload["transport"]["framing"] == "length_prefixed_u32"
+  end
+
+  test "describes reachable solver agents through the protocol endpoint" do
+    {:ok, _pid} =
+      FakePlaygroundAgent.start_link([
+        %{
+          "ok" => true,
+          "result" => %{
+            "program" => "kyuubiki-rust-agent",
+            "role" => "solver_agent",
+            "protocol" => %{
+              "name" => "kyuubiki.solver-rpc/v1",
+              "rpc_version" => 1,
+              "transport" => %{
+                "kind" => "tcp",
+                "framing" => "length_prefixed_u32",
+                "encoding" => "json"
+              },
+              "methods" => ["ping", "describe_agent", "solve_truss_2d"]
+            },
+            "capabilities" => [
+              %{
+                "id" => "truss-2d",
+                "role" => "solver",
+                "methods" => ["solve_truss_2d"],
+                "tags" => ["truss", "cpu"]
+              }
+            ],
+            "deployment_modes" => ["local", "distributed"]
+          }
+        }
+      ])
+
+    port = await_fake_agent_port()
+
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [%{id: "protocol-agent", host: "127.0.0.1", port: port}]
+    )
+
+    AgentPool.reload()
+
+    conn =
+      :get
+      |> conn("/api/v1/protocol/agents")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    [agent] = payload["agents"]
+    assert agent["id"] == "protocol-agent"
+    assert agent["descriptor"]["program"] == "kyuubiki-rust-agent"
+    assert "describe_agent" in agent["descriptor"]["protocol"]["methods"]
+  end
+
+  test "registers, heartbeats, and removes remote agents through the API" do
+    Application.put_env(:kyuubiki_web, AgentPool, discovery: :registry, endpoints: [])
+    AgentPool.reload()
+    cluster_ts = Integer.to_string(System.system_time(:millisecond))
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "solver-remote-a",
+          "host" => "10.20.0.11",
+          "port" => 6101,
+          "region" => "ap-shanghai"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> Router.call(@opts)
+
+    assert conn.status == 201
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["agent"]["id"] == "solver-remote-a"
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/solver-remote-a/heartbeat",
+        Jason.encode!(%{
+          "host" => "10.20.0.11",
+          "port" => 6101,
+          "zone" => "rack-a"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert Jason.decode!(conn.resp_body)["agent"]["zone"] == "rack-a"
+
+    conn =
+      :get
+      |> conn("/api/v1/agents")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["summary"]["active_agents"] == 1
+    assert Enum.map(payload["agents"], & &1["id"]) == ["solver-remote-a"]
+
+    conn =
+      :delete
+      |> conn("/api/v1/agents/solver-remote-a")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert Jason.decode!(conn.resp_body)["status"] == "removed"
+  end
+
+  test "serves a Hub-facing workload catalog with project download URLs" do
+    previous_trust = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
+    Application.put_env(:kyuubiki_web, :trust_forwarded_headers, true)
+
+    on_exit(fn ->
+      Application.put_env(:kyuubiki_web, :trust_forwarded_headers, previous_trust)
+    end)
+
+    {:ok, project} =
+      Library.create_project(%{"name" => "Bridge Pack", "description" => "starter"})
+
+    {:ok, _model} =
+      Library.create_model(project["project_id"], %{
+        "name" => "Bridge Truss",
+        "kind" => "truss_2d",
+        "payload" => %{
+          "model_schema_version" => "kyuubiki.model/v1",
+          "kind" => "truss_2d",
+          "name" => "Bridge Truss",
+          "analysis_metadata" => %{
+            "domain" => "thermo_mechanical",
+            "family" => "trusses",
+            "thermal_intent" => ["nodal_temperature_rise", "truss_thermal_response"]
+          },
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    conn =
+      :get
+      |> conn("/api/v1/workloads/catalog")
+      |> put_req_header("x-forwarded-proto", "https")
+      |> put_req_header("x-forwarded-host", "hub.example.com")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+    assert payload["schema_version"] == "kyuubiki.workload-catalog/v1"
+    assert payload["sourceLabel"] == "Kyuubiki Control Plane"
+
+    project_id = project["project_id"]
+
+    assert [
+             %{
+               "label" => "Bridge Pack",
+               "project_id" => ^project_id,
+               "schema" => "kyuubiki.project/v2",
+               "layout" => "kyuubiki.project-layout/v1",
+               "model_count" => 1,
+               "analysis_domains" => ["thermo_mechanical"],
+               "analysis_families" => ["trusses"],
+               "thermal_intents" => ["nodal_temperature_rise", "truss_thermal_response"]
+             } = workload
+           ] = payload["workloads"]
+
+    assert workload["download_url"] ==
+             "https://hub.example.com/api/v1/projects/#{project_id}/bundle"
+  end
+
+  test "exports a project bundle for Hub workload download" do
+    {:ok, project} =
+      Library.create_project(%{"name" => "Downloadable Pack", "description" => "bundle"})
+
+    {:ok, model} =
+      Library.create_model(project["project_id"], %{
+        "name" => "Space Truss",
+        "kind" => "truss_3d",
+        "payload" => %{
+          "model_schema_version" => "kyuubiki.model/v1",
+          "kind" => "truss_3d",
+          "name" => "Space Truss",
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    {:ok, version} =
+      Library.create_version(model["model_id"], %{
+        "kind" => "truss_3d",
+        "payload" => %{
+          "model_schema_version" => "kyuubiki.model/v1",
+          "kind" => "truss_3d",
+          "name" => "Space Truss v1",
+          "nodes" => [],
+          "elements" => []
+        }
+      })
+
+    conn =
+      :get
+      |> conn("/api/v1/projects/#{project["project_id"]}/bundle")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    assert get_resp_header(conn, "content-type") == ["application/json; charset=utf-8"]
+    assert [disposition] = get_resp_header(conn, "content-disposition")
+    assert disposition =~ "attachment;"
+    assert disposition =~ ".kyuubiki.json"
+
+    payload = Jason.decode!(conn.resp_body)
+    model_id = model["model_id"]
+    version_id = version["version_id"]
+    assert payload["project_schema_version"] == "kyuubiki.project/v2"
+    assert payload["project"]["project_id"] == project["project_id"]
+    assert payload["project_file_manifest"]["layout_version"] == "kyuubiki.project-layout/v1"
+    assert Enum.any?(payload["models"], &(&1["model_id"] == model_id))
+    assert Enum.any?(payload["model_versions"], &(&1["version_id"] == version_id))
+    assert payload["active_model_id"] == model_id
+    assert payload["active_version_id"] == version_id
+  end
+end

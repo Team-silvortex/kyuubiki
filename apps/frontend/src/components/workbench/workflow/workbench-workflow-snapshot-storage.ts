@@ -37,6 +37,8 @@ type WindowWithIdleCallback = Window & {
 
 const pendingSnapshotPayloads = new Map<string, PendingSnapshotPayload>();
 const pendingSnapshotWrites = new Map<string, { kind: "idle" | "timeout"; handle: number }>();
+let snapshotIndexCache: StoredWorkflowSnapshotSummary[] | null = null;
+const latestSnapshotFingerprintCache = new Map<string, { snapshotId: string; fingerprint: string }>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -57,15 +59,17 @@ function buildSnapshotPayload(payload: PendingSnapshotPayload) {
 
 function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
   if (typeof window === "undefined") return [];
+  if (snapshotIndexCache) return snapshotIndexCache;
   try {
     const raw = window.localStorage.getItem(WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((entry) => {
+    snapshotIndexCache = parsed.flatMap((entry) => {
       if (!isRecord(entry) || typeof entry.id !== "string" || typeof entry.workflowId !== "string" || typeof entry.workflowName !== "string" || typeof entry.createdAt !== "string" || typeof entry.reason !== "string") return [];
       return [{ id: entry.id, workflowId: entry.workflowId, workflowName: entry.workflowName, createdAt: entry.createdAt, reason: entry.reason, summary: asStringArray(entry.summary), payloadState: entry.payloadState === "summary_only" ? "summary_only" : "full" }];
     });
+    return snapshotIndexCache;
   } catch {
     return [];
   }
@@ -73,6 +77,8 @@ function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
 
 function writeSnapshotIndex(records: StoredWorkflowSnapshotSummary[]) {
   if (typeof window === "undefined") return;
+  snapshotIndexCache = records;
+  latestSnapshotFingerprintCache.clear();
   window.localStorage.setItem(WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY, JSON.stringify(records));
 }
 
@@ -190,6 +196,22 @@ function pruneSnapshots(index: StoredWorkflowSnapshotSummary[]) {
   return next;
 }
 
+function readLatestSnapshotFingerprint(
+  latestEntry: StoredWorkflowSnapshotSummary | undefined,
+): string | null {
+  if (!latestEntry || latestEntry.payloadState !== "full") return null;
+  const cached = latestSnapshotFingerprintCache.get(latestEntry.workflowId);
+  if (cached?.snapshotId === latestEntry.id) return cached.fingerprint;
+  const latestSnapshot = loadStoredWorkflowSnapshot(latestEntry.id);
+  if (!latestSnapshot) return null;
+  const fingerprint = buildSnapshotFingerprint(latestSnapshot.graph, latestSnapshot.inputArtifactTexts);
+  latestSnapshotFingerprintCache.set(latestEntry.workflowId, {
+    snapshotId: latestEntry.id,
+    fingerprint,
+  });
+  return fingerprint;
+}
+
 export function listStoredWorkflowSnapshots(workflowId: string): StoredWorkflowSnapshotSummary[] {
   return readSnapshotIndex().filter((entry) => entry.workflowId === workflowId).sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
@@ -223,15 +245,13 @@ export function saveStoredWorkflowSnapshot(params: {
   summary: string[];
 }) {
   if (typeof window === "undefined") return null;
+  const index = readSnapshotIndex();
   const nextFingerprint = buildSnapshotFingerprint(params.graph, params.inputArtifactTexts);
   const payload = { graph: params.graph, inputArtifactTexts: params.inputArtifactTexts };
   const payloadText = buildSnapshotPayload(payload);
-  const latestEntry = readSnapshotIndex().find((entry) => entry.workflowId === params.workflowId);
+  const latestEntry = index.find((entry) => entry.workflowId === params.workflowId);
   if (latestEntry) {
-    const latestSnapshot = loadStoredWorkflowSnapshot(latestEntry.id);
-    const latestFingerprint = latestSnapshot
-      ? buildSnapshotFingerprint(latestSnapshot.graph, latestSnapshot.inputArtifactTexts)
-      : null;
+    const latestFingerprint = readLatestSnapshotFingerprint(latestEntry);
     const latestCreatedAt = Date.parse(latestEntry.createdAt);
     if (
       latestFingerprint === nextFingerprint &&
@@ -251,7 +271,11 @@ export function saveStoredWorkflowSnapshot(params: {
     summary: params.summary,
     payloadState: payloadText.length > WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_MAX_BYTES ? "summary_only" : "full",
   };
-  writeSnapshotIndex(pruneSnapshots([indexEntry, ...readSnapshotIndex()]));
+  writeSnapshotIndex(pruneSnapshots([indexEntry, ...index]));
+  latestSnapshotFingerprintCache.set(params.workflowId, {
+    snapshotId: id,
+    fingerprint: nextFingerprint,
+  });
   if (indexEntry.payloadState === "full") scheduleSnapshotPayloadWrite(id, payload);
   return indexEntry;
 }

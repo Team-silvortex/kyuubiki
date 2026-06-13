@@ -268,12 +268,28 @@ pub struct WorkflowGraphRunResult {
     #[serde(default)]
     pub skipped_nodes: Vec<String>,
     #[serde(default)]
+    pub progress_events: Vec<WorkflowProgressEvent>,
+    #[serde(default)]
     pub branch_decisions: Vec<WorkflowBranchDecision>,
     #[serde(default)]
     pub node_runs: Vec<WorkflowNodeRunTrace>,
     #[serde(default)]
     pub artifact_lineage: Vec<WorkflowArtifactLineage>,
     pub artifacts: BTreeMap<String, Value>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WorkflowProgressEvent {
+    pub stage: JobStatus,
+    pub progress: f32,
+    #[serde(default)]
+    pub message: Option<String>,
+    #[serde(default)]
+    pub node_id: Option<String>,
+    #[serde(default)]
+    pub kind: Option<String>,
+    #[serde(default)]
+    pub emitted_at: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3148,6 +3164,7 @@ mod tests {
             workflow_id: decoded.graph.id,
             completed_nodes: vec!["heat_model".to_string(), "thermo_summary".to_string()],
             skipped_nodes: vec![],
+            progress_events: vec![],
             branch_decisions: vec![],
             node_runs: vec![],
             artifact_lineage: vec![],
@@ -3161,6 +3178,7 @@ mod tests {
             serde_json::from_str(&json).expect("workflow graph result should decode");
         assert_eq!(decoded.completed_nodes.len(), 2);
         assert_eq!(decoded.skipped_nodes.len(), 0);
+        assert_eq!(decoded.progress_events.len(), 0);
         assert_eq!(decoded.node_runs.len(), 0);
     }
 

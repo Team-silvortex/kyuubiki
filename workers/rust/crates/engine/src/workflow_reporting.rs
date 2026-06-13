@@ -1,5 +1,7 @@
 use serde_json::Value;
 
+pub use crate::workflow_summary_transforms::{compare_summary_pair, merge_summary_pair};
+
 pub fn extract_result_summary(payload: Value, config: Value) -> Result<Value, String> {
     let object = payload
         .as_object()
@@ -196,45 +198,6 @@ pub fn extract_field_hotspots(payload: Value, config: Value) -> Result<Value, St
         "source_collection": source,
         "source_field": field,
     }))
-}
-
-pub fn merge_summary_pair(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload
-        .as_object()
-        .ok_or_else(|| "transform.merge_summary_pair expects an object payload".to_string())?;
-    let left = object
-        .get("left")
-        .and_then(Value::as_object)
-        .ok_or_else(|| "transform.merge_summary_pair expects object payload.left".to_string())?;
-    let right = object
-        .get("right")
-        .and_then(Value::as_object)
-        .ok_or_else(|| "transform.merge_summary_pair expects object payload.right".to_string())?;
-
-    let left_prefix = config
-        .get("left_prefix")
-        .and_then(Value::as_str)
-        .unwrap_or("left");
-    let right_prefix = config
-        .get("right_prefix")
-        .and_then(Value::as_str)
-        .unwrap_or("right");
-    let include_source_count = config
-        .get("include_source_count")
-        .and_then(Value::as_bool)
-        .unwrap_or(true);
-
-    let mut merged = serde_json::Map::new();
-    merge_summary_fields(&mut merged, left_prefix, left);
-    merge_summary_fields(&mut merged, right_prefix, right);
-    if include_source_count {
-        merged.insert("summary_source_count".to_string(), Value::from(2));
-    }
-    if merged.is_empty() {
-        return Err("transform.merge_summary_pair did not find any summary fields".to_string());
-    }
-
-    Ok(Value::Object(merged))
 }
 
 pub fn export_summary_json(payload: Value) -> Result<Value, String> {
@@ -509,20 +472,4 @@ fn resolve_path_value<'a>(payload: &'a Value, path: &str) -> Option<&'a Value> {
         };
     }
     Some(current)
-}
-
-fn merge_summary_fields(
-    merged: &mut serde_json::Map<String, Value>,
-    prefix: &str,
-    source: &serde_json::Map<String, Value>,
-) {
-    let normalized_prefix = prefix.trim();
-    for (key, value) in source {
-        let next_key = if normalized_prefix.is_empty() {
-            key.clone()
-        } else {
-            format!("{normalized_prefix}_{key}")
-        };
-        merged.insert(next_key, value.clone());
-    }
 }

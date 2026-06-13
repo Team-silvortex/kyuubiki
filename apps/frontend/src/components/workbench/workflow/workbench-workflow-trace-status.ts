@@ -43,3 +43,9 @@ export function resolveWorkflowTraceHeaderHealthLabel(
 ) {
   return dynamicReviewState.includes("needs review") ? "review" : staticContractHealth;
 }
+
+export function resolveWorkflowTraceProgressStageTone(stage: string): WorkflowTraceStatusTone {
+  if (stage === "completed") return "good";
+  if (stage === "failed" || stage === "cancelled") return "risk";
+  return "watch";
+}

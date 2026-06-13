@@ -68,6 +68,19 @@ export const HOTSPOT_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     title: "Electrostatic Hotspot Alert",
     alertSummary: "Hotspot candidates were detected in the electrostatic field.",
   }),
+  buildHotspotAlertTemplateChain({
+    id: "electrostatic_triangle_hotspot_alert",
+    label: "electrostatic triangle hotspot alert",
+    summary:
+      "Electrostatic triangle solve, hotspot extraction, and markdown alert export.",
+    tags: ["electrostatic", "triangle", "hotspot", "alert", "field", "2d"],
+    solveOperatorId: "solve.electrostatic_plane_triangle_2d",
+    field: "electric_field_magnitude",
+    outputPrefix: "field",
+    title: "Electrostatic Triangle Hotspot Alert",
+    alertSummary:
+      "Hotspot candidates were detected in the electrostatic triangle field.",
+  }),
   buildHotspotGuardTemplateChain({
     id: "electrostatic_hotspot_guard",
     label: "electrostatic hotspot guard",
@@ -80,6 +93,21 @@ export const HOTSPOT_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
     alertSummary: "Hotspot candidates exceeded the workflow threshold.",
     clearTitle: "Electrostatic Field Clear",
     clearSummary: "Hotspot count stayed within the configured workflow threshold.",
+  }),
+  buildHotspotGuardTemplateChain({
+    id: "electrostatic_triangle_hotspot_guard",
+    label: "electrostatic triangle hotspot guard",
+    summary:
+      "Route electrostatic triangle hotspot summaries into alert or clear markdown output.",
+    tags: ["electrostatic", "triangle", "hotspot", "condition", "alert", "2d"],
+    solveOperatorId: "solve.electrostatic_plane_triangle_2d",
+    field: "electric_field_magnitude",
+    outputPrefix: "field",
+    alertTitle: "Electrostatic Triangle Hotspot Alert",
+    alertSummary: "Electrostatic triangle hotspots exceeded the workflow threshold.",
+    clearTitle: "Electrostatic Triangle Field Clear",
+    clearSummary:
+      "Electrostatic triangle hotspot count stayed within the configured workflow threshold.",
   }),
   buildHotspotAlertTemplateChain({
     id: "heat_hotspot_alert",

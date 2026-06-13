@@ -10,6 +10,7 @@ import { buildWorkflowIntegrityReport } from "@/components/workbench/workflow/wo
 import { findStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { listStoredWorkflowSnapshots } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
+import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 import {
   resolveWorkflowTraceBranchPredicateTone,
   resolveWorkflowTraceContractHealthTone,
@@ -17,6 +18,7 @@ import {
   resolveWorkflowTraceLineageSourceLabel,
   resolveWorkflowTraceLineageSourceTone,
   resolveWorkflowTraceNodeRunTone,
+  resolveWorkflowTraceProgressStageTone,
 } from "@/components/workbench/workflow/workbench-workflow-trace-status";
 import type { WorkflowRunRecord } from "@/components/workbench/workflow/workbench-workflow-types";
 import { readSecurityAuditLog } from "@/lib/workbench/security-audit";
@@ -104,8 +106,17 @@ function renderDatasetValueRows(workflow?: WorkflowCatalogEntry | null) {
     .join("");
 }
 
-function renderSnapshotRows(workflowId: string) {
-  return listStoredWorkflowSnapshots(workflowId)
+function renderSummaryArtifactRows(run: WorkflowRunRecord) {
+  return listWorkflowSummaryArtifacts(run.result ?? null)
+    .map(
+      (artifact) =>
+        `<tr><td>${escapeHtml(artifact.artifactKey)}</td><td>${escapeHtml(artifact.artifactType)}</td><td>${escapeHtml(artifact.payload.summary_kind ?? "--")}</td><td>${escapeHtml(artifact.payload.source_operator_id ?? "--")}</td><td>${escapeHtml(String(Object.keys(artifact.payload.fields).length))}</td><td>${escapeHtml(artifact.nodeId ?? "--")}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderSnapshotRows(snapshots: ReturnType<typeof listStoredWorkflowSnapshots>) {
+  return snapshots
     .slice(0, 6)
     .map(
       (snapshot) =>
@@ -114,8 +125,8 @@ function renderSnapshotRows(workflowId: string) {
     .join("");
 }
 
-function renderSecurityAuditRows() {
-  return readSecurityAuditLog()
+function renderSecurityAuditRows(entries: ReturnType<typeof readSecurityAuditLog>) {
+  return entries
     .slice(-8)
     .reverse()
     .map(
@@ -137,6 +148,15 @@ function renderIntegrityRows(
     .join("");
 }
 
+function renderProgressTimelineRows(run: WorkflowRunRecord) {
+  return (run.traceSummary?.recentProgressEvents ?? [])
+    .map(
+      (event) =>
+        `<tr><td>${renderToneBadge(event.stage, resolveWorkflowTraceProgressStageTone(event.stage))}</td><td>${escapeHtml(`${Math.round(event.progress * 100)}%`)}</td><td>${escapeHtml(event.kind ?? "--")}</td><td>${escapeHtml(event.nodeId ?? "--")}</td><td>${escapeHtml(event.label ?? "--")}</td><td>${escapeHtml(event.emittedAt ?? "--")}</td></tr>`,
+    )
+    .join("");
+}
+
 export function buildWorkflowRunAuditReportHtml({
   run,
   workflow,
@@ -152,19 +172,22 @@ export function buildWorkflowRunAuditReportHtml({
         inputArtifactTexts: workflow.local?.input_artifact_texts,
       })
     : undefined;
-  const snapshotRows = renderSnapshotRows(run.workflowId);
-  const securityAuditRows = renderSecurityAuditRows();
+  const snapshots = listStoredWorkflowSnapshots(run.workflowId);
+  const securityAuditEntries = readSecurityAuditLog();
+  const snapshotRows = renderSnapshotRows(snapshots);
+  const securityAuditRows = renderSecurityAuditRows(securityAuditEntries);
   const integrityRows = renderIntegrityRows(workflow, operatorDescriptors);
   const validationRows = renderIssueRows(workflow, operatorDescriptors);
   const runtimeRows = renderRuntimeRows(workflow);
   const datasetRows = renderDatasetValueRows(workflow);
+  const summaryArtifactRows = renderSummaryArtifactRows(run);
   const contractWarningRows = renderWarningRows(contractWarnings);
+  const summaryArtifactCount = listWorkflowSummaryArtifacts(run.result ?? null).length;
   const supportedNodeCount = graph?.nodes.filter((node) => isWorkflowNodeSupportedInRuntime(node)).length ?? 0;
-  const snapshots = listStoredWorkflowSnapshots(run.workflowId);
   const fullSnapshotCount = snapshots.filter((entry) => entry.payloadState === "full").length;
   const summaryOnlySnapshotCount = snapshots.filter((entry) => entry.payloadState === "summary_only").length;
-  const securityAuditEntries = readSecurityAuditLog();
   const traceSummary = run.traceSummary;
+  const progressTimelineRows = renderProgressTimelineRows(run);
   const staticContractHealth = formatWorkflowContractHealthSummary(contractWarnings);
   const dynamicReviewState = formatWorkflowDynamicReviewState({
     warnings: contractWarnings,
@@ -227,6 +250,7 @@ export function buildWorkflowRunAuditReportHtml({
         ["summary", run.summary ?? "--"],
         ["updated at", run.updatedAt ?? "--"],
         ["workflow version", workflow?.version ?? "--"],
+        ["summary artifacts", String(summaryArtifactCount)],
         ["graph nodes", String(graph?.nodes.length ?? 0)],
         ["graph edges", String(graph?.edges?.length ?? 0)],
         ["runtime supported nodes", `${supportedNodeCount}/${graph?.nodes.length ?? 0}`],
@@ -300,6 +324,10 @@ export function buildWorkflowRunAuditReportHtml({
       <table><thead><tr><th>scope</th><th>severity</th><th>message</th><th>detail</th></tr></thead><tbody>${integrityRows || '<tr><td colspan="4">--</td></tr>'}</tbody></table>
     </section>
     <section>
+      <h2>Summary artifact contracts</h2>
+      <table><thead><tr><th>artifact</th><th>type</th><th>summary kind</th><th>source operator</th><th>fields</th><th>node</th></tr></thead><tbody>${summaryArtifactRows || '<tr><td colspan="6">--</td></tr>'}</tbody></table>
+    </section>
+    <section>
       <h2>Dataset values</h2>
       <table><thead><tr><th>value</th><th>class</th><th>element</th><th>semantic</th><th>encoding</th><th>axes</th></tr></thead><tbody>${datasetRows || '<tr><td colspan="6">--</td></tr>'}</tbody></table>
     </section>
@@ -314,6 +342,10 @@ export function buildWorkflowRunAuditReportHtml({
     <section>
       <h2>Branch trace</h2>
       <table><thead><tr><th>node</th><th>chosen output</th><th>predicate</th></tr></thead><tbody>${branchRows || '<tr><td colspan="3">--</td></tr>'}</tbody></table>
+    </section>
+    <section>
+      <h2>Progress timeline</h2>
+      <table><thead><tr><th>stage</th><th>progress</th><th>kind</th><th>node</th><th>label</th><th>emitted</th></tr></thead><tbody>${progressTimelineRows || '<tr><td colspan="6">--</td></tr>'}</tbody></table>
     </section>
     <section>
       <h2>Skipped nodes</h2>

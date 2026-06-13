@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkflowRunTraceSummary } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
+import type { WorkflowGraphJobResult } from "@/lib/api";
 
 export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
 export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "needs_review";
@@ -33,6 +34,7 @@ export type WorkflowRunRecord = {
     port_id: string;
     source_artifacts?: string[];
   }>;
+  result?: WorkflowGraphJobResult;
   traceSummary?: WorkflowRunTraceSummary;
 };
 
@@ -68,6 +70,8 @@ export type WorkflowSidebarLabels = {
   insertTruss3dSolveExportLabel: string;
   insertHeatBridgeThermoLabel: string;
   insertElectrostaticBridgeHeatLabel: string;
+  insertElectrostaticHeatThermoSummaryLabel: string;
+  insertElectrostaticTriangleHeatThermoTriangleSummaryLabel: string;
   insertElectrostaticSolveExportLabel: string;
   templateChainFavoritesLabel: string;
   templateChainFavoriteAddLabel: string;

@@ -1,5 +1,8 @@
 ExUnit.start()
 
+Path.wildcard(Path.join(__DIR__, "support/**/*.exs"))
+|> Enum.each(&Code.require_file/1)
+
 defmodule KyuubikiWeb.TestSupport.FakePlaygroundAgent do
   @moduledoc false
 

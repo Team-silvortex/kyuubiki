@@ -89,6 +89,8 @@ export const copyZhCore = {
     workflowInsertTruss3dSolveExportLabel: "插入三维桁架摘要链",
     workflowInsertHeatBridgeThermoLabel: "插入 heat -> bridge -> thermo",
     workflowInsertElectrostaticBridgeHeatLabel: "插入 electrostatic -> bridge -> heat",
+    workflowInsertElectrostaticHeatThermoSummaryLabel: "插入 electrostatic -> heat -> thermo 全耦合摘要链",
+    workflowInsertElectrostaticTriangleHeatThermoTriangleSummaryLabel: "插入 electrostatic triangle -> heat triangle -> thermo triangle 全耦合摘要链",
     workflowInsertElectrostaticSolveExportLabel: "插入 electrostatic -> extract -> export",
     workflowTemplateChainFavoritesLabel: "收藏链路",
     workflowTemplateChainFavoriteAddLabel: "收藏链路",

@@ -1,4 +1,5 @@
 use crate::bridge::{
+    attach_bridge_diagnostics,
     bridge_electrostatic_result_to_heat_plane_quad_model,
     bridge_electrostatic_result_to_heat_plane_triangle_model,
     bridge_heat_result_to_thermal_plane_quad_model,
@@ -6,8 +7,11 @@ use crate::bridge::{
     resolve_electrostatic_to_heat_bridge_contract,
 };
 use crate::workflow_reporting::{
-    export_alert_markdown, export_summary_csv, export_summary_json, extract_field_hotspots,
-    extract_field_statistics, extract_result_summary, merge_summary_pair,
+    compare_summary_pair, export_alert_markdown, export_summary_csv, export_summary_json,
+    extract_field_hotspots, extract_field_statistics, extract_result_summary, merge_summary_pair,
+};
+use crate::workflow_summary_transforms::{
+    aggregate_summary_collection, normalize_summary_fields, select_best_summary,
 };
 use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
@@ -59,6 +63,10 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "bridge.electrostatic_field_to_heat_triangle_2d",
     "transform.first_available",
     "transform.merge_summary_pair",
+    "transform.compare_summary_pair",
+    "transform.aggregate_summary_collection",
+    "transform.normalize_summary_fields",
+    "transform.select_best_summary",
 ];
 
 const SUPPORTED_EXTRACT_OPERATORS: &[&str] =
@@ -133,6 +141,9 @@ pub fn transform_operator_accepts_partial_inputs(operator_id: &str) -> bool {
 
 pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
     operator_id == "transform.merge_summary_pair"
+        || operator_id == "transform.compare_summary_pair"
+        || operator_id == "transform.aggregate_summary_collection"
+        || operator_id == "transform.select_best_summary"
 }
 
 pub fn resolve_named_input_payloads(
@@ -498,19 +509,19 @@ pub fn run_transform_operator(
             let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
             let thermo_seed_model: SolveThermalPlaneQuad2dRequest =
                 serde_json::from_value(config).map_err(|err| err.to_string())?;
-            let bridged =
+            let (bridged, diagnostics) =
                 bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &thermo_seed_model)?;
-            serde_json::to_value(bridged).map_err(|err| err.to_string())
+            attach_bridge_diagnostics(&bridged, &diagnostics)
         }
         "bridge.temperature_field_to_thermo_triangle_2d" => {
             let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
             let thermo_seed_model: SolveThermalPlaneTriangle2dRequest =
                 serde_json::from_value(config).map_err(|err| err.to_string())?;
-            let bridged = bridge_heat_result_to_thermal_plane_triangle_model(
+            let (bridged, diagnostics) = bridge_heat_result_to_thermal_plane_triangle_model(
                 &heat_result,
                 &thermo_seed_model,
             )?;
-            serde_json::to_value(bridged).map_err(|err| err.to_string())
+            attach_bridge_diagnostics(&bridged, &diagnostics)
         }
         "bridge.electrostatic_field_to_heat_quad_2d" => {
             let electrostatic_result =
@@ -521,12 +532,12 @@ pub fn run_transform_operator(
             let heat_seed_model: SolveHeatPlaneQuad2dRequest =
                 serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
             let contract = resolve_electrostatic_to_heat_bridge_contract(&config)?;
-            let bridged = bridge_electrostatic_result_to_heat_plane_quad_model(
+            let (bridged, diagnostics) = bridge_electrostatic_result_to_heat_plane_quad_model(
                 &electrostatic_result,
                 &heat_seed_model,
                 &contract,
             )?;
-            serde_json::to_value(bridged).map_err(|err| err.to_string())
+            attach_bridge_diagnostics(&bridged, &diagnostics)
         }
         "bridge.electrostatic_field_to_heat_triangle_2d" => {
             let electrostatic_result =
@@ -538,15 +549,19 @@ pub fn run_transform_operator(
             let heat_seed_model: SolveHeatPlaneTriangle2dRequest =
                 serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
             let contract = resolve_electrostatic_to_heat_bridge_contract(&config)?;
-            let bridged = bridge_electrostatic_result_to_heat_plane_triangle_model(
+            let (bridged, diagnostics) = bridge_electrostatic_result_to_heat_plane_triangle_model(
                 &electrostatic_result,
                 &heat_seed_model,
                 &contract,
             )?;
-            serde_json::to_value(bridged).map_err(|err| err.to_string())
+            attach_bridge_diagnostics(&bridged, &diagnostics)
         }
         "transform.first_available" => Ok(payload),
         "transform.merge_summary_pair" => merge_summary_pair(payload, config),
+        "transform.compare_summary_pair" => compare_summary_pair(payload, config),
+        "transform.aggregate_summary_collection" => aggregate_summary_collection(payload, config),
+        "transform.normalize_summary_fields" => normalize_summary_fields(payload, config),
+        "transform.select_best_summary" => select_best_summary(payload, config),
         _ => Err(format!(
             "unsupported transform operator in first executor: {operator_id}"
         )),

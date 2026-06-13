@@ -13,7 +13,9 @@
     "lint": "next lint",
     "check:file-lines": "node ./scripts/check-file-lines.mjs",
     "check:ui-layout": "node ./scripts/check-ui-layout.mjs",
-    "typecheck": "node ./scripts/typecheck.mjs"
+    "check:workflow-topology": "node ./scripts/check-workflow-topology-regression.mjs",
+    "typecheck": "node ./scripts/typecheck.mjs",
+    "benchmark:workflow": "node ./scripts/workflow-benchmark.mjs"
   },
   "dependencies": {
     "jszip": "^3.10.1",

@@ -324,4 +324,4 @@ The platform-specific release checklist lives in:
 - [docs/desktop-release-checklist.md](desktop-release-checklist.md)
 - [docs/system-overview.md](system-overview.md)
 - [deploy/README.md](../deploy/README.md)
-- [dist/README.md](../dist/README.md)
+- [releases/README.md](../releases/README.md)

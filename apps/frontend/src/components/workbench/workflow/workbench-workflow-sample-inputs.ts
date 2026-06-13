@@ -42,6 +42,27 @@ const SAMPLE_INPUTS: Record<string, WorkflowSampleInputDefinition> = {
       }),
     },
   },
+  electrostatic_quad_triangle_pair: {
+    artifacts: {
+      electrostatic_model: sampleInputArtifact("study_model/electrostatic_plane_quad_2d", {
+        nodes: [
+          { id: "n0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
+          { id: "n1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
+          { id: "n2", x: 1, y: 1, fix_potential: true, potential: 0, charge_density: 0 },
+          { id: "n3", x: 0, y: 1, fix_potential: true, potential: 10, charge_density: 0 },
+        ],
+        elements: [{ id: "epq0", node_i: 0, node_j: 1, node_k: 2, node_l: 3, thickness: 0.05, permittivity: 2 }],
+      }),
+      electrostatic_plane_triangle_model: sampleInputArtifact("study_model/electrostatic_plane_triangle_2d", {
+        nodes: [
+          { id: "et0", x: 0, y: 0, fix_potential: true, potential: 10, charge_density: 0 },
+          { id: "et1", x: 1, y: 0, fix_potential: true, potential: 0, charge_density: 0 },
+          { id: "et2", x: 0, y: 1, fix_potential: false, potential: 0, charge_density: 0 },
+        ],
+        elements: [{ id: "ept0", node_i: 0, node_j: 1, node_k: 2, thickness: 0.05, permittivity: 2 }],
+      }),
+    },
+  },
   heat_plane_quad: {
     artifacts: {
       heat_model: sampleInputArtifact("study_model/heat_plane_quad_2d", {
@@ -163,9 +184,24 @@ const SAMPLE_INPUT_ALIASES: Record<string, keyof typeof SAMPLE_INPUTS> = {
   "workflow.electrostatic-to-heat-quad-2d": "electrostatic_plane_quad",
   "workflow.electrostatic-plane-quad-2d": "electrostatic_plane_quad",
   "solve.electrostatic_plane_quad_2d": "electrostatic_plane_quad",
+  "workflow.electrostatic-to-heat-triangle-2d": "electrostatic_plane_triangle",
   "workflow.electrostatic-plane-triangle-summary-json": "electrostatic_plane_triangle",
+  "electrostatic_triangle_summary": "electrostatic_plane_triangle",
+  "electrostatic_triangle_field_statistics": "electrostatic_plane_triangle",
+  "electrostatic_triangle_hotspot_alert": "electrostatic_plane_triangle",
+  "electrostatic_triangle_hotspot_guard": "electrostatic_plane_triangle",
+  "electrostatic_triangle_preheat_guard": "electrostatic_plane_triangle",
+  "electrostatic_triangle_heat_thermo_triangle_summary": "electrostatic_plane_triangle",
+  "workflow.electrostatic-heat-thermo-triangle-summary-json": "electrostatic_plane_triangle",
   "solve.electrostatic_plane_triangle_2d": "electrostatic_plane_triangle",
   "workflow.heat-to-thermo-quad-2d": "heat_plane_quad",
+  "electrostatic_heat_thermo_summary": "electrostatic_plane_quad",
+  "electrostatic_field_statistics": "electrostatic_plane_quad",
+  "electrostatic_hotspot_alert": "electrostatic_plane_quad",
+  "electrostatic_hotspot_guard": "electrostatic_plane_quad",
+  "electrostatic_preheat_guard": "electrostatic_plane_quad",
+  "electrostatic_quad_triangle_compare": "electrostatic_quad_triangle_pair",
+  "workflow.electrostatic-heat-thermo-summary-json": "electrostatic_plane_quad",
   "solve.heat_plane_quad_2d": "heat_plane_quad",
   "workflow.bar-1d-summary-json": "bar_1d",
   "solve.bar_1d": "bar_1d",

@@ -63,7 +63,7 @@ fn bridges_heat_quad_temperatures_into_thermo_model() {
         _ => unreachable!("expected heat quad result"),
     };
 
-    let bridged = bridge_heat_result_to_thermal_plane_quad_model(
+    let (bridged, _) = bridge_heat_result_to_thermal_plane_quad_model(
         &heat_result,
         &SolveThermalPlaneQuad2dRequest {
             nodes: vec![

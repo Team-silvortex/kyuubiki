@@ -216,6 +216,11 @@ export function applyHistoryJobPayload(
         currentNode: workflowResult.current_node ?? payload.job.message ?? null,
         summary,
         updatedAt: payload.job.updated_at ?? null,
+        skippedNodes: workflowResult.skipped_nodes ?? [],
+        branchDecisions: workflowResult.branch_decisions ?? [],
+        nodeRuns: workflowResult.node_runs ?? [],
+        artifactLineage: workflowResult.artifact_lineage ?? [],
+        result: workflowResult,
       }),
     );
     setMessage(

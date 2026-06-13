@@ -14,6 +14,37 @@ import type { WorkflowNodeTemplatePreset } from "@/components/workbench/workflow
 
 const RECENT_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.recentOperators";
 const FAVORITE_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.favoriteOperators";
+const operatorSearchTextCache = new Map<string, string>();
+
+function resolveOperatorSearchText(
+  preset: WorkflowNodeTemplatePreset,
+  descriptor?: WorkflowOperatorDescriptor,
+) {
+  const cacheKey = [
+    preset.id,
+    preset.label,
+    preset.operatorId ?? "",
+    descriptor?.summary ?? "",
+    descriptor?.family ?? "",
+    descriptor?.domain ?? "",
+    descriptor?.capability_tags.join(" ") ?? "",
+  ].join("|");
+  const cached = operatorSearchTextCache.get(cacheKey);
+  if (cached) return cached;
+  const searchText = [
+    preset.label,
+    preset.operatorId,
+    descriptor?.summary,
+    descriptor?.family,
+    descriptor?.domain,
+    descriptor?.capability_tags.join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  operatorSearchTextCache.set(cacheKey, searchText);
+  return searchText;
+}
 
 function groupWorkflowOperatorOptionPresets(
   presets: WorkflowNodeTemplatePreset[],
@@ -25,7 +56,9 @@ function groupWorkflowOperatorOptionPresets(
       ? operatorDescriptorMap.get(preset.operatorId)
       : undefined;
     const domain = descriptor?.domain ?? "other";
-    groups.set(domain, [...(groups.get(domain) ?? []), preset]);
+    const current = groups.get(domain);
+    if (current) current.push(preset);
+    else groups.set(domain, [preset]);
   }
   return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right));
 }
@@ -60,18 +93,7 @@ export function filterWorkflowOperatorOptionPresets(
       return false;
     }
     if (!normalizedQuery) return true;
-    const haystack = [
-      preset.label,
-      preset.operatorId,
-      descriptor?.summary,
-      descriptor?.family,
-      descriptor?.domain,
-      descriptor?.capability_tags.join(" "),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(normalizedQuery);
+    return resolveOperatorSearchText(preset, descriptor).includes(normalizedQuery);
   });
 }
 
@@ -119,6 +141,15 @@ export function WorkbenchWorkflowOperatorSearch(props: {
     filteredPresets,
     operatorDescriptorMap,
   );
+  const filteredPresetByOperatorId = useMemo(
+    () =>
+      new Map(
+        filteredPresets.flatMap((preset) =>
+          preset.operatorId ? [[preset.operatorId, preset] as const] : [],
+        ),
+      ),
+    [filteredPresets],
+  );
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(RECENT_OPERATOR_STORAGE_KEY);
@@ -144,22 +175,18 @@ export function WorkbenchWorkflowOperatorSearch(props: {
   const favoritePresets = useMemo(
     () =>
       favoriteOperatorIds
-        .map((operatorId) =>
-          filteredPresets.find((preset) => preset.operatorId === operatorId),
-        )
+        .map((operatorId) => filteredPresetByOperatorId.get(operatorId))
         .filter(Boolean)
         .slice(0, 8) as WorkflowNodeTemplatePreset[],
-    [favoriteOperatorIds, filteredPresets],
+    [favoriteOperatorIds, filteredPresetByOperatorId],
   );
   const recentPresets = useMemo(
     () =>
       recentOperatorIds
-        .map((operatorId) =>
-          filteredPresets.find((preset) => preset.operatorId === operatorId),
-        )
+        .map((operatorId) => filteredPresetByOperatorId.get(operatorId))
         .filter(Boolean)
         .slice(0, 6) as WorkflowNodeTemplatePreset[],
-    [filteredPresets, recentOperatorIds],
+    [filteredPresetByOperatorId, recentOperatorIds],
   );
   const compatiblePresets = useMemo(
     () =>

@@ -16,11 +16,14 @@ import {
   formatWorkflowContractHealthLabel,
   rankWorkflowContractHealth,
 } from "@/components/workbench/workflow/workbench-workflow-contract-health";
+import { PINNED_WORKFLOW_IDS } from "@/components/workbench/workflow/workbench-workflow-catalog-highlights";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import {
   markWorkflowSurfaceIntent,
   measureWorkflowSurfaceReady,
 } from "@/components/workbench/workflow/workbench-workflow-perf";
+import { WorkbenchWorkflowCatalogCard } from "@/components/workbench/workflow/workbench-workflow-catalog-card";
+import { groupWorkflowCatalogEntriesByDomain } from "@/components/workbench/workflow/workbench-workflow-domain-groups";
 import { WorkbenchWorkflowRunTraceCard } from "@/components/workbench/workflow/workbench-workflow-run-trace-card";
 import type {
   WorkflowRunRecord,
@@ -59,21 +62,6 @@ function workflowStatusTone(status: string): string {
   if (status === "completed") return "good";
   if (status === "failed" || status === "cancelled") return "risk";
   return "watch";
-}
-
-function formatPromotedAt(value?: string) {
-  if (!value) return "--";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function formatWorkflowTags(tags?: string[]) {
-  const normalized = tags?.filter(Boolean) ?? [];
-  return normalized.length > 0 ? normalized.join(", ") : null;
 }
 
 function scoreWorkflowRunComplexity(run: WorkflowRunRecord) {
@@ -128,6 +116,9 @@ export function WorkbenchWorkflowSidebar({
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
+  const previousLatestRun = latestRun
+    ? workflowRuns.find((entry, index) => index > 0 && entry.workflowId === latestRun.workflowId) ?? null
+    : null;
   const latestRunWorkflow = latestRun
     ? workflowCatalogEntries.find((entry) => entry.id === latestRun.workflowId) ?? null
     : null;
@@ -205,6 +196,63 @@ export function WorkbenchWorkflowSidebar({
       return left.name.localeCompare(right.name);
     });
   }, [catalogFilter, latestRunStatusByWorkflowId, workflowCatalogEntries]);
+  const groupedWorkflowCatalogEntries = useMemo(
+    () => groupWorkflowCatalogEntriesByDomain(filteredWorkflowCatalogEntries),
+    [filteredWorkflowCatalogEntries],
+  );
+  const pinnedWorkflowCatalogEntries = useMemo(
+    () =>
+      PINNED_WORKFLOW_IDS.map((workflowId) =>
+        filteredWorkflowCatalogEntries.find((entry) => entry.id === workflowId),
+      ).filter(Boolean) as WorkflowCatalogEntry[],
+    [filteredWorkflowCatalogEntries],
+  );
+  const pinnedWorkflowIdSet = useMemo(
+    () => new Set(pinnedWorkflowCatalogEntries.map((entry) => entry.id)),
+    [pinnedWorkflowCatalogEntries],
+  );
+  const unpinnedWorkflowGroups = useMemo(
+    () =>
+      groupedWorkflowCatalogEntries
+        .map((group) => ({
+          ...group,
+          entries: group.entries.filter((entry) => !pinnedWorkflowIdSet.has(entry.id)),
+        }))
+        .filter((group) => group.entries.length > 0),
+    [groupedWorkflowCatalogEntries, pinnedWorkflowIdSet],
+  );
+
+  function renderWorkflowCard(workflow: WorkflowCatalogEntry) {
+    const contractHealth = elevateWorkflowContractHealthLabel(
+      formatWorkflowContractHealthLabel(workflow.capability_tags ?? workflow.local?.tags),
+      latestRunStatusByWorkflowId.get(workflow.id),
+    );
+
+    return (
+      <WorkbenchWorkflowCatalogCard
+        contractHealth={contractHealth}
+        isSelected={selectedWorkflowId === workflow.id}
+        key={workflow.id}
+        labels={labels}
+        onDelete={workflow.local ? () => deleteCatalogLocalWorkflow(workflow) : undefined}
+        onRun={() => {
+          setCatalogMessage(
+            buildWorkflowContractHealthRunFeedbackMessage(
+              workflow.name,
+              workflow.capability_tags ?? workflow.local?.tags,
+              latestRunStatusByWorkflowId.get(workflow.id),
+            ),
+          );
+          onRunWorkflowCatalog(workflow.id);
+        }}
+        onSelectForBuilder={() => {
+          onSelectWorkflow(workflow.id);
+          onSurfaceTabChange("builder");
+        }}
+        workflow={workflow}
+      />
+    );
+  }
   useEffect(() => {
     if (typeof window === "undefined") return;
     let disposed = false;
@@ -339,85 +387,28 @@ export function WorkbenchWorkflowSidebar({
             </button>
           </div>
           {filteredWorkflowCatalogEntries.length === 0 ? <p className="card-copy">{labels.emptyCatalogLabel}</p> : null}
-          <div className="runtime-overview-grid">
-            {filteredWorkflowCatalogEntries.map((workflow) => {
-              const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
-              const contractHealth = elevateWorkflowContractHealthLabel(formatWorkflowContractHealthLabel(workflow.capability_tags ?? workflow.local?.tags), latestRunStatusByWorkflowId.get(workflow.id));
-              return (
-                <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={workflow.id}>
-                  <div className="card-head">
-                    <h2>{workflow.name}</h2>
-                    <span className={`status-pill status-pill--${selectedWorkflowId === workflow.id ? "good" : "watch"}`}>
-                      {workflow.local ? labels.localWorkflowBadgeLabel : workflow.version}
-                    </span>
-                  </div>
-                  <p className="card-copy">{workflow.summary}</p>
-                  {workflow.local ? (
-                    <div className="sidebar-list">
-                      <div className="sidebar-list__row">
-                        <span>{labels.localWorkflowSourceLabel}</span>
-                        <strong>{workflow.local.source_workflow_name ?? workflow.local.source_workflow_id ?? "--"}</strong>
-                      </div>
-                      <div className="sidebar-list__row">
-                        <span>{labels.localWorkflowPromotedAtLabel}</span>
-                        <strong>{formatPromotedAt(workflow.local.promoted_at)}</strong>
-                      </div>
-                      {workflow.local.variant_of_workflow_name || workflow.local.variant_of_workflow_id ? (
-                        <div className="sidebar-list__row">
-                          <span>{labels.localWorkflowVariantOfLabel}</span>
-                          <strong>{workflow.local.variant_of_workflow_name ?? workflow.local.variant_of_workflow_id}</strong>
-                        </div>
-                      ) : null}
-                      {workflow.local.imported_from_package_id ? (
-                        <div className="sidebar-list__row">
-                          <span>{labels.localWorkflowPackageIdLabel}</span>
-                          <strong>{workflow.local.imported_from_package_id}</strong>
-                        </div>
-                      ) : null}
-                      {workflow.local.imported_from_package_version ? (
-                        <div className="sidebar-list__row">
-                          <span>{labels.localWorkflowPackageVersionLabel}</span>
-                          <strong>{workflow.local.imported_from_package_version}</strong>
-                        </div>
-                      ) : null}
-                      {localWorkflowTags ? (
-                        <div className="sidebar-list__row">
-                          <span>{labels.localWorkflowTagsLabel}</span>
-                          <strong>{localWorkflowTags}</strong>
-                        </div>
-                      ) : null}
-                      {contractHealth ? (
-                        <div className="sidebar-list__row">
-                          <span>contract health</span>
-                          <strong>{contractHealth}</strong>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {workflow.local?.notes ? <p className="card-copy">{workflow.local.notes}</p> : null}
-                  <div className="button-row button-row--adaptive">
-                    <button
-                      onClick={() => {
-                        onSelectWorkflow(workflow.id);
-                        onSurfaceTabChange("builder");
-                      }}
-                      type="button"
-                    >
-                      {labels.selectForBuilderLabel}
-                    </button>
-                    <button onClick={() => { setCatalogMessage(buildWorkflowContractHealthRunFeedbackMessage(workflow.name, workflow.capability_tags ?? workflow.local?.tags, latestRunStatusByWorkflowId.get(workflow.id))); onRunWorkflowCatalog(workflow.id); }} type="button">
-                      {labels.runLabel}
-                    </button>
-                    {workflow.local ? (
-                      <button onClick={() => deleteCatalogLocalWorkflow(workflow)} type="button">
-                        {labels.localWorkflowDeleteLabel}
-                      </button>
-                    ) : null}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+          {pinnedWorkflowCatalogEntries.length > 0 ? (
+            <div className="sidebar-stack">
+              <div className="sidebar-list__row">
+                <span>{labels.templateChainPinnedLabel}</span>
+                <strong>{pinnedWorkflowCatalogEntries.length}</strong>
+              </div>
+              <div className="runtime-overview-grid">
+                {pinnedWorkflowCatalogEntries.map(renderWorkflowCard)}
+              </div>
+            </div>
+          ) : null}
+          {unpinnedWorkflowGroups.map((group) => (
+            <div className="sidebar-stack" key={group.key}>
+              <div className="sidebar-list__row">
+                <span>{group.label}</span>
+                <strong>{group.entries.length}</strong>
+              </div>
+              <div className="runtime-overview-grid">
+                {group.entries.map(renderWorkflowCard)}
+              </div>
+            </div>
+          ))}
         </section>
       ) : null}
 
@@ -466,7 +457,7 @@ export function WorkbenchWorkflowSidebar({
               </div>
             </div>
           ) : null}
-          {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectBranch={(nodeId, outputId) => openRunBranchInBuilder(latestRun.workflowId, nodeId, outputId)} onSelectLineage={(entry) => openRunLineageInBuilder(latestRun, entry.artifact_key, entry.node_id)} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} operatorDescriptors={workflowOperatorDescriptors} run={latestRun} workflow={latestRunWorkflow} /> : null}
+          {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectBranch={(nodeId, outputId) => openRunBranchInBuilder(latestRun.workflowId, nodeId, outputId)} onSelectLineage={(entry) => openRunLineageInBuilder(latestRun, entry.artifact_key, entry.node_id)} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} operatorDescriptors={workflowOperatorDescriptors} previousRun={previousLatestRun} run={latestRun} workflow={latestRunWorkflow} /> : null}
           {workflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
             {sortedWorkflowRuns.map((run) => (

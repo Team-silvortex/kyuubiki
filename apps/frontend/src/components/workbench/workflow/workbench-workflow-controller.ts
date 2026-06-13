@@ -21,6 +21,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { parseWorkflowInputArtifactTexts } from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
 import { summarizeWorkflowRunTrace } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
+import { summarizeWorkflowResultArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 
 type WorkflowControllerLabels = {
   workflowCatalogLoaded: string;
@@ -52,26 +53,7 @@ export function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJob
 }
 
 export function summarizeWorkflowArtifacts(result: WorkflowGraphJobResult): string | null {
-  const exported = result.artifacts["json_output.json"];
-  if (!exported || typeof exported !== "object" || exported === null || !("content" in exported)) {
-    return null;
-  }
-
-  const content = (exported as { content?: unknown }).content;
-  if (typeof content !== "string") {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(content) as Record<string, unknown>;
-    const summary = Object.entries(parsed)
-      .slice(0, 3)
-      .map(([key, value]) => `${key}=${typeof value === "number" ? value.toExponential(3) : String(value)}`)
-      .join(", ");
-    return summary || null;
-  } catch {
-    return null;
-  }
+  return summarizeWorkflowResultArtifacts(result);
 }
 
 export function upsertWorkflowRunRecord(current: WorkflowRunRecord[], next: WorkflowRunRecord): WorkflowRunRecord[] {
@@ -176,6 +158,7 @@ export function useWorkbenchWorkflowController({
             branchDecisions: next.result && isWorkflowGraphResult(next.result) ? next.result.branch_decisions ?? [] : [],
             nodeRuns: next.result && isWorkflowGraphResult(next.result) ? next.result.node_runs ?? [] : [],
             artifactLineage: next.result && isWorkflowGraphResult(next.result) ? next.result.artifact_lineage ?? [] : [],
+            result: next.result && isWorkflowGraphResult(next.result) ? next.result : undefined,
             traceSummary: next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowRunTrace(next.result) : undefined,
             updatedAt: next.job.updated_at ?? null,
           }),

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kyuubiki.local/schemas/workflow-progress-event.schema.json",
+  "title": "WorkflowProgressEvent",
+  "description": "Structured progress event emitted during workflow graph execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "stage",
+    "progress"
+  ],
+  "properties": {
+    "stage": {
+      "type": "string",
+      "enum": [
+        "queued",
+        "preprocessing",
+        "partitioning",
+        "solving",
+        "postprocessing",
+        "completed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "progress": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "message": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "node_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kind": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "emitted_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  }
+}

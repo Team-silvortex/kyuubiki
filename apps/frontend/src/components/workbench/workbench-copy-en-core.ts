@@ -1,5 +1,4 @@
 import brand from "../../../../../assets/brand/brand.json";
-
 export const copyEnCore = {
     brand: brand.productName,
     shortTitle: brand.workbenchShortName ?? brand.applicationName.replace(/^Kyuubiki\s+/u, ""),
@@ -89,6 +88,8 @@ export const copyEnCore = {
     workflowInsertTruss3dSolveExportLabel: "Insert truss 3D summary chain",
     workflowInsertHeatBridgeThermoLabel: "Insert heat -> bridge -> thermo",
     workflowInsertElectrostaticBridgeHeatLabel: "Insert electrostatic -> bridge -> heat",
+    workflowInsertElectrostaticHeatThermoSummaryLabel: "Insert electrostatic -> heat -> thermo coupled summary chain",
+    workflowInsertElectrostaticTriangleHeatThermoTriangleSummaryLabel: "Insert electrostatic triangle -> heat triangle -> thermo triangle coupled summary chain",
     workflowInsertElectrostaticSolveExportLabel: "Insert electrostatic -> extract -> export",
     workflowTemplateChainFavoritesLabel: "Favorite chains",
     workflowTemplateChainFavoriteAddLabel: "Favorite chain",
@@ -595,5 +596,4 @@ export const copyEnCore = {
     immersiveJobs: "Recent jobs",
     immersiveEmptyModels: "No saved models in this project yet.",
     immersiveEmptyJobs: "No jobs yet.",
-
 } as const;

@@ -35,6 +35,8 @@ export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
     insertTruss3dSolveExportLabel: t.workflowInsertTruss3dSolveExportLabel,
     insertHeatBridgeThermoLabel: t.workflowInsertHeatBridgeThermoLabel,
     insertElectrostaticBridgeHeatLabel: t.workflowInsertElectrostaticBridgeHeatLabel,
+    insertElectrostaticHeatThermoSummaryLabel: t.workflowInsertElectrostaticHeatThermoSummaryLabel,
+    insertElectrostaticTriangleHeatThermoTriangleSummaryLabel: t.workflowInsertElectrostaticTriangleHeatThermoTriangleSummaryLabel,
     insertElectrostaticSolveExportLabel: t.workflowInsertElectrostaticSolveExportLabel,
     templateChainFavoritesLabel: t.workflowTemplateChainFavoritesLabel,
     templateChainFavoriteAddLabel: t.workflowTemplateChainFavoriteAddLabel,

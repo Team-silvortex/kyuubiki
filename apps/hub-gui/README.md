@@ -28,6 +28,8 @@ exists, and falls back to the repo-local `tauri:dev` shell during development.
 
 - UI shell:
   [ui/](ui)
+- Desktop docs shelf:
+  [ui/docs](ui/docs)
 - Tauri backend:
   [src-tauri/](src-tauri)
 - Packaged icons:
@@ -74,6 +76,8 @@ Do not treat that directory as source-owned. The source of truth is:
 - the Hub Tauri shell source in this app
 - the shared desktop runtime crate
 - the repository-level desktop packaging flow
+- the repository-level documentation under `docs/`, with `ui/docs/` as the
+  desktop-facing mirror/shelf for shorter operator reading
 - [docs/hub-architecture.md](../../docs/hub-architecture.md)
 - [deploy/workload-catalog.example.json](../../deploy/workload-catalog.example.json)
 - [docs/packaging-and-deployment.md](../../docs/packaging-and-deployment.md)

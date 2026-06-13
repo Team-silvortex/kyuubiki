@@ -2,7 +2,9 @@
 
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { ELECTROMAGNETIC_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-electromagnetic-presets";
 import { HOTSPOT_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-hotspot-presets";
+import { STATISTICS_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-statistics-presets";
 
 const WORKFLOW_TEMPLATE_CHAIN_LIBRARY_KEY =
   "kyuubiki.workflow.templateChainLibrary.v1";
@@ -53,6 +55,7 @@ function buildSummaryTemplateChain(params: {
 }
 
 const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
+  ...STATISTICS_TEMPLATE_CHAINS,
   buildSummaryTemplateChain({
     id: "bar_1d_summary",
     label: "bar_1d summary",
@@ -225,192 +228,7 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
       { kind: "export", operatorId: "export.summary_json" },
     ],
   },
-  {
-    id: "electrostatic_bridge_heat",
-    label: "electrostatic -> bridge -> heat",
-    source: "built-in",
-    summary: "Electrostatic field bridge into heat plane quad solve.",
-    tags: ["electrostatic", "heat", "bridge", "coupled", "2d"],
-    templates: [
-      { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
-      {
-        kind: "transform",
-        operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
-        config: createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_quad_2d") ?? undefined,
-      },
-      { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
-    ],
-  },
-  {
-    id: "electrostatic_triangle_bridge_heat_triangle",
-    label: "electrostatic triangle -> bridge -> heat triangle",
-    source: "built-in",
-    summary: "Electrostatic triangle field bridge into heat plane triangle solve.",
-    tags: ["electrostatic", "heat", "bridge", "triangle", "coupled", "2d"],
-    templates: [
-      { kind: "solve", operatorId: "solve.electrostatic_plane_triangle_2d" },
-      {
-        kind: "transform",
-        operatorId: "bridge.electrostatic_field_to_heat_triangle_2d",
-        config:
-          createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_triangle_2d") ??
-          undefined,
-      },
-      { kind: "solve", operatorId: "solve.heat_plane_triangle_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.result_summary",
-        config: { fields: ["max_temperature", "max_heat_flux"] },
-      },
-      { kind: "export", operatorId: "export.summary_json" },
-    ],
-  },
-  {
-    id: "electrostatic_triangle_heat_thermo_triangle_summary",
-    label: "electrostatic triangle -> heat triangle -> thermo triangle summary",
-    source: "built-in",
-    summary:
-      "Full coupled triangle chain from electrostatic field, through heat loading, into thermo-mechanical solve and summary export.",
-    tags: [
-      "electromagnetic",
-      "electrostatic",
-      "heat",
-      "thermal",
-      "thermo_mechanical",
-      "bridge",
-      "triangle",
-      "coupled",
-      "summary",
-      "2d",
-    ],
-    templates: [
-      { kind: "solve", operatorId: "solve.electrostatic_plane_triangle_2d" },
-      {
-        kind: "transform",
-        operatorId: "bridge.electrostatic_field_to_heat_triangle_2d",
-        config:
-          createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_triangle_2d") ??
-          undefined,
-      },
-      { kind: "solve", operatorId: "solve.heat_plane_triangle_2d" },
-      {
-        kind: "transform",
-        operatorId: "bridge.temperature_field_to_thermo_triangle_2d",
-        config:
-          createBridgeConfigForOperator("bridge.temperature_field_to_thermo_triangle_2d") ??
-          undefined,
-      },
-      { kind: "solve", operatorId: "solve.thermal_plane_triangle_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.result_summary",
-        config: { fields: ["max_displacement", "max_stress", "max_temperature_delta"] },
-      },
-      { kind: "export", operatorId: "export.summary_json" },
-    ],
-  },
-  {
-    id: "electrostatic_heat_thermo_summary",
-    label: "electrostatic -> heat -> thermo summary",
-    source: "built-in",
-    summary:
-      "Full coupled chain from electrostatic field, through heat loading, into thermo-mechanical solve and summary export.",
-    tags: [
-      "electromagnetic",
-      "electrostatic",
-      "heat",
-      "thermal",
-      "thermo_mechanical",
-      "bridge",
-      "coupled",
-      "summary",
-      "2d",
-    ],
-    templates: [
-      { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.result_summary",
-        config: { fields: ["max_potential", "max_electric_field"] },
-      },
-      {
-        kind: "transform",
-        operatorId: "bridge.electrostatic_field_to_heat_quad_2d",
-        config:
-          createBridgeConfigForOperator("bridge.electrostatic_field_to_heat_quad_2d") ??
-          undefined,
-      },
-      { kind: "solve", operatorId: "solve.heat_plane_quad_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.result_summary",
-        config: { fields: ["max_temperature", "max_heat_flux"] },
-      },
-      {
-        kind: "transform",
-        operatorId: "bridge.temperature_field_to_thermo_quad_2d",
-        config:
-          createBridgeConfigForOperator("bridge.temperature_field_to_thermo_quad_2d") ??
-          undefined,
-      },
-      { kind: "solve", operatorId: "solve.thermal_plane_quad_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.result_summary",
-        config: {
-          fields: [
-            "max_displacement",
-            "max_stress",
-            "max_temperature_delta",
-            "max_temperature_gradient",
-          ],
-        },
-      },
-      {
-        kind: "transform",
-        operatorId: "transform.merge_summary_pair",
-        config: { left_prefix: "electrostatic", right_prefix: "heat", include_source_count: false },
-      },
-      {
-        kind: "transform",
-        operatorId: "transform.merge_summary_pair",
-        config: { left_prefix: "", right_prefix: "thermo", include_source_count: false },
-      },
-      { kind: "export", operatorId: "export.summary_json" },
-    ],
-    connections: [
-      { from: 0, to: 1 },
-      { from: 0, to: 2 },
-      { from: 2, to: 3 },
-      { from: 3, to: 4 },
-      { from: 3, to: 5 },
-      { from: 5, to: 6 },
-      { from: 6, to: 7 },
-      { from: 1, to: 8, toPort: "left" },
-      { from: 4, to: 8, toPort: "right" },
-      { from: 8, to: 9, toPort: "left" },
-      { from: 7, to: 9, toPort: "right" },
-      { from: 9, to: 10 },
-    ],
-  },
-  {
-    id: "electrostatic_summary",
-    label: "electrostatic summary",
-    source: "built-in",
-    summary: "Electrostatic solve and field summary export.",
-    tags: ["electrostatic", "summary", "field", "2d"],
-    templates: [
-      { kind: "solve", operatorId: "solve.electrostatic_plane_quad_2d" },
-      {
-        kind: "extract",
-        operatorId: "extract.result_summary",
-        config: {
-          fields: ["max_potential", "max_electric_field", "max_flux_density"],
-        },
-      },
-      { kind: "export", operatorId: "export.summary_json" },
-    ],
-  },
+  ...ELECTROMAGNETIC_TEMPLATE_CHAINS,
   ...HOTSPOT_TEMPLATE_CHAINS,
   {
     id: "condition_branch_merge_export",

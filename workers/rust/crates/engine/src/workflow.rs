@@ -6,11 +6,14 @@ use crate::workflow_executor::{
     transform_operator_accepts_partial_inputs, transform_operator_requires_port_map,
 };
 use kyuubiki_protocol::{
-    WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest,
+    JobStatus, WorkflowArtifactLineage, WorkflowBranchDecision, WorkflowGraphRunRequest,
     WorkflowGraphRunResult, WorkflowNodeKind, WorkflowNodeRunStatus, WorkflowNodeRunTrace,
+    WorkflowProgressEvent,
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use time::format_description::well_known::Rfc3339;
+use time::OffsetDateTime;
 
 fn incoming_artifact_keys(
     incoming: &[&kyuubiki_protocol::WorkflowEdge],
@@ -21,6 +24,31 @@ fn incoming_artifact_keys(
         .map(|edge| artifact_key(&edge.from.node, &edge.from.port))
         .filter(|key| artifacts.contains_key(key))
         .collect()
+}
+
+fn workflow_progress_event(
+    stage: JobStatus,
+    progress: f32,
+    message: impl Into<String>,
+    node_id: Option<&str>,
+    kind: Option<WorkflowNodeKind>,
+) -> WorkflowProgressEvent {
+    WorkflowProgressEvent {
+        stage,
+        progress,
+        message: Some(message.into()),
+        node_id: node_id.map(ToOwned::to_owned),
+        kind: kind.map(|value| match value {
+            WorkflowNodeKind::Input => "input".to_string(),
+            WorkflowNodeKind::Solve => "solve".to_string(),
+            WorkflowNodeKind::Transform => "transform".to_string(),
+            WorkflowNodeKind::Extract => "extract".to_string(),
+            WorkflowNodeKind::Export => "export".to_string(),
+            WorkflowNodeKind::Condition => "condition".to_string(),
+            WorkflowNodeKind::Output => "output".to_string(),
+        }),
+        emitted_at: OffsetDateTime::now_utc().format(&Rfc3339).ok(),
+    }
 }
 
 pub fn run_workflow_graph(
@@ -40,7 +68,15 @@ pub fn run_workflow_graph(
     let mut branch_decisions = Vec::new();
     let mut node_runs = Vec::new();
     let mut artifact_lineage = Vec::new();
+    let mut progress_events = vec![workflow_progress_event(
+        JobStatus::Preprocessing,
+        0.0,
+        format!("workflow {} accepted", graph.id),
+        None,
+        None,
+    )];
     let mut artifacts = BTreeMap::new();
+    let total_nodes = graph.nodes.len().max(1) as f32;
 
     loop {
         let mut progressed = false;
@@ -90,6 +126,13 @@ pub fn run_workflow_graph(
                         consumed_artifacts: incoming_artifact_keys(&incoming, &artifacts),
                         produced_artifacts: Vec::new(),
                     });
+                    progress_events.push(workflow_progress_event(
+                        JobStatus::Partitioning,
+                        (completed.len() + skipped.len()) as f32 / total_nodes,
+                        format!("skipped node {}", node.id),
+                        Some(&node.id),
+                        Some(node.kind),
+                    ));
                     progressed = true;
                 }
                 continue;
@@ -284,6 +327,13 @@ pub fn run_workflow_graph(
                 consumed_artifacts,
                 produced_artifacts,
             });
+            progress_events.push(workflow_progress_event(
+                JobStatus::Solving,
+                (completed.len() + skipped.len()) as f32 / total_nodes,
+                format!("completed node {}", node.id),
+                Some(&node.id),
+                Some(node.kind),
+            ));
             progressed = true;
         }
 
@@ -310,10 +360,26 @@ pub fn run_workflow_graph(
         }
     }
 
+    progress_events.push(workflow_progress_event(
+        JobStatus::Postprocessing,
+        1.0,
+        format!("validated {} output node(s)", graph.output_nodes.len()),
+        None,
+        None,
+    ));
+    progress_events.push(workflow_progress_event(
+        JobStatus::Completed,
+        1.0,
+        format!("workflow {} completed", graph.id),
+        None,
+        None,
+    ));
+
     Ok(WorkflowGraphRunResult {
         workflow_id: graph.id,
         completed_nodes: ordered_completed,
         skipped_nodes: ordered_skipped,
+        progress_events,
         branch_decisions,
         node_runs,
         artifact_lineage,

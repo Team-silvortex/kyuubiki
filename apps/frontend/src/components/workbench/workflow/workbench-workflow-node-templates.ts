@@ -8,6 +8,7 @@ import type {
 } from "@/lib/api";
 import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
+import { DATASET_VALUE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-dataset-presets";
 import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";
 
 export type WorkflowNodeTemplatePreset = {
@@ -24,163 +25,6 @@ export type WorkflowNodeTemplateSelection = {
   kind?: string;
   operatorId?: string;
   config?: Record<string, unknown>;
-};
-
-const DATASET_VALUE_PRESETS: Record<string, WorkflowDatasetValueInfo> = {
-  heat_model: { id: "heat_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/heat_plane_quad_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.heat_plane_quad_2d.input", version: "1" } },
-  heat_result: { id: "heat_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/heat_plane_quad_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.heat_plane_quad_2d.output", version: "1" } },
-  thermo_model: { id: "thermo_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/thermal_plane_quad_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.thermal_plane_quad_2d.input", version: "1" } },
-  thermo_result: { id: "thermo_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/thermal_plane_quad_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.thermal_plane_quad_2d.output", version: "1" } },
-  frame_model: {
-    id: "frame_model",
-    data_class: "study_model",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "study_model/frame_3d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.frame_3d.input", version: "1" },
-  },
-  frame_result: {
-    id: "frame_result",
-    data_class: "result",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "result/frame_3d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.frame_3d.output", version: "1" },
-  },
-  thermal_frame_model: {
-    id: "thermal_frame_model",
-    data_class: "study_model",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "study_model/thermal_frame_3d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.thermal_frame_3d.input", version: "1" },
-  },
-  thermal_frame_result: {
-    id: "thermal_frame_result",
-    data_class: "result",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "result/thermal_frame_3d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.thermal_frame_3d.output", version: "1" },
-  },
-  thermal_truss_model: {
-    id: "thermal_truss_model",
-    data_class: "study_model",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "study_model/thermal_truss_3d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.thermal_truss_3d.input", version: "1" },
-  },
-  thermal_truss_result: {
-    id: "thermal_truss_result",
-    data_class: "result",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "result/thermal_truss_3d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.thermal_truss_3d.output", version: "1" },
-  },
-  electrostatic_bar_model: {
-    id: "electrostatic_bar_model",
-    data_class: "study_model",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "study_model/electrostatic_bar_1d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_bar_1d.input", version: "1" },
-  },
-  electrostatic_bar_result: {
-    id: "electrostatic_bar_result",
-    data_class: "result",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "result/electrostatic_bar_1d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_bar_1d.output", version: "1" },
-  },
-  electrostatic_plane_triangle_model: {
-    id: "electrostatic_plane_triangle_model",
-    data_class: "study_model",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "study_model/electrostatic_plane_triangle_2d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_plane_triangle_2d.input", version: "1" },
-  },
-  electrostatic_plane_triangle_result: {
-    id: "electrostatic_plane_triangle_result",
-    data_class: "result",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "result/electrostatic_plane_triangle_2d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_plane_triangle_2d.output", version: "1" },
-  },
-  electrostatic_plane_quad_model: {
-    id: "electrostatic_plane_quad_model",
-    data_class: "study_model",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "study_model/electrostatic_plane_quad_2d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_plane_quad_2d.input", version: "1" },
-  },
-  electrostatic_plane_quad_result: {
-    id: "electrostatic_plane_quad_result",
-    data_class: "result",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "result/electrostatic_plane_quad_2d",
-    encoding: "json",
-    schema_ref: { schema: "kyuubiki.operator.solve.electrostatic_plane_quad_2d.output", version: "1" },
-  },
-  spring_model: { id: "spring_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/spring_1d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.spring_1d.input", version: "1" } },
-  spring_result: { id: "spring_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/spring_1d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.spring_1d.output", version: "1" } },
-  truss_model: { id: "truss_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/truss_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.truss_2d.input", version: "1" } },
-  truss_result: { id: "truss_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/truss_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.truss_2d.output", version: "1" } },
-  truss_3d_model: { id: "truss_3d_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/truss_3d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.truss_3d.input", version: "1" } },
-  truss_3d_result: { id: "truss_3d_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/truss_3d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.truss_3d.output", version: "1" } },
-  frame_2d_model: { id: "frame_2d_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/frame_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.frame_2d.input", version: "1" } },
-  frame_2d_result: { id: "frame_2d_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/frame_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.frame_2d.output", version: "1" } },
-  beam_model: { id: "beam_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/beam_1d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.beam_1d.input", version: "1" } },
-  beam_result: { id: "beam_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/beam_1d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.beam_1d.output", version: "1" } },
-  thermal_beam_model: { id: "thermal_beam_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/thermal_beam_1d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.thermal_beam_1d.input", version: "1" } },
-  thermal_beam_result: { id: "thermal_beam_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/thermal_beam_1d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.thermal_beam_1d.output", version: "1" } },
-  spring_2d_model: { id: "spring_2d_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/spring_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.spring_2d.input", version: "1" } },
-  spring_2d_result: { id: "spring_2d_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/spring_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.spring_2d.output", version: "1" } },
-  spring_3d_model: { id: "spring_3d_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/spring_3d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.spring_3d.input", version: "1" } },
-  spring_3d_result: { id: "spring_3d_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/spring_3d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.spring_3d.output", version: "1" } },
-  thermal_frame_2d_model: { id: "thermal_frame_2d_model", data_class: "study_model", element_type: "json_object", shape: { axes: [] }, semantic_type: "study_model/thermal_frame_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.thermal_frame_2d.input", version: "1" } },
-  thermal_frame_2d_result: { id: "thermal_frame_2d_result", data_class: "result", element_type: "json_object", shape: { axes: [] }, semantic_type: "result/thermal_frame_2d", encoding: "json", schema_ref: { schema: "kyuubiki.operator.solve.thermal_frame_2d.output", version: "1" } },
-  result_summary: {
-    id: "result_summary",
-    data_class: "artifact",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "artifact/result_summary",
-    encoding: "json",
-  },
-  json_export: {
-    id: "json_export",
-    data_class: "artifact",
-    element_type: "json_object",
-    shape: { axes: [] },
-    semantic_type: "artifact/json",
-    encoding: "json",
-  },
-  csv_export: {
-    id: "csv_export",
-    data_class: "artifact",
-    element_type: "table",
-    shape: { axes: [] },
-    semantic_type: "artifact/csv",
-    encoding: "text/csv",
-  },
 };
 
 const PRESETS: WorkflowNodeTemplatePreset[] = [
@@ -428,9 +272,7 @@ function buildDatasetValuePresetFromPort(
   };
 }
 
-function buildPortsFromOperatorDescriptor(
-  descriptor: WorkflowOperatorDescriptor,
-): WorkflowNodeTemplatePreset {
+function buildPortsFromOperatorDescriptor(descriptor: WorkflowOperatorDescriptor): WorkflowNodeTemplatePreset {
   const kind = workflowKindFromOperatorKind(descriptor.kind);
   return {
     id: descriptor.id,
@@ -440,8 +282,18 @@ function buildPortsFromOperatorDescriptor(
     config:
       descriptor.id === "extract.result_summary"
         ? { fields: ["max_displacement", "max_stress"] }
+        : descriptor.id === "extract.field_statistics"
+          ? { source: "elements", field: "von_mises_stress", output_prefix: "stress", percentiles: [50, 90, 99] }
+        : descriptor.id === "extract.field_hotspots"
+          ? { source: "elements", field: "von_mises_stress", output_prefix: "stress", percentile: 90, sample_limit: 4, sample_sort: "value_desc" }
         : descriptor.id === "transform.merge_summary_pair"
           ? { left_prefix: "left", right_prefix: "right", include_source_count: false }
+        : descriptor.id === "transform.compare_summary_pair"
+          ? { left_prefix: "baseline", right_prefix: "candidate", delta_prefix: "delta", ratio_prefix: "ratio", percent_prefix: "percent_change", include_originals: true, include_delta: true, include_ratio: true, include_percent_change: true, include_shared_field_count: true }
+        : descriptor.id === "transform.normalize_summary_fields"
+          ? { copy_unmapped: false, rules: [{ source: "max_temperature", target: "temperature_peak" }, { source: "max_heat_flux", target: "heat_flux_peak" }] }
+        : descriptor.id === "transform.select_best_summary"
+          ? { criteria: [{ field: "max_temperature", goal: "min", weight: 1 }, { field: "max_heat_flux", goal: "max", weight: 0.5 }], include_breakdown: true, include_all_scores: true }
         : descriptor.id.startsWith("bridge.")
           ? createBridgeConfigForOperator(descriptor.id) ?? undefined
         : undefined,
@@ -460,9 +312,7 @@ function buildPortsFromOperatorDescriptor(
   };
 }
 
-function listDescriptorBackedPresets(
-  operatorDescriptors?: WorkflowOperatorDescriptor[],
-) {
+function listDescriptorBackedPresets(operatorDescriptors?: WorkflowOperatorDescriptor[]) {
   return (operatorDescriptors ?? []).map(buildPortsFromOperatorDescriptor);
 }
 

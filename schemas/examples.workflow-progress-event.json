@@ -1,0 +1,8 @@
+{
+  "stage": "solving",
+  "progress": 0.6,
+  "message": "completed node solve_heat",
+  "node_id": "solve_heat",
+  "kind": "solve",
+  "emitted_at": "2026-06-13T12:00:00Z"
+}

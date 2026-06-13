@@ -65,6 +65,8 @@ export const copyJa = {
     workflowInsertTruss3dSolveExportLabel: "3D truss 要約チェーンを挿入",
     workflowInsertHeatBridgeThermoLabel: "heat -> bridge -> thermo を挿入",
     workflowInsertElectrostaticBridgeHeatLabel: "electrostatic -> bridge -> heat を挿入",
+    workflowInsertElectrostaticHeatThermoSummaryLabel: "electrostatic -> heat -> thermo 連成要約チェーンを挿入",
+    workflowInsertElectrostaticTriangleHeatThermoTriangleSummaryLabel: "electrostatic triangle -> heat triangle -> thermo triangle 連成要約チェーンを挿入",
     workflowInsertElectrostaticSolveExportLabel: "electrostatic -> extract -> export を挿入",
     workflowTemplateChainFavoritesLabel: "お気に入りチェーン",
     workflowTemplateChainFavoriteAddLabel: "チェーンをお気に入りに追加",

@@ -55,6 +55,15 @@ function syncEdgeFromPorts(edge: WorkflowGraphEdge, nodes: WorkflowGraphNode[]) 
   };
 }
 
+function didPortChange(previousPort: WorkflowGraphPort, nextPort: WorkflowGraphPort) {
+  return (
+    previousPort.id !== nextPort.id ||
+    previousPort.artifact_type !== nextPort.artifact_type ||
+    previousPort.dataset_value !== nextPort.dataset_value ||
+    previousPort.description !== nextPort.description
+  );
+}
+
 function pickConnectedPorts(sourceNode: WorkflowGraphNode, nextNode: WorkflowGraphNode) {
   const sourceOutputs = sourceNode.outputs ?? [];
   const targetInputs = nextNode.inputs ?? [];
@@ -295,10 +304,24 @@ export function createWorkflowTopologyActions(
   function updateNode(nodeId: string, updater: (node: WorkflowGraphNode) => WorkflowGraphNode) {
     setDraftGraph((current) => {
       if (!current) return current;
-      const next = cloneWorkflowGraph(current);
-      if (!next) return current;
-      next.nodes = next.nodes.map((node) => (node.id === nodeId ? updater(node) : node));
-      return next;
+      const currentNodes = current.nodes ?? [];
+      let changed = false;
+      const nextNodes = currentNodes.map((node) => {
+        if (node.id !== nodeId) return node;
+        const updatedNode = updater({
+          ...node,
+          config: node.config ? { ...node.config } : node.config,
+          inputs: node.inputs ? [...node.inputs] : node.inputs,
+          outputs: node.outputs ? [...node.outputs] : node.outputs,
+        });
+        changed = updatedNode !== node;
+        return updatedNode;
+      });
+      if (!changed) return current;
+      return {
+        ...current,
+        nodes: nextNodes,
+      };
     });
   }
 
@@ -308,12 +331,55 @@ export function createWorkflowTopologyActions(
     portId: string,
     updater: (port: WorkflowGraphPort) => WorkflowGraphPort,
   ) {
-    updateNode(nodeId, (node) => ({
-      ...node,
-      [direction]: (node[direction] ?? []).map((port) =>
-        port.id === portId ? updater(port) : port,
-      ),
-    }));
+    setDraftGraph((current) => {
+      if (!current) return current;
+      const currentNodes = current.nodes ?? [];
+      const nodeIndex = currentNodes.findIndex((node) => node.id === nodeId);
+      if (nodeIndex < 0) return current;
+      const currentNode = currentNodes[nodeIndex];
+      const currentPorts = currentNode[direction] ?? [];
+      let previousPort: WorkflowGraphPort | null = null;
+      let nextPort: WorkflowGraphPort | null = null;
+      const nextPorts = currentPorts.map((port) => {
+        if (port.id !== portId) return port;
+        previousPort = port;
+        nextPort = updater({ ...port });
+        return nextPort;
+      });
+      if (!previousPort || !nextPort || !didPortChange(previousPort, nextPort)) return current;
+      const nextNode = {
+        ...currentNode,
+        [direction]: nextPorts,
+      };
+      const nextNodes = currentNodes.map((node, index) => (index === nodeIndex ? nextNode : node));
+      const currentEdges = current.edges ?? [];
+      let edgeChanged = false;
+      const nextEdges = currentEdges.map((edge) => {
+        const touchesOutput = direction === "outputs" && edge.from.node === nodeId && edge.from.port === previousPort?.id;
+        const touchesInput = direction === "inputs" && edge.to.node === nodeId && edge.to.port === previousPort?.id;
+        if (!touchesOutput && !touchesInput) return edge;
+        const rewiredEdge = syncEdgeFromPorts(
+          {
+            ...edge,
+            from: touchesOutput ? { ...edge.from, port: nextPort?.id ?? edge.from.port } : edge.from,
+            to: touchesInput ? { ...edge.to, port: nextPort?.id ?? edge.to.port } : edge.to,
+          },
+          nextNodes,
+        );
+        edgeChanged =
+          edgeChanged ||
+          rewiredEdge.from.port !== edge.from.port ||
+          rewiredEdge.to.port !== edge.to.port ||
+          rewiredEdge.artifact_type !== edge.artifact_type ||
+          rewiredEdge.dataset_value !== edge.dataset_value;
+        return rewiredEdge;
+      });
+      return {
+        ...current,
+        nodes: nextNodes,
+        edges: edgeChanged ? nextEdges : currentEdges,
+      };
+    });
   }
 
   function addNode(template?: WorkflowNodeTemplateSelection) {
@@ -459,12 +525,33 @@ export function createWorkflowTopologyActions(
   function updateEdge(edgeId: string, updater: (edge: WorkflowGraphEdge) => WorkflowGraphEdge) {
     setDraftGraph((current) => {
       if (!current) return current;
-      const next = cloneWorkflowGraph(current);
-      if (!next) return current;
-      next.edges = (next.edges ?? []).map((edge) =>
-        edge.id === edgeId ? syncEdgeFromPorts(updater(edge), next.nodes) : edge,
-      );
-      return next;
+      const currentEdges = current.edges ?? [];
+      let changed = false;
+      const nextEdges = currentEdges.map((edge) => {
+        if (edge.id !== edgeId) return edge;
+        const updatedEdge = syncEdgeFromPorts(
+          updater({
+            ...edge,
+            from: { ...edge.from },
+            to: { ...edge.to },
+          }),
+          current.nodes,
+        );
+        changed =
+          updatedEdge.id !== edge.id ||
+          updatedEdge.from.node !== edge.from.node ||
+          updatedEdge.from.port !== edge.from.port ||
+          updatedEdge.to.node !== edge.to.node ||
+          updatedEdge.to.port !== edge.to.port ||
+          updatedEdge.artifact_type !== edge.artifact_type ||
+          updatedEdge.dataset_value !== edge.dataset_value;
+        return updatedEdge;
+      });
+      if (!changed) return current;
+      return {
+        ...current,
+        edges: nextEdges,
+      };
     });
   }
 

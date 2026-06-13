@@ -3,6 +3,16 @@
 Use this directory as the current source of truth for product shape, protocol
 boundaries, deployment modes, and engineering workflow.
 
+## Ownership
+
+- `docs/`
+  is the repository-level source of truth for engineering, architecture,
+  protocol, deployment, and product-shape documents.
+- `apps/hub-gui/ui/docs/`
+  is the desktop-facing HTML shelf used inside Hub for operator-facing reading.
+  Keep it aligned with this directory, but do not treat the Hub copy as the
+  deeper source narrative by default.
+
 ## Start Here
 
 Read these first, in order:
@@ -12,6 +22,13 @@ Read these first, in order:
 3. `protocols.md`
 4. `repository-structure.md`
 5. `testing-and-ci.md`
+6. `maintenance.md`
+
+## Maintenance
+
+- `maintenance.md`
+  Curation rules for deciding which docs are source-of-truth, planning-only,
+  generated, or desktop-facing mirrors.
 
 Then branch by intent:
 
@@ -139,8 +156,6 @@ Then branch by intent:
   Unified launcher, host-side workflow commands, and packaging entrypoints.
 - `deploy/README.md`
   Deployment descriptors, agent manifests, and workload-catalog examples.
-- `dist/README.md`
-  Generated desktop artifacts, build summaries, and release-output layout.
 - `tmp/README.md`
   Disposable local runtime state, working data, and dev-only paths.
 - `schemas/README.md`
