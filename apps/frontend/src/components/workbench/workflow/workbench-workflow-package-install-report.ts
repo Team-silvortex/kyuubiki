@@ -2,6 +2,7 @@
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import type { WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
+import { formatWorkflowContractHealthSummary, formatWorkflowDynamicReviewState } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { WORKBENCH_LOCAL_WORKFLOWS_KEY } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_LOG_KEY } from "@/components/workbench/workflow/workbench-workflow-package-maintenance-log";
@@ -46,6 +47,11 @@ export type WorkflowPackageInstallReport = {
     portability: string;
   };
   input_contract_warnings: Record<string, string[]>;
+  contract_health: {
+    static_health: string;
+    dynamic_review_state: string;
+    recent_run_status?: string;
+  };
   integrity: WorkflowIntegrityReport;
   residuals: WorkflowPackageResidualRecord[];
   maintenance_history?: Array<{
@@ -109,6 +115,7 @@ export function buildWorkflowPackageInstallReport(params: {
   workflow: WorkflowCatalogEntry;
   importedPackage: WorkflowPackage | null;
   integrityReport: WorkflowIntegrityReport;
+  recentRunStatus?: string | null;
   maintenanceHistory?: Array<{
     at: string;
     kind: "scan" | "repair";
@@ -176,6 +183,14 @@ export function buildWorkflowPackageInstallReport(params: {
         "Package manifest, graph, and dataset contract remain JSON-exportable for cross-operator reuse and headless SDK flows.",
     },
     input_contract_warnings: inputContractWarnings,
+    contract_health: {
+      static_health: formatWorkflowContractHealthSummary(inputContractWarnings),
+      dynamic_review_state: formatWorkflowDynamicReviewState({
+        warnings: inputContractWarnings,
+        recentRunStatus: params.recentRunStatus,
+      }),
+      recent_run_status: params.recentRunStatus ?? undefined,
+    },
     integrity: integrityReport,
     residuals: scanWorkflowPackageResiduals(params),
     maintenance_history: maintenanceHistory,

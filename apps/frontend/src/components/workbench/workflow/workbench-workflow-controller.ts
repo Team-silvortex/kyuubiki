@@ -20,6 +20,7 @@ import {
   findStoredLocalWorkflow,
 } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { parseWorkflowInputArtifactTexts } from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
+import { summarizeWorkflowRunTrace } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
 
 type WorkflowControllerLabels = {
   workflowCatalogLoaded: string;
@@ -175,6 +176,7 @@ export function useWorkbenchWorkflowController({
             branchDecisions: next.result && isWorkflowGraphResult(next.result) ? next.result.branch_decisions ?? [] : [],
             nodeRuns: next.result && isWorkflowGraphResult(next.result) ? next.result.node_runs ?? [] : [],
             artifactLineage: next.result && isWorkflowGraphResult(next.result) ? next.result.artifact_lineage ?? [] : [],
+            traceSummary: next.result && isWorkflowGraphResult(next.result) ? summarizeWorkflowRunTrace(next.result) : undefined,
             updatedAt: next.job.updated_at ?? null,
           }),
         );

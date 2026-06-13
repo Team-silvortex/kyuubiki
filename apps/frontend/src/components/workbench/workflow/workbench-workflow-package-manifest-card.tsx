@@ -1,7 +1,7 @@
 "use client";
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
-import { formatWorkflowContractHealthSummary } from "@/components/workbench/workflow/workbench-workflow-contract-health";
+import { formatWorkflowContractHealthSummary, formatWorkflowDynamicReviewState } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import type {
   WorkflowPackage,
@@ -13,6 +13,7 @@ type WorkbenchWorkflowPackageManifestCardProps = {
   labels: WorkflowSidebarLabels;
   workflow: WorkflowCatalogEntry;
   importedPackage: WorkflowPackage | null;
+  recentRunStatus?: string | null;
 };
 
 function formatList(values?: string[]) {
@@ -85,6 +86,7 @@ export function WorkbenchWorkflowPackageManifestCard({
   labels,
   workflow,
   importedPackage,
+  recentRunStatus,
 }: WorkbenchWorkflowPackageManifestCardProps) {
   const mountedPackageId = importedPackage?.package_id ?? workflow.local?.imported_from_package_id ?? null;
   const mountedPackageVersion =
@@ -225,8 +227,12 @@ export function WorkbenchWorkflowPackageManifestCard({
           <strong>{formatSemanticTypeMap(importedPackage?.workflow.input_artifact_semantic_types)}</strong>
         </div>
         <div className="sidebar-list__row">
-          <span>contract health</span>
+          <span>static contract health</span>
           <strong>{formatWorkflowContractHealthSummary(contractWarnings)}</strong>
+        </div>
+        <div className="sidebar-list__row">
+          <span>dynamic review state</span>
+          <strong>{formatWorkflowDynamicReviewState({ warnings: contractWarnings, recentRunStatus })}</strong>
         </div>
         <div className="sidebar-list__row">
           <span>export contract warnings</span>

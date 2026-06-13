@@ -76,6 +76,36 @@ function formatWorkflowTags(tags?: string[]) {
   return normalized.length > 0 ? normalized.join(", ") : null;
 }
 
+function scoreWorkflowRunComplexity(run: WorkflowRunRecord) {
+  if (!run.traceSummary) {
+    return (run.branchDecisions?.length ?? 0) * 3 +
+      (run.skippedNodes?.length ?? 0) * 2 +
+      (run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) > 0).length ?? 0);
+  }
+  return run.traceSummary.branchDecisionCount * 3 +
+    run.traceSummary.skippedNodeRunCount * 2 +
+    run.traceSummary.derivedArtifactCount +
+    Math.min(run.traceSummary.progressEventCount, 6);
+}
+
+function describeWorkflowRunComplexity(run: WorkflowRunRecord) {
+  const branches = run.traceSummary?.branchDecisionCount ?? run.branchDecisions?.length ?? 0;
+  const derived =
+    run.traceSummary?.derivedArtifactCount ??
+    run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) > 0).length ??
+    0;
+  const skipped = run.traceSummary?.skippedNodeRunCount ?? run.skippedNodes?.length ?? 0;
+  const progressEvents = run.traceSummary?.progressEventCount ?? 0;
+  const score = scoreWorkflowRunComplexity(run);
+  const tags: Array<{ label: string; tone: "watch" | "good" | "risk" }> = [];
+  if (score >= 8) tags.push({ label: "complex", tone: "risk" });
+  if (branches >= 2) tags.push({ label: "branch-heavy", tone: "watch" });
+  if (derived >= 3) tags.push({ label: "lineage-heavy", tone: "good" });
+  if (tags.length < 2 && progressEvents >= 4) tags.push({ label: "eventful", tone: "watch" });
+  if (tags.length === 0 && skipped > 0) tags.push({ label: "skip-path", tone: "watch" });
+  return tags.slice(0, 2);
+}
+
 export function WorkbenchWorkflowSidebar({
   surfaceTab,
   onSurfaceTabChange,
@@ -107,6 +137,15 @@ export function WorkbenchWorkflowSidebar({
   const [builderBranchFocus, setBuilderBranchFocus] = useState<{ nodeId: string; outputId: string; token: number } | null>(null);
   const [builderDatasetFocus, setBuilderDatasetFocus] = useState<{ nodeId: string; portId: string; token: number } | null>(null);
   const latestRunStatusByWorkflowId = useMemo(() => new Map(workflowRuns.map((run) => [run.workflowId, run.status] as const)), [workflowRuns]);
+  const sortedWorkflowRuns = useMemo(
+    () =>
+      [...workflowRuns].sort((left, right) => {
+        const complexityDelta = scoreWorkflowRunComplexity(right) - scoreWorkflowRunComplexity(left);
+        if (complexityDelta !== 0) return complexityDelta;
+        return right.jobId.localeCompare(left.jobId);
+      }),
+    [workflowRuns],
+  );
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
     removeStoredLocalWorkflow(workflow.local.storage_id);
@@ -389,6 +428,7 @@ export function WorkbenchWorkflowSidebar({
           currentStudyKind={currentStudyKind}
           labels={labels}
           operatorDescriptors={workflowOperatorDescriptors}
+          recentRunStatus={selectedWorkflow ? latestRunStatusByWorkflowId.get(selectedWorkflow.id) ?? null : null}
           onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
           onRunWorkflowDraft={onRunWorkflowDraft}
@@ -429,11 +469,16 @@ export function WorkbenchWorkflowSidebar({
           {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectBranch={(nodeId, outputId) => openRunBranchInBuilder(latestRun.workflowId, nodeId, outputId)} onSelectLineage={(entry) => openRunLineageInBuilder(latestRun, entry.artifact_key, entry.node_id)} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} operatorDescriptors={workflowOperatorDescriptors} run={latestRun} workflow={latestRunWorkflow} /> : null}
           {workflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
-            {workflowRuns.map((run) => (
+            {sortedWorkflowRuns.map((run) => (
               <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={run.jobId}>
                 <div className="card-head">
                   <h2>{run.workflowId}</h2>
-                  <span className={`status-pill status-pill--${workflowStatusTone(run.status)}`}>{run.status}</span>
+                  <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {describeWorkflowRunComplexity(run).map((tag) => (
+                      <span className={`status-pill status-pill--${tag.tone}`} key={`${run.jobId}:${tag.label}`}>{tag.label}</span>
+                    ))}
+                    <span className={`status-pill status-pill--${workflowStatusTone(run.status)}`}>{run.status}</span>
+                  </div>
                 </div>
                 <div className="sidebar-list">
                   <div className="sidebar-list__row">
@@ -450,11 +495,35 @@ export function WorkbenchWorkflowSidebar({
                   </div>
                   <div className="sidebar-list__row">
                     <span>skipped</span>
-                    <strong>{run.skippedNodes?.length ?? 0}</strong>
+                    <strong>{run.traceSummary?.skippedNodeRunCount ?? run.skippedNodes?.length ?? 0}</strong>
                   </div>
                   <div className="sidebar-list__row">
                     <span>branches</span>
-                    <strong>{run.branchDecisions?.length ?? 0}</strong>
+                    <strong>{run.traceSummary?.branchDecisionCount ?? run.branchDecisions?.length ?? 0}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>node runs</span>
+                    <strong>
+                      {run.traceSummary
+                        ? `${run.traceSummary.completedNodeRunCount}/${run.traceSummary.skippedNodeRunCount}`
+                        : run.nodeRuns?.length ?? 0}
+                    </strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>events</span>
+                    <strong>{run.traceSummary?.progressEventCount ?? 0}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>phase</span>
+                    <strong>{run.traceSummary?.latestProgressLabel ?? "--"}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>lineage</span>
+                    <strong>
+                      {run.traceSummary
+                        ? `${run.traceSummary.rootArtifactCount}/${run.traceSummary.derivedArtifactCount}`
+                        : `${run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) === 0).length ?? 0}/${run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) > 0).length ?? 0}`}
+                    </strong>
                   </div>
                 </div>
                 <div className="button-row">

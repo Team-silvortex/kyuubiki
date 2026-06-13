@@ -1,5 +1,7 @@
 "use client";
 
+import type { WorkflowRunTraceSummary } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
+
 export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
 export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "needs_review";
 
@@ -31,6 +33,7 @@ export type WorkflowRunRecord = {
     port_id: string;
     source_artifacts?: string[];
   }>;
+  traceSummary?: WorkflowRunTraceSummary;
 };
 
 export type WorkflowSidebarLabels = {

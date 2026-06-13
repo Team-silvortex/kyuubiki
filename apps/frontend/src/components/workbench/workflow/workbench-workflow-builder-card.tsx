@@ -43,8 +43,7 @@ type WorkbenchWorkflowBuilderCardProps = {
   selectedWorkflow: WorkflowCatalogEntry | null;
   operatorDescriptors?: WorkflowOperatorDescriptor[];
   currentStudyKind: StudyKind;
-  currentHeatPlaneModel: HeatPlaneStudyJobInput;
-  currentPlaneModel: PlaneStudyJobInput;
+  currentHeatPlaneModel: HeatPlaneStudyJobInput; currentPlaneModel: PlaneStudyJobInput; recentRunStatus?: string | null;
   onRefreshWorkflowCatalog: () => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
   onRunWorkflowDraft: (workflowId: string, graph: WorkflowGraphDefinition, inputArtifacts: Record<string, unknown>) => void; traceFocusNodeId?: string | null; traceFocusToken?: number; traceFocusBranchNodeId?: string | null; traceFocusBranchOutputId?: string | null; traceFocusBranchToken?: number; traceFocusDatasetNodeId?: string | null; traceFocusDatasetPortId?: string | null; traceFocusDatasetToken?: number;
@@ -55,6 +54,7 @@ type WorkbenchWorkflowBuilderCardProps = {
   currentStudyKind,
   currentHeatPlaneModel,
   currentPlaneModel,
+  recentRunStatus,
   onRefreshWorkflowCatalog,
   onRunWorkflowCatalog,
   onRunWorkflowDraft,
@@ -218,7 +218,6 @@ type WorkbenchWorkflowBuilderCardProps = {
   ) {
     updateArtifacts(field, (artifacts) => artifacts.map((artifact, artifactIndex) => (artifactIndex === index ? updater(artifact) : artifact)));
   }
-
   function applyValidationFix(issueId: string) {
     const issue = validationIssues.find((entry) => entry.id === issueId);
     if (!issue?.fix) return;
@@ -473,7 +472,7 @@ type WorkbenchWorkflowBuilderCardProps = {
   }
   function deleteSnapshot(snapshotId: string) { if (!selectedWorkflow) return; removeStoredWorkflowSnapshot(snapshotId); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); }
   function exportDraftDatasetContract() { if (!selectedDatasetContract) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedDatasetContract.id)}.workflow-dataset.json`, selectedDatasetContract); }
-  function exportPackageInstallReport(maintenanceHistory: Array<{ at: string; kind: "scan" | "repair"; lines: string[] }>) { if (!selectedWorkflow) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedWorkflow.id)}.workflow-package-install-report.json`, buildWorkflowPackageInstallReport({ workflow: selectedWorkflow, importedPackage, integrityReport, maintenanceHistory })); setImportMessage(labels.packageInstallRulesReportExportedLabel); }
+  function exportPackageInstallReport(maintenanceHistory: Array<{ at: string; kind: "scan" | "repair"; lines: string[] }>) { if (!selectedWorkflow) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedWorkflow.id)}.workflow-package-install-report.json`, buildWorkflowPackageInstallReport({ workflow: selectedWorkflow, importedPackage, integrityReport, recentRunStatus, maintenanceHistory })); setImportMessage(labels.packageInstallRulesReportExportedLabel); }
   function scanPackageResiduals() { const receipt = packageResiduals.length > 0 ? packageResiduals.map((entry) => entry.message) : [labels.packageInstallRulesResidualsCleanLabel]; setImportMessage(receipt[0]); return receipt; }
   function locatePackageResidual(residualId: string) { const residual = packageResiduals.find((entry) => entry.id === residualId); if (!residual) return; if (residual.locate === "snapshot") return queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-snapshot-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); if (residual.locate === "local") return queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-local-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-package-card="card"], [data-workflow-package-policy-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); }
   function locateImportDiagnostic(diagnostic: WorkflowPackageImportDiagnostic) { locateWorkflowPackageImportDiagnostic(builderRootRef.current, diagnostic, setSelectedDatasetValueId); }
@@ -564,7 +563,7 @@ type WorkbenchWorkflowBuilderCardProps = {
         selectedWorkflow={selectedWorkflow}
       />
       <WorkbenchWorkflowDraftCard drafts={savedDrafts} labels={labels} onDeleteDraft={deleteSavedDraft} onLoadDraft={loadSavedDraft} onSaveDraft={saveCurrentDraft} />
-      <WorkbenchWorkflowPackageManifestCard importedPackage={importedPackage} labels={labels} workflow={selectedWorkflow} />
+      <WorkbenchWorkflowPackageManifestCard importedPackage={importedPackage} labels={labels} recentRunStatus={recentRunStatus} workflow={selectedWorkflow} />
       <WorkbenchWorkflowDiagnosticsPlane
         importedPackage={importedPackage}
         integrityReport={integrityReport}

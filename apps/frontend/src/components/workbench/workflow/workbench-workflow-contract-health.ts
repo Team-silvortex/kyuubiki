@@ -78,6 +78,17 @@ export function formatWorkflowContractHealthSummary(warnings?: Record<string, st
   return `${warningCount} warning(s), needs review`;
 }
 
+export function formatWorkflowDynamicReviewState(params: {
+  warnings?: Record<string, string[]>;
+  recentRunStatus?: string | null;
+}) {
+  const staticHealth = formatWorkflowContractHealthSummary(params.warnings);
+  if (params.recentRunStatus === "failed" || params.recentRunStatus === "cancelled") {
+    return `needs review (escalated after ${params.recentRunStatus})`;
+  }
+  return staticHealth;
+}
+
 export function readSnapshotContractWarningCount(snapshot: StoredWorkflowSnapshotSummary) {
   const line = snapshot.summary.find((entry) => entry.startsWith("contract warnings:"));
   if (!line) return null;

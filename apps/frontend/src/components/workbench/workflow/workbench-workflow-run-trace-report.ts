@@ -1,10 +1,23 @@
 "use client";
 
 import { validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
+import {
+  formatWorkflowContractHealthSummary,
+  formatWorkflowDynamicReviewState,
+} from "@/components/workbench/workflow/workbench-workflow-contract-health";
+import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { buildWorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
 import { findStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { listStoredWorkflowSnapshots } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
+import {
+  resolveWorkflowTraceBranchPredicateTone,
+  resolveWorkflowTraceContractHealthTone,
+  resolveWorkflowTraceHeaderHealthLabel,
+  resolveWorkflowTraceLineageSourceLabel,
+  resolveWorkflowTraceLineageSourceTone,
+  resolveWorkflowTraceNodeRunTone,
+} from "@/components/workbench/workflow/workbench-workflow-trace-status";
 import type { WorkflowRunRecord } from "@/components/workbench/workflow/workbench-workflow-types";
 import { readSecurityAuditLog } from "@/lib/workbench/security-audit";
 import type { WorkflowCatalogEntry, WorkflowOperatorDescriptor } from "@/lib/api";
@@ -34,6 +47,21 @@ function renderRows(rows: Array<[string, string]>) {
     .map(
       ([label, value]) =>
         `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderToneBadge(label: string, tone: "good" | "watch" | "risk") {
+  return `<span class="pill pill--${tone}">${escapeHtml(label)}</span>`;
+}
+
+function renderWarningRows(warnings?: Record<string, string[]>) {
+  return Object.entries(warnings ?? {})
+    .flatMap(([nodeId, lines]) =>
+      lines.map(
+        (line, index) =>
+          `<tr><td>${escapeHtml(nodeId)}</td><td>${escapeHtml(String(index + 1))}</td><td>${escapeHtml(line)}</td></tr>`,
+      ),
     )
     .join("");
 }
@@ -118,31 +146,48 @@ export function buildWorkflowRunAuditReportHtml({
   const integrity = buildWorkflowIntegrityReport(workflow, operatorDescriptors ?? []);
   const localWorkflow =
     workflow?.local?.storage_id ? findStoredLocalWorkflow(workflow.local.storage_id) : null;
+  const contractWarnings = workflow
+    ? collectWorkflowInputArtifactContractWarnings({
+        entryInputs: workflow.entry_inputs,
+        inputArtifactTexts: workflow.local?.input_artifact_texts,
+      })
+    : undefined;
   const snapshotRows = renderSnapshotRows(run.workflowId);
   const securityAuditRows = renderSecurityAuditRows();
   const integrityRows = renderIntegrityRows(workflow, operatorDescriptors);
   const validationRows = renderIssueRows(workflow, operatorDescriptors);
   const runtimeRows = renderRuntimeRows(workflow);
   const datasetRows = renderDatasetValueRows(workflow);
+  const contractWarningRows = renderWarningRows(contractWarnings);
   const supportedNodeCount = graph?.nodes.filter((node) => isWorkflowNodeSupportedInRuntime(node)).length ?? 0;
   const snapshots = listStoredWorkflowSnapshots(run.workflowId);
   const fullSnapshotCount = snapshots.filter((entry) => entry.payloadState === "full").length;
   const summaryOnlySnapshotCount = snapshots.filter((entry) => entry.payloadState === "summary_only").length;
   const securityAuditEntries = readSecurityAuditLog();
+  const traceSummary = run.traceSummary;
+  const staticContractHealth = formatWorkflowContractHealthSummary(contractWarnings);
+  const dynamicReviewState = formatWorkflowDynamicReviewState({
+    warnings: contractWarnings,
+    recentRunStatus: run.status,
+  });
+  const headerHealthLabel = resolveWorkflowTraceHeaderHealthLabel(
+    staticContractHealth,
+    dynamicReviewState,
+  );
   const branchRows =
     run.branchDecisions?.map(
       (entry) =>
-        `<tr><td>${escapeHtml(entry.node_id)}</td><td>${escapeHtml(entry.chosen_output)}</td><td>${entry.predicate_result ? "true" : "false"}</td></tr>`,
+        `<tr><td>${escapeHtml(entry.node_id)}</td><td>${escapeHtml(entry.chosen_output)}</td><td>${renderToneBadge(entry.predicate_result ? "true" : "false", resolveWorkflowTraceBranchPredicateTone(entry.predicate_result))}</td></tr>`,
     ).join("") ?? "";
   const nodeRows =
     run.nodeRuns?.map(
       (entry) =>
-        `<tr><td>${escapeHtml(entry.node_id)}</td><td>${escapeHtml(entry.status)}</td><td>${escapeHtml(entry.kind)}</td><td>${escapeHtml(entry.operator_id ?? "--")}</td><td>${escapeHtml(String(entry.consumed_artifacts?.length ?? 0))}</td><td>${escapeHtml(String(entry.produced_artifacts?.length ?? 0))}</td></tr>`,
+        `<tr><td>${escapeHtml(entry.node_id)}</td><td>${renderToneBadge(entry.status, resolveWorkflowTraceNodeRunTone(entry.status))}</td><td>${escapeHtml(entry.kind)}</td><td>${escapeHtml(entry.operator_id ?? "--")}</td><td>${escapeHtml(String(entry.consumed_artifacts?.length ?? 0))}</td><td>${escapeHtml(String(entry.produced_artifacts?.length ?? 0))}</td></tr>`,
     ).join("") ?? "";
   const lineageRows =
     run.artifactLineage?.map(
       (entry) =>
-        `<tr><td>${escapeHtml(entry.artifact_key)}</td><td>${escapeHtml(`${entry.node_id}.${entry.port_id}`)}</td><td><ul>${renderList(entry.source_artifacts)}</ul></td></tr>`,
+        `<tr><td>${escapeHtml(entry.artifact_key)}</td><td>${escapeHtml(`${entry.node_id}.${entry.port_id}`)}</td><td>${renderToneBadge(resolveWorkflowTraceLineageSourceLabel(entry.source_artifacts), resolveWorkflowTraceLineageSourceTone(entry.source_artifacts))}<ul>${renderList(entry.source_artifacts)}</ul></td></tr>`,
     ).join("") ?? "";
   return `<!DOCTYPE html>
 <html lang="en">
@@ -161,6 +206,9 @@ export function buildWorkflowRunAuditReportHtml({
     th { width: 220px; color: #9fb1c7; font-weight: 600; }
     .meta th { width: 180px; }
     .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #243247; color: #9fd1ff; font-size: 12px; }
+    .pill--good { background: rgba(46, 125, 50, 0.35); color: #9cf0a6; }
+    .pill--watch { background: rgba(170, 120, 30, 0.35); color: #ffd38a; }
+    .pill--risk { background: rgba(163, 45, 45, 0.35); color: #ffb0b0; }
     .good { color: #7ee08a; }
     .risk { color: #f49b9b; }
     ul { margin: 0; padding-left: 18px; }
@@ -170,6 +218,7 @@ export function buildWorkflowRunAuditReportHtml({
   <main>
     <section>
       <h1>${escapeHtml(run.workflowId)} audit report</h1>
+      <p>${renderToneBadge(headerHealthLabel, resolveWorkflowTraceContractHealthTone(dynamicReviewState))}</p>
       <table class="meta"><tbody>${renderRows([
         ["job id", run.jobId],
         ["status", run.status],
@@ -181,6 +230,21 @@ export function buildWorkflowRunAuditReportHtml({
         ["graph nodes", String(graph?.nodes.length ?? 0)],
         ["graph edges", String(graph?.edges?.length ?? 0)],
         ["runtime supported nodes", `${supportedNodeCount}/${graph?.nodes.length ?? 0}`],
+        ["branch decisions", String(traceSummary?.branchDecisionCount ?? run.branchDecisions?.length ?? 0)],
+        [
+          "node runs (completed/skipped)",
+          traceSummary
+            ? `${traceSummary.completedNodeRunCount}/${traceSummary.skippedNodeRunCount}`
+            : String(run.nodeRuns?.length ?? 0),
+        ],
+        ["progress events", String(traceSummary?.progressEventCount ?? 0)],
+        ["latest phase", traceSummary?.latestProgressLabel ?? "--"],
+        [
+          "lineage (root/derived)",
+          traceSummary
+            ? `${traceSummary.rootArtifactCount}/${traceSummary.derivedArtifactCount}`
+            : `${run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) === 0).length ?? 0}/${run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) > 0).length ?? 0}`,
+        ],
       ])}</tbody></table>
     </section>
     <section>
@@ -192,7 +256,10 @@ export function buildWorkflowRunAuditReportHtml({
         ["dataset values", String(graph?.dataset_contract?.values.length ?? 0)],
         ["entry inputs", String(workflow?.entry_inputs.length ?? 0)],
         ["output artifacts", String(workflow?.output_artifacts.length ?? 0)],
+        ["static contract health", staticContractHealth],
+        ["dynamic review state", dynamicReviewState],
       ])}</tbody></table>
+      <table><thead><tr><th>node</th><th>#</th><th>export contract warning</th></tr></thead><tbody>${contractWarningRows || '<tr><td colspan="3">--</td></tr>'}</tbody></table>
     </section>
     <section>
       <h2>Local lifecycle</h2>
