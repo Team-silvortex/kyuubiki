@@ -8,6 +8,7 @@ import {
   setText,
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
+import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 
 const shellCopy = {
   en: {
@@ -104,6 +105,7 @@ const elements = {
   workbenchUrl: document.getElementById("workbench-url"),
   orchestratorUrl: document.getElementById("orchestrator-url"),
   deploymentMode: document.getElementById("deployment-mode"),
+  statusPlane: document.getElementById("status-plane"),
   statusOutput: document.getElementById("status-output"),
   logsPanel: document.getElementById("logs-panel"),
   logOutput: document.getElementById("log-output"),
@@ -225,9 +227,12 @@ function releaseLabel() {
   return releaseTag ? `Kyuubiki Workbench · ${releaseTag}` : "Kyuubiki Workbench";
 }
 
-function formatStatusReport(rendered) {
-  const body = String(rendered || "").trim();
-  return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
+function formatStatusReport(rendered, summary) {
+  return formatRuntimeStatusReport({
+    title: releaseLabel(),
+    rendered,
+    summary,
+  });
 }
 
 function invokeGuardedMutation(action, payload = {}) {
@@ -242,8 +247,10 @@ function invokeGuardedMutation(action, payload = {}) {
 async function refreshStatus() {
   try {
     const payload = await invokeTauri("service_status");
-    elements.statusOutput.textContent = formatStatusReport(payload.rendered);
+    renderRuntimeStatusPlane(elements.statusPlane, payload.summary);
+    elements.statusOutput.textContent = formatStatusReport(payload.rendered, payload.summary);
   } catch (error) {
+    renderRuntimeStatusPlane(elements.statusPlane, null);
     elements.statusOutput.textContent = formatStatusReport(String(error));
   }
 }
@@ -287,7 +294,8 @@ async function runAction(action) {
     }
 
     if (action === "stop") {
-      elements.statusOutput.textContent = formatStatusReport(await invokeGuardedMutation("service_stop"));
+      await invokeGuardedMutation("service_stop");
+      await refreshStatus();
       if (state.consoleTab === "logs") {
         await refreshLog();
       }
@@ -295,9 +303,8 @@ async function runAction(action) {
     }
 
     if (action === "start-local") {
-      elements.statusOutput.textContent = formatStatusReport(
-        await invokeGuardedMutation("service_start", { mode: "local" }),
-      );
+      await invokeGuardedMutation("service_start", { mode: "local" });
+      await refreshStatus();
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
         await refreshLog();
@@ -306,9 +313,8 @@ async function runAction(action) {
     }
 
     if (action === "restart-local") {
-      elements.statusOutput.textContent = formatStatusReport(
-        await invokeGuardedMutation("service_restart", { mode: "local" }),
-      );
+      await invokeGuardedMutation("service_restart", { mode: "local" });
+      await refreshStatus();
       loadWorkbenchFrame();
       if (state.consoleTab === "logs") {
         await refreshLog();

@@ -30,7 +30,11 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     public_agent = AgentRegistry.public_agent(agent)
     assert public_agent["authority"]["control_mode"] == "orch_managed"
     assert public_agent["authority"]["authority_mode"] == "single_orchestrator"
+    assert public_agent["authority"]["session_state"] == "orch_bound_pending_session"
     assert public_agent["authority"]["orchestrator_id"] == "orch-alpha"
+    assert public_agent["last_session_transition"]["from"] == "unregistered"
+    assert public_agent["last_session_transition"]["to"] == "orch_bound_pending_session"
+    assert public_agent["last_session_transition"]["reason"] == "registered"
   end
 
   test "refreshes last seen through heartbeat" do
@@ -53,6 +57,10 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
 
     assert heartbeat_agent.zone == "rack-b"
     assert heartbeat_agent.orch_session_id == "session-1"
+    public_agent = AgentRegistry.public_agent(heartbeat_agent)
+    assert public_agent["session_state"] == "orch_session_bound"
+    assert public_agent["last_session_transition"]["source"] == "register"
+    assert public_agent["last_session_transition"]["reason"] == "registered"
   end
 
   test "keeps capability and health metadata for managed remote agents" do
@@ -140,5 +148,135 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
 
     assert conflict.current.control_mode == "orch_managed"
     assert conflict.attempted.control_mode == "offline_mesh"
+  end
+
+  test "rejects a second agent id that reuses the same fingerprint under another orchestra" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-remote-f",
+               "host" => "10.20.0.16",
+               "port" => 6106,
+               "orch_id" => "orch-alpha",
+               "fingerprint" => "fp-shared-a"
+             })
+
+    assert {:error, {:agent_identity_conflict, conflict}} =
+             AgentRegistry.register(%{
+               "id" => "solver-remote-f-shadow",
+               "host" => "10.20.0.99",
+               "port" => 6999,
+               "orch_id" => "orch-beta",
+               "fingerprint" => "fp-shared-a"
+             })
+
+    assert conflict.current_agent_id == "solver-remote-f"
+    assert conflict.entity_key == {:fingerprint, "fp-shared-a"}
+    assert conflict.current.orch_id == "orch-alpha"
+    assert conflict.attempted.orch_id == "orch-beta"
+  end
+
+  test "rejects a second agent id that reuses the same host and port when no fingerprint is present" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-remote-g",
+               "host" => "10.20.0.17",
+               "port" => 6107,
+               "orch_id" => "orch-alpha"
+             })
+
+    assert {:error, {:agent_identity_conflict, conflict}} =
+             AgentRegistry.register(%{
+               "id" => "solver-remote-g-shadow",
+               "host" => "10.20.0.17",
+               "port" => 6107,
+               "control_mode" => "offline_mesh"
+             })
+
+    assert conflict.current_agent_id == "solver-remote-g"
+    assert conflict.entity_key == {:endpoint, "10.20.0.17", 6107}
+    assert conflict.current.control_mode == "orch_managed"
+    assert conflict.attempted.control_mode == "offline_mesh"
+  end
+
+  test "summarizes mesh topology across managed and offline agents" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-a",
+               "host" => "10.20.1.10",
+               "port" => 6301,
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a1"
+             })
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-b",
+               "host" => "10.20.1.11",
+               "port" => 6302,
+               "orch_id" => "orch-alpha"
+             })
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-c",
+               "host" => "10.20.1.12",
+               "port" => 6303,
+               "orch_id" => "orch-beta",
+               "orch_session_id" => "session-b1"
+             })
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-d",
+               "host" => "10.20.1.13",
+               "port" => 6304,
+               "control_mode" => "offline_mesh"
+             })
+
+    snapshot = AgentRegistry.status_snapshot()
+
+    assert snapshot.control_modes == %{orch_managed: 3, offline_mesh: 1}
+    assert snapshot.session_states == %{
+             "offline_mesh" => 1,
+             "orch_bound_pending_session" => 1,
+             "orch_session_bound" => 2
+           }
+    assert length(snapshot.recent_session_transitions) == 4
+    assert Enum.any?(snapshot.recent_session_transitions, fn event ->
+             event["agent_id"] == "solver-mesh-d" and
+               event["to"] == "offline_mesh" and
+               event["reason"] == "registered"
+           end)
+
+    assert Enum.any?(snapshot.authority_groups, fn group ->
+             group.control_mode == "orch_managed" and
+               group.orch_id == "orch-alpha" and
+               group.orch_session_id == nil and
+               group.agent_ids == ["solver-mesh-b"]
+           end)
+
+    assert Enum.any?(snapshot.authority_groups, fn group ->
+             group.control_mode == "offline_mesh" and
+               group.orch_id == nil and
+               group.agent_ids == ["solver-mesh-d"]
+           end)
+
+    assert snapshot.mesh_topology.offline_mesh.agent_count == 1
+    assert snapshot.mesh_topology.offline_mesh.agent_ids == ["solver-mesh-d"]
+
+    assert snapshot.mesh_topology.managed_orchestrators == [
+             %{
+               orch_id: "orch-alpha",
+               agent_count: 2,
+               agent_ids: ["solver-mesh-a", "solver-mesh-b"],
+               session_ids: ["session-a1"]
+             },
+             %{
+               orch_id: "orch-beta",
+               agent_count: 1,
+               agent_ids: ["solver-mesh-c"],
+               session_ids: ["session-b1"]
+             }
+           ]
   end
 end

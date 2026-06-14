@@ -2129,6 +2129,7 @@ const elements = {
   favoriteActionList: document.getElementById("favorite-action-list"),
   recentActionList: document.getElementById("recent-action-list"),
   operationOutput: document.getElementById("hub-operation-output"),
+  runtimeStatusPlane: document.getElementById("runtime-status-plane"),
   runtimeStatusOutput: document.getElementById("runtime-status-output"),
   localRuntimeStatus: document.getElementById("local-runtime-status"),
   observeRuntimeStatusOutput: document.getElementById("observe-runtime-status-output"),
@@ -4970,6 +4971,7 @@ async function refreshRuntimeStatus() {
     applyDesktopState,
     localRuntimeStatus: elements.localRuntimeStatus,
     observeRuntimeStatus: elements.observeRuntimeStatus,
+    runtimeStatusPlane: elements.runtimeStatusPlane,
   });
   renderAssistantContext();
   renderHubAssistantLocalCards();

@@ -36,6 +36,7 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["compatible_solver_rpc"]["name"] == "kyuubiki.solver-rpc/v1"
     assert payload["authority"]["control_mode"] == "orch_managed"
     assert payload["authority"]["authority_mode"] == "single_orchestrator"
+    assert payload["authority"]["session_state"] == "orch_bound_pending_session"
     assert payload["authority"]["accepts_multi_orchestrator_binding"] == false
 
     conn =
@@ -122,6 +123,7 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
           "id" => "solver-remote-a",
           "host" => "10.20.0.11",
           "port" => 6101,
+          "orch_id" => "orch-alpha",
           "region" => "ap-shanghai"
         })
       )
@@ -136,6 +138,8 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["agent"]["id"] == "solver-remote-a"
     assert payload["agent"]["authority"]["control_mode"] == "orch_managed"
     assert payload["agent"]["authority"]["authority_mode"] == "single_orchestrator"
+    assert payload["agent"]["authority"]["session_state"] == "orch_bound_pending_session"
+    assert payload["agent"]["last_session_transition"]["reason"] == "registered"
 
     conn =
       :post
@@ -144,6 +148,7 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
         Jason.encode!(%{
           "host" => "10.20.0.11",
           "port" => 6101,
+          "orch_id" => "orch-alpha",
           "zone" => "rack-a"
         })
       )
@@ -156,6 +161,7 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert conn.status == 200
     assert Jason.decode!(conn.resp_body)["agent"]["zone"] == "rack-a"
     assert Jason.decode!(conn.resp_body)["agent"]["authority"]["authority_mode"] == "single_orchestrator"
+    assert Jason.decode!(conn.resp_body)["agent"]["authority"]["session_state"] == "orch_bound_pending_session"
 
     conn =
       :get
@@ -165,9 +171,21 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert conn.status == 200
     payload = Jason.decode!(conn.resp_body)
     assert payload["summary"]["active_agents"] == 1
+    assert payload["summary"]["control_modes"] == %{"orch_managed" => 1, "offline_mesh" => 0}
+    assert payload["summary"]["session_states"] == %{"orch_bound_pending_session" => 1}
+    assert hd(payload["summary"]["recent_session_transitions"])["agent_id"] == "solver-remote-a"
     assert Enum.map(payload["agents"], & &1["id"]) == ["solver-remote-a"]
     assert hd(payload["agents"])["authority"]["control_mode"] == "orch_managed"
     assert hd(payload["agents"])["authority"]["authority_mode"] == "single_orchestrator"
+    assert hd(payload["agents"])["authority"]["session_state"] == "orch_bound_pending_session"
+    assert payload["summary"]["mesh_topology"]["managed_orchestrators"] == [
+             %{
+               "orch_id" => "orch-alpha",
+               "agent_count" => 1,
+               "agent_ids" => ["solver-remote-a"],
+               "session_ids" => []
+             }
+           ]
 
     conn =
       :delete
@@ -179,6 +197,67 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
 
     assert conn.status == 200
     assert Jason.decode!(conn.resp_body)["status"] == "removed"
+  end
+
+  test "rejects API registration that tries to rebind the same fingerprinted agent under a second id" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: nil,
+      cluster_api_token: nil,
+      protect_reads?: false
+    )
+
+    Application.put_env(:kyuubiki_web, AgentPool, discovery: :registry, endpoints: [])
+    AgentPool.reload()
+    cluster_ts = Integer.to_string(System.system_time(:millisecond))
+
+    first_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "solver-entity-a",
+          "host" => "10.20.0.31",
+          "port" => 6131,
+          "orch_id" => "orch-alpha",
+          "fingerprint" => "fp-entity-a"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-entity-a")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-solver-entity-a-register")
+      |> Router.call(@opts)
+
+    assert first_conn.status == 201
+
+    conflict_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "solver-entity-a-shadow",
+          "host" => "10.20.0.88",
+          "port" => 6888,
+          "orch_id" => "orch-beta",
+          "fingerprint" => "fp-entity-a"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-entity-a-shadow")
+      |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-solver-entity-a-shadow-register")
+      |> Router.call(@opts)
+
+    assert conflict_conn.status == 422
+
+    payload = Jason.decode!(conflict_conn.resp_body)
+    assert payload["error"] == "agent_identity_conflict"
+    assert payload["conflict"]["agent_id"] == "solver-entity-a-shadow"
+    assert payload["conflict"]["current_agent_id"] == "solver-entity-a"
+    assert payload["conflict"]["entity_key"]["kind"] == "fingerprint"
+    assert payload["conflict"]["entity_key"]["value"] == "fp-entity-a"
+    assert payload["conflict"]["current"]["orch_id"] == "orch-alpha"
+    assert payload["conflict"]["attempted"]["orch_id"] == "orch-beta"
   end
 
   test "serves a Hub-facing workload catalog with project download URLs" do

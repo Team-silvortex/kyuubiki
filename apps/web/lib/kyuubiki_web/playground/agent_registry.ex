@@ -5,6 +5,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   use GenServer
 
+  alias KyuubikiWeb.Playground.AgentSessionState
+
   @type agent :: %{
           required(:id) => String.t(),
           required(:host) => String.t(),
@@ -22,6 +24,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           optional(:methods) => [String.t()],
           optional(:capabilities) => [map()],
           optional(:health_score) => non_neg_integer(),
+          optional(:last_session_transition) => map(),
           required(:last_seen_at) => DateTime.t()
         }
 
@@ -72,6 +75,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           %{
             "control_mode" => "offline_mesh",
             "authority_mode" => "offline_mesh",
+            "session_state" => "offline_mesh",
             "orchestrator_id" => nil,
             "orchestrator_session_id" => nil,
             "accepts_multi_orchestrator_binding" => false,
@@ -82,6 +86,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           %{
             "control_mode" => "orch_managed",
             "authority_mode" => "single_orchestrator",
+            "session_state" => AgentSessionState.state(agent),
             "orchestrator_id" => orch_id,
             "orchestrator_session_id" => orch_session_id,
             "accepts_multi_orchestrator_binding" => false,
@@ -104,6 +109,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       "host" => Map.get(agent, :host) || Map.get(agent, "host"),
       "port" => Map.get(agent, :port) || Map.get(agent, "port"),
       "control_mode" => control_mode,
+      "session_state" => AgentSessionState.state(agent),
       "orch_id" => orch_id,
       "orch_session_id" => orch_session_id,
       "cluster_id" => Map.get(agent, :cluster_id) || Map.get(agent, "cluster_id"),
@@ -116,6 +122,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       "methods" => Map.get(agent, :methods) || Map.get(agent, "methods") || [],
       "capabilities" => Map.get(agent, :capabilities) || Map.get(agent, "capabilities") || [],
       "health_score" => Map.get(agent, :health_score) || Map.get(agent, "health_score"),
+      "last_session_transition" =>
+        Map.get(agent, :last_session_transition) || Map.get(agent, "last_session_transition"),
       "last_seen_at" => format_last_seen(Map.get(agent, :last_seen_at) || Map.get(agent, "last_seen_at")),
       "authority" => authority
     }
@@ -136,7 +144,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     current = Map.get(state.agents, agent_id_from_attrs(attrs))
 
     with {:ok, agent} <- build_agent(attrs),
+         :ok <- validate_entity_uniqueness(state.agents, agent),
          :ok <- validate_control_transition(current, agent) do
+      agent = attach_session_transition(current, agent, "register")
       agents = Map.put(state.agents, agent.id, agent)
       {:reply, {:ok, agent}, %{state | agents: agents}}
     else
@@ -148,7 +158,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     current = Map.get(state.agents, agent_id, %{id: agent_id})
 
     with {:ok, agent} <- build_agent(merge_heartbeat_attrs(current, attrs, agent_id)),
+         :ok <- validate_entity_uniqueness(state.agents, agent),
          :ok <- validate_control_transition(Map.get(state.agents, agent_id), agent) do
+      agent = attach_session_transition(Map.get(state.agents, agent_id), agent, "heartbeat")
       agents = Map.put(state.agents, agent.id, agent)
       {:reply, {:ok, agent}, %{state | agents: agents}}
     else
@@ -170,14 +182,21 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   def handle_call(:status_snapshot, _from, state) do
     total = map_size(state.agents)
-    active = length(active_agents(state.agents))
+    agents = state.agents |> Map.values() |> sort_agents()
+    active_agents = active_agents(state.agents)
+    active = length(active_agents)
 
     {:reply,
      %{
        total_agents: total,
        active_agents: active,
        stale_agents: max(total - active, 0),
-       stale_after_ms: stale_after_ms()
+       stale_after_ms: stale_after_ms(),
+       control_modes: summarize_control_modes(agents),
+       session_states: summarize_session_states(agents),
+       recent_session_transitions: summarize_recent_session_transitions(agents),
+       authority_groups: summarize_authority_groups(agents),
+       mesh_topology: summarize_mesh_topology(agents)
      }, state}
   end
 
@@ -274,10 +293,50 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
   defp compatible_orch_session?(session_id, session_id), do: true
   defp compatible_orch_session?(_current_session_id, _next_session_id), do: false
 
+  defp validate_entity_uniqueness(agents, next_agent) do
+    case Enum.find(Map.values(agents), &entity_conflict?(&1, next_agent)) do
+      nil ->
+        :ok
+
+      current ->
+        {:error,
+         {:agent_identity_conflict,
+          %{
+            agent_id: next_agent.id,
+            current_agent_id: current.id,
+            entity_key: entity_key(current),
+            current: control_binding(current),
+            attempted: control_binding(next_agent)
+          }}}
+    end
+  end
+
+  defp entity_conflict?(current, next_agent) do
+    current.id != next_agent.id and entity_key(current) != nil and entity_key(current) == entity_key(next_agent)
+  end
+
+  defp entity_key(agent) do
+    fingerprint = Map.get(agent, :fingerprint) || Map.get(agent, "fingerprint")
+    host = Map.get(agent, :host) || Map.get(agent, "host")
+    port = Map.get(agent, :port) || Map.get(agent, "port")
+
+    cond do
+      is_binary(fingerprint) and fingerprint != "" ->
+        {:fingerprint, fingerprint}
+
+      is_binary(host) and host != "" and is_integer(port) and port > 0 ->
+        {:endpoint, host, port}
+
+      true ->
+        nil
+    end
+  end
+
   defp control_binding(agent) do
     %{
       control_mode:
         Map.get(agent, :control_mode) || Map.get(agent, "control_mode") || "orch_managed",
+      session_state: AgentSessionState.state(agent),
       orch_id: Map.get(agent, :orch_id) || Map.get(agent, "orch_id") || "orchestra/default",
       orch_session_id: Map.get(agent, :orch_session_id) || Map.get(agent, "orch_session_id")
     }
@@ -431,9 +490,76 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     |> sort_agents()
   end
 
-  defp sort_agents(agents) do
-    Enum.sort_by(agents, & &1.id)
+  defp summarize_control_modes(agents) do
+    Enum.reduce(agents, %{orch_managed: 0, offline_mesh: 0}, fn agent, acc ->
+      case agent.control_mode do
+        "offline_mesh" -> Map.update!(acc, :offline_mesh, &(&1 + 1))
+        _ -> Map.update!(acc, :orch_managed, &(&1 + 1))
+      end
+    end)
   end
+
+  defp summarize_session_states(agents),
+    do: Enum.frequencies_by(agents, &AgentSessionState.state/1)
+
+  defp summarize_recent_session_transitions(agents) do
+    agents
+    |> Enum.map(& &1[:last_session_transition])
+    |> Enum.reject(&is_nil/1)
+    |> Enum.sort_by(&Map.get(&1, "at"), :desc)
+  end
+
+  defp summarize_authority_groups(agents) do
+    agents
+    |> Enum.group_by(&authority_group_key/1)
+    |> Enum.map(fn {{control_mode, orch_id, orch_session_id}, grouped_agents} ->
+      %{
+        control_mode: control_mode,
+        orch_id: orch_id,
+        orch_session_id: orch_session_id,
+        agent_count: length(grouped_agents),
+        agent_ids: grouped_agents |> Enum.map(& &1.id) |> Enum.sort()
+      }
+    end)
+    |> Enum.sort_by(fn group ->
+      {group.control_mode, group.orch_id || "", group.orch_session_id || ""}
+    end)
+  end
+
+  defp summarize_mesh_topology(agents) do
+    managed_agents = Enum.filter(agents, &(&1.control_mode == "orch_managed"))
+    offline_mesh_agents = Enum.filter(agents, &(&1.control_mode == "offline_mesh"))
+
+    %{
+      managed_orchestrators: summarize_managed_orchestrators(managed_agents),
+      offline_mesh: %{
+        agent_count: length(offline_mesh_agents),
+        agent_ids: offline_mesh_agents |> Enum.map(& &1.id) |> Enum.sort()
+      }
+    }
+  end
+
+  defp summarize_managed_orchestrators(agents) do
+    agents
+    |> Enum.group_by(& &1.orch_id)
+    |> Enum.map(fn {orch_id, grouped_agents} ->
+      %{
+        orch_id: orch_id,
+        agent_count: length(grouped_agents),
+        agent_ids: grouped_agents |> Enum.map(& &1.id) |> Enum.sort(),
+        session_ids:
+          grouped_agents
+          |> Enum.map(& &1.orch_session_id)
+          |> Enum.reject(&is_nil/1)
+          |> Enum.uniq()
+          |> Enum.sort()
+      }
+    end)
+    |> Enum.sort_by(&(&1.orch_id || ""))
+  end
+
+  defp authority_group_key(agent), do: {agent.control_mode, agent.orch_id, agent.orch_session_id}
+  defp sort_agents(agents), do: Enum.sort_by(agents, & &1.id)
 
   defp to_endpoint(agent) do
     %{
@@ -441,6 +567,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       host: agent.host,
       port: agent.port,
       control_mode: agent.control_mode,
+      session_state: AgentSessionState.state(agent),
       orch_id: agent.orch_id,
       orch_session_id: agent.orch_session_id,
       cluster_id: agent.cluster_id,
@@ -453,6 +580,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       methods: agent.methods,
       capabilities: agent.capabilities,
       health_score: agent.health_score,
+      last_session_transition: agent[:last_session_transition],
       last_seen_at: DateTime.to_iso8601(agent.last_seen_at)
     }
   end
@@ -461,6 +589,15 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     Application.get_env(:kyuubiki_web, __MODULE__, [])
     |> Keyword.get(:stale_after_ms, 15_000)
   end
+
+  defp attach_session_transition(current, agent, source),
+    do:
+      Map.put(
+        agent,
+        :last_session_transition,
+        AgentSessionState.transition(current, agent, source) ||
+          current && (current[:last_session_transition] || current["last_session_transition"])
+      )
 
   defp format_last_seen(%DateTime{} = last_seen_at), do: DateTime.to_iso8601(last_seen_at)
   defp format_last_seen(last_seen_at), do: last_seen_at

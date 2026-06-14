@@ -130,6 +130,7 @@ defmodule KyuubikiWeb.Protocol do
     %{
       "control_mode" => "orch_managed",
       "authority_mode" => "single_orchestrator",
+      "session_state" => "orch_bound_pending_session",
       "orchestrator_id" => "orchestra/default",
       "orchestrator_session_id" => nil,
       "accepts_multi_orchestrator_binding" => false,
@@ -196,12 +197,14 @@ defmodule KyuubikiWeb.Protocol do
     control_mode = Map.get(endpoint, :control_mode)
     orch_id = Map.get(endpoint, :orch_id)
     orch_session_id = Map.get(endpoint, :orch_session_id)
+    session_state = Map.get(endpoint, :session_state)
 
     case control_mode || runtime_mode do
       "offline_mesh" ->
         %{
           "control_mode" => "offline_mesh",
           "authority_mode" => "offline_mesh",
+          "session_state" => session_state || "offline_mesh",
           "orchestrator_id" => nil,
           "orchestrator_session_id" => nil,
           "accepts_multi_orchestrator_binding" => false,
@@ -212,6 +215,7 @@ defmodule KyuubikiWeb.Protocol do
         %{
           "control_mode" => "orch_managed",
           "authority_mode" => "single_orchestrator",
+          "session_state" => session_state || default_session_state(orch_session_id),
           "orchestrator_id" => orch_id,
           "orchestrator_session_id" => orch_session_id,
           "accepts_multi_orchestrator_binding" => false,
@@ -222,6 +226,7 @@ defmodule KyuubikiWeb.Protocol do
         %{
           "control_mode" => "orch_managed",
           "authority_mode" => "single_orchestrator",
+          "session_state" => session_state || default_session_state(orch_session_id),
           "orchestrator_id" => orch_id,
           "orchestrator_session_id" => orch_session_id,
           "accepts_multi_orchestrator_binding" => false,
@@ -243,4 +248,9 @@ defmodule KyuubikiWeb.Protocol do
   defp maybe_fill_nil(map, key, fallback) do
     if Map.get(map, key) == nil, do: Map.put(map, key, fallback), else: map
   end
+
+  defp default_session_state(session_id) when is_binary(session_id) and session_id != "",
+    do: "orch_session_bound"
+
+  defp default_session_state(_session_id), do: "orch_bound_pending_session"
 end

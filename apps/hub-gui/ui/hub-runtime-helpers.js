@@ -1,3 +1,5 @@
+import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
+
 export function sanitizeRuntimeLogForClipboard(text) {
   return String(text || "")
     .replace(/(authorization\s*[:=]\s*)(bearer\s+)?([^\s]+)/giu, "$1[redacted]")
@@ -31,14 +33,23 @@ export async function refreshRuntimeStatusPanel({
   applyDesktopState,
   localRuntimeStatus,
   observeRuntimeStatus,
+  runtimeStatusPlane,
 }) {
   try {
     const payload = await invokeTauri("service_status");
-    setRuntimeStatusOutput(payload.rendered);
+    renderRuntimeStatusPlane(runtimeStatusPlane, payload.summary);
+    setRuntimeStatusOutput(
+      formatRuntimeStatusReport({
+        title: "Kyuubiki Hub Runtime",
+        rendered: payload.rendered,
+        summary: payload.summary,
+      }),
+    );
     applyDesktopState(localRuntimeStatus, payload.rendered, { kind: "health" });
     applyDesktopState(observeRuntimeStatus, payload.rendered, { kind: "health" });
   } catch (error) {
     const message = String(error);
+    renderRuntimeStatusPlane(runtimeStatusPlane, null);
     setRuntimeStatusOutput(message);
     applyDesktopState(localRuntimeStatus, message, { kind: "health" });
     applyDesktopState(observeRuntimeStatus, message, { kind: "health" });

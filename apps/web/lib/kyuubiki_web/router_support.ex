@@ -15,7 +15,7 @@ defmodule KyuubikiWeb.RouterSupport do
     |> Plug.Conn.send_resp(status, payload)
   end
 
-  def unprocessable(conn, reason), do: respond_json(conn, 422, %{"error" => inspect(reason)})
+  def unprocessable(conn, reason), do: respond_json(conn, 422, encode_unprocessable(reason))
 
   def request_base_url(conn) do
     trust_forwarded? = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
@@ -100,4 +100,27 @@ defmodule KyuubikiWeb.RouterSupport do
       {:error, status, payload} -> respond_json(conn, status, payload)
     end
   end
+
+  defp encode_unprocessable({:agent_identity_conflict, conflict}) when is_map(conflict) do
+    %{
+      "error" => "agent_identity_conflict",
+      "conflict" => %{
+        "agent_id" => Map.get(conflict, :agent_id),
+        "current_agent_id" => Map.get(conflict, :current_agent_id),
+        "entity_key" => encode_entity_key(Map.get(conflict, :entity_key)),
+        "current" => Map.get(conflict, :current),
+        "attempted" => Map.get(conflict, :attempted)
+      }
+    }
+  end
+
+  defp encode_unprocessable(reason), do: %{"error" => inspect(reason)}
+
+  defp encode_entity_key({:fingerprint, value}), do: %{"kind" => "fingerprint", "value" => value}
+
+  defp encode_entity_key({:endpoint, host, port}) do
+    %{"kind" => "endpoint", "host" => host, "port" => port}
+  end
+
+  defp encode_entity_key(_), do: nil
 end

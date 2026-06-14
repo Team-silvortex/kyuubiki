@@ -17,7 +17,7 @@ import {
 } from "./installer-workflows.js";
 import { mountIntegrityPanel, renderIntegrityReport } from "./integrity-panel.js";
 import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdateChannel } from "./update-panel.js";
-
+import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 (function () {
   const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json";
   const DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json";
@@ -27,9 +27,9 @@ import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdate
     distributedAgentManifestPath: DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH,
     sqliteDatabasePath: DEFAULT_SQLITE_DATABASE_PATH,
   };
-
   const output = document.getElementById("output");
   const serviceStatus = document.getElementById("service-status");
+  const serviceStatusPlane = document.getElementById("service-status-plane");
   const runtimeLog = document.getElementById("runtime-log");
   const completionBanner = document.getElementById("completion-banner");
   const completionMessage = document.getElementById("completion-message");
@@ -58,11 +58,6 @@ import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdate
     const releaseCodename = String(brandConfig?.releaseCodename || "").trim();
     const releaseTag = [releaseCodename, releaseVersion].filter(Boolean).join(" ");
     return releaseTag ? `Kyuubiki Installer · ${releaseTag}` : "Kyuubiki Installer";
-  }
-
-  function formatServiceReport(rendered) {
-    const body = String(rendered || "").trim();
-    return body ? `${releaseLabel()}\n\n${body}` : releaseLabel();
   }
 
   function renderDesktopLanguagePreference() {
@@ -200,8 +195,13 @@ import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdate
     setModeCard(form.deployment_mode || "local");
   }
 
-  function renderServiceStatus(rendered) {
-    serviceStatus.textContent = formatServiceReport(rendered);
+  function renderServiceStatus(report) {
+    renderRuntimeStatusPlane(serviceStatusPlane, report?.summary);
+    serviceStatus.textContent = formatRuntimeStatusReport({
+      title: releaseLabel(),
+      rendered: report?.rendered,
+      summary: report?.summary,
+    });
   }
 
   function renderRuntimeLog(rendered) {
@@ -250,7 +250,7 @@ import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdate
 
   async function refreshServiceStatus() {
     const report = await invoke("service_status");
-    renderServiceStatus(report.rendered);
+    renderServiceStatus(report);
     return report.rendered;
   }
 
