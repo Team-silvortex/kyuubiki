@@ -97,6 +97,9 @@ Then branch by intent:
 - `version-line.md`
   Current version-line note for `tamamono 1.x`, including codename and major
   version policy.
+- `release-prep-1.7.md`
+  Practical upgrade checklist and audit entrypoint for moving the repository
+  from the current `1.6.x` shipping point toward `1.7.x`.
 - `tamamono-minor-lines.md`
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`

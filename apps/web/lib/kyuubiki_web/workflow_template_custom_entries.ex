@@ -7,12 +7,14 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
   alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries
   alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries
   alias KyuubikiWeb.WorkflowTemplateSolverContractGraphs
+  alias KyuubikiWeb.WorkflowTemplateThermalEntries
 
   def list do
     WorkflowTemplateElectromagneticEntries.list() ++
       WorkflowTemplateElectromagneticGuardEntries.list() ++
       WorkflowTemplateElectromagneticGuardThermoEntries.list() ++
       WorkflowTemplateBridgeEntries.list() ++
+      WorkflowTemplateThermalEntries.list() ++
       [
         electrostatic_to_heat_quad_entry(),
         electrostatic_plane_quad_entry(),

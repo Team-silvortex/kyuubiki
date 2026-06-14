@@ -34,6 +34,8 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
 
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-plane-quad-hotspot-alert")
     assert MapSet.member?(workflow_ids, "workflow.heat-to-thermo-quad-comparison-json")
+    assert MapSet.member?(workflow_ids, "workflow.heat-plane-quad-guard-json")
+    assert MapSet.member?(workflow_ids, "workflow.heat-thermo-quad-benchmark-json")
     assert MapSet.member?(workflow_ids, "workflow.plane-quad-2d-summary-json")
   end
 
@@ -260,6 +262,42 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
     assert Enum.any?(compare_graph["nodes"], &(&1["operator_id"] == "solve.electrostatic_plane_triangle_2d"))
     assert Enum.any?(compare_graph["nodes"], &(&1["operator_id"] == "transform.normalize_summary_fields"))
     assert Enum.any?(compare_graph["nodes"], &(&1["operator_id"] == "transform.compare_summary_pair"))
+  end
+
+  test "can resolve graphs for thermal guard and benchmark workflows" do
+    assert {:ok, %{"id" => "workflow.heat-plane-quad-guard-json"} = guard_graph} =
+             WorkflowTemplateCatalog.graph_by_id("workflow.heat-plane-quad-guard-json")
+
+    assert Enum.any?(guard_graph["nodes"], &(&1["operator_id"] == "solve.heat_plane_quad_2d"))
+    assert Enum.any?(guard_graph["nodes"], &(&1["operator_id"] == "extract.thermal_result_diagnostics"))
+    assert Enum.any?(guard_graph["nodes"], &(&1["operator_id"] == "transform.evaluate_thermal_guard"))
+    assert guard_graph["dataset_contract"]["id"] == "kyuubiki.dataset.heat_plane_quad_guard/v1"
+
+    guard_node = Enum.find(guard_graph["nodes"], &(&1["id"] == "evaluate_guard"))
+
+    assert guard_node["outputs"] == [
+             %{
+               "id" => "result",
+               "artifact_type" => "report/summary",
+               "dataset_value" => "thermal_guard"
+             }
+           ]
+
+    assert {:ok, %{"id" => "workflow.heat-thermo-quad-benchmark-json"} = benchmark_graph} =
+             WorkflowTemplateCatalog.graph_by_id("workflow.heat-thermo-quad-benchmark-json")
+
+    assert Enum.any?(benchmark_graph["nodes"], &(&1["operator_id"] == "solve.heat_plane_quad_2d"))
+    assert Enum.any?(benchmark_graph["nodes"], &(&1["operator_id"] == "bridge.temperature_field_to_thermo_quad_2d"))
+    assert Enum.any?(benchmark_graph["nodes"], &(&1["operator_id"] == "solve.thermal_plane_quad_2d"))
+    assert Enum.any?(benchmark_graph["nodes"], &(&1["operator_id"] == "extract.thermal_result_diagnostics"))
+    assert Enum.any?(benchmark_graph["nodes"], &(&1["operator_id"] == "extract.thermo_result_diagnostics"))
+    assert Enum.any?(benchmark_graph["nodes"], &(&1["operator_id"] == "transform.benchmark_coupled_heat_pair"))
+    assert benchmark_graph["dataset_contract"]["metadata"]["workflow_family"] == "heat_thermo_quad_benchmark"
+
+    benchmark_node = Enum.find(benchmark_graph["nodes"], &(&1["id"] == "benchmark_coupled"))
+
+    assert Enum.map(benchmark_node["inputs"], & &1["dataset_value"]) ==
+             ["thermal_diagnostics", "thermo_diagnostics"]
   end
 
   test "can resolve graphs for electromagnetic guard workflows" do

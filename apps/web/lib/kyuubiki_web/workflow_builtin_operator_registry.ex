@@ -21,7 +21,13 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
      ["transform", "summary", "normalize", "mapping", "headless_safe"]},
     {"transform.select_best_summary", "select_best_summary",
      "Score multiple summary payloads against weighted min/max criteria and emit the best candidate summary with selection metadata.",
-     ["transform", "summary", "select", "ranking", "benchmark", "headless_safe"]}
+     ["transform", "summary", "select", "ranking", "benchmark", "headless_safe"]},
+    {"transform.evaluate_thermal_guard", "evaluate_thermal_guard",
+     "Evaluate a thermal or thermo-mechanical diagnostic payload against visible threshold rules and emit pass, warn, or block guard state.",
+     ["transform", "thermal", "guard", "threshold", "headless_safe"]},
+    {"transform.benchmark_coupled_heat_pair", "benchmark_coupled_heat_pair",
+     "Benchmark paired heat or thermo-mechanical summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
+     ["transform", "thermal", "benchmark", "compare", "headless_safe"]}
   ]
 
   @extract_specs [

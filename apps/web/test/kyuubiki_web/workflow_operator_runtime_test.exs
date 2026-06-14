@@ -67,6 +67,8 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert MapSet.member?(operators, "bridge.electrostatic_field_to_heat_triangle_2d")
     assert MapSet.member?(operators, "bridge.temperature_field_to_thermo_triangle_2d")
     assert MapSet.member?(operators, "transform.compare_summary_pair")
+    assert MapSet.member?(operators, "transform.evaluate_thermal_guard")
+    assert MapSet.member?(operators, "transform.benchmark_coupled_heat_pair")
     assert MapSet.member?(operators, "extract.field_statistics")
     assert MapSet.member?(operators, "extract.thermal_result_diagnostics")
     assert MapSet.member?(operators, "extract.thermo_result_diagnostics")
@@ -410,6 +412,69 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert diagnostics["thermo_peak_displacement_id"] == "n2"
     assert diagnostics["thermo_peak_stress"] == 180.0
     assert diagnostics["thermo_peak_stress_id"] == "e1"
+  end
+
+  test "evaluates thermal guard thresholds into pass warn block states" do
+    payload = %{
+      "thermal_temperature_max" => 120.0,
+      "thermal_peak_flux_magnitude" => 14.0,
+      "thermo_peak_stress" => 210.0
+    }
+
+    assert {:ok, guard} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.evaluate_thermal_guard",
+               payload,
+               %{
+                 "rules" => [
+                   %{"field" => "thermal_temperature_max", "threshold" => 100.0, "severity" => "warn", "label" => "temperature ceiling"},
+                   %{"field" => "thermo_peak_stress", "threshold" => 180.0, "comparison" => "gt", "severity" => "block", "label" => "stress ceiling"}
+                 ]
+               }
+             )
+
+    assert guard["guard_status"] == "block"
+    assert guard["guard_passed"] == false
+    assert guard["guard_trigger_count"] == 2
+    assert Enum.any?(guard["guard_triggers"], &(&1["field"] == "thermal_temperature_max"))
+    assert Enum.any?(guard["guard_triggers"], &(&1["severity"] == "block"))
+  end
+
+  test "benchmarks coupled heat pairs with weighted criteria" do
+    payload = %{
+      "left" => %{
+        "thermal_temperature_max" => 80.0,
+        "thermal_peak_flux_magnitude" => 10.0,
+        "thermal_loaded_node_count" => 3.0
+      },
+      "right" => %{
+        "thermo_temperature_delta_max" => 75.0,
+        "thermo_peak_stress" => 140.0,
+        "thermo_heated_node_count" => 2.0
+      }
+    }
+
+    assert {:ok, benchmark} =
+             WorkflowOperatorRuntime.run_transform_operator(
+               "transform.benchmark_coupled_heat_pair",
+               payload,
+               %{
+               "left_label" => "baseline",
+                "right_label" => "candidate",
+                "criteria" => [
+                  %{"field" => "temperature_vs_delta", "left_field" => "thermal_temperature_max", "right_field" => "thermo_temperature_delta_max", "goal" => "min", "weight" => 2.0},
+                  %{"field" => "loaded_vs_heated_nodes", "left_field" => "thermal_loaded_node_count", "right_field" => "thermo_heated_node_count", "goal" => "min", "weight" => 1.0},
+                  %{"field" => "flux_vs_stress", "left_field" => "thermal_peak_flux_magnitude", "right_field" => "thermo_peak_stress", "goal" => "min", "weight" => 3.0}
+                ]
+              }
+             )
+
+    assert benchmark["baseline_score"] == 3.0
+    assert benchmark["candidate_score"] == 3.0
+    assert benchmark["benchmark_winner"] == "tie"
+    assert benchmark["benchmark_margin"] == 0.0
+    assert benchmark["benchmark_criteria_count"] == 3
+    assert length(benchmark["benchmark_breakdown"]) == 3
   end
 
   test "exports hotspot summaries as markdown alerts" do

@@ -11,6 +11,9 @@ This directory contains host-native operational entry points.
 - `build-update-catalog.mjs`
   Generate the shared update catalog JSON plus HTML docs from release snapshots
   and the human-owned channel contract.
+- `audit-version-line.mjs`
+  Audit repository-wide version contracts and inventory visible version
+  references before advancing a shipping line such as `tamamono 1.7.0`.
 - `release-metadata.mjs`
   Shared release-path, JSON, artifact, and shipping-version helpers used by the
   release and installation-doc generators.

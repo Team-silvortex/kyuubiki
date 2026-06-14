@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime
   alias KyuubikiWeb.WorkflowReportingRuntime
   alias KyuubikiWeb.WorkflowSolverRegistry
+  alias KyuubikiWeb.WorkflowThermalRuntime
 
   def run_solve_operator(operator_id, payload) when is_map(payload) do
     case WorkflowSolverRegistry.fetch(operator_id) do
@@ -119,6 +120,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "transform.select_best_summary" when is_map(config) ->
         WorkflowReportingRuntime.select_best_summary(payload, config)
+
+      "transform.evaluate_thermal_guard" when is_map(config) ->
+        WorkflowThermalRuntime.evaluate_thermal_guard(payload, config)
+
+      "transform.benchmark_coupled_heat_pair" when is_map(config) ->
+        WorkflowThermalRuntime.benchmark_coupled_heat_pair(payload, config)
 
       _ ->
         {:error, {:unsupported_workflow_transform_operator, operator_id}}

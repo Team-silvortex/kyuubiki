@@ -376,4 +376,103 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
     assert get_in(payload, ["artifacts", "compare.result", "force_max_temperature"]) == 40.0
     assert get_in(payload, ["artifacts", "compare.result", "thermal_max_temperature"]) == 44.0
   end
+
+  test "runs a coupled heat benchmark transform through the workflow graph" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/run",
+        Jason.encode!(%{
+          "graph" => %{
+            "schema_version" => "kyuubiki.workflow-graph/v1",
+            "id" => "workflow.coupled-heat-benchmark",
+            "name" => "Coupled heat benchmark",
+            "version" => "1.0.0",
+            "entry_nodes" => ["baseline_input", "candidate_input"],
+            "output_nodes" => ["benchmarked_output"],
+            "nodes" => [
+              %{
+                "id" => "baseline_input",
+                "kind" => "input",
+                "outputs" => [%{"id" => "summary", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "candidate_input",
+                "kind" => "input",
+                "outputs" => [%{"id" => "summary", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "benchmark",
+                "kind" => "transform",
+                "operator_id" => "transform.benchmark_coupled_heat_pair",
+                "config" => %{
+                  "left_label" => "baseline",
+                  "right_label" => "candidate",
+                  "criteria" => [
+                    %{"field" => "thermal_temperature_max", "goal" => "min", "weight" => 2.0},
+                    %{"field" => "thermal_peak_flux_magnitude", "goal" => "min", "weight" => 1.0},
+                    %{"field" => "thermo_peak_stress", "goal" => "min", "weight" => 3.0}
+                  ]
+                },
+                "inputs" => [
+                  %{"id" => "left", "artifact_type" => "artifact/json"},
+                  %{"id" => "right", "artifact_type" => "artifact/json"}
+                ],
+                "outputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}]
+              },
+              %{
+                "id" => "benchmarked_output",
+                "kind" => "output",
+                "inputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}],
+                "outputs" => []
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => "baseline-to-benchmark",
+                "from" => %{"node" => "baseline_input", "port" => "summary"},
+                "to" => %{"node" => "benchmark", "port" => "left"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "candidate-to-benchmark",
+                "from" => %{"node" => "candidate_input", "port" => "summary"},
+                "to" => %{"node" => "benchmark", "port" => "right"},
+                "artifact_type" => "artifact/json"
+              },
+              %{
+                "id" => "benchmark-to-output",
+                "from" => %{"node" => "benchmark", "port" => "result"},
+                "to" => %{"node" => "benchmarked_output", "port" => "result"},
+                "artifact_type" => "artifact/json"
+              }
+            ]
+          },
+          "input_artifacts" => %{
+            "baseline_input" => %{
+              "summary" => %{"thermal_temperature_max" => 80.0, "thermal_peak_flux_magnitude" => 10.0, "thermo_peak_stress" => 160.0}
+            },
+            "candidate_input" => %{
+              "summary" => %{"thermal_temperature_max" => 75.0, "thermal_peak_flux_magnitude" => 14.0, "thermo_peak_stress" => 140.0}
+            }
+          }
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+
+    assert payload["completed_nodes"] == [
+             "baseline_input",
+             "candidate_input",
+             "benchmark",
+             "benchmarked_output"
+           ]
+
+    assert get_in(payload, ["artifacts", "benchmark.result", "baseline_score"]) == 1.0
+    assert get_in(payload, ["artifacts", "benchmark.result", "candidate_score"]) == 5.0
+    assert get_in(payload, ["artifacts", "benchmark.result", "benchmark_winner"]) == "candidate"
+  end
 end
