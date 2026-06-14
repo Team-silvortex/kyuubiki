@@ -30,6 +30,7 @@ defmodule KyuubikiWeb.TestSupport.ApiRouterCase do
     KyuubikiWeb.AnalysisResultStore.reset()
     KyuubikiWeb.Library.reset()
     KyuubikiWeb.SecurityEvents.Store.reset()
+    KyuubikiWeb.Security.reset_cluster_nonce_cache()
 
     Enum.each(KyuubikiWeb.Playground.AgentRegistry.agents(), fn agent ->
       KyuubikiWeb.Playground.AgentRegistry.unregister(agent.id)
@@ -45,6 +46,7 @@ defmodule KyuubikiWeb.TestSupport.ApiRouterCase do
 
       Application.put_env(:kyuubiki_web, KyuubikiWeb.Playground.AgentPool, original_config)
       Application.put_env(:kyuubiki_web, KyuubikiWeb.Security, original_security)
+      KyuubikiWeb.Security.reset_cluster_nonce_cache()
       KyuubikiWeb.Playground.AgentPool.reload()
     end)
 

@@ -19,6 +19,19 @@ deployment_mode =
     _ -> :local
   end
 
+http_bind_ip =
+  case System.get_env("KYUUBIKI_HTTP_BIND_IP") do
+    value when is_binary(value) and value != "" ->
+      value
+
+    _ ->
+      if deployment_mode == :local do
+        "127.0.0.1"
+      else
+        "0.0.0.0"
+      end
+  end
+
 protect_reads? =
   case System.get_env("KYUUBIKI_PROTECT_READS") do
     "true" -> true
@@ -69,6 +82,7 @@ agent_endpoints =
 
 config :kyuubiki_web,
   storage_backend: storage_backend,
+  http_bind_ip: http_bind_ip,
   ecto_repos: [KyuubikiWeb.PostgresRepo, KyuubikiWeb.SqliteRepo]
 
 config :kyuubiki_web, KyuubikiWeb.Security,
@@ -106,6 +120,16 @@ config :kyuubiki_web, KyuubikiWeb.Playground.AgentClient,
 config :kyuubiki_web, KyuubikiWeb.Playground.AgentRegistry,
   stale_after_ms:
     String.to_integer(System.get_env("KYUUBIKI_REMOTE_AGENT_STALE_AFTER_MS", "15000"))
+
+transitional_worker_adapters_enabled? =
+  case System.get_env("KYUUBIKI_ENABLE_TRANSITIONAL_WORKER_ADAPTERS") do
+    "true" -> true
+    "false" -> false
+    _ -> deployment_mode == :local
+  end
+
+config :kyuubiki_web, KyuubikiWeb.Workers.MockWorkerAdapter,
+  enabled?: transitional_worker_adapters_enabled?
 
 config :kyuubiki_web, KyuubikiWeb.Jobs.Watchdog,
   scan_interval_ms:

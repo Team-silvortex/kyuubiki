@@ -426,11 +426,7 @@ fn format_percentile_key(percentile: f64) -> String {
     format!("p{}", normalized.replace('.', "_"))
 }
 
-fn resolve_hotspot_threshold(
-    items: &[Value],
-    field: &str,
-    config: &Value,
-) -> Result<f64, String> {
+fn resolve_hotspot_threshold(items: &[Value], field: &str, config: &Value) -> Result<f64, String> {
     if let Some(threshold) = config.get("threshold").and_then(Value::as_f64) {
         return Ok(threshold);
     }
@@ -440,7 +436,9 @@ fn resolve_hotspot_threshold(
         .and_then(Value::as_f64)
         .unwrap_or(90.0);
     if !(0.0..=100.0).contains(&percentile) {
-        return Err("extract.field_hotspots config.percentile must be between 0 and 100".to_string());
+        return Err(
+            "extract.field_hotspots config.percentile must be between 0 and 100".to_string(),
+        );
     }
 
     let values = items

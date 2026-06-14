@@ -116,6 +116,8 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const protocolAgentCards = buildProtocolAgentCards({
     agents: protocolAgents,
     labels: {
+      authorityMode: language === "zh" ? "控制权模式" : language === "ja" ? "権限モード" : "Authority mode",
+      controlMode: language === "zh" ? "控制绑定" : language === "ja" ? "制御バインド" : "Control binding",
       runtimeMode: t.runtimeMode,
       cluster: t.cluster,
       clusterSize: t.clusterSize,
@@ -149,6 +151,12 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const runtimeProtocolRows = [
     { label: t.controlPlaneProtocol, value: health?.protocol?.protocol?.name ?? "--" },
     { label: t.solverRpcProtocol, value: health?.protocol?.compatible_solver_rpc?.name ?? "--" },
+    {
+      label: language === "zh" ? "控制面控制权" : language === "ja" ? "制御面権限" : "Control-plane authority",
+      value: health?.protocol?.authority
+        ? `${health.protocol.authority.authority_mode}${health.protocol.authority.orchestrator_id ? ` · ${health.protocol.authority.orchestrator_id}` : ""}`
+        : "--",
+    },
     { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
     { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
     { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },

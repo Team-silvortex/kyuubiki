@@ -75,6 +75,32 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert MapSet.member?(operators, "export.alert_markdown")
   end
 
+  test "catalog exposes real artifact contracts for heat to thermo bridge operators" do
+    {:ok, %{"operator" => quad_bridge}} =
+      WorkflowOperatorCatalog.fetch("bridge.temperature_field_to_thermo_quad_2d")
+
+    {:ok, %{"operator" => triangle_bridge}} =
+      WorkflowOperatorCatalog.fetch("bridge.temperature_field_to_thermo_triangle_2d")
+
+    assert quad_bridge["inputs"] |> hd() |> Map.take(["id", "artifact_type", "dataset_value"]) == %{
+             "id" => "heat_result",
+             "artifact_type" => "result/heat_plane_quad_2d",
+             "dataset_value" => "heat_result"
+           }
+
+    assert quad_bridge["outputs"] |> hd() |> Map.take(["id", "artifact_type", "dataset_value"]) == %{
+             "id" => "thermo_model",
+             "artifact_type" => "study_model/thermal_plane_quad_2d",
+             "dataset_value" => "thermo_model"
+           }
+
+    assert triangle_bridge["inputs"] |> hd() |> Map.fetch!("artifact_type") ==
+             "result/heat_plane_triangle_2d"
+
+    assert triangle_bridge["outputs"] |> hd() |> Map.fetch!("artifact_type") ==
+             "study_model/thermal_plane_triangle_2d"
+  end
+
   test "bridges electrostatic triangle results into a heat triangle seed model" do
     electrostatic_result = %{
       "nodes" => [
@@ -436,6 +462,10 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert guard["guard_status"] == "block"
     assert guard["guard_passed"] == false
     assert guard["guard_trigger_count"] == 2
+    assert guard["guard_warn_count"] == 1
+    assert guard["guard_block_count"] == 1
+    assert guard["guard_recommendation"] == "hold_and_review"
+    assert String.starts_with?(guard["guard_summary"], "BLOCK:")
     assert Enum.any?(guard["guard_triggers"], &(&1["field"] == "thermal_temperature_max"))
     assert Enum.any?(guard["guard_triggers"], &(&1["severity"] == "block"))
   end
@@ -474,6 +504,11 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert benchmark["benchmark_winner"] == "tie"
     assert benchmark["benchmark_margin"] == 0.0
     assert benchmark["benchmark_criteria_count"] == 3
+    assert benchmark["benchmark_left_win_count"] == 1
+    assert benchmark["benchmark_right_win_count"] == 2
+    assert benchmark["benchmark_tie_count"] == 0
+    assert benchmark["benchmark_recommendation"] == "keep_both_under_review"
+    assert String.contains?(benchmark["benchmark_summary"], "tie across 3 criteria")
     assert length(benchmark["benchmark_breakdown"]) == 3
   end
 

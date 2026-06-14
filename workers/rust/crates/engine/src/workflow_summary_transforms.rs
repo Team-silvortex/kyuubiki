@@ -149,7 +149,10 @@ pub fn compare_summary_pair(payload: Value, config: Value) -> Result<Value, Stri
         );
     }
     compared.insert("summary_left_prefix".to_string(), Value::from(left_prefix));
-    compared.insert("summary_right_prefix".to_string(), Value::from(right_prefix));
+    compared.insert(
+        "summary_right_prefix".to_string(),
+        Value::from(right_prefix),
+    );
 
     Ok(Value::Object(compared))
 }
@@ -234,7 +237,9 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
         let count = values.len();
         let sum = values.iter().sum::<f64>();
         let mean = sum / count as f64;
-        let min = values.iter().fold(f64::INFINITY, |current, value| current.min(*value));
+        let min = values
+            .iter()
+            .fold(f64::INFINITY, |current, value| current.min(*value));
         let max = values
             .iter()
             .fold(f64::NEG_INFINITY, |current, value| current.max(*value));
@@ -274,9 +279,9 @@ pub fn aggregate_summary_collection(payload: Value, config: Value) -> Result<Val
 }
 
 pub fn normalize_summary_fields(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload
-        .as_object()
-        .ok_or_else(|| "transform.normalize_summary_fields expects an object payload".to_string())?;
+    let object = payload.as_object().ok_or_else(|| {
+        "transform.normalize_summary_fields expects an object payload".to_string()
+    })?;
     let rules = config
         .get("rules")
         .and_then(Value::as_array)
@@ -297,10 +302,7 @@ pub fn normalize_summary_fields(payload: Value, config: Value) -> Result<Value, 
             .get("source")
             .and_then(Value::as_str)
             .ok_or_else(|| "transform.normalize_summary_fields rule requires source".to_string())?;
-        let target = rule
-            .get("target")
-            .and_then(Value::as_str)
-            .unwrap_or(source);
+        let target = rule.get("target").and_then(Value::as_str).unwrap_or(source);
         let Some(source_value) = object.get(source) else {
             continue;
         };
@@ -342,7 +344,9 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
         .as_object()
         .ok_or_else(|| "transform.select_best_summary expects an object payload".to_string())?;
     if object.is_empty() {
-        return Err("transform.select_best_summary requires at least one named summary input".to_string());
+        return Err(
+            "transform.select_best_summary requires at least one named summary input".to_string(),
+        );
     }
 
     let criteria = config
@@ -374,7 +378,12 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
         .iter()
         .map(|(source_id, summary)| {
             let (score, breakdown) = score_summary_entry(summary, criteria)?;
-            Ok(((*source_id).to_string(), (*summary).clone(), score, breakdown))
+            Ok((
+                (*source_id).to_string(),
+                (*summary).clone(),
+                score,
+                breakdown,
+            ))
         })
         .collect::<Result<Vec<_>, String>>()?;
     scored.sort_by(|left, right| {
@@ -384,14 +393,20 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
             .then_with(|| left.0.cmp(&right.0))
     });
 
-    let (best_source, best_summary, best_score, best_breakdown) = scored
-        .first()
-        .cloned()
-        .ok_or_else(|| "transform.select_best_summary could not score any summary inputs".to_string())?;
+    let (best_source, best_summary, best_score, best_breakdown) =
+        scored.first().cloned().ok_or_else(|| {
+            "transform.select_best_summary could not score any summary inputs".to_string()
+        })?;
 
     let mut selected = best_summary;
-    selected.insert("selected_summary_source".to_string(), Value::from(best_source));
-    selected.insert("selected_summary_score".to_string(), Value::from(best_score));
+    selected.insert(
+        "selected_summary_source".to_string(),
+        Value::from(best_source),
+    );
+    selected.insert(
+        "selected_summary_score".to_string(),
+        Value::from(best_score),
+    );
     if include_breakdown {
         selected.insert(
             "selected_summary_breakdown".to_string(),
@@ -408,7 +423,10 @@ pub fn select_best_summary(payload: Value, config: Value) -> Result<Value, Strin
                 })
             })
             .collect::<Vec<_>>();
-        selected.insert("selected_summary_candidates".to_string(), Value::Array(all_scores));
+        selected.insert(
+            "selected_summary_candidates".to_string(),
+            Value::Array(all_scores),
+        );
     }
 
     Ok(Value::Object(selected))
@@ -487,19 +505,16 @@ fn score_summary_entry(
             .get("weight")
             .and_then(Value::as_f64)
             .unwrap_or(1.0);
-        let value = summary
-            .get(field)
-            .and_then(Value::as_f64)
-            .ok_or_else(|| {
-                format!("transform.select_best_summary missing numeric field {field}")
-            })?;
+        let value = summary.get(field).and_then(Value::as_f64).ok_or_else(|| {
+            format!("transform.select_best_summary missing numeric field {field}")
+        })?;
         let criterion_score = match goal {
             "min" => -value * weight,
             "max" => value * weight,
             other => {
                 return Err(format!(
                     "transform.select_best_summary unsupported criterion goal: {other}"
-                ))
+                ));
             }
         };
         total += criterion_score;

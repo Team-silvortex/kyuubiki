@@ -34,6 +34,9 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert payload["program"] == "kyuubiki-orchestrator"
     assert payload["protocol"]["name"] == "kyuubiki.control-plane/http-v1"
     assert payload["compatible_solver_rpc"]["name"] == "kyuubiki.solver-rpc/v1"
+    assert payload["authority"]["control_mode"] == "orch_managed"
+    assert payload["authority"]["authority_mode"] == "single_orchestrator"
+    assert payload["authority"]["accepts_multi_orchestrator_binding"] == false
 
     conn =
       :get
@@ -96,9 +99,17 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     assert agent["id"] == "protocol-agent"
     assert agent["descriptor"]["program"] == "kyuubiki-rust-agent"
     assert "describe_agent" in agent["descriptor"]["protocol"]["methods"]
+    assert agent["descriptor"]["authority"]["control_mode"] == "standalone"
+    assert agent["descriptor"]["authority"]["authority_mode"] == "self_directed"
   end
 
   test "registers, heartbeats, and removes remote agents through the API" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: nil,
+      cluster_api_token: nil,
+      protect_reads?: false
+    )
+
     Application.put_env(:kyuubiki_web, AgentPool, discovery: :registry, endpoints: [])
     AgentPool.reload()
     cluster_ts = Integer.to_string(System.system_time(:millisecond))
@@ -115,12 +126,16 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
         })
       )
       |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-remote-a")
       |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-solver-remote-a-register")
       |> Router.call(@opts)
 
     assert conn.status == 201
     payload = Jason.decode!(conn.resp_body)
     assert payload["agent"]["id"] == "solver-remote-a"
+    assert payload["agent"]["authority"]["control_mode"] == "orch_managed"
+    assert payload["agent"]["authority"]["authority_mode"] == "single_orchestrator"
 
     conn =
       :post
@@ -133,11 +148,14 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
         })
       )
       |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-remote-a")
       |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-solver-remote-a-heartbeat")
       |> Router.call(@opts)
 
     assert conn.status == 200
     assert Jason.decode!(conn.resp_body)["agent"]["zone"] == "rack-a"
+    assert Jason.decode!(conn.resp_body)["agent"]["authority"]["authority_mode"] == "single_orchestrator"
 
     conn =
       :get
@@ -148,11 +166,15 @@ defmodule KyuubikiWeb.Api.ControlPlaneApiTest do
     payload = Jason.decode!(conn.resp_body)
     assert payload["summary"]["active_agents"] == 1
     assert Enum.map(payload["agents"], & &1["id"]) == ["solver-remote-a"]
+    assert hd(payload["agents"])["authority"]["control_mode"] == "orch_managed"
+    assert hd(payload["agents"])["authority"]["authority_mode"] == "single_orchestrator"
 
     conn =
       :delete
       |> conn("/api/v1/agents/solver-remote-a")
+      |> put_req_header("x-kyuubiki-agent-id", "solver-remote-a")
       |> put_req_header("x-kyuubiki-cluster-ts", cluster_ts)
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-solver-remote-a-delete")
       |> Router.call(@opts)
 
     assert conn.status == 200

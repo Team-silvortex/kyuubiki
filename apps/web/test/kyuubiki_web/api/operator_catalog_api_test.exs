@@ -28,6 +28,11 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
         operator["id"] == "bridge.temperature_field_to_thermo_quad_2d"
       end)
 
+    heat_thermo_triangle_bridge_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "bridge.temperature_field_to_thermo_triangle_2d"
+      end)
+
     assert frame_operator["kind"] == "solver"
     assert frame_operator["origin"] == "built_in"
     assert frame_operator["input_schema"]["schema"] == "kyuubiki.operator.frame_3d.input"
@@ -87,8 +92,56 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert heat_thermo_bridge_operator["config_schema"]["schema"] ==
              "kyuubiki.bridge-contract.heat_to_thermo.v1"
 
+    assert [
+             %{
+               "id" => "heat_result",
+               "artifact_type" => "result/heat_plane_quad_2d",
+               "dataset_value" => "heat_result",
+               "schema_ref" => %{
+                 "schema" => "kyuubiki.operator.heat_plane_quad_2d.output",
+                 "version" => "1"
+               }
+             }
+           ] = heat_thermo_bridge_operator["inputs"]
+
+    assert [
+             %{
+               "id" => "thermo_model",
+               "artifact_type" => "study_model/thermal_plane_quad_2d",
+               "dataset_value" => "thermo_model",
+               "schema_ref" => %{
+                 "schema" => "kyuubiki.operator.thermal_plane_quad_2d.input",
+                 "version" => "1"
+               }
+             }
+           ] = heat_thermo_bridge_operator["outputs"]
+
     assert heat_thermo_bridge_operator["config_example"]["contract"]["target"]["field"] ==
              "temperature_delta"
+
+    assert [
+             %{
+               "id" => "heat_result",
+               "artifact_type" => "result/heat_plane_triangle_2d",
+               "dataset_value" => "heat_result",
+               "schema_ref" => %{
+                 "schema" => "kyuubiki.operator.heat_plane_triangle_2d.output",
+                 "version" => "1"
+               }
+             }
+           ] = heat_thermo_triangle_bridge_operator["inputs"]
+
+    assert [
+             %{
+               "id" => "thermo_model",
+               "artifact_type" => "study_model/thermal_plane_triangle_2d",
+               "dataset_value" => "thermo_model",
+               "schema_ref" => %{
+                 "schema" => "kyuubiki.operator.thermal_plane_triangle_2d.input",
+                 "version" => "1"
+               }
+             }
+           ] = heat_thermo_triangle_bridge_operator["outputs"]
 
     electrostatic_plane_operator =
       Enum.find(operators, fn operator ->

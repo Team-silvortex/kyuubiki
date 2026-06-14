@@ -330,7 +330,8 @@ fn derive_element_nodal_target_field<TElement>(
     let mut source_values = Vec::new();
 
     for element in elements {
-        let source_value = resolve_source(element, contract.source_field.as_str())? * contract.scale;
+        let source_value =
+            resolve_source(element, contract.source_field.as_str())? * contract.scale;
         source_values.push(source_value);
         let weight = resolve_weight(element);
         for field in &contract.node_index_fields {

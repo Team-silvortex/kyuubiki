@@ -16,6 +16,7 @@ import type { StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import {
   isWorkflowBridgeContractOperator,
+  normalizeBridgeConfigForOperator,
   resolveBridgeContractForOperator,
   resolveBridgeSeedModelForOperator,
 } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
@@ -29,7 +30,6 @@ type WorkbenchWorkflowBridgeContractEditorProps = {
   currentPlaneModel: Record<string, unknown>;
   onUpdateNode: (nodeId: string, updater: (node: WorkflowGraphNode) => WorkflowGraphNode) => void;
 };
-
 type SeedModelRecord = Record<string, unknown>;
 function asObjectRecord(value: unknown): SeedModelRecord | null {
   return typeof value === "object" && value !== null ? (value as SeedModelRecord) : null;
@@ -37,7 +37,6 @@ function asObjectRecord(value: unknown): SeedModelRecord | null {
 function asObjectArray(value: unknown) {
   return Array.isArray(value) ? value.map((entry) => asObjectRecord(entry)).filter(Boolean) as SeedModelRecord[] : [];
 }
-
 function updateBridgeContractField(
   node: WorkflowGraphNode,
   updater: (contract: NonNullable<ReturnType<typeof resolveBridgeContractForOperator>>) => void,
@@ -58,10 +57,7 @@ function updateBridgeContractField(
   };
 }
 
-function updateBridgeSeedModel(
-  node: WorkflowGraphNode,
-  nextSeedModel: Record<string, unknown>,
-) {
+function updateBridgeSeedModel(node: WorkflowGraphNode, nextSeedModel: Record<string, unknown>) {
   if (
     node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" ||
     node.operator_id === "bridge.electrostatic_field_to_heat_triangle_2d"
@@ -80,12 +76,19 @@ function updateBridgeSeedModel(
   ) {
     return {
       ...node,
-      config: nextSeedModel,
+      config: normalizeBridgeConfigForOperator(
+        node.operator_id,
+        {
+          ...(typeof node.config === "object" && node.config !== null ? node.config : {}),
+          seed_model: nextSeedModel,
+        },
+      ) ?? {
+        seed_model: nextSeedModel,
+      },
     };
   }
   return node;
 }
-
 function summarizeSeedModel(seedModel: Record<string, unknown> | null) {
   const nodes = Array.isArray(seedModel?.nodes) ? seedModel.nodes.length : 0;
   const elements = Array.isArray(seedModel?.elements) ? seedModel.elements.length : 0;
@@ -104,13 +107,7 @@ function importableBridgeWorkspaceStudyKind(operatorId?: string | null) {
   if (operatorId === "bridge.temperature_field_to_thermo_triangle_2d") return "thermal_plane_triangle_2d";
   return operatorId === "bridge.temperature_field_to_thermo_quad_2d" ? "thermal_plane_quad_2d" : null;
 }
-function updateSeedModelCollectionField(
-  node: WorkflowGraphNode,
-  collection: "nodes" | "elements",
-  index: number,
-  field: string,
-  value: unknown,
-) {
+function updateSeedModelCollectionField(node: WorkflowGraphNode, collection: "nodes" | "elements", index: number, field: string, value: unknown) {
   const seedModel = resolveBridgeSeedModelForOperator(
     node.operator_id,
     node.config as Record<string, unknown> | null | undefined,
@@ -157,9 +154,7 @@ export function WorkbenchWorkflowBridgeContractEditor({
       (node.outputs ?? []).some((output) => output.artifact_type === port.artifact_type),
     ),
   );
-  const seedModelSummary = summarizeSeedModel(
-    resolvedSeedModel as Record<string, unknown> | null,
-  );
+  const seedModelSummary = summarizeSeedModel(resolvedSeedModel as Record<string, unknown> | null);
   const canImportCurrentWorkspaceModel =
     importableBridgeWorkspaceStudyKind(node.operator_id) === currentStudyKind;
   const seedModelNodes = asObjectArray(resolvedSeedModel?.nodes);

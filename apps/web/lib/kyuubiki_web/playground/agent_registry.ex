@@ -54,6 +54,73 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     GenServer.call(__MODULE__, :active_endpoints)
   end
 
+  @spec public_agents() :: [map()]
+  def public_agents do
+    agents()
+    |> Enum.map(&public_agent/1)
+  end
+
+  @spec public_agent(agent() | map()) :: map()
+  def public_agent(agent) when is_map(agent) do
+    control_mode = Map.get(agent, :control_mode) || Map.get(agent, "control_mode") || "orch_managed"
+    orch_id = Map.get(agent, :orch_id) || Map.get(agent, "orch_id")
+    orch_session_id = Map.get(agent, :orch_session_id) || Map.get(agent, "orch_session_id")
+
+    authority =
+      case control_mode do
+        "offline_mesh" ->
+          %{
+            "control_mode" => "offline_mesh",
+            "authority_mode" => "offline_mesh",
+            "orchestrator_id" => nil,
+            "orchestrator_session_id" => nil,
+            "accepts_multi_orchestrator_binding" => false,
+            "agent_library_replication" => "central_fetch"
+          }
+
+        "orch_managed" ->
+          %{
+            "control_mode" => "orch_managed",
+            "authority_mode" => "single_orchestrator",
+            "orchestrator_id" => orch_id,
+            "orchestrator_session_id" => orch_session_id,
+            "accepts_multi_orchestrator_binding" => false,
+            "agent_library_replication" => "central_fetch"
+          }
+
+        _ ->
+          %{
+            "control_mode" => "standalone",
+            "authority_mode" => "self_directed",
+            "orchestrator_id" => nil,
+            "orchestrator_session_id" => nil,
+            "accepts_multi_orchestrator_binding" => false,
+            "agent_library_replication" => "central_fetch"
+          }
+      end
+
+    %{
+      "id" => Map.get(agent, :id) || Map.get(agent, "id"),
+      "host" => Map.get(agent, :host) || Map.get(agent, "host"),
+      "port" => Map.get(agent, :port) || Map.get(agent, "port"),
+      "control_mode" => control_mode,
+      "orch_id" => orch_id,
+      "orch_session_id" => orch_session_id,
+      "cluster_id" => Map.get(agent, :cluster_id) || Map.get(agent, "cluster_id"),
+      "fingerprint" => Map.get(agent, :fingerprint) || Map.get(agent, "fingerprint"),
+      "role" => Map.get(agent, :role) || Map.get(agent, "role"),
+      "region" => Map.get(agent, :region) || Map.get(agent, "region"),
+      "zone" => Map.get(agent, :zone) || Map.get(agent, "zone"),
+      "capacity" => Map.get(agent, :capacity) || Map.get(agent, "capacity"),
+      "tags" => Map.get(agent, :tags) || Map.get(agent, "tags") || [],
+      "methods" => Map.get(agent, :methods) || Map.get(agent, "methods") || [],
+      "capabilities" => Map.get(agent, :capabilities) || Map.get(agent, "capabilities") || [],
+      "health_score" => Map.get(agent, :health_score) || Map.get(agent, "health_score"),
+      "last_seen_at" => format_last_seen(Map.get(agent, :last_seen_at) || Map.get(agent, "last_seen_at")),
+      "authority" => authority
+    }
+  end
+
   @spec status_snapshot() :: map()
   def status_snapshot do
     GenServer.call(__MODULE__, :status_snapshot)
@@ -394,4 +461,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     Application.get_env(:kyuubiki_web, __MODULE__, [])
     |> Keyword.get(:stale_after_ms, 15_000)
   end
+
+  defp format_last_seen(%DateTime{} = last_seen_at), do: DateTime.to_iso8601(last_seen_at)
+  defp format_last_seen(last_seen_at), do: last_seen_at
 end

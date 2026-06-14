@@ -11,7 +11,9 @@ fn build_hotspot_condition_graph(predicate_value: usize) -> WorkflowGraph {
         id: format!("workflow.electrostatic-hotspot-condition-{predicate_value}"),
         name: "Electrostatic hotspot condition alert".to_string(),
         version: "1.0.0".to_string(),
-        description: Some("Route hotspot summaries into alert or clear markdown exports.".to_string()),
+        description: Some(
+            "Route hotspot summaries into alert or clear markdown exports.".to_string(),
+        ),
         dataset_contract: None,
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["final_output".to_string()],
@@ -253,24 +255,59 @@ fn build_hotspot_condition_graph(predicate_value: usize) -> WorkflowGraph {
             },
         ],
         edges: vec![
-            edge("edge-input", ("electrostatic_model", "model"), ("solve_electrostatic", "model"), "study_model/electrostatic_plane_quad_2d"),
-            edge("edge-result", ("solve_electrostatic", "result"), ("field_hotspots", "result"), "result/electrostatic_plane_quad_2d"),
-            edge("edge-summary", ("field_hotspots", "summary"), ("gate", "value"), "report/summary"),
-            edge("edge-true", ("gate", "if_true"), ("alert_export", "summary"), "report/summary"),
-            edge("edge-false", ("gate", "if_false"), ("clear_export", "summary"), "report/summary"),
-            edge("edge-alert", ("alert_export", "markdown"), ("merge_output", "left"), "export/markdown"),
-            edge("edge-clear", ("clear_export", "markdown"), ("merge_output", "right"), "export/markdown"),
-            edge("edge-output", ("merge_output", "merged"), ("final_output", "markdown"), "export/markdown"),
+            edge(
+                "edge-input",
+                ("electrostatic_model", "model"),
+                ("solve_electrostatic", "model"),
+                "study_model/electrostatic_plane_quad_2d",
+            ),
+            edge(
+                "edge-result",
+                ("solve_electrostatic", "result"),
+                ("field_hotspots", "result"),
+                "result/electrostatic_plane_quad_2d",
+            ),
+            edge(
+                "edge-summary",
+                ("field_hotspots", "summary"),
+                ("gate", "value"),
+                "report/summary",
+            ),
+            edge(
+                "edge-true",
+                ("gate", "if_true"),
+                ("alert_export", "summary"),
+                "report/summary",
+            ),
+            edge(
+                "edge-false",
+                ("gate", "if_false"),
+                ("clear_export", "summary"),
+                "report/summary",
+            ),
+            edge(
+                "edge-alert",
+                ("alert_export", "markdown"),
+                ("merge_output", "left"),
+                "export/markdown",
+            ),
+            edge(
+                "edge-clear",
+                ("clear_export", "markdown"),
+                ("merge_output", "right"),
+                "export/markdown",
+            ),
+            edge(
+                "edge-output",
+                ("merge_output", "merged"),
+                ("final_output", "markdown"),
+                "export/markdown",
+            ),
         ],
     }
 }
 
-fn edge(
-    id: &str,
-    from: (&str, &str),
-    to: (&str, &str),
-    artifact_type: &str,
-) -> WorkflowEdge {
+fn edge(id: &str, from: (&str, &str), to: (&str, &str), artifact_type: &str) -> WorkflowEdge {
     WorkflowEdge {
         id: id.to_string(),
         from: WorkflowNodePortRef {
@@ -305,7 +342,10 @@ fn electrostatic_input() -> serde_json::Value {
 fn routes_hotspot_summary_to_alert_branch() {
     let run = run_workflow_graph(WorkflowGraphRunRequest {
         graph: build_hotspot_condition_graph(0),
-        input_artifacts: BTreeMap::from([("electrostatic_model".to_string(), electrostatic_input())]),
+        input_artifacts: BTreeMap::from([(
+            "electrostatic_model".to_string(),
+            electrostatic_input(),
+        )]),
     })
     .expect("hotspot condition alert workflow should run");
 
@@ -322,7 +362,10 @@ fn routes_hotspot_summary_to_alert_branch() {
 fn routes_hotspot_summary_to_clear_branch() {
     let run = run_workflow_graph(WorkflowGraphRunRequest {
         graph: build_hotspot_condition_graph(2),
-        input_artifacts: BTreeMap::from([("electrostatic_model".to_string(), electrostatic_input())]),
+        input_artifacts: BTreeMap::from([(
+            "electrostatic_model".to_string(),
+            electrostatic_input(),
+        )]),
     })
     .expect("hotspot clear workflow should run");
 

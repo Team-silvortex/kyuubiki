@@ -65,6 +65,13 @@ Then branch by intent:
   Full runtime map across GUI, control plane, and solver data plane.
 - `app-runtime-boundaries.md`
   Hard role split between Hub, Workbench, Installer, and runtime/agent layers.
+- `agent-orchestrator-boundary.md`
+  Runtime-side contract for keeping Rust agents, Elixir orchestration, and UI shells decoupled.
+  Also includes the current transitional inventory and convergence checklist.
+- `headless-agent-contract.md`
+  Stable runtime contract for headless Rust agents, including solver-RPC
+  authority, descriptor expectations, and the boundary between runtime
+  protocols and frontend-owned gateways.
 - `architecture-red-lines.md`
   Practical do-not-cross checklist for keeping product and runtime layers clean.
 - `philosophy.md`
@@ -79,6 +86,9 @@ Then branch by intent:
 - `protocols.md`
   Public HTTP and TCP contracts that let the GUI, control plane, and solver
   agents run as separate programs.
+- `headless-agent-contract.md`
+  Practical runtime-side contract for solver agents, SDK callers, and
+  orchestrators that need a cleaner boundary than frontend gateway flows.
 - `headless-sdks.md`
   Protocol-first Rust, Elixir, and Python SDK layer for headless AI and
   automation clients.
@@ -174,10 +184,10 @@ Then branch by intent:
 - Browser/frontend work:
   `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
 - Desktop product boundary work:
-  `system-overview.md` -> `app-runtime-boundaries.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
+  `system-overview.md` -> `app-runtime-boundaries.md` -> `agent-orchestrator-boundary.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
 - Orchestrator/control-plane work:
-  `philosophy.md` -> `system-overview.md` -> `operations.md`
+  `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `operations.md`
 - Rust solver/agent work:
-  `philosophy.md` -> `system-overview.md` -> `protocols.md`
+  `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `protocols.md`
 - Packaging/release work:
   `packaging-and-deployment.md` -> `desktop-release-checklist.md` -> `update-catalog.html`

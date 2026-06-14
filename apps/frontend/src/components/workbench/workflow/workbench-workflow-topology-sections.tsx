@@ -33,12 +33,13 @@ function WorkbenchWorkflowPortEditor(props: {
   ports: WorkflowGraphPort[];
   direction: "inputs" | "outputs";
   title: string;
+  highlightedPortKeys?: string[];
   locked?: boolean;
   onAdd: () => void;
   onRemove: (portId: string) => void;
   onUpdate: (portId: string, updater: (port: WorkflowGraphPort) => WorkflowGraphPort) => void;
 }) {
-  const { labels, nodeId, ports, direction, title, locked = false, onAdd, onRemove, onUpdate } = props;
+  const { labels, nodeId, ports, direction, title, highlightedPortKeys = [], locked = false, onAdd, onRemove, onUpdate } = props;
   return (
     <div className="sidebar-stack">
       <div className="card-head">
@@ -46,7 +47,11 @@ function WorkbenchWorkflowPortEditor(props: {
         {locked ? <span className="status-pill status-pill--watch">descriptor</span> : <button onClick={onAdd} type="button">{direction === "inputs" ? labels.addInputPortLabel : labels.addOutputPortLabel}</button>}
       </div>
       {ports.map((port, index) => (
-        <div className="form-grid compact" key={`${nodeId}:${direction}:${port.id}`}>
+        <div
+          className="form-grid compact"
+          key={`${nodeId}:${direction}:${port.id}`}
+          style={highlightedPortKeys.includes(`${nodeId}:${direction}:${port.id}`) ? { outline: "2px solid rgba(34, 197, 94, 0.9)", outlineOffset: "2px", borderRadius: "10px", boxShadow: "0 0 0 1px rgba(34, 197, 94, 0.22), 0 0 18px rgba(34, 197, 94, 0.18)" } : undefined}
+        >
           <label>
             <span>{labels.portIdLabel}</span>
             <input data-workflow-port-field={`${nodeId}:${direction}:${port.id}:id`} data-workflow-port-stable={`${nodeId}:${direction}:${index}:id`} disabled={locked} onChange={(event) => onUpdate(port.id, (current) => ({ ...current, id: event.target.value }))} value={port.id} />
@@ -102,6 +107,7 @@ type WorkbenchWorkflowTopologyNodeSectionProps = {
   currentPlaneModel: PlaneStudyJobInput;
   controlFlowEdges: WorkflowGraphEdge[];
   bridgePeerNodes: WorkflowGraphNode[];
+  highlightedPortKeys?: string[];
   nextNodeKind: string;
   nextOperatorId: string;
   onAddConnectedNode: (sourceNodeId: string, template?: { kind: string; operatorId?: string }) => void;
@@ -127,6 +133,7 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
   currentPlaneModel,
   controlFlowEdges,
   bridgePeerNodes,
+  highlightedPortKeys = [],
   nextNodeKind,
   nextOperatorId,
   onAddConnectedNode,
@@ -171,8 +178,8 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
       <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={controlFlowEdges} />
       <WorkbenchWorkflowBridgeContractEditor currentHeatPlaneModel={currentHeatPlaneModel as unknown as Record<string, unknown>} currentPlaneModel={currentPlaneModel as unknown as Record<string, unknown>} currentStudyKind={currentStudyKind} labels={labels} node={node} selectedNodes={bridgePeerNodes} onUpdateNode={onUpdateNode} />
       <WorkbenchWorkflowConditionEditor labels={labels} node={node} onUpdateNode={onUpdateNode} />
-      <WorkbenchWorkflowPortEditor direction="inputs" labels={labels} locked={templateLocked} nodeId={node.id} onAdd={() => onAddNodePort(node.id, "inputs")} onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)} onUpdate={(portId, updater) => onUpdateNodePort(node.id, "inputs", portId, updater)} ports={node.inputs ?? []} title={labels.inputsTitle} />
-      <WorkbenchWorkflowPortEditor direction="outputs" labels={labels} locked={templateLocked} nodeId={node.id} onAdd={() => onAddNodePort(node.id, "outputs")} onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)} onUpdate={(portId, updater) => onUpdateNodePort(node.id, "outputs", portId, updater)} ports={node.outputs ?? []} title={labels.outputsTitle} />
+      <WorkbenchWorkflowPortEditor direction="inputs" highlightedPortKeys={highlightedPortKeys} labels={labels} locked={templateLocked} nodeId={node.id} onAdd={() => onAddNodePort(node.id, "inputs")} onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)} onUpdate={(portId, updater) => onUpdateNodePort(node.id, "inputs", portId, updater)} ports={node.inputs ?? []} title={labels.inputsTitle} />
+      <WorkbenchWorkflowPortEditor direction="outputs" highlightedPortKeys={highlightedPortKeys} labels={labels} locked={templateLocked} nodeId={node.id} onAdd={() => onAddNodePort(node.id, "outputs")} onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)} onUpdate={(portId, updater) => onUpdateNodePort(node.id, "outputs", portId, updater)} ports={node.outputs ?? []} title={labels.outputsTitle} />
     </section>
   );
 }

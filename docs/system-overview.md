@@ -50,6 +50,10 @@ Those runtime layers map cleanly onto the monorepo:
 See [repository-structure.md](repository-structure.md)
 for the fuller directory map.
 
+For the stricter runtime-side split between Rust agents, Elixir orchestration,
+and product shells, see
+[agent-orchestrator-boundary.md](agent-orchestrator-boundary.md).
+
 The relationship between `Hub` and `control plane` is intentional:
 
 - the Hub is not the control plane

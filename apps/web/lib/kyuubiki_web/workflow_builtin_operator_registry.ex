@@ -70,39 +70,24 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
 
   defp heat_to_thermo_bridge_specs do
     [
-      %{
-        "id" => "bridge.temperature_field_to_thermo_quad_2d",
-        "domain" => "thermo_mechanical",
-        "family" => "thermal_plane_quad_2d",
-        "kind" => "workflow_bridge",
-        "summary" => "Bridge a heat quad temperature field into a thermal quad structural model.",
-        "capability_tags" => ["workflow_bridge", "temperature_field", "quad", "2d"],
-        "config_schema" => %{
-          "schema" => "kyuubiki.bridge-contract.heat_to_thermo.v1",
-          "version" => "1"
-        },
-        "config_example" => %{
-          "seed_model" => WorkflowCatalogSupport.thermo_quad_seed_model_example(),
-          "contract" => WorkflowCatalogSupport.heat_to_thermo_bridge_contract_example()
-        }
-      },
-      %{
-        "id" => "bridge.temperature_field_to_thermo_triangle_2d",
-        "domain" => "thermo_mechanical",
-        "family" => "thermal_plane_triangle_2d",
-        "kind" => "workflow_bridge",
-        "summary" =>
-          "Bridge a heat triangle temperature field into a thermal triangle structural model.",
-        "capability_tags" => ["workflow_bridge", "temperature_field", "triangle", "2d"],
-        "config_schema" => %{
-          "schema" => "kyuubiki.bridge-contract.heat_to_thermo.v1",
-          "version" => "1"
-        },
-        "config_example" => %{
-          "seed_model" => WorkflowCatalogSupport.thermo_triangle_seed_model_example(),
-          "contract" => WorkflowCatalogSupport.heat_to_thermo_bridge_contract_example()
-        }
-      }
+      heat_to_thermo_spec(
+        "bridge.temperature_field_to_thermo_quad_2d",
+        "quad",
+        "result/heat_plane_quad_2d",
+        "study_model/thermal_plane_quad_2d",
+        "Heat quad result payload to bridge from",
+        "Thermo-mechanical quad model with bridged nodal temperature deltas",
+        WorkflowCatalogSupport.thermo_quad_seed_model_example()
+      ),
+      heat_to_thermo_spec(
+        "bridge.temperature_field_to_thermo_triangle_2d",
+        "triangle",
+        "result/heat_plane_triangle_2d",
+        "study_model/thermal_plane_triangle_2d",
+        "Heat triangle result payload to bridge from",
+        "Thermo-mechanical triangle model with bridged nodal temperature deltas",
+        WorkflowCatalogSupport.thermo_triangle_seed_model_example()
+      )
     ]
   end
 
@@ -158,6 +143,40 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
             50.0,
             node_index_fields
           )
+      },
+      "source_artifact_type" => source_artifact_type,
+      "target_artifact_type" => target_artifact_type,
+      "input_description" => input_description,
+      "output_description" => output_description
+    }
+  end
+
+  defp heat_to_thermo_spec(
+         id,
+         shape,
+         source_artifact_type,
+         target_artifact_type,
+         input_description,
+         output_description,
+         seed_model
+       ) do
+    %{
+      "id" => id,
+      "domain" => "thermo_mechanical",
+      "family" => "thermal_plane_#{shape}_2d",
+      "kind" => "workflow_bridge",
+      "bridge_type" => "heat_to_thermo",
+      "shape" => shape,
+      "summary" =>
+        "Bridge heat #{shape} temperatures into nodal temperature deltas for a downstream thermo-mechanical #{shape} model.",
+      "capability_tags" => ["workflow_bridge", "temperature_field", "thermo", shape, "2d"],
+      "config_schema" => %{
+        "schema" => "kyuubiki.bridge-contract.heat_to_thermo.v1",
+        "version" => "1"
+      },
+      "config_example" => %{
+        "seed_model" => seed_model,
+        "contract" => WorkflowCatalogSupport.heat_to_thermo_bridge_contract_example()
       },
       "source_artifact_type" => source_artifact_type,
       "target_artifact_type" => target_artifact_type,

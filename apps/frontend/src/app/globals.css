@@ -106,7 +106,7 @@ button {
 }
 
 .button-row--adaptive > * {
-  flex: 1 1 160px;
+  flex: 1 1 148px;
 }
 
 .stack-block {
@@ -310,7 +310,7 @@ button {
   min-height: 100vh;
   padding: 8px;
   display: grid;
-  grid-template-columns: 70px 292px minmax(0, 1fr) 280px;
+  grid-template-columns: 70px minmax(248px, 18vw) minmax(0, 1fr) minmax(248px, 17vw);
   gap: var(--editor-gap);
   position: relative;
 }
@@ -965,7 +965,7 @@ html[data-theme="graphite"] .immersive-switches {
 }
 
 .workflow-diagnostics-plane__summary {
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(156px, 1fr));
   margin-top: 0;
 }
 
@@ -984,7 +984,7 @@ html[data-theme="graphite"] .immersive-switches {
 .runtime-overview-grid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .runtime-overview-card .button-row {
@@ -1048,8 +1048,12 @@ html[data-theme="graphite"] .immersive-switches {
 
 .form-grid.compact {
   margin-top: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   align-items: start;
+}
+
+.sidebar-card > .form-grid.compact {
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
 }
 
 .form-grid label {
@@ -2216,7 +2220,7 @@ html[data-theme="graphite"] .assistant-float-panel {
 
 @media (max-width: 1380px) {
   .workbench-shell {
-    grid-template-columns: 88px 320px minmax(0, 1fr);
+    grid-template-columns: 80px minmax(260px, 312px) minmax(0, 1fr);
   }
 
   .workbench-shell__workspace {
@@ -2225,6 +2229,21 @@ html[data-theme="graphite"] .assistant-float-panel {
 
   .workspace-inspector {
     grid-column: 2 / span 2;
+  }
+}
+
+@media (max-width: 1240px) {
+  .workbench-shell {
+    grid-template-columns: 76px minmax(232px, 284px) minmax(0, 1fr);
+  }
+
+  .workflow-diagnostics-plane__summary,
+  .runtime-overview-grid {
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  }
+
+  .button-row--adaptive > * {
+    flex-basis: 136px;
   }
 }
 
@@ -2242,10 +2261,18 @@ html[data-theme="graphite"] .assistant-float-panel {
 @media (max-width: 1100px) {
   .workbench-shell {
     grid-template-columns: 1fr;
+    grid-auto-columns: 1fr;
   }
 
   .workbench-shell__workspace {
     display: contents;
+  }
+
+  .workbench-shell__rail,
+  .workbench-shell__sidebar,
+  main,
+  .workspace-inspector {
+    grid-column: 1;
   }
 
   .app-rail {
@@ -2286,7 +2313,7 @@ html[data-theme="graphite"] .assistant-float-panel {
   }
 
   .form-grid.compact {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   .assistant-float-launcher {
@@ -2322,5 +2349,12 @@ html[data-theme="graphite"] .assistant-float-panel {
 
   .button-row--adaptive > * {
     width: 100%;
+  }
+
+  .form-grid.compact,
+  .sidebar-card > .form-grid.compact,
+  .workflow-diagnostics-plane__summary,
+  .runtime-overview-grid {
+    grid-template-columns: 1fr;
   }
 }

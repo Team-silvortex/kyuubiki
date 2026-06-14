@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
+import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
 
 export const metadata: Metadata = {
   title: "Workflow Summary Contracts | tamamono 1.6.0",

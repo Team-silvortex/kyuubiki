@@ -26,6 +26,11 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     assert agent.orch_id == "orch-alpha"
     assert AgentRegistry.status_snapshot().active_agents == 1
     assert Enum.map(AgentRegistry.active_endpoints(), & &1.id) == ["solver-remote-a"]
+
+    public_agent = AgentRegistry.public_agent(agent)
+    assert public_agent["authority"]["control_mode"] == "orch_managed"
+    assert public_agent["authority"]["authority_mode"] == "single_orchestrator"
+    assert public_agent["authority"]["orchestrator_id"] == "orch-alpha"
   end
 
   test "refreshes last seen through heartbeat" do

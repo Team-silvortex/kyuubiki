@@ -15,6 +15,7 @@ const RUN_DIR = path.join(ROOT_DIR, "tmp/run");
 const HOT_RUN_DIR = path.join(RUN_DIR, "hot");
 const ENV_FILE = path.join(ROOT_DIR, ".env.local");
 const ENV_EXAMPLE_FILE = path.join(ROOT_DIR, ".env.example");
+const RUNTIME_MODE_FILE = path.join(RUN_DIR, "runtime-mode.txt");
 const SERVICE_PORTS = { orchestrator: 4000, frontend: 3000 };
 const SERVICE_FILES = {
   orchestrator: { pid: path.join(RUN_DIR, "orchestrator.pid"), log: path.join(RUN_DIR, "orchestrator.log") },
@@ -89,7 +90,11 @@ function printHelp() {
 
 async function renderServiceStatus() {
   const agents = loadAgentPorts();
+  const mode = readRuntimeMode();
   const lines = [];
+  lines.push(`deployment-mode: ${mode}`);
+  lines.push(`control-mode: ${controlModeLabel(mode)}`);
+  lines.push(`authority-mode: ${authorityModeLabel(mode)}`);
   lines.push(await formatHttpStatus("orchestrator", SERVICE_FILES.orchestrator.pid, SERVICE_PORTS.orchestrator));
   lines.push(await formatHttpStatus("frontend", SERVICE_FILES.frontend.pid, SERVICE_PORTS.frontend));
   for (const port of agents) {
@@ -118,6 +123,7 @@ async function renderHotStatus() {
 
 async function startServices(mode) {
   ensureRunDirs();
+  const resolvedMode = resolveDeploymentMode(mode);
   if (mode !== "distributed") {
     for (const port of loadAgentPorts()) {
       await startAgent(port);
@@ -125,6 +131,7 @@ async function startServices(mode) {
   }
   await startOrchestrator(mode);
   await startFrontend();
+  writeRuntimeMode(resolvedMode);
 }
 
 async function restartServices(mode) {
@@ -140,6 +147,7 @@ async function stopServices() {
   }
   await stopManagedProcess(SERVICE_FILES.frontend.pid, "frontend", SERVICE_PORTS.frontend);
   await stopManagedProcess(SERVICE_FILES.orchestrator.pid, "orchestrator", SERVICE_PORTS.orchestrator);
+  removeRuntimeMode();
 }
 
 async function startOrchestrator(mode) {
@@ -260,6 +268,26 @@ async function exportDb(url = "http://127.0.0.1:4000/api/v1/export/database") {
 function ensureRunDirs() {
   fs.mkdirSync(RUN_DIR, { recursive: true });
   fs.mkdirSync(HOT_RUN_DIR, { recursive: true });
+}
+
+function readRuntimeMode() {
+  try {
+    const value = fs.readFileSync(RUNTIME_MODE_FILE, "utf8").trim();
+    if (value === "local" || value === "cloud" || value === "distributed") {
+      return value;
+    }
+  } catch {}
+
+  return resolveDeploymentMode("default");
+}
+
+function writeRuntimeMode(mode) {
+  fs.mkdirSync(RUN_DIR, { recursive: true });
+  fs.writeFileSync(RUNTIME_MODE_FILE, `${resolveDeploymentMode(mode)}\n`, "utf8");
+}
+
+function removeRuntimeMode() {
+  fs.rmSync(RUNTIME_MODE_FILE, { force: true });
 }
 
 function spawnManaged({ pidPath, logPath, cwd, command, args, env }) {
@@ -474,10 +502,22 @@ function storageModeLabel(mode) {
 }
 
 function deploymentModeLabel(mode) {
+  return resolveDeploymentMode(mode);
+}
+
+function resolveDeploymentMode(mode) {
   if (mode === "local" || mode === "cloud" || mode === "distributed") {
     return mode;
   }
   return loadEnvValues().KYUUBIKI_DEPLOYMENT_MODE ?? "local";
+}
+
+function controlModeLabel(mode) {
+  return resolveDeploymentMode(mode) === "local" ? "standalone" : "orch_managed";
+}
+
+function authorityModeLabel(mode) {
+  return resolveDeploymentMode(mode) === "local" ? "self_directed" : "single_orchestrator";
 }
 
 function hotModeLabel(mode) {

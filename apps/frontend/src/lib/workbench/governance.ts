@@ -48,6 +48,7 @@ export type WorkbenchGovernanceRuntimeDiagnostics = {
   hasViolation: boolean;
   visibleClusterIds: string[];
   visibleRuntimeModes: string[];
+  visibleAuthorityModes: string[];
 };
 
 export type WorkbenchGovernanceEnforcementPlan = {
@@ -63,18 +64,48 @@ type RuntimeNormalizationResult = {
   violation: WorkbenchGovernanceViolation | null;
 };
 
-function countDeclaredDirectMeshEndpoints(value: string) {
-  return value
+function asTrimmedText(value: string | null | undefined) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function asText(value: string | null | undefined) {
+  return typeof value === "string" ? value : "";
+}
+
+function countDeclaredDirectMeshEndpoints(value: string | null | undefined) {
+  return asText(value)
     .split(/[\n,]+/)
     .map((entry) => entry.trim())
     .filter(Boolean).length;
+}
+
+function uniqueNonEmpty(values: Array<string | null | undefined>) {
+  return [...new Set(values.map((value) => (typeof value === "string" ? value.trim() : "")).filter(Boolean))];
+}
+
+export function resolveWorkbenchAuthorityMode(input: {
+  frontendRuntimeMode: FrontendRuntimeMode;
+  protocolAgents: readonly ProtocolAgentDescriptor[];
+}) {
+  const visibleAuthorityModes = uniqueNonEmpty(
+    input.protocolAgents.map((agent) => agent.descriptor?.authority?.authority_mode),
+  );
+
+  if (visibleAuthorityModes.length === 1) {
+    const [authorityMode] = visibleAuthorityModes;
+    if (authorityMode === "single_orchestrator" || authorityMode === "offline_mesh") {
+      return authorityMode;
+    }
+  }
+
+  return input.frontendRuntimeMode === "direct_mesh_gui" ? "offline_mesh" : "single_orchestrator";
 }
 
 export function normalizeWorkbenchGovernanceRuntime(input: {
   frontendRuntimeMode: FrontendRuntimeMode;
   directMeshEndpointsText: string;
 }): RuntimeNormalizationResult {
-  const directMeshEndpointsText = input.directMeshEndpointsText;
+  const directMeshEndpointsText = asText(input.directMeshEndpointsText);
   const declaredDirectMeshEndpoints = countDeclaredDirectMeshEndpoints(directMeshEndpointsText);
   const violation =
     input.frontendRuntimeMode === "direct_mesh_gui" && declaredDirectMeshEndpoints === 0
@@ -122,9 +153,9 @@ export function buildWorkbenchGovernedAuthHeaders(input: {
   frontendRuntimeMode: FrontendRuntimeMode;
   secrets: WorkbenchGovernedSecrets;
 }) {
-  const controlPlaneApiToken = input.secrets.controlPlaneApiToken?.trim() ?? "";
-  const clusterApiToken = input.secrets.clusterApiToken?.trim() ?? "";
-  const directMeshApiToken = input.secrets.directMeshApiToken?.trim() ?? "";
+  const controlPlaneApiToken = asTrimmedText(input.secrets.controlPlaneApiToken);
+  const clusterApiToken = asTrimmedText(input.secrets.clusterApiToken);
+  const directMeshApiToken = asTrimmedText(input.secrets.directMeshApiToken);
 
   if (input.url.startsWith("/api/direct-mesh")) {
     return input.frontendRuntimeMode === "direct_mesh_gui" && directMeshApiToken
@@ -166,29 +197,26 @@ export function buildWorkbenchGovernanceRuntimeDiagnostics(input: {
     frontendRuntimeMode: input.frontendRuntimeMode,
     directMeshEndpointsText: input.directMeshEndpointsText,
   });
-  const visibleClusterIds = [...new Set(
-    input.protocolAgents
-      .map((agent) => agent.descriptor?.runtime.cluster_id?.trim() ?? "")
-      .filter(Boolean),
-  )];
-  const visibleRuntimeModes = [...new Set(
-    input.protocolAgents
-      .map((agent) => agent.descriptor?.runtime.runtime_mode?.trim() ?? "")
-      .filter(Boolean),
-  )];
+  const visibleClusterIds = uniqueNonEmpty(input.protocolAgents.map((agent) => agent.descriptor?.runtime.cluster_id));
+  const visibleRuntimeModes = uniqueNonEmpty(
+    input.protocolAgents.map((agent) => agent.descriptor?.runtime.runtime_mode),
+  );
+  const visibleAuthorityModes = uniqueNonEmpty(
+    input.protocolAgents.map((agent) => agent.descriptor?.authority?.authority_mode),
+  );
   const orchestratedAuthorityActive =
     normalized.frontendRuntimeMode === "orchestrated_gui" &&
-    input.controlPlaneApiToken.trim().length > 0;
+    asTrimmedText(input.controlPlaneApiToken).length > 0;
   const directMeshAuthorityActive =
     normalized.frontendRuntimeMode === "direct_mesh_gui" &&
-    input.directMeshApiToken.trim().length > 0;
+    asTrimmedText(input.directMeshApiToken).length > 0;
   const authorityLabel =
     normalized.frontendRuntimeMode === "direct_mesh_gui"
       ? directMeshAuthorityActive
         ? "direct-mesh authority"
         : "direct-mesh authority missing token"
       : orchestratedAuthorityActive
-        ? input.clusterApiToken.trim().length > 0
+        ? asTrimmedText(input.clusterApiToken).length > 0
           ? "single orchestrator authority via cluster token"
           : "single orchestrator authority via control-plane token"
         : "orchestrator authority missing token";
@@ -212,6 +240,7 @@ export function buildWorkbenchGovernanceRuntimeDiagnostics(input: {
       visibleRuntimeModes.length > 1,
     visibleClusterIds,
     visibleRuntimeModes,
+    visibleAuthorityModes,
   } satisfies WorkbenchGovernanceRuntimeDiagnostics;
 }
 
@@ -238,17 +267,22 @@ export function buildWorkbenchGovernanceConfig(input: {
   controlPlaneApiToken: string;
   clusterApiToken: string;
   directMeshApiToken: string;
+  protocolAgents?: readonly ProtocolAgentDescriptor[];
 }): WorkbenchGovernanceConfig {
   const normalized = normalizeWorkbenchGovernanceRuntime({
     frontendRuntimeMode: input.frontendRuntimeMode,
     directMeshEndpointsText: input.directMeshEndpointsText,
+  });
+  const topology = resolveWorkbenchAuthorityMode({
+    frontendRuntimeMode: normalized.frontendRuntimeMode,
+    protocolAgents: input.protocolAgents ?? [],
   });
 
   return {
     contractVersion: "kyuubiki.system-governance/v1",
     controlMode: normalized.frontendRuntimeMode,
     orchestration: {
-      topology: normalized.frontendRuntimeMode === "direct_mesh_gui" ? "offline_mesh" : "single_orchestrator",
+      topology,
       singleOrchestratorPerAgent: true,
       multiOrchestratorAuthentication: "forbidden",
       offlineMeshWithoutOrchestratorAllowed: true,
@@ -271,9 +305,9 @@ export function buildWorkbenchGovernanceConfig(input: {
     },
     connectivity: {
       declaredDirectMeshEndpoints: normalized.declaredDirectMeshEndpoints,
-      controlPlaneTokenConfigured: input.controlPlaneApiToken.trim().length > 0,
-      clusterTokenConfigured: input.clusterApiToken.trim().length > 0,
-      directMeshTokenConfigured: input.directMeshApiToken.trim().length > 0,
+      controlPlaneTokenConfigured: asTrimmedText(input.controlPlaneApiToken).length > 0,
+      clusterTokenConfigured: asTrimmedText(input.clusterApiToken).length > 0,
+      directMeshTokenConfigured: asTrimmedText(input.directMeshApiToken).length > 0,
     },
   };
 }

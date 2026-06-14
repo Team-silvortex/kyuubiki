@@ -10,6 +10,7 @@ defmodule KyuubikiWeb.Security do
   """
 
   @type scope :: :read | :write | :cluster
+  @cluster_nonce_table :kyuubiki_cluster_nonce_cache
 
   def authorize(conn, scope) when scope in [:read, :write, :cluster] do
     if token_required?(scope) do
@@ -40,6 +41,7 @@ defmodule KyuubikiWeb.Security do
       "cluster_cluster_allowlist_enabled" => cluster_cluster_allowlist_enabled?(),
       "cluster_cluster_allowlist_count" => MapSet.size(cluster_allowed_cluster_ids()),
       "cluster_fingerprint_required" => cluster_fingerprint_required?(),
+      "cluster_nonce_required" => true,
       "cluster_timestamp_window_ms" => cluster_timestamp_window_ms(),
       "cluster_identity_headers_required" => cluster_token_required?(),
       "protect_reads" => protect_reads?(),
@@ -105,11 +107,28 @@ defmodule KyuubikiWeb.Security do
     config()[:protect_reads?] == true
   end
 
+  def reset_cluster_nonce_cache do
+    case :ets.whereis(@cluster_nonce_table) do
+      :undefined -> :ok
+      table -> :ets.delete_all_objects(table)
+    end
+  end
+
   defp token_required?(:read), do: token_configured?() and protect_reads?()
   defp token_required?(:write), do: token_configured?()
   defp token_required?(:cluster), do: cluster_token_required?()
 
-  defp authorize_without_token(_conn, :read), do: :ok
+  defp authorize_without_token(conn, :read) do
+    if loopback_request?(conn) do
+      :ok
+    else
+      {:error, 401,
+       %{
+         "error" => "unauthorized",
+         "message" => "missing API token for non-local request"
+       }}
+    end
+  end
 
   defp authorize_without_token(conn, scope) when scope in [:write, :cluster] do
     if loopback_request?(conn) do
@@ -123,7 +142,13 @@ defmodule KyuubikiWeb.Security do
     end
   end
 
-  defp authorize_post_token(conn, :cluster), do: validate_cluster_timestamp(conn)
+  defp authorize_post_token(conn, :cluster) do
+    with :ok <- validate_cluster_timestamp(conn),
+         :ok <- validate_cluster_nonce(conn) do
+      :ok
+    end
+  end
+
   defp authorize_post_token(_conn, _scope), do: :ok
 
   defp cluster_token_required? do
@@ -211,8 +236,90 @@ defmodule KyuubikiWeb.Security do
     end
   end
 
+  defp validate_cluster_nonce(conn) do
+    with {:ok, nonce} <- required_header(conn, "x-kyuubiki-cluster-nonce"),
+         :ok <- validate_cluster_nonce_format(nonce),
+         :ok <- remember_cluster_nonce(conn, nonce) do
+      :ok
+    else
+      _ ->
+        {:error, 401,
+         %{
+           "error" => "replayed_cluster_request",
+           "message" => "missing, invalid, or replayed cluster nonce"
+         }}
+    end
+  end
+
   defp timestamp_fresh?(timestamp_ms) do
     abs(System.system_time(:millisecond) - timestamp_ms) <= cluster_timestamp_window_ms()
+  end
+
+  defp validate_cluster_nonce_format(nonce) when byte_size(nonce) > 0 and byte_size(nonce) <= 160 do
+    if String.match?(nonce, ~r/^[A-Za-z0-9._:-]+$/u) do
+      :ok
+    else
+      :error
+    end
+  end
+
+  defp validate_cluster_nonce_format(_nonce), do: :error
+
+  defp remember_cluster_nonce(conn, nonce) do
+    prune_expired_cluster_nonces()
+
+    expires_at = System.system_time(:millisecond) + cluster_nonce_ttl_ms()
+    cache_key = {cluster_nonce_scope(conn), nonce}
+
+    if :ets.insert_new(cluster_nonce_table(), {cache_key, expires_at}) do
+      :ok
+    else
+      :error
+    end
+  end
+
+  defp cluster_nonce_scope(conn) do
+    case Plug.Conn.get_req_header(conn, "x-kyuubiki-agent-id") do
+      [agent_id | _] when agent_id not in [nil, ""] ->
+        {:agent, agent_id}
+
+      _ ->
+        {:ip, conn.remote_ip}
+    end
+  end
+
+  defp cluster_nonce_ttl_ms do
+    cluster_timestamp_window_ms()
+  end
+
+  defp cluster_nonce_table do
+    case :ets.whereis(@cluster_nonce_table) do
+      :undefined ->
+        :ets.new(@cluster_nonce_table, [
+          :named_table,
+          :public,
+          :set,
+          read_concurrency: true,
+          write_concurrency: true
+        ])
+
+      table ->
+        table
+    end
+  end
+
+  defp prune_expired_cluster_nonces do
+    now = System.system_time(:millisecond)
+
+    :ets.select_delete(cluster_nonce_table(), [
+      {
+        {:"$1", :"$2"},
+        [{:<, :"$2", now}],
+        [true]
+      }
+    ])
+
+    :ok
   end
 
   defp loopback_request?(conn) do

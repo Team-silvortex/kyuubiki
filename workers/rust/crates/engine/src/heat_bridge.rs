@@ -1,7 +1,10 @@
 use crate::bridge::BridgeDiagnostics;
 use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult, HeatPlaneNodeResult, HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneQuad2dWorkflowResult, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    AnalysisResult, HeatPlaneNodeResult, HeatToThermoPlaneQuad2dWorkflowRequest,
+    HeatToThermoPlaneQuad2dWorkflowResult, SolveHeatPlaneQuad2dResult,
+    SolveHeatPlaneTriangle2dResult, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest,
 };
 use serde_json::Value;
 
@@ -208,11 +211,22 @@ pub(crate) fn resolve_heat_to_thermo_bridge_contract(
                 .map(ToString::to_string)
                 .collect::<Vec<_>>()
         })
-        .unwrap_or_else(|| vec!["node_i".to_string(), "node_j".to_string(), "node_k".to_string(), "node_l".to_string()]);
+        .unwrap_or_else(|| {
+            vec![
+                "node_i".to_string(),
+                "node_j".to_string(),
+                "node_k".to_string(),
+                "node_l".to_string(),
+            ]
+        });
     let reduction = transform
         .and_then(|value| value.get("reduction"))
         .and_then(Value::as_str)
-        .unwrap_or(if distribution == "node_to_node" { "copy" } else { "mean" })
+        .unwrap_or(if distribution == "node_to_node" {
+            "copy"
+        } else {
+            "mean"
+        })
         .to_string();
     let target_field = target
         .and_then(|value| value.get("field"))
@@ -232,10 +246,7 @@ pub(crate) fn resolve_heat_to_thermo_bridge_contract(
         let supports_element_field = distribution == "element_to_nodes"
             && matches!(
                 source_field.as_str(),
-                "average_temperature"
-                    | "heat_flux_x"
-                    | "heat_flux_y"
-                    | "heat_flux_magnitude"
+                "average_temperature" | "heat_flux_x" | "heat_flux_y" | "heat_flux_magnitude"
             );
         if !supports_element_field {
             return Err(format!(
@@ -309,7 +320,8 @@ fn derive_element_heat_nodal_target_field<TElement>(
     let mut source_values = Vec::new();
 
     for element in elements {
-        let source_value = resolve_source(element, contract.source_field.as_str())? * contract.scale;
+        let source_value =
+            resolve_source(element, contract.source_field.as_str())? * contract.scale;
         source_values.push(source_value);
         let weight = resolve_weight(element);
         for field in &contract.node_index_fields {

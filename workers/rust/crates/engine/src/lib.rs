@@ -11,11 +11,11 @@ mod workflow_summary_transforms;
 #[cfg(test)]
 mod tests;
 
+pub use catalog::{built_in_operator_descriptors, describe_built_in_operator};
+pub use chunking::chunk_result;
 pub use heat_bridge::{
     bridge_heat_result_to_thermal_plane_quad_model, run_heat_to_thermo_plane_quad_2d_workflow,
 };
-pub use catalog::{built_in_operator_descriptors, describe_built_in_operator};
-pub use chunking::chunk_result;
 pub use workflow::run_workflow_graph;
 pub use workflow_executor::{is_supported_workflow_operator, supported_workflow_operator_ids};
 

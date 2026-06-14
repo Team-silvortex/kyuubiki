@@ -7,11 +7,7 @@ import type {
   WorkflowSummaryArtifactFieldValue,
   WorkflowSummaryArtifactPayload,
 } from "@/lib/api";
-
-export const WORKFLOW_SUMMARY_ARTIFACT_CONTRACT = {
-  schema: "kyuubiki.workflow.summary_artifact",
-  version: "1",
-} as const;
+import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
 
 export type WorkflowResolvedSummaryArtifact = {
   artifactKey: string;

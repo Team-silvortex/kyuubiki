@@ -80,6 +80,14 @@ export type HealthPayload = {
   protocol?: {
     program: string;
     role: string;
+    authority?: {
+      control_mode: string;
+      authority_mode: string;
+      orchestrator_id?: string | null;
+      orchestrator_session_id?: string | null;
+      accepts_multi_orchestrator_binding: boolean;
+      agent_library_replication: string;
+    };
     protocol?: {
       name: string;
       version: number;
@@ -153,6 +161,14 @@ export type ProtocolAgentDescriptor = {
   descriptor?: {
     program: string;
     role: string;
+    authority?: {
+      control_mode: string;
+      authority_mode: string;
+      orchestrator_id?: string | null;
+      orchestrator_session_id?: string | null;
+      accepts_multi_orchestrator_binding: boolean;
+      agent_library_replication: string;
+    };
     runtime: {
       cluster_id?: string | null;
       runtime_mode: string;

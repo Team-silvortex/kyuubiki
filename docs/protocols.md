@@ -110,3 +110,7 @@ This split keeps deployment modes independent:
 As long as the programs speak these public contracts, the frontend, Phoenix
 control plane, and Rust agents can evolve on different release cadences without
 re-coupling at the implementation level.
+
+For the stricter runtime-side interpretation of this split, including
+authority rules and which frontend layers are packaging-only, see
+[headless-agent-contract.md](headless-agent-contract.md).

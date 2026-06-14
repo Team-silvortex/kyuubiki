@@ -42,7 +42,9 @@ fn runs_electrostatic_plane_field_hotspots_graph() {
         id: "workflow.electrostatic-plane-field-hotspots".to_string(),
         name: "Electrostatic plane field hotspots".to_string(),
         version: "1.0.0".to_string(),
-        description: Some("Solve an electrostatic quad model then extract hotspot samples.".to_string()),
+        description: Some(
+            "Solve an electrostatic quad model then extract hotspot samples.".to_string(),
+        ),
         dataset_contract: None,
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["json_output".to_string()],
@@ -172,29 +174,53 @@ fn runs_electrostatic_plane_field_hotspots_graph() {
         edges: vec![
             WorkflowEdge {
                 id: "edge-input".to_string(),
-                from: WorkflowNodePortRef { node: "electrostatic_model".to_string(), port: "model".to_string() },
-                to: WorkflowNodePortRef { node: "solve_electrostatic".to_string(), port: "model".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "electrostatic_model".to_string(),
+                    port: "model".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "solve_electrostatic".to_string(),
+                    port: "model".to_string(),
+                },
                 artifact_type: "study_model/electrostatic_plane_quad_2d".to_string(),
                 dataset_value: None,
             },
             WorkflowEdge {
                 id: "edge-result".to_string(),
-                from: WorkflowNodePortRef { node: "solve_electrostatic".to_string(), port: "result".to_string() },
-                to: WorkflowNodePortRef { node: "field_hotspots".to_string(), port: "result".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "solve_electrostatic".to_string(),
+                    port: "result".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "field_hotspots".to_string(),
+                    port: "result".to_string(),
+                },
                 artifact_type: "result/electrostatic_plane_quad_2d".to_string(),
                 dataset_value: None,
             },
             WorkflowEdge {
                 id: "edge-summary".to_string(),
-                from: WorkflowNodePortRef { node: "field_hotspots".to_string(), port: "summary".to_string() },
-                to: WorkflowNodePortRef { node: "export_json".to_string(), port: "summary".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "field_hotspots".to_string(),
+                    port: "summary".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "export_json".to_string(),
+                    port: "summary".to_string(),
+                },
                 artifact_type: "report/summary".to_string(),
                 dataset_value: None,
             },
             WorkflowEdge {
                 id: "edge-json".to_string(),
-                from: WorkflowNodePortRef { node: "export_json".to_string(), port: "json".to_string() },
-                to: WorkflowNodePortRef { node: "json_output".to_string(), port: "json".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "export_json".to_string(),
+                    port: "json".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "json_output".to_string(),
+                    port: "json".to_string(),
+                },
                 artifact_type: "export/json".to_string(),
                 dataset_value: None,
             },
@@ -225,7 +251,9 @@ fn runs_electrostatic_plane_field_hotspots_graph() {
         .get("json_output.json")
         .cloned()
         .expect("json export artifact should exist");
-    let content = exported["content"].as_str().expect("json content should be a string");
+    let content = exported["content"]
+        .as_str()
+        .expect("json content should be a string");
     assert!(content.contains("field_threshold"));
     assert!(content.contains("field_hotspot_count"));
     assert!(content.contains("field_hotspot_samples"));

@@ -315,6 +315,14 @@ function validateBridgeConfigs(graph: WorkflowGraphDefinition): WorkflowGraphVal
           ? `Bridge node "${node.id}" is missing config.seed_model for the downstream heat quad seed model.`
           : `Bridge node "${node.id}" is missing downstream thermo seed-model fields in config.`,
       locate: { kind: "node", nodeId: node.id },
+      fix: node.operator_id
+        ? {
+            kind: "sync_node_template_from_operator",
+            nodeId: node.id,
+            operatorId: node.operator_id,
+            templateKind: node.kind,
+          }
+        : undefined,
     });
   }
   return issues;
@@ -468,10 +476,18 @@ export function applyWorkflowValidationFix(
 
   switch (fix.kind) {
     case "sync_node_template_from_operator": {
+      const currentNode = next.nodes.find((entry) => entry.id === fix.nodeId);
       applyWorkflowNodeTemplateSync(
         next,
         fix.nodeId,
-        { kind: fix.templateKind, operatorId: fix.operatorId },
+        {
+          kind: fix.templateKind,
+          operatorId: fix.operatorId,
+          config:
+            currentNode?.config && typeof currentNode.config === "object"
+              ? { ...(currentNode.config as Record<string, unknown>) }
+              : undefined,
+        },
         operatorDescriptors,
       );
       break;

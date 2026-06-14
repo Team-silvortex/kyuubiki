@@ -3,10 +3,10 @@ use crate::bridge::{
     resolve_electrostatic_to_heat_bridge_contract,
 };
 use kyuubiki_protocol::{
-    ElectrostaticPlaneNodeInput, ElectrostaticPlaneNodeResult, ElectrostaticPlaneTriangleElementInput,
-    ElectrostaticPlaneTriangleElementResult, HeatPlaneNodeInput, HeatPlaneTriangleElementInput,
-    SolveElectrostaticPlaneTriangle2dRequest, SolveElectrostaticPlaneTriangle2dResult,
-    SolveHeatPlaneTriangle2dRequest,
+    ElectrostaticPlaneNodeInput, ElectrostaticPlaneNodeResult,
+    ElectrostaticPlaneTriangleElementInput, ElectrostaticPlaneTriangleElementResult,
+    HeatPlaneNodeInput, HeatPlaneTriangleElementInput, SolveElectrostaticPlaneTriangle2dRequest,
+    SolveElectrostaticPlaneTriangle2dResult, SolveHeatPlaneTriangle2dRequest,
 };
 
 #[test]
@@ -36,7 +36,7 @@ fn bridges_triangle_fields_with_max_reduction() {
     assert_eq!(bridged.nodes[2].heat_load, 8.0);
     assert_eq!(bridged.nodes[3].heat_load, 8.0);
     assert_eq!(diagnostics.reduction.as_deref(), Some("max"));
-  }
+}
 
 #[test]
 fn bridges_triangle_fields_with_min_reduction() {

@@ -5,6 +5,7 @@ import type { HeadlessWorkflowExecutionBatch } from "@/components/workbench/work
 import {
   buildWorkbenchGovernanceConfig,
   buildWorkbenchGovernanceRuntimeDiagnostics,
+  resolveWorkbenchAuthorityMode,
 } from "@/lib/workbench/governance";
 import {
   buildHeadlessAgentDispatchPlan,
@@ -55,6 +56,7 @@ export function buildHeadlessOrchestraHandoffEnvelope(input: {
     controlPlaneApiToken: input.controlPlaneApiToken,
     clusterApiToken: input.clusterApiToken,
     directMeshApiToken: input.directMeshApiToken,
+    protocolAgents: input.protocolAgents,
   });
   const governanceDiagnostics = buildWorkbenchGovernanceRuntimeDiagnostics({
     frontendRuntimeMode: input.frontendRuntimeMode,
@@ -63,6 +65,10 @@ export function buildHeadlessOrchestraHandoffEnvelope(input: {
     controlPlaneApiToken: input.controlPlaneApiToken,
     clusterApiToken: input.clusterApiToken,
     directMeshApiToken: input.directMeshApiToken,
+  });
+  const authorityMode = resolveWorkbenchAuthorityMode({
+    frontendRuntimeMode: governanceConfig.controlMode,
+    protocolAgents: input.protocolAgents,
   });
 
   return {
@@ -76,8 +82,7 @@ export function buildHeadlessOrchestraHandoffEnvelope(input: {
       diagnostics: governanceDiagnostics,
     },
     runtime_manifest: {
-      authority_mode:
-        input.frontendRuntimeMode === "direct_mesh_gui" ? "offline_mesh" : "single_orchestrator",
+      authority_mode: authorityMode,
       source_of_truth: "central_orchestrator_library",
       agent_library_replication: "forbidden",
       target_clusters: governanceDiagnostics.visibleClusterIds,

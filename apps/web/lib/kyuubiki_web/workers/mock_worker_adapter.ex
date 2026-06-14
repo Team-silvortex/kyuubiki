@@ -11,19 +11,23 @@ defmodule KyuubikiWeb.Workers.MockWorkerAdapter do
 
   @spec run_job(Job.t(), keyword()) :: {:ok, [map()]} | {:error, term()}
   def run_job(%Job{} = job, opts \\ []) do
-    runner = Keyword.get(opts, :runner, &default_runner/2)
+    if adapter_enabled?() do
+      runner = Keyword.get(opts, :runner, &default_runner/2)
 
-    with {:ok, _job} <- Store.assign_worker(job.job_id, @worker_id),
-         {output, 0} <- runner.(job, opts),
-         {:ok, events} <- parse_output(output),
-         {:ok, applied_events} <- persist_events(events) do
-      {:ok, applied_events}
+      with {:ok, _job} <- Store.assign_worker(job.job_id, @worker_id),
+           {output, 0} <- runner.(job, opts),
+           {:ok, events} <- parse_output(output),
+           {:ok, applied_events} <- persist_events(events) do
+        {:ok, applied_events}
+      else
+        {output, status} when is_integer(status) ->
+          {:error, {:worker_command_failed, status, String.trim(output)}}
+
+        error ->
+          error
+      end
     else
-      {output, status} when is_integer(status) ->
-        {:error, {:worker_command_failed, status, String.trim(output)}}
-
-      error ->
-        error
+      {:error, :transitional_worker_adapter_disabled}
     end
   end
 
@@ -44,6 +48,11 @@ defmodule KyuubikiWeb.Workers.MockWorkerAdapter do
     ]
 
     System.cmd("cargo", args, stderr_to_stdout: true, cd: worker_dir)
+  end
+
+  defp adapter_enabled? do
+    Application.get_env(:kyuubiki_web, __MODULE__, [])
+    |> Keyword.get(:enabled?, false)
   end
 
   defp worker_dir do

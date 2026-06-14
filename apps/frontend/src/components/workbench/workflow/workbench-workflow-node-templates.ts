@@ -6,7 +6,10 @@ import type {
   WorkflowGraphNode,
   WorkflowGraphPort,
 } from "@/lib/api";
-import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import {
+  createBridgeConfigForOperator,
+  normalizeBridgeConfigForOperator,
+} from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
 import { DATASET_VALUE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-dataset-presets";
 import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";
@@ -295,8 +298,11 @@ function buildPortsFromOperatorDescriptor(descriptor: WorkflowOperatorDescriptor
         : descriptor.id === "transform.select_best_summary"
           ? { criteria: [{ field: "max_temperature", goal: "min", weight: 1 }, { field: "max_heat_flux", goal: "max", weight: 0.5 }], include_breakdown: true, include_all_scores: true }
         : descriptor.id.startsWith("bridge.")
-          ? createBridgeConfigForOperator(descriptor.id) ?? undefined
-        : undefined,
+          ? normalizeBridgeConfigForOperator(
+              descriptor.id,
+              createBridgeConfigForOperator(descriptor.id),
+            ) ?? undefined
+          : undefined,
     inputs: descriptor.inputs.map((port) => ({
       id: port.id,
       artifact_type: port.artifact_type,
@@ -390,13 +396,21 @@ export function buildPortsForWorkflowNodeTemplate(
 ) {
   const preset = resolveWorkflowNodeTemplate(template, operatorDescriptors);
   if (preset) {
+    const mergedConfig = {
+      ...(preset.config ?? {}),
+      ...(template?.config ?? {}),
+    };
+
     return {
       kind: preset.kind,
       operatorId: preset.operatorId,
-      config: {
-        ...(preset.config ?? {}),
-        ...(template?.config ?? {}),
-      },
+      config:
+        preset.operatorId?.startsWith("bridge.")
+          ? normalizeBridgeConfigForOperator(
+              preset.operatorId,
+              mergedConfig,
+            ) ?? undefined
+          : mergedConfig,
       inputs: clonePorts(preset.inputs),
       outputs: clonePorts(preset.outputs),
     };
@@ -437,7 +451,15 @@ export function buildPortsForWorkflowNodeTemplate(
   return {
     kind,
     operatorId: template?.operatorId?.trim() || undefined,
-    config: template?.config ? { ...template.config } : undefined,
+    config:
+      template?.operatorId?.trim()?.startsWith("bridge.")
+        ? normalizeBridgeConfigForOperator(
+            template.operatorId,
+            template.config ? { ...template.config } : undefined,
+          ) ?? undefined
+        : template?.config
+          ? { ...template.config }
+          : undefined,
     inputs: [{ id: "in_1", artifact_type: "artifact/json", description: "" }],
     outputs: [{ id: "out_1", artifact_type: "artifact/json", description: "" }],
   };

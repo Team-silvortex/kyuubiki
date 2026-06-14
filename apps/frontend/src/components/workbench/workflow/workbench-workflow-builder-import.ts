@@ -63,14 +63,28 @@ export function normalizeImportedWorkflowGraph(
     const impact = getWorkflowNodeTemplateSyncImpact(
       nextGraph,
       node.id,
-      { kind: node.kind, operatorId },
+      {
+        kind: node.kind,
+        operatorId,
+        config:
+          node.config && typeof node.config === "object"
+            ? { ...(node.config as Record<string, unknown>) }
+            : undefined,
+      },
       operatorDescriptors,
     );
     for (const edgeId of listAutoReconnectEdgeIds(impact)) autoReconnectEdgeIds.add(edgeId);
     applyWorkflowNodeTemplateSync(
       nextGraph,
       node.id,
-      { kind: node.kind, operatorId },
+      {
+        kind: node.kind,
+        operatorId,
+        config:
+          node.config && typeof node.config === "object"
+            ? { ...(node.config as Record<string, unknown>) }
+            : undefined,
+      },
       operatorDescriptors,
     );
   }

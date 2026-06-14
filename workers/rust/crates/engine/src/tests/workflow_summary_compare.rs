@@ -14,7 +14,10 @@ fn runs_summary_compare_workflow_graph() {
         version: "1.0.0".to_string(),
         description: Some("Compare baseline and candidate summary artifacts.".to_string()),
         dataset_contract: None,
-        entry_nodes: vec!["baseline_summary".to_string(), "candidate_summary".to_string()],
+        entry_nodes: vec![
+            "baseline_summary".to_string(),
+            "candidate_summary".to_string(),
+        ],
         output_nodes: vec!["json_output".to_string()],
         defaults: WorkflowDefaults {
             cache_policy: Some(WorkflowCachePolicy::Cached),
@@ -135,8 +138,14 @@ fn runs_summary_compare_workflow_graph() {
         .get("compare_summary.merged")
         .cloned()
         .expect("compared summary should exist");
-    assert_eq!(compared["baseline_max_temperature"], serde_json::json!(100.0));
-    assert_eq!(compared["candidate_max_temperature"], serde_json::json!(120.0));
+    assert_eq!(
+        compared["baseline_max_temperature"],
+        serde_json::json!(100.0)
+    );
+    assert_eq!(
+        compared["candidate_max_temperature"],
+        serde_json::json!(120.0)
+    );
     assert_eq!(compared["delta_max_temperature"], serde_json::json!(20.0));
     assert_eq!(compared["ratio_max_temperature"], serde_json::json!(1.2));
     assert_eq!(
@@ -171,7 +180,10 @@ fn compare_summary_skips_ratio_when_baseline_is_zero() {
         version: "1.0.0".to_string(),
         description: Some("Compare summaries while skipping divide-by-zero ratios.".to_string()),
         dataset_contract: None,
-        entry_nodes: vec!["baseline_summary".to_string(), "candidate_summary".to_string()],
+        entry_nodes: vec![
+            "baseline_summary".to_string(),
+            "candidate_summary".to_string(),
+        ],
         output_nodes: vec!["summary_output".to_string()],
         defaults: WorkflowDefaults::default(),
         nodes: vec![

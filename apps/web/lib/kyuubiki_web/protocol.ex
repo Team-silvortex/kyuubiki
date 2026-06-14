@@ -17,6 +17,7 @@ defmodule KyuubikiWeb.Protocol do
       "role" => "control_plane",
       "protocol" => control_plane_protocol(),
       "compatible_solver_rpc" => solver_rpc_protocol(),
+      "authority" => control_plane_authority(),
       "programs" => [
         %{
           "program" => "kyuubiki-frontend",
@@ -125,6 +126,17 @@ defmodule KyuubikiWeb.Protocol do
     |> Enum.map(&describe_agent/1)
   end
 
+  defp control_plane_authority do
+    %{
+      "control_mode" => "orch_managed",
+      "authority_mode" => "single_orchestrator",
+      "orchestrator_id" => "orchestra/default",
+      "orchestrator_session_id" => nil,
+      "accepts_multi_orchestrator_binding" => false,
+      "agent_library_replication" => "central_fetch"
+    }
+  end
+
   defp describe_agent(endpoint) do
     base = %{
       "id" => endpoint.id,
@@ -142,10 +154,93 @@ defmodule KyuubikiWeb.Protocol do
 
     case AgentClient.describe_agent(endpoint) do
       {:ok, descriptor} ->
-        Map.put(base, "descriptor", descriptor)
+        Map.put(base, "descriptor", merge_descriptor_authority(descriptor, endpoint))
 
       {:error, reason} ->
         Map.put(base, "descriptor_error", inspect(reason))
     end
+  end
+
+  defp merge_descriptor_authority(descriptor, endpoint) when is_map(descriptor) do
+    authority =
+      descriptor
+      |> Map.get("authority")
+      |> normalize_descriptor_authority(endpoint, descriptor)
+
+    Map.put(descriptor, "authority", authority)
+  end
+
+  defp normalize_descriptor_authority(nil, endpoint, descriptor) do
+    runtime_mode =
+      descriptor
+      |> get_in(["runtime", "runtime_mode"])
+      |> to_string()
+
+    endpoint_authority(endpoint, runtime_mode)
+  end
+
+  defp normalize_descriptor_authority(authority, endpoint, descriptor) when is_map(authority) do
+    runtime_mode =
+      descriptor
+      |> get_in(["runtime", "runtime_mode"])
+      |> to_string()
+
+    synthesized = endpoint_authority(endpoint, runtime_mode)
+
+    Map.merge(synthesized, authority)
+    |> maybe_fill_nil("orchestrator_id", synthesized["orchestrator_id"])
+    |> maybe_fill_nil("orchestrator_session_id", synthesized["orchestrator_session_id"])
+  end
+
+  defp endpoint_authority(endpoint, runtime_mode) do
+    control_mode = Map.get(endpoint, :control_mode)
+    orch_id = Map.get(endpoint, :orch_id)
+    orch_session_id = Map.get(endpoint, :orch_session_id)
+
+    case control_mode || runtime_mode do
+      "offline_mesh" ->
+        %{
+          "control_mode" => "offline_mesh",
+          "authority_mode" => "offline_mesh",
+          "orchestrator_id" => nil,
+          "orchestrator_session_id" => nil,
+          "accepts_multi_orchestrator_binding" => false,
+          "agent_library_replication" => "central_fetch"
+        }
+
+      "orchestrated" ->
+        %{
+          "control_mode" => "orch_managed",
+          "authority_mode" => "single_orchestrator",
+          "orchestrator_id" => orch_id,
+          "orchestrator_session_id" => orch_session_id,
+          "accepts_multi_orchestrator_binding" => false,
+          "agent_library_replication" => "central_fetch"
+        }
+
+      "orch_managed" ->
+        %{
+          "control_mode" => "orch_managed",
+          "authority_mode" => "single_orchestrator",
+          "orchestrator_id" => orch_id,
+          "orchestrator_session_id" => orch_session_id,
+          "accepts_multi_orchestrator_binding" => false,
+          "agent_library_replication" => "central_fetch"
+        }
+
+      _ ->
+        %{
+          "control_mode" => "standalone",
+          "authority_mode" => "self_directed",
+          "orchestrator_id" => nil,
+          "orchestrator_session_id" => nil,
+          "accepts_multi_orchestrator_binding" => false,
+          "agent_library_replication" => "central_fetch"
+        }
+    end
+  end
+
+  defp maybe_fill_nil(map, key, fallback) do
+    if Map.get(map, key) == nil, do: Map.put(map, key, fallback), else: map
   end
 end

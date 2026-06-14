@@ -14,7 +14,8 @@ The workbench is now expected to support two runtime shapes over time:
   Uses the Phoenix control plane as the primary API and cluster coordinator.
 - `direct_mesh_gui`
   Talks directly to headless Rust solver agents on a LAN peer mesh when a
-  central orchestrator is not required.
+  central orchestrator is not required. Outside `local` deployment mode, this
+  path should be treated as an explicit opt-in and not a default exposure.
 
 Key subtrees:
 

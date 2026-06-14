@@ -7,8 +7,8 @@ use kyuubiki_protocol::{
     HeatPlaneNodeResult, HeatPlaneTriangleElementInput, HeatPlaneTriangleElementResult,
     SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
     SolveThermalPlaneTriangle2dRequest, WorkflowCachePolicy, WorkflowDefaults, WorkflowEdge,
-    WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode, WorkflowNodeKind,
-    WorkflowNodePortRef, WorkflowPort,
+    WorkflowGraph, WorkflowGraphRunRequest, WorkflowNode, WorkflowNodeKind, WorkflowNodePortRef,
+    WorkflowPort,
 };
 use std::collections::BTreeMap;
 
@@ -40,7 +40,7 @@ fn bridges_heat_triangle_elements_into_thermo_triangle_with_max_reduction() {
     assert_eq!(bridged.nodes[3].temperature_delta, 90.0);
     assert_eq!(diagnostics.source_field, "average_temperature");
     assert_eq!(diagnostics.reduction.as_deref(), Some("max"));
-  }
+}
 
 #[test]
 fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges() {
@@ -140,7 +140,10 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
                 })),
                 cache_policy: None,
                 inputs: vec![port("source", "result/heat_plane_triangle_2d")],
-                outputs: vec![port("bridged_model", "study_model/thermal_plane_triangle_2d")],
+                outputs: vec![port(
+                    "bridged_model",
+                    "study_model/thermal_plane_triangle_2d",
+                )],
             },
             solve_node(
                 "solve_thermo",
@@ -274,12 +277,13 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
         thermo_nodes[3]["temperature_delta"].as_f64(),
         Some(second_average)
     );
-    assert!(run
-        .artifacts
-        .get("summary_output.summary")
-        .and_then(|summary| summary.get("max_temperature_delta"))
-        .and_then(|value| value.as_f64())
-        .is_some_and(|value| value > 0.0));
+    assert!(
+        run.artifacts
+            .get("summary_output.summary")
+            .and_then(|summary| summary.get("max_temperature_delta"))
+            .and_then(|value| value.as_f64())
+            .is_some_and(|value| value > 0.0)
+    );
 }
 
 fn heat_triangle_result() -> SolveHeatPlaneTriangle2dResult {
@@ -362,7 +366,13 @@ fn thermo_triangle_seed_model() -> SolveThermalPlaneTriangle2dRequest {
     .expect("thermo seed model should decode")
 }
 
-fn heat_result_node(id: &str, x: f64, y: f64, temperature: f64, heat_load: f64) -> HeatPlaneNodeResult {
+fn heat_result_node(
+    id: &str,
+    x: f64,
+    y: f64,
+    temperature: f64,
+    heat_load: f64,
+) -> HeatPlaneNodeResult {
     HeatPlaneNodeResult {
         index: 0,
         id: id.to_string(),

@@ -8,6 +8,7 @@ import { WorkbenchWorkflowPackageImportDiagnosticsCard } from "@/components/work
 import type { WorkflowPackageImportDiagnostic } from "@/components/workbench/workflow/workbench-workflow-package-adapter";
 import type { WorkflowPackageResidualRecord } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
+import type { WorkflowValidationFixSummaryEntry } from "@/components/workbench/workflow/workbench-workflow-validation-summary";
 import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
 import type { WorkflowGraphValidationIssue } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
@@ -17,7 +18,7 @@ type WorkbenchWorkflowDiagnosticsPlaneProps = {
   workflow: WorkflowCatalogEntry;
   importedPackage: WorkflowPackage | null;
   validationIssues: WorkflowGraphValidationIssue[];
-  recentFixSummary: string[];
+  recentFixSummary: WorkflowValidationFixSummaryEntry[];
   integrityReport: WorkflowIntegrityReport;
   packageResiduals: WorkflowPackageResidualRecord[];
   importDiagnostics: WorkflowPackageImportDiagnostic[];

@@ -23,18 +23,28 @@ function deploymentMode() {
   return process.env.KYUUBIKI_DEPLOYMENT_MODE ?? "local";
 }
 
-function allowRequestDefinedEndpoints() {
-  const configured = process.env.KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS;
+function directMeshEnabledForDeployment() {
+  const configured = process.env.KYUUBIKI_DIRECT_MESH_ENABLED;
   if (configured === "true") return true;
   if (configured === "false") return false;
   return deploymentMode() === "local";
 }
 
+function allowRequestDefinedEndpoints() {
+  const configured = process.env.KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS;
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+  return false;
+}
+
 export function authorizeDirectMeshRequest(request: Request) {
-  const enabled = process.env.KYUUBIKI_DIRECT_MESH_ENABLED !== "false";
+  const enabled = directMeshEnabledForDeployment();
   if (!enabled) {
     return NextResponse.json(
-      { error: "direct_mesh_disabled", message: "direct mesh runtime is disabled for this deployment" },
+      {
+        error: "direct_mesh_disabled",
+        message: "direct mesh runtime is disabled for this deployment; set KYUUBIKI_DIRECT_MESH_ENABLED=true to opt in",
+      },
       { status: 403 },
     );
   }

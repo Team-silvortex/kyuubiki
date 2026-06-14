@@ -7,7 +7,7 @@ import { copyZhCore } from "@/components/workbench/workbench-copy-zh-core";
 import type { WorkflowCatalogEntry, WorkflowGraphJobResult } from "@/lib/api";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import { summarizeWorkflowRunTrace } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
-import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
+import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
 
 const workflowId = "workflow.synthetic.benchmark";
 

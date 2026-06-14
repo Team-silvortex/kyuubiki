@@ -1373,6 +1373,16 @@ pub struct AgentClusterDescriptor {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RuntimeAuthorityDescriptor {
+    pub control_mode: String,
+    pub authority_mode: String,
+    pub orchestrator_id: Option<String>,
+    pub orchestrator_session_id: Option<String>,
+    pub accepts_multi_orchestrator_binding: bool,
+    pub agent_library_replication: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RpcProtocolDescriptor {
     pub name: String,
     pub rpc_version: u8,
@@ -1388,6 +1398,7 @@ pub struct AgentDescriptor {
     pub capabilities: Vec<CapabilityDescriptor>,
     pub deployment_modes: Vec<String>,
     pub runtime: AgentClusterDescriptor,
+    pub authority: RuntimeAuthorityDescriptor,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1891,6 +1902,14 @@ impl AgentDescriptor {
                 cluster_size: 1,
                 health_score: 100,
                 peers: vec![],
+            },
+            authority: RuntimeAuthorityDescriptor {
+                control_mode: "standalone".to_string(),
+                authority_mode: "self_directed".to_string(),
+                orchestrator_id: None,
+                orchestrator_session_id: None,
+                accepts_multi_orchestrator_binding: false,
+                agent_library_replication: "central_fetch".to_string(),
             },
         }
     }
@@ -4322,6 +4341,8 @@ mod tests {
         assert_eq!(decoded.program, "kyuubiki-rust-agent");
         assert_eq!(decoded.protocol.rpc_version, RPC_VERSION);
         assert!(decoded.protocol.methods.contains(&RpcMethod::DescribeAgent));
+        assert_eq!(decoded.authority.control_mode, "standalone");
+        assert_eq!(decoded.authority.authority_mode, "self_directed");
     }
 
     #[test]

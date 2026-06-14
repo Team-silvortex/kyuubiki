@@ -269,7 +269,15 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
                 "tags" => ["truss", "space", "cpu"]
               }
             ],
-            "deployment_modes" => ["local", "distributed"]
+            "deployment_modes" => ["local", "distributed"],
+            "authority" => %{
+              "control_mode" => "standalone",
+              "authority_mode" => "self_directed",
+              "orchestrator_id" => nil,
+              "orchestrator_session_id" => nil,
+              "accepts_multi_orchestrator_binding" => false,
+              "agent_library_replication" => "central_fetch"
+            }
           }
         }
       ])
@@ -282,6 +290,8 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert descriptor["program"] == "kyuubiki-rust-agent"
     assert descriptor["protocol"]["name"] == "kyuubiki.solver-rpc/v1"
     assert "describe_agent" in descriptor["protocol"]["methods"]
+    assert descriptor["authority"]["control_mode"] == "standalone"
+    assert descriptor["authority"]["authority_mode"] == "self_directed"
   end
 
   defp await_fake_agent_port do

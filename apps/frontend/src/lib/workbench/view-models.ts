@@ -205,6 +205,8 @@ export function buildProtocolAgentCards({
 }: {
   agents: ProtocolAgentDescriptor[];
   labels: {
+    authorityMode: string;
+    controlMode: string;
     runtimeMode: string;
     cluster: string;
     clusterSize: string;
@@ -224,6 +226,8 @@ export function buildProtocolAgentCards({
     id: agent.id,
     endpoint: `${agent.host}:${agent.port}`,
     metrics: [
+      { label: labels.authorityMode, value: agent.descriptor?.authority?.authority_mode ?? "--" },
+      { label: labels.controlMode, value: agent.descriptor?.authority?.control_mode ?? "--" },
       { label: labels.runtimeMode, value: agent.descriptor?.runtime?.runtime_mode ?? "--" },
       { label: labels.cluster, value: agent.descriptor?.runtime?.cluster_id ?? "--" },
       { label: labels.clusterSize, value: agent.descriptor?.runtime?.cluster_size ?? 1 },

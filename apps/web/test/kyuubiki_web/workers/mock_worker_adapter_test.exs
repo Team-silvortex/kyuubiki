@@ -5,6 +5,9 @@ defmodule KyuubikiWeb.Workers.MockWorkerAdapterTest do
   alias KyuubikiWeb.Workers.MockWorkerAdapter
 
   setup do
+    original = Application.get_env(:kyuubiki_web, MockWorkerAdapter, [])
+    Application.put_env(:kyuubiki_web, MockWorkerAdapter, Keyword.put(original, :enabled?, true))
+
     Store.reset()
 
     {:ok, job} =
@@ -13,6 +16,10 @@ defmodule KyuubikiWeb.Workers.MockWorkerAdapterTest do
         project_id: "project-1",
         simulation_case_id: "case-1"
       })
+
+    on_exit(fn ->
+      Application.put_env(:kyuubiki_web, MockWorkerAdapter, original)
+    end)
 
     %{job: job}
   end
@@ -39,5 +46,12 @@ defmodule KyuubikiWeb.Workers.MockWorkerAdapterTest do
 
     assert {:error, {:worker_command_failed, 1, "worker exploded"}} =
              MockWorkerAdapter.run_job(job, runner: runner)
+  end
+
+  test "refuses to run when transitional worker adapters are disabled", %{job: job} do
+    Application.put_env(:kyuubiki_web, MockWorkerAdapter, enabled?: false)
+
+    assert {:error, :transitional_worker_adapter_disabled} =
+             MockWorkerAdapter.run_job(job)
   end
 end

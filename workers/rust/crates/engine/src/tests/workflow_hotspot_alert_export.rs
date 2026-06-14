@@ -45,7 +45,9 @@ fn runs_electrostatic_hotspot_alert_export_graph() {
         id: "workflow.electrostatic-hotspot-alert".to_string(),
         name: "Electrostatic hotspot alert".to_string(),
         version: "1.0.0".to_string(),
-        description: Some("Solve electrostatic quad, extract hotspots, then export a markdown alert.".to_string()),
+        description: Some(
+            "Solve electrostatic quad, extract hotspots, then export a markdown alert.".to_string(),
+        ),
         dataset_contract: None,
         entry_nodes: vec!["electrostatic_model".to_string()],
         output_nodes: vec!["alert_output".to_string()],
@@ -182,29 +184,53 @@ fn runs_electrostatic_hotspot_alert_export_graph() {
         edges: vec![
             WorkflowEdge {
                 id: "edge-input".to_string(),
-                from: WorkflowNodePortRef { node: "electrostatic_model".to_string(), port: "model".to_string() },
-                to: WorkflowNodePortRef { node: "solve_electrostatic".to_string(), port: "model".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "electrostatic_model".to_string(),
+                    port: "model".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "solve_electrostatic".to_string(),
+                    port: "model".to_string(),
+                },
                 artifact_type: "study_model/electrostatic_plane_quad_2d".to_string(),
                 dataset_value: None,
             },
             WorkflowEdge {
                 id: "edge-result".to_string(),
-                from: WorkflowNodePortRef { node: "solve_electrostatic".to_string(), port: "result".to_string() },
-                to: WorkflowNodePortRef { node: "field_hotspots".to_string(), port: "result".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "solve_electrostatic".to_string(),
+                    port: "result".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "field_hotspots".to_string(),
+                    port: "result".to_string(),
+                },
                 artifact_type: "result/electrostatic_plane_quad_2d".to_string(),
                 dataset_value: None,
             },
             WorkflowEdge {
                 id: "edge-summary".to_string(),
-                from: WorkflowNodePortRef { node: "field_hotspots".to_string(), port: "summary".to_string() },
-                to: WorkflowNodePortRef { node: "export_alert".to_string(), port: "summary".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "field_hotspots".to_string(),
+                    port: "summary".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "export_alert".to_string(),
+                    port: "summary".to_string(),
+                },
                 artifact_type: "report/summary".to_string(),
                 dataset_value: None,
             },
             WorkflowEdge {
                 id: "edge-markdown".to_string(),
-                from: WorkflowNodePortRef { node: "export_alert".to_string(), port: "markdown".to_string() },
-                to: WorkflowNodePortRef { node: "alert_output".to_string(), port: "markdown".to_string() },
+                from: WorkflowNodePortRef {
+                    node: "export_alert".to_string(),
+                    port: "markdown".to_string(),
+                },
+                to: WorkflowNodePortRef {
+                    node: "alert_output".to_string(),
+                    port: "markdown".to_string(),
+                },
                 artifact_type: "export/markdown".to_string(),
                 dataset_value: None,
             },

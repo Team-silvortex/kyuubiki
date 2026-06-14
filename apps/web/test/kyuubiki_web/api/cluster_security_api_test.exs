@@ -42,6 +42,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-a-1")
       |> Router.call(@opts)
 
     assert authorized_conn.status == 201
@@ -72,6 +73,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-b-1")
       |> Router.call(@opts)
 
     assert conn.status == 201
@@ -104,6 +106,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond) - 10_000)
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-c-stale")
       |> Router.call(@opts)
 
     assert stale_conn.status == 401
@@ -137,6 +140,95 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
     assert Jason.decode!(conn.resp_body)["error"] == "stale_cluster_request"
   end
 
+  test "rejects missing cluster nonce on protected cluster routes" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "shared-secret",
+      cluster_api_token: "cluster-only-secret",
+      protect_reads?: false
+    )
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-nonce-missing",
+          "host" => "127.0.0.1",
+          "port" => 5009,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-nonce-missing")
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
+      |> Router.call(@opts)
+
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "replayed_cluster_request"
+  end
+
+  test "rejects replayed cluster nonce within the active timestamp window" do
+    Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
+      api_token: "shared-secret",
+      cluster_api_token: "cluster-only-secret",
+      cluster_timestamp_window_ms: 30_000,
+      protect_reads?: false
+    )
+
+    nonce = "nonce-remote-replay-1"
+
+    first_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-replay",
+          "host" => "127.0.0.1",
+          "port" => 5010,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-replay")
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
+      |> put_req_header("x-kyuubiki-cluster-nonce", nonce)
+      |> Router.call(@opts)
+
+    assert first_conn.status == 201
+
+    replay_conn =
+      :post
+      |> conn(
+        "/api/v1/agents/register",
+        Jason.encode!(%{
+          "id" => "remote-replay",
+          "host" => "127.0.0.1",
+          "port" => 5010,
+          "role" => "solver"
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> put_req_header("x-kyuubiki-token", "cluster-only-secret")
+      |> put_req_header("x-kyuubiki-agent-id", "remote-replay")
+      |> put_req_header(
+        "x-kyuubiki-cluster-ts",
+        Integer.to_string(System.system_time(:millisecond))
+      )
+      |> put_req_header("x-kyuubiki-cluster-nonce", nonce)
+      |> Router.call(@opts)
+
+    assert replay_conn.status == 401
+    assert Jason.decode!(replay_conn.resp_body)["error"] == "replayed_cluster_request"
+  end
+
   test "allows protected cluster registration when agent and cluster IDs are allowlisted" do
     Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
       api_token: "shared-secret",
@@ -166,6 +258,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-d-1")
       |> Router.call(@opts)
 
     assert conn.status == 201
@@ -198,6 +291,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-denied-1")
       |> Router.call(@opts)
 
     assert conn.status == 401
@@ -233,6 +327,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-e-register")
       |> Router.call(@opts)
 
     assert register_conn.status == 201
@@ -251,6 +346,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-e-heartbeat")
       |> Router.call(@opts)
 
     assert heartbeat_conn.status == 401
@@ -283,6 +379,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-fp-a-1")
       |> Router.call(@opts)
 
     assert conn.status == 401
@@ -316,6 +413,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-fp-b-register")
       |> Router.call(@opts)
 
     assert register_conn.status == 201
@@ -331,6 +429,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
       )
+      |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-fp-b-heartbeat")
       |> Router.call(@opts)
 
     assert heartbeat_conn.status == 401

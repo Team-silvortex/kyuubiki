@@ -14,7 +14,9 @@ use kyuubiki_desktop_runtime::{
     service_start as desktop_service_start,
     service_status as desktop_service_status,
     service_stop as desktop_service_stop,
+    summarize_service_status as desktop_summarize_service_status,
     write_global_language_preference as desktop_write_global_language_preference,
+    ServiceStatusSummary,
     HotServiceMode,
     ServiceMode,
 };
@@ -29,6 +31,12 @@ const HUB_GUARDED_MUTATION_AUDIT_FILE: &str = "hub-guarded-mutations.jsonl";
 
 #[derive(Serialize)]
 struct ServiceStatusPayload {
+    rendered: String,
+    summary: ServiceStatusSummary,
+}
+
+#[derive(Serialize)]
+struct TextReportPayload {
     rendered: String,
 }
 
@@ -816,8 +824,10 @@ fn run_project_cli_compare(command: &str, left_path: &str, right_path: &str) -> 
 
 #[tauri::command]
 fn service_status() -> Result<ServiceStatusPayload, String> {
+    let rendered = desktop_service_status()?;
     Ok(ServiceStatusPayload {
-        rendered: desktop_service_status()?,
+        summary: desktop_summarize_service_status(&rendered),
+        rendered,
     })
 }
 
@@ -836,8 +846,8 @@ fn set_global_language_preference(payload: DesktopPreferencesInputPayload) -> Re
 }
 
 #[tauri::command]
-fn hot_service_status() -> Result<ServiceStatusPayload, String> {
-    Ok(ServiceStatusPayload {
+fn hot_service_status() -> Result<TextReportPayload, String> {
+    Ok(TextReportPayload {
         rendered: desktop_hot_service_status()?,
     })
 }
@@ -851,8 +861,8 @@ fn read_runtime_log(payload: LogPayload) -> Result<RuntimeLogPayload, String> {
 }
 
 #[tauri::command]
-fn doctor_report() -> Result<ServiceStatusPayload, String> {
-    Ok(ServiceStatusPayload {
+fn doctor_report() -> Result<TextReportPayload, String> {
+    Ok(TextReportPayload {
         rendered: build_doctor_report().render(),
     })
 }

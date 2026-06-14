@@ -3,7 +3,8 @@ use kyuubiki_desktop_runtime::{
     read_global_language_preference as desktop_read_global_language_preference,
     read_runtime_log as read_shared_runtime_log, service_restart as desktop_service_restart,
     service_start as desktop_service_start, service_status as desktop_service_status,
-    service_stop as desktop_service_stop, write_global_language_preference as desktop_write_global_language_preference,
+    service_stop as desktop_service_stop, summarize_service_status as desktop_summarize_service_status,
+    write_global_language_preference as desktop_write_global_language_preference, ServiceStatusSummary,
     ServiceMode,
 };
 use serde::Serialize;
@@ -13,6 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Serialize)]
 struct ServiceStatusPayload {
     rendered: String,
+    summary: ServiceStatusSummary,
 }
 
 #[derive(Serialize)]
@@ -42,8 +44,10 @@ struct WorkbenchGuardedMutationPayload {
 
 #[tauri::command]
 fn service_status() -> Result<ServiceStatusPayload, String> {
+    let rendered = desktop_service_status()?;
     Ok(ServiceStatusPayload {
-        rendered: desktop_service_status()?,
+        summary: desktop_summarize_service_status(&rendered),
+        rendered,
     })
 }
 

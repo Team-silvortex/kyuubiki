@@ -6,12 +6,13 @@ import {
   publishWorkflowPolicyActionFeedback,
   useWorkflowPolicyAction,
 } from "@/components/workbench/workflow/workbench-workflow-policy-actions";
+import type { WorkflowValidationFixSummaryEntry } from "@/components/workbench/workflow/workbench-workflow-validation-summary";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowValidationCardProps = {
   labels: WorkflowSidebarLabels;
   validationIssues: WorkflowGraphValidationIssue[];
-  recentFixSummary?: string[];
+  recentFixSummary?: WorkflowValidationFixSummaryEntry[];
   onApplyValidationFix: (issueId: string) => void;
   onApplyAllValidationFixes: () => void;
   onLocateValidationIssue: (issueId: string) => void;
@@ -61,8 +62,9 @@ export function WorkbenchWorkflowValidationCard({
           <p className="card-copy">{labels.validationLatestFixSummaryLabel}</p>
           <div className="sidebar-list">
             {recentSummaryPreview.map((item) => (
-              <div className="sidebar-list__row" key={`recent:${item}`}>
-                <strong>{item}</strong>
+              <div className="sidebar-list__row" key={`recent:${item.id}`}>
+                <strong>{item.title}</strong>
+                <span>{item.detail}</span>
               </div>
             ))}
           </div>
@@ -84,6 +86,9 @@ export function WorkbenchWorkflowValidationCard({
                 {previewIssues.map((issue) => (
                   <div className="sidebar-list__row" key={`preview:${issue.id}`}>
                     <strong>{issue.message}</strong>
+                    {issue.fix?.kind === "sync_node_template_from_operator" ? (
+                      <span>{`会按 ${issue.fix.operatorId} 的节点模板重建端口并尽量保留现有配置。`}</span>
+                    ) : null}
                   </div>
                 ))}
               </div>

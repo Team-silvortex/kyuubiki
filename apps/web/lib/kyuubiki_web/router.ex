@@ -8,10 +8,39 @@ defmodule KyuubikiWeb.Router do
   alias KyuubikiWeb.Protocol
   alias KyuubikiWeb.Security
   alias KyuubikiWeb.Workloads
+  import KyuubikiWeb.RouterSupport
+
+  @fem_submit_routes [
+    {"/api/v1/fem/axial-bar/jobs", :submit_axial_bar},
+    {"/api/v1/fem/thermal-bar-1d/jobs", :submit_thermal_bar_1d},
+    {"/api/v1/fem/heat-bar-1d/jobs", :submit_heat_bar_1d},
+    {"/api/v1/fem/electrostatic-bar-1d/jobs", :submit_electrostatic_bar_1d},
+    {"/api/v1/fem/electrostatic-plane-triangle-2d/jobs", :submit_electrostatic_plane_triangle_2d},
+    {"/api/v1/fem/electrostatic-plane-quad-2d/jobs", :submit_electrostatic_plane_quad_2d},
+    {"/api/v1/fem/heat-plane-triangle-2d/jobs", :submit_heat_plane_triangle_2d},
+    {"/api/v1/fem/heat-plane-quad-2d/jobs", :submit_heat_plane_quad_2d},
+    {"/api/v1/fem/thermal-truss-2d/jobs", :submit_thermal_truss_2d},
+    {"/api/v1/fem/thermal-truss-3d/jobs", :submit_thermal_truss_3d},
+    {"/api/v1/fem/beam-1d/jobs", :submit_beam_1d},
+    {"/api/v1/fem/thermal-plane-triangle-2d/jobs", :submit_thermal_plane_triangle_2d},
+    {"/api/v1/fem/thermal-plane-quad-2d/jobs", :submit_thermal_plane_quad_2d},
+    {"/api/v1/fem/thermal-beam-1d/jobs", :submit_thermal_beam_1d},
+    {"/api/v1/fem/thermal-frame-2d/jobs", :submit_thermal_frame_2d},
+    {"/api/v1/fem/thermal-frame-3d/jobs", :submit_thermal_frame_3d},
+    {"/api/v1/fem/torsion-1d/jobs", :submit_torsion_1d},
+    {"/api/v1/fem/spring-1d/jobs", :submit_spring_1d},
+    {"/api/v1/fem/spring-2d/jobs", :submit_spring_2d},
+    {"/api/v1/fem/spring-3d/jobs", :submit_spring_3d},
+    {"/api/v1/fem/truss-2d/jobs", :submit_truss_2d},
+    {"/api/v1/fem/truss-3d/jobs", :submit_truss_3d},
+    {"/api/v1/fem/plane-triangle-2d/jobs", :submit_plane_triangle_2d},
+    {"/api/v1/fem/plane-quad-2d/jobs", :submit_plane_quad_2d},
+    {"/api/v1/fem/frame-2d/jobs", :submit_frame_2d},
+    {"/api/v1/fem/frame-3d/jobs", :submit_frame_3d}
+  ]
 
   plug(Plug.Logger)
   plug(Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason)
-
   plug(:match)
   plug(:dispatch)
 
@@ -26,18 +55,15 @@ defmodule KyuubikiWeb.Router do
   get "/api/health" do
     with_auth(conn, :read, fn conn ->
       agent_endpoints = KyuubikiWeb.Playground.AgentPool.endpoints()
-      deployment = KyuubikiWeb.Playground.AgentPool.deployment_info()
-      remote_registry = KyuubikiWeb.Playground.AgentRegistry.status_snapshot()
-      watchdog = KyuubikiWeb.Jobs.Watchdog.status_snapshot()
 
       respond_json(conn, 200, %{
         "service" => "kyuubiki-orchestrator",
         "status" => "ok",
         "protocol" => Protocol.descriptor(),
         "security" => Security.descriptor(),
-        "deployment" => deployment,
-        "remote_solver_registry" => remote_registry,
-        "watchdog" => watchdog,
+        "deployment" => KyuubikiWeb.Playground.AgentPool.deployment_info(),
+        "remote_solver_registry" => KyuubikiWeb.Playground.AgentRegistry.status_snapshot(),
+        "watchdog" => KyuubikiWeb.Jobs.Watchdog.status_snapshot(),
         "transport" => %{
           "http" => 4000,
           "solver_agent_tcp" => (List.first(agent_endpoints) || %{})[:port] || 5001,
@@ -49,9 +75,7 @@ defmodule KyuubikiWeb.Router do
   end
 
   get "/api/v1/protocol" do
-    with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Protocol.descriptor())
-    end)
+    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Protocol.descriptor()) end)
   end
 
   get "/api/v1/protocol/control-plane" do
@@ -61,9 +85,7 @@ defmodule KyuubikiWeb.Router do
   end
 
   get "/api/v1/protocol/solver-rpc" do
-    with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Protocol.solver_rpc_protocol())
-    end)
+    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Protocol.solver_rpc_protocol()) end)
   end
 
   get "/api/v1/protocol/agents" do
@@ -75,7 +97,7 @@ defmodule KyuubikiWeb.Router do
   get "/api/v1/agents" do
     with_auth(conn, :read, fn conn ->
       respond_json(conn, 200, %{
-        "agents" => KyuubikiWeb.Playground.AgentRegistry.agents(),
+        "agents" => KyuubikiWeb.Playground.AgentRegistry.public_agents(),
         "summary" => KyuubikiWeb.Playground.AgentRegistry.status_snapshot()
       })
     end)
@@ -90,13 +112,13 @@ defmodule KyuubikiWeb.Router do
           case KyuubikiWeb.Playground.AgentRegistry.register(body_params) do
             {:ok, agent} ->
               _ = KyuubikiWeb.Playground.AgentPool.reload()
-              respond_json(conn, 201, %{"agent" => agent})
+              respond_json(conn, 201, %{"agent" => KyuubikiWeb.Playground.AgentRegistry.public_agent(agent)})
 
             {:error, {:invalid_agent_field, field}} ->
               respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
 
             {:error, reason} ->
-              respond_json(conn, 422, %{"error" => inspect(reason)})
+              unprocessable(conn, reason)
           end
 
         {:error, status, payload} ->
@@ -109,385 +131,60 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :cluster, fn conn ->
       body_params = with_cluster_fingerprint(conn, conn.body_params)
 
-      case Security.validate_cluster_agent_identity(conn, agent_id, body_params) do
-        :ok ->
-          case validate_registered_fingerprint(conn, agent_id) do
-            :ok ->
-              case KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, body_params) do
-                {:ok, agent} ->
-                  _ = KyuubikiWeb.Playground.AgentPool.reload()
-                  respond_json(conn, 200, %{"agent" => agent})
+      with :ok <- Security.validate_cluster_agent_identity(conn, agent_id, body_params),
+           :ok <- validate_registered_fingerprint(conn, agent_id),
+           {:ok, agent} <- KyuubikiWeb.Playground.AgentRegistry.heartbeat(agent_id, body_params) do
+        _ = KyuubikiWeb.Playground.AgentPool.reload()
+        respond_json(conn, 200, %{"agent" => KyuubikiWeb.Playground.AgentRegistry.public_agent(agent)})
+      else
+        {:error, {:invalid_agent_field, field}} ->
+          respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
 
-                {:error, {:invalid_agent_field, field}} ->
-                  respond_json(conn, 422, %{"error" => "invalid_agent_field", "field" => field})
-
-                {:error, reason} ->
-                  respond_json(conn, 422, %{"error" => inspect(reason)})
-              end
-
-            {:error, status, payload} ->
-              respond_json(conn, status, payload)
-          end
-
-        {:error, status, payload} ->
+        {:error, status, payload} when is_integer(status) ->
           respond_json(conn, status, payload)
+
+        {:error, reason} ->
+          unprocessable(conn, reason)
       end
     end)
   end
 
   delete "/api/v1/agents/:agent_id" do
     with_auth(conn, :cluster, fn conn ->
-      case Security.validate_cluster_agent_identity(conn, agent_id) do
-        :ok ->
-          case validate_registered_fingerprint(conn, agent_id) do
-            :ok ->
-              :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
-              _ = KyuubikiWeb.Playground.AgentPool.reload()
-              respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
-
-            {:error, status, payload} ->
-              respond_json(conn, status, payload)
-          end
-
-        {:error, status, payload} ->
-          respond_json(conn, status, payload)
+      with :ok <- Security.validate_cluster_agent_identity(conn, agent_id),
+           :ok <- validate_registered_fingerprint(conn, agent_id) do
+        :ok = KyuubikiWeb.Playground.AgentRegistry.unregister(agent_id)
+        _ = KyuubikiWeb.Playground.AgentPool.reload()
+        respond_json(conn, 200, %{"agent_id" => agent_id, "status" => "removed"})
+      else
+        {:error, status, payload} -> respond_json(conn, status, payload)
       end
     end)
   end
 
-  post "/api/v1/fem/axial-bar/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_axial_bar(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-bar-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_bar_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/heat-bar-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_heat_bar_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/electrostatic-bar-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_electrostatic_bar_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/electrostatic-plane-triangle-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_electrostatic_plane_triangle_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/electrostatic-plane-quad-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_electrostatic_plane_quad_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/heat-plane-triangle-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_heat_plane_triangle_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/heat-plane-quad-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_heat_plane_quad_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-truss-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_truss_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-truss-3d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_truss_3d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/beam-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_beam_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-plane-triangle-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_plane_triangle_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-plane-quad-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_plane_quad_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-beam-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_beam_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-frame-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_frame_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/thermal-frame-3d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_thermal_frame_3d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/torsion-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_torsion_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/spring-1d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_spring_1d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/spring-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_spring_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/spring-3d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_spring_3d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/truss-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_truss_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/truss-3d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_truss_3d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/plane-triangle-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_plane_triangle_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/plane-quad-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_plane_quad_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/frame-2d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_frame_2d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
-  end
-
-  post "/api/v1/fem/frame-3d/jobs" do
-    with_auth(conn, :write, fn conn ->
-      case Analysis.submit_frame_3d(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
-    end)
+  for {path, submit_fun} <- @fem_submit_routes do
+    post path do
+      with_auth(conn, :write, fn conn ->
+        conn
+        |> run_submit(unquote(submit_fun), conn.body_params)
+        |> respond_submit()
+      end)
+    end
   end
 
   post "/api/v1/workflows/graph/run" do
     with_auth(conn, :write, fn conn ->
-      case Analysis.run_workflow_graph(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 200, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
+      conn
+      |> run_analysis(:run_workflow_graph, [conn.body_params])
+      |> respond_success(200)
     end)
   end
 
   post "/api/v1/workflows/graph/jobs" do
     with_auth(conn, :write, fn conn ->
-      case Analysis.submit_workflow_graph(conn.body_params) do
-        {:ok, payload} ->
-          respond_json(conn, 202, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
+      conn
+      |> run_submit(:submit_workflow_graph, conn.body_params)
+      |> respond_submit()
     end)
   end
 
@@ -508,7 +205,7 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 404, %{"error" => "workflow_not_found", "workflow_id" => workflow_id})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -523,7 +220,7 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 404, %{"error" => "workflow_not_found", "workflow_id" => workflow_id})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -545,26 +242,18 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 404, %{"error" => "operator_not_found", "operator_id" => operator_id})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
 
   get "/api/v1/jobs" do
-    with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.list_jobs())
-    end)
+    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.list_jobs()) end)
   end
 
   get "/api/v1/jobs/:job_id" do
     with_auth(conn, :read, fn conn ->
-      case Analysis.fetch_job(job_id) do
-        {:ok, payload} ->
-          respond_json(conn, 200, payload)
-
-        {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
+      conn |> run_analysis(:fetch_job, [job_id]) |> respond_success(200)
     end)
   end
 
@@ -573,7 +262,7 @@ defmodule KyuubikiWeb.Router do
       case Analysis.update_job(job_id, conn.body_params) do
         {:ok, payload} -> respond_json(conn, 200, payload)
         {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -583,7 +272,7 @@ defmodule KyuubikiWeb.Router do
       case Analysis.cancel_job(job_id) do
         {:ok, payload} -> respond_json(conn, 200, payload)
         {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -593,15 +282,13 @@ defmodule KyuubikiWeb.Router do
       case Analysis.delete_job(job_id) do
         {:ok, payload} -> respond_json(conn, 200, payload)
         {:error, {:job_not_found, _}} -> respond_json(conn, 404, %{"error" => "job_not_found"})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
 
   get "/api/v1/results" do
-    with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.list_results())
-    end)
+    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.list_results()) end)
   end
 
   get "/api/v1/results/:job_id" do
@@ -614,7 +301,7 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 404, %{"error" => "result_not_found"})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -635,7 +322,7 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 422, %{"error" => "invalid_chunk_param", "field" => key})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -644,10 +331,7 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :write, fn conn ->
       case Map.get(conn.body_params, "result") do
         result when is_map(result) ->
-          case Analysis.update_result(job_id, result) do
-            {:ok, payload} -> respond_json(conn, 200, payload)
-            {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-          end
+          conn |> run_analysis(:update_result, [job_id, result]) |> respond_success(200)
 
         _ ->
           respond_json(conn, 422, %{"error" => "missing_result_payload"})
@@ -665,15 +349,13 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 404, %{"error" => "result_not_found"})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
 
   get "/api/v1/export/database" do
-    with_auth(conn, :read, fn conn ->
-      respond_json(conn, 200, Analysis.export_database())
-    end)
+    with_auth(conn, :read, fn conn -> respond_json(conn, 200, Analysis.export_database()) end)
   end
 
   get "/api/v1/export/security-events" do
@@ -710,7 +392,7 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 422, %{"error" => "invalid_security_event_field", "field" => field})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -726,7 +408,7 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :write, fn conn ->
       case Library.create_project(conn.body_params) do
         {:ok, project} -> respond_json(conn, 201, %{"project" => project})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -757,7 +439,7 @@ defmodule KyuubikiWeb.Router do
           respond_json(conn, 404, %{"error" => "project_not_found"})
 
         {:error, reason} ->
-          respond_json(conn, 422, %{"error" => inspect(reason)})
+          unprocessable(conn, reason)
       end
     end)
   end
@@ -767,7 +449,7 @@ defmodule KyuubikiWeb.Router do
       case Library.update_project(project_id, conn.body_params) do
         {:ok, project} -> respond_json(conn, 200, %{"project" => project})
         :error -> respond_json(conn, 404, %{"error" => "project_not_found"})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -785,7 +467,7 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :read, fn conn ->
       case Library.list_models(project_id) do
         {:ok, models} -> respond_json(conn, 200, %{"models" => models})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -794,7 +476,7 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :write, fn conn ->
       case Library.create_model(project_id, conn.body_params) do
         {:ok, model} -> respond_json(conn, 201, %{"model" => model})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -813,7 +495,7 @@ defmodule KyuubikiWeb.Router do
       case Library.update_model(model_id, conn.body_params) do
         {:ok, model} -> respond_json(conn, 200, %{"model" => model})
         :error -> respond_json(conn, 404, %{"error" => "model_not_found"})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -831,7 +513,7 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :read, fn conn ->
       case Library.list_versions(model_id) do
         {:ok, versions} -> respond_json(conn, 200, %{"versions" => versions})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -840,7 +522,7 @@ defmodule KyuubikiWeb.Router do
     with_auth(conn, :write, fn conn ->
       case Library.create_version(model_id, conn.body_params) do
         {:ok, version} -> respond_json(conn, 201, %{"version" => version})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -859,7 +541,7 @@ defmodule KyuubikiWeb.Router do
       case Library.update_version(version_id, conn.body_params) do
         {:ok, version} -> respond_json(conn, 200, %{"version" => version})
         :error -> respond_json(conn, 404, %{"error" => "version_not_found"})
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
+        {:error, reason} -> unprocessable(conn, reason)
       end
     end)
   end
@@ -875,10 +557,9 @@ defmodule KyuubikiWeb.Router do
 
   post "/api/playground/run" do
     with_auth(conn, :write, fn conn ->
-      case Analysis.submit_axial_bar(conn.body_params) do
-        {:ok, payload} -> respond_json(conn, 202, payload)
-        {:error, reason} -> respond_json(conn, 422, %{"error" => inspect(reason)})
-      end
+      conn
+      |> run_submit(:submit_axial_bar, conn.body_params)
+      |> respond_submit()
     end)
   end
 
@@ -886,106 +567,17 @@ defmodule KyuubikiWeb.Router do
     Plug.Conn.send_resp(conn, 404, "not found")
   end
 
-  defp respond_json(conn, status, payload) do
-    conn
-    |> Plug.Conn.put_resp_content_type("application/json")
-    |> Plug.Conn.send_resp(status, Jason.encode!(payload))
+  defp run_submit(conn, submit_fun, params) do
+    {conn, apply(Analysis, submit_fun, [params])}
   end
 
-  defp respond_text(conn, status, content_type, payload) do
-    conn
-    |> Plug.Conn.put_resp_content_type(content_type)
-    |> Plug.Conn.send_resp(status, payload)
+  defp run_analysis(conn, fun, args) do
+    {conn, apply(Analysis, fun, args)}
   end
 
-  defp request_base_url(conn) do
-    trust_forwarded? = Application.get_env(:kyuubiki_web, :trust_forwarded_headers, false)
+  defp respond_submit({conn, {:ok, payload}}), do: respond_json(conn, 202, payload)
+  defp respond_submit({conn, {:error, reason}}), do: unprocessable(conn, reason)
 
-    scheme =
-      if trust_forwarded? do
-        case Plug.Conn.get_req_header(conn, "x-forwarded-proto") do
-          [value | _] -> value
-          _ -> Atom.to_string(conn.scheme)
-        end
-      else
-        Atom.to_string(conn.scheme)
-      end
-
-    host =
-      if trust_forwarded? do
-        case Plug.Conn.get_req_header(conn, "x-forwarded-host") do
-          [value | _] -> value
-          _ -> conn.host
-        end
-      else
-        conn.host
-      end
-
-    port =
-      if trust_forwarded? do
-        case Plug.Conn.get_req_header(conn, "x-forwarded-port") do
-          [value | _] ->
-            case Integer.parse(value) do
-              {parsed, ""} -> parsed
-              _ -> conn.port
-            end
-
-          _ ->
-            case scheme do
-              "https" -> 443
-              "http" -> 80
-              _ -> conn.port
-            end
-        end
-      else
-        conn.port
-      end
-
-    default_port? =
-      (scheme == "http" and port == 80) or
-        (scheme == "https" and port == 443)
-
-    if default_port? do
-      "#{scheme}://#{host}"
-    else
-      "#{scheme}://#{host}:#{port}"
-    end
-  end
-
-  defp with_cluster_fingerprint(conn, attrs) when is_map(attrs) do
-    case Security.cluster_fingerprint(conn) do
-      {:ok, fingerprint} -> Map.put(attrs, "fingerprint", fingerprint)
-      :error -> attrs
-    end
-  end
-
-  defp validate_registered_fingerprint(conn, agent_id) do
-    case Enum.find(KyuubikiWeb.Playground.AgentRegistry.agents(), &(&1.id == agent_id)) do
-      %{fingerprint: registered} when is_binary(registered) and registered != "" ->
-        case Security.cluster_fingerprint(conn) do
-          {:ok, ^registered} ->
-            :ok
-
-          _ ->
-            {:error, 401,
-             %{
-               "error" => "invalid_cluster_identity",
-               "message" => "cluster fingerprint does not match the registered agent identity"
-             }}
-        end
-
-      _ ->
-        :ok
-    end
-  end
-
-  defp with_auth(conn, scope, fun) do
-    case Security.authorize(conn, scope) do
-      :ok ->
-        fun.(conn)
-
-      {:error, status, payload} ->
-        respond_json(conn, status, payload)
-    end
-  end
+  defp respond_success({conn, {:ok, payload}}, status), do: respond_json(conn, status, payload)
+  defp respond_success({conn, {:error, reason}}, _status), do: unprocessable(conn, reason)
 end

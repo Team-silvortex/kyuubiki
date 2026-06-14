@@ -34,7 +34,7 @@ Environment variables:
 Behavior:
 
 - no token configured
-  local-friendly mode, reads and writes are open
+  local-friendly mode, reads and writes are available only to loopback callers
 - token configured
   mutating and cluster routes require the token
 - token configured on non-local deployments
@@ -51,6 +51,9 @@ Behavior:
   cluster routes fall back to `KYUUBIKI_API_TOKEN`
 - cluster timestamp header present
   cluster routes reject stale requests outside the configured timestamp window
+- cluster nonce header present
+  cluster routes require `x-kyuubiki-cluster-nonce` and reject replayed
+  nonces within the active timestamp window
 - `KYUUBIKI_PROTECT_READS=true`
   read routes should also be considered protected in deployment policy
 
@@ -80,12 +83,20 @@ talk straight to solver agents.
 
 Endpoint policy:
 
-- `local` deployment
-  request-defined direct-mesh endpoints are allowed by default
+- `KYUUBIKI_DIRECT_MESH_ENABLED` omitted
+  direct mesh is enabled by default only in `local` deployment mode; `cloud`
+  and `distributed` deployments must opt in explicitly with
+  `KYUUBIKI_DIRECT_MESH_ENABLED=true`
+- request-defined direct-mesh endpoints are denied by default in every
+  deployment mode
 - `cloud` or `distributed` deployment
   request-defined endpoints are denied by default; direct mesh requests must use
   the environment-configured endpoint list unless
   `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true`
+- `local` deployment
+  use `KYUUBIKI_DIRECT_MESH_ENDPOINTS` for the default safe path, and only turn
+  on `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true` when you explicitly
+  want operator-supplied endpoints
 
 ### Frontend operator settings
 

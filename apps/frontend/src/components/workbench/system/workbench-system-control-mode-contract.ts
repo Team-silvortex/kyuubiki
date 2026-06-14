@@ -1,7 +1,11 @@
 "use client";
 
 import type { DirectMeshSelectionMode, FrontendRuntimeMode, ProtocolAgentDescriptor } from "@/lib/api";
-import { buildWorkbenchGovernanceEnforcementPlan, buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
+import {
+  buildWorkbenchGovernanceEnforcementPlan,
+  buildWorkbenchGovernanceRuntimeDiagnostics,
+  resolveWorkbenchAuthorityMode,
+} from "@/lib/workbench/governance";
 
 type ControlWindowMode = "orchestrated" | "direct" | "mesh";
 type ControlLanguage = "en" | "zh" | "ja" | "es";
@@ -47,6 +51,7 @@ export type WorkbenchSystemControlModeCopy = {
 
 export type WorkbenchSystemControlTopologySummary = {
   mode: ControlWindowMode;
+  authorityMode: "single_orchestrator" | "offline_mesh";
   entryAgentId: string;
   entryHealthLabel: string;
   peerCount: number;
@@ -183,6 +188,11 @@ function pickEntryAgentId(
   return agents[0]?.id ?? "entry-agent";
 }
 
+function controlWindowModeForAuthority(authorityMode: "single_orchestrator" | "offline_mesh", agentCount: number): ControlWindowMode {
+  if (authorityMode === "single_orchestrator") return "orchestrated";
+  return agentCount > 1 ? "mesh" : "direct";
+}
+
 export function buildWorkbenchSystemControlModeCopy(
   language: ControlLanguage,
   frontendRuntimeMode: FrontendRuntimeMode,
@@ -294,7 +304,11 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
     frontendRuntimeMode: input.frontendRuntimeMode,
     diagnostics: governanceDiagnostics,
   });
-  const mode: ControlWindowMode = input.frontendRuntimeMode === "direct_mesh_gui" ? "direct" : "orchestrated";
+  const authorityMode = resolveWorkbenchAuthorityMode({
+    frontendRuntimeMode: input.frontendRuntimeMode,
+    protocolAgents: input.protocolAgents,
+  });
+  const mode = controlWindowModeForAuthority(authorityMode, input.protocolAgents.length);
   const nowUnixS = input.nowUnixS ?? Math.floor(Date.now() / 1000);
   const entryAgentId = pickEntryAgentId(input.protocolAgents, input.directMeshSelectionMode, input.frontendRuntimeMode);
   const entryAgent = input.protocolAgents.find((agent) => agent.id === entryAgentId);
@@ -322,6 +336,7 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
           : input.copy.tabs.orchestrated;
   return {
     mode,
+    authorityMode,
     entryAgentId,
     entryHealthLabel:
       entryHealthScore === null
@@ -337,8 +352,18 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
     auditCount: input.auditCount,
     protocolOnline: input.protocolOnline,
     securityConfigured: input.securityConfigured,
-    routingPolicy: mode === "orchestrated" ? input.copy.windows.orchestrated.title : input.copy.directStrategyLabels[input.directMeshSelectionMode],
-    fallbackPolicy: mode === "orchestrated" ? input.copy.tabs.direct : input.protocolOnline ? input.copy.tabs.orchestrated : input.copy.tabs.direct,
+    routingPolicy:
+      authorityMode === "single_orchestrator"
+        ? "single_orchestrator"
+        : mode === "mesh"
+          ? "offline_mesh relay"
+          : "offline_mesh direct",
+    fallbackPolicy:
+      authorityMode === "single_orchestrator"
+        ? input.copy.tabs.direct
+        : input.protocolOnline
+          ? input.copy.tabs.orchestrated
+          : input.copy.tabs.direct,
     failoverReason,
     safeModeActive: governanceEnforcement.shouldDowngrade,
     downgradeReason: governanceEnforcement.reason ?? governanceDiagnostics.driftLabel,
@@ -449,6 +474,7 @@ export function buildControlTopologySummaryFromSnapshot(
 ): WorkbenchSystemControlTopologySummary {
   return {
     mode: snapshot.control_mode,
+    authorityMode: snapshot.control_mode === "orchestrated" ? "single_orchestrator" : "offline_mesh",
     entryAgentId: snapshot.entry_agent_id,
     entryHealthLabel: snapshot.entry_health_score === null ? "--" : `${Math.round(snapshot.entry_health_score * 100)}%`,
     peerCount: snapshot.peer_count,

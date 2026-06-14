@@ -5,7 +5,7 @@ import {
   createHeatToThermoBridgeContract,
   ELECTROSTATIC_TO_HEAT_BRIDGE_CONTRACT_SCHEMA,
   HEAT_TO_THERMO_BRIDGE_CONTRACT_SCHEMA,
-} from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+} from "@/lib/workbench/workflow-bridge-contract";
 
 export const metadata: Metadata = {
   title: "Workflow Bridge Contracts | tamamono 1.6.0",

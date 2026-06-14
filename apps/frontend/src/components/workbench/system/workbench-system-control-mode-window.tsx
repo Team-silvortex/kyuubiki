@@ -86,7 +86,7 @@ export function WorkbenchSystemControlModeWindow({
             <strong>{copy.windows[windowMode].title}</strong>
             <span>{copy.modeLabel}</span>
           </div>
-          <span className="status-chip status-chip--watch">{copy.tabs[windowMode]}</span>
+          <span className="status-chip status-chip--watch">{topology.authorityMode}</span>
         </header>
         <div className="sidebar-list sidebar-list--metrics" data-workbench-control-window="snapshot-meta">
           <div className="sidebar-list__row">

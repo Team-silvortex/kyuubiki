@@ -73,6 +73,59 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
     }
   end
 
+  defp built_in_descriptor(
+         %{"kind" => "workflow_bridge", "bridge_type" => "heat_to_thermo"} = spec
+       ) do
+    family = spec["family"]
+    shape = spec["shape"]
+
+    %{
+      "id" => spec["id"],
+      "version" => "1.0.0",
+      "domain" => spec["domain"],
+      "family" => family,
+      "kind" => "workflow_bridge",
+      "summary" => spec["summary"],
+      "capability_tags" => spec["capability_tags"],
+      "origin" => "built_in",
+      "input_schema" => %{
+        "schema" => "kyuubiki.operator.#{family}.bridge_input",
+        "version" => "1"
+      },
+      "output_schema" => %{
+        "schema" => "kyuubiki.operator.#{family}.bridge_output",
+        "version" => "1"
+      },
+      "config_schema" => spec["config_schema"],
+      "config_example" => spec["config_example"],
+      "inputs" => [
+        %{
+          "id" => "heat_result",
+          "artifact_type" => spec["source_artifact_type"],
+          "description" => spec["input_description"],
+          "dataset_value" => "heat_result",
+          "schema_ref" => %{
+            "schema" => "kyuubiki.operator.heat_plane_#{shape}_2d.output",
+            "version" => "1"
+          }
+        }
+      ],
+      "outputs" => [
+        %{
+          "id" => "thermo_model",
+          "artifact_type" => spec["target_artifact_type"],
+          "description" => spec["output_description"],
+          "dataset_value" => "thermo_model",
+          "schema_ref" => %{
+            "schema" => "kyuubiki.operator.thermal_plane_#{shape}_2d.input",
+            "version" => "1"
+          }
+        }
+      ],
+      "validation" => validation_profile(family, ["workflow_graph", "catalog_job"])
+    }
+  end
+
   defp built_in_descriptor(%{"kind" => "workflow_bridge"} = spec) do
     family = spec["family"]
 

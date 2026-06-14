@@ -9,11 +9,12 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use kyuubiki_protocol::{
     AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
     JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
-    SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
-    SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
-    SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+    RuntimeAuthorityDescriptor, SolveBarRequest, SolveBeam1dRequest,
+    SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+    SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
+    SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
+    SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
     SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
     SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
     SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
@@ -1934,9 +1935,10 @@ fn store_runtime_descriptor(descriptor: AgentDescriptor) {
 
 fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
     let mut descriptor = AgentDescriptor::solver_agent_default();
+    let runtime_mode = agent_runtime_mode(config);
     descriptor.runtime = AgentClusterDescriptor {
         cluster_id: config.cluster_id.clone(),
-        runtime_mode: agent_runtime_mode(config).to_string(),
+        runtime_mode: runtime_mode.to_string(),
         headless: true,
         cluster_size: 1 + config.peers.len(),
         health_score: 100,
@@ -1952,7 +1954,40 @@ fn build_agent_descriptor(config: &AgentConfig) -> AgentDescriptor {
             })
             .collect(),
     };
+    descriptor.authority = build_runtime_authority_descriptor(config, runtime_mode);
     descriptor
+}
+
+fn build_runtime_authority_descriptor(
+    config: &AgentConfig,
+    runtime_mode: &str,
+) -> RuntimeAuthorityDescriptor {
+    match runtime_mode {
+        "orchestrated" => RuntimeAuthorityDescriptor {
+            control_mode: "orch_managed".to_string(),
+            authority_mode: "single_orchestrator".to_string(),
+            orchestrator_id: config.orchestrator_url.clone(),
+            orchestrator_session_id: None,
+            accepts_multi_orchestrator_binding: false,
+            agent_library_replication: "central_fetch".to_string(),
+        },
+        "peer_mesh" => RuntimeAuthorityDescriptor {
+            control_mode: "offline_mesh".to_string(),
+            authority_mode: "offline_mesh".to_string(),
+            orchestrator_id: None,
+            orchestrator_session_id: None,
+            accepts_multi_orchestrator_binding: false,
+            agent_library_replication: "central_fetch".to_string(),
+        },
+        _ => RuntimeAuthorityDescriptor {
+            control_mode: "standalone".to_string(),
+            authority_mode: "self_directed".to_string(),
+            orchestrator_id: None,
+            orchestrator_session_id: None,
+            accepts_multi_orchestrator_binding: false,
+            agent_library_replication: "central_fetch".to_string(),
+        },
+    }
 }
 
 fn registration_payload(config: &AgentConfig) -> serde_json::Value {
@@ -4294,6 +4329,8 @@ mod tests {
                 .contains(&RpcMethod::SolveTruss3d)
         );
         assert_eq!(descriptor.runtime.runtime_mode, "standalone");
+        assert_eq!(descriptor.authority.control_mode, "standalone");
+        assert_eq!(descriptor.authority.authority_mode, "self_directed");
     }
 
     #[test]
@@ -4318,6 +4355,8 @@ mod tests {
         assert_eq!(descriptor.runtime.health_score, 100);
         assert_eq!(descriptor.runtime.peers.len(), 2);
         assert_eq!(descriptor.runtime.peers[0].status, "seed");
+        assert_eq!(descriptor.authority.control_mode, "offline_mesh");
+        assert_eq!(descriptor.authority.authority_mode, "offline_mesh");
     }
 
     #[test]

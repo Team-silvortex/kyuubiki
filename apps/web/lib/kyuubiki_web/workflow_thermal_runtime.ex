@@ -106,7 +106,11 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
          "guard_passed" => status == "pass",
          "guard_trigger_count" => length(triggers),
          "guard_checked_rule_count" => length(rules),
-         "guard_triggers" => triggers
+         "guard_warn_count" => Enum.count(triggers, &(&1["severity"] == "warn")),
+         "guard_block_count" => Enum.count(triggers, &(&1["severity"] == "block")),
+         "guard_triggers" => triggers,
+         "guard_recommendation" => guard_recommendation(status),
+         "guard_summary" => guard_summary(status, triggers)
        }}
     end
   end
@@ -143,7 +147,12 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
            "benchmark_winner" => benchmark_winner(left_score, right_score, left_label, right_label),
            "benchmark_margin" => abs(left_score - right_score),
            "benchmark_criteria_count" => length(breakdown),
-           "benchmark_breakdown" => breakdown
+           "benchmark_left_win_count" => Enum.count(breakdown, &(&1["left_score"] > &1["right_score"])),
+           "benchmark_right_win_count" => Enum.count(breakdown, &(&1["right_score"] > &1["left_score"])),
+           "benchmark_tie_count" => Enum.count(breakdown, &(&1["right_score"] == &1["left_score"])),
+           "benchmark_breakdown" => breakdown,
+           "benchmark_recommendation" => benchmark_recommendation(left_score, right_score, left_label, right_label),
+           "benchmark_summary" => benchmark_summary(left_score, right_score, left_label, right_label, breakdown)
          }}
       end
     end
@@ -260,6 +269,21 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
   defp normalize_severity("warn"), do: "warn"
   defp normalize_severity(_severity), do: "warn"
 
+  defp guard_recommendation("block"), do: "hold_and_review"
+  defp guard_recommendation("warn"), do: "review_before_continue"
+  defp guard_recommendation(_status), do: "continue"
+
+  defp guard_summary("pass", _triggers), do: "All thermal guard rules passed."
+
+  defp guard_summary(status, triggers) do
+    lead =
+      triggers
+      |> Enum.take(2)
+      |> Enum.map_join(", ", fn trigger -> "#{trigger["label"]}=#{trigger["value"]}" end)
+
+    "#{String.upcase(status)}: #{length(triggers)} trigger(s)" <> if(lead == "", do: ".", else: " (#{lead}).")
+  end
+
   defp normalize_goal("max"), do: "max"
   defp normalize_goal(_goal), do: "min"
 
@@ -271,6 +295,19 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
       field when is_binary(field) -> field
       _ -> Map.get(criterion, "field")
     end
+  end
+
+  defp benchmark_recommendation(left_score, right_score, left_label, right_label) do
+    case benchmark_winner(left_score, right_score, left_label, right_label) do
+      "tie" -> "keep_both_under_review"
+      ^left_label -> "prefer_#{left_label}"
+      ^right_label -> "prefer_#{right_label}"
+    end
+  end
+
+  defp benchmark_summary(left_score, right_score, left_label, right_label, breakdown) do
+    winner = benchmark_winner(left_score, right_score, left_label, right_label)
+    "#{winner} across #{length(breakdown)} criteria (#{left_label}=#{left_score}, #{right_label}=#{right_score})."
   end
 
   defp fetch_list(map, key) when is_map(map) and is_binary(key) do

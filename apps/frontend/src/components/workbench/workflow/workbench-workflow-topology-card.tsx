@@ -22,6 +22,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   currentPlaneModel: PlaneStudyJobInput;
   highlightedEdgeIds?: string[];
   highlightedNodeIds?: string[];
+  highlightedPortKeys?: string[];
   focusedNodeId?: string | null;
   focusedEdgeId?: string | null;
   onAddNode: (template?: WorkflowNodeTemplateSelection) => void;
@@ -62,6 +63,7 @@ export function WorkbenchWorkflowTopologyCard({
   currentPlaneModel,
   highlightedEdgeIds = [],
   highlightedNodeIds = [],
+  highlightedPortKeys = [],
   focusedNodeId,
   focusedEdgeId,
   onAddNode,
@@ -201,6 +203,7 @@ export function WorkbenchWorkflowTopologyCard({
             currentStudyKind={currentStudyKind}
             isFocused={focusedNodeId === node.id}
             isHighlighted={highlightedNodeIds.includes(node.id)}
+            highlightedPortKeys={highlightedPortKeys}
             key={node.id}
             labels={labels}
             nextNodeKind={nextNodeKind}

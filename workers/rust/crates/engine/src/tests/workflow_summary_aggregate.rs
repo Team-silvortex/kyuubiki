@@ -146,14 +146,38 @@ fn runs_summary_aggregate_workflow_graph() {
         .cloned()
         .expect("aggregated summary should exist");
     assert_eq!(aggregated["summary_input_count"], serde_json::json!(3));
-    assert_eq!(aggregated["summary_aggregated_field_count"], serde_json::json!(2));
-    assert_eq!(aggregated["benchmark_max_temperature_min"], serde_json::json!(90.0));
-    assert_eq!(aggregated["benchmark_max_temperature_max"], serde_json::json!(120.0));
-    assert_eq!(aggregated["benchmark_max_temperature_mean"], serde_json::json!(103.33333333333333));
-    assert_eq!(aggregated["benchmark_max_temperature_span"], serde_json::json!(30.0));
-    assert_eq!(aggregated["benchmark_max_heat_flux_min"], serde_json::json!(40.0));
-    assert_eq!(aggregated["benchmark_max_heat_flux_max"], serde_json::json!(60.0));
-    assert_eq!(aggregated["benchmark_max_heat_flux_span"], serde_json::json!(20.0));
+    assert_eq!(
+        aggregated["summary_aggregated_field_count"],
+        serde_json::json!(2)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_temperature_min"],
+        serde_json::json!(90.0)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_temperature_max"],
+        serde_json::json!(120.0)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_temperature_mean"],
+        serde_json::json!(103.33333333333333)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_temperature_span"],
+        serde_json::json!(30.0)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_heat_flux_min"],
+        serde_json::json!(40.0)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_heat_flux_max"],
+        serde_json::json!(60.0)
+    );
+    assert_eq!(
+        aggregated["benchmark_max_heat_flux_span"],
+        serde_json::json!(20.0)
+    );
     assert_eq!(
         aggregated["benchmark_max_temperature_sources"],
         serde_json::json!(["baseline", "candidate", "variant"])

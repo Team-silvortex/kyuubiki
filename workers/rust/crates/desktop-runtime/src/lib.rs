@@ -1,3 +1,4 @@
+use serde::Serialize;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -5,6 +6,24 @@ use std::path::PathBuf;
 use std::process::Command;
 
 const GLOBAL_LANGUAGE_FILE: &str = "desktop-language.txt";
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ServiceEndpointSummary {
+    pub label: String,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ServiceStatusSummary {
+    pub deployment_mode: String,
+    pub control_mode: String,
+    pub authority_mode: String,
+    pub orchestrator_status: String,
+    pub frontend_status: String,
+    pub agent_count: usize,
+    pub active_agent_count: usize,
+    pub agents: Vec<ServiceEndpointSummary>,
+}
 
 #[derive(Clone, Copy)]
 pub enum ServiceMode {
@@ -179,6 +198,14 @@ pub fn service_status() -> Result<String, String> {
     run_workspace_command(&["node", "./scripts/kyuubiki-runtime.mjs", "status"])
 }
 
+pub fn service_status_summary() -> Result<ServiceStatusSummary, String> {
+    Ok(summarize_service_status(&service_status()?))
+}
+
+pub fn summarize_service_status(rendered: &str) -> ServiceStatusSummary {
+    parse_service_status_summary(rendered)
+}
+
 pub fn service_start(mode: ServiceMode) -> Result<String, String> {
     run_workspace_command(&[
         "node",
@@ -272,9 +299,99 @@ pub fn read_runtime_log(service: &str, max_lines: usize) -> Result<String, Strin
     Ok(lines[start..].join("\n"))
 }
 
+fn parse_service_status_summary(rendered: &str) -> ServiceStatusSummary {
+    let mut summary = ServiceStatusSummary {
+        deployment_mode: "local".to_string(),
+        control_mode: "standalone".to_string(),
+        authority_mode: "self_directed".to_string(),
+        orchestrator_status: "unknown".to_string(),
+        frontend_status: "unknown".to_string(),
+        agent_count: 0,
+        active_agent_count: 0,
+        agents: Vec::new(),
+    };
+
+    for line in rendered
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+    {
+        if let Some(value) = line.strip_prefix("deployment-mode:") {
+            summary.deployment_mode = value.trim().to_string();
+            continue;
+        }
+
+        if let Some(value) = line.strip_prefix("control-mode:") {
+            summary.control_mode = value.trim().to_string();
+            continue;
+        }
+
+        if let Some(value) = line.strip_prefix("authority-mode:") {
+            summary.authority_mode = value.trim().to_string();
+            continue;
+        }
+
+        if let Some(status) = parse_named_status(line, "orchestrator") {
+            summary.orchestrator_status = status;
+            continue;
+        }
+
+        if let Some(status) = parse_named_status(line, "frontend") {
+            summary.frontend_status = status;
+            continue;
+        }
+
+        if let Some(status) = parse_agent_status(line) {
+            summary.agent_count += 1;
+            if status.status == "running" {
+                summary.active_agent_count += 1;
+            }
+            summary.agents.push(status);
+        }
+    }
+
+    summary
+}
+
+fn parse_named_status(line: &str, name: &str) -> Option<String> {
+    let prefix = format!("{name}:");
+    let value = line.strip_prefix(&prefix)?.trim();
+    Some(
+        if value.starts_with("running") || value.starts_with("listening") {
+            "running".to_string()
+        } else if value.starts_with("stopped") {
+            "stopped".to_string()
+        } else {
+            "unknown".to_string()
+        },
+    )
+}
+
+fn parse_agent_status(line: &str) -> Option<ServiceEndpointSummary> {
+    let (label, value) = line.split_once(':')?;
+    if !label.starts_with("agent[") {
+        return None;
+    }
+
+    let status = if value.trim().starts_with("running") || value.trim().starts_with("listening") {
+        "running"
+    } else if value.trim().starts_with("stopped") {
+        "stopped"
+    } else {
+        "unknown"
+    };
+
+    Some(ServiceEndpointSummary {
+        label: label.trim().to_string(),
+        status: status.to_string(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    use super::workspace_root;
+    use super::{
+        ServiceEndpointSummary, ServiceStatusSummary, parse_service_status_summary, workspace_root,
+    };
 
     #[test]
     fn workspace_root_points_to_repo_root() {
@@ -283,6 +400,43 @@ mod tests {
             root.join("scripts").join("kyuubiki").is_file(),
             "workspace root should resolve to repo root, got {}",
             root.display()
+        );
+    }
+
+    #[test]
+    fn parses_service_status_summary() {
+        let rendered = [
+            "deployment-mode: distributed",
+            "control-mode: orch_managed",
+            "authority-mode: single_orchestrator",
+            "orchestrator: running on http://127.0.0.1:4000 (pid 100)",
+            "frontend: stopped",
+            "agent[5001]: running on tcp://127.0.0.1:5001 (pid 101)",
+            "agent[5002]: stopped",
+        ]
+        .join("\n");
+
+        assert_eq!(
+            parse_service_status_summary(&rendered),
+            ServiceStatusSummary {
+                deployment_mode: "distributed".to_string(),
+                control_mode: "orch_managed".to_string(),
+                authority_mode: "single_orchestrator".to_string(),
+                orchestrator_status: "running".to_string(),
+                frontend_status: "stopped".to_string(),
+                agent_count: 2,
+                active_agent_count: 1,
+                agents: vec![
+                    ServiceEndpointSummary {
+                        label: "agent[5001]".to_string(),
+                        status: "running".to_string(),
+                    },
+                    ServiceEndpointSummary {
+                        label: "agent[5002]".to_string(),
+                        status: "stopped".to_string(),
+                    },
+                ],
+            }
         );
     }
 }
