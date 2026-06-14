@@ -1,6 +1,9 @@
 defmodule KyuubikiWeb.TestSupport.WorkflowApi do
   @moduledoc false
 
+  require ExUnit.Assertions
+
+  import Plug.Conn
   import Plug.Test
 
   alias KyuubikiWeb.Playground.AgentPool
@@ -131,17 +134,31 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     ExUnit.Assertions.assert(result_payload["result"]["workflow_id"] == workflow_id)
     ExUnit.Assertions.assert(length(result_payload["result"]["completed_nodes"]) == 7)
     ExUnit.Assertions.assert(length(result_payload["result"]["progress_events"]) == 7)
-    ExUnit.Assertions.assert(Enum.member?(result_payload["result"]["completed_nodes"], "field_hotspots"))
-    ExUnit.Assertions.refute(Enum.member?(result_payload["result"]["completed_nodes"], "solve_heat"))
-    ExUnit.Assertions.refute(Enum.member?(result_payload["result"]["completed_nodes"], "solve_thermo"))
 
     ExUnit.Assertions.assert(
-      MapSet.subset?(MapSet.new(skipped_nodes), MapSet.new(result_payload["result"]["skipped_nodes"]))
+      Enum.member?(result_payload["result"]["completed_nodes"], "field_hotspots")
     )
 
-    ExUnit.Assertions.assert(result_payload["result"]["branch_decisions"] == [
-      %{"node_id" => "gate", "chosen_output" => "if_true", "predicate_result" => true}
-    ])
+    ExUnit.Assertions.refute(
+      Enum.member?(result_payload["result"]["completed_nodes"], "solve_heat")
+    )
+
+    ExUnit.Assertions.refute(
+      Enum.member?(result_payload["result"]["completed_nodes"], "solve_thermo")
+    )
+
+    ExUnit.Assertions.assert(
+      MapSet.subset?(
+        MapSet.new(skipped_nodes),
+        MapSet.new(result_payload["result"]["skipped_nodes"])
+      )
+    )
+
+    ExUnit.Assertions.assert(
+      result_payload["result"]["branch_decisions"] == [
+        %{"node_id" => "gate", "chosen_output" => "if_true", "predicate_result" => true}
+      ]
+    )
 
     exported = result_payload["result"]["artifacts"]["json_output.json"]
     ExUnit.Assertions.assert(exported["format"] == "json")
@@ -153,24 +170,55 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     ExUnit.Assertions.assert(summary["source_field"] == "electric_field_magnitude")
   end
 
-  def assert_guard_continued(result_payload, workflow_id, expected_temperature_deltas, expected_summary) do
+  def assert_guard_continued(
+        result_payload,
+        workflow_id,
+        expected_temperature_deltas,
+        expected_summary
+      ) do
     ExUnit.Assertions.assert(result_payload["job"]["status"] == "completed")
     ExUnit.Assertions.assert(result_payload["result"]["workflow_id"] == workflow_id)
     ExUnit.Assertions.assert(length(result_payload["result"]["completed_nodes"]) == 11)
     ExUnit.Assertions.assert(length(result_payload["result"]["progress_events"]) == 11)
-    ExUnit.Assertions.refute(Enum.member?(result_payload["result"]["completed_nodes"], "field_hotspots"))
-    ExUnit.Assertions.assert(Enum.member?(result_payload["result"]["completed_nodes"], "solve_heat"))
-    ExUnit.Assertions.assert(Enum.member?(result_payload["result"]["completed_nodes"], "solve_thermo"))
-    ExUnit.Assertions.assert(MapSet.equal?(MapSet.new(result_payload["result"]["skipped_nodes"]), MapSet.new(["field_hotspots"])))
-    ExUnit.Assertions.assert(result_payload["result"]["branch_decisions"] == [
-      %{"node_id" => "gate", "chosen_output" => "if_false", "predicate_result" => false}
-    ])
+
+    ExUnit.Assertions.refute(
+      Enum.member?(result_payload["result"]["completed_nodes"], "field_hotspots")
+    )
+
+    ExUnit.Assertions.assert(
+      Enum.member?(result_payload["result"]["completed_nodes"], "solve_heat")
+    )
+
+    ExUnit.Assertions.assert(
+      Enum.member?(result_payload["result"]["completed_nodes"], "solve_thermo")
+    )
+
+    ExUnit.Assertions.assert(
+      MapSet.equal?(
+        MapSet.new(result_payload["result"]["skipped_nodes"]),
+        MapSet.new(["field_hotspots"])
+      )
+    )
+
+    ExUnit.Assertions.assert(
+      result_payload["result"]["branch_decisions"] == [
+        %{"node_id" => "gate", "chosen_output" => "if_false", "predicate_result" => false}
+      ]
+    )
 
     bridged_heat_model = result_payload["result"]["artifacts"]["bridge_field_to_heat.heat_model"]
-    ExUnit.Assertions.assert(Enum.all?(bridged_heat_model["nodes"], fn node -> node["heat_load"] == 300.0 end))
 
-    bridged_thermo_model = result_payload["result"]["artifacts"]["bridge_temperature.thermo_model"]
-    ExUnit.Assertions.assert(Enum.map(bridged_thermo_model["nodes"], & &1["temperature_delta"]) == expected_temperature_deltas)
+    ExUnit.Assertions.assert(
+      Enum.all?(bridged_heat_model["nodes"], fn node -> node["heat_load"] == 300.0 end)
+    )
+
+    bridged_thermo_model =
+      result_payload["result"]["artifacts"]["bridge_temperature.thermo_model"]
+
+    ExUnit.Assertions.assert(
+      Enum.map(bridged_thermo_model["nodes"], & &1["temperature_delta"]) ==
+        expected_temperature_deltas
+    )
 
     exported = result_payload["result"]["artifacts"]["json_output.json"]
     ExUnit.Assertions.assert(exported["format"] == "json")
@@ -178,20 +226,59 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     summary = Jason.decode!(exported["content"])
     ExUnit.Assertions.assert(summary["max_displacement"] == expected_summary["max_displacement"])
     ExUnit.Assertions.assert(summary["max_stress"] == expected_summary["max_stress"])
-    ExUnit.Assertions.assert(summary["max_temperature_delta"] == expected_summary["max_temperature_delta"])
+
+    ExUnit.Assertions.assert(
+      summary["max_temperature_delta"] == expected_summary["max_temperature_delta"]
+    )
   end
 
   def heat_to_thermo_quad_input_artifacts do
     %{
       "heat_model" => %{
         "nodes" => [
-          %{"id" => "h0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 100.0, "heat_load" => 0.0},
-          %{"id" => "h1", "x" => 1.0, "y" => 0.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-          %{"id" => "h2", "x" => 1.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-          %{"id" => "h3", "x" => 0.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0}
+          %{
+            "id" => "h0",
+            "x" => 0.0,
+            "y" => 0.0,
+            "fix_temperature" => true,
+            "temperature" => 100.0,
+            "heat_load" => 0.0
+          },
+          %{
+            "id" => "h1",
+            "x" => 1.0,
+            "y" => 0.0,
+            "fix_temperature" => false,
+            "temperature" => 0.0,
+            "heat_load" => 0.0
+          },
+          %{
+            "id" => "h2",
+            "x" => 1.0,
+            "y" => 1.0,
+            "fix_temperature" => true,
+            "temperature" => 20.0,
+            "heat_load" => 0.0
+          },
+          %{
+            "id" => "h3",
+            "x" => 0.0,
+            "y" => 1.0,
+            "fix_temperature" => true,
+            "temperature" => 20.0,
+            "heat_load" => 0.0
+          }
         ],
         "elements" => [
-          %{"id" => "hq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.02, "conductivity" => 45.0}
+          %{
+            "id" => "hq0",
+            "node_i" => 0,
+            "node_j" => 1,
+            "node_k" => 2,
+            "node_l" => 3,
+            "thickness" => 0.02,
+            "conductivity" => 45.0
+          }
         ]
       }
     }
@@ -201,13 +288,49 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
     %{
       "electrostatic_model" => %{
         "nodes" => [
-          %{"id" => "n0", "x" => 0.0, "y" => 0.0, "fix_potential" => true, "potential" => 10.0, "charge_density" => 0.0},
-          %{"id" => "n1", "x" => 1.0, "y" => 0.0, "fix_potential" => true, "potential" => 0.0, "charge_density" => 0.0},
-          %{"id" => "n2", "x" => 1.0, "y" => 1.0, "fix_potential" => true, "potential" => 0.0, "charge_density" => 0.0},
-          %{"id" => "n3", "x" => 0.0, "y" => 1.0, "fix_potential" => true, "potential" => 10.0, "charge_density" => 0.0}
+          %{
+            "id" => "n0",
+            "x" => 0.0,
+            "y" => 0.0,
+            "fix_potential" => true,
+            "potential" => 10.0,
+            "charge_density" => 0.0
+          },
+          %{
+            "id" => "n1",
+            "x" => 1.0,
+            "y" => 0.0,
+            "fix_potential" => true,
+            "potential" => 0.0,
+            "charge_density" => 0.0
+          },
+          %{
+            "id" => "n2",
+            "x" => 1.0,
+            "y" => 1.0,
+            "fix_potential" => true,
+            "potential" => 0.0,
+            "charge_density" => 0.0
+          },
+          %{
+            "id" => "n3",
+            "x" => 0.0,
+            "y" => 1.0,
+            "fix_potential" => true,
+            "potential" => 10.0,
+            "charge_density" => 0.0
+          }
         ],
         "elements" => [
-          %{"id" => "epq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.05, "permittivity" => 2.0}
+          %{
+            "id" => "epq0",
+            "node_i" => 0,
+            "node_j" => 1,
+            "node_k" => 2,
+            "node_l" => 3,
+            "thickness" => 0.05,
+            "permittivity" => 2.0
+          }
         ]
       }
     }
@@ -219,10 +342,23 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
         "nodes" => [
           %{"id" => "e0", "x" => 0.0, "y" => 0.0, "fix_potential" => true, "potential" => 12.0},
           %{"id" => "e1", "x" => 1.0, "y" => 0.0, "fix_potential" => true, "potential" => 0.0},
-          %{"id" => "e2", "x" => 0.0, "y" => 1.0, "fix_potential" => false, "charge_density" => 0.0}
+          %{
+            "id" => "e2",
+            "x" => 0.0,
+            "y" => 1.0,
+            "fix_potential" => false,
+            "charge_density" => 0.0
+          }
         ],
         "elements" => [
-          %{"id" => "et0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "thickness" => 0.05, "permittivity" => 2.0}
+          %{
+            "id" => "et0",
+            "node_i" => 0,
+            "node_j" => 1,
+            "node_k" => 2,
+            "thickness" => 0.05,
+            "permittivity" => 2.0
+          }
         ]
       }
     }
@@ -233,7 +369,14 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
       "ok" => true,
       "result" => %{
         "nodes" => [
-          %{"index" => 0, "id" => "n0", "x" => 0.0, "y" => 0.0, "potential" => 10.0, "charge_density" => 0.0}
+          %{
+            "index" => 0,
+            "id" => "n0",
+            "x" => 0.0,
+            "y" => 0.0,
+            "potential" => 10.0,
+            "charge_density" => 0.0
+          }
         ],
         "elements" => [
           %{
@@ -280,7 +423,14 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
       "ok" => true,
       "result" => %{
         "nodes" => [
-          %{"index" => 0, "id" => "n0", "x" => 0.0, "y" => 0.0, "potential" => 10.0, "charge_density" => 0.0}
+          %{
+            "index" => 0,
+            "id" => "n0",
+            "x" => 0.0,
+            "y" => 0.0,
+            "potential" => 10.0,
+            "charge_density" => 0.0
+          }
         ],
         "elements" => [
           %{
@@ -315,7 +465,14 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApi do
       "ok" => true,
       "result" => %{
         "nodes" => [
-          %{"index" => 0, "id" => "n0", "x" => 0.0, "y" => 0.0, "potential" => 6.0, "charge_density" => 0.0}
+          %{
+            "index" => 0,
+            "id" => "n0",
+            "x" => 0.0,
+            "y" => 0.0,
+            "potential" => 6.0,
+            "charge_density" => 0.0
+          }
         ],
         "elements" => [
           %{

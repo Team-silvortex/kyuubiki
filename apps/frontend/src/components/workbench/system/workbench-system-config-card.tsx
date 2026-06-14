@@ -6,7 +6,7 @@ type Theme = "linen" | "marine" | "graphite";
 type Language = "en" | "zh" | "ja" | "es";
 type FrontendRuntimeMode = "orchestrated_gui" | "direct_mesh_gui";
 type DirectMeshSelectionMode = "healthiest" | "first_reachable";
-type ConfigPage = "workspace" | "routing" | "access" | "packs";
+type ConfigPage = "workspace" | "routing" | "access" | "governance" | "packs";
 
 type WorkbenchSystemConfigCardProps = {
   title: string;
@@ -14,6 +14,7 @@ type WorkbenchSystemConfigCardProps = {
   workspacePageLabel: string;
   routingPageLabel: string;
   accessPageLabel: string;
+  governancePageLabel: string;
   packsPageLabel: string;
   themeLabel: string;
   languageLabel: string;
@@ -50,6 +51,10 @@ type WorkbenchSystemConfigCardProps = {
   immersiveGuardHelp: string;
   browserLimitsNote: string;
   exportDatabaseLabel: string;
+  governanceTitle: string;
+  governanceHint: string;
+  governanceRows: Array<{ label: string; value: string }>;
+  governanceJson: string;
   theme: Theme;
   language: Language;
   frontendRuntimeMode: FrontendRuntimeMode;
@@ -96,6 +101,7 @@ export function WorkbenchSystemConfigCard({
   workspacePageLabel,
   routingPageLabel,
   accessPageLabel,
+  governancePageLabel,
   packsPageLabel,
   themeLabel,
   languageLabel,
@@ -132,6 +138,10 @@ export function WorkbenchSystemConfigCard({
   immersiveGuardHelp,
   browserLimitsNote,
   exportDatabaseLabel,
+  governanceTitle,
+  governanceHint,
+  governanceRows,
+  governanceJson,
   theme,
   language,
   frontendRuntimeMode,
@@ -181,6 +191,9 @@ export function WorkbenchSystemConfigCard({
         </button>
         <button className={`panel-tab${page === "access" ? " panel-tab--active" : ""}`} onClick={() => setPage("access")} type="button">
           {accessPageLabel}
+        </button>
+        <button className={`panel-tab${page === "governance" ? " panel-tab--active" : ""}`} onClick={() => setPage("governance")} type="button">
+          {governancePageLabel}
         </button>
         <button className={`panel-tab${page === "packs" ? " panel-tab--active" : ""}`} onClick={() => setPage("packs")} type="button">
           {packsPageLabel}
@@ -270,6 +283,25 @@ export function WorkbenchSystemConfigCard({
             <small className="field-hint">{directMeshTokenHelp}</small>
             <input type="password" value={directMeshApiToken} onChange={(event) => onDirectMeshApiTokenChange(event.target.value)} placeholder={directMeshTokenPlaceholder} />
           </label>
+        </div>
+      ) : null}
+      {page === "governance" ? (
+        <div className="stack-block">
+          <div className="card-copy">
+            <strong>{governanceTitle}</strong>
+            <p>{governanceHint}</p>
+          </div>
+          <div className="sidebar-list">
+            {governanceRows.map((row) => (
+              <div className="sidebar-list__row" key={row.label}>
+                <span>{row.label}</span>
+                <strong>{row.value}</strong>
+              </div>
+            ))}
+          </div>
+          <pre className="code-block" style={{ margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            {governanceJson}
+          </pre>
         </div>
       ) : null}
       {page === "packs" ? (

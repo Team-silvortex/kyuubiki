@@ -2,13 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { heartbeatTone } from "@/components/workbench/workbench-result-helpers";
+import { buildWorkbenchGovernanceEnforcementPlan, buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
 import type {
   BeamResultField,
   FrameResultField,
   StudyKind,
   SystemPanelTab,
 } from "@/components/workbench/workbench-types";
-import type { JobEnvelope, ProjectRecord } from "@/lib/api";
+import type { FrontendRuntimeMode, JobEnvelope, ProjectRecord, ProtocolAgentDescriptor } from "@/lib/api";
 
 export function useWorkbenchRuntimeGuards(params: {
   beamResultField: BeamResultField;
@@ -19,6 +20,12 @@ export function useWorkbenchRuntimeGuards(params: {
   job: JobEnvelope["job"] | null;
   language: string;
   frameResultField: FrameResultField;
+  frontendRuntimeMode: FrontendRuntimeMode;
+  directMeshEndpointsText: string;
+  controlPlaneApiToken: string;
+  clusterApiToken: string;
+  directMeshApiToken: string;
+  protocolAgents: ProtocolAgentDescriptor[];
   projects: ProjectRecord[];
   selectedProjectId: string | null;
   setAssistantWindowOpen: (value: boolean) => void;
@@ -26,6 +33,7 @@ export function useWorkbenchRuntimeGuards(params: {
   setFocusedFrameElement: (value: number | null) => void;
   setFocusedPlaneElement: (value: number | null) => void;
   setFrameResultField: (value: FrameResultField) => void;
+  setFrontendRuntimeMode: (value: FrontendRuntimeMode) => void;
   setImmersiveHelpDrawerOpen: (value: boolean) => void;
   setImmersiveToolDrawerOpen: (value: boolean) => void;
   setImmersiveViewport: (value: boolean) => void;
@@ -50,6 +58,12 @@ export function useWorkbenchRuntimeGuards(params: {
     job,
     language,
     frameResultField,
+    frontendRuntimeMode,
+    directMeshEndpointsText,
+    controlPlaneApiToken,
+    clusterApiToken,
+    directMeshApiToken,
+    protocolAgents,
     projects,
     selectedProjectId,
     setAssistantWindowOpen,
@@ -57,6 +71,7 @@ export function useWorkbenchRuntimeGuards(params: {
     setFocusedFrameElement,
     setFocusedPlaneElement,
     setFrameResultField,
+    setFrontendRuntimeMode,
     setImmersiveHelpDrawerOpen,
     setImmersiveToolDrawerOpen,
     setImmersiveViewport,
@@ -71,6 +86,7 @@ export function useWorkbenchRuntimeGuards(params: {
   } = params;
 
   const staleHeartbeatAlertedRef = useRef<string | null>(null);
+  const governanceDowngradeSignatureRef = useRef<string | null>(null);
   const dragHistoryCapturedRef = useRef(false);
   const drag3dHistoryCapturedRef = useRef(false);
   const dragFrameRef = useRef<number | null>(null);
@@ -78,6 +94,50 @@ export function useWorkbenchRuntimeGuards(params: {
   const canvasStageRef = useRef<HTMLDivElement | null>(null);
   const resultRefreshSeqRef = useRef(0);
   const jobPollTokenRef = useRef(0);
+
+  useEffect(() => {
+    const diagnostics = buildWorkbenchGovernanceRuntimeDiagnostics({
+      frontendRuntimeMode,
+      directMeshEndpointsText,
+      protocolAgents,
+      controlPlaneApiToken,
+      clusterApiToken,
+      directMeshApiToken,
+    });
+    const enforcement = buildWorkbenchGovernanceEnforcementPlan({
+      frontendRuntimeMode,
+      diagnostics,
+    });
+    const signature = `${frontendRuntimeMode}:${diagnostics.driftLabel}:${diagnostics.exposureLabel}:${diagnostics.visibleRuntimeModes.join(",")}`;
+
+    if (!enforcement.shouldDowngrade) {
+      governanceDowngradeSignatureRef.current = null;
+      return;
+    }
+    if (governanceDowngradeSignatureRef.current === signature) return;
+
+    governanceDowngradeSignatureRef.current = signature;
+    setFrontendRuntimeMode(enforcement.nextFrontendRuntimeMode);
+    setSystemPanelTab("runtime");
+    setMessage(
+      language === "zh"
+        ? `检测到治理风险，已自动降级到中心调度安全模式: ${enforcement.reason ?? "runtime drift"}。`
+        : language === "ja"
+          ? `ガバナンス上のリスクを検出したため、オーケストレーション安全モードへ自動降格しました: ${enforcement.reason ?? "runtime drift"}。`
+          : `Governance risk detected. Automatically downgraded to orchestrated safe mode: ${enforcement.reason ?? "runtime drift"}.`,
+    );
+  }, [
+    clusterApiToken,
+    controlPlaneApiToken,
+    directMeshApiToken,
+    directMeshEndpointsText,
+    frontendRuntimeMode,
+    language,
+    protocolAgents,
+    setFrontendRuntimeMode,
+    setMessage,
+    setSystemPanelTab,
+  ]);
 
   useEffect(() => {
     if (systemPanelTab === "assistant") {

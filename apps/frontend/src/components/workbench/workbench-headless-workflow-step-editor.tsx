@@ -11,6 +11,8 @@ import type {
 } from "@/components/workbench/workbench-headless-workflow-contract";
 import { updatePayloadField } from "@/components/workbench/workbench-headless-workflow-contract";
 import { WorkbenchHeadlessReferenceMapper } from "@/components/workbench/workbench-headless-reference-mapper";
+import { localizeWorkflowText } from "@/components/workbench/workbench-headless-workflow-registry";
+import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime";
 
 type WorkbenchHeadlessWorkflowStepEditorProps = {
   bridgeActionListLabel: string;
@@ -25,6 +27,8 @@ type WorkbenchHeadlessWorkflowStepEditorProps = {
   contract: HeadlessActionContract | undefined;
   endpointsHint: string;
   endpointsLabel: string;
+  guidanceTitle: string;
+  language: WorkbenchScriptLanguage;
   noReferencesLabel: string;
   onRestoreBridgeMacro?: () => void;
   parsePayloadText: (payloadText: string) => PayloadObject | null;
@@ -124,6 +128,8 @@ export function WorkbenchHeadlessWorkflowStepEditor({
   contract,
   endpointsHint,
   endpointsLabel,
+  guidanceTitle,
+  language,
   noReferencesLabel,
   onRestoreBridgeMacro,
   parsePayloadText,
@@ -287,6 +293,24 @@ export function WorkbenchHeadlessWorkflowStepEditor({
 
   return (
     <>
+      {contract.guidanceNotes?.length ? (
+        <>
+          <div className="card-subhead">
+            <strong>{guidanceTitle}</strong>
+            <span>{contract.guidanceNotes.length}</span>
+          </div>
+          <div className="script-panel__catalog">
+            {contract.guidanceNotes.map((note) => (
+              <article className="script-panel__action" key={`${step.id}-${localizeWorkflowText(language, note.label)}`}>
+                <div className="script-panel__payload">
+                  <span>{localizeWorkflowText(language, note.label)}</span>
+                  <code>{localizeWorkflowText(language, note.value)}</code>
+                </div>
+              </article>
+            ))}
+          </div>
+        </>
+      ) : null}
       {contract.inputSchema.map((port) => (
         <div key={`${step.id}-${port.key}`}>
           {renderField(port)}

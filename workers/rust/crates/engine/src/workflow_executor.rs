@@ -1,19 +1,18 @@
-use crate::bridge::{
-    attach_bridge_diagnostics,
-    bridge_electrostatic_result_to_heat_plane_quad_model,
-    bridge_electrostatic_result_to_heat_plane_triangle_model,
-    bridge_heat_result_to_thermal_plane_quad_model,
-    bridge_heat_result_to_thermal_plane_triangle_model,
-    resolve_electrostatic_to_heat_bridge_contract,
+use crate::{
+    bridge::{
+        attach_bridge_diagnostics, bridge_electrostatic_result_to_heat_plane_quad_model,
+        bridge_electrostatic_result_to_heat_plane_triangle_model,
+        resolve_electrostatic_to_heat_bridge_contract,
+    },
+    heat_bridge::{
+        bridge_heat_result_to_thermal_plane_quad_model_with_contract,
+        bridge_heat_result_to_thermal_plane_triangle_model_with_contract,
+        resolve_heat_to_thermo_bridge_contract,
+    },
+    EngineSolveRequest, solve,
 };
-use crate::workflow_reporting::{
-    compare_summary_pair, export_alert_markdown, export_summary_csv, export_summary_json,
-    extract_field_hotspots, extract_field_statistics, extract_result_summary, merge_summary_pair,
-};
-use crate::workflow_summary_transforms::{
-    aggregate_summary_collection, normalize_summary_fields, select_best_summary,
-};
-use crate::{EngineSolveRequest, solve};
+use crate::workflow_reporting::{compare_summary_pair, export_alert_markdown, export_summary_csv, export_summary_json, extract_field_hotspots, extract_field_statistics, extract_result_summary, merge_summary_pair};
+use crate::workflow_summary_transforms::{aggregate_summary_collection, normalize_summary_fields, select_best_summary};
 use kyuubiki_protocol::{
     AnalysisResult, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
@@ -499,28 +498,26 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
     }
 }
 
-pub fn run_transform_operator(
-    operator_id: &str,
-    payload: Value,
-    config: Value,
-) -> Result<Value, String> {
+pub fn run_transform_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
     match operator_id {
         "bridge.temperature_field_to_thermo_quad_2d" => {
             let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let contract = resolve_heat_to_thermo_bridge_contract(&config)?;
+            let seed_model_value = config.get("seed_model").cloned().unwrap_or(config);
             let thermo_seed_model: SolveThermalPlaneQuad2dRequest =
-                serde_json::from_value(config).map_err(|err| err.to_string())?;
+                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
             let (bridged, diagnostics) =
-                bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &thermo_seed_model)?;
+                bridge_heat_result_to_thermal_plane_quad_model_with_contract(&heat_result, &thermo_seed_model, &contract)?;
             attach_bridge_diagnostics(&bridged, &diagnostics)
         }
         "bridge.temperature_field_to_thermo_triangle_2d" => {
             let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let contract = resolve_heat_to_thermo_bridge_contract(&config)?;
+            let seed_model_value = config.get("seed_model").cloned().unwrap_or(config);
             let thermo_seed_model: SolveThermalPlaneTriangle2dRequest =
-                serde_json::from_value(config).map_err(|err| err.to_string())?;
-            let (bridged, diagnostics) = bridge_heat_result_to_thermal_plane_triangle_model(
-                &heat_result,
-                &thermo_seed_model,
-            )?;
+                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
+            let (bridged, diagnostics) =
+                bridge_heat_result_to_thermal_plane_triangle_model_with_contract(&heat_result, &thermo_seed_model, &contract)?;
             attach_bridge_diagnostics(&bridged, &diagnostics)
         }
         "bridge.electrostatic_field_to_heat_quad_2d" => {

@@ -212,11 +212,13 @@ defmodule KyuubikiWeb.Analysis do
       {:ok,
        %{
          "workflow_id" => Map.get(graph, "id"),
+         "dataset_contract" => Map.get(graph, "dataset_contract"),
          "completed_nodes" => Map.get(result, "completed_nodes", []),
          "skipped_nodes" => Map.get(result, "skipped_nodes", []),
          "branch_decisions" => Map.get(result, "branch_decisions", []),
          "node_runs" => Map.get(result, "node_runs", []),
          "artifact_lineage" => Map.get(result, "artifact_lineage", []),
+         "dataset_lineage" => Map.get(result, "dataset_lineage", []),
          "artifacts" => Map.get(result, "artifacts", %{})
        }}
     else
@@ -329,6 +331,7 @@ defmodule KyuubikiWeb.Analysis do
     WorkflowGraphRunner.run(
       graph,
       input_artifacts,
+      dataset_contract: Map.get(graph, "dataset_contract"),
       progress_callback: progress_callback,
       execute_solve: &WorkflowOperatorRuntime.run_solve_operator/2,
       execute_transform: &WorkflowOperatorRuntime.run_transform_operator/3,
@@ -419,6 +422,7 @@ defmodule KyuubikiWeb.Analysis do
           :ok =
             AnalysisResultStore.put(job_id, %{
               "workflow_id" => Map.get(graph, "id"),
+              "dataset_contract" => Map.get(graph, "dataset_contract"),
               "current_node" => nil,
               "progress_events" => workflow_progress_events(job_id),
               "completed_nodes" => Map.get(result, "completed_nodes", []),
@@ -426,6 +430,7 @@ defmodule KyuubikiWeb.Analysis do
               "branch_decisions" => Map.get(result, "branch_decisions", []),
               "node_runs" => Map.get(result, "node_runs", []),
               "artifact_lineage" => Map.get(result, "artifact_lineage", []),
+              "dataset_lineage" => Map.get(result, "dataset_lineage", []),
               "artifacts" => Map.get(result, "artifacts", %{})
             })
 

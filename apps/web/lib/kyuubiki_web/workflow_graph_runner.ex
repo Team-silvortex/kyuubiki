@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.WorkflowGraphRunner do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowCatalogSupport
+
   def run(graph, input_artifacts, opts \\ [])
 
   def run(graph, input_artifacts, opts)
@@ -69,13 +71,23 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
 
     cond do
       MapSet.size(next_state.completed) + MapSet.size(next_state.skipped) == length(nodes) ->
+        graph = %{
+          "nodes" => nodes,
+          "edges" => edges,
+          "dataset_contract" => Keyword.get(opts, :dataset_contract)
+        }
+
+        artifact_lineage = next_state.artifact_lineage
+
         {:ok,
          %{
            "completed_nodes" => next_state.ordered_completed,
            "skipped_nodes" => next_state.ordered_skipped,
            "branch_decisions" => next_state.branch_decisions,
            "node_runs" => next_state.node_runs,
-           "artifact_lineage" => next_state.artifact_lineage,
+           "artifact_lineage" => artifact_lineage,
+           "dataset_lineage" =>
+             WorkflowCatalogSupport.derive_dataset_lineage(graph, artifact_lineage),
            "artifacts" => next_state.artifacts
          }}
 
@@ -303,7 +315,14 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         key = edge_from_key(edge)
 
         case Map.fetch(artifacts, key) do
-          {:ok, value} -> {:cont, Map.put(acc, get_in(edge, ["to", "port"]), value)}
+          {:ok, value} ->
+            {:cont,
+             Map.put(
+               acc,
+               get_in(edge, ["to", "port"]),
+               unwrap_named_transform_input(value, edge)
+             )}
+
           :error -> {:halt, {:error, {:missing_upstream_artifact, key}}}
         end
       end)
@@ -319,6 +338,15 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
         {:ok, payload}
     end
   end
+
+  defp unwrap_named_transform_input(value, edge) when is_map(value) do
+    case get_in(edge, ["from", "port"]) do
+      port_id when is_binary(port_id) -> Map.get(value, port_id, value)
+      _ -> value
+    end
+  end
+
+  defp unwrap_named_transform_input(value, _edge), do: value
 
   defp consumed_artifacts_for_node(node, incoming, artifacts) do
     if transform_operator_accepts_partial_inputs?(node) do

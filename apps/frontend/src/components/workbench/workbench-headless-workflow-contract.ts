@@ -26,19 +26,27 @@ export type HeadlessOutputPort = {
   label: string;
 };
 
+export type HeadlessLocalizedText = Record<string, string>;
+
+export type HeadlessActionGuidanceNote = {
+  label: HeadlessLocalizedText;
+  value: HeadlessLocalizedText;
+};
+
 export type HeadlessActionContract = {
   id: string;
   risk: "normal" | "sensitive" | "destructive";
-  summary: Record<string, string>;
+  summary: HeadlessLocalizedText;
   payloadExample: PayloadObject;
   inputSchema: HeadlessInputPort[];
   outputSchema: HeadlessOutputPort[];
+  guidanceNotes?: HeadlessActionGuidanceNote[];
 };
 
 export type HeadlessWorkflowTemplate = {
   id: string;
-  title: Record<string, string>;
-  description: Record<string, string>;
+  title: HeadlessLocalizedText;
+  description: HeadlessLocalizedText;
   steps: Array<{ action: string; payload: PayloadObject }>;
 };
 
@@ -63,4 +71,8 @@ export function updatePayloadField(payload: PayloadObject | null, key: string, v
     next[key] = value;
   }
   return next;
+}
+
+export function localizeHeadlessText(language: string, value: HeadlessLocalizedText) {
+  return value[language] ?? value.en ?? "";
 }

@@ -1,24 +1,21 @@
-use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult, HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneQuad2dWorkflowResult,
     SolveElectrostaticPlaneQuad2dResult, SolveElectrostaticPlaneTriangle2dResult,
-    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
-    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
 };
 use serde::Serialize;
 use serde_json::Value;
 
 #[derive(Clone, Serialize)]
 pub struct BridgeDiagnostics {
-    bridge_kind: String,
-    mapped_count: usize,
-    defaulted_count: usize,
-    source_field: String,
-    target_field: String,
-    source_value_min: Option<f64>,
-    source_value_max: Option<f64>,
-    reduction: Option<String>,
-    scale: Option<f64>,
+    pub(crate) bridge_kind: String,
+    pub(crate) mapped_count: usize,
+    pub(crate) defaulted_count: usize,
+    pub(crate) source_field: String,
+    pub(crate) target_field: String,
+    pub(crate) source_value_min: Option<f64>,
+    pub(crate) source_value_max: Option<f64>,
+    pub(crate) reduction: Option<String>,
+    pub(crate) scale: Option<f64>,
 }
 
 pub(crate) fn attach_bridge_diagnostics<T: Serialize>(
@@ -34,123 +31,6 @@ pub(crate) fn attach_bridge_diagnostics<T: Serialize>(
         serde_json::to_value(diagnostics).map_err(|err| err.to_string())?,
     );
     Ok(value)
-}
-
-pub fn bridge_heat_result_to_thermal_plane_quad_model(
-    heat_result: &kyuubiki_protocol::SolveHeatPlaneQuad2dResult,
-    thermo_seed_model: &SolveThermalPlaneQuad2dRequest,
-) -> Result<(SolveThermalPlaneQuad2dRequest, BridgeDiagnostics), String> {
-    if heat_result.nodes.len() != thermo_seed_model.nodes.len() {
-        return Err("heat and thermo quad models must have the same node count".to_string());
-    }
-    if heat_result.input.elements.len() != thermo_seed_model.elements.len() {
-        return Err("heat and thermo quad models must have the same element count".to_string());
-    }
-
-    let mut bridged = thermo_seed_model.clone();
-    let temperatures = heat_result
-        .nodes
-        .iter()
-        .map(|node| node.temperature)
-        .collect::<Vec<_>>();
-    for (heat_node, thermo_node) in heat_result.nodes.iter().zip(bridged.nodes.iter_mut()) {
-        if (heat_node.x - thermo_node.x).abs() > 1.0e-9
-            || (heat_node.y - thermo_node.y).abs() > 1.0e-9
-        {
-            return Err(format!(
-                "heat node {} does not align with thermo node {}",
-                heat_node.id, thermo_node.id
-            ));
-        }
-        thermo_node.temperature_delta = heat_node.temperature;
-    }
-
-    Ok((
-        bridged,
-        BridgeDiagnostics {
-            bridge_kind: "heat_to_thermo_quad_2d".to_string(),
-            mapped_count: heat_result.nodes.len(),
-            defaulted_count: 0,
-            source_field: "temperature".to_string(),
-            target_field: "temperature_delta".to_string(),
-            source_value_min: temperatures.iter().copied().reduce(f64::min),
-            source_value_max: temperatures.iter().copied().reduce(f64::max),
-            reduction: None,
-            scale: None,
-        },
-    ))
-}
-
-pub fn bridge_heat_result_to_thermal_plane_triangle_model(
-    heat_result: &SolveHeatPlaneTriangle2dResult,
-    thermo_seed_model: &SolveThermalPlaneTriangle2dRequest,
-) -> Result<(SolveThermalPlaneTriangle2dRequest, BridgeDiagnostics), String> {
-    if heat_result.nodes.len() != thermo_seed_model.nodes.len() {
-        return Err("heat and thermo triangle models must have the same node count".to_string());
-    }
-    if heat_result.input.elements.len() != thermo_seed_model.elements.len() {
-        return Err("heat and thermo triangle models must have the same element count".to_string());
-    }
-
-    let mut bridged = thermo_seed_model.clone();
-    let temperatures = heat_result
-        .nodes
-        .iter()
-        .map(|node| node.temperature)
-        .collect::<Vec<_>>();
-    for (heat_node, thermo_node) in heat_result.nodes.iter().zip(bridged.nodes.iter_mut()) {
-        if (heat_node.x - thermo_node.x).abs() > 1.0e-9
-            || (heat_node.y - thermo_node.y).abs() > 1.0e-9
-        {
-            return Err(format!(
-                "heat node {} does not align with thermo node {}",
-                heat_node.id, thermo_node.id
-            ));
-        }
-        thermo_node.temperature_delta = heat_node.temperature;
-    }
-
-    Ok((
-        bridged,
-        BridgeDiagnostics {
-            bridge_kind: "heat_to_thermo_triangle_2d".to_string(),
-            mapped_count: heat_result.nodes.len(),
-            defaulted_count: 0,
-            source_field: "temperature".to_string(),
-            target_field: "temperature_delta".to_string(),
-            source_value_min: temperatures.iter().copied().reduce(f64::min),
-            source_value_max: temperatures.iter().copied().reduce(f64::max),
-            reduction: None,
-            scale: None,
-        },
-    ))
-}
-
-pub fn run_heat_to_thermo_plane_quad_2d_workflow(
-    request: HeatToThermoPlaneQuad2dWorkflowRequest,
-) -> Result<HeatToThermoPlaneQuad2dWorkflowResult, String> {
-    let heat_result = match solve(EngineSolveRequest::HeatPlaneQuad2d(request.heat_model))? {
-        AnalysisResult::HeatPlaneQuad2d(result) => result,
-        _ => return Err("heat-plane-quad workflow produced an unexpected heat result".to_string()),
-    };
-
-    let (bridged_model, _) =
-        bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &request.thermo_seed_model)?;
-    let thermo_result = match solve(EngineSolveRequest::ThermalPlaneQuad2d(
-        bridged_model.clone(),
-    ))? {
-        AnalysisResult::ThermalPlaneQuad2d(result) => result,
-        _ => {
-            return Err("heat-to-thermo workflow produced an unexpected thermo result".to_string());
-        }
-    };
-
-    Ok(HeatToThermoPlaneQuad2dWorkflowResult {
-        workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
-        heat_result,
-        bridged_model,
-        thermo_result,
-    })
 }
 
 #[derive(Debug, Clone)]
@@ -221,12 +101,17 @@ pub(crate) fn resolve_electrostatic_to_heat_bridge_contract(
         .unwrap_or("heat_load")
         .to_string();
 
-    if distribution != "element_to_nodes" {
+    if distribution != "element_to_nodes" && distribution != "node_to_node" {
         return Err(format!(
             "unsupported electrostatic-to-heat bridge distribution: {distribution}"
         ));
     }
-    if reduction != "mean" && reduction != "sum" && reduction != "area_weighted_mean" {
+    if reduction != "mean"
+        && reduction != "sum"
+        && reduction != "area_weighted_mean"
+        && reduction != "max"
+        && reduction != "min"
+    {
         return Err(format!(
             "unsupported electrostatic-to-heat bridge reduction: {reduction}"
         ));
@@ -256,16 +141,12 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_quad_model(
     if electrostatic_result.nodes.len() != heat_seed_model.nodes.len() {
         return Err("electrostatic and heat quad models must have the same node count".to_string());
     }
-    if electrostatic_result.input.elements.len() != heat_seed_model.elements.len() {
+    if contract.distribution == "element_to_nodes"
+        && electrostatic_result.input.elements.len() != heat_seed_model.elements.len()
+    {
         return Err(
             "electrostatic and heat quad models must have the same element count".to_string(),
         );
-    }
-    if contract.distribution != "element_to_nodes" {
-        return Err(format!(
-            "unsupported electrostatic-to-heat bridge distribution: {}",
-            contract.distribution
-        ));
     }
 
     let mut bridged = heat_seed_model.clone();
@@ -284,42 +165,21 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_quad_model(
         }
     }
 
-    let mut sums = vec![0.0; bridged.nodes.len()];
-    let mut counts = vec![0usize; bridged.nodes.len()];
-    let mut weighted_sums = vec![0.0; bridged.nodes.len()];
-    let mut weight_totals = vec![0.0; bridged.nodes.len()];
-    let mut source_values = Vec::new();
-
-    for element in &electrostatic_result.elements {
-        let source_value =
-            electrostatic_bridge_source_value(element, contract.source_field.as_str())?
-                * contract.scale;
-        source_values.push(source_value);
-        let weight = element.area.abs();
-        for field in &contract.node_index_fields {
-            let index = electrostatic_bridge_node_index(element, field)?;
-            let Some(sum) = sums.get_mut(index) else {
-                return Err(format!(
-                    "bridge node index {} from field {} is out of bounds",
-                    index, field
-                ));
-            };
-            *sum += source_value;
-            counts[index] += 1;
-            weighted_sums[index] += source_value * weight;
-            weight_totals[index] += weight;
-        }
-    }
+    let (source_values, nodal_values) = if contract.distribution == "node_to_node" {
+        derive_direct_nodal_target_field(&electrostatic_result.nodes, contract)?
+    } else {
+        derive_element_nodal_target_field(
+            &electrostatic_result.elements,
+            bridged.nodes.len(),
+            contract,
+            electrostatic_bridge_source_value,
+            electrostatic_bridge_node_index,
+            |element| element.area.abs(),
+        )?
+    };
 
     for (index, heat_node) in bridged.nodes.iter_mut().enumerate() {
-        let value = reduce_bridge_value(
-            contract.reduction.as_str(),
-            contract.default_value,
-            counts[index],
-            sums[index],
-            weighted_sums[index],
-            weight_totals[index],
-        );
+        let value = nodal_values[index];
         match contract.target_field.as_str() {
             "heat_load" => heat_node.heat_load = value,
             "temperature" => heat_node.temperature = value,
@@ -331,8 +191,8 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_quad_model(
         bridged,
         BridgeDiagnostics {
             bridge_kind: "electrostatic_to_heat_quad_2d".to_string(),
-            mapped_count: counts.iter().filter(|count| **count > 0).count(),
-            defaulted_count: counts.iter().filter(|count| **count == 0).count(),
+            mapped_count: nodal_values.len(),
+            defaulted_count: 0,
             source_field: contract.source_field.clone(),
             target_field: contract.target_field.clone(),
             source_value_min: source_values.iter().copied().reduce(f64::min),
@@ -353,16 +213,12 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_triangle_model(
             "electrostatic and heat triangle models must have the same node count".to_string(),
         );
     }
-    if electrostatic_result.input.elements.len() != heat_seed_model.elements.len() {
+    if contract.distribution == "element_to_nodes"
+        && electrostatic_result.input.elements.len() != heat_seed_model.elements.len()
+    {
         return Err(
             "electrostatic and heat triangle models must have the same element count".to_string(),
         );
-    }
-    if contract.distribution != "element_to_nodes" {
-        return Err(format!(
-            "unsupported electrostatic-to-heat bridge distribution: {}",
-            contract.distribution
-        ));
     }
 
     let mut bridged = heat_seed_model.clone();
@@ -381,42 +237,21 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_triangle_model(
         }
     }
 
-    let mut sums = vec![0.0; bridged.nodes.len()];
-    let mut counts = vec![0usize; bridged.nodes.len()];
-    let mut weighted_sums = vec![0.0; bridged.nodes.len()];
-    let mut weight_totals = vec![0.0; bridged.nodes.len()];
-    let mut source_values = Vec::new();
-
-    for element in &electrostatic_result.elements {
-        let source_value =
-            electrostatic_triangle_bridge_source_value(element, contract.source_field.as_str())?
-                * contract.scale;
-        source_values.push(source_value);
-        let weight = element.area.abs();
-        for field in &contract.node_index_fields {
-            let index = electrostatic_triangle_bridge_node_index(element, field)?;
-            let Some(sum) = sums.get_mut(index) else {
-                return Err(format!(
-                    "bridge node index {} from field {} is out of bounds",
-                    index, field
-                ));
-            };
-            *sum += source_value;
-            counts[index] += 1;
-            weighted_sums[index] += source_value * weight;
-            weight_totals[index] += weight;
-        }
-    }
+    let (source_values, nodal_values) = if contract.distribution == "node_to_node" {
+        derive_direct_nodal_target_field(&electrostatic_result.nodes, contract)?
+    } else {
+        derive_element_nodal_target_field(
+            &electrostatic_result.elements,
+            bridged.nodes.len(),
+            contract,
+            electrostatic_triangle_bridge_source_value,
+            electrostatic_triangle_bridge_node_index,
+            |element| element.area.abs(),
+        )?
+    };
 
     for (index, heat_node) in bridged.nodes.iter_mut().enumerate() {
-        let value = reduce_bridge_value(
-            contract.reduction.as_str(),
-            contract.default_value,
-            counts[index],
-            sums[index],
-            weighted_sums[index],
-            weight_totals[index],
-        );
+        let value = nodal_values[index];
         match contract.target_field.as_str() {
             "heat_load" => heat_node.heat_load = value,
             "temperature" => heat_node.temperature = value,
@@ -428,8 +263,8 @@ pub(crate) fn bridge_electrostatic_result_to_heat_plane_triangle_model(
         bridged,
         BridgeDiagnostics {
             bridge_kind: "electrostatic_to_heat_triangle_2d".to_string(),
-            mapped_count: counts.iter().filter(|count| **count > 0).count(),
-            defaulted_count: counts.iter().filter(|count| **count == 0).count(),
+            mapped_count: nodal_values.len(),
+            defaulted_count: 0,
             source_field: contract.source_field.clone(),
             target_field: contract.target_field.clone(),
             source_value_min: source_values.iter().copied().reduce(f64::min),
@@ -447,13 +282,90 @@ fn reduce_bridge_value(
     sum: f64,
     weighted_sum: f64,
     weight_total: f64,
+    minimum: f64,
+    maximum: f64,
 ) -> f64 {
     match reduction {
         "sum" if count > 0 => sum,
+        "max" if count > 0 => maximum,
+        "min" if count > 0 => minimum,
         "area_weighted_mean" if weight_total > 0.0 => weighted_sum / weight_total,
         _ if count > 0 => sum / count as f64,
         _ => default_value,
     }
+}
+
+fn derive_direct_nodal_target_field(
+    nodes: &[kyuubiki_protocol::ElectrostaticPlaneNodeResult],
+    contract: &ElectrostaticToHeatBridgeContract,
+) -> Result<(Vec<f64>, Vec<f64>), String> {
+    let mut source_values = Vec::with_capacity(nodes.len());
+    let nodal_values = nodes
+        .iter()
+        .map(|node| {
+            let source_value =
+                electrostatic_node_source_value(node, contract.source_field.as_str())?
+                    * contract.scale;
+            source_values.push(source_value);
+            Ok(source_value)
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    Ok((source_values, nodal_values))
+}
+
+fn derive_element_nodal_target_field<TElement>(
+    elements: &[TElement],
+    node_count: usize,
+    contract: &ElectrostaticToHeatBridgeContract,
+    resolve_source: fn(&TElement, &str) -> Result<f64, String>,
+    resolve_node_index: fn(&TElement, &str) -> Result<usize, String>,
+    resolve_weight: fn(&TElement) -> f64,
+) -> Result<(Vec<f64>, Vec<f64>), String> {
+    let mut sums = vec![0.0; node_count];
+    let mut counts = vec![0usize; node_count];
+    let mut weighted_sums = vec![0.0; node_count];
+    let mut weight_totals = vec![0.0; node_count];
+    let mut minima = vec![f64::INFINITY; node_count];
+    let mut maxima = vec![f64::NEG_INFINITY; node_count];
+    let mut source_values = Vec::new();
+
+    for element in elements {
+        let source_value = resolve_source(element, contract.source_field.as_str())? * contract.scale;
+        source_values.push(source_value);
+        let weight = resolve_weight(element);
+        for field in &contract.node_index_fields {
+            let index = resolve_node_index(element, field)?;
+            let Some(sum) = sums.get_mut(index) else {
+                return Err(format!(
+                    "bridge node index {} from field {} is out of bounds",
+                    index, field
+                ));
+            };
+            *sum += source_value;
+            counts[index] += 1;
+            weighted_sums[index] += source_value * weight;
+            weight_totals[index] += weight;
+            minima[index] = minima[index].min(source_value);
+            maxima[index] = maxima[index].max(source_value);
+        }
+    }
+
+    let nodal_values = (0..node_count)
+        .map(|index| {
+            reduce_bridge_value(
+                contract.reduction.as_str(),
+                contract.default_value,
+                counts[index],
+                sums[index],
+                weighted_sums[index],
+                weight_totals[index],
+                minima[index],
+                maxima[index],
+            )
+        })
+        .collect::<Vec<_>>();
+
+    Ok((source_values, nodal_values))
 }
 
 fn electrostatic_bridge_source_value(
@@ -521,6 +433,19 @@ fn electrostatic_triangle_bridge_node_index(
         "node_k" => Ok(element.node_k),
         _ => Err(format!(
             "unsupported electrostatic triangle bridge node index field: {field}"
+        )),
+    }
+}
+
+fn electrostatic_node_source_value(
+    node: &kyuubiki_protocol::ElectrostaticPlaneNodeResult,
+    field: &str,
+) -> Result<f64, String> {
+    match field {
+        "potential" => Ok(node.potential),
+        "charge_density" => Ok(node.charge_density),
+        other => Err(format!(
+            "unsupported electrostatic node bridge source field: {other}"
         )),
     }
 }

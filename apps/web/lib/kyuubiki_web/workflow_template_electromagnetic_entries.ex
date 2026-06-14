@@ -1,7 +1,7 @@
 defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
   @moduledoc false
 
-  alias KyuubikiWeb.WorkflowCatalogSupport
+  alias KyuubikiWeb.WorkflowTemplateElectromagneticContractGraphs
 
   def list do
     [
@@ -27,64 +27,7 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
         "summary",
         "2d"
       ],
-      graph_from_chain(
-        "workflow.electrostatic-heat-thermo-summary-json",
-        "Electrostatic heat thermo quad summary JSON",
-        "electrostatic_model",
-        "study_model/electrostatic_plane_quad_2d",
-        [
-          solve_node(
-            "solve_electrostatic",
-            "solve.electrostatic_plane_quad_2d",
-            "study_model/electrostatic_plane_quad_2d",
-            "result/electrostatic_plane_quad_2d"
-          ),
-          transform_node(
-            "bridge_field_to_heat",
-            "bridge.electrostatic_field_to_heat_quad_2d",
-            %{
-              "seed_model" => heat_quad_seed_model_example(),
-              "contract" =>
-                WorkflowCatalogSupport.electrostatic_to_heat_bridge_contract_example(50.0)
-            },
-            "electrostatic_result",
-            "result/electrostatic_plane_quad_2d",
-            "heat_model",
-            "study_model/heat_plane_quad_2d"
-          ),
-          solve_node(
-            "solve_heat",
-            "solve.heat_plane_quad_2d",
-            "study_model/heat_plane_quad_2d",
-            "result/heat_plane_quad_2d"
-          ),
-          transform_node(
-            "bridge_temperature",
-            "bridge.temperature_field_to_thermo_quad_2d",
-            %{
-              "seed_model" => WorkflowCatalogSupport.thermo_quad_seed_model_example(),
-              "contract" => WorkflowCatalogSupport.heat_to_thermo_bridge_contract_example()
-            },
-            "heat_result",
-            "result/heat_plane_quad_2d",
-            "thermo_model",
-            "study_model/thermal_plane_quad_2d"
-          ),
-          solve_node(
-            "solve_thermo",
-            "solve.thermal_plane_quad_2d",
-            "study_model/thermal_plane_quad_2d",
-            "result/thermal_plane_quad_2d"
-          ),
-          extract_node("extract_summary", "result/thermal_plane_quad_2d", [
-            "max_displacement",
-            "max_stress",
-            "max_temperature_delta"
-          ]),
-          export_node(),
-          output_node()
-        ]
-      ),
+      WorkflowTemplateElectromagneticContractGraphs.electrostatic_heat_thermo_quad_graph(),
       [
         %{
           "node_id" => "electrostatic_model",
@@ -287,43 +230,39 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
     }
   end
 
-  defp input_node(id, port_id, artifact_type) do
+  defp input_node(id, port_id, artifact_type, dataset_value \\ nil) do
     %{
       "id" => id,
       "kind" => "input",
-      "outputs" => [%{"id" => port_id, "artifact_type" => artifact_type}]
+      "outputs" => [port(port_id, artifact_type, dataset_value)]
     }
   end
 
-  defp solve_node(id, operator_id, input_artifact_type, output_artifact_type) do
+  defp solve_node(
+         id,
+         operator_id,
+         input_artifact_type,
+         output_artifact_type,
+         input_dataset_value \\ nil,
+         output_dataset_value \\ nil
+       ) do
     %{
       "id" => id,
       "kind" => "solve",
       "operator_id" => operator_id,
-      "inputs" => [%{"id" => "model", "artifact_type" => input_artifact_type}],
-      "outputs" => [%{"id" => "result", "artifact_type" => output_artifact_type}]
+      "inputs" => [port("model", input_artifact_type, input_dataset_value)],
+      "outputs" => [port("result", output_artifact_type, output_dataset_value)]
     }
   end
 
-  defp transform_node(id, operator_id, config, input_id, input_artifact_type, output_id, output_artifact_type) do
-    %{
-      "id" => id,
-      "kind" => "transform",
-      "operator_id" => operator_id,
-      "config" => config,
-      "inputs" => [%{"id" => input_id, "artifact_type" => input_artifact_type}],
-      "outputs" => [%{"id" => output_id, "artifact_type" => output_artifact_type}]
-    }
-  end
-
-  defp extract_node(id, input_artifact_type, fields) do
+  defp extract_node(id, input_artifact_type, fields, input_dataset_value \\ nil, output_dataset_value \\ nil) do
     %{
       "id" => id,
       "kind" => "extract",
       "operator_id" => "extract.result_summary",
       "config" => %{"fields" => fields},
-      "inputs" => [%{"id" => "result", "artifact_type" => input_artifact_type}],
-      "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+      "inputs" => [port("result", input_artifact_type, input_dataset_value)],
+      "outputs" => [port("summary", "report/summary", output_dataset_value)]
     }
   end
 
@@ -386,32 +325,33 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
     }
   end
 
-  defp export_node do
+  defp export_node(input_dataset_value \\ nil, output_dataset_value \\ nil) do
     %{
       "id" => "export_json",
       "kind" => "export",
       "operator_id" => "export.summary_json",
-      "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
-      "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
+      "inputs" => [port("summary", "report/summary", input_dataset_value)],
+      "outputs" => [port("json", "export/json", output_dataset_value)]
     }
   end
 
-  defp output_node do
+  defp output_node(input_dataset_value \\ nil) do
     %{
       "id" => "json_output",
       "kind" => "output",
-      "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}],
+      "inputs" => [port("json", "export/json", input_dataset_value)],
       "outputs" => []
     }
   end
 
-  defp edge(id, from_node, from_port, to_node, to_port, artifact_type) do
+  defp edge(id, from_node, from_port, to_node, to_port, artifact_type, dataset_value \\ nil) do
     %{
       "id" => id,
       "from" => %{"node" => from_node, "port" => from_port},
       "to" => %{"node" => to_node, "port" => to_port},
       "artifact_type" => artifact_type
     }
+    |> maybe_put_dataset_value(dataset_value)
   end
 
   defp graph_from_chain(id, name, entry_node_id, entry_artifact_type, chain_nodes) do
@@ -451,8 +391,17 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
         "to" => %{"node" => right["id"], "port" => Map.fetch!(right_input, "id")},
         "artifact_type" => Map.fetch!(left_output, "artifact_type")
       }
+      |> maybe_put_dataset_value(left_output["dataset_value"] || right_input["dataset_value"])
     end)
   end
+
+  defp port(id, artifact_type, dataset_value) do
+    %{"id" => id, "artifact_type" => artifact_type}
+    |> maybe_put_dataset_value(dataset_value)
+  end
+
+  defp maybe_put_dataset_value(map, nil), do: map
+  defp maybe_put_dataset_value(map, dataset_value), do: Map.put(map, "dataset_value", dataset_value)
 
   defp custom_entry(id, name, summary, domains, capability_tags, graph, entry_inputs, output_artifacts) do
     %{
@@ -468,17 +417,4 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticEntries do
     }
   end
 
-  defp heat_quad_seed_model_example do
-    %{
-      "nodes" => [
-        %{"id" => "n0", "x" => 0.0, "y" => 0.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0},
-        %{"id" => "n1", "x" => 1.0, "y" => 0.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-        %{"id" => "n2", "x" => 1.0, "y" => 1.0, "fix_temperature" => false, "temperature" => 0.0, "heat_load" => 0.0},
-        %{"id" => "n3", "x" => 0.0, "y" => 1.0, "fix_temperature" => true, "temperature" => 20.0, "heat_load" => 0.0}
-      ],
-      "elements" => [
-        %{"id" => "hq0", "node_i" => 0, "node_j" => 1, "node_k" => 2, "node_l" => 3, "thickness" => 0.02, "conductivity" => 45.0}
-      ]
-    }
-  end
 end

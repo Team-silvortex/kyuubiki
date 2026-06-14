@@ -1,3 +1,5 @@
+import { buildWorkbenchGovernedAuthHeaders } from "@/lib/workbench/governance";
+
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 const SECRETS_KEY = "kyuubiki-workbench-secrets";
 
@@ -18,6 +20,7 @@ function authHeadersFor(url: string) {
       : {};
     const parsedLegacySettings = rawSettings
       ? (JSON.parse(rawSettings) as {
+          frontendRuntimeMode?: "orchestrated_gui" | "direct_mesh_gui";
           controlPlaneApiToken?: string;
           clusterApiToken?: string;
           directMeshApiToken?: string;
@@ -36,27 +39,14 @@ function authHeadersFor(url: string) {
       directMeshApiToken?: string;
     };
 
-    if (url.startsWith("/api/direct-mesh")) {
-      return parsed.directMeshApiToken ? { "x-kyuubiki-token": parsed.directMeshApiToken } : {};
-    }
-
-    if (
-      url === "/api/v1/agents/register" ||
-      /^\/api\/v1\/agents\/[^/]+\/heartbeat$/.test(url) ||
-      /^\/api\/v1\/agents\/[^/]+$/.test(url)
-    ) {
-      return parsed.clusterApiToken
-        ? { "x-kyuubiki-token": parsed.clusterApiToken }
-        : parsed.controlPlaneApiToken
-          ? { "x-kyuubiki-token": parsed.controlPlaneApiToken }
-          : {};
-    }
-
-    if (url.startsWith("/api/v1") || url.startsWith("/api/playground") || url === "/api/health") {
-      return parsed.controlPlaneApiToken ? { "x-kyuubiki-token": parsed.controlPlaneApiToken } : {};
-    }
-
-    return {};
+    return buildWorkbenchGovernedAuthHeaders({
+      url,
+      frontendRuntimeMode:
+        parsedLegacySettings.frontendRuntimeMode === "direct_mesh_gui"
+          ? "direct_mesh_gui"
+          : "orchestrated_gui",
+      secrets: parsed,
+    });
   } catch {
     return {};
   }

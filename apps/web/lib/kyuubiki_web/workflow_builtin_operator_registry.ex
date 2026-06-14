@@ -33,7 +33,13 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
      ["extract", "statistics", "field", "headless_safe"]},
     {"extract.field_hotspots", "field_hotspots",
      "Extract hotspot candidates from a numeric result field using an absolute or percentile threshold.",
-     ["extract", "hotspot", "threshold", "field", "headless_safe"]}
+     ["extract", "hotspot", "threshold", "field", "headless_safe"]},
+    {"extract.thermal_result_diagnostics", "thermal_result_diagnostics",
+     "Extract thermal diagnostics such as temperature span, heat-load totals, and peak gradient or flux magnitudes from a heat result.",
+     ["extract", "thermal", "diagnostics", "heat", "headless_safe"]},
+    {"extract.thermo_result_diagnostics", "thermo_result_diagnostics",
+     "Extract thermo-mechanical diagnostics such as temperature-delta spread, peak displacement, and peak stress from a thermal structural result.",
+     ["extract", "thermo_mechanical", "diagnostics", "headless_safe"]}
   ]
 
   @export_specs [

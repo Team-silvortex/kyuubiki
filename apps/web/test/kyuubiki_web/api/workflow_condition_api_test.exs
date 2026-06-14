@@ -18,7 +18,13 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
               %{
                 "id" => "summary_input",
                 "kind" => "input",
-                "outputs" => [%{"id" => "value", "artifact_type" => "artifact/json"}]
+                "outputs" => [
+                  %{
+                    "id" => "value",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "input_summary"
+                  }
+                ]
               },
               %{
                 "id" => "gate",
@@ -131,10 +137,24 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
                     "value" => 10.0
                   }
                 },
-                "inputs" => [%{"id" => "value", "artifact_type" => "artifact/json"}],
+                "inputs" => [
+                  %{
+                    "id" => "value",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "input_summary"
+                  }
+                ],
                 "outputs" => [
-                  %{"id" => "if_true", "artifact_type" => "artifact/json"},
-                  %{"id" => "if_false", "artifact_type" => "artifact/json"}
+                  %{
+                    "id" => "if_true",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "gated_summary"
+                  },
+                  %{
+                    "id" => "if_false",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "gated_summary"
+                  }
                 ]
               },
               %{
@@ -142,18 +162,61 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
                 "kind" => "transform",
                 "operator_id" => "transform.first_available",
                 "inputs" => [
-                  %{"id" => "left", "artifact_type" => "artifact/json"},
-                  %{"id" => "right", "artifact_type" => "artifact/json"}
+                  %{
+                    "id" => "left",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "gated_summary"
+                  },
+                  %{
+                    "id" => "right",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "gated_summary"
+                  }
                 ],
-                "outputs" => [%{"id" => "merged", "artifact_type" => "artifact/json"}]
+                "outputs" => [
+                  %{
+                    "id" => "merged",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "merged_summary"
+                  }
+                ]
               },
               %{
                 "id" => "merged_output",
                 "kind" => "output",
-                "inputs" => [%{"id" => "result", "artifact_type" => "artifact/json"}],
+                "inputs" => [
+                  %{
+                    "id" => "result",
+                    "artifact_type" => "artifact/json",
+                    "dataset_value" => "merged_summary"
+                  }
+                ],
                 "outputs" => []
               }
             ],
+            "dataset_contract" => %{
+              "id" => "kyuubiki.dataset.summary_gate/v1",
+              "values" => [
+                %{
+                  "id" => "input_summary",
+                  "data_class" => "model",
+                  "element_type" => "json_object",
+                  "semantic_type" => "artifact/json"
+                },
+                %{
+                  "id" => "gated_summary",
+                  "data_class" => "result",
+                  "element_type" => "json_object",
+                  "semantic_type" => "artifact/json"
+                },
+                %{
+                  "id" => "merged_summary",
+                  "data_class" => "result",
+                  "element_type" => "json_object",
+                  "semantic_type" => "artifact/json"
+                }
+              ]
+            },
             "edges" => [
               %{
                 "id" => "input-to-gate",
@@ -207,6 +270,14 @@ defmodule KyuubikiWeb.Api.WorkflowConditionApiTest do
     assert Enum.any?(payload["artifact_lineage"], fn entry ->
              entry["artifact_key"] == "join.merged" and
                entry["source_artifacts"] == ["gate.if_true"]
+           end)
+
+    assert payload["dataset_contract"]["id"] == "kyuubiki.dataset.summary_gate/v1"
+
+    assert Enum.any?(payload["dataset_lineage"], fn entry ->
+             entry["artifact_key"] == "join.merged" and
+               entry["dataset_value"] == "merged_summary" and
+               entry["source_datasets"] == ["gated_summary"]
            end)
 
     assert payload["artifacts"]["join.merged"] == payload["artifacts"]["gate.if_true"]

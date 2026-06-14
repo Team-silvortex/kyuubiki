@@ -1,20 +1,16 @@
 "use client";
-
 import type { Dispatch, MouseEvent, ReactNode, SetStateAction } from "react";
 import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchSystemDataMount } from "@/components/workbench/workbench-system-data-mount";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workbench-system-config-card";
-import {
-  buildWorkbenchSystemControlModeCopy,
-  buildWorkbenchSystemControlTopologySummary,
-  buildWorkbenchSystemTopologySnapshot,
-} from "@/components/workbench/system/workbench-system-control-mode-contract";
+import { buildWorkbenchSystemControlModeCopy, buildWorkbenchSystemControlTopologySummary, buildWorkbenchSystemTopologySnapshot } from "@/components/workbench/system/workbench-system-control-mode-contract";
 import { WorkbenchSystemInstallLayoutCard } from "@/components/workbench/system/workbench-system-install-layout-card";
 import { WorkbenchSystemInstallPolicyMount } from "@/components/workbench/system/workbench-system-install-policy-mount";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
+import { applyWorkbenchGovernancePatch, buildWorkbenchGovernanceConfig, buildWorkbenchGovernanceRows } from "@/lib/workbench/governance";
 import type { WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { ProtocolAgentDescriptor } from "@/lib/api";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
@@ -295,6 +291,9 @@ export function WorkbenchSystemSidebarMount({
     directMeshSelectionMode,
     directMeshEndpointsText,
     protocolAgents: protocolAgents as ProtocolAgentDescriptor[],
+    controlPlaneApiToken,
+    clusterApiToken,
+    directMeshApiToken,
     protocolOnline: healthProtocolOnline,
     securityConfigured: healthSecurityApiTokenConfigured,
     auditCount: runtimeAuditEntries.length,
@@ -307,7 +306,8 @@ export function WorkbenchSystemSidebarMount({
     protocolAgents: protocolAgents as ProtocolAgentDescriptor[],
     topology: controlWindowTopology,
   });
-
+  const governanceConfig = buildWorkbenchGovernanceConfig({ frontendRuntimeMode, directMeshEndpointsText, controlPlaneApiToken, clusterApiToken, directMeshApiToken });
+  const governanceRows = buildWorkbenchGovernanceRows(governanceConfig);
   return (
     <WorkbenchSystemSidebar
       systemPanelTab={systemPanelTab}
@@ -328,6 +328,7 @@ export function WorkbenchSystemSidebarMount({
             workspacePageLabel={t.workspace}
             routingPageLabel={t.routing}
             accessPageLabel={t.access}
+            governancePageLabel="governance"
             packsPageLabel={t.packs}
             themeLabel={t.theme}
             languageLabel={t.language}
@@ -364,6 +365,10 @@ export function WorkbenchSystemSidebarMount({
             immersiveGuardHelp={t.immersiveGuardHelp}
             browserLimitsNote={t.browserLimitsNote}
             exportDatabaseLabel={t.exportDatabase}
+            governanceTitle="System governance"
+            governanceHint="A persisted, read-only architecture contract for hub, workbench, installer, and agent responsibilities."
+            governanceRows={governanceRows}
+            governanceJson={JSON.stringify(governanceConfig, null, 2)}
             theme={theme}
             language={language}
             frontendRuntimeMode={frontendRuntimeMode}
@@ -401,9 +406,9 @@ export function WorkbenchSystemSidebarMount({
             onExportInstalledLanguagePack={handleExportInstalledLanguagePack}
             onImportLanguagePack={(file) => void handleImportLanguagePack(file)}
             onRemoveLanguagePack={handleRemoveLanguagePack}
-            onFrontendRuntimeModeChange={setFrontendRuntimeMode}
+            onFrontendRuntimeModeChange={(value) => setFrontendRuntimeMode(applyWorkbenchGovernancePatch({ currentFrontendRuntimeMode: frontendRuntimeMode, currentDirectMeshEndpointsText: directMeshEndpointsText, nextFrontendRuntimeMode: value }).frontendRuntimeMode)}
             onDirectMeshSelectionModeChange={setDirectMeshSelectionMode}
-            onDirectMeshEndpointsTextChange={setDirectMeshEndpointsText}
+            onDirectMeshEndpointsTextChange={(value) => { const governed = applyWorkbenchGovernancePatch({ currentFrontendRuntimeMode: frontendRuntimeMode, currentDirectMeshEndpointsText: directMeshEndpointsText, nextDirectMeshEndpointsText: value }); setDirectMeshEndpointsText(governed.directMeshEndpointsText); setFrontendRuntimeMode(governed.frontendRuntimeMode); }}
             onControlPlaneApiTokenChange={setControlPlaneApiToken}
             onClusterApiTokenChange={setClusterApiToken}
             onDirectMeshApiTokenChange={setDirectMeshApiToken}
@@ -414,12 +419,6 @@ export function WorkbenchSystemSidebarMount({
           <WorkbenchSystemInstallLayoutCard
             title={t.workflowPackageInstallRulesTitle}
             hint={t.workflowPackageManifestNoneLabel}
-            storageScopeLabel={t.workflowPackageInstallRulesStorageScopeLabel}
-            localPathLabel={t.workflowPackageInstallRulesLocalPathLabel}
-            snapshotPathLabel={t.workflowPackageInstallRulesSnapshotPathLabel}
-            snapshotPayloadPathLabel={t.workflowPackageInstallRulesSnapshotPayloadPathLabel}
-            maintenancePathLabel={t.workflowPackageInstallRulesMaintenancePathLabel}
-            snapshotLimitLabel={t.workflowPackageInstallRulesSnapshotLabel}
           />
           <WorkbenchSystemInstallPolicyMount
             handleWorkflowPanelTabChange={handleWorkflowPanelTabChange}

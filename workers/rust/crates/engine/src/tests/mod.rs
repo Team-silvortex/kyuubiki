@@ -3,6 +3,7 @@ mod bridges_electrostatic;
 mod core;
 mod workflow_conditions;
 mod workflow_coupled;
+mod workflow_coupled_bridge_contracts;
 mod workflow_coupled_electrostatic_heat_triangle;
 mod workflow_coupled_electrostatic_triangle;
 mod workflow_coupled_triangle;

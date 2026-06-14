@@ -1,5 +1,4 @@
 import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime";
-
 export const workbenchScriptPanelCopy = {
   en: {
     title: "WASM Python",
@@ -94,7 +93,7 @@ export const workbenchScriptPanelCopy = {
     exportMacroJson: "Export macro JSON",
     importMacroJson: "Import macro JSON",
     macroJsonExported: "Exported the current recorded macro as JSON.",
-    macroJsonImported: "Imported a macro JSON draft into the editor.",
+    macroJsonImported: "Imported a macro JSON draft into the editor.", headlessWorkflowImported: "Imported a headless workflow contract into the editor as a runnable macro draft.",
     projectPresets: "Project presets",
     presetName: "Preset name",
     presetNamePlaceholder: "review current result context",
@@ -242,7 +241,7 @@ export const workbenchScriptPanelCopy = {
     exportMacroJson: "导出宏 JSON",
     importMacroJson: "导入宏 JSON",
     macroJsonExported: "已把当前录制宏导出为 JSON。",
-    macroJsonImported: "已把宏 JSON 草稿导入编辑器。",
+    macroJsonImported: "已把宏 JSON 草稿导入编辑器。", headlessWorkflowImported: "已把无头工作流契约导入编辑器，并转换成可运行的宏草稿。",
     projectPresets: "项目预设",
     presetName: "预设名称",
     presetNamePlaceholder: "复查当前结果上下文",
@@ -390,7 +389,7 @@ export const workbenchScriptPanelCopy = {
     exportMacroJson: "マクロ JSON を書き出す",
     importMacroJson: "マクロ JSON を読み込む",
     macroJsonExported: "現在の記録マクロを JSON で書き出しました。",
-    macroJsonImported: "マクロ JSON 下書きをエディタへ読み込みました。",
+    macroJsonImported: "マクロ JSON 下書きをエディタへ読み込みました。", headlessWorkflowImported: "ヘッドレス workflow 契約を読み込み、実行可能なマクロ下書きへ変換しました。",
     projectPresets: "プロジェクトプリセット",
     presetName: "プリセット名",
     presetNamePlaceholder: "現在の結果コンテキストを確認",
@@ -538,7 +537,7 @@ export const workbenchScriptPanelCopy = {
     exportMacroJson: "Export macro JSON",
     importMacroJson: "Import macro JSON",
     macroJsonExported: "Exported the current recorded macro as JSON.",
-    macroJsonImported: "Imported a macro JSON draft into the editor.",
+    macroJsonImported: "Imported a macro JSON draft into the editor.", headlessWorkflowImported: "Imported a headless workflow contract into the editor as a runnable macro draft.",
     projectPresets: "Project presets",
     presetName: "Preset name",
     presetNamePlaceholder: "review current result context",

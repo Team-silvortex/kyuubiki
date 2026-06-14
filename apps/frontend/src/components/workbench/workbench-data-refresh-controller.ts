@@ -19,6 +19,7 @@ import {
 } from "@/lib/api";
 import { copyByLanguage } from "@/components/workbench/workbench-copy";
 import { parseDirectMeshEndpoints } from "@/lib/workbench/helpers";
+import { validateWorkbenchExecutionGovernance } from "@/lib/workbench/governance";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
 
@@ -79,7 +80,14 @@ export function useWorkbenchDataRefreshController({
 
     if (frontendRuntimeMode === "direct_mesh_gui") {
       try {
-        const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
+        const governance = validateWorkbenchExecutionGovernance({ frontendRuntimeMode, directMeshEndpointsText });
+        if (!governance.ok) {
+          if (refreshSeq !== healthRefreshSeqRef.current) return;
+          setHealth(null);
+          setProtocolAgents([]);
+          return;
+        }
+        const endpoints = parseDirectMeshEndpoints(governance.directMeshEndpointsText);
         const nextDirect = await fetchDirectMeshAgents(endpoints);
         const directMethods = [
           ...new Set(nextDirect.agents.flatMap((agent) => agent.descriptor?.protocol?.methods ?? [])),

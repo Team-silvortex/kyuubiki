@@ -101,6 +101,14 @@ export function WorkbenchSystemControlModeWindow({
             <span>{copy.snapshotObservedAtLabel}</span>
             <strong>{snapshot.observed_at}</strong>
           </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.safeModeLabel}</span>
+            <strong>{topology.safeModeActive ? copy.statuses.ready : copy.statuses.open}</strong>
+          </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.downgradeReasonLabel}</span>
+            <strong>{topology.downgradeReason}</strong>
+          </div>
         </div>
         <p className="control-mode-window__hint">{copy.windows[windowMode].hint}</p>
         <div className="sidebar-list sidebar-list--metrics" data-workbench-control-window="metrics">

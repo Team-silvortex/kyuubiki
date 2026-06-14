@@ -109,6 +109,7 @@ import type {
   Spring3dStudyJobInput,
 } from "@/components/workbench/workbench-types";
 import { parseDirectMeshEndpoints, toAxialInput } from "@/lib/workbench/helpers";
+import { validateWorkbenchExecutionGovernance } from "@/lib/workbench/governance";
 import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
 
 type AnyStudyResult =
@@ -332,10 +333,11 @@ export async function runWorkbenchAnalysis({
   jobPollTokenRef.current += 1;
 
   if (frontendRuntimeMode === "direct_mesh_gui") {
-    const endpoints = parseDirectMeshEndpoints(directMeshEndpointsText);
-    if (endpoints.length === 0) {
+    const governance = validateWorkbenchExecutionGovernance({ frontendRuntimeMode, directMeshEndpointsText });
+    if (!governance.ok) {
       throw new Error(labels.directMeshEndpointsHelp);
     }
+    const endpoints = parseDirectMeshEndpoints(governance.directMeshEndpointsText);
 
     const created =
       studyKind === "axial_bar_1d"

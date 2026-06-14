@@ -1,6 +1,6 @@
 "use client";
 
-export type WorkbenchSecurityAuditSource = "script" | "assistant";
+export type WorkbenchSecurityAuditSource = "script" | "assistant" | "governance";
 export type WorkbenchSecurityAuditRisk = "sensitive" | "destructive";
 export type WorkbenchSecurityAuditStatus = "prompted" | "cancelled" | "completed" | "failed";
 
@@ -12,6 +12,7 @@ export type WorkbenchSecurityAuditEntry = {
   risk: WorkbenchSecurityAuditRisk;
   status: WorkbenchSecurityAuditStatus;
   note: string;
+  context?: Record<string, unknown>;
 };
 
 const STORAGE_KEY = "kyuubiki-workbench-security-audit";

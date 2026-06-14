@@ -149,14 +149,79 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries do
       "id" => id,
       "name" => name,
       "version" => "1.0.0",
+      "dataset_contract" =>
+        WorkflowCatalogSupport.workflow_dataset_contract(
+          "kyuubiki.dataset.#{String.replace(id, "workflow.", "")}/v1",
+          [
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "electrostatic_model",
+              "model",
+              entry_artifact_type
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "electrostatic_result",
+              "result",
+              electrostatic_result_artifact_type
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "hotspot_summary",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "heat_model",
+              "model",
+              heat_model_artifact_type
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "heat_result",
+              "result",
+              heat_result_artifact_type
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermo_model",
+              "model",
+              thermo_model_artifact_type
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermo_result",
+              "result",
+              thermo_result_artifact_type
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "thermo_summary",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "merged_summary",
+              "result",
+              "report/summary"
+            ),
+            WorkflowCatalogSupport.workflow_dataset_value_info(
+              "summary_json",
+              "export",
+              "export/json",
+              "utf8_text"
+            )
+          ],
+          %{"workflow_family" => "electrostatic_guard_heat_thermo"}
+        ),
       "entry_nodes" => [entry_node_id],
       "output_nodes" => ["json_output"],
       "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
       "nodes" => [
-        input_node(entry_node_id, entry_artifact_type),
-        solve_node("solve_electrostatic", electrostatic_solve_operator_id, entry_artifact_type, electrostatic_result_artifact_type),
-        condition_node(electrostatic_result_artifact_type),
-        hotspot_extract_node(electrostatic_result_artifact_type),
+        input_node(entry_node_id, entry_artifact_type, "electrostatic_model"),
+        solve_node(
+          "solve_electrostatic",
+          electrostatic_solve_operator_id,
+          entry_artifact_type,
+          electrostatic_result_artifact_type,
+          "electrostatic_model",
+          "electrostatic_result"
+        ),
+        condition_node(electrostatic_result_artifact_type, "electrostatic_result"),
+        hotspot_extract_node(electrostatic_result_artifact_type, "electrostatic_result", "hotspot_summary"),
         bridge_node(
           "bridge_field_to_heat",
           electrostatic_heat_bridge_operator_id,
@@ -164,12 +229,21 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries do
           "electrostatic_result",
           heat_model_artifact_type,
           "heat_model",
+          "electrostatic_result",
+          "heat_model",
           %{
             "seed_model" => heat_seed_model,
             "contract" => electrostatic_heat_contract(electrostatic_heat_bridge_operator_id)
           }
         ),
-        solve_node("solve_heat", heat_solve_operator_id, heat_model_artifact_type, heat_result_artifact_type),
+        solve_node(
+          "solve_heat",
+          heat_solve_operator_id,
+          heat_model_artifact_type,
+          heat_result_artifact_type,
+          "heat_model",
+          "heat_result"
+        ),
         bridge_node(
           "bridge_temperature",
           heat_thermo_bridge_operator_id,
@@ -177,68 +251,88 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries do
           "heat_result",
           thermo_model_artifact_type,
           "thermo_model",
+          "heat_result",
+          "thermo_model",
           %{
             "seed_model" => thermo_seed_model,
             "contract" => WorkflowCatalogSupport.heat_to_thermo_bridge_contract_example()
           }
         ),
-        solve_node("solve_thermo", thermo_solve_operator_id, thermo_model_artifact_type, thermo_result_artifact_type),
-        thermo_summary_node(thermo_result_artifact_type),
+        solve_node(
+          "solve_thermo",
+          thermo_solve_operator_id,
+          thermo_model_artifact_type,
+          thermo_result_artifact_type,
+          "thermo_model",
+          "thermo_result"
+        ),
+        thermo_summary_node(thermo_result_artifact_type, "thermo_result", "thermo_summary"),
         merge_node(),
         export_json_node(),
-        output_node()
+        output_node("summary_json")
       ],
       "edges" => [
-        edge("e0", entry_node_id, "model", "solve_electrostatic", "model", entry_artifact_type),
-        edge("e1", "solve_electrostatic", "result", "gate", "value", electrostatic_result_artifact_type),
-        edge("e2", "gate", "if_true", "field_hotspots", "result", electrostatic_result_artifact_type),
-        edge("e3", "gate", "if_false", "bridge_field_to_heat", "electrostatic_result", electrostatic_result_artifact_type),
-        edge("e4", "bridge_field_to_heat", "heat_model", "solve_heat", "model", heat_model_artifact_type),
-        edge("e5", "solve_heat", "result", "bridge_temperature", "heat_result", heat_result_artifact_type),
-        edge("e6", "bridge_temperature", "thermo_model", "solve_thermo", "model", thermo_model_artifact_type),
-        edge("e7", "solve_thermo", "result", "extract_thermo_summary", "result", thermo_result_artifact_type),
-        edge("e8", "field_hotspots", "summary", "merge_summary", "left", "report/summary"),
-        edge("e9", "extract_thermo_summary", "summary", "merge_summary", "right", "report/summary"),
-        edge("e10", "merge_summary", "result", "export_json", "summary", "report/summary"),
-        edge("e11", "export_json", "json", "json_output", "json", "export/json")
+        edge("e0", entry_node_id, "model", "solve_electrostatic", "model", entry_artifact_type, "electrostatic_model"),
+        edge("e1", "solve_electrostatic", "result", "gate", "value", electrostatic_result_artifact_type, "electrostatic_result"),
+        edge("e2", "gate", "if_true", "field_hotspots", "result", electrostatic_result_artifact_type, "electrostatic_result"),
+        edge("e3", "gate", "if_false", "bridge_field_to_heat", "electrostatic_result", electrostatic_result_artifact_type, "electrostatic_result"),
+        edge("e4", "bridge_field_to_heat", "heat_model", "solve_heat", "model", heat_model_artifact_type, "heat_model"),
+        edge("e5", "solve_heat", "result", "bridge_temperature", "heat_result", heat_result_artifact_type, "heat_result"),
+        edge("e6", "bridge_temperature", "thermo_model", "solve_thermo", "model", thermo_model_artifact_type, "thermo_model"),
+        edge("e7", "solve_thermo", "result", "extract_thermo_summary", "result", thermo_result_artifact_type, "thermo_result"),
+        edge("e8", "field_hotspots", "summary", "merge_summary", "left", "report/summary", "hotspot_summary"),
+        edge("e9", "extract_thermo_summary", "summary", "merge_summary", "right", "report/summary", "thermo_summary"),
+        edge("e10", "merge_summary", "result", "export_json", "summary", "report/summary", "merged_summary"),
+        edge("e11", "export_json", "json", "json_output", "json", "export/json", "summary_json")
       ]
     }
   end
 
-  defp input_node(id, artifact_type) do
+  defp input_node(id, artifact_type, dataset_value) do
     %{
       "id" => id,
       "kind" => "input",
-      "outputs" => [%{"id" => "model", "artifact_type" => artifact_type}]
+      "outputs" => [port("model", artifact_type, dataset_value)]
     }
   end
 
-  defp solve_node(id, operator_id, input_artifact_type, output_artifact_type) do
+  defp solve_node(
+         id,
+         operator_id,
+         input_artifact_type,
+         output_artifact_type,
+         input_dataset_value,
+         output_dataset_value
+       ) do
     %{
       "id" => id,
       "kind" => "solve",
       "operator_id" => operator_id,
-      "inputs" => [%{"id" => "model", "artifact_type" => input_artifact_type}],
-      "outputs" => [%{"id" => "result", "artifact_type" => output_artifact_type}]
+      "inputs" => [port("model", input_artifact_type, input_dataset_value)],
+      "outputs" => [port("result", output_artifact_type, output_dataset_value)]
     }
   end
 
-  defp condition_node(electrostatic_result_artifact_type) do
+  defp condition_node(electrostatic_result_artifact_type, dataset_value) do
     %{
       "id" => "gate",
       "kind" => "condition",
       "config" => %{
         "predicate" => %{"path" => "max_electric_field", "operator" => "gt", "value" => 8.0}
       },
-      "inputs" => [%{"id" => "value", "artifact_type" => electrostatic_result_artifact_type}],
+      "inputs" => [port("value", electrostatic_result_artifact_type, dataset_value)],
       "outputs" => [
-        %{"id" => "if_true", "artifact_type" => electrostatic_result_artifact_type},
-        %{"id" => "if_false", "artifact_type" => electrostatic_result_artifact_type}
+        port("if_true", electrostatic_result_artifact_type, dataset_value),
+        port("if_false", electrostatic_result_artifact_type, dataset_value)
       ]
     }
   end
 
-  defp hotspot_extract_node(electrostatic_result_artifact_type) do
+  defp hotspot_extract_node(
+         electrostatic_result_artifact_type,
+         input_dataset_value,
+         output_dataset_value
+       ) do
     %{
       "id" => "field_hotspots",
       "kind" => "extract",
@@ -251,30 +345,40 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries do
         "sample_limit" => 4,
         "sample_sort" => "value_desc"
       },
-      "inputs" => [%{"id" => "result", "artifact_type" => electrostatic_result_artifact_type}],
-      "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+      "inputs" => [port("result", electrostatic_result_artifact_type, input_dataset_value)],
+      "outputs" => [port("summary", "report/summary", output_dataset_value)]
     }
   end
 
-  defp bridge_node(id, operator_id, input_artifact_type, input_id, output_artifact_type, output_id, config) do
+  defp bridge_node(
+         id,
+         operator_id,
+         input_artifact_type,
+         input_id,
+         output_artifact_type,
+         output_id,
+         input_dataset_value,
+         output_dataset_value,
+         config
+       ) do
     %{
       "id" => id,
       "kind" => "transform",
       "operator_id" => operator_id,
       "config" => config,
-      "inputs" => [%{"id" => input_id, "artifact_type" => input_artifact_type}],
-      "outputs" => [%{"id" => output_id, "artifact_type" => output_artifact_type}]
+      "inputs" => [port(input_id, input_artifact_type, input_dataset_value)],
+      "outputs" => [port(output_id, output_artifact_type, output_dataset_value)]
     }
   end
 
-  defp thermo_summary_node(thermo_result_artifact_type) do
+  defp thermo_summary_node(thermo_result_artifact_type, input_dataset_value, output_dataset_value) do
     %{
       "id" => "extract_thermo_summary",
       "kind" => "extract",
       "operator_id" => "extract.result_summary",
       "config" => %{"fields" => ["max_displacement", "max_stress", "max_temperature_delta"]},
-      "inputs" => [%{"id" => "result", "artifact_type" => thermo_result_artifact_type}],
-      "outputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}]
+      "inputs" => [port("result", thermo_result_artifact_type, input_dataset_value)],
+      "outputs" => [port("summary", "report/summary", output_dataset_value)]
     }
   end
 
@@ -284,10 +388,10 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries do
       "kind" => "transform",
       "operator_id" => "transform.first_available",
       "inputs" => [
-        %{"id" => "left", "artifact_type" => "report/summary"},
-        %{"id" => "right", "artifact_type" => "report/summary"}
+        port("left", "report/summary", "hotspot_summary"),
+        port("right", "report/summary", "thermo_summary")
       ],
-      "outputs" => [%{"id" => "result", "artifact_type" => "report/summary"}]
+      "outputs" => [port("result", "report/summary", "merged_summary")]
     }
   end
 
@@ -296,23 +400,37 @@ defmodule KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries do
       "id" => "export_json",
       "kind" => "export",
       "operator_id" => "export.summary_json",
-      "inputs" => [%{"id" => "summary", "artifact_type" => "report/summary"}],
-      "outputs" => [%{"id" => "json", "artifact_type" => "export/json"}]
+      "inputs" => [port("summary", "report/summary", "merged_summary")],
+      "outputs" => [port("json", "export/json", "summary_json")]
     }
   end
 
-  defp output_node do
-    %{"id" => "json_output", "kind" => "output", "inputs" => [%{"id" => "json", "artifact_type" => "export/json"}], "outputs" => []}
+  defp output_node(input_dataset_value) do
+    %{
+      "id" => "json_output",
+      "kind" => "output",
+      "inputs" => [port("json", "export/json", input_dataset_value)],
+      "outputs" => []
+    }
   end
 
-  defp edge(id, from_node, from_port, to_node, to_port, artifact_type) do
+  defp edge(id, from_node, from_port, to_node, to_port, artifact_type, dataset_value) do
     %{
       "id" => id,
       "from" => %{"node" => from_node, "port" => from_port},
       "to" => %{"node" => to_node, "port" => to_port},
       "artifact_type" => artifact_type
     }
+    |> maybe_put_dataset_value(dataset_value)
   end
+
+  defp port(id, artifact_type, dataset_value) do
+    %{"id" => id, "artifact_type" => artifact_type}
+    |> maybe_put_dataset_value(dataset_value)
+  end
+
+  defp maybe_put_dataset_value(map, nil), do: map
+  defp maybe_put_dataset_value(map, dataset_value), do: Map.put(map, "dataset_value", dataset_value)
 
   defp electrostatic_heat_contract("bridge.electrostatic_field_to_heat_quad_2d") do
     %{

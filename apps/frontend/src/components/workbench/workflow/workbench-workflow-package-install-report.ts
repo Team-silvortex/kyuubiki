@@ -4,10 +4,8 @@ import type { WorkflowCatalogEntry } from "@/lib/api";
 import type { WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
 import { formatWorkflowContractHealthSummary, formatWorkflowDynamicReviewState } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
-import { WORKBENCH_LOCAL_WORKFLOWS_KEY } from "@/components/workbench/workflow/workbench-workflow-local-storage";
-import { WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_LOG_KEY } from "@/components/workbench/workflow/workbench-workflow-package-maintenance-log";
+import { buildWorkbenchInstallGovernanceDiagnostics, WORKBENCH_STANDARD_STORAGE_CONTRACT } from "@/components/workbench/system/workbench-system-storage-contract";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
-import { WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY, WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT, WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 
 export type WorkflowPackageResidualRecord = {
   id: string;
@@ -16,6 +14,13 @@ export type WorkflowPackageResidualRecord = {
   auto_fixable: boolean;
   locate: "snapshot" | "local" | "package";
   message: string;
+};
+
+export type WorkflowPackageRepairPlanStep = {
+  residualId: string;
+  action: string;
+  scope: string;
+  safe: boolean;
 };
 
 export type WorkflowPackageInstallReport = {
@@ -35,6 +40,11 @@ export type WorkflowPackageInstallReport = {
     capability_tags: string[];
   };
   install_rules: {
+    safe_mode: string;
+    downgrade_reason: string;
+    standard_install: string;
+    residual_policy: string;
+    visibility: string;
     storage: string;
     storage_scope: string;
     local_workflow_key: string;
@@ -43,6 +53,9 @@ export type WorkflowPackageInstallReport = {
     maintenance_log_key: string;
     cleanup: string;
     snapshots: string;
+    cleanup_authority: string;
+    retention_policy: string;
+    ownership_model: string;
     format_contract: string;
     portability: string;
   };
@@ -54,6 +67,7 @@ export type WorkflowPackageInstallReport = {
   };
   integrity: WorkflowIntegrityReport;
   residuals: WorkflowPackageResidualRecord[];
+  repair_plan: WorkflowPackageRepairPlanStep[];
   maintenance_history?: Array<{
     at: string;
     kind: "scan" | "repair";
@@ -123,6 +137,13 @@ export function buildWorkflowPackageInstallReport(params: {
   }>;
 }): WorkflowPackageInstallReport {
   const { workflow, importedPackage, integrityReport, maintenanceHistory } = params;
+  const residuals = scanWorkflowPackageResiduals(params);
+  const installGovernance = buildWorkbenchInstallGovernanceDiagnostics({
+    residualCount: residuals.length,
+    autoFixableResidualCount: residuals.filter((entry) => entry.auto_fixable).length,
+    summaryOnlySnapshotCount: integrityReport.summaryOnlySnapshotCount,
+  });
+  const repairPlan = buildWorkflowPackageRepairPlan(residuals);
   const mountState = importedPackage
     ? "draft_session"
     : workflow.local?.imported_from_package_id
@@ -168,19 +189,26 @@ export function buildWorkflowPackageInstallReport(params: {
         importedPackage?.search_index.capability_tags ?? workflow.capability_tags ?? [],
     },
     install_rules: {
+      safe_mode: installGovernance.safeMode,
+      downgrade_reason: installGovernance.downgradeReason,
+      standard_install: installGovernance.standardInstallLabel,
+      residual_policy: installGovernance.residualPolicyLabel,
+      visibility: installGovernance.visibilityLabel,
       storage,
-      storage_scope: "browser localStorage / per-user workspace profile",
-      local_workflow_key: WORKBENCH_LOCAL_WORKFLOWS_KEY,
-      snapshot_index_key: WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY,
-      snapshot_payload_prefix: WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX,
-      maintenance_log_key: WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_LOG_KEY,
+      storage_scope: WORKBENCH_STANDARD_STORAGE_CONTRACT.storageScope,
+      local_workflow_key: WORKBENCH_STANDARD_STORAGE_CONTRACT.localWorkflowKey,
+      snapshot_index_key: WORKBENCH_STANDARD_STORAGE_CONTRACT.snapshotIndexKey,
+      snapshot_payload_prefix: WORKBENCH_STANDARD_STORAGE_CONTRACT.snapshotPayloadPrefix,
+      maintenance_log_key: WORKBENCH_STANDARD_STORAGE_CONTRACT.maintenanceLogKey,
       cleanup,
-      snapshots: `${snapshots} limit=${WORKBENCH_WORKFLOW_SNAPSHOT_LIMIT}`,
+      snapshots: snapshots.length > 0 ? snapshots : WORKBENCH_STANDARD_STORAGE_CONTRACT.snapshotRule,
+      cleanup_authority: WORKBENCH_STANDARD_STORAGE_CONTRACT.cleanupAuthority,
+      retention_policy: WORKBENCH_STANDARD_STORAGE_CONTRACT.retentionPolicy,
+      ownership_model: WORKBENCH_STANDARD_STORAGE_CONTRACT.ownershipModel,
       format_contract: importedPackage
-        ? "kyuubiki.workflow-package v1 + workflow dataset contract JSON"
+        ? WORKBENCH_STANDARD_STORAGE_CONTRACT.formatContract
         : "Built-in workflow graph + optional workflow package export",
-      portability:
-        "Package manifest, graph, and dataset contract remain JSON-exportable for cross-operator reuse and headless SDK flows.",
+      portability: WORKBENCH_STANDARD_STORAGE_CONTRACT.portability,
     },
     input_contract_warnings: inputContractWarnings,
     contract_health: {
@@ -192,7 +220,8 @@ export function buildWorkflowPackageInstallReport(params: {
       recent_run_status: params.recentRunStatus ?? undefined,
     },
     integrity: integrityReport,
-    residuals: scanWorkflowPackageResiduals(params),
+    residuals,
+    repair_plan: repairPlan,
     maintenance_history: maintenanceHistory,
   };
 }
@@ -209,4 +238,44 @@ export function buildWorkflowPackageResidualRepairPreview(
     return [];
   });
   return actions.length === 0 ? "" : ["Apply these safe repairs?", ...actions].join("\n");
+}
+
+export function buildWorkflowPackageRepairPlan(
+  residuals: WorkflowPackageResidualRecord[],
+): WorkflowPackageRepairPlanStep[] {
+  return residuals.flatMap((entry) => {
+    if (entry.kind === "orphan_snapshots") {
+      return [{
+        residualId: entry.id,
+        action: "Remove orphan workflow snapshots that no longer have a local workflow owner.",
+        scope: "snapshot index + snapshot payload cache",
+        safe: entry.auto_fixable,
+      }];
+    }
+    if (entry.kind === "summary_only_snapshots") {
+      return [{
+        residualId: entry.id,
+        action: "Remove summary-only snapshots that cannot restore a full workflow graph.",
+        scope: "snapshot payload cache",
+        safe: entry.auto_fixable,
+      }];
+    }
+    if (entry.kind === "package_override") {
+      return [{
+        residualId: entry.id,
+        action: "Discard the active draft override and restore the mounted workflow package linkage.",
+        scope: "draft package session state",
+        safe: entry.auto_fixable,
+      }];
+    }
+    if (entry.kind === "local_link_missing") {
+      return [{
+        residualId: entry.id,
+        action: "Rebuild or manually relink the missing local workflow record before cleanup.",
+        scope: "local workflow library entry",
+        safe: false,
+      }];
+    }
+    return [];
+  });
 }

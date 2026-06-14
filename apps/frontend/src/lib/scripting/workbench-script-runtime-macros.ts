@@ -102,6 +102,32 @@ export function parseWorkbenchRecordedMacroDraft(value: unknown): WorkbenchRecor
   };
 }
 
+export function parseWorkbenchMacroImportDocument(value: unknown): {
+  draft: WorkbenchRecordedMacroDraft;
+  source: "macro" | "headless-workflow";
+} {
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid macro document.");
+  }
+
+  const candidate = value as {
+    schema_version?: unknown;
+    workflow?: unknown;
+  };
+
+  if (candidate.schema_version === "kyuubiki.headless-workflow/v1") {
+    return {
+      draft: parseWorkbenchRecordedMacroDraft(candidate.workflow),
+      source: "headless-workflow",
+    };
+  }
+
+  return {
+    draft: parseWorkbenchRecordedMacroDraft(value),
+    source: "macro",
+  };
+}
+
 export function serializeWorkbenchRecordedMacroDraft(macro: WorkbenchRecordedMacroDraft): string {
   return JSON.stringify(macro, null, 2);
 }

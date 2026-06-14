@@ -2,6 +2,7 @@
 
 import { applyStudyKindSelection, isWorkbenchStudyKind } from "@/components/workbench/workbench-study-kind-controller";
 import type { WorkbenchStudyKind } from "@/lib/workbench/history";
+import { applyWorkbenchGovernancePatch } from "@/lib/workbench/governance";
 
 type ScriptNavControllerDeps = {
   action: string;
@@ -21,7 +22,9 @@ type ScriptNavControllerDeps = {
   setSystemDataTab: (value: "jobs" | "results") => void;
   handleLanguageChange: (value: "en" | "zh" | "ja" | "es") => void;
   setTheme: (value: "linen" | "marine" | "graphite") => void;
+  currentFrontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   setFrontendRuntimeMode: (value: "orchestrated_gui" | "direct_mesh_gui") => void;
+  currentDirectMeshEndpointsText: string;
   setDirectMeshEndpointsText: (value: string) => void;
   setDirectMeshSelectionMode: (value: "healthiest" | "first_reachable") => void;
   refreshHealth: () => Promise<void>;
@@ -49,7 +52,9 @@ export async function handleWorkbenchScriptNavAction({
   setSystemDataTab,
   handleLanguageChange,
   setTheme,
+  currentFrontendRuntimeMode,
   setFrontendRuntimeMode,
+  currentDirectMeshEndpointsText,
   setDirectMeshEndpointsText,
   setDirectMeshSelectionMode,
   refreshHealth,
@@ -130,16 +135,28 @@ export async function handleWorkbenchScriptNavAction({
       if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
         setTheme(payload.theme);
       }
-      if (payload.frontendRuntimeMode === "orchestrated_gui" || payload.frontendRuntimeMode === "direct_mesh_gui") {
-        setFrontendRuntimeMode(payload.frontendRuntimeMode);
-      }
-      if (typeof payload.directMeshEndpointsText === "string") {
-        setDirectMeshEndpointsText(payload.directMeshEndpointsText);
-      }
+      const governedPatch = applyWorkbenchGovernancePatch({
+        currentFrontendRuntimeMode,
+        currentDirectMeshEndpointsText,
+        nextFrontendRuntimeMode:
+          payload.frontendRuntimeMode === "orchestrated_gui" || payload.frontendRuntimeMode === "direct_mesh_gui"
+            ? payload.frontendRuntimeMode
+            : undefined,
+        nextDirectMeshEndpointsText:
+          typeof payload.directMeshEndpointsText === "string" ? payload.directMeshEndpointsText : undefined,
+      });
+      if (typeof payload.directMeshEndpointsText === "string") setDirectMeshEndpointsText(governedPatch.directMeshEndpointsText);
+      setFrontendRuntimeMode(governedPatch.frontendRuntimeMode);
       if (payload.directMeshSelectionMode === "healthiest" || payload.directMeshSelectionMode === "first_reachable") {
         setDirectMeshSelectionMode(payload.directMeshSelectionMode);
       }
-      return { ok: true, action };
+      return {
+        ok: true,
+        action,
+        frontendRuntimeMode: governedPatch.frontendRuntimeMode,
+        directMeshEndpointsText: governedPatch.directMeshEndpointsText,
+        governanceViolation: governedPatch.violation,
+      };
     }
     case "runtime/refreshAll": {
       await Promise.all([refreshHealth(), refreshJobHistory(), refreshResults(), refreshProjects(), refreshSecurityEvents()]);

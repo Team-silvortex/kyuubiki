@@ -16,6 +16,7 @@ import {
 import { WorkbenchProtocolAgentsCard } from "@/components/workbench/system/workbench-protocol-agents-card";
 import { WorkbenchSecurityAuditCard } from "@/components/workbench/system/workbench-security-audit-card";
 import { WorkbenchSystemMetricsCard } from "@/components/workbench/system/workbench-system-metrics-card";
+import { WorkbenchSystemStorageCard } from "@/components/workbench/system/workbench-system-storage-card";
 
 type MetricRow = {
   label: string;
@@ -382,6 +383,8 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
               </button>
             </div>
           </section>
+
+          <WorkbenchSystemStorageCard />
         </div>
       ) : null}
       {page === "control" ? (
@@ -413,6 +416,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
               ) : null
             }
           />
+          <WorkbenchSystemStorageCard />
         </>
       ) : null}
       {page === "security" ? (

@@ -19,6 +19,7 @@ import {
 } from "@/components/workbench/workbench-runtime-audit-helpers";
 import { clusterHealthTone, formatPeerStatus, formatProtocolMethodLabel, materialColorByIndex } from "@/components/workbench/workbench-result-helpers";
 import { SAMPLE_LIBRARY } from "@/lib/models";
+import { buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
 
 export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const {
@@ -28,6 +29,8 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     frontendRuntimeMode,
     directMeshSelectionMode,
     directMeshExecution,
+    controlPlaneApiToken,
+    clusterApiToken,
     directMeshApiToken,
     protocolAgents,
     securityUi,
@@ -128,6 +131,14 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     clusterHealthTone,
     peerStatusLabel: (status?: string) => formatPeerStatus(status, t),
   });
+  const governanceRuntime = buildWorkbenchGovernanceRuntimeDiagnostics({
+    frontendRuntimeMode,
+    directMeshEndpointsText: props.directMeshEndpointsText,
+    protocolAgents,
+    controlPlaneApiToken,
+    clusterApiToken,
+    directMeshApiToken,
+  });
 
   const runtimeBackendRows = [
     { label: t.ui, value: "3000" },
@@ -161,6 +172,18 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   );
 
   const runtimeSecurityRows = [
+    {
+      label: language === "zh" ? "控制权归属" : language === "ja" ? "制御権限" : "Control authority",
+      value: governanceRuntime.authorityLabel,
+    },
+    {
+      label: language === "zh" ? "Cluster 暴露" : language === "ja" ? "Cluster 露出" : "Cluster exposure",
+      value: governanceRuntime.exposureLabel,
+    },
+    {
+      label: language === "zh" ? "治理漂移" : language === "ja" ? "ガバナンス偏差" : "Governance drift",
+      value: governanceRuntime.driftLabel,
+    },
     {
       label: securityUi.controlPlaneToken,
       value: health?.security?.api_token_configured ? securityUi.configured : securityUi.notConfigured,
@@ -218,6 +241,12 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
           : language === "ja"
             ? "アシスタント"
             : "Assistant"
+        : entry.source === "governance"
+          ? language === "zh"
+            ? "治理"
+            : language === "ja"
+              ? "ガバナンス"
+              : "Governance"
         : language === "zh"
           ? "脚本"
           : language === "ja"

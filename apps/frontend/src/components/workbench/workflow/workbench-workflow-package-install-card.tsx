@@ -2,20 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { WorkflowCatalogEntry } from "@/lib/api";
+import { WORKBENCH_STANDARD_STORAGE_CONTRACT } from "@/components/workbench/system/workbench-system-storage-contract";
 import {
   listStoredWorkflowPackageMaintenanceHistory,
   saveStoredWorkflowPackageMaintenanceHistory,
   type WorkflowPackageMaintenanceLogEntry,
-  WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_LOG_KEY,
 } from "@/components/workbench/workflow/workbench-workflow-package-maintenance-log";
-import { WORKBENCH_LOCAL_WORKFLOWS_KEY } from "@/components/workbench/workflow/workbench-workflow-local-storage";
-import type { WorkflowPackageResidualRecord } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
+import {
+  buildWorkflowPackageRepairPlan,
+  type WorkflowPackageResidualRecord,
+} from "@/components/workbench/workflow/workbench-workflow-package-install-report";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
 import {
   publishWorkflowPolicyActionFeedback,
   useWorkflowPolicyAction,
 } from "@/components/workbench/workflow/workbench-workflow-policy-actions";
-import { WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY, WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowPackageInstallCardProps = {
@@ -67,15 +68,18 @@ function buildInstallRows(
   return [
     [labels.packageInstallRulesMountStateLabel, mountState],
     [labels.packageInstallRulesStorageLabel, storageRule],
-    [labels.packageInstallRulesStorageScopeLabel, "browser localStorage / per-user workspace profile"],
-    [labels.packageInstallRulesLocalPathLabel, WORKBENCH_LOCAL_WORKFLOWS_KEY],
-    [labels.packageInstallRulesSnapshotPathLabel, WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY],
-    [labels.packageInstallRulesSnapshotPayloadPathLabel, WORKBENCH_WORKFLOW_SNAPSHOT_PAYLOAD_PREFIX],
-    [labels.packageInstallRulesMaintenancePathLabel, WORKBENCH_WORKFLOW_PACKAGE_MAINTENANCE_LOG_KEY],
+    [labels.packageInstallRulesStorageScopeLabel, WORKBENCH_STANDARD_STORAGE_CONTRACT.storageScope],
+    [labels.packageInstallRulesLocalPathLabel, WORKBENCH_STANDARD_STORAGE_CONTRACT.localWorkflowKey],
+    [labels.packageInstallRulesSnapshotPathLabel, WORKBENCH_STANDARD_STORAGE_CONTRACT.snapshotIndexKey],
+    [labels.packageInstallRulesSnapshotPayloadPathLabel, WORKBENCH_STANDARD_STORAGE_CONTRACT.snapshotPayloadPrefix],
+    [labels.packageInstallRulesMaintenancePathLabel, WORKBENCH_STANDARD_STORAGE_CONTRACT.maintenanceLogKey],
     [labels.packageInstallRulesCleanupLabel, cleanupRule],
     [labels.packageInstallRulesSnapshotLabel, snapshotRule],
-    [labels.packageInstallRulesFormatLabel, formatRule],
-    [labels.packageInstallRulesPortabilityLabel, portabilityRule],
+    ["Cleanup authority", WORKBENCH_STANDARD_STORAGE_CONTRACT.cleanupAuthority],
+    ["Retention policy", WORKBENCH_STANDARD_STORAGE_CONTRACT.retentionPolicy],
+    ["Ownership model", WORKBENCH_STANDARD_STORAGE_CONTRACT.ownershipModel],
+    [labels.packageInstallRulesFormatLabel, importedPackage ? WORKBENCH_STANDARD_STORAGE_CONTRACT.formatContract : formatRule],
+    [labels.packageInstallRulesPortabilityLabel, portabilityRule || WORKBENCH_STANDARD_STORAGE_CONTRACT.portability],
   ] as const;
 }
 
@@ -102,6 +106,7 @@ export function WorkbenchWorkflowPackageInstallCard({
   );
   const autoFixableCount = residuals.filter((entry) => entry.auto_fixable).length;
   const previewResiduals = previewResidualIds ? residuals.filter((entry) => previewResidualIds.includes(entry.id)) : [];
+  const previewRepairPlan = buildWorkflowPackageRepairPlan(previewResiduals);
   useEffect(() => {
     setHistory(listStoredWorkflowPackageMaintenanceHistory(workflow.id));
     setPreviewResidualIds(null);
@@ -209,6 +214,16 @@ export function WorkbenchWorkflowPackageInstallCard({
               <p className="card-copy" key={`preview:${entry.id}`}>{entry.message}</p>
             ))}
           </div>
+          {previewRepairPlan.length > 0 ? (
+            <div style={{ display: "grid", gap: "0.35rem", marginTop: "0.5rem" }}>
+              {previewRepairPlan.map((step, index) => (
+                <div className="sidebar-list__row" key={`${step.residualId}:${index}`}>
+                  <span>{step.action}</span>
+                  <strong>{step.scope}</strong>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="button-row button-row--adaptive">
             <button onClick={() => { const receipt = previewResiduals.flatMap((entry) => onRepairResidual(entry.id)); appendHistory("repair", receipt); setPreviewResidualIds(null); }} type="button">{labels.packageInstallRulesPreviewApplyLabel}</button>
             <button onClick={() => setPreviewResidualIds(null)} type="button">{labels.packageInstallRulesPreviewCancelLabel}</button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createSecurityEvent } from "@/lib/api";
 import {
   createAssistantTransactionEntry,
@@ -16,6 +16,7 @@ import {
   type WorkbenchSecurityAuditSource,
 } from "@/lib/workbench/security-audit";
 import type { WorkbenchScriptActionLogEntry, WorkbenchScriptSnapshot } from "@/lib/scripting/workbench-script-runtime";
+import { buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
 
 type AssistantPlanAction = {
   action: string;
@@ -27,6 +28,11 @@ type AssistantAuditControllerDeps = {
   language: "en" | "zh" | "ja" | "es";
   scriptRecordingMode: boolean;
   frontendRuntimeMode: string;
+  directMeshEndpointsText: string;
+  controlPlaneApiToken: string;
+  clusterApiToken: string;
+  directMeshApiToken: string;
+  protocolAgents: any[];
   studyKind: string;
   selectedProjectId: string | null;
   selectedModelId: string | null;
@@ -42,6 +48,11 @@ export function useWorkbenchAssistantAuditController({
   language,
   scriptRecordingMode,
   frontendRuntimeMode,
+  directMeshEndpointsText,
+  controlPlaneApiToken,
+  clusterApiToken,
+  directMeshApiToken,
+  protocolAgents,
   studyKind,
   selectedProjectId,
   selectedModelId,
@@ -55,6 +66,7 @@ export function useWorkbenchAssistantAuditController({
   const [scriptActionLog, setScriptActionLog] = useState<WorkbenchScriptActionLogEntry[]>([]);
   const [assistantTransactions, setAssistantTransactions] = useState<AssistantTransactionEntry[]>([]);
   const [securityAuditLog, setSecurityAuditLog] = useState<WorkbenchSecurityAuditEntry[]>([]);
+  const governanceAuditSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     setSecurityAuditLog(readSecurityAuditLog());
@@ -63,6 +75,27 @@ export function useWorkbenchAssistantAuditController({
   useEffect(() => {
     writeSecurityAuditLog(securityAuditLog);
   }, [securityAuditLog]);
+
+  const governanceRuntime = useMemo(
+    () =>
+      buildWorkbenchGovernanceRuntimeDiagnostics({
+        frontendRuntimeMode:
+          frontendRuntimeMode === "direct_mesh_gui" ? "direct_mesh_gui" : "orchestrated_gui",
+        directMeshEndpointsText,
+        protocolAgents,
+        controlPlaneApiToken,
+        clusterApiToken,
+        directMeshApiToken,
+      }),
+    [
+      clusterApiToken,
+      controlPlaneApiToken,
+      directMeshApiToken,
+      directMeshEndpointsText,
+      frontendRuntimeMode,
+      protocolAgents,
+    ],
+  );
 
   const getScriptSnapshot = (): WorkbenchScriptSnapshot => buildScriptSnapshot();
 
@@ -109,6 +142,7 @@ export function useWorkbenchAssistantAuditController({
           model_version_id: selectedVersionId,
           language,
           immersive_viewport: immersiveViewport,
+          ...(entry.context ?? {}),
         },
       });
     } catch {
@@ -121,6 +155,42 @@ export function useWorkbenchAssistantAuditController({
     setSecurityAuditLog((current) => [event, ...current].slice(0, 80));
     void persistSecurityAuditEvent(event);
   };
+
+  useEffect(() => {
+    const nextSignature = JSON.stringify({
+      authority: governanceRuntime.authorityLabel,
+      exposure: governanceRuntime.exposureLabel,
+      drift: governanceRuntime.driftLabel,
+      clusters: governanceRuntime.visibleClusterIds,
+      runtimeModes: governanceRuntime.visibleRuntimeModes,
+      hasViolation: governanceRuntime.hasViolation,
+    });
+
+    if (governanceAuditSignatureRef.current === nextSignature) return;
+    governanceAuditSignatureRef.current = nextSignature;
+
+    if (!governanceRuntime.hasViolation) return;
+
+    recordSecurityAuditEvent({
+      action: "governance/runtime-drift",
+      source: "governance",
+      risk: "sensitive",
+      status: "completed",
+      note:
+        language === "zh"
+          ? `检测到治理漂移: ${governanceRuntime.driftLabel}。`
+          : language === "ja"
+            ? `ガバナンス偏差を検出しました: ${governanceRuntime.driftLabel}。`
+            : `Governance drift detected: ${governanceRuntime.driftLabel}.`,
+      context: {
+        authority_label: governanceRuntime.authorityLabel,
+        exposure_label: governanceRuntime.exposureLabel,
+        drift_label: governanceRuntime.driftLabel,
+        visible_cluster_ids: governanceRuntime.visibleClusterIds,
+        visible_runtime_modes: governanceRuntime.visibleRuntimeModes,
+      },
+    });
+  }, [governanceRuntime, language]);
 
   const recordAssistantTransaction = (summary: string, executedActions: string[]) => {
     const entry: AssistantTransactionEntry = createAssistantTransactionEntry(

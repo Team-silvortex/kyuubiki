@@ -8,8 +8,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
       |> Router.call(@opts)
 
     assert list_conn.status == 200
-    payload = Jason.decode!(list_conn.resp_body)
-    workflows = payload["workflows"]
+    workflows = Jason.decode!(list_conn.resp_body)["workflows"]
     assert length(workflows) >= 3
 
     workflow_ids =
@@ -126,34 +125,114 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     electrostatic_fetched = Jason.decode!(electrostatic_fetch_conn.resp_body)["workflow"]
     assert electrostatic_fetched["id"] == "workflow.electrostatic-plane-quad-2d"
     assert electrostatic_fetched["graph"]["output_nodes"] == ["json_output"]
+    assert electrostatic_fetched["graph"]["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "electrostatic_plane_quad_summary"
+           }
 
     electrostatic_heat_fetch_conn =
       :get
       |> conn("/api/v1/workflows/catalog/workflow.electrostatic-to-heat-quad-2d")
       |> Router.call(@opts)
-
     assert electrostatic_heat_fetch_conn.status == 200
-
     electrostatic_heat_fetched =
       Jason.decode!(electrostatic_heat_fetch_conn.resp_body)["workflow"]
-
     assert electrostatic_heat_fetched["id"] == "workflow.electrostatic-to-heat-quad-2d"
     assert electrostatic_heat_fetched["graph"]["output_nodes"] == ["json_output"]
+    assert electrostatic_heat_fetched["graph"]["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "electrostatic_to_heat_quad"
+           }
 
     electrostatic_heat_thermo_fetch_conn =
       :get
       |> conn("/api/v1/workflows/catalog/workflow.electrostatic-heat-thermo-summary-json")
       |> Router.call(@opts)
-
     assert electrostatic_heat_thermo_fetch_conn.status == 200
-
     electrostatic_heat_thermo_fetched =
       Jason.decode!(electrostatic_heat_thermo_fetch_conn.resp_body)["workflow"]
-
     assert electrostatic_heat_thermo_fetched["id"] ==
              "workflow.electrostatic-heat-thermo-summary-json"
 
     assert electrostatic_heat_thermo_fetched["graph"]["output_nodes"] == ["json_output"]
+    assert electrostatic_heat_thermo_fetched["graph"]["dataset_contract"]["values"] |> length() >= 8
+    assert hd(electrostatic_heat_thermo_fetched["graph"]["nodes"])["outputs"] == [
+             %{
+               "id" => "model",
+               "artifact_type" => "study_model/electrostatic_plane_quad_2d",
+               "dataset_value" => "electrostatic_model"
+             }
+           ]
+
+    electrostatic_heat_thermo_triangle_fetch_conn =
+      :get
+      |> conn(
+        "/api/v1/workflows/catalog/workflow.electrostatic-heat-thermo-triangle-summary-json"
+      )
+      |> Router.call(@opts)
+    assert electrostatic_heat_thermo_triangle_fetch_conn.status == 200
+    electrostatic_heat_thermo_triangle_fetched =
+      Jason.decode!(electrostatic_heat_thermo_triangle_fetch_conn.resp_body)["workflow"]
+    assert electrostatic_heat_thermo_triangle_fetched["id"] ==
+             "workflow.electrostatic-heat-thermo-triangle-summary-json"
+
+    assert electrostatic_heat_thermo_triangle_fetched["graph"]["dataset_contract"]["metadata"] ==
+             %{"workflow_family" => "electrostatic_heat_thermo_triangle"}
+
+    electrostatic_heat_triangle_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-to-heat-triangle-2d")
+      |> Router.call(@opts)
+    assert electrostatic_heat_triangle_fetch_conn.status == 200
+    electrostatic_heat_triangle_fetched =
+      Jason.decode!(electrostatic_heat_triangle_fetch_conn.resp_body)["workflow"]
+    assert electrostatic_heat_triangle_fetched["id"] == "workflow.electrostatic-to-heat-triangle-2d"
+    assert electrostatic_heat_triangle_fetched["graph"]["dataset_contract"]["values"] |> length() >= 6
+
+    heat_to_thermo_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.heat-to-thermo-quad-2d")
+      |> Router.call(@opts)
+    assert heat_to_thermo_fetch_conn.status == 200
+    heat_to_thermo_fetched =
+      Jason.decode!(heat_to_thermo_fetch_conn.resp_body)["workflow"]
+    assert heat_to_thermo_fetched["graph"]["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "heat_to_thermo_quad"
+           }
+
+    bridge_node =
+      Enum.find(heat_to_thermo_fetched["graph"]["nodes"], fn node ->
+        node["id"] == "bridge_temperature"
+      end)
+
+    assert bridge_node["outputs"] == [
+             %{
+               "id" => "thermo_model",
+               "artifact_type" => "study_model/thermal_plane_quad_2d",
+               "dataset_value" => "thermo_model"
+             }
+           ]
+
+    comparison_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.heat-to-thermo-quad-comparison-json")
+      |> Router.call(@opts)
+    assert comparison_fetch_conn.status == 200
+    comparison_fetched =
+      Jason.decode!(comparison_fetch_conn.resp_body)["workflow"]
+    assert comparison_fetched["id"] == "workflow.heat-to-thermo-quad-comparison-json"
+    assert comparison_fetched["graph"]["dataset_contract"]["values"] |> length() >= 8
+
+    compare_node =
+      Enum.find(comparison_fetched["graph"]["nodes"], fn node ->
+        node["id"] == "compare_summaries"
+      end)
+
+    assert compare_node["outputs"] == [
+             %{
+               "id" => "result",
+               "artifact_type" => "report/summary",
+               "dataset_value" => "comparison_summary"
+             }
+           ]
 
     electrostatic_statistics_fetch_conn =
       :get
@@ -172,22 +251,28 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
       :get
       |> conn("/api/v1/workflows/catalog/workflow.electrostatic-quad-triangle-compare-json")
       |> Router.call(@opts)
-
     assert electrostatic_compare_fetch_conn.status == 200
-
     electrostatic_compare_fetched =
       Jason.decode!(electrostatic_compare_fetch_conn.resp_body)["workflow"]
-
     assert electrostatic_compare_fetched["id"] ==
              "workflow.electrostatic-quad-triangle-compare-json"
+
+    electrostatic_hotspot_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-plane-quad-hotspot-alert")
+      |> Router.call(@opts)
+    assert electrostatic_hotspot_fetch_conn.status == 200
+    electrostatic_hotspot_fetched =
+      Jason.decode!(electrostatic_hotspot_fetch_conn.resp_body)["workflow"]
+
+    assert electrostatic_hotspot_fetched["graph"]["output_nodes"] == ["markdown_output"]
+    assert electrostatic_hotspot_fetched["graph"]["dataset_contract"]["values"] |> length() >= 4
 
     electrostatic_guard_fetch_conn =
       :get
       |> conn("/api/v1/workflows/catalog/workflow.electrostatic-preheat-guard-markdown")
       |> Router.call(@opts)
-
     assert electrostatic_guard_fetch_conn.status == 200
-
     electrostatic_guard_fetched =
       Jason.decode!(electrostatic_guard_fetch_conn.resp_body)["workflow"]
 
@@ -198,9 +283,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
       :get
       |> conn("/api/v1/workflows/catalog/workflow.electrostatic-preheat-guard-heat-json")
       |> Router.call(@opts)
-
     assert electrostatic_guard_heat_fetch_conn.status == 200
-
     electrostatic_guard_heat_fetched =
       Jason.decode!(electrostatic_guard_heat_fetch_conn.resp_body)["workflow"]
 
@@ -211,14 +294,15 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
       :get
       |> conn("/api/v1/workflows/catalog/workflow.electrostatic-preheat-guard-heat-thermo-json")
       |> Router.call(@opts)
-
     assert electrostatic_guard_heat_thermo_fetch_conn.status == 200
-
     electrostatic_guard_heat_thermo_fetched =
       Jason.decode!(electrostatic_guard_heat_thermo_fetch_conn.resp_body)["workflow"]
 
     assert electrostatic_guard_heat_thermo_fetched["id"] ==
              "workflow.electrostatic-preheat-guard-heat-thermo-json"
+    assert electrostatic_guard_heat_thermo_fetched["graph"]["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "electrostatic_guard_heat_thermo"
+           }
 
     electrostatic_triangle_guard_heat_thermo_fetch_conn =
       :get
@@ -226,9 +310,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
         "/api/v1/workflows/catalog/workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
       )
       |> Router.call(@opts)
-
     assert electrostatic_triangle_guard_heat_thermo_fetch_conn.status == 200
-
     electrostatic_triangle_guard_heat_thermo_fetched =
       Jason.decode!(electrostatic_triangle_guard_heat_thermo_fetch_conn.resp_body)["workflow"]
 
@@ -341,8 +423,12 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     result_payload = WorkflowApi.wait_for_job(job_id, @opts)
     assert result_payload["job"]["status"] == "completed"
     assert result_payload["result"]["workflow_id"] == "workflow.heat-to-thermo-quad-2d"
+    assert result_payload["result"]["dataset_contract"]["id"] == "kyuubiki.dataset.heat_to_thermo_quad/v1"
     assert length(result_payload["result"]["completed_nodes"]) == 7
     assert length(result_payload["result"]["progress_events"]) == 7
+    assert Enum.any?(result_payload["result"]["dataset_lineage"], fn entry ->
+             entry["dataset_value"] == "thermo_summary" and entry["source_datasets"] == ["thermo_result"]
+           end)
     exported = result_payload["result"]["artifacts"]["json_output.json"]
     assert exported["format"] == "json"
     summary = Jason.decode!(exported["content"])
@@ -491,12 +577,16 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
       |> Router.call(@opts)
 
     assert conn.status == 202
-    payload = Jason.decode!(conn.resp_body)
-    result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
+    result_payload = WorkflowApi.wait_for_job(Jason.decode!(conn.resp_body)["job"]["job_id"], @opts)
 
     assert result_payload["job"]["status"] == "completed"
     assert result_payload["result"]["workflow_id"] == "workflow.electrostatic-to-heat-quad-2d"
+    assert result_payload["result"]["dataset_contract"]["id"] ==
+             "kyuubiki.dataset.electrostatic_to_heat_quad/v1"
     assert length(result_payload["result"]["completed_nodes"]) == 7
+    assert Enum.any?(result_payload["result"]["dataset_lineage"], fn entry ->
+             entry["dataset_value"] == "heat_model" and entry["source_datasets"] == ["electrostatic_result"]
+           end)
     exported = result_payload["result"]["artifacts"]["json_output.json"]
     assert exported["format"] == "json"
     summary = Jason.decode!(exported["content"])

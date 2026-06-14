@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
+  alias KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime
   alias KyuubikiWeb.WorkflowReportingRuntime
   alias KyuubikiWeb.WorkflowSolverRegistry
 
@@ -23,7 +24,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       )
       when is_map(heat_result) and is_map(thermo_seed_model) and is_map(config) do
     with {:ok, bridge_contract} <- resolve_heat_to_thermo_bridge_contract(config) do
-      WorkflowOperatorBridgeRuntime.bridge_heat_result_to_thermal_plane_quad_model(
+      WorkflowOperatorHeatBridgeRuntime.bridge_heat_result_to_thermal_plane_quad_model(
         heat_result,
         thermo_seed_model,
         bridge_contract
@@ -38,7 +39,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       )
       when is_map(heat_result) and is_map(thermo_seed_model) and is_map(config) do
     with {:ok, bridge_contract} <- resolve_heat_to_thermo_bridge_contract(config) do
-      WorkflowOperatorBridgeRuntime.bridge_heat_result_to_thermal_plane_triangle_model(
+      WorkflowOperatorHeatBridgeRuntime.bridge_heat_result_to_thermal_plane_triangle_model(
         heat_result,
         thermo_seed_model,
         bridge_contract
@@ -52,7 +53,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         thermo_seed_model
       )
       when is_map(heat_result) and is_map(thermo_seed_model) do
-    WorkflowOperatorBridgeRuntime.bridge_heat_result_to_thermal_plane_quad_model(
+    WorkflowOperatorHeatBridgeRuntime.bridge_heat_result_to_thermal_plane_quad_model(
       heat_result,
       thermo_seed_model
     )
@@ -64,7 +65,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         thermo_seed_model
       )
       when is_map(heat_result) and is_map(thermo_seed_model) do
-    WorkflowOperatorBridgeRuntime.bridge_heat_result_to_thermal_plane_triangle_model(
+    WorkflowOperatorHeatBridgeRuntime.bridge_heat_result_to_thermal_plane_triangle_model(
       heat_result,
       thermo_seed_model
     )
@@ -138,6 +139,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "extract.field_hotspots" ->
         WorkflowReportingRuntime.extract_field_hotspots(payload, config || %{})
 
+      "extract.thermal_result_diagnostics" ->
+        WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config || %{})
+
+      "extract.thermo_result_diagnostics" ->
+        WorkflowReportingRuntime.extract_thermo_result_diagnostics(payload, config || %{})
+
       _ ->
         {:error, {:unsupported_workflow_extract_operator, operator_id}}
     end
@@ -174,5 +181,5 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     do: WorkflowOperatorBridgeRuntime.resolve_electrostatic_to_heat_bridge_contract(config)
 
   defp resolve_heat_to_thermo_bridge_contract(config),
-    do: WorkflowOperatorBridgeRuntime.resolve_heat_to_thermo_bridge_contract(config)
+    do: WorkflowOperatorHeatBridgeRuntime.resolve_heat_to_thermo_bridge_contract(config)
 end

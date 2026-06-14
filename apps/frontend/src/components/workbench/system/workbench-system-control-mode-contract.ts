@@ -1,6 +1,7 @@
 "use client";
 
 import type { DirectMeshSelectionMode, FrontendRuntimeMode, ProtocolAgentDescriptor } from "@/lib/api";
+import { buildWorkbenchGovernanceEnforcementPlan, buildWorkbenchGovernanceRuntimeDiagnostics } from "@/lib/workbench/governance";
 
 type ControlWindowMode = "orchestrated" | "direct" | "mesh";
 type ControlLanguage = "en" | "zh" | "ja" | "es";
@@ -35,6 +36,8 @@ export type WorkbenchSystemControlModeCopy = {
     meshRoutingLabel: string;
     meshFallbackLabel: string;
     meshFailoverReasonLabel: string;
+    safeModeLabel: string;
+    downgradeReasonLabel: string;
   };
   meshPlannedHint: string;
   statuses: { online: string; offline: string; ready: string; open: string };
@@ -59,6 +62,8 @@ export type WorkbenchSystemControlTopologySummary = {
   routingPolicy: string;
   fallbackPolicy: string;
   failoverReason: string;
+  safeModeActive: boolean;
+  downgradeReason: string;
   runtimeLabel: string;
   directStrategyLabel: string;
 };
@@ -84,6 +89,8 @@ export type WorkbenchSystemTopologySnapshot = {
   routing_policy: string;
   fallback_policy: string;
   failover_reason: string;
+  safe_mode_active: boolean;
+  downgrade_reason: string;
   agents: Array<{
     id: string;
     endpoint: string;
@@ -239,6 +246,8 @@ export function buildWorkbenchSystemControlModeCopy(
       meshRoutingLabel: localizedRecord(language, { zh: "路由策略", ja: "ルーティング方針", en: "Routing policy" }),
       meshFallbackLabel: localizedRecord(language, { zh: "回退路径", ja: "フォールバック経路", en: "Fallback path" }),
       meshFailoverReasonLabel: localizedRecord(language, { zh: "回退原因", ja: "フォールバック理由", en: "Failover reason" }),
+      safeModeLabel: localizedRecord(language, { zh: "安全模式", ja: "セーフモード", en: "Safe mode" }),
+      downgradeReasonLabel: localizedRecord(language, { zh: "降级原因", ja: "降格理由", en: "Downgrade reason" }),
     },
     meshPlannedHint: localizedRecord(language, {
       zh: "这扇窗先作为去中心控制面的最小契约摘要，后面再接真实的 entry-agent、传播路由和失败转移状态。",
@@ -264,12 +273,27 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
   directMeshSelectionMode: DirectMeshSelectionMode;
   directMeshEndpointsText: string;
   protocolAgents: readonly ProtocolAgentDescriptor[];
+  controlPlaneApiToken: string;
+  clusterApiToken: string;
+  directMeshApiToken: string;
   protocolOnline: boolean;
   securityConfigured: boolean;
   auditCount: number;
   copy: WorkbenchSystemControlModeCopy;
   nowUnixS?: number;
 }): WorkbenchSystemControlTopologySummary {
+  const governanceDiagnostics = buildWorkbenchGovernanceRuntimeDiagnostics({
+    frontendRuntimeMode: input.frontendRuntimeMode,
+    directMeshEndpointsText: input.directMeshEndpointsText,
+    protocolAgents: input.protocolAgents,
+    controlPlaneApiToken: input.controlPlaneApiToken,
+    clusterApiToken: input.clusterApiToken,
+    directMeshApiToken: input.directMeshApiToken,
+  });
+  const governanceEnforcement = buildWorkbenchGovernanceEnforcementPlan({
+    frontendRuntimeMode: input.frontendRuntimeMode,
+    diagnostics: governanceDiagnostics,
+  });
   const mode: ControlWindowMode = input.frontendRuntimeMode === "direct_mesh_gui" ? "direct" : "orchestrated";
   const nowUnixS = input.nowUnixS ?? Math.floor(Date.now() / 1000);
   const entryAgentId = pickEntryAgentId(input.protocolAgents, input.directMeshSelectionMode, input.frontendRuntimeMode);
@@ -316,6 +340,8 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
     routingPolicy: mode === "orchestrated" ? input.copy.windows.orchestrated.title : input.copy.directStrategyLabels[input.directMeshSelectionMode],
     fallbackPolicy: mode === "orchestrated" ? input.copy.tabs.direct : input.protocolOnline ? input.copy.tabs.orchestrated : input.copy.tabs.direct,
     failoverReason,
+    safeModeActive: governanceEnforcement.shouldDowngrade,
+    downgradeReason: governanceEnforcement.reason ?? governanceDiagnostics.driftLabel,
     runtimeLabel: input.copy.runtimeLabels[input.frontendRuntimeMode],
     directStrategyLabel: input.copy.directStrategyLabels[input.directMeshSelectionMode],
   };
@@ -352,6 +378,8 @@ export function buildWorkbenchSystemTopologySnapshot(input: {
     routing_policy: input.topology.routingPolicy,
     fallback_policy: input.topology.fallbackPolicy,
     failover_reason: input.topology.failoverReason,
+    safe_mode_active: input.topology.safeModeActive,
+    downgrade_reason: input.topology.downgradeReason,
     agents: input.protocolAgents.map((agent) => {
       const peers = agent.descriptor?.runtime.peers ?? [];
       const latestPeerSeen = peers.reduce<number | null>((latest, peer) => {
@@ -398,6 +426,8 @@ export function parseWorkbenchSystemTopologySnapshot(value: unknown): WorkbenchS
     routing_policy: typeof record.routing_policy === "string" ? record.routing_policy : "--",
     fallback_policy: typeof record.fallback_policy === "string" ? record.fallback_policy : "--",
     failover_reason: typeof record.failover_reason === "string" ? record.failover_reason : "--",
+    safe_mode_active: record.safe_mode_active === true,
+    downgrade_reason: typeof record.downgrade_reason === "string" ? record.downgrade_reason : "--",
     agents: record.agents.flatMap((entry) => {
       if (!entry || typeof entry !== "object") return [];
       const agent = entry as Record<string, unknown>;
@@ -434,6 +464,8 @@ export function buildControlTopologySummaryFromSnapshot(
     routingPolicy: snapshot.routing_policy,
     fallbackPolicy: snapshot.fallback_policy,
     failoverReason: snapshot.failover_reason,
+    safeModeActive: snapshot.safe_mode_active,
+    downgradeReason: snapshot.downgrade_reason,
     runtimeLabel: copy.runtimeLabels[snapshot.runtime_mode],
     directStrategyLabel: copy.directStrategyLabels[snapshot.direct_mesh_strategy],
   };

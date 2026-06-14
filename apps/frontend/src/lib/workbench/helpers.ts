@@ -1,4 +1,9 @@
 import { buildStudyModelPayload } from "@/lib/models";
+import {
+  buildWorkbenchGovernanceConfig,
+  normalizeWorkbenchGovernanceRuntime,
+  type WorkbenchGovernanceConfig,
+} from "@/lib/workbench/governance";
 import type {
   AxialBarJobInput,
   Beam1dJobInput,
@@ -46,6 +51,7 @@ export type StoredWorkbenchSettings = {
   clusterApiToken?: string;
   directMeshApiToken?: string;
   assistantApiKey?: string;
+  governanceConfig?: WorkbenchGovernanceConfig;
 };
 
 export type WorkbenchLanguagePack = {
@@ -71,6 +77,7 @@ type PersistedWorkbenchSettings = {
   assistantMode?: string;
   assistantApiBaseUrl?: string;
   assistantModel?: string;
+  governanceConfig?: WorkbenchGovernanceConfig;
 };
 
 type StoredWorkbenchSecrets = {
@@ -154,8 +161,15 @@ export function safeStorageGet(): StoredWorkbenchSettings {
       window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizedSettings));
     }
 
+    const normalized = normalizeWorkbenchGovernanceRuntime({
+      frontendRuntimeMode: parsedSettings.frontendRuntimeMode ?? "orchestrated_gui",
+      directMeshEndpointsText: parsedSettings.directMeshEndpointsText ?? "",
+    });
+
     return {
       ...parsedSettings,
+      frontendRuntimeMode: normalized.frontendRuntimeMode,
+      directMeshEndpointsText: normalized.directMeshEndpointsText,
       ...mergedSecrets,
     };
   } catch {
@@ -164,17 +178,29 @@ export function safeStorageGet(): StoredWorkbenchSettings {
 }
 
 export function sanitizeWorkbenchSettings(input: WorkbenchSettingsInput): PersistedWorkbenchSettings {
+  const normalized = normalizeWorkbenchGovernanceRuntime({
+    frontendRuntimeMode: input.frontendRuntimeMode,
+    directMeshEndpointsText: input.directMeshEndpointsText,
+  });
+
   return {
     theme: input.theme,
     language: input.language,
     showShortcutHints: input.showShortcutHints,
     immersiveGuardrails: input.immersiveGuardrails,
-    frontendRuntimeMode: input.frontendRuntimeMode,
-    directMeshEndpointsText: input.directMeshEndpointsText,
+    frontendRuntimeMode: normalized.frontendRuntimeMode,
+    directMeshEndpointsText: normalized.directMeshEndpointsText,
     directMeshSelectionMode: input.directMeshSelectionMode,
     assistantMode: input.assistantMode,
     assistantApiBaseUrl: input.assistantApiBaseUrl.trim(),
     assistantModel: input.assistantModel.trim(),
+    governanceConfig: buildWorkbenchGovernanceConfig({
+      frontendRuntimeMode: normalized.frontendRuntimeMode,
+      directMeshEndpointsText: normalized.directMeshEndpointsText,
+      controlPlaneApiToken: input.controlPlaneApiToken,
+      clusterApiToken: input.clusterApiToken,
+      directMeshApiToken: input.directMeshApiToken,
+    }),
   };
 }
 

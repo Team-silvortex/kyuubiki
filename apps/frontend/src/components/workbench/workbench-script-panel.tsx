@@ -27,6 +27,7 @@ import {
   ensurePyodideRuntime,
   listWorkbenchMacroPresets,
   listWorkbenchSnippetPresets,
+  parseWorkbenchMacroImportDocument,
   parseWorkbenchRecordedMacroDraft,
   parseWorkbenchSnippetPresetRecord,
   renderWorkbenchScriptSnippet,
@@ -278,10 +279,10 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const importMacroJson = async (file: File | undefined) => {
     if (!file) return;
     try {
-      const parsed = parseWorkbenchRecordedMacroDraft(JSON.parse(await file.text()) as unknown);
-      setMacroDraftBuffer(parsed);
-      setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(parsed)}\n`);
-      appendOutput(`[macro] ${t.macroJsonImported}`);
+      const imported = parseWorkbenchMacroImportDocument(JSON.parse(await file.text()) as unknown);
+      setMacroDraftBuffer(imported.draft);
+      setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(imported.draft)}\n`);
+      appendOutput(`[macro] ${imported.source === "headless-workflow" ? t.headlessWorkflowImported : t.macroJsonImported}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       appendOutput(`[macro] ${message}`);

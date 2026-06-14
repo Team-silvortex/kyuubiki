@@ -3,6 +3,7 @@
 import type {
   DraftStep,
   HeadlessActionContract,
+  HeadlessActionGuidanceNote,
   HeadlessReferenceToken,
   HeadlessWorkflowTemplate,
   PayloadObject,
@@ -16,6 +17,102 @@ type AutomationContractRecord = {
   risk: "normal" | "sensitive" | "destructive";
   summary: string;
   examples: PayloadObject[];
+};
+
+function t(en: string, zh: string, ja: string, es: string) {
+  return { en, zh, ja, es };
+}
+
+const SERVICE_GUIDANCE_OVERRIDES: Partial<Record<string, HeadlessActionGuidanceNote[]>> = {
+  workflow_submit_catalog: [
+    {
+      label: t("Control authority", "控制权", "制御権限", "Autoridad de control"),
+      value: t(
+        "Keep this action on the orchestrated control-plane path. Do not mix direct-mesh tokens into the same submission contract.",
+        "这个动作应当留在编排控制面路径上，不要把 direct-mesh 凭证混进同一次提交流程。",
+        "このアクションはオーケストレーション制御プレーン経路に留め、同一投入契約へ direct-mesh トークンを混在させないでください。",
+        "Mantenga esta accion en la ruta del plano de control orquestado. No mezcle tokens de direct mesh en el mismo contrato de envio.",
+      ),
+    },
+    {
+      label: t("Install visibility", "安装可见性", "インストール可視性", "Visibilidad de instalacion"),
+      value: t(
+        "Package source, residual cleanup policy, and repair steps should stay visible in installer diagnostics before catalog workflows become standard.",
+        "在目录工作流成为标准路径前，包来源、残留清理策略和修复步骤都应该在 installer 诊断里保持可见。",
+        "カタログ workflow を標準経路にする前に、パッケージ由来、残留クリーンアップ方針、修復手順を installer 診断で可視に保ってください。",
+        "Antes de convertir estos workflows de catalogo en la ruta estandar, mantenga visibles en el instalador el origen del paquete, la politica de residuos y los pasos de reparacion.",
+      ),
+    },
+  ],
+  workflow_submit_graph: [
+    {
+      label: t("Control authority", "控制权", "制御権限", "Autoridad de control"),
+      value: t(
+        "Ad hoc graph submission still belongs to one orchestrated authority. Avoid combining multiple clusters or runtime modes inside one graph launch.",
+        "临时图提交依然只能属于一个编排控制权，不要在一次图启动里混入多个集群或多种 runtime mode。",
+        "アドホックグラフ投入も単一のオーケストレーション権限に属します。1 回のグラフ起動へ複数クラスターや複数 runtime mode を混在させないでください。",
+        "El envio de grafos ad hoc sigue perteneciendo a una sola autoridad orquestada. Evite combinar varios clusters o modos de runtime en un mismo lanzamiento.",
+      ),
+    },
+    {
+      label: t("Repair path", "修复路径", "修復経路", "Ruta de reparacion"),
+      value: t(
+        "If graph dependencies drift, surface repair-only installer mode first instead of silently retrying with unknown package state.",
+        "如果图依赖发生漂移，应先暴露 installer 的 repair-only 模式，而不是在未知包状态下静默重试。",
+        "グラフ依存がドリフトした場合、未知のパッケージ状態で黙って再試行するより先に installer の repair-only モードを提示してください。",
+        "Si las dependencias del grafo se desalinean, exponga primero el modo repair-only del instalador en lugar de reintentar silenciosamente con un estado de paquetes desconocido.",
+      ),
+    },
+  ],
+  direct_mesh_solve: [
+    {
+      label: t("Single authority", "单一控制权", "単一権限", "Autoridad unica"),
+      value: t(
+        "Direct-mesh solve should use one visible direct-mesh authority only. Do not combine orchestrator and mesh credentials in the same request path.",
+        "direct-mesh 求解只能使用一个可见的直连控制权，不要在同一请求路径里同时混用 orchestrator 和 mesh 凭证。",
+        "direct-mesh solve では可視な単一 direct-mesh 権限のみを使い、同一リクエスト経路へ orchestrator と mesh の認証を混在させないでください。",
+        "La resolucion direct mesh debe usar una sola autoridad direct mesh visible. No combine credenciales del orquestador y de la malla en la misma ruta de solicitud.",
+      ),
+    },
+    {
+      label: t("Safe mode", "安全模式", "セーフモード", "Modo seguro"),
+      value: t(
+        "When cluster exposure or runtime drift appears, the frontend downgrades back to orchestrated GUI safe mode. Headless callers should follow the same expectation.",
+        "一旦出现集群暴露或 runtime 漂移，前端会自动降级回 orchestrated GUI 安全模式。无头调用方也应遵守同样的预期。",
+        "クラスター露出や runtime ドリフトが生じた場合、フロントエンドは orchestrated GUI のセーフモードへ自動降格します。ヘッドレス呼び出し側も同じ前提に従ってください。",
+        "Cuando aparezcan exposicion de clusters o deriva de runtime, el frontend volvera automaticamente al modo seguro orchestrated GUI. Los consumidores headless deben seguir esa misma expectativa.",
+      ),
+    },
+    {
+      label: t("Endpoint discipline", "端点纪律", "エンドポイント規律", "Disciplina de endpoints"),
+      value: t(
+        "Keep endpoint lists explicit, reviewable, and tied to standard install rules so old solver residues do not become invisible routing state.",
+        "端点列表必须显式、可审计，并且与标准安装规则绑定，避免旧 solver 残留变成不可见的路由状态。",
+        "エンドポイント一覧は明示的かつ監査可能に保ち、標準インストール規則へ結び付けて旧 solver 残留が不可視な経路状態にならないようにしてください。",
+        "Mantenga la lista de endpoints explicita y auditable, ligada a reglas de instalacion estandar para que residuos antiguos del solver no se conviertan en estado de ruteo invisible.",
+      ),
+    },
+  ],
+  solve_and_wait_from_model_version: [
+    {
+      label: t("Execution scope", "执行范围", "実行スコープ", "Alcance de ejecucion"),
+      value: t(
+        "This shortcut folds submit, wait, and fetch into one action, but it still inherits the same single-authority runtime contract as the underlying solve path.",
+        "这个快捷动作虽然把提交、等待、抓取折叠到一步里，但仍然继承底层求解链路的单一控制权 runtime 契约。",
+        "このショートカットは投入・待機・取得を 1 ステップに畳み込みますが、基盤 solve 経路と同じ単一権限 runtime 契約を継承します。",
+        "Este atajo agrupa enviar, esperar y obtener en una sola accion, pero sigue heredando el mismo contrato de runtime de autoridad unica que la ruta de resolucion subyacente.",
+      ),
+    },
+    {
+      label: t("Visibility", "可见性", "可視性", "Visibilidad"),
+      value: t(
+        "Because follow-up is implicit here, diagnostics and audit output should remain enabled so job transitions do not disappear from operator review.",
+        "因为这里把后续步骤隐含掉了，所以诊断和审计输出要保持开启，避免任务状态迁移从操作员视野里消失。",
+        "ここでは後続手順が暗黙化されるため、ジョブ遷移が運用者レビューから消えないよう診断と監査出力を有効に保ってください。",
+        "Como aqui el seguimiento queda implicito, mantenga activos el diagnostico y la auditoria para que las transiciones del trabajo no desaparezcan de la revision operativa.",
+      ),
+    },
+  ],
 };
 
 const SERVICE_SUMMARY_OVERRIDES: Record<string, Record<string, string>> = {
@@ -64,6 +161,7 @@ const SERVICE_HEADLESS_ACTIONS: HeadlessActionContract[] = (headlessServiceActio
     payloadExample: (contract.examples[0] as PayloadObject | undefined) ?? {},
     inputSchema: SERVICE_SCHEMA_OVERRIDES[contract.id].inputSchema,
     outputSchema: SERVICE_SCHEMA_OVERRIDES[contract.id].outputSchema,
+    guidanceNotes: SERVICE_GUIDANCE_OVERRIDES[contract.id],
   }));
 
 export const HEADLESS_ACTIONS: HeadlessActionContract[] = SERVICE_HEADLESS_ACTIONS.concat([
@@ -89,6 +187,17 @@ export const HEADLESS_ACTIONS: HeadlessActionContract[] = SERVICE_HEADLESS_ACTIO
     outputSchema: [
       { key: "macro_id", label: "macro_id" },
       { key: "step_count", label: "step_count" },
+    ],
+    guidanceNotes: [
+      {
+        label: t("Boundary", "边界", "境界", "Limite"),
+        value: t(
+          "This node is an explicit bridge into frontend automation. Keep the UI-owned flow stable and do not treat it like a fully headless service action.",
+          "这个节点是通往前端自动化的显式桥接点。UI 侧流程属于固有界面，不应把它当成完全无头的 service action。",
+          "このノードはフロントエンド自動化への明示的なブリッジです。UI 側フローは固有の画面に属し、完全なヘッドレス service action と同一視しないでください。",
+          "Este nodo es un puente explicito hacia la automatizacion frontend. Mantenga estable el flujo gobernado por la UI y no lo trate como si fuera una accion de servicio completamente headless.",
+        ),
+      },
     ],
   },
 ]);

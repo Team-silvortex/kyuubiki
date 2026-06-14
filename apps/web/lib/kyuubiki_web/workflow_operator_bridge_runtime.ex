@@ -1,26 +1,6 @@
 defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
   @moduledoc false
 
-  def bridge_heat_result_to_thermal_plane_quad_model(heat_result, thermo_seed_model),
-    do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, "temperature_delta")
-
-  def bridge_heat_result_to_thermal_plane_triangle_model(heat_result, thermo_seed_model),
-    do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, "temperature_delta")
-
-  def bridge_heat_result_to_thermal_plane_quad_model(
-        heat_result,
-        thermo_seed_model,
-        bridge_contract
-      ),
-      do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, bridge_contract)
-
-  def bridge_heat_result_to_thermal_plane_triangle_model(
-        heat_result,
-        thermo_seed_model,
-        bridge_contract
-      ),
-      do: bridge_heat_result_to_thermal_model(heat_result, thermo_seed_model, bridge_contract)
-
   def bridge_electrostatic_result_to_heat_plane_quad_model(
         electrostatic_result,
         heat_seed_model,
@@ -70,7 +50,8 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
            normalize_contract_string(
              get_in(contract, ["target", "field"]) || "heat_load",
              :invalid_bridge_contract_target_field
-           ) do
+           ),
+         :ok <- validate_electrostatic_bridge_source_field(source_field, distribution) do
       {:ok,
        %{
          source_field: source_field,
@@ -87,66 +68,6 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
   def resolve_electrostatic_to_heat_bridge_contract(_config),
     do: {:error, :invalid_bridge_contract}
 
-  def resolve_heat_to_thermo_bridge_contract(config) when is_map(config) do
-    contract = Map.get(config, "contract", %{})
-
-    with {:ok, source_field} <-
-           normalize_contract_string(
-             get_in(contract, ["source", "field"]) || "temperature",
-             :invalid_bridge_contract_source_field
-           ),
-         {:ok, target_field} <-
-           normalize_contract_string(
-             get_in(contract, ["target", "field"]) || "temperature_delta",
-             :invalid_bridge_contract_target_field
-           ),
-         {:ok, scale} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "scale"]) || 1.0),
-         {:ok, default_value} <-
-           normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0) do
-      {:ok,
-       %{
-         source_field: source_field,
-         target_field: target_field,
-         scale: scale,
-         default_value: default_value
-       }}
-    end
-  end
-
-  def resolve_heat_to_thermo_bridge_contract(_config), do: {:error, :invalid_bridge_contract}
-
-  defp bridge_heat_result_to_thermal_model(
-         %{"nodes" => heat_nodes, "input" => %{"elements" => heat_elements}},
-         %{"nodes" => thermo_nodes, "elements" => thermo_elements} = thermo_seed_model,
-         target_field
-       )
-       when is_list(heat_nodes) and is_list(heat_elements) and is_list(thermo_nodes) and
-              is_list(thermo_elements) and is_binary(target_field) do
-    validate_bridge_shapes(heat_nodes, heat_elements, thermo_nodes, thermo_elements, fn ->
-      bridge_heat_nodes(heat_nodes, thermo_nodes, thermo_seed_model, %{
-        target_field: target_field,
-        source_field: "temperature",
-        scale: 1.0,
-        default_value: 0.0
-      })
-    end)
-  end
-
-  defp bridge_heat_result_to_thermal_model(
-         %{"nodes" => heat_nodes, "input" => %{"elements" => heat_elements}},
-         %{"nodes" => thermo_nodes, "elements" => thermo_elements} = thermo_seed_model,
-         bridge_contract
-       )
-       when is_list(heat_nodes) and is_list(heat_elements) and is_list(thermo_nodes) and
-              is_list(thermo_elements) and is_map(bridge_contract) do
-    validate_bridge_shapes(heat_nodes, heat_elements, thermo_nodes, thermo_elements, fn ->
-      bridge_heat_nodes(heat_nodes, thermo_nodes, thermo_seed_model, bridge_contract)
-    end)
-  end
-
-  defp bridge_heat_result_to_thermal_model(_heat_result, _thermo_seed_model, _target_or_contract),
-    do: {:error, :invalid_bridge_payload}
 
   defp bridge_electrostatic_result_to_heat_model(
          %{"nodes" => electrostatic_nodes, "elements" => electrostatic_elements},
@@ -158,13 +79,37 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
     if length(electrostatic_nodes) != length(heat_nodes) do
       {:error, :node_count_mismatch}
     else
-      with :ok <- ensure_node_alignment(electrostatic_nodes, heat_nodes),
-           nodal_heat_loads <-
-             derive_nodal_target_field(
-               electrostatic_elements,
-               length(heat_nodes),
-               bridge_contract
-             ) do
+      validate_and_bridge_electrostatic_nodes(
+        electrostatic_nodes,
+        electrostatic_elements,
+        heat_nodes,
+        heat_elements,
+        heat_seed_model,
+        bridge_contract
+      )
+    end
+  end
+
+  defp bridge_electrostatic_result_to_heat_model(_result, _seed_model, _bridge_contract),
+    do: {:error, :invalid_bridge_payload}
+
+  defp validate_and_bridge_electrostatic_nodes(
+         electrostatic_nodes,
+         electrostatic_elements,
+         heat_nodes,
+         heat_elements,
+         heat_seed_model,
+         bridge_contract
+       ) do
+    with :ok <- ensure_node_alignment(electrostatic_nodes, heat_nodes),
+         :ok <- validate_electrostatic_bridge_shape(electrostatic_elements, heat_elements, bridge_contract),
+         nodal_heat_loads <-
+           derive_nodal_target_field(
+             electrostatic_nodes,
+             electrostatic_elements,
+             length(heat_nodes),
+             bridge_contract
+           ) do
         bridged_nodes =
           Enum.with_index(heat_nodes)
           |> Enum.map(fn {heat_node, index} ->
@@ -176,53 +121,18 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
           end)
 
         {:ok, Map.put(heat_seed_model, "nodes", bridged_nodes)}
-      end
     end
   end
 
-  defp bridge_electrostatic_result_to_heat_model(_result, _seed_model, _bridge_contract),
-    do: {:error, :invalid_bridge_payload}
+  defp validate_electrostatic_bridge_shape(_electrostatic_elements, _heat_elements, %{
+         distribution: "node_to_node"
+       }),
+       do: :ok
 
-  defp validate_bridge_shapes(
-         source_nodes,
-         source_elements,
-         target_nodes,
-         target_elements,
-         on_valid
-       ) do
-    cond do
-      length(source_nodes) != length(target_nodes) -> {:error, :node_count_mismatch}
-      length(source_elements) != length(target_elements) -> {:error, :element_count_mismatch}
-      true -> on_valid.()
-    end
-  end
-
-  defp bridge_heat_nodes(heat_nodes, thermo_nodes, thermo_seed_model, bridge_contract) do
-    bridged_nodes =
-      Enum.zip(heat_nodes, thermo_nodes)
-      |> Enum.reduce_while([], fn {heat_node, thermo_node}, acc ->
-        if close_enough?(Map.get(heat_node, "x"), Map.get(thermo_node, "x")) and
-             close_enough?(Map.get(heat_node, "y"), Map.get(thermo_node, "y")) do
-          {:cont,
-           acc ++
-             [
-               Map.put(
-                 thermo_node,
-                 bridge_contract.target_field,
-                 normalize_numeric_value(
-                   Map.get(heat_node, bridge_contract.source_field, bridge_contract.default_value)
-                 ) * bridge_contract.scale
-               )
-             ]}
-        else
-          {:halt, :mismatch}
-        end
-      end)
-
-    case bridged_nodes do
-      :mismatch -> {:error, :node_alignment_mismatch}
-      nodes -> {:ok, Map.put(thermo_seed_model, "nodes", nodes)}
-    end
+  defp validate_electrostatic_bridge_shape(electrostatic_elements, heat_elements, _bridge_contract) do
+    if length(electrostatic_elements) == length(heat_elements),
+      do: :ok,
+      else: {:error, :element_count_mismatch}
   end
 
   defp ensure_node_alignment(source_nodes, target_nodes) do
@@ -239,37 +149,77 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
   end
 
   defp derive_nodal_target_field(
+         nodes,
+         _elements,
+         _node_count,
+         %{distribution: "node_to_node", source_field: source_field, scale: scale, default_value: default_value}
+       ) do
+    Enum.map(nodes, fn node ->
+      node
+      |> Map.get(source_field, default_value)
+      |> normalize_numeric_value()
+      |> Kernel.*(scale)
+    end)
+  end
+
+  defp derive_nodal_target_field(
+         _nodes,
          elements,
          node_count,
          %{source_field: source_field, node_index_fields: node_index_fields, scale: scale} =
            bridge_contract
        ) do
-    {totals, counts} =
+    {totals, counts, minima, maxima} =
       Enum.reduce(
         elements,
-        {List.duplicate(0.0, node_count), List.duplicate(0, node_count)},
-        fn element, {totals, counts} ->
+        {
+          List.duplicate(0.0, node_count),
+          List.duplicate(0, node_count),
+          List.duplicate(nil, node_count),
+          List.duplicate(nil, node_count)
+        },
+        fn element, {totals, counts, minima, maxima} ->
           magnitude =
             element
-            |> Map.get(source_field, bridge_contract.default_value)
-            |> normalize_numeric_value()
+            |> electrostatic_bridge_source_value(source_field, bridge_contract.default_value)
 
           node_indexes =
             Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
 
-          Enum.reduce(node_indexes, {totals, counts}, fn node_index, {totals_acc, counts_acc} ->
+          Enum.reduce(node_indexes, {totals, counts, minima, maxima}, fn node_index, {totals_acc, counts_acc, minima_acc, maxima_acc} ->
+            next_min =
+              minima_acc
+              |> Enum.at(node_index)
+              |> case do
+                nil -> magnitude * scale
+                current -> min(current, magnitude * scale)
+              end
+
+            next_max =
+              maxima_acc
+              |> Enum.at(node_index)
+              |> case do
+                nil -> magnitude * scale
+                current -> max(current, magnitude * scale)
+              end
+
             {
               List.update_at(totals_acc, node_index, &(&1 + magnitude * scale)),
-              List.update_at(counts_acc, node_index, &(&1 + 1))
+              List.update_at(counts_acc, node_index, &(&1 + 1)),
+              List.replace_at(minima_acc, node_index, next_min),
+              List.replace_at(maxima_acc, node_index, next_max)
             }
           end)
         end
       )
 
-    reduce_nodal_values(totals, counts, bridge_contract)
+    reduce_nodal_values(totals, counts, minima, maxima, bridge_contract)
   end
 
-  defp reduce_nodal_values(totals, counts, %{reduction: "sum", default_value: default_value}) do
+  defp reduce_nodal_values(totals, counts, _minima, _maxima, %{
+         reduction: "sum",
+         default_value: default_value
+       }) do
     Enum.zip(totals, counts)
     |> Enum.map(fn
       {_total, 0} -> default_value
@@ -277,12 +227,46 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
     end)
   end
 
-  defp reduce_nodal_values(totals, counts, %{default_value: default_value}) do
+  defp reduce_nodal_values(_totals, counts, minima, _maxima, %{
+         reduction: "min",
+         default_value: default_value
+       }) do
+    Enum.zip(minima, counts)
+    |> Enum.map(fn
+      {_minimum, 0} -> default_value
+      {minimum, _count} -> minimum || default_value
+    end)
+  end
+
+  defp reduce_nodal_values(_totals, counts, _minima, maxima, %{
+         reduction: "max",
+         default_value: default_value
+       }) do
+    Enum.zip(maxima, counts)
+    |> Enum.map(fn
+      {_maximum, 0} -> default_value
+      {maximum, _count} -> maximum || default_value
+    end)
+  end
+
+  defp reduce_nodal_values(totals, counts, _minima, _maxima, %{default_value: default_value}) do
     Enum.zip(totals, counts)
     |> Enum.map(fn
       {_total, 0} -> default_value
       {total, count} -> total / count
     end)
+  end
+
+  defp electrostatic_bridge_source_value(element, "flux_magnitude", default_value) do
+    element
+    |> Map.get("electric_flux_density_magnitude", default_value)
+    |> normalize_numeric_value()
+  end
+
+  defp electrostatic_bridge_source_value(element, source_field, default_value) do
+    element
+    |> Map.get(source_field, default_value)
+    |> normalize_numeric_value()
   end
 
   defp normalize_bridge_scale(nil), do: {:ok, 1.0}
@@ -296,11 +280,57 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
   defp normalize_contract_string(_value, reason), do: {:error, reason}
 
   defp validate_bridge_distribution("element_to_nodes"), do: :ok
+  defp validate_bridge_distribution("node_to_node"), do: :ok
   defp validate_bridge_distribution(_distribution), do: {:error, :unsupported_bridge_distribution}
 
   defp validate_bridge_reduction("mean"), do: :ok
   defp validate_bridge_reduction("sum"), do: :ok
+  defp validate_bridge_reduction("area_weighted_mean"), do: :ok
+  defp validate_bridge_reduction("min"), do: :ok
+  defp validate_bridge_reduction("max"), do: :ok
   defp validate_bridge_reduction(_reduction), do: {:error, :unsupported_bridge_reduction}
+
+  defp validate_electrostatic_bridge_source_field("potential", "node_to_node"), do: :ok
+  defp validate_electrostatic_bridge_source_field("charge_density", "node_to_node"), do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "electric_field_magnitude",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field("electric_field_x", "element_to_nodes"),
+    do: :ok
+
+  defp validate_electrostatic_bridge_source_field("electric_field_y", "element_to_nodes"),
+    do: :ok
+
+  defp validate_electrostatic_bridge_source_field("average_potential", "element_to_nodes"),
+    do: :ok
+
+  defp validate_electrostatic_bridge_source_field("flux_magnitude", "element_to_nodes"),
+    do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "electric_flux_density_magnitude",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "electric_flux_density_x",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "electric_flux_density_y",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(_source_field, _distribution),
+    do: {:error, :invalid_bridge_contract_source_field}
 
   defp normalize_node_index_fields(fields) when is_list(fields) do
     normalized =
