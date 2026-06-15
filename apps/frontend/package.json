@@ -2,6 +2,7 @@
   "name": "kyuubiki-frontend",
   "version": "1.6.0",
   "private": true,
+  "type": "module",
   "bin": {
     "kyuubiki": "./scripts/kyuubiki-cli.mjs"
   },
@@ -11,6 +12,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:unit": "node ./scripts/test-unit.mjs",
+    "test:unit:workflow": "node ./scripts/test-unit.mjs workflow",
     "check:file-lines": "node ./scripts/check-file-lines.mjs",
     "check:ui-layout": "node ./scripts/check-ui-layout.mjs",
     "check:workflow-topology": "node ./scripts/check-workflow-topology-regression.mjs",
