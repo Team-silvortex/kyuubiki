@@ -6,6 +6,9 @@ Headless Elixir SDK for Kyuubiki control-plane and solver-rpc protocols.
 auth = KyuubikiSdk.Auth.access_token("dev-token")
 client = KyuubikiSdk.ControlPlaneClient.new("http://127.0.0.1:4000", auth: auth)
 {:ok, health} = KyuubikiSdk.ControlPlaneClient.health(client)
+{:ok, operators} = KyuubikiSdk.ControlPlaneClient.list_workflow_operators(client)
+{:ok, structural_operators} = KyuubikiSdk.ControlPlaneClient.list_workflow_operators(client, domain: "structural", family: "solver")
+{:ok, operator} = KyuubikiSdk.ControlPlaneClient.fetch_workflow_operator(client, "solver.truss_2d")
 
 rpc = KyuubikiSdk.SolverRpcClient.new("127.0.0.1", 5001)
 {:ok, descriptor} = KyuubikiSdk.SolverRpcClient.describe_agent(rpc)
@@ -49,6 +52,7 @@ graph =
 Highlights:
 
 - jobs/results/export CRUD on the control plane
+- operator catalog listing, filtering, and descriptor fetch
 - direct framed TCP solver-RPC access
 - `KyuubikiSdk.Session` for submit/batch/wait flows
 - `KyuubikiSdk.AgentClient` for run-study and chunk-browse flows

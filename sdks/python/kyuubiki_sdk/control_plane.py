@@ -58,8 +58,12 @@ class ControlPlaneClient:
     def list_workflow_catalog(self) -> dict[str, Any]:
         return self._request("/api/v1/workflows/catalog")
 
-    def list_workflow_operators(self) -> dict[str, Any]:
-        return self._request("/api/v1/operators")
+    def list_workflow_operators(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
+        return self._request("/api/v1/operators", query=query)
+
+    def fetch_workflow_operator(self, operator_id: str) -> dict[str, Any]:
+        quoted_id = urllib.parse.quote(operator_id, safe="")
+        return self._request(f"/api/v1/operators/{quoted_id}")
 
     def create_axial_bar_job(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._request("/api/v1/fem/axial-bar/jobs", "POST", payload)

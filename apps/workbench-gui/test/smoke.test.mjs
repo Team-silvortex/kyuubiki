@@ -1,14 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  assertMatches,
+  createFixtureReader,
+  createFixtureRoot,
+} from "../../desktop-shared/test/smoke-test-helpers.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-function read(relativePath) {
-  return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
-}
+const ROOT = createFixtureRoot(import.meta.url);
+const read = createFixtureReader(ROOT);
 
 test("desktop shell defines a least-privilege main-window capability", () => {
   const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json"));
@@ -29,39 +28,46 @@ test("desktop shell defines a least-privilege main-window capability", () => {
 test("desktop shell exposes runtime and log panels", () => {
   const html = read("ui/index.html");
 
-  assert.match(html, /data-console-tab="status"/);
-  assert.match(html, /data-console-tab="logs"/);
-  assert.match(html, /data-log-service="frontend"/);
-  assert.match(html, /data-log-service="orchestrator"/);
-  assert.match(html, /data-shell-page="control"/);
-  assert.match(html, /data-shell-page="workbench"/);
-  assert.match(html, /data-shell-pane="control"/);
-  assert.match(html, /data-shell-pane="workbench"/);
-  assert.match(html, /id="workbench-frame"/);
+  assertMatches(html, [
+    /data-console-tab="status"/,
+    /data-console-tab="logs"/,
+    /data-log-service="frontend"/,
+    /data-log-service="orchestrator"/,
+    /data-shell-page="control"/,
+    /data-shell-page="workbench"/,
+    /data-shell-pane="control"/,
+    /data-shell-pane="workbench"/,
+    /id="workbench-frame"/,
+  ]);
 });
 
 test("desktop shell registers local runtime actions and shortcuts", () => {
   const html = read("ui/index.html");
   const js = read("ui/app.js");
   const bridge = read("ui/shared/tauri-bridge.js");
+  const platform = read("ui/shared/platform.js");
 
-  assert.match(html, /shortcut-list/);
-  assert.match(html, /reload embedded workbench/);
-  assert.match(js, /guarded_mutation_action/);
-  assert.match(js, /invokeGuardedMutation/);
-  assert.match(js, /read_runtime_log/);
-  assert.match(js, /setShellPage/);
-  assert.match(js, /renderShellPages/);
-  assert.match(js, /keydown/);
-  assert.match(bridge, /invokeTauri/);
-  assert.match(bridge, /loadDesktopBrand/);
+  assertMatches(html, [/shortcut-list/, /reload embedded workbench/]);
+  assertMatches(js, [
+    /guarded_mutation_action/,
+    /invokeGuardedMutation/,
+    /read_runtime_log/,
+    /setShellPage/,
+    /renderShellPages/,
+    /normalizeDesktopPlatform/,
+    /keydown/,
+  ]);
+  assert.match(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
+  assert.match(platform, /desktop-shared\/ui\/platform\.js/);
 });
 
 test("tauri backend exposes workbench runtime commands", () => {
   const rust = read("src-tauri/src/main.rs");
 
-  assert.match(rust, /service_status/);
-  assert.match(rust, /guarded_mutation_action/);
-  assert.match(rust, /read_runtime_log/);
-  assert.match(rust, /workbench_environment/);
+  assertMatches(rust, [
+    /service_status/,
+    /guarded_mutation_action/,
+    /read_runtime_log/,
+    /workbench_environment/,
+  ]);
 });

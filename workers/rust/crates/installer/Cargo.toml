@@ -5,4 +5,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+kyuubiki-platform = { path = "../platform" }
 serde_json = "1.0"

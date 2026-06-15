@@ -1,0 +1,14 @@
+{
+  "schema_version": "kyuubiki.operator-package/v1",
+  "package_id": "operator.template.summary",
+  "package_version": "0.1.0",
+  "runtime": "rust_crate",
+  "entrypoint": "target/debug/{lib_prefix}kyuubiki_operator_template.{lib_extension}",
+  "operators": [
+    {
+      "operator_id": "extract.template_summary",
+      "kind": "extract",
+      "entry_symbol": "register_template_operator"
+    }
+  ]
+}

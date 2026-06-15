@@ -56,6 +56,8 @@ for page in agent.iter_result_chunks(bundle["terminal"]["job"]["job_id"], "nodes
 
 catalog = cp.list_workflow_catalog()
 operators = cp.list_workflow_operators()
+structural_operators = cp.list_workflow_operators({"domain": "structural", "family": "solver"})
+operator = cp.fetch_workflow_operator("solver.truss_2d")
 workflow_job = cp.submit_workflow_catalog_job(
     "workflow.heat-to-thermo-quad-2d",
     {"thermal_case": {"loadcase": "baseline"}},
@@ -105,6 +107,7 @@ Highlights:
 
 - control-plane jobs/results/export CRUD
 - control-plane workflow catalog, operator catalog, and workflow submission
+- operator catalog filtering plus single-operator descriptor fetch
 - built-in workflow graph and dataset-contract validation helpers
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access

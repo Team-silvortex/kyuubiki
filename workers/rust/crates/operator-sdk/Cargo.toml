@@ -1,0 +1,11 @@
+[package]
+name = "kyuubiki-operator-sdk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+kyuubiki-platform = { path = "../platform" }
+kyuubiki-protocol = { path = "../protocol" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

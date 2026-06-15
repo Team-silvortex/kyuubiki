@@ -1,21 +1,8 @@
-use crate::workflow_reporting::{
-    compare_summary_pair, export_alert_markdown, export_summary_csv, export_summary_json,
-    extract_field_hotspots, extract_field_statistics, extract_result_summary, merge_summary_pair,
-};
-use crate::workflow_summary_transforms::{
-    aggregate_summary_collection, normalize_summary_fields, select_best_summary,
-};
 use crate::{
     EngineSolveRequest,
-    bridge::{
-        attach_bridge_diagnostics, bridge_electrostatic_result_to_heat_plane_quad_model,
-        bridge_electrostatic_result_to_heat_plane_triangle_model,
-        resolve_electrostatic_to_heat_bridge_contract,
-    },
-    heat_bridge::{
-        bridge_heat_result_to_thermal_plane_quad_model_with_contract,
-        bridge_heat_result_to_thermal_plane_triangle_model_with_contract,
-        resolve_heat_to_thermo_bridge_contract,
+    operator_sdk_runtime::{
+        run_registered_export_operator, run_registered_extract_operator,
+        run_registered_transform_operator,
     },
     solve,
 };
@@ -513,105 +500,28 @@ pub fn run_transform_operator(
     config: Value,
 ) -> Result<Value, String> {
     match operator_id {
-        "bridge.temperature_field_to_thermo_quad_2d" => {
-            let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
-            let contract = resolve_heat_to_thermo_bridge_contract(&config)?;
-            let seed_model_value = config.get("seed_model").cloned().unwrap_or(config);
-            let thermo_seed_model: SolveThermalPlaneQuad2dRequest =
-                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
-            let (bridged, diagnostics) =
-                bridge_heat_result_to_thermal_plane_quad_model_with_contract(
-                    &heat_result,
-                    &thermo_seed_model,
-                    &contract,
-                )?;
-            attach_bridge_diagnostics(&bridged, &diagnostics)
+        "bridge.temperature_field_to_thermo_quad_2d"
+        | "bridge.temperature_field_to_thermo_triangle_2d"
+        | "bridge.electrostatic_field_to_heat_quad_2d"
+        | "bridge.electrostatic_field_to_heat_triangle_2d"
+        | "transform.first_available"
+        | "transform.merge_summary_pair"
+        | "transform.compare_summary_pair"
+        | "transform.aggregate_summary_collection"
+        | "transform.normalize_summary_fields"
+        | "transform.select_best_summary" => {
+            run_registered_transform_operator(operator_id, payload, config)
         }
-        "bridge.temperature_field_to_thermo_triangle_2d" => {
-            let heat_result = serde_json::from_value(payload).map_err(|err| err.to_string())?;
-            let contract = resolve_heat_to_thermo_bridge_contract(&config)?;
-            let seed_model_value = config.get("seed_model").cloned().unwrap_or(config);
-            let thermo_seed_model: SolveThermalPlaneTriangle2dRequest =
-                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
-            let (bridged, diagnostics) =
-                bridge_heat_result_to_thermal_plane_triangle_model_with_contract(
-                    &heat_result,
-                    &thermo_seed_model,
-                    &contract,
-                )?;
-            attach_bridge_diagnostics(&bridged, &diagnostics)
-        }
-        "bridge.electrostatic_field_to_heat_quad_2d" => {
-            let electrostatic_result =
-                serde_json::from_value(payload).map_err(|err| err.to_string())?;
-            let seed_model_value = config.get("seed_model").cloned().ok_or_else(|| {
-                "bridge.electrostatic_field_to_heat_quad_2d requires config.seed_model".to_string()
-            })?;
-            let heat_seed_model: SolveHeatPlaneQuad2dRequest =
-                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
-            let contract = resolve_electrostatic_to_heat_bridge_contract(&config)?;
-            let (bridged, diagnostics) = bridge_electrostatic_result_to_heat_plane_quad_model(
-                &electrostatic_result,
-                &heat_seed_model,
-                &contract,
-            )?;
-            attach_bridge_diagnostics(&bridged, &diagnostics)
-        }
-        "bridge.electrostatic_field_to_heat_triangle_2d" => {
-            let electrostatic_result =
-                serde_json::from_value(payload).map_err(|err| err.to_string())?;
-            let seed_model_value = config.get("seed_model").cloned().ok_or_else(|| {
-                "bridge.electrostatic_field_to_heat_triangle_2d requires config.seed_model"
-                    .to_string()
-            })?;
-            let heat_seed_model: SolveHeatPlaneTriangle2dRequest =
-                serde_json::from_value(seed_model_value).map_err(|err| err.to_string())?;
-            let contract = resolve_electrostatic_to_heat_bridge_contract(&config)?;
-            let (bridged, diagnostics) = bridge_electrostatic_result_to_heat_plane_triangle_model(
-                &electrostatic_result,
-                &heat_seed_model,
-                &contract,
-            )?;
-            attach_bridge_diagnostics(&bridged, &diagnostics)
-        }
-        "transform.first_available" => Ok(payload),
-        "transform.merge_summary_pair" => merge_summary_pair(payload, config),
-        "transform.compare_summary_pair" => compare_summary_pair(payload, config),
-        "transform.aggregate_summary_collection" => aggregate_summary_collection(payload, config),
-        "transform.normalize_summary_fields" => normalize_summary_fields(payload, config),
-        "transform.select_best_summary" => select_best_summary(payload, config),
         _ => Err(format!(
             "unsupported transform operator in first executor: {operator_id}"
         )),
     }
 }
 
-pub fn run_extract_operator(
-    operator_id: &str,
-    payload: Value,
-    config: Value,
-) -> Result<Value, String> {
-    match operator_id {
-        "extract.result_summary" => extract_result_summary(payload, config),
-        "extract.field_statistics" => extract_field_statistics(payload, config),
-        "extract.field_hotspots" => extract_field_hotspots(payload, config),
-        _ => Err(format!(
-            "unsupported extract operator in first executor: {operator_id}"
-        )),
-    }
+pub fn run_extract_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+    run_registered_extract_operator(operator_id, payload, config)
 }
 
-pub fn run_export_operator(
-    operator_id: &str,
-    payload: Value,
-    config: Value,
-) -> Result<Value, String> {
-    match operator_id {
-        "export.summary_json" => export_summary_json(payload),
-        "export.summary_csv" => export_summary_csv(payload, config),
-        "export.alert_markdown" => export_alert_markdown(payload, config),
-        _ => Err(format!(
-            "unsupported export operator in first executor: {operator_id}"
-        )),
-    }
+pub fn run_export_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+    run_registered_export_operator(operator_id, payload, config)
 }

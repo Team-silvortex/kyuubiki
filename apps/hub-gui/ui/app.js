@@ -9,6 +9,12 @@ import {
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
 import {
+  desktopPlatformContextLabel,
+  detectDesktopPlatform,
+  normalizeDesktopPlatform,
+  populateDesktopPlatformSelect,
+} from "./shared/platform.js";
+import {
   currentProjectBundleComparePayload as buildCurrentProjectBundleComparePayload,
   currentProjectBundleOutputPayload as buildCurrentProjectBundleOutputPayload,
   currentProjectBundlePayload as buildCurrentProjectBundlePayload,
@@ -1775,7 +1781,7 @@ const HUB_DENSITY_DEFAULTS = {
 };
 
 const state = {
-  hostPlatform: "macos",
+  hostPlatform: detectDesktopPlatform(),
   activeSection: "projects",
   projectsPage: "start",
   panelPages: {
@@ -1809,6 +1815,22 @@ let observeRuntimeLogPollHandle = null;
 
 function hubCopy() {
   return HUB_I18N[state.language] || HUB_I18N.en;
+}
+
+function renderToolsPlatformLabel() {
+  if (!elements.toolsPackagesPlatformLabel) {
+    return;
+  }
+
+  const baseLabel = hubCopy().panels.tools.packages.platform;
+  const selectedPlatform = elements.releasePlatform?.value || state.hostPlatform;
+  elements.toolsPackagesPlatformLabel.textContent = desktopPlatformContextLabel(
+    baseLabel,
+    normalizeDesktopPlatform(selectedPlatform, state.hostPlatform, {
+      allowAll: true,
+    }),
+    "",
+  );
 }
 
 function hubMessage(template, replacements = {}) {
@@ -2563,7 +2585,7 @@ function renderPanelLanguage(copy) {
   setText(elements.toolsPackagesLabel, copy.panels.tools.packages.label);
   setText(elements.toolsPackagesTitle, copy.panels.tools.packages.title);
   setText(elements.toolsPackagesCopy, copy.panels.tools.packages.copy);
-  setText(elements.toolsPackagesPlatformLabel, copy.panels.tools.packages.platform);
+  renderToolsPlatformLabel();
   setText(elements.toolsPackagesBenchmark, copy.panels.tools.packages.benchmark);
   setText(elements.toolsPackagesValidate, copy.panels.tools.packages.validate);
   setText(elements.toolsPackagesExport, copy.panels.tools.packages.export);
@@ -4943,11 +4965,17 @@ function applyAssistantSettings() {
 
 async function loadEnvironment() {
   const environment = await invokeTauri("hub_environment");
-  state.hostPlatform = environment.host_platform;
+  state.hostPlatform = normalizeDesktopPlatform(environment.host_platform);
+
+  populateDesktopPlatformSelect(elements.releasePlatform, {
+    includeAll: true,
+    fallback: state.hostPlatform,
+  });
 
   if (elements.releasePlatform && !elements.releasePlatform.value) {
-    elements.releasePlatform.value = environment.host_platform;
+    elements.releasePlatform.value = state.hostPlatform;
   }
+  renderToolsPlatformLabel();
 
   if (elements.workbenchUrl) {
     elements.workbenchUrl.textContent = environment.workbench_url;
@@ -4967,6 +4995,7 @@ async function loadEnvironment() {
 async function refreshRuntimeStatus() {
   await refreshRuntimeStatusPanel({
     invokeTauri,
+    orchestratorBaseUrl: currentOrchestratorBaseUrl(),
     setRuntimeStatusOutput,
     applyDesktopState,
     localRuntimeStatus: elements.localRuntimeStatus,
@@ -5232,6 +5261,7 @@ elements.assistantBaseUrl?.addEventListener("input", updateAssistantEndpointPoli
 elements.assistantApiKey?.addEventListener("change", syncAssistantSettingsFromInputs);
 elements.assistantModelName?.addEventListener("change", syncAssistantSettingsFromInputs);
 elements.releasePlatform?.addEventListener("change", () => {
+  renderToolsPlatformLabel();
   void refreshDesktopStatusOutput();
 });
 elements.hotRuntimeLogService?.addEventListener("change", () => {
@@ -5373,8 +5403,10 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
 elements.languageSelect?.addEventListener("change", async (event) => {
   state.language = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
   rerenderLocalizedHubShell();
+  renderToolsPlatformLabel();
   window.requestAnimationFrame(() => {
     rerenderLocalizedHubShell();
+    renderToolsPlatformLabel();
   });
 });
 

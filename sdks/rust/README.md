@@ -13,6 +13,12 @@ use kyuubiki_headless_sdk::{
 
 let cp = ControlPlaneClient::new("http://127.0.0.1:4000")?;
 let health = cp.health()?;
+let operators = cp.list_workflow_operators()?;
+let structural_operators = cp.list_workflow_operators_with_query(Some(&[
+    ("domain", "structural".to_string()),
+    ("family", "solver".to_string()),
+]))?;
+let operator = cp.fetch_workflow_operator("solver.truss_2d")?;
 
 let rpc = SolverRpcClient::new("127.0.0.1", 5001);
 let descriptor = rpc.describe_agent()?;
@@ -91,6 +97,7 @@ built_graph.validate()?;
 Highlights:
 
 - jobs/results/export control-plane surface
+- operator catalog listing, filtering, and descriptor fetch
 - workflow graph and dataset contract typed structs with validation
 - workflow builder helpers for graph, node, edge, port, and dataset assembly
 - direct solver-RPC client

@@ -3,6 +3,7 @@ use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+pub use kyuubiki_platform::Platform;
 
 mod cross_platform;
 mod integrity;
@@ -513,61 +514,9 @@ pub fn workspace_root() -> PathBuf {
 }
 
 pub fn parse_platform(value: Option<String>) -> Platform {
-    match value.as_deref() {
-        Some("macos") => Platform::Macos,
-        Some("linux") => Platform::Linux,
-        Some("windows") => Platform::Windows,
-        Some(_) | None => Platform::current(),
-    }
+    Platform::parse(value.as_deref())
 }
 
 fn escape_json(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Platform {
-    Macos,
-    Linux,
-    Windows,
-}
-
-impl Platform {
-    pub fn current() -> Self {
-        match env::consts::OS {
-            "macos" => Self::Macos,
-            "windows" => Self::Windows,
-            _ => Self::Linux,
-        }
-    }
-
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Macos => "macos",
-            Self::Linux => "linux",
-            Self::Windows => "windows",
-        }
-    }
-
-    fn default_shell(self) -> &'static str {
-        match self {
-            Self::Windows => "cmd",
-            Self::Macos | Self::Linux => "sh",
-        }
-    }
-
-    fn entrypoint_command(self) -> &'static str {
-        match self {
-            Self::Windows => "./scripts/start.cmd",
-            Self::Macos | Self::Linux => "./scripts/start.sh",
-        }
-    }
-
-    fn desktop_bundle_kinds_json(self) -> &'static str {
-        match self {
-            Self::Macos => "\"app\", \"dmg\"",
-            Self::Linux => "\"appimage\", \"deb\", \"rpm\"",
-            Self::Windows => "\"msi\", \"nsis\"",
-        }
-    }
 }

@@ -27,8 +27,21 @@ export function inferHotRuntimeState(rendered, fallbackMode = "local") {
   };
 }
 
+async function fetchMeshRuntimeHealth(orchestratorBaseUrl) {
+  const baseUrl = String(orchestratorBaseUrl || "").trim().replace(/\/+$/u, "");
+  if (!baseUrl) return null;
+
+  const response = await fetch(`${baseUrl}/api/health`);
+  if (!response.ok) {
+    throw new Error(`mesh runtime health request failed with ${response.status}`);
+  }
+
+  return response.json();
+}
+
 export async function refreshRuntimeStatusPanel({
   invokeTauri,
+  orchestratorBaseUrl,
   setRuntimeStatusOutput,
   applyDesktopState,
   localRuntimeStatus,
@@ -37,13 +50,14 @@ export async function refreshRuntimeStatusPanel({
 }) {
   try {
     const payload = await invokeTauri("service_status");
-    renderRuntimeStatusPlane(runtimeStatusPlane, payload.summary);
+    const meshRuntime = await fetchMeshRuntimeHealth(orchestratorBaseUrl).catch(() => null);
+    renderRuntimeStatusPlane(runtimeStatusPlane, payload.summary, meshRuntime);
     setRuntimeStatusOutput(
       formatRuntimeStatusReport({
         title: "Kyuubiki Hub Runtime",
         rendered: payload.rendered,
         summary: payload.summary,
-      }),
+      }, meshRuntime),
     );
     applyDesktopState(localRuntimeStatus, payload.rendered, { kind: "health" });
     applyDesktopState(observeRuntimeStatus, payload.rendered, { kind: "health" });

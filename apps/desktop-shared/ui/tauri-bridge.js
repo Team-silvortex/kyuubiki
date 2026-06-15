@@ -29,9 +29,30 @@ export async function loadDesktopBrand() {
   }
 }
 
-export function setText(id, value) {
-  const element = document.getElementById(id);
-  if (element && value) {
+export function normalizeDesktopLanguage(value) {
+  return value === "zh" || value === "ja" || value === "es" ? value : "en";
+}
+
+export async function loadDesktopLanguagePreference() {
+  try {
+    const payload = await invokeTauri("get_global_language_preference");
+    return normalizeDesktopLanguage(payload?.language);
+  } catch (_error) {
+    return "en";
+  }
+}
+
+export async function saveDesktopLanguagePreference(language) {
+  const payload = await invokeTauri("set_global_language_preference", {
+    payload: { language: normalizeDesktopLanguage(language) },
+  });
+  return normalizeDesktopLanguage(payload?.language);
+}
+
+export function setText(target, value) {
+  const element =
+    typeof target === "string" ? document.getElementById(target) : target;
+  if (element && value !== undefined && value !== null) {
     element.textContent = value;
   }
 }

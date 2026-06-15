@@ -24,7 +24,8 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def protocol(client), do: request(client, :get, "/api/v1/protocol")
   def agents(client), do: request(client, :get, "/api/v1/protocol/agents")
   def list_workflow_catalog(client), do: request(client, :get, "/api/v1/workflows/catalog")
-  def list_workflow_operators(client), do: request(client, :get, "/api/v1/operators")
+  def list_workflow_operators(client, opts \\ []), do: request(client, :get, append_query("/api/v1/operators", opts))
+  def fetch_workflow_operator(client, operator_id), do: request(client, :get, "/api/v1/operators/#{URI.encode(operator_id)}")
   def list_jobs(client), do: request(client, :get, "/api/v1/jobs")
   def fetch_job(client, job_id), do: request(client, :get, "/api/v1/jobs/#{job_id}")
   def update_job(client, job_id, payload), do: request(client, :patch, "/api/v1/jobs/#{job_id}", payload)
@@ -57,21 +58,11 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def export_database(client), do: request(client, :get, "/api/v1/export/database")
 
   def export_security_events(client, opts \\ []) do
-    query =
-      opts
-      |> Enum.filter(fn {_key, value} -> not is_nil(value) and value != "" end)
-      |> Enum.map(fn {key, value} -> {to_string(key), to_string(value)} end)
-
-    request(client, :get, "/api/v1/export/security-events" <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
+    request(client, :get, append_query("/api/v1/export/security-events", opts))
   end
 
   def export_security_events_csv(client, opts \\ []) do
-    query =
-      opts
-      |> Enum.filter(fn {_key, value} -> not is_nil(value) and value != "" end)
-      |> Enum.map(fn {key, value} -> {to_string(key), to_string(value)} end)
-
-    request_text(client, :get, "/api/v1/export/security-events.csv" <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
+    request_text(client, :get, append_query("/api/v1/export/security-events.csv", opts))
   end
 
   defp request(client, method, path, payload \\ nil) do
@@ -126,5 +117,14 @@ defmodule KyuubikiSdk.ControlPlaneClient do
       {:error, reason} ->
         {:error, Error.transport(inspect(reason))}
     end
+  end
+
+  defp append_query(path, opts) do
+    query =
+      opts
+      |> Enum.filter(fn {_key, value} -> not is_nil(value) and value != "" end)
+      |> Enum.map(fn {key, value} -> {to_string(key), to_string(value)} end)
+
+    path <> if(query == [], do: "", else: "?" <> URI.encode_query(query))
   end
 end

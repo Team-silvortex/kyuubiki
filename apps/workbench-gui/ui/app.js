@@ -8,6 +8,7 @@ import {
   setText,
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
+import { normalizeDesktopPlatform } from "./shared/platform.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 
 const shellCopy = {
@@ -209,6 +210,7 @@ async function loadEnvironment() {
   elements.workbenchUrl.textContent = environment.workbench_url;
   elements.orchestratorUrl.textContent = environment.orchestrator_url;
   applyDesktopState(elements.deploymentMode, environment.deployment_mode, { kind: "activity" });
+  elements.shellRoot?.dataset.hostPlatform = normalizeDesktopPlatform(environment.host_platform);
 }
 
 function loadWorkbenchFrame() {
@@ -227,12 +229,24 @@ function releaseLabel() {
   return releaseTag ? `Kyuubiki Workbench · ${releaseTag}` : "Kyuubiki Workbench";
 }
 
-function formatStatusReport(rendered, summary) {
+function formatStatusReport(rendered, summary, meshRuntime) {
   return formatRuntimeStatusReport({
     title: releaseLabel(),
     rendered,
     summary,
-  });
+  }, meshRuntime);
+}
+
+async function fetchMeshRuntimeHealth(orchestratorBaseUrl) {
+  const baseUrl = String(orchestratorBaseUrl || "").trim().replace(/\/+$/u, "");
+  if (!baseUrl) return null;
+
+  const response = await fetch(`${baseUrl}/api/health`);
+  if (!response.ok) {
+    throw new Error(`mesh runtime health request failed with ${response.status}`);
+  }
+
+  return response.json();
 }
 
 function invokeGuardedMutation(action, payload = {}) {
@@ -247,8 +261,9 @@ function invokeGuardedMutation(action, payload = {}) {
 async function refreshStatus() {
   try {
     const payload = await invokeTauri("service_status");
-    renderRuntimeStatusPlane(elements.statusPlane, payload.summary);
-    elements.statusOutput.textContent = formatStatusReport(payload.rendered, payload.summary);
+    const meshRuntime = await fetchMeshRuntimeHealth(state.orchestratorUrl).catch(() => null);
+    renderRuntimeStatusPlane(elements.statusPlane, payload.summary, meshRuntime);
+    elements.statusOutput.textContent = formatStatusReport(payload.rendered, payload.summary, meshRuntime);
   } catch (error) {
     renderRuntimeStatusPlane(elements.statusPlane, null);
     elements.statusOutput.textContent = formatStatusReport(String(error));

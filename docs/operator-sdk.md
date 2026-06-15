@@ -217,6 +217,119 @@ The current shape includes:
 - `OperatorRunResult`
 - `OperatorArtifactRef`
 
+### Author-facing crate
+
+The first author-facing Rust SDK crate now also exists in
+`workers/rust/crates/operator-sdk` and provides:
+
+- `OperatorHandler`
+  low-level trait for fully custom operator handlers
+- `JsonOperator`
+  typed JSON-input helper trait for most operator authors
+- `OperatorRegistry`
+  in-process registration, descriptor lookup, and run dispatch
+- `OperatorSdkError`
+  duplicate-registration, decode, and handler failure surface
+- `OperatorDescriptorBuilder`
+  builder-style descriptor assembly so authors do not need to hand-write large
+  `OperatorDescriptor` structs
+- `operator_summary_result`
+  helper for common summary-only operator outputs
+
+There is now also a minimal example operator at
+`workers/rust/crates/operator-sdk/examples/minimal_operator.rs` that shows:
+
+- declaring a descriptor with ports and validation metadata
+- implementing `JsonOperator` with a typed input struct
+- registering the operator in `OperatorRegistry`
+- running it through the shared `OperatorRunRequest` path
+
+There is also a more domain-shaped example at
+`workers/rust/crates/operator-sdk/examples/electrostatic_peak_field_operator.rs`
+showing a real electromagnetic post-processing operator that accepts
+`SolveElectrostaticPlaneQuad2dResult` and emits a compact peak-field summary.
+
+### External-local packaging
+
+For external-local authoring, there is now a copyable starter crate at
+`workers/rust/templates/operator-crate-template/` with:
+
+- a ready-to-rename `Cargo.toml`
+- a `kyuubiki-operator.json` manifest for external-local discovery using
+  `{lib_prefix}` / `{lib_extension}` placeholders for cross-platform library
+  naming
+- a minimal typed operator in `src/lib.rs`
+- a tiny runnable `src/main.rs`
+- a crate-local smoke test so authors start with a feedback loop immediately
+
+The Rust operator SDK now defines the first external-local manifest,
+discovery, and activation-boundary helpers:
+
+- `OPERATOR_PACKAGE_SCHEMA_VERSION`
+  stable schema id for external-local package manifests
+- `OPERATOR_PACKAGE_MANIFEST_FILE`
+  canonical manifest filename
+- `OperatorPackageManifest`
+  external-local package manifest contract
+- `read_operator_package_manifest(...)`
+  single-manifest parser and validator
+- `discover_operator_packages(...)`
+  scans a directory tree for `kyuubiki-operator.json`
+- `OperatorPackageLoadPlan`
+  resolved activation plan with manifest, root directory, and entrypoint path
+- `OperatorPackageActivator`
+  runtime-host hook that turns a load plan into registered operators
+- `discover_and_activate_operator_packages(...)`
+  convenience path for discovery plus host-driven activation
+
+This means external-local support has now moved past simple discovery and into
+an explicit activation boundary:
+
+1. discover package roots
+2. parse stable manifests
+3. resolve package entrypoints into load plans
+4. let the runtime host activate those plans into an `OperatorRegistry`
+
+What remains intentionally host-owned is platform policy, not the full loading
+mechanism. The SDK still does not hardcode one universal desktop/headless
+loading policy, but the engine runtime now has a real dynamic-library host for
+trusted local packages. The final mount-and-bind step is still represented by
+the `OperatorPackageActivator` host hook so desktop, headless, and future
+sandboxed runtimes can adopt different loading policies without changing the
+operator author contract.
+
+The current load-plan resolver also supports cross-platform library naming in
+two ways:
+
+- manifest placeholders such as `{lib_prefix}` and `{lib_extension}`
+- fallback candidate resolution that maps library names onto the current
+  platform when the manifest uses a portable basename
+
+### Runtime migration status
+
+The first runtime migration is also in place:
+
+- built-in `extract.*` operators now dispatch through the Rust operator SDK
+  registry path inside `workers/rust/crates/engine`
+- built-in `export.*` operators now dispatch through the same registry path
+  instead of direct hard-coded executor branches
+- built-in non-bridge `transform.*` operators now dispatch through the same
+  registry path
+- built-in bridge-oriented `transform/workflow_bridge` operators now dispatch
+  through the same registry path, so coupled heat/thermo and electrostatic/heat
+  bridge execution already shares the author-facing Rust SDK boundary
+- the engine now also exposes a host-side assembly boundary for external-local
+  packages:
+  `built_in_operator_registry(...)` for built-ins,
+  `built_in_registry_with_external_packages(...)` for built-ins plus discovered
+  packages, `load_external_operator_packages_with_dynamic_host(...)` for the
+  real dynamic-library path, and `DeferredDynamicLoadActivator` as the explicit
+  default when platform dynamic loading has not been enabled yet
+- external-local activation now runs through an explicit trust policy surface
+  in the engine host config:
+  package-id allowlists, runtime allowlists, absolute-entrypoint toggles, and
+  package-root boundary checks are all evaluated before activation
+
 Built-in descriptors now carry:
 
 - typed input/output ports

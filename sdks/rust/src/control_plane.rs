@@ -62,6 +62,15 @@ impl ControlPlaneClient {
         self.request_json("GET", "/api/v1/operators", None)
     }
 
+    pub fn list_workflow_operators_with_query(&self, query: Option<&[(&str, String)]>) -> SdkResult<Value> {
+        let path = append_query("/api/v1/operators", query);
+        self.request_json("GET", &path, None)
+    }
+
+    pub fn fetch_workflow_operator(&self, operator_id: &str) -> SdkResult<Value> {
+        self.request_json("GET", &format!("/api/v1/operators/{}", percent_encode(operator_id)), None)
+    }
+
     pub fn list_jobs(&self) -> SdkResult<Value> {
         self.request_json("GET", "/api/v1/jobs", None)
     }
@@ -151,34 +160,12 @@ impl ControlPlaneClient {
     }
 
     pub fn export_security_events(&self, query: Option<&[(&str, String)]>) -> SdkResult<Value> {
-        let mut path = String::from("/api/v1/export/security-events");
-        if let Some(query) = query {
-            let query = query
-                .iter()
-                .filter(|(_, value)| !value.is_empty())
-                .map(|(key, value)| format!("{key}={value}"))
-                .collect::<Vec<_>>();
-            if !query.is_empty() {
-                path.push('?');
-                path.push_str(&query.join("&"));
-            }
-        }
+        let path = append_query("/api/v1/export/security-events", query);
         self.request_json("GET", &path, None)
     }
 
     pub fn export_security_events_csv(&self, query: Option<&[(&str, String)]>) -> SdkResult<String> {
-        let mut path = String::from("/api/v1/export/security-events.csv");
-        if let Some(query) = query {
-            let query = query
-                .iter()
-                .filter(|(_, value)| !value.is_empty())
-                .map(|(key, value)| format!("{key}={value}"))
-                .collect::<Vec<_>>();
-            if !query.is_empty() {
-                path.push('?');
-                path.push_str(&query.join("&"));
-            }
-        }
+        let path = append_query("/api/v1/export/security-events.csv", query);
         self.request_text("GET", &path)
     }
 
@@ -259,4 +246,31 @@ impl ControlPlaneClient {
 
         Ok(body.to_string())
     }
+}
+
+fn append_query(path: &str, query: Option<&[(&str, String)]>) -> String {
+    let mut built = String::from(path);
+    if let Some(query) = query {
+        let query = query
+            .iter()
+            .filter(|(_, value)| !value.is_empty())
+            .map(|(key, value)| format!("{}={}", percent_encode(key), percent_encode(value)))
+            .collect::<Vec<_>>();
+        if !query.is_empty() {
+            built.push('?');
+            built.push_str(&query.join("&"));
+        }
+    }
+    built
+}
+
+fn percent_encode(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => encoded.push(byte as char),
+            _ => encoded.push_str(&format!("%{byte:02X}")),
+        }
+    }
+    encoded
 }

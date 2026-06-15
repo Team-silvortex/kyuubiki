@@ -1,4 +1,5 @@
 use serde::Serialize;
+use kyuubiki_platform::desktop_preferences_dir as shared_desktop_preferences_dir;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -88,36 +89,7 @@ fn normalize_language(value: &str) -> Option<&'static str> {
 }
 
 fn desktop_preferences_dir() -> Result<PathBuf, String> {
-    #[cfg(target_os = "macos")]
-    {
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| "HOME is not available".to_string())?;
-        return Ok(home
-            .join("Library")
-            .join("Application Support")
-            .join("kyuubiki"));
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        let appdata = std::env::var_os("APPDATA")
-            .map(PathBuf::from)
-            .ok_or_else(|| "APPDATA is not available".to_string())?;
-        return Ok(appdata.join("kyuubiki"));
-    }
-
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-    {
-        if let Some(config_home) = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from) {
-            return Ok(config_home.join("kyuubiki"));
-        }
-
-        let home = std::env::var_os("HOME")
-            .map(PathBuf::from)
-            .ok_or_else(|| "HOME is not available".to_string())?;
-        Ok(home.join(".config").join("kyuubiki"))
-    }
+    shared_desktop_preferences_dir("kyuubiki")
 }
 
 fn global_language_path() -> Result<PathBuf, String> {

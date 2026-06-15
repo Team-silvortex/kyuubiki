@@ -39,6 +39,26 @@ defmodule KyuubikiSdk.SmokeTest do
     assert page["total"] == 3
   end
 
+  test "control plane lists and fetches workflow operators", %{base_url: base_url} do
+    client = KyuubikiSdk.ControlPlaneClient.new(base_url)
+
+    {:ok, operators} = KyuubikiSdk.ControlPlaneClient.list_workflow_operators(client)
+    assert Enum.at(operators["operators"], 0)["id"] == "solver.truss_2d"
+
+    {:ok, filtered} =
+      KyuubikiSdk.ControlPlaneClient.list_workflow_operators(client,
+        domain: "structural",
+        family: "solver"
+      )
+
+    assert Enum.at(filtered["operators"], 0)["family"] == "solver"
+
+    {:ok, operator} =
+      KyuubikiSdk.ControlPlaneClient.fetch_workflow_operator(client, "solver.truss_2d")
+
+    assert operator["operator"]["kind"] == "solver"
+  end
+
   defp accept_loop(listener, parent) do
     {:ok, socket} = :gen_tcp.accept(listener)
     handle_socket(socket)
@@ -55,6 +75,46 @@ defmodule KyuubikiSdk.SmokeTest do
       case {method, path} do
         {"POST", "/api/v1/fem/truss-2d/jobs"} ->
           json_response(202, %{"job" => %{"job_id" => "job-smoke", "status" => "queued"}})
+
+        {"GET", "/api/v1/operators"} ->
+          json_response(200, %{
+            "operators" => [
+              %{
+                "id" => "solver.truss_2d",
+                "version" => "1.0.0",
+                "domain" => "structural",
+                "family" => "solver",
+                "kind" => "solver",
+                "summary" => "Smoke operator"
+              }
+            ]
+          })
+
+        {"GET", "/api/v1/operators?domain=structural&family=solver"} ->
+          json_response(200, %{
+            "operators" => [
+              %{
+                "id" => "solver.truss_2d",
+                "version" => "1.0.0",
+                "domain" => "structural",
+                "family" => "solver",
+                "kind" => "solver",
+                "summary" => "Smoke operator"
+              }
+            ]
+          })
+
+        {"GET", "/api/v1/operators/solver.truss_2d"} ->
+          json_response(200, %{
+            "operator" => %{
+              "id" => "solver.truss_2d",
+              "version" => "1.0.0",
+              "domain" => "structural",
+              "family" => "solver",
+              "kind" => "solver",
+              "summary" => "Smoke operator"
+            }
+          })
 
         {"GET", "/api/v1/jobs/job-smoke"} ->
           json_response(200, %{"job" => %{"job_id" => "job-smoke", "status" => "completed", "progress" => 1.0}})

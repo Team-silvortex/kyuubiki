@@ -1,14 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  assertMatches,
+  createFixtureReader,
+  createFixtureRoot,
+} from "../../desktop-shared/test/smoke-test-helpers.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-
-function read(relativePath) {
-  return fs.readFileSync(path.join(ROOT, relativePath), "utf8");
-}
+const ROOT = createFixtureRoot(import.meta.url);
+const read = createFixtureReader(ROOT);
 
 test("installer shell defines a least-privilege main-window capability", () => {
   const tauriConfig = JSON.parse(read("src-tauri/tauri.conf.json"));
@@ -29,32 +28,41 @@ test("installer shell defines a least-privilege main-window capability", () => {
 test("installer shell exposes setup, services, remote, and release surfaces", () => {
   const html = read("ui/index.html");
 
-  assert.match(html, /data-tab="setup"/);
-  assert.match(html, /data-tab="services"/);
-  assert.match(html, /data-tab="remote"/);
-  assert.match(html, /data-tab="release"/);
-  assert.match(html, /Run doctor/);
-  assert.match(html, /Bootstrap workspace/);
+  assertMatches(html, [
+    /data-tab="setup"/,
+    /data-tab="services"/,
+    /data-tab="remote"/,
+    /data-tab="release"/,
+    /Run doctor/,
+    /Bootstrap workspace/,
+    /placeholder="dist\/\{platform\}"/,
+  ]);
 });
 
 test("installer shell wires core install and runtime actions", () => {
   const js = read("ui/app.js");
   const bridge = read("ui/shared/tauri-bridge.js");
+  const platform = read("ui/shared/platform.js");
 
-  assert.match(js, /doctor_report/);
-  assert.match(js, /guarded_mutation_action/);
-  assert.match(js, /invokeGuardedMutation/);
-  assert.match(bridge, /invokeTauri/);
-  assert.match(bridge, /listenTauri/);
-  assert.match(bridge, /loadDesktopBrand/);
+  assertMatches(js, [
+    /doctor_report/,
+    /guarded_mutation_action/,
+    /invokeGuardedMutation/,
+    /populateDesktopPlatformSelect/,
+    /syncDesktopReleaseTargetInput/,
+  ]);
+  assert.match(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
+  assert.match(platform, /desktop-shared\/ui\/platform\.js/);
 });
 
 test("tauri backend exposes installer command surface", () => {
   const rust = read("src-tauri/src/main.rs");
 
-  assert.match(rust, /doctor_report/);
-  assert.match(rust, /guarded_mutation_action/);
-  assert.match(rust, /service_status/);
-  assert.match(rust, /start_log_stream/);
-  assert.match(rust, /read_env_file/);
+  assertMatches(rust, [
+    /doctor_report/,
+    /guarded_mutation_action/,
+    /service_status/,
+    /start_log_stream/,
+    /read_env_file/,
+  ]);
 });

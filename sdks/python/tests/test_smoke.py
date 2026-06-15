@@ -4,6 +4,7 @@ import json
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, urlparse
 
 from kyuubiki_sdk import KyuubikiAgentClient, KyuubikiSession
 
@@ -74,19 +75,28 @@ class _SmokeHandler(BaseHTTPRequestHandler):
         self._respond(404, {"error": "not_found"})
 
     def do_GET(self) -> None:
-        if self.path == "/api/v1/workflows/catalog":
+        parsed = urlparse(self.path)
+
+        if parsed.path == "/api/v1/workflows/catalog":
             self._respond(200, self.workflow_catalog_payload)
             return
-        if self.path == "/api/v1/operators":
-            self._respond(200, self.operator_catalog_payload)
+        if parsed.path == "/api/v1/operators":
+            query = parse_qs(parsed.query)
+            if query.get("domain") == ["structural"]:
+                self._respond(200, self.operator_catalog_payload)
+            else:
+                self._respond(200, self.operator_catalog_payload)
             return
-        if self.path == "/api/v1/jobs/job-smoke":
+        if parsed.path == "/api/v1/operators/solver.truss_2d":
+            self._respond(200, {"operator": self.operator_catalog_payload["operators"][0]})
+            return
+        if parsed.path == "/api/v1/jobs/job-smoke":
             self._respond(200, self.job_payload)
             return
-        if self.path == "/api/v1/results/job-smoke":
+        if parsed.path == "/api/v1/results/job-smoke":
             self._respond(200, self.result_payload)
             return
-        if self.path.startswith("/api/v1/results/job-smoke/chunks/nodes"):
+        if parsed.path == "/api/v1/results/job-smoke/chunks/nodes":
             self._respond(
                 200,
                 {
@@ -148,6 +158,10 @@ class SmokeTest(unittest.TestCase):
 
         operators = session.control_plane.list_workflow_operators()
         self.assertEqual(operators["operators"][0]["id"], "solver.truss_2d")
+        filtered_operators = session.control_plane.list_workflow_operators({"domain": "structural"})
+        self.assertEqual(filtered_operators["operators"][0]["family"], "solver")
+        operator = session.control_plane.fetch_workflow_operator("solver.truss_2d")
+        self.assertEqual(operator["operator"]["kind"], "solver")
 
         catalog_job = session.control_plane.submit_workflow_catalog_job("workflow.test-graph", {"mesh": {"project_id": "demo"}})
         self.assertEqual(catalog_job["job"]["job_id"], "workflow-catalog-job")

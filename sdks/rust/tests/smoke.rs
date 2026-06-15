@@ -84,6 +84,75 @@ fn agent_client_runs_study_and_browses_chunks() {
     server.join().expect("server thread");
 }
 
+#[test]
+fn control_plane_lists_and_fetches_workflow_operators() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind test listener");
+    let addr = listener.local_addr().expect("listener addr");
+
+    let server = thread::spawn(move || {
+        for _ in 0..3 {
+            let (mut stream, _) = listener.accept().expect("accept");
+            let request = read_http_request(&mut stream);
+            let path = request
+                .lines()
+                .next()
+                .and_then(|line| line.split_whitespace().nth(1))
+                .unwrap_or("/");
+
+            let (status, body) = match path {
+                "/api/v1/operators" => (
+                    200,
+                    r#"{"operators":[{"id":"solver.truss_2d","version":"1.0.0","domain":"structural","family":"solver","kind":"solver","summary":"Smoke operator"}]}"#
+                        .to_string(),
+                ),
+                "/api/v1/operators?domain=structural&family=solver" => (
+                    200,
+                    r#"{"operators":[{"id":"solver.truss_2d","version":"1.0.0","domain":"structural","family":"solver","kind":"solver","summary":"Smoke operator"}]}"#
+                        .to_string(),
+                ),
+                "/api/v1/operators/solver.truss_2d" => (
+                    200,
+                    r#"{"operator":{"id":"solver.truss_2d","version":"1.0.0","domain":"structural","family":"solver","kind":"solver","summary":"Smoke operator"}}"#
+                        .to_string(),
+                ),
+                _ => (404, r#"{"error":"not_found"}"#.to_string()),
+            };
+
+            let response = format!(
+                "HTTP/1.1 {status} OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(response.as_bytes()).expect("write response");
+        }
+    });
+
+    let client = kyuubiki_headless_sdk::ControlPlaneClient::new(&format!("http://{}", addr)).expect("control plane client");
+
+    let operators = client.list_workflow_operators().expect("operator list");
+    assert_eq!(
+        operators["operators"][0]["id"].as_str(),
+        Some("solver.truss_2d")
+    );
+
+    let filtered = client
+        .list_workflow_operators_with_query(Some(&[
+            ("domain", "structural".to_string()),
+            ("family", "solver".to_string()),
+        ]))
+        .expect("filtered operator list");
+    assert_eq!(
+        filtered["operators"][0]["family"].as_str(),
+        Some("solver")
+    );
+
+    let operator = client
+        .fetch_workflow_operator("solver.truss_2d")
+        .expect("operator descriptor");
+    assert_eq!(operator["operator"]["kind"].as_str(), Some("solver"));
+
+    server.join().expect("server thread");
+}
+
 fn read_http_request(stream: &mut std::net::TcpStream) -> String {
     let mut buffer = Vec::new();
     let mut chunk = [0_u8; 1024];

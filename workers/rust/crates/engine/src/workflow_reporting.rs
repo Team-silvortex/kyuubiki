@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-pub use crate::workflow_summary_transforms::{compare_summary_pair, merge_summary_pair};
+pub use crate::workflow_summary_transforms::merge_summary_pair;
 
 pub fn extract_result_summary(payload: Value, config: Value) -> Result<Value, String> {
     let object = payload

@@ -6,6 +6,15 @@ It currently contains:
 
 - `crates/protocol`
   Shared RPC messages, job/result payloads, and agent-wire contracts.
+- `crates/operator-sdk`
+  Author-facing Rust traits and registry helpers for building workflow
+  operators against the shared protocol contract, including external-local
+  manifest discovery, cross-platform load-plan resolution, and activation
+  hooks.
+- `templates/operator-crate-template`
+  Copyable starter crate for external-local Rust operators built on top of the
+  author-facing operator SDK, including a `cdylib` export symbol for runtime
+  loading tests and host integration.
 - `crates/engine`
   Engine-facing solve entry points and chunk helpers that sit above raw solver
   kernels.

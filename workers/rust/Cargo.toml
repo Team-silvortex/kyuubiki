@@ -5,6 +5,8 @@ members = [
   "crates/desktop-runtime",
   "crates/engine",
   "crates/installer",
+  "crates/operator-sdk",
+  "crates/platform",
   "crates/protocol",
   "crates/solver",
 ]

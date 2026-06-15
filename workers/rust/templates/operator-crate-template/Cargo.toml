@@ -1,0 +1,16 @@
+[package]
+name = "kyuubiki-operator-template"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+kyuubiki-operator-sdk = { path = "../../crates/operator-sdk" }
+kyuubiki-protocol = { path = "../../crates/protocol" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[workspace]

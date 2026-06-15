@@ -1,4 +1,5 @@
 import { applyDesktopState } from "./shared/tauri-bridge.js";
+import { desktopPlatformLabel } from "./shared/platform.js";
 
 export function applyPreset(mode, defaults) {
   const storageMode = document.getElementById("storage-mode");
@@ -62,7 +63,7 @@ export function currentRemoteAgentPayload() {
 }
 
 export function renderDoctor(report, platformLabel, workspaceLabel, doctorGrid) {
-  platformLabel.textContent = report.platform;
+  platformLabel.textContent = desktopPlatformLabel(report.platform);
   workspaceLabel.textContent = report.workspace;
   doctorGrid.innerHTML = "";
 

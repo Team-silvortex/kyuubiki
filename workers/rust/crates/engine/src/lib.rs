@@ -2,6 +2,9 @@ mod bridge;
 mod catalog;
 mod chunking;
 mod heat_bridge;
+mod operator_sdk_bridges;
+mod operator_sdk_host;
+mod operator_sdk_runtime;
 mod workflow;
 mod workflow_contract;
 mod workflow_executor;
@@ -16,6 +19,15 @@ pub use chunking::chunk_result;
 pub use heat_bridge::{
     bridge_heat_result_to_thermal_plane_quad_model, run_heat_to_thermo_plane_quad_2d_workflow,
 };
+pub use operator_sdk_host::{
+    DeferredDynamicLoadActivator, DynamicLibraryOperatorActivator,
+    DynamicOperatorHostSession, ExternalOperatorHostConfig, ExternalOperatorHostError,
+    ExternalOperatorLoadReport, ExternalOperatorTrustPolicy,
+    built_in_registry_with_external_packages,
+    load_external_operator_packages_with_deferred_host,
+    load_external_operator_packages_with_dynamic_host,
+};
+pub use operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
 pub use workflow::run_workflow_graph;
 pub use workflow_executor::{is_supported_workflow_operator, supported_workflow_operator_ids};
 

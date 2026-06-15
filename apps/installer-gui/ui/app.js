@@ -10,6 +10,12 @@ import {
   syncDesktopStates,
 } from "./shared/tauri-bridge.js";
 import {
+  desktopReleaseRootPattern,
+  normalizeDesktopPlatform,
+  populateDesktopPlatformSelect,
+  syncDesktopReleaseTargetInput,
+} from "./shared/platform.js";
+import {
   applyPreset,
   currentRemoteAgentPayload,
   currentRemoteBootstrapPayload,
@@ -35,6 +41,8 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   const completionMessage = document.getElementById("completion-message");
   const doctorGrid = document.getElementById("doctor-grid");
   const platformLabel = document.getElementById("platform-label");
+  const releasePlatformSelect = document.getElementById("release-platform");
+  const releaseTargetInput = document.getElementById("release-target");
   const workspaceLabel = document.getElementById("workspace-label");
   const currentModeLabel = document.getElementById("current-mode-label");
   const languageLabel = document.getElementById("shell-language-label");
@@ -52,6 +60,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
 
   mountIntegrityPanel();
   mountUpdatePanel();
+  populateDesktopPlatformSelect(releasePlatformSelect);
 
   function releaseLabel() {
     const releaseVersion = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
@@ -210,6 +219,17 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     runtimeLog.scrollTop = runtimeLog.scrollHeight;
   }
 
+  function syncReleaseTarget(platform = releasePlatformSelect?.value) {
+    syncDesktopReleaseTargetInput(
+      releaseTargetInput,
+      normalizeDesktopPlatform(platform),
+    );
+    if (releaseTargetInput && !releaseTargetInput.dataset.desktopPlaceholderBound) {
+      releaseTargetInput.placeholder = desktopReleaseRootPattern();
+      releaseTargetInput.dataset.desktopPlaceholderBound = "true";
+    }
+  }
+
   async function runAction(name, callback, options = {}) {
     try {
       const result = await callback();
@@ -336,6 +356,10 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     } else {
       await refreshRuntimeLog().catch(() => {});
     }
+  });
+
+  releasePlatformSelect?.addEventListener("change", (event) => {
+    syncReleaseTarget(event.target.value);
   });
 
   document.querySelectorAll("[data-action]").forEach((button) => {
@@ -579,6 +603,13 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
         applyPreset("local", DEFAULT_PRESET);
         setModeCard("local");
       }
+      if (releasePlatformSelect) {
+        populateDesktopPlatformSelect(releasePlatformSelect, {
+          fallback: normalizeDesktopPlatform(doctor?.platform),
+        });
+        releasePlatformSelect.value = normalizeDesktopPlatform(doctor?.platform);
+      }
+      syncReleaseTarget(releasePlatformSelect?.value);
       renderServiceStatus(status.rendered);
       await refreshRuntimeLog().catch(() => {
         renderRuntimeLog("runtime log unavailable");
