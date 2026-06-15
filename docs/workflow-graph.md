@@ -104,6 +104,18 @@ strings. That is the current line's ONNX-like layer:
 - the graph still carries topology
 - the dataset contract carries value semantics
 
+The graph now also has a first-class execution-hint layer so that distributed
+automation does not need to infer scheduling intent from hidden state:
+
+- `dispatch_policy`
+  graph-level execution mode hint such as `central_fetch` or `direct_mesh`
+- `operator_fetch_plan`
+  explicit operator package-fetch metadata per runnable node
+- `placement_tags`
+  graph-level or node-level placement intent
+- `required_capabilities`
+  graph-level or node-level runtime capability contract
+
 See [workflow-dataset.md](workflow-dataset.md).
 
 ## First workflow targets
@@ -315,6 +327,17 @@ In short:
 
 - operator SDK defines a node’s capabilities
 - workflow graph defines how nodes connect and run together
+
+The current execution-hint split is:
+
+- graph-level fields
+  broad orchestration intent and whole-run requirements
+- `defaults`
+  common node defaults for cache and placement/capability hints
+- node-level fields
+  precise per-node placement or capability overrides
+- `operator_fetch_plan`
+  concrete fetch provenance for operator binaries/packages
 
 ## 1.x delivery order
 

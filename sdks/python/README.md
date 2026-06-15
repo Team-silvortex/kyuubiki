@@ -15,9 +15,11 @@ from kyuubiki_sdk import (
     build_workflow_edge,
     build_workflow_graph,
     build_workflow_node,
+    build_workflow_output_manifest,
     build_workflow_port,
     validate_workflow_dataset_contract,
     validate_workflow_graph,
+    validate_workflow_result_against_graph,
 )
 
 auth = KyuubikiAuth.access_token("dev-token")
@@ -58,10 +60,17 @@ catalog = cp.list_workflow_catalog()
 operators = cp.list_workflow_operators()
 structural_operators = cp.list_workflow_operators({"domain": "structural", "family": "solver"})
 operator = cp.fetch_workflow_operator("solver.truss_2d")
+workflow_descriptor = cp.fetch_workflow_catalog_workflow("workflow.heat-to-thermo-quad-2d")
 workflow_job = cp.submit_workflow_catalog_job(
     "workflow.heat-to-thermo-quad-2d",
     {"thermal_case": {"loadcase": "baseline"}},
 )
+workflow_run = agent.run_workflow_catalog(
+    "workflow.heat-to-thermo-quad-2d",
+    {"thermal_case": {"loadcase": "baseline"}},
+    timeout_s=60.0,
+)
+workflow_runtime = workflow_run["workflow_runtime"]
 validate_workflow_dataset_contract(
     {
         "schema_version": "kyuubiki.workflow-dataset/v1",
@@ -100,19 +109,52 @@ graph = build_workflow_graph(
     ],
     edges=[build_workflow_edge("edge-1", from_node="input", from_port="case", to_node="output", to_port="case", artifact_type="study_model/demo", dataset_value="thermal_case")],
     dataset_contract=dataset_contract,
+    defaults=build_workflow_defaults(
+        cache_policy="cached",
+        orchestrated=False,
+        dispatch_policy="central_fetch",
+        placement_tags=["cpu"],
+        required_capabilities=["solver.thermal"],
+    ),
+    dispatch_policy="central_fetch",
+    operator_fetch_plan=[
+        build_workflow_operator_fetch_entry(
+            "input",
+            operator_id="input.demo",
+            package_ref="kyuubiki://operators/input.demo",
+            version="1.0.0",
+            integrity="sha256:demo",
+            cache_scope="agent",
+        )
+    ],
+    placement_tags=["mesh-enabled"],
+    required_capabilities=["artifact-cache"],
 )
+workflow_graph_run = agent.run_workflow_graph(
+    graph,
+    {"thermal_case": {"loadcase": "baseline"}},
+    timeout_s=60.0,
+)
+output_manifest = build_workflow_output_manifest(graph)
+validated_outputs = validate_workflow_result_against_graph(graph, workflow_graph_run["result"])
 ```
 
 Highlights:
 
 - control-plane jobs/results/export CRUD
 - control-plane workflow catalog, operator catalog, and workflow submission
+- direct workflow catalog descriptor fetch plus auto graph resolution for catalog runs
 - operator catalog filtering plus single-operator descriptor fetch
+- expanded solve-kind coverage across structural, thermal,
+  thermo-mechanical, and electrostatic study families
 - built-in workflow graph and dataset-contract validation helpers
+- distributed workflow execution-hint fields for dispatch policy, operator fetch
+  plan, placement tags, and required capabilities
+- workflow output manifest and result validation helpers
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access
 - high-level `KyuubikiSession` for submit/wait flows
-- `KyuubikiAgentClient` for run-study and chunk-browse flows
+- `KyuubikiAgentClient` for run-study, workflow-run, and chunk-browse flows
 - retry policy, failure classification, and chunk iteration helpers
 - reusable `KyuubikiAuth` header auth object
 - thin JSON-first payload shape for AI-generated requests

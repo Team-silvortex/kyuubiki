@@ -163,15 +163,26 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     end
   end
 
-  @spec request_with_agent(String.t(), map(), (map() -> any())) ::
+  @spec request(String.t(), map(), (map() -> any()), keyword()) :: {:ok, map()} | {:error, term()}
+  def request(method, params, on_progress, opts)
+      when is_binary(method) and is_map(params) and is_function(on_progress, 1) and is_list(opts) do
+    with {:ok, result, _endpoint} <- request_with_agent(method, params, on_progress, opts) do
+      {:ok, result}
+    end
+  end
+
+  @spec request_with_agent(String.t(), map(), (map() -> any()), keyword()) ::
           {:ok, map(), AgentPool.endpoint()} | {:error, term()}
-  def request_with_agent(method, params, on_progress \\ fn _progress -> :ok end)
-      when is_binary(method) and is_map(params) and is_function(on_progress, 1) do
+  def request_with_agent(method, params, on_progress \\ fn _progress -> :ok end, opts \\ [])
+      when is_binary(method) and is_map(params) and is_function(on_progress, 1) and is_list(opts) do
     request_id = request_id()
     request = build_request(request_id, method, params)
-    endpoints = AgentPool.checkout_endpoints(method)
+    endpoints = AgentPool.checkout_endpoints(method, opts)
 
-    attempt_request(endpoints, request_id, request, on_progress, [])
+    case endpoints do
+      [] -> {:error, no_matching_agent_error(method, opts)}
+      _ -> attempt_request(endpoints, request_id, request, on_progress, [])
+    end
   end
 
   defp build_request(request_id, method, params) do
@@ -228,6 +239,16 @@ defmodule KyuubikiWeb.Playground.AgentClient do
           %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
         ])
     end
+  end
+
+  defp no_matching_agent_error(method, opts) do
+    {:no_matching_agent,
+     %{
+       method: method,
+       required_capabilities:
+         opts |> Keyword.get(:required_capabilities, []) |> Enum.filter(&is_binary/1),
+       placement_tags: opts |> Keyword.get(:placement_tags, []) |> Enum.filter(&is_binary/1)
+     }}
   end
 
   defp request_once(endpoint, request_id, request, on_progress) do

@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-06-12T07:46:31.972Z",
+  "generated_at": "2026-06-15T05:25:23.136Z",
   "shipping_version": "1.6.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
@@ -107,7 +107,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -121,7 +121,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -135,7 +135,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -205,7 +205,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -219,7 +219,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -233,7 +233,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -295,7 +295,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
@@ -309,7 +309,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -323,7 +323,7 @@
           "kind": "app",
           "platform": "macos",
           "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",

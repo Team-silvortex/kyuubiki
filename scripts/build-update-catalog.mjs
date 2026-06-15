@@ -6,12 +6,35 @@ import {
   readJson,
   releaseIndexPath,
   rootDir,
-  updateCatalogDocPaths,
   updateCatalogPath,
   updateChannelsPath,
   writeJson,
   writeText,
 } from "./release-metadata.mjs";
+
+const updateCatalogDocs = {
+  docs: {
+    outputPath: path.join(rootDir, "docs/update-catalog.html"),
+    cssHref: "../apps/hub-gui/ui/docs/docs.css",
+    kicker: "Unified update catalog",
+    extraCopy: "",
+    links: [
+      { href: "./README.md", label: "Back to docs readme" },
+      { href: "../releases/update-catalog.json", label: "Open JSON source" },
+    ],
+  },
+  hub: {
+    outputPath: path.join(rootDir, "apps/hub-gui/ui/docs/update-catalog.html"),
+    cssHref: "./docs.css",
+    kicker: "Unified Update Catalog Mirror · Chapter 7",
+    extraCopy: "This is the Hub mirror for the trust-and-safety chapter's update visibility material.",
+    links: [
+      { href: "./index.html", label: "Back to book entry" },
+      { href: "../../../../docs/book-ch07-trust-and-safety.html", label: "Open central chapter" },
+      { href: "../../../../docs/update-catalog.html", label: "Open source page" },
+    ],
+  },
+};
 
 function artifactEntry(product, key, relativePath) {
   const kind = key.split("_").pop();
@@ -177,28 +200,37 @@ function renderChannels(channels) {
     .join("\n");
 }
 
-function renderHtml(catalog) {
+function renderHtml(catalog, options) {
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kyuubiki Unified Update Catalog</title>
-    <link rel="stylesheet" href="./docs.css" />
+    <link rel="stylesheet" href="${escapeHtml(options.cssHref)}" />
   </head>
   <body>
     <main class="docs-shell">
       <section class="docs-hero">
-        <div class="docs-kicker">Unified update catalog</div>
+        <div class="docs-kicker">${escapeHtml(options.kicker)}</div>
         <h1>${escapeHtml(catalog.line)} delivery channels</h1>
         <p class="docs-copy">
           This page is generated from the shared release index and the human-owned update channel contract.
           It defines the visible, Docker-like update tags that point to concrete shipped versions.
         </p>
+        ${options.extraCopy ? `<p class="docs-copy">\n          ${escapeHtml(options.extraCopy)}\n        </p>` : ""}
         <div class="docs-meta">
           <span class="docs-chip">Shipping version: ${escapeHtml(catalog.shipping_version)}</span>
           <span class="docs-chip">Default channel: ${escapeHtml(catalog.default_channel)}</span>
           <span class="docs-chip">Schema: ${escapeHtml(catalog.schema_version)}</span>
+        </div>
+        <div class="docs-links">
+          ${options.links
+            .map(
+              (link) =>
+                `<a class="docs-link" href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`,
+            )
+            .join("\n          ")}
         </div>
       </section>
 
@@ -226,11 +258,9 @@ function renderHtml(catalog) {
 
 const catalog = buildCatalog();
 writeJson(updateCatalogPath, catalog);
-for (const filePath of updateCatalogDocPaths) {
-  writeText(filePath, renderHtml(catalog));
-}
+writeText(updateCatalogDocs.docs.outputPath, renderHtml(catalog, updateCatalogDocs.docs));
+writeText(updateCatalogDocs.hub.outputPath, renderHtml(catalog, updateCatalogDocs.hub));
 
 console.log(`wrote ${path.relative(rootDir, updateCatalogPath)}`);
-for (const filePath of updateCatalogDocPaths) {
-  console.log(`wrote ${path.relative(rootDir, filePath)}`);
-}
+console.log(`wrote ${path.relative(rootDir, updateCatalogDocs.docs.outputPath)}`);
+console.log(`wrote ${path.relative(rootDir, updateCatalogDocs.hub.outputPath)}`);

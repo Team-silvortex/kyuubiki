@@ -3,45 +3,82 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Kyuubiki Hub Docs</title>
+    <title>Kyuubiki Book</title>
     <link rel="stylesheet" href="./docs.css" />
   </head>
   <body>
     <main class="docs-shell">
       <section class="docs-hero">
-        <div class="docs-kicker">Kyuubiki Hub Docs</div>
-        <h1>tamamono 1.6.0 docs home</h1>
+        <div class="docs-kicker">Kyuubiki Book</div>
+        <h1>Desktop reading entry for tamamono 1.6.0</h1>
         <p class="docs-copy">
-          Start here when you want the shortest product-facing path through the
-          current line, operations, and first-line support notes.
+          This shelf is the Hub-facing entrance to the Kyuubiki Book. It is the
+          shortest desktop path for understanding what the product is, where the
+          runtime boundaries are, how installation and update behavior work, and
+          which deeper documents should be treated as source of truth.
         </p>
         <div class="docs-meta">
           <span class="docs-chip">Current line: tamamono 1.6.0</span>
-          <span class="docs-chip">Audience: operators and desktop users</span>
+          <span class="docs-chip">Audience: operators, desktop users, assistants</span>
+          <span class="docs-chip">Role: mirror of the central book</span>
         </div>
         <p class="docs-copy">
-          This shelf is the desktop-facing docs mirror for Hub. Repository-level
-          source narrative still lives under <code>docs/</code>.
+          The repository-level narrative book lives at
+          <code>docs/book.html</code>, and the machine-readable reading manifest
+          lives at <code>docs/book-manifest.json</code>. This Hub page mirrors
+          that structure in shorter desktop form.
         </p>
+        <div class="docs-links">
+          <a class="docs-link" href="../../../../docs/book.html">Open central book</a>
+          <a class="docs-link" href="../../../../docs/book-manifest.json">Open book manifest</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Chapter entry</h2>
+        <div class="docs-toc">
+          <a class="docs-link" href="../../../../docs/book-ch01-what-is-kyuubiki.html">Chapter 1: What Kyuubiki is</a>
+          <a class="docs-link" href="../../../../docs/book-ch02-tamamono-line.html">Chapter 2: What tamamono 1.x is optimizing for</a>
+          <a class="docs-link" href="../../../../docs/book-ch03-architecture-boundaries.html">Chapter 3: The hard architecture boundaries</a>
+          <a class="docs-link" href="../../../../docs/book-ch04-runtime-modes.html">Chapter 4: Runtime and deployment modes</a>
+          <a class="docs-link" href="../../../../docs/book-ch05-workflow-and-operators.html">Chapter 5: Workflow and operator philosophy</a>
+          <a class="docs-link" href="../../../../docs/book-ch06-sdk-surfaces.html">Chapter 6: SDK and automation surfaces</a>
+          <a class="docs-link" href="../../../../docs/book-ch07-trust-and-safety.html">Chapter 7: Accuracy, trust, and release safety</a>
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Chapter 8: Reading paths by job</a>
+        </div>
+      </section>
+
+      <section class="docs-section docs-card">
+        <h2>Quick entry by role</h2>
+        <div class="docs-links">
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Operator / product owner</a>
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Frontend / Workbench engineer</a>
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Runtime / agent engineer</a>
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">SDK / extension engineer</a>
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Release / packaging owner</a>
+          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Large model integrator</a>
+        </div>
       </section>
 
       <section class="docs-grid">
         <article class="docs-card">
-          <h2>Current line</h2>
+          <h2>What Kyuubiki is</h2>
           <p class="docs-copy">
-            Read what the current tamamono line is optimizing for and why this
-            generation is focused on trust, consistency, and operator experience.
+            Use Hub, Workbench, Installer, orchestrator, and Rust agents as five
+            distinct roles. This project is a FEM workstation plus a control
+            plane, not a single merged app.
           </p>
           <div class="docs-links">
-            <a class="docs-link" href="./current-line.html">Open current line</a>
+            <a class="docs-link" href="./current-line.html">Open current line mirror</a>
           </div>
         </article>
 
         <article class="docs-card">
-          <h2>Operations</h2>
+          <h2>Runtime modes</h2>
           <p class="docs-copy">
-            See the runtime modes, storage choices, agent discovery paths, and
-            practical operator entrypoints.
+            Review local workstation, cloud control plane, distributed control
+            plane, and the future headless mesh posture before making runtime or
+            deployment decisions.
           </p>
           <div class="docs-links">
             <a class="docs-link" href="./operations.html">Open operations</a>
@@ -49,21 +86,11 @@
         </article>
 
         <article class="docs-card">
-          <h2>Troubleshooting</h2>
+          <h2>Install integrity</h2>
           <p class="docs-copy">
-            Start with the shortest failure path before you dive into logs,
-            packaging output, or deeper deployment detail.
-          </p>
-          <div class="docs-links">
-            <a class="docs-link" href="./troubleshooting.html">Open troubleshooting</a>
-          </div>
-        </article>
-
-        <article class="docs-card">
-          <h2>Install contract</h2>
-          <p class="docs-copy">
-            Inspect the standard installation roots, protected paths, cleanup
-            allowlist, and the exact contract the installer enforces.
+            Inspect the standard install roots, cleanup rules, residue policy,
+            and the visible contract for what the desktop stack is allowed to
+            create or remove.
           </p>
           <div class="docs-links">
             <a class="docs-link" href="./installation-integrity.html">Open install contract</a>
@@ -71,25 +98,37 @@
         </article>
 
         <article class="docs-card">
-          <h2>Update channels</h2>
+          <h2>Update visibility</h2>
           <p class="docs-copy">
-            Inspect the unified update tags, concrete shipped version targets,
-            and the visible rules that constrain update behavior.
+            See the unified update tags, shipped targets, and the explicit rules
+            that constrain update behavior instead of leaving it hidden in
+            tooling.
           </p>
           <div class="docs-links">
             <a class="docs-link" href="./update-catalog.html">Open update catalog</a>
           </div>
         </article>
+
+        <article class="docs-card">
+          <h2>First-line support</h2>
+          <p class="docs-copy">
+            Start with the shortest failure path before diving into packaging
+            output, runtime logs, or deeper engineering docs.
+          </p>
+          <div class="docs-links">
+            <a class="docs-link" href="./troubleshooting.html">Open troubleshooting</a>
+          </div>
+        </article>
       </section>
 
       <section class="docs-section docs-card">
-        <h2>How to use this shelf</h2>
+        <h2>How to use the desktop shelf</h2>
         <ul class="docs-list">
-          <li>Read <strong>Current line</strong> before changing product direction.</li>
-          <li>Use <strong>Operations</strong> when you need runtime and deployment guidance.</li>
-          <li>Use <strong>Troubleshooting</strong> when something looks partial or unhealthy.</li>
-          <li>Use <strong>Install contract</strong> when you need the exact cleanup and protection rules.</li>
-          <li>Use <strong>Update channels</strong> when you need the current stable tag and update behavior contract.</li>
+          <li>Use the mirrored Hub pages for short operator-facing reading inside the desktop shell.</li>
+          <li>Jump into the central chapter pages when you need the deeper source narrative instead of the short mirror.</li>
+          <li>Use <strong>Current line</strong> before changing product direction or release posture.</li>
+          <li>Use <strong>Operations</strong>, <strong>Install integrity</strong>, and <strong>Update visibility</strong> for desktop-runtime behavior.</li>
+          <li>Use <strong>Troubleshooting</strong> when something looks partial, unhealthy, or inconsistent with the documented contract.</li>
         </ul>
       </section>
     </main>

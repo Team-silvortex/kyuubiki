@@ -3,6 +3,35 @@ defmodule KyuubikiSdk.SolverRpcClient do
 
   alias KyuubikiSdk.Error
 
+  @solver_methods %{
+    "bar_1d" => "solve_bar_1d",
+    "thermal_bar_1d" => "solve_thermal_bar_1d",
+    "heat_bar_1d" => "solve_heat_bar_1d",
+    "electrostatic_bar_1d" => "solve_electrostatic_bar_1d",
+    "beam_1d" => "solve_beam_1d",
+    "thermal_beam_1d" => "solve_thermal_beam_1d",
+    "torsion_1d" => "solve_torsion_1d",
+    "spring_1d" => "solve_spring_1d",
+    "spring_2d" => "solve_spring_2d",
+    "spring_3d" => "solve_spring_3d",
+    "truss_2d" => "solve_truss_2d",
+    "thermal_truss_2d" => "solve_thermal_truss_2d",
+    "frame_2d" => "solve_frame_2d",
+    "thermal_frame_2d" => "solve_thermal_frame_2d",
+    "plane_triangle_2d" => "solve_plane_triangle_2d",
+    "heat_plane_triangle_2d" => "solve_heat_plane_triangle_2d",
+    "thermal_plane_triangle_2d" => "solve_thermal_plane_triangle_2d",
+    "electrostatic_plane_triangle_2d" => "solve_electrostatic_plane_triangle_2d",
+    "plane_quad_2d" => "solve_plane_quad_2d",
+    "heat_plane_quad_2d" => "solve_heat_plane_quad_2d",
+    "thermal_plane_quad_2d" => "solve_thermal_plane_quad_2d",
+    "electrostatic_plane_quad_2d" => "solve_electrostatic_plane_quad_2d",
+    "truss_3d" => "solve_truss_3d",
+    "thermal_truss_3d" => "solve_thermal_truss_3d",
+    "frame_3d" => "solve_frame_3d",
+    "thermal_frame_3d" => "solve_thermal_frame_3d"
+  }
+
   defstruct [:host, :port, :timeout]
 
   def new(host, port, opts \\ []) do
@@ -15,11 +44,18 @@ defmodule KyuubikiSdk.SolverRpcClient do
 
   def ping(client), do: call(client, "ping", %{})
   def describe_agent(client), do: call(client, "describe_agent", %{})
-  def solve_bar_1d(client, payload), do: call(client, "solve_bar_1d", payload)
-  def solve_truss_2d(client, payload), do: call(client, "solve_truss_2d", payload)
-  def solve_truss_3d(client, payload), do: call(client, "solve_truss_3d", payload)
-  def solve_plane_triangle_2d(client, payload), do: call(client, "solve_plane_triangle_2d", payload)
+  def solve_bar_1d(client, payload), do: solve_study(client, "bar_1d", payload)
+  def solve_truss_2d(client, payload), do: solve_study(client, "truss_2d", payload)
+  def solve_truss_3d(client, payload), do: solve_study(client, "truss_3d", payload)
+  def solve_plane_triangle_2d(client, payload), do: solve_study(client, "plane_triangle_2d", payload)
   def cancel_job(client, job_id), do: call(client, "cancel_job", %{"job_id" => job_id})
+
+  def solve_study(client, solve_kind, payload) do
+    case Map.fetch(@solver_methods, normalize_solve_kind(solve_kind)) do
+      {:ok, method} -> call(client, method, payload)
+      :error -> {:error, Error.rpc("unsupported solve kind: #{solve_kind}")}
+    end
+  end
 
   def call(client, method, params) do
     with {:ok, socket} <-
@@ -65,4 +101,8 @@ defmodule KyuubikiSdk.SolverRpcClient do
       end
     end
   end
+
+  defp normalize_solve_kind(kind) when is_atom(kind), do: normalize_solve_kind(Atom.to_string(kind))
+  defp normalize_solve_kind("axial_bar_1d"), do: "bar_1d"
+  defp normalize_solve_kind(kind) when is_binary(kind), do: String.downcase(kind)
 end

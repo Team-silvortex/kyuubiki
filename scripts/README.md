@@ -11,9 +11,18 @@ This directory contains host-native operational entry points.
 - `build-update-catalog.mjs`
   Generate the shared update catalog JSON plus HTML docs from release snapshots
   and the human-owned channel contract.
+- `build-installation-integrity-docs.mjs`
+  Generate the installation integrity HTML docs for both the repository-level
+  book and the Hub-facing mirror shelf.
 - `audit-version-line.mjs`
   Audit repository-wide version contracts and inventory visible version
   references before advancing a shipping line such as `tamamono 1.7.0`.
+- `check-doc-book.mjs`
+  Verify the centralized docs book and Hub mirrors for version alignment,
+  broken local links, required chapter markers, and old legacy wording.
+- `sync-doc-book-version.mjs`
+  Update the hand-maintained book entry pages to the current shipping version
+  without touching the generated installation or update-catalog pages.
 - `release-metadata.mjs`
   Shared release-path, JSON, artifact, and shipping-version helpers used by the
   release and installation-doc generators.

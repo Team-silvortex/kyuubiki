@@ -8,14 +8,16 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.WorkflowSolverRegistry
   alias KyuubikiWeb.WorkflowThermalRuntime
 
-  def run_solve_operator(operator_id, payload) when is_map(payload) do
+  def run_solve_operator(operator_id, payload, node \\ %{})
+
+  def run_solve_operator(operator_id, payload, node) when is_map(payload) and is_map(node) do
     case WorkflowSolverRegistry.fetch(operator_id) do
-      {:ok, %{method: method}} -> apply(solve_runtime_client(), method, [payload])
+      {:ok, %{method: method}} -> dispatch_solve_operator(method, payload, node)
       :error -> {:error, {:unsupported_workflow_solve_operator, operator_id}}
     end
   end
 
-  def run_solve_operator(operator_id, _payload),
+  def run_solve_operator(operator_id, _payload, _node),
     do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
 
   def run_transform_operator(
@@ -183,6 +185,44 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     Application.get_env(:kyuubiki_web, __MODULE__, [])
     |> Keyword.get(:solve_runtime_client, AgentClient)
   end
+
+  defp dispatch_solve_operator(method, payload, node) when is_atom(method) do
+    client = solve_runtime_client()
+    routing_opts = solve_routing_opts(node)
+
+    cond do
+      function_exported?(client, :request, 4) ->
+        client.request(Atom.to_string(method), payload, fn _progress -> :ok end, routing_opts)
+
+      function_exported?(client, method, 1) ->
+        apply(client, method, [payload])
+
+      true ->
+        {:error, {:unsupported_workflow_solve_method, Atom.to_string(method)}}
+    end
+  end
+
+  defp solve_routing_opts(node) do
+    [
+      required_capabilities:
+        node
+        |> Map.get("required_capabilities", [])
+        |> normalize_routing_values(),
+      placement_tags:
+        node
+        |> Map.get("placement_tags", [])
+        |> normalize_routing_values()
+    ]
+  end
+
+  defp normalize_routing_values(values) when is_list(values) do
+    values
+    |> Enum.filter(&is_binary/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp normalize_routing_values(_values), do: []
 
   defp resolve_electrostatic_to_heat_bridge_contract(config),
     do: WorkflowOperatorBridgeRuntime.resolve_electrostatic_to_heat_bridge_contract(config)

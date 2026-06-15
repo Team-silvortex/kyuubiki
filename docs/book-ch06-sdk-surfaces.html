@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chapter 6 · SDK Surfaces</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Kyuubiki Book · Chapter 6</div>
+        <h1>SDK and automation surfaces</h1>
+        <p class="docs-copy">
+          There are multiple extension surfaces, and they must not be confused.
+          Runtime extension, headless automation, and frontend-owned UI
+          automation solve different problems and need different contracts.
+        </p>
+        <div class="docs-links">
+          <a class="docs-link" href="./book.html">Back to book</a>
+          <a class="docs-link" href="./book-ch05-workflow-and-operators.html">Previous chapter</a>
+          <a class="docs-link" href="./book-ch07-trust-and-safety.html">Next chapter</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Surface split</h2>
+        <ul class="docs-list">
+          <li><strong>Rust operator SDK</strong>: authoring operator capabilities and extending the solver/runtime side.</li>
+          <li><strong>Headless SDKs</strong>: automation, agents, external tools, and AI clients outside the frontend.</li>
+          <li><strong>WASM Python UI automation</strong>: frontend-owned and stability-sensitive, built around a product-owned DOM contract.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Design rule</h2>
+        <p class="docs-copy">
+          Mixing these surfaces makes boundaries fuzzy and introduces accidental
+          coupling. Keeping them distinct lets the project harden both frontend
+          automation and runtime automation safely.
+        </p>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Primary sources</h2>
+        <div class="docs-links">
+          <a class="docs-link" href="./operator-sdk.md">operator-sdk.md</a>
+          <a class="docs-link" href="./headless-sdks.md">headless-sdks.md</a>
+          <a class="docs-link" href="./ui-automation-contract.html">ui-automation-contract.html</a>
+          <a class="docs-link" href="./headless-agent-contract.md">headless-agent-contract.md</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

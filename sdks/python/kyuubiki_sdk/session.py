@@ -49,17 +49,28 @@ class KyuubikiSession:
     def submit_job(self, solve_kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self.control_plane is None:
             raise RuntimeError("control plane client is not configured")
+        return self.control_plane.submit_fem_job(solve_kind, payload)
 
-        normalized = solve_kind.strip().lower()
-        if normalized == "bar_1d":
-            return self.control_plane.create_axial_bar_job(payload)
-        if normalized == "truss_2d":
-            return self.control_plane.create_truss_2d_job(payload)
-        if normalized == "truss_3d":
-            return self.control_plane.create_truss_3d_job(payload)
-        if normalized == "plane_triangle_2d":
-            return self.control_plane.create_plane_triangle_2d_job(payload)
-        raise ValueError(f"unsupported solve kind: {solve_kind}")
+    def submit_workflow_catalog_job(
+        self,
+        workflow_id: str,
+        input_artifacts: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if self.control_plane is None:
+            raise RuntimeError("control plane client is not configured")
+        return self.control_plane.submit_workflow_catalog_job(
+            workflow_id,
+            input_artifacts,
+        )
+
+    def submit_workflow_graph_job(
+        self,
+        graph: dict[str, Any],
+        input_artifacts: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if self.control_plane is None:
+            raise RuntimeError("control plane client is not configured")
+        return self.control_plane.submit_workflow_graph_job(graph, input_artifacts)
 
     def submit_jobs(self, jobs: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return [self.submit_job(job["solve_kind"], job["payload"]) for job in jobs]
@@ -67,17 +78,7 @@ class KyuubikiSession:
     def solve_direct(self, solve_kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         if self.solver_rpc is None:
             raise RuntimeError("solver rpc client is not configured")
-
-        normalized = solve_kind.strip().lower()
-        if normalized == "bar_1d":
-            return self.solver_rpc.solve_bar_1d(payload)
-        if normalized == "truss_2d":
-            return self.solver_rpc.solve_truss_2d(payload)
-        if normalized == "truss_3d":
-            return self.solver_rpc.solve_truss_3d(payload)
-        if normalized == "plane_triangle_2d":
-            return self.solver_rpc.solve_plane_triangle_2d(payload)
-        raise ValueError(f"unsupported solve kind: {solve_kind}")
+        return self.solver_rpc.solve_study(solve_kind, payload)["result"]
 
     def wait_for_job(
         self,
@@ -119,6 +120,40 @@ class KyuubikiSession:
         timeout_s: float = 300.0,
     ) -> dict[str, Any]:
         submitted = self.submit_job(solve_kind, payload)
+        job_id = submitted["job"]["job_id"]
+        waited = self.wait_for_job(
+            job_id,
+            poll_interval_s=poll_interval_s,
+            timeout_s=timeout_s,
+        )
+        return {"submitted": submitted, **waited}
+
+    def submit_workflow_catalog_and_wait(
+        self,
+        workflow_id: str,
+        input_artifacts: dict[str, Any] | None = None,
+        *,
+        poll_interval_s: float = 1.0,
+        timeout_s: float = 300.0,
+    ) -> dict[str, Any]:
+        submitted = self.submit_workflow_catalog_job(workflow_id, input_artifacts)
+        job_id = submitted["job"]["job_id"]
+        waited = self.wait_for_job(
+            job_id,
+            poll_interval_s=poll_interval_s,
+            timeout_s=timeout_s,
+        )
+        return {"submitted": submitted, **waited}
+
+    def submit_workflow_graph_and_wait(
+        self,
+        graph: dict[str, Any],
+        input_artifacts: dict[str, Any] | None = None,
+        *,
+        poll_interval_s: float = 1.0,
+        timeout_s: float = 300.0,
+    ) -> dict[str, Any]:
+        submitted = self.submit_workflow_graph_job(graph, input_artifacts)
         job_id = submitted["job"]["job_id"]
         waited = self.wait_for_job(
             job_id,

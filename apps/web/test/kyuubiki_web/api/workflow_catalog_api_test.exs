@@ -105,6 +105,14 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     assert length(workflow["entry_inputs"]) == 1
     assert length(workflow["output_artifacts"]) == 1
     assert is_map(workflow["graph"])
+    assert workflow["runtime_manifest"]["dispatch_policy"]["authority_mode"] ==
+             "central_operator_library"
+    assert Enum.any?(workflow["runtime_manifest"]["operator_fetch_plan"], fn entry ->
+             entry["node_id"] == "solve_heat" and
+               entry["operator_id"] == "solve.heat_plane_quad_2d" and
+               entry["package_ref"] ==
+                 "orchestra://operator-package/solve.heat_plane_quad_2d"
+           end)
 
     fetch_conn =
       :get
@@ -115,6 +123,16 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     fetched = Jason.decode!(fetch_conn.resp_body)["workflow"]
     assert fetched["id"] == "workflow.heat-to-thermo-quad-2d"
     assert fetched["graph"]["output_nodes"] == ["json_output"]
+    assert fetched["graph"]["dispatch_policy"] == "central_fetch"
+    assert "workflow_bridge_runtime" in fetched["graph"]["required_capabilities"]
+
+    bridge_node =
+      Enum.find(fetched["graph"]["nodes"], fn node ->
+        node["id"] == "bridge_temperature"
+      end)
+
+    assert "bridge" in bridge_node["placement_tags"]
+    assert "workflow_bridge_runtime" in bridge_node["required_capabilities"]
 
     electrostatic_fetch_conn =
       :get

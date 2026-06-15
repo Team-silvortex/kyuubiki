@@ -61,10 +61,34 @@ defmodule KyuubikiSdk.WorkflowBuildersTest do
           WorkflowBuilders.edge("edge-1", "input", "case", "solve", "case", "study_model/demo", %{dataset_value: "thermal_case"}),
           WorkflowBuilders.edge("edge-2", "solve", "result", "output", "result", "result/demo", %{dataset_value: "thermal_result"})
         ],
-        %{dataset_contract: dataset, output_nodes: ["output"]}
+        %{
+          dataset_contract: dataset,
+          output_nodes: ["output"],
+          defaults:
+            WorkflowBuilders.defaults(%{
+              cache_policy: "cached",
+              orchestrated: false,
+              dispatch_policy: "central_fetch",
+              placement_tags: ["cpu"],
+              required_capabilities: ["solver.thermal"]
+            }),
+          dispatch_policy: "central_fetch",
+          operator_fetch_plan: [
+            WorkflowBuilders.operator_fetch_entry("solve", "solve.demo", %{
+              package_ref: "kyuubiki://operators/solve.demo",
+              version: "1.0.0",
+              integrity: "sha256:demo",
+              cache_scope: "agent"
+            })
+          ],
+          placement_tags: ["mesh-enabled"],
+          required_capabilities: ["artifact-cache"]
+        }
       )
 
     assert graph["schema_version"] == WorkflowContracts.workflow_graph_schema_version()
+    assert graph["dispatch_policy"] == "central_fetch"
+    assert graph["defaults"]["orchestrated"] == false
     assert {:ok, _} = WorkflowContracts.validate_graph(graph)
   end
 end

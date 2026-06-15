@@ -6,9 +6,10 @@ Protocol-driven Rust SDK for Kyuubiki headless integration.
 use std::time::Duration;
 
 use kyuubiki_headless_sdk::{
-    ControlPlaneClient, KyuubikiAgentClient, KyuubikiAuth, KyuubikiSession, RetryPolicy, SolverRpcClient,
-    WorkflowDatasetContract, WorkflowGraphDefinition, workflow_dataset_contract, workflow_dataset_value, workflow_edge, workflow_graph,
-    workflow_node, workflow_port,
+    build_workflow_output_manifest, validate_workflow_result_against_graph, ControlPlaneClient, KyuubikiAgentClient, KyuubikiAuth,
+    KyuubikiSession, RetryPolicy, SolverRpcClient,
+    WorkflowDatasetContract, WorkflowGraphDefinition, workflow_dataset_contract, workflow_dataset_value, workflow_defaults,
+    workflow_edge, workflow_graph, workflow_node, workflow_operator_fetch_entry, workflow_port,
 };
 
 let cp = ControlPlaneClient::new("http://127.0.0.1:4000")?;
@@ -19,6 +20,7 @@ let structural_operators = cp.list_workflow_operators_with_query(Some(&[
     ("family", "solver".to_string()),
 ]))?;
 let operator = cp.fetch_workflow_operator("solver.truss_2d")?;
+let workflow_descriptor = cp.fetch_workflow_catalog_workflow("workflow.heat-to-thermo-quad-2d")?;
 
 let rpc = SolverRpcClient::new("127.0.0.1", 5001);
 let descriptor = rpc.describe_agent()?;
@@ -56,6 +58,14 @@ let retried = agent.run_study_with_retry(
     true,
     &RetryPolicy::default(),
 )?;
+let workflow_run = agent.run_workflow_catalog(
+    "workflow.heat-to-thermo-quad-2d",
+    &serde_json::json!({"thermal_case": {"loadcase": "baseline"}}),
+    Duration::from_secs(1),
+    Duration::from_secs(60),
+    true,
+)?;
+let workflow_runtime = workflow_run.workflow_runtime.as_ref().unwrap();
 for page in agent.iter_result_chunks(
     run.terminal["job"]["job_id"].as_str().unwrap(),
     "nodes",
@@ -90,19 +100,46 @@ let built_graph = workflow_graph(
     ],
     vec![workflow_edge("edge-1", "input", "case", "output", "case", "study_model/demo").with_dataset_value("thermal_case")],
 )
-.with_dataset_contract(built_dataset);
+.with_dataset_contract(built_dataset)
+.with_defaults(
+    workflow_defaults()
+        .with_cache_policy("cached")
+        .with_orchestrated(false)
+        .with_dispatch_policy("central_fetch")
+        .with_placement_tags(vec!["cpu".into()])
+        .with_required_capabilities(vec!["solver.thermal".into()]),
+)
+.with_dispatch_policy("central_fetch")
+.with_operator_fetch_plan(vec![
+    workflow_operator_fetch_entry("input", "input.demo")
+        .with_package_ref("kyuubiki://operators/input.demo")
+        .with_version("1.0.0")
+        .with_integrity("sha256:demo")
+        .with_cache_scope("agent"),
+])
+.with_placement_tags(vec!["mesh-enabled".into()])
+.with_required_capabilities(vec!["artifact-cache".into()]);
 built_graph.validate()?;
+let output_manifest = build_workflow_output_manifest(&graph)?;
+let validated_outputs =
+    validate_workflow_result_against_graph(&graph, workflow_run.result.as_ref().unwrap())?;
 ```
 
 Highlights:
 
 - jobs/results/export control-plane surface
 - operator catalog listing, filtering, and descriptor fetch
+- workflow catalog descriptor fetch plus auto graph resolution for catalog runs
+- expanded solve-kind coverage across structural, thermal,
+  thermo-mechanical, and electrostatic study families
 - workflow graph and dataset contract typed structs with validation
+- distributed workflow execution-hint fields for dispatch policy, operator fetch
+  plan, placement tags, and required capabilities
 - workflow builder helpers for graph, node, edge, port, and dataset assembly
+- workflow output manifest and result validation helpers
 - direct solver-RPC client
 - high-level `KyuubikiSession` for batch submit and wait loops
-- `KyuubikiAgentClient` for run-study and chunk-browse flows
+- `KyuubikiAgentClient` for run-study, workflow-run, and chunk-browse flows
 - retry, failure classification, and chunk iteration helpers
 - reusable `KyuubikiAuth` plus more explicit error variants
 - embedding-friendly API for headless agents and CLIs

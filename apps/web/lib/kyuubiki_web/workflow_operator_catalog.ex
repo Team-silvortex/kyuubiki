@@ -1,6 +1,7 @@
 defmodule KyuubikiWeb.WorkflowOperatorCatalog do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowCatalogSupport
   alias KyuubikiWeb.WorkflowBuiltinOperatorRegistry
   alias KyuubikiWeb.WorkflowCatalogQuery
   alias KyuubikiWeb.WorkflowSolverRegistry
@@ -10,6 +11,7 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
 
     (Enum.map(WorkflowSolverRegistry.list(), &WorkflowSolverRegistry.descriptor/1) ++
        Enum.map(WorkflowBuiltinOperatorRegistry.list(), &built_in_descriptor/1))
+    |> Enum.map(&WorkflowCatalogSupport.enrich_operator_descriptor/1)
     |> Enum.filter(&WorkflowCatalogQuery.matches_operator?(&1, normalized_filters))
   end
 

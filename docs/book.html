@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki Book</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Kyuubiki Book</div>
+        <h1>One book for tamamono 1.6.0</h1>
+        <p class="docs-copy">
+          This is the single reading entrypoint for understanding what Kyuubiki
+          is, what the current line is trying to harden, how the product is
+          split across Hub, Workbench, Installer, orchestrator, Rust agents,
+          workflows, and SDKs, and which documents are the real sources of
+          truth.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Version line: tamamono 1.6.0</span>
+          <span class="docs-chip">Audience: humans + large models</span>
+          <span class="docs-chip">Use: orientation before deep diving</span>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>How to use this book</h2>
+        <ul class="docs-list">
+          <li>Read chapters in order the first time.</li>
+          <li>Use the reading paths section when you are entering from a specific job.</li>
+          <li>Use the chapter source lists to jump into the deeper source-of-truth documents.</li>
+          <li>If a large model only ingests one documentation file, start with this book and then follow <code>docs/book-manifest.json</code>.</li>
+        </ul>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Table of contents</h2>
+        <div class="docs-toc">
+          <a class="docs-link" href="./book-ch01-what-is-kyuubiki.html">Chapter 1: What Kyuubiki is</a>
+          <a class="docs-link" href="./book-ch02-tamamono-line.html">Chapter 2: What tamamono 1.x is optimizing for</a>
+          <a class="docs-link" href="./book-ch03-architecture-boundaries.html">Chapter 3: The hard architecture boundaries</a>
+          <a class="docs-link" href="./book-ch04-runtime-modes.html">Chapter 4: Runtime and deployment modes</a>
+          <a class="docs-link" href="./book-ch05-workflow-and-operators.html">Chapter 5: Workflow and operator philosophy</a>
+          <a class="docs-link" href="./book-ch06-sdk-surfaces.html">Chapter 6: SDK and automation surfaces</a>
+          <a class="docs-link" href="./book-ch07-trust-and-safety.html">Chapter 7: Accuracy, trust, and release safety</a>
+          <a class="docs-link" href="./book-ch08-reading-paths.html">Chapter 8: Reading paths by job</a>
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Quick entry by role</h2>
+        <div class="docs-links">
+          <a class="docs-link" href="#path-operator">Operator / product owner</a>
+          <a class="docs-link" href="#path-frontend">Frontend / Workbench engineer</a>
+          <a class="docs-link" href="#path-runtime">Runtime / agent engineer</a>
+          <a class="docs-link" href="#path-sdk">SDK / extension engineer</a>
+          <a class="docs-link" href="#path-release">Release / packaging owner</a>
+          <a class="docs-link" href="#path-llm">Large model integrator</a>
+        </div>
+      </section>
+
+      <section id="chapter-1" class="docs-card docs-section">
+        <h2>Chapter 1: What Kyuubiki is</h2>
+        <p class="docs-copy">
+          Kyuubiki is an engine-first FEM workstation and control plane. The
+          user-facing surface is split across desktop shells and a browser
+          workbench, while the execution layer is split across a Phoenix control
+          plane and Rust solver agents.
+        </p>
+        <ul class="docs-list">
+          <li><strong>Hub</strong>: operator shell, runtime control, workload shelf, docs, packaging entrypoint.</li>
+          <li><strong>Workbench</strong>: modeling, analysis setup, results, and future deeper 3D interaction.</li>
+          <li><strong>Installer</strong>: bootstrap, deployment prep, installation integrity, release structure.</li>
+          <li><strong>Orchestrator</strong>: job control, persistence, workflow coordination, remote/runtime management.</li>
+          <li><strong>Rust agents</strong>: solver data plane, headless execution, future mesh and peer-networking growth.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch01-what-is-kyuubiki.html">Open chapter page</a>
+          <a class="docs-link" href="./system-overview.md">system-overview.md</a>
+          <a class="docs-link" href="./app-runtime-boundaries.md">app-runtime-boundaries.md</a>
+          <a class="docs-link" href="./hub-architecture.md">hub-architecture.md</a>
+        </div>
+      </section>
+
+      <section id="chapter-2" class="docs-card docs-section">
+        <h2>Chapter 2: What tamamono 1.x is optimizing for</h2>
+        <p class="docs-copy">
+          The current line is not supposed to grow mainly by feature count. It
+          is supposed to harden trust: numerical accuracy, stable contracts,
+          cleaner boundaries, safer deployment, and a more coherent operator
+          experience.
+        </p>
+        <ul class="docs-list">
+          <li>Keep major version posture conservative.</li>
+          <li>Prefer verified solver growth over wide speculative UI growth.</li>
+          <li>Make documentation, automation, and release behavior explicit instead of folklore-driven.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch02-tamamono-line.html">Open chapter page</a>
+          <a class="docs-link" href="./current-line.md">current-line.md</a>
+          <a class="docs-link" href="./version-line.md">version-line.md</a>
+          <a class="docs-link" href="./tamamono-minor-lines.md">tamamono-minor-lines.md</a>
+        </div>
+      </section>
+
+      <section id="chapter-3" class="docs-card docs-section">
+        <h2>Chapter 3: The hard architecture boundaries</h2>
+        <p class="docs-copy">
+          Kyuubiki depends on preserving certain splits. Frontend, runtime,
+          orchestrator, and agents are not supposed to blur into one another.
+          The Hub is not the orchestrator. The Workbench is not the runtime. The
+          agent is not the UI.
+        </p>
+        <ul class="docs-list">
+          <li>Hub manages entry, operator flow, runtime switching, and packaging posture.</li>
+          <li>Workbench owns the concrete analysis workflow and user-facing authoring surface.</li>
+          <li>Installer owns deployment structure and installation policy.</li>
+          <li>Agents remain runtime-side, headless, and Rust-first.</li>
+          <li>One orchestrator controls an agent at a time unless the system is intentionally in offline/decentralized mesh mode.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch03-architecture-boundaries.html">Open chapter page</a>
+          <a class="docs-link" href="./app-runtime-boundaries.md">app-runtime-boundaries.md</a>
+          <a class="docs-link" href="./agent-orchestrator-boundary.md">agent-orchestrator-boundary.md</a>
+          <a class="docs-link" href="./headless-agent-contract.md">headless-agent-contract.md</a>
+          <a class="docs-link" href="./architecture-red-lines.md">architecture-red-lines.md</a>
+        </div>
+      </section>
+
+      <section id="chapter-4" class="docs-card docs-section">
+        <h2>Chapter 4: Runtime and deployment modes</h2>
+        <p class="docs-copy">
+          The product is intentionally deployable in multiple shapes, but those
+          shapes must stay explicit and understandable.
+        </p>
+        <ul class="docs-list">
+          <li><strong>local workstation</strong>: frontend + orchestrator + local Rust agents.</li>
+          <li><strong>cloud control plane</strong>: browser and orchestrator with remote persistence and external agents.</li>
+          <li><strong>distributed control plane</strong>: separated control plane with remotely deployed solver nodes.</li>
+          <li><strong>headless peer mesh</strong>: future or selective mode where Rust agents can cluster without GUI/Phoenix on the hot path.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch04-runtime-modes.html">Open chapter page</a>
+          <a class="docs-link" href="./operations.md">operations.md</a>
+          <a class="docs-link" href="./packaging-and-deployment.md">packaging-and-deployment.md</a>
+          <a class="docs-link" href="./desktop-release-checklist.md">desktop-release-checklist.md</a>
+        </div>
+      </section>
+
+      <section id="chapter-5" class="docs-card docs-section">
+        <h2>Chapter 5: Workflow and operator philosophy</h2>
+        <p class="docs-copy">
+          Kyuubiki is moving beyond isolated single operators. The workflow
+          direction is shader-like or neural-network-like composition: operators
+          connected through a stable cross-operator data contract.
+        </p>
+        <ul class="docs-list">
+          <li>Workflow graph growth is intentional, not ad hoc.</li>
+          <li>Dataset transport should be portable and contract-driven, with an ONNX-like spirit.</li>
+          <li>Operator library ownership remains centralized instead of fully replicated to every agent.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch05-workflow-and-operators.html">Open chapter page</a>
+          <a class="docs-link" href="./workflow-graph.md">workflow-graph.md</a>
+          <a class="docs-link" href="./workflow-dataset.md">workflow-dataset.md</a>
+          <a class="docs-link" href="./operator-library-centralization.md">operator-library-centralization.md</a>
+        </div>
+      </section>
+
+      <section id="chapter-6" class="docs-card docs-section">
+        <h2>Chapter 6: SDK and automation surfaces</h2>
+        <p class="docs-copy">
+          There are multiple extension surfaces, and they must not be confused.
+        </p>
+        <ul class="docs-list">
+          <li><strong>Rust operator SDK</strong>: for authoring operator capabilities and extending the solver/runtime side.</li>
+          <li><strong>Headless SDKs</strong>: for automation, agents, external tools, and AI clients running outside the frontend.</li>
+          <li><strong>WASM Python UI automation</strong>: frontend-owned and stability-sensitive, with a product-owned DOM contract.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch06-sdk-surfaces.html">Open chapter page</a>
+          <a class="docs-link" href="./operator-sdk.md">operator-sdk.md</a>
+          <a class="docs-link" href="./headless-sdks.md">headless-sdks.md</a>
+          <a class="docs-link" href="./ui-automation-contract.html">ui-automation-contract.html</a>
+          <a class="docs-link" href="./headless-agent-contract.md">headless-agent-contract.md</a>
+        </div>
+      </section>
+
+      <section id="chapter-7" class="docs-card docs-section">
+        <h2>Chapter 7: Accuracy, trust, and release safety</h2>
+        <p class="docs-copy">
+          Solver trust is a first-class product concern. So are safety,
+          installation integrity, update visibility, and release repeatability.
+        </p>
+        <ul class="docs-list">
+          <li>Accuracy baselines and expansion plan are explicit.</li>
+          <li>Security and destructive actions are meant to stay visible and auditable.</li>
+          <li>Installation and update behavior must be configuration-visible and residue-conscious.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch07-trust-and-safety.html">Open chapter page</a>
+          <a class="docs-link" href="./accuracy-plan.md">accuracy-plan.md</a>
+          <a class="docs-link" href="./accuracy-baselines.md">accuracy-baselines.md</a>
+          <a class="docs-link" href="./security.md">security.md</a>
+          <a class="docs-link" href="./installation-integrity-contract.html">installation-integrity-contract.html</a>
+          <a class="docs-link" href="./update-catalog.html">update-catalog.html</a>
+        </div>
+      </section>
+
+      <section id="chapter-8" class="docs-card docs-section">
+        <h2>Chapter 8: Reading paths by job</h2>
+        <ul class="docs-list">
+          <li id="path-operator"><strong>Operator / product owner</strong>: current line -> system overview -> app runtime boundaries -> operations -> security.</li>
+          <li id="path-frontend"><strong>Frontend / Workbench engineer</strong>: philosophy -> frontend style -> frontend implementation -> UI automation contract -> rendering roadmap.</li>
+          <li id="path-runtime"><strong>Runtime / agent engineer</strong>: system overview -> agent-orchestrator boundary -> headless agent contract -> protocols -> operations.</li>
+          <li id="path-sdk"><strong>SDK / extension engineer</strong>: operator SDK -> headless SDKs -> workflow graph -> workflow dataset -> protocols.</li>
+          <li id="path-release"><strong>Release / packaging owner</strong>: packaging and deployment -> desktop release checklist -> installation integrity contract -> update catalog.</li>
+          <li id="path-llm"><strong>Large model integrator</strong>: this book -> book manifest -> system overview -> app runtime boundaries -> protocols -> headless SDKs -> operator SDK.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./book-ch08-reading-paths.html">Open chapter page</a>
+          <a class="docs-link" href="./book-manifest.json">Open book manifest</a>
+          <a class="docs-link" href="./README.md">Open docs map</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

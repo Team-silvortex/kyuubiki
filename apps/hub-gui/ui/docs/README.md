@@ -9,6 +9,9 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
   truth.
 - `apps/hub-gui/ui/docs/`
   is the desktop-facing HTML shelf for operators and end users inside Hub.
+- `index.html`
+  is the Hub-facing entry to the centralized Kyuubiki Book and should stay
+  aligned with `docs/book.html`.
 
 ## How to treat these files
 
@@ -22,11 +25,16 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
 
 ## Current mirrored topics
 
+- `index.html`
+  Desktop dispatch page that links both the short Hub mirrors and the
+  repository-level chapter pages of the centralized book.
 - `current-line.html`
 - `installation-integrity.html`
 - `operations.html`
 - `troubleshooting.html`
 - `update-catalog.html`
+  Hub mirror for the centralized book's update-visibility material and release
+  channel posture.
 
 If a topic needs long-form engineering detail, put that detail under `docs/`
 and keep the Hub page as the short desktop entrypoint.

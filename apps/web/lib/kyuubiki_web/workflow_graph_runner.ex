@@ -9,7 +9,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
       when is_map(graph) and is_map(input_artifacts) and is_list(opts) do
     with nodes when is_list(nodes) <- Map.get(graph, "nodes"),
          edges when is_list(edges) <- Map.get(graph, "edges", []),
-         execute_solve when is_function(execute_solve, 2) <- Keyword.get(opts, :execute_solve),
+         execute_solve when is_function(execute_solve, 3) <- Keyword.get(opts, :execute_solve),
          execute_transform when is_function(execute_transform, 3) <-
            Keyword.get(opts, :execute_transform),
          execute_extract when is_function(execute_extract, 3) <-
@@ -176,7 +176,7 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
   defp execute_workflow_node(%{"kind" => "solve"} = node, incoming, _inputs, state, opts) do
     with {:ok, operator_id} <- fetch_operator_id(node),
          {:ok, payload} <- resolve_single_input_payload(node, incoming, state.artifacts),
-         {:ok, result} <- Keyword.fetch!(opts, :execute_solve).(operator_id, payload) do
+         {:ok, result} <- Keyword.fetch!(opts, :execute_solve).(operator_id, payload, node) do
       {:ok,
        publish_node_outputs(
          state,
@@ -324,7 +324,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
                unwrap_named_transform_input(value, edge)
              )}
 
-          :error -> {:halt, {:error, {:missing_upstream_artifact, key}}}
+          :error ->
+            {:halt, {:error, {:missing_upstream_artifact, key}}}
         end
       end)
 

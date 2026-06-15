@@ -37,6 +37,13 @@ body {
   gap: 16px;
 }
 
+.docs-toc {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
 .docs-kicker {
   font-size: 12px;
   letter-spacing: 0.16em;
@@ -124,6 +131,10 @@ h3 {
 
 .docs-link:hover {
   background: rgba(54, 82, 136, 0.78);
+}
+
+.docs-link[href^="#"] {
+  justify-content: flex-start;
 }
 
 .docs-section {

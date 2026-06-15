@@ -74,8 +74,40 @@
   "output_nodes": ["thermo_summary"],
   "defaults": {
     "cache_policy": "cached",
-    "orchestrated": true
+    "orchestrated": true,
+    "dispatch_policy": "central_fetch",
+    "placement_tags": ["cpu"],
+    "required_capabilities": ["artifact-cache"]
   },
+  "dispatch_policy": "central_fetch",
+  "operator_fetch_plan": [
+    {
+      "node_id": "solve_heat",
+      "operator_id": "solve.heat_plane_quad_2d",
+      "package_ref": "kyuubiki://operators/solve.heat_plane_quad_2d",
+      "version": "1.0.0",
+      "integrity": "sha256:heat-demo",
+      "cache_scope": "agent"
+    },
+    {
+      "node_id": "bridge_temperature",
+      "operator_id": "bridge.temperature_field_to_thermo_quad_2d",
+      "package_ref": "kyuubiki://operators/bridge.temperature_field_to_thermo_quad_2d",
+      "version": "1.0.0",
+      "integrity": "sha256:bridge-demo",
+      "cache_scope": "agent"
+    },
+    {
+      "node_id": "solve_thermo",
+      "operator_id": "solve.thermal_plane_quad_2d",
+      "package_ref": "kyuubiki://operators/solve.thermal_plane_quad_2d",
+      "version": "1.0.0",
+      "integrity": "sha256:thermo-demo",
+      "cache_scope": "agent"
+    }
+  ],
+  "placement_tags": ["mesh-enabled"],
+  "required_capabilities": ["artifact-cache", "dataset-contract-v1"],
   "nodes": [
     {
       "id": "heat_model",
@@ -95,6 +127,8 @@
       "kind": "solve",
       "operator_id": "solve.heat_plane_quad_2d",
       "name": "Solve heat quad",
+      "placement_tags": ["cpu-preferred"],
+      "required_capabilities": ["solver.heat"],
       "inputs": [
         {
           "id": "model",
@@ -115,6 +149,8 @@
       "kind": "transform",
       "operator_id": "bridge.temperature_field_to_thermo_quad_2d",
       "name": "Bridge temperature field",
+      "placement_tags": ["bridge-runtime"],
+      "required_capabilities": ["field-transform"],
       "inputs": [
         {
           "id": "heat_result",
@@ -135,6 +171,8 @@
       "kind": "solve",
       "operator_id": "solve.thermal_plane_quad_2d",
       "name": "Solve thermo-mechanical quad",
+      "placement_tags": ["gpu-preferred"],
+      "required_capabilities": ["solver.thermal"],
       "inputs": [
         {
           "id": "model",

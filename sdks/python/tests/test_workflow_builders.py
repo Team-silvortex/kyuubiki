@@ -8,9 +8,11 @@ from kyuubiki_sdk import (
     build_workflow_axis,
     build_workflow_dataset_contract,
     build_workflow_dataset_value,
+    build_workflow_defaults,
     build_workflow_edge,
     build_workflow_graph,
     build_workflow_node,
+    build_workflow_operator_fetch_entry,
     build_workflow_port,
     build_workflow_schema_ref,
     build_workflow_shape,
@@ -52,6 +54,26 @@ class WorkflowBuilderTest(unittest.TestCase):
             entry_nodes=["input"],
             output_nodes=["output"],
             dataset_contract=dataset_contract,
+            defaults=build_workflow_defaults(
+                cache_policy="cached",
+                orchestrated=False,
+                dispatch_policy="central_fetch",
+                placement_tags=["cpu"],
+                required_capabilities=["solver.thermal"],
+            ),
+            dispatch_policy="central_fetch",
+            operator_fetch_plan=[
+                build_workflow_operator_fetch_entry(
+                    "solve",
+                    operator_id="solve.demo",
+                    package_ref="kyuubiki://operators/solve.demo",
+                    version="1.0.0",
+                    integrity="sha256:demo",
+                    cache_scope="agent",
+                )
+            ],
+            placement_tags=["mesh-enabled"],
+            required_capabilities=["artifact-cache"],
             nodes=[
                 build_workflow_node(
                     "input",
@@ -65,6 +87,8 @@ class WorkflowBuilderTest(unittest.TestCase):
                     operator_id="solve.demo",
                     inputs=[build_workflow_port("case", artifact_type="study_model/demo", dataset_value="thermal_case")],
                     outputs=[build_workflow_port("result", artifact_type="result/demo", dataset_value="thermal_result")],
+                    placement_tags=["gpu-preferred"],
+                    required_capabilities=["solver.thermal"],
                 ),
                 build_workflow_node(
                     "output",
@@ -80,6 +104,9 @@ class WorkflowBuilderTest(unittest.TestCase):
         )
         self.assertEqual(graph["schema_version"], WORKFLOW_GRAPH_SCHEMA_VERSION)
         self.assertEqual(len(graph["edges"]), 2)
+        self.assertEqual(graph["dispatch_policy"], "central_fetch")
+        self.assertFalse(graph["defaults"]["orchestrated"])
+        self.assertEqual(graph["operator_fetch_plan"][0]["node_id"], "solve")
 
 
 if __name__ == "__main__":

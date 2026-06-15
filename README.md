@@ -67,6 +67,10 @@ The monorepo is intentionally split by responsibility:
 
 Start here if you need orientation:
 
+- [docs/book.html](docs/book.html)
+  Single-entry HTML book for understanding the whole project before deep diving.
+- [docs/book-manifest.json](docs/book-manifest.json)
+  Machine-readable chapter and reading-path manifest for assistants and tooling.
 - [docs/README.md](docs/README.md)
   Full current documentation map.
 - [docs/current-line.md](docs/current-line.md)

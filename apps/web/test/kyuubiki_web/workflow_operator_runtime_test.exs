@@ -6,6 +6,21 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
   alias KyuubikiWeb.WorkflowOperatorRuntime
 
   defmodule StubSolveClient do
+    def request(method, payload, _on_progress, opts) do
+      send(self(), {:solve_request, method, payload, opts})
+
+      case method do
+        "solve_electrostatic_bar_1d" ->
+          {:ok, %{"solver" => "electrostatic_bar_1d", "payload" => payload}}
+
+        "solve_heat_plane_triangle_2d" ->
+          {:ok, %{"solver" => "heat_plane_triangle_2d", "payload" => payload}}
+
+        "solve_frame_3d" ->
+          {:ok, %{"solver" => "frame_3d", "payload" => payload}}
+      end
+    end
+
     def solve_electrostatic_bar_1d(payload),
       do: {:ok, %{"solver" => "electrostatic_bar_1d", "payload" => payload}}
 
@@ -53,6 +68,24 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
              WorkflowOperatorRuntime.run_solve_operator("solve.unknown", %{})
   end
 
+  test "forwards workflow node routing constraints into the solve runtime client" do
+    assert {:ok, %{"solver" => "heat_plane_triangle_2d", "payload" => %{"model" => 2}}} =
+             WorkflowOperatorRuntime.run_solve_operator(
+               "solve.heat_plane_triangle_2d",
+               %{"model" => 2},
+               %{
+                 "required_capabilities" => ["solver_rpc"],
+                 "placement_tags" => ["thermal", "mesh", "triangle"]
+               }
+             )
+
+    assert_receive {:solve_request, "solve_heat_plane_triangle_2d", %{"model" => 2},
+                    [
+                      required_capabilities: ["solver_rpc"],
+                      placement_tags: ["thermal", "mesh", "triangle"]
+                    ]}
+  end
+
   test "catalog exposes newly wired workflow solve operators" do
     operators = WorkflowOperatorCatalog.list() |> Enum.map(& &1["id"]) |> MapSet.new()
 
@@ -82,17 +115,19 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     {:ok, %{"operator" => triangle_bridge}} =
       WorkflowOperatorCatalog.fetch("bridge.temperature_field_to_thermo_triangle_2d")
 
-    assert quad_bridge["inputs"] |> hd() |> Map.take(["id", "artifact_type", "dataset_value"]) == %{
-             "id" => "heat_result",
-             "artifact_type" => "result/heat_plane_quad_2d",
-             "dataset_value" => "heat_result"
-           }
+    assert quad_bridge["inputs"] |> hd() |> Map.take(["id", "artifact_type", "dataset_value"]) ==
+             %{
+               "id" => "heat_result",
+               "artifact_type" => "result/heat_plane_quad_2d",
+               "dataset_value" => "heat_result"
+             }
 
-    assert quad_bridge["outputs"] |> hd() |> Map.take(["id", "artifact_type", "dataset_value"]) == %{
-             "id" => "thermo_model",
-             "artifact_type" => "study_model/thermal_plane_quad_2d",
-             "dataset_value" => "thermo_model"
-           }
+    assert quad_bridge["outputs"] |> hd() |> Map.take(["id", "artifact_type", "dataset_value"]) ==
+             %{
+               "id" => "thermo_model",
+               "artifact_type" => "study_model/thermal_plane_quad_2d",
+               "dataset_value" => "thermo_model"
+             }
 
     assert triangle_bridge["inputs"] |> hd() |> Map.fetch!("artifact_type") ==
              "result/heat_plane_triangle_2d"
@@ -388,8 +423,20 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
         %{"id" => "n2", "temperature" => 80.0, "heat_load" => -5.0}
       ],
       "elements" => [
-        %{"id" => "e0", "temperature_gradient_x" => 3.0, "temperature_gradient_y" => 4.0, "heat_flux_x" => -6.0, "heat_flux_y" => 8.0},
-        %{"id" => "e1", "temperature_gradient_x" => 0.0, "temperature_gradient_y" => 12.0, "heat_flux_x" => 5.0, "heat_flux_y" => 12.0}
+        %{
+          "id" => "e0",
+          "temperature_gradient_x" => 3.0,
+          "temperature_gradient_y" => 4.0,
+          "heat_flux_x" => -6.0,
+          "heat_flux_y" => 8.0
+        },
+        %{
+          "id" => "e1",
+          "temperature_gradient_x" => 0.0,
+          "temperature_gradient_y" => 12.0,
+          "heat_flux_x" => 5.0,
+          "heat_flux_y" => 12.0
+        }
       ]
     }
 
@@ -414,9 +461,24 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
   test "extracts dedicated thermo-mechanical diagnostics from a structural thermal result" do
     payload = %{
       "nodes" => [
-        %{"id" => "n0", "temperature_delta" => 0.0, "displacement_x" => 0.0, "displacement_y" => 0.0},
-        %{"id" => "n1", "temperature_delta" => 20.0, "displacement_x" => 3.0, "displacement_y" => 4.0},
-        %{"id" => "n2", "temperature_delta" => 35.0, "displacement_x" => 6.0, "displacement_y" => 8.0}
+        %{
+          "id" => "n0",
+          "temperature_delta" => 0.0,
+          "displacement_x" => 0.0,
+          "displacement_y" => 0.0
+        },
+        %{
+          "id" => "n1",
+          "temperature_delta" => 20.0,
+          "displacement_x" => 3.0,
+          "displacement_y" => 4.0
+        },
+        %{
+          "id" => "n2",
+          "temperature_delta" => 35.0,
+          "displacement_x" => 6.0,
+          "displacement_y" => 8.0
+        }
       ],
       "elements" => [
         %{"id" => "e0", "von_mises_stress" => 120.0},
@@ -453,8 +515,19 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
                payload,
                %{
                  "rules" => [
-                   %{"field" => "thermal_temperature_max", "threshold" => 100.0, "severity" => "warn", "label" => "temperature ceiling"},
-                   %{"field" => "thermo_peak_stress", "threshold" => 180.0, "comparison" => "gt", "severity" => "block", "label" => "stress ceiling"}
+                   %{
+                     "field" => "thermal_temperature_max",
+                     "threshold" => 100.0,
+                     "severity" => "warn",
+                     "label" => "temperature ceiling"
+                   },
+                   %{
+                     "field" => "thermo_peak_stress",
+                     "threshold" => 180.0,
+                     "comparison" => "gt",
+                     "severity" => "block",
+                     "label" => "stress ceiling"
+                   }
                  ]
                }
              )
@@ -489,14 +562,32 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
                "transform.benchmark_coupled_heat_pair",
                payload,
                %{
-               "left_label" => "baseline",
-                "right_label" => "candidate",
-                "criteria" => [
-                  %{"field" => "temperature_vs_delta", "left_field" => "thermal_temperature_max", "right_field" => "thermo_temperature_delta_max", "goal" => "min", "weight" => 2.0},
-                  %{"field" => "loaded_vs_heated_nodes", "left_field" => "thermal_loaded_node_count", "right_field" => "thermo_heated_node_count", "goal" => "min", "weight" => 1.0},
-                  %{"field" => "flux_vs_stress", "left_field" => "thermal_peak_flux_magnitude", "right_field" => "thermo_peak_stress", "goal" => "min", "weight" => 3.0}
-                ]
-              }
+                 "left_label" => "baseline",
+                 "right_label" => "candidate",
+                 "criteria" => [
+                   %{
+                     "field" => "temperature_vs_delta",
+                     "left_field" => "thermal_temperature_max",
+                     "right_field" => "thermo_temperature_delta_max",
+                     "goal" => "min",
+                     "weight" => 2.0
+                   },
+                   %{
+                     "field" => "loaded_vs_heated_nodes",
+                     "left_field" => "thermal_loaded_node_count",
+                     "right_field" => "thermo_heated_node_count",
+                     "goal" => "min",
+                     "weight" => 1.0
+                   },
+                   %{
+                     "field" => "flux_vs_stress",
+                     "left_field" => "thermal_peak_flux_magnitude",
+                     "right_field" => "thermo_peak_stress",
+                     "goal" => "min",
+                     "weight" => 3.0
+                   }
+                 ]
+               }
              )
 
     assert benchmark["baseline_score"] == 3.0

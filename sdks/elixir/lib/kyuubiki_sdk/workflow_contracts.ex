@@ -10,6 +10,7 @@ defmodule KyuubikiSdk.WorkflowContracts do
   @node_kinds ~w(input solve transform extract export condition output)
   @cardinalities ~w(one many)
   @operator_node_kinds ~w(solve transform extract export condition)
+  @dispatch_policies ~w(orchestra_only central_fetch direct_mesh local_only)
 
   def workflow_dataset_schema_version, do: @workflow_dataset_schema_version
   def workflow_graph_schema_version, do: @workflow_graph_schema_version
@@ -56,6 +57,10 @@ defmodule KyuubikiSdk.WorkflowContracts do
       |> optional_list(graph, "output_nodes", "graph")
       |> require_list(graph, "nodes", "graph", 1)
       |> require_list(graph, "edges", "graph", 0)
+      |> validate_enum(Map.get(graph, "dispatch_policy"), @dispatch_policies, "graph.dispatch_policy")
+      |> validate_string_list(Map.get(graph, "placement_tags"), "graph.placement_tags")
+      |> validate_string_list(Map.get(graph, "required_capabilities"), "graph.required_capabilities")
+      |> validate_operator_fetch_plan(Map.get(graph, "operator_fetch_plan"), "graph.operator_fetch_plan")
       |> validate_defaults(Map.get(graph, "defaults"))
 
     {node_errors, node_ids, input_ports, output_ports} = validate_nodes(Map.get(graph, "nodes", []), dataset_ids)
@@ -82,6 +87,8 @@ defmodule KyuubikiSdk.WorkflowContracts do
           |> optional_string(node, "description", path)
           |> validate_node_config(Map.get(node, "config"), "#{path}.config")
           |> validate_cache_policy(Map.get(node, "cache_policy"), "#{path}.cache_policy")
+          |> validate_string_list(Map.get(node, "placement_tags"), "#{path}.placement_tags")
+          |> validate_string_list(Map.get(node, "required_capabilities"), "#{path}.required_capabilities")
           |> require_list(node, "inputs", path, 0)
           |> require_list(node, "outputs", path, 0)
           |> require_operator_id(node, path)
@@ -272,6 +279,9 @@ defmodule KyuubikiSdk.WorkflowContracts do
     errors
     |> validate_cache_policy(Map.get(defaults, "cache_policy"), "graph.defaults.cache_policy")
     |> validate_boolean(Map.get(defaults, "orchestrated"), "graph.defaults.orchestrated")
+    |> validate_enum(Map.get(defaults, "dispatch_policy"), @dispatch_policies, "graph.defaults.dispatch_policy")
+    |> validate_string_list(Map.get(defaults, "placement_tags"), "graph.defaults.placement_tags")
+    |> validate_string_list(Map.get(defaults, "required_capabilities"), "graph.defaults.required_capabilities")
   end
 
   defp validate_defaults(errors, _defaults), do: errors ++ ["graph.defaults must be an object"]
@@ -305,6 +315,40 @@ defmodule KyuubikiSdk.WorkflowContracts do
   end
 
   defp validate_named_node_refs(_node_ids, _known_ids, path), do: ["#{path} must be a list"]
+
+  defp validate_operator_fetch_plan(errors, nil, _path), do: errors
+
+  defp validate_operator_fetch_plan(errors, plan, path) when is_list(plan) do
+    Enum.with_index(plan)
+    |> Enum.reduce(errors, fn {entry, index}, acc ->
+      entry_path = "#{path}[#{index}]"
+
+      if is_map(entry) do
+        acc
+        |> require_string(entry, "node_id", entry_path)
+        |> require_string(entry, "operator_id", entry_path)
+        |> optional_string(entry, "package_ref", entry_path)
+        |> optional_string(entry, "version", entry_path)
+        |> optional_string(entry, "integrity", entry_path)
+        |> optional_string(entry, "cache_scope", entry_path)
+      else
+        acc ++ ["#{entry_path} must be an object"]
+      end
+    end)
+  end
+
+  defp validate_operator_fetch_plan(errors, _plan, path), do: errors ++ ["#{path} must be a list"]
+
+  defp validate_string_list(errors, nil, _path), do: errors
+
+  defp validate_string_list(errors, values, path) when is_list(values) do
+    Enum.with_index(values)
+    |> Enum.reduce(errors, fn {value, index}, acc ->
+      if present_string?(value), do: acc, else: acc ++ ["#{path}[#{index}] must be a non-empty string"]
+    end)
+  end
+
+  defp validate_string_list(errors, _values, path), do: errors ++ ["#{path} must be a list"]
 
   defp validate_node_port_ref(nil, path), do: {["#{path} must be an object"], nil}
 

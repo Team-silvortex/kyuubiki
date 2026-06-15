@@ -6,6 +6,12 @@ from typing import Any
 
 from .errors import KyuubikiSdkError, classify_error
 from .session import KyuubikiSession
+from .workflow_results import (
+    build_workflow_output_manifest,
+    normalize_workflow_progression,
+    normalize_workflow_runtime,
+    validate_workflow_result_against_graph,
+)
 
 
 @dataclass(frozen=True)
@@ -35,16 +41,88 @@ class KyuubikiAgentClient:
             poll_interval_s=poll_interval_s,
             timeout_s=timeout_s,
         )
+        return self._build_run_outcome(outcome, include_result=include_result)
+
+    def run_workflow_catalog(
+        self,
+        workflow_id: str,
+        input_artifacts: dict[str, Any] | None = None,
+        *,
+        graph: dict[str, Any] | None = None,
+        poll_interval_s: float = 1.0,
+        timeout_s: float = 300.0,
+        include_result: bool = True,
+    ) -> dict[str, Any]:
+        resolved_graph = graph or self._fetch_workflow_catalog_graph(workflow_id)
+        outcome = self.session.submit_workflow_catalog_and_wait(
+            workflow_id,
+            input_artifacts,
+            poll_interval_s=poll_interval_s,
+            timeout_s=timeout_s,
+        )
+        return self._build_run_outcome(
+            outcome,
+            include_result=include_result,
+            workflow_graph=resolved_graph,
+        )
+
+    def run_workflow_graph(
+        self,
+        graph: dict[str, Any],
+        input_artifacts: dict[str, Any] | None = None,
+        *,
+        poll_interval_s: float = 1.0,
+        timeout_s: float = 300.0,
+        include_result: bool = True,
+    ) -> dict[str, Any]:
+        outcome = self.session.submit_workflow_graph_and_wait(
+            graph,
+            input_artifacts,
+            poll_interval_s=poll_interval_s,
+            timeout_s=timeout_s,
+        )
+        return self._build_run_outcome(
+            outcome,
+            include_result=include_result,
+            workflow_graph=graph,
+        )
+
+    def _build_run_outcome(
+        self,
+        outcome: dict[str, Any],
+        *,
+        include_result: bool,
+        workflow_graph: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         terminal = outcome["terminal"]
         job = terminal.get("job", {})
         result = None
+        output_manifest = None
+        validated_outputs = None
+        workflow_runtime = None
+        workflow_progression = None
         if include_result and job.get("status") == "completed" and self.session.control_plane is not None:
             result = self.session.control_plane.fetch_result(job["job_id"])
+            workflow_runtime = normalize_workflow_runtime(result)
+            workflow_progression = normalize_workflow_progression(
+                outcome["history"],
+                result,
+            )
+            if workflow_graph is not None:
+                output_manifest = build_workflow_output_manifest(workflow_graph)
+                validated_outputs = validate_workflow_result_against_graph(
+                    workflow_graph,
+                    result,
+                )
         return {
             "submitted": outcome["submitted"],
             "terminal": terminal,
             "history": outcome["history"],
             "result": result,
+            "workflow_runtime": workflow_runtime,
+            "workflow_progression": workflow_progression,
+            "output_manifest": output_manifest,
+            "validated_outputs": validated_outputs,
         }
 
     def fetch_job_bundle(self, job_id: str, *, include_result: bool = True) -> dict[str, Any]:
@@ -160,3 +238,12 @@ class KyuubikiAgentClient:
             return "pending"
 
         return "unknown"
+
+    def _fetch_workflow_catalog_graph(self, workflow_id: str) -> dict[str, Any] | None:
+        if self.session.control_plane is None:
+            return None
+        descriptor = self.session.control_plane.fetch_workflow_catalog_workflow(workflow_id)
+        workflow = descriptor.get("workflow")
+        if isinstance(workflow, dict) and isinstance(workflow.get("graph"), dict):
+            return workflow["graph"]
+        return None

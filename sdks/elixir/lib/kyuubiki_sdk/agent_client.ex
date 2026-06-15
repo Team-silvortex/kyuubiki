@@ -3,6 +3,7 @@ defmodule KyuubikiSdk.AgentClient do
 
   alias KyuubikiSdk.Error
   alias KyuubikiSdk.Session
+  alias KyuubikiSdk.WorkflowResults
 
   def run_study(session, solve_kind, payload, opts \\ []) do
     poll_interval = Keyword.get(opts, :poll_interval, 1_000)
@@ -17,11 +18,42 @@ defmodule KyuubikiSdk.AgentClient do
              poll_interval: poll_interval,
              timeout: timeout
            ) do
-      terminal = outcome[:terminal]
-      submitted = outcome[:submitted]
-      history = outcome[:history]
-      result = maybe_fetch_result(session, terminal, include_result)
-      {:ok, %{submitted: submitted, terminal: terminal, history: history, result: result}}
+      {:ok, build_run_outcome(session, outcome, include_result)}
+    end
+  end
+
+  def run_workflow_catalog(session, workflow_id, input_artifacts \\ %{}, opts \\ []) do
+    poll_interval = Keyword.get(opts, :poll_interval, 1_000)
+    timeout = Keyword.get(opts, :timeout, 300_000)
+    include_result = Keyword.get(opts, :include_result, true)
+    graph = Keyword.get(opts, :graph) || fetch_workflow_catalog_graph(session, workflow_id)
+
+    with {:ok, outcome} <-
+           Session.submit_workflow_catalog_and_wait(
+             session,
+             workflow_id,
+             input_artifacts,
+             poll_interval: poll_interval,
+             timeout: timeout
+           ) do
+      {:ok, build_run_outcome(session, outcome, include_result, graph)}
+    end
+  end
+
+  def run_workflow_graph(session, graph, input_artifacts \\ %{}, opts \\ []) do
+    poll_interval = Keyword.get(opts, :poll_interval, 1_000)
+    timeout = Keyword.get(opts, :timeout, 300_000)
+    include_result = Keyword.get(opts, :include_result, true)
+
+    with {:ok, outcome} <-
+           Session.submit_workflow_graph_and_wait(
+             session,
+             graph,
+             input_artifacts,
+             poll_interval: poll_interval,
+             timeout: timeout
+           ) do
+      {:ok, build_run_outcome(session, outcome, include_result, graph)}
     end
   end
 
@@ -130,8 +162,69 @@ defmodule KyuubikiSdk.AgentClient do
 
   defp maybe_fetch_result(_session, _terminal, _include_result), do: nil
 
+  defp build_run_outcome(session, outcome, include_result, workflow_graph \\ nil) do
+    terminal = outcome[:terminal]
+    submitted = outcome[:submitted]
+    history = outcome[:history]
+    result = maybe_fetch_result(session, terminal, include_result)
+
+    {output_manifest, validated_outputs} =
+      case {workflow_graph, result} do
+        {graph, payload} when is_map(graph) and is_map(payload) ->
+          case {WorkflowResults.build_output_manifest(graph), WorkflowResults.validate_result_against_graph(graph, payload)} do
+            {{:ok, manifest}, {:ok, validated}} -> {manifest, validated}
+            _ -> {nil, nil}
+          end
+
+        _ ->
+          {nil, nil}
+      end
+
+    workflow_runtime =
+      case result do
+        payload when is_map(payload) ->
+          case WorkflowResults.normalize_runtime(payload) do
+            {:ok, runtime} -> runtime
+            _ -> nil
+          end
+
+        _ ->
+          nil
+      end
+
+    workflow_progression =
+      case WorkflowResults.normalize_progression(history, result) do
+        {:ok, progression} -> progression
+        _ -> nil
+      end
+
+    %{
+      submitted: submitted,
+      terminal: terminal,
+      history: history,
+      result: result,
+      workflow_runtime: workflow_runtime,
+      workflow_progression: workflow_progression,
+      output_manifest: output_manifest,
+      validated_outputs: validated_outputs
+    }
+  end
+
   defp fetch_control_plane(%Session{control_plane: nil}), do: {:error, KyuubikiSdk.Error.transport("control plane client is not configured")}
   defp fetch_control_plane(%Session{control_plane: client}), do: {:ok, client}
+
+  defp fetch_workflow_catalog_graph(session, workflow_id) do
+    case fetch_control_plane(session) do
+      {:ok, client} ->
+        case KyuubikiSdk.ControlPlaneClient.fetch_workflow_catalog_workflow(client, workflow_id) do
+          {:ok, %{"workflow" => %{"graph" => graph}}} when is_map(graph) -> graph
+          _ -> nil
+        end
+
+      _ ->
+        nil
+    end
+  end
 
   defp do_run_study_with_retry(session, solve_kind, payload, max_attempts, retry_on, backoff, backoff_multiplier, run_opts, attempt, attempts) do
     case run_study(session, solve_kind, payload, run_opts) do

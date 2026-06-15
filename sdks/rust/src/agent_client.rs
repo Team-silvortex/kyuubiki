@@ -1,4 +1,8 @@
-use crate::{KyuubikiSession, SdkError, SdkResult};
+use crate::{
+    build_workflow_output_manifest, normalize_workflow_progression, normalize_workflow_runtime, validate_workflow_result_against_graph,
+    KyuubikiSession, SdkError, SdkResult, WorkflowOutputManifest, WorkflowProgression, WorkflowRuntimeSnapshot,
+    WorkflowValidatedArtifacts,
+};
 use serde_json::Value;
 use std::time::Duration;
 
@@ -30,6 +34,10 @@ pub struct StudyRunOutcome {
     pub terminal: Value,
     pub history: Vec<Value>,
     pub result: Option<Value>,
+    pub workflow_runtime: Option<WorkflowRuntimeSnapshot>,
+    pub workflow_progression: Option<WorkflowProgression>,
+    pub output_manifest: Option<WorkflowOutputManifest>,
+    pub validated_outputs: Option<WorkflowValidatedArtifacts>,
 }
 
 pub struct RetriedStudyRunOutcome {
@@ -60,8 +68,65 @@ impl KyuubikiAgentClient {
             .get("job")
             .and_then(|job| job.get("job_id"))
             .and_then(Value::as_str)
-            .ok_or_else(|| SdkError::Transport("submit response did not include job_id".into()))?;
-        let waited = self.session.wait_for_job(job_id, poll_interval, timeout)?;
+            .ok_or_else(|| SdkError::Transport("submit response did not include job_id".into()))?
+            .to_string();
+        let waited = self.session.wait_for_job(&job_id, poll_interval, timeout)?;
+        self.build_run_outcome(submitted, &job_id, waited, include_result, None)
+    }
+
+    pub fn run_workflow_catalog(
+        &self,
+        workflow_id: &str,
+        input_artifacts: &Value,
+        workflow_graph: Option<&Value>,
+        poll_interval: Duration,
+        timeout: Duration,
+        include_result: bool,
+    ) -> SdkResult<StudyRunOutcome> {
+        let fetched_graph = if workflow_graph.is_none() {
+            self.fetch_workflow_catalog_graph(workflow_id)?
+        } else {
+            None
+        };
+        let resolved_graph = workflow_graph.or(fetched_graph.as_ref());
+        let submitted = self.session.submit_workflow_catalog_job(workflow_id, input_artifacts)?;
+        let job_id = submitted
+            .get("job")
+            .and_then(|job| job.get("job_id"))
+            .and_then(Value::as_str)
+            .ok_or_else(|| SdkError::Transport("submit response did not include job_id".into()))?
+            .to_string();
+        let waited = self.session.wait_for_job(&job_id, poll_interval, timeout)?;
+        self.build_run_outcome(submitted, &job_id, waited, include_result, resolved_graph)
+    }
+
+    pub fn run_workflow_graph(
+        &self,
+        graph: &Value,
+        input_artifacts: &Value,
+        poll_interval: Duration,
+        timeout: Duration,
+        include_result: bool,
+    ) -> SdkResult<StudyRunOutcome> {
+        let submitted = self.session.submit_workflow_graph_job(graph, input_artifacts)?;
+        let job_id = submitted
+            .get("job")
+            .and_then(|job| job.get("job_id"))
+            .and_then(Value::as_str)
+            .ok_or_else(|| SdkError::Transport("submit response did not include job_id".into()))?
+            .to_string();
+        let waited = self.session.wait_for_job(&job_id, poll_interval, timeout)?;
+        self.build_run_outcome(submitted, &job_id, waited, include_result, Some(graph))
+    }
+
+    fn build_run_outcome(
+        &self,
+        submitted: Value,
+        job_id: &str,
+        waited: crate::session::JobWaitOutcome,
+        include_result: bool,
+        workflow_graph: Option<&Value>,
+    ) -> SdkResult<StudyRunOutcome> {
         let result = if include_result {
             match waited
                 .terminal
@@ -75,12 +140,33 @@ impl KyuubikiAgentClient {
         } else {
             None
         };
+        let workflow_runtime = match result.as_ref() {
+            Some(result) => Some(normalize_workflow_runtime(result)?),
+            None => None,
+        };
+        let workflow_progression = Some(normalize_workflow_progression(
+            &waited.history,
+            result.as_ref(),
+        )?);
+        let (output_manifest, validated_outputs) = match (workflow_graph, result.as_ref()) {
+            (Some(graph), Some(result)) => {
+                let graph = serde_json::from_value(graph.clone())?;
+                let manifest = build_workflow_output_manifest(&graph)?;
+                let validated = validate_workflow_result_against_graph(&graph, result)?;
+                (Some(manifest), Some(validated))
+            }
+            _ => (None, None),
+        };
 
         Ok(StudyRunOutcome {
             submitted,
             terminal: waited.terminal,
             history: waited.history,
             result,
+            workflow_runtime,
+            workflow_progression,
+            output_manifest,
+            validated_outputs,
         })
     }
 
@@ -204,6 +290,18 @@ impl KyuubikiAgentClient {
             Err(SdkError::HttpStatus { status_code: 404, .. }) => Ok(None),
             Err(error) => Err(error),
         }
+    }
+
+    fn fetch_workflow_catalog_graph(&self, workflow_id: &str) -> SdkResult<Option<Value>> {
+        let control_plane = match self.session.control_plane.as_ref() {
+            Some(client) => client,
+            None => return Ok(None),
+        };
+        let descriptor = control_plane.fetch_workflow_catalog_workflow(workflow_id)?;
+        Ok(descriptor
+            .get("workflow")
+            .and_then(|workflow| workflow.get("graph"))
+            .cloned())
     }
 }
 

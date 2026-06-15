@@ -1,0 +1,140 @@
+{
+  "schema_version": "kyuubiki.docs-book/v1",
+  "title": "Kyuubiki Book",
+  "version_line": "tamamono 1.6.0",
+  "entry_html": "docs/book.html",
+  "purpose": "Single-entry documentation guide for humans and large models.",
+  "chapters": [
+    {
+      "id": "what-is-kyuubiki",
+      "title": "What Kyuubiki is",
+      "chapter_page": "docs/book-ch01-what-is-kyuubiki.html",
+      "summary": "Product surface map across Hub, Workbench, Installer, orchestrator, and Rust agents.",
+      "sources": [
+        "docs/system-overview.md",
+        "docs/app-runtime-boundaries.md",
+        "docs/hub-architecture.md"
+      ]
+    },
+    {
+      "id": "tamamono-line",
+      "title": "What tamamono 1.x is optimizing for",
+      "chapter_page": "docs/book-ch02-tamamono-line.html",
+      "summary": "Current-line posture and the trust-first philosophy for 1.x.",
+      "sources": [
+        "docs/current-line.md",
+        "docs/version-line.md",
+        "docs/tamamono-minor-lines.md"
+      ]
+    },
+    {
+      "id": "architecture-boundaries",
+      "title": "Hard architecture boundaries",
+      "chapter_page": "docs/book-ch03-architecture-boundaries.html",
+      "summary": "Role split and authority boundaries across desktop shells, orchestrator, and agents.",
+      "sources": [
+        "docs/app-runtime-boundaries.md",
+        "docs/agent-orchestrator-boundary.md",
+        "docs/headless-agent-contract.md",
+        "docs/architecture-red-lines.md"
+      ]
+    },
+    {
+      "id": "runtime-modes",
+      "title": "Runtime and deployment modes",
+      "chapter_page": "docs/book-ch04-runtime-modes.html",
+      "summary": "Supported deployment topologies and operator-facing runtime posture.",
+      "sources": [
+        "docs/operations.md",
+        "docs/packaging-and-deployment.md",
+        "docs/desktop-release-checklist.md"
+      ]
+    },
+    {
+      "id": "workflow-and-operators",
+      "title": "Workflow and operator philosophy",
+      "chapter_page": "docs/book-ch05-workflow-and-operators.html",
+      "summary": "Composite workflow direction, dataset contracts, and centralized operator ownership.",
+      "sources": [
+        "docs/workflow-graph.md",
+        "docs/workflow-dataset.md",
+        "docs/operator-library-centralization.md"
+      ]
+    },
+    {
+      "id": "sdk-surfaces",
+      "title": "SDK and automation surfaces",
+      "chapter_page": "docs/book-ch06-sdk-surfaces.html",
+      "summary": "Rust operator SDK, headless SDKs, and frontend-owned automation contract.",
+      "sources": [
+        "docs/operator-sdk.md",
+        "docs/headless-sdks.md",
+        "docs/ui-automation-contract.html",
+        "docs/headless-agent-contract.md"
+      ]
+    },
+    {
+      "id": "trust-and-safety",
+      "title": "Accuracy, trust, and release safety",
+      "chapter_page": "docs/book-ch07-trust-and-safety.html",
+      "summary": "Accuracy baselines, security rules, installation integrity, and update visibility.",
+      "sources": [
+        "docs/accuracy-plan.md",
+        "docs/accuracy-baselines.md",
+        "docs/security.md",
+        "docs/installation-integrity-contract.html",
+        "docs/update-catalog.html"
+      ]
+    },
+    {
+      "id": "reading-paths",
+      "title": "Reading paths by job",
+      "chapter_page": "docs/book-ch08-reading-paths.html",
+      "summary": "Role-based entrypoints for operators, engineers, release owners, and large-model integrators.",
+      "sources": [
+        "docs/book.html",
+        "docs/README.md",
+        "docs/book-manifest.json"
+      ]
+    }
+  ],
+  "reading_paths": {
+    "operator": [
+      "docs/current-line.md",
+      "docs/system-overview.md",
+      "docs/app-runtime-boundaries.md",
+      "docs/operations.md",
+      "docs/security.md"
+    ],
+    "frontend_engineer": [
+      "docs/philosophy.md",
+      "docs/frontend-style.md",
+      "docs/frontend-implementation.md",
+      "docs/ui-automation-contract.html",
+      "docs/rendering-roadmap.html"
+    ],
+    "runtime_engineer": [
+      "docs/system-overview.md",
+      "docs/agent-orchestrator-boundary.md",
+      "docs/headless-agent-contract.md",
+      "docs/protocols.md",
+      "docs/operations.md"
+    ],
+    "sdk_engineer": [
+      "docs/operator-sdk.md",
+      "docs/headless-sdks.md",
+      "docs/workflow-graph.md",
+      "docs/workflow-dataset.md",
+      "docs/protocols.md"
+    ],
+    "llm_integrator": [
+      "docs/book.html",
+      "docs/book-manifest.json",
+      "docs/system-overview.md",
+      "docs/app-runtime-boundaries.md",
+      "docs/protocols.md",
+      "docs/headless-sdks.md",
+      "docs/operator-sdk.md"
+    ]
+  }
+}

@@ -415,4 +415,36 @@ defmodule KyuubikiWeb.Playground.AgentClientTest do
     assert endpoint.cooldown_remaining_ms == 0
     assert endpoint.last_failure_reason == nil
   end
+
+  test "returns a clear routing error when no agent matches workflow execution constraints" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "reporter",
+          host: "127.0.0.1",
+          port: 5101,
+          role: "reporting",
+          tags: ["reporting"],
+          methods: ["export_summary_json"]
+        }
+      ]
+    )
+
+    AgentPool.reload()
+
+    assert {:error,
+            {:no_matching_agent,
+             %{
+               method: "solve_heat_plane_triangle_2d",
+               required_capabilities: ["solver_rpc"],
+               placement_tags: ["thermal", "mesh"]
+             }}} =
+             AgentClient.request_with_agent(
+               "solve_heat_plane_triangle_2d",
+               %{"model" => %{}},
+               fn _progress -> :ok end,
+               required_capabilities: ["solver_rpc"],
+               placement_tags: ["thermal", "mesh"]
+             )
+  end
 end

@@ -44,13 +44,18 @@ Each SDK follows the same split:
 - `Auth`
   Reusable header-based auth descriptor for control-plane clients
 - `AgentClient`
-  AI-oriented orchestration helper for run-study, job-bundle, and chunk-browse flows
+  AI-oriented orchestration helper for run-study, workflow-run, job-bundle, and chunk-browse flows
 
 Recent additions:
 
 - retry policies for transient study failures
 - explicit error-to-failure classification
 - auto-paged chunk iterators or streams for large result windows
+- broader solve-kind coverage across mechanical, thermal, thermo-mechanical,
+  and electrostatic families through one normalized SDK dispatch surface
+- workflow catalog and inline-graph runs lifted into the session and agent layers
+- catalog workflow descriptors can be fetched directly, and catalog runs can auto-resolve
+  their backing graph for output validation
 
 The current SDK cut focuses on the smallest useful headless surface plus a
 thin workflow layer:
@@ -60,11 +65,27 @@ thin workflow layer:
 - jobs/results/export CRUD through the control plane
 - workflow catalog discovery, operator discovery, and workflow job submission
 - workflow graph and workflow dataset contract validation helpers
+- distributed workflow execution hints through dispatch policy, operator fetch
+  plan, placement tags, and required capability fields
+- workflow output manifest extraction and result-contract validation helpers
 - solver job submission through the control plane
 - batch submit and terminal-state polling helpers
 - direct TCP RPC access to headless agents
 - structured transport / HTTP / RPC / timeout errors
 - JSON-first payloads that AI models can generate or inspect easily
+
+The current solve-kind dispatcher now covers:
+
+- `axial_bar_1d` / `bar_1d`
+- `thermal_bar_1d`, `heat_bar_1d`, `electrostatic_bar_1d`
+- `beam_1d`, `thermal_beam_1d`, `torsion_1d`
+- `spring_1d`, `spring_2d`, `spring_3d`
+- `truss_2d`, `thermal_truss_2d`, `truss_3d`, `thermal_truss_3d`
+- `frame_2d`, `thermal_frame_2d`, `frame_3d`, `thermal_frame_3d`
+- `plane_triangle_2d`, `heat_plane_triangle_2d`,
+  `thermal_plane_triangle_2d`, `electrostatic_plane_triangle_2d`
+- `plane_quad_2d`, `heat_plane_quad_2d`, `thermal_plane_quad_2d`,
+  `electrostatic_plane_quad_2d`
 
 These SDKs intentionally target the public protocol boundaries described in
 [`docs/protocols.md`](../docs/protocols.md), not

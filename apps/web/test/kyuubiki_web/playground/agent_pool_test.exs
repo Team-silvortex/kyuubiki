@@ -171,6 +171,76 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
            ]
   end
 
+  test "prefers endpoints whose declared capabilities and placement tags match workflow constraints" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "legacy-solver",
+          host: "127.0.0.1",
+          port: 5101
+        },
+        %{
+          id: "thermal-solver",
+          host: "127.0.0.1",
+          port: 5102,
+          role: "solver",
+          tags: ["thermal", "mesh"],
+          methods: ["solve_heat_plane_triangle_2d"],
+          capabilities: [
+            %{
+              id: "solver_rpc",
+              role: "solver",
+              methods: ["solve_heat_plane_triangle_2d"],
+              tags: ["thermal", "mesh"]
+            }
+          ]
+        },
+        %{
+          id: "mechanical-solver",
+          host: "127.0.0.1",
+          port: 5103,
+          role: "solver",
+          tags: ["mechanical"],
+          methods: ["solve_heat_plane_triangle_2d"]
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(
+             AgentPool.checkout_endpoints(
+               "solve_heat_plane_triangle_2d",
+               required_capabilities: ["solver_rpc"],
+               placement_tags: ["thermal", "mesh"]
+             ),
+             & &1.id
+           ) == ["thermal-solver", "legacy-solver"]
+  end
+
+  test "returns no endpoints when every typed agent explicitly mismatches workflow constraints" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "reporter",
+          host: "127.0.0.1",
+          port: 5101,
+          role: "reporting",
+          tags: ["reporting"],
+          methods: ["export_summary_json"]
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert AgentPool.checkout_endpoints(
+             "solve_heat_plane_triangle_2d",
+             required_capabilities: ["solver_rpc"],
+             placement_tags: ["thermal"]
+           ) == []
+  end
+
   test "deprioritizes cooling endpoints after reported failures and exposes cooldown state" do
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [

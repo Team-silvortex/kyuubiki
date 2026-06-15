@@ -54,6 +54,21 @@
     "defaults": {
       "$ref": "#/$defs/workflowDefaults"
     },
+    "dispatch_policy": {
+      "$ref": "#/$defs/workflowDispatchPolicy"
+    },
+    "operator_fetch_plan": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/operatorFetchEntry"
+      }
+    },
+    "placement_tags": {
+      "$ref": "#/$defs/stringTagList"
+    },
+    "required_capabilities": {
+      "$ref": "#/$defs/stringTagList"
+    },
     "nodes": {
       "type": "array",
       "minItems": 1,
@@ -79,6 +94,15 @@
         },
         "orchestrated": {
           "type": "boolean"
+        },
+        "dispatch_policy": {
+          "$ref": "#/$defs/workflowDispatchPolicy"
+        },
+        "placement_tags": {
+          "$ref": "#/$defs/stringTagList"
+        },
+        "required_capabilities": {
+          "$ref": "#/$defs/stringTagList"
         }
       }
     },
@@ -125,6 +149,12 @@
         "cache_policy": {
           "type": "string",
           "enum": ["ephemeral", "cached", "persisted"]
+        },
+        "placement_tags": {
+          "$ref": "#/$defs/stringTagList"
+        },
+        "required_capabilities": {
+          "$ref": "#/$defs/stringTagList"
         },
         "inputs": {
           "type": "array",
@@ -231,6 +261,56 @@
           "minLength": 1
         },
         "port": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workflowDispatchPolicy": {
+      "type": "string",
+      "enum": [
+        "orchestra_only",
+        "central_fetch",
+        "direct_mesh",
+        "local_only"
+      ]
+    },
+    "stringTagList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "operatorFetchEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "node_id",
+        "operator_id"
+      ],
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operator_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "package_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "integrity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cache_scope": {
           "type": "string",
           "minLength": 1
         }

@@ -5,6 +5,7 @@ use std::collections::{HashMap, HashSet};
 
 pub const WORKFLOW_DATASET_SCHEMA_VERSION: &str = "kyuubiki.workflow-dataset/v1";
 pub const WORKFLOW_GRAPH_SCHEMA_VERSION: &str = "kyuubiki.workflow-graph/v1";
+pub const WORKFLOW_DISPATCH_POLICIES: &[&str] = &["orchestra_only", "central_fetch", "direct_mesh", "local_only"];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowSchemaRef {
@@ -87,6 +88,10 @@ pub struct WorkflowGraphNode {
     pub config: Option<Value>,
     #[serde(default)]
     pub cache_policy: Option<String>,
+    #[serde(default)]
+    pub placement_tags: Vec<String>,
+    #[serde(default)]
+    pub required_capabilities: Vec<String>,
     pub inputs: Vec<WorkflowGraphPort>,
     pub outputs: Vec<WorkflowGraphPort>,
 }
@@ -113,6 +118,26 @@ pub struct WorkflowDefaults {
     pub cache_policy: Option<String>,
     #[serde(default)]
     pub orchestrated: Option<bool>,
+    #[serde(default)]
+    pub dispatch_policy: Option<String>,
+    #[serde(default)]
+    pub placement_tags: Vec<String>,
+    #[serde(default)]
+    pub required_capabilities: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkflowOperatorFetchEntry {
+    pub node_id: String,
+    pub operator_id: String,
+    #[serde(default)]
+    pub package_ref: Option<String>,
+    #[serde(default)]
+    pub version: Option<String>,
+    #[serde(default)]
+    pub integrity: Option<String>,
+    #[serde(default)]
+    pub cache_scope: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -130,6 +155,14 @@ pub struct WorkflowGraphDefinition {
     pub output_nodes: Vec<String>,
     #[serde(default)]
     pub defaults: Option<WorkflowDefaults>,
+    #[serde(default)]
+    pub dispatch_policy: Option<String>,
+    #[serde(default)]
+    pub operator_fetch_plan: Vec<WorkflowOperatorFetchEntry>,
+    #[serde(default)]
+    pub placement_tags: Vec<String>,
+    #[serde(default)]
+    pub required_capabilities: Vec<String>,
     pub nodes: Vec<WorkflowGraphNode>,
     pub edges: Vec<WorkflowGraphEdge>,
 }
@@ -199,6 +232,20 @@ impl WorkflowGraphDefinition {
             }
             None => HashSet::new(),
         };
+        validate_dispatch_policy(self.dispatch_policy.as_deref(), "graph.dispatch_policy", &mut errors);
+        validate_string_list(&self.placement_tags, "graph.placement_tags", &mut errors);
+        validate_string_list(&self.required_capabilities, "graph.required_capabilities", &mut errors);
+        validate_operator_fetch_plan(&self.operator_fetch_plan, "graph.operator_fetch_plan", &mut errors);
+        if let Some(defaults) = &self.defaults {
+            if let Some(cache_policy) = defaults.cache_policy.as_deref() {
+                if !matches!(cache_policy, "ephemeral" | "cached" | "persisted") {
+                    errors.push("graph.defaults.cache_policy is invalid".into());
+                }
+            }
+            validate_dispatch_policy(defaults.dispatch_policy.as_deref(), "graph.defaults.dispatch_policy", &mut errors);
+            validate_string_list(&defaults.placement_tags, "graph.defaults.placement_tags", &mut errors);
+            validate_string_list(&defaults.required_capabilities, "graph.defaults.required_capabilities", &mut errors);
+        }
         let mut node_ids = HashSet::new();
         let mut input_ports = HashMap::new();
         let mut output_ports = HashMap::new();
@@ -215,6 +262,8 @@ impl WorkflowGraphDefinition {
             if matches!(node.kind.as_str(), "solve" | "transform" | "extract" | "export" | "condition") {
                 require_option_string(node.operator_id.as_deref(), &format!("{path}.operator_id"), &mut errors);
             }
+            validate_string_list(&node.placement_tags, &format!("{path}.placement_tags"), &mut errors);
+            validate_string_list(&node.required_capabilities, &format!("{path}.required_capabilities"), &mut errors);
             collect_ports(&node.id, &node.inputs, &dataset_ids, &mut input_ports, &mut errors, &format!("{path}.inputs"));
             collect_ports(&node.id, &node.outputs, &dataset_ids, &mut output_ports, &mut errors, &format!("{path}.outputs"));
         }
@@ -313,5 +362,41 @@ fn require_option_string(value: Option<&str>, path: &str, errors: &mut Vec<Strin
     match value {
         Some(value) if !value.trim().is_empty() => {}
         _ => errors.push(format!("{path} must be a non-empty string")),
+    }
+}
+
+fn validate_dispatch_policy(value: Option<&str>, path: &str, errors: &mut Vec<String>) {
+    if let Some(value) = value {
+        if !WORKFLOW_DISPATCH_POLICIES.contains(&value) {
+            errors.push(format!("{path} must be one of {:?}", WORKFLOW_DISPATCH_POLICIES));
+        }
+    }
+}
+
+fn validate_string_list(values: &[String], path: &str, errors: &mut Vec<String>) {
+    for (index, value) in values.iter().enumerate() {
+        if value.trim().is_empty() {
+            errors.push(format!("{path}[{index}] must be a non-empty string"));
+        }
+    }
+}
+
+fn validate_operator_fetch_plan(entries: &[WorkflowOperatorFetchEntry], path: &str, errors: &mut Vec<String>) {
+    for (index, entry) in entries.iter().enumerate() {
+        let entry_path = format!("{path}[{index}]");
+        require_string(&entry.node_id, &format!("{entry_path}.node_id"), errors);
+        require_string(&entry.operator_id, &format!("{entry_path}.operator_id"), errors);
+        validate_optional_non_empty(entry.package_ref.as_deref(), &format!("{entry_path}.package_ref"), errors);
+        validate_optional_non_empty(entry.version.as_deref(), &format!("{entry_path}.version"), errors);
+        validate_optional_non_empty(entry.integrity.as_deref(), &format!("{entry_path}.integrity"), errors);
+        validate_optional_non_empty(entry.cache_scope.as_deref(), &format!("{entry_path}.cache_scope"), errors);
+    }
+}
+
+fn validate_optional_non_empty(value: Option<&str>, path: &str, errors: &mut Vec<String>) {
+    if let Some(value) = value {
+        if value.trim().is_empty() {
+            errors.push(format!("{path} must be a non-empty string"));
+        }
     }
 }

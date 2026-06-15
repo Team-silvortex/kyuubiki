@@ -50,17 +50,23 @@ impl KyuubikiSession {
             .control_plane
             .as_ref()
             .ok_or_else(|| SdkError::Transport("control plane client is not configured".into()))?;
+        control_plane.submit_fem_job(solve_kind, payload)
+    }
 
-        match normalize_kind(solve_kind) {
-            "bar_1d" => control_plane.create_axial_bar_job(payload),
-            "truss_2d" => control_plane.create_truss_2d_job(payload),
-            "truss_3d" => control_plane.create_truss_3d_job(payload),
-            "plane_triangle_2d" => control_plane.create_plane_triangle_2d_job(payload),
-            _ => Err(SdkError::Rpc {
-                message: format!("unsupported solve kind: {solve_kind}"),
-                code: None,
-            }),
-        }
+    pub fn submit_workflow_catalog_job(&self, workflow_id: &str, input_artifacts: &Value) -> SdkResult<Value> {
+        let control_plane = self
+            .control_plane
+            .as_ref()
+            .ok_or_else(|| SdkError::Transport("control plane client is not configured".into()))?;
+        control_plane.submit_workflow_catalog_job(workflow_id, input_artifacts)
+    }
+
+    pub fn submit_workflow_graph_job(&self, graph: &Value, input_artifacts: &Value) -> SdkResult<Value> {
+        let control_plane = self
+            .control_plane
+            .as_ref()
+            .ok_or_else(|| SdkError::Transport("control plane client is not configured".into()))?;
+        control_plane.submit_workflow_graph_job(graph, input_artifacts)
     }
 
     pub fn submit_jobs(&self, jobs: &[JobRequest]) -> SdkResult<Vec<Value>> {
@@ -77,20 +83,7 @@ impl KyuubikiSession {
                 message: "solver rpc client is not configured".into(),
                 code: None,
             })?;
-
-        let outcome = match normalize_kind(solve_kind) {
-            "bar_1d" => solver_rpc.solve_bar_1d(payload)?,
-            "truss_2d" => solver_rpc.solve_truss_2d(payload)?,
-            "truss_3d" => solver_rpc.solve_truss_3d(payload)?,
-            "plane_triangle_2d" => solver_rpc.solve_plane_triangle_2d(payload)?,
-            _ => {
-                return Err(SdkError::Rpc {
-                    message: format!("unsupported solve kind: {solve_kind}"),
-                    code: None,
-                })
-            }
-        };
-
+        let outcome = solver_rpc.solve_study(solve_kind, payload)?;
         Ok(outcome.result)
     }
 
@@ -144,14 +137,36 @@ impl KyuubikiSession {
 
         self.wait_for_job(job_id, poll_interval, timeout)
     }
-}
 
-fn normalize_kind(kind: &str) -> &str {
-    match kind {
-        "bar_1d" => "bar_1d",
-        "truss_2d" => "truss_2d",
-        "truss_3d" => "truss_3d",
-        "plane_triangle_2d" => "plane_triangle_2d",
-        other => other,
+    pub fn submit_workflow_catalog_and_wait(
+        &self,
+        workflow_id: &str,
+        input_artifacts: &Value,
+        poll_interval: Duration,
+        timeout: Duration,
+    ) -> SdkResult<JobWaitOutcome> {
+        let submitted = self.submit_workflow_catalog_job(workflow_id, input_artifacts)?;
+        let job_id = submitted
+            .get("job")
+            .and_then(|job| job.get("job_id"))
+            .and_then(Value::as_str)
+            .ok_or_else(|| SdkError::Transport("submit response did not include job_id".into()))?;
+        self.wait_for_job(job_id, poll_interval, timeout)
+    }
+
+    pub fn submit_workflow_graph_and_wait(
+        &self,
+        graph: &Value,
+        input_artifacts: &Value,
+        poll_interval: Duration,
+        timeout: Duration,
+    ) -> SdkResult<JobWaitOutcome> {
+        let submitted = self.submit_workflow_graph_job(graph, input_artifacts)?;
+        let job_id = submitted
+            .get("job")
+            .and_then(|job| job.get("job_id"))
+            .and_then(Value::as_str)
+            .ok_or_else(|| SdkError::Transport("submit response did not include job_id".into()))?;
+        self.wait_for_job(job_id, poll_interval, timeout)
     }
 }

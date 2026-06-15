@@ -49,6 +49,18 @@ defmodule KyuubikiSdk.Session do
     end
   end
 
+  def submit_workflow_catalog_job(session, workflow_id, input_artifacts \\ %{}) do
+    with {:ok, client} <- fetch_control_plane(session) do
+      ControlPlaneClient.submit_workflow_catalog_job(client, workflow_id, input_artifacts)
+    end
+  end
+
+  def submit_workflow_graph_job(session, graph, input_artifacts \\ %{}) do
+    with {:ok, client} <- fetch_control_plane(session) do
+      ControlPlaneClient.submit_workflow_graph_job(client, graph, input_artifacts)
+    end
+  end
+
   def submit_jobs(session, jobs) when is_list(jobs) do
     Enum.reduce_while(jobs, {:ok, []}, fn %{"solve_kind" => solve_kind, "payload" => payload}, {:ok, acc} ->
       case submit_job(session, solve_kind, payload) do
@@ -63,8 +75,9 @@ defmodule KyuubikiSdk.Session do
   end
 
   def solve_direct(session, solve_kind, payload) do
-    with {:ok, client} <- fetch_solver_rpc(session) do
-      dispatch_solver_rpc(client, solve_kind, payload)
+    with {:ok, client} <- fetch_solver_rpc(session),
+         {:ok, outcome} <- dispatch_solver_rpc(client, solve_kind, payload) do
+      {:ok, outcome.result}
     end
   end
 
@@ -89,6 +102,28 @@ defmodule KyuubikiSdk.Session do
     end
   end
 
+  def submit_workflow_catalog_and_wait(session, workflow_id, input_artifacts \\ %{}, opts \\ []) do
+    with {:ok, submitted} <- submit_workflow_catalog_job(session, workflow_id, input_artifacts),
+         %{"job" => %{"job_id" => job_id}} <- submitted,
+         {:ok, waited} <- wait_for_job(session, job_id, opts) do
+      {:ok, Map.put(waited, :submitted, submitted)}
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, Error.rpc("submit response did not include job_id")}
+    end
+  end
+
+  def submit_workflow_graph_and_wait(session, graph, input_artifacts \\ %{}, opts \\ []) do
+    with {:ok, submitted} <- submit_workflow_graph_job(session, graph, input_artifacts),
+         %{"job" => %{"job_id" => job_id}} <- submitted,
+         {:ok, waited} <- wait_for_job(session, job_id, opts) do
+      {:ok, Map.put(waited, :submitted, submitted)}
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, Error.rpc("submit response did not include job_id")}
+    end
+  end
+
   defp fetch_control_plane(%__MODULE__{control_plane: nil}),
     do: {:error, Error.transport("control plane client is not configured")}
 
@@ -100,35 +135,11 @@ defmodule KyuubikiSdk.Session do
   defp fetch_solver_rpc(%__MODULE__{solver_rpc: client}), do: {:ok, client}
 
   defp dispatch_control_plane(client, solve_kind, payload) do
-    case normalize_kind(solve_kind) do
-      :bar_1d -> ControlPlaneClient.create_axial_bar_job(client, payload)
-      :truss_2d -> ControlPlaneClient.create_truss_2d_job(client, payload)
-      :truss_3d -> ControlPlaneClient.create_truss_3d_job(client, payload)
-      :plane_triangle_2d -> ControlPlaneClient.create_plane_triangle_2d_job(client, payload)
-      :unsupported -> {:error, Error.rpc("unsupported solve kind: #{solve_kind}")}
-    end
+    ControlPlaneClient.submit_fem_job(client, solve_kind, payload)
   end
 
   defp dispatch_solver_rpc(client, solve_kind, payload) do
-    case normalize_kind(solve_kind) do
-      :bar_1d -> SolverRpcClient.solve_bar_1d(client, payload)
-      :truss_2d -> SolverRpcClient.solve_truss_2d(client, payload)
-      :truss_3d -> SolverRpcClient.solve_truss_3d(client, payload)
-      :plane_triangle_2d -> SolverRpcClient.solve_plane_triangle_2d(client, payload)
-      :unsupported -> {:error, Error.rpc("unsupported solve kind: #{solve_kind}")}
-    end
-  end
-
-  defp normalize_kind(kind) when is_atom(kind), do: normalize_kind(Atom.to_string(kind))
-
-  defp normalize_kind(kind) when is_binary(kind) do
-    case String.downcase(kind) do
-      "bar_1d" -> :bar_1d
-      "truss_2d" -> :truss_2d
-      "truss_3d" -> :truss_3d
-      "plane_triangle_2d" -> :plane_triangle_2d
-      _ -> :unsupported
-    end
+    SolverRpcClient.solve_study(client, solve_kind, payload)
   end
 
   defp do_wait_for_job(client, job_id, poll_interval, timeout, terminal_statuses, started_at, history, last_status, last_progress) do

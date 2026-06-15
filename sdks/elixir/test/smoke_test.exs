@@ -45,6 +45,11 @@ defmodule KyuubikiSdk.SmokeTest do
     {:ok, operators} = KyuubikiSdk.ControlPlaneClient.list_workflow_operators(client)
     assert Enum.at(operators["operators"], 0)["id"] == "solver.truss_2d"
 
+    {:ok, workflow} =
+      KyuubikiSdk.ControlPlaneClient.fetch_workflow_catalog_workflow(client, "workflow.test-graph")
+
+    assert workflow["workflow"]["graph"]["id"] == "workflow.test-graph"
+
     {:ok, filtered} =
       KyuubikiSdk.ControlPlaneClient.list_workflow_operators(client,
         domain: "structural",
@@ -57,6 +62,111 @@ defmodule KyuubikiSdk.SmokeTest do
       KyuubikiSdk.ControlPlaneClient.fetch_workflow_operator(client, "solver.truss_2d")
 
     assert operator["operator"]["kind"] == "solver"
+  end
+
+  test "agent client runs workflow jobs", %{base_url: base_url} do
+    session = Session.new(base_url: base_url)
+
+    {:ok, catalog_outcome} =
+      AgentClient.run_workflow_catalog(
+        session,
+        "workflow.test-graph",
+        %{"mesh" => %{"project_id" => "demo"}},
+        timeout: 5_000
+      )
+
+    assert get_in(catalog_outcome, [:terminal, "job", "status"]) == "completed"
+    assert get_in(catalog_outcome, [:result, "result", "artifacts", "mesh.result", "artifact_id"]) ==
+             "artifact.catalog.result"
+    assert get_in(catalog_outcome, [:validated_outputs, "artifacts", "output.mesh_result", "artifact_id"]) ==
+             "artifact.catalog.result"
+    assert get_in(catalog_outcome, [:workflow_runtime, "run_id"]) == "run-workflow-catalog"
+    assert get_in(catalog_outcome, [:workflow_progression, "snapshots", Access.at(0), "current_node"]) == "output"
+
+    graph_definition = %{
+      "schema_version" => "kyuubiki.workflow-graph/v1",
+      "id" => "workflow.test-inline",
+      "name" => "Inline Graph",
+      "version" => "1.0.0",
+      "entry_nodes" => ["input"],
+      "output_nodes" => ["output"],
+      "nodes" => [
+        %{"id" => "input", "kind" => "input", "inputs" => [], "outputs" => [%{"id" => "mesh", "artifact_type" => "mesh.input"}]},
+        %{"id" => "solve", "kind" => "solve", "operator_id" => "solver.truss_2d", "inputs" => [], "outputs" => []},
+        %{"id" => "output", "kind" => "output", "inputs" => [%{"id" => "mesh_result", "artifact_type" => "mesh.result"}], "outputs" => []}
+      ],
+      "edges" => []
+    }
+    {:ok, graph_outcome} =
+      AgentClient.run_workflow_graph(
+        session,
+        graph_definition,
+        %{"mesh" => %{"project_id" => "demo"}},
+        timeout: 5_000
+      )
+
+    assert get_in(graph_outcome, [:terminal, "job", "status"]) == "completed"
+    assert get_in(graph_outcome, [:result, "result", "artifacts", "mesh.result", "artifact_id"]) ==
+             "artifact.graph.result"
+    assert get_in(graph_outcome, [:output_manifest, "graph_id"]) == "workflow.test-inline"
+    assert get_in(graph_outcome, [:validated_outputs, "artifacts", "output.mesh_result", "artifact_id"]) ==
+             "artifact.graph.result"
+    assert get_in(graph_outcome, [:workflow_runtime, "current_node"]) == "output"
+    assert get_in(graph_outcome, [:workflow_progression, "latest", "run_id"]) == "run-workflow-graph"
+  end
+
+  test "session supports expanded solve kinds", %{base_url: base_url} do
+    session = Session.new(base_url: base_url)
+
+    {:ok, axial} =
+      Session.submit_job(session, "axial_bar_1d", %{"nodes" => [], "elements" => []})
+
+    assert axial["job"]["job_id"] == "job-axial"
+
+    {:ok, thermal_frame} =
+      Session.submit_job(session, "thermal_frame_3d", %{"nodes" => [], "elements" => []})
+
+    assert thermal_frame["job"]["job_id"] == "job-thermal-frame-3d"
+  end
+
+  test "session supports direct rpc for expanded solve kinds" do
+    {:ok, listener} =
+      :gen_tcp.listen(0, [:binary, packet: 0, active: false, reuseaddr: true])
+
+    {:ok, port} = :inet.port(listener)
+
+    server =
+      spawn_link(fn ->
+        {:ok, socket} = :gen_tcp.accept(listener)
+        {:ok, <<size::unsigned-big-32>>} = :gen_tcp.recv(socket, 4)
+        {:ok, payload} = :gen_tcp.recv(socket, size)
+        request = Jason.decode!(payload)
+        assert request["method"] == "solve_electrostatic_plane_quad_2d"
+
+        response =
+          Jason.encode!(%{
+            ok: true,
+            result: %{
+              "solver" => "electrostatic_plane_quad_2d",
+              "input" => request["params"]
+            }
+          })
+
+        :ok = :gen_tcp.send(socket, <<byte_size(response)::unsigned-big-32, response::binary>>)
+        :gen_tcp.close(socket)
+      end)
+
+    on_exit(fn ->
+      Process.exit(server, :kill)
+      :gen_tcp.close(listener)
+    end)
+
+    session = Session.new(rpc_host: "127.0.0.1", rpc_port: port)
+
+    {:ok, result} =
+      Session.solve_direct(session, "electrostatic_plane_quad_2d", %{"nodes" => [], "elements" => []})
+
+    assert result["solver"] == "electrostatic_plane_quad_2d"
   end
 
   defp accept_loop(listener, parent) do
@@ -75,6 +185,38 @@ defmodule KyuubikiSdk.SmokeTest do
       case {method, path} do
         {"POST", "/api/v1/fem/truss-2d/jobs"} ->
           json_response(202, %{"job" => %{"job_id" => "job-smoke", "status" => "queued"}})
+
+        {"POST", "/api/v1/fem/axial-bar/jobs"} ->
+          json_response(202, %{"job" => %{"job_id" => "job-axial", "status" => "queued"}})
+
+        {"POST", "/api/v1/fem/thermal-frame-3d/jobs"} ->
+          json_response(202, %{"job" => %{"job_id" => "job-thermal-frame-3d", "status" => "queued"}})
+
+        {"POST", "/api/v1/workflows/catalog/workflow.test-graph/jobs"} ->
+          json_response(202, %{"job" => %{"job_id" => "workflow-catalog-job", "status" => "queued"}})
+
+        {"GET", "/api/v1/workflows/catalog/workflow.test-graph"} ->
+          json_response(200, %{
+            "workflow" => %{
+              "id" => "workflow.test-graph",
+              "graph" => %{
+                "schema_version" => "kyuubiki.workflow-graph/v1",
+                "id" => "workflow.test-graph",
+                "name" => "Test Graph",
+                "version" => "1.0.0",
+                "entry_nodes" => ["input"],
+                "output_nodes" => ["output"],
+                "nodes" => [
+                  %{"id" => "input", "kind" => "input", "inputs" => [], "outputs" => [%{"id" => "mesh", "artifact_type" => "mesh.input"}]},
+                  %{"id" => "output", "kind" => "output", "inputs" => [%{"id" => "mesh_result", "artifact_type" => "mesh.result"}], "outputs" => []}
+                ],
+                "edges" => []
+              }
+            }
+          })
+
+        {"POST", "/api/v1/workflows/graph/jobs"} ->
+          json_response(202, %{"job" => %{"job_id" => "workflow-graph-job", "status" => "queued"}})
 
         {"GET", "/api/v1/operators"} ->
           json_response(200, %{
@@ -119,6 +261,30 @@ defmodule KyuubikiSdk.SmokeTest do
         {"GET", "/api/v1/jobs/job-smoke"} ->
           json_response(200, %{"job" => %{"job_id" => "job-smoke", "status" => "completed", "progress" => 1.0}})
 
+        {"GET", "/api/v1/jobs/workflow-catalog-job"} ->
+          json_response(200, %{
+            "job" => %{
+              "job_id" => "workflow-catalog-job",
+              "status" => "completed",
+              "progress" => 1.0,
+              "current_node" => "output",
+              "completed_nodes" => ["input", "output"],
+              "progress_events" => [%{"node_id" => "output", "status" => "completed"}]
+            }
+          })
+
+        {"GET", "/api/v1/jobs/workflow-graph-job"} ->
+          json_response(200, %{
+            "job" => %{
+              "job_id" => "workflow-graph-job",
+              "status" => "completed",
+              "progress" => 1.0,
+              "current_node" => "output",
+              "completed_nodes" => ["input", "solve", "output"],
+              "progress_events" => [%{"node_id" => "solve", "status" => "completed"}]
+            }
+          })
+
         {"GET", "/api/v1/results/job-smoke"} ->
           json_response(200, %{
             "job_id" => "job-smoke",
@@ -127,6 +293,34 @@ defmodule KyuubikiSdk.SmokeTest do
               "elements" => [%{"index" => 0, "id" => "e0"}],
               "max_displacement" => 1.0e-6,
               "max_stress" => 7.0e4
+            }
+          })
+
+        {"GET", "/api/v1/results/workflow-catalog-job"} ->
+          json_response(200, %{
+            "job_id" => "workflow-catalog-job",
+            "result" => %{
+              "workflow_id" => "workflow.test-graph",
+              "run_id" => "run-workflow-catalog",
+              "status" => "completed",
+              "current_node" => "output",
+              "completed_nodes" => ["input", "output"],
+              "progress_events" => [%{"node_id" => "output", "status" => "completed"}],
+              "artifacts" => %{"mesh.result" => %{"artifact_id" => "artifact.catalog.result"}}
+            }
+          })
+
+        {"GET", "/api/v1/results/workflow-graph-job"} ->
+          json_response(200, %{
+            "job_id" => "workflow-graph-job",
+            "result" => %{
+              "workflow_id" => "workflow.test-inline",
+              "run_id" => "run-workflow-graph",
+              "status" => "completed",
+              "current_node" => "output",
+              "completed_nodes" => ["input", "solve", "output"],
+              "progress_events" => [%{"node_id" => "solve", "status" => "completed"}],
+              "artifacts" => %{"mesh.result" => %{"artifact_id" => "artifact.graph.result"}}
             }
           })
 

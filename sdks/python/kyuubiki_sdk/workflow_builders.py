@@ -112,6 +112,49 @@ def build_workflow_port(
     return port
 
 
+def build_workflow_defaults(
+    *,
+    cache_policy: str | None = None,
+    orchestrated: bool | None = None,
+    dispatch_policy: str | None = None,
+    placement_tags: list[str] | None = None,
+    required_capabilities: list[str] | None = None,
+) -> dict[str, Any]:
+    defaults: dict[str, Any] = {}
+    if cache_policy is not None:
+        defaults["cache_policy"] = cache_policy
+    if orchestrated is not None:
+        defaults["orchestrated"] = orchestrated
+    if dispatch_policy is not None:
+        defaults["dispatch_policy"] = dispatch_policy
+    if placement_tags is not None:
+        defaults["placement_tags"] = placement_tags
+    if required_capabilities is not None:
+        defaults["required_capabilities"] = required_capabilities
+    return defaults
+
+
+def build_workflow_operator_fetch_entry(
+    node_id: str,
+    *,
+    operator_id: str,
+    package_ref: str | None = None,
+    version: str | None = None,
+    integrity: str | None = None,
+    cache_scope: str | None = None,
+) -> dict[str, Any]:
+    entry: dict[str, Any] = {"node_id": node_id, "operator_id": operator_id}
+    if package_ref is not None:
+        entry["package_ref"] = package_ref
+    if version is not None:
+        entry["version"] = version
+    if integrity is not None:
+        entry["integrity"] = integrity
+    if cache_scope is not None:
+        entry["cache_scope"] = cache_scope
+    return entry
+
+
 def build_workflow_node(
     node_id: str,
     *,
@@ -123,6 +166,8 @@ def build_workflow_node(
     description: str | None = None,
     config: dict[str, Any] | None = None,
     cache_policy: str | None = None,
+    placement_tags: list[str] | None = None,
+    required_capabilities: list[str] | None = None,
 ) -> dict[str, Any]:
     node: dict[str, Any] = {
         "id": node_id,
@@ -140,6 +185,10 @@ def build_workflow_node(
         node["config"] = config
     if cache_policy is not None:
         node["cache_policy"] = cache_policy
+    if placement_tags is not None:
+        node["placement_tags"] = placement_tags
+    if required_capabilities is not None:
+        node["required_capabilities"] = required_capabilities
     return node
 
 
@@ -176,6 +225,10 @@ def build_workflow_graph(
     dataset_contract: dict[str, Any] | None = None,
     output_nodes: list[str] | None = None,
     defaults: dict[str, Any] | None = None,
+    dispatch_policy: str | None = None,
+    operator_fetch_plan: list[dict[str, Any]] | None = None,
+    placement_tags: list[str] | None = None,
+    required_capabilities: list[str] | None = None,
     validate: bool = True,
 ) -> dict[str, Any]:
     graph: dict[str, Any] = {
@@ -195,4 +248,12 @@ def build_workflow_graph(
         graph["output_nodes"] = output_nodes
     if defaults is not None:
         graph["defaults"] = defaults
+    if dispatch_policy is not None:
+        graph["dispatch_policy"] = dispatch_policy
+    if operator_fetch_plan is not None:
+        graph["operator_fetch_plan"] = operator_fetch_plan
+    if placement_tags is not None:
+        graph["placement_tags"] = placement_tags
+    if required_capabilities is not None:
+        graph["required_capabilities"] = required_capabilities
     return validate_workflow_graph(graph) if validate else graph

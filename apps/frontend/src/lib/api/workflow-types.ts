@@ -23,6 +23,19 @@ export type WorkflowOperatorValidationProfile = {
   smoke_paths: string[];
 };
 
+export type WorkflowOperatorExecutionDescriptor = {
+  authority_mode: "central_operator_library";
+  execution_mode: "orchestra_fetch" | "orchestra_only";
+  source_ref: string;
+  package_ref?: string | null;
+  package_version?: string | null;
+  integrity?: string | null;
+  placement_tags: string[];
+  required_capabilities: string[];
+  cache_scope: "ephemeral" | "job" | "session";
+  agent_fetchable?: boolean;
+};
+
 export type WorkflowOperatorDescriptor = {
   id: string;
   version: string;
@@ -39,6 +52,7 @@ export type WorkflowOperatorDescriptor = {
   inputs: WorkflowOperatorPortDescriptor[];
   outputs: WorkflowOperatorPortDescriptor[];
   validation: WorkflowOperatorValidationProfile;
+  execution?: WorkflowOperatorExecutionDescriptor;
 };
 
 export type WorkflowOperatorCatalogPayload = {
@@ -74,6 +88,8 @@ export type WorkflowGraphNode = {
   kind: string;
   operator_id?: string;
   config?: Record<string, unknown>;
+  placement_tags?: string[];
+  required_capabilities?: string[];
   inputs?: WorkflowGraphPort[];
   outputs?: WorkflowGraphPort[];
 };
@@ -134,8 +150,21 @@ export type WorkflowGraphDefinition = {
   entry_nodes?: string[];
   output_nodes?: string[];
   defaults?: Record<string, unknown>;
+  dispatch_policy?: string;
+  operator_fetch_plan?: Array<Record<string, unknown>>;
+  placement_tags?: string[];
+  required_capabilities?: string[];
   nodes: WorkflowGraphNode[];
   edges?: WorkflowGraphEdge[];
+};
+
+export type WorkflowCatalogRuntimeManifest = {
+  required_operator_ids: string[];
+  sample_input_node_ids: string[];
+  included_input_text_node_ids: string[];
+  bridge_seed_summaries: Array<Record<string, unknown>>;
+  dispatch_policy: Record<string, unknown>;
+  operator_fetch_plan: Array<Record<string, unknown>>;
 };
 
 export type WorkflowCatalogEntry = {
@@ -146,6 +175,7 @@ export type WorkflowCatalogEntry = {
   domains?: string[];
   capability_tags?: string[];
   graph?: WorkflowGraphDefinition;
+  runtime_manifest?: WorkflowCatalogRuntimeManifest;
   entry_inputs: WorkflowCatalogEntryArtifact[];
   output_artifacts: WorkflowCatalogEntryArtifact[];
   local?: {

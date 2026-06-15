@@ -21,6 +21,7 @@ WORKFLOW_CACHE_POLICIES = {"ephemeral", "cached", "persisted"}
 WORKFLOW_NODE_KINDS = {"input", "solve", "transform", "extract", "export", "condition", "output"}
 WORKFLOW_PORT_CARDINALITIES = {"one", "many"}
 WORKFLOW_OPERATOR_NODE_KINDS = {"solve", "transform", "extract", "export", "condition"}
+WORKFLOW_DISPATCH_POLICIES = {"orchestra_only", "central_fetch", "direct_mesh", "local_only"}
 
 
 def validate_workflow_dataset_contract(contract: dict[str, Any]) -> dict[str, Any]:
@@ -47,11 +48,11 @@ def validate_workflow_graph(graph: dict[str, Any]) -> dict[str, Any]:
     contract = graph.get("dataset_contract")
     dataset_value_ids: set[str] = set()
     if contract is not None:
-      if isinstance(contract, dict):
-        _validate_dataset_contract(contract, errors, "graph.dataset_contract")
-        dataset_value_ids = {value["id"] for value in contract.get("values", []) if isinstance(value, dict) and isinstance(value.get("id"), str)}
-      else:
-        errors.append("graph.dataset_contract must be an object")
+        if isinstance(contract, dict):
+            _validate_dataset_contract(contract, errors, "graph.dataset_contract")
+            dataset_value_ids = {value["id"] for value in contract.get("values", []) if isinstance(value, dict) and isinstance(value.get("id"), str)}
+        else:
+            errors.append("graph.dataset_contract must be an object")
 
     defaults = graph.get("defaults")
     if defaults is not None:
@@ -64,6 +65,14 @@ def validate_workflow_graph(graph: dict[str, Any]) -> dict[str, Any]:
             orchestrated = defaults.get("orchestrated")
             if orchestrated is not None and not isinstance(orchestrated, bool):
                 errors.append("graph.defaults.orchestrated must be a boolean")
+            _validate_dispatch_policy(defaults.get("dispatch_policy"), errors, "graph.defaults.dispatch_policy")
+            _validate_string_list(defaults.get("placement_tags"), errors, "graph.defaults.placement_tags")
+            _validate_string_list(defaults.get("required_capabilities"), errors, "graph.defaults.required_capabilities")
+
+    _validate_dispatch_policy(graph.get("dispatch_policy"), errors, "graph.dispatch_policy")
+    _validate_string_list(graph.get("placement_tags"), errors, "graph.placement_tags")
+    _validate_string_list(graph.get("required_capabilities"), errors, "graph.required_capabilities")
+    _validate_operator_fetch_plan(graph.get("operator_fetch_plan"), errors, "graph.operator_fetch_plan")
 
     entry_nodes = _require_list(graph, "entry_nodes", errors, "graph", min_items=1)
     output_nodes = _optional_list(graph, "output_nodes", errors, "graph")
@@ -98,6 +107,8 @@ def validate_workflow_graph(graph: dict[str, Any]) -> dict[str, Any]:
         cache_policy = node.get("cache_policy")
         if cache_policy is not None and cache_policy not in WORKFLOW_CACHE_POLICIES:
             errors.append(f"{location}.cache_policy must be one of {sorted(WORKFLOW_CACHE_POLICIES)!r}")
+        _validate_string_list(node.get("placement_tags"), errors, f"{location}.placement_tags")
+        _validate_string_list(node.get("required_capabilities"), errors, f"{location}.required_capabilities")
 
         for port_kind, port_bucket in (("inputs", input_ports), ("outputs", output_ports)):
             ports = _require_list(node, port_kind, errors, location)
@@ -264,6 +275,43 @@ def _validate_node_port_ref(value: Any, errors: list[str], location: str) -> tup
     if node is None or port is None:
         return None
     return node, port
+
+
+def _validate_dispatch_policy(value: Any, errors: list[str], location: str) -> None:
+    if value is None:
+        return
+    if value not in WORKFLOW_DISPATCH_POLICIES:
+        errors.append(f"{location} must be one of {sorted(WORKFLOW_DISPATCH_POLICIES)!r}")
+
+
+def _validate_string_list(value: Any, errors: list[str], location: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list):
+        errors.append(f"{location} must be a list")
+        return
+    for index, item in enumerate(value):
+        if not isinstance(item, str) or not item.strip():
+            errors.append(f"{location}[{index}] must be a non-empty string")
+
+
+def _validate_operator_fetch_plan(value: Any, errors: list[str], location: str) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list):
+        errors.append(f"{location} must be a list")
+        return
+    for index, entry in enumerate(value):
+        entry_location = f"{location}[{index}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{entry_location} must be an object")
+            continue
+        _require_non_empty_string(entry, "node_id", errors, entry_location)
+        _require_non_empty_string(entry, "operator_id", errors, entry_location)
+        _optional_string(entry, "package_ref", errors, entry_location)
+        _optional_string(entry, "version", errors, entry_location)
+        _optional_string(entry, "integrity", errors, entry_location)
+        _optional_string(entry, "cache_scope", errors, entry_location)
 
 
 def _require_list(container: dict[str, Any], key: str, errors: list[str], location: str, *, min_items: int = 0) -> list[Any]:

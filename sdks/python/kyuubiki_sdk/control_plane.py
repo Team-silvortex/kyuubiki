@@ -9,6 +9,39 @@ from urllib.error import HTTPError, URLError
 from .auth import KyuubikiAuth
 from .errors import KyuubikiHttpError, KyuubikiTransportError
 
+_FEM_JOB_PATHS: dict[str, str] = {
+    "bar_1d": "/api/v1/fem/axial-bar/jobs",
+    "thermal_bar_1d": "/api/v1/fem/thermal-bar-1d/jobs",
+    "heat_bar_1d": "/api/v1/fem/heat-bar-1d/jobs",
+    "electrostatic_bar_1d": "/api/v1/fem/electrostatic-bar-1d/jobs",
+    "beam_1d": "/api/v1/fem/beam-1d/jobs",
+    "thermal_beam_1d": "/api/v1/fem/thermal-beam-1d/jobs",
+    "torsion_1d": "/api/v1/fem/torsion-1d/jobs",
+    "spring_1d": "/api/v1/fem/spring-1d/jobs",
+    "spring_2d": "/api/v1/fem/spring-2d/jobs",
+    "spring_3d": "/api/v1/fem/spring-3d/jobs",
+    "truss_2d": "/api/v1/fem/truss-2d/jobs",
+    "thermal_truss_2d": "/api/v1/fem/thermal-truss-2d/jobs",
+    "frame_2d": "/api/v1/fem/frame-2d/jobs",
+    "thermal_frame_2d": "/api/v1/fem/thermal-frame-2d/jobs",
+    "plane_triangle_2d": "/api/v1/fem/plane-triangle-2d/jobs",
+    "heat_plane_triangle_2d": "/api/v1/fem/heat-plane-triangle-2d/jobs",
+    "thermal_plane_triangle_2d": "/api/v1/fem/thermal-plane-triangle-2d/jobs",
+    "electrostatic_plane_triangle_2d": "/api/v1/fem/electrostatic-plane-triangle-2d/jobs",
+    "plane_quad_2d": "/api/v1/fem/plane-quad-2d/jobs",
+    "heat_plane_quad_2d": "/api/v1/fem/heat-plane-quad-2d/jobs",
+    "thermal_plane_quad_2d": "/api/v1/fem/thermal-plane-quad-2d/jobs",
+    "electrostatic_plane_quad_2d": "/api/v1/fem/electrostatic-plane-quad-2d/jobs",
+    "truss_3d": "/api/v1/fem/truss-3d/jobs",
+    "thermal_truss_3d": "/api/v1/fem/thermal-truss-3d/jobs",
+    "frame_3d": "/api/v1/fem/frame-3d/jobs",
+    "thermal_frame_3d": "/api/v1/fem/thermal-frame-3d/jobs",
+}
+
+_SOLVE_KIND_ALIASES: dict[str, str] = {
+    "axial_bar_1d": "bar_1d",
+}
+
 
 class ControlPlaneClient:
     def __init__(
@@ -58,6 +91,10 @@ class ControlPlaneClient:
     def list_workflow_catalog(self) -> dict[str, Any]:
         return self._request("/api/v1/workflows/catalog")
 
+    def fetch_workflow_catalog_workflow(self, workflow_id: str) -> dict[str, Any]:
+        quoted_id = urllib.parse.quote(workflow_id, safe="")
+        return self._request(f"/api/v1/workflows/catalog/{quoted_id}")
+
     def list_workflow_operators(self, query: dict[str, Any] | None = None) -> dict[str, Any]:
         return self._request("/api/v1/operators", query=query)
 
@@ -65,17 +102,24 @@ class ControlPlaneClient:
         quoted_id = urllib.parse.quote(operator_id, safe="")
         return self._request(f"/api/v1/operators/{quoted_id}")
 
+    def submit_fem_job(self, solve_kind: str, payload: dict[str, Any]) -> dict[str, Any]:
+        normalized = normalize_solve_kind(solve_kind)
+        path = _FEM_JOB_PATHS.get(normalized)
+        if path is None:
+            raise ValueError(f"unsupported solve kind: {solve_kind}")
+        return self._request(path, "POST", payload)
+
     def create_axial_bar_job(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("/api/v1/fem/axial-bar/jobs", "POST", payload)
+        return self.submit_fem_job("bar_1d", payload)
 
     def create_truss_2d_job(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("/api/v1/fem/truss-2d/jobs", "POST", payload)
+        return self.submit_fem_job("truss_2d", payload)
 
     def create_truss_3d_job(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("/api/v1/fem/truss-3d/jobs", "POST", payload)
+        return self.submit_fem_job("truss_3d", payload)
 
     def create_plane_triangle_2d_job(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._request("/api/v1/fem/plane-triangle-2d/jobs", "POST", payload)
+        return self.submit_fem_job("plane_triangle_2d", payload)
 
     def submit_workflow_catalog_job(
         self,
@@ -165,3 +209,8 @@ class ControlPlaneClient:
             raise KyuubikiHttpError(error.code, body_text) from error
         except URLError as error:
             raise KyuubikiTransportError(str(error.reason)) from error
+
+
+def normalize_solve_kind(solve_kind: str) -> str:
+    normalized = solve_kind.strip().lower()
+    return _SOLVE_KIND_ALIASES.get(normalized, normalized)

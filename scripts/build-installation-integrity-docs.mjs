@@ -21,19 +21,24 @@ async function main() {
     title: "Installation Integrity Contract",
     kicker: "Installation Contract",
     cssHref: installationIntegrityDocs.docsCssHref,
-    backHref: "./README.md",
-    backLabel: "Back to docs readme",
-    jsonHref: installationIntegrityDocs.docsJsonHref,
-    jsonLabel: "Open JSON source",
+    extraCopy: "",
+    links: [
+      { href: "./README.md", label: "Back to docs readme" },
+      { href: installationIntegrityDocs.docsJsonHref, label: "Open JSON source" },
+    ],
   });
   const hubHtml = renderHtml(contract, {
     title: "Installation Integrity Contract",
-    kicker: "Installation Contract",
+    kicker: "Installation Contract Mirror · Chapter 7",
     cssHref: installationIntegrityDocs.hubCssHref,
-    backHref: "./index.html",
-    backLabel: "Back to docs home",
-    jsonHref: installationIntegrityDocs.hubJsonHref,
-    jsonLabel: "Open JSON source",
+    extraCopy:
+      "This is the Hub mirror for the trust-and-safety chapter's installation integrity material.",
+    links: [
+      { href: "./index.html", label: "Back to book entry" },
+      { href: "../../../../docs/book-ch07-trust-and-safety.html", label: "Open central chapter" },
+      { href: "../../../../docs/installation-integrity-contract.html", label: "Open source page" },
+      { href: installationIntegrityDocs.hubJsonHref, label: "Open JSON source" },
+    ],
   });
 
   await fs.writeFile(installationIntegrityDocs.docsOutputPath, docsHtml);
@@ -73,13 +78,18 @@ function renderHtml(contract, options) {
           Generated from <code>deploy/installation-integrity-contract.json</code>.
           This page exposes the same contract used by the desktop installer integrity report and repair workflow.
         </p>
+        ${options.extraCopy ? `<p class="docs-copy">\n          ${escapeHtml(options.extraCopy)}\n        </p>` : ""}
         <div class="docs-meta">
           <span class="docs-chip">Shipping version: ${version}</span>
           <span class="docs-chip">Schema: ${schemaVersion}</span>
         </div>
         <div class="docs-links">
-          <a class="docs-link" href="${escapeHtml(options.backHref)}">${escapeHtml(options.backLabel)}</a>
-          <a class="docs-link" href="${escapeHtml(options.jsonHref)}">${escapeHtml(options.jsonLabel)}</a>
+          ${options.links
+            .map(
+              (link) =>
+                `<a class="docs-link" href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`,
+            )
+            .join("\n          ")}
         </div>
       </section>
 

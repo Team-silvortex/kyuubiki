@@ -103,7 +103,11 @@ defmodule KyuubikiWeb.Analysis do
 
   @spec submit_thermal_beam_1d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_beam_1d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_beam_1d/1, "solve_thermal_beam_1d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_thermal_beam_1d/1,
+      "solve_thermal_beam_1d"
+    )
   end
 
   @spec submit_torsion_1d(map()) :: {:ok, map()} | {:error, term()}
@@ -138,22 +142,38 @@ defmodule KyuubikiWeb.Analysis do
 
   @spec submit_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_triangle_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_plane_triangle_2d/1, "solve_plane_triangle_2d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_plane_triangle_2d/1,
+      "solve_plane_triangle_2d"
+    )
   end
 
   @spec submit_thermal_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_plane_triangle_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_plane_triangle_2d/1, "solve_thermal_plane_triangle_2d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_thermal_plane_triangle_2d/1,
+      "solve_thermal_plane_triangle_2d"
+    )
   end
 
   @spec submit_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_plane_quad_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_plane_quad_2d/1, "solve_plane_quad_2d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_plane_quad_2d/1,
+      "solve_plane_quad_2d"
+    )
   end
 
   @spec submit_thermal_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_plane_quad_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_plane_quad_2d/1, "solve_thermal_plane_quad_2d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_thermal_plane_quad_2d/1,
+      "solve_thermal_plane_quad_2d"
+    )
   end
 
   @spec submit_frame_2d(map()) :: {:ok, map()} | {:error, term()}
@@ -168,12 +188,20 @@ defmodule KyuubikiWeb.Analysis do
 
   @spec submit_thermal_frame_2d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_frame_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_frame_2d/1, "solve_thermal_frame_2d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_thermal_frame_2d/1,
+      "solve_thermal_frame_2d"
+    )
   end
 
   @spec submit_thermal_frame_3d(map()) :: {:ok, map()} | {:error, term()}
   def submit_thermal_frame_3d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_thermal_frame_3d/1, "solve_thermal_frame_3d")
+    submit_solver_job(
+      params,
+      &FemModelNormalizer.normalize_thermal_frame_3d/1,
+      "solve_thermal_frame_3d"
+    )
   end
 
   defp submit_solver_job(params, normalizer, method)
@@ -307,7 +335,8 @@ defmodule KyuubikiWeb.Analysis do
 
   def delete_result(job_id) when is_binary(job_id), do: AnalysisJobRecords.delete_result(job_id)
 
-  def create_security_event(attrs) when is_map(attrs), do: AnalysisExports.create_security_event(attrs)
+  def create_security_event(attrs) when is_map(attrs),
+    do: AnalysisExports.create_security_event(attrs)
 
   def list_security_events(filters \\ %{}) when is_map(filters),
     do: AnalysisExports.list_security_events(filters)
@@ -319,7 +348,6 @@ defmodule KyuubikiWeb.Analysis do
     do: AnalysisExports.export_security_events_csv(filters)
 
   def export_database, do: AnalysisExports.export_database()
-
 
   defp execute_workflow_graph(graph, input_artifacts) do
     execute_workflow_graph(graph, input_artifacts, nil)
@@ -333,7 +361,7 @@ defmodule KyuubikiWeb.Analysis do
       input_artifacts,
       dataset_contract: Map.get(graph, "dataset_contract"),
       progress_callback: progress_callback,
-      execute_solve: &WorkflowOperatorRuntime.run_solve_operator/2,
+      execute_solve: &WorkflowOperatorRuntime.run_solve_operator/3,
       execute_transform: &WorkflowOperatorRuntime.run_transform_operator/3,
       execute_extract: &WorkflowOperatorRuntime.run_extract_operator/3,
       execute_export: &WorkflowOperatorRuntime.run_export_operator/3
@@ -549,5 +577,4 @@ defmodule KyuubikiWeb.Analysis do
     Application.get_env(:kyuubiki_web, KyuubikiWeb.Jobs.Watchdog, [])
     |> Keyword.get(:job_timeout_ms, 120_000)
   end
-
 end

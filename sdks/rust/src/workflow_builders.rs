@@ -1,6 +1,6 @@
 use crate::workflow_contracts::{
     WorkflowAxis, WorkflowDatasetContract, WorkflowDatasetValue, WorkflowDefaults, WorkflowGraphDefinition, WorkflowGraphEdge,
-    WorkflowGraphNode, WorkflowGraphPort, WorkflowNodePortRef, WorkflowSchemaRef, WorkflowShape,
+    WorkflowGraphNode, WorkflowGraphPort, WorkflowNodePortRef, WorkflowOperatorFetchEntry, WorkflowSchemaRef, WorkflowShape,
     WORKFLOW_DATASET_SCHEMA_VERSION, WORKFLOW_GRAPH_SCHEMA_VERSION,
 };
 use std::collections::HashMap;
@@ -67,6 +67,24 @@ pub fn workflow_port(port_id: impl Into<String>, artifact_type: impl Into<String
     }
 }
 
+pub fn workflow_defaults() -> WorkflowDefaults {
+    WorkflowDefaults::default()
+}
+
+pub fn workflow_operator_fetch_entry(
+    node_id: impl Into<String>,
+    operator_id: impl Into<String>,
+) -> WorkflowOperatorFetchEntry {
+    WorkflowOperatorFetchEntry {
+        node_id: node_id.into(),
+        operator_id: operator_id.into(),
+        package_ref: None,
+        version: None,
+        integrity: None,
+        cache_scope: None,
+    }
+}
+
 pub fn workflow_node(node_id: impl Into<String>, kind: impl Into<String>) -> WorkflowGraphNode {
     WorkflowGraphNode {
         id: node_id.into(),
@@ -76,6 +94,8 @@ pub fn workflow_node(node_id: impl Into<String>, kind: impl Into<String>) -> Wor
         description: None,
         config: None,
         cache_policy: None,
+        placement_tags: Vec::new(),
+        required_capabilities: Vec::new(),
         inputs: Vec::new(),
         outputs: Vec::new(),
     }
@@ -122,6 +142,10 @@ pub fn workflow_graph(
         entry_nodes,
         output_nodes: Vec::new(),
         defaults: None,
+        dispatch_policy: None,
+        operator_fetch_plan: Vec::new(),
+        placement_tags: Vec::new(),
+        required_capabilities: Vec::new(),
         nodes,
         edges,
     }
@@ -236,6 +260,16 @@ impl WorkflowGraphNode {
         self
     }
 
+    pub fn with_placement_tags(mut self, placement_tags: Vec<String>) -> Self {
+        self.placement_tags = placement_tags;
+        self
+    }
+
+    pub fn with_required_capabilities(mut self, required_capabilities: Vec<String>) -> Self {
+        self.required_capabilities = required_capabilities;
+        self
+    }
+
     pub fn with_inputs(mut self, inputs: Vec<WorkflowGraphPort>) -> Self {
         self.inputs = inputs;
         self
@@ -272,6 +306,75 @@ impl WorkflowGraphDefinition {
 
     pub fn with_defaults(mut self, defaults: WorkflowDefaults) -> Self {
         self.defaults = Some(defaults);
+        self
+    }
+
+    pub fn with_dispatch_policy(mut self, dispatch_policy: impl Into<String>) -> Self {
+        self.dispatch_policy = Some(dispatch_policy.into());
+        self
+    }
+
+    pub fn with_operator_fetch_plan(mut self, operator_fetch_plan: Vec<WorkflowOperatorFetchEntry>) -> Self {
+        self.operator_fetch_plan = operator_fetch_plan;
+        self
+    }
+
+    pub fn with_placement_tags(mut self, placement_tags: Vec<String>) -> Self {
+        self.placement_tags = placement_tags;
+        self
+    }
+
+    pub fn with_required_capabilities(mut self, required_capabilities: Vec<String>) -> Self {
+        self.required_capabilities = required_capabilities;
+        self
+    }
+}
+
+impl WorkflowDefaults {
+    pub fn with_cache_policy(mut self, cache_policy: impl Into<String>) -> Self {
+        self.cache_policy = Some(cache_policy.into());
+        self
+    }
+
+    pub fn with_orchestrated(mut self, orchestrated: bool) -> Self {
+        self.orchestrated = Some(orchestrated);
+        self
+    }
+
+    pub fn with_dispatch_policy(mut self, dispatch_policy: impl Into<String>) -> Self {
+        self.dispatch_policy = Some(dispatch_policy.into());
+        self
+    }
+
+    pub fn with_placement_tags(mut self, placement_tags: Vec<String>) -> Self {
+        self.placement_tags = placement_tags;
+        self
+    }
+
+    pub fn with_required_capabilities(mut self, required_capabilities: Vec<String>) -> Self {
+        self.required_capabilities = required_capabilities;
+        self
+    }
+}
+
+impl WorkflowOperatorFetchEntry {
+    pub fn with_package_ref(mut self, package_ref: impl Into<String>) -> Self {
+        self.package_ref = Some(package_ref.into());
+        self
+    }
+
+    pub fn with_version(mut self, version: impl Into<String>) -> Self {
+        self.version = Some(version.into());
+        self
+    }
+
+    pub fn with_integrity(mut self, integrity: impl Into<String>) -> Self {
+        self.integrity = Some(integrity.into());
+        self
+    }
+
+    pub fn with_cache_scope(mut self, cache_scope: impl Into<String>) -> Self {
+        self.cache_scope = Some(cache_scope.into());
         self
     }
 }

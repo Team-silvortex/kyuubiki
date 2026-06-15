@@ -45,6 +45,40 @@ class WorkflowContractValidationTest(unittest.TestCase):
             validate_workflow_dataset_contract(contract)
         self.assertIn("duplicate id", str(context.exception))
 
+    def test_validates_execution_hints(self) -> None:
+        graph = load_json("examples.workflow-graph.json")
+        graph["dispatch_policy"] = "central_fetch"
+        graph["placement_tags"] = ["mesh-enabled"]
+        graph["required_capabilities"] = ["artifact-cache"]
+        graph["defaults"] = {
+            "cache_policy": "cached",
+            "orchestrated": False,
+            "dispatch_policy": "central_fetch",
+            "placement_tags": ["cpu"],
+            "required_capabilities": ["solver.thermal"],
+        }
+        graph["operator_fetch_plan"] = [
+            {
+                "node_id": "thermal_solve",
+                "operator_id": "solve.thermal.steady_state",
+                "package_ref": "kyuubiki://operators/solve.thermal.steady_state",
+                "version": "1.0.0",
+                "integrity": "sha256:demo",
+                "cache_scope": "agent",
+            }
+        ]
+        graph["nodes"][1]["placement_tags"] = ["gpu-preferred"]
+        graph["nodes"][1]["required_capabilities"] = ["solver.thermal"]
+        validated = validate_workflow_graph(graph)
+        self.assertEqual(validated["dispatch_policy"], "central_fetch")
+
+    def test_rejects_invalid_dispatch_policy(self) -> None:
+        graph = load_json("examples.workflow-graph.json")
+        graph["dispatch_policy"] = "mystery_mode"
+        with self.assertRaises(WorkflowContractValidationError) as context:
+            validate_workflow_graph(graph)
+        self.assertIn("dispatch_policy", str(context.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

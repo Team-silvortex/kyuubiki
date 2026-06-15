@@ -4,6 +4,35 @@ use serde_json::Value;
 use std::io::{Read, Write};
 use std::net::TcpStream;
 
+const FEM_JOB_PATHS: &[(&str, &str)] = &[
+    ("bar_1d", "/api/v1/fem/axial-bar/jobs"),
+    ("thermal_bar_1d", "/api/v1/fem/thermal-bar-1d/jobs"),
+    ("heat_bar_1d", "/api/v1/fem/heat-bar-1d/jobs"),
+    ("electrostatic_bar_1d", "/api/v1/fem/electrostatic-bar-1d/jobs"),
+    ("beam_1d", "/api/v1/fem/beam-1d/jobs"),
+    ("thermal_beam_1d", "/api/v1/fem/thermal-beam-1d/jobs"),
+    ("torsion_1d", "/api/v1/fem/torsion-1d/jobs"),
+    ("spring_1d", "/api/v1/fem/spring-1d/jobs"),
+    ("spring_2d", "/api/v1/fem/spring-2d/jobs"),
+    ("spring_3d", "/api/v1/fem/spring-3d/jobs"),
+    ("truss_2d", "/api/v1/fem/truss-2d/jobs"),
+    ("thermal_truss_2d", "/api/v1/fem/thermal-truss-2d/jobs"),
+    ("frame_2d", "/api/v1/fem/frame-2d/jobs"),
+    ("thermal_frame_2d", "/api/v1/fem/thermal-frame-2d/jobs"),
+    ("plane_triangle_2d", "/api/v1/fem/plane-triangle-2d/jobs"),
+    ("heat_plane_triangle_2d", "/api/v1/fem/heat-plane-triangle-2d/jobs"),
+    ("thermal_plane_triangle_2d", "/api/v1/fem/thermal-plane-triangle-2d/jobs"),
+    ("electrostatic_plane_triangle_2d", "/api/v1/fem/electrostatic-plane-triangle-2d/jobs"),
+    ("plane_quad_2d", "/api/v1/fem/plane-quad-2d/jobs"),
+    ("heat_plane_quad_2d", "/api/v1/fem/heat-plane-quad-2d/jobs"),
+    ("thermal_plane_quad_2d", "/api/v1/fem/thermal-plane-quad-2d/jobs"),
+    ("electrostatic_plane_quad_2d", "/api/v1/fem/electrostatic-plane-quad-2d/jobs"),
+    ("truss_3d", "/api/v1/fem/truss-3d/jobs"),
+    ("thermal_truss_3d", "/api/v1/fem/thermal-truss-3d/jobs"),
+    ("frame_3d", "/api/v1/fem/frame-3d/jobs"),
+    ("thermal_frame_3d", "/api/v1/fem/thermal-frame-3d/jobs"),
+];
+
 pub struct ControlPlaneClient {
     host: String,
     port: u16,
@@ -58,6 +87,14 @@ impl ControlPlaneClient {
         self.request_json("GET", "/api/v1/workflows/catalog", None)
     }
 
+    pub fn fetch_workflow_catalog_workflow(&self, workflow_id: &str) -> SdkResult<Value> {
+        self.request_json(
+            "GET",
+            &format!("/api/v1/workflows/catalog/{}", percent_encode(workflow_id)),
+            None,
+        )
+    }
+
     pub fn list_workflow_operators(&self) -> SdkResult<Value> {
         self.request_json("GET", "/api/v1/operators", None)
     }
@@ -92,19 +129,31 @@ impl ControlPlaneClient {
     }
 
     pub fn create_axial_bar_job(&self, payload: &Value) -> SdkResult<Value> {
-        self.request_json("POST", "/api/v1/fem/axial-bar/jobs", Some(payload))
+        self.submit_fem_job("bar_1d", payload)
     }
 
     pub fn create_truss_2d_job(&self, payload: &Value) -> SdkResult<Value> {
-        self.request_json("POST", "/api/v1/fem/truss-2d/jobs", Some(payload))
+        self.submit_fem_job("truss_2d", payload)
     }
 
     pub fn create_truss_3d_job(&self, payload: &Value) -> SdkResult<Value> {
-        self.request_json("POST", "/api/v1/fem/truss-3d/jobs", Some(payload))
+        self.submit_fem_job("truss_3d", payload)
     }
 
     pub fn create_plane_triangle_2d_job(&self, payload: &Value) -> SdkResult<Value> {
-        self.request_json("POST", "/api/v1/fem/plane-triangle-2d/jobs", Some(payload))
+        self.submit_fem_job("plane_triangle_2d", payload)
+    }
+
+    pub fn submit_fem_job(&self, solve_kind: &str, payload: &Value) -> SdkResult<Value> {
+        let normalized = normalize_solve_kind(solve_kind);
+        let path = FEM_JOB_PATHS
+            .iter()
+            .find_map(|(kind, path)| (*kind == normalized).then_some(*path))
+            .ok_or_else(|| SdkError::Rpc {
+                message: format!("unsupported solve kind: {solve_kind}"),
+                code: None,
+            })?;
+        self.request_json("POST", path, Some(payload))
     }
 
     pub fn submit_workflow_catalog_job(&self, workflow_id: &str, input_artifacts: &Value) -> SdkResult<Value> {
@@ -262,6 +311,13 @@ fn append_query(path: &str, query: Option<&[(&str, String)]>) -> String {
         }
     }
     built
+}
+
+fn normalize_solve_kind(kind: &str) -> &str {
+    match kind {
+        "axial_bar_1d" => "bar_1d",
+        other => other,
+    }
 }
 
 fn percent_encode(value: &str) -> String {

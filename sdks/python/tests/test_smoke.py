@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import socket
+import struct
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -48,6 +50,26 @@ class _SmokeHandler(BaseHTTPRequestHandler):
             "progress": 1.0,
         }
     }
+    workflow_catalog_job_payload = {
+        "job": {
+            "job_id": "workflow-catalog-job",
+            "status": "completed",
+            "progress": 1.0,
+            "current_node": "output",
+            "completed_nodes": ["input", "output"],
+            "progress_events": [{"node_id": "output", "status": "completed"}],
+        }
+    }
+    workflow_graph_job_payload = {
+        "job": {
+            "job_id": "workflow-graph-job",
+            "status": "completed",
+            "progress": 1.0,
+            "current_node": "output",
+            "completed_nodes": ["input", "solve", "output"],
+            "progress_events": [{"node_id": "solve", "status": "completed"}],
+        }
+    }
     result_payload = {
         "job_id": "job-smoke",
         "result": {
@@ -63,6 +85,12 @@ class _SmokeHandler(BaseHTTPRequestHandler):
     }
 
     def do_POST(self) -> None:
+        if self.path == "/api/v1/fem/axial-bar/jobs":
+            self._respond(202, {"job": {"job_id": "job-axial", "status": "queued"}})
+            return
+        if self.path == "/api/v1/fem/thermal-frame-3d/jobs":
+            self._respond(202, {"job": {"job_id": "job-thermal-frame-3d", "status": "queued"}})
+            return
         if self.path == "/api/v1/fem/truss-2d/jobs":
             self._respond(202, {"job": {"job_id": "job-smoke", "status": "queued"}})
             return
@@ -80,6 +108,29 @@ class _SmokeHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/v1/workflows/catalog":
             self._respond(200, self.workflow_catalog_payload)
             return
+        if parsed.path == "/api/v1/workflows/catalog/workflow.test-graph":
+            self._respond(
+                200,
+                {
+                    "workflow": {
+                        "id": "workflow.test-graph",
+                        "graph": {
+                            "schema_version": "kyuubiki.workflow-graph/v1",
+                            "id": "workflow.test-graph",
+                            "name": "Test Graph",
+                            "version": "1.0.0",
+                            "entry_nodes": ["input"],
+                            "output_nodes": ["output"],
+                            "nodes": [
+                                {"id": "input", "kind": "input", "inputs": [], "outputs": [{"id": "mesh", "artifact_type": "mesh.input"}]},
+                                {"id": "output", "kind": "output", "inputs": [{"id": "mesh_result", "artifact_type": "mesh.result"}], "outputs": []},
+                            ],
+                            "edges": [],
+                        },
+                    }
+                },
+            )
+            return
         if parsed.path == "/api/v1/operators":
             query = parse_qs(parsed.query)
             if query.get("domain") == ["structural"]:
@@ -93,8 +144,52 @@ class _SmokeHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/v1/jobs/job-smoke":
             self._respond(200, self.job_payload)
             return
+        if parsed.path == "/api/v1/jobs/workflow-catalog-job":
+            self._respond(200, self.workflow_catalog_job_payload)
+            return
+        if parsed.path == "/api/v1/jobs/workflow-graph-job":
+            self._respond(200, self.workflow_graph_job_payload)
+            return
         if parsed.path == "/api/v1/results/job-smoke":
             self._respond(200, self.result_payload)
+            return
+        if parsed.path == "/api/v1/results/workflow-catalog-job":
+            self._respond(
+                200,
+                {
+                    "job_id": "workflow-catalog-job",
+                    "result": {
+                        "workflow_id": "workflow.test-graph",
+                        "run_id": "run-workflow-catalog",
+                        "status": "completed",
+                        "current_node": "output",
+                        "completed_nodes": ["input", "output"],
+                        "progress_events": [{"node_id": "output", "status": "completed"}],
+                        "artifacts": {
+                            "mesh.result": {"artifact_id": "artifact.catalog.result"},
+                        }
+                    },
+                },
+            )
+            return
+        if parsed.path == "/api/v1/results/workflow-graph-job":
+            self._respond(
+                200,
+                {
+                    "job_id": "workflow-graph-job",
+                    "result": {
+                        "workflow_id": "workflow.test-inline",
+                        "run_id": "run-workflow-graph",
+                        "status": "completed",
+                        "current_node": "output",
+                        "completed_nodes": ["input", "solve", "output"],
+                        "progress_events": [{"node_id": "solve", "status": "completed"}],
+                        "artifacts": {
+                            "mesh.result": {"artifact_id": "artifact.graph.result"},
+                        }
+                    },
+                },
+            )
             return
         if parsed.path == "/api/v1/results/job-smoke/chunks/nodes":
             self._respond(
@@ -165,6 +260,8 @@ class SmokeTest(unittest.TestCase):
 
         catalog_job = session.control_plane.submit_workflow_catalog_job("workflow.test-graph", {"mesh": {"project_id": "demo"}})
         self.assertEqual(catalog_job["job"]["job_id"], "workflow-catalog-job")
+        catalog_descriptor = session.control_plane.fetch_workflow_catalog_workflow("workflow.test-graph")
+        self.assertEqual(catalog_descriptor["workflow"]["graph"]["id"], "workflow.test-graph")
 
         graph_job = session.control_plane.submit_workflow_graph_job(
             {
@@ -175,6 +272,116 @@ class SmokeTest(unittest.TestCase):
             {"mesh": {"project_id": "demo"}},
         )
         self.assertEqual(graph_job["job"]["job_id"], "workflow-graph-job")
+
+    def test_agent_client_runs_workflow_jobs(self) -> None:
+        session = KyuubikiSession.from_control_plane(self.base_url)
+        agent = KyuubikiAgentClient(session)
+
+        catalog_outcome = agent.run_workflow_catalog(
+            "workflow.test-graph",
+            {"mesh": {"project_id": "demo"}},
+            timeout_s=5.0,
+        )
+        self.assertEqual(catalog_outcome["terminal"]["job"]["status"], "completed")
+        self.assertEqual(
+            catalog_outcome["result"]["result"]["artifacts"]["mesh.result"]["artifact_id"],
+            "artifact.catalog.result",
+        )
+        self.assertEqual(
+            catalog_outcome["validated_outputs"]["artifacts"]["output.mesh_result"]["artifact_id"],
+            "artifact.catalog.result",
+        )
+        self.assertEqual(catalog_outcome["workflow_runtime"]["run_id"], "run-workflow-catalog")
+        self.assertEqual(catalog_outcome["workflow_progression"]["snapshots"][0]["current_node"], "output")
+
+        graph_definition = {
+            "schema_version": "kyuubiki.workflow-graph/v1",
+            "id": "workflow.test-inline",
+            "name": "Inline Graph",
+            "version": "1.0.0",
+            "entry_nodes": ["input"],
+            "output_nodes": ["output"],
+            "nodes": [
+                {"id": "input", "kind": "input", "inputs": [], "outputs": [{"id": "mesh", "artifact_type": "mesh.input"}]},
+                {"id": "solve", "kind": "solve", "operator_id": "solver.truss_2d", "inputs": [], "outputs": []},
+                {"id": "output", "kind": "output", "inputs": [{"id": "mesh_result", "artifact_type": "mesh.result"}], "outputs": []},
+            ],
+            "edges": [],
+        }
+        graph_outcome = agent.run_workflow_graph(
+            graph_definition,
+            {"mesh": {"project_id": "demo"}},
+            timeout_s=5.0,
+        )
+        self.assertEqual(graph_outcome["terminal"]["job"]["status"], "completed")
+        self.assertEqual(
+            graph_outcome["result"]["result"]["artifacts"]["mesh.result"]["artifact_id"],
+            "artifact.graph.result",
+        )
+        self.assertEqual(graph_outcome["output_manifest"]["graph_id"], "workflow.test-inline")
+        self.assertEqual(
+            graph_outcome["validated_outputs"]["artifacts"]["output.mesh_result"]["artifact_id"],
+            "artifact.graph.result",
+        )
+        self.assertEqual(graph_outcome["workflow_runtime"]["current_node"], "output")
+        self.assertEqual(graph_outcome["workflow_progression"]["latest"]["run_id"], "run-workflow-graph")
+
+    def test_session_supports_expanded_solve_kinds(self) -> None:
+        session = KyuubikiSession.from_control_plane(self.base_url)
+
+        axial = session.submit_job("axial_bar_1d", {"nodes": [], "elements": []})
+        self.assertEqual(axial["job"]["job_id"], "job-axial")
+
+        thermal_frame = session.submit_job("thermal_frame_3d", {"nodes": [], "elements": []})
+        self.assertEqual(thermal_frame["job"]["job_id"], "job-thermal-frame-3d")
+
+    def test_session_supports_direct_rpc_for_expanded_solve_kinds(self) -> None:
+        listener = socket.create_server(("127.0.0.1", 0))
+        host, port = listener.getsockname()
+
+        def serve_once() -> None:
+            conn, _addr = listener.accept()
+            with conn:
+                size = struct.unpack(">I", _recv_exact(conn, 4))[0]
+                payload = json.loads(_recv_exact(conn, size).decode("utf-8"))
+                self.assertEqual(payload["method"], "solve_electrostatic_plane_quad_2d")
+                frame = json.dumps(
+                    {
+                        "ok": True,
+                        "result": {
+                            "solver": "electrostatic_plane_quad_2d",
+                            "input": payload["params"],
+                        },
+                    }
+                ).encode("utf-8")
+                conn.sendall(struct.pack(">I", len(frame)) + frame)
+
+        thread = threading.Thread(target=serve_once, daemon=True)
+        thread.start()
+        try:
+            session = KyuubikiSession.from_endpoints(
+                self.base_url,
+                rpc_host=host,
+                rpc_port=port,
+            )
+            result = session.solve_direct(
+                "electrostatic_plane_quad_2d",
+                {"nodes": [], "elements": []},
+            )
+            self.assertEqual(result["solver"], "electrostatic_plane_quad_2d")
+        finally:
+            listener.close()
+            thread.join(timeout=1)
+
+
+def _recv_exact(sock: socket.socket, size: int) -> bytes:
+    chunks = bytearray()
+    while len(chunks) < size:
+        chunk = sock.recv(size - len(chunks))
+        if not chunk:
+            raise RuntimeError("rpc connection closed before frame completed")
+        chunks.extend(chunk)
+    return bytes(chunks)
 
 
 if __name__ == "__main__":

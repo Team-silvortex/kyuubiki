@@ -17,12 +17,28 @@ boundaries, deployment modes, and engineering workflow.
 
 Read these first, in order:
 
-1. `current-line.md`
-2. `system-overview.md`
-3. `protocols.md`
-4. `repository-structure.md`
-5. `testing-and-ci.md`
-6. `maintenance.md`
+1. `book.html`
+2. `book-manifest.json`
+3. `current-line.md`
+4. `system-overview.md`
+5. `protocols.md`
+6. `repository-structure.md`
+7. `testing-and-ci.md`
+8. `maintenance.md`
+
+## Central Book
+
+- `book.html`
+  Single-entry HTML book for humans and assistants that need the whole project
+  picture before diving into chapter-level documents.
+- `book-manifest.json`
+  Machine-readable chapter map and reading-path manifest for future large-model
+  ingestion and tooling.
+- `book-ch*.html`
+  Chapter pages for the centralized book, so the book can grow by section
+  without turning the main entrypoint back into one oversized page.
+- `../apps/hub-gui/ui/docs/index.html`
+  Desktop-facing mirror entry for the same narrative, tuned for the Hub shelf.
 
 ## Maintenance
 

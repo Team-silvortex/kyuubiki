@@ -15,9 +15,9 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
   end
 
-  @spec checkout_endpoints(String.t() | nil) :: [endpoint()]
-  def checkout_endpoints(method \\ nil) do
-    GenServer.call(__MODULE__, {:checkout_endpoints, method})
+  @spec checkout_endpoints(String.t() | nil, keyword()) :: [endpoint()]
+  def checkout_endpoints(method \\ nil, opts \\ []) when is_list(opts) do
+    GenServer.call(__MODULE__, {:checkout_endpoints, method, opts})
   end
 
   @spec report_failure(endpoint(), term()) :: :ok
@@ -82,7 +82,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   end
 
   def handle_call(
-        {:checkout_endpoints, method},
+        {:checkout_endpoints, method, opts},
         _from,
         %{endpoints: endpoints, cursor: cursor, health: health} = state
       ) do
@@ -90,6 +90,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       endpoints
       |> rotate(cursor)
       |> route_endpoints(method)
+      |> filter_endpoints(method, opts)
       |> deprioritize_cooling_endpoints(health)
 
     next_cursor = if endpoints == [], do: 0, else: rem(cursor + 1, length(endpoints))
@@ -153,6 +154,132 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       _ -> available ++ cooling
     end
   end
+
+  defp filter_endpoints(endpoints, method, opts) do
+    required_capabilities =
+      opts
+      |> Keyword.get(:required_capabilities, [])
+      |> normalize_constraint_values()
+
+    placement_tags =
+      opts
+      |> Keyword.get(:placement_tags, [])
+      |> normalize_constraint_values()
+
+    if required_capabilities == [] and placement_tags == [] do
+      endpoints
+    else
+      {typed_matches, legacy_fallbacks} =
+        Enum.reduce(endpoints, {[], []}, fn endpoint, {typed, legacy} ->
+          case classify_endpoint(endpoint, method, required_capabilities, placement_tags) do
+            {:typed_match, score} -> {[{endpoint, score} | typed], legacy}
+            :legacy_fallback -> {typed, [endpoint | legacy]}
+            :explicit_mismatch -> {typed, legacy}
+          end
+        end)
+
+      typed_matches =
+        typed_matches
+        |> Enum.sort_by(fn {_endpoint, score} -> -score end)
+        |> Enum.map(&elem(&1, 0))
+
+      typed_matches ++ Enum.reverse(legacy_fallbacks)
+    end
+  end
+
+  defp classify_endpoint(endpoint, method, required_capabilities, placement_tags) do
+    capability_status = capability_match_status(endpoint, method, required_capabilities)
+    tag_status = tag_match_status(endpoint, placement_tags)
+
+    cond do
+      capability_status == :mismatch or tag_status == :mismatch ->
+        :explicit_mismatch
+
+      capability_status == :unknown or tag_status == :unknown ->
+        :legacy_fallback
+
+      true ->
+        {:typed_match, endpoint_match_score(endpoint, required_capabilities, placement_tags)}
+    end
+  end
+
+  defp capability_match_status(_endpoint, _method, []), do: :match
+
+  defp capability_match_status(endpoint, method, required_capabilities) do
+    capability_ids =
+      endpoint
+      |> Map.get(:capabilities, [])
+      |> Enum.map(& &1.id)
+
+    has_capability_metadata? =
+      capability_ids != [] or
+        Map.get(endpoint, :methods, []) != [] or
+        is_binary(Map.get(endpoint, :role)) or
+        Enum.any?(Map.get(endpoint, :capabilities, []), &is_binary(&1.role))
+
+    cond do
+      not has_capability_metadata? ->
+        :unknown
+
+      Enum.all?(
+        required_capabilities,
+        &endpoint_supports_capability?(endpoint, method, &1, capability_ids)
+      ) ->
+        :match
+
+      true ->
+        :mismatch
+    end
+  end
+
+  defp endpoint_supports_capability?(endpoint, method, "solver_rpc", capability_ids) do
+    "solver_rpc" in capability_ids or
+      Map.get(endpoint, :role) == "solver" or
+      supports_method?(endpoint, method || "") or
+      Enum.any?(Map.get(endpoint, :capabilities, []), &(&1.role == "solver"))
+  end
+
+  defp endpoint_supports_capability?(endpoint, _method, capability_id, capability_ids) do
+    capability_id in capability_ids or Map.get(endpoint, :role) == capability_id
+  end
+
+  defp tag_match_status(_endpoint, []), do: :match
+
+  defp tag_match_status(endpoint, placement_tags) do
+    tags = endpoint_tags(endpoint)
+
+    cond do
+      tags == [] -> :unknown
+      Enum.any?(placement_tags, &(&1 in tags)) -> :match
+      true -> :mismatch
+    end
+  end
+
+  defp endpoint_match_score(endpoint, required_capabilities, placement_tags) do
+    capability_ids =
+      endpoint
+      |> Map.get(:capabilities, [])
+      |> Enum.map(& &1.id)
+
+    tags = endpoint_tags(endpoint)
+
+    capability_score =
+      Enum.count(required_capabilities, fn capability_id ->
+        capability_id in capability_ids or Map.get(endpoint, :role) == capability_id
+      end)
+
+    tag_score = Enum.count(placement_tags, &(&1 in tags))
+    capability_score * 10 + tag_score
+  end
+
+  defp normalize_constraint_values(values) when is_list(values) do
+    values
+    |> Enum.filter(&is_binary/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+  end
+
+  defp normalize_constraint_values(_values), do: []
 
   defp configured_endpoints do
     config = Application.get_env(:kyuubiki_web, __MODULE__, [])

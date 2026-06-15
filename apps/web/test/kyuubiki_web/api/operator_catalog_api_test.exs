@@ -36,6 +36,11 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert frame_operator["kind"] == "solver"
     assert frame_operator["origin"] == "built_in"
     assert frame_operator["input_schema"]["schema"] == "kyuubiki.operator.frame_3d.input"
+    assert frame_operator["execution"]["authority_mode"] == "central_operator_library"
+    assert frame_operator["execution"]["execution_mode"] == "orchestra_fetch"
+    assert frame_operator["execution"]["package_ref"] == "orchestra://operator-package/solve.frame_3d"
+    assert "frame" in frame_operator["execution"]["placement_tags"]
+    assert "solver_rpc" in frame_operator["execution"]["required_capabilities"]
     assert frame_operator["validation"]["baseline_status"] == "verified"
     assert frame_operator["validation"]["baseline_cases"] == ["frame_3d_baseline"]
     assert "orchestrated_api" in frame_operator["validation"]["smoke_paths"]
@@ -79,6 +84,10 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
            ] = electrostatic_operator["outputs"]
 
     assert electrostatic_heat_bridge_operator["kind"] == "workflow_bridge"
+    assert electrostatic_heat_bridge_operator["execution"]["source_ref"] ==
+             "orchestra://operator/bridge.electrostatic_field_to_heat_quad_2d"
+    assert "bridge" in electrostatic_heat_bridge_operator["execution"]["placement_tags"]
+    assert "workflow_bridge_runtime" in electrostatic_heat_bridge_operator["execution"]["required_capabilities"]
 
     assert electrostatic_heat_bridge_operator["config_schema"]["schema"] ==
              "kyuubiki.bridge-contract.electrostatic_to_heat.v1"
