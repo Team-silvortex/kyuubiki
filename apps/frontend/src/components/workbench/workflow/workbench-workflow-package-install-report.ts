@@ -1,11 +1,12 @@
 "use client";
 
-import type { WorkflowCatalogEntry } from "@/lib/api";
+import type { ProtocolAgentDescriptor, WorkflowCatalogEntry } from "@/lib/api";
 import type { WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
 import { formatWorkflowContractHealthSummary, formatWorkflowDynamicReviewState } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { buildWorkbenchInstallGovernanceDiagnostics, WORKBENCH_STANDARD_STORAGE_CONTRACT } from "@/components/workbench/system/workbench-system-storage-contract";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
+import { readWorkbenchAuditTimeline } from "@/lib/workbench/workbench-audit-timeline";
 
 export type WorkflowPackageResidualRecord = {
   id: string;
@@ -73,6 +74,14 @@ export type WorkflowPackageInstallReport = {
     kind: "scan" | "repair";
     lines: string[];
   }>;
+  audit_timeline?: Array<{
+    at: string;
+    source: string;
+    kind: string;
+    message: string;
+    detail?: string;
+    count?: number;
+  }>;
 };
 
 export function scanWorkflowPackageResiduals(params: {
@@ -130,6 +139,8 @@ export function buildWorkflowPackageInstallReport(params: {
   importedPackage: WorkflowPackage | null;
   integrityReport: WorkflowIntegrityReport;
   recentRunStatus?: string | null;
+  protocolAgents?: ProtocolAgentDescriptor[];
+  frontendRuntimeMode?: "orchestrated_gui" | "direct_mesh_gui";
   maintenanceHistory?: Array<{
     at: string;
     kind: "scan" | "repair";
@@ -169,6 +180,12 @@ export function buildWorkflowPackageInstallReport(params: {
       entryInputs: workflow.entry_inputs,
       inputArtifactTexts: workflow.local?.input_artifact_texts,
     });
+  const auditTimeline = readWorkbenchAuditTimeline(workflow.id, 24, params.frontendRuntimeMode ? {
+    frontendRuntimeMode: params.frontendRuntimeMode,
+    protocolAgents: params.protocolAgents ?? [],
+  } : undefined)
+    .slice(0, 16)
+    .map((entry) => ({ at: entry.at, source: entry.source, kind: entry.kind, message: entry.title, detail: entry.detail, count: entry.count }));
 
   return {
     generated_at: new Date().toISOString(),
@@ -223,6 +240,7 @@ export function buildWorkflowPackageInstallReport(params: {
     residuals,
     repair_plan: repairPlan,
     maintenance_history: maintenanceHistory,
+    audit_timeline: auditTimeline,
   };
 }
 

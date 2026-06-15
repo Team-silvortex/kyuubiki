@@ -14,10 +14,11 @@ import {
   resolveWorkflowConditionConfig,
   WORKFLOW_CONDITION_OPERATORS,
 } from "@/components/workbench/workflow/workbench-workflow-condition";
-import { hasBridgeSeedModelConfig } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import { validateBridgeNodes } from "@/components/workbench/workflow/workbench-workflow-bridge-validation";
 import { buildPortsForWorkflowNodeTemplate } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
+import { normalizeBridgeConfigWithSupport } from "@/lib/workbench/workflow-bridge-contract-support";
 
 export type WorkflowGraphValidationIssue = {
   id: string;
@@ -58,6 +59,7 @@ export type WorkflowGraphValidationIssue = {
         operatorId: string;
         templateKind?: string;
       }
+    | { kind: "normalize_bridge_contract_from_support"; nodeId: string; operatorId: string }
     | { kind: "clear_port_dataset_value"; nodeId: string; portId: string; direction: "inputs" | "outputs" }
     | { kind: "clear_edge_dataset_value"; edgeId: string };
 };
@@ -294,40 +296,6 @@ function validateRuntimeSupport(graph: WorkflowGraphDefinition): WorkflowGraphVa
   return issues;
 }
 
-function validateBridgeConfigs(graph: WorkflowGraphDefinition): WorkflowGraphValidationIssue[] {
-  const issues: WorkflowGraphValidationIssue[] = [];
-  for (const node of graph.nodes) {
-    if (!node.operator_id?.startsWith("bridge.")) continue;
-    if (
-      hasBridgeSeedModelConfig(
-        node.operator_id,
-        node.config as Record<string, unknown> | null | undefined,
-      )
-    ) {
-      continue;
-    }
-    issues.push({
-      id: `bridge:seed-model:${node.id}`,
-      level: "warning",
-      message:
-        node.operator_id === "bridge.electrostatic_field_to_heat_quad_2d" ||
-        node.operator_id === "bridge.electrostatic_field_to_heat_triangle_2d"
-          ? `Bridge node "${node.id}" is missing config.seed_model for the downstream heat quad seed model.`
-          : `Bridge node "${node.id}" is missing downstream thermo seed-model fields in config.`,
-      locate: { kind: "node", nodeId: node.id },
-      fix: node.operator_id
-        ? {
-            kind: "sync_node_template_from_operator",
-            nodeId: node.id,
-            operatorId: node.operator_id,
-            templateKind: node.kind,
-          }
-        : undefined,
-    });
-  }
-  return issues;
-}
-
 export function validateWorkflowGraphDefinition(
   graph: WorkflowGraphDefinition | null,
   entryInputs: WorkflowCatalogEntryArtifact[],
@@ -456,7 +424,43 @@ export function validateWorkflowGraphDefinition(
   }
 
   issues.push(...validateRuntimeSupport(graph));
-  issues.push(...validateBridgeConfigs(graph));
+  const bridgeIssues = validateBridgeNodes(graph, operatorDescriptors);
+  issues.push(
+    ...bridgeIssues
+      .filter((issue) => !issue.id.startsWith("bridge:contract:"))
+      .map((issue) => {
+      if (issue.id !== `bridge:seed-model:${issue.locate.nodeId}`) return issue;
+      const bridgeNode = nodeMap.get(issue.locate.nodeId);
+      return {
+        ...issue,
+        fix: bridgeNode?.operator_id
+          ? {
+              kind: "sync_node_template_from_operator" as const,
+              nodeId: issue.locate.nodeId,
+              operatorId: bridgeNode.operator_id,
+              templateKind: bridgeNode.kind,
+            }
+          : undefined,
+      };
+    }),
+  );
+  issues.push(
+    ...bridgeIssues
+      .filter((issue) => issue.id.startsWith("bridge:contract:"))
+      .map((issue) => {
+        const bridgeNode = nodeMap.get(issue.locate.nodeId);
+        return {
+          ...issue,
+          fix: bridgeNode?.operator_id
+            ? {
+                kind: "normalize_bridge_contract_from_support" as const,
+                nodeId: issue.locate.nodeId,
+                operatorId: bridgeNode.operator_id,
+              }
+            : undefined,
+        };
+      }),
+  );
   issues.push(...validateCatalogArtifacts(graph, entryInputs, "entry"));
   issues.push(...validateCatalogArtifacts(graph, outputArtifacts, "output"));
   issues.push(...validateOperatorDescriptorContracts(graph, operatorDescriptors));
@@ -490,6 +494,17 @@ export function applyWorkflowValidationFix(
         },
         operatorDescriptors,
       );
+      break;
+    }
+    case "normalize_bridge_contract_from_support": {
+      const node = next.nodes.find((entry) => entry.id === fix.nodeId);
+      const descriptor = operatorDescriptors.find((entry) => entry.id === fix.operatorId);
+      if (!node || !descriptor?.contract_support) break;
+      node.config = normalizeBridgeConfigWithSupport(
+        fix.operatorId,
+        node.config as Record<string, unknown> | null | undefined,
+        descriptor,
+      ) ?? undefined;
       break;
     }
     case "set_edge_artifact_type_from_source":

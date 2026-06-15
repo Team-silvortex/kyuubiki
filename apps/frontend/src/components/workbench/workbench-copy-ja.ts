@@ -280,7 +280,7 @@ export const copyJa = {
     workflowBridgeContractScaleLabel: "スケール",
     workflowBridgeContractReductionLabel: "集約方式",
     workflowBridgeContractDefaultValueLabel: "デフォルト値",
-    workflowBridgeContractTargetFieldLabel: "出力フィールド",
+    workflowBridgeContractTargetFieldLabel: "出力フィールド", workflowBridgeContractAdjustedFieldsLabel: "自動補正された項目",
     workflowBridgeContractPreviewTitle: "影響プレビュー",
     workflowBridgeContractPreviewSummaryLabel: "現在のマッピング",
     workflowBridgeContractPreviewDownstreamLabel: "下流への影響",

@@ -209,7 +209,13 @@ defmodule KyuubikiWeb.Analysis do
     with {:ok, normalized} <- normalizer.(params),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
          {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
-      start_background_job(job.job_id, method, normalized)
+      start_background_job(
+        job.job_id,
+        method,
+        normalized,
+        orchestration_context_from_params(params)
+      )
+
       {:ok, AnalysisJobSupport.serialize_payload(job)}
     end
   end
@@ -270,7 +276,10 @@ defmodule KyuubikiWeb.Analysis do
              "input_artifacts" => input_artifacts,
              "tags" => Map.get(normalized, "tags", []),
              "requested_agent_id" => Map.get(normalized, "requested_agent_id"),
-             "requested_capability" => Map.get(normalized, "requested_capability")
+             "requested_capability" => Map.get(normalized, "requested_capability"),
+             "control_mode" => Map.get(normalized, "control_mode"),
+             "orch_id" => Map.get(normalized, "orch_id"),
+             "orch_session_id" => Map.get(normalized, "orch_session_id")
            }) do
       {:ok, payload}
     else
@@ -289,16 +298,19 @@ defmodule KyuubikiWeb.Analysis do
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
          {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
+      orchestration_context = orchestration_context_from_params(params)
+
       :ok =
         AnalysisResultStore.put(job.job_id, %{
           "workflow_id" => Map.get(graph, "id"),
           "current_node" => nil,
           "progress_events" => [],
           "completed_nodes" => [],
-          "artifacts" => %{}
+          "artifacts" => %{},
+          "orchestration_context" => orchestration_context
         })
 
-      start_background_workflow_job(job.job_id, graph, input_artifacts)
+      start_background_workflow_job(job.job_id, graph, input_artifacts, orchestration_context)
       {:ok, AnalysisJobSupport.serialize_payload(job)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
@@ -350,36 +362,52 @@ defmodule KyuubikiWeb.Analysis do
   def export_database, do: AnalysisExports.export_database()
 
   defp execute_workflow_graph(graph, input_artifacts) do
-    execute_workflow_graph(graph, input_artifacts, nil)
+    execute_workflow_graph(graph, input_artifacts, nil, %{})
   end
 
-  defp execute_workflow_graph(%{} = graph, input_artifacts, progress_callback)
-       when is_map(input_artifacts) and
+  defp execute_workflow_graph(
+         %{} = graph,
+         input_artifacts,
+         progress_callback,
+         orchestration_context
+       )
+       when is_map(input_artifacts) and is_map(orchestration_context) and
               (is_nil(progress_callback) or is_function(progress_callback, 1)) do
     WorkflowGraphRunner.run(
       graph,
       input_artifacts,
       dataset_contract: Map.get(graph, "dataset_contract"),
       progress_callback: progress_callback,
-      execute_solve: &WorkflowOperatorRuntime.run_solve_operator/3,
+      execute_solve: fn operator_id, payload, node ->
+        WorkflowOperatorRuntime.run_solve_operator(
+          operator_id,
+          payload,
+          Map.put(node, "orchestration_context", orchestration_context)
+        )
+      end,
       execute_transform: &WorkflowOperatorRuntime.run_transform_operator/3,
       execute_extract: &WorkflowOperatorRuntime.run_extract_operator/3,
       execute_export: &WorkflowOperatorRuntime.run_export_operator/3
     )
   end
 
-  defp execute_workflow_graph(_graph, _input_artifacts, _progress_callback),
-    do: {:error, :invalid_workflow_graph}
+  defp execute_workflow_graph(
+         _graph,
+         _input_artifacts,
+         _progress_callback,
+         _orchestration_context
+       ),
+       do: {:error, :invalid_workflow_graph}
 
-  defp start_background_job(job_id, method, params) do
+  defp start_background_job(job_id, method, params, orchestration_context) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      execute_background_job(job_id, method, params)
+      execute_background_job(job_id, method, params, orchestration_context)
     end)
   end
 
-  defp start_background_workflow_job(job_id, graph, input_artifacts) do
+  defp start_background_workflow_job(job_id, graph, input_artifacts, orchestration_context) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      execute_background_workflow_job(job_id, graph, input_artifacts)
+      execute_background_workflow_job(job_id, graph, input_artifacts, orchestration_context)
     end)
   end
 
@@ -403,12 +431,18 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
-  defp execute_background_job(job_id, method, params) do
+  defp execute_background_job(job_id, method, params, orchestration_context) do
     timeout_ms = watchdog_job_timeout_ms()
 
     task =
       Task.async(fn ->
-        AgentClient.request_with_agent(method, params, &apply_agent_progress(job_id, &1))
+        AgentClient.request_with_agent(
+          method,
+          params,
+          &apply_agent_progress(job_id, &1),
+          orchestration: orchestration_context,
+          job_id: job_id
+        )
       end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
@@ -434,14 +468,19 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
-  defp execute_background_workflow_job(job_id, graph, input_artifacts) do
+  defp execute_background_workflow_job(job_id, graph, input_artifacts, orchestration_context) do
     timeout_ms = watchdog_job_timeout_ms()
 
     task =
       Task.async(fn ->
-        execute_workflow_graph(graph, input_artifacts, fn progress ->
-          apply_workflow_progress(job_id, progress)
-        end)
+        execute_workflow_graph(
+          graph,
+          input_artifacts,
+          fn progress ->
+            apply_workflow_progress(job_id, progress)
+          end,
+          orchestration_context
+        )
       end)
 
     case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
@@ -544,6 +583,22 @@ defmodule KyuubikiWeb.Analysis do
 
     AnalysisResultStore.put(job_id, updater.(runtime))
   end
+
+  defp orchestration_context_from_params(params) when is_map(params) do
+    normalized = AnalysisJobSupport.stringify_keys(params)
+
+    %{}
+    |> maybe_put_orchestration_value("control_mode", Map.get(normalized, "control_mode"))
+    |> maybe_put_orchestration_value("orch_id", Map.get(normalized, "orch_id"))
+    |> maybe_put_orchestration_value("orch_session_id", Map.get(normalized, "orch_session_id"))
+  end
+
+  defp maybe_put_orchestration_value(context, _key, nil), do: context
+
+  defp maybe_put_orchestration_value(context, key, value) when is_binary(value) and value != "",
+    do: Map.put(context, key, value)
+
+  defp maybe_put_orchestration_value(context, _key, _value), do: context
 
   defp fail_job(job_id, message) when is_binary(job_id) and is_binary(message) do
     _ =

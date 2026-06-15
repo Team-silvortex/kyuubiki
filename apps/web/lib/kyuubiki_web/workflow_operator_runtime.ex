@@ -189,6 +189,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   defp dispatch_solve_operator(method, payload, node) when is_atom(method) do
     client = solve_runtime_client()
     routing_opts = solve_routing_opts(node)
+    _ = Code.ensure_loaded(client)
 
     cond do
       function_exported?(client, :request, 4) ->
@@ -211,7 +212,11 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       placement_tags:
         node
         |> Map.get("placement_tags", [])
-        |> normalize_routing_values()
+        |> normalize_routing_values(),
+      orchestration:
+        node
+        |> Map.get("orchestration_context", %{})
+        |> normalize_orchestration_context()
     ]
   end
 
@@ -223,6 +228,22 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   end
 
   defp normalize_routing_values(_values), do: []
+
+  defp normalize_orchestration_context(%{} = context) do
+    %{}
+    |> put_orchestration_value(:control_mode, Map.get(context, "control_mode"))
+    |> put_orchestration_value(:orch_id, Map.get(context, "orch_id"))
+    |> put_orchestration_value(:orch_session_id, Map.get(context, "orch_session_id"))
+  end
+
+  defp normalize_orchestration_context(_context), do: %{}
+
+  defp put_orchestration_value(context, _key, nil), do: context
+
+  defp put_orchestration_value(context, key, value) when is_binary(value),
+    do: Map.put(context, key, value)
+
+  defp put_orchestration_value(context, _key, _value), do: context
 
   defp resolve_electrostatic_to_heat_bridge_contract(config),
     do: WorkflowOperatorBridgeRuntime.resolve_electrostatic_to_heat_bridge_contract(config)

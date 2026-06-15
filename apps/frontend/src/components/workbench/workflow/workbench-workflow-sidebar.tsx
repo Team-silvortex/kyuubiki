@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type {
   JobState,
+  ProtocolAgentDescriptor,
   WorkflowCatalogEntry,
   WorkflowGraphDefinition,
   WorkflowOperatorDescriptor,
@@ -47,6 +48,8 @@ type WorkbenchWorkflowSidebarProps = {
   latestJob: JobState | null;
   latestWorkflowSummary: string | null;
   workflowRuns: WorkflowRunRecord[];
+  protocolAgents: ProtocolAgentDescriptor[];
+  frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   onRefreshWorkflowCatalog: () => void;
   onSelectWorkflow: (workflowId: string) => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
@@ -109,6 +112,8 @@ export function WorkbenchWorkflowSidebar({
   latestJob,
   latestWorkflowSummary,
   workflowRuns,
+  protocolAgents,
+  frontendRuntimeMode,
   onRefreshWorkflowCatalog,
   onSelectWorkflow,
   onRunWorkflowCatalog,
@@ -151,6 +156,7 @@ export function WorkbenchWorkflowSidebar({
     setBuilderTraceFocus({ nodeId, token: Date.now() });
     openSurfaceTab("builder");
   }
+  function openAuditRun(jobId: string) { onOpenWorkflowRun(jobId); openSurfaceTab("runs"); }
   function openRunBranchInBuilder(workflowId: string, nodeId: string, outputId: string) {
     onSelectWorkflow(workflowId); setBuilderTraceFocus({ nodeId, token: Date.now() }); setBuilderBranchFocus({ nodeId, outputId, token: Date.now() }); openSurfaceTab("builder");
   }
@@ -419,6 +425,8 @@ export function WorkbenchWorkflowSidebar({
           currentStudyKind={currentStudyKind}
           labels={labels}
           operatorDescriptors={workflowOperatorDescriptors}
+          protocolAgents={protocolAgents}
+          frontendRuntimeMode={frontendRuntimeMode}
           recentRunStatus={selectedWorkflow ? latestRunStatusByWorkflowId.get(selectedWorkflow.id) ?? null : null}
           onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
@@ -432,6 +440,7 @@ export function WorkbenchWorkflowSidebar({
           traceFocusDatasetNodeId={builderDatasetFocus?.nodeId ?? null}
           traceFocusDatasetPortId={builderDatasetFocus?.portId ?? null}
           traceFocusDatasetToken={builderDatasetFocus?.token}
+          onLocateAuditTarget={(target) => { if (target.kind === "run") openAuditRun(target.jobId); }}
         />
       ) : null}
 

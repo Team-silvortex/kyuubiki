@@ -36,6 +36,24 @@ export type WorkflowOperatorExecutionDescriptor = {
   agent_fetchable?: boolean;
 };
 
+export type WorkflowBridgeContractSupport = {
+  source: {
+    fields: string[];
+    distributions: Record<string, string[]>;
+    node_index_fields: string[];
+  };
+  transform: {
+    reductions: string[];
+    default_reduction_by_distribution?: Record<string, string>;
+    default_scale?: number;
+    default_value?: number;
+  };
+  target: {
+    fields: string[];
+    default_field?: string;
+  };
+};
+
 export type WorkflowOperatorDescriptor = {
   id: string;
   version: string;
@@ -49,6 +67,7 @@ export type WorkflowOperatorDescriptor = {
   output_schema: WorkflowOperatorSchemaRef;
   config_schema?: WorkflowOperatorSchemaRef;
   config_example?: Record<string, unknown> | null;
+  contract_support?: WorkflowBridgeContractSupport;
   inputs: WorkflowOperatorPortDescriptor[];
   outputs: WorkflowOperatorPortDescriptor[];
   validation: WorkflowOperatorValidationProfile;

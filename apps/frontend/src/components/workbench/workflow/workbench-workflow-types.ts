@@ -281,6 +281,7 @@ export type WorkflowSidebarLabels = {
   bridgeContractReductionLabel: string;
   bridgeContractDefaultValueLabel: string;
   bridgeContractTargetFieldLabel: string;
+  bridgeContractAdjustedFieldsLabel: string;
   bridgeContractPreviewTitle: string;
   bridgeContractPreviewSummaryLabel: string;
   bridgeContractPreviewDownstreamLabel: string;

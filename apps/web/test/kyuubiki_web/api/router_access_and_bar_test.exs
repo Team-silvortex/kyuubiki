@@ -116,6 +116,50 @@ defmodule KyuubikiWeb.Api.RouterAccessAndBarTest do
     assert Jason.decode!(conn.resp_body)["project"]["name"] == "Local Project"
   end
 
+  test "exposes active execution leases through the agents API" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-agent-lease-view",
+               "host" => "10.20.2.10",
+               "port" => 6401,
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a"
+             })
+
+    assert {:ok, _lease} =
+             AgentRegistry.claim_execution("solver-agent-lease-view", %{
+               "lease_id" => "lease-view-a",
+               "control_mode" => "orch_managed",
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a",
+               "job_id" => "job-a",
+               "method" => "solve_bar_1d"
+             })
+
+    conn =
+      :get
+      |> conn("/api/v1/agents")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+
+    payload = Jason.decode!(conn.resp_body)
+    [agent] = payload["agents"]
+
+    assert agent["id"] == "solver-agent-lease-view"
+    assert agent["execution_state"] == "leased"
+    assert agent["active_lease"]["lease_id"] == "lease-view-a"
+    assert agent["active_lease"]["job_id"] == "job-a"
+    assert is_integer(agent["active_lease"]["age_ms"])
+    assert agent["active_lease"]["is_stale"] == false
+
+    assert payload["summary"]["active_execution_lease_count"] == 1
+    assert payload["summary"]["stale_execution_lease_count"] == 0
+
+    assert hd(payload["summary"]["active_execution_leases"])["agent_id"] ==
+             "solver-agent-lease-view"
+  end
+
   test "rejects non-loopback mutating routes without a configured API token" do
     conn =
       :post

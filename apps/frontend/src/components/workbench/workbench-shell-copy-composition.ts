@@ -246,6 +246,7 @@ export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
     bridgeContractReductionLabel: t.workflowBridgeContractReductionLabel,
     bridgeContractDefaultValueLabel: t.workflowBridgeContractDefaultValueLabel,
     bridgeContractTargetFieldLabel: t.workflowBridgeContractTargetFieldLabel,
+    bridgeContractAdjustedFieldsLabel: t.workflowBridgeContractAdjustedFieldsLabel,
     bridgeContractPreviewTitle: t.workflowBridgeContractPreviewTitle,
     bridgeContractPreviewSummaryLabel: t.workflowBridgeContractPreviewSummaryLabel,
     bridgeContractPreviewDownstreamLabel: t.workflowBridgeContractPreviewDownstreamLabel,

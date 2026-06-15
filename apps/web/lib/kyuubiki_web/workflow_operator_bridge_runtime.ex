@@ -51,7 +51,8 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
              get_in(contract, ["target", "field"]) || "heat_load",
              :invalid_bridge_contract_target_field
            ),
-         :ok <- validate_electrostatic_bridge_source_field(source_field, distribution) do
+         :ok <- validate_electrostatic_bridge_source_field(source_field, distribution),
+         :ok <- validate_electrostatic_bridge_target_field(target_field) do
       {:ok,
        %{
          source_field: source_field,
@@ -169,24 +170,32 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
          %{source_field: source_field, node_index_fields: node_index_fields, scale: scale} =
            bridge_contract
        ) do
-    {totals, counts, minima, maxima} =
+    {totals, counts, weighted_totals, weight_sums, minima, maxima} =
       Enum.reduce(
         elements,
         {
           List.duplicate(0.0, node_count),
           List.duplicate(0, node_count),
+          List.duplicate(0.0, node_count),
+          List.duplicate(0.0, node_count),
           List.duplicate(nil, node_count),
           List.duplicate(nil, node_count)
         },
-        fn element, {totals, counts, minima, maxima} ->
+        fn element, {totals, counts, weighted_totals, weight_sums, minima, maxima} ->
           magnitude =
             element
             |> electrostatic_bridge_source_value(source_field, bridge_contract.default_value)
 
+          weight = normalize_numeric_value(Map.get(element, "area", 1.0))
           node_indexes =
             Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
 
-          Enum.reduce(node_indexes, {totals, counts, minima, maxima}, fn node_index, {totals_acc, counts_acc, minima_acc, maxima_acc} ->
+          Enum.reduce(
+            node_indexes,
+            {totals, counts, weighted_totals, weight_sums, minima, maxima},
+            fn node_index,
+               {totals_acc, counts_acc, weighted_totals_acc, weight_sums_acc, minima_acc,
+                maxima_acc} ->
             next_min =
               minima_acc
               |> Enum.at(node_index)
@@ -206,17 +215,28 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
             {
               List.update_at(totals_acc, node_index, &(&1 + magnitude * scale)),
               List.update_at(counts_acc, node_index, &(&1 + 1)),
+              List.update_at(weighted_totals_acc, node_index, &(&1 + magnitude * scale * weight)),
+              List.update_at(weight_sums_acc, node_index, &(&1 + weight)),
               List.replace_at(minima_acc, node_index, next_min),
               List.replace_at(maxima_acc, node_index, next_max)
             }
-          end)
+          end
+          )
         end
       )
 
-    reduce_nodal_values(totals, counts, minima, maxima, bridge_contract)
+    reduce_nodal_values(
+      totals,
+      counts,
+      weighted_totals,
+      weight_sums,
+      minima,
+      maxima,
+      bridge_contract
+    )
   end
 
-  defp reduce_nodal_values(totals, counts, _minima, _maxima, %{
+  defp reduce_nodal_values(totals, counts, _weighted_totals, _weight_sums, _minima, _maxima, %{
          reduction: "sum",
          default_value: default_value
        }) do
@@ -227,7 +247,26 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
     end)
   end
 
-  defp reduce_nodal_values(_totals, counts, minima, _maxima, %{
+  defp reduce_nodal_values(
+         _totals,
+         counts,
+         weighted_totals,
+         weight_sums,
+         _minima,
+         _maxima,
+         %{
+           reduction: "area_weighted_mean",
+           default_value: default_value
+         }
+       ) do
+    Enum.zip([weighted_totals, weight_sums, counts])
+    |> Enum.map(fn
+      {weighted_total, weight_sum, count} when count > 0 and weight_sum > 0 -> weighted_total / weight_sum
+      {_weighted_total, _weight_sum, _count} -> default_value
+    end)
+  end
+
+  defp reduce_nodal_values(_totals, counts, _weighted_totals, _weight_sums, minima, _maxima, %{
          reduction: "min",
          default_value: default_value
        }) do
@@ -238,10 +277,18 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
     end)
   end
 
-  defp reduce_nodal_values(_totals, counts, _minima, maxima, %{
+  defp reduce_nodal_values(
+         _totals,
+         counts,
+         _weighted_totals,
+         _weight_sums,
+         _minima,
+         maxima,
+         %{
          reduction: "max",
          default_value: default_value
-       }) do
+         }
+       ) do
     Enum.zip(maxima, counts)
     |> Enum.map(fn
       {_maximum, 0} -> default_value
@@ -249,7 +296,15 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
     end)
   end
 
-  defp reduce_nodal_values(totals, counts, _minima, _maxima, %{default_value: default_value}) do
+  defp reduce_nodal_values(
+         totals,
+         counts,
+         _weighted_totals,
+         _weight_sums,
+         _minima,
+         _maxima,
+         %{default_value: default_value}
+       ) do
     Enum.zip(totals, counts)
     |> Enum.map(fn
       {_total, 0} -> default_value
@@ -331,6 +386,11 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
 
   defp validate_electrostatic_bridge_source_field(_source_field, _distribution),
     do: {:error, :invalid_bridge_contract_source_field}
+
+  defp validate_electrostatic_bridge_target_field("heat_load"), do: :ok
+  defp validate_electrostatic_bridge_target_field("temperature"), do: :ok
+  defp validate_electrostatic_bridge_target_field(_target_field),
+    do: {:error, :invalid_bridge_contract_target_field}
 
   defp normalize_node_index_fields(fields) when is_list(fields) do
     normalized =

@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.Playground.AgentClient do
   """
 
   alias KyuubikiWeb.Playground.AgentPool
+  alias KyuubikiWeb.Playground.AgentRegistry
 
   @rpc_version 1
 
@@ -177,11 +178,12 @@ defmodule KyuubikiWeb.Playground.AgentClient do
       when is_binary(method) and is_map(params) and is_function(on_progress, 1) and is_list(opts) do
     request_id = request_id()
     request = build_request(request_id, method, params)
+    opts = put_execution_lease(opts, request_id, method)
     endpoints = AgentPool.checkout_endpoints(method, opts)
 
     case endpoints do
       [] -> {:error, no_matching_agent_error(method, opts)}
-      _ -> attempt_request(endpoints, request_id, request, on_progress, [])
+      _ -> attempt_request(endpoints, request_id, request, on_progress, opts, [])
     end
   end
 
@@ -218,26 +220,37 @@ defmodule KyuubikiWeb.Playground.AgentClient do
     end
   end
 
-  defp attempt_request([], _request_id, _request, _on_progress, failures) do
+  defp attempt_request([], _request_id, _request, _on_progress, _opts, failures) do
     {:error, {:all_agents_failed, Enum.reverse(failures)}}
   end
 
-  defp attempt_request([endpoint | rest], request_id, request, on_progress, failures) do
-    case request_once(endpoint, request_id, request, on_progress) do
-      {:ok, result} ->
-        :ok = AgentPool.report_success(endpoint)
-        {:ok, result, endpoint}
+  defp attempt_request([endpoint | rest], request_id, request, on_progress, opts, failures) do
+    with_claimed_endpoint(endpoint, opts, fn ->
+      case request_once(endpoint, request_id, request, on_progress) do
+        {:ok, result} ->
+          :ok = AgentPool.report_success(endpoint)
+          {:ok, result, endpoint}
 
-      {:error, {:rpc_error, _code, _message} = reason} ->
-        :ok = AgentPool.report_success(endpoint)
-        {:error, reason}
+        {:error, {:rpc_error, _code, _message} = reason} ->
+          :ok = AgentPool.report_success(endpoint)
+          {:error, reason}
 
-      {:error, reason} ->
-        :ok = AgentPool.report_failure(endpoint, reason)
+        {:error, reason} ->
+          :ok = AgentPool.report_failure(endpoint, reason)
 
-        attempt_request(rest, request_id, request, on_progress, [
+          attempt_request(rest, request_id, request, on_progress, opts, [
+            %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
+          ])
+      end
+    end)
+    |> case do
+      {:error, {:agent_execution_conflict, _conflict} = reason} ->
+        attempt_request(rest, request_id, request, on_progress, opts, [
           %{agent: worker_id(endpoint), reason: inspect(reason)} | failures
         ])
+
+      other ->
+        other
     end
   end
 
@@ -250,6 +263,85 @@ defmodule KyuubikiWeb.Playground.AgentClient do
        placement_tags: opts |> Keyword.get(:placement_tags, []) |> Enum.filter(&is_binary/1)
      }}
   end
+
+  defp with_claimed_endpoint(endpoint, opts, fun)
+       when is_map(endpoint) and is_list(opts) and is_function(fun, 0) do
+    lease = Keyword.get(opts, :execution_lease, %{})
+
+    case claim_execution(endpoint, opts) do
+      :ok ->
+        try do
+          fun.()
+        after
+          release_execution(endpoint, lease)
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp claim_execution(endpoint, opts) do
+    lease = Keyword.get(opts, :execution_lease, %{})
+
+    cond do
+      not is_binary(Map.get(endpoint, :control_mode)) ->
+        :ok
+
+      not is_binary(Map.get(lease, :lease_id)) ->
+        :ok
+
+      true ->
+        AgentRegistry.claim_execution(endpoint.id, Map.new(lease))
+        |> case do
+          {:ok, _lease} -> :ok
+          {:error, _reason} = error -> error
+        end
+    end
+  end
+
+  defp release_execution(endpoint, lease) when is_map(endpoint) and is_map(lease) do
+    if is_binary(Map.get(endpoint, :control_mode)) and is_binary(Map.get(lease, :lease_id)) do
+      AgentRegistry.release_execution(endpoint.id, Map.get(lease, :lease_id))
+    else
+      :ok
+    end
+  end
+
+  defp put_execution_lease(opts, request_id, method) do
+    orchestration = Keyword.get(opts, :orchestration, %{})
+
+    lease =
+      %{
+        "lease_id" => "lease:" <> request_id,
+        "method" => method,
+        "job_id" => Keyword.get(opts, :job_id)
+      }
+      |> maybe_put_lease_value(
+        "control_mode",
+        Map.get(orchestration, :control_mode) || Map.get(orchestration, "control_mode")
+      )
+      |> maybe_put_lease_value(
+        "orch_id",
+        Map.get(orchestration, :orch_id) || Map.get(orchestration, "orch_id")
+      )
+      |> maybe_put_lease_value(
+        "orch_session_id",
+        Map.get(orchestration, :orch_session_id) || Map.get(orchestration, "orch_session_id")
+      )
+
+    Keyword.put(opts, :execution_lease, lease)
+  end
+
+  defp maybe_put_lease_value(lease, _key, nil), do: lease
+
+  defp maybe_put_lease_value(lease, key, value) when is_binary(value),
+    do: Map.put(lease, key, value)
+
+  defp maybe_put_lease_value(lease, key, value) when is_binary(key) and is_binary(value),
+    do: Map.put(lease, key, value)
+
+  defp maybe_put_lease_value(lease, _key, _value), do: lease
 
   defp request_once(endpoint, request_id, request, on_progress) do
     with {:ok, socket} <- connect(endpoint),

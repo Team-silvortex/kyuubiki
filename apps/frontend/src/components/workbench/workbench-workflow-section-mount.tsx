@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type {
   JobState,
+  ProtocolAgentDescriptor,
   WorkflowCatalogEntry,
   WorkflowGraphDefinition,
   WorkflowOperatorDescriptor,
@@ -36,6 +37,8 @@ type WorkbenchWorkflowSectionMountProps = {
   latestJob: JobState | null;
   latestWorkflowSummary: string | null;
   workflowRuns: WorkflowRunRecord[];
+  protocolAgents: ProtocolAgentDescriptor[];
+  frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   refreshWorkflowCatalog: () => Promise<void>;
   setSelectedWorkflowId: (workflowId: string | null) => void;
   setWorkflowRuns: Dispatch<SetStateAction<WorkflowRunRecord[]>>;
@@ -63,6 +66,8 @@ export function WorkbenchWorkflowSectionMount({
   latestJob,
   latestWorkflowSummary,
   workflowRuns,
+  protocolAgents,
+  frontendRuntimeMode,
   refreshWorkflowCatalog,
   setSelectedWorkflowId,
   setWorkflowRuns,
@@ -103,6 +108,8 @@ export function WorkbenchWorkflowSectionMount({
       latestJob={latestJob}
       latestWorkflowSummary={latestWorkflowSummary}
       workflowRuns={workflowRuns}
+      protocolAgents={protocolAgents}
+      frontendRuntimeMode={frontendRuntimeMode}
       onRefreshWorkflowCatalog={() => void refreshWorkflowCatalog()}
       onSelectWorkflow={(workflowId) => setSelectedWorkflowId(workflowId)}
       onRunWorkflowCatalog={runWorkflowCatalogEntry}

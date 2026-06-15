@@ -303,7 +303,7 @@ export const copyZhCore = {
     workflowBridgeContractScaleLabel: "缩放系数",
     workflowBridgeContractReductionLabel: "归并方式",
     workflowBridgeContractDefaultValueLabel: "默认值",
-    workflowBridgeContractTargetFieldLabel: "目标字段",
+    workflowBridgeContractTargetFieldLabel: "目标字段", workflowBridgeContractAdjustedFieldsLabel: "已自动修正字段",
     workflowBridgeContractPreviewTitle: "影响预览",
     workflowBridgeContractPreviewSummaryLabel: "当前映射",
     workflowBridgeContractPreviewDownstreamLabel: "下游影响",

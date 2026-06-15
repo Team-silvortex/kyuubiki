@@ -86,6 +86,8 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         latestJob={props.job}
         latestWorkflowSummary={props.latestWorkflowSummary}
         workflowRuns={props.workflowRuns}
+        protocolAgents={props.protocolAgents}
+        frontendRuntimeMode={props.frontendRuntimeMode}
         refreshWorkflowCatalog={props.refreshWorkflowCatalog}
         setSelectedWorkflowId={props.setSelectedWorkflowId}
         setWorkflowRuns={props.setWorkflowRuns}

@@ -86,6 +86,8 @@ defmodule KyuubikiWeb.Playground.AgentPool do
         _from,
         %{endpoints: endpoints, cursor: cursor, health: health} = state
       ) do
+    endpoints = runtime_checkout_endpoints(endpoints)
+
     ordered =
       endpoints
       |> rotate(cursor)
@@ -94,7 +96,7 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       |> deprioritize_cooling_endpoints(health)
 
     next_cursor = if endpoints == [], do: 0, else: rem(cursor + 1, length(endpoints))
-    {:reply, ordered, %{state | cursor: next_cursor}}
+    {:reply, ordered, %{state | endpoints: endpoints, cursor: next_cursor}}
   end
 
   def handle_call({:report_failure, endpoint, reason}, _from, state) do
@@ -166,12 +168,30 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       |> Keyword.get(:placement_tags, [])
       |> normalize_constraint_values()
 
-    if required_capabilities == [] and placement_tags == [] do
+    orchestration_context =
+      opts
+      |> Keyword.get(:orchestration, %{})
+      |> normalize_orchestration_context()
+
+    execution_lease =
+      opts
+      |> Keyword.get(:execution_lease, %{})
+      |> normalize_execution_lease()
+
+    if required_capabilities == [] and placement_tags == [] and orchestration_context == %{} and
+         execution_lease == %{} do
       endpoints
     else
       {typed_matches, legacy_fallbacks} =
         Enum.reduce(endpoints, {[], []}, fn endpoint, {typed, legacy} ->
-          case classify_endpoint(endpoint, method, required_capabilities, placement_tags) do
+          case classify_endpoint(
+                 endpoint,
+                 method,
+                 required_capabilities,
+                 placement_tags,
+                 orchestration_context,
+                 execution_lease
+               ) do
             {:typed_match, score} -> {[{endpoint, score} | typed], legacy}
             :legacy_fallback -> {typed, [endpoint | legacy]}
             :explicit_mismatch -> {typed, legacy}
@@ -187,19 +207,36 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     end
   end
 
-  defp classify_endpoint(endpoint, method, required_capabilities, placement_tags) do
+  defp classify_endpoint(
+         endpoint,
+         method,
+         required_capabilities,
+         placement_tags,
+         orchestration_context,
+         execution_lease
+       ) do
     capability_status = capability_match_status(endpoint, method, required_capabilities)
     tag_status = tag_match_status(endpoint, placement_tags)
+    orchestration_status = orchestration_match_status(endpoint, orchestration_context)
+    lease_status = execution_lease_status(endpoint, execution_lease)
 
     cond do
-      capability_status == :mismatch or tag_status == :mismatch ->
+      capability_status == :mismatch or tag_status == :mismatch or
+        orchestration_status == :mismatch or lease_status == :mismatch ->
         :explicit_mismatch
 
-      capability_status == :unknown or tag_status == :unknown ->
+      capability_status == :unknown or tag_status == :unknown or orchestration_status == :unknown or
+          lease_status == :unknown ->
         :legacy_fallback
 
       true ->
-        {:typed_match, endpoint_match_score(endpoint, required_capabilities, placement_tags)}
+        {:typed_match,
+         endpoint_match_score(
+           endpoint,
+           required_capabilities,
+           placement_tags,
+           orchestration_context
+         )}
     end
   end
 
@@ -255,7 +292,76 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     end
   end
 
-  defp endpoint_match_score(endpoint, required_capabilities, placement_tags) do
+  defp orchestration_match_status(_endpoint, %{} = orchestration_context)
+       when orchestration_context == %{},
+       do: :match
+
+  defp orchestration_match_status(endpoint, orchestration_context) do
+    endpoint_control_mode = Map.get(endpoint, :control_mode)
+    endpoint_orch_id = Map.get(endpoint, :orch_id)
+    endpoint_orch_session_id = Map.get(endpoint, :orch_session_id)
+
+    has_authority_metadata? =
+      is_binary(endpoint_control_mode) or is_binary(endpoint_orch_id) or
+        is_binary(endpoint_orch_session_id)
+
+    if not has_authority_metadata? do
+      :unknown
+    else
+      expected_control_mode = Map.get(orchestration_context, :control_mode)
+      expected_orch_id = Map.get(orchestration_context, :orch_id)
+      expected_orch_session_id = Map.get(orchestration_context, :orch_session_id)
+
+      cond do
+        expected_control_mode == "offline_mesh" ->
+          if endpoint_control_mode == "offline_mesh", do: :match, else: :mismatch
+
+        expected_control_mode == "orch_managed" ->
+          orch_id_matches? =
+            is_nil(expected_orch_id) or expected_orch_id == endpoint_orch_id
+
+          session_matches? =
+            is_nil(expected_orch_session_id) or
+              expected_orch_session_id == endpoint_orch_session_id
+
+          if endpoint_control_mode == "orch_managed" and orch_id_matches? and session_matches? do
+            :match
+          else
+            :mismatch
+          end
+
+        true ->
+          :match
+      end
+    end
+  end
+
+  defp execution_lease_status(endpoint, %{} = execution_lease) when execution_lease == %{} do
+    if Map.get(endpoint, :active_lease), do: :mismatch, else: :match
+  end
+
+  defp execution_lease_status(endpoint, execution_lease) do
+    case Map.get(endpoint, :active_lease) do
+      nil ->
+        :match
+
+      %{"lease_id" => lease_id} ->
+        if lease_id == Map.get(execution_lease, :lease_id), do: :match, else: :mismatch
+
+      %{lease_id: lease_id} ->
+        if lease_id == Map.get(execution_lease, :lease_id), do: :match, else: :mismatch
+
+      _ ->
+        :unknown
+    end
+  end
+
+  defp endpoint_match_score(
+         endpoint,
+         required_capabilities,
+         placement_tags,
+         orchestration_context
+       ) do
     capability_ids =
       endpoint
       |> Map.get(:capabilities, [])
@@ -269,7 +375,20 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       end)
 
     tag_score = Enum.count(placement_tags, &(&1 in tags))
-    capability_score * 10 + tag_score
+
+    orchestration_score =
+      case Map.get(orchestration_context, :control_mode) do
+        "orch_managed" ->
+          if Map.get(endpoint, :control_mode) == "orch_managed", do: 100, else: 0
+
+        "offline_mesh" ->
+          if Map.get(endpoint, :control_mode) == "offline_mesh", do: 100, else: 0
+
+        _ ->
+          0
+      end
+
+    orchestration_score + capability_score * 10 + tag_score
   end
 
   defp normalize_constraint_values(values) when is_list(values) do
@@ -281,6 +400,38 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
   defp normalize_constraint_values(_values), do: []
 
+  defp normalize_orchestration_context(%{} = context) do
+    %{}
+    |> put_orchestration_value(
+      :control_mode,
+      Map.get(context, :control_mode) || Map.get(context, "control_mode")
+    )
+    |> put_orchestration_value(
+      :orch_id,
+      Map.get(context, :orch_id) || Map.get(context, "orch_id")
+    )
+    |> put_orchestration_value(
+      :orch_session_id,
+      Map.get(context, :orch_session_id) || Map.get(context, "orch_session_id")
+    )
+  end
+
+  defp normalize_orchestration_context(_context), do: %{}
+
+  defp normalize_execution_lease(%{} = lease) do
+    %{}
+    |> put_orchestration_value(:lease_id, Map.get(lease, :lease_id) || Map.get(lease, "lease_id"))
+  end
+
+  defp normalize_execution_lease(_lease), do: %{}
+
+  defp put_orchestration_value(context, _key, nil), do: context
+
+  defp put_orchestration_value(context, key, value) when is_binary(value),
+    do: Map.put(context, key, value)
+
+  defp put_orchestration_value(context, _key, _value), do: context
+
   defp configured_endpoints do
     config = Application.get_env(:kyuubiki_web, __MODULE__, [])
 
@@ -290,6 +441,15 @@ defmodule KyuubikiWeb.Playground.AgentPool do
 
       _ ->
         configured_endpoints_from_discovery(config)
+    end
+  end
+
+  defp runtime_checkout_endpoints(current_endpoints) do
+    config = Application.get_env(:kyuubiki_web, __MODULE__, [])
+
+    case discovery_mode(config) do
+      :registry -> registry_configured_endpoints()
+      _ -> current_endpoints
     end
   end
 
@@ -366,7 +526,20 @@ defmodule KyuubikiWeb.Playground.AgentPool do
   defp normalize_endpoint(%{host: host, port: port} = endpoint)
        when is_binary(host) and is_integer(port) and port > 0 do
     endpoint
-    |> Map.take([:role, :region, :zone, :capacity, :tags])
+    |> Map.take([
+      :active_lease,
+      :control_mode,
+      :orch_id,
+      :orch_session_id,
+      :session_state,
+      :cluster_id,
+      :fingerprint,
+      :role,
+      :region,
+      :zone,
+      :capacity,
+      :tags
+    ])
     |> Map.merge(%{
       id: Map.get(endpoint, :id, "#{host}:#{port}"),
       host: host,
@@ -383,6 +556,13 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       id: Map.get(endpoint, "id", "#{host}:#{port}"),
       host: host,
       port: port,
+      active_lease: Map.get(endpoint, "active_lease"),
+      control_mode: Map.get(endpoint, "control_mode"),
+      orch_id: Map.get(endpoint, "orch_id"),
+      orch_session_id: Map.get(endpoint, "orch_session_id"),
+      session_state: Map.get(endpoint, "session_state"),
+      cluster_id: Map.get(endpoint, "cluster_id"),
+      fingerprint: Map.get(endpoint, "fingerprint"),
       role: Map.get(endpoint, "role"),
       region: Map.get(endpoint, "region"),
       zone: Map.get(endpoint, "zone"),

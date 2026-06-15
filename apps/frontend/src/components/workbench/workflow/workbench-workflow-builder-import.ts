@@ -3,6 +3,7 @@
 import type {
   WorkflowDatasetContract,
   WorkflowGraphDefinition,
+  WorkflowGraphNode,
   WorkflowOperatorDescriptor,
 } from "@/lib/api";
 import {
@@ -10,10 +11,16 @@ import {
   getWorkflowNodeTemplateSyncImpact,
   listAutoReconnectEdgeIds,
 } from "@/components/workbench/workflow/workbench-workflow-template-impact";
+import { normalizeBridgeConfigWithSupport } from "@/lib/workbench/workflow-bridge-contract-support";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
+
+type WorkflowImportNormalizationDiagnostic = {
+  message: string;
+  locate?: { kind: "node"; nodeId: string };
+};
 
 export async function readJsonFile(file: File): Promise<unknown> {
   const text = await file.text();
@@ -49,17 +56,38 @@ export function mergeDatasetContractIntoGraph(
   };
 }
 
+function readBridgeNormalizationEntries(node: WorkflowGraphNode) {
+  const value = node.config?.contract_normalization;
+  if (!Array.isArray(value)) return [] as Array<{ field: string; previous: string; next: string }>;
+  return value.filter((entry): entry is { field: string; previous: string; next: string } => (
+    isRecord(entry) &&
+    typeof entry.field === "string" &&
+    typeof entry.previous === "string" &&
+    typeof entry.next === "string"
+  ));
+}
+
+export function countWorkflowBridgeNormalizationAdjustments(
+  graph: WorkflowGraphDefinition | null,
+) {
+  if (!graph) return 0;
+  return graph.nodes.reduce((count, node) => count + readBridgeNormalizationEntries(node).length, 0);
+}
+
 export function normalizeImportedWorkflowGraph(
   graph: WorkflowGraphDefinition | null,
   operatorDescriptors: WorkflowOperatorDescriptor[] = [],
 ) {
-  if (!graph) return { graph, autoReconnectEdgeIds: [] as string[] };
+  if (!graph) return { graph, autoReconnectEdgeIds: [] as string[], diagnostics: [] as WorkflowImportNormalizationDiagnostic[] };
   const nextGraph = structuredClone(graph) as WorkflowGraphDefinition;
   const autoReconnectEdgeIds = new Set<string>();
+  const diagnostics: WorkflowImportNormalizationDiagnostic[] = [];
+  const descriptorMap = new Map(operatorDescriptors.map((descriptor) => [descriptor.id, descriptor] as const));
 
   for (const node of nextGraph.nodes) {
     const operatorId = node.operator_id?.trim();
     if (!operatorId) continue;
+    const descriptor = descriptorMap.get(operatorId);
     const impact = getWorkflowNodeTemplateSyncImpact(
       nextGraph,
       node.id,
@@ -87,10 +115,24 @@ export function normalizeImportedWorkflowGraph(
       },
       operatorDescriptors,
     );
+    const syncedNode = nextGraph.nodes.find((entry) => entry.id === node.id);
+    if (!syncedNode || !syncedNode.operator_id?.startsWith("bridge.")) continue;
+    syncedNode.config = normalizeBridgeConfigWithSupport(
+      syncedNode.operator_id,
+      syncedNode.config as Record<string, unknown> | null | undefined,
+      descriptor,
+    ) ?? undefined;
+    for (const entry of readBridgeNormalizationEntries(syncedNode)) {
+      diagnostics.push({
+        message: `Bridge contract normalized at ${syncedNode.id}: ${entry.field} ${entry.previous} -> ${entry.next}`,
+        locate: { kind: "node", nodeId: syncedNode.id },
+      });
+    }
   }
 
   return {
     graph: nextGraph,
     autoReconnectEdgeIds: [...autoReconnectEdgeIds],
+    diagnostics,
   };
 }

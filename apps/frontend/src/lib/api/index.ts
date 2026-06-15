@@ -158,6 +158,19 @@ export type ProtocolAgentDescriptor = {
   region?: string | null;
   zone?: string | null;
   role?: string | null;
+  execution_state?: "idle" | "leased" | "lease_stale";
+  active_lease?: {
+    lease_id: string;
+    agent_id: string;
+    control_mode?: string | null;
+    orch_id?: string | null;
+    orch_session_id?: string | null;
+    job_id?: string | null;
+    method?: string | null;
+    claimed_at?: string | null;
+    age_ms?: number | null;
+    is_stale?: boolean | null;
+  } | null;
   descriptor?: {
     program: string;
     role: string;
@@ -205,6 +218,21 @@ export type ProtocolAgentDescriptor = {
 
 export type ProtocolAgentListPayload = {
   agents: ProtocolAgentDescriptor[];
+};
+
+export type RegisteredAgentSnapshot = {
+  id: string;
+  execution_state?: "idle" | "leased" | "lease_stale";
+  active_lease?: ProtocolAgentDescriptor["active_lease"];
+};
+
+export type RegisteredAgentRegistryPayload = {
+  agents: RegisteredAgentSnapshot[];
+  summary: {
+    active_execution_lease_count: number;
+    stale_execution_lease_count: number;
+    active_execution_leases?: Array<ProtocolAgentDescriptor["active_lease"]>;
+  };
 };
 
 export type DatabaseExportPayload = {

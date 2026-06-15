@@ -198,6 +198,113 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     assert conflict.attempted.control_mode == "offline_mesh"
   end
 
+  test "claims and releases an execution lease for an orchestrated agent" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-lease-a",
+               "host" => "10.20.0.18",
+               "port" => 6108,
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a"
+             })
+
+    assert {:ok, lease} =
+             AgentRegistry.claim_execution("solver-lease-a", %{
+               "lease_id" => "lease-a",
+               "control_mode" => "orch_managed",
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a",
+               "job_id" => "job-a",
+               "method" => "solve_bar_1d"
+             })
+
+    assert lease.agent_id == "solver-lease-a"
+
+    endpoint = hd(AgentRegistry.active_endpoints())
+    assert endpoint.active_lease["lease_id"] == "lease-a"
+    assert is_integer(endpoint.active_lease["age_ms"])
+    assert endpoint.active_lease["is_stale"] == false
+
+    assert length(AgentRegistry.status_snapshot().active_execution_leases) == 1
+    assert AgentRegistry.status_snapshot().stale_execution_lease_count == 0
+
+    assert :ok = AgentRegistry.release_execution("solver-lease-a", "lease-a")
+    endpoint = hd(AgentRegistry.active_endpoints())
+    assert endpoint.active_lease == nil
+    assert AgentRegistry.status_snapshot().active_execution_leases == []
+  end
+
+  test "rejects a second execution lease while the agent is already claimed" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-lease-b",
+               "host" => "10.20.0.19",
+               "port" => 6109,
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a"
+             })
+
+    assert {:ok, _lease} =
+             AgentRegistry.claim_execution("solver-lease-b", %{
+               "lease_id" => "lease-a",
+               "control_mode" => "orch_managed",
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a"
+             })
+
+    assert {:error, {:agent_execution_conflict, conflict}} =
+             AgentRegistry.claim_execution("solver-lease-b", %{
+               "lease_id" => "lease-b",
+               "control_mode" => "orch_managed",
+               "orch_id" => "orch-alpha",
+               "orch_session_id" => "session-a"
+             })
+
+    assert conflict.agent_id == "solver-lease-b"
+    assert conflict.current["lease_id"] == "lease-a"
+    assert conflict.attempted["lease_id"] == "lease-b"
+  end
+
+  test "marks old execution leases as stale in public views" do
+    original_config = Application.get_env(:kyuubiki_web, AgentRegistry, [])
+
+    Application.put_env(
+      :kyuubiki_web,
+      AgentRegistry,
+      Keyword.merge(original_config, execution_lease_stale_after_ms: 1)
+    )
+
+    on_exit(fn ->
+      Application.put_env(:kyuubiki_web, AgentRegistry, original_config)
+    end)
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-lease-stale",
+               "host" => "10.20.0.20",
+               "port" => 6110,
+               "orch_id" => "orch-alpha"
+             })
+
+    assert {:ok, _lease} =
+             AgentRegistry.claim_execution("solver-lease-stale", %{
+               "lease_id" => "lease-stale-a",
+               "control_mode" => "orch_managed",
+               "orch_id" => "orch-alpha"
+             })
+
+    Process.sleep(5)
+
+    [agent] = AgentRegistry.public_agents()
+    assert agent["execution_state"] == "lease_stale"
+    assert agent["active_lease"]["is_stale"] == true
+    assert agent["active_lease"]["age_ms"] >= 1
+
+    snapshot = AgentRegistry.status_snapshot()
+    assert snapshot.stale_execution_lease_count == 1
+    assert hd(snapshot.active_execution_leases)["is_stale"] == true
+  end
+
   test "summarizes mesh topology across managed and offline agents" do
     assert {:ok, _agent} =
              AgentRegistry.register(%{
@@ -236,12 +343,15 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
     snapshot = AgentRegistry.status_snapshot()
 
     assert snapshot.control_modes == %{orch_managed: 3, offline_mesh: 1}
+
     assert snapshot.session_states == %{
              "offline_mesh" => 1,
              "orch_bound_pending_session" => 1,
              "orch_session_bound" => 2
            }
+
     assert length(snapshot.recent_session_transitions) == 4
+
     assert Enum.any?(snapshot.recent_session_transitions, fn event ->
              event["agent_id"] == "solver-mesh-d" and
                event["to"] == "offline_mesh" and

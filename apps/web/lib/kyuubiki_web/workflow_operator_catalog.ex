@@ -47,6 +47,7 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
       },
       "config_schema" => spec["config_schema"],
       "config_example" => spec["config_example"],
+      "contract_support" => electrostatic_to_heat_contract_support(spec),
       "inputs" => [
         %{
           "id" => "electrostatic_result",
@@ -100,6 +101,7 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
       },
       "config_schema" => spec["config_schema"],
       "config_example" => spec["config_example"],
+      "contract_support" => heat_to_thermo_contract_support(spec),
       "inputs" => [
         %{
           "id" => "heat_result",
@@ -313,6 +315,166 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
       "baseline_status" => "verified",
       "baseline_cases" => ["#{family}_baseline"],
       "smoke_paths" => smoke_paths
+    }
+  end
+
+  defp electrostatic_to_heat_contract_support(%{"shape" => "triangle"}) do
+    %{
+      "source" => %{
+        "fields" => [
+          "potential",
+          "charge_density",
+          "electric_field_magnitude",
+          "electric_field_x",
+          "electric_field_y",
+          "average_potential",
+          "flux_magnitude",
+          "electric_flux_density_magnitude",
+          "electric_flux_density_x",
+          "electric_flux_density_y"
+        ],
+        "distributions" => %{
+          "node_to_node" => ["potential", "charge_density"],
+          "element_to_nodes" => [
+            "electric_field_magnitude",
+            "electric_field_x",
+            "electric_field_y",
+            "average_potential",
+            "flux_magnitude",
+            "electric_flux_density_magnitude",
+            "electric_flux_density_x",
+            "electric_flux_density_y"
+          ]
+        },
+        "node_index_fields" => ["node_i", "node_j", "node_k"]
+      },
+      "transform" => %{
+        "reductions" => ["mean", "sum", "area_weighted_mean", "min", "max"],
+        "default_reduction_by_distribution" => %{
+          "node_to_node" => "mean",
+          "element_to_nodes" => "mean"
+        },
+        "default_scale" => 1.0,
+        "default_value" => 0.0
+      },
+      "target" => %{"fields" => ["heat_load", "temperature"], "default_field" => "heat_load"}
+    }
+  end
+
+  defp electrostatic_to_heat_contract_support(%{"shape" => "quad"}) do
+    %{
+      "source" => %{
+        "fields" => [
+          "potential",
+          "charge_density",
+          "electric_field_magnitude",
+          "electric_field_x",
+          "electric_field_y",
+          "average_potential",
+          "flux_magnitude",
+          "electric_flux_density_magnitude",
+          "electric_flux_density_x",
+          "electric_flux_density_y"
+        ],
+        "distributions" => %{
+          "node_to_node" => ["potential", "charge_density"],
+          "element_to_nodes" => [
+            "electric_field_magnitude",
+            "electric_field_x",
+            "electric_field_y",
+            "average_potential",
+            "flux_magnitude",
+            "electric_flux_density_magnitude",
+            "electric_flux_density_x",
+            "electric_flux_density_y"
+          ]
+        },
+        "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
+      },
+      "transform" => %{
+        "reductions" => ["mean", "sum", "area_weighted_mean", "min", "max"],
+        "default_reduction_by_distribution" => %{
+          "node_to_node" => "mean",
+          "element_to_nodes" => "mean"
+        },
+        "default_scale" => 1.0,
+        "default_value" => 0.0
+      },
+      "target" => %{"fields" => ["heat_load", "temperature"], "default_field" => "heat_load"}
+    }
+  end
+
+  defp heat_to_thermo_contract_support(%{"shape" => "triangle"}) do
+    %{
+      "source" => %{
+        "fields" => [
+          "temperature",
+          "heat_load",
+          "average_temperature",
+          "heat_flux_x",
+          "heat_flux_y",
+          "heat_flux",
+          "heat_flux_magnitude"
+        ],
+        "distributions" => %{
+          "node_to_node" => ["temperature", "heat_load"],
+          "element_to_nodes" => [
+            "average_temperature",
+            "heat_flux_x",
+            "heat_flux_y",
+            "heat_flux",
+            "heat_flux_magnitude"
+          ]
+        },
+        "node_index_fields" => ["node_i", "node_j", "node_k"]
+      },
+      "transform" => %{
+        "reductions" => ["copy", "mean", "sum", "area_weighted_mean", "min", "max"],
+        "default_reduction_by_distribution" => %{
+          "node_to_node" => "copy",
+          "element_to_nodes" => "mean"
+        },
+        "default_scale" => 1.0,
+        "default_value" => 0.0
+      },
+      "target" => %{"fields" => ["temperature_delta"], "default_field" => "temperature_delta"}
+    }
+  end
+
+  defp heat_to_thermo_contract_support(%{"shape" => "quad"}) do
+    %{
+      "source" => %{
+        "fields" => [
+          "temperature",
+          "heat_load",
+          "average_temperature",
+          "heat_flux_x",
+          "heat_flux_y",
+          "heat_flux",
+          "heat_flux_magnitude"
+        ],
+        "distributions" => %{
+          "node_to_node" => ["temperature", "heat_load"],
+          "element_to_nodes" => [
+            "average_temperature",
+            "heat_flux_x",
+            "heat_flux_y",
+            "heat_flux",
+            "heat_flux_magnitude"
+          ]
+        },
+        "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
+      },
+      "transform" => %{
+        "reductions" => ["copy", "mean", "sum", "area_weighted_mean", "min", "max"],
+        "default_reduction_by_distribution" => %{
+          "node_to_node" => "copy",
+          "element_to_nodes" => "mean"
+        },
+        "default_scale" => 1.0,
+        "default_value" => 0.0
+      },
+      "target" => %{"fields" => ["temperature_delta"], "default_field" => "temperature_delta"}
     }
   end
 end

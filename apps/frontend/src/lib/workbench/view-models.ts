@@ -3,7 +3,6 @@ import type {
   JobState,
   ModelRecord,
   ModelVersionRecord,
-  ProtocolAgentDescriptor,
   ResultRecord,
   Truss3dElementInput,
   Truss3dNodeInput,
@@ -14,6 +13,7 @@ export {
   buildStudyKindOptionGroups,
   buildStudyKindOptions,
 } from "@/lib/workbench/view-model-study-options";
+export { buildProtocolAgentCards } from "@/lib/workbench/view-model-protocol-agents";
 
 export type SampleLibraryEntry = {
   id: string;
@@ -196,71 +196,6 @@ export function buildAdminResultRows({
     summary: summaryLabel(record),
   }));
 }
-
-export function buildProtocolAgentCards({
-  agents,
-  labels,
-  clusterHealthTone,
-  peerStatusLabel,
-}: {
-  agents: ProtocolAgentDescriptor[];
-  labels: {
-    authorityMode: string;
-    controlMode: string;
-    runtimeMode: string;
-    cluster: string;
-    clusterSize: string;
-    clusterHealth: string;
-    peers: string;
-    headless: string;
-    yes: string;
-    no: string;
-    capabilities: string;
-    methods: string;
-    peerState: string;
-  };
-  clusterHealthTone: (score: number | null | undefined) => string;
-  peerStatusLabel: (status: string | undefined) => string;
-}) {
-  return agents.slice(0, 4).map((agent) => ({
-    id: agent.id,
-    endpoint: `${agent.host}:${agent.port}`,
-    metrics: [
-      { label: labels.authorityMode, value: agent.descriptor?.authority?.authority_mode ?? "--" },
-      { label: labels.controlMode, value: agent.descriptor?.authority?.control_mode ?? "--" },
-      { label: labels.runtimeMode, value: agent.descriptor?.runtime?.runtime_mode ?? "--" },
-      { label: labels.cluster, value: agent.descriptor?.runtime?.cluster_id ?? "--" },
-      { label: labels.clusterSize, value: agent.descriptor?.runtime?.cluster_size ?? 1 },
-      {
-        label: labels.clusterHealth,
-        value: agent.descriptor?.runtime?.health_score ?? "--",
-        tone: clusterHealthTone(agent.descriptor?.runtime?.health_score),
-      },
-      { label: labels.peers, value: agent.descriptor?.runtime?.peers?.length ?? 0 },
-      { label: labels.headless, value: agent.descriptor?.runtime?.headless ? labels.yes : labels.no },
-      { label: labels.capabilities, value: agent.descriptor?.capabilities?.length ?? 0 },
-      { label: labels.methods, value: agent.descriptor?.protocol?.methods?.length ?? 0 },
-    ],
-    chips: [
-      ...(agent.descriptor?.capabilities?.flatMap((capability) =>
-        capability.tags.slice(0, 3).map((tag) => ({
-          key: `${agent.id}-${capability.id}-${tag}`,
-          label: tag,
-        })),
-      ) ?? []),
-      ...(agent.descriptor?.runtime?.peers?.slice(0, 2).map((peer) => ({
-        key: `${agent.id}-${peer.address}`,
-        label: peer.address,
-        tone: clusterHealthTone(
-          peer.status === "healthy" ? 100 : peer.status === "degraded" ? 65 : peer.status === "seed" ? 85 : 25,
-        ),
-        title: `${labels.peerState}: ${peerStatusLabel(peer.status)}`,
-      })) ?? []),
-    ],
-    error: agent.descriptor_error,
-  }));
-}
-
 
 export function buildStudySummaryRows({
   labels,

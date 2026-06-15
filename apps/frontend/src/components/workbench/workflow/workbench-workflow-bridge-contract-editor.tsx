@@ -11,19 +11,27 @@ import {
   type ThermalPlaneTriangle2dJobInput,
   type ThermalPlaneQuad2dJobInput,
   type WorkflowGraphNode,
+  type WorkflowOperatorDescriptor,
 } from "@/lib/api";
 import type { StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
+import { WorkbenchWorkflowBridgeContractFields } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-fields";
 import {
   isWorkflowBridgeContractOperator,
   normalizeBridgeConfigForOperator,
   resolveBridgeContractForOperator,
   resolveBridgeSeedModelForOperator,
 } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
+import {
+  resolveBridgeContractFieldOptions,
+  type WorkflowBridgeContractNormalizationAdjustment,
+  normalizeBridgeConfigWithSupport,
+} from "@/lib/workbench/workflow-bridge-contract-support";
 
 type WorkbenchWorkflowBridgeContractEditorProps = {
   labels: WorkflowSidebarLabels;
   node: WorkflowGraphNode;
+  operatorDescriptor?: WorkflowOperatorDescriptor;
   selectedNodes?: WorkflowGraphNode[];
   currentStudyKind: StudyKind;
   currentHeatPlaneModel: Record<string, unknown>;
@@ -39,6 +47,7 @@ function asObjectArray(value: unknown) {
 }
 function updateBridgeContractField(
   node: WorkflowGraphNode,
+  operatorDescriptor: WorkflowOperatorDescriptor | undefined,
   updater: (contract: NonNullable<ReturnType<typeof resolveBridgeContractForOperator>>) => void,
 ) {
   const contract = resolveBridgeContractForOperator(
@@ -50,10 +59,18 @@ function updateBridgeContractField(
   updater(nextContract);
   return {
     ...node,
-    config: {
-      ...(node.config ?? {}),
-      contract: nextContract,
-    },
+    config:
+      normalizeBridgeConfigWithSupport(
+        node.operator_id,
+        {
+          ...(node.config ?? {}),
+          contract: nextContract,
+        },
+        operatorDescriptor,
+      ) ?? {
+        ...(node.config ?? {}),
+        contract: nextContract,
+      },
   };
 }
 
@@ -107,6 +124,17 @@ function importableBridgeWorkspaceStudyKind(operatorId?: string | null) {
   if (operatorId === "bridge.temperature_field_to_thermo_triangle_2d") return "thermal_plane_triangle_2d";
   return operatorId === "bridge.temperature_field_to_thermo_quad_2d" ? "thermal_plane_quad_2d" : null;
 }
+function readBridgeContractNormalizationAdjustments(node: WorkflowGraphNode) {
+  const value = node.config?.contract_normalization;
+  if (!Array.isArray(value)) return [] as WorkflowBridgeContractNormalizationAdjustment[];
+  return value.filter((entry): entry is WorkflowBridgeContractNormalizationAdjustment => (
+    typeof entry === "object" &&
+    entry !== null &&
+    typeof (entry as { field?: unknown }).field === "string" &&
+    typeof (entry as { previous?: unknown }).previous === "string" &&
+    typeof (entry as { next?: unknown }).next === "string"
+  ));
+}
 function updateSeedModelCollectionField(node: WorkflowGraphNode, collection: "nodes" | "elements", index: number, field: string, value: unknown) {
   const seedModel = resolveBridgeSeedModelForOperator(
     node.operator_id,
@@ -125,6 +153,7 @@ function updateSeedModelCollectionField(node: WorkflowGraphNode, collection: "no
 export function WorkbenchWorkflowBridgeContractEditor({
   labels,
   node,
+  operatorDescriptor,
   selectedNodes = [],
   currentStudyKind,
   currentHeatPlaneModel,
@@ -137,6 +166,15 @@ export function WorkbenchWorkflowBridgeContractEditor({
     node.config as Record<string, unknown> | null | undefined,
   );
   if (!contract) return null;
+  const contractSupport = operatorDescriptor?.contract_support;
+  const contractNormalizationAdjustments = readBridgeContractNormalizationAdjustments(node);
+  const {
+    distributionOptions,
+    sourceFieldOptions,
+    reductionOptions,
+    targetFieldOptions,
+    nodeIndexFieldOptions,
+  } = resolveBridgeContractFieldOptions(contract, contractSupport);
   const resolvedSeedModel = resolveBridgeSeedModelForOperator(
     node.operator_id,
     node.config as Record<string, unknown> | null | undefined,
@@ -163,6 +201,13 @@ export function WorkbenchWorkflowBridgeContractEditor({
     contract.source.distribution === "node_to_node"
       ? `${contract.source.field} × ${contract.transform.scale} -> ${contract.target.field}`
       : `${contract.source.field} -> ${contract.target.field} (${contract.source.distribution}, ${contract.transform.reduction}, scale ${contract.transform.scale})`;
+  const normalizationFieldLabels: Record<WorkflowBridgeContractNormalizationAdjustment["field"], string> = {
+    "source.field": labels.bridgeContractSourceFieldLabel,
+    "source.distribution": labels.bridgeContractDistributionLabel,
+    "source.node_index_fields": labels.bridgeContractNodeIndexFieldsLabel,
+    "transform.reduction": labels.bridgeContractReductionLabel,
+    "target.field": labels.bridgeContractTargetFieldLabel,
+  };
   function applySeedModelDraft() {
     try {
       const parsed = JSON.parse(seedModelDraft) as Record<string, unknown>;
@@ -212,104 +257,37 @@ export function WorkbenchWorkflowBridgeContractEditor({
         <h3>{labels.bridgeContractTitle}</h3>
         <span className="status-pill status-pill--watch">contract</span>
       </div>
-      <div className="form-grid compact">
-        <label>
-          <span>{labels.bridgeContractSourceFieldLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.source.field = event.target.value;
-                }),
-              )
-            }
-            value={contract.source.field}
-          />
-        </label>
-        <label>
-          <span>{labels.bridgeContractDistributionLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.source.distribution = event.target.value;
-                }),
-              )
-            }
-            value={contract.source.distribution}
-          />
-        </label>
-        <label className="field-span-2">
-          <span>{labels.bridgeContractNodeIndexFieldsLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.source.node_index_fields = event.target.value
-                    .split(",")
-                    .map((value) => value.trim())
-                    .filter(Boolean);
-                }),
-              )
-            }
-            value={contract.source.node_index_fields.join(", ")}
-          />
-        </label>
-        <label>
-          <span>{labels.bridgeContractScaleLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.transform.scale = Number(event.target.value) || 0;
-                }),
-              )
-            }
-            type="number"
-            value={contract.transform.scale}
-          />
-        </label>
-        <label>
-          <span>{labels.bridgeContractReductionLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.transform.reduction = event.target.value;
-                }),
-              )
-            }
-            value={contract.transform.reduction}
-          />
-        </label>
-        <label>
-          <span>{labels.bridgeContractDefaultValueLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.transform.default_value = Number(event.target.value) || 0;
-                }),
-              )
-            }
-            type="number"
-            value={contract.transform.default_value}
-          />
-        </label>
-        <label>
-          <span>{labels.bridgeContractTargetFieldLabel}</span>
-          <input
-            onChange={(event) =>
-              onUpdateNode(node.id, (current) =>
-                updateBridgeContractField(current, (nextContract) => {
-                  nextContract.target.field = event.target.value;
-                }),
-              )
-            }
-            value={contract.target.field}
-          />
-        </label>
-      </div>
+      <WorkbenchWorkflowBridgeContractFields
+        contract={contract}
+        contractSupport={contractSupport}
+        distributionOptions={distributionOptions}
+        labels={labels}
+        node={node}
+        nodeIndexFieldOptions={nodeIndexFieldOptions}
+        onUpdateNode={onUpdateNode}
+        reductionOptions={reductionOptions}
+        sourceFieldOptions={sourceFieldOptions}
+        targetFieldOptions={targetFieldOptions}
+        updateBridgeContractField={(currentNode, updater) =>
+          updateBridgeContractField(currentNode, operatorDescriptor, updater)
+        }
+      />
+      {contractNormalizationAdjustments.length > 0 ? (
+        <div className="sidebar-stack">
+          <div className="card-head">
+            <h3>{labels.bridgeContractAdjustedFieldsLabel}</h3>
+            <span className="status-pill status-pill--watch">{contractNormalizationAdjustments.length}</span>
+          </div>
+          <div className="sidebar-list">
+            {contractNormalizationAdjustments.map((entry) => (
+              <div className="sidebar-list__row" key={`${node.id}:contract-normalization:${entry.field}`}>
+                <span>{normalizationFieldLabels[entry.field]}</span>
+                <strong>{entry.previous} {"->"} {entry.next}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <div className="sidebar-stack">
         <div className="card-head">
           <h3>{labels.bridgeContractPreviewTitle}</h3>

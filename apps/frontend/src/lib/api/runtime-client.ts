@@ -6,6 +6,7 @@ import type {
   JobHistoryPayload,
   JobState,
   ProtocolAgentListPayload,
+  RegisteredAgentRegistryPayload,
   WorkflowCatalogQuery,
   WorkflowCatalogPayload,
   WorkflowGraphDefinition,
@@ -120,6 +121,13 @@ export function fetchHealth(): Promise<HealthPayload> {
 
 export function fetchProtocolAgents(): Promise<ProtocolAgentListPayload> {
   return requestJson<ProtocolAgentListPayload>("/api/v1/protocol/agents", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
+export function fetchRegisteredAgents(): Promise<RegisteredAgentRegistryPayload> {
+  return requestJson<RegisteredAgentRegistryPayload>("/api/v1/agents", {
     method: "GET",
     cache: "no-store",
   });

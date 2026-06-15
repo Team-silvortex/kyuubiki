@@ -82,7 +82,34 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert_receive {:solve_request, "solve_heat_plane_triangle_2d", %{"model" => 2},
                     [
                       required_capabilities: ["solver_rpc"],
-                      placement_tags: ["thermal", "mesh", "triangle"]
+                      placement_tags: ["thermal", "mesh", "triangle"],
+                      orchestration: %{}
+                    ]}
+  end
+
+  test "forwards orchestration context into the solve runtime client" do
+    assert {:ok, %{"solver" => "frame_3d", "payload" => %{"model" => 3}}} =
+             WorkflowOperatorRuntime.run_solve_operator(
+               "solve.frame_3d",
+               %{"model" => 3},
+               %{
+                 "orchestration_context" => %{
+                   "control_mode" => "orch_managed",
+                   "orch_id" => "orch-alpha",
+                   "orch_session_id" => "session-a"
+                 }
+               }
+             )
+
+    assert_receive {:solve_request, "solve_frame_3d", %{"model" => 3},
+                    [
+                      required_capabilities: [],
+                      placement_tags: [],
+                      orchestration: %{
+                        control_mode: "orch_managed",
+                        orch_id: "orch-alpha",
+                        orch_session_id: "session-a"
+                      }
                     ]}
   end
 

@@ -122,6 +122,7 @@ type WorkbenchSystemRuntimePanelProps = {
   protocolAgentsTitle: string;
   protocolAgentsCountLabel: string;
   protocolAgentsEmptyLabel: string;
+  protocolAgentSummaryRows: Array<{ label: string; value: ReactNode }>;
   protocolAgents: ProtocolAgentCardRow[];
   watchdogTitle: string;
   watchdogStatus: ReactNode;
@@ -194,6 +195,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   protocolAgentsTitle,
   protocolAgentsCountLabel,
   protocolAgentsEmptyLabel,
+  protocolAgentSummaryRows,
   protocolAgents,
   watchdogTitle,
   watchdogStatus,
@@ -327,6 +329,12 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
             </div>
             {protocolAgents.length > 0 ? (
               <div className="sidebar-list sidebar-list--metrics">
+                {protocolAgentSummaryRows.map((row) => (
+                  <div className="sidebar-list__row" key={`agent-summary-${row.label}`}>
+                    <span>{row.label}</span>
+                    <strong>{row.value}</strong>
+                  </div>
+                ))}
                 {protocolAgents.slice(0, 2).map((agent) => (
                   <div className="sidebar-list__row" key={`agent-${agent.id}`}>
                     <span>{agent.id}</span>

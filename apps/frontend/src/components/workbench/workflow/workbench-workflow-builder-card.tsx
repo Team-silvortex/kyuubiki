@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import type { WorkflowCatalogEntryArtifact, WorkflowDatasetAxis, WorkflowCatalogEntry, WorkflowDatasetValueInfo, WorkflowGraphDefinition, WorkflowOperatorDescriptor } from "@/lib/api";
+import type { ProtocolAgentDescriptor, WorkflowCatalogEntryArtifact, WorkflowDatasetAxis, WorkflowCatalogEntry, WorkflowDatasetValueInfo, WorkflowGraphDefinition, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
-import { asWorkflowDatasetContract, mergeDatasetContractIntoGraph, normalizeImportedWorkflowGraph, readJsonFile } from "@/components/workbench/workflow/workbench-workflow-builder-import";
+import { asWorkflowDatasetContract, countWorkflowBridgeNormalizationAdjustments, mergeDatasetContractIntoGraph, normalizeImportedWorkflowGraph, readJsonFile } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 import { listStoredWorkflowDrafts, removeStoredWorkflowDraft, saveStoredWorkflowDraft, type StoredWorkflowDraft } from "@/components/workbench/workflow/workbench-workflow-draft-storage";
 import { duplicateStoredLocalWorkflow, removeStoredLocalWorkflow, renameStoredLocalWorkflow, saveStoredLocalWorkflow, updateStoredLocalWorkflowMetadata } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { type WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
@@ -15,8 +15,7 @@ import { WorkbenchWorkflowArtifactCard } from "@/components/workbench/workflow/w
 import { buildDraftArtifact, buildDraftDatasetValue, cloneWorkflowGraph, downloadJsonArtifact, ensureDatasetContract, slugifyWorkflowAssetName } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
 import { createWorkflowTopologyActions } from "@/components/workbench/workflow/workbench-workflow-topology-actions";
 import { applyAllWorkflowValidationFixes, applyWorkflowValidationFix, validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
-import { buildWorkflowValidationHighlightPlan } from "@/components/workbench/workflow/workbench-workflow-validation-highlights";
-import { buildWorkflowValidationFixSummary, type WorkflowValidationFixSummaryEntry } from "@/components/workbench/workflow/workbench-workflow-validation-summary";
+import { buildWorkflowValidationHighlightPlan } from "@/components/workbench/workflow/workbench-workflow-validation-highlights"; import { buildWorkflowValidationFixSummary, type WorkflowValidationFixSummaryEntry } from "@/components/workbench/workflow/workbench-workflow-validation-summary";
 import { useWorkflowBuilderFocus } from "@/components/workbench/workflow/workbench-workflow-builder-focus";
 import { WorkbenchWorkflowFocusStrip } from "@/components/workbench/workflow/workbench-workflow-focus-strip";
 import { useWorkflowPolicyFeedback } from "@/components/workbench/workflow/workbench-workflow-policy-feedback";
@@ -26,23 +25,21 @@ import { WorkbenchWorkflowDiagnosticsPlane } from "@/components/workbench/workfl
 import { WorkbenchWorkflowDatasetCard } from "@/components/workbench/workflow/workbench-workflow-dataset-card";
 import { WorkbenchWorkflowControlFlowPlaneCard } from "@/components/workbench/workflow/workbench-workflow-control-flow-plane-card"; import { WorkbenchWorkflowGraphSummaryCard } from "@/components/workbench/workflow/workbench-workflow-graph-summary-card"; import { flashWorkflowFixReceiptHighlights } from "@/components/workbench/workflow/workbench-workflow-fix-receipt-flash";
 import { buildWorkflowIntegrityReport, type WorkflowIntegrityIssue } from "@/components/workbench/workflow/workbench-workflow-integrity";
-import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card";
-import { WorkbenchWorkflowPackageManifestCard } from "@/components/workbench/workflow/workbench-workflow-package-manifest-card";
+import { WorkbenchWorkflowLocalMetadataCard } from "@/components/workbench/workflow/workbench-workflow-local-metadata-card"; import { WorkbenchWorkflowPackageManifestCard } from "@/components/workbench/workflow/workbench-workflow-package-manifest-card";
 import { buildWorkflowPackageInstallReport, scanWorkflowPackageResiduals } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
-import { WorkbenchWorkflowSnapshotCard } from "@/components/workbench/workflow/workbench-workflow-snapshot-card"; import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs"; import { WorkbenchWorkflowTopologyCard } from "@/components/workbench/workflow/workbench-workflow-topology-card";
-import { readWorkflowTemplateChainPreferences, writeWorkflowTemplateChainPreferences } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage";
-import { locateWorkflowPackageImportDiagnostic } from "@/components/workbench/workflow/workbench-workflow-package-import-diagnostic-locate";
-import { buildImportedWorkflowContractHealthMessage, buildWorkflowDraftContractWarningMessage, countWorkflowContractWarnings } from "@/components/workbench/workflow/workbench-workflow-contract-health";
-import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation"; const EMPTY_LIST: never[] = [];
+import { WorkbenchWorkflowSnapshotCard } from "@/components/workbench/workflow/workbench-workflow-snapshot-card"; import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs"; import { WorkbenchWorkflowTopologyCard } from "@/components/workbench/workflow/workbench-workflow-topology-card"; import { buildWorkflowAuditReplayPlan } from "@/components/workbench/workflow/workbench-workflow-audit-replay";
+import { readWorkflowTemplateChainPreferences, writeWorkflowTemplateChainPreferences } from "@/components/workbench/workflow/workbench-workflow-template-chain-storage"; import { locateWorkflowPackageImportDiagnostic } from "@/components/workbench/workflow/workbench-workflow-package-import-diagnostic-locate";
+import { buildControlFlowEdgeAuditPayload, buildControlFlowNodeAddAuditPayload, buildControlFlowPlaneInsertAuditPayload } from "@/components/workbench/workflow/workbench-workflow-control-flow-audit"; import { buildWorkflowAuditContextFromImportDiagnostic, buildWorkflowAuditContextFromValidationIssue, parseWorkflowArtifactFocusKey, type WorkflowAuditNavigationTarget } from "@/components/workbench/workflow/workbench-workflow-audit-targets";
+import { buildImportedWorkflowContractHealthMessage, buildWorkflowDraftContractWarningMessage, countWorkflowContractWarnings } from "@/components/workbench/workflow/workbench-workflow-contract-health"; import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation"; import { appendWorkflowActivityLogEntry, buildWorkflowActivityCountSummary } from "@/lib/workbench/workflow-activity-log"; const EMPTY_LIST: never[] = [];
 type WorkbenchWorkflowBuilderCardProps = {
   labels: WorkflowSidebarLabels;
   selectedWorkflow: WorkflowCatalogEntry | null;
   operatorDescriptors?: WorkflowOperatorDescriptor[];
   currentStudyKind: StudyKind;
-  currentHeatPlaneModel: HeatPlaneStudyJobInput; currentPlaneModel: PlaneStudyJobInput; recentRunStatus?: string | null;
+  currentHeatPlaneModel: HeatPlaneStudyJobInput; currentPlaneModel: PlaneStudyJobInput; recentRunStatus?: string | null; protocolAgents?: ProtocolAgentDescriptor[]; frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   onRefreshWorkflowCatalog: () => void;
   onRunWorkflowCatalog: (workflowId: string) => void;
-  onRunWorkflowDraft: (workflowId: string, graph: WorkflowGraphDefinition, inputArtifacts: Record<string, unknown>) => void; traceFocusNodeId?: string | null; traceFocusToken?: number; traceFocusBranchNodeId?: string | null; traceFocusBranchOutputId?: string | null; traceFocusBranchToken?: number; traceFocusDatasetNodeId?: string | null; traceFocusDatasetPortId?: string | null; traceFocusDatasetToken?: number;
+  onRunWorkflowDraft: (workflowId: string, graph: WorkflowGraphDefinition, inputArtifacts: Record<string, unknown>) => void; traceFocusNodeId?: string | null; traceFocusToken?: number; traceFocusBranchNodeId?: string | null; traceFocusBranchOutputId?: string | null; traceFocusBranchToken?: number; traceFocusDatasetNodeId?: string | null; traceFocusDatasetPortId?: string | null; traceFocusDatasetToken?: number; onLocateAuditTarget?: (target: WorkflowAuditNavigationTarget) => void;
 }; export function WorkbenchWorkflowBuilderCard({
   labels,
   selectedWorkflow,
@@ -51,6 +48,8 @@ type WorkbenchWorkflowBuilderCardProps = {
   currentHeatPlaneModel,
   currentPlaneModel,
   recentRunStatus,
+  protocolAgents = EMPTY_LIST as unknown as ProtocolAgentDescriptor[],
+  frontendRuntimeMode,
   onRefreshWorkflowCatalog,
   onRunWorkflowCatalog,
   onRunWorkflowDraft,
@@ -60,14 +59,11 @@ type WorkbenchWorkflowBuilderCardProps = {
   traceFocusBranchOutputId,
   traceFocusBranchToken,
   traceFocusDatasetNodeId,
-  traceFocusDatasetPortId,
-  traceFocusDatasetToken,
+  traceFocusDatasetPortId, traceFocusDatasetToken, onLocateAuditTarget,
 }: WorkbenchWorkflowBuilderCardProps) { const [draftGraph, setDraftGraph] = useState<WorkflowGraphDefinition | null>(null), [draftInputTexts, setDraftInputTexts] = useState<Record<string, string>>({}), [selectedDatasetValueId, setSelectedDatasetValueId] = useState<string | null>(null);
   const [importMessage, setImportMessage] = useState<string | null>(null), [importDiagnostics, setImportDiagnostics] = useState<WorkflowPackageImportDiagnostic[]>([]), [savedDrafts, setSavedDrafts] = useState<StoredWorkflowDraft[]>([]), [savedSnapshots, setSavedSnapshots] = useState<StoredWorkflowSnapshotSummary[]>([]), [recentFixSummary, setRecentFixSummary] = useState<WorkflowValidationFixSummaryEntry[]>([]);
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null), [focusedEdgeId, setFocusedEdgeId] = useState<string | null>(null);
-  const [focusedArtifactKey, setFocusedArtifactKey] = useState<string | null>(null), [focusedDatasetValueId, setFocusedDatasetValueId] = useState<string | null>(null);
-  const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]), [highlightedEdgeIds, setHighlightedEdgeIds] = useState<string[]>([]), [highlightedArtifactKeys, setHighlightedArtifactKeys] = useState<string[]>([]), [highlightedPortKeys, setHighlightedPortKeys] = useState<string[]>([]), [highlightDatasetEditor, setHighlightDatasetEditor] = useState(false), [importedPackage, setImportedPackage] = useState<WorkflowPackage | null>(null);
-  const [showDeferredPanels, setShowDeferredPanels] = useState(false);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null), [focusedEdgeId, setFocusedEdgeId] = useState<string | null>(null), [focusedArtifactKey, setFocusedArtifactKey] = useState<string | null>(null), [focusedDatasetValueId, setFocusedDatasetValueId] = useState<string | null>(null);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<string[]>([]), [highlightedEdgeIds, setHighlightedEdgeIds] = useState<string[]>([]), [highlightedArtifactKeys, setHighlightedArtifactKeys] = useState<string[]>([]), [highlightedPortKeys, setHighlightedPortKeys] = useState<string[]>([]), [highlightDatasetEditor, setHighlightDatasetEditor] = useState(false), [importedPackage, setImportedPackage] = useState<WorkflowPackage | null>(null), [showDeferredPanels, setShowDeferredPanels] = useState(false);
   const graphInputRef = useRef<HTMLInputElement | null>(null), datasetInputRef = useRef<HTMLInputElement | null>(null), builderRootRef = useRef<HTMLElement | null>(null);
   const activeFocusTarget = useWorkflowBuilderFocus(builderRootRef);
   const { policyFeedback, setPolicyFeedback } = useWorkflowPolicyFeedback();
@@ -157,10 +153,7 @@ type WorkbenchWorkflowBuilderCardProps = {
   const integrityReport = useMemo(() => buildWorkflowIntegrityReport(selectedWorkflow, operatorDescriptors ?? []), [operatorDescriptors, selectedWorkflow]);
   const packageResiduals = useMemo(() => selectedWorkflow ? scanWorkflowPackageResiduals({ workflow: selectedWorkflow, importedPackage, integrityReport }) : [], [importedPackage, integrityReport, selectedWorkflow]);
   const draftBlockingIssueCount = validationIssues.length + parsedDraftInputs.invalidKeys.length, canRunDraft = Boolean(selectedGraph) && draftBlockingIssueCount === 0;
-  const selectedDatasetValue = useMemo(
-    () => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null,
-    [selectedDatasetValueId, selectedDatasetValues],
-  );
+  const selectedDatasetValue = useMemo(() => selectedDatasetValues.find((value) => value.id === selectedDatasetValueId) ?? selectedDatasetValues[0] ?? null, [selectedDatasetValueId, selectedDatasetValues]);
   const snapshotContractSummary = `contract warnings: ${inputArtifactWarningCount}`;
   const topologyActions = useMemo(() => createWorkflowTopologyActions(setDraftGraph, operatorDescriptors), [operatorDescriptors]);
   function updateDatasetValue(valueId: string, updater: (value: WorkflowDatasetValueInfo) => WorkflowDatasetValueInfo) {
@@ -251,7 +244,7 @@ type WorkbenchWorkflowBuilderCardProps = {
     const nextGraph = applyWorkflowValidationFix(selectedGraph, issue, operatorDescriptors ?? []);
     if (selectedWorkflow && nextGraph) {
       const summary = buildWorkflowValidationFixSummary([issue], selectedGraph, operatorDescriptors ?? []);
-      saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "single validation fix", graph: nextGraph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary] });
+      saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "single validation fix", graph: nextGraph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary, buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(nextGraph), "bridge auto-fixes")] }); appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "validation_fix_applied", message: "Applied single workflow validation fix.", detail: issue.message, count: 1, context: buildWorkflowAuditContextFromValidationIssue(issue, selectedGraph) });
       setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id));
       setRecentFixSummary(summary);
       flashFixReceiptHighlights(summary);
@@ -269,7 +262,7 @@ type WorkbenchWorkflowBuilderCardProps = {
     if (appliedCount === 0) return;
     const summary = buildWorkflowValidationFixSummary(appliedIssues, selectedGraph, operatorDescriptors ?? []);
     if (selectedWorkflow && graph) {
-      saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "batch validation fixes", graph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary] });
+      saveStoredWorkflowSnapshot({ workflowId: selectedWorkflow.id, workflowName: selectedWorkflow.name, reason: "batch validation fixes", graph, inputArtifactTexts: draftInputTexts, summary: [...summary.map((entry) => entry.title), snapshotContractSummary, buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(graph), "bridge auto-fixes")] }); appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "validation_fix_applied", message: "Applied batch workflow validation fixes.", count: appliedIssues.length, context: buildWorkflowAuditContextFromValidationIssue(appliedIssues[0]!, selectedGraph) });
       setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id));
     }
     setDraftGraph(graph);
@@ -281,6 +274,12 @@ type WorkbenchWorkflowBuilderCardProps = {
   }
   function locateValidationIssue(issueId: string) { const issue = validationIssues.find((entry) => entry.id === issueId); if (issue?.locate) locateBuilderIssue(issue.locate); }
   function locateIntegrityIssue(issue: WorkflowIntegrityIssue) { if (issue.locate) locateBuilderIssue(issue.locate); }
+  function locateAuditTarget(target: WorkflowAuditNavigationTarget) { if (target.kind === "run") { onLocateAuditTarget?.(target); return; } locateBuilderIssue(target.kind === "node" ? { kind: "node", nodeId: target.nodeId } : { kind: "dataset", datasetValueId: target.datasetValueId }); }
+  function replayAuditEntry(entry: import("@/lib/workbench/workbench-audit-timeline").WorkbenchAuditTimelineEntry) { const plan = buildWorkflowAuditReplayPlan(entry); if (plan.nodeId) setFocusedNodeId(plan.nodeId); if (plan.edgeIds[0]) setFocusedEdgeId(plan.edgeIds[0]); if (plan.nodeIds.length > 0) setHighlightedNodeIds(plan.nodeIds); if (plan.edgeIds.length > 0) flashHighlightedEdges(plan.edgeIds); window.setTimeout(() => setHighlightedNodeIds((current) => current.join(",") === plan.nodeIds.join(",") ? [] : current), 2200); }
+  function appendControlFlowAudit(payload: ReturnType<typeof buildControlFlowEdgeAuditPayload> | ReturnType<typeof buildControlFlowNodeAddAuditPayload> | ReturnType<typeof buildControlFlowPlaneInsertAuditPayload>) { if (!selectedWorkflow) return; appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: payload.kind, message: payload.message, detail: payload.detail, context: payload.context }); }
+  function addControlFlowNode(kind: "condition" | "merge") { topologyActions.addNode(kind === "condition" ? { kind: "condition" } : { kind: "transform", operatorId: "transform.first_available" }); appendControlFlowAudit(buildControlFlowNodeAddAuditPayload(kind)); }
+  function insertControlFlowPlaneWithAudit(sourceNodeId?: string | null) { topologyActions.insertControlFlowPlane(sourceNodeId); appendControlFlowAudit(buildControlFlowPlaneInsertAuditPayload(sourceNodeId)); }
+  function setControlFlowEdgeWithAudit(mode: "outgoing" | "incoming", nodeId: string, portId: string, target: string) { topologyActions.setControlFlowEdge(mode, nodeId, portId, target); appendControlFlowAudit(buildControlFlowEdgeAuditPayload({ graph: selectedGraph, mode, nodeId, portId, target })); }
   function locateBuilderIssue(locate: NonNullable<WorkflowIntegrityIssue["locate"]> | NonNullable<NonNullable<typeof validationIssues[number]>["locate"]>) {
     resetBuilderFocus();
     if (locate.kind === "node") {
@@ -490,12 +489,12 @@ type WorkbenchWorkflowBuilderCardProps = {
   }
   function deleteSnapshot(snapshotId: string) { if (!selectedWorkflow) return; removeStoredWorkflowSnapshot(snapshotId); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); }
   function exportDraftDatasetContract() { if (!selectedDatasetContract) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedDatasetContract.id)}.workflow-dataset.json`, selectedDatasetContract); }
-  function exportPackageInstallReport(maintenanceHistory: Array<{ at: string; kind: "scan" | "repair"; lines: string[] }>) { if (!selectedWorkflow) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedWorkflow.id)}.workflow-package-install-report.json`, buildWorkflowPackageInstallReport({ workflow: selectedWorkflow, importedPackage, integrityReport, recentRunStatus, maintenanceHistory })); setImportMessage(labels.packageInstallRulesReportExportedLabel); }
-  function scanPackageResiduals() { const receipt = packageResiduals.length > 0 ? packageResiduals.map((entry) => entry.message) : [labels.packageInstallRulesResidualsCleanLabel]; setImportMessage(receipt[0]); return receipt; }
+  function exportPackageInstallReport(maintenanceHistory: Array<{ at: string; kind: "scan" | "repair"; lines: string[] }>) { if (!selectedWorkflow) return; downloadJsonArtifact(`${slugifyWorkflowAssetName(selectedWorkflow.id)}.workflow-package-install-report.json`, buildWorkflowPackageInstallReport({ workflow: selectedWorkflow, importedPackage, integrityReport, recentRunStatus, protocolAgents, frontendRuntimeMode, maintenanceHistory })); setImportMessage(labels.packageInstallRulesReportExportedLabel); }
+  function scanPackageResiduals() { const receipt = packageResiduals.length > 0 ? packageResiduals.map((entry) => entry.message) : [labels.packageInstallRulesResidualsCleanLabel]; if (selectedWorkflow) appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "package_residual_scanned", message: "Scanned workflow package residuals.", count: packageResiduals.length, detail: receipt[0] }); setImportMessage(receipt[0]); return receipt; }
   function locatePackageResidual(residualId: string) { const residual = packageResiduals.find((entry) => entry.id === residualId); if (!residual) return; if (residual.locate === "snapshot") return queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-snapshot-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); if (residual.locate === "local") return queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-local-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); queueMicrotask(() => builderRootRef.current?.querySelector<HTMLElement>('[data-workflow-package-card="card"], [data-workflow-package-policy-card="card"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" })); }
   function locateImportDiagnostic(diagnostic: WorkflowPackageImportDiagnostic) { locateWorkflowPackageImportDiagnostic(builderRootRef.current, diagnostic, setSelectedDatasetValueId); }
   function applyResidualRepair(kind: (typeof packageResiduals)[number]["kind"]) { if (!selectedWorkflow) return [] as string[]; if (kind === "orphan_snapshots") { removeStoredWorkflowSnapshotsByWorkflowId(selectedWorkflow.id); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); return ["Removed orphan workflow snapshots for the current workflow."]; } if (kind === "summary_only_snapshots") { removeStoredWorkflowSummaryOnlySnapshots(selectedWorkflow.id); setSavedSnapshots(listStoredWorkflowSnapshots(selectedWorkflow.id)); return ["Removed summary-only snapshots that could not be restored."]; } if (kind === "package_override") { const nextGraph = cloneWorkflowGraph(selectedWorkflow.graph ?? null); setDraftGraph(nextGraph); setDraftInputTexts(selectedWorkflow.local?.input_artifact_texts ?? buildWorkflowInputArtifactTexts(nextGraph?.entry_inputs ?? [], builtInWorkflowSampleInputArtifacts(selectedWorkflow.local?.source_workflow_id ?? selectedWorkflow.id))); setImportedPackage(null); setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null); resetBuilderFocus(); return ["Discarded the draft package override and restored the mounted workflow state."]; } return []; }
-  function repairPackageResidual(residualId: string) { const residual = packageResiduals.find((entry) => entry.id === residualId); if (!residual?.auto_fixable) { setImportMessage(labels.packageInstallRulesRepairUnavailableLabel); return []; } const receipt = applyResidualRepair(residual.kind); if (receipt.length > 0) setImportMessage(labels.packageInstallRulesRepairedLabel); return receipt; }
+  function repairPackageResidual(residualId: string) { const residual = packageResiduals.find((entry) => entry.id === residualId); if (!residual?.auto_fixable) { setImportMessage(labels.packageInstallRulesRepairUnavailableLabel); return []; } const receipt = applyResidualRepair(residual.kind); if (receipt.length > 0) { if (selectedWorkflow) appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "package_residual_repaired", message: "Applied workflow package residual repair.", detail: residual.message, count: 1 }); setImportMessage(labels.packageInstallRulesRepairedLabel); } return receipt; }
   async function importWorkflowGraphFile(file: File) {
     try {
       const json = await readJsonFile(file);
@@ -520,9 +519,10 @@ type WorkbenchWorkflowBuilderCardProps = {
       if (templateChainPreferences) {
         writeWorkflowTemplateChainPreferences(templateChainPreferences);
       }
-      setImportDiagnostics([]);
+      setImportDiagnostics([...(importedPayload.diagnostics ?? []), ...imported.diagnostics]);
       setImportedPackage(nextImportedPackage);
       setSelectedDatasetValueId(nextGraph?.dataset_contract?.values?.[0]?.id ?? null);
+      if (selectedWorkflow) appendWorkflowActivityLogEntry({ workflowId: selectedWorkflow.id, kind: "workflow_imported", message: "Imported workflow graph into the builder.", count: imported.diagnostics.length, detail: buildWorkflowActivityCountSummary(countWorkflowBridgeNormalizationAdjustments(nextGraph), "bridge auto-fixes"), context: imported.diagnostics[0] ? buildWorkflowAuditContextFromImportDiagnostic(imported.diagnostics[0]) : undefined });
       flashHighlightedEdges(imported.autoReconnectEdgeIds);
       setImportMessage(buildImportedWorkflowContractHealthMessage({ importSuccessLabel: labels.importSuccessLabel, currentWarnings: inputArtifactWarnings, importedWarnings: nextImportedPackage?.workflow.input_artifact_contract_warnings, hasImportedPackage: Boolean(nextImportedPackage) }));
     } catch {
@@ -583,10 +583,10 @@ type WorkbenchWorkflowBuilderCardProps = {
       <WorkbenchWorkflowDraftCard drafts={savedDrafts} labels={labels} onDeleteDraft={deleteSavedDraft} onLoadDraft={loadSavedDraft} onSaveDraft={saveCurrentDraft} />
       <WorkbenchWorkflowPackageManifestCard importedPackage={importedPackage} labels={labels} recentRunStatus={recentRunStatus} workflow={selectedWorkflow} />
       <WorkbenchWorkflowInputArtifactsCard entryInputs={selectedEntryInputs} inputTexts={draftInputTexts} invalidKeys={parsedDraftInputs.invalidKeys} labels={labels} onChangeInputText={updateDraftInputText} />
-      <WorkbenchWorkflowControlFlowPlaneCard labels={labels} operatorDescriptors={operatorDescriptors} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} invalidInputCount={parsedDraftInputs.invalidKeys.length} traceFocusBranchNodeId={traceFocusBranchNodeId} traceFocusBranchOutputId={traceFocusBranchOutputId} traceFocusBranchToken={traceFocusBranchToken} onAddConditionNode={() => topologyActions.addNode({ kind: "condition" })} onAddMergeNode={() => topologyActions.addNode({ kind: "transform", operatorId: "transform.first_available" })} onAddNode={topologyActions.addNode} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onInsertControlFlowPlane={topologyActions.insertControlFlowPlane} onSetControlFlowEdge={topologyActions.setControlFlowEdge} />
+      <WorkbenchWorkflowControlFlowPlaneCard labels={labels} operatorDescriptors={operatorDescriptors} selectedEdges={selectedEdges} selectedNodes={selectedNodes} validationIssues={validationIssues} invalidInputCount={parsedDraftInputs.invalidKeys.length} traceFocusBranchNodeId={traceFocusBranchNodeId} traceFocusBranchOutputId={traceFocusBranchOutputId} traceFocusBranchToken={traceFocusBranchToken} onAddConditionNode={() => addControlFlowNode("condition")} onAddMergeNode={() => addControlFlowNode("merge")} onAddNode={topologyActions.addNode} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onInsertControlFlowPlane={insertControlFlowPlaneWithAudit} onSetControlFlowEdge={setControlFlowEdgeWithAudit} />
       <WorkbenchWorkflowTopologyCard currentHeatPlaneModel={currentHeatPlaneModel} currentPlaneModel={currentPlaneModel} currentStudyKind={currentStudyKind} focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedNodeIds={highlightedNodeIds} highlightedPortKeys={highlightedPortKeys} labels={labels} operatorDescriptors={operatorDescriptors} onAddEdge={topologyActions.addEdge} onAddConnectedNode={topologyActions.addConnectedNode} onInsertTemplateChain={topologyActions.insertTemplateChain} onAddNode={topologyActions.addNode} onAddNodePort={topologyActions.addNodePort} onRemoveEdge={topologyActions.removeEdge} onRemoveNode={topologyActions.removeNode} onRemoveNodePort={topologyActions.removeNodePort} onSyncNodeTemplate={topologyActions.syncNodeTemplate} onUpdateEdge={topologyActions.updateEdge} onUpdateNode={topologyActions.updateNode} onUpdateNodePort={topologyActions.updateNodePort} highlightedEdgeIds={highlightedEdgeIds} selectedEdges={selectedEdges} selectedNodes={selectedNodes} />
       {showDeferredPanels ? <>
-        <WorkbenchWorkflowDiagnosticsPlane importedPackage={importedPackage} integrityReport={integrityReport} labels={labels} onApplyAllValidationFixes={applyAllValidationFixes} onApplyValidationFix={applyValidationFix} onExportPackageInstallReport={exportPackageInstallReport} onLocateIntegrityIssue={locateIntegrityIssue} onLocatePackageResidual={locatePackageResidual} onLocateImportDiagnostic={locateImportDiagnostic} onLocateValidationIssue={locateValidationIssue} onRepairPackageResidual={repairPackageResidual} onScanPackageResiduals={scanPackageResiduals} importDiagnostics={importDiagnostics} packageResiduals={packageResiduals} recentFixSummary={recentFixSummary} snapshotCount={savedSnapshots.length} validationIssues={validationIssues} workflow={selectedWorkflow} />
+        <WorkbenchWorkflowDiagnosticsPlane auditFocusHint={{ nodeId: focusedNodeId, edgeId: focusedEdgeId, branchNodeId: traceFocusBranchNodeId, branchOutputId: traceFocusBranchOutputId, datasetValueId: focusedDatasetValueId, ...parseWorkflowArtifactFocusKey(focusedArtifactKey) }} frontendRuntimeMode={frontendRuntimeMode} importedPackage={importedPackage} integrityReport={integrityReport} labels={labels} onApplyAllValidationFixes={applyAllValidationFixes} onApplyValidationFix={applyValidationFix} onExportPackageInstallReport={exportPackageInstallReport} onLocateAuditTarget={locateAuditTarget} onLocateIntegrityIssue={locateIntegrityIssue} onLocatePackageResidual={locatePackageResidual} onLocateImportDiagnostic={locateImportDiagnostic} onLocateValidationIssue={locateValidationIssue} onReplayAuditEntry={replayAuditEntry} onRepairPackageResidual={repairPackageResidual} onScanPackageResiduals={scanPackageResiduals} importDiagnostics={importDiagnostics} packageResiduals={packageResiduals} protocolAgents={protocolAgents} recentFixSummary={recentFixSummary} snapshotCount={savedSnapshots.length} validationIssues={validationIssues} workflow={selectedWorkflow} />
         {selectedWorkflow.local ? <WorkbenchWorkflowLocalMetadataCard labels={labels} onSave={saveCurrentLocalWorkflowMetadata} workflow={selectedWorkflow} /> : null}
         <WorkbenchWorkflowSnapshotCard labels={labels} onDeleteSnapshot={deleteSnapshot} onRestoreSnapshot={restoreSnapshot} snapshots={savedSnapshots} />
         <WorkbenchWorkflowGraphSummaryCard focusedEdgeId={focusedEdgeId} focusedNodeId={focusedNodeId} highlightedEdgeIds={highlightedEdgeIds} highlightedNodeIds={highlightedNodeIds} labels={labels} selectedEdges={selectedEdges} selectedEntryInputsCount={selectedEntryInputs.length} selectedNodes={selectedNodes} selectedOutputArtifactsCount={selectedOutputArtifacts.length} />

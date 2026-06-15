@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkflowGraphDefinition } from "@/lib/api";
+import { appendWorkflowActivityLogEntry } from "@/lib/workbench/workflow-activity-log";
 import { asWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-import";
 
 export const WORKBENCH_WORKFLOW_SNAPSHOT_INDEX_KEY = "kyuubiki.workbench.workflowSnapshots.index.v1";
@@ -275,6 +276,13 @@ export function saveStoredWorkflowSnapshot(params: {
   latestSnapshotFingerprintCache.set(params.workflowId, {
     snapshotId: id,
     fingerprint: nextFingerprint,
+  });
+  appendWorkflowActivityLogEntry({
+    workflowId: params.workflowId,
+    kind: "snapshot_saved",
+    message: "Saved workflow snapshot.",
+    detail: params.reason,
+    count: params.summary.length,
   });
   if (indexEntry.payloadState === "full") scheduleSnapshotPayloadWrite(id, payload);
   return indexEntry;

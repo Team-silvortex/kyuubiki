@@ -302,7 +302,7 @@ export const copyEnCore = {
     workflowBridgeContractScaleLabel: "Scale",
     workflowBridgeContractReductionLabel: "Reduction",
     workflowBridgeContractDefaultValueLabel: "Default value",
-    workflowBridgeContractTargetFieldLabel: "Target field",
+    workflowBridgeContractTargetFieldLabel: "Target field", workflowBridgeContractAdjustedFieldsLabel: "Adjusted fields",
     workflowBridgeContractPreviewTitle: "Impact preview",
     workflowBridgeContractPreviewSummaryLabel: "Current mapping",
     workflowBridgeContractPreviewDownstreamLabel: "Downstream impact",

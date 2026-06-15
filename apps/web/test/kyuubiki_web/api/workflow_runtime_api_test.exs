@@ -110,10 +110,38 @@ defmodule KyuubikiWeb.Api.WorkflowRuntimeApiTest do
                 "operator_id" => "bridge.temperature_field_to_thermo_quad_2d",
                 "config" => %{
                   "nodes" => [
-                    %{"id" => "h0", "x" => 0.0, "y" => 0.0, "fix_x" => true, "fix_y" => true, "temperature_delta" => 0.0},
-                    %{"id" => "h1", "x" => 1.0, "y" => 0.0, "fix_x" => false, "fix_y" => false, "temperature_delta" => 0.0},
-                    %{"id" => "h2", "x" => 1.0, "y" => 1.0, "fix_x" => false, "fix_y" => false, "temperature_delta" => 0.0},
-                    %{"id" => "h3", "x" => 0.0, "y" => 1.0, "fix_x" => true, "fix_y" => true, "temperature_delta" => 0.0}
+                    %{
+                      "id" => "h0",
+                      "x" => 0.0,
+                      "y" => 0.0,
+                      "fix_x" => true,
+                      "fix_y" => true,
+                      "temperature_delta" => 0.0
+                    },
+                    %{
+                      "id" => "h1",
+                      "x" => 1.0,
+                      "y" => 0.0,
+                      "fix_x" => false,
+                      "fix_y" => false,
+                      "temperature_delta" => 0.0
+                    },
+                    %{
+                      "id" => "h2",
+                      "x" => 1.0,
+                      "y" => 1.0,
+                      "fix_x" => false,
+                      "fix_y" => false,
+                      "temperature_delta" => 0.0
+                    },
+                    %{
+                      "id" => "h3",
+                      "x" => 0.0,
+                      "y" => 1.0,
+                      "fix_x" => true,
+                      "fix_y" => true,
+                      "temperature_delta" => 0.0
+                    }
                   ],
                   "elements" => [
                     %{
@@ -133,7 +161,10 @@ defmodule KyuubikiWeb.Api.WorkflowRuntimeApiTest do
                   %{"id" => "heat_result", "artifact_type" => "result/heat_plane_quad_2d"}
                 ],
                 "outputs" => [
-                  %{"id" => "thermo_model", "artifact_type" => "study_model/thermal_plane_quad_2d"}
+                  %{
+                    "id" => "thermo_model",
+                    "artifact_type" => "study_model/thermal_plane_quad_2d"
+                  }
                 ]
               },
               %{
@@ -171,12 +202,42 @@ defmodule KyuubikiWeb.Api.WorkflowRuntimeApiTest do
               }
             ],
             "edges" => [
-              %{"id" => "e0", "from" => %{"node" => "heat_model", "port" => "model"}, "to" => %{"node" => "solve_heat", "port" => "model"}, "artifact_type" => "study_model/heat_plane_quad_2d"},
-              %{"id" => "e1", "from" => %{"node" => "solve_heat", "port" => "result"}, "to" => %{"node" => "bridge_temperature", "port" => "heat_result"}, "artifact_type" => "result/heat_plane_quad_2d"},
-              %{"id" => "e2", "from" => %{"node" => "bridge_temperature", "port" => "thermo_model"}, "to" => %{"node" => "solve_thermo", "port" => "model"}, "artifact_type" => "study_model/thermal_plane_quad_2d"},
-              %{"id" => "e3", "from" => %{"node" => "solve_thermo", "port" => "result"}, "to" => %{"node" => "extract_summary", "port" => "result"}, "artifact_type" => "result/thermal_plane_quad_2d"},
-              %{"id" => "e4", "from" => %{"node" => "extract_summary", "port" => "summary"}, "to" => %{"node" => "export_json", "port" => "summary"}, "artifact_type" => "report/summary"},
-              %{"id" => "e5", "from" => %{"node" => "export_json", "port" => "json"}, "to" => %{"node" => "json_output", "port" => "json"}, "artifact_type" => "export/json"}
+              %{
+                "id" => "e0",
+                "from" => %{"node" => "heat_model", "port" => "model"},
+                "to" => %{"node" => "solve_heat", "port" => "model"},
+                "artifact_type" => "study_model/heat_plane_quad_2d"
+              },
+              %{
+                "id" => "e1",
+                "from" => %{"node" => "solve_heat", "port" => "result"},
+                "to" => %{"node" => "bridge_temperature", "port" => "heat_result"},
+                "artifact_type" => "result/heat_plane_quad_2d"
+              },
+              %{
+                "id" => "e2",
+                "from" => %{"node" => "bridge_temperature", "port" => "thermo_model"},
+                "to" => %{"node" => "solve_thermo", "port" => "model"},
+                "artifact_type" => "study_model/thermal_plane_quad_2d"
+              },
+              %{
+                "id" => "e3",
+                "from" => %{"node" => "solve_thermo", "port" => "result"},
+                "to" => %{"node" => "extract_summary", "port" => "result"},
+                "artifact_type" => "result/thermal_plane_quad_2d"
+              },
+              %{
+                "id" => "e4",
+                "from" => %{"node" => "extract_summary", "port" => "summary"},
+                "to" => %{"node" => "export_json", "port" => "summary"},
+                "artifact_type" => "report/summary"
+              },
+              %{
+                "id" => "e5",
+                "from" => %{"node" => "export_json", "port" => "json"},
+                "to" => %{"node" => "json_output", "port" => "json"},
+                "artifact_type" => "export/json"
+              }
             ]
           },
           "input_artifacts" => WorkflowApi.heat_to_thermo_quad_input_artifacts()

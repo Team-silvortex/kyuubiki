@@ -241,6 +241,111 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
            ) == []
   end
 
+  test "filters orch managed endpoints to the active orchestrator session" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "orch-alpha-a",
+          host: "127.0.0.1",
+          port: 5101,
+          control_mode: "orch_managed",
+          orch_id: "orch-alpha",
+          orch_session_id: "session-a"
+        },
+        %{
+          id: "orch-beta-a",
+          host: "127.0.0.1",
+          port: 5102,
+          control_mode: "orch_managed",
+          orch_id: "orch-beta",
+          orch_session_id: "session-b"
+        },
+        %{
+          id: "offline-a",
+          host: "127.0.0.1",
+          port: 5103,
+          control_mode: "offline_mesh"
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(
+             AgentPool.checkout_endpoints(
+               "solve_bar_1d",
+               orchestration: %{
+                 "control_mode" => "orch_managed",
+                 "orch_id" => "orch-alpha",
+                 "orch_session_id" => "session-a"
+               }
+             ),
+             & &1.id
+           ) == ["orch-alpha-a"]
+  end
+
+  test "filters offline mesh runs away from orchestra managed endpoints" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "orch-alpha-a",
+          host: "127.0.0.1",
+          port: 5101,
+          control_mode: "orch_managed",
+          orch_id: "orch-alpha"
+        },
+        %{
+          id: "offline-a",
+          host: "127.0.0.1",
+          port: 5102,
+          control_mode: "offline_mesh"
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(
+             AgentPool.checkout_endpoints(
+               "solve_bar_1d",
+               orchestration: %{"control_mode" => "offline_mesh"}
+             ),
+             & &1.id
+           ) == ["offline-a"]
+  end
+
+  test "skips endpoints that already hold an active execution lease" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "busy-agent",
+          host: "127.0.0.1",
+          port: 5101,
+          control_mode: "orch_managed",
+          orch_id: "orch-alpha",
+          active_lease: %{"lease_id" => "lease-busy", "orch_id" => "orch-alpha"}
+        },
+        %{
+          id: "idle-agent",
+          host: "127.0.0.1",
+          port: 5102,
+          control_mode: "orch_managed",
+          orch_id: "orch-alpha"
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(
+             AgentPool.checkout_endpoints(
+               "solve_bar_1d",
+               orchestration: %{"control_mode" => "orch_managed", "orch_id" => "orch-alpha"}
+             ),
+             & &1.id
+           ) == ["idle-agent"]
+  end
+
   test "deprioritizes cooling endpoints after reported failures and exposes cooldown state" do
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [

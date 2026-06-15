@@ -32,6 +32,8 @@ export type WorkflowBridgeContract = {
   };
 };
 
+export type { WorkflowBridgeContractSupport } from "@/lib/api";
+
 export function createHeatPlaneQuadBridgeSeedModel() {
   return {
     nodes: [

@@ -52,7 +52,8 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
          :ok <- validate_heat_bridge_reduction(reduction),
          {:ok, default_value} <-
            normalize_bridge_scale(get_in(contract, ["transform", "default_value"]) || 0.0),
-         :ok <- validate_heat_bridge_source_field(source_field, distribution) do
+         :ok <- validate_heat_bridge_source_field(source_field, distribution),
+         :ok <- validate_heat_bridge_target_field(target_field) do
       {:ok,
        %{
          source_field: source_field,
@@ -395,6 +396,10 @@ defmodule KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime do
   defp validate_heat_bridge_source_field("heat_flux", "element_to_nodes"), do: :ok
   defp validate_heat_bridge_source_field("heat_flux_magnitude", "element_to_nodes"), do: :ok
   defp validate_heat_bridge_source_field(_source_field, _distribution), do: {:error, :invalid_bridge_contract_source_field}
+
+  defp validate_heat_bridge_target_field("temperature_delta"), do: :ok
+  defp validate_heat_bridge_target_field(_target_field),
+    do: {:error, :invalid_bridge_contract_target_field}
 
   defp normalize_numeric_value(value) when is_number(value), do: value
   defp normalize_numeric_value(_value), do: 0.0

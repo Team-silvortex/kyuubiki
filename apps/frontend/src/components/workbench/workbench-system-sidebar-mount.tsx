@@ -285,12 +285,16 @@ export function WorkbenchSystemSidebarMount({
   setMessage,
   refreshJobHistory,
 }: WorkbenchSystemSidebarMountProps) {
+  const mergedProtocolAgents = protocolAgents as ProtocolAgentDescriptor[];
+  const activeLeaseCount = mergedProtocolAgents.filter((agent) => Boolean(agent.active_lease)).length, staleLeaseCount = mergedProtocolAgents.filter((agent) => agent.active_lease?.is_stale).length;
+  const protocolAgentCountLabel = language === "zh" ? `${mergedProtocolAgents.length} 台 · ${activeLeaseCount} 租约 · ${staleLeaseCount} 过期` : language === "ja" ? `${mergedProtocolAgents.length} 台 ・ ${activeLeaseCount} リース ・ ${staleLeaseCount} 期限切れ` : `${mergedProtocolAgents.length} agents · ${activeLeaseCount} leases · ${staleLeaseCount} stale`;
+  const protocolAgentSummaryRows = language === "zh" ? [{ label: "可达代理", value: mergedProtocolAgents.length }, { label: "活跃租约", value: activeLeaseCount }, { label: "过期租约", value: staleLeaseCount }] : language === "ja" ? [{ label: "到達可能エージェント", value: mergedProtocolAgents.length }, { label: "アクティブリース", value: activeLeaseCount }, { label: "期限切れリース", value: staleLeaseCount }] : [{ label: "Reachable agents", value: mergedProtocolAgents.length }, { label: "Active leases", value: activeLeaseCount }, { label: "Stale leases", value: staleLeaseCount }];
   const controlWindowCopy = buildWorkbenchSystemControlModeCopy(language, frontendRuntimeMode);
   const controlWindowTopology = buildWorkbenchSystemControlTopologySummary({
     frontendRuntimeMode,
     directMeshSelectionMode,
     directMeshEndpointsText,
-    protocolAgents: protocolAgents as ProtocolAgentDescriptor[],
+    protocolAgents: mergedProtocolAgents,
     controlPlaneApiToken,
     clusterApiToken,
     directMeshApiToken,
@@ -303,10 +307,12 @@ export function WorkbenchSystemSidebarMount({
     frontendRuntimeMode,
     directMeshSelectionMode,
     directMeshEndpointsText,
-    protocolAgents: protocolAgents as ProtocolAgentDescriptor[],
+    protocolAgents: mergedProtocolAgents,
     topology: controlWindowTopology,
   });
-  const governanceConfig = buildWorkbenchGovernanceConfig({ frontendRuntimeMode, directMeshEndpointsText, controlPlaneApiToken, clusterApiToken, directMeshApiToken });
+  const governanceConfig = buildWorkbenchGovernanceConfig({
+    frontendRuntimeMode, directMeshEndpointsText, controlPlaneApiToken, clusterApiToken, directMeshApiToken,
+  });
   const governanceRows = buildWorkbenchGovernanceRows(governanceConfig);
   return (
     <WorkbenchSystemSidebar
@@ -460,13 +466,7 @@ export function WorkbenchSystemSidebarMount({
           securityFooter={<p className="card-copy">{t.runtimeSecurityFooter}</p>}
           auditTitle={t.securityAudit}
           auditCountLabel={String(securityEventRecords.length)}
-          auditEmptyLabel={
-            language === "zh"
-              ? "当前筛选下还没有安全事件。"
-              : language === "ja"
-                ? "現在のフィルターに一致するセキュリティイベントはありません。"
-                : "No security events match the current filters."
-          }
+          auditEmptyLabel={language === "zh" ? "当前筛选下还没有安全事件。" : language === "ja" ? "現在のフィルターに一致するセキュリティイベントはありません。" : "No security events match the current filters."}
           auditSessionLabel={t.auditSessionLabel}
           auditWindowLabel={t.auditWindow}
           auditSourceLabel={t.auditSource}
@@ -524,9 +524,7 @@ export function WorkbenchSystemSidebarMount({
             { value: "failed", label: t.auditStatusOptions.failed },
           ]}
           onAuditWindowChange={(value) => setSecurityEventWindowFilter(value as SecurityEventWindow)}
-          onAuditSourceChange={(value) =>
-            setSecurityEventSourceFilter(value as WorkbenchSecurityAuditSource | "hub-assistant" | "")
-          }
+          onAuditSourceChange={(value) => setSecurityEventSourceFilter(value as WorkbenchSecurityAuditSource | "hub-assistant" | "")}
           onAuditRiskChange={(value) => setSecurityEventRiskFilter(value as WorkbenchSecurityAuditRisk | "")}
           onAuditStatusChange={(value) => setSecurityEventStatusFilter(value as "" | "allowed" | "blocked")}
           onAuditActionChange={setSecurityEventActionFilter}
@@ -535,8 +533,9 @@ export function WorkbenchSystemSidebarMount({
           onAuditExportCsv={() => void downloadSecurityEventCsvExport()}
           auditEntries={runtimeAuditEntries}
           protocolAgentsTitle={t.protocolAgents}
-          protocolAgentsCountLabel={String(protocolAgents.length)}
+          protocolAgentsCountLabel={protocolAgentCountLabel}
           protocolAgentsEmptyLabel={t.noProtocolAgents}
+          protocolAgentSummaryRows={protocolAgentSummaryRows}
           protocolAgents={protocolAgentCards}
           watchdogTitle={t.watchdog}
           watchdogStatus={healthWatchdogOnline ? t.online : t.offline}

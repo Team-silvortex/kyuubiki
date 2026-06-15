@@ -98,6 +98,23 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert electrostatic_heat_bridge_operator["config_example"]["contract"]["target"]["field"] ==
              "heat_load"
 
+    assert electrostatic_heat_bridge_operator["contract_support"]["source"]["distributions"][
+             "node_to_node"
+           ] == ["potential", "charge_density"]
+
+    assert electrostatic_heat_bridge_operator["contract_support"]["transform"]["reductions"] == [
+             "mean",
+             "sum",
+             "area_weighted_mean",
+             "min",
+             "max"
+           ]
+
+    assert electrostatic_heat_bridge_operator["contract_support"]["target"]["fields"] == [
+             "heat_load",
+             "temperature"
+           ]
+
     assert heat_thermo_bridge_operator["config_schema"]["schema"] ==
              "kyuubiki.bridge-contract.heat_to_thermo.v1"
 
@@ -127,6 +144,27 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
 
     assert heat_thermo_bridge_operator["config_example"]["contract"]["target"]["field"] ==
              "temperature_delta"
+
+    assert heat_thermo_bridge_operator["contract_support"]["source"]["distributions"][
+             "element_to_nodes"
+           ] == [
+             "average_temperature",
+             "heat_flux_x",
+             "heat_flux_y",
+             "heat_flux",
+             "heat_flux_magnitude"
+           ]
+
+    assert heat_thermo_bridge_operator["contract_support"]["transform"][
+             "default_reduction_by_distribution"
+           ] == %{
+             "node_to_node" => "copy",
+             "element_to_nodes" => "mean"
+           }
+
+    assert heat_thermo_bridge_operator["contract_support"]["target"]["fields"] == [
+             "temperature_delta"
+           ]
 
     assert [
              %{

@@ -13,6 +13,7 @@ import {
 import { createDefaultWorkflowConditionConfig } from "@/components/workbench/workflow/workbench-workflow-condition";
 import { DATASET_VALUE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-dataset-presets";
 import { CONTROL_NODE_TEMPLATE_PRESETS } from "@/components/workbench/workflow/workbench-workflow-node-template-control-presets";
+import { normalizeBridgeConfigWithSupport } from "@/lib/workbench/workflow-bridge-contract-support";
 
 export type WorkflowNodeTemplatePreset = {
   id: string;
@@ -394,6 +395,10 @@ export function buildPortsForWorkflowNodeTemplate(
   template?: WorkflowNodeTemplateSelection,
   operatorDescriptors?: WorkflowOperatorDescriptor[],
 ) {
+  const operatorId = template?.operatorId?.trim();
+  const operatorDescriptor = operatorId
+    ? (operatorDescriptors ?? []).find((entry) => entry.id === operatorId)
+    : undefined;
   const preset = resolveWorkflowNodeTemplate(template, operatorDescriptors);
   if (preset) {
     const mergedConfig = {
@@ -406,9 +411,10 @@ export function buildPortsForWorkflowNodeTemplate(
       operatorId: preset.operatorId,
       config:
         preset.operatorId?.startsWith("bridge.")
-          ? normalizeBridgeConfigForOperator(
+          ? normalizeBridgeConfigWithSupport(
               preset.operatorId,
               mergedConfig,
+              operatorDescriptor ?? (preset.operatorId ? (operatorDescriptors ?? []).find((entry) => entry.id === preset.operatorId) : undefined),
             ) ?? undefined
           : mergedConfig,
       inputs: clonePorts(preset.inputs),
@@ -450,12 +456,13 @@ export function buildPortsForWorkflowNodeTemplate(
 
   return {
     kind,
-    operatorId: template?.operatorId?.trim() || undefined,
+    operatorId,
     config:
-      template?.operatorId?.trim()?.startsWith("bridge.")
-        ? normalizeBridgeConfigForOperator(
-            template.operatorId,
-            template.config ? { ...template.config } : undefined,
+      operatorId?.startsWith("bridge.")
+        ? normalizeBridgeConfigWithSupport(
+            operatorId,
+            template?.config ? { ...template.config } : undefined,
+            operatorDescriptor,
           ) ?? undefined
         : template?.config
           ? { ...template.config }

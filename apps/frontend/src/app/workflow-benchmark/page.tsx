@@ -172,6 +172,8 @@ export default function WorkflowBenchmarkPage() {
         latestJob={null}
         latestWorkflowSummary={workflowRuns[0]?.summary ?? null}
         workflowRuns={workflowRuns}
+        protocolAgents={[]}
+        frontendRuntimeMode="orchestrated_gui"
         refreshWorkflowCatalog={async () => {}}
         setSelectedWorkflowId={setSelectedWorkflowId}
         setWorkflowRuns={setWorkflowRuns}

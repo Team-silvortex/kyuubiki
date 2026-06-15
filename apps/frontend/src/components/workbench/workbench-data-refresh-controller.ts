@@ -15,6 +15,7 @@ import {
   fetchModelVersions,
   fetchProjects,
   fetchProtocolAgents,
+  fetchRegisteredAgents,
   fetchSecurityEvents,
 } from "@/lib/api";
 import { copyByLanguage } from "@/components/workbench/workbench-copy";
@@ -136,15 +137,35 @@ export function useWorkbenchDataRefreshController({
     }
 
     try {
-      const [nextHealth, nextProtocolAgents] = await Promise.all([
+      const [nextHealth, nextProtocolAgents, nextRegisteredAgents] = await Promise.all([
         fetchHealth(),
         fetchProtocolAgents().catch(() => ({ agents: [] })),
+        fetchRegisteredAgents().catch(() => ({
+          agents: [],
+          summary: { active_execution_lease_count: 0, stale_execution_lease_count: 0 },
+        })),
       ]);
 
       if (refreshSeq !== healthRefreshSeqRef.current) return;
 
       setHealth(nextHealth);
-      setProtocolAgents(nextProtocolAgents.agents);
+      const registryById = new Map(
+        nextRegisteredAgents.agents.map((agent) => [agent.id, agent] as const),
+      );
+
+      setProtocolAgents(
+        nextProtocolAgents.agents.map((agent) => {
+          const registered = registryById.get(agent.id);
+
+          return registered
+            ? {
+                ...agent,
+                execution_state: registered.execution_state,
+                active_lease: registered.active_lease,
+              }
+            : agent;
+        }),
+      );
     } catch {
       if (refreshSeq !== healthRefreshSeqRef.current) return;
       setHealth(null);

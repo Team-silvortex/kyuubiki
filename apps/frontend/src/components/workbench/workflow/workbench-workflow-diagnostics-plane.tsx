@@ -1,6 +1,8 @@
 "use client";
 
-import type { WorkflowCatalogEntry } from "@/lib/api";
+import type { ProtocolAgentDescriptor, WorkflowCatalogEntry } from "@/lib/api";
+import { WorkbenchWorkflowActivityLogCard } from "@/components/workbench/workflow/workbench-workflow-activity-log-card";
+import { WorkbenchWorkflowControlFlowHistoryCard } from "@/components/workbench/workflow/workbench-workflow-control-flow-history-card";
 import { WorkbenchWorkflowIntegrityCard } from "@/components/workbench/workflow/workbench-workflow-integrity-card";
 import type { WorkflowIntegrityIssue, WorkflowIntegrityReport } from "@/components/workbench/workflow/workbench-workflow-integrity";
 import { WorkbenchWorkflowPackageInstallCard } from "@/components/workbench/workflow/workbench-workflow-package-install-card";
@@ -12,10 +14,15 @@ import type { WorkflowValidationFixSummaryEntry } from "@/components/workbench/w
 import { WorkbenchWorkflowValidationCard } from "@/components/workbench/workflow/workbench-workflow-validation-card";
 import type { WorkflowGraphValidationIssue } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
+import type { WorkflowAuditFocusHint, WorkflowAuditNavigationTarget } from "@/components/workbench/workflow/workbench-workflow-audit-targets";
+import type { WorkbenchAuditTimelineEntry } from "@/lib/workbench/workbench-audit-timeline";
+import { readWorkbenchAuditTimeline } from "@/lib/workbench/workbench-audit-timeline";
 
 type WorkbenchWorkflowDiagnosticsPlaneProps = {
   labels: WorkflowSidebarLabels;
   workflow: WorkflowCatalogEntry;
+  protocolAgents: ProtocolAgentDescriptor[];
+  frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   importedPackage: WorkflowPackage | null;
   validationIssues: WorkflowGraphValidationIssue[];
   recentFixSummary: WorkflowValidationFixSummaryEntry[];
@@ -32,11 +39,16 @@ type WorkbenchWorkflowDiagnosticsPlaneProps = {
   onRepairPackageResidual: (residualId: string) => string[];
   onLocatePackageResidual: (residualId: string) => void;
   onLocateImportDiagnostic: (diagnostic: WorkflowPackageImportDiagnostic) => void;
+  onLocateAuditTarget: (target: WorkflowAuditNavigationTarget) => void;
+  onReplayAuditEntry: (entry: WorkbenchAuditTimelineEntry) => void;
+  auditFocusHint?: WorkflowAuditFocusHint | null;
 };
 
 export function WorkbenchWorkflowDiagnosticsPlane({
   labels,
   workflow,
+  protocolAgents,
+  frontendRuntimeMode,
   importedPackage,
   validationIssues,
   recentFixSummary,
@@ -53,7 +65,15 @@ export function WorkbenchWorkflowDiagnosticsPlane({
   onRepairPackageResidual,
   onLocatePackageResidual,
   onLocateImportDiagnostic,
+  onLocateAuditTarget,
+  onReplayAuditEntry,
+  auditFocusHint,
 }: WorkbenchWorkflowDiagnosticsPlaneProps) {
+  const activityLogEntries = readWorkbenchAuditTimeline(workflow.id, 8, {
+    frontendRuntimeMode,
+    protocolAgents,
+  });
+  const controlFlowHistoryEntries = activityLogEntries.filter((entry) => entry.kind.startsWith("control_flow_"));
   return (
     <section className="workflow-diagnostics-plane">
       <div className="workflow-diagnostics-plane__summary sidebar-list">
@@ -73,6 +93,10 @@ export function WorkbenchWorkflowDiagnosticsPlane({
           <span>Package import diagnostics</span>
           <strong>{importDiagnostics.length}</strong>
         </div>
+        <div className="sidebar-list__row">
+          <span>Activity log</span>
+          <strong>{activityLogEntries.length}</strong>
+        </div>
       </div>
       <div className="workflow-diagnostics-plane__cards">
         <WorkbenchWorkflowValidationCard
@@ -84,6 +108,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
           validationIssues={validationIssues}
         />
         <WorkbenchWorkflowIntegrityCard onLocateIssue={onLocateIntegrityIssue} report={integrityReport} />
+        <WorkbenchWorkflowControlFlowHistoryCard entries={controlFlowHistoryEntries} onLocateTarget={onLocateAuditTarget} onReplayEntry={onReplayAuditEntry} />
         <WorkbenchWorkflowPackageInstallCard
           importedPackage={importedPackage}
           labels={labels}
@@ -97,6 +122,7 @@ export function WorkbenchWorkflowDiagnosticsPlane({
           workflow={workflow}
         />
         <WorkbenchWorkflowPackageImportDiagnosticsCard diagnostics={importDiagnostics} onLocateDiagnostic={onLocateImportDiagnostic} />
+        <WorkbenchWorkflowActivityLogCard auditFocusHint={auditFocusHint} entries={activityLogEntries} onLocateTarget={onLocateAuditTarget} protocolAgents={protocolAgents} workflowId={workflow.id} />
       </div>
     </section>
   );
