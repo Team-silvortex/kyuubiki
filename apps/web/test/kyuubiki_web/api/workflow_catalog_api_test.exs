@@ -22,6 +22,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
                "workflow.electrostatic-preheat-guard-markdown",
                "workflow.electrostatic-preheat-guard-heat-json",
                "workflow.electrostatic-preheat-guard-heat-thermo-json",
+               "workflow.diagnostics-bundle-guard-report-markdown",
                "workflow.electrostatic-triangle-preheat-guard-markdown",
                "workflow.electrostatic-triangle-preheat-guard-heat-json",
                "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
@@ -67,6 +68,11 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
         workflow["id"] == "workflow.electrostatic-preheat-guard-heat-thermo-json"
       end)
 
+    diagnostics_bundle_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.diagnostics-bundle-guard-report-markdown"
+      end)
+
     electrostatic_workflow =
       Enum.find(workflows, fn workflow ->
         workflow["id"] == "workflow.electrostatic-plane-quad-2d"
@@ -94,10 +100,14 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     assert electrostatic_guard_heat_thermo_workflow["name"] ==
              "Electrostatic pre-heat guard -> heat -> thermo JSON"
 
+    assert diagnostics_bundle_workflow["name"] ==
+             "Diagnostics bundle guard report markdown"
+
     assert electrostatic_heat_thermo_workflow["name"] ==
              "Electrostatic heat thermo quad summary JSON"
 
     assert electrostatic_heat_thermo_workflow["version"] == "1.0.0"
+    assert diagnostics_bundle_workflow["version"] == "1.0.0"
     assert electrostatic_workflow["name"] == "Electrostatic plane quad"
     assert electrostatic_workflow["version"] == "1.0.0"
     assert workflow["name"] == "Heat to thermo quad"

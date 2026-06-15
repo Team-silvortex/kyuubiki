@@ -475,6 +475,18 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
              )
 
     assert diagnostics["thermal_temperature_min"] == 20.0
+    assert diagnostics["diagnostic_contract"] == "kyuubiki.workflow_diagnostics/v1"
+    assert diagnostics["diagnostic_domain"] == "thermal"
+    assert diagnostics["diagnostic_subject"] == "thermal_result"
+    assert diagnostics["diagnostic_prefix"] == "thermal"
+    assert diagnostics["diagnostic_node_count"] == 3
+    assert diagnostics["diagnostic_element_count"] == 2
+    assert diagnostics["diagnostic_metric_groups"] == [
+             "temperature",
+             "heat_load",
+             "gradient",
+             "flux"
+           ]
     assert diagnostics["thermal_temperature_max"] == 80.0
     assert diagnostics["thermal_temperature_span"] == 60.0
     assert diagnostics["thermal_total_heat_load"] == 5.0
@@ -521,6 +533,17 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
              )
 
     assert diagnostics["thermo_temperature_delta_max"] == 35.0
+    assert diagnostics["diagnostic_contract"] == "kyuubiki.workflow_diagnostics/v1"
+    assert diagnostics["diagnostic_domain"] == "thermo_mechanical"
+    assert diagnostics["diagnostic_subject"] == "thermo_result"
+    assert diagnostics["diagnostic_prefix"] == "thermo"
+    assert diagnostics["diagnostic_node_count"] == 3
+    assert diagnostics["diagnostic_element_count"] == 2
+    assert diagnostics["diagnostic_metric_groups"] == [
+             "temperature_delta",
+             "displacement",
+             "stress"
+           ]
     assert diagnostics["thermo_temperature_delta_span"] == 35.0
     assert diagnostics["thermo_heated_node_count"] == 2
     assert diagnostics["thermo_peak_displacement"] == 10.0

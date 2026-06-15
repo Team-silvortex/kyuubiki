@@ -2,10 +2,13 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   @moduledoc false
 
   alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.WorkflowBundleRuntime
+  alias KyuubikiWeb.WorkflowElectrostaticRuntime
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
   alias KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime
   alias KyuubikiWeb.WorkflowReportingRuntime
   alias KyuubikiWeb.WorkflowSolverRegistry
+  alias KyuubikiWeb.WorkflowSummaryRuntime
   alias KyuubikiWeb.WorkflowThermalRuntime
 
   def run_solve_operator(operator_id, payload, node \\ %{})
@@ -123,6 +126,15 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.select_best_summary" when is_map(config) ->
         WorkflowReportingRuntime.select_best_summary(payload, config)
 
+      "transform.compose_diagnostics_bundle" when is_map(config) ->
+        WorkflowSummaryRuntime.compose_diagnostics_bundle(payload, config)
+
+      "transform.compose_diagnostics_report_payload" when is_map(config) ->
+        WorkflowBundleRuntime.compose_diagnostics_report_payload(payload, config)
+
+      "transform.evaluate_diagnostics_bundle_guard" when is_map(config) ->
+        WorkflowSummaryRuntime.evaluate_diagnostics_bundle_guard(payload, config)
+
       "transform.evaluate_thermal_guard" when is_map(config) ->
         WorkflowThermalRuntime.evaluate_thermal_guard(payload, config)
 
@@ -148,6 +160,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "extract.field_hotspots" ->
         WorkflowReportingRuntime.extract_field_hotspots(payload, config || %{})
 
+      "extract.electrostatic_result_diagnostics" ->
+        WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(payload, config || %{})
+
       "extract.thermal_result_diagnostics" ->
         WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config || %{})
 
@@ -172,6 +187,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "export.alert_markdown" ->
         WorkflowReportingRuntime.export_alert_markdown(payload, config || %{})
+
+      "export.diagnostics_bundle_markdown" ->
+        WorkflowReportingRuntime.export_diagnostics_bundle_markdown(payload, config || %{})
 
       _ ->
         {:error, {:unsupported_workflow_export_operator, operator_id}}

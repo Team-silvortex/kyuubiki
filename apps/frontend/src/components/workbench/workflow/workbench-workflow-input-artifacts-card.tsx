@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { WorkflowCatalogEntryArtifact } from "@/lib/api";
+import type { WorkflowCatalogEntryArtifact, WorkflowGraphNode } from "@/lib/api";
 import {
   applyWorkflowFemFieldDefault,
   applyWorkflowFemSectionDefaults,
@@ -20,12 +20,19 @@ import {
   formatWorkflowFemFieldLabel,
   resolveWorkflowFemFieldMetadata,
 } from "@/components/workbench/workflow/workbench-workflow-fem-field-metadata";
+import {
+  applyWorkflowDiagnosticsScenario,
+  resolveWorkflowDiagnosticsGuardRules,
+  resolveWorkflowDiagnosticsScenarioPreview,
+  resolveWorkflowDiagnosticsSummaryInfo,
+} from "@/components/workbench/workflow/workbench-workflow-diagnostics-input-helper";
 import { validateWorkflowFemInputPayload } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowInputArtifactsCardProps = {
   labels: WorkflowSidebarLabels;
   entryInputs: WorkflowCatalogEntryArtifact[];
+  selectedNodes: WorkflowGraphNode[];
   inputTexts: Record<string, string>;
   invalidKeys: string[];
   onChangeInputText: (nodeId: string, value: string) => void;
@@ -34,11 +41,13 @@ type WorkbenchWorkflowInputArtifactsCardProps = {
 export function WorkbenchWorkflowInputArtifactsCard({
   labels,
   entryInputs,
+  selectedNodes,
   inputTexts,
   invalidKeys,
   onChangeInputText,
 }: WorkbenchWorkflowInputArtifactsCardProps) {
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const diagnosticsGuardRules = resolveWorkflowDiagnosticsGuardRules(selectedNodes);
 
   function focusInsertedField(nodeId: string, nextText: string, field: string) {
     window.setTimeout(() => {
@@ -76,6 +85,17 @@ export function WorkbenchWorkflowInputArtifactsCard({
           const coverage = summarizeWorkflowFemInputCoverage(artifact.artifact_type, parsedInput);
           const materialPresets = resolveWorkflowFemMaterialPresets(artifact.artifact_type);
           const validationIssues = validateWorkflowFemInputPayload(artifact.artifact_type, parsedInput);
+          const diagnosticsSummary = resolveWorkflowDiagnosticsSummaryInfo(parsedInput);
+          const diagnosticsPreview = diagnosticsSummary
+            ? resolveWorkflowDiagnosticsScenarioPreview(
+                diagnosticsSummary.domain === "electrostatic"
+                  ? "electrostatic_warn"
+                  : diagnosticsSummary.domain === "thermal"
+                    ? "thermal_warn"
+                    : "thermo_block",
+                diagnosticsGuardRules,
+              )
+            : null;
           const physicsIssues = validationIssues.filter((entry) => entry.category === "physics");
           const contractIssues = validationIssues.filter((entry) => entry.category === "contract");
           return (
@@ -261,6 +281,79 @@ export function WorkbenchWorkflowInputArtifactsCard({
                         </details>
                       );
                     })}
+                  </div>
+                </details>
+              ) : null}
+              {diagnosticsSummary ? (
+                <details open style={{ marginBottom: "0.75rem" }}>
+                  <summary className="card-copy" style={{ cursor: "pointer" }}>
+                    diagnostics summary: {diagnosticsSummary.domain}
+                  </summary>
+                  <div style={{ display: "grid", gap: "0.35rem", marginTop: "0.5rem" }}>
+                    <p className="card-copy" style={{ margin: 0 }}>
+                      Subject: {diagnosticsSummary.subject} / Prefix: {diagnosticsSummary.prefix}
+                    </p>
+                    <p className="card-copy" style={{ margin: 0 }}>
+                      Mesh: {diagnosticsSummary.nodeCount ?? "--"} nodes, {diagnosticsSummary.elementCount ?? "--"} elements
+                    </p>
+                    <p className="card-copy" style={{ margin: 0 }}>
+                      Groups: {diagnosticsSummary.metricGroups.join(", ") || "--"}
+                    </p>
+                    {diagnosticsPreview ? (
+                      <div style={{ display: "grid", gap: "0.1rem", padding: "0.45rem 0.55rem", borderRadius: "10px", background: "rgba(148, 163, 184, 0.08)" }}>
+                        <p className="card-copy" style={{ margin: 0 }}>
+                          Guard preview: {diagnosticsPreview.label} / expected {diagnosticsPreview.expectedSeverity}
+                        </p>
+                        <p className="card-copy" style={{ margin: 0 }}>
+                          {diagnosticsPreview.field}: threshold {diagnosticsPreview.threshold ?? "--"} {"->"} target {diagnosticsPreview.targetValue}
+                        </p>
+                      </div>
+                    ) : null}
+                    <div style={{ display: "grid", gap: "0.1rem" }}>
+                      {diagnosticsSummary.numericMetrics.map(([field, value]) => (
+                        <p className="card-copy" key={`${artifact.node_id}:diagnostic:${field}`} style={{ margin: 0 }}>
+                          {field}: {value}
+                        </p>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                      {diagnosticsSummary.domain === "electrostatic" ? (
+                        <button
+                          onClick={() => {
+                            const nextText = `${JSON.stringify(applyWorkflowDiagnosticsScenario(parsedInput, "electrostatic_warn", diagnosticsGuardRules), null, 2)}\n`;
+                            onChangeInputText(artifact.node_id, nextText);
+                            focusInsertedField(artifact.node_id, nextText, "electrostatic_field_peak_magnitude");
+                          }}
+                          type="button"
+                        >
+                          Push field warn
+                        </button>
+                      ) : null}
+                      {diagnosticsSummary.domain === "thermal" ? (
+                        <button
+                          onClick={() => {
+                            const nextText = `${JSON.stringify(applyWorkflowDiagnosticsScenario(parsedInput, "thermal_warn", diagnosticsGuardRules), null, 2)}\n`;
+                            onChangeInputText(artifact.node_id, nextText);
+                            focusInsertedField(artifact.node_id, nextText, "thermal_temperature_max");
+                          }}
+                          type="button"
+                        >
+                          Push thermal warn
+                        </button>
+                      ) : null}
+                      {diagnosticsSummary.domain === "thermo" ? (
+                        <button
+                          onClick={() => {
+                            const nextText = `${JSON.stringify(applyWorkflowDiagnosticsScenario(parsedInput, "thermo_block", diagnosticsGuardRules), null, 2)}\n`;
+                            onChangeInputText(artifact.node_id, nextText);
+                            focusInsertedField(artifact.node_id, nextText, "thermo_peak_stress");
+                          }}
+                          type="button"
+                        >
+                          Push stress block
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </details>
               ) : null}

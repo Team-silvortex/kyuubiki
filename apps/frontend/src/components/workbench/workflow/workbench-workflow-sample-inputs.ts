@@ -76,6 +76,52 @@ const SAMPLE_INPUTS: Record<string, WorkflowSampleInputDefinition> = {
       }),
     },
   },
+  diagnostics_bundle_guard_report: {
+    artifacts: {
+      electrostatic_input: sampleInputArtifact("workflow_diagnostics/electrostatic_summary", {
+        summary: {
+          diagnostic_contract: "kyuubiki.workflow_diagnostics/v1",
+          diagnostic_domain: "electrostatic",
+          diagnostic_subject: "electrostatic_result",
+          diagnostic_prefix: "electrostatic",
+          diagnostic_node_count: 4,
+          diagnostic_element_count: 2,
+          diagnostic_metric_groups: ["field", "potential"],
+          electrostatic_field_peak_magnitude: 8.4,
+          electrostatic_potential_max: 12.0,
+          electrostatic_potential_min: 0.0,
+        },
+      }),
+      thermal_input: sampleInputArtifact("workflow_diagnostics/thermal_summary", {
+        summary: {
+          diagnostic_contract: "kyuubiki.workflow_diagnostics/v1",
+          diagnostic_domain: "thermal",
+          diagnostic_subject: "thermal_result",
+          diagnostic_prefix: "thermal",
+          diagnostic_node_count: 4,
+          diagnostic_element_count: 3,
+          diagnostic_metric_groups: ["temperature", "flux"],
+          thermal_temperature_max: 92.0,
+          thermal_temperature_min: 24.0,
+          thermal_heat_flux_peak_magnitude: 16.5,
+        },
+      }),
+      thermo_input: sampleInputArtifact("workflow_diagnostics/thermo_summary", {
+        summary: {
+          diagnostic_contract: "kyuubiki.workflow_diagnostics/v1",
+          diagnostic_domain: "thermo",
+          diagnostic_subject: "thermo_result",
+          diagnostic_prefix: "thermo",
+          diagnostic_node_count: 4,
+          diagnostic_element_count: 3,
+          diagnostic_metric_groups: ["stress", "displacement", "temperature"],
+          thermo_peak_stress: 142.0,
+          thermo_peak_displacement: 0.0028,
+          thermo_temperature_max: 88.0,
+        },
+      }),
+    },
+  },
   bar_1d: {
     artifacts: {
       bar_1d_model: sampleInputArtifact("study_model/bar_1d", { length: 1, area: 0.01, youngs_modulus: 210000000000, elements: 2, tip_force: 1200 }),
@@ -212,6 +258,7 @@ const SAMPLE_INPUT_ALIASES: Record<string, keyof typeof SAMPLE_INPUTS> = {
   "workflow.electrostatic-quad-triangle-compare-json": "electrostatic_quad_triangle_pair",
   "workflow.electrostatic-heat-thermo-summary-json": "electrostatic_plane_quad",
   "solve.heat_plane_quad_2d": "heat_plane_quad",
+  "workflow.diagnostics-bundle-guard-report-markdown": "diagnostics_bundle_guard_report",
   "workflow.bar-1d-summary-json": "bar_1d",
   "solve.bar_1d": "bar_1d",
   "workflow.thermal-bar-1d-summary-json": "thermal_bar_1d",

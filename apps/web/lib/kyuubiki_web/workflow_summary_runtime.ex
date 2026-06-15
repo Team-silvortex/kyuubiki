@@ -208,6 +208,130 @@ defmodule KyuubikiWeb.WorkflowSummaryRuntime do
     end
   end
 
+  def compose_diagnostics_bundle(payload, config) when is_map(payload) and is_map(config) do
+    diagnostics =
+      payload
+      |> Enum.filter(fn {_source_id, entry} -> is_map(entry) end)
+      |> Enum.filter(fn {_source_id, entry} -> diagnostic_entry?(entry, config) end)
+
+    if diagnostics == [] do
+      {:error, :invalid_diagnostics_bundle}
+    else
+      include_payloads = Map.get(config, "include_payloads", true)
+      include_numeric_fields = Map.get(config, "include_numeric_fields", true)
+
+      items =
+        Enum.map(diagnostics, fn {source_id, entry} ->
+          %{
+            "source" => source_id,
+            "domain" => Map.get(entry, "diagnostic_domain"),
+            "subject" => Map.get(entry, "diagnostic_subject"),
+            "prefix" => Map.get(entry, "diagnostic_prefix"),
+            "node_count" => Map.get(entry, "diagnostic_node_count", 0),
+            "element_count" => Map.get(entry, "diagnostic_element_count", 0),
+            "metric_groups" => Map.get(entry, "diagnostic_metric_groups", [])
+          }
+        end)
+
+      numeric_fields =
+        diagnostics
+        |> Enum.flat_map(fn {_source_id, entry} ->
+          entry
+          |> Enum.filter(fn {_field, value} -> is_number(value) end)
+          |> Enum.map(&elem(&1, 0))
+        end)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      domains =
+        items
+        |> Enum.map(& &1["domain"])
+        |> Enum.reject(&is_nil/1)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      metric_groups =
+        items
+        |> Enum.flat_map(&List.wrap(&1["metric_groups"]))
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      subjects =
+        items
+        |> Enum.map(& &1["subject"])
+        |> Enum.reject(&is_nil/1)
+        |> Enum.uniq()
+        |> Enum.sort()
+
+      payloads =
+        Map.new(diagnostics, fn {source_id, entry} ->
+          {source_id, entry}
+        end)
+
+      domain_counts =
+        Enum.reduce(items, %{}, fn item, acc ->
+          Map.update(acc, item["domain"], 1, &(&1 + 1))
+        end)
+
+      {:ok,
+       %{
+         "bundle_contract" => "kyuubiki.workflow_diagnostics_bundle/v1",
+         "bundle_kind" => "workflow_diagnostics_bundle",
+         "bundle_source_count" => length(items),
+         "bundle_sources" => Enum.map(items, & &1["source"]),
+         "bundle_domains" => domains,
+         "bundle_subjects" => subjects,
+         "bundle_domain_counts" => domain_counts,
+         "bundle_metric_groups" => metric_groups,
+         "bundle_items" => items,
+         "bundle_total_node_count" => Enum.sum(Enum.map(items, & &1["node_count"])),
+         "bundle_total_element_count" => Enum.sum(Enum.map(items, & &1["element_count"])),
+         "bundle_numeric_field_count" => length(numeric_fields)
+       }
+       |> maybe_put(include_payloads, "bundle_payloads", payloads)
+       |> maybe_put(include_numeric_fields, "bundle_numeric_fields", numeric_fields)}
+    end
+  end
+
+  def evaluate_diagnostics_bundle_guard(payload, config) when is_map(payload) and is_map(config) do
+    rules =
+      case Map.get(config, "rules") do
+        entries when is_list(entries) -> Enum.filter(entries, &is_map/1)
+        _ -> []
+      end
+
+    if rules == [] do
+      {:error, :invalid_diagnostics_bundle_guard_rules}
+    else
+      triggers =
+        Enum.flat_map(rules, fn rule ->
+          evaluate_bundle_guard_rule(payload, rule)
+        end)
+
+      status =
+        cond do
+          Enum.any?(triggers, &(&1["severity"] == "block")) -> "block"
+          Enum.any?(triggers, &(&1["severity"] == "warn")) -> "warn"
+          true -> "pass"
+        end
+
+      {:ok,
+       %{
+         "guard_contract" => "kyuubiki.workflow_guard_result/v1",
+         "guard_scope" => "workflow_diagnostics_bundle",
+         "guard_status" => status,
+         "guard_passed" => status == "pass",
+         "guard_trigger_count" => length(triggers),
+         "guard_checked_rule_count" => length(rules),
+         "guard_warn_count" => Enum.count(triggers, &(&1["severity"] == "warn")),
+         "guard_block_count" => Enum.count(triggers, &(&1["severity"] == "block")),
+         "guard_triggers" => triggers,
+         "guard_recommendation" => bundle_guard_recommendation(status),
+         "guard_summary" => bundle_guard_summary(status, triggers)
+       }}
+    end
+  end
+
   defp aggregate_fields(source_entries, config) do
     case Map.get(config, "fields") do
       fields when is_list(fields) and fields != [] ->
@@ -289,6 +413,101 @@ defmodule KyuubikiWeb.WorkflowSummaryRuntime do
           {:halt, {:error, :invalid_selection_criterion}}
       end
     end)
+  end
+
+  defp evaluate_bundle_guard_rule(payload, rule) do
+    with field when is_binary(field) <- Map.get(rule, "field"),
+         {:ok, value, source_ref} <- fetch_bundle_guard_value(payload, rule, field),
+         true <- bundle_guard_triggered?(value, rule) do
+      [
+        %{
+          "field" => field,
+          "source" => source_ref,
+          "value" => value,
+          "threshold" => bundle_guard_threshold(rule),
+          "comparison" => bundle_guard_comparison(rule),
+          "severity" => bundle_guard_severity(Map.get(rule, "severity", "warn")),
+          "label" => Map.get(rule, "label", field)
+        }
+      ]
+    else
+      _ -> []
+    end
+  end
+
+  defp fetch_bundle_guard_value(payload, rule, field) do
+    case Map.get(rule, "source") do
+      source when is_binary(source) ->
+        with %{} = bundle_payloads <- Map.get(payload, "bundle_payloads"),
+             %{} = source_payload <- Map.get(bundle_payloads, source),
+             {:ok, value} <- fetch_numeric_field(source_payload, field) do
+          {:ok, value, source}
+        else
+          _ -> :error
+        end
+
+      _ ->
+        case fetch_numeric_field(payload, field) do
+          {:ok, value} -> {:ok, value, "bundle"}
+          :error -> :error
+        end
+    end
+  end
+
+  defp bundle_guard_triggered?(value, rule) do
+    comparison = bundle_guard_comparison(rule)
+    threshold = bundle_guard_threshold(rule)
+
+    case {comparison, threshold} do
+      {"gt", threshold} when is_number(threshold) -> value > threshold
+      {"gte", threshold} when is_number(threshold) -> value >= threshold
+      {"lt", threshold} when is_number(threshold) -> value < threshold
+      {"lte", threshold} when is_number(threshold) -> value <= threshold
+      {"eq", threshold} when is_number(threshold) -> value == threshold
+      _ -> false
+    end
+  end
+
+  defp bundle_guard_comparison(rule) do
+    case Map.get(rule, "comparison", "gte") do
+      operator when operator in ["gt", "gte", "lt", "lte", "eq"] -> operator
+      _ -> "gte"
+    end
+  end
+
+  defp bundle_guard_threshold(rule) do
+    cond do
+      is_number(Map.get(rule, "threshold")) -> Map.get(rule, "threshold") * 1.0
+      is_number(Map.get(rule, "value")) -> Map.get(rule, "value") * 1.0
+      true -> nil
+    end
+  end
+
+  defp bundle_guard_severity("block"), do: "block"
+  defp bundle_guard_severity("warn"), do: "warn"
+  defp bundle_guard_severity(_severity), do: "warn"
+
+  defp bundle_guard_recommendation("block"), do: "hold_and_review"
+  defp bundle_guard_recommendation("warn"), do: "review_before_continue"
+  defp bundle_guard_recommendation(_status), do: "continue"
+
+  defp bundle_guard_summary("pass", _triggers), do: "All diagnostics bundle guard rules passed."
+
+  defp bundle_guard_summary(status, triggers) do
+    lead =
+      triggers
+      |> Enum.take(2)
+      |> Enum.map_join(", ", fn trigger ->
+        "#{trigger["source"]}.#{trigger["label"]}=#{trigger["value"]}"
+      end)
+
+    "#{String.upcase(status)}: #{length(triggers)} trigger(s)" <> if(lead == "", do: ".", else: " (#{lead}).")
+  end
+
+  defp diagnostic_entry?(entry, config) do
+    include_non_diagnostics = Map.get(config, "include_non_diagnostics", false)
+
+    include_non_diagnostics or Map.get(entry, "diagnostic_contract") == "kyuubiki.workflow_diagnostics/v1"
   end
 
   defp fetch_numeric_field(map, field) when is_map(map) and is_binary(field) do

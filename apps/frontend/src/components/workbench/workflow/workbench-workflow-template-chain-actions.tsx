@@ -81,6 +81,11 @@ function sortChainsByPriority(
   });
 }
 
+function isDiagnosticsTemplateChain(chain: WorkflowTemplateChainDefinition) {
+  const tags = chain.tags ?? [];
+  return tags.includes("diagnostics") || chain.id.includes("diagnostics");
+}
+
 export function WorkbenchWorkflowTemplateChainActions({
   labels,
   selectedSourceNodeId,
@@ -149,6 +154,10 @@ export function WorkbenchWorkflowTemplateChainActions({
   );
   const groupedBuiltInChains = useMemo(
     () => groupTemplateChainsByDomain(filteredBuiltInChains),
+    [filteredBuiltInChains],
+  );
+  const featuredDiagnosticsChains = useMemo(
+    () => filteredBuiltInChains.filter(isDiagnosticsTemplateChain).slice(0, 4),
     [filteredBuiltInChains],
   );
 
@@ -340,6 +349,34 @@ export function WorkbenchWorkflowTemplateChainActions({
                 onInsert={() => insertChain(chain)}
                 onPrimaryAction={() => renameFavorite(chain.id)}
                 onPrimaryLabel={chainDisplayLabel(chain)}
+                onSelectTag={selectTag}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {featuredDiagnosticsChains.length > 0 ? (
+        <div className="sidebar-list">
+          <div className="sidebar-list__row">
+            <span>diagnostics workflows</span>
+            <strong>{featuredDiagnosticsChains.length}</strong>
+          </div>
+          <p className="card-copy">
+            Bundle multi-domain diagnostics, evaluate guard rules, and export a review-ready report.
+          </p>
+          <div className="button-row button-row--adaptive">
+            {featuredDiagnosticsChains.map((chain) => (
+              <WorkbenchWorkflowTemplateChainCard
+                activeQuery={query}
+                chain={chain}
+                favorite={favoriteChainIds.includes(chain.id)}
+                key={`featured-diagnostics:${chain.id}`}
+                labels={labels}
+                onExport={() => exportChainPackage(chain)}
+                onInsert={() => insertChain(chain)}
+                onPrimaryAction={() => toggleFavorite(chain.id)}
+                onPrimaryLabel={chainInsertLabel(chain)}
                 onSelectTag={selectTag}
               />
             ))}

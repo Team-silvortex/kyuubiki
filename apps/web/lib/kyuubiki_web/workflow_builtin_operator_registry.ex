@@ -22,6 +22,15 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"transform.select_best_summary", "select_best_summary",
      "Score multiple summary payloads against weighted min/max criteria and emit the best candidate summary with selection metadata.",
      ["transform", "summary", "select", "ranking", "benchmark", "headless_safe"]},
+    {"transform.compose_diagnostics_bundle", "compose_diagnostics_bundle",
+     "Compose multiple diagnostics payloads into a single workflow diagnostics bundle with domain, source, and metric-group metadata.",
+     ["transform", "diagnostics", "bundle", "compose", "headless_safe"]},
+    {"transform.compose_diagnostics_report_payload", "compose_diagnostics_report_payload",
+     "Compose a diagnostics bundle and guard result into a standard report payload for downstream export operators.",
+     ["transform", "diagnostics", "bundle", "report", "compose", "headless_safe"]},
+    {"transform.evaluate_diagnostics_bundle_guard", "evaluate_diagnostics_bundle_guard",
+     "Evaluate a workflow diagnostics bundle against visible warn/block rules and emit a unified guard decision.",
+     ["transform", "diagnostics", "bundle", "guard", "headless_safe"]},
     {"transform.evaluate_thermal_guard", "evaluate_thermal_guard",
      "Evaluate a thermal or thermo-mechanical diagnostic payload against visible threshold rules and emit pass, warn, or block guard state.",
      ["transform", "thermal", "guard", "threshold", "headless_safe"]},
@@ -40,6 +49,9 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"extract.field_hotspots", "field_hotspots",
      "Extract hotspot candidates from a numeric result field using an absolute or percentile threshold.",
      ["extract", "hotspot", "threshold", "field", "headless_safe"]},
+    {"extract.electrostatic_result_diagnostics", "electrostatic_result_diagnostics",
+     "Extract electrostatic diagnostics such as potential span, charge-density totals, and peak electric-field magnitude from an electrostatic result.",
+     ["extract", "electrostatic", "diagnostics", "field", "headless_safe"]},
     {"extract.thermal_result_diagnostics", "thermal_result_diagnostics",
      "Extract thermal diagnostics such as temperature span, heat-load totals, and peak gradient or flux magnitudes from a heat result.",
      ["extract", "thermal", "diagnostics", "heat", "headless_safe"]},
@@ -57,7 +69,10 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
      ["export", "csv", "summary", "headless_safe"]},
     {"export.alert_markdown", "alert_markdown",
      "Export a summary payload as a readable markdown alert document.",
-     ["export", "markdown", "alert", "headless_safe"]}
+     ["export", "markdown", "alert", "headless_safe"]},
+    {"export.diagnostics_bundle_markdown", "diagnostics_bundle_markdown",
+     "Export a workflow diagnostics bundle and optional guard result as a readable markdown report.",
+     ["export", "markdown", "diagnostics", "bundle", "headless_safe"]}
   ]
 
   def list do

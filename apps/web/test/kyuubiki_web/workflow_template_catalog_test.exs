@@ -15,6 +15,7 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-markdown")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-heat-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-preheat-guard-heat-thermo-json")
+    assert MapSet.member?(workflow_ids, "workflow.diagnostics-bundle-guard-report-markdown")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-triangle-preheat-guard-markdown")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-triangle-preheat-guard-heat-json")
     assert MapSet.member?(workflow_ids, "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json")
@@ -240,6 +241,38 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
                "id" => "right",
                "artifact_type" => "report/summary",
                "dataset_value" => "thermo_summary"
+             }
+           ]
+  end
+
+  test "can resolve graphs for diagnostics bundle guard report workflows" do
+    assert {:ok, %{"id" => "workflow.diagnostics-bundle-guard-report-markdown"} = graph} =
+             WorkflowTemplateCatalog.graph_by_id(
+               "workflow.diagnostics-bundle-guard-report-markdown"
+             )
+
+    assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "transform.compose_diagnostics_bundle"))
+    assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "transform.evaluate_diagnostics_bundle_guard"))
+    assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "transform.compose_diagnostics_report_payload"))
+    assert Enum.any?(graph["nodes"], &(&1["operator_id"] == "export.diagnostics_bundle_markdown"))
+    assert graph["dataset_contract"]["id"] ==
+             "kyuubiki.dataset.diagnostics_bundle_guard_report/v1"
+    assert graph["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "diagnostics_bundle_guard_report"
+           }
+
+    report_node = Enum.find(graph["nodes"], &(&1["id"] == "report"))
+
+    assert report_node["inputs"] == [
+             %{
+               "id" => "bundle",
+               "artifact_type" => "artifact/json",
+               "dataset_value" => "diagnostics_bundle"
+             },
+             %{
+               "id" => "guard",
+               "artifact_type" => "artifact/json",
+               "dataset_value" => "guard_result"
              }
            ]
   end

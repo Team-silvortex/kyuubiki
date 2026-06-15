@@ -19,6 +19,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
 import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
 import { WorkbenchWorkflowConditionEditor } from "@/components/workbench/workflow/workbench-workflow-condition-editor";
+import { WorkbenchWorkflowDiagnosticsGuardEditor } from "@/components/workbench/workflow/workbench-workflow-diagnostics-guard-editor";
 import { WorkbenchWorkflowControlFlowHint } from "@/components/workbench/workflow/workbench-workflow-control-flow-hint";
 
 type WorkflowOperatorOptionPreset = {
@@ -178,6 +179,7 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
       <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={controlFlowEdges} />
       <WorkbenchWorkflowBridgeContractEditor currentHeatPlaneModel={currentHeatPlaneModel as unknown as Record<string, unknown>} currentPlaneModel={currentPlaneModel as unknown as Record<string, unknown>} currentStudyKind={currentStudyKind} labels={labels} node={node} operatorDescriptor={operatorDescriptor} selectedNodes={bridgePeerNodes} onUpdateNode={onUpdateNode} />
       <WorkbenchWorkflowConditionEditor labels={labels} node={node} onUpdateNode={onUpdateNode} />
+      <WorkbenchWorkflowDiagnosticsGuardEditor node={node} onUpdateNode={onUpdateNode} />
       <WorkbenchWorkflowPortEditor direction="inputs" highlightedPortKeys={highlightedPortKeys} labels={labels} locked={templateLocked} nodeId={node.id} onAdd={() => onAddNodePort(node.id, "inputs")} onRemove={(portId) => onRemoveNodePort(node.id, "inputs", portId)} onUpdate={(portId, updater) => onUpdateNodePort(node.id, "inputs", portId, updater)} ports={node.inputs ?? []} title={labels.inputsTitle} />
       <WorkbenchWorkflowPortEditor direction="outputs" highlightedPortKeys={highlightedPortKeys} labels={labels} locked={templateLocked} nodeId={node.id} onAdd={() => onAddNodePort(node.id, "outputs")} onRemove={(portId) => onRemoveNodePort(node.id, "outputs", portId)} onUpdate={(portId, updater) => onUpdateNodePort(node.id, "outputs", portId, updater)} ports={node.outputs ?? []} title={labels.outputsTitle} />
     </section>

@@ -20,6 +20,7 @@ import {
   type WorkflowNodeTemplateSelection,
 } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
+import { applyTemplateChainNodeSemantics } from "@/components/workbench/workflow/workbench-workflow-template-chain-insert-semantics";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 type SetDraftGraph = Dispatch<SetStateAction<WorkflowGraphDefinition | null>>;
@@ -32,9 +33,7 @@ function findPort(
   node: WorkflowGraphNode | undefined,
   direction: "inputs" | "outputs",
   portId: string,
-) {
-  return node?.[direction]?.find((port) => port.id === portId);
-}
+) { return node?.[direction]?.find((port) => port.id === portId); }
 
 function syncEdgeFromPorts(edge: WorkflowGraphEdge, nodes: WorkflowGraphNode[]) {
   const sourceNode = findNode(nodes, edge.from.node);
@@ -239,6 +238,7 @@ function appendGraphTemplateChain(
 ) {
   const createdNodes = appendTemplateChainNodes(graph, chain.templates, operatorDescriptors);
   if (createdNodes.length === 0) return;
+  applyTemplateChainNodeSemantics(graph, chain, createdNodes);
   if (sourceNode) connectNodes(graph, sourceNode, createdNodes[0]);
   for (const connection of chain.connections ?? []) {
     const fromNode = createdNodes[connection.from];

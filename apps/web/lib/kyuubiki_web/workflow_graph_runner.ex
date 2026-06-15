@@ -137,6 +137,8 @@ defmodule KyuubikiWeb.WorkflowGraphRunner do
               "transform.compare_summary_pair",
               "transform.aggregate_summary_collection",
               "transform.select_best_summary",
+              "transform.compose_diagnostics_bundle",
+              "transform.compose_diagnostics_report_payload",
               "transform.benchmark_coupled_heat_pair"
             ],
        do: true

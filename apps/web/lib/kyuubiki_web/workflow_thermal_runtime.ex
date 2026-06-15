@@ -33,6 +33,12 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
           "#{prefix}_node_count" => length(Enum.filter(nodes, &is_map/1)),
           "#{prefix}_element_count" => length(Enum.filter(elements, &is_map/1))
         }
+        |> merge_diagnostic_contract("thermal", "thermal_result", prefix, [
+          "temperature",
+          "heat_load",
+          "gradient",
+          "flux"
+        ])
         |> maybe_merge_temperature_stats(prefix, temperature_nodes)
         |> maybe_merge_load_stats(prefix, heat_load_nodes)
         |> maybe_merge_peak_vector(prefix, "gradient", gradient_peak)
@@ -64,6 +70,11 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
           "#{prefix}_node_count" => length(Enum.filter(nodes, &is_map/1)),
           "#{prefix}_element_count" => length(Enum.filter(elements, &is_map/1))
         }
+        |> merge_diagnostic_contract("thermo_mechanical", "thermo_result", prefix, [
+          "temperature_delta",
+          "displacement",
+          "stress"
+        ])
         |> maybe_merge_temperature_delta_stats(prefix, delta_nodes)
         |> maybe_merge_peak_magnitude(prefix, "displacement", displacement_peak)
         |> maybe_merge_peak_scalar(prefix, "stress", stress_peak)
@@ -453,6 +464,17 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
     summary
     |> Map.put("#{prefix}_peak_#{name}", value)
     |> Map.put("#{prefix}_peak_#{name}_id", id)
+  end
+
+  defp merge_diagnostic_contract(summary, domain, subject, prefix, metric_groups) do
+    summary
+    |> Map.put("diagnostic_contract", "kyuubiki.workflow_diagnostics/v1")
+    |> Map.put("diagnostic_domain", domain)
+    |> Map.put("diagnostic_subject", subject)
+    |> Map.put("diagnostic_prefix", prefix)
+    |> Map.put("diagnostic_node_count", Map.get(summary, "#{prefix}_node_count", 0))
+    |> Map.put("diagnostic_element_count", Map.get(summary, "#{prefix}_element_count", 0))
+    |> Map.put("diagnostic_metric_groups", metric_groups)
   end
 
   defp normalize_prefix(prefix) when is_binary(prefix) do

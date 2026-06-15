@@ -3,6 +3,7 @@
 import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 
 export const PINNED_WORKFLOW_IDS = [
+  "workflow.diagnostics-bundle-guard-report-markdown",
   "workflow.electrostatic-plane-quad-2d",
   "workflow.electrostatic-plane-quad-field-statistics-json",
   "workflow.electrostatic-preheat-guard-markdown",
@@ -40,10 +41,17 @@ function detectShape(tags: string[]) {
 }
 
 function detectChain(tags: string[]) {
+  const hasDiagnostics = includesTag(tags, "diagnostics");
+  const hasGuard = includesTag(tags, "guard");
+  const hasReport = includesTag(tags, "report");
+  const hasMarkdown = includesTag(tags, "markdown");
   const hasElectrostatic = includesTag(tags, "electrostatic");
   const hasHeat = includesTag(tags, "heat");
   const hasThermal = includesTag(tags, "thermal") || includesTag(tags, "thermo_mechanical");
 
+  if (hasDiagnostics && hasGuard && (hasReport || hasMarkdown)) {
+    return "diagnostics -> guard -> report";
+  }
   if (hasElectrostatic && hasHeat && hasThermal) return "electrostatic -> heat -> thermo";
   if (hasElectrostatic && hasHeat) return "electrostatic -> heat";
   if (hasHeat && hasThermal) return "heat -> thermo";
@@ -52,6 +60,7 @@ function detectChain(tags: string[]) {
 }
 
 function detectMaturity(tags: string[]) {
+  if (includesTag(tags, "diagnostics") && includesTag(tags, "report")) return "review-ready";
   if (includesTag(tags, "workflow_bridge") && includesTag(tags, "summary")) return "coupled path";
   if (includesTag(tags, "workflow_bridge")) return "bridge-ready";
   if (includesTag(tags, "default_template")) return "baseline";
@@ -84,7 +93,7 @@ export function deriveWorkflowCatalogHighlights(
     if (solveCount > 1 || transformCount > 0 || extractCount > 0) {
       highlights.push({
         label: "stages",
-        value: `${solveCount} solve / ${transformCount} bridge / ${extractCount} extract`,
+        value: `${solveCount} solve / ${transformCount} transform / ${extractCount} extract`,
       });
     }
   }

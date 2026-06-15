@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
   @moduledoc false
 
   alias KyuubikiWeb.WorkflowSummaryRuntime
+  alias KyuubikiWeb.WorkflowElectrostaticRuntime
   alias KyuubikiWeb.WorkflowThermalRuntime
 
   def extract_result_summary(payload, config) when is_map(payload) and is_map(config) do
@@ -187,6 +188,9 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
   def extract_thermal_result_diagnostics(payload, config),
     do: WorkflowThermalRuntime.extract_thermal_result_diagnostics(payload, config)
 
+  def extract_electrostatic_result_diagnostics(payload, config),
+    do: WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(payload, config)
+
   def extract_thermo_result_diagnostics(payload, config),
     do: WorkflowThermalRuntime.extract_thermo_result_diagnostics(payload, config)
 
@@ -213,6 +217,31 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
      }}
   end
 
+  def export_diagnostics_bundle_markdown(payload, config)
+      when is_map(payload) and is_map(config) do
+    lines =
+      [
+        "# #{Map.get(config, "title", "Workflow Diagnostics Bundle")}",
+        "",
+        "- Contract: #{Map.get(payload, "bundle_contract", "unknown")}",
+        "- Sources: #{Map.get(payload, "bundle_source_count", 0)}",
+        "- Domains: #{format_list(Map.get(payload, "bundle_domains", []))}",
+        "- Subjects: #{format_list(Map.get(payload, "bundle_subjects", []))}",
+        "- Total Nodes: #{Map.get(payload, "bundle_total_node_count", 0)}",
+        "- Total Elements: #{Map.get(payload, "bundle_total_element_count", 0)}"
+      ] ++
+        build_bundle_metric_groups_section(payload) ++
+        build_bundle_items_section(payload, config) ++
+        build_bundle_guard_section(payload, config)
+
+    {:ok,
+     %{
+       "format" => "markdown",
+       "content_type" => "text/markdown",
+       "content" => Enum.join(lines, "\n")
+     }}
+  end
+
   defp alert_field_lines(payload, fields) when is_list(fields) do
     Enum.flat_map(fields, fn field ->
       case Map.fetch(payload, field) do
@@ -224,6 +253,85 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
 
   defp alert_field_lines(payload, _fields),
     do: Enum.map(payload, fn {key, value} -> "- #{key}: #{markdown_value(value)}" end)
+
+  defp build_bundle_metric_groups_section(payload) do
+    case Map.get(payload, "bundle_metric_groups", []) do
+      groups when is_list(groups) and groups != [] ->
+        ["", "## Metric Groups", "", "- " <> Enum.join(groups, ", ")]
+
+      _ ->
+        []
+    end
+  end
+
+  defp build_bundle_items_section(payload, config) do
+    case Map.get(payload, "bundle_items", []) do
+      items when is_list(items) and items != [] ->
+        max_items = min(Map.get(config, "item_count", 8), 24)
+
+        ["", "## Diagnostics Sources"] ++
+          Enum.flat_map(Enum.take(items, max_items), fn
+            %{} = item ->
+              [
+                "",
+                "### #{Map.get(item, "source", "unknown")}",
+                "- Domain: #{Map.get(item, "domain", "unknown")}",
+                "- Subject: #{Map.get(item, "subject", "unknown")}",
+                "- Prefix: #{Map.get(item, "prefix", "unknown")}",
+                "- Nodes: #{Map.get(item, "node_count", 0)}",
+                "- Elements: #{Map.get(item, "element_count", 0)}",
+                "- Metric Groups: #{format_list(Map.get(item, "metric_groups", []))}"
+              ]
+
+            _ ->
+              []
+          end)
+
+      _ ->
+        []
+    end
+  end
+
+  defp build_bundle_guard_section(payload, config) do
+    guard_payload =
+      case Map.get(payload, "guard_payload") || Map.get(config, "guard_payload") do
+        %{} = explicit -> explicit
+        _ -> payload
+      end
+
+    if Map.get(guard_payload, "guard_status") do
+      [
+        "",
+        "## Guard Decision",
+        "",
+        "- Status: #{Map.get(guard_payload, "guard_status")}",
+        "- Passed: #{markdown_value(Map.get(guard_payload, "guard_passed"))}",
+        "- Recommendation: #{Map.get(guard_payload, "guard_recommendation", "continue")}",
+        "- Summary: #{Map.get(guard_payload, "guard_summary", "No guard summary.")}"
+      ] ++ build_bundle_guard_triggers(guard_payload)
+    else
+      []
+    end
+  end
+
+  defp build_bundle_guard_triggers(guard_payload) do
+    case Map.get(guard_payload, "guard_triggers", []) do
+      triggers when is_list(triggers) and triggers != [] ->
+        ["", "### Guard Triggers"] ++
+          Enum.flat_map(triggers, fn
+            %{} = trigger ->
+              [
+                "- #{Map.get(trigger, "source", "bundle")}.#{Map.get(trigger, "label", Map.get(trigger, "field", "unknown"))}: #{markdown_value(Map.get(trigger, "value"))} #{Map.get(trigger, "comparison", "gte")} #{markdown_value(Map.get(trigger, "threshold"))} (#{Map.get(trigger, "severity", "warn")})"
+              ]
+
+            _ ->
+              []
+          end)
+
+      _ ->
+        []
+    end
+  end
 
   defp fetch_list(map, key) when is_map(map) and is_binary(key) do
     case Map.get(map, key) do
@@ -379,6 +487,17 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
     trimmed = String.trim(prefix)
     if trimmed == "", do: "summary", else: trimmed
   end
+
+  defp format_list(entries) when is_list(entries) do
+    entries
+    |> Enum.filter(&is_binary/1)
+    |> case do
+      [] -> "none"
+      values -> Enum.join(values, ", ")
+    end
+  end
+
+  defp format_list(_entries), do: "none"
 
   defp markdown_value(value) when is_binary(value), do: value
   defp markdown_value(value) when is_number(value) or is_boolean(value), do: to_string(value)
