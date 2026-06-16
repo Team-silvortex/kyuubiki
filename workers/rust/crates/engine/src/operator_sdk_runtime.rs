@@ -1,15 +1,17 @@
 use crate::catalog::describe_built_in_operator;
 use crate::operator_sdk_bridges::register_bridge_transform_operators;
 use crate::workflow_reporting::{
-    export_alert_markdown, export_summary_csv, export_summary_json,
-    extract_field_hotspots, extract_field_statistics, extract_result_summary,
+    export_alert_markdown, export_summary_csv, export_summary_json, extract_field_hotspots,
+    extract_field_statistics, extract_result_summary,
 };
 use crate::workflow_summary_transforms::{
     aggregate_summary_collection, compare_summary_pair, normalize_summary_fields,
     select_best_summary,
 };
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
-use kyuubiki_protocol::{OperatorDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult};
+use kyuubiki_protocol::{
+    OperatorDescriptor, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
+};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -75,7 +77,6 @@ struct SelectBestSummaryOperator {
     descriptor: OperatorDescriptor,
 }
 
-
 impl JsonOperator for ResultSummaryOperator {
     type Input = WorkflowOperatorEnvelope;
 
@@ -88,7 +89,10 @@ impl JsonOperator for ResultSummaryOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(&self.descriptor.id, extract_result_summary(input.payload, input.config))
+        run_summary_only(
+            &self.descriptor.id,
+            extract_result_summary(input.payload, input.config),
+        )
     }
 }
 
@@ -158,7 +162,10 @@ impl JsonOperator for SummaryCsvOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(&self.descriptor.id, export_summary_csv(input.payload, input.config))
+        run_summary_only(
+            &self.descriptor.id,
+            export_summary_csv(input.payload, input.config),
+        )
     }
 }
 
@@ -209,7 +216,10 @@ impl JsonOperator for MergeSummaryPairOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(&self.descriptor.id, crate::workflow_reporting::merge_summary_pair(input.payload, input.config))
+        run_summary_only(
+            &self.descriptor.id,
+            crate::workflow_reporting::merge_summary_pair(input.payload, input.config),
+        )
     }
 }
 
@@ -225,7 +235,10 @@ impl JsonOperator for CompareSummaryPairOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(&self.descriptor.id, compare_summary_pair(input.payload, input.config))
+        run_summary_only(
+            &self.descriptor.id,
+            compare_summary_pair(input.payload, input.config),
+        )
     }
 }
 
@@ -279,10 +292,12 @@ impl JsonOperator for SelectBestSummaryOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        run_summary_only(&self.descriptor.id, select_best_summary(input.payload, input.config))
+        run_summary_only(
+            &self.descriptor.id,
+            select_best_summary(input.payload, input.config),
+        )
     }
 }
-
 
 pub fn run_registered_extract_operator(
     operator_id: &str,

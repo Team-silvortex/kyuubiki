@@ -3,13 +3,13 @@ use crate::{
     built_in_registry_with_external_packages, load_external_operator_packages_with_deferred_host,
     load_external_operator_packages_with_dynamic_host,
 };
-use std::collections::BTreeSet;
 use kyuubiki_operator_sdk::{
     OperatorDescriptorBuilder, OperatorHandler, OperatorPackageActivator, OperatorPackageLoadError,
     OperatorPackageLoadPlan, OperatorRegistry, OperatorSdkError,
     current_platform_library_file_name, current_platform_library_path, partial_validation,
 };
 use kyuubiki_protocol::{OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult};
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -24,10 +24,7 @@ impl OperatorHandler for StaticExternalOperator {
         &self.descriptor
     }
 
-    fn run(
-        &self,
-        _request: OperatorRunRequest,
-    ) -> Result<OperatorRunResult, OperatorSdkError> {
+    fn run(&self, _request: OperatorRunRequest) -> Result<OperatorRunResult, OperatorSdkError> {
         Ok(OperatorRunResult {
             operator_id: self.descriptor.id.clone(),
             summary: serde_json::json!({
@@ -96,16 +93,16 @@ fn loads_external_local_package_into_built_in_registry() {
     .expect("write manifest");
 
     let (registry, report) = built_in_registry_with_external_packages(
-        &ExternalOperatorHostConfig::new(
-            BuiltInOperatorRegistryKind::Extract,
-            &packages_root,
-        ),
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root),
         &TestActivator,
     )
     .expect("external package should load");
 
     assert_eq!(report.activated_packages.len(), 1);
-    assert_eq!(report.activated_packages[0].manifest.package_id, "operator.alpha");
+    assert_eq!(
+        report.activated_packages[0].manifest.package_id,
+        "operator.alpha"
+    );
 
     let result = registry
         .run(OperatorRunRequest {
@@ -114,7 +111,10 @@ fn loads_external_local_package_into_built_in_registry() {
             context: OperatorRunContext::default(),
         })
         .expect("external operator should run");
-    assert_eq!(result.summary["package_id"].as_str(), Some("operator.alpha"));
+    assert_eq!(
+        result.summary["package_id"].as_str(),
+        Some("operator.alpha")
+    );
     assert_eq!(result.summary["source"].as_str(), Some("external_local"));
 }
 
@@ -222,13 +222,10 @@ fn host_policy_rejects_non_allowlisted_package_id() {
     .expect("write manifest");
 
     let error = match built_in_registry_with_external_packages(
-        &ExternalOperatorHostConfig::new(
-            BuiltInOperatorRegistryKind::Extract,
-            &packages_root,
-        )
-        .with_trust_policy(ExternalOperatorTrustPolicy::allow_package_ids([
-            "operator.alpha",
-        ])),
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root)
+            .with_trust_policy(ExternalOperatorTrustPolicy::allow_package_ids([
+                "operator.alpha",
+            ])),
         &TestActivator,
     ) {
         Ok(_) => panic!("host policy should reject unknown package id"),
@@ -265,17 +262,18 @@ fn host_policy_rejects_disallowed_runtime() {
     .expect("write manifest");
 
     let error = match built_in_registry_with_external_packages(
-        &ExternalOperatorHostConfig::new(
-            BuiltInOperatorRegistryKind::Extract,
-            &packages_root,
-        ),
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root),
         &TestActivator,
     ) {
         Ok(_) => panic!("host policy should reject disallowed runtime"),
         Err(error) => error,
     };
 
-    assert!(error.to_string().contains("runtime python_wasm is not allowed"));
+    assert!(
+        error
+            .to_string()
+            .contains("runtime python_wasm is not allowed")
+    );
     assert!(error.to_string().contains("operator.epsilon"));
 }
 
@@ -305,10 +303,7 @@ fn host_policy_rejects_entrypoint_outside_package_root() {
     .expect("write manifest");
 
     let error = match built_in_registry_with_external_packages(
-        &ExternalOperatorHostConfig::new(
-            BuiltInOperatorRegistryKind::Extract,
-            &packages_root,
-        ),
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root),
         &TestActivator,
     ) {
         Ok(_) => panic!("host policy should reject escaping entrypoint"),
@@ -324,8 +319,10 @@ fn host_policy_can_allow_absolute_entrypoints_for_trusted_packages() {
     let packages_root = temp_dir("external-host-policy-absolute");
     let package_dir = packages_root.join("operator-eta");
     fs::create_dir_all(&package_dir).expect("create package dir");
-    let trusted_library = current_platform_library_path(packages_root.join("trusted"), "operator_eta");
-    fs::create_dir_all(trusted_library.parent().expect("trusted parent")).expect("create trusted parent");
+    let trusted_library =
+        current_platform_library_path(packages_root.join("trusted"), "operator_eta");
+    fs::create_dir_all(trusted_library.parent().expect("trusted parent"))
+        .expect("create trusted parent");
     fs::write(&trusted_library, b"placeholder").expect("write placeholder library");
     fs::write(
         package_dir.join(kyuubiki_operator_sdk::OPERATOR_PACKAGE_MANIFEST_FILE),
@@ -357,11 +354,8 @@ fn host_policy_can_allow_absolute_entrypoints_for_trusted_packages() {
     };
 
     let (registry, report) = built_in_registry_with_external_packages(
-        &ExternalOperatorHostConfig::new(
-            BuiltInOperatorRegistryKind::Extract,
-            &packages_root,
-        )
-        .with_trust_policy(trust_policy),
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root)
+            .with_trust_policy(trust_policy),
         &TestActivator,
     )
     .expect("trusted absolute entrypoint should be accepted");
@@ -376,7 +370,9 @@ fn loads_prebuilt_template_cdylib_through_dynamic_host() {
     let packages_root = temp_dir("external-host-template-dylib");
     let template_dylib = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../../templates/operator-crate-template/target/debug")
-        .join(current_platform_library_file_name("kyuubiki_operator_template"));
+        .join(current_platform_library_file_name(
+            "kyuubiki_operator_template",
+        ));
     assert!(
         template_dylib.exists(),
         "template cdylib must be prebuilt before running this test"
@@ -405,20 +401,15 @@ fn loads_prebuilt_template_cdylib_through_dynamic_host() {
     .expect("write manifest");
 
     let trust_policy = ExternalOperatorTrustPolicy {
-        allowed_package_ids: Some(BTreeSet::from([
-            "operator.template.summary".to_string(),
-        ])),
+        allowed_package_ids: Some(BTreeSet::from(["operator.template.summary".to_string()])),
         allowed_runtimes: BTreeSet::from(["rust_crate".to_string()]),
         allow_absolute_entrypoints: true,
         require_entrypoint_within_package_root: false,
     };
     let activator = crate::DynamicLibraryOperatorActivator::default();
     let (registry, report) = built_in_registry_with_external_packages(
-        &ExternalOperatorHostConfig::new(
-            BuiltInOperatorRegistryKind::Extract,
-            &packages_root,
-        )
-        .with_trust_policy(trust_policy),
+        &ExternalOperatorHostConfig::new(BuiltInOperatorRegistryKind::Extract, &packages_root)
+            .with_trust_policy(trust_policy),
         &activator,
     )
     .expect("dynamic host should load prebuilt template library");

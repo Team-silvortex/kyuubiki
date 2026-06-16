@@ -1,5 +1,5 @@
-use serde::Serialize;
 use kyuubiki_platform::desktop_preferences_dir as shared_desktop_preferences_dir;
+use serde::Serialize;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;

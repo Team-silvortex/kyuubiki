@@ -1,0 +1,12 @@
+# Replace deploy.kyuubiki.example with your real domain or subdomain.
+deploy.kyuubiki.example {
+    reverse_proxy 127.0.0.1:4070
+
+    encode zstd gzip
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy no-referrer-when-downgrade
+    }
+}

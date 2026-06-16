@@ -1,8 +1,6 @@
-use crate::manifest::{DiscoveredOperatorPackage, discover_operator_packages};
-use crate::{
-    current_platform_library_file_name, expand_platform_library_template,
-};
 use crate::OperatorRegistry;
+use crate::manifest::{DiscoveredOperatorPackage, discover_operator_packages};
+use crate::{current_platform_library_file_name, expand_platform_library_template};
 use std::fmt::{Display, Formatter};
 use std::path::{Path, PathBuf};
 
@@ -37,7 +35,10 @@ impl Display for OperatorPackageLoadError {
                 package_id,
                 message,
             } => {
-                write!(f, "failed to activate operator package {package_id}: {message}")
+                write!(
+                    f,
+                    "failed to activate operator package {package_id}: {message}"
+                )
             }
         }
     }
@@ -54,10 +55,8 @@ impl From<crate::OperatorManifestError> for OperatorPackageLoadError {
 pub fn build_operator_package_load_plan(
     discovered: DiscoveredOperatorPackage,
 ) -> OperatorPackageLoadPlan {
-    let entrypoint_candidates = resolve_entrypoint_candidates(
-        &discovered.package_root,
-        &discovered.manifest.entrypoint,
-    );
+    let entrypoint_candidates =
+        resolve_entrypoint_candidates(&discovered.package_root, &discovered.manifest.entrypoint);
     let entrypoint_path = select_entrypoint_path(&entrypoint_candidates);
     OperatorPackageLoadPlan {
         package_root: discovered.package_root,
@@ -130,7 +129,9 @@ fn derive_platform_entrypoint_variants(entrypoint: &str) -> Vec<String> {
         .and_then(|trimmed| trimmed.rsplit_once('.').map(|(value, _)| value))
         .or_else(|| file_name.rsplit_once('.').map(|(value, _)| value))
         .unwrap_or(file_name);
-    let parent = Path::new(entrypoint).parent().unwrap_or_else(|| Path::new(""));
+    let parent = Path::new(entrypoint)
+        .parent()
+        .unwrap_or_else(|| Path::new(""));
 
     for variant_name in current_platform_library_names(stem) {
         let variant_path = if parent.as_os_str().is_empty() {
@@ -188,10 +189,7 @@ mod tests {
             &self.descriptor
         }
 
-        fn run(
-            &self,
-            _request: OperatorRunRequest,
-        ) -> Result<OperatorRunResult, OperatorSdkError> {
+        fn run(&self, _request: OperatorRunRequest) -> Result<OperatorRunResult, OperatorSdkError> {
             Ok(operator_summary_result(
                 self.descriptor.id.clone(),
                 serde_json::json!({ "package_id": self.package_id }),
@@ -263,9 +261,11 @@ mod tests {
 
         assert_eq!(
             plan.entrypoint_path,
-            package_root.join("target/debug").join(current_platform_library_file_name(
-                "operator_example_loader",
-            ))
+            package_root
+                .join("target/debug")
+                .join(current_platform_library_file_name(
+                    "operator_example_loader",
+                ))
         );
         assert!(!plan.entrypoint_candidates.is_empty());
     }
@@ -296,9 +296,8 @@ mod tests {
         .expect("write manifest");
 
         let mut registry = OperatorRegistry::new();
-        let plans =
-            discover_and_activate_operator_packages(&root, &TestActivator, &mut registry)
-                .expect("packages should activate");
+        let plans = discover_and_activate_operator_packages(&root, &TestActivator, &mut registry)
+            .expect("packages should activate");
 
         assert_eq!(plans.len(), 1);
         assert_eq!(plans[0].manifest.package_id, "operator.alpha");
@@ -309,7 +308,10 @@ mod tests {
                 context: Default::default(),
             })
             .expect("registered operator should run");
-        assert_eq!(result.summary["package_id"].as_str(), Some("operator.alpha"));
+        assert_eq!(
+            result.summary["package_id"].as_str(),
+            Some("operator.alpha")
+        );
     }
 
     fn temp_dir(label: &str) -> PathBuf {

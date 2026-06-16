@@ -1,0 +1,16 @@
+[Unit]
+Description=Kyuubiki Orchestrator
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kyuubiki-dev
+WorkingDirectory=/home/kyuubiki-dev/kyuubiki/apps/web
+EnvironmentFile=-/home/kyuubiki-dev/kyuubiki/deploy/kyuubiki-orchestrator.env
+ExecStart=/bin/sh -lc 'exec mix run --no-halt'
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

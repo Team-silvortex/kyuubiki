@@ -86,13 +86,18 @@ pub fn current_platform_library_file_name(stem: &str) -> String {
 }
 
 pub fn current_platform_library_path(parent: impl AsRef<Path>, stem: &str) -> PathBuf {
-    parent.as_ref().join(current_platform_library_file_name(stem))
+    parent
+        .as_ref()
+        .join(current_platform_library_file_name(stem))
 }
 
 pub fn expand_platform_library_template(entrypoint: &str) -> String {
     entrypoint
         .replace(LIB_PREFIX_PLACEHOLDER, current_platform_library_prefix())
-        .replace(LIB_EXTENSION_PLACEHOLDER, current_platform_library_extension())
+        .replace(
+            LIB_EXTENSION_PLACEHOLDER,
+            current_platform_library_extension(),
+        )
 }
 
 pub fn desktop_preferences_dir(app_name: &str) -> Result<PathBuf, String> {

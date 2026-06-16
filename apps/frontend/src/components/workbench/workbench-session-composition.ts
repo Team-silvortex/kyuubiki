@@ -66,6 +66,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     },
     jobPollTokenRef: props.jobPollTokenRef,
     refreshJobHistory,
+    setRuntimeRecovery: props.setRuntimeRecovery,
     setJob: props.setJob,
     setMessage: props.setMessage,
     openWorkflowRunsSurface: () => {
@@ -114,6 +115,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     setModelVersions: props.setModelVersions,
     setProjects: props.setProjects,
     setProtocolAgents: props.setProtocolAgents,
+    setRuntimeRecovery: props.setRuntimeRecovery,
     setSecurityEventRecords: adminSecurityState.setSecurityEventRecords,
     setSelectedModelId: props.setSelectedModelId,
     setSelectedProjectId: props.setSelectedProjectId,
@@ -229,6 +231,14 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     refreshProjects,
     refreshSecurityEvents,
     refreshVersions,
+    retryRuntimeRecovery: async () => {
+      await Promise.allSettled([
+        refreshHealth(),
+        refreshProjects(),
+        refreshSecurityEvents(),
+        sessionWorkflowController.refreshWorkflowCatalog(),
+      ]);
+    },
     projectFlows,
     adminJobMessage,
     adminJobProjectId,

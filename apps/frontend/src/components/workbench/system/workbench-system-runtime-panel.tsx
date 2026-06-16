@@ -54,6 +54,7 @@ type WorkbenchSystemRuntimePanelProps = {
   backendTitle: string;
   backendStatus: ReactNode;
   backendRows: MetricRow[];
+  recoveryCard?: ReactNode;
   controlWindow: {
     copy: WorkbenchSystemControlModeCopy;
     topology: WorkbenchSystemControlTopologySummary;
@@ -139,6 +140,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
   backendTitle,
   backendStatus,
   backendRows,
+  recoveryCard,
   controlWindow,
   protocolsTitle,
   protocolsStatus,
@@ -392,6 +394,7 @@ export const WorkbenchSystemRuntimePanel = memo(function WorkbenchSystemRuntimeP
             </div>
           </section>
 
+          {recoveryCard}
           <WorkbenchSystemStorageCard />
         </div>
       ) : null}

@@ -20,12 +20,16 @@ use kyuubiki_desktop_runtime::{
     ServiceMode,
 };
 use diagnostics::{
-    doctor_report, installation_integrity_report, unified_update_plan, unified_update_preview,
+    doctor_report, installation_integrity_report, latest_applied_update_record, latest_downloaded_update_record, latest_staged_update_record, unified_update_plan, unified_update_preview, update_source_config,
 };
 use kyuubiki_installer::{
+    apply_downloaded_update as installer_apply_downloaded_update,
+    download_update as installer_download_update,
     export_launch_config, init_env as installer_init_env, parse_platform,
+    prepare_staged_update as installer_prepare_staged_update,
     prepare_layout as installer_prepare_layout, repair_installation as installer_repair_installation,
     stage_release as installer_stage_release, validate_env_file, workspace_root,
+    write_update_source_config as installer_write_update_source_config,
 };
 use remote::{remote_bootstrap, remote_start_agent, RemoteAgentPayload, RemoteBootstrapPayload};
 use serde::Serialize;
@@ -73,41 +77,20 @@ struct WriteEnvPayload {
     kyuubiki_direct_mesh_token: String,
 }
 
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ReleasePayload {
-    platform: String,
-    target_dir: Option<String>,
-}
-
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct PlatformPayload {
-    platform: String,
-}
-
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct LogPayload {
-    service: String,
-}
-
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct DesktopPreferencesInputPayload {
-    language: String,
-}
-
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct BuildPayload {
-    bundle_mode: Option<String>,
-}
+#[derive(Clone, serde::Deserialize)] #[serde(rename_all = "camelCase")] struct ReleasePayload { platform: String, target_dir: Option<String> }
+#[derive(Clone, serde::Deserialize)] #[serde(rename_all = "camelCase")] struct PlatformPayload { platform: String }
+#[derive(Clone, serde::Deserialize)] #[serde(rename_all = "camelCase")] struct LogPayload { service: String }
+#[derive(Clone, serde::Deserialize)] #[serde(rename_all = "camelCase")] struct DesktopPreferencesInputPayload { language: String }
+#[derive(Clone, serde::Deserialize)] #[serde(rename_all = "camelCase")] struct BuildPayload { bundle_mode: Option<String> }
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct InstallerGuardedMutationPayload {
     action: String,
+    channel: Option<String>,
+    catalog_path: Option<String>,
+    artifact_root: Option<String>,
+    download_dir: Option<String>,
     mode: Option<String>,
     force: Option<bool>,
     platform: Option<String>,
@@ -118,22 +101,9 @@ struct InstallerGuardedMutationPayload {
     remote_agent: Option<RemoteAgentPayload>,
 }
 
-#[derive(Serialize)]
-struct ServiceStatusPayload {
-    rendered: String,
-    summary: ServiceStatusSummary,
-}
-
-#[derive(Serialize)]
-struct DesktopPreferencesPayload {
-    language: String,
-}
-
-#[derive(Clone, Serialize)]
-struct RuntimeLogPayload {
-    service: String,
-    rendered: String,
-}
+#[derive(Serialize)] struct ServiceStatusPayload { rendered: String, summary: ServiceStatusSummary }
+#[derive(Serialize)] struct DesktopPreferencesPayload { language: String }
+#[derive(Clone, Serialize)] struct RuntimeLogPayload { service: String, rendered: String }
 
 static LOG_STREAMS: OnceLock<Mutex<HashMap<String, Arc<AtomicBool>>>> = OnceLock::new();
 
@@ -160,6 +130,8 @@ fn append_installer_guarded_mutation_audit(
         "action": payload.action,
         "mode": payload.mode,
         "platform": payload.platform,
+        "channel": payload.channel,
+        "catalogPath": payload.catalog_path,
         "bundleMode": payload.bundle_mode,
         "status": status,
         "detail": detail,
@@ -545,6 +517,32 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
                 target_dir: payload.target_dir.clone(),
             })
         }
+        "prepare_staged_update" => {
+            let platform = payload
+                .platform
+                .clone()
+                .ok_or_else(|| "platform is required".to_string())?;
+            installer_prepare_staged_update(
+                payload.channel.clone(),
+                parse_platform(Some(platform)),
+                payload.target_dir.clone().map(PathBuf::from),
+            )
+            .map(|report| report.render())
+        }
+        "write_update_source_config" => installer_write_update_source_config(
+            payload.catalog_path.clone().unwrap_or_default(),
+            payload.artifact_root.clone().unwrap_or_default(),
+            payload.download_dir.clone().unwrap_or_default(),
+        ),
+        "download_update" => {
+            let platform = payload
+                .platform
+                .clone()
+                .ok_or_else(|| "platform is required".to_string())?;
+            installer_download_update(payload.channel.clone(), parse_platform(Some(platform)))
+                .map(|record| record.render())
+        }
+        "apply_downloaded_update" => installer_apply_downloaded_update().map(|record| record.render()),
         "build_installer_bundle" => build_installer_bundle(BuildPayload {
             bundle_mode: payload.bundle_mode.clone(),
         }),
@@ -560,21 +558,7 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
 }
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![
-            doctor_report,
-            installation_integrity_report,
-            unified_update_plan,
-            unified_update_preview,
-            export_launch,
-            read_env_file,
-            service_status,
-            get_global_language_preference,
-            set_global_language_preference,
-            read_runtime_log,
-            start_log_stream,
-            stop_log_stream,
-            guarded_mutation_action
-        ])
+        .invoke_handler(tauri::generate_handler![doctor_report, installation_integrity_report, latest_applied_update_record, latest_downloaded_update_record, latest_staged_update_record, update_source_config, unified_update_plan, unified_update_preview, export_launch, read_env_file, service_status, get_global_language_preference, set_global_language_preference, read_runtime_log, start_log_stream, stop_log_stream, guarded_mutation_action])
         .run(tauri::generate_context!())
         .expect("failed to run kyuubiki installer gui");
 }

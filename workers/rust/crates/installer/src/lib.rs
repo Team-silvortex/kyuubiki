@@ -1,9 +1,9 @@
+pub use kyuubiki_platform::Platform;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-pub use kyuubiki_platform::Platform;
 
 mod cross_platform;
 mod integrity;
@@ -12,6 +12,7 @@ mod release;
 #[cfg(test)]
 mod tests;
 mod update_catalog;
+mod update_source;
 
 pub use cross_platform::{
     CrossPlatformAuditIssue, CrossPlatformAuditReport, cross_platform_audit_report,
@@ -27,8 +28,14 @@ pub(crate) use release::{
     write_release_scripts,
 };
 pub use update_catalog::{
-    UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep, UpdateArtifactRef,
-    unified_update_plan, unified_update_preview,
+    StagedUpdateRecord, UnifiedUpdatePlan, UnifiedUpdatePreview, UnifiedUpdatePreviewStep,
+    UpdateArtifactRef, latest_staged_update_record, prepare_staged_update, unified_update_plan,
+    unified_update_preview,
+};
+pub use update_source::{
+    AppliedUpdateRecord, DownloadedUpdateRecord, UpdateSourceConfig, apply_downloaded_update,
+    download_update, latest_applied_update_record, latest_downloaded_update_record,
+    read_update_source_config, write_update_source_config,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -121,6 +128,7 @@ pub fn print_help() {
         "  cross-platform-audit  Validate dist/ parity across macOS, Linux, and Windows\n",
         "  update-plan      Show the unified channel-based update target\n",
         "  update-preview   Show pre-apply checks and blockers for a channel update\n",
+        "  prepare-staged-update  Repair, stage, and record a channel update scaffold\n",
         "  repair-installation     Recreate layout and clean removable residue\n",
         "  validate-env     Validate required environment variables from .env.local\n",
         "  init-env         Create .env.local from .env.example when missing\n",
@@ -132,6 +140,7 @@ pub fn print_help() {
         "  cargo run -p kyuubiki-installer -- doctor\n",
         "  cargo run -p kyuubiki-installer -- update-plan stable\n",
         "  cargo run -p kyuubiki-installer -- update-preview stable\n",
+        "  cargo run -p kyuubiki-installer -- prepare-staged-update stable macos\n",
         "  cargo run -p kyuubiki-installer -- stage-release\n",
         "  cargo run -p kyuubiki-installer -- stage-release windows ./dist/windows-preview\n",
     ));

@@ -151,6 +151,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         handleSystemPanelTabChange={props.handleSystemPanelTabChange}
         setSidebarSection={props.setSidebarSection}
         handleWorkflowPanelTabChange={props.handleWorkflowPanelTabChange}
+        runtimeRecoveryCard={props.runtimeRecoveryCard}
         healthStatus={props.health?.status}
         healthProtocolOnline={Boolean(props.health?.protocol)}
         healthWatchdogOnline={Boolean(props.health?.watchdog)}

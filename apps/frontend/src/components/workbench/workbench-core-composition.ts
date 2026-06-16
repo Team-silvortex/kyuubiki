@@ -128,6 +128,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     setModelVersions: rootState.setModelVersions,
     setProjects: rootState.setProjects,
     setProtocolAgents: rootState.setProtocolAgents,
+    setRuntimeRecovery: rootState.setRuntimeRecovery,
     setSelectedModelId: rootState.setSelectedModelId,
     setSelectedProjectId: rootState.setSelectedProjectId,
     setSelectedVersionId: rootState.setSelectedVersionId,
@@ -236,6 +237,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     refreshProjects,
     refreshSecurityEvents,
     refreshVersions,
+    retryRuntimeRecovery,
     projectFlows,
   } = sessionComposition;
 
@@ -337,6 +339,8 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     refreshProjects,
     refreshSecurityEvents,
     refreshVersions,
+    retryRuntimeRecovery,
+    runtimeRecovery: rootState.runtimeRecovery,
     refreshJobHistory: jobHistoryController.refreshJobHistory,
     cancelCurrentJob: jobHistoryController.cancelCurrentJob,
     selectedAdminJobId: jobHistoryController.selectedAdminJobId,

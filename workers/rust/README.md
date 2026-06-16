@@ -23,6 +23,9 @@ It currently contains:
 - `crates/cli`
   TCP solver agent, local runtime entry point, and remote self-registration
   behavior.
+- `crates/deploy-server`
+  Read-only Rust download/deployment metadata server for update catalogs,
+  deploy descriptors, and artifact file distribution.
 - `crates/benchmark`
   Benchmark profiles for medium, large, v2, and `10k` scale targets.
 - `crates/installer`

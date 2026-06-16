@@ -3,8 +3,9 @@ use std::path::PathBuf;
 
 use kyuubiki_installer::{
     cross_platform_audit_report, exit_on_err, export_launch_config, init_env,
-    installation_integrity_report, parse_platform, prepare_layout, print_help, repair_installation,
-    run_doctor, stage_release, unified_update_plan, unified_update_preview, validate_env_file,
+    installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
+    print_help, repair_installation, run_doctor, stage_release, unified_update_plan,
+    unified_update_preview, validate_env_file,
 };
 
 fn main() {
@@ -23,6 +24,14 @@ fn main() {
         "update-preview" => {
             let channel = args.next();
             exit_on_err(unified_update_preview(channel).map(|report| report.render()))
+        }
+        "prepare-staged-update" => {
+            let channel = args.next();
+            let platform = parse_platform(args.next());
+            let target_dir = args.next().map(PathBuf::from);
+            exit_on_err(
+                prepare_staged_update(channel, platform, target_dir).map(|report| report.render()),
+            )
         }
         "repair-installation" => exit_on_err(repair_installation()),
         "validate-env" => exit_on_err(validate_env_file()),

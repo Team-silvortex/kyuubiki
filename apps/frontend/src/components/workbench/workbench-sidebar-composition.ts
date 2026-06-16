@@ -1,6 +1,8 @@
 "use client";
 
+import { createElement } from "react";
 import { buildWorkbenchSidebarMountProps } from "@/components/workbench/workbench-sidebar-mount-props";
+import { WorkbenchRuntimeRecoveryCard } from "@/components/workbench/system/workbench-runtime-recovery-card";
 
 export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
   const { shellState, workspaceState, studyResultDerived, interactionControllers, flowControllers, workflowController } =
@@ -95,6 +97,15 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     handleSystemPanelTabChange: uiActionController.handleSystemPanelTabChange,
     setSidebarSection: workspaceState.setSidebarSection,
     health: props.health,
+    runtimeRecoveryCard: createElement(WorkbenchRuntimeRecoveryCard, {
+      language: shellState.language,
+      recovery: props.runtimeRecovery,
+      onRetryAll: () => void props.retryRuntimeRecovery(),
+      onRetryHealth: () => void props.refreshHealth(),
+      onRetryProjects: () => void props.refreshProjects(),
+      onRetrySecurityEvents: () => void props.refreshSecurityEvents(),
+      onRetryWorkflowCatalog: () => void workflowController.refreshWorkflowCatalog(),
+    }),
     runtimeBackendRows: studyResultDerived.runtimeBackendRows,
     runtimeProtocolRows: studyResultDerived.runtimeProtocolRows,
     runtimeProtocolMethods: studyResultDerived.runtimeProtocolMethods,

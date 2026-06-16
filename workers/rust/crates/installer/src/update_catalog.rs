@@ -1,10 +1,14 @@
 use std::cmp::Ordering;
 use std::fs;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde_json::Value;
+use serde_json::{Value, json};
 
-use crate::{IntegrityContractRule, Platform, load_integrity_contract, workspace_root};
+use crate::{
+    IntegrityContractRule, Platform, load_integrity_contract, repair_installation, stage_release,
+    update_source::current_update_catalog_path, workspace_root,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UpdateArtifactRef {
@@ -45,6 +49,15 @@ pub struct UnifiedUpdatePreview {
     pub blocking_issues: usize,
     pub removable_residue: usize,
     pub steps: Vec<UnifiedUpdatePreviewStep>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StagedUpdateRecord {
+    pub channel: String,
+    pub target_version: String,
+    pub release_dir: String,
+    pub manifest_path: String,
+    pub audit_path: String,
 }
 
 impl UnifiedUpdatePlan {
@@ -107,6 +120,20 @@ impl UnifiedUpdatePreview {
         }
 
         lines.join("\n")
+    }
+}
+
+impl StagedUpdateRecord {
+    pub fn render(&self) -> String {
+        [
+            "kyuubiki staged update prepared".to_string(),
+            format!("channel: {}", self.channel),
+            format!("target_version: {}", self.target_version),
+            format!("release_dir: {}", self.release_dir),
+            format!("manifest_path: {}", self.manifest_path),
+            format!("audit_path: {}", self.audit_path),
+        ]
+        .join("\n")
     }
 }
 
@@ -243,6 +270,127 @@ pub fn unified_update_preview(channel: Option<String>) -> Result<UnifiedUpdatePr
     })
 }
 
+pub fn prepare_staged_update(
+    channel: Option<String>,
+    platform: Platform,
+    target_dir: Option<PathBuf>,
+) -> Result<StagedUpdateRecord, String> {
+    let plan = unified_update_plan(channel.clone())?;
+    let preview = unified_update_preview(channel)?;
+    if preview.overall_status != "ready_for_apply" {
+        return Err(format!(
+            "staged update blocked: preview status is {}",
+            preview.overall_status
+        ));
+    }
+
+    repair_installation()?;
+    stage_release(platform, target_dir.clone())?;
+
+    let root = workspace_root();
+    let release_dir = target_dir.unwrap_or_else(|| root.join("dist").join(platform.as_str()));
+    let latest_path = root.join("dist").join("staged-update-latest.json");
+    let manifest_path = release_dir.join("manifests").join("staged-update.json");
+    let audit_path = release_dir.join("logs").join("staged-update-audit.jsonl");
+    let generated_at = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0);
+    let manifest = json!({
+        "schema_version": "kyuubiki.staged-update/v1",
+        "generated_at": generated_at,
+        "platform": platform.as_str(),
+        "channel": {
+            "id": plan.target_channel,
+            "tag": plan.target_tag,
+            "target_version": plan.target_version,
+            "summary": plan.summary,
+        },
+        "preview": {
+            "overall_status": preview.overall_status,
+            "blocking_issues": preview.blocking_issues,
+            "removable_residue": preview.removable_residue,
+        },
+        "workspace": root.display().to_string(),
+        "release_dir": release_dir.display().to_string(),
+        "artifacts": plan
+            .artifacts
+            .iter()
+            .map(|artifact| json!({
+                "product": artifact.product,
+                "platform": artifact.platform,
+                "kind": artifact.kind,
+                "path": artifact.path,
+                "exists": artifact.exists,
+            }))
+            .collect::<Vec<Value>>(),
+    });
+    fs::write(
+        &manifest_path,
+        serde_json::to_string_pretty(&manifest).map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
+    let audit_line = json!({
+        "ts": generated_at,
+        "action": "prepare_staged_update",
+        "channel": manifest["channel"]["id"],
+        "target_version": manifest["channel"]["target_version"],
+        "release_dir": release_dir.display().to_string(),
+        "manifest_path": manifest_path.display().to_string(),
+    });
+    let mut audit_contents = fs::read_to_string(&audit_path).unwrap_or_default();
+    audit_contents.push_str(&format!("{audit_line}\n"));
+    fs::write(&audit_path, audit_contents)
+        .map_err(|error| format!("failed to write {}: {error}", audit_path.display()))?;
+    fs::write(
+        &latest_path,
+        serde_json::to_string_pretty(&json!({
+            "schema_version": "kyuubiki.staged-update-pointer/v1",
+            "channel": manifest["channel"]["id"],
+            "target_version": manifest["channel"]["target_version"],
+            "release_dir": release_dir.display().to_string(),
+            "manifest_path": manifest_path.display().to_string(),
+            "audit_path": audit_path.display().to_string(),
+        }))
+        .map_err(|error| error.to_string())?,
+    )
+    .map_err(|error| format!("failed to write {}: {error}", latest_path.display()))?;
+
+    Ok(StagedUpdateRecord {
+        channel: manifest["channel"]["id"]
+            .as_str()
+            .unwrap_or("unknown")
+            .to_string(),
+        target_version: manifest["channel"]["target_version"]
+            .as_str()
+            .unwrap_or("unknown")
+            .to_string(),
+        release_dir: release_dir.display().to_string(),
+        manifest_path: manifest_path.display().to_string(),
+        audit_path: audit_path.display().to_string(),
+    })
+}
+
+pub fn latest_staged_update_record() -> Result<Option<StagedUpdateRecord>, String> {
+    let path = workspace_root()
+        .join("dist")
+        .join("staged-update-latest.json");
+    if !path.exists() {
+        return Ok(None);
+    }
+    let contents = fs::read_to_string(&path)
+        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
+    let value: Value = serde_json::from_str(&contents)
+        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
+    Ok(Some(StagedUpdateRecord {
+        channel: value_string(value.get("channel")),
+        target_version: value_string(value.get("target_version")),
+        release_dir: value_string(value.get("release_dir")),
+        manifest_path: value_string(value.get("manifest_path")),
+        audit_path: value_string(value.get("audit_path")),
+    }))
+}
+
 fn load_update_catalog() -> Result<Value, String> {
     let path = update_catalog_path();
     let contents = fs::read_to_string(&path)
@@ -252,9 +400,7 @@ fn load_update_catalog() -> Result<Value, String> {
 }
 
 pub(crate) fn update_catalog_path() -> PathBuf {
-    workspace_root()
-        .join("releases")
-        .join("update-catalog.json")
+    current_update_catalog_path(&workspace_root())
 }
 
 fn select_channel<'a>(catalog: &'a Value, requested: Option<&str>) -> Result<&'a Value, String> {

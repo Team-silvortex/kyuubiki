@@ -1,8 +1,8 @@
 mod bridges;
 mod bridges_electrostatic;
 mod core;
-mod operator_sdk_runtime;
 mod operator_sdk_host;
+mod operator_sdk_runtime;
 mod workflow_conditions;
 mod workflow_coupled;
 mod workflow_coupled_bridge_contracts;

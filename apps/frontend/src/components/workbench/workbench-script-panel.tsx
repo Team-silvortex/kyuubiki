@@ -13,21 +13,30 @@ import {
 } from "@/components/workbench/workbench-script-panel-helpers";
 import { WorkbenchScriptAuthorPanel } from "@/components/workbench/workbench-script-author-panel";
 import { WorkbenchScriptCatalogPanel } from "@/components/workbench/workbench-script-catalog-panel";
+import { WorkbenchScriptDslCard } from "@/components/workbench/workbench-script-dsl-card";
 import { WorkbenchScriptInspectPanel } from "@/components/workbench/workbench-script-inspect-panel";
 import { WorkbenchScriptLaunchCard } from "@/components/workbench/workbench-script-launch-card";
+import { executeWorkbenchPythonSource } from "@/components/workbench/workbench-script-panel-runtime";
+import {
+  safeWorkbenchPanelStorageGet,
+  writeWorkbenchPanelStorage,
+} from "@/components/workbench/workbench-script-panel-storage";
 import { workbenchScriptPanelCopy, type WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
 import {
   buildWorkbenchRecordedMacroDraft,
   buildWorkbenchRecordedMacroDraftFromEntries,
   buildWorkbenchUiAutomationContractSnapshot,
   buildWorkbenchPythonPrelude,
+  buildWorkbenchFrontendDslFromMacroDraft,
+  compileWorkbenchFrontendDslToPython,
+  DEFAULT_WORKBENCH_FRONTEND_DSL,
   DEFAULT_WORKBENCH_PYTHON,
   deleteWorkbenchMacroPreset,
   deleteWorkbenchSnippetPreset,
-  ensurePyodideRuntime,
   listWorkbenchMacroPresets,
   listWorkbenchSnippetPresets,
   parseWorkbenchMacroImportDocument,
+  parseWorkbenchFrontendDslDocument,
   parseWorkbenchRecordedMacroDraft,
   parseWorkbenchSnippetPresetRecord,
   renderWorkbenchScriptSnippet,
@@ -39,6 +48,7 @@ import {
   WORKBENCH_SCRIPT_MACROS,
   WORKBENCH_SCRIPT_SNIPPETS,
   WORKBENCH_SCRIPT_ACTIONS,
+  WORKBENCH_FRONTEND_DSL_REPORT_PREFIX,
   type WorkbenchScriptActionDefinition,
   type WorkbenchScriptActionLogEntry,
   type WorkbenchScriptLanguage,
@@ -62,44 +72,40 @@ type WorkbenchScriptPanelProps = {
 
 type RuntimeStatus = "idle" | "loading" | "ready" | "running" | "error";
 
-const STORAGE_KEY = "kyuubiki-workbench-python-panel";
-
-function safeStorageGet() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as { code?: string }) : null;
-  } catch {
-    return null;
-  }
-}
+const STORAGE_KEY = "kyuubiki-workbench-python-panel", DSL_STORAGE_KEY = "kyuubiki-workbench-dsl-panel";
 
 function stringifyPayload(payload: Record<string, unknown> | undefined): string {
   return serializeWorkbenchPythonLiteral(payload ?? {});
 }
 
-
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
   const t = workbenchScriptPanelCopy[language] as WorkbenchScriptPanelCopyEntry;
   const [headlessFrontendMacroAssets, setHeadlessFrontendMacroAssets] = useState<FrontendMacroAssetRecord[]>([]);
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
+  const [dslCode, setDslCode] = useState(DEFAULT_WORKBENCH_FRONTEND_DSL);
   const [output, setOutput] = useState<string[]>([]);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  const [dslError, setDslError] = useState<string | null>(null);
   const [presetName, setPresetName] = useState("");
   const [presetRecords, setPresetRecords] = useState<WorkbenchMacroPresetRecord[]>([]);
   const [snippetPresetRecords, setSnippetPresetRecords] = useState<WorkbenchScriptSnippetPresetRecord[]>([]);
   const [macroDraftBuffer, setMacroDraftBuffer] = useState<ReturnType<typeof buildWorkbenchRecordedMacroDraft> | null>(null);
 
   useEffect(() => {
-    const stored = safeStorageGet();
+    const stored = safeWorkbenchPanelStorageGet(STORAGE_KEY);
     if (stored?.code) setScriptCode(stored.code);
+    const storedDsl = safeWorkbenchPanelStorageGet(DSL_STORAGE_KEY);
+    if (storedDsl?.code) setDslCode(storedDsl.code);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ code: scriptCode }));
+    writeWorkbenchPanelStorage(STORAGE_KEY, scriptCode);
   }, [scriptCode]);
+
+  useEffect(() => {
+    writeWorkbenchPanelStorage(DSL_STORAGE_KEY, dslCode);
+  }, [dslCode]);
 
   useEffect(() => {
     setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
@@ -132,7 +138,12 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setRuntimeError(null);
     setRuntimeStatus("loading");
     try {
-      await ensurePyodideRuntime();
+      await executeWorkbenchPythonSource({
+        appendOutput,
+        getSnapshot,
+        onInvokeAction,
+        source: `${buildWorkbenchPythonPrelude()}\nky.log("Runtime loaded")`,
+      });
       setRuntimeStatus("ready");
       appendOutput(`[runtime] ${t.ready}`);
     } catch (error) {
@@ -143,26 +154,34 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     }
   };
 
+  const compileDslToScript = () => {
+    try {
+      const document = parseWorkbenchFrontendDslDocument(dslCode);
+      const compiled = compileWorkbenchFrontendDslToPython(document);
+      setDslError(null);
+      setScriptCode((current) => `${current.trimEnd()}\n\n${compiled}\n`);
+      appendOutput(`[dsl] compiled ${document.name}`);
+      return compiled;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setDslError(message);
+      setRuntimeError(message);
+      appendOutput(`[dsl] ${message}`);
+      return null;
+    }
+  };
+
   const runScript = async () => {
     setRuntimeError(null);
     setRuntimeStatus("running");
     try {
-      const pyodide = await ensurePyodideRuntime();
-      window.__kyuubikiBridge = {
-        invoke: async (action: string, payloadJson?: string) => {
-          const payload = payloadJson && payloadJson.trim().length > 0 ? (JSON.parse(payloadJson) as Record<string, unknown>) : {};
-          const result = await onInvokeAction(action, payload);
-          return JSON.stringify(result ?? { ok: true, action });
-        },
-        state_json: () => JSON.stringify(getSnapshot()),
-        actions_json: () => JSON.stringify(WORKBENCH_SCRIPT_ACTIONS),
-        macros_json: () => JSON.stringify(WORKBENCH_SCRIPT_MACROS),
-        ui_contract_json: () => JSON.stringify(buildWorkbenchUiAutomationContractSnapshot()),
-        log: (message: string) => appendOutput(message),
-        sleep: async (seconds = 0) => new Promise<void>((resolve) => window.setTimeout(resolve, Math.max(0, seconds) * 1000)),
-      };
       appendOutput(`[script] ${t.running}`);
-      await pyodide.runPythonAsync(`${buildWorkbenchPythonPrelude()}\n${scriptCode}`);
+      await executeWorkbenchPythonSource({
+        appendOutput,
+        getSnapshot,
+        onInvokeAction,
+        source: `${buildWorkbenchPythonPrelude()}\n${scriptCode}`,
+      });
       setRuntimeStatus("ready");
       appendOutput(`[script] ${t.ready}`);
     } catch (error) {
@@ -170,6 +189,33 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       setRuntimeError(message);
       setRuntimeStatus("error");
       appendOutput(`[error] ${message}`);
+    }
+  };
+
+  const runDsl = async () => {
+    const compiled = compileDslToScript();
+    if (!compiled) return;
+
+    setRuntimeError(null);
+    setRuntimeStatus("running");
+    try {
+      appendOutput("[dsl] running");
+      await executeWorkbenchPythonSource({
+        appendOutput,
+        getSnapshot,
+        onInvokeAction,
+        source: `${buildWorkbenchPythonPrelude()}\n${compiled}`,
+      });
+      setRuntimeStatus("ready");
+      appendOutput("[dsl] ready");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const taggedCode = message.match(/\[dsl-code=([a-z_]+)\]/i)?.[1];
+      const cleanMessage = message.replace(/^\[dsl-code=[^\]]+\]\s*/i, "");
+      setRuntimeError(message);
+      setRuntimeStatus("error");
+      appendOutput(`${WORKBENCH_FRONTEND_DSL_REPORT_PREFIX} reported_at=${new Date().toISOString()} status=failed failure_code=${taggedCode ?? (/timeout/i.test(message) ? "timeout" : /selector/i.test(message) ? "selector_mismatch" : /state/i.test(message) ? "state_mismatch" : "runtime_exception")} failure_reason=${encodeURIComponent(cleanMessage)}`);
+      appendOutput(`[dsl] ${message}`);
     }
   };
 
@@ -341,6 +387,17 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
+  const useCurrentMacroDraftAsDsl = () => {
+    const draft = resolveCurrentDraft();
+    if (!draft) {
+      appendOutput(`[dsl] ${t.noMacroDraftSource}`);
+      return;
+    }
+    const document = buildWorkbenchFrontendDslFromMacroDraft(draft);
+    setDslCode(JSON.stringify(document, null, 2));
+    setDslError(null);
+    appendOutput(`[dsl] ${document.name}`);
+  };
   const insertFrontendMacroAsset = (asset: FrontendMacroAssetRecord) => {
     setMacroDraftBuffer(asset.draft);
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(asset.draft)}\n`);
@@ -466,6 +523,20 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         recordingMode={recordingMode}
         scriptCode={scriptCode}
         setScriptCode={setScriptCode}
+      />
+
+      <WorkbenchScriptDslCard
+        dslCode={dslCode}
+        dslError={dslError}
+        language={language}
+        onCompileDsl={compileDslToScript}
+        onLoadDslTemplate={() => {
+          setDslCode(DEFAULT_WORKBENCH_FRONTEND_DSL);
+          setDslError(null);
+        }}
+        onRunDsl={() => void runDsl()}
+        onUseCurrentMacroDraft={useCurrentMacroDraftAsDsl}
+        setDslCode={setDslCode}
       />
 
       <WorkbenchScriptInspectPanel

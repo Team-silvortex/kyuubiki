@@ -3,8 +3,8 @@ use crate::{
     workflow_executor::{run_export_operator, run_extract_operator, run_transform_operator},
 };
 use kyuubiki_protocol::{
-    AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
-    SolveHeatPlaneQuad2dRequest, SolveThermalPlaneQuad2dRequest,
+    AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput, SolveHeatPlaneQuad2dRequest,
+    SolveThermalPlaneQuad2dRequest,
 };
 
 #[test]

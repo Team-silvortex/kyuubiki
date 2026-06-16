@@ -33,18 +33,9 @@ pub struct DiscoveredOperatorPackage {
 
 #[derive(Debug)]
 pub enum OperatorManifestError {
-    Io {
-        path: PathBuf,
-        message: String,
-    },
-    Decode {
-        path: PathBuf,
-        message: String,
-    },
-    Invalid {
-        path: PathBuf,
-        message: String,
-    },
+    Io { path: PathBuf, message: String },
+    Decode { path: PathBuf, message: String },
+    Invalid { path: PathBuf, message: String },
 }
 
 impl Display for OperatorManifestError {
@@ -69,10 +60,11 @@ pub fn read_operator_package_manifest(
     manifest_path: impl AsRef<Path>,
 ) -> Result<OperatorPackageManifest, OperatorManifestError> {
     let manifest_path = manifest_path.as_ref().to_path_buf();
-    let content = fs::read_to_string(&manifest_path).map_err(|error| OperatorManifestError::Io {
-        path: manifest_path.clone(),
-        message: error.to_string(),
-    })?;
+    let content =
+        fs::read_to_string(&manifest_path).map_err(|error| OperatorManifestError::Io {
+            path: manifest_path.clone(),
+            message: error.to_string(),
+        })?;
     let manifest: OperatorPackageManifest =
         serde_json::from_str(&content).map_err(|error| OperatorManifestError::Decode {
             path: manifest_path.clone(),
@@ -117,7 +109,11 @@ pub fn discover_operator_packages(
         left.manifest
             .package_id
             .cmp(&right.manifest.package_id)
-            .then(left.manifest.package_version.cmp(&right.manifest.package_version))
+            .then(
+                left.manifest
+                    .package_version
+                    .cmp(&right.manifest.package_version),
+            )
     });
     Ok(discovered)
 }

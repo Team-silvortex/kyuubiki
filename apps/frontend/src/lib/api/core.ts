@@ -1,4 +1,8 @@
 import { buildWorkbenchGovernedAuthHeaders } from "@/lib/workbench/governance";
+import {
+  createHttpWorkbenchRequestError,
+  normalizeWorkbenchRequestError,
+} from "@/lib/api/request-errors";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
 const SECRETS_KEY = "kyuubiki-workbench-secrets";
@@ -125,29 +129,47 @@ export async function requestJson<T>(url: string, init?: RequestInit, timeoutMs?
     if (value) headers.set(key, value);
   });
 
-  const response = await fetchWithTimeout(
-    url,
-    {
-      ...init,
-      headers,
-    },
-    timeoutMs,
-  );
-  const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string }) | string | null;
+  try {
+    const response = await fetchWithTimeout(
+      url,
+      {
+        ...init,
+        headers,
+      },
+      timeoutMs,
+    );
+    const payload = (await readResponsePayload(response)) as (T & { error?: string; message?: string }) | string | null;
 
-  if (!response.ok) {
-    if (payload && typeof payload === "object") {
-      throw new Error(payload.error ?? payload.message ?? `request failed: ${response.status}`);
+    if (!response.ok) {
+      if (payload && typeof payload === "object") {
+        throw createHttpWorkbenchRequestError({
+          message: payload.error ?? payload.message ?? `request failed: ${response.status}`,
+          responseMessage: payload.error ?? payload.message ?? null,
+          statusCode: response.status,
+          url,
+        });
+      }
+
+      if (typeof payload === "string" && payload.trim()) {
+        throw createHttpWorkbenchRequestError({
+          message: payload,
+          responseMessage: payload,
+          statusCode: response.status,
+          url,
+        });
+      }
+
+      throw createHttpWorkbenchRequestError({
+        message: `request failed: ${response.status}`,
+        statusCode: response.status,
+        url,
+      });
     }
 
-    if (typeof payload === "string" && payload.trim()) {
-      throw new Error(payload);
-    }
-
-    throw new Error(`request failed: ${response.status}`);
+    return (payload ?? {}) as T;
+  } catch (error) {
+    throw normalizeWorkbenchRequestError(error, url);
   }
-
-  return (payload ?? {}) as T;
 }
 
 export async function requestText(url: string, init?: RequestInit, timeoutMs?: number): Promise<string> {
@@ -156,19 +178,28 @@ export async function requestText(url: string, init?: RequestInit, timeoutMs?: n
     if (value) headers.set(key, value);
   });
 
-  const response = await fetchWithTimeout(
-    url,
-    {
-      ...init,
-      headers,
-    },
-    timeoutMs,
-  );
-  const payload = await response.text();
+  try {
+    const response = await fetchWithTimeout(
+      url,
+      {
+        ...init,
+        headers,
+      },
+      timeoutMs,
+    );
+    const payload = await response.text();
 
-  if (!response.ok) {
-    throw new Error(payload || `request failed: ${response.status}`);
+    if (!response.ok) {
+      throw createHttpWorkbenchRequestError({
+        message: payload || `request failed: ${response.status}`,
+        responseMessage: payload || null,
+        statusCode: response.status,
+        url,
+      });
+    }
+
+    return payload;
+  } catch (error) {
+    throw normalizeWorkbenchRequestError(error, url);
   }
-
-  return payload;
 }

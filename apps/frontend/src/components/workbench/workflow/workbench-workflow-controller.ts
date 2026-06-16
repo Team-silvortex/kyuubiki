@@ -22,6 +22,12 @@ import {
 import { parseWorkflowInputArtifactTexts } from "@/components/workbench/workflow/workbench-workflow-input-artifacts";
 import { summarizeWorkflowRunTrace } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
 import { summarizeWorkflowResultArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
+import {
+  clearWorkbenchRuntimeRecoveryIssue,
+  upsertWorkbenchRuntimeRecoveryIssue,
+  type WorkbenchRuntimeRecoveryState,
+} from "@/components/workbench/workbench-runtime-recovery";
+import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
 
 type WorkflowControllerLabels = {
   workflowCatalogLoaded: string;
@@ -37,6 +43,7 @@ type UseWorkbenchWorkflowControllerArgs = {
   labels: WorkflowControllerLabels;
   jobPollTokenRef: MutableRefObject<number>;
   refreshJobHistory: () => Promise<void>;
+  setRuntimeRecovery: Dispatch<SetStateAction<WorkbenchRuntimeRecoveryState>>;
   setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>;
   setMessage: Dispatch<SetStateAction<string>>;
   openWorkflowRunsSurface: (workflowId: string) => void;
@@ -65,6 +72,7 @@ export function useWorkbenchWorkflowController({
   labels,
   jobPollTokenRef,
   refreshJobHistory,
+  setRuntimeRecovery,
   setJob,
   setMessage,
   openWorkflowRunsSurface,
@@ -92,8 +100,17 @@ export function useWorkbenchWorkflowController({
           ? current
           : [...localEntries, ...payload.workflows][0]?.id ?? null,
       );
+      setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, "workflow_catalog"));
       setMessage(labels.workflowCatalogLoaded);
     } catch (error) {
+      setRuntimeRecovery((current) =>
+        upsertWorkbenchRuntimeRecoveryIssue({
+          channel: "workflow_catalog",
+          current,
+          error: normalizeWorkbenchRequestError(error, "Workflow catalog"),
+          scopeLabel: "Workflow catalog",
+        }),
+      );
       setMessage(error instanceof Error ? error.message : labels.initialFailed);
     } finally {
       setWorkflowCatalogBusy(false);

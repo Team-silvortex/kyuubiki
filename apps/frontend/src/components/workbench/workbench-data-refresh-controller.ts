@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 import type {
   DirectMeshSelectionMode,
   FrontendRuntimeMode,
@@ -23,6 +23,12 @@ import { parseDirectMeshEndpoints } from "@/lib/workbench/helpers";
 import { validateWorkbenchExecutionGovernance } from "@/lib/workbench/governance";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 import type { WorkbenchSecurityAuditRisk, WorkbenchSecurityAuditSource } from "@/lib/workbench/security-audit";
+import {
+  clearWorkbenchRuntimeRecoveryIssue,
+  upsertWorkbenchRuntimeRecoveryIssue,
+  type WorkbenchRuntimeRecoveryState,
+} from "@/components/workbench/workbench-runtime-recovery";
+import { normalizeWorkbenchRequestError } from "@/lib/api/request-errors";
 
 type UseWorkbenchDataRefreshControllerArgs = {
   directMeshEndpointsText: string;
@@ -39,6 +45,7 @@ type UseWorkbenchDataRefreshControllerArgs = {
   setModelVersions: (value: ModelVersionRecord[]) => void;
   setProjects: (value: ProjectRecord[]) => void;
   setProtocolAgents: (value: ProtocolAgentDescriptor[]) => void;
+  setRuntimeRecovery: Dispatch<SetStateAction<WorkbenchRuntimeRecoveryState>>;
   setSecurityEventRecords: (value: SecurityEventRecord[]) => void;
   setSelectedModelId: (value: string | null) => void;
   setSelectedProjectId: (value: string | null) => void;
@@ -63,6 +70,7 @@ export function useWorkbenchDataRefreshController({
   setModelVersions,
   setProjects,
   setProtocolAgents,
+  setRuntimeRecovery,
   setSecurityEventRecords,
   setSelectedModelId,
   setSelectedProjectId,
@@ -75,6 +83,26 @@ export function useWorkbenchDataRefreshController({
   const projectRefreshSeqRef = useRef(0);
   const securityEventsRefreshSeqRef = useRef(0);
   const versionsRefreshSeqRef = useRef(0);
+
+  function clearRecovery(channel: "health" | "projects" | "security_events") {
+    setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, channel));
+  }
+
+  function pushRecovery(
+    channel: "health" | "projects" | "security_events",
+    error: unknown,
+    scopeLabel: string,
+  ) {
+    const requestError = normalizeWorkbenchRequestError(error, scopeLabel);
+    setRuntimeRecovery((current) =>
+      upsertWorkbenchRuntimeRecoveryIssue({
+        channel,
+        current,
+        error: requestError,
+        scopeLabel,
+      }),
+    );
+  }
 
   async function refreshHealth() {
     const refreshSeq = ++healthRefreshSeqRef.current;
@@ -128,10 +156,12 @@ export function useWorkbenchDataRefreshController({
             active_agents: nextDirect.agents.length,
           },
         });
+        clearRecovery("health");
       } catch {
         if (refreshSeq !== healthRefreshSeqRef.current) return;
         setHealth(null);
         setProtocolAgents([]);
+        pushRecovery("health", new Error("Failed to refresh direct mesh health state."), "Direct mesh runtime");
       }
       return;
     }
@@ -166,10 +196,12 @@ export function useWorkbenchDataRefreshController({
             : agent;
         }),
       );
-    } catch {
+      clearRecovery("health");
+    } catch (error) {
       if (refreshSeq !== healthRefreshSeqRef.current) return;
       setHealth(null);
       setProtocolAgents([]);
+      pushRecovery("health", error, "Hub health");
     }
   }
 
@@ -212,9 +244,11 @@ export function useWorkbenchDataRefreshController({
       if (!nextModelId) {
         setSelectedVersionId(null);
       }
-    } catch {
+      clearRecovery("projects");
+    } catch (error) {
       if (refreshSeq !== projectRefreshSeqRef.current) return;
       setProjects([]);
+      pushRecovery("projects", error, "Project library");
     }
   }
 
@@ -236,9 +270,11 @@ export function useWorkbenchDataRefreshController({
       });
       if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
       setSecurityEventRecords(payload.events);
-    } catch {
+      clearRecovery("security_events");
+    } catch (error) {
       if (refreshSeq !== securityEventsRefreshSeqRef.current) return;
       setSecurityEventRecords([]);
+      pushRecovery("security_events", error, "Security audit");
     }
   }
 

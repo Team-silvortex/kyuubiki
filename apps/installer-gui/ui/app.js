@@ -1,62 +1,18 @@
-import {
-  applyDesktopState,
-  invokeTauri as invoke,
-  listenTauri as listen,
-  loadDesktopBrand,
-  loadDesktopLanguagePreference,
-  normalizeDesktopLanguage,
-  saveDesktopLanguagePreference,
-  setText,
-  syncDesktopStates,
-} from "./shared/tauri-bridge.js";
-import {
-  desktopReleaseRootPattern,
-  normalizeDesktopPlatform,
-  populateDesktopPlatformSelect,
-  syncDesktopReleaseTargetInput,
-} from "./shared/platform.js";
-import {
-  applyPreset,
-  currentRemoteAgentPayload,
-  currentRemoteBootstrapPayload,
-  renderDoctor,
-} from "./installer-workflows.js";
+import { applyDesktopState, invokeTauri as invoke, listenTauri as listen, loadDesktopBrand, loadDesktopLanguagePreference, normalizeDesktopLanguage, saveDesktopLanguagePreference, setText, syncDesktopStates } from "./shared/tauri-bridge.js";
+import { desktopReleaseRootPattern, normalizeDesktopPlatform, populateDesktopPlatformSelect, syncDesktopReleaseTargetInput } from "./shared/platform.js";
+import { applyPreset, currentRemoteAgentPayload, currentRemoteBootstrapPayload, renderDoctor } from "./installer-workflows.js";
 import { mountIntegrityPanel, renderIntegrityReport } from "./integrity-panel.js";
-import { mountUpdatePanel, renderUpdatePlan, renderUpdatePreview, selectedUpdateChannel } from "./update-panel.js";
+import { currentUpdateSourcePayload, hydrateUpdateSourceConfig, mountUpdatePanel, renderLatestAppliedUpdate, renderLatestDownloadedUpdate, renderLatestStagedUpdate, renderUpdatePlan, renderUpdatePreview, selectedUpdateChannel } from "./update-panel.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 (function () {
-  const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json";
-  const DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json";
-  const DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
+  const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json", DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json", DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
   const DEFAULT_PRESET = {
     agentManifestPath: DEFAULT_AGENT_MANIFEST_PATH,
     distributedAgentManifestPath: DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH,
     sqliteDatabasePath: DEFAULT_SQLITE_DATABASE_PATH,
   };
-  const output = document.getElementById("output");
-  const serviceStatus = document.getElementById("service-status");
-  const serviceStatusPlane = document.getElementById("service-status-plane");
-  const runtimeLog = document.getElementById("runtime-log");
-  const completionBanner = document.getElementById("completion-banner");
-  const completionMessage = document.getElementById("completion-message");
-  const doctorGrid = document.getElementById("doctor-grid");
-  const platformLabel = document.getElementById("platform-label");
-  const releasePlatformSelect = document.getElementById("release-platform");
-  const releaseTargetInput = document.getElementById("release-target");
-  const workspaceLabel = document.getElementById("workspace-label");
-  const currentModeLabel = document.getElementById("current-mode-label");
-  const languageLabel = document.getElementById("shell-language-label");
-  const languageSelect = document.getElementById("shell-language-select");
-  const serviceModePill = document.getElementById("service-mode-pill");
-  const completionGuide = document.getElementById("completion-guide");
-  const liveTailToggle = document.getElementById("log-autorefresh");
-  const logServiceSelect = document.getElementById("log-service");
-  let logRefreshTimer = null;
-  let stopLogListener = null;
-  let streamedService = null;
-  let latestLogSnapshot = "";
-  let brandConfig = null;
-  let currentLanguage = "en";
+  const output = document.getElementById("output"), serviceStatus = document.getElementById("service-status"), serviceStatusPlane = document.getElementById("service-status-plane"), runtimeLog = document.getElementById("runtime-log"), completionBanner = document.getElementById("completion-banner"), completionMessage = document.getElementById("completion-message"), doctorGrid = document.getElementById("doctor-grid"), platformLabel = document.getElementById("platform-label"), releasePlatformSelect = document.getElementById("release-platform"), releaseTargetInput = document.getElementById("release-target"), workspaceLabel = document.getElementById("workspace-label"), currentModeLabel = document.getElementById("current-mode-label"), languageLabel = document.getElementById("shell-language-label"), languageSelect = document.getElementById("shell-language-select"), serviceModePill = document.getElementById("service-mode-pill"), completionGuide = document.getElementById("completion-guide"), liveTailToggle = document.getElementById("log-autorefresh");
+  const logServiceSelect = document.getElementById("log-service"); let logRefreshTimer = null, stopLogListener = null, streamedService = null, latestLogSnapshot = "", brandConfig = null, currentLanguage = "en";
 
   mountIntegrityPanel();
   mountUpdatePanel();
@@ -262,10 +218,20 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     return report.rendered;
   }
 
-  async function refreshUpdatePreview() {
-    const report = await invoke("unified_update_preview", { channel: selectedUpdateChannel() });
-    renderUpdatePreview(report);
-    return report.rendered;
+  async function refreshUpdateSourceConfig() { const config = await invoke("update_source_config"); hydrateUpdateSourceConfig(config); return config.rendered; }
+
+  async function refreshUpdatePreview() { const report = await invoke("unified_update_preview", { channel: selectedUpdateChannel() }); renderUpdatePreview(report); return report.rendered; }
+
+  async function refreshLatestStagedUpdate() {
+    const record = await invoke("latest_staged_update_record").catch(() => null); renderLatestStagedUpdate(record); return record?.rendered || "no staged update record";
+  }
+
+  async function refreshLatestDownloadedUpdate() { const record = await invoke("latest_downloaded_update_record").catch(() => null); renderLatestDownloadedUpdate(record); return record?.rendered || "no downloaded update record"; }
+  async function refreshLatestAppliedUpdate() { const record = await invoke("latest_applied_update_record").catch(() => null); renderLatestAppliedUpdate(record); return record?.rendered || "no applied update record"; }
+
+  async function refreshUpdateState() {
+    const [plan, preview, latest, downloaded, applied] = await Promise.all([refreshUpdatePlan(), refreshUpdatePreview(), refreshLatestStagedUpdate(), refreshLatestDownloadedUpdate(), refreshLatestAppliedUpdate()]);
+    return [plan, preview, latest, downloaded, applied].filter(Boolean).join("\n\n");
   }
 
   async function refreshServiceStatus() {
@@ -274,13 +240,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     return report.rendered;
   }
 
-  async function refreshRuntimeLog() {
-    const report = await invoke("read_runtime_log", {
-      service: logServiceSelect.value,
-    });
-    renderRuntimeLog(report.rendered || `${report.service} log is empty`);
-    return `loaded ${report.service} log`;
-  }
+  async function refreshRuntimeLog() { const report = await invoke("read_runtime_log", { service: logServiceSelect.value }); renderRuntimeLog(report.rendered || `${report.service} log is empty`); return `loaded ${report.service} log`; }
 
   async function stopRuntimeLogStream() {
     if (logRefreshTimer) {
@@ -405,8 +365,24 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
         case "refresh-update-plan":
           await runAction("refresh-update-plan", refreshUpdatePlan);
           break;
+        case "refresh-update-source": await runAction("refresh-update-source", refreshUpdateSourceConfig); break;
         case "refresh-update-preview":
           await runAction("refresh-update-preview", refreshUpdatePreview);
+          break;
+        case "save-update-source": await runAction("save-update-source", async () => { const result = await invokeGuardedMutation("write_update_source_config", currentUpdateSourcePayload()); await refreshUpdateSourceConfig(); showCompletion("Update source saved. Refresh the channel plan to validate the selected catalog."); return result; }); break;
+        case "download-update": await runAction("download-update", async () => { const result = await invokeGuardedMutation("download_update", { channel: selectedUpdateChannel(), platform: releasePlatformSelect?.value || "macos" }); await refreshLatestDownloadedUpdate(); showCompletion("Selected channel artifacts downloaded into the configured update cache."); return result; }); break;
+        case "refresh-downloaded-update": await runAction("refresh-downloaded-update", refreshLatestDownloadedUpdate); break;
+        case "apply-downloaded-update": await runAction("apply-downloaded-update", async () => { const result = await invokeGuardedMutation("apply_downloaded_update"); await refreshLatestAppliedUpdate(); showCompletion("Downloaded update promoted into the applied-update handoff record."); return result; }); break;
+        case "refresh-applied-update": await runAction("refresh-applied-update", refreshLatestAppliedUpdate); break;
+        case "refresh-staged-update": await runAction("refresh-staged-update", refreshLatestStagedUpdate); break;
+        case "prepare-update":
+        case "reprepare-update":
+          await runAction("prepare-update", async () => {
+            const result = await invokeGuardedMutation("prepare_staged_update", { channel: selectedUpdateChannel(), platform: releasePlatformSelect?.value || "macos", targetDir: releaseTargetInput?.value.trim() || null });
+            await Promise.all([refreshIntegrityReport(), refreshUpdateState()]);
+            showCompletion("Staged update prepared. Review the refreshed integrity and channel state before distributing artifacts.");
+            return result;
+          });
           break;
         case "write-env":
           await runAction("write-env", async () => {
@@ -568,17 +544,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   runAction(
     "startup",
     async () => {
-      const [doctor, integrityReport, updatePlan, updatePreview, envForm, status, language, brand] =
-        await Promise.all([
-          invoke("doctor_report"),
-          invoke("installation_integrity_report").catch(() => null),
-          invoke("unified_update_plan", { channel: "stable" }).catch(() => null),
-          invoke("unified_update_preview", { channel: "stable" }).catch(() => null),
-          invoke("read_env_file").catch(() => null),
-          invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
-          loadDesktopLanguagePreference().catch(() => "en"),
-          loadDesktopBrand().catch(() => null),
-        ]);
+      const [doctor, integrityReport, updatePlan, updateSource, updatePreview, downloadedUpdate, appliedUpdate, stagedUpdate, envForm, status, language, brand] = await Promise.all([invoke("doctor_report"), invoke("installation_integrity_report").catch(() => null), invoke("unified_update_plan", { channel: "stable" }).catch(() => null), invoke("update_source_config").catch(() => null), invoke("unified_update_preview", { channel: "stable" }).catch(() => null), invoke("latest_downloaded_update_record").catch(() => null), invoke("latest_applied_update_record").catch(() => null), invoke("latest_staged_update_record").catch(() => null), invoke("read_env_file").catch(() => null), invoke("service_status").catch(() => ({ rendered: "service status unavailable" })), loadDesktopLanguagePreference().catch(() => "en"), loadDesktopBrand().catch(() => null)]);
 
       currentLanguage = language || currentLanguage;
       renderDesktopLanguagePreference();
@@ -594,9 +560,13 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       if (updatePlan) {
         renderUpdatePlan(updatePlan);
       }
+      hydrateUpdateSourceConfig(updateSource);
       if (updatePreview) {
         renderUpdatePreview(updatePreview);
       }
+      renderLatestDownloadedUpdate(downloadedUpdate);
+      renderLatestAppliedUpdate(appliedUpdate);
+      renderLatestStagedUpdate(stagedUpdate);
       if (envForm) {
         hydrateEnv(envForm);
       } else {

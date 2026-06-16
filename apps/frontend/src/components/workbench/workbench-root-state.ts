@@ -8,6 +8,9 @@ import {
   bindWorkbenchWorkspaceState,
 } from "@/components/workbench/workbench-shell-bindings";
 import { useWorkbenchShellState } from "@/components/workbench/workbench-shell-state";
+import {
+  EMPTY_WORKBENCH_RUNTIME_RECOVERY_STATE,
+} from "@/components/workbench/workbench-runtime-recovery";
 import { useWorkbenchWorkspaceState } from "@/components/workbench/workbench-workspace-state";
 import type { HealthPayload, ProtocolAgentDescriptor } from "@/lib/api";
 
@@ -21,6 +24,7 @@ export function useWorkbenchRootState() {
 
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [protocolAgents, setProtocolAgents] = useState<ProtocolAgentDescriptor[]>([]);
+  const [runtimeRecovery, setRuntimeRecovery] = useState(EMPTY_WORKBENCH_RUNTIME_RECOVERY_STATE);
 
   const shellState = useWorkbenchShellState({
     setLoadedModelName: workspaceBindings.setLoadedModelName,
@@ -82,6 +86,8 @@ export function useWorkbenchRootState() {
     setHealth,
     protocolAgents,
     setProtocolAgents,
+    runtimeRecovery,
+    setRuntimeRecovery,
     isPending,
     startTransition,
     viewportPanelRef,

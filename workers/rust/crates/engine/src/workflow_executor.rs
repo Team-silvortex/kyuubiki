@@ -518,10 +518,18 @@ pub fn run_transform_operator(
     }
 }
 
-pub fn run_extract_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+pub fn run_extract_operator(
+    operator_id: &str,
+    payload: Value,
+    config: Value,
+) -> Result<Value, String> {
     run_registered_extract_operator(operator_id, payload, config)
 }
 
-pub fn run_export_operator(operator_id: &str, payload: Value, config: Value) -> Result<Value, String> {
+pub fn run_export_operator(
+    operator_id: &str,
+    payload: Value,
+    config: Value,
+) -> Result<Value, String> {
     run_registered_export_operator(operator_id, payload, config)
 }

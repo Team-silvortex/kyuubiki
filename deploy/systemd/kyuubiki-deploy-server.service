@@ -1,0 +1,16 @@
+[Unit]
+Description=Kyuubiki Deploy Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kyuubiki-dev
+WorkingDirectory=/home/kyuubiki-dev/kyuubiki
+ExecStart=/home/kyuubiki-dev/kyuubiki/workers/rust/target/debug/kyuubiki-deploy-server serve --host 127.0.0.1 --port 4070
+Restart=always
+RestartSec=2
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target

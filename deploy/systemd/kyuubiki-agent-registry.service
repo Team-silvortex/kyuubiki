@@ -1,0 +1,15 @@
+[Unit]
+Description=Kyuubiki Agent Registry Sync
+After=network-online.target kyuubiki-orchestrator.service kyuubiki-agent.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kyuubiki-dev
+WorkingDirectory=/home/kyuubiki-dev/kyuubiki
+ExecStart=/bin/sh -lc 'exec /home/kyuubiki-dev/kyuubiki/deploy/kyuubiki-agent-registry-sync.sh'
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

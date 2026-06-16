@@ -8,14 +8,13 @@ use crate::heat_bridge::{
     bridge_heat_result_to_thermal_plane_triangle_model_with_contract,
     resolve_heat_to_thermo_bridge_contract,
 };
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
-    OperatorDescriptor, OperatorRunContext, OperatorRunResult,
-    SolveElectrostaticPlaneQuad2dResult, SolveElectrostaticPlaneTriangle2dResult,
-    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest,
-    SolveHeatPlaneTriangle2dResult, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneTriangle2dRequest,
+    OperatorDescriptor, OperatorRunContext, OperatorRunResult, SolveElectrostaticPlaneQuad2dResult,
+    SolveElectrostaticPlaneTriangle2dResult, SolveHeatPlaneQuad2dRequest,
+    SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
 };
 
 struct HeatToThermoQuadBridgeOperator {
@@ -46,22 +45,29 @@ impl JsonOperator for HeatToThermoQuadBridgeOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        let heat_result: SolveHeatPlaneQuad2dResult =
-            serde_json::from_value(input.payload).map_err(|error| OperatorSdkError::DecodeInput {
-                operator_id: self.descriptor.id.clone(),
-                message: error.to_string(),
-            })?;
-        let contract = resolve_heat_to_thermo_bridge_contract(&input.config).map_err(|message| {
-            OperatorSdkError::Handler {
-                operator_id: self.descriptor.id.clone(),
-                message,
-            }
-        })?;
-        let seed_model_value = input.config.get("seed_model").cloned().unwrap_or(input.config);
-        let thermo_seed_model: SolveThermalPlaneQuad2dRequest = serde_json::from_value(seed_model_value)
+        let heat_result: SolveHeatPlaneQuad2dResult = serde_json::from_value(input.payload)
             .map_err(|error| OperatorSdkError::DecodeInput {
                 operator_id: self.descriptor.id.clone(),
                 message: error.to_string(),
+            })?;
+        let contract =
+            resolve_heat_to_thermo_bridge_contract(&input.config).map_err(|message| {
+                OperatorSdkError::Handler {
+                    operator_id: self.descriptor.id.clone(),
+                    message,
+                }
+            })?;
+        let seed_model_value = input
+            .config
+            .get("seed_model")
+            .cloned()
+            .unwrap_or(input.config);
+        let thermo_seed_model: SolveThermalPlaneQuad2dRequest =
+            serde_json::from_value(seed_model_value).map_err(|error| {
+                OperatorSdkError::DecodeInput {
+                    operator_id: self.descriptor.id.clone(),
+                    message: error.to_string(),
+                }
             })?;
         let (bridged, diagnostics) = bridge_heat_result_to_thermal_plane_quad_model_with_contract(
             &heat_result,
@@ -91,22 +97,29 @@ impl JsonOperator for HeatToThermoTriangleBridgeOperator {
         input: Self::Input,
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
-        let heat_result: SolveHeatPlaneTriangle2dResult =
-            serde_json::from_value(input.payload).map_err(|error| OperatorSdkError::DecodeInput {
+        let heat_result: SolveHeatPlaneTriangle2dResult = serde_json::from_value(input.payload)
+            .map_err(|error| OperatorSdkError::DecodeInput {
                 operator_id: self.descriptor.id.clone(),
                 message: error.to_string(),
             })?;
-        let contract = resolve_heat_to_thermo_bridge_contract(&input.config).map_err(|message| {
-            OperatorSdkError::Handler {
-                operator_id: self.descriptor.id.clone(),
-                message,
-            }
-        })?;
-        let seed_model_value = input.config.get("seed_model").cloned().unwrap_or(input.config);
+        let contract =
+            resolve_heat_to_thermo_bridge_contract(&input.config).map_err(|message| {
+                OperatorSdkError::Handler {
+                    operator_id: self.descriptor.id.clone(),
+                    message,
+                }
+            })?;
+        let seed_model_value = input
+            .config
+            .get("seed_model")
+            .cloned()
+            .unwrap_or(input.config);
         let thermo_seed_model: SolveThermalPlaneTriangle2dRequest =
-            serde_json::from_value(seed_model_value).map_err(|error| OperatorSdkError::DecodeInput {
-                operator_id: self.descriptor.id.clone(),
-                message: error.to_string(),
+            serde_json::from_value(seed_model_value).map_err(|error| {
+                OperatorSdkError::DecodeInput {
+                    operator_id: self.descriptor.id.clone(),
+                    message: error.to_string(),
+                }
             })?;
         let (bridged, diagnostics) =
             bridge_heat_result_to_thermal_plane_triangle_model_with_contract(
@@ -138,20 +151,25 @@ impl JsonOperator for ElectrostaticToHeatQuadBridgeOperator {
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
         let electrostatic_result: SolveElectrostaticPlaneQuad2dResult =
-            serde_json::from_value(input.payload).map_err(|error| OperatorSdkError::DecodeInput {
-                operator_id: self.descriptor.id.clone(),
-                message: error.to_string(),
+            serde_json::from_value(input.payload).map_err(|error| {
+                OperatorSdkError::DecodeInput {
+                    operator_id: self.descriptor.id.clone(),
+                    message: error.to_string(),
+                }
             })?;
-        let seed_model_value = input
-            .config
-            .get("seed_model")
-            .cloned()
-            .ok_or_else(|| OperatorSdkError::Handler {
-                operator_id: self.descriptor.id.clone(),
-                message: "bridge.electrostatic_field_to_heat_quad_2d requires config.seed_model".to_string(),
-            })?;
-        let heat_seed_model: SolveHeatPlaneQuad2dRequest =
-            serde_json::from_value(seed_model_value).map_err(|error| OperatorSdkError::DecodeInput {
+        let seed_model_value =
+            input
+                .config
+                .get("seed_model")
+                .cloned()
+                .ok_or_else(|| OperatorSdkError::Handler {
+                    operator_id: self.descriptor.id.clone(),
+                    message:
+                        "bridge.electrostatic_field_to_heat_quad_2d requires config.seed_model"
+                            .to_string(),
+                })?;
+        let heat_seed_model: SolveHeatPlaneQuad2dRequest = serde_json::from_value(seed_model_value)
+            .map_err(|error| OperatorSdkError::DecodeInput {
                 operator_id: self.descriptor.id.clone(),
                 message: error.to_string(),
             })?;
@@ -191,22 +209,29 @@ impl JsonOperator for ElectrostaticToHeatTriangleBridgeOperator {
         _context: &OperatorRunContext,
     ) -> Result<OperatorRunResult, OperatorSdkError> {
         let electrostatic_result: SolveElectrostaticPlaneTriangle2dResult =
-            serde_json::from_value(input.payload).map_err(|error| OperatorSdkError::DecodeInput {
-                operator_id: self.descriptor.id.clone(),
-                message: error.to_string(),
+            serde_json::from_value(input.payload).map_err(|error| {
+                OperatorSdkError::DecodeInput {
+                    operator_id: self.descriptor.id.clone(),
+                    message: error.to_string(),
+                }
             })?;
-        let seed_model_value = input
-            .config
-            .get("seed_model")
-            .cloned()
-            .ok_or_else(|| OperatorSdkError::Handler {
-                operator_id: self.descriptor.id.clone(),
-                message: "bridge.electrostatic_field_to_heat_triangle_2d requires config.seed_model".to_string(),
-            })?;
-        let heat_seed_model: SolveHeatPlaneTriangle2dRequest = serde_json::from_value(seed_model_value)
-            .map_err(|error| OperatorSdkError::DecodeInput {
-                operator_id: self.descriptor.id.clone(),
-                message: error.to_string(),
+        let seed_model_value =
+            input
+                .config
+                .get("seed_model")
+                .cloned()
+                .ok_or_else(|| OperatorSdkError::Handler {
+                    operator_id: self.descriptor.id.clone(),
+                    message:
+                        "bridge.electrostatic_field_to_heat_triangle_2d requires config.seed_model"
+                            .to_string(),
+                })?;
+        let heat_seed_model: SolveHeatPlaneTriangle2dRequest =
+            serde_json::from_value(seed_model_value).map_err(|error| {
+                OperatorSdkError::DecodeInput {
+                    operator_id: self.descriptor.id.clone(),
+                    message: error.to_string(),
+                }
             })?;
         let contract =
             resolve_electrostatic_to_heat_bridge_contract(&input.config).map_err(|message| {

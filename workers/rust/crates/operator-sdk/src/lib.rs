@@ -10,8 +10,13 @@ use std::fmt::{Display, Formatter};
 use std::sync::Arc;
 
 pub use builder::{
-    OperatorDescriptorBuilder, operator_port, operator_port_with_dataset,
-    operator_summary_result, partial_validation, verified_validation,
+    OperatorDescriptorBuilder, operator_port, operator_port_with_dataset, operator_summary_result,
+    partial_validation, verified_validation,
+};
+pub use kyuubiki_platform::{
+    LIB_EXTENSION_PLACEHOLDER, LIB_PREFIX_PLACEHOLDER, current_platform_library_extension,
+    current_platform_library_file_name, current_platform_library_path,
+    current_platform_library_prefix, expand_platform_library_template,
 };
 pub use loader::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
@@ -19,15 +24,9 @@ pub use loader::{
     discover_and_activate_operator_packages,
 };
 pub use manifest::{
-    DiscoveredOperatorPackage, OPERATOR_PACKAGE_MANIFEST_FILE,
-    OPERATOR_PACKAGE_SCHEMA_VERSION, OperatorManifestError, OperatorPackageManifest,
-    OperatorPackageOperatorEntry, discover_operator_packages,
-    read_operator_package_manifest,
-};
-pub use kyuubiki_platform::{
-    LIB_EXTENSION_PLACEHOLDER, LIB_PREFIX_PLACEHOLDER, current_platform_library_extension,
-    current_platform_library_file_name, current_platform_library_path,
-    current_platform_library_prefix, expand_platform_library_template,
+    DiscoveredOperatorPackage, OPERATOR_PACKAGE_MANIFEST_FILE, OPERATOR_PACKAGE_SCHEMA_VERSION,
+    OperatorManifestError, OperatorPackageManifest, OperatorPackageOperatorEntry,
+    discover_operator_packages, read_operator_package_manifest,
 };
 
 pub type OperatorRegistrationEntrypoint =
@@ -81,10 +80,20 @@ where
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperatorSdkError {
-    DuplicateOperator { operator_id: String },
-    UnknownOperator { operator_id: String },
-    DecodeInput { operator_id: String, message: String },
-    Handler { operator_id: String, message: String },
+    DuplicateOperator {
+        operator_id: String,
+    },
+    UnknownOperator {
+        operator_id: String,
+    },
+    DecodeInput {
+        operator_id: String,
+        message: String,
+    },
+    Handler {
+        operator_id: String,
+        message: String,
+    },
 }
 
 impl Display for OperatorSdkError {
@@ -152,12 +161,11 @@ impl OperatorRegistry {
     }
 
     pub fn run(&self, request: OperatorRunRequest) -> Result<OperatorRunResult, OperatorSdkError> {
-        let handler = self
-            .handlers
-            .get(&request.operator_id)
-            .ok_or_else(|| OperatorSdkError::UnknownOperator {
+        let handler = self.handlers.get(&request.operator_id).ok_or_else(|| {
+            OperatorSdkError::UnknownOperator {
                 operator_id: request.operator_id.clone(),
-            })?;
+            }
+        })?;
         handler.run(request)
     }
 
@@ -181,8 +189,7 @@ mod tests {
         operator_summary_result, partial_validation,
     };
     use kyuubiki_protocol::{
-        OperatorDescriptor, OperatorKind, OperatorRunContext, OperatorRunRequest,
-        OperatorRunResult,
+        OperatorDescriptor, OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult,
     };
     use serde::Deserialize;
 
@@ -260,10 +267,7 @@ mod tests {
             .expect("operator should run");
 
         assert_eq!(result.summary["echo"].as_i64(), Some(42));
-        assert_eq!(
-            result.summary["project_id"].as_str(),
-            Some("project-alpha")
-        );
+        assert_eq!(result.summary["project_id"].as_str(), Some("project-alpha"));
     }
 
     #[test]

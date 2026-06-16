@@ -88,7 +88,10 @@ impl Display for ExternalOperatorHostError {
                 package_id,
                 message,
             } => {
-                write!(f, "external operator package {package_id} rejected by host policy: {message}")
+                write!(
+                    f,
+                    "external operator package {package_id} rejected by host policy: {message}"
+                )
             }
             Self::Activation(error) => error.fmt(f),
         }
@@ -263,14 +266,14 @@ impl OperatorPackageActivator for DynamicLibraryOperatorActivator {
             let entry_symbol = operator.entry_symbol.as_bytes();
             let register = unsafe { library.get::<OperatorRegistrationEntrypoint>(entry_symbol) }
                 .map_err(|error| OperatorPackageLoadError::Activation {
-                    package_id: plan.manifest.package_id.clone(),
-                    message: format!(
-                        "failed to resolve symbol {} in {}: {}",
-                        operator.entry_symbol,
-                        plan.entrypoint_path.display(),
-                        error
-                    ),
-                })?;
+                package_id: plan.manifest.package_id.clone(),
+                message: format!(
+                    "failed to resolve symbol {} in {}: {}",
+                    operator.entry_symbol,
+                    plan.entrypoint_path.display(),
+                    error
+                ),
+            })?;
             unsafe { register(registry) }.map_err(|error| {
                 OperatorPackageLoadError::Activation {
                     package_id: plan.manifest.package_id.clone(),

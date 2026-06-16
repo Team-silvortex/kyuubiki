@@ -1,0 +1,114 @@
+#!/usr/bin/env sh
+
+set -eu
+
+REMOTE_HOST="${KYUUBIKI_LAB_HOST:-kyuubiki-lab}"
+HTTP_HOST="${KYUUBIKI_LAB_HTTP_HOST:-kyuubiki-lab.local}"
+COMMAND="${1:-help}"
+
+remote() {
+  ssh "$REMOTE_HOST" "$@"
+}
+
+print_help() {
+  cat <<'EOF'
+kyuubiki-lab
+
+Usage:
+  ./scripts/kyuubiki-lab status
+  ./scripts/kyuubiki-lab health
+  ./scripts/kyuubiki-lab restart-deploy-server
+  ./scripts/kyuubiki-lab deploy-server-log
+  ./scripts/kyuubiki-lab orchestrator-status
+  ./scripts/kyuubiki-lab orchestrator-start
+  ./scripts/kyuubiki-lab orchestrator-stop
+  ./scripts/kyuubiki-lab orchestrator-restart
+  ./scripts/kyuubiki-lab orchestrator-log
+  ./scripts/kyuubiki-lab agent-status
+  ./scripts/kyuubiki-lab agent-start
+  ./scripts/kyuubiki-lab agent-stop
+  ./scripts/kyuubiki-lab agent-restart
+  ./scripts/kyuubiki-lab agent-log
+  ./scripts/kyuubiki-lab agent-registry-status
+  ./scripts/kyuubiki-lab agent-registry-start
+  ./scripts/kyuubiki-lab agent-registry-stop
+  ./scripts/kyuubiki-lab agent-registry-restart
+  ./scripts/kyuubiki-lab agent-registry-log
+  ./scripts/kyuubiki-lab cleanup-residue
+
+Environment:
+  KYUUBIKI_LAB_HOST   SSH host alias for the shared lab machine
+  KYUUBIKI_LAB_HTTP_HOST   HTTPS host for the shared lab machine
+EOF
+}
+
+case "$COMMAND" in
+  help|--help|-h)
+    print_help
+    ;;
+  status)
+    remote 'systemctl --no-pager --full status kyuubiki-deploy-server | sed -n "1,12p"; echo ---; systemctl --no-pager --full status caddy | sed -n "1,12p"; echo ---; ss -ltnp | grep -E ":(80|443|4070)\s" || true'
+    ;;
+  health)
+    curl -ks "https://${HTTP_HOST}/health" || remote 'curl -s http://127.0.0.1:4070/health'
+    ;;
+  restart-deploy-server)
+    remote 'printf "Thx114514\n" | sudo -S systemctl restart kyuubiki-deploy-server && systemctl --no-pager --full status kyuubiki-deploy-server | sed -n "1,12p"'
+    ;;
+  deploy-server-log)
+    remote 'printf "Thx114514\n" | sudo -S journalctl -u kyuubiki-deploy-server -n 40 --no-pager'
+    ;;
+  orchestrator-status)
+    remote 'systemctl --no-pager --full status kyuubiki-orchestrator | sed -n "1,14p"; echo ---; ss -ltnp | grep ":4000 " || true'
+    ;;
+  orchestrator-start)
+    remote 'printf "Thx114514\n" | sudo -S systemctl start kyuubiki-orchestrator && systemctl --no-pager --full status kyuubiki-orchestrator | sed -n "1,14p"'
+    ;;
+  orchestrator-stop)
+    remote 'printf "Thx114514\n" | sudo -S systemctl stop kyuubiki-orchestrator && systemctl --no-pager --full status kyuubiki-orchestrator | sed -n "1,14p"'
+    ;;
+  orchestrator-restart)
+    remote 'printf "Thx114514\n" | sudo -S systemctl restart kyuubiki-orchestrator && systemctl --no-pager --full status kyuubiki-orchestrator | sed -n "1,14p"'
+    ;;
+  orchestrator-log)
+    remote 'printf "Thx114514\n" | sudo -S journalctl -u kyuubiki-orchestrator -n 80 --no-pager'
+    ;;
+  agent-status)
+    remote 'systemctl --no-pager --full status kyuubiki-agent | sed -n "1,14p"; echo ---; ss -ltnp | grep ":5001 " || true'
+    ;;
+  agent-start)
+    remote 'printf "Thx114514\n" | sudo -S systemctl start kyuubiki-agent && systemctl --no-pager --full status kyuubiki-agent | sed -n "1,14p"'
+    ;;
+  agent-stop)
+    remote 'printf "Thx114514\n" | sudo -S systemctl stop kyuubiki-agent && systemctl --no-pager --full status kyuubiki-agent | sed -n "1,14p"'
+    ;;
+  agent-restart)
+    remote 'printf "Thx114514\n" | sudo -S systemctl restart kyuubiki-agent && systemctl --no-pager --full status kyuubiki-agent | sed -n "1,14p"'
+    ;;
+  agent-log)
+    remote 'printf "Thx114514\n" | sudo -S journalctl -u kyuubiki-agent -n 60 --no-pager'
+    ;;
+  agent-registry-status)
+    remote 'systemctl --no-pager --full status kyuubiki-agent-registry | sed -n "1,14p"'
+    ;;
+  agent-registry-start)
+    remote 'printf "Thx114514\n" | sudo -S systemctl start kyuubiki-agent-registry && systemctl --no-pager --full status kyuubiki-agent-registry | sed -n "1,14p"'
+    ;;
+  agent-registry-stop)
+    remote 'printf "Thx114514\n" | sudo -S systemctl stop kyuubiki-agent-registry && systemctl --no-pager --full status kyuubiki-agent-registry | sed -n "1,14p"'
+    ;;
+  agent-registry-restart)
+    remote 'printf "Thx114514\n" | sudo -S systemctl restart kyuubiki-agent-registry && systemctl --no-pager --full status kyuubiki-agent-registry | sed -n "1,14p"'
+    ;;
+  agent-registry-log)
+    remote 'printf "Thx114514\n" | sudo -S journalctl -u kyuubiki-agent-registry -n 60 --no-pager'
+    ;;
+  cleanup-residue)
+    remote 'rm -f ~/deploy-server.pid ~/kyuubiki-agent-*.log ~/kyuubiki-agent-*.pid ~/kyuubiki/.DS_Store ~/kyuubiki/deploy-server.log && echo cleaned'
+    ;;
+  *)
+    echo "unknown command: $COMMAND" >&2
+    print_help >&2
+    exit 1
+    ;;
+esac

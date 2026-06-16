@@ -4,6 +4,9 @@ This directory contains host-native operational entry points.
 
 - `kyuubiki`
   Unified launcher for local, cloud, and distributed development flows.
+- `kyuubiki-lab`
+  Thin operational wrapper for the shared Ubuntu lab machine that now hosts
+  the standard download/deploy server plus the shared solver-agent test node.
 - `create-release-snapshot.mjs`
   Scaffold a new lightweight release snapshot manifest and update the release
   index. When a snapshot is marked `current`, it also advances the shared

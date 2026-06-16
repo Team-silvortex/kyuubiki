@@ -22,6 +22,7 @@ type WorkbenchSystemSidebarMountProps = {
   handleSystemPanelTabChange: (tab: "config" | "scripts" | "runtime" | "data") => void;
   setSidebarSection: (section: "study" | "model" | "workflow" | "library" | "system") => void;
   handleWorkflowPanelTabChange: (tab: WorkflowSurfaceTab) => void;
+  runtimeRecoveryCard?: ReactNode;
   healthStatus: string | undefined;
   healthProtocolOnline: boolean;
   healthWatchdogOnline: boolean;
@@ -49,8 +50,7 @@ type WorkbenchSystemSidebarMountProps = {
   setSecurityEventStatusFilter: (value: "" | "allowed" | "blocked") => void;
   setSecurityEventActionFilter: (value: string) => void;
   refreshSecurityEvents: () => Promise<void>;
-  downloadSecurityEventExport: () => Promise<void>;
-  downloadSecurityEventCsvExport: () => Promise<void>;
+  downloadSecurityEventExport: () => Promise<void>; downloadSecurityEventCsvExport: () => Promise<void>;
   runtimeAuditEntries: Array<{ id: string; at: string; action: string; source: string; risk: string; status: string; note: string }>;
   protocolAgents: Array<unknown>;
   protocolAgentCards: Array<{
@@ -173,6 +173,7 @@ export function WorkbenchSystemSidebarMount({
   handleSystemPanelTabChange,
   setSidebarSection,
   handleWorkflowPanelTabChange,
+  runtimeRecoveryCard,
   healthStatus,
   healthProtocolOnline,
   healthWatchdogOnline,
@@ -446,6 +447,7 @@ export function WorkbenchSystemSidebarMount({
       }
       runtimeContent={
         <WorkbenchSystemRuntimePanel
+          recoveryCard={runtimeRecoveryCard}
           overviewTabLabel={t.overview}
           stackTabLabel={t.stack}
           securityTabLabel={t.security}

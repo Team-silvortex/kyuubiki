@@ -2566,6 +2566,10 @@ fn cluster_auth_headers(
                         .map(|duration| duration.as_millis().to_string())
                         .unwrap_or_else(|_| "0".to_string()),
                 ),
+                (
+                    "x-kyuubiki-cluster-nonce".to_string(),
+                    cluster_request_nonce(),
+                ),
             ];
 
             if let Some(cluster_id) = cluster_id.filter(|value| !value.trim().is_empty()) {
@@ -2586,6 +2590,14 @@ fn cluster_auth_headers(
         }
         _ => vec![],
     }
+}
+
+fn cluster_request_nonce() -> String {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    format!("agent-{now}")
 }
 
 struct ParsedHttpUrl {
