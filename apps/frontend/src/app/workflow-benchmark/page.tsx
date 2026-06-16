@@ -15,7 +15,7 @@ function buildSyntheticWorkflow(): WorkflowCatalogEntry {
   return {
     id: workflowId,
     name: "Synthetic Benchmark Workflow",
-    version: "1.6.0-bench",
+    version: "1.8.0-bench",
     summary: "Synthetic workflow used by the standalone benchmark page.",
     domains: ["benchmark"],
     capability_tags: ["contract_health:clean", "benchmark"],
@@ -23,7 +23,7 @@ function buildSyntheticWorkflow(): WorkflowCatalogEntry {
       schema_version: "kyuubiki.workflow-graph/v1",
       id: workflowId,
       name: "Synthetic Benchmark Workflow",
-      version: "1.6.0-bench",
+      version: "1.8.0-bench",
       entry_inputs: [{ node_id: "input.source", artifact_type: "study.result", description: "Synthetic result input" }],
       output_artifacts: [{ node_id: "export.summary", artifact_type: "report.html", description: "Synthetic export artifact" }],
       entry_nodes: ["input.source"],

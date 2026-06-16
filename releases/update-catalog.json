@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-06-15T05:25:23.136Z",
-  "shipping_version": "1.6.0",
+  "generated_at": "2026-06-16T09:09:15.258Z",
+  "shipping_version": "1.8.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.6",
-        "tamamono:1.6.0"
+        "tamamono:1.8",
+        "tamamono:1.8.0"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.6.0",
-      "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",
-      "date": "2026-06-12",
+      "version": "1.8.0",
+      "summary": "TODO: summarize tamamono 1.8.0.",
+      "date": "2026-06-16",
       "notes": [
         "Primary operator-facing update track for the current shipping line.",
         "Targets standard installs that follow the visible installation contract."
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.6.0.json",
+      "snapshot_path": "releases/snapshots/1.8.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -71,33 +71,31 @@
         "frontend_workbench": {
           "version": "1.6.0",
           "notes": [
-            "System install policy can now jump into Workflow Builder targets and trigger safe preview or scan actions",
-            "Workflow Builder now groups validation, component integrity, and package-install maintenance into one diagnostics plane",
-            "Validation and package maintenance both expose preview-first panels instead of burying repair intent inside plain list rows"
+            "TODO: describe frontend/workbench changes."
           ]
         },
         "hub_gui": {
           "version": "1.6.0",
           "notes": [
-            "Hub shell, packaged docs, and release-facing version badges now report the tamamono 1.6.0 shipping line"
+            "TODO: describe Hub desktop-shell changes."
           ]
         },
         "workbench_gui": {
           "version": "1.6.0",
           "notes": [
-            "Workbench desktop shell and bundled assets now align with the 1.6.0 line and visible product-version contract"
+            "TODO: describe Workbench desktop-shell changes."
           ]
         },
         "installer_gui": {
           "version": "1.6.0",
           "notes": [
-            "Installer update and integrity panels now speak the 1.6.0 contract and keep visible version alignment with release metadata"
+            "TODO: describe Installer desktop-shell changes."
           ]
         },
         "web_api": {
           "version": "1.6.0",
           "notes": [
-            "Shared workflow metadata defaults, language-pack defaults, and release-facing update catalogs now align to 1.6.0"
+            "TODO: describe API/control-plane changes."
           ]
         }
       },
@@ -113,7 +111,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.6.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.8.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -127,7 +125,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.6.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.8.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -141,7 +139,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.6.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.8.0_aarch64.dmg",
           "exists": false
         }
       ]
@@ -149,12 +147,12 @@
   ],
   "versions": [
     {
-      "version": "1.6.0",
+      "version": "1.8.0",
       "line": "1.x",
       "status": "current",
-      "date": "2026-06-12",
-      "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",
-      "snapshot_path": "releases/snapshots/1.6.0.json",
+      "date": "2026-06-16",
+      "summary": "TODO: summarize tamamono 1.8.0.",
+      "snapshot_path": "releases/snapshots/1.8.0.json",
       "channels": [
         "stable"
       ],
@@ -162,9 +160,95 @@
         "tamamono:stable",
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.6",
-        "tamamono:1.6.0"
+        "tamamono:1.8",
+        "tamamono:1.8.0"
       ],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "1.6.0",
+          "notes": [
+            "TODO: describe frontend/workbench changes."
+          ]
+        },
+        "hub_gui": {
+          "version": "1.6.0",
+          "notes": [
+            "TODO: describe Hub desktop-shell changes."
+          ]
+        },
+        "workbench_gui": {
+          "version": "1.6.0",
+          "notes": [
+            "TODO: describe Workbench desktop-shell changes."
+          ]
+        },
+        "installer_gui": {
+          "version": "1.6.0",
+          "notes": [
+            "TODO: describe Installer desktop-shell changes."
+          ]
+        },
+        "web_api": {
+          "version": "1.6.0",
+          "notes": [
+            "TODO: describe API/control-plane changes."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.8.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.8.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.8.0_aarch64.dmg",
+          "exists": false
+        }
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "line": "1.x",
+      "status": "current",
+      "date": "2026-06-12",
+      "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",
+      "snapshot_path": "releases/snapshots/1.6.0.json",
+      "channels": [],
+      "tags": [],
       "product_surfaces": {
         "frontend_workbench": {
           "version": "1.6.0",

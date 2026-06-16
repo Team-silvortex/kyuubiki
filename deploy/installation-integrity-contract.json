@@ -1,18 +1,58 @@
 {
   "schema_version": "kyuubiki.installation-contract/v1",
   "product_line": "tamamono 1.x",
-  "shipping_version": "1.6.0",
+  "shipping_version": "1.8.0",
   "required_layout": [
-    { "label": "workspace root", "path": ".", "required": true },
-    { "label": "runtime temp root", "path": "tmp", "required": true },
-    { "label": "runtime process state", "path": "tmp/run", "required": true },
-    { "label": "runtime data state", "path": "tmp/data", "required": true },
-    { "label": "release staging root", "path": "dist", "required": true },
-    { "label": "platform release staging", "path": "dist/{platform}", "required": true },
-    { "label": "release snapshots", "path": "releases/snapshots", "required": true },
-    { "label": "desktop installer shell", "path": "apps/installer-gui", "required": true },
-    { "label": "desktop hub shell", "path": "apps/hub-gui", "required": true },
-    { "label": "desktop workbench shell", "path": "apps/workbench-gui", "required": true }
+    {
+      "label": "workspace root",
+      "path": ".",
+      "required": true
+    },
+    {
+      "label": "runtime temp root",
+      "path": "tmp",
+      "required": true
+    },
+    {
+      "label": "runtime process state",
+      "path": "tmp/run",
+      "required": true
+    },
+    {
+      "label": "runtime data state",
+      "path": "tmp/data",
+      "required": true
+    },
+    {
+      "label": "release staging root",
+      "path": "dist",
+      "required": true
+    },
+    {
+      "label": "platform release staging",
+      "path": "dist/{platform}",
+      "required": true
+    },
+    {
+      "label": "release snapshots",
+      "path": "releases/snapshots",
+      "required": true
+    },
+    {
+      "label": "desktop installer shell",
+      "path": "apps/installer-gui",
+      "required": true
+    },
+    {
+      "label": "desktop hub shell",
+      "path": "apps/hub-gui",
+      "required": true
+    },
+    {
+      "label": "desktop workbench shell",
+      "path": "apps/workbench-gui",
+      "required": true
+    }
   ],
   "protected_paths": [
     ".env.local",
@@ -31,7 +71,11 @@
     "tmp/run/*.lock",
     "tmp/run/*.tmp"
   ],
-  "allowed_dist_children": ["macos", "linux", "windows"],
+  "allowed_dist_children": [
+    "macos",
+    "linux",
+    "windows"
+  ],
   "visible_rules": [
     {
       "category": "cleanup",
@@ -64,7 +108,7 @@
     {
       "category": "version",
       "label": "required shipping version",
-      "value": "1.6.0",
+      "value": "1.8.0",
       "editable": false,
       "description": "Desktop shells, release manifests, and workspace packages are expected to align to this version."
     },

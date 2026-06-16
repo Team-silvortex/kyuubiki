@@ -624,7 +624,7 @@ mod tests {
         fs::write(&path, contents).unwrap();
         assert_eq!(
             read_workspace_cargo_version(path),
-            Some("1.6.0".to_string())
+            Some("1.8.0".to_string())
         );
         let _ = fs::remove_dir_all(root);
     }

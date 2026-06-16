@@ -60,7 +60,7 @@ function buildMockWorkflowCatalog() {
       {
         id: benchmarkWorkflowId,
         name: "Synthetic Benchmark Workflow",
-        version: "1.6.0-bench",
+        version: "1.8.0-bench",
         summary: "Synthetic workflow used by the local benchmark harness.",
         domains: ["benchmark"],
         capability_tags: ["contract_health:clean", "benchmark"],
@@ -68,7 +68,7 @@ function buildMockWorkflowCatalog() {
           schema_version: "kyuubiki.workflow-graph/v1",
           id: benchmarkWorkflowId,
           name: "Synthetic Benchmark Workflow",
-          version: "1.6.0-bench",
+          version: "1.8.0-bench",
           entry_inputs: [{ node_id: "input.source", artifact_type: "study.result", description: "Synthetic result input" }],
           output_artifacts: [{ node_id: "export.summary", artifact_type: "report.html", description: "Synthetic export artifact" }],
           entry_nodes: ["input.source"],

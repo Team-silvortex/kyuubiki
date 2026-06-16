@@ -519,7 +519,7 @@ mod tests {
             root.join("deploy").join("update-channels.json"),
             serde_json::to_vec_pretty(&json!({
                 "channels": [
-                    { "id": "stable", "version": "1.6.0" }
+                    { "id": "stable", "version": "1.8.0" }
                 ]
             }))
             .unwrap(),

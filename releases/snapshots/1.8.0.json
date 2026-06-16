@@ -1,0 +1,89 @@
+{
+  "version": "1.8.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-16",
+  "git_commit": "e132bbe96dd41814f8b077716232065aa8b04024",
+  "summary": "Runtime and release-contract alignment kickoff for the tamamono 1.8.x push, with shipping-version contracts, desktop shell metadata, generated update surfaces, and lab deployment workflow moved onto the new line.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.8.0",
+      "notes": [
+        "Release-line kickoff alignment for workflow-facing UI and built-in docs."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.8.0",
+      "notes": [
+        "Desktop shell metadata and mirrored docs are now staged on the 1.8.0 line."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.8.0",
+      "notes": [
+        "Workbench desktop shell metadata is aligned to the 1.8.0 release contract."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.8.0",
+      "notes": [
+        "Installer update and integrity surfaces now read from the 1.8.0 contract line."
+      ]
+    },
+    "web_api": {
+      "version": "1.8.0",
+      "notes": [
+        "Control-plane release metadata and generated catalog surfaces are staged for 1.8.0."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "TODO",
+    "capabilities": []
+  },
+  "operator_sdk": {
+    "status": "TODO",
+    "capabilities": []
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.8.0_aarch64.dmg",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.8.0_aarch64.dmg",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.8.0_aarch64.dmg"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": true,
+      "status_short": []
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.8.0",
+      "workbench": "1.8.0",
+      "installer": "1.8.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check",
+      "node ./scripts/audit-version-line.mjs --expected 1.8.0 --next 1.8.0"
+    ]
+  }
+}

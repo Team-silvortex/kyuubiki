@@ -9,7 +9,7 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `tamamono`
 - active line: `1.x`
-- current shipping version: `tamamono 1.6.0`
+- current shipping version: `tamamono 1.8.0`
 - major-version policy:
   unless there is a deliberate structural reset later, the major version is
   expected to remain `1`
