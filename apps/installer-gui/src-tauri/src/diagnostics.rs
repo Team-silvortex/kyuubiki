@@ -1,10 +1,10 @@
 use kyuubiki_installer::{
-    read_update_source_config as build_read_update_source_config,
     doctor_report as build_doctor_report,
     installation_integrity_report as build_installation_integrity_report,
     latest_applied_update_record as build_latest_applied_update_record,
     latest_downloaded_update_record as build_latest_downloaded_update_record,
     latest_staged_update_record as build_latest_staged_update_record,
+    read_update_source_config as build_read_update_source_config,
     unified_update_plan as build_unified_update_plan,
     unified_update_preview as build_unified_update_preview,
 };
@@ -293,48 +293,55 @@ pub fn unified_update_preview(
 
 #[tauri::command]
 pub fn latest_staged_update_record() -> Result<Option<StagedUpdateRecordPayload>, String> {
-    Ok(build_latest_staged_update_record()?.map(|record| StagedUpdateRecordPayload {
-        rendered: record.render(),
-        channel: record.channel,
-        target_version: record.target_version,
-        release_dir: record.release_dir,
-        manifest_path: record.manifest_path,
-        audit_path: record.audit_path,
-    }))
+    Ok(
+        build_latest_staged_update_record()?.map(|record| StagedUpdateRecordPayload {
+            rendered: record.render(),
+            channel: record.channel,
+            target_version: record.target_version,
+            release_dir: record.release_dir,
+            manifest_path: record.manifest_path,
+            audit_path: record.audit_path,
+        }),
+    )
 }
 
 #[tauri::command]
 pub fn update_source_config() -> Result<UpdateSourceConfigPayload, String> {
     let config = build_read_update_source_config()?;
+    let rendered = config.render();
     Ok(UpdateSourceConfigPayload {
         schema_version: config.schema_version,
         catalog_path: config.catalog_path,
         artifact_root: config.artifact_root,
         download_dir: config.download_dir,
-        rendered: config.render(),
+        rendered,
     })
 }
 
 #[tauri::command]
 pub fn latest_downloaded_update_record() -> Result<Option<DownloadedUpdateRecordPayload>, String> {
-    Ok(build_latest_downloaded_update_record()?.map(|record| DownloadedUpdateRecordPayload {
-        rendered: record.render(),
-        channel: record.channel,
-        target_version: record.target_version,
-        download_dir: record.download_dir,
-        manifest_path: record.manifest_path,
-        downloaded_paths: record.downloaded_paths,
-    }))
+    Ok(
+        build_latest_downloaded_update_record()?.map(|record| DownloadedUpdateRecordPayload {
+            rendered: record.render(),
+            channel: record.channel,
+            target_version: record.target_version,
+            download_dir: record.download_dir,
+            manifest_path: record.manifest_path,
+            downloaded_paths: record.downloaded_paths,
+        }),
+    )
 }
 
 #[tauri::command]
 pub fn latest_applied_update_record() -> Result<Option<AppliedUpdateRecordPayload>, String> {
-    Ok(build_latest_applied_update_record()?.map(|record| AppliedUpdateRecordPayload {
-        rendered: record.render(),
-        channel: record.channel,
-        target_version: record.target_version,
-        apply_dir: record.apply_dir,
-        manifest_path: record.manifest_path,
-        source_download_manifest_path: record.source_download_manifest_path,
-    }))
+    Ok(
+        build_latest_applied_update_record()?.map(|record| AppliedUpdateRecordPayload {
+            rendered: record.render(),
+            channel: record.channel,
+            target_version: record.target_version,
+            apply_dir: record.apply_dir,
+            manifest_path: record.manifest_path,
+            source_download_manifest_path: record.source_download_manifest_path,
+        }),
+    )
 }

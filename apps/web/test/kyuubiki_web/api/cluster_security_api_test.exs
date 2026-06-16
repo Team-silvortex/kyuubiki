@@ -49,7 +49,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
     assert Jason.decode!(authorized_conn.resp_body)["agent"]["id"] == "remote-a"
   end
 
-  test "falls back to control-plane token for cluster routes when no dedicated cluster token is configured" do
+  test "rejects remote cluster routes when only the control-plane token is configured" do
     Application.put_env(:kyuubiki_web, KyuubikiWeb.Security,
       api_token: "shared-secret",
       protect_reads?: false
@@ -69,6 +69,7 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
       |> put_req_header("content-type", "application/json")
       |> put_req_header("x-kyuubiki-token", "shared-secret")
       |> put_req_header("x-kyuubiki-agent-id", "remote-b")
+      |> Map.put(:remote_ip, {203, 0, 113, 9})
       |> put_req_header(
         "x-kyuubiki-cluster-ts",
         Integer.to_string(System.system_time(:millisecond))
@@ -76,8 +77,8 @@ defmodule KyuubikiWeb.Api.ClusterSecurityApiTest do
       |> put_req_header("x-kyuubiki-cluster-nonce", "nonce-remote-b-1")
       |> Router.call(@opts)
 
-    assert conn.status == 201
-    assert Jason.decode!(conn.resp_body)["agent"]["id"] == "remote-b"
+    assert conn.status == 401
+    assert Jason.decode!(conn.resp_body)["error"] == "unauthorized"
   end
 
   test "rejects stale cluster timestamps on protected cluster routes" do

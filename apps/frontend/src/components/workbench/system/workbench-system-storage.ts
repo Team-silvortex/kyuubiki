@@ -105,7 +105,7 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     ],
     mode: "careful",
     cleanupLabel: "Manual review first",
-    detail: "Theme, runtime mode, tokens, language packs, and other per-user workbench configuration.",
+    detail: "Theme, runtime mode, language packs, and legacy workbench storage keys. Runtime secrets now stay in memory for the active session.",
   },
 ];
 

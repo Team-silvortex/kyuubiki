@@ -3,40 +3,28 @@ import {
   createHttpWorkbenchRequestError,
   normalizeWorkbenchRequestError,
 } from "@/lib/api/request-errors";
+import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/helpers";
 
 const SETTINGS_KEY = "kyuubiki-workbench-settings";
-const SECRETS_KEY = "kyuubiki-workbench-secrets";
 
 function authHeadersFor(url: string) {
   if (typeof window === "undefined") return {};
 
   try {
-    const rawSecrets = window.sessionStorage.getItem(SECRETS_KEY);
     const rawSettings = window.localStorage.getItem(SETTINGS_KEY);
-    if (!rawSecrets && !rawSettings) return {};
+    const parsedSecrets = readInMemoryWorkbenchSecrets();
+    if (Object.keys(parsedSecrets).length === 0 && !rawSettings) return {};
 
-    const parsedSecrets = rawSecrets
-      ? (JSON.parse(rawSecrets) as {
-          controlPlaneApiToken?: string;
-          clusterApiToken?: string;
-          directMeshApiToken?: string;
-        })
-      : {};
     const parsedLegacySettings = rawSettings
       ? (JSON.parse(rawSettings) as {
           frontendRuntimeMode?: "orchestrated_gui" | "direct_mesh_gui";
-          controlPlaneApiToken?: string;
-          clusterApiToken?: string;
-          directMeshApiToken?: string;
         })
       : {};
 
     const parsed = {
-      controlPlaneApiToken:
-        parsedSecrets.controlPlaneApiToken ?? parsedLegacySettings.controlPlaneApiToken,
-      clusterApiToken: parsedSecrets.clusterApiToken ?? parsedLegacySettings.clusterApiToken,
-      directMeshApiToken:
-        parsedSecrets.directMeshApiToken ?? parsedLegacySettings.directMeshApiToken,
+      controlPlaneApiToken: parsedSecrets.controlPlaneApiToken,
+      clusterApiToken: parsedSecrets.clusterApiToken,
+      directMeshApiToken: parsedSecrets.directMeshApiToken,
     } as {
       controlPlaneApiToken?: string;
       clusterApiToken?: string;

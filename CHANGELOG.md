@@ -1,5 +1,25 @@
 # Changelog
 
+## tamamono 1.8.0 security hardening snapshot
+
+### Changed
+
+- stopped the desktop installer from returning plaintext `.env.local` secrets to
+  the Tauri renderer during env reload; sensitive fields now round-trip as
+  configured-state plus explicit overwrite intent
+- moved workbench operator secrets out of browser-persisted storage and into
+  in-memory session state; legacy local/session storage tokens are scrubbed on
+  load
+- removed the cluster-route fallback from `KYUUBIKI_CLUSTER_API_TOKEN` to
+  `KYUUBIKI_API_TOKEN`; remote cluster registration, heartbeat, and removal now
+  require the dedicated cluster token
+- replaced direct string token equality in the Phoenix security helper with
+  constant-time comparison
+
+### Verified
+
+- `mix test test/kyuubiki_web/api/cluster_security_api_test.exs test/kyuubiki_web/api/control_plane_api_test.exs`
+
 ## v0.4
 
 Kyuubiki `v0.4` is the release where the system becomes much more explicitly multi-program: browser workbench, desktop shells, orchestrator, direct mesh routes, and headless solver agents can now be reasoned about as cooperating surfaces instead of one blurred stack.

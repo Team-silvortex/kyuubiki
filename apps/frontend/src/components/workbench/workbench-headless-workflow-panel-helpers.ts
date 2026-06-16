@@ -2,6 +2,7 @@
 
 import type { FrontendRuntimeMode } from "@/lib/api";
 import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime";
+import { readInMemoryWorkbenchSecrets } from "@/lib/workbench/helpers";
 
 export function readStoredWorkbenchAuth(): {
   frontendRuntimeMode: FrontendRuntimeMode;
@@ -25,11 +26,7 @@ export function readStoredWorkbenchAuth(): {
       frontendRuntimeMode?: "orchestrated_gui" | "direct_mesh_gui";
       directMeshEndpointsText?: string;
     };
-    const secrets = JSON.parse(window.sessionStorage.getItem("kyuubiki-workbench-secrets") ?? "{}") as {
-      controlPlaneApiToken?: string;
-      clusterApiToken?: string;
-      directMeshApiToken?: string;
-    };
+    const secrets = readInMemoryWorkbenchSecrets();
 
     return {
       frontendRuntimeMode:

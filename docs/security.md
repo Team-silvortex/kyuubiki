@@ -36,7 +36,7 @@ Behavior:
 - no token configured
   local-friendly mode, reads and writes are available only to loopback callers
 - token configured
-  mutating and cluster routes require the token
+  mutating routes require the control-plane token
 - token configured on non-local deployments
   read routes are also protected by default unless `KYUUBIKI_PROTECT_READS=false`
 - cluster token configured
@@ -48,7 +48,7 @@ Behavior:
 - cluster fingerprint required
   cluster routes require `x-kyuubiki-agent-fingerprint`, and an already-registered agent ID may only heartbeat or unregister with the same fingerprint
 - cluster token omitted
-  cluster routes fall back to `KYUUBIKI_API_TOKEN`
+  remote cluster routes do not fall back to `KYUUBIKI_API_TOKEN`; only loopback callers keep the local-development path
 - cluster timestamp header present
   cluster routes reject stale requests outside the configured timestamp window
 - cluster nonce header present
@@ -107,9 +107,21 @@ settings:
 - cluster token
 - direct-mesh token
 
-They are now stored in browser session storage, while non-sensitive UI
-preferences remain in local storage. Legacy local-storage tokens are migrated
-out on load.
+They are now held in per-page in-memory session state, while non-sensitive UI
+preferences remain in local storage. Legacy local-storage and session-storage
+tokens are scrubbed on load after a one-time in-memory migration path so the
+current page can keep working without persisting secrets back into browser
+storage.
+
+The desktop installer follows the same direction for deployment secrets:
+
+- `.env.local` values such as `DATABASE_URL`, `KYUUBIKI_API_TOKEN`,
+  `KYUUBIKI_CLUSTER_API_TOKEN`, and `KYUUBIKI_DIRECT_MESH_TOKEN` are no longer
+  returned to the Tauri renderer as plaintext during env reload
+- the installer UI only receives `configured / not configured` state for those
+  fields
+- saving the env keeps the existing secret when the operator leaves a sensitive
+  input blank intentionally
 
 Assistant-planned actions and WASM Python scripted actions now share the same
 high-risk confirmation gate inside the workbench action executor. Destructive
@@ -257,9 +269,9 @@ Sensitivity levels:
 | `apps/web/lib/kyuubiki_web/playground/agent_client.ex` | Orchestrator TCP client to Rust solver agents. | Timeouts, frame parsing, error propagation, and network boundary assumptions. |
 | `apps/web/lib/kyuubiki_web/storage/**` | SQLite/Postgres repos, schema setup, and persistence records for jobs, results, projects, and model versions. | Migration safety, data export scope, result payload size, and accidental sensitive-data logging. |
 | `apps/web/lib/kyuubiki_web/jobs/**` and `apps/web/lib/kyuubiki_web/results/**` | Job/result persistence and watchdog-driven lifecycle state. | Cancellation semantics, stale job handling, result chunk boundaries, and operator edits. |
-| `apps/frontend/src/lib/workbench/helpers.ts` | Workbench settings bridge persistent UI prefs and session-scoped secrets for operator tokens and LLM API keys. | Session storage behavior, migration of legacy secrets, token redaction, export boundaries, and accidental serialization of secrets. |
+| `apps/frontend/src/lib/workbench/helpers.ts` | Workbench settings bridge persistent UI prefs and in-memory operator secrets for tokens and LLM API keys. | In-memory secret lifetime, legacy storage scrubbing, token redaction, export boundaries, and accidental serialization of secrets. |
 | `apps/frontend/src/components/workbench/system/workbench-system-config-card.tsx` | UI surface for entering operator tokens and exporting database snapshots. | Password field behavior, copy/export affordances, and avoiding accidental display of token values. |
-| `apps/frontend/src/lib/api/index.ts` | Frontend API client attaches operator tokens to orchestrator and direct-mesh requests. | Header construction, session-secret lookup, token scope separation, and error handling without leaking secrets. |
+| `apps/frontend/src/lib/api/index.ts` | Frontend API client attaches operator tokens to orchestrator and direct-mesh requests. | Header construction, in-memory secret lookup, token scope separation, and error handling without leaking secrets. |
 | `apps/frontend/src/lib/assistant/openai-compatible.ts` | Optional LLM integration receives workbench context and returns executable action plans. | Prompt data minimization, API key storage, action validation, and tool-result redaction. |
 | `apps/frontend/src/lib/scripting/workbench-script-runtime.ts` | Scriptable workbench actions include project/model CRUD and runtime operations. | Action allowlist, destructive actions, confirmation strategy, and future WASM Python sandboxing. |
 | `apps/frontend/src/components/workbench/workbench.tsx` | Central workbench action executor is shared by manual UI actions, assistant plans, and WASM Python bridge calls. | Keep the high-risk confirmation gate and session audit logging centralized; do not add bypass paths for destructive/export actions. |
@@ -306,9 +318,10 @@ Sensitivity levels:
 - Remote deployment through the Tauri installer uses SSH and shell command
   construction. Treat all changes there as critical even when inputs appear to
   be operator-only.
-- Browser-local token storage is convenient for workstation mode, not a
-  multi-user authn/authz model. Do not serialize those settings into
-  project/model exports.
+- Browser-resident operator secrets are now intentionally in-memory only during
+  an active page session, not persisted browser settings. Do not reintroduce
+  token serialization through project/model exports, assistant snapshots, or
+  convenience caches.
 - Assistant and script actions now depend on a centralized confirmation gate
   for high-risk operations. Keep new destructive or export-capable actions
   classified in the shared action catalog before exposing them to automation.

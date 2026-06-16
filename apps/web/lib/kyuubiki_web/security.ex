@@ -17,8 +17,16 @@ defmodule KyuubikiWeb.Security do
       configured = configured_token(scope)
 
       case extract_token(conn) do
-        {:ok, token} when token == configured ->
-          authorize_post_token(conn, scope)
+        {:ok, token} ->
+          if valid_token?(token, configured) do
+            authorize_post_token(conn, scope)
+          else
+            {:error, 401,
+             %{
+               "error" => "unauthorized",
+               "message" => "missing or invalid API token"
+             }}
+          end
 
         _ ->
           {:error, 401,
@@ -151,16 +159,23 @@ defmodule KyuubikiWeb.Security do
 
   defp authorize_post_token(_conn, _scope), do: :ok
 
-  defp cluster_token_required? do
-    configured_token(:cluster) not in [nil, ""]
+  defp valid_token?(token, configured)
+       when is_binary(token) and is_binary(configured) and byte_size(token) == byte_size(configured) do
+    Plug.Crypto.secure_compare(token, configured)
   end
 
-  defp configured_token(:cluster) do
-    direct_cluster_token() || configured_token(:write)
+  defp valid_token?(_token, _configured), do: false
+
+  defp cluster_token_required? do
+    direct_cluster_token() not in [nil, ""]
   end
 
   defp configured_token(:read) do
     configured_token(:write)
+  end
+
+  defp configured_token(:cluster) do
+    direct_cluster_token()
   end
 
   defp configured_token(:write) do

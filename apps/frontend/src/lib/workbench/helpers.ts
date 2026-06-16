@@ -87,6 +87,8 @@ type StoredWorkbenchSecrets = {
   assistantApiKey?: string;
 };
 
+let inMemoryWorkbenchSecrets: StoredWorkbenchSecrets = {};
+
 export type WorkbenchSettingsInput = {
   theme: string;
   language: string;
@@ -103,6 +105,44 @@ export type WorkbenchSettingsInput = {
   assistantApiKey: string;
   assistantModel: string;
 };
+
+function sanitizeStoredSettings(input: StoredWorkbenchSettings): PersistedWorkbenchSettings {
+  return {
+    theme: input.theme,
+    language: input.language,
+    showShortcutHints: input.showShortcutHints,
+    immersiveGuardrails: input.immersiveGuardrails,
+    frontendRuntimeMode: input.frontendRuntimeMode,
+    directMeshEndpointsText: input.directMeshEndpointsText,
+    directMeshSelectionMode: input.directMeshSelectionMode,
+    assistantMode: input.assistantMode,
+    assistantApiBaseUrl: input.assistantApiBaseUrl,
+    assistantModel: input.assistantModel,
+    governanceConfig: input.governanceConfig,
+  };
+}
+
+function scrubPersistedWorkbenchSecrets() {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(WORKBENCH_SECRETS_KEY);
+}
+
+export function readInMemoryWorkbenchSecrets(): StoredWorkbenchSecrets {
+  return { ...inMemoryWorkbenchSecrets };
+}
+
+export function writeInMemoryWorkbenchSecrets(input: StoredWorkbenchSecrets) {
+  inMemoryWorkbenchSecrets = {
+    ...(input.controlPlaneApiToken?.trim()
+      ? { controlPlaneApiToken: input.controlPlaneApiToken.trim() }
+      : {}),
+    ...(input.clusterApiToken?.trim() ? { clusterApiToken: input.clusterApiToken.trim() } : {}),
+    ...(input.directMeshApiToken?.trim()
+      ? { directMeshApiToken: input.directMeshApiToken.trim() }
+      : {}),
+    ...(input.assistantApiKey?.trim() ? { assistantApiKey: input.assistantApiKey.trim() } : {}),
+  };
+}
 
 type StudyKind = "axial_bar_1d" | "heat_bar_1d" | "electrostatic_plane_triangle_2d" | "electrostatic_plane_quad_2d" | "heat_plane_triangle_2d" | "heat_plane_quad_2d" | "thermal_bar_1d" | "thermal_beam_1d" | "thermal_frame_2d" | "thermal_truss_2d" | "thermal_truss_3d" | "thermal_plane_triangle_2d" | "thermal_plane_quad_2d" | "spring_1d" | "spring_2d" | "spring_3d" | "beam_1d" | "torsion_1d" | "truss_2d" | "truss_3d" | "plane_triangle_2d" | "plane_quad_2d" | "frame_2d";
 
@@ -124,9 +164,8 @@ export function safeStorageGet(): StoredWorkbenchSettings {
   try {
     const rawSettings = window.localStorage.getItem(WORKBENCH_SETTINGS_KEY);
     const parsedSettings = rawSettings ? (JSON.parse(rawSettings) as StoredWorkbenchSettings) : {};
-
     const rawSecrets = window.sessionStorage.getItem(WORKBENCH_SECRETS_KEY);
-    const parsedSecrets = rawSecrets ? (JSON.parse(rawSecrets) as StoredWorkbenchSecrets) : {};
+    const persistedSessionSecrets = rawSecrets ? (JSON.parse(rawSecrets) as StoredWorkbenchSecrets) : {};
 
     const legacySecrets: StoredWorkbenchSecrets = {
       ...(parsedSettings.controlPlaneApiToken ? { controlPlaneApiToken: parsedSettings.controlPlaneApiToken } : {}),
@@ -135,31 +174,16 @@ export function safeStorageGet(): StoredWorkbenchSettings {
       ...(parsedSettings.assistantApiKey ? { assistantApiKey: parsedSettings.assistantApiKey } : {}),
     };
 
-    const mergedSecrets =
-      Object.keys(parsedSecrets).length > 0
-        ? parsedSecrets
-        : Object.keys(legacySecrets).length > 0
-          ? legacySecrets
-          : {};
+    if (Object.keys(persistedSessionSecrets).length > 0) {
+      writeInMemoryWorkbenchSecrets(persistedSessionSecrets);
+    }
 
     if (Object.keys(legacySecrets).length > 0) {
-      window.sessionStorage.setItem(WORKBENCH_SECRETS_KEY, JSON.stringify(mergedSecrets));
-
-      const sanitizedSettings: PersistedWorkbenchSettings = {
-        theme: parsedSettings.theme,
-        language: parsedSettings.language,
-        showShortcutHints: parsedSettings.showShortcutHints,
-        immersiveGuardrails: parsedSettings.immersiveGuardrails,
-        frontendRuntimeMode: parsedSettings.frontendRuntimeMode,
-        directMeshEndpointsText: parsedSettings.directMeshEndpointsText,
-        directMeshSelectionMode: parsedSettings.directMeshSelectionMode,
-        assistantMode: parsedSettings.assistantMode,
-        assistantApiBaseUrl: parsedSettings.assistantApiBaseUrl,
-        assistantModel: parsedSettings.assistantModel,
-      };
-
-      window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizedSettings));
+      writeInMemoryWorkbenchSecrets(legacySecrets);
+      window.localStorage.setItem(WORKBENCH_SETTINGS_KEY, JSON.stringify(sanitizeStoredSettings(parsedSettings)));
     }
+
+    scrubPersistedWorkbenchSecrets();
 
     const normalized = normalizeWorkbenchGovernanceRuntime({
       frontendRuntimeMode: parsedSettings.frontendRuntimeMode ?? "orchestrated_gui",
@@ -167,10 +191,10 @@ export function safeStorageGet(): StoredWorkbenchSettings {
     });
 
     return {
-      ...parsedSettings,
+      ...sanitizeStoredSettings(parsedSettings),
       frontendRuntimeMode: normalized.frontendRuntimeMode,
       directMeshEndpointsText: normalized.directMeshEndpointsText,
-      ...mergedSecrets,
+      ...readInMemoryWorkbenchSecrets(),
     };
   } catch {
     return {};
@@ -224,10 +248,8 @@ export function persistWorkbenchSettings(input: WorkbenchSettingsInput) {
     WORKBENCH_SETTINGS_KEY,
     JSON.stringify(sanitizeWorkbenchSettings(input)),
   );
-  window.sessionStorage.setItem(
-    WORKBENCH_SECRETS_KEY,
-    JSON.stringify(sanitizeWorkbenchSecrets(input)),
-  );
+  writeInMemoryWorkbenchSecrets(sanitizeWorkbenchSecrets(input));
+  scrubPersistedWorkbenchSecrets();
 }
 
 export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {

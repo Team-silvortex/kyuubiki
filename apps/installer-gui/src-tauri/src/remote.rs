@@ -74,7 +74,11 @@ fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-fn run_remote_ssh(ssh_port: Option<u16>, target: &str, remote_command: &str) -> Result<String, String> {
+fn run_remote_ssh(
+    ssh_port: Option<u16>,
+    target: &str,
+    remote_command: &str,
+) -> Result<String, String> {
     let mut command = Command::new("ssh");
     if let Some(port) = ssh_port {
         command.arg("-p").arg(port.to_string());

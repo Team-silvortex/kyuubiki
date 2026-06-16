@@ -13,6 +13,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   };
   const output = document.getElementById("output"), serviceStatus = document.getElementById("service-status"), serviceStatusPlane = document.getElementById("service-status-plane"), runtimeLog = document.getElementById("runtime-log"), completionBanner = document.getElementById("completion-banner"), completionMessage = document.getElementById("completion-message"), doctorGrid = document.getElementById("doctor-grid"), platformLabel = document.getElementById("platform-label"), releasePlatformSelect = document.getElementById("release-platform"), releaseTargetInput = document.getElementById("release-target"), workspaceLabel = document.getElementById("workspace-label"), currentModeLabel = document.getElementById("current-mode-label"), languageLabel = document.getElementById("shell-language-label"), languageSelect = document.getElementById("shell-language-select"), serviceModePill = document.getElementById("service-mode-pill"), completionGuide = document.getElementById("completion-guide"), liveTailToggle = document.getElementById("log-autorefresh");
   const logServiceSelect = document.getElementById("log-service"); let logRefreshTimer = null, stopLogListener = null, streamedService = null, latestLogSnapshot = "", brandConfig = null, currentLanguage = "en";
+  const sensitiveEnvFieldIds = ["database-url", "api-token", "cluster-api-token", "direct-mesh-token"];
 
   mountIntegrityPanel();
   mountUpdatePanel();
@@ -96,16 +97,23 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
   }
 
   function currentEnvPayload() {
+    const databaseUrlInput = document.getElementById("database-url");
+    const apiTokenInput = document.getElementById("api-token");
+    const clusterApiTokenInput = document.getElementById("cluster-api-token");
+    const directMeshTokenInput = document.getElementById("direct-mesh-token");
     return {
       deploymentMode: document.getElementById("deployment-mode").value,
       agentDiscovery: document.getElementById("agent-discovery").value,
       agentManifestPath: document.getElementById("agent-manifest-path").value.trim(),
       storageBackend: document.getElementById("storage-mode").value,
       sqliteDatabasePath: document.getElementById("sqlite-path").value.trim(),
-      databaseUrl: document.getElementById("database-url").value.trim(),
+      databaseUrl: databaseUrlInput.value.trim(),
+      databaseUrlConfigured: databaseUrlInput.dataset.configured === "true",
       agentEndpoints: document.getElementById("agent-endpoints").value.trim(),
-      kyuubikiApiToken: document.getElementById("api-token").value.trim(),
-      kyuubikiClusterApiToken: document.getElementById("cluster-api-token").value.trim(),
+      kyuubikiApiToken: apiTokenInput.value.trim(),
+      kyuubikiApiTokenConfigured: apiTokenInput.dataset.configured === "true",
+      kyuubikiClusterApiToken: clusterApiTokenInput.value.trim(),
+      kyuubikiClusterApiTokenConfigured: clusterApiTokenInput.dataset.configured === "true",
       kyuubikiClusterAllowedAgentIds:
         document.getElementById("cluster-allowed-agent-ids").value.trim(),
       kyuubikiClusterAllowedClusterIds:
@@ -116,8 +124,16 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
         document.getElementById("cluster-timestamp-window").value.trim() || "30000",
       kyuubikiProtectReads: document.getElementById("protect-reads").value === "true",
       kyuubikiDirectMeshEnabled: document.getElementById("direct-mesh-enabled").value === "true",
-      kyuubikiDirectMeshToken: document.getElementById("direct-mesh-token").value.trim(),
+      kyuubikiDirectMeshToken: directMeshTokenInput.value.trim(),
+      kyuubikiDirectMeshTokenConfigured: directMeshTokenInput.dataset.configured === "true",
     };
+  }
+
+  function setSensitiveFieldState(input, configured, placeholders) {
+    if (!input) return;
+    input.value = "";
+    input.dataset.configured = configured ? "true" : "false";
+    input.placeholder = configured ? placeholders.configured : placeholders.empty;
   }
 
   function currentMode() {
@@ -141,11 +157,20 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     document.getElementById("storage-mode").value = form.storage_backend || "sqlite";
     document.getElementById("sqlite-path").value =
       form.sqlite_database_path || DEFAULT_SQLITE_DATABASE_PATH;
-    document.getElementById("database-url").value = form.database_url || "";
+    setSensitiveFieldState(document.getElementById("database-url"), form.database_url_configured === true, {
+      configured: "configured; leave blank to keep current value",
+      empty: "ecto://postgres:postgres@127.0.0.1:5432/kyuubiki_dev",
+    });
     document.getElementById("agent-endpoints").value =
       form.agent_endpoints || "127.0.0.1:5001,127.0.0.1:5002";
-    document.getElementById("api-token").value = form.kyuubiki_api_token || "";
-    document.getElementById("cluster-api-token").value = form.kyuubiki_cluster_api_token || "";
+    setSensitiveFieldState(document.getElementById("api-token"), form.kyuubiki_api_token_configured === true, {
+      configured: "configured; leave blank to keep current token",
+      empty: "optional shared token",
+    });
+    setSensitiveFieldState(document.getElementById("cluster-api-token"), form.kyuubiki_cluster_api_token_configured === true, {
+      configured: "configured; leave blank to keep current token",
+      empty: "optional cluster-only token",
+    });
     document.getElementById("cluster-allowed-agent-ids").value =
       form.kyuubiki_cluster_allowed_agent_ids || "";
     document.getElementById("cluster-allowed-cluster-ids").value =
@@ -156,7 +181,10 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       form.kyuubiki_cluster_timestamp_window_ms || "30000";
     document.getElementById("protect-reads").value = form.kyuubiki_protect_reads ? "true" : "false";
     document.getElementById("direct-mesh-enabled").value = form.kyuubiki_direct_mesh_enabled === false ? "false" : "true";
-    document.getElementById("direct-mesh-token").value = form.kyuubiki_direct_mesh_token || "";
+    setSensitiveFieldState(document.getElementById("direct-mesh-token"), form.kyuubiki_direct_mesh_token_configured === true, {
+      configured: "configured; leave blank to keep current token",
+      empty: "optional direct-mesh token",
+    });
     setModeCard(form.deployment_mode || "local");
   }
 
@@ -320,6 +348,13 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
 
   releasePlatformSelect?.addEventListener("change", (event) => {
     syncReleaseTarget(event.target.value);
+  });
+
+  sensitiveEnvFieldIds.forEach((id) => {
+    const input = document.getElementById(id);
+    input?.addEventListener("input", () => {
+      input.dataset.configured = "false";
+    });
   });
 
   document.querySelectorAll("[data-action]").forEach((button) => {
