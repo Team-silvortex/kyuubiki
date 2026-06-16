@@ -11,7 +11,13 @@ import {
   getWorkflowNodeTemplateSyncImpact,
   listAutoReconnectEdgeIds,
 } from "@/components/workbench/workflow/workbench-workflow-template-impact";
+import {
+  countWorkflowBridgeNormalizationAdjustments,
+  readBridgeNormalizationEntries,
+} from "@/components/workbench/workflow/workbench-workflow-bridge-normalization";
 import { normalizeBridgeConfigWithSupport } from "@/lib/workbench/workflow-bridge-contract-support";
+
+export { countWorkflowBridgeNormalizationAdjustments };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -54,24 +60,6 @@ export function mergeDatasetContractIntoGraph(
       metadata: contract.metadata ? { ...contract.metadata } : {},
     },
   };
-}
-
-function readBridgeNormalizationEntries(node: WorkflowGraphNode) {
-  const value = node.config?.contract_normalization;
-  if (!Array.isArray(value)) return [] as Array<{ field: string; previous: string; next: string }>;
-  return value.filter((entry): entry is { field: string; previous: string; next: string } => (
-    isRecord(entry) &&
-    typeof entry.field === "string" &&
-    typeof entry.previous === "string" &&
-    typeof entry.next === "string"
-  ));
-}
-
-export function countWorkflowBridgeNormalizationAdjustments(
-  graph: WorkflowGraphDefinition | null,
-) {
-  if (!graph) return 0;
-  return graph.nodes.reduce((count, node) => count + readBridgeNormalizationEntries(node).length, 0);
 }
 
 export function normalizeImportedWorkflowGraph(

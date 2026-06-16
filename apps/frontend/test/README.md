@@ -17,3 +17,6 @@ Organization rules:
   grow independently.
 - Keep browser and smoke coverage separate from pure unit tests; integration
   flows still live under the repo-level `tests/integration`.
+- The unit-test runner registers a local `@/` alias loader, so tests may import
+  real frontend source modules directly instead of copying logic into test-only
+  wrappers.

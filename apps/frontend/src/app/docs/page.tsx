@@ -26,6 +26,12 @@ const DOCS = [
     summary:
       "Shared summary artifact contract used by extract, transform, export, benchmark, and headless flows.",
   },
+  {
+    href: "/docs/workbench-window-protection",
+    title: "Workbench Window Protection",
+    summary:
+      "Responsive shell, panel, tab, and content-priority rules that protect the built-in UI on narrow and fullscreen layouts.",
+  },
 ];
 
 export default function DocsPage() {

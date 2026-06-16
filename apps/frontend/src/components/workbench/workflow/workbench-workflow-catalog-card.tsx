@@ -2,6 +2,7 @@
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import { deriveWorkflowCatalogHighlights } from "@/components/workbench/workflow/workbench-workflow-catalog-highlights";
+import { WorkbenchWorkflowBridgeStatusPill } from "@/components/workbench/workflow/workbench-workflow-bridge-status-pill";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 function formatPromotedAt(value?: string) {
@@ -20,6 +21,8 @@ function formatWorkflowTags(tags?: string[]) {
 }
 
 export function WorkbenchWorkflowCatalogCard(props: {
+  bridgeRuntimeSummary?: string | null;
+  bridgeRuntimeTone?: "good" | "watch" | "risk" | null;
   contractHealth: string | null;
   isSelected: boolean;
   labels: WorkflowSidebarLabels;
@@ -28,7 +31,7 @@ export function WorkbenchWorkflowCatalogCard(props: {
   onSelectForBuilder: () => void;
   workflow: WorkflowCatalogEntry;
 }) {
-  const { contractHealth, isSelected, labels, onDelete, onRun, onSelectForBuilder, workflow } =
+  const { bridgeRuntimeSummary, bridgeRuntimeTone, contractHealth, isSelected, labels, onDelete, onRun, onSelectForBuilder, workflow } =
     props;
   const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
   const highlights = deriveWorkflowCatalogHighlights(workflow);
@@ -90,6 +93,12 @@ export function WorkbenchWorkflowCatalogCard(props: {
             <div className="sidebar-list__row">
               <span>contract health</span>
               <strong>{contractHealth}</strong>
+            </div>
+          ) : null}
+          {bridgeRuntimeSummary ? (
+            <div className="sidebar-list__row">
+              <span>bridge runtime</span>
+              <strong>{bridgeRuntimeTone ? <WorkbenchWorkflowBridgeStatusPill mode="summary" summary={bridgeRuntimeSummary} tone={bridgeRuntimeTone} /> : bridgeRuntimeSummary}</strong>
             </div>
           ) : null}
         </div>

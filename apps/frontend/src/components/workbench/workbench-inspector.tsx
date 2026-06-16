@@ -142,6 +142,10 @@ function WorkbenchInspectorInner({
       className="workspace-inspector panel"
       data-workbench-panel="inspector"
       data-workbench-surface="built-in"
+      data-workbench-inspector-tab={inspectorTab}
+      data-workbench-inspector-status-page={statusPage}
+      data-workbench-inspector-actions-page={actionsPage}
+      data-workbench-inspector-result-page={resultPage}
     >
       <div className="panel-head">
         <h2>{t.overview}</h2>

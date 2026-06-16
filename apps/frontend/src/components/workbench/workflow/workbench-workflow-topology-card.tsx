@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { WorkflowGraphEdge, WorkflowGraphNode, WorkflowGraphPort, WorkflowOperatorDescriptor } from "@/lib/api";
+import type { WorkflowGraphEdge, WorkflowGraphJobResult, WorkflowGraphNode, WorkflowGraphPort, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
+import { buildWorkflowBridgeRuntimeStatusMap } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation";
 import { listWorkflowNodeTemplatePresets, type WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
 import { sortWorkflowOperatorOptionPresets, WorkbenchWorkflowOperatorDescriptorSummary } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
@@ -20,6 +21,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   currentStudyKind: StudyKind;
   currentHeatPlaneModel: HeatPlaneStudyJobInput;
   currentPlaneModel: PlaneStudyJobInput;
+  bridgeRuntimeResult?: WorkflowGraphJobResult | null;
   highlightedEdgeIds?: string[];
   highlightedNodeIds?: string[];
   highlightedPortKeys?: string[];
@@ -61,6 +63,7 @@ export function WorkbenchWorkflowTopologyCard({
   currentStudyKind,
   currentHeatPlaneModel,
   currentPlaneModel,
+  bridgeRuntimeResult,
   highlightedEdgeIds = [],
   highlightedNodeIds = [],
   highlightedPortKeys = [],
@@ -98,6 +101,7 @@ export function WorkbenchWorkflowTopologyCard({
     }
     return byKind;
   }, [operatorDescriptorMap, operatorDescriptors, selectedNodes]);
+  const bridgeRuntimeStatusMap = useMemo(() => buildWorkflowBridgeRuntimeStatusMap({ nodes: selectedNodes, edges: selectedEdges }, bridgeRuntimeResult), [bridgeRuntimeResult, selectedEdges, selectedNodes]);
   const controlFlowEdgesByNode = useMemo(() => {
     const byNode = new Map<string, WorkflowGraphEdge[]>();
     for (const node of selectedNodes) byNode.set(node.id, []);
@@ -201,6 +205,7 @@ export function WorkbenchWorkflowTopologyCard({
             currentHeatPlaneModel={currentHeatPlaneModel}
             currentPlaneModel={currentPlaneModel}
             currentStudyKind={currentStudyKind}
+            bridgeRuntimeStatus={bridgeRuntimeStatusMap.get(node.id)}
             isFocused={focusedNodeId === node.id}
             isHighlighted={highlightedNodeIds.includes(node.id)}
             highlightedPortKeys={highlightedPortKeys}

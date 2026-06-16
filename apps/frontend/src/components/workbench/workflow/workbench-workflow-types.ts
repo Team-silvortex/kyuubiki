@@ -4,7 +4,7 @@ import type { WorkflowRunTraceSummary } from "@/components/workbench/workflow/wo
 import type { WorkflowGraphJobResult } from "@/lib/api";
 
 export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
-export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "needs_review";
+export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "needs_review" | "bridge_aligned" | "bridge_drift" | "bridge_missing_runtime";
 
 export type WorkflowRunRecord = {
   jobId: string;
@@ -54,6 +54,12 @@ export type WorkflowSidebarLabels = {
   catalogFilterVariantsLabel: string;
   catalogFilterHealthyLabel: string;
   catalogFilterNeedsReviewLabel: string;
+  // Bridge runtime navigation labels
+  catalogFilterBridgeAlignedLabel: string;
+  catalogFilterBridgeDriftLabel: string;
+  catalogFilterBridgeMissingRuntimeLabel: string;
+  runsFilterBridgeAlertsLabel: string;
+  overviewBridgeStatusLabel: string;
   refreshLabel: string;
   runLabel: string;
   runDraftLabel: string;

@@ -2,6 +2,10 @@
 
 import { validateWorkflowGraphDefinition } from "@/components/workbench/workflow/workbench-workflow-builder-validation";
 import {
+  inspectWorkflowBridgeRuntimePaths,
+  validateWorkflowBridgeRuntimeContracts,
+} from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation";
+import {
   formatWorkflowContractHealthSummary,
   formatWorkflowDynamicReviewState,
 } from "@/components/workbench/workflow/workbench-workflow-contract-health";
@@ -11,6 +15,11 @@ import { findStoredLocalWorkflow } from "@/components/workbench/workflow/workben
 import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { listStoredWorkflowSnapshots } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
+import {
+  isWorkflowBridgeContractOperator,
+  resolveBridgeContractForOperator,
+  resolveBridgeSeedModelForOperator,
+} from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
 import {
   resolveWorkflowTraceBranchPredicateTone,
   resolveWorkflowTraceContractHealthTone,
@@ -148,6 +157,59 @@ function renderIntegrityRows(
     .join("");
 }
 
+function renderBridgeRuntimeRows(
+  run: WorkflowRunRecord,
+  workflow?: WorkflowCatalogEntry | null,
+) {
+  return validateWorkflowBridgeRuntimeContracts(workflow?.graph ?? null, run.result ?? null)
+    .map(
+      (issue) =>
+        `<tr><td>${escapeHtml(issue.nodeId)}</td><td>${escapeHtml(issue.level)}</td><td>${escapeHtml(issue.artifactKey ?? "--")}</td><td>${escapeHtml(issue.message)}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderBridgeRuntimeInspectionRows(
+  run: WorkflowRunRecord,
+  workflow?: WorkflowCatalogEntry | null,
+) {
+  return inspectWorkflowBridgeRuntimePaths(workflow?.graph ?? null, run.result ?? null)
+    .map(
+      (record) =>
+        `<tr><td>${escapeHtml(record.nodeId)}</td><td>${escapeHtml(record.upstreamNodeId ?? "--")}</td><td>${escapeHtml(record.downstreamNodeIds.join(", ") || "--")}</td><td>${escapeHtml(`${record.sourceField} -> ${record.targetField}`)}</td><td>${escapeHtml(`${record.reduction} x ${String(record.scale)}`)}</td><td>${renderToneBadge(record.sourceFieldExposed ? "source ok" : "source missing", record.sourceFieldExposed ? "good" : "watch")}</td><td>${renderToneBadge(record.targetFieldExposed ? "target ok" : "target missing", record.targetFieldExposed ? "good" : "watch")}</td><td>${escapeHtml(`${record.inputArtifactKey ?? "--"} => ${record.outputArtifactKey ?? "--"}`)}</td></tr>`,
+    )
+    .join("");
+}
+
+function summarizeBridgeSeedModel(value: unknown) {
+  const seedModel = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+  const nodes = Array.isArray(seedModel?.nodes) ? seedModel.nodes.length : 0;
+  const elements = Array.isArray(seedModel?.elements) ? seedModel.elements.length : 0;
+  return `${nodes} nodes / ${elements} elements`;
+}
+
+function renderBridgeContractCompareRows(
+  run: WorkflowRunRecord,
+  workflow?: WorkflowCatalogEntry | null,
+) {
+  const graph = workflow?.graph;
+  if (!graph) return "";
+  const runtimeByNodeId = new Map(
+    inspectWorkflowBridgeRuntimePaths(graph, run.result ?? null).map((record) => [record.nodeId, record] as const),
+  );
+  return graph.nodes
+    .filter((node) => isWorkflowBridgeContractOperator(node.operator_id))
+    .map((node) => {
+      const config = node.config as Record<string, unknown> | null | undefined;
+      const contract = resolveBridgeContractForOperator(node.operator_id, config);
+      const seedModel = resolveBridgeSeedModelForOperator(node.operator_id, config);
+      const runtime = runtimeByNodeId.get(node.id);
+      const aligned = runtime ? runtime.sourceFieldExposed && runtime.targetFieldExposed : false;
+      return `<tr><td>${escapeHtml(node.id)}</td><td>${escapeHtml(contract ? `${contract.source.field} -> ${contract.target.field}` : "--")}</td><td>${escapeHtml(contract ? `${contract.transform.reduction} x ${String(contract.transform.scale)}` : "--")}</td><td>${escapeHtml(summarizeBridgeSeedModel(seedModel))}</td><td>${escapeHtml(runtime?.upstreamNodeId ?? "--")}</td><td>${escapeHtml(runtime?.downstreamNodeIds.join(", ") || "--")}</td><td>${renderToneBadge(runtime ? (runtime.sourceFieldExposed ? "source ok" : "source missing") : "no runtime", runtime ? (runtime.sourceFieldExposed ? "good" : "watch") : "risk")}</td><td>${renderToneBadge(runtime ? (runtime.targetFieldExposed ? "target ok" : "target missing") : "no runtime", runtime ? (runtime.targetFieldExposed ? "good" : "watch") : "risk")}</td><td>${renderToneBadge(aligned ? "aligned" : "check", aligned ? "good" : "watch")}</td></tr>`;
+    })
+    .join("");
+}
+
 function renderProgressTimelineRows(run: WorkflowRunRecord) {
   return (run.traceSummary?.recentProgressEvents ?? [])
     .map(
@@ -177,6 +239,9 @@ export function buildWorkflowRunAuditReportHtml({
   const snapshotRows = renderSnapshotRows(snapshots);
   const securityAuditRows = renderSecurityAuditRows(securityAuditEntries);
   const integrityRows = renderIntegrityRows(workflow, operatorDescriptors);
+  const bridgeRuntimeRows = renderBridgeRuntimeRows(run, workflow);
+  const bridgeRuntimeInspectionRows = renderBridgeRuntimeInspectionRows(run, workflow);
+  const bridgeContractCompareRows = renderBridgeContractCompareRows(run, workflow);
   const validationRows = renderIssueRows(workflow, operatorDescriptors);
   const runtimeRows = renderRuntimeRows(workflow);
   const datasetRows = renderDatasetValueRows(workflow);
@@ -322,6 +387,18 @@ export function buildWorkflowRunAuditReportHtml({
         ["summary-only snapshots", String(integrity.summaryOnlySnapshotCount)],
       ])}</tbody></table>
       <table><thead><tr><th>scope</th><th>severity</th><th>message</th><th>detail</th></tr></thead><tbody>${integrityRows || '<tr><td colspan="4">--</td></tr>'}</tbody></table>
+    </section>
+    <section>
+      <h2>Bridge runtime contracts</h2>
+      <table><thead><tr><th>node</th><th>severity</th><th>artifact</th><th>message</th></tr></thead><tbody>${bridgeRuntimeRows || '<tr><td colspan="4">--</td></tr>'}</tbody></table>
+    </section>
+    <section>
+      <h2>Bridge runtime path inspection</h2>
+      <table><thead><tr><th>bridge</th><th>upstream</th><th>downstream</th><th>field map</th><th>transform</th><th>source</th><th>target</th><th>artifacts</th></tr></thead><tbody>${bridgeRuntimeInspectionRows || '<tr><td colspan="8">--</td></tr>'}</tbody></table>
+    </section>
+    <section>
+      <h2>Bridge contract design vs runtime</h2>
+      <table><thead><tr><th>bridge</th><th>design field map</th><th>design transform</th><th>seed model</th><th>runtime upstream</th><th>runtime downstream</th><th>source</th><th>target</th><th>status</th></tr></thead><tbody>${bridgeContractCompareRows || '<tr><td colspan="9">--</td></tr>'}</tbody></table>
     </section>
     <section>
       <h2>Summary artifact contracts</h2>

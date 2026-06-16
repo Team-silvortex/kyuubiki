@@ -220,6 +220,7 @@ const preStyle: CSSProperties = {
   borderRadius: 16,
   padding: 20,
   overflowX: "auto",
+  maxWidth: "100%",
   lineHeight: 1.6,
   fontSize: 13,
   color: "#d9e3f0",
@@ -230,6 +231,8 @@ const listStyle: CSSProperties = {
   lineHeight: 1.8,
   paddingLeft: 20,
   margin: 0,
+  overflowWrap: "anywhere",
+  wordBreak: "break-word",
 };
 
 const linkCardStyle: CSSProperties = {

@@ -3,6 +3,13 @@
 import { scientific } from "@/lib/workbench/helpers";
 
 export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
+  const bridgeWorkflowLabels = {
+    catalogFilterBridgeAlignedLabel: t.workflowCatalogFilterBridgeAlignedLabel,
+    catalogFilterBridgeDriftLabel: t.workflowCatalogFilterBridgeDriftLabel,
+    catalogFilterBridgeMissingRuntimeLabel: t.workflowCatalogFilterBridgeMissingRuntimeLabel,
+    runsFilterBridgeAlertsLabel: t.workflowRunsFilterBridgeAlertsLabel,
+    overviewBridgeStatusLabel: t.workflowOverviewBridgeStatusLabel,
+  };
   return {
     sectionTitle: t.sections.workflow,
     overviewPageLabel: t.workflowOverviewPage,
@@ -19,6 +26,7 @@ export function buildWorkbenchWorkflowLabels(t: Record<string, any>) {
     catalogFilterVariantsLabel: t.workflowCatalogFilterVariantsLabel,
     catalogFilterHealthyLabel: t.workflowCatalogFilterHealthyLabel,
     catalogFilterNeedsReviewLabel: t.workflowCatalogFilterNeedsReviewLabel,
+    ...bridgeWorkflowLabels,
     refreshLabel: t.workflowCatalogRefresh,
     runLabel: t.workflowCatalogRun,
     runDraftLabel: t.workflowRunDraftLabel,

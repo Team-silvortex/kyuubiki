@@ -11,6 +11,9 @@ import type {
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
+import { WorkbenchWorkflowBridgeStatusPill } from "@/components/workbench/workflow/workbench-workflow-bridge-status-pill";
+import { getBridgeOverviewNavTooltipProps, getBridgeRunStatusTooltipProps } from "@/components/workbench/workflow/workbench-workflow-bridge-status-tooltips";
+import { rankBridgeRuntimeState, resolveBridgeRuntimeFilterState, resolveBridgeRuntimeOverview, summarizeBridgeRuntimeStates } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-overview";
 import {
   buildWorkflowContractHealthRunFeedbackMessage,
   elevateWorkflowContractHealthLabel,
@@ -121,27 +124,35 @@ export function WorkbenchWorkflowSidebar({
   onOpenWorkflowRun,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
-  const previousLatestRun = latestRun
-    ? workflowRuns.find((entry, index) => index > 0 && entry.workflowId === latestRun.workflowId) ?? null
-    : null;
-  const latestRunWorkflow = latestRun
-    ? workflowCatalogEntries.find((entry) => entry.id === latestRun.workflowId) ?? null
-    : null;
+  const latestRunForSelectedWorkflow = selectedWorkflow ? workflowRuns.find((entry) => entry.workflowId === selectedWorkflow.id) ?? null : null;
+  const previousLatestRun = latestRun ? workflowRuns.find((entry, index) => index > 0 && entry.workflowId === latestRun.workflowId) ?? null : null;
+  const latestRunWorkflow = latestRun ? workflowCatalogEntries.find((entry) => entry.id === latestRun.workflowId) ?? null : null;
   const [catalogFilter, setCatalogFilter] = useState<WorkflowCatalogFilter>("all");
+  const [runsFilter, setRunsFilter] = useState<"all" | "bridge_alerts" | "bridge_drift" | "bridge_missing_runtime">("all");
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [builderTraceFocus, setBuilderTraceFocus] = useState<{ nodeId: string; token: number } | null>(null);
   const [builderBranchFocus, setBuilderBranchFocus] = useState<{ nodeId: string; outputId: string; token: number } | null>(null);
   const [builderDatasetFocus, setBuilderDatasetFocus] = useState<{ nodeId: string; portId: string; token: number } | null>(null);
+  const latestRunByWorkflowId = useMemo(() => {
+    const next = new Map<string, WorkflowRunRecord>();
+    for (const run of workflowRuns) if (!next.has(run.workflowId)) next.set(run.workflowId, run);
+    return next;
+  }, [workflowRuns]);
+  const workflowById = useMemo(() => new Map(workflowCatalogEntries.map((entry) => [entry.id, entry] as const)), [workflowCatalogEntries]);
+  const overviewBridgeSummary = useMemo(() => summarizeBridgeRuntimeStates(workflowCatalogEntries, latestRunByWorkflowId), [latestRunByWorkflowId, workflowCatalogEntries]);
   const latestRunStatusByWorkflowId = useMemo(() => new Map(workflowRuns.map((run) => [run.workflowId, run.status] as const)), [workflowRuns]);
   const sortedWorkflowRuns = useMemo(
     () =>
       [...workflowRuns].sort((left, right) => {
+        const bridgeDelta = rankBridgeRuntimeState(resolveBridgeRuntimeFilterState(workflowById.get(right.workflowId), right)) - rankBridgeRuntimeState(resolveBridgeRuntimeFilterState(workflowById.get(left.workflowId), left));
+        if (bridgeDelta !== 0) return bridgeDelta;
         const complexityDelta = scoreWorkflowRunComplexity(right) - scoreWorkflowRunComplexity(left);
         if (complexityDelta !== 0) return complexityDelta;
         return right.jobId.localeCompare(left.jobId);
       }),
-    [workflowRuns],
+    [workflowById, workflowRuns],
   );
+  const filteredWorkflowRuns = useMemo(() => sortedWorkflowRuns.filter((run) => { const state = resolveBridgeRuntimeFilterState(workflowById.get(run.workflowId), run); return runsFilter === "all" ? true : runsFilter === "bridge_alerts" ? state === "bridge_drift" || state === "bridge_missing_runtime" : state === runsFilter; }), [runsFilter, sortedWorkflowRuns, workflowById]);
   function deleteCatalogLocalWorkflow(workflow: WorkflowCatalogEntry) {
     if (!workflow.local) return;
     removeStoredLocalWorkflow(workflow.local.storage_id);
@@ -176,6 +187,8 @@ export function WorkbenchWorkflowSidebar({
         formatWorkflowContractHealthLabel(workflow.capability_tags ?? workflow.local?.tags),
         latestRunStatusByWorkflowId.get(workflow.id),
       );
+    const bridgeRuntimeState = (workflow: WorkflowCatalogEntry) =>
+      resolveBridgeRuntimeFilterState(workflow, latestRunByWorkflowId.get(workflow.id));
     const filtered =
       catalogFilter === "local"
         ? workflowCatalogEntries.filter((workflow) => Boolean(workflow.local))
@@ -188,6 +201,12 @@ export function WorkbenchWorkflowSidebar({
               })
             : catalogFilter === "needs_review"
               ? workflowCatalogEntries.filter((workflow) => dynamicHealth(workflow) === "needs review")
+              : catalogFilter === "bridge_aligned"
+                ? workflowCatalogEntries.filter((workflow) => bridgeRuntimeState(workflow) === "bridge_aligned")
+                : catalogFilter === "bridge_drift"
+                  ? workflowCatalogEntries.filter((workflow) => bridgeRuntimeState(workflow) === "bridge_drift")
+                  : catalogFilter === "bridge_missing_runtime"
+                    ? workflowCatalogEntries.filter((workflow) => bridgeRuntimeState(workflow) === "bridge_missing_runtime")
               : workflowCatalogEntries;
     return [...filtered].sort((left, right) => {
       const leftRank = rankWorkflowContractHealth({ ...left, capability_tags: [`contract_health:${dynamicHealth(left) === "needs review" ? "review" : dynamicHealth(left) ?? "manageable"}`] });
@@ -201,7 +220,7 @@ export function WorkbenchWorkflowSidebar({
       if (right.local?.promoted_at) return 1;
       return left.name.localeCompare(right.name);
     });
-  }, [catalogFilter, latestRunStatusByWorkflowId, workflowCatalogEntries]);
+  }, [catalogFilter, latestRunByWorkflowId, latestRunStatusByWorkflowId, workflowCatalogEntries]);
   const groupedWorkflowCatalogEntries = useMemo(
     () => groupWorkflowCatalogEntriesByDomain(filteredWorkflowCatalogEntries),
     [filteredWorkflowCatalogEntries],
@@ -233,9 +252,12 @@ export function WorkbenchWorkflowSidebar({
       formatWorkflowContractHealthLabel(workflow.capability_tags ?? workflow.local?.tags),
       latestRunStatusByWorkflowId.get(workflow.id),
     );
+    const bridgeRuntimeOverview = resolveBridgeRuntimeOverview(workflow, latestRunByWorkflowId.get(workflow.id));
 
     return (
       <WorkbenchWorkflowCatalogCard
+        bridgeRuntimeSummary={bridgeRuntimeOverview?.summary ?? null}
+        bridgeRuntimeTone={bridgeRuntimeOverview?.tone ?? null}
         contractHealth={contractHealth}
         isSelected={selectedWorkflowId === workflow.id}
         key={workflow.id}
@@ -274,7 +296,11 @@ export function WorkbenchWorkflowSidebar({
   }, [surfaceTab, latestRun?.jobId, filteredWorkflowCatalogEntries.length]);
 
   return (
-    <div className="sidebar-stack panel-scroll-window">
+    <div
+      className="sidebar-stack panel-scroll-window"
+      data-workbench-workflow-surface={surfaceTab}
+      data-workbench-workflow-runs-filter={runsFilter}
+    >
       <div className="panel-tabs panel-tabs--editor">
         <button
           className={`panel-tab${surfaceTab === "overview" ? " panel-tab--active" : ""}`}
@@ -359,6 +385,10 @@ export function WorkbenchWorkflowSidebar({
                   <span>{labels.runsPageLabel}</span>
                   <strong>{latestRun?.status ?? "--"}</strong>
                 </div>
+                <div className="sidebar-list__row">
+                  <span>{labels.overviewBridgeStatusLabel}</span>
+                  <strong style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}><button {...getBridgeOverviewNavTooltipProps("aligned")} onClick={() => { setCatalogFilter("bridge_aligned"); openSurfaceTab("catalog"); }} style={{ all: "unset", cursor: "pointer" }} type="button"><WorkbenchWorkflowBridgeStatusPill mode="summary" summary={String(overviewBridgeSummary.aligned)} tone="good" tooltipProps={getBridgeOverviewNavTooltipProps("aligned")} /></button><button {...getBridgeOverviewNavTooltipProps("drift")} onClick={() => { setCatalogFilter("bridge_drift"); openSurfaceTab("catalog"); }} style={{ all: "unset", cursor: "pointer" }} type="button"><WorkbenchWorkflowBridgeStatusPill mode="summary" summary={String(overviewBridgeSummary.drift)} tone="watch" tooltipProps={getBridgeOverviewNavTooltipProps("drift")} /></button><button {...getBridgeOverviewNavTooltipProps("missing-runtime")} onClick={() => { setRunsFilter("bridge_missing_runtime"); openSurfaceTab("runs"); }} style={{ all: "unset", cursor: "pointer" }} type="button"><WorkbenchWorkflowBridgeStatusPill mode="summary" summary={String(overviewBridgeSummary.missing)} tone="risk" tooltipProps={getBridgeOverviewNavTooltipProps("missing-runtime")} /></button></strong>
+                </div>
               </div>
             ) : null}
           </section>
@@ -373,24 +403,15 @@ export function WorkbenchWorkflowSidebar({
           <p className="card-copy">{labels.catalogHint}</p>
           {catalogMessage ? <p className="card-copy">{catalogMessage}</p> : null}
           <div className="button-row button-row--adaptive">
-            <button onClick={() => setCatalogFilter("all")} type="button">
-              {labels.catalogFilterAllLabel}
-            </button>
-            <button onClick={() => setCatalogFilter("local")} type="button">
-              {labels.catalogFilterLocalLabel}
-            </button>
-            <button onClick={() => setCatalogFilter("variants")} type="button">
-              {labels.catalogFilterVariantsLabel}
-            </button>
-            <button onClick={() => setCatalogFilter("healthy")} type="button">
-              {labels.catalogFilterHealthyLabel}
-            </button>
-            <button onClick={() => setCatalogFilter("needs_review")} type="button">
-              {labels.catalogFilterNeedsReviewLabel}
-            </button>
-            <button onClick={onRefreshWorkflowCatalog} type="button">
-              {labels.refreshLabel}
-            </button>
+            <button onClick={() => setCatalogFilter("all")} type="button">{labels.catalogFilterAllLabel}</button>
+            <button onClick={() => setCatalogFilter("local")} type="button">{labels.catalogFilterLocalLabel}</button>
+            <button onClick={() => setCatalogFilter("variants")} type="button">{labels.catalogFilterVariantsLabel}</button>
+            <button onClick={() => setCatalogFilter("healthy")} type="button">{labels.catalogFilterHealthyLabel}</button>
+            <button onClick={() => setCatalogFilter("needs_review")} type="button">{labels.catalogFilterNeedsReviewLabel}</button>
+            <button onClick={() => setCatalogFilter("bridge_aligned")} type="button">{labels.catalogFilterBridgeAlignedLabel}</button>
+            <button onClick={() => setCatalogFilter("bridge_drift")} type="button">{labels.catalogFilterBridgeDriftLabel}</button>
+            <button onClick={() => setCatalogFilter("bridge_missing_runtime")} type="button">{labels.catalogFilterBridgeMissingRuntimeLabel}</button>
+            <button onClick={onRefreshWorkflowCatalog} type="button">{labels.refreshLabel}</button>
           </div>
           {filteredWorkflowCatalogEntries.length === 0 ? <p className="card-copy">{labels.emptyCatalogLabel}</p> : null}
           {pinnedWorkflowCatalogEntries.length > 0 ? (
@@ -428,6 +449,7 @@ export function WorkbenchWorkflowSidebar({
           protocolAgents={protocolAgents}
           frontendRuntimeMode={frontendRuntimeMode}
           recentRunStatus={selectedWorkflow ? latestRunStatusByWorkflowId.get(selectedWorkflow.id) ?? null : null}
+          latestRun={latestRunForSelectedWorkflow}
           onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
           onRunWorkflowDraft={onRunWorkflowDraft}
@@ -467,9 +489,12 @@ export function WorkbenchWorkflowSidebar({
             </div>
           ) : null}
           {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectBranch={(nodeId, outputId) => openRunBranchInBuilder(latestRun.workflowId, nodeId, outputId)} onSelectLineage={(entry) => openRunLineageInBuilder(latestRun, entry.artifact_key, entry.node_id)} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} operatorDescriptors={workflowOperatorDescriptors} previousRun={previousLatestRun} run={latestRun} workflow={latestRunWorkflow} /> : null}
-          {workflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
+          <div className="button-row button-row--adaptive">
+            <button onClick={() => setRunsFilter("all")} type="button">{labels.catalogFilterAllLabel}</button><button onClick={() => setRunsFilter("bridge_alerts")} type="button">{labels.runsFilterBridgeAlertsLabel}</button><button onClick={() => setRunsFilter("bridge_drift")} type="button">{labels.catalogFilterBridgeDriftLabel}</button><button onClick={() => setRunsFilter("bridge_missing_runtime")} type="button">{labels.catalogFilterBridgeMissingRuntimeLabel}</button>
+          </div>
+          {filteredWorkflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}
           <div className="runtime-overview-grid">
-            {sortedWorkflowRuns.map((run) => (
+            {filteredWorkflowRuns.map((run) => (
               <section className="sidebar-card sidebar-card--compact runtime-overview-card" key={run.jobId}>
                 <div className="card-head">
                   <h2>{run.workflowId}</h2>
@@ -480,6 +505,14 @@ export function WorkbenchWorkflowSidebar({
                     <span className={`status-pill status-pill--${workflowStatusTone(run.status)}`}>{run.status}</span>
                   </div>
                 </div>
+                {(() => {
+                  const bridgeRuntimeOverview = resolveBridgeRuntimeOverview(workflowById.get(run.workflowId), run);
+                  return bridgeRuntimeOverview ? (
+                    <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", marginBottom: "0.45rem" }}>
+                      <WorkbenchWorkflowBridgeStatusPill mode="run" summary={`bridge ${bridgeRuntimeOverview.summary}`} tone={bridgeRuntimeOverview.tone} />
+                    </div>
+                  ) : null;
+                })()}
                 <div className="sidebar-list">
                   <div className="sidebar-list__row">
                     <span>{labels.progressLabel}</span>

@@ -63,6 +63,8 @@ export const copyZhCore = {
     workflowCatalogFilterVariantsLabel: "变体",
     workflowCatalogFilterHealthyLabel: "健康",
     workflowCatalogFilterNeedsReviewLabel: "待复核",
+    // Bridge runtime navigation
+    workflowCatalogFilterBridgeAlignedLabel: "桥接已对齐", workflowCatalogFilterBridgeDriftLabel: "桥接漂移", workflowCatalogFilterBridgeMissingRuntimeLabel: "桥接缺运行态", workflowRunsFilterBridgeAlertsLabel: "桥接告警", workflowOverviewBridgeStatusLabel: "桥接 已对齐/漂移/缺失",
     workflowOverviewHint: "把复合算子工作流放在独立工作面里，而不是继续藏在样板或结果页里。",
     workflowBuilderHint: "先看清 graph 的节点、桥接、提取和导出，再决定怎么把它接进更大的研究链。",
     workflowRunsHint: "在一个地方看命名工作流任务、当前节点和导出摘要。",

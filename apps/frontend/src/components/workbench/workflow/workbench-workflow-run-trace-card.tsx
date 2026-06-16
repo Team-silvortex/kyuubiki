@@ -12,6 +12,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { measureWorkflowTraceCardReady } from "@/components/workbench/workflow/workbench-workflow-perf";
+import { WorkbenchWorkflowBridgeRuntimeCard } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-card";
 import { buildWorkflowRunAuditReportHtml } from "@/components/workbench/workflow/workbench-workflow-run-trace-report";
 import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 import {
@@ -178,6 +179,13 @@ export function WorkbenchWorkflowRunTraceCard({
               ))}
             </div>
           </details>
+        </div>
+        <div>
+          <WorkbenchWorkflowBridgeRuntimeCard
+            graph={workflow?.graph ?? null}
+            onLocateIssue={(issue) => onSelectNode?.(issue.nodeId)}
+            result={run.result ?? null}
+          />
         </div>
         <div>
           <p className="card-copy">latest branch</p>

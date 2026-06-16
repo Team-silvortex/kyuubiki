@@ -21,6 +21,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import type { WorkflowTemplateChainDefinition } from "@/components/workbench/workflow/workbench-workflow-template-chain-library";
 import { applyTemplateChainNodeSemantics } from "@/components/workbench/workflow/workbench-workflow-template-chain-insert-semantics";
+import { pickConnectedPorts } from "@/components/workbench/workflow/workbench-workflow-topology-connection";
 import { applyWorkflowNodeTemplateSync } from "@/components/workbench/workflow/workbench-workflow-template-impact";
 
 type SetDraftGraph = Dispatch<SetStateAction<WorkflowGraphDefinition | null>>;
@@ -61,37 +62,6 @@ function didPortChange(previousPort: WorkflowGraphPort, nextPort: WorkflowGraphP
     previousPort.dataset_value !== nextPort.dataset_value ||
     previousPort.description !== nextPort.description
   );
-}
-
-function pickConnectedPorts(sourceNode: WorkflowGraphNode, nextNode: WorkflowGraphNode) {
-  const sourceOutputs = sourceNode.outputs ?? [];
-  const targetInputs = nextNode.inputs ?? [];
-
-  for (const sourcePort of sourceOutputs) {
-    const datasetMatch = targetInputs.find(
-      (port) =>
-        sourcePort.dataset_value &&
-        port.dataset_value &&
-        port.dataset_value === sourcePort.dataset_value,
-    );
-    if (datasetMatch) {
-      return { sourcePort, targetPort: datasetMatch };
-    }
-  }
-
-  for (const sourcePort of sourceOutputs) {
-    const artifactMatch = targetInputs.find(
-      (port) => port.artifact_type === sourcePort.artifact_type,
-    );
-    if (artifactMatch) {
-      return { sourcePort, targetPort: artifactMatch };
-    }
-  }
-
-  return {
-    sourcePort: sourceOutputs[0],
-    targetPort: targetInputs[0],
-  };
 }
 
 function mergeMissingDatasetValues(

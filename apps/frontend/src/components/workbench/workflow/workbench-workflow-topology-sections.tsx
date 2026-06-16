@@ -18,6 +18,7 @@ import {
   WorkbenchWorkflowOperatorDescriptorSummary,
 } from "@/components/workbench/workflow/workbench-workflow-operator-descriptor-summary";
 import { WorkbenchWorkflowBridgeContractEditor } from "@/components/workbench/workflow/workbench-workflow-bridge-contract-editor";
+import type { WorkflowBridgeRuntimeNodeStatus } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation";
 import { WorkbenchWorkflowConditionEditor } from "@/components/workbench/workflow/workbench-workflow-condition-editor";
 import { WorkbenchWorkflowDiagnosticsGuardEditor } from "@/components/workbench/workflow/workbench-workflow-diagnostics-guard-editor";
 import { WorkbenchWorkflowControlFlowHint } from "@/components/workbench/workflow/workbench-workflow-control-flow-hint";
@@ -101,6 +102,7 @@ type WorkbenchWorkflowTopologyNodeSectionProps = {
   operatorDescriptor?: WorkflowOperatorDescriptor;
   operatorDescriptorMap: Map<string, WorkflowOperatorDescriptor>;
   nodeOperatorPresets: WorkflowOperatorOptionPreset[];
+  bridgeRuntimeStatus?: WorkflowBridgeRuntimeNodeStatus;
   isFocused: boolean;
   isHighlighted: boolean;
   currentStudyKind: StudyKind;
@@ -127,6 +129,7 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
   operatorDescriptor,
   operatorDescriptorMap,
   nodeOperatorPresets,
+  bridgeRuntimeStatus,
   isFocused,
   isHighlighted,
   currentStudyKind,
@@ -152,6 +155,7 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
       <div className="card-head">
         <h2>{node.id}</h2>
         <div className="button-row">
+          {bridgeRuntimeStatus ? <span className={`status-pill status-pill--${bridgeRuntimeStatus.tone}`}>{bridgeRuntimeStatus.label}</span> : null}
           <button onClick={() => onAddConnectedNode(node.id, { kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addConnectedNodeLabel}</button>
           <button onClick={() => onRemoveNode(node.id)} type="button">{labels.removeNodeLabel}</button>
         </div>

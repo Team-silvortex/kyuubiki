@@ -43,7 +43,13 @@ if (testFiles.length === 0) {
 
 const result = spawnSync(
   "node",
-  ["--test", "--experimental-strip-types", ...testFiles],
+  [
+    "--import",
+    "./test/support/register-alias-loader.mjs",
+    "--test",
+    "--experimental-strip-types",
+    ...testFiles,
+  ],
   {
     cwd: ROOT,
     stdio: "inherit",
