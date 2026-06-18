@@ -321,10 +321,36 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
   const runtimeAuditStudyFacets = buildRuntimeAuditStudyFacets(securityEventRecords);
   const runtimeAuditProjectFacets = buildRuntimeAuditProjectFacets(securityEventRecords);
   const runtimeAuditModelVersionFacets = buildRuntimeAuditModelVersionFacets(securityEventRecords);
+  const recentWatchdogIssueJobs = deferredJobHistory.filter((job: any) => {
+    const failureClass = job.status_detail?.failure_class;
+    return (
+      failureClass === "watchdog_stalled" ||
+      failureClass === "watchdog_timeout" ||
+      failureClass === "execution_timeout"
+    );
+  });
+  const latestWatchdogIssue = recentWatchdogIssueJobs[0];
+  const latestWatchdogIssueLabel = latestWatchdogIssue
+    ? `${latestWatchdogIssue.job_id.slice(0, 8)} ${resolveJobStatusDetailLabel(latestWatchdogIssue.status_detail) ?? latestWatchdogIssue.status}`
+    : language === "zh"
+      ? "无"
+      : language === "ja"
+        ? "なし"
+        : "None";
   const runtimeWatchdogRows = [
     { label: t.activeJobs, value: health?.watchdog?.active_jobs ?? 0 },
     { label: t.stalledJobs, value: health?.watchdog?.stalled_jobs ?? 0 },
     { label: t.timedOutJobs, value: health?.watchdog?.timed_out_jobs ?? 0 },
+    {
+      label: language === "zh" ? "近期问题任务" : language === "ja" ? "最近の問題ジョブ" : "Recent issue jobs",
+      value: recentWatchdogIssueJobs.length,
+    },
+    {
+      label: language === "zh" ? "最近问题" : language === "ja" ? "最新の問題" : "Latest issue",
+      value: latestWatchdogIssue
+        ? `${latestWatchdogIssueLabel} · ${formatTime(latestWatchdogIssue.updated_at, language)}`
+        : latestWatchdogIssueLabel,
+    },
     { label: t.scanEvery, value: formatMilliseconds(health?.watchdog?.scan_interval_ms) },
     { label: t.staleAfter, value: formatMilliseconds(health?.watchdog?.stale_job_ms) },
     { label: t.timeoutAfter, value: formatMilliseconds(health?.watchdog?.job_timeout_ms) },

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { isRestrictedPlaywrightLaunchError, reportRestrictedPlaywrightSkip } from "./playwright-runtime-guard.mjs";
 
 const baseUrl = process.env.WORKFLOW_BENCHMARK_URL || "http://127.0.0.1:3000/workflow-benchmark";
 const iterations = Number(process.env.WORKFLOW_BENCHMARK_ITERATIONS || 5);
@@ -269,7 +270,16 @@ async function measureBuilderEdits(page, workflowId) {
 }
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+  } catch (error) {
+    if (isRestrictedPlaywrightLaunchError(error)) {
+      reportRestrictedPlaywrightSkip("Workflow benchmark", error);
+      return;
+    }
+    throw error;
+  }
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   try {
     await installApiMocks(page);
@@ -317,6 +327,10 @@ async function run() {
 }
 
 run().catch((error) => {
+  if (isRestrictedPlaywrightLaunchError(error)) {
+    reportRestrictedPlaywrightSkip("Workflow benchmark", error);
+    process.exit(0);
+  }
   console.error(`Workflow benchmark failed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 });

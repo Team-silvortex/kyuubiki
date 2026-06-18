@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 import { findAutomationActionContract } from "./kyuubiki-automation-actions.mjs";
+import { buildRestrictedPlaywrightLaunchError, isRestrictedPlaywrightLaunchError } from "./playwright-runtime-guard.mjs";
 
 function normalizeActionName(action) {
   return String(action ?? "")
@@ -188,7 +189,18 @@ function resolveActionExecutor(step) {
 }
 
 export async function createPlaywrightExecutor(options = {}) {
-  const browser = await chromium.launch({ headless: options.headless !== false });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: options.headless !== false });
+  } catch (error) {
+    if (isRestrictedPlaywrightLaunchError(error)) {
+      throw buildRestrictedPlaywrightLaunchError(
+        error,
+        "Run the automation command in a desktop session that can launch a local browser.",
+      );
+    }
+    throw error;
+  }
   const context = await browser.newContext({
     viewport: options.viewport ?? { width: 1440, height: 900 },
     baseURL: options.baseUrl ?? undefined,

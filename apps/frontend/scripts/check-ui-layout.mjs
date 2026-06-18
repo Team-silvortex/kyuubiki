@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { isRestrictedPlaywrightLaunchError, reportRestrictedPlaywrightSkip } from "./playwright-runtime-guard.mjs";
 
 const baseUrl = process.env.UI_LAYOUT_URL || "http://127.0.0.1:3000";
 const pagePaths = (process.env.UI_LAYOUT_PATHS || "/,/workflow-benchmark,/docs,/docs/workflow-architecture")
@@ -31,7 +32,16 @@ function resolveAuditUrl(pathname) {
 }
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true });
+  } catch (error) {
+    if (isRestrictedPlaywrightLaunchError(error)) {
+      reportRestrictedPlaywrightSkip("UI layout guard", error);
+      return;
+    }
+    throw error;
+  }
   const failures = [];
 
   try {
@@ -194,6 +204,10 @@ async function run() {
 }
 
 run().catch((error) => {
+  if (isRestrictedPlaywrightLaunchError(error)) {
+    reportRestrictedPlaywrightSkip("UI layout guard", error);
+    process.exit(0);
+  }
   console.error(error);
   process.exit(1);
 });

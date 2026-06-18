@@ -13,6 +13,7 @@ type AdminJobRow = {
   projectId: string | null;
   heartbeatTone: string;
   heartbeatLabel: string;
+  statusDetail?: string | null;
   detail: string;
 };
 
@@ -321,6 +322,7 @@ export const WorkbenchDataAdminPanel = memo(function WorkbenchDataAdminPanel({
                   <small>
                     <span className={`heartbeat-badge heartbeat-badge--${entry.heartbeatTone}`}>{entry.heartbeatLabel}</span>
                   </small>
+                  {entry.statusDetail ? <small>{entry.statusDetail}</small> : null}
                   <small>{entry.detail}</small>
                 </button>
               )}

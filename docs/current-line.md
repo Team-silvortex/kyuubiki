@@ -28,8 +28,16 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The current shipping point in this line is `tamamono 1.8.0`, and these
-expectations are meant to remain true across later `1.x` releases too.
+The current published release snapshot in this line is `tamamono 1.8.0`.
+
+The current working point in the repository is `tamamono 1.8.1`, where the
+main focus remains hardening work inside `1.8.x`:
+
+- workflow-run lifecycle cleanup
+- clearer task failure semantics
+- bug fixing and runtime consistency
+
+These expectations are meant to remain true across later `1.x` releases too.
 
 ## Current backend momentum
 

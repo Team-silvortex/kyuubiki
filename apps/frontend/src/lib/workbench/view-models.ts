@@ -172,6 +172,7 @@ export function buildAdminJobRows({
     projectId: job.project_id ?? null,
     heartbeatTone: heartbeatTone(job as JobEnvelope["job"]),
     heartbeatLabel: heartbeatLabel(job as JobEnvelope["job"]),
+    statusDetail: resolveJobStatusDetailLabel(job.status_detail),
     detail: detailLabel(job),
   }));
 }

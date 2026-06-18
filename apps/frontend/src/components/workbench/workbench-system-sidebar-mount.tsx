@@ -103,14 +103,7 @@ type WorkbenchSystemSidebarMountProps = {
   scriptSnapshot: WorkbenchScriptSnapshot;
   systemDataTab: "jobs" | "results";
   handleSystemDataTabChange: (tab: "jobs" | "results") => void;
-  adminJobRows: Array<{
-    id: string;
-    status: string;
-    projectId: string | null;
-    heartbeatTone: string;
-    heartbeatLabel: string;
-    detail: string;
-  }>;
+  adminJobRows: Array<{ id: string; status: string; projectId: string | null; heartbeatTone: string; heartbeatLabel: string; statusDetail?: string | null; detail: string }>;
   selectedAdminJobId: string | null;
   handleSelectAdminJob: (jobId: string) => void;
   selectedAdminJob: { job_id?: string; project_id?: string | null; model_version_id?: string | null; status?: string } | null;

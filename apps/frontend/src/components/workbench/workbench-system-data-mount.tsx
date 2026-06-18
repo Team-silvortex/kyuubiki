@@ -46,6 +46,7 @@ type WorkbenchSystemDataMountProps = {
     projectId: string | null;
     heartbeatTone: string;
     heartbeatLabel: string;
+    statusDetail?: string | null;
     detail: string;
   }>;
   adminResultRows: Array<{

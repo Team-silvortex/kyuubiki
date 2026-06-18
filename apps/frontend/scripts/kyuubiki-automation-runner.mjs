@@ -13,6 +13,12 @@ function shouldBlockStep(step, options) {
   return !options.dryRun;
 }
 
+function resolveExecutionError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const code = error && typeof error === "object" && typeof error.code === "string" ? error.code : null;
+  return { message, code };
+}
+
 async function executeStep(step, options) {
   const startedAt = new Date().toISOString();
   const base = {
@@ -63,11 +69,13 @@ async function executeStep(step, options) {
       result: execution?.result ?? null,
     };
   } catch (error) {
+    const failure = resolveExecutionError(error);
     return {
       ...base,
       status: "failed",
       completed_at: new Date().toISOString(),
-      message: error instanceof Error ? error.message : String(error),
+      message: failure.message,
+      error_code: failure.code,
     };
   }
 }

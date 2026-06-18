@@ -1,5 +1,33 @@
 # Changelog
 
+## tamamono 1.8.1 workflow reliability snapshot
+
+### Changed
+
+- started formalizing workflow-run lifecycle handling instead of leaving run
+  state as ad hoc frontend-only strings
+- introduced shared frontend job-status helpers for active, terminal, failed,
+  and detached workflow-run states
+- workflow runs now retain explicit polling attachment state, so the Workbench
+  can show when a run has detached from active polling instead of only dropping
+  a transient message
+- added structured `status_detail` metadata to job payloads so stalled,
+  watchdog-timeout, execution-timeout, and operator-cancelled failures are no
+  longer hidden only inside freeform message strings
+- carried the new structured job-status detail into:
+  - workflow run trace cards
+  - workflow history reopen flows
+  - headless job fetch / wait flows
+  - library and admin job list surfaces
+
+### Notes
+
+- this is a `1.8.1` hardening step inside the current `1.8.x` line, not the
+  start of the planned `1.9.x` task-system expansion
+- formal release metadata and generated update-catalog artifacts are still on
+  the published `1.8.0` snapshot until the repository-wide version contract is
+  advanced together
+
 ## tamamono 1.8.0 security hardening snapshot
 
 ### Changed
