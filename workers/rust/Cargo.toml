@@ -5,6 +5,7 @@ members = [
   "crates/deploy-server",
   "crates/desktop-runtime",
   "crates/engine",
+  "crates/headless-sdk",
   "crates/installer",
   "crates/operator-sdk",
   "crates/platform",

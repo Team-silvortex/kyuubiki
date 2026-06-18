@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { fail, parseFlags, positionalArgs } from "./kyuubiki-cli-runtime.mjs";
+import { assertHeadlessInputPath, handleHeadlessInit, handleHeadlessInspect, handleHeadlessRender, handleHeadlessRun, handleHeadlessTemplates, handleHeadlessValidate } from "./kyuubiki-cli-headless.mjs";
 import {
   handleProjectAutomationPresets,
   handleProjectAutomationRender,
@@ -35,6 +36,12 @@ Usage:
   kyuubiki project automation-presets <input> [--json]
   kyuubiki project automation-render <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json]
   kyuubiki project automation-run <input> --preset <id|name> [--payload payload.json] [--state state.json] [--json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir] [--api-base-url url]
+  kyuubiki headless templates [--runtime service_only|browser_only|hybrid] [--query text] [--json]
+  kyuubiki headless init [--template <id>] [--runtime-style service_only|browser_only|hybrid] [--query text] [--workflow-id workflow.id] [--out output.json] [--json]
+  kyuubiki headless inspect <input> [--json]
+  kyuubiki headless validate <input> [--json]
+  kyuubiki headless render <input> [--json] [--out output.json]
+  kyuubiki headless run <input> [--state context.json] [--json] [--report-out report.json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir] [--api-base-url url]
   kyuubiki macro inspect <macro.json> [--json]
   kyuubiki macro actions [--json]
   kyuubiki macro validate <input> [--json]
@@ -74,6 +81,18 @@ async function handleMacroScope(command, args, flags) {
   fail(`unknown macro command: ${command}`);
 }
 
+async function handleHeadlessScope(command, args, flags) {
+  if (command === "templates") return handleHeadlessTemplates(flags);
+  if (command === "init") return handleHeadlessInit(flags);
+  const [, , inputPath] = positionalArgs(args);
+  assertHeadlessInputPath(inputPath);
+  if (command === "inspect") return handleHeadlessInspect(inputPath, flags);
+  if (command === "validate") return handleHeadlessValidate(inputPath, flags);
+  if (command === "render") return handleHeadlessRender(inputPath, flags);
+  if (command === "run") return handleHeadlessRun(inputPath, flags);
+  fail(`unknown headless command: ${command}`);
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const [scope = "help", command = ""] = positionalArgs(args);
@@ -84,6 +103,7 @@ async function main() {
     return;
   }
   if (scope === "project") return handleProjectScope(command, args, flags);
+  if (scope === "headless") return handleHeadlessScope(command, args, flags);
   if (scope === "macro") return handleMacroScope(command, args, flags);
   fail(`unknown command: ${scope}`);
 }

@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { createHybridAutomationExecutor } from "./kyuubiki-hybrid-executor.mjs";
 
@@ -65,8 +65,41 @@ export async function withAutomationExecutor(flags, callback) {
     return await callback({
       executor: runtime.executor,
       artifactsDir: runtime.getArtifactsDir?.() ?? runtime.artifactsDir ?? null,
+      apiBaseUrl: runtime.getApiBaseUrl?.() ?? null,
     });
   } finally {
     await runtime.dispose();
   }
+}
+
+async function collectArtifactManifestEntries(rootDir, currentDir) {
+  const entries = await readdir(currentDir, { withFileTypes: true });
+  const manifest = [];
+  for (const entry of entries) {
+    const absolutePath = path.join(currentDir, entry.name);
+    if (entry.isDirectory()) {
+      manifest.push(...await collectArtifactManifestEntries(rootDir, absolutePath));
+      continue;
+    }
+    const details = await stat(absolutePath);
+    manifest.push({
+      path: absolutePath,
+      relative_path: path.relative(rootDir, absolutePath) || entry.name,
+      size_bytes: details.size,
+      modified_at: details.mtime.toISOString(),
+    });
+  }
+  manifest.sort((left, right) => left.relative_path.localeCompare(right.relative_path));
+  return manifest;
+}
+
+export async function collectArtifactManifest(artifactsDir) {
+  if (!artifactsDir) return [];
+  try {
+    const details = await stat(artifactsDir);
+    if (!details.isDirectory()) return [];
+  } catch {
+    return [];
+  }
+  return collectArtifactManifestEntries(artifactsDir, artifactsDir);
 }
