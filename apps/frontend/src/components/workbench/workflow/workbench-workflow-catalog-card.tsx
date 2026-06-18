@@ -28,12 +28,13 @@ export function WorkbenchWorkflowCatalogCard(props: {
   isSelected: boolean;
   labels: WorkflowSidebarLabels;
   matchSummary?: string[];
+  searchScore?: number | null;
   onDelete?: () => void;
   onRun: () => void;
   onSelectForBuilder: () => void;
   workflow: WorkflowCatalogEntry;
 }) {
-  const { activeQuery, bridgeRuntimeSummary, bridgeRuntimeTone, contractHealth, isSelected, labels, matchSummary = [], onDelete, onRun, onSelectForBuilder, workflow } =
+  const { activeQuery, bridgeRuntimeSummary, bridgeRuntimeTone, contractHealth, isSelected, labels, matchSummary = [], onDelete, onRun, onSelectForBuilder, searchScore, workflow } =
     props;
   const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
   const highlights = deriveWorkflowCatalogHighlights(workflow);
@@ -49,6 +50,12 @@ export function WorkbenchWorkflowCatalogCard(props: {
       <p className="card-copy">{workflow.summary}</p>
       {activeQuery?.trim() && matchSummary.length > 0 ? (
         <div className="sidebar-list">
+          {typeof searchScore === "number" && searchScore > 0 ? (
+            <div className="sidebar-list__row">
+              <span>{labels.catalogSearchScoreLabel}</span>
+              <strong>{searchScore}</strong>
+            </div>
+          ) : null}
           <div className="sidebar-list__row">
             <span>{labels.catalogSearchMatchesLabel}</span>
             <strong>{matchSummary.join(" · ")}</strong>

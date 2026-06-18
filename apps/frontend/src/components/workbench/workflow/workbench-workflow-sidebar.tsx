@@ -29,8 +29,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-perf";
 import { WorkbenchWorkflowCatalogCard } from "@/components/workbench/workflow/workbench-workflow-catalog-card";
 import {
-  describeWorkflowCatalogEntrySearchMatches,
-  scoreWorkflowCatalogEntrySearch,
+  suggestWorkflowCatalogEntries,
 } from "@/components/workbench/workflow/workbench-workflow-catalog-search";
 import { groupWorkflowCatalogEntriesByDomain } from "@/components/workbench/workflow/workbench-workflow-domain-groups";
 import { WorkbenchWorkflowRunTraceCard } from "@/components/workbench/workflow/workbench-workflow-run-trace-card";
@@ -208,14 +207,10 @@ export function WorkbenchWorkflowSidebar({
                   : catalogFilter === "bridge_missing_runtime"
                     ? workflowCatalogEntries.filter((workflow) => bridgeRuntimeState(workflow) === "bridge_missing_runtime")
               : workflowCatalogEntries;
-    const searchScores = new Map(
-      filtered.flatMap((workflow) => {
-        const score = scoreWorkflowCatalogEntrySearch(workflow, catalogQuery.trim());
-        return !catalogQuery.trim() || score == null ? (catalogQuery.trim() ? [] : [[workflow.id, 0] as const]) : [[workflow.id, score] as const];
-      }),
-    );
-    return filtered
-      .filter((workflow) => searchScores.has(workflow.id))
+    const suggestions = suggestWorkflowCatalogEntries(filtered, catalogQuery.trim());
+    const searchScores = new Map(suggestions.map((entry) => [entry.workflow.id, entry.score] as const));
+    return suggestions
+      .map((entry) => entry.workflow)
       .sort((left, right) => {
       const scoreDiff = (searchScores.get(right.id) ?? 0) - (searchScores.get(left.id) ?? 0);
       if (scoreDiff !== 0) return scoreDiff;
@@ -231,6 +226,10 @@ export function WorkbenchWorkflowSidebar({
       return left.name.localeCompare(right.name);
     });
   }, [catalogFilter, catalogQuery, latestRunByWorkflowId, latestRunStatusByWorkflowId, workflowCatalogEntries]);
+  const catalogSearchSuggestions = useMemo(
+    () => new Map(suggestWorkflowCatalogEntries(filteredWorkflowCatalogEntries, catalogQuery.trim()).map((entry) => [entry.workflow.id, entry] as const)),
+    [catalogQuery, filteredWorkflowCatalogEntries],
+  );
   const groupedWorkflowCatalogEntries = useMemo(
     () => groupWorkflowCatalogEntriesByDomain(filteredWorkflowCatalogEntries),
     [filteredWorkflowCatalogEntries],
@@ -273,7 +272,7 @@ export function WorkbenchWorkflowSidebar({
         isSelected={selectedWorkflowId === workflow.id}
         key={workflow.id}
         labels={labels}
-        matchSummary={describeWorkflowCatalogEntrySearchMatches(workflow, catalogQuery)}
+        matchSummary={catalogSearchSuggestions.get(workflow.id)?.matchSummary}
         onDelete={workflow.local ? () => deleteCatalogLocalWorkflow(workflow) : undefined}
         onRun={() => {
           setCatalogMessage(
@@ -289,6 +288,7 @@ export function WorkbenchWorkflowSidebar({
           onSelectWorkflow(workflow.id);
           onSurfaceTabChange("builder");
         }}
+        searchScore={catalogSearchSuggestions.get(workflow.id)?.score ?? null}
         workflow={workflow}
       />
     );

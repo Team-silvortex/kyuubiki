@@ -343,6 +343,9 @@ const HUB_I18N = {
       workflowCatalogLabel: "Workflow catalog",
       workflowCatalogTitle: "Named workflow runs",
       workflowCatalogCopy: "Discover built-in multi-operator workflows and run a reference sample without pasting a raw graph.",
+      workflowCatalogSearchLabel: "Search workflows",
+      workflowCatalogSearchPlaceholder: "bridge thermal export",
+      workflowCatalogSearchClear: "Clear search",
       workflowCatalogRefresh: "Refresh workflow catalog",
       workflowCatalogReady: "Workflow catalog is ready.",
       ready: "Workload library is ready.",
@@ -522,6 +525,9 @@ const HUB_I18N = {
       managedWorkloadsEmpty: "No managed workloads yet. Register a current bundle or sync a remote catalog.",
       managedWorkloadsFilterEmpty: "No workloads match {domain} / {family}.",
       workflowCatalogEmpty: "No named workflows are available yet.",
+      workflowCatalogNoSearchMatches: "No workflows match \"{query}\" right now.",
+      workflowCatalogSuggestedBadge: "score {score}",
+      workflowCatalogMatchedTerms: "Matched: {terms}",
       workflowCatalogLoading: "Loading workflow catalog…",
       workflowCatalogLoaded: "loaded {count} named workflows into the Hub catalog",
       workflowCatalogRun: "Run reference sample",
@@ -807,6 +813,9 @@ const HUB_I18N = {
     workflowCatalogLabel: "工作流目录",
     workflowCatalogTitle: "命名工作流运行",
     workflowCatalogCopy: "发现内建多算子工作流，并直接运行参考样板，不必手填 raw graph。",
+    workflowCatalogSearchLabel: "搜索工作流",
+    workflowCatalogSearchPlaceholder: "bridge thermal export",
+    workflowCatalogSearchClear: "清空搜索",
     workflowCatalogRefresh: "刷新工作流目录",
     workflowCatalogReady: "工作流目录已就绪。",
     ready: "工作负载库已就绪。",
@@ -986,6 +995,9 @@ const HUB_I18N = {
       managedWorkloadsEmpty: "还没有已管理工作负载。先注册当前 bundle，或同步远端 catalog。",
       managedWorkloadsFilterEmpty: "没有工作负载匹配 {domain} / {family}。",
       workflowCatalogEmpty: "当前还没有可用的命名工作流。",
+      workflowCatalogNoSearchMatches: "当前没有工作流匹配“{query}”。",
+      workflowCatalogSuggestedBadge: "评分 {score}",
+      workflowCatalogMatchedTerms: "命中词：{terms}",
       workflowCatalogLoading: "正在加载工作流目录……",
       workflowCatalogLoaded: "已将 {count} 条命名工作流载入 Hub 目录",
       workflowCatalogRun: "运行参考样板",
@@ -1271,6 +1283,9 @@ const HUB_I18N = {
       workflowCatalogLabel: "workflow catalog",
       workflowCatalogTitle: "名前付き workflow 実行",
       workflowCatalogCopy: "raw graph を貼り付けずに、組み込み multi-operator workflow を見つけて reference sample を実行します。",
+      workflowCatalogSearchLabel: "workflow を検索",
+      workflowCatalogSearchPlaceholder: "bridge thermal export",
+      workflowCatalogSearchClear: "検索をクリア",
       workflowCatalogRefresh: "workflow catalog を更新",
       workflowCatalogReady: "workflow catalog の準備ができました。",
       ready: "ワークロードライブラリの準備ができました。",
@@ -1561,6 +1576,9 @@ HUB_I18N.es = {
     workflowCatalogLabel: "Catálogo de workflows",
     workflowCatalogTitle: "Ejecuciones con nombre",
     workflowCatalogCopy: "Descubre workflows integrados de varios operadores y ejecuta una muestra de referencia sin pegar un grafo crudo.",
+    workflowCatalogSearchLabel: "Buscar workflows",
+    workflowCatalogSearchPlaceholder: "bridge thermal export",
+    workflowCatalogSearchClear: "Limpiar búsqueda",
     workflowCatalogRefresh: "Actualizar catálogo de workflows",
     workflowCatalogReady: "El catálogo de workflows está listo.",
   },
@@ -1987,6 +2005,9 @@ const elements = {
   workflowCatalogLabel: document.getElementById("workflow-catalog-label"),
   workflowCatalogTitle: document.getElementById("workflow-catalog-title"),
   workflowCatalogCopy: document.getElementById("workflow-catalog-copy"),
+  workflowCatalogSearchLabel: document.getElementById("workflow-catalog-search-label"),
+  workflowCatalogSearch: document.getElementById("workflow-catalog-search"),
+  workflowCatalogSearchClear: document.getElementById("workflow-catalog-search-clear"),
   workflowCatalogRefresh: document.getElementById("workflow-catalog-refresh"),
   workflowCatalogList: document.getElementById("workflow-catalog-list"),
   workflowCatalogOutput: document.getElementById("workflow-catalog-output"),
@@ -2361,6 +2382,11 @@ function renderDesktopLanguagePreference() {
   setText(elements.workflowCatalogLabel, copy.library.workflowCatalogLabel);
   setText(elements.workflowCatalogTitle, copy.library.workflowCatalogTitle);
   setText(elements.workflowCatalogCopy, copy.library.workflowCatalogCopy);
+  setText(elements.workflowCatalogSearchLabel, copy.library.workflowCatalogSearchLabel);
+  if (elements.workflowCatalogSearch) {
+    elements.workflowCatalogSearch.placeholder = copy.library.workflowCatalogSearchPlaceholder;
+  }
+  setText(elements.workflowCatalogSearchClear, copy.library.workflowCatalogSearchClear);
   setText(elements.workflowCatalogRefresh, copy.library.workflowCatalogRefresh);
   if (elements.workflowCatalogOutput && !state.workflowCatalogBusy) {
     elements.workflowCatalogOutput.textContent = copy.library.workflowCatalogReady;
@@ -4582,6 +4608,7 @@ function renderWorkflowCatalog(entries = state.workflowCatalog) {
   return renderWorkflowCatalogPanel(entries, {
     workflowCatalogList: elements.workflowCatalogList,
     workflowCatalogBusy: state.workflowCatalogBusy,
+    workflowCatalogQuery: elements.workflowCatalogSearch?.value || "",
     renderEmptyHistoryState,
     localizedWorkflowCatalogLabel,
     appendTextElement,
@@ -5352,6 +5379,18 @@ elements.workloadFamilyFilterButtons.forEach((button) => {
     renderHubWorkloadLibrary();
     setWorkloadLibraryOutput(`filtered workloads: ${state.workloadFilter} / ${state.workloadFamilyFilter}`);
   });
+});
+
+elements.workflowCatalogSearch?.addEventListener("input", () => {
+  renderWorkflowCatalog();
+});
+
+elements.workflowCatalogSearchClear?.addEventListener("click", () => {
+  if (elements.workflowCatalogSearch) {
+    elements.workflowCatalogSearch.value = "";
+  }
+  renderWorkflowCatalog();
+  setWorkflowCatalogOutput(localizedWorkflowCatalogLabel("workflowCatalogReady"));
 });
 
 elements.historyManageButtons.forEach((button) => {

@@ -6,8 +6,9 @@ use kyuubiki_headless_sdk::{
     HeadlessEngine, HeadlessExecutionBatch, HeadlessRunReport, HeadlessRuntimeStyle,
     HeadlessTemplateDescriptor, HeadlessValidationReport, HeadlessWorkflowDocument,
     HybridHeadlessExecutor, MockHeadlessExecutor, ServiceHeadlessExecutor, build_template_document,
-    collect_executor_compatibility_issues, execute_batch_with_executor, list_templates,
-    normalize_workflow_document, run_batch_dry, summarize_batch, validate_batch,
+    collect_executor_compatibility_issues, execute_batch_with_executor,
+    normalize_workflow_document, run_batch_dry, search_templates, summarize_batch,
+    suggest_template_details, suggest_templates, validate_batch,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -28,6 +29,7 @@ fn run() -> Result<(), String> {
             Ok(())
         }
         "templates" => handle_templates(&args[1..]),
+        "suggest" => handle_suggest(&args[1..]),
         "init" => handle_init(&args[1..]),
         "inspect" => handle_inspect(&args[1..]),
         "validate" => handle_validate(&args[1..]),
@@ -38,13 +40,13 @@ fn run() -> Result<(), String> {
 
 fn print_usage() {
     println!(
-        "kyuubiki headless (Rust)\n\nUsage:\n  kyuubiki-headless help\n  kyuubiki-headless templates [--runtime service_only|browser_only|hybrid] [--query text] [--json]\n  kyuubiki-headless init [--template <id>] [--runtime-style service_only|browser_only|hybrid] [--query text] [--workflow-id workflow.id] [--out output.json] [--json]\n  kyuubiki-headless inspect <input> [--json]\n  kyuubiki-headless validate <input> [--json]\n  kyuubiki-headless run <input> [--json] [--report-out report.json] [--allow-sensitive] [--allow-destructive] [--execute] [--executor mock|service|hybrid] [--api-base-url http://127.0.0.1:3000] [--api-token token]"
+        "kyuubiki headless (Rust)\n\nUsage:\n  kyuubiki-headless help\n  kyuubiki-headless templates [--runtime service_only|browser_only|hybrid] [--category name] [--tag label] [--query text] [--json]\n  kyuubiki-headless suggest <query> [--json]\n  kyuubiki-headless init [--template <id>] [--runtime-style service_only|browser_only|hybrid] [--category name] [--tag label] [--query text] [--workflow-id workflow.id] [--out output.json] [--json]\n  kyuubiki-headless inspect <input> [--json]\n  kyuubiki-headless validate <input> [--json]\n  kyuubiki-headless run <input> [--json] [--report-out report.json] [--allow-sensitive] [--allow-destructive] [--execute] [--executor mock|service|hybrid] [--api-base-url http://127.0.0.1:3000] [--api-token token]"
     );
 }
 
 fn handle_templates(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args);
-    let templates = filter_templates(flags.runtime.as_deref(), flags.query.as_deref());
+    let templates = filter_templates(&flags);
     if flags.json {
         print_json(&TemplateListOutput {
             template_count: templates.len(),
@@ -57,6 +59,35 @@ fn handle_templates(args: &[String]) -> Result<(), String> {
     }
     println!("Headless templates: {}", templates.len());
     print_template_groups(&templates);
+    Ok(())
+}
+
+fn handle_suggest(args: &[String]) -> Result<(), String> {
+    let flags = Flags::parse(args);
+    let query = flags
+        .query
+        .clone()
+        .or_else(|| flags.positional.first().cloned())
+        .ok_or_else(|| "suggest requires a query".to_string())?;
+    let suggestions = suggest_template_details(&query, 5);
+    if flags.json {
+        print_json(&suggestions)?;
+        return Ok(());
+    }
+    if suggestions.is_empty() {
+        println!("No template suggestions for: {query}");
+        return Ok(());
+    }
+    println!("Template suggestions for: {query}");
+    for suggestion in suggestions {
+        println!(
+            "- {} [{}] score={} terms={}",
+            suggestion.id,
+            runtime_style_label(suggestion.runtime_style),
+            suggestion.score,
+            suggestion.matched_terms.join(", ")
+        );
+    }
     Ok(())
 }
 
@@ -83,11 +114,7 @@ fn print_template_groups(templates: &[&HeadlessTemplateDescriptor]) {
 
 fn handle_init(args: &[String]) -> Result<(), String> {
     let flags = Flags::parse(args);
-    let template = resolve_template(
-        flags.template.as_deref(),
-        flags.runtime.as_deref(),
-        flags.query.as_deref(),
-    )?;
+    let template = resolve_template(&flags)?;
     let document = build_template_document(template.id, flags.workflow_id.as_deref())
         .ok_or_else(|| format!("failed to build template {}", template.id))?;
     if flags.json && flags.out.is_none() {
@@ -265,18 +292,20 @@ fn load_batch_from_path(path: &str) -> Result<HeadlessExecutionBatch, String> {
     ))
 }
 
-fn resolve_template<'a>(
-    template_id: Option<&str>,
-    runtime: Option<&str>,
-    query: Option<&str>,
-) -> Result<&'a HeadlessTemplateDescriptor, String> {
-    let matches = filter_templates(runtime, query);
-    if let Some(template_id) = template_id {
+fn resolve_template(flags: &Flags) -> Result<&'static HeadlessTemplateDescriptor, String> {
+    let matches = filter_templates(flags);
+    if let Some(template_id) = flags.template.as_deref() {
         return matches
             .into_iter()
             .find(|template| template.id == template_id)
-            .ok_or_else(|| format!("unknown headless template \"{template_id}\""));
+            .ok_or_else(|| unknown_template_message(template_id));
     }
+    resolve_filtered_template(matches)
+}
+
+fn resolve_filtered_template(
+    matches: Vec<&'static HeadlessTemplateDescriptor>,
+) -> Result<&'static HeadlessTemplateDescriptor, String> {
     if matches.len() == 1 {
         return Ok(matches[0]);
     }
@@ -293,35 +322,28 @@ fn resolve_template<'a>(
     ))
 }
 
-fn filter_templates(
-    runtime: Option<&str>,
-    query: Option<&str>,
-) -> Vec<&'static HeadlessTemplateDescriptor> {
-    let runtime = runtime.and_then(parse_runtime_style);
-    let tokens = query_tokens(query);
-    list_templates()
-        .iter()
-        .filter(|template| runtime.is_none_or(|runtime| template.runtime_style == runtime))
-        .filter(|template| matches_query(template, &tokens))
-        .collect()
+fn filter_templates(flags: &Flags) -> Vec<&'static HeadlessTemplateDescriptor> {
+    search_templates(
+        flags.runtime.as_deref().and_then(parse_runtime_style),
+        flags.category.as_deref(),
+        flags.tag.as_deref(),
+        flags.query.as_deref(),
+    )
 }
 
-fn matches_query(template: &HeadlessTemplateDescriptor, tokens: &[String]) -> bool {
-    if tokens.is_empty() {
-        return true;
+fn unknown_template_message(template_id: &str) -> String {
+    let suggestions = suggest_templates(template_id, 5);
+    if suggestions.is_empty() {
+        return format!("unknown headless template \"{template_id}\"");
     }
-    let actions = template_actions(template.id);
-    let fields = [
-        template.id.to_lowercase(),
-        template.title.to_lowercase(),
-        template.description.to_lowercase(),
-        template.category.to_lowercase(),
-        template.tags.join(" ").to_lowercase(),
-        actions.join(" ").to_lowercase(),
-    ];
-    tokens
-        .iter()
-        .all(|token| fields.iter().any(|field| field.contains(token)))
+    format!(
+        "unknown headless template \"{template_id}\". Closest matches: {}",
+        suggestions
+            .iter()
+            .map(|template| template.id)
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
 }
 
 fn template_actions(template_id: &str) -> Vec<String> {
@@ -335,15 +357,6 @@ fn template_actions(template_id: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn query_tokens(query: Option<&str>) -> Vec<String> {
-    query
-        .unwrap_or_default()
-        .split_whitespace()
-        .map(|token| token.trim().to_lowercase())
-        .filter(|token| !token.is_empty())
-        .collect()
 }
 
 fn parse_runtime_style(value: &str) -> Option<HeadlessRuntimeStyle> {
@@ -469,6 +482,8 @@ struct Flags {
     api_base_url: Option<String>,
     api_token: Option<String>,
     runtime: Option<String>,
+    category: Option<String>,
+    tag: Option<String>,
     query: Option<String>,
     template: Option<String>,
     workflow_id: Option<String>,
@@ -501,6 +516,14 @@ impl Flags {
                 "--runtime" | "--runtime-style" => {
                     index += 1;
                     flags.runtime = args.get(index).cloned();
+                }
+                "--category" => {
+                    index += 1;
+                    flags.category = args.get(index).cloned();
+                }
+                "--tag" => {
+                    index += 1;
+                    flags.tag = args.get(index).cloned();
                 }
                 "--query" | "--search" => {
                     index += 1;

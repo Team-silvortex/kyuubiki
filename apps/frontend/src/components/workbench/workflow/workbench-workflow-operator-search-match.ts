@@ -2,6 +2,15 @@
 
 import type { WorkflowOperatorDescriptor } from "@/lib/api";
 import type { WorkflowNodeTemplatePreset } from "@/components/workbench/workflow/workbench-workflow-node-templates";
+import {
+  buildWorkflowSearchSuggestions,
+  findWorkflowSearchMatches,
+  includesAllWorkflowSearchTokens,
+  normalizeWorkflowSearchText,
+  scoreWorkflowSearchFields,
+  tokenizeWorkflowSearchQuery,
+  type WorkflowSearchWeightedField,
+} from "@/components/workbench/workflow/workbench-workflow-search-score";
 
 type WorkflowNodeTemplateSearchIndex = {
   combined: string;
@@ -14,15 +23,13 @@ type WorkflowNodeTemplateSearchIndex = {
   capabilities: string[];
 };
 
+export type WorkflowNodeTemplateSearchSuggestion = {
+  preset: WorkflowNodeTemplatePreset;
+  score: number;
+  matchSummary: string[];
+};
+
 const operatorSearchIndexCache = new Map<string, WorkflowNodeTemplateSearchIndex>();
-
-function normalizeWorkflowSearchText(value?: string | null) {
-  return value?.trim().toLowerCase() ?? "";
-}
-
-function tokenizeWorkflowSearchQuery(query: string) {
-  return normalizeWorkflowSearchText(query).split(/\s+/).filter(Boolean);
-}
 
 function resolveWorkflowNodeTemplateSearchIndex(
   preset: WorkflowNodeTemplatePreset,
@@ -80,41 +87,79 @@ export function scoreWorkflowNodeTemplatePresetSearch(
   const tokens = tokenizeWorkflowSearchQuery(normalizedQuery);
   if (tokens.length === 0) return 0;
   const index = resolveWorkflowNodeTemplateSearchIndex(preset, descriptor);
-  if (!tokens.every((token) => index.combined.includes(token))) return null;
+  if (!includesAllWorkflowSearchTokens(index.combined, tokens)) return null;
+  const weightedFields: WorkflowSearchWeightedField[] = [
+    { value: index.label, exact: 160, prefix: 120, contains: 90 },
+    { value: index.operatorId, exact: 150, prefix: 110, contains: 80 },
+    { value: index.summary, exact: 120, prefix: 90, contains: 70 },
+  ];
+  return (
+    scoreWorkflowSearchFields(
+      weightedFields,
+      [index.family, index.domain, index.kind, ...index.capabilities],
+      normalizedQuery,
+      tokens,
+    ) +
+    (index.family === normalizedQuery ? 50 : 0) +
+    (index.domain === normalizedQuery ? 45 : 0) +
+    (index.kind === normalizedQuery ? 35 : 0) +
+    (index.capabilities.includes(normalizedQuery) ? 40 : 0)
+  );
+}
 
-  let score = 0;
-  if (index.label === normalizedQuery) score += 160;
-  else if (index.label.startsWith(normalizedQuery)) score += 120;
-  else if (index.label.includes(normalizedQuery)) score += 90;
+export function describeWorkflowNodeTemplatePresetSearchMatches(
+  preset: WorkflowNodeTemplatePreset,
+  descriptor: WorkflowOperatorDescriptor | undefined,
+  query: string,
+) {
+  const normalizedQuery = normalizeWorkflowSearchText(query);
+  if (!normalizedQuery) return [];
+  const tokens = tokenizeWorkflowSearchQuery(normalizedQuery);
+  if (tokens.length === 0) return [];
+  const index = resolveWorkflowNodeTemplateSearchIndex(preset, descriptor);
+  const matches: string[] = [];
+  const hasTokenMatch = (values: string[]) => findWorkflowSearchMatches(values, tokens);
 
-  if (index.operatorId === normalizedQuery) score += 150;
-  else if (index.operatorId.startsWith(normalizedQuery)) score += 110;
-  else if (index.operatorId.includes(normalizedQuery)) score += 80;
-
-  if (index.summary === normalizedQuery) score += 120;
-  else if (index.summary.startsWith(normalizedQuery)) score += 90;
-  else if (index.summary.includes(normalizedQuery)) score += 70;
-
-  if (index.family === normalizedQuery) score += 50;
-  if (index.domain === normalizedQuery) score += 45;
-  if (index.kind === normalizedQuery) score += 35;
-  if (index.capabilities.includes(normalizedQuery)) score += 40;
-
-  for (const token of tokens) {
-    if (index.label.startsWith(token)) score += 16;
-    else if (index.label.includes(token)) score += 10;
-
-    if (index.operatorId.startsWith(token)) score += 14;
-    else if (index.operatorId.includes(token)) score += 9;
-
-    if (index.summary.startsWith(token)) score += 12;
-    else if (index.summary.includes(token)) score += 8;
-
-    if (index.family.includes(token)) score += 6;
-    if (index.domain.includes(token)) score += 6;
-    if (index.kind.includes(token)) score += 4;
-    if (index.capabilities.some((tag) => tag.includes(token))) score += 7;
+  if (hasTokenMatch([index.label])) matches.push(`label: ${preset.label}`);
+  if (hasTokenMatch([index.operatorId])) matches.push(`operator: ${preset.operatorId}`);
+  if (hasTokenMatch([index.summary])) matches.push("summary");
+  if (hasTokenMatch([index.family])) matches.push(`family: ${descriptor?.family ?? preset.kind}`);
+  if (hasTokenMatch([index.domain])) matches.push(`domain: ${descriptor?.domain ?? "other"}`);
+  const matchedCapabilities = (descriptor?.capability_tags ?? []).filter((value) =>
+    tokens.every((token) => normalizeWorkflowSearchText(value).includes(token)),
+  );
+  if (matchedCapabilities.length > 0) {
+    matches.push(`capability: ${matchedCapabilities.slice(0, 2).join(", ")}`);
   }
+  return matches.slice(0, 3);
+}
 
-  return score;
+export function suggestWorkflowNodeTemplatePresets(
+  presets: WorkflowNodeTemplatePreset[],
+  operatorDescriptorMap: Map<string, WorkflowOperatorDescriptor>,
+  query: string,
+) {
+  const normalizedQuery = normalizeWorkflowSearchText(query);
+  return buildWorkflowSearchSuggestions(
+    presets,
+    query,
+    (preset, normalizedQuery) => {
+      const descriptor = preset.operatorId
+        ? operatorDescriptorMap.get(preset.operatorId)
+        : undefined;
+      return {
+        score: scoreWorkflowNodeTemplatePresetSearch(preset, descriptor, normalizedQuery),
+        matchSummary: describeWorkflowNodeTemplatePresetSearchMatches(
+          preset,
+          descriptor,
+          normalizedQuery,
+        ),
+      };
+    },
+    (preset) => preset.label,
+  ).map((entry) => ({
+    preset: entry.item,
+    score: entry.score,
+    matchSummary: entry.matchSummary,
+  }));
 }

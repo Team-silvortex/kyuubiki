@@ -951,9 +951,14 @@ button.is-busy {
     justify-content: flex-start;
   }
 
-  .hub-history-item__controls button {
-    flex: 1 1 140px;
-  }
+.hub-history-item__controls button {
+  flex: 1 1 140px;
+}
+
+.hub-workflow-catalog-search {
+  min-width: min(100%, 22rem);
+  flex: 1 1 18rem;
+}
 
   .hub-assistant-overlay {
     padding: 1rem;

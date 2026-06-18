@@ -56,6 +56,7 @@ export type WorkflowSidebarLabels = {
   catalogSearchPlaceholder: string;
   catalogSearchEmptyLabel: string;
   catalogSearchMatchesLabel: string;
+  catalogSearchScoreLabel: string;
   catalogFilterAllLabel: string;
   catalogFilterLocalLabel: string;
   catalogFilterVariantsLabel: string;
@@ -132,6 +133,8 @@ export type WorkflowSidebarLabels = {
   operatorSearchLabel: string;
   operatorSearchPlaceholder: string;
   operatorSearchEmptyLabel: string;
+  operatorSearchScoreLabel: string;
+  operatorSearchReasonLabel: string;
   operatorDomainFilterLabel: string;
   operatorValidationFilterLabel: string;
   operatorCapabilityFilterLabel: string;

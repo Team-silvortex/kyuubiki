@@ -1,7 +1,7 @@
-use crate::{
-    HeadlessTemplateDescriptor, HeadlessWorkflowDocument,
-};
+use crate::{HeadlessRuntimeStyle, HeadlessTemplateDescriptor, HeadlessWorkflowDocument};
 use crate::template_workflows::build_template_workflow;
+use serde::Serialize;
+use std::collections::BTreeSet;
 
 const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
     HeadlessTemplateDescriptor {
@@ -238,12 +238,130 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
     },
 ];
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct HeadlessTemplateSuggestion {
+    pub id: String,
+    pub title: String,
+    pub category: String,
+    pub runtime_style: HeadlessRuntimeStyle,
+    pub tags: Vec<String>,
+    pub score: usize,
+    pub matched_terms: Vec<String>,
+}
+
 pub fn list_templates() -> &'static [HeadlessTemplateDescriptor] {
     TEMPLATES
 }
 
 pub fn find_template(id: &str) -> Option<&'static HeadlessTemplateDescriptor> {
     TEMPLATES.iter().find(|template| template.id == id)
+}
+
+pub fn list_template_categories() -> Vec<&'static str> {
+    TEMPLATES
+        .iter()
+        .map(|template| template.category)
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+pub fn search_templates(
+    runtime: Option<HeadlessRuntimeStyle>,
+    category: Option<&str>,
+    tag: Option<&str>,
+    query: Option<&str>,
+) -> Vec<&'static HeadlessTemplateDescriptor> {
+    let category = category.map(normalize_filter_token);
+    let tag = tag.map(normalize_filter_token);
+    let tokens = query_tokens(query);
+    let mut templates = TEMPLATES
+        .iter()
+        .filter(|template| runtime.is_none_or(|runtime| template.runtime_style == runtime))
+        .filter(|template| {
+            category
+                .as_ref()
+                .is_none_or(|category| normalize_filter_token(template.category) == *category)
+        })
+        .filter(|template| {
+            tag.as_ref().is_none_or(|tag| {
+                template
+                    .tags
+                    .iter()
+                    .any(|candidate| normalize_filter_token(candidate) == *tag)
+            })
+        })
+        .filter_map(|template| {
+            let metadata = template_search_metadata(template);
+            matches_query(&metadata, &tokens).then_some((template, score_query_match(&metadata, &tokens)))
+        })
+        .collect::<Vec<_>>();
+    if !tokens.is_empty() {
+        templates.sort_by(|(left_template, left_score), (right_template, right_score)| {
+            right_score
+                .cmp(left_score)
+                .then_with(|| left_template.id.cmp(right_template.id))
+        });
+    }
+    templates.into_iter().map(|(template, _)| template).collect()
+}
+
+pub fn suggest_templates(query: &str, limit: usize) -> Vec<&'static HeadlessTemplateDescriptor> {
+    let tokens = query_tokens(Some(query));
+    let mut templates = TEMPLATES
+        .iter()
+        .map(|template| {
+            let metadata = template_search_metadata(template);
+            (template, score_query_match(&metadata, &tokens))
+        })
+        .filter(|(_, score)| *score > 0)
+        .collect::<Vec<_>>();
+    templates.sort_by(|(left_template, left_score), (right_template, right_score)| {
+        right_score
+            .cmp(left_score)
+            .then_with(|| left_template.id.cmp(right_template.id))
+    });
+    templates
+        .into_iter()
+        .take(limit)
+        .map(|(template, _)| template)
+        .collect()
+}
+
+pub fn suggest_template_details(query: &str, limit: usize) -> Vec<HeadlessTemplateSuggestion> {
+    let tokens = query_tokens(Some(query));
+    let mut templates = TEMPLATES
+        .iter()
+        .map(|template| {
+            let metadata = template_search_metadata(template);
+            let score = score_query_match(&metadata, &tokens);
+            let matched_terms = tokens
+                .iter()
+                .filter(|token| metadata.fields.iter().any(|field| field.contains(token.as_str())))
+                .cloned()
+                .collect::<Vec<_>>();
+            (template, score, matched_terms)
+        })
+        .filter(|(_, score, _)| *score > 0)
+        .collect::<Vec<_>>();
+    templates.sort_by(|(left_template, left_score, _), (right_template, right_score, _)| {
+        right_score
+            .cmp(left_score)
+            .then_with(|| left_template.id.cmp(right_template.id))
+    });
+    templates
+        .into_iter()
+        .take(limit)
+        .map(|(template, score, matched_terms)| HeadlessTemplateSuggestion {
+            id: template.id.to_string(),
+            title: template.title.to_string(),
+            category: template.category.to_string(),
+            runtime_style: template.runtime_style,
+            tags: template.tags.iter().map(|tag| (*tag).to_string()).collect(),
+            score,
+            matched_terms,
+        })
+        .collect()
 }
 
 pub fn build_template_document(
@@ -261,4 +379,89 @@ pub fn build_template_document(
         workflow: build_template_workflow(template.id, &workflow_id),
         template: Some(template.to_snapshot()),
     })
+}
+
+fn matches_query(metadata: &TemplateSearchMetadata, tokens: &[String]) -> bool {
+    if tokens.is_empty() {
+        return true;
+    }
+    tokens
+        .iter()
+        .all(|token| metadata.fields.iter().any(|field| field.contains(token)))
+}
+
+fn query_tokens(query: Option<&str>) -> Vec<String> {
+    query
+        .unwrap_or_default()
+        .split(|char: char| !char.is_ascii_alphanumeric())
+        .map(normalize_filter_token)
+        .filter(|token| !token.is_empty())
+        .collect()
+}
+
+fn normalize_filter_token(value: &str) -> String {
+    value.trim().to_lowercase()
+}
+
+fn score_query_match(metadata: &TemplateSearchMetadata, tokens: &[String]) -> usize {
+    if tokens.is_empty() {
+        return 0;
+    }
+    tokens
+        .iter()
+        .map(|token| {
+            metadata
+                .weighted_fields
+                .iter()
+                .filter_map(|(field, weight)| {
+                    if field == token {
+                        Some(weight * 6)
+                    } else if field.starts_with(token) {
+                        Some(weight * 4)
+                    } else if field.contains(token) {
+                        Some(*weight)
+                    } else {
+                        None
+                    }
+                })
+                .max()
+                .unwrap_or_default()
+        })
+        .sum()
+}
+
+fn template_search_metadata(template: &HeadlessTemplateDescriptor) -> TemplateSearchMetadata {
+    let actions = build_template_workflow(template.id, template.id)
+        .steps
+        .into_iter()
+        .map(|step| step.action)
+        .collect::<Vec<_>>();
+    let tags = template
+        .tags
+        .iter()
+        .map(|tag| normalize_filter_token(tag))
+        .collect::<Vec<_>>();
+    let action_tokens = actions
+        .iter()
+        .map(|action| normalize_filter_token(action))
+        .collect::<Vec<_>>();
+    let id = normalize_filter_token(template.id);
+    let title = normalize_filter_token(template.title);
+    let description = normalize_filter_token(template.description);
+    let category = normalize_filter_token(template.category);
+    let mut fields = vec![id.clone(), title.clone(), description.clone(), category.clone()];
+    fields.extend(tags.iter().cloned());
+    fields.extend(action_tokens.iter().cloned());
+    let mut weighted_fields = vec![(id, 5usize), (title, 4), (category, 3), (description, 1)];
+    weighted_fields.extend(tags.into_iter().map(|tag| (tag, 4)));
+    weighted_fields.extend(action_tokens.into_iter().map(|action| (action, 2)));
+    TemplateSearchMetadata {
+        fields,
+        weighted_fields,
+    }
+}
+
+struct TemplateSearchMetadata {
+    fields: Vec<String>,
+    weighted_fields: Vec<(String, usize)>,
 }

@@ -27,6 +27,69 @@ export function builtInWorkflowSampleInputArtifacts(workflowId) {
   }
 }
 
+function workflowCatalogTokens(value) {
+  return String(value || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function workflowCatalogSearchMetadata(entry) {
+  const inputs = Object.keys(entry?.entry_inputs || {});
+  const outputs = Array.isArray(entry?.output_artifacts) ? entry.output_artifacts : [];
+  const fields = [
+    String(entry?.id || "").toLowerCase(),
+    String(entry?.name || "").toLowerCase(),
+    String(entry?.summary || "").toLowerCase(),
+    String(entry?.version || "").toLowerCase(),
+    inputs.join(" ").toLowerCase(),
+    outputs.join(" ").toLowerCase(),
+  ];
+  const weightedFields = [
+    [String(entry?.id || "").toLowerCase(), 5],
+    [String(entry?.name || "").toLowerCase(), 4],
+    [String(entry?.summary || "").toLowerCase(), 2],
+    [inputs.join(" ").toLowerCase(), 2],
+    [outputs.join(" ").toLowerCase(), 2],
+    [String(entry?.version || "").toLowerCase(), 1],
+  ];
+  return { fields, weightedFields };
+}
+
+function scoreWorkflowCatalogEntry(entry, tokens) {
+  const metadata = workflowCatalogSearchMetadata(entry);
+  const matchedTerms = tokens.filter((token) => metadata.fields.some((field) => field.includes(token)));
+  if (tokens.length > 0 && matchedTerms.length !== tokens.length) {
+    return { score: 0, matchedTerms: [] };
+  }
+  const score = tokens.reduce((total, token) => {
+    const best = metadata.weightedFields.reduce((max, [field, weight]) => {
+      if (field === token) return Math.max(max, weight * 6);
+      if (field.startsWith(token)) return Math.max(max, weight * 4);
+      if (field.includes(token)) return Math.max(max, weight);
+      return max;
+    }, 0);
+    return total + best;
+  }, 0);
+  return { score, matchedTerms };
+}
+
+export function suggestWorkflowCatalogEntries(entries, query, limit = 8) {
+  const tokens = workflowCatalogTokens(query);
+  if (!tokens.length) {
+    return entries.map((entry) => ({ entry, score: 0, matchedTerms: [] }));
+  }
+  return entries
+    .map((entry) => {
+      const { score, matchedTerms } = scoreWorkflowCatalogEntry(entry, tokens);
+      return { entry, score, matchedTerms };
+    })
+    .filter((candidate) => candidate.score > 0)
+    .sort((left, right) => right.score - left.score || String(left.entry.id || "").localeCompare(String(right.entry.id || "")))
+    .slice(0, limit);
+}
+
 export function describeWorkflowSummary(resultPayload) {
   const exported = resultPayload?.result?.artifacts?.["json_output.json"];
   if (!exported?.content) {
@@ -218,8 +281,19 @@ export function renderWorkflowCatalog(entries, options) {
     );
     return;
   }
+  const query = String(options.workflowCatalogQuery || "").trim();
+  const suggestedEntries = suggestWorkflowCatalogEntries(entries, query);
+  if (query && !suggestedEntries.length) {
+    options.renderEmptyHistoryState(
+      options.workflowCatalogList,
+      options.hubMessage(options.localizedWorkflowCatalogLabel("workflowCatalogNoSearchMatches"), {
+        query,
+      }),
+    );
+    return;
+  }
 
-  entries.forEach((entry) => {
+  suggestedEntries.forEach(({ entry, score, matchedTerms }) => {
     const shell = document.createElement("div");
     shell.className = "hub-history-item";
 
@@ -232,9 +306,29 @@ export function renderWorkflowCatalog(entries, options) {
     meta.className = "hub-history-item__meta";
     options.appendTextElement(meta, "span", entry.id || "--", "desktop-shell-chip");
     options.appendTextElement(meta, "span", entry.version || "v1", "desktop-shell-chip");
+    if (query) {
+      options.appendTextElement(
+        meta,
+        "span",
+        options.hubMessage(options.localizedWorkflowCatalogLabel("workflowCatalogSuggestedBadge"), {
+          score,
+        }),
+        "desktop-shell-chip",
+      );
+    }
     heading.appendChild(meta);
     summary.appendChild(heading);
     options.appendTextElement(summary, "span", entry.summary || "named workflow");
+    if (query && matchedTerms.length) {
+      options.appendTextElement(
+        summary,
+        "span",
+        options.hubMessage(options.localizedWorkflowCatalogLabel("workflowCatalogMatchedTerms"), {
+          terms: matchedTerms.join(", "),
+        }),
+        "hub-history-item__alias",
+      );
+    }
     options.appendTextElement(
       summary,
       "span",

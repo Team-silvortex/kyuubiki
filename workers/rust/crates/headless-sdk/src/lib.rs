@@ -27,7 +27,11 @@ pub use run::{
     HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };
 pub use service_executor::ServiceHeadlessExecutor;
-pub use templates::{build_template_document, find_template, list_templates};
+pub use templates::{
+    HeadlessTemplateSuggestion, build_template_document, find_template,
+    list_template_categories, list_templates, search_templates, suggest_template_details,
+    suggest_templates,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeadlessTemplateDescriptor {

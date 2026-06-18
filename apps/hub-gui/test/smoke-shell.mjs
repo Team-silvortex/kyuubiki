@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { assertMatches } from "../../desktop-shared/test/smoke-test-helpers.mjs";
+import { suggestWorkflowCatalogEntries } from "../ui/hub-workflow-catalog.js";
 import {
   HUB_INFORMATION_ARCHITECTURE_PATTERNS,
   HUB_PLATFORM_HELPER_PATTERNS,
@@ -38,4 +39,55 @@ test("hub shell normalizes host platform through shared desktop helpers", () => 
   assertMatches(js, HUB_PLATFORM_HELPER_PATTERNS);
   assert.doesNotMatch(js, /hostPlatform:\s*"macos"/);
   assert.match(platform, /desktop-shared\/ui\/platform\.js/);
+});
+
+test("hub workflow catalog suggestions rank the closest workflow first", () => {
+  const entries = [
+    {
+      id: "workflow.bridge-thermal-export",
+      name: "Bridge Thermal Export",
+      summary: "Bridge thermal diagnostics into an export artifact.",
+      version: "v1",
+      entry_inputs: { thermal_model: {} },
+      output_artifacts: ["thermal_summary.json"],
+    },
+    {
+      id: "workflow.bridge-mechanical-report",
+      name: "Bridge Mechanical Report",
+      summary: "Bridge structural diagnostics into a report artifact.",
+      version: "v1",
+      entry_inputs: { frame_model: {} },
+      output_artifacts: ["mechanical_report.md"],
+    },
+    {
+      id: "workflow.summary-bundle",
+      name: "Summary Bundle",
+      summary: "Thermal bridge export bundle.",
+      version: "v2",
+      entry_inputs: { heat_model: {} },
+      output_artifacts: ["thermal_export.json"],
+    },
+  ];
+
+  const suggestions = suggestWorkflowCatalogEntries(entries, "bridge thermal export");
+  assert.equal(suggestions.length, 2);
+  assert.equal(suggestions[0].entry.id, "workflow.bridge-thermal-export");
+  assert.deepEqual(suggestions[0].matchedTerms, ["bridge", "thermal", "export"]);
+  assert.ok(suggestions[0].score > suggestions[1].score);
+});
+
+test("hub workflow catalog suggestions return empty for unmatched queries", () => {
+  const entries = [
+    {
+      id: "workflow.bridge-thermal-export",
+      name: "Bridge Thermal Export",
+      summary: "Bridge thermal diagnostics into an export artifact.",
+      version: "v1",
+      entry_inputs: { thermal_model: {} },
+      output_artifacts: ["thermal_summary.json"],
+    },
+  ];
+
+  const suggestions = suggestWorkflowCatalogEntries(entries, "electrostatic mesh");
+  assert.deepEqual(suggestions, []);
 });

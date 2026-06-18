@@ -1,6 +1,15 @@
 "use client";
 
 import type { WorkflowCatalogEntry } from "@/lib/api";
+import {
+  buildWorkflowSearchSuggestions,
+  findWorkflowSearchMatches,
+  includesAllWorkflowSearchTokens,
+  normalizeWorkflowSearchText,
+  scoreWorkflowSearchFields,
+  tokenizeWorkflowSearchQuery,
+  type WorkflowSearchWeightedField,
+} from "@/components/workbench/workflow/workbench-workflow-search-score";
 
 type WorkflowCatalogSearchIndex = {
   combined: string;
@@ -16,23 +25,15 @@ type WorkflowCatalogSearchIndex = {
 
 const workflowCatalogSearchIndexCache = new Map<string, WorkflowCatalogSearchIndex>();
 
-function normalizeWorkflowCatalogSearchText(value?: string | null) {
-  return value?.trim().toLowerCase() ?? "";
-}
-
-function tokenizeWorkflowCatalogSearchQuery(query: string) {
-  return normalizeWorkflowCatalogSearchText(query).split(/\s+/).filter(Boolean);
-}
-
 function resolveWorkflowCatalogSearchIndex(workflow: WorkflowCatalogEntry) {
   const operatorIds = [
     ...(workflow.runtime_manifest?.required_operator_ids ?? []),
     ...(workflow.graph?.nodes.map((node) => node.operator_id ?? "").filter(Boolean) ?? []),
-  ].map((value) => normalizeWorkflowCatalogSearchText(value));
+  ].map((value) => normalizeWorkflowSearchText(value));
   const artifacts = [
     ...workflow.entry_inputs.map((artifact) => artifact.artifact_type),
     ...workflow.output_artifacts.map((artifact) => artifact.artifact_type),
-  ].map((value) => normalizeWorkflowCatalogSearchText(value));
+  ].map((value) => normalizeWorkflowSearchText(value));
   const cacheKey = [
     workflow.id,
     workflow.name,
@@ -53,12 +54,12 @@ function resolveWorkflowCatalogSearchIndex(workflow: WorkflowCatalogEntry) {
   ].join("::");
   const cached = workflowCatalogSearchIndexCache.get(cacheKey);
   if (cached) return cached;
-  const domains = (workflow.domains ?? []).map((value) => normalizeWorkflowCatalogSearchText(value));
+  const domains = (workflow.domains ?? []).map((value) => normalizeWorkflowSearchText(value));
   const capabilities = (workflow.capability_tags ?? []).map((value) =>
-    normalizeWorkflowCatalogSearchText(value),
+    normalizeWorkflowSearchText(value),
   );
   const localTags = (workflow.local?.tags ?? []).map((value) =>
-    normalizeWorkflowCatalogSearchText(value),
+    normalizeWorkflowSearchText(value),
   );
   const index = {
     combined: [
@@ -80,11 +81,11 @@ function resolveWorkflowCatalogSearchIndex(workflow: WorkflowCatalogEntry) {
       ...artifacts,
     ]
       .filter(Boolean)
-      .map((value) => normalizeWorkflowCatalogSearchText(value))
+      .map((value) => normalizeWorkflowSearchText(value))
       .join(" "),
-    name: normalizeWorkflowCatalogSearchText(workflow.name),
-    id: normalizeWorkflowCatalogSearchText(workflow.id),
-    summary: normalizeWorkflowCatalogSearchText(workflow.summary),
+    name: normalizeWorkflowSearchText(workflow.name),
+    id: normalizeWorkflowSearchText(workflow.id),
+    summary: normalizeWorkflowSearchText(workflow.summary),
     domains,
     capabilities,
     operatorIds,
@@ -99,81 +100,63 @@ export function scoreWorkflowCatalogEntrySearch(
   workflow: WorkflowCatalogEntry,
   query: string,
 ) {
-  const normalizedQuery = normalizeWorkflowCatalogSearchText(query);
+  const normalizedQuery = normalizeWorkflowSearchText(query);
   if (!normalizedQuery) return 0;
-  const tokens = tokenizeWorkflowCatalogSearchQuery(normalizedQuery);
+  const tokens = tokenizeWorkflowSearchQuery(normalizedQuery);
   if (tokens.length === 0) return 0;
   const index = resolveWorkflowCatalogSearchIndex(workflow);
-  if (!tokens.every((token) => index.combined.includes(token))) return null;
-
-  let score = 0;
-  if (index.name === normalizedQuery) score += 180;
-  else if (index.name.startsWith(normalizedQuery)) score += 140;
-  else if (index.name.includes(normalizedQuery)) score += 100;
-
-  if (index.id === normalizedQuery) score += 160;
-  else if (index.id.startsWith(normalizedQuery)) score += 120;
-  else if (index.id.includes(normalizedQuery)) score += 85;
-
-  if (index.summary === normalizedQuery) score += 110;
-  else if (index.summary.startsWith(normalizedQuery)) score += 85;
-  else if (index.summary.includes(normalizedQuery)) score += 60;
-
-  if (index.domains.includes(normalizedQuery)) score += 60;
-  if (index.capabilities.includes(normalizedQuery)) score += 55;
-  if (index.localTags.includes(normalizedQuery)) score += 55;
-  if (index.operatorIds.includes(normalizedQuery)) score += 70;
-  if (index.artifacts.includes(normalizedQuery)) score += 50;
-
-  for (const token of tokens) {
-    if (index.name.startsWith(token)) score += 16;
-    else if (index.name.includes(token)) score += 10;
-    if (index.id.startsWith(token)) score += 14;
-    else if (index.id.includes(token)) score += 9;
-    if (index.summary.startsWith(token)) score += 12;
-    else if (index.summary.includes(token)) score += 8;
-    score += index.domains.filter((value) => value.includes(token)).length * 7;
-    score += index.capabilities.filter((value) => value.includes(token)).length * 7;
-    score += index.localTags.filter((value) => value.includes(token)).length * 7;
-    score += index.operatorIds.filter((value) => value.includes(token)).length * 8;
-    score += index.artifacts.filter((value) => value.includes(token)).length * 6;
-  }
-
-  return score;
+  if (!includesAllWorkflowSearchTokens(index.combined, tokens)) return null;
+  const weightedFields: WorkflowSearchWeightedField[] = [
+    { value: index.name, exact: 180, prefix: 140, contains: 100 },
+    { value: index.id, exact: 160, prefix: 120, contains: 85 },
+    { value: index.summary, exact: 110, prefix: 85, contains: 60 },
+  ];
+  return (
+    scoreWorkflowSearchFields(
+      weightedFields,
+      [...index.domains, ...index.capabilities, ...index.localTags, ...index.operatorIds, ...index.artifacts],
+      normalizedQuery,
+      tokens,
+    ) +
+    (index.domains.includes(normalizedQuery) ? 60 : 0) +
+    (index.capabilities.includes(normalizedQuery) ? 55 : 0) +
+    (index.localTags.includes(normalizedQuery) ? 55 : 0) +
+    (index.operatorIds.includes(normalizedQuery) ? 70 : 0) +
+    (index.artifacts.includes(normalizedQuery) ? 50 : 0)
+  );
 }
 
 export function describeWorkflowCatalogEntrySearchMatches(
   workflow: WorkflowCatalogEntry,
   query: string,
 ) {
-  const normalizedQuery = normalizeWorkflowCatalogSearchText(query);
+  const normalizedQuery = normalizeWorkflowSearchText(query);
   if (!normalizedQuery) return [];
-  const tokens = tokenizeWorkflowCatalogSearchQuery(normalizedQuery);
+  const tokens = tokenizeWorkflowSearchQuery(normalizedQuery);
   if (tokens.length === 0) return [];
   const index = resolveWorkflowCatalogSearchIndex(workflow);
 
   const matches: string[] = [];
-  const hasTokenMatch = (values: string[]) =>
-    tokens.every((token) => values.some((value) => value.includes(token)));
+  const hasTokenMatch = (values: string[]) => findWorkflowSearchMatches(values, tokens);
 
   if (hasTokenMatch([index.name])) matches.push(`name: ${workflow.name}`);
   if (hasTokenMatch([index.id])) matches.push(`id: ${workflow.id}`);
   if (hasTokenMatch([index.summary])) matches.push(`summary`);
 
   const matchedDomains = (workflow.domains ?? []).filter((value) =>
-    tokens.every((token) => normalizeWorkflowCatalogSearchText(value).includes(token)),
+    tokens.every((token) => normalizeWorkflowSearchText(value).includes(token)),
   );
   if (matchedDomains.length > 0) matches.push(`domain: ${matchedDomains.slice(0, 2).join(", ")}`);
 
   const matchedCapabilities = (workflow.capability_tags ?? []).filter((value) =>
-    tokens.every((token) => normalizeWorkflowCatalogSearchText(value).includes(token)),
+    tokens.every((token) => normalizeWorkflowSearchText(value).includes(token)),
   );
   if (matchedCapabilities.length > 0) {
     matches.push(`capability: ${matchedCapabilities.slice(0, 2).join(", ")}`);
   }
 
   const matchedLocalTags = (workflow.local?.tags ?? []).filter((value) =>
-    tokens.every((token) => normalizeWorkflowCatalogSearchText(value).includes(token)),
+    tokens.every((token) => normalizeWorkflowSearchText(value).includes(token)),
   );
   if (matchedLocalTags.length > 0) matches.push(`tag: ${matchedLocalTags.slice(0, 2).join(", ")}`);
 
@@ -181,7 +164,7 @@ export function describeWorkflowCatalogEntrySearchMatches(
     ...(workflow.runtime_manifest?.required_operator_ids ?? []),
     ...(workflow.graph?.nodes.map((node) => node.operator_id).filter(Boolean) ?? []),
   ].filter((value): value is string =>
-    tokens.every((token) => normalizeWorkflowCatalogSearchText(value).includes(token)),
+    tokens.every((token) => normalizeWorkflowSearchText(value).includes(token)),
   );
   if (matchedOperators.length > 0) {
     matches.push(`operator: ${matchedOperators.slice(0, 2).join(", ")}`);
@@ -191,11 +174,30 @@ export function describeWorkflowCatalogEntrySearchMatches(
     ...workflow.entry_inputs.map((artifact) => artifact.artifact_type),
     ...workflow.output_artifacts.map((artifact) => artifact.artifact_type),
   ].filter((value) =>
-    tokens.every((token) => normalizeWorkflowCatalogSearchText(value).includes(token)),
+    tokens.every((token) => normalizeWorkflowSearchText(value).includes(token)),
   );
   if (matchedArtifacts.length > 0) {
     matches.push(`artifact: ${matchedArtifacts.slice(0, 2).join(", ")}`);
   }
 
   return matches.slice(0, 3);
+}
+
+export function suggestWorkflowCatalogEntries(
+  workflows: WorkflowCatalogEntry[],
+  query: string,
+) {
+  return buildWorkflowSearchSuggestions(
+    workflows,
+    query,
+    (workflow, normalizedQuery) => ({
+      score: scoreWorkflowCatalogEntrySearch(workflow, normalizedQuery),
+      matchSummary: describeWorkflowCatalogEntrySearchMatches(workflow, normalizedQuery),
+    }),
+    (workflow) => workflow.name,
+  ).map((entry) => ({
+    workflow: entry.item,
+    score: entry.score,
+    matchSummary: entry.matchSummary,
+  }));
 }

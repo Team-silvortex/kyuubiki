@@ -12,6 +12,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-operator-compatibility";
 import {
   scoreWorkflowNodeTemplatePresetSearch,
+  suggestWorkflowNodeTemplatePresets,
 } from "@/components/workbench/workflow/workbench-workflow-operator-search-match";
 import type { WorkflowNodeTemplatePreset } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 
@@ -204,6 +205,10 @@ export function WorkbenchWorkflowOperatorSearch(props: {
         sourceNode: selectedSourceNode ?? null,
       }),
     [filteredPresets, operatorDescriptorMap, selectedSourceNode],
+  );
+  const searchSuggestions = useMemo(
+    () => suggestWorkflowNodeTemplatePresets(filteredPresets, operatorDescriptorMap, query.trim()),
+    [filteredPresets, operatorDescriptorMap, query],
   );
   const activeFilters = [
     query.trim() ? `${labels.operatorSearchLabel}: ${query.trim()}` : null,
@@ -418,24 +423,38 @@ export function WorkbenchWorkflowOperatorSearch(props: {
       ) : null}
       {filteredPresets.length > 0 ? (
         <div className="button-row button-row--adaptive">
-          {filteredPresets.slice(0, 6).map((preset) =>
-            preset.operatorId ? (
-              <div key={`quick:${preset.id}`} style={{ display: "flex", gap: "0.35rem" }}>
+          {(query.trim() ? searchSuggestions.slice(0, 6) : filteredPresets.slice(0, 6).map((preset) => ({
+            preset,
+            score: 0,
+            matchSummary: [],
+          }))).map((entry) =>
+            entry.preset.operatorId ? (
+              <div key={`quick:${entry.preset.id}`} style={{ display: "grid", gap: "0.2rem" }}>
+                <div style={{ display: "flex", gap: "0.35rem" }}>
                 <button
                   onClick={() => {
-                    rememberOperator(preset.operatorId!);
-                    onQuickInsert(preset.operatorId!);
+                    rememberOperator(entry.preset.operatorId!);
+                    onQuickInsert(entry.preset.operatorId!);
                   }}
                   type="button"
                 >
-                  {preset.label}
+                  {entry.preset.label}
                 </button>
                 <button
-                  onClick={() => toggleFavoriteOperator(preset.operatorId!)}
+                  onClick={() => toggleFavoriteOperator(entry.preset.operatorId!)}
                   type="button"
                 >
-                  {favoriteLabel(preset.operatorId!)}
+                  {favoriteLabel(entry.preset.operatorId!)}
                 </button>
+                </div>
+                {query.trim() ? (
+                  <span className="card-copy">
+                    {labels.operatorSearchScoreLabel}: {entry.score}
+                    {entry.matchSummary.length > 0
+                      ? ` · ${labels.operatorSearchReasonLabel}: ${entry.matchSummary.join(" · ")}`
+                      : ""}
+                  </span>
+                ) : null}
               </div>
             ) : null,
           )}
