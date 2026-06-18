@@ -16,7 +16,7 @@ export function WorkbenchWorkflowIntegrityCard({
 }: WorkbenchWorkflowIntegrityCardProps) {
   const previewIssues = report.issues.slice(0, 4);
   return (
-    <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+    <section className="sidebar-card sidebar-card--compact runtime-overview-card" data-workflow-integrity-card="card">
       <div className="card-head">
         <h2>Component integrity</h2>
         <span className={`status-pill status-pill--${report.issues.length === 0 ? "good" : "watch"}`}>

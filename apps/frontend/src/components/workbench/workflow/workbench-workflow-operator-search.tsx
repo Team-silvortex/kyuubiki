@@ -251,6 +251,7 @@ export function WorkbenchWorkflowOperatorSearch(props: {
       <label>
         <span>{labels.operatorSearchLabel}</span>
         <input
+          data-workflow-operator-search="query"
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder={labels.operatorSearchPlaceholder}
           value={query}

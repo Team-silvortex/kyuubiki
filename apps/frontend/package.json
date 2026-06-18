@@ -16,6 +16,7 @@
     "test:unit:workflow": "node ./scripts/test-unit.mjs workflow",
     "check:file-lines": "node ./scripts/check-file-lines.mjs",
     "check:ui-layout": "node ./scripts/check-ui-layout.mjs",
+    "check:workflow-search-layout": "node ./scripts/check-workflow-search-layout.mjs",
     "check:workflow-topology": "node ./scripts/check-workflow-topology-regression.mjs",
     "typecheck": "node ./scripts/typecheck.mjs",
     "benchmark:workflow": "node ./scripts/workflow-benchmark.mjs"

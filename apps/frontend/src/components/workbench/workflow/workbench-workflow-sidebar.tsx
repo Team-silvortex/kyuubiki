@@ -417,6 +417,7 @@ export function WorkbenchWorkflowSidebar({
           <label>
             <span>{labels.catalogSearchLabel}</span>
             <input
+              data-workflow-catalog-search="query"
               onChange={(event) => setCatalogQuery(event.target.value)}
               placeholder={labels.catalogSearchPlaceholder}
               type="search"
@@ -510,7 +511,7 @@ export function WorkbenchWorkflowSidebar({
             </div>
           ) : null}
           {latestRun ? <WorkbenchWorkflowRunTraceCard labels={labels} onSelectBranch={(nodeId, outputId) => openRunBranchInBuilder(latestRun.workflowId, nodeId, outputId)} onSelectLineage={(entry) => openRunLineageInBuilder(latestRun, entry.artifact_key, entry.node_id)} onSelectNode={(nodeId) => openRunNodeInBuilder(latestRun.workflowId, nodeId)} operatorDescriptors={workflowOperatorDescriptors} previousRun={previousLatestRun} run={latestRun} workflow={latestRunWorkflow} /> : null}
-          <div className="button-row button-row--adaptive">
+          <div className="button-row button-row--adaptive" data-workflow-runs-filter-row="actions">
             <button onClick={() => setRunsFilter("all")} type="button">{labels.catalogFilterAllLabel}</button><button onClick={() => setRunsFilter("bridge_alerts")} type="button">{labels.runsFilterBridgeAlertsLabel}</button><button onClick={() => setRunsFilter("bridge_drift")} type="button">{labels.catalogFilterBridgeDriftLabel}</button><button onClick={() => setRunsFilter("bridge_missing_runtime")} type="button">{labels.catalogFilterBridgeMissingRuntimeLabel}</button>
           </div>
           {filteredWorkflowRuns.length === 0 ? <p className="card-copy">{labels.emptyRunsLabel}</p> : null}

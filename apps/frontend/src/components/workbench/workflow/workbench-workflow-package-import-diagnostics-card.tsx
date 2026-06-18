@@ -35,7 +35,7 @@ export function WorkbenchWorkflowPackageImportDiagnosticsCard(props: {
   if (diagnostics.length === 0) return null;
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact" data-workflow-package-import-card="card">
       <div className="card-head">
         <h2>Package import diagnostics</h2>
         <span className="status-pill status-pill--watch">{filteredDiagnostics.length}</span>

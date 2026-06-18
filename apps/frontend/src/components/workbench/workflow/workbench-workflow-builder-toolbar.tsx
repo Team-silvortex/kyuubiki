@@ -107,7 +107,7 @@ export function WorkbenchWorkflowBuilderToolbar({
         </div>
       ) : null}
       {selectedWorkflow.local?.notes ? <p className="card-copy">{selectedWorkflow.local.notes}</p> : null}
-      <div className="button-row button-row--adaptive">
+      <div className="button-row button-row--adaptive" data-workflow-builder-toolbar="actions">
         <button onClick={onRunCatalog} type="button">{labels.runLabel}</button>
         <button disabled={!canRunDraft} onClick={onRunDraft} type="button">{labels.runDraftLabel}</button>
         <button onClick={onSaveDraft} type="button">{labels.saveDraftLabel}</button>
@@ -126,7 +126,7 @@ export function WorkbenchWorkflowBuilderToolbar({
       </div>
       <input accept="application/json,.json" hidden onChange={onGraphFileChange} ref={graphInputRef} type="file" />
       <input accept="application/json,.json" hidden onChange={onDatasetFileChange} ref={datasetInputRef} type="file" />
-      {importMessage ? <p className="card-copy">{importMessage}</p> : null}
+      {importMessage ? <p className="card-copy" data-workflow-import-message="text">{importMessage}</p> : null}
     </>
   );
 }

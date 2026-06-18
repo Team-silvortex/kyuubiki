@@ -20,6 +20,8 @@ const containerSelectors = [
   ".viewport-window-bar",
   ".sidebar-list__row",
   ".panel-tabs",
+  ".form-grid",
+  ".runtime-overview-grid",
 ];
 
 function formatIssue(prefix, issue) {
@@ -29,6 +31,159 @@ function formatIssue(prefix, issue) {
 function resolveAuditUrl(pathname) {
   if (/^https?:\/\//.test(pathname)) return pathname;
   return new URL(pathname, baseUrl).toString();
+}
+
+async function waitForDoublePaint(page) {
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+async function auditPageState(page) {
+  return page.evaluate((selectors) => {
+    function isVisible(element) {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return (
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
+    }
+
+    function overlaps(a, b) {
+      return !(
+        a.right <= b.left ||
+        b.right <= a.left ||
+        a.bottom <= b.top ||
+        b.bottom <= a.top
+      );
+    }
+
+    function axisOverflowValue(styleValue) {
+      return styleValue === "auto" || styleValue === "scroll" || styleValue === "hidden" || styleValue === "clip";
+    }
+
+    function axisCanScroll(container, axis) {
+      const style = window.getComputedStyle(container);
+      const overflowValue = axis === "x" ? style.overflowX : style.overflowY;
+      const clientSize = axis === "x" ? container.clientWidth : container.clientHeight;
+      const scrollSize = axis === "x" ? container.scrollWidth : container.scrollHeight;
+      return (overflowValue === "auto" || overflowValue === "scroll") && scrollSize - clientSize > 1;
+    }
+
+    function axisClipsWithoutScroll(container, axis) {
+      const style = window.getComputedStyle(container);
+      const overflowValue = axis === "x" ? style.overflowX : style.overflowY;
+      if (!axisOverflowValue(overflowValue)) return false;
+      return !axisCanScroll(container, axis);
+    }
+
+    const overflowX = Math.max(
+      document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      0,
+    );
+    const overlapIssues = [];
+    const clipIssues = [];
+
+    for (const selector of selectors) {
+      const containers = Array.from(document.querySelectorAll(selector)).filter(isVisible);
+      containers.forEach((container, containerIndex) => {
+        const children = Array.from(container.children).filter(isVisible);
+        const containerRect = container.getBoundingClientRect();
+        const clipsX = axisClipsWithoutScroll(container, "x");
+        const clipsY = axisClipsWithoutScroll(container, "y");
+
+        children.forEach((child, childIndex) => {
+          const rect = child.getBoundingClientRect();
+          const overflowRight = rect.right - containerRect.right > 1;
+          const overflowLeft = containerRect.left - rect.left > 1;
+          const overflowBottom = rect.bottom - containerRect.bottom > 1;
+          const overflowTop = containerRect.top - rect.top > 1;
+          if ((clipsX && (overflowLeft || overflowRight)) || (clipsY && (overflowTop || overflowBottom))) {
+            clipIssues.push(
+              `${selector}[${containerIndex}] child ${childIndex} clipped by container`,
+            );
+          }
+        });
+
+        for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
+          for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
+            const left = children[leftIndex];
+            const right = children[rightIndex];
+            if (overlaps(left.getBoundingClientRect(), right.getBoundingClientRect())) {
+              overlapIssues.push(
+                `${selector}[${containerIndex}] child ${leftIndex} overlaps child ${rightIndex}`,
+              );
+            }
+          }
+        }
+      });
+    }
+
+    const rootText = document.body?.innerText ?? "";
+    const runtimeErrorDetected =
+      rootText.includes("TypeError:") ||
+      rootText.includes("ReferenceError:") ||
+      rootText.includes("Application error") ||
+      rootText.includes("Internal Server Error");
+
+    return { overflowX, overlapIssues, clipIssues, runtimeErrorDetected };
+  }, containerSelectors);
+}
+
+function pushAuditFailures(failures, audit, prefix) {
+  if (audit.runtimeErrorDetected) {
+    failures.push(formatIssue(prefix, "runtime error screen detected"));
+  }
+  if (audit.overflowX > 1) {
+    failures.push(formatIssue(prefix, `horizontal overflow detected: ${audit.overflowX}px`));
+  }
+  audit.overlapIssues.forEach((issue) => failures.push(formatIssue(prefix, issue)));
+  audit.clipIssues.forEach((issue) => failures.push(formatIssue(prefix, issue)));
+}
+
+async function openAuditedPage(page, pagePath, prefix, failures) {
+  const auditUrl = resolveAuditUrl(pagePath);
+  try {
+    const response = await page.goto(auditUrl, { waitUntil: "networkidle", timeout: 30_000 });
+    if (!response?.ok()) {
+      failures.push(formatIssue(prefix, `page responded with HTTP ${response?.status?.() ?? "unknown"}`));
+      return false;
+    }
+    return true;
+  } catch (error) {
+    failures.push(
+      formatIssue(prefix, `unable to open ${auditUrl}. Start the frontend first, for example: npm run dev`),
+    );
+    return false;
+  }
+}
+
+async function runWorkflowBenchmarkInteractiveAudit(browser, viewport, failures) {
+  const page = await browser.newPage({ viewport });
+  try {
+    const prefixBase = `${viewport.name} /workflow-benchmark`;
+    if (!(await openAuditedPage(page, "/workflow-benchmark", prefixBase, failures))) return;
+    await page.waitForFunction(() => Boolean(window.__kyuubikiWorkflowDebug), { timeout: 30_000 });
+
+    await page.evaluate(() => window.__kyuubikiWorkflowDebug?.setSurfaceTab("catalog"));
+    await waitForDoublePaint(page);
+    const catalogSearch = page.locator('[data-workflow-catalog-search="query"]');
+    await catalogSearch.fill("bridge thermal export");
+    await catalogSearch.blur();
+    await waitForDoublePaint(page);
+    pushAuditFailures(failures, await auditPageState(page), `${prefixBase} [catalog-search]`);
+
+    await page.evaluate(() => window.__kyuubikiWorkflowDebug?.setSurfaceTab("builder"));
+    await waitForDoublePaint(page);
+    const operatorSearch = page.locator('[data-workflow-operator-search="query"]');
+    await operatorSearch.fill("thermal bridge");
+    await operatorSearch.blur();
+    await waitForDoublePaint(page);
+    pushAuditFailures(failures, await auditPageState(page), `${prefixBase} [builder-search]`);
+  } finally {
+    await page.close();
+  }
 }
 
 async function run() {
@@ -48,147 +203,15 @@ async function run() {
     for (const viewport of viewports) {
       for (const pagePath of pagePaths) {
         const page = await browser.newPage({ viewport });
-        const auditUrl = resolveAuditUrl(pagePath);
-
-        let response = null;
+        const prefix = `${viewport.name} ${pagePath}`;
         try {
-          response = await page.goto(auditUrl, { waitUntil: "networkidle", timeout: 30_000 });
-        } catch (error) {
-          failures.push(
-            formatIssue(
-              `${viewport.name} ${pagePath}`,
-              `unable to open ${auditUrl}. Start the frontend first, for example: npm run dev`,
-            ),
-          );
+          if (!(await openAuditedPage(page, pagePath, prefix, failures))) continue;
+          pushAuditFailures(failures, await auditPageState(page), prefix);
+        } finally {
           await page.close();
-          continue;
         }
-
-        if (!response?.ok()) {
-          failures.push(
-            formatIssue(
-              `${viewport.name} ${pagePath}`,
-              `page responded with HTTP ${response?.status?.() ?? "unknown"}`,
-            ),
-          );
-          await page.close();
-          continue;
-        }
-
-        const audit = await page.evaluate((selectors) => {
-          function isVisible(element) {
-            const style = window.getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-            return (
-              style.display !== "none" &&
-              style.visibility !== "hidden" &&
-              rect.width > 0 &&
-              rect.height > 0
-            );
-          }
-
-          function overlaps(a, b) {
-            return !(
-              a.right <= b.left ||
-              b.right <= a.left ||
-              a.bottom <= b.top ||
-              b.bottom <= a.top
-            );
-          }
-
-          function axisOverflowValue(styleValue) {
-            return styleValue === "auto" || styleValue === "scroll" || styleValue === "hidden" || styleValue === "clip";
-          }
-
-          function axisCanScroll(container, axis) {
-            const style = window.getComputedStyle(container);
-            const overflowValue = axis === "x" ? style.overflowX : style.overflowY;
-            const clientSize = axis === "x" ? container.clientWidth : container.clientHeight;
-            const scrollSize = axis === "x" ? container.scrollWidth : container.scrollHeight;
-            return (overflowValue === "auto" || overflowValue === "scroll") && scrollSize - clientSize > 1;
-          }
-
-          function axisClipsWithoutScroll(container, axis) {
-            const style = window.getComputedStyle(container);
-            const overflowValue = axis === "x" ? style.overflowX : style.overflowY;
-            if (!axisOverflowValue(overflowValue)) return false;
-            return !axisCanScroll(container, axis);
-          }
-
-          const overflowX = Math.max(
-            document.documentElement.scrollWidth - document.documentElement.clientWidth,
-            0,
-          );
-          const overlapIssues = [];
-          const clipIssues = [];
-
-          for (const selector of selectors) {
-            const containers = Array.from(document.querySelectorAll(selector)).filter(isVisible);
-            containers.forEach((container, containerIndex) => {
-              const children = Array.from(container.children).filter(isVisible);
-              const containerRect = container.getBoundingClientRect();
-              const clipsX = axisClipsWithoutScroll(container, "x");
-              const clipsY = axisClipsWithoutScroll(container, "y");
-
-              children.forEach((child, childIndex) => {
-                const rect = child.getBoundingClientRect();
-                const overflowRight = rect.right - containerRect.right > 1;
-                const overflowLeft = containerRect.left - rect.left > 1;
-                const overflowBottom = rect.bottom - containerRect.bottom > 1;
-                const overflowTop = containerRect.top - rect.top > 1;
-                if ((clipsX && (overflowLeft || overflowRight)) || (clipsY && (overflowTop || overflowBottom))) {
-                  clipIssues.push(
-                    `${selector}[${containerIndex}] child ${childIndex} clipped by container`,
-                  );
-                }
-              });
-
-              for (let leftIndex = 0; leftIndex < children.length; leftIndex += 1) {
-                for (let rightIndex = leftIndex + 1; rightIndex < children.length; rightIndex += 1) {
-                  const left = children[leftIndex];
-                  const right = children[rightIndex];
-                  if (overlaps(left.getBoundingClientRect(), right.getBoundingClientRect())) {
-                    overlapIssues.push(
-                      `${selector}[${containerIndex}] child ${leftIndex} overlaps child ${rightIndex}`,
-                    );
-                  }
-                }
-              }
-            });
-          }
-
-          const rootText = document.body?.innerText ?? "";
-          const runtimeErrorDetected =
-            rootText.includes("TypeError:") ||
-            rootText.includes("ReferenceError:") ||
-            rootText.includes("Application error") ||
-            rootText.includes("Internal Server Error");
-
-          return { overflowX, overlapIssues, clipIssues, runtimeErrorDetected };
-        }, containerSelectors);
-
-        if (audit.runtimeErrorDetected) {
-          failures.push(formatIssue(`${viewport.name} ${pagePath}`, "runtime error screen detected"));
-        }
-
-        if (audit.overflowX > 1) {
-          failures.push(
-            formatIssue(
-              `${viewport.name} ${pagePath}`,
-              `horizontal overflow detected: ${audit.overflowX}px`,
-            ),
-          );
-        }
-
-        audit.overlapIssues.forEach((issue) => {
-          failures.push(formatIssue(`${viewport.name} ${pagePath}`, issue));
-        });
-        audit.clipIssues.forEach((issue) => {
-          failures.push(formatIssue(`${viewport.name} ${pagePath}`, issue));
-        });
-
-        await page.close();
       }
+      await runWorkflowBenchmarkInteractiveAudit(browser, viewport, failures);
     }
   } finally {
     await browser.close();

@@ -4,6 +4,7 @@ mod executor;
 mod hybrid_executor;
 mod run;
 mod service_executor;
+mod template_search;
 mod template_workflows;
 mod templates;
 #[cfg(test)]

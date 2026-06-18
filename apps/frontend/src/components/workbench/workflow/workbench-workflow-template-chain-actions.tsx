@@ -287,6 +287,7 @@ export function WorkbenchWorkflowTemplateChainActions({
         <label>
           <span>{labels.templateChainSearchLabel}</span>
           <input
+            data-workflow-template-chain-search="query"
             onChange={(event) => setQuery(event.target.value)}
             placeholder={labels.templateChainSearchPlaceholder}
             value={query}

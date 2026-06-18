@@ -4,54 +4,169 @@ import { useMemo, useState } from "react";
 import { WorkbenchWorkflowSectionMount } from "@/components/workbench/workbench-workflow-section-mount";
 import { buildWorkbenchWorkflowLabels } from "@/components/workbench/workbench-shell-copy-composition";
 import { copyZhCore } from "@/components/workbench/workbench-copy-zh-core";
-import type { WorkflowCatalogEntry, WorkflowGraphJobResult } from "@/lib/api";
+import type {
+  WorkflowCatalogEntry,
+  WorkflowGraphDefinition,
+  WorkflowGraphJobResult,
+  WorkflowOperatorDescriptor,
+} from "@/lib/api";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import { summarizeWorkflowRunTrace } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
 import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
 
-const workflowId = "workflow.synthetic.benchmark";
+const primaryWorkflowId = "workflow.synthetic.benchmark";
 
-function buildSyntheticWorkflow(): WorkflowCatalogEntry {
-  return {
-    id: workflowId,
-    name: "Synthetic Benchmark Workflow",
-    version: "1.8.0-bench",
-    summary: "Synthetic workflow used by the standalone benchmark page.",
-    domains: ["benchmark"],
-    capability_tags: ["contract_health:clean", "benchmark"],
-    graph: {
-      schema_version: "kyuubiki.workflow-graph/v1",
-      id: workflowId,
-      name: "Synthetic Benchmark Workflow",
+function buildSyntheticOperatorDescriptors(): WorkflowOperatorDescriptor[] {
+  return [
+    {
+      id: "transform.normalize_summary_fields",
       version: "1.8.0-bench",
-      entry_inputs: [{ node_id: "input.source", artifact_type: "study.result", description: "Synthetic result input" }],
-      output_artifacts: [{ node_id: "export.summary", artifact_type: "report.html", description: "Synthetic export artifact" }],
-      entry_nodes: ["input.source"],
-      output_nodes: ["export.summary"],
-      nodes: [
-        { id: "input.source", kind: "input", outputs: [{ id: "out", artifact_type: "study.result", description: "result payload" }] },
-        { id: "extract.summary", kind: "extract", operator_id: "extract.result_summary", inputs: [{ id: "source", artifact_type: "study.result", description: "raw result" }], outputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "summary payload" }] },
-        { id: "transform.normalize", kind: "transform", operator_id: "transform.normalize_summary_fields", inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "summary" }], outputs: [{ id: "normalized", artifact_type: "artifact/result_summary", description: "normalized summary" }] },
-        { id: "export.summary", kind: "export", operator_id: "export.summary_json", inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "normalized summary" }], outputs: [{ id: "file", artifact_type: "artifact/json", description: "export file" }] },
-      ],
-      edges: [
-        { id: "edge.input.extract", from: { node: "input.source", port: "out" }, to: { node: "extract.summary", port: "source" }, artifact_type: "study.result" },
-        { id: "edge.extract.transform", from: { node: "extract.summary", port: "summary" }, to: { node: "transform.normalize", port: "summary" }, artifact_type: "artifact/result_summary" },
-        { id: "edge.transform.export", from: { node: "transform.normalize", port: "normalized" }, to: { node: "export.summary", port: "summary" }, artifact_type: "artifact/result_summary" },
-      ],
+      domain: "thermal",
+      family: "summary_pipeline",
+      kind: "transform",
+      summary: "Normalize thermal result summaries into a stable comparison contract.",
+      capability_tags: ["benchmark", "summary", "thermal", "normalize"],
+      origin: "built_in",
+      input_schema: { schema: "artifact/result_summary", version: "1.0.0" },
+      output_schema: { schema: "artifact/result_summary", version: "1.0.0" },
+      config_schema: { schema: "config/normalize_summary", version: "1.0.0" },
+      config_example: { field_namespace: "normalized", copy_unmapped: false },
+      inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "result summary payload" }],
+      outputs: [{ id: "normalized", artifact_type: "artifact/result_summary", description: "normalized summary payload" }],
+      validation: { baseline_status: "verified", baseline_cases: ["summary.normalize.smoke"], smoke_paths: ["/workflow-benchmark"] },
     },
+    {
+      id: "transform.aggregate_hotspots",
+      version: "1.8.0-bench",
+      domain: "thermal",
+      family: "summary_pipeline",
+      kind: "transform",
+      summary: "Aggregate hotspot extrema into a compact thermal hotspot report.",
+      capability_tags: ["benchmark", "hotspot", "thermal", "aggregate"],
+      origin: "built_in",
+      input_schema: { schema: "artifact/result_summary", version: "1.0.0" },
+      output_schema: { schema: "artifact/result_summary", version: "1.0.0" },
+      config_schema: { schema: "config/aggregate_hotspots", version: "1.0.0" },
+      config_example: { reduction: "max", include_locations: true },
+      inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "normalized result summary" }],
+      outputs: [{ id: "hotspots", artifact_type: "artifact/result_summary", description: "hotspot summary payload" }],
+      validation: { baseline_status: "partial", baseline_cases: ["summary.hotspot.smoke"], smoke_paths: ["/workflow-benchmark"] },
+    },
+    {
+      id: "transform.bridge_metric_table",
+      version: "1.8.0-bench",
+      domain: "mechanical",
+      family: "bridge_runtime",
+      kind: "transform",
+      summary: "Map bridge metrics into a contract-ready table for downstream export.",
+      capability_tags: ["benchmark", "bridge", "mechanical", "table"],
+      origin: "built_in",
+      input_schema: { schema: "artifact/result_summary", version: "1.0.0" },
+      output_schema: { schema: "artifact/result_summary", version: "1.0.0" },
+      config_schema: { schema: "config/bridge_metric_table", version: "1.0.0" },
+      config_example: { columns: ["temperature_peak", "stress_peak", "displacement_peak"] },
+      inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "summary payload" }],
+      outputs: [{ id: "table", artifact_type: "artifact/result_summary", description: "bridge metric table" }],
+      validation: { baseline_status: "unverified", baseline_cases: ["bridge.metric.table.sample"], smoke_paths: ["/workflow-benchmark"] },
+    },
+  ];
+}
+
+function buildSyntheticGraph(workflowId: string, name: string): WorkflowGraphDefinition {
+  return {
+    schema_version: "kyuubiki.workflow-graph/v1",
+    id: workflowId,
+    name,
+    version: "1.8.0-bench",
+    dataset_contract: {
+      schema_version: "kyuubiki.workflow-dataset/v1",
+      id: `${workflowId}.dataset`,
+      version: "1.0.0",
+      name: `${name} Dataset Contract`,
+      values: [
+        {
+          id: "thermo_result",
+          data_class: "field",
+          element_type: "float64",
+          shape: { axes: [{ id: "node", label: "Node", size: 24, semantic: "mesh_node" }] },
+          semantic_type: "study.result",
+          unit: "mixed",
+          encoding: "json",
+          schema_ref: { schema: "study.result", version: "1.0.0" },
+        },
+        {
+          id: "result_summary",
+          data_class: "summary",
+          element_type: "float64",
+          shape: { axes: [{ id: "metric", label: "Metric", size: 3, semantic: "summary_metric" }] },
+          semantic_type: "artifact/result_summary",
+          unit: "mixed",
+          encoding: "json",
+          schema_ref: { schema: "artifact/result_summary", version: "1.0.0" },
+        },
+        {
+          id: "json_export",
+          data_class: "file",
+          element_type: "utf8",
+          shape: { axes: [{ id: "document", label: "Document", size: 1, semantic: "export_file" }] },
+          semantic_type: "artifact/json",
+          unit: "n/a",
+          encoding: "utf8",
+          schema_ref: { schema: "artifact/json", version: "1.0.0" },
+        },
+      ],
+      metadata: {
+        source: "synthetic_benchmark",
+        contract_scope: "workflow_layout_guard",
+      },
+    },
+    entry_inputs: [{ node_id: "input.source", artifact_type: "study.result", description: "Synthetic result input" }],
+    output_artifacts: [{ node_id: "export.summary", artifact_type: "report.html", description: "Synthetic export artifact" }],
+    entry_nodes: ["input.source"],
+    output_nodes: ["export.summary"],
+    nodes: [
+      { id: "input.source", kind: "input", outputs: [{ id: "out", artifact_type: "study.result", description: "result payload", dataset_value: "thermo_result" }] },
+      { id: "extract.summary", kind: "extract", operator_id: "extract.result_summary", inputs: [{ id: "source", artifact_type: "study.result", description: "raw result", dataset_value: "thermo_result" }], outputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "summary payload", dataset_value: "result_summary" }] },
+      { id: "transform.normalize", kind: "transform", operator_id: "transform.normalize_summary_fields", inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "summary", dataset_value: "result_summary" }], outputs: [{ id: "normalized", artifact_type: "artifact/result_summary", description: "normalized summary", dataset_value: "result_summary" }] },
+      { id: "export.summary", kind: "export", operator_id: "export.summary_json", inputs: [{ id: "summary", artifact_type: "artifact/result_summary", description: "normalized summary", dataset_value: "result_summary" }], outputs: [{ id: "file", artifact_type: "artifact/json", description: "export file", dataset_value: "json_export" }] },
+    ],
+    edges: [
+      { id: "edge.input.extract", from: { node: "input.source", port: "out" }, to: { node: "extract.summary", port: "source" }, artifact_type: "study.result", dataset_value: "thermo_result" },
+      { id: "edge.extract.transform", from: { node: "extract.summary", port: "summary" }, to: { node: "transform.normalize", port: "summary" }, artifact_type: "artifact/result_summary", dataset_value: "result_summary" },
+      { id: "edge.transform.export", from: { node: "transform.normalize", port: "normalized" }, to: { node: "export.summary", port: "summary" }, artifact_type: "artifact/result_summary", dataset_value: "result_summary" },
+    ],
+  };
+}
+
+function buildSyntheticWorkflow(config: {
+  id: string;
+  name: string;
+  summary: string;
+  domains: string[];
+  capabilityTags: string[];
+  notes: string;
+  tags: string[];
+}) {
+  return {
+    id: config.id,
+    name: config.name,
+    version: "1.8.0-bench",
+    summary: config.summary,
+    domains: config.domains,
+    capability_tags: config.capabilityTags,
+    graph: buildSyntheticGraph(config.id, config.name),
     entry_inputs: [{ node_id: "input.source", artifact_type: "study.result", description: "Synthetic result input" }],
     output_artifacts: [{ node_id: "export.summary", artifact_type: "artifact/json", description: "Synthetic export artifact" }],
     local: {
-      storage_id: "synthetic-benchmark-local",
-      source_workflow_id: workflowId,
-      source_workflow_name: "Synthetic Benchmark Workflow",
+      storage_id: `${config.id}-local`,
+      source_workflow_id: config.id,
+      source_workflow_name: config.name,
       input_artifact_texts: {
         "input.source:study.result": JSON.stringify({ sample: true, magnitude: 42 }, null, 2),
       },
       promoted_at: new Date("2026-06-13T00:00:00Z").toISOString(),
-      notes: "Local synthetic benchmark workflow.",
-      tags: ["benchmark"],
+      notes: config.notes,
+      tags: config.tags,
     },
   };
 }
@@ -59,7 +174,7 @@ function buildSyntheticWorkflow(): WorkflowCatalogEntry {
 function buildSyntheticRuns(): WorkflowRunRecord[] {
   const emittedAt = new Date("2026-06-13T00:00:00Z").toISOString();
   const result: WorkflowGraphJobResult = {
-    workflow_id: workflowId,
+    workflow_id: primaryWorkflowId,
     current_node: "export.summary",
     completed_nodes: ["input.source", "extract.summary", "transform.normalize", "export.summary"],
     skipped_nodes: ["condition.route"],
@@ -132,7 +247,7 @@ function buildSyntheticRuns(): WorkflowRunRecord[] {
   };
   return [{
     jobId: "bench-job-1",
-    workflowId,
+    workflowId: primaryWorkflowId,
     status: "completed",
     progress: 1,
     currentNode: "export.summary",
@@ -149,9 +264,41 @@ function buildSyntheticRuns(): WorkflowRunRecord[] {
 
 export default function WorkflowBenchmarkPage() {
   const labels = useMemo(() => buildWorkbenchWorkflowLabels(copyZhCore), []);
-  const workflowCatalogEntries = useMemo(() => [buildSyntheticWorkflow()], []);
+  const workflowCatalogEntries = useMemo(
+    () => [
+      buildSyntheticWorkflow({
+        id: primaryWorkflowId,
+        name: "Synthetic Benchmark Workflow",
+        summary: "Synthetic workflow used by the standalone benchmark page.",
+        domains: ["benchmark"],
+        capabilityTags: ["contract_health:clean", "benchmark", "thermal", "summary"],
+        notes: "Local synthetic benchmark workflow.",
+        tags: ["benchmark", "thermal"],
+      }),
+      buildSyntheticWorkflow({
+        id: "workflow.synthetic.bridge-thermal-export",
+        name: "Bridge Thermal Export Chain",
+        summary: "Bridge-focused thermal summary chain with contract-safe export steps.",
+        domains: ["thermal", "mechanical"],
+        capabilityTags: ["contract_health:manageable", "bridge", "thermal", "export"],
+        notes: "Synthetic bridge thermal export variant.",
+        tags: ["bridge", "thermal", "export"],
+      }),
+      buildSyntheticWorkflow({
+        id: "workflow.synthetic.mesh-audit-pack",
+        name: "Mesh Audit Pack",
+        summary: "Mesh and result auditing chain for benchmarked report generation.",
+        domains: ["mechanical"],
+        capabilityTags: ["contract_health:review", "mesh", "audit", "report"],
+        notes: "Synthetic mesh audit variant.",
+        tags: ["mesh", "audit", "report"],
+      }),
+    ],
+    [],
+  );
+  const workflowOperatorDescriptors = useMemo(() => buildSyntheticOperatorDescriptors(), []);
   const [surfaceTab, setSurfaceTab] = useState<WorkflowSurfaceTab>("overview");
-  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(workflowId);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(primaryWorkflowId);
   const [workflowRuns, setWorkflowRuns] = useState<WorkflowRunRecord[]>(buildSyntheticRuns());
   const selectedWorkflow = workflowCatalogEntries.find((entry) => entry.id === selectedWorkflowId) ?? workflowCatalogEntries[0] ?? null;
 
@@ -162,7 +309,7 @@ export default function WorkflowBenchmarkPage() {
         onSurfaceTabChange={setSurfaceTab}
         labels={labels}
         workflowCatalogEntries={workflowCatalogEntries}
-        workflowOperatorDescriptors={[]}
+        workflowOperatorDescriptors={workflowOperatorDescriptors}
         workflowCatalogBusy={false}
         selectedWorkflowId={selectedWorkflowId}
         selectedWorkflow={selectedWorkflow}

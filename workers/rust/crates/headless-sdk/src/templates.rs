@@ -1,3 +1,6 @@
+use crate::template_search::{
+    matches_search_tokens, normalize_search_token, score_search_tokens, tokenize_search_query,
+};
 use crate::{HeadlessRuntimeStyle, HeadlessTemplateDescriptor, HeadlessWorkflowDocument};
 use crate::template_workflows::build_template_workflow;
 use serde::Serialize;
@@ -272,28 +275,29 @@ pub fn search_templates(
     tag: Option<&str>,
     query: Option<&str>,
 ) -> Vec<&'static HeadlessTemplateDescriptor> {
-    let category = category.map(normalize_filter_token);
-    let tag = tag.map(normalize_filter_token);
-    let tokens = query_tokens(query);
+    let category = category.map(normalize_search_token);
+    let tag = tag.map(normalize_search_token);
+    let tokens = tokenize_search_query(query);
     let mut templates = TEMPLATES
         .iter()
         .filter(|template| runtime.is_none_or(|runtime| template.runtime_style == runtime))
         .filter(|template| {
             category
                 .as_ref()
-                .is_none_or(|category| normalize_filter_token(template.category) == *category)
+                .is_none_or(|category| normalize_search_token(template.category) == *category)
         })
         .filter(|template| {
             tag.as_ref().is_none_or(|tag| {
                 template
                     .tags
                     .iter()
-                    .any(|candidate| normalize_filter_token(candidate) == *tag)
+                    .any(|candidate| normalize_search_token(candidate) == *tag)
             })
         })
         .filter_map(|template| {
             let metadata = template_search_metadata(template);
-            matches_query(&metadata, &tokens).then_some((template, score_query_match(&metadata, &tokens)))
+            matches_search_tokens(&metadata.fields, &tokens)
+                .then_some((template, score_search_tokens(&metadata.weighted_fields, &tokens)))
         })
         .collect::<Vec<_>>();
     if !tokens.is_empty() {
@@ -307,12 +311,12 @@ pub fn search_templates(
 }
 
 pub fn suggest_templates(query: &str, limit: usize) -> Vec<&'static HeadlessTemplateDescriptor> {
-    let tokens = query_tokens(Some(query));
+    let tokens = tokenize_search_query(Some(query));
     let mut templates = TEMPLATES
         .iter()
         .map(|template| {
             let metadata = template_search_metadata(template);
-            (template, score_query_match(&metadata, &tokens))
+            (template, score_search_tokens(&metadata.weighted_fields, &tokens))
         })
         .filter(|(_, score)| *score > 0)
         .collect::<Vec<_>>();
@@ -329,12 +333,12 @@ pub fn suggest_templates(query: &str, limit: usize) -> Vec<&'static HeadlessTemp
 }
 
 pub fn suggest_template_details(query: &str, limit: usize) -> Vec<HeadlessTemplateSuggestion> {
-    let tokens = query_tokens(Some(query));
+    let tokens = tokenize_search_query(Some(query));
     let mut templates = TEMPLATES
         .iter()
         .map(|template| {
             let metadata = template_search_metadata(template);
-            let score = score_query_match(&metadata, &tokens);
+            let score = score_search_tokens(&metadata.weighted_fields, &tokens);
             let matched_terms = tokens
                 .iter()
                 .filter(|token| metadata.fields.iter().any(|field| field.contains(token.as_str())))
@@ -381,55 +385,6 @@ pub fn build_template_document(
     })
 }
 
-fn matches_query(metadata: &TemplateSearchMetadata, tokens: &[String]) -> bool {
-    if tokens.is_empty() {
-        return true;
-    }
-    tokens
-        .iter()
-        .all(|token| metadata.fields.iter().any(|field| field.contains(token)))
-}
-
-fn query_tokens(query: Option<&str>) -> Vec<String> {
-    query
-        .unwrap_or_default()
-        .split(|char: char| !char.is_ascii_alphanumeric())
-        .map(normalize_filter_token)
-        .filter(|token| !token.is_empty())
-        .collect()
-}
-
-fn normalize_filter_token(value: &str) -> String {
-    value.trim().to_lowercase()
-}
-
-fn score_query_match(metadata: &TemplateSearchMetadata, tokens: &[String]) -> usize {
-    if tokens.is_empty() {
-        return 0;
-    }
-    tokens
-        .iter()
-        .map(|token| {
-            metadata
-                .weighted_fields
-                .iter()
-                .filter_map(|(field, weight)| {
-                    if field == token {
-                        Some(weight * 6)
-                    } else if field.starts_with(token) {
-                        Some(weight * 4)
-                    } else if field.contains(token) {
-                        Some(*weight)
-                    } else {
-                        None
-                    }
-                })
-                .max()
-                .unwrap_or_default()
-        })
-        .sum()
-}
-
 fn template_search_metadata(template: &HeadlessTemplateDescriptor) -> TemplateSearchMetadata {
     let actions = build_template_workflow(template.id, template.id)
         .steps
@@ -439,16 +394,16 @@ fn template_search_metadata(template: &HeadlessTemplateDescriptor) -> TemplateSe
     let tags = template
         .tags
         .iter()
-        .map(|tag| normalize_filter_token(tag))
+        .map(|tag| normalize_search_token(tag))
         .collect::<Vec<_>>();
     let action_tokens = actions
         .iter()
-        .map(|action| normalize_filter_token(action))
+        .map(|action| normalize_search_token(action))
         .collect::<Vec<_>>();
-    let id = normalize_filter_token(template.id);
-    let title = normalize_filter_token(template.title);
-    let description = normalize_filter_token(template.description);
-    let category = normalize_filter_token(template.category);
+    let id = normalize_search_token(template.id);
+    let title = normalize_search_token(template.title);
+    let description = normalize_search_token(template.description);
+    let category = normalize_search_token(template.category);
     let mut fields = vec![id.clone(), title.clone(), description.clone(), category.clone()];
     fields.extend(tags.iter().cloned());
     fields.extend(action_tokens.iter().cloned());
