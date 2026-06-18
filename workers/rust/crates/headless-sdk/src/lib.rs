@@ -4,7 +4,10 @@ mod executor;
 mod hybrid_executor;
 mod run;
 mod service_executor;
+mod template_workflows;
 mod templates;
+#[cfg(test)]
+mod template_tests;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -37,19 +40,8 @@ pub struct HeadlessTemplateDescriptor {
 }
 
 impl HeadlessTemplateDescriptor {
-    pub fn default_workflow_id(&self) -> &'static str {
-        match self.id {
-            "solve_wait_result" => "template.solve_wait_result",
-            "workflow_submit_monitor" => "template.workflow_submit_monitor",
-            "direct_mesh_pipeline" => "template.direct_mesh_pipeline",
-            "direct_plane_quad" => "template.direct_plane_quad",
-            "direct_heat_quad" => "template.direct_heat_quad",
-            "direct_thermal_quad" => "template.direct_thermal_quad",
-            "direct_electrostatic_quad" => "template.direct_electrostatic_quad",
-            "browser_capture_review" => "template.browser_capture_review",
-            "browser_submit_then_poll" => "template.browser_submit_then_poll",
-            _ => "template.unknown",
-        }
+    pub fn default_workflow_id(&self) -> String {
+        format!("template.{}", self.id)
     }
 
     pub fn to_snapshot(&self) -> HeadlessTemplateSnapshot {
@@ -520,35 +512,6 @@ fn build_policy_summary(batch: &HeadlessExecutionBatch) -> HeadlessPolicySummary
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn normalizes_template_workflow_to_batch() {
-        let document = build_template_document("workflow_submit_monitor", None).unwrap();
-        let batch = normalize_workflow_document(&document).unwrap();
-        assert_eq!(batch.workflow_id, "template.workflow_submit_monitor");
-        assert_eq!(batch.steps.len(), 3);
-        assert_eq!(batch.steps[1].action, "job_wait");
-    }
-
-    #[test]
-    fn validates_browser_template_policy() {
-        let document = build_template_document("browser_capture_review", None).unwrap();
-        let batch = normalize_workflow_document(&document).unwrap();
-        let report = validate_batch(&batch);
-        assert!(report.ok, "{:?}", report.issues);
-        let policy = report.policy.unwrap();
-        assert_eq!(
-            policy.recommended_runtime,
-            HeadlessRuntimeStyle::BrowserOnly
-        );
-        assert!(policy.needs_desktop_browser);
-        assert!(
-            policy
-                .notes
-                .iter()
-                .any(|note| note.contains("--allow-sensitive"))
-        );
-    }
 
     #[test]
     fn rejects_future_binding_reference() {

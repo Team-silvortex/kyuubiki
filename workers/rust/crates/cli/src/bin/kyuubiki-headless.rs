@@ -56,17 +56,29 @@ fn handle_templates(args: &[String]) -> Result<(), String> {
         return Ok(());
     }
     println!("Headless templates: {}", templates.len());
-    for template in templates {
-        let view = TemplateView::from_descriptor(template);
-        println!("- {} ({} steps)", view.id, view.step_count);
-        println!("  {}", view.title);
-        println!("  {}", view.description);
-        println!("  runtime: {}", runtime_style_label(view.runtime_style));
-        println!("  category: {}", view.category);
-        println!("  tags: {}", view.tags.join(", "));
-        println!("  actions: {}", view.actions.join(", "));
-    }
+    print_template_groups(&templates);
     Ok(())
+}
+
+fn print_template_groups(templates: &[&HeadlessTemplateDescriptor]) {
+    let mut categories = templates
+        .iter()
+        .map(|template| template.category)
+        .collect::<Vec<_>>();
+    categories.sort_unstable();
+    categories.dedup();
+    for category in categories {
+        println!("\n[{}]", category);
+        for template in templates.iter().filter(|template| template.category == category) {
+            let view = TemplateView::from_descriptor(template);
+            println!("- {} ({} steps)", view.id, view.step_count);
+            println!("  {}", view.title);
+            println!("  {}", view.description);
+            println!("  runtime: {}", runtime_style_label(view.runtime_style));
+            println!("  tags: {}", view.tags.join(", "));
+            println!("  actions: {}", view.actions.join(", "));
+        }
+    }
 }
 
 fn handle_init(args: &[String]) -> Result<(), String> {
