@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveJobStatusDetailLabel } from "@/lib/api";
 import {
   buildAdminJobRows,
   buildAdminResultRows,
@@ -70,7 +71,12 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     }),
     heartbeatTone: (job: any) => props.heartbeatTone(job),
     heartbeatLabel: (job: any) => props.heartbeatStatus(job, t),
-    detailLabel: (job: any) => props.humanizeSolverFailure(job.message, t) ?? job.message ?? job.worker_id ?? "--",
+    detailLabel: (job: any) =>
+      props.humanizeSolverFailure(job.message, t) ??
+      resolveJobStatusDetailLabel(job.status_detail) ??
+      job.message ??
+      job.worker_id ??
+      "--",
   });
 
   const adminResultRows = buildAdminResultRows({

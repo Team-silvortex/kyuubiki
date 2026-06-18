@@ -3,6 +3,8 @@
 import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import {
   fetchJobStatus,
+  isWorkflowRunFailureStatus,
+  isWorkflowRunTerminalStatus,
   fetchWorkflowCatalog,
   fetchWorkflowOperators,
   submitWorkflowCatalogJob,
@@ -136,14 +138,17 @@ export function useWorkbenchWorkflowController({
       const payload = params.graph
         ? await submitWorkflowGraphJob(params.graph, inputArtifacts)
         : await submitWorkflowCatalogJob(params.sourceWorkflowId, inputArtifacts);
+      const activeJobId = payload.job.job_id;
       openWorkflowRunsSurface(params.displayWorkflowId);
       setJob(payload.job);
       setWorkflowRuns((current) =>
         upsertWorkflowRunRecord(current, {
-          jobId: payload.job.job_id,
+          jobId: activeJobId,
           workflowId: params.displayWorkflowId,
           status: payload.job.status,
+          statusDetail: payload.job.status_detail ?? null,
           progress: payload.job.progress ?? 0,
+          pollingState: "attached",
           currentNode: payload.job.message ?? null,
           updatedAt: payload.job.updated_at ?? null,
         }),
@@ -165,7 +170,9 @@ export function useWorkbenchWorkflowController({
             jobId: next.job.job_id,
             workflowId: params.displayWorkflowId,
             status: next.job.status,
+            statusDetail: next.job.status_detail ?? null,
             progress: next.job.progress ?? 0,
+            pollingState: "attached",
             currentNode:
               (next.result && isWorkflowGraphResult(next.result) ? next.result.current_node : null) ??
               next.job.message ??
@@ -192,15 +199,31 @@ export function useWorkbenchWorkflowController({
           return;
         }
 
-        if (next.job.status === "failed" || next.job.status === "cancelled") {
+        if (isWorkflowRunFailureStatus(next.job.status)) {
           await refreshJobHistory();
           setMessage(labels.workflowCatalogFailed);
+          return;
+        }
+
+        if (isWorkflowRunTerminalStatus(next.job.status)) {
+          await refreshJobHistory();
           return;
         }
 
         await new Promise((resolve) => window.setTimeout(resolve, 350));
       }
 
+      setWorkflowRuns((current) =>
+        current.map((entry) =>
+          entry.jobId === activeJobId
+            ? {
+                ...entry,
+                pollingState: "detached",
+                updatedAt: new Date().toISOString(),
+              }
+            : entry,
+        ),
+      );
       await refreshJobHistory();
       setMessage(labels.pollingDetached);
     } catch (error) {

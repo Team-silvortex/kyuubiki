@@ -10,40 +10,21 @@ import {
 import {
   buildWorkflowOperatorPresetRecommendations,
 } from "@/components/workbench/workflow/workbench-workflow-operator-compatibility";
+import {
+  scoreWorkflowNodeTemplatePresetSearch,
+} from "@/components/workbench/workflow/workbench-workflow-operator-search-match";
 import type { WorkflowNodeTemplatePreset } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 
 const RECENT_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.recentOperators";
 const FAVORITE_OPERATOR_STORAGE_KEY = "kyuubiki.workflow.favoriteOperators";
-const operatorSearchTextCache = new Map<string, string>();
 
-function resolveOperatorSearchText(
-  preset: WorkflowNodeTemplatePreset,
-  descriptor?: WorkflowOperatorDescriptor,
+function rankWorkflowOperatorValidationStatus(
+  status?: WorkflowOperatorDescriptor["validation"]["baseline_status"],
 ) {
-  const cacheKey = [
-    preset.id,
-    preset.label,
-    preset.operatorId ?? "",
-    descriptor?.summary ?? "",
-    descriptor?.family ?? "",
-    descriptor?.domain ?? "",
-    descriptor?.capability_tags.join(" ") ?? "",
-  ].join("|");
-  const cached = operatorSearchTextCache.get(cacheKey);
-  if (cached) return cached;
-  const searchText = [
-    preset.label,
-    preset.operatorId,
-    descriptor?.summary,
-    descriptor?.family,
-    descriptor?.domain,
-    descriptor?.capability_tags.join(" "),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  operatorSearchTextCache.set(cacheKey, searchText);
-  return searchText;
+  if (status === "verified") return 0;
+  if (status === "partial") return 1;
+  if (status === "unverified") return 2;
+  return 3;
 }
 
 function groupWorkflowOperatorOptionPresets(
@@ -73,28 +54,55 @@ export function filterWorkflowOperatorOptionPresets(
     capability: string;
   },
 ) {
-  const sorted = sortWorkflowOperatorOptionPresets(presets, operatorDescriptorMap);
-  const normalizedQuery = query.trim().toLowerCase();
-  return sorted.filter((preset) => {
+  const normalizedQuery = query.trim();
+  const ranked = presets.flatMap((preset) => {
     const descriptor = preset.operatorId
       ? operatorDescriptorMap.get(preset.operatorId)
       : undefined;
-    if (filters?.domain && descriptor?.domain !== filters.domain) return false;
+    if (filters?.domain && descriptor?.domain !== filters.domain) return [];
     if (
       filters?.validation &&
       descriptor?.validation?.baseline_status !== filters.validation
     ) {
-      return false;
+      return [];
     }
     if (
       filters?.capability &&
       !descriptor?.capability_tags.includes(filters.capability)
     ) {
-      return false;
+      return [];
     }
-    if (!normalizedQuery) return true;
-    return resolveOperatorSearchText(preset, descriptor).includes(normalizedQuery);
+    const score = scoreWorkflowNodeTemplatePresetSearch(
+      preset,
+      descriptor,
+      normalizedQuery,
+    );
+    if (normalizedQuery && score == null) return [];
+    return [{ preset, score: score ?? 0 }];
   });
+  if (!normalizedQuery) {
+    return sortWorkflowOperatorOptionPresets(
+      ranked.map((entry) => entry.preset),
+      operatorDescriptorMap,
+    );
+  }
+  return ranked
+    .sort((left, right) => {
+      const scoreDiff = right.score - left.score;
+      if (scoreDiff !== 0) return scoreDiff;
+      const leftDescriptor = left.preset.operatorId
+        ? operatorDescriptorMap.get(left.preset.operatorId)
+        : undefined;
+      const rightDescriptor = right.preset.operatorId
+        ? operatorDescriptorMap.get(right.preset.operatorId)
+        : undefined;
+      const validationDiff =
+        rankWorkflowOperatorValidationStatus(leftDescriptor?.validation?.baseline_status) -
+        rankWorkflowOperatorValidationStatus(rightDescriptor?.validation?.baseline_status);
+      if (validationDiff !== 0) return validationDiff;
+      return left.preset.label.localeCompare(right.preset.label);
+    })
+    .map((entry) => entry.preset);
 }
 
 export function WorkbenchWorkflowOperatorSearch(props: {

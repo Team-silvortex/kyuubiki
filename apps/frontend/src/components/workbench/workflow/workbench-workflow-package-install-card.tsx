@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import { WORKBENCH_STANDARD_STORAGE_CONTRACT } from "@/components/workbench/system/workbench-system-storage-contract";
 import {
@@ -14,12 +14,17 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-package-install-report";
 import type { WorkflowPackage } from "@/components/workbench/workflow/workbench-workflow-package";
 import {
+  scoreWorkflowPackageMaintenanceEntrySearch,
+  scoreWorkflowPackageResidualSearch,
+} from "@/components/workbench/workflow/workbench-workflow-package-diagnostics-search";
+import {
   publishWorkflowPolicyActionFeedback,
   useWorkflowPolicyAction,
 } from "@/components/workbench/workflow/workbench-workflow-policy-actions";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowPackageInstallCardProps = {
+  activeFilter?: "all" | "auto" | "manual";
   labels: WorkflowSidebarLabels;
   workflow: WorkflowCatalogEntry;
   importedPackage: WorkflowPackage | null;
@@ -84,6 +89,7 @@ function buildInstallRows(
 }
 
 export function WorkbenchWorkflowPackageInstallCard({
+  activeFilter = "all",
   labels,
   workflow,
   importedPackage,
@@ -97,6 +103,7 @@ export function WorkbenchWorkflowPackageInstallCard({
 }: WorkbenchWorkflowPackageInstallCardProps) {
   const [previewResidualIds, setPreviewResidualIds] = useState<string[] | null>(null);
   const [history, setHistory] = useState<WorkflowPackageMaintenanceLogEntry[]>([]);
+  const [query, setQuery] = useState("");
   const rows = buildInstallRows(
     labels,
     workflow,
@@ -107,9 +114,38 @@ export function WorkbenchWorkflowPackageInstallCard({
   const autoFixableCount = residuals.filter((entry) => entry.auto_fixable).length;
   const previewResiduals = previewResidualIds ? residuals.filter((entry) => previewResidualIds.includes(entry.id)) : [];
   const previewRepairPlan = buildWorkflowPackageRepairPlan(previewResiduals);
+  const scopeFilteredResiduals =
+    activeFilter === "auto"
+      ? residuals.filter((entry) => entry.auto_fixable)
+      : activeFilter === "manual"
+        ? residuals.filter((entry) => !entry.auto_fixable)
+        : residuals;
+  const filteredResiduals = useMemo(() => {
+    const normalized = query.trim();
+    if (!normalized) return scopeFilteredResiduals;
+    return scopeFilteredResiduals
+      .flatMap((entry) => {
+        const score = scoreWorkflowPackageResidualSearch(entry, normalized);
+        return score == null ? [] : [{ entry, score }];
+      })
+      .sort((left, right) => right.score - left.score)
+      .map((item) => item.entry);
+  }, [query, scopeFilteredResiduals]);
+  const filteredHistory = useMemo(() => {
+    const normalized = query.trim();
+    if (!normalized) return history;
+    return history
+      .flatMap((entry) => {
+        const score = scoreWorkflowPackageMaintenanceEntrySearch(entry, normalized);
+        return score == null ? [] : [{ entry, score }];
+      })
+      .sort((left, right) => right.score - left.score)
+      .map((item) => item.entry);
+  }, [history, query]);
   useEffect(() => {
     setHistory(listStoredWorkflowPackageMaintenanceHistory(workflow.id));
     setPreviewResidualIds(null);
+    setQuery("");
   }, [workflow.id]);
   function appendHistory(kind: WorkflowPackageMaintenanceLogEntry["kind"], lines: string[]) {
     if (lines.length === 0) return;
@@ -165,6 +201,15 @@ export function WorkbenchWorkflowPackageInstallCard({
         <h2>{labels.packageInstallRulesTitle}</h2>
         <span className="status-pill status-pill--watch">{labels.packageInstallRulesReadonlyLabel}</span>
       </div>
+      <label style={{ display: "grid", gap: "0.35rem", marginBottom: "0.75rem" }}>
+        <span className="card-copy">{labels.packageDiagnosticsSearchLabel}</span>
+        <input
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={labels.packageDiagnosticsSearchPlaceholder}
+          type="search"
+          value={query}
+        />
+      </label>
       <div className="sidebar-list">
         {rows.map(([label, value]) => (
           <div className="sidebar-list__row" key={label}>
@@ -174,12 +219,15 @@ export function WorkbenchWorkflowPackageInstallCard({
         ))}
         <div className="sidebar-list__row">
           <span>{labels.packageInstallRulesResidualsLabel}</span>
-          <strong>{residuals.length === 0 ? labels.packageInstallRulesResidualsCleanLabel : `${residuals.length} warning(s)`}</strong>
+          <strong>{filteredResiduals.length === 0 ? labels.packageInstallRulesResidualsCleanLabel : `${filteredResiduals.length} warning(s)`}</strong>
         </div>
       </div>
-      {residuals.length > 0 ? (
+      {query.trim() && filteredResiduals.length === 0 && filteredHistory.length === 0 ? (
+        <p className="card-copy">{labels.packageDiagnosticsSearchEmptyLabel}</p>
+      ) : null}
+      {filteredResiduals.length > 0 ? (
         <div style={{ display: "grid", gap: "0.35rem", marginTop: "0.75rem" }}>
-          {residuals.map((entry) => (
+          {filteredResiduals.map((entry) => (
             <div key={entry.id} style={{ display: "grid", gap: "0.35rem" }}>
               <div className="sidebar-list__row">
                 <span>{entry.message}</span>
@@ -233,11 +281,11 @@ export function WorkbenchWorkflowPackageInstallCard({
       <div className="sidebar-card sidebar-card--compact" style={{ marginTop: "0.75rem" }}>
         <div className="card-head">
           <h2>{labels.packageInstallRulesReceiptTitle}</h2>
-          <span className={`status-pill status-pill--${history.length > 0 ? "good" : "watch"}`}>{history.length}</span>
+          <span className={`status-pill status-pill--${filteredHistory.length > 0 ? "good" : "watch"}`}>{filteredHistory.length}</span>
         </div>
-        {history.length > 0 ? (
+        {filteredHistory.length > 0 ? (
           <div style={{ display: "grid", gap: "0.5rem" }}>
-            {history.map((entry) => (
+            {filteredHistory.map((entry) => (
               <div key={entry.id} style={{ display: "grid", gap: "0.35rem" }}>
                 <div className="sidebar-list__row">
                   <span>{new Date(entry.at).toLocaleString()}</span>
@@ -249,6 +297,8 @@ export function WorkbenchWorkflowPackageInstallCard({
               </div>
             ))}
           </div>
+        ) : query.trim() ? (
+          <p className="card-copy">{labels.packageDiagnosticsSearchEmptyLabel}</p>
         ) : (
           <p className="card-copy">{labels.packageInstallRulesHistoryEmptyLabel}</p>
         )}

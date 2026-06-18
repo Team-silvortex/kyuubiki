@@ -50,6 +50,21 @@ defmodule KyuubikiWeb.Jobs.Job do
   @spec statuses() :: [status()]
   def statuses, do: @statuses
 
+  @spec status_detail(t()) :: map()
+  def status_detail(%__MODULE__{} = job) do
+    active = job.status in [:queued, :preprocessing, :partitioning, :solving, :postprocessing]
+    terminal = job.status in [:completed, :failed, :cancelled]
+    failure_class = failure_class(job.status, job.message)
+
+    %{
+      "lifecycle" => if(active, do: "active", else: "terminal"),
+      "active" => active,
+      "terminal" => terminal,
+      "failure_class" => failure_class,
+      "recoverable" => recoverable_failure_class?(failure_class)
+    }
+  end
+
   @spec new(map()) :: {:ok, t()} | {:error, term()}
   def new(attrs) when is_map(attrs) do
     now = DateTime.utc_now()
@@ -178,6 +193,28 @@ defmodule KyuubikiWeb.Jobs.Job do
   end
 
   defp normalize_status(value), do: value
+
+  defp failure_class(:failed, message) when is_binary(message) do
+    cond do
+      String.contains?(message, "watchdog marked job stalled") -> "watchdog_stalled"
+      String.contains?(message, "watchdog timed out job") -> "watchdog_timeout"
+      String.contains?(message, "execution timed out") -> "execution_timeout"
+      true -> "runtime_failure"
+    end
+  end
+
+  defp failure_class(:cancelled, message) when is_binary(message) do
+    if String.contains?(message, "cancelled by operator"),
+      do: "operator_cancelled",
+      else: "cancelled"
+  end
+
+  defp failure_class(:cancelled, _message), do: "cancelled"
+  defp failure_class(_status, _message), do: nil
+
+  defp recoverable_failure_class?(failure_class) do
+    failure_class in ["watchdog_stalled", "watchdog_timeout", "execution_timeout", "operator_cancelled"]
+  end
 
   defp fetch_progress(attrs, key, default) do
     case Map.get(attrs, key, default) do

@@ -46,6 +46,52 @@
         "cancelled"
       ]
     },
+    "status_detail": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "lifecycle",
+        "active",
+        "terminal",
+        "recoverable"
+      ],
+      "properties": {
+        "lifecycle": {
+          "type": "string",
+          "enum": [
+            "active",
+            "terminal"
+          ]
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "terminal": {
+          "type": "boolean"
+        },
+        "failure_class": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "watchdog_stalled",
+            "watchdog_timeout",
+            "execution_timeout",
+            "runtime_failure",
+            "operator_cancelled",
+            "cancelled",
+            null
+          ]
+        },
+        "recoverable": {
+          "type": "boolean"
+        }
+      }
+    },
     "progress": {
       "type": "number",
       "minimum": 0,

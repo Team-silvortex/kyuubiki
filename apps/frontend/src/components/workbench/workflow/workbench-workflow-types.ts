@@ -1,7 +1,8 @@
 "use client";
 
+import type { JobStatusDetail, WorkflowGraphJobResult } from "@/lib/api";
+import type { WorkflowRunPollingState, WorkflowRunStatus } from "@/lib/api";
 import type { WorkflowRunTraceSummary } from "@/components/workbench/workflow/workbench-workflow-run-trace-summary";
-import type { WorkflowGraphJobResult } from "@/lib/api";
 
 export type WorkflowSurfaceTab = "overview" | "catalog" | "builder" | "runs";
 export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "needs_review" | "bridge_aligned" | "bridge_drift" | "bridge_missing_runtime";
@@ -9,8 +10,10 @@ export type WorkflowCatalogFilter = "all" | "local" | "variants" | "healthy" | "
 export type WorkflowRunRecord = {
   jobId: string;
   workflowId: string;
-  status: string;
+  status: WorkflowRunStatus;
+  statusDetail?: JobStatusDetail | null;
   progress: number;
+  pollingState?: WorkflowRunPollingState;
   currentNode?: string | null;
   summary?: string | null;
   updatedAt?: string | null;
@@ -49,6 +52,10 @@ export type WorkflowSidebarLabels = {
   builderHint: string;
   runsHint: string;
   catalogTitle: string;
+  catalogSearchLabel: string;
+  catalogSearchPlaceholder: string;
+  catalogSearchEmptyLabel: string;
+  catalogSearchMatchesLabel: string;
   catalogFilterAllLabel: string;
   catalogFilterLocalLabel: string;
   catalogFilterVariantsLabel: string;
@@ -207,6 +214,12 @@ export type WorkflowSidebarLabels = {
   packageManifestOperatorsLabel: string;
   packageManifestEntryArtifactsLabel: string;
   packageManifestOutputArtifactsLabel: string;
+  packageDiagnosticsSearchLabel: string;
+  packageDiagnosticsSearchPlaceholder: string;
+  packageDiagnosticsSearchEmptyLabel: string;
+  packageDiagnosticsNodeLabel: string;
+  packageDiagnosticsDatasetLabel: string;
+  packageDiagnosticsPackageLabel: string;
   packageInstallRulesTitle: string;
   packageInstallRulesMountStateLabel: string;
   packageInstallRulesStorageLabel: string;
@@ -243,6 +256,9 @@ export type WorkflowSidebarLabels = {
   localWorkflowMetadataSavedLabel: string;
   runDraftInvalidInputsLabel: string;
   validationTitle: string;
+  validationSummaryAllLabel: string;
+  validationSummaryFixableLabel: string;
+  validationSummaryReviewLabel: string;
   validationOkLabel: string;
   validationFixLabel: string;
   validationFixAllLabel: string;

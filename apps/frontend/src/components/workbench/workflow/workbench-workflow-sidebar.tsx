@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { resolveWorkflowRunStatusTone } from "@/lib/api";
 import type {
   JobState,
   ProtocolAgentDescriptor,
@@ -27,6 +28,10 @@ import {
   measureWorkflowSurfaceReady,
 } from "@/components/workbench/workflow/workbench-workflow-perf";
 import { WorkbenchWorkflowCatalogCard } from "@/components/workbench/workflow/workbench-workflow-catalog-card";
+import {
+  describeWorkflowCatalogEntrySearchMatches,
+  scoreWorkflowCatalogEntrySearch,
+} from "@/components/workbench/workflow/workbench-workflow-catalog-search";
 import { groupWorkflowCatalogEntriesByDomain } from "@/components/workbench/workflow/workbench-workflow-domain-groups";
 import { WorkbenchWorkflowRunTraceCard } from "@/components/workbench/workflow/workbench-workflow-run-trace-card";
 import type {
@@ -63,12 +68,6 @@ type WorkbenchWorkflowSidebarProps = {
   ) => void;
   onOpenWorkflowRun: (jobId: string) => void;
 };
-
-function workflowStatusTone(status: string): string {
-  if (status === "completed") return "good";
-  if (status === "failed" || status === "cancelled") return "risk";
-  return "watch";
-}
 
 function scoreWorkflowRunComplexity(run: WorkflowRunRecord) {
   if (!run.traceSummary) {
@@ -128,6 +127,7 @@ export function WorkbenchWorkflowSidebar({
   const previousLatestRun = latestRun ? workflowRuns.find((entry, index) => index > 0 && entry.workflowId === latestRun.workflowId) ?? null : null;
   const latestRunWorkflow = latestRun ? workflowCatalogEntries.find((entry) => entry.id === latestRun.workflowId) ?? null : null;
   const [catalogFilter, setCatalogFilter] = useState<WorkflowCatalogFilter>("all");
+  const [catalogQuery, setCatalogQuery] = useState("");
   const [runsFilter, setRunsFilter] = useState<"all" | "bridge_alerts" | "bridge_drift" | "bridge_missing_runtime">("all");
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [builderTraceFocus, setBuilderTraceFocus] = useState<{ nodeId: string; token: number } | null>(null);
@@ -208,7 +208,17 @@ export function WorkbenchWorkflowSidebar({
                   : catalogFilter === "bridge_missing_runtime"
                     ? workflowCatalogEntries.filter((workflow) => bridgeRuntimeState(workflow) === "bridge_missing_runtime")
               : workflowCatalogEntries;
-    return [...filtered].sort((left, right) => {
+    const searchScores = new Map(
+      filtered.flatMap((workflow) => {
+        const score = scoreWorkflowCatalogEntrySearch(workflow, catalogQuery.trim());
+        return !catalogQuery.trim() || score == null ? (catalogQuery.trim() ? [] : [[workflow.id, 0] as const]) : [[workflow.id, score] as const];
+      }),
+    );
+    return filtered
+      .filter((workflow) => searchScores.has(workflow.id))
+      .sort((left, right) => {
+      const scoreDiff = (searchScores.get(right.id) ?? 0) - (searchScores.get(left.id) ?? 0);
+      if (scoreDiff !== 0) return scoreDiff;
       const leftRank = rankWorkflowContractHealth({ ...left, capability_tags: [`contract_health:${dynamicHealth(left) === "needs review" ? "review" : dynamicHealth(left) ?? "manageable"}`] });
       const rightRank = rankWorkflowContractHealth({ ...right, capability_tags: [`contract_health:${dynamicHealth(right) === "needs review" ? "review" : dynamicHealth(right) ?? "manageable"}`] });
       const healthDelta = leftRank - rightRank;
@@ -220,7 +230,7 @@ export function WorkbenchWorkflowSidebar({
       if (right.local?.promoted_at) return 1;
       return left.name.localeCompare(right.name);
     });
-  }, [catalogFilter, latestRunByWorkflowId, latestRunStatusByWorkflowId, workflowCatalogEntries]);
+  }, [catalogFilter, catalogQuery, latestRunByWorkflowId, latestRunStatusByWorkflowId, workflowCatalogEntries]);
   const groupedWorkflowCatalogEntries = useMemo(
     () => groupWorkflowCatalogEntriesByDomain(filteredWorkflowCatalogEntries),
     [filteredWorkflowCatalogEntries],
@@ -256,12 +266,14 @@ export function WorkbenchWorkflowSidebar({
 
     return (
       <WorkbenchWorkflowCatalogCard
+        activeQuery={catalogQuery}
         bridgeRuntimeSummary={bridgeRuntimeOverview?.summary ?? null}
         bridgeRuntimeTone={bridgeRuntimeOverview?.tone ?? null}
         contractHealth={contractHealth}
         isSelected={selectedWorkflowId === workflow.id}
         key={workflow.id}
         labels={labels}
+        matchSummary={describeWorkflowCatalogEntrySearchMatches(workflow, catalogQuery)}
         onDelete={workflow.local ? () => deleteCatalogLocalWorkflow(workflow) : undefined}
         onRun={() => {
           setCatalogMessage(
@@ -402,6 +414,15 @@ export function WorkbenchWorkflowSidebar({
           </div>
           <p className="card-copy">{labels.catalogHint}</p>
           {catalogMessage ? <p className="card-copy">{catalogMessage}</p> : null}
+          <label>
+            <span>{labels.catalogSearchLabel}</span>
+            <input
+              onChange={(event) => setCatalogQuery(event.target.value)}
+              placeholder={labels.catalogSearchPlaceholder}
+              type="search"
+              value={catalogQuery}
+            />
+          </label>
           <div className="button-row button-row--adaptive">
             <button onClick={() => setCatalogFilter("all")} type="button">{labels.catalogFilterAllLabel}</button>
             <button onClick={() => setCatalogFilter("local")} type="button">{labels.catalogFilterLocalLabel}</button>
@@ -413,7 +434,7 @@ export function WorkbenchWorkflowSidebar({
             <button onClick={() => setCatalogFilter("bridge_missing_runtime")} type="button">{labels.catalogFilterBridgeMissingRuntimeLabel}</button>
             <button onClick={onRefreshWorkflowCatalog} type="button">{labels.refreshLabel}</button>
           </div>
-          {filteredWorkflowCatalogEntries.length === 0 ? <p className="card-copy">{labels.emptyCatalogLabel}</p> : null}
+          {filteredWorkflowCatalogEntries.length === 0 ? <p className="card-copy">{catalogQuery.trim() ? labels.catalogSearchEmptyLabel : labels.emptyCatalogLabel}</p> : null}
           {pinnedWorkflowCatalogEntries.length > 0 ? (
             <div className="sidebar-stack">
               <div className="sidebar-list__row">
@@ -502,7 +523,8 @@ export function WorkbenchWorkflowSidebar({
                     {describeWorkflowRunComplexity(run).map((tag) => (
                       <span className={`status-pill status-pill--${tag.tone}`} key={`${run.jobId}:${tag.label}`}>{tag.label}</span>
                     ))}
-                    <span className={`status-pill status-pill--${workflowStatusTone(run.status)}`}>{run.status}</span>
+                    {run.pollingState === "detached" ? <span className="status-pill status-pill--watch">detached</span> : null}
+                    <span className={`status-pill status-pill--${resolveWorkflowRunStatusTone(run.status, run.pollingState)}`}>{run.status}</span>
                   </div>
                 </div>
                 {(() => {

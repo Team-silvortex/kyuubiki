@@ -126,6 +126,9 @@ Then branch by intent:
 - `release-prep-1.8.md`
   Practical upgrade checklist and audit entrypoint for moving the repository
   from the current `1.7.x` shipping point toward `1.8.x`.
+- `release-prep-1.9-to-1.20.md`
+  Industrialization roadmap for the second half of `tamamono 1.x`, covering
+  the boundary-hardening path from `1.9.x` through `1.20.x` before `2.0`.
 - `tamamono-minor-lines.md`
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`

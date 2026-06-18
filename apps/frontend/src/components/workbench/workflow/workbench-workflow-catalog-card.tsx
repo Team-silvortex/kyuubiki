@@ -21,17 +21,19 @@ function formatWorkflowTags(tags?: string[]) {
 }
 
 export function WorkbenchWorkflowCatalogCard(props: {
+  activeQuery?: string;
   bridgeRuntimeSummary?: string | null;
   bridgeRuntimeTone?: "good" | "watch" | "risk" | null;
   contractHealth: string | null;
   isSelected: boolean;
   labels: WorkflowSidebarLabels;
+  matchSummary?: string[];
   onDelete?: () => void;
   onRun: () => void;
   onSelectForBuilder: () => void;
   workflow: WorkflowCatalogEntry;
 }) {
-  const { bridgeRuntimeSummary, bridgeRuntimeTone, contractHealth, isSelected, labels, onDelete, onRun, onSelectForBuilder, workflow } =
+  const { activeQuery, bridgeRuntimeSummary, bridgeRuntimeTone, contractHealth, isSelected, labels, matchSummary = [], onDelete, onRun, onSelectForBuilder, workflow } =
     props;
   const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
   const highlights = deriveWorkflowCatalogHighlights(workflow);
@@ -45,6 +47,14 @@ export function WorkbenchWorkflowCatalogCard(props: {
         </span>
       </div>
       <p className="card-copy">{workflow.summary}</p>
+      {activeQuery?.trim() && matchSummary.length > 0 ? (
+        <div className="sidebar-list">
+          <div className="sidebar-list__row">
+            <span>{labels.catalogSearchMatchesLabel}</span>
+            <strong>{matchSummary.join(" · ")}</strong>
+          </div>
+        </div>
+      ) : null}
       {highlights.length > 0 ? (
         <div className="sidebar-list">
           {highlights.map((entry) => (

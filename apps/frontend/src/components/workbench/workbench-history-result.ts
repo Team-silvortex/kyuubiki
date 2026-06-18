@@ -27,6 +27,7 @@ import type {
   Spring3dResult,
   Torsion1dResult,
 } from "@/lib/api";
+import { resolveJobStatusDetailLabel } from "@/lib/api";
 import { createMaterialDefinition } from "@/lib/materials";
 import {
   ensureFrameModelMaterials,
@@ -208,7 +209,11 @@ export function applyHistoryJobPayload(
   effects.setJob(payload.job);
 
   if (!payload.result) {
-    setMessage(payload.job.status === "failed" ? payload.job.message ?? copy.historyLoaded : copy.historyLoaded);
+    setMessage(
+      payload.job.status === "failed"
+        ? payload.job.message ?? resolveJobStatusDetailLabel(payload.job.status_detail) ?? copy.historyLoaded
+        : copy.historyLoaded,
+    );
     return;
   }
 
@@ -224,6 +229,7 @@ export function applyHistoryJobPayload(
         jobId: payload.job.job_id,
         workflowId: workflowResult.workflow_id,
         status: payload.job.status,
+        statusDetail: payload.job.status_detail ?? null,
         progress: payload.job.progress ?? 0,
         currentNode: workflowResult.current_node ?? payload.job.message ?? null,
         summary,
@@ -396,7 +402,11 @@ export function applyHistoryJobPayload(
     openWorkspaceStudy("controls");
   }
 
-  setMessage(payload.job.status === "failed" ? payload.job.message ?? copy.historyLoaded : copy.historyLoaded);
+  setMessage(
+    payload.job.status === "failed"
+      ? payload.job.message ?? resolveJobStatusDetailLabel(payload.job.status_detail) ?? copy.historyLoaded
+      : copy.historyLoaded,
+  );
 }
 function ensureBeamModelMaterials<T extends { materials?: Array<{ id: string }>; elements: Array<{ material_id?: string | undefined }> }>(
   model: T,

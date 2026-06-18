@@ -1,3 +1,4 @@
+import { isWorkflowRunActiveStatus } from "@/lib/api";
 import type {
   AxialBarResult,
   Beam1dResult,
@@ -496,12 +497,7 @@ export function heartbeatStatus(
   const updatedAt = new Date(job.updated_at);
   if (Number.isNaN(updatedAt.getTime())) return "--";
 
-  const active =
-    job.status === "queued" ||
-    job.status === "preprocessing" ||
-    job.status === "partitioning" ||
-    job.status === "solving" ||
-    job.status === "postprocessing";
+  const active = isWorkflowRunActiveStatus(job.status);
 
   if (!active) return languageCopy.heartbeatHealthy;
 
@@ -521,12 +517,7 @@ export function heartbeatTone(
   const updatedAt = new Date(job.updated_at);
   if (Number.isNaN(updatedAt.getTime())) return "quiet";
 
-  const active =
-    job.status === "queued" ||
-    job.status === "preprocessing" ||
-    job.status === "partitioning" ||
-    job.status === "solving" ||
-    job.status === "postprocessing";
+  const active = isWorkflowRunActiveStatus(job.status);
 
   if (!active) return "healthy";
 

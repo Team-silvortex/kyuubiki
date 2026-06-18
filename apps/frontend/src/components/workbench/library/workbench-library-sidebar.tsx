@@ -140,6 +140,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
               >
                 <strong>{historyJob.shortId}</strong>
                 <span>{historyJob.status}</span>
+                {historyJob.statusDetail ? <small>{historyJob.statusDetail}</small> : null}
                 <small>
                   {labels.updatedAt}: {historyJob.updatedAt}
                 </small>
@@ -186,6 +187,7 @@ export const WorkbenchLibrarySidebar = memo(function WorkbenchLibrarySidebar({
               >
                 <strong>{historyJob.shortId}</strong>
                 <span>{historyJob.status}</span>
+                {historyJob.statusDetail ? <small>{historyJob.statusDetail}</small> : null}
                 <small>
                   {labels.updatedAt}: {historyJob.updatedAt}
                 </small>

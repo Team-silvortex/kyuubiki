@@ -1,3 +1,5 @@
+import type { JobStatusDetail, WorkflowRunStatus } from "./job-status";
+
 export type ModelMaterial = {
   id: string;
   name: string;
@@ -7,7 +9,8 @@ export type ModelMaterial = {
 
 export type JobState = {
   job_id: string;
-  status: string;
+  status: WorkflowRunStatus;
+  status_detail?: JobStatusDetail | null;
   worker_id: string | null;
   model_version_id?: string | null;
   message?: string | null;

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { WorkflowOperatorDescriptor } from "@/lib/api";
 import { listWorkflowNodeTemplatePresets, type WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { isWorkflowDescriptorSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
+import { scoreWorkflowNodeTemplatePresetSearch } from "@/components/workbench/workflow/workbench-workflow-operator-search-match";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowControlFlowQuickAddCardProps = {
@@ -20,21 +21,34 @@ export function WorkbenchWorkflowControlFlowQuickAddCard({
   onAddNode,
 }: WorkbenchWorkflowControlFlowQuickAddCardProps) {
   const [query, setQuery] = useState("");
+  const operatorDescriptorMap = useMemo(
+    () => new Map((operatorDescriptors ?? []).map((entry) => [entry.id, entry] as const)),
+    [operatorDescriptors],
+  );
   const presets = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = query.trim();
     return listWorkflowNodeTemplatePresets(undefined, operatorDescriptors)
-      .filter((preset) => {
-        if (preset.operatorId) {
-          const descriptor = (operatorDescriptors ?? []).find((entry) => entry.id === preset.operatorId);
-          if (!descriptor || !isWorkflowDescriptorSupportedInRuntime(descriptor)) return false;
+      .flatMap((preset) => {
+        const descriptor = preset.operatorId
+          ? operatorDescriptorMap.get(preset.operatorId)
+          : undefined;
+        if (preset.operatorId && (!descriptor || !isWorkflowDescriptorSupportedInRuntime(descriptor))) {
+          return [];
         }
-        if (!normalized) return PRIORITY_KINDS.has(preset.kind);
-        return [preset.label, preset.operatorId, preset.kind, preset.id]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(normalized));
+        if (!normalized) {
+          return PRIORITY_KINDS.has(preset.kind) ? [{ preset, score: 0 }] : [];
+        }
+        const score = scoreWorkflowNodeTemplatePresetSearch(preset, descriptor, normalized);
+        return score == null ? [] : [{ preset, score }];
       })
+      .sort((left, right) => {
+        const scoreDiff = right.score - left.score;
+        if (scoreDiff !== 0) return scoreDiff;
+        return left.preset.label.localeCompare(right.preset.label);
+      })
+      .map((entry) => entry.preset)
       .slice(0, normalized ? 8 : 6);
-  }, [operatorDescriptors, query]);
+  }, [operatorDescriptorMap, operatorDescriptors, query]);
 
   return (
     <section className="sidebar-card sidebar-card--compact runtime-overview-card">

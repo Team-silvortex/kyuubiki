@@ -10,6 +10,7 @@ import type { WorkflowValidationFixSummaryEntry } from "@/components/workbench/w
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type WorkbenchWorkflowValidationCardProps = {
+  activeFilter?: "all" | "fixable" | "review";
   labels: WorkflowSidebarLabels;
   validationIssues: WorkflowGraphValidationIssue[];
   recentFixSummary?: WorkflowValidationFixSummaryEntry[];
@@ -19,6 +20,7 @@ type WorkbenchWorkflowValidationCardProps = {
 };
 
 export function WorkbenchWorkflowValidationCard({
+  activeFilter = "all",
   labels,
   validationIssues,
   recentFixSummary = [],
@@ -27,7 +29,13 @@ export function WorkbenchWorkflowValidationCard({
   onLocateValidationIssue,
 }: WorkbenchWorkflowValidationCardProps) {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const fixableIssues = validationIssues.filter((issue) => issue.fix);
+  const filteredIssues =
+    activeFilter === "fixable"
+      ? validationIssues.filter((issue) => issue.fix)
+      : activeFilter === "review"
+        ? validationIssues.filter((issue) => !issue.fix)
+        : validationIssues;
+  const fixableIssues = filteredIssues.filter((issue) => issue.fix);
   const fixableIssueCount = fixableIssues.length;
   const previewIssues = fixableIssues.slice(0, 3);
   const remainingPreviewCount = fixableIssueCount - previewIssues.length;
@@ -53,8 +61,8 @@ export function WorkbenchWorkflowValidationCard({
     <section className="sidebar-card sidebar-card--compact" data-workflow-validation-card="card">
       <div className="card-head">
         <h2>{labels.validationTitle}</h2>
-        <span className={`status-pill status-pill--${validationIssues.length > 0 ? "watch" : "good"}`}>
-          {validationIssues.length}
+        <span className={`status-pill status-pill--${filteredIssues.length > 0 ? "watch" : "good"}`}>
+          {filteredIssues.length}
         </span>
       </div>
       {recentSummaryPreview.length > 0 ? (
@@ -73,7 +81,7 @@ export function WorkbenchWorkflowValidationCard({
           ) : null}
         </div>
       ) : null}
-      {validationIssues.length > 0 ? (
+      {filteredIssues.length > 0 ? (
         <div className="sidebar-stack">
           {previewOpen && fixableIssueCount > 0 ? (
             <div className="sidebar-card sidebar-card--compact workflow-preview-panel">
@@ -102,7 +110,7 @@ export function WorkbenchWorkflowValidationCard({
             </div>
           ) : null}
           <div className="sidebar-list">
-            {validationIssues.map((issue) => (
+            {filteredIssues.map((issue) => (
               <div className="sidebar-list__row" key={issue.id}>
                 <span>{issue.level}</span>
                 <strong>{issue.message}</strong>

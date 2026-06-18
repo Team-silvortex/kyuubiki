@@ -10,6 +10,8 @@ import {
   fetchJobStatus,
   fetchModelVersion,
   fetchResultRecord,
+  isWorkflowRunTerminalStatus,
+  resolveJobStatusDetailLabel,
   submitWorkflowCatalogJob,
   submitWorkflowGraphJob,
   type DirectMeshSelectionMode,
@@ -61,8 +63,9 @@ async function waitForJob(jobId: string, intervalMs: number, timeoutMs: number, 
   const startedAt = Date.now();
   while (Date.now() - startedAt <= timeoutMs) {
     const envelope = await fetchJobStatus(jobId);
-    onEvent?.({ message: `[job_wait] ${jobId} -> ${envelope.job.status}` });
-    if (["completed", "failed", "cancelled"].includes(envelope.job.status)) return envelope;
+    const detailLabel = resolveJobStatusDetailLabel(envelope.job.status_detail);
+    onEvent?.({ message: `[job_wait] ${jobId} -> ${envelope.job.status}${detailLabel ? ` (${detailLabel})` : ""}` });
+    if (isWorkflowRunTerminalStatus(envelope.job.status)) return envelope;
     await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
   }
   throw new Error(`Timed out while waiting for job ${jobId}.`);
@@ -102,15 +105,20 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
   }
   if (action === "workflow_submit_catalog") {
     const response = await submitWorkflowCatalogJob(String(payload.workflow_id ?? ""), asRecord(payload.input_artifacts));
-    return { job_id: response.job.job_id, status: response.job.status };
+    return { job_id: response.job.job_id, status: response.job.status, status_detail: response.job.status_detail ?? null };
   }
   if (action === "workflow_submit_graph") {
     const response = await submitWorkflowGraphJob(payload.graph as WorkflowGraphDefinition, asRecord(payload.input_artifacts));
-    return { job_id: response.job.job_id, status: response.job.status };
+    return { job_id: response.job.job_id, status: response.job.status, status_detail: response.job.status_detail ?? null };
   }
   if (action === "job_fetch") {
     const response = await fetchJobStatus(String(payload.job_id ?? ""));
-    return { job_id: response.job.job_id, status: response.job.status, progress: response.job.progress };
+    return {
+      job_id: response.job.job_id,
+      status: response.job.status,
+      status_detail: response.job.status_detail ?? null,
+      progress: response.job.progress,
+    };
   }
   if (action === "job_wait") {
     const response = await waitForJob(
@@ -119,7 +127,12 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
       typeof payload.timeout_ms === "number" ? payload.timeout_ms : 60_000,
       onEvent,
     );
-    return { job_id: response.job.job_id, status: response.job.status, progress: response.job.progress };
+    return {
+      job_id: response.job.job_id,
+      status: response.job.status,
+      status_detail: response.job.status_detail ?? null,
+      progress: response.job.progress,
+    };
   }
   if (action === "result_fetch") {
     const jobId = String(payload.job_id ?? "");
@@ -137,7 +150,12 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
       asStringList(payload.endpoints),
       asSelectionMode(payload.selection_mode),
     );
-    return { job_id: response.job.job_id, status: response.job.status, endpoint: response.direct_mesh.endpoint };
+    return {
+      job_id: response.job.job_id,
+      status: response.job.status,
+      status_detail: response.job.status_detail ?? null,
+      endpoint: response.direct_mesh.endpoint,
+    };
   }
   if (action === "solve_from_model_version" || action === "solve_and_wait_from_model_version") {
     const version = await fetchModelVersion(String(payload.model_version_id ?? ""));
@@ -150,6 +168,7 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     const baseResult: Record<string, unknown> = {
       job_id: solve.job.job_id,
       status: solve.job.status,
+      status_detail: solve.job.status_detail ?? null,
       model_version_id: version.version.version_id,
       endpoint: solve.direct_mesh.endpoint,
     };
@@ -161,7 +180,12 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
       onEvent,
     );
     const resultRecord = payload.direct_mesh ? await fetchDirectMeshResultRecord(solve.job.job_id) : await fetchResultRecord(solve.job.job_id);
-    return { ...baseResult, status: waited.job.status, result: resultRecord.result };
+    return {
+      ...baseResult,
+      status: waited.job.status,
+      status_detail: waited.job.status_detail ?? null,
+      result: resultRecord.result,
+    };
   }
   throw new Error(`Unsupported headless execution action: ${action}`);
 }

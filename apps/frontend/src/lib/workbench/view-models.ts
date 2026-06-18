@@ -1,3 +1,4 @@
+import { resolveJobStatusDetailLabel } from "@/lib/api";
 import type {
   JobEnvelope,
   JobState,
@@ -148,6 +149,7 @@ export function buildLibraryJobRows({
     id: job.job_id,
     shortId: job.job_id.slice(0, 8),
     status: job.status,
+    statusDetail: resolveJobStatusDetailLabel(job.status_detail),
     updatedAt: updatedAtLabel(job.updated_at),
     hasResult: hasResultLabel(Boolean(job.has_result)),
   }));

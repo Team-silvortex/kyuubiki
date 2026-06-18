@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
   """
 
   alias KyuubikiWeb.AnalysisResultStore
+  alias KyuubikiWeb.Jobs.Job
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Playground.AgentClient
 
@@ -186,6 +187,7 @@ defmodule KyuubikiWeb.AnalysisJobRecords do
       "worker_id" => job.worker_id,
       "message" => job.message,
       "status" => Atom.to_string(job.status),
+      "status_detail" => Job.status_detail(job),
       "progress" => job.progress,
       "residual" => job.residual,
       "iteration" => job.iteration,

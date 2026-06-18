@@ -3,32 +3,48 @@
 import type { WorkflowGraphDefinition, WorkflowGraphJobResult } from "@/lib/api";
 import {
   inspectWorkflowBridgeRuntimePaths,
+  type WorkflowBridgeRuntimeNodeStatus,
   validateWorkflowBridgeRuntimeContracts,
   type WorkflowBridgeRuntimeInspectionRecord,
   type WorkflowBridgeRuntimeValidationIssue,
 } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-validation";
 
 type WorkbenchWorkflowBridgeRuntimeCardProps = {
+  activeStatusFilter?: WorkflowBridgeRuntimeNodeStatus["label"] | null;
   graph?: WorkflowGraphDefinition | null;
   result?: WorkflowGraphJobResult | null;
   onLocateIssue?: (issue: WorkflowBridgeRuntimeValidationIssue) => void;
 };
 
 export function WorkbenchWorkflowBridgeRuntimeCard({
+  activeStatusFilter = null,
   graph,
   result,
   onLocateIssue,
 }: WorkbenchWorkflowBridgeRuntimeCardProps) {
   const issues = validateWorkflowBridgeRuntimeContracts(graph ?? null, result ?? null);
   const inspections = inspectWorkflowBridgeRuntimePaths(graph ?? null, result ?? null);
-  const previewIssues = issues.slice(0, 4);
+  const filteredInspections = activeStatusFilter
+    ? inspections.filter((record) => resolveBridgeRuntimeInspectionStatus(record) === activeStatusFilter)
+    : inspections;
+  const filteredIssues = activeStatusFilter
+    ? issues.filter((issue) => {
+        const inspection = inspections.find((record) => record.nodeId === issue.nodeId);
+        return inspection
+          ? resolveBridgeRuntimeInspectionStatus(inspection) === activeStatusFilter
+          : activeStatusFilter !== "aligned";
+      })
+    : issues;
+  const previewIssues = filteredIssues.slice(0, 4);
+  const previewInspections = filteredInspections.slice(0, 4);
+  const statusSummary = activeStatusFilter ? ` (${activeStatusFilter})` : "";
 
   return (
     <section className="sidebar-card sidebar-card--compact runtime-overview-card">
       <div className="card-head">
-        <h2>Bridge runtime contracts</h2>
-        <span className={`status-pill status-pill--${issues.length === 0 ? "good" : "watch"}`}>
-          {issues.length}
+        <h2>{`Bridge runtime contracts${statusSummary}`}</h2>
+        <span className={`status-pill status-pill--${filteredIssues.length === 0 ? "good" : "watch"}`}>
+          {filteredIssues.length}
         </span>
       </div>
       {previewIssues.length > 0 ? (
@@ -43,16 +59,22 @@ export function WorkbenchWorkflowBridgeRuntimeCard({
         </div>
       ) : (
         <p className="card-copy" style={{ marginTop: "0.75rem" }}>
-          Runtime bridge payloads expose the expected upstream source fields and downstream target fields.
+          {activeStatusFilter === "aligned"
+            ? "Filtered bridge nodes are exposing both expected source and target runtime fields."
+            : activeStatusFilter === "missing-runtime"
+              ? "Filtered bridge nodes are missing runtime payloads on the inspected path."
+              : activeStatusFilter === "drift"
+                ? "Filtered bridge nodes are exposing runtime payloads, but source or target fields drifted from contract expectations."
+                : "Runtime bridge payloads expose the expected upstream source fields and downstream target fields."}
         </p>
       )}
-      {inspections.length > 0 ? (
+      {filteredInspections.length > 0 ? (
         <details style={{ marginTop: "0.75rem" }}>
           <summary className="card-copy" style={{ cursor: "pointer" }}>
-            {`runtime path inspection (${inspections.length})`}
+            {`runtime path inspection (${filteredInspections.length})`}
           </summary>
           <div style={{ display: "grid", gap: "0.45rem", marginTop: "0.55rem" }}>
-            {inspections.slice(0, 4).map((record) => (
+            {previewInspections.map((record) => (
               <BridgeRuntimeInspectionPreview key={`${record.nodeId}:${record.operatorId}`} onLocateIssue={onLocateIssue} record={record} />
             ))}
           </div>
@@ -60,6 +82,14 @@ export function WorkbenchWorkflowBridgeRuntimeCard({
       ) : null}
     </section>
   );
+}
+
+function resolveBridgeRuntimeInspectionStatus(
+  record: WorkflowBridgeRuntimeInspectionRecord,
+): WorkflowBridgeRuntimeNodeStatus["label"] {
+  if (!record.inputArtifactKey && !record.outputArtifactKey) return "missing-runtime";
+  if (record.sourceFieldExposed && record.targetFieldExposed) return "aligned";
+  return "drift";
 }
 
 function BridgeRuntimeIssuePreview({

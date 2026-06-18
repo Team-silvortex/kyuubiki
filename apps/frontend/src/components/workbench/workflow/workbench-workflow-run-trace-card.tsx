@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo } from "react";
 import {
+  resolveJobStatusDetailLabel,
+  resolveJobStatusDetailTone,
+  resolveWorkflowRunStatusTone,
+} from "@/lib/api";
+import {
   downloadHtmlArtifact,
   slugifyWorkflowAssetName,
 } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
@@ -137,6 +142,9 @@ export function WorkbenchWorkflowRunTraceCard({
         <h2>{run.workflowId}</h2>
         <div style={{ display: "flex", gap: "0.45rem", alignItems: "center", flexWrap: "wrap" }}>
           <button onClick={exportTraceReport} type="button">export audit</button>
+          {run.pollingState === "detached" ? <span className="status-pill status-pill--watch">detached</span> : null}
+          {renderStatusPill(run.status, resolveWorkflowRunStatusTone(run.status, run.pollingState))}
+          {resolveJobStatusDetailLabel(run.statusDetail) ? renderStatusPill(resolveJobStatusDetailLabel(run.statusDetail) ?? "--", resolveJobStatusDetailTone(run.statusDetail)) : null}
           <span className="status-pill status-pill--watch">trace</span>
           {renderStatusPill(
             headerHealthLabel,
@@ -147,6 +155,7 @@ export function WorkbenchWorkflowRunTraceCard({
       <div className="sidebar-list">
         <div className="sidebar-list__row"><span>{labels.progressLabel}</span><strong>{Math.round(run.progress * 100)}%</strong></div>
         <div className="sidebar-list__row"><span>{labels.currentNodeLabel}</span><strong>{run.currentNode ?? "--"}</strong></div>
+        <div className="sidebar-list__row"><span>lifecycle</span><strong>{run.statusDetail?.lifecycle ?? "--"}</strong></div>
         <div className="sidebar-list__row"><span>skipped</span><strong>{run.skippedNodes?.length ?? 0}</strong></div>
         <div className="sidebar-list__row"><span>node runs</span><strong>{traceSummary ? `${traceSummary.completedNodeRunCount}/${traceSummary.skippedNodeRunCount}` : run.nodeRuns?.length ?? 0}</strong></div>
         <div className="sidebar-list__row"><span>branch decisions</span><strong>{traceSummary?.branchDecisionCount ?? run.branchDecisions?.length ?? 0}</strong></div>

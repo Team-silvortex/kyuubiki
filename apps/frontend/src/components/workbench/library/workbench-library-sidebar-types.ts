@@ -37,6 +37,7 @@ export type JobRow = {
   id: string;
   shortId: string;
   status: string;
+  statusDetail?: string | null;
   updatedAt: string;
   hasResult: string;
 };

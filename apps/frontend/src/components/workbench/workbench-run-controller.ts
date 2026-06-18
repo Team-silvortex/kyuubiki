@@ -25,6 +25,7 @@ import {
   createTruss2dJob,
   createTruss3dJob,
   fetchJobStatus,
+  isWorkflowRunTerminalStatus,
   resolveBeam1dJobInput,
   resolveElectrostaticPlaneQuad2dJobInput,
   resolveElectrostaticPlaneTriangle2dJobInput,
@@ -257,11 +258,7 @@ async function pollWorkbenchJob({
 
       setMessage(formatJobMessage(payload.job, `${jobId} ${payload.job.status}`, copy));
 
-      if (
-        payload.job.status === "completed" ||
-        payload.job.status === "failed" ||
-        payload.job.status === "cancelled"
-      ) {
+      if (isWorkflowRunTerminalStatus(payload.job.status)) {
         await refreshJobHistory();
         return;
       }

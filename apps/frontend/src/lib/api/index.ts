@@ -1,4 +1,5 @@
 export * from "./workflow-types";
+export * from "./job-status";
 export * from "./runtime-client";
 export * from "./security-results-client";
 export * from "./headless-results-client";

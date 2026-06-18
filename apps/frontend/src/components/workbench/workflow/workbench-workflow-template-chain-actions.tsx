@@ -25,6 +25,7 @@ import {
   buildImportedTemplateChainFromNodes,
   buildSuggestedTemplateChainLabel,
 } from "@/components/workbench/workflow/workbench-workflow-template-chain-build";
+import { scoreWorkflowTemplateChainSearch } from "@/components/workbench/workflow/workbench-workflow-template-chain-search";
 import { WorkbenchWorkflowTemplateChainCard } from "@/components/workbench/workflow/workbench-workflow-template-chain-card";
 import { downloadJsonArtifact } from "@/components/workbench/workflow/workbench-workflow-builder-utils";
 import { readJsonFile } from "@/components/workbench/workflow/workbench-workflow-builder-import";
@@ -38,27 +39,6 @@ type WorkbenchWorkflowTemplateChainActionsProps = {
   ) => void;
   selectedNodes?: WorkflowGraphNode[];
 };
-
-function scoreTemplateChainQueryMatch(
-  chain: WorkflowTemplateChainDefinition,
-  normalizedQuery: string,
-) {
-  const haystack = [chain.id, chain.label, chain.summary ?? "", chain.tags?.join(" ") ?? ""]
-    .join(" ")
-    .toLowerCase();
-  if (!normalizedQuery) return 0;
-  if (!haystack.includes(normalizedQuery)) return -1;
-  let score = haystack.startsWith(normalizedQuery) ? 180 : 0;
-  if (chain.label.toLowerCase().includes(normalizedQuery)) score += 120;
-  if (chain.id.toLowerCase().includes(normalizedQuery)) score += 80;
-  score +=
-    (chain.tags ?? []).filter((tag) => tag.toLowerCase().includes(normalizedQuery)).length * 40;
-  score +=
-    chain.templates.filter((template) =>
-      (template.operatorId ?? template.kind ?? "").toLowerCase().includes(normalizedQuery),
-    ).length * 12;
-  return score;
-}
 
 function sortChainsByPriority(
   chains: WorkflowTemplateChainDefinition[],
@@ -112,11 +92,13 @@ export function WorkbenchWorkflowTemplateChainActions({
   }, []);
 
   const filteredChains = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = query.trim();
     if (!normalized) return availableChains;
     return availableChains
-      .map((chain) => ({ chain, score: scoreTemplateChainQueryMatch(chain, normalized) }))
-      .filter((entry) => entry.score >= 0)
+      .flatMap((chain) => {
+        const score = scoreWorkflowTemplateChainSearch(chain, normalized);
+        return score == null ? [] : [{ chain, score }];
+      })
       .sort(
         (left, right) =>
           right.score - left.score || left.chain.label.localeCompare(right.chain.label),
