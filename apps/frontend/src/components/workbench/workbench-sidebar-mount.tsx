@@ -25,6 +25,9 @@ type WorkbenchSidebarMountProps = {
   workflowSection?: ReactNode;
   librarySection?: ReactNode;
   systemSection?: ReactNode;
+  assistantLabel?: string;
+  assistantOpen?: boolean;
+  onAssistantToggle?: () => void;
 };
 
 export function WorkbenchSidebarMount({
@@ -40,6 +43,9 @@ export function WorkbenchSidebarMount({
   workflowSection,
   librarySection,
   systemSection,
+  assistantLabel = "Assistant",
+  assistantOpen = false,
+  onAssistantToggle = () => {},
 }: WorkbenchSidebarMountProps) {
   return (
     <>
@@ -48,6 +54,9 @@ export function WorkbenchSidebarMount({
         railItems={railItems}
         sidebarSection={sidebarSection}
         onSidebarSectionChange={onSidebarSectionChange}
+        assistantLabel={assistantLabel}
+        assistantOpen={assistantOpen}
+        onAssistantToggle={onAssistantToggle}
       />
       <WorkbenchSidebarPanel
         shortTitle={shortTitle}

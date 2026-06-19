@@ -300,9 +300,11 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     endpoint_control_mode = Map.get(endpoint, :control_mode)
     endpoint_orch_id = Map.get(endpoint, :orch_id)
     endpoint_orch_session_id = Map.get(endpoint, :orch_session_id)
+    endpoint_cluster_id = Map.get(endpoint, :cluster_id)
 
     has_authority_metadata? =
       is_binary(endpoint_control_mode) or is_binary(endpoint_orch_id) or
+        is_binary(endpoint_cluster_id) or
         is_binary(endpoint_orch_session_id)
 
     if not has_authority_metadata? do
@@ -311,10 +313,18 @@ defmodule KyuubikiWeb.Playground.AgentPool do
       expected_control_mode = Map.get(orchestration_context, :control_mode)
       expected_orch_id = Map.get(orchestration_context, :orch_id)
       expected_orch_session_id = Map.get(orchestration_context, :orch_session_id)
+      expected_cluster_id = Map.get(orchestration_context, :cluster_id)
 
       cond do
         expected_control_mode == "offline_mesh" ->
-          if endpoint_control_mode == "offline_mesh", do: :match, else: :mismatch
+          cluster_matches? =
+            is_nil(expected_cluster_id) or expected_cluster_id == endpoint_cluster_id
+
+          if endpoint_control_mode == "offline_mesh" and cluster_matches? do
+            :match
+          else
+            :mismatch
+          end
 
         expected_control_mode == "orch_managed" ->
           orch_id_matches? =
@@ -382,7 +392,15 @@ defmodule KyuubikiWeb.Playground.AgentPool do
           if Map.get(endpoint, :control_mode) == "orch_managed", do: 100, else: 0
 
         "offline_mesh" ->
-          if Map.get(endpoint, :control_mode) == "offline_mesh", do: 100, else: 0
+          base_score = if Map.get(endpoint, :control_mode) == "offline_mesh", do: 100, else: 0
+          expected_cluster_id = Map.get(orchestration_context, :cluster_id)
+
+          if is_binary(expected_cluster_id) and expected_cluster_id != "" and
+               Map.get(endpoint, :cluster_id) == expected_cluster_id do
+            base_score + 20
+          else
+            base_score
+          end
 
         _ ->
           0
@@ -413,6 +431,10 @@ defmodule KyuubikiWeb.Playground.AgentPool do
     |> put_orchestration_value(
       :orch_session_id,
       Map.get(context, :orch_session_id) || Map.get(context, "orch_session_id")
+    )
+    |> put_orchestration_value(
+      :cluster_id,
+      Map.get(context, :cluster_id) || Map.get(context, "cluster_id")
     )
   end
 

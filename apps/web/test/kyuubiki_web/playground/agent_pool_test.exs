@@ -314,6 +314,43 @@ defmodule KyuubikiWeb.Playground.AgentPoolTest do
            ) == ["offline-a"]
   end
 
+  test "filters offline mesh runs to the requested mesh cluster" do
+    Application.put_env(:kyuubiki_web, AgentPool,
+      endpoints: [
+        %{
+          id: "offline-alpha-a",
+          host: "127.0.0.1",
+          port: 5101,
+          control_mode: "offline_mesh",
+          cluster_id: "mesh-alpha"
+        },
+        %{
+          id: "offline-beta-a",
+          host: "127.0.0.1",
+          port: 5102,
+          control_mode: "offline_mesh",
+          cluster_id: "mesh-beta"
+        },
+        %{
+          id: "offline-unclustered",
+          host: "127.0.0.1",
+          port: 5103,
+          control_mode: "offline_mesh"
+        }
+      ]
+    )
+
+    assert :ok = AgentPool.reload()
+
+    assert Enum.map(
+             AgentPool.checkout_endpoints(
+               "solve_bar_1d",
+               orchestration: %{"control_mode" => "offline_mesh", "cluster_id" => "mesh-alpha"}
+             ),
+             & &1.id
+           ) == ["offline-alpha-a"]
+  end
+
   test "skips endpoints that already hold an active execution lease" do
     Application.put_env(:kyuubiki_web, AgentPool,
       endpoints: [

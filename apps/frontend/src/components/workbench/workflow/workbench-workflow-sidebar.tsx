@@ -1,15 +1,8 @@
 "use client";
-
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { resolveWorkflowRunStatusTone } from "@/lib/api";
-import type {
-  JobState,
-  ProtocolAgentDescriptor,
-  WorkflowCatalogEntry,
-  WorkflowGraphDefinition,
-  WorkflowOperatorDescriptor,
-} from "@/lib/api";
+import type { JobState, ProtocolAgentDescriptor, WorkflowCatalogEntry, WorkflowGraphDefinition, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";

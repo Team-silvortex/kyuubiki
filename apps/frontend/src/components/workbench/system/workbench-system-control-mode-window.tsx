@@ -23,6 +23,34 @@ function deriveWindowMode(mode: WorkbenchSystemControlTopologySummary["mode"]): 
   return mode;
 }
 
+function formatClusterHealth(score: number | null) {
+  if (score === null) return "--";
+  return `${Math.round(score * 100)}%`;
+}
+
+function formatControlGroupLine(
+  group: WorkbenchSystemControlTopologySummary["controlGroups"][number],
+  copy: WorkbenchSystemControlModeCopy,
+) {
+  const base = `${group.agentCount} agents · ${group.peerCount} peers · ${formatClusterHealth(group.averageHealthScore)}`;
+  if (group.kind === "orchestrated") {
+    return `${base} · ${copy.rows.groupSessionsLabel}: ${group.sessionCount}`;
+  }
+  if (group.kind === "mesh") {
+    return `${base} · ${group.relayCandidateCount} relay`;
+  }
+  return base;
+}
+
+function groupLabelForKind(
+  kind: WorkbenchSystemControlTopologySummary["controlGroups"][number]["kind"],
+  copy: WorkbenchSystemControlModeCopy,
+) {
+  if (kind === "orchestrated") return copy.tabs.orchestrated;
+  if (kind === "mesh") return copy.tabs.mesh;
+  return copy.tabs.direct;
+}
+
 export function WorkbenchSystemControlModeWindow({
   copy,
   topology,
@@ -32,10 +60,23 @@ export function WorkbenchSystemControlModeWindow({
   onResetSnapshotSource,
 }: WorkbenchSystemControlModeWindowProps) {
   const [windowMode, setWindowMode] = useState<WindowMode>(deriveWindowMode(topology.mode));
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(topology.controlGroups[0]?.id ?? null);
+
+  const selectedGroup =
+    topology.controlGroups.find((group) => group.id === selectedGroupId) ??
+    topology.controlGroups[0] ??
+    null;
 
   useEffect(() => {
     setWindowMode((current) => (current === "mesh" ? current : deriveWindowMode(topology.mode)));
   }, [topology.mode]);
+
+  useEffect(() => {
+    setSelectedGroupId((current) => {
+      if (current && topology.controlGroups.some((group) => group.id === current)) return current;
+      return topology.controlGroups[0]?.id ?? null;
+    });
+  }, [topology.controlGroups]);
 
   function handleExportSnapshot() {
     const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json;charset=utf-8" });
@@ -116,6 +157,30 @@ export function WorkbenchSystemControlModeWindow({
             <span>{copy.rows.currentRuntimeLabel}</span>
             <strong>{topology.runtimeLabel}</strong>
           </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.meshEntryLabel}</span>
+            <strong>{topology.entryAgentId}</strong>
+          </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.meshEntryHealthLabel}</span>
+            <strong>{topology.entryHealthLabel}</strong>
+          </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.groupCountLabel}</span>
+            <strong>{topology.controlGroups.length}</strong>
+          </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.meshRouteTraceLabel}</span>
+            <strong>{topology.routeTraceLabel}</strong>
+          </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.meshFallbackLabel}</span>
+            <strong>{topology.fallbackPolicy}</strong>
+          </div>
+          <div className="sidebar-list__row">
+            <span>{copy.rows.meshFailoverReasonLabel}</span>
+            <strong>{topology.failoverReason}</strong>
+          </div>
           {windowMode === "orchestrated" ? (
             <>
               <div className="sidebar-list__row">
@@ -129,6 +194,10 @@ export function WorkbenchSystemControlModeWindow({
               <div className="sidebar-list__row">
                 <span>{copy.rows.auditCountLabel}</span>
                 <strong>{topology.auditCount}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{copy.rows.meshRoutingLabel}</span>
+                <strong>{topology.routingPolicy}</strong>
               </div>
             </>
           ) : null}
@@ -146,29 +215,33 @@ export function WorkbenchSystemControlModeWindow({
                 <span>{copy.rows.agentCountLabel}</span>
                 <strong>{topology.visibleAgentCount}</strong>
               </div>
+              <div className="sidebar-list__row">
+                <span>{copy.rows.meshRoutingLabel}</span>
+                <strong>{topology.routingPolicy}</strong>
+              </div>
             </>
           ) : null}
           {windowMode === "mesh" ? (
             <>
               <div className="sidebar-list__row">
-                <span>{copy.rows.meshEntryLabel}</span>
-                <strong>{topology.entryAgentId}</strong>
-              </div>
-              <div className="sidebar-list__row">
-                <span>{copy.rows.meshEntryHealthLabel}</span>
-                <strong>{topology.entryHealthLabel}</strong>
-              </div>
-              <div className="sidebar-list__row">
                 <span>{copy.rows.meshPeersLabel}</span>
                 <strong>{topology.peerCount}</strong>
               </div>
               <div className="sidebar-list__row">
-                <span>{copy.rows.meshGraphLabel}</span>
-                <strong>{topology.graphSummaryLabel}</strong>
+                <span>{copy.rows.meshClusterCountLabel}</span>
+                <strong>{topology.meshClusterCount}</strong>
               </div>
               <div className="sidebar-list__row">
-                <span>{copy.rows.meshRouteTraceLabel}</span>
-                <strong>{topology.routeTraceLabel}</strong>
+                <span>{copy.rows.meshRelayCandidateCountLabel}</span>
+                <strong>{topology.meshRelayCandidateCount}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{copy.rows.meshUnclusteredCountLabel}</span>
+                <strong>{topology.meshUnclusteredCount}</strong>
+              </div>
+              <div className="sidebar-list__row">
+                <span>{copy.rows.meshGraphLabel}</span>
+                <strong>{topology.graphSummaryLabel}</strong>
               </div>
               <div className="sidebar-list__row">
                 <span>{copy.rows.meshLastSeenLabel}</span>
@@ -182,15 +255,65 @@ export function WorkbenchSystemControlModeWindow({
                 <span>{copy.rows.meshRoutingLabel}</span>
                 <strong>{topology.routingPolicy}</strong>
               </div>
-              <div className="sidebar-list__row">
-                <span>{copy.rows.meshFallbackLabel}</span>
-                <strong>{topology.fallbackPolicy}</strong>
-              </div>
-              <div className="sidebar-list__row">
-                <span>{copy.rows.meshFailoverReasonLabel}</span>
-                <strong>{topology.failoverReason}</strong>
-              </div>
             </>
+          ) : null}
+          {topology.controlGroups.length > 0 ? (
+            <div className="control-mode-window__cluster-list">
+              <strong>{copy.rows.groupSummaryLabel}</strong>
+              <div className="sidebar-list sidebar-list--metrics">
+                {topology.controlGroups.map((group) => (
+                  <button
+                    className={`sidebar-list__row${selectedGroup?.id === group.id ? " sidebar-list__row--selected" : ""}`}
+                    key={`${group.kind}:${group.id}`}
+                    onClick={() => setSelectedGroupId(group.id)}
+                    type="button"
+                  >
+                    <span>{group.id}</span>
+                    <strong>{formatControlGroupLine(group, copy)}</strong>
+                  </button>
+                ))}
+              </div>
+              {selectedGroup ? (
+                <div className="sidebar-list sidebar-list--metrics" data-workbench-control-window="group-detail">
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.groupEntryLabel}</span>
+                    <strong>{selectedGroup.entryAgentId}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.modeLabel}</span>
+                    <strong>{groupLabelForKind(selectedGroup.kind, copy)}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.agentCountLabel}</span>
+                    <strong>{selectedGroup.agentCount}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.meshPeersLabel}</span>
+                    <strong>{selectedGroup.peerCount}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.meshEntryHealthLabel}</span>
+                    <strong>{formatClusterHealth(selectedGroup.averageHealthScore)}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.groupSessionsLabel}</span>
+                    <strong>{selectedGroup.sessionCount}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.meshRelayCandidateCountLabel}</span>
+                    <strong>{selectedGroup.relayCandidateCount}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.meshRoutingLabel}</span>
+                    <strong>{topology.routingPolicy}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>{copy.rows.meshFallbackLabel}</span>
+                    <strong>{topology.fallbackPolicy}</strong>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div className="button-row" data-workbench-control-window="actions">

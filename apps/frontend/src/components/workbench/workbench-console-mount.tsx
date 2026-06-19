@@ -1,8 +1,9 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "./workbench-alert-strip";
 import { buildWorkbenchConsoleSurfaceAlerts } from "./workbench-console-surface-alerts";
-import type { WorkbenchNoticeItem } from "./workbench-notice-state";
+import type { WorkbenchNoticeItem, WorkbenchNoticeStateSetter } from "./workbench-notice-state";
 import { WorkbenchConsole, type WorkbenchConsoleElement } from "./workbench-console";
 import type { WorkbenchCopy } from "./workbench-copy";
 import type { TrussDiagnostics } from "./workbench-defaults";
@@ -51,10 +52,10 @@ type ConsoleMountProps = {
   >;
   message: string;
   importNotice?: WorkbenchNoticeItem | null;
-  setImportNotice?: ((value: WorkbenchNoticeItem | null) => void) | undefined;
+  setImportNotice?: WorkbenchNoticeStateSetter | undefined;
   runtimeRecovery?: WorkbenchRuntimeRecoveryState;
   systemAlerts?: WorkbenchAlertItem[];
-  setSystemAlerts?: ((value: WorkbenchAlertItem[] | ((current: WorkbenchAlertItem[]) => WorkbenchAlertItem[])) => void) | undefined;
+  setSystemAlerts?: Dispatch<SetStateAction<WorkbenchAlertItem[]>> | undefined;
   trussDiagnostics?: TrussDiagnostics | null;
   isPlane: boolean;
   isBeam: boolean;

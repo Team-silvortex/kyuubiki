@@ -13,6 +13,10 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApiFixtures do
 
   def electrostatic_quad_summary_frames, do: [[quad_catalog_summary_result()]]
 
+  def large_graph_frames do
+    [[large_graph_heat_result()], [large_graph_thermo_result()]]
+  end
+
   def guarded_triangle_frames(:blocked), do: [[triangle_electrostatic_result(:blocked)]]
 
   def guarded_triangle_frames(:continued) do
@@ -149,6 +153,64 @@ defmodule KyuubikiWeb.TestSupport.WorkflowApiFixtures do
             "node_k" => 2,
             "thickness" => 0.05,
             "permittivity" => 2.0
+          }
+        ]
+      }
+    }
+  end
+
+  defp large_graph_heat_result do
+    %{
+      "ok" => true,
+      "result" => %{
+        "max_temperature" => 100.0,
+        "max_heat_flux" => 2846.0498941515416,
+        "nodes" => [
+          %{"id" => "h0", "x" => 0.0, "y" => 0.0, "temperature" => 100.0},
+          %{"id" => "h1", "x" => 1.0, "y" => 0.0, "temperature" => 60.0},
+          %{"id" => "h2", "x" => 1.0, "y" => 1.0, "temperature" => 20.0},
+          %{"id" => "h3", "x" => 0.0, "y" => 1.0, "temperature" => 20.0}
+        ],
+        "elements" => [
+          %{"id" => "hq0", "temperature_gradient_x" => -20.0, "temperature_gradient_y" => -60.0}
+        ],
+        "input" => %{
+          "elements" => [
+            %{
+              "id" => "hq0",
+              "node_i" => 0,
+              "node_j" => 1,
+              "node_k" => 2,
+              "node_l" => 3,
+              "thickness" => 0.02,
+              "conductivity" => 45.0
+            }
+          ]
+        }
+      }
+    }
+  end
+
+  defp large_graph_thermo_result do
+    %{
+      "ok" => true,
+      "result" => %{
+        "max_displacement" => 0.0,
+        "max_stress" => 34_477_611.940298505,
+        "max_temperature_delta" => 30,
+        "nodes" => [
+          %{"id" => "h0", "temperature_delta" => 100.0},
+          %{"id" => "h1", "temperature_delta" => 60.0},
+          %{"id" => "h2", "temperature_delta" => 20.0},
+          %{"id" => "h3", "temperature_delta" => 20.0}
+        ],
+        "elements" => [
+          %{
+            "id" => "tq0",
+            "stress_x" => -34_477_611.940298505,
+            "stress_y" => -34_477_611.940298505,
+            "mechanical_strain_x" => -3.3e-4,
+            "mechanical_strain_y" => -3.3e-4
           }
         ]
       }

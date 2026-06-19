@@ -1,9 +1,15 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import { applyImportedWorkbenchModel } from "@/components/workbench/workbench-model-load";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
-import { dismissWorkbenchNotice, showWorkbenchNotice, type WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
+import {
+  dismissWorkbenchNotice,
+  showWorkbenchNotice,
+  type WorkbenchNoticeItem,
+  type WorkbenchNoticeStateSetter,
+} from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api";
 import { parsePlaygroundModel } from "@/lib/models";
 import { parseProjectBundleFile } from "@/lib/projects";
@@ -59,8 +65,8 @@ type PersistedModelControllerDeps = PersistedModelEffects & {
   importFailedLabel: string;
   formatImportNotice: (skippedSensitivePresetCount: number) => WorkbenchNoticeItem;
   setMessage: (value: string) => void;
-  setSystemAlerts: (value: WorkbenchAlertItem[] | ((current: WorkbenchAlertItem[]) => WorkbenchAlertItem[])) => void;
-  setImportNotice: (value: WorkbenchNoticeItem | null) => void;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
+  setImportNotice: WorkbenchNoticeStateSetter;
   setSelectedProjectId: (value: string | null) => void;
   setSidebarSection?: (value: any) => void;
 };

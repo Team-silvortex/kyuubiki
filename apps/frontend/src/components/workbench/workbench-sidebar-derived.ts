@@ -126,15 +126,20 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
       controlMode: language === "zh" ? "控制绑定" : language === "ja" ? "制御バインド" : "Control binding",
       runtimeMode: t.runtimeMode,
       cluster: t.cluster,
+      meshGroup: language === "zh" ? "Mesh 组" : language === "ja" ? "mesh グループ" : "Mesh group",
       clusterSize: t.clusterSize,
       clusterHealth: t.clusterHealth,
       peers: t.peers,
+      relay: language === "zh" ? "Relay 候选" : language === "ja" ? "Relay 候補" : "Relay candidate",
       headless: t.headless,
       yes: t.yes,
       no: t.no,
       capabilities: t.capabilities,
       methods: t.methods,
       peerState: t.peerState,
+      meshRoleChip: language === "zh" ? "Mesh 角色" : language === "ja" ? "mesh 役割" : "Mesh role",
+      relayChip: language === "zh" ? "Relay" : language === "ja" ? "Relay" : "Relay",
+      meshGroupChip: language === "zh" ? "组" : language === "ja" ? "グループ" : "Group",
       execution: language === "zh" ? "执行状态" : language === "ja" ? "実行状態" : "Execution",
       leaseAge: language === "zh" ? "租约时长" : language === "ja" ? "リース時間" : "Lease age",
       leaseIdle: language === "zh" ? "空闲" : language === "ja" ? "待機" : "Idle",
@@ -176,6 +181,18 @@ export function buildWorkbenchSidebarDerived(props: Record<string, any>) {
     { label: t.deploymentMode, value: health?.deployment?.mode ?? "--" },
     { label: t.discoveryMode, value: health?.deployment?.discovery ?? "--" },
     { label: t.registeredAgents, value: health?.remote_solver_registry?.active_agents ?? 0 },
+    {
+      label: language === "zh" ? "Mesh clusters" : language === "ja" ? "mesh クラスター" : "Mesh clusters",
+      value: health?.remote_solver_registry?.mesh_topology?.offline_mesh?.clustered_meshes?.length ?? 0,
+    },
+    {
+      label: language === "zh" ? "Mesh relay 候选" : language === "ja" ? "mesh Relay 候補" : "Mesh relay candidates",
+      value:
+        health?.remote_solver_registry?.mesh_topology?.offline_mesh?.clustered_meshes?.reduce(
+          (sum: number, cluster: any) => sum + (cluster.relay_candidate_ids?.length ?? 0),
+          0,
+        ) ?? 0,
+    },
     { label: t.reachableAgents, value: protocolAgents.length },
     ...(frontendRuntimeMode === "direct_mesh_gui"
       ? [

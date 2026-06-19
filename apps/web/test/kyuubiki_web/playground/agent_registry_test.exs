@@ -373,6 +373,8 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
 
     assert snapshot.mesh_topology.offline_mesh.agent_count == 1
     assert snapshot.mesh_topology.offline_mesh.agent_ids == ["solver-mesh-d"]
+    assert snapshot.mesh_topology.offline_mesh.clustered_meshes == []
+    assert snapshot.mesh_topology.offline_mesh.unclustered_agent_ids == ["solver-mesh-d"]
 
     assert snapshot.mesh_topology.managed_orchestrators == [
              %{
@@ -386,6 +388,72 @@ defmodule KyuubikiWeb.Playground.AgentRegistryTest do
                agent_count: 1,
                agent_ids: ["solver-mesh-c"],
                session_ids: ["session-b1"]
+             }
+           ]
+  end
+
+  test "publishes offline mesh peer groups and clustered relay candidates" do
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-peer-a",
+               "host" => "10.20.2.10",
+               "port" => 6401,
+               "control_mode" => "offline_mesh",
+               "cluster_id" => "mesh-alpha",
+               "health_score" => 91,
+               "capacity" => 2,
+               "tags" => ["mesh", "relay"]
+             })
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-peer-b",
+               "host" => "10.20.2.11",
+               "port" => 6402,
+               "control_mode" => "offline_mesh",
+               "cluster_id" => "mesh-alpha",
+               "health_score" => 72
+             })
+
+    assert {:ok, _agent} =
+             AgentRegistry.register(%{
+               "id" => "solver-mesh-peer-c",
+               "host" => "10.20.2.12",
+               "port" => 6403,
+               "control_mode" => "offline_mesh",
+               "cluster_id" => "mesh-beta",
+               "health_score" => 44
+             })
+
+    agents = AgentRegistry.public_agents()
+    peer_a = Enum.find(agents, &(&1["id"] == "solver-mesh-peer-a"))
+    peer_b = Enum.find(agents, &(&1["id"] == "solver-mesh-peer-b"))
+
+    assert peer_a["mesh"]["cluster_id"] == "mesh-alpha"
+    assert peer_a["mesh"]["peer_group_id"] == "offline_mesh:mesh-alpha"
+    assert peer_a["mesh"]["peer_count"] == 1
+    assert peer_a["mesh"]["relay_candidate"] == true
+    assert peer_a["mesh"]["topology_role"] == "relay_candidate"
+    assert Enum.map(peer_a["mesh"]["peers"], & &1["id"]) == ["solver-mesh-peer-b"]
+    assert hd(peer_a["mesh"]["peers"])["status"] == "degraded"
+
+    assert peer_b["mesh"]["peer_group_id"] == "offline_mesh:mesh-alpha"
+    assert Enum.map(peer_b["mesh"]["peers"], & &1["id"]) == ["solver-mesh-peer-a"]
+
+    snapshot = AgentRegistry.status_snapshot()
+
+    assert snapshot.mesh_topology.offline_mesh.clustered_meshes == [
+             %{
+               cluster_id: "mesh-alpha",
+               agent_count: 2,
+               agent_ids: ["solver-mesh-peer-a", "solver-mesh-peer-b"],
+               relay_candidate_ids: ["solver-mesh-peer-a"]
+             },
+             %{
+               cluster_id: "mesh-beta",
+               agent_count: 1,
+               agent_ids: ["solver-mesh-peer-c"],
+               relay_candidate_ids: []
              }
            ]
   end

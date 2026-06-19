@@ -12,15 +12,20 @@ export function buildProtocolAgentCards({
     controlMode: string;
     runtimeMode: string;
     cluster: string;
+    meshGroup: string;
     clusterSize: string;
     clusterHealth: string;
     peers: string;
+    relay: string;
     headless: string;
     yes: string;
     no: string;
     capabilities: string;
     methods: string;
     peerState: string;
+    meshRoleChip: string;
+    relayChip: string;
+    meshGroupChip: string;
     execution: string;
     leaseAge: string;
     leaseIdle: string;
@@ -40,16 +45,18 @@ export function buildProtocolAgentCards({
     endpoint: `${agent.host}:${agent.port}`,
     metrics: [
       { label: labels.authorityMode, value: agent.descriptor?.authority?.authority_mode ?? "--" },
-      { label: labels.controlMode, value: agent.descriptor?.authority?.control_mode ?? "--" },
+      { label: labels.controlMode, value: agent.mesh ? (agent.control_mode ?? agent.descriptor?.authority?.control_mode ?? "--") : (agent.descriptor?.authority?.control_mode ?? "--") },
       { label: labels.runtimeMode, value: agent.descriptor?.runtime?.runtime_mode ?? "--" },
-      { label: labels.cluster, value: agent.descriptor?.runtime?.cluster_id ?? "--" },
+      { label: labels.cluster, value: agent.mesh?.cluster_id ?? agent.cluster_id ?? agent.descriptor?.runtime?.cluster_id ?? "--" },
+      { label: labels.meshGroup, value: agent.mesh?.peer_group_id ?? "--" },
       { label: labels.clusterSize, value: agent.descriptor?.runtime?.cluster_size ?? 1 },
       {
         label: labels.clusterHealth,
         value: agent.descriptor?.runtime?.health_score ?? "--",
         tone: clusterHealthTone(agent.descriptor?.runtime?.health_score),
       },
-      { label: labels.peers, value: agent.descriptor?.runtime?.peers?.length ?? 0 },
+      { label: labels.peers, value: agent.mesh?.peer_count ?? agent.descriptor?.runtime?.peers?.length ?? 0 },
+      { label: labels.relay, value: agent.mesh?.relay_candidate ? labels.yes : labels.no },
       { label: labels.headless, value: agent.descriptor?.runtime?.headless ? labels.yes : labels.no },
       { label: labels.capabilities, value: agent.descriptor?.capabilities?.length ?? 0 },
       { label: labels.methods, value: agent.descriptor?.protocol?.methods?.length ?? 0 },
@@ -65,6 +72,7 @@ export function buildProtocolAgentCards({
       },
     ],
     chips: [
+      ...buildMeshChips(agent, labels),
       ...buildLeaseChips(agent, labels),
       ...(agent.descriptor?.capabilities?.flatMap((capability) =>
         capability.tags.slice(0, 3).map((tag) => ({
@@ -72,17 +80,81 @@ export function buildProtocolAgentCards({
           label: tag,
         })),
       ) ?? []),
-      ...(agent.descriptor?.runtime?.peers?.slice(0, 2).map((peer) => ({
-        key: `${agent.id}-${peer.address}`,
-        label: peer.address,
-        tone: clusterHealthTone(
-          peer.status === "healthy" ? 100 : peer.status === "degraded" ? 65 : peer.status === "seed" ? 85 : 25,
-        ),
-        title: `${labels.peerState}: ${peerStatusLabel(peer.status)}`,
-      })) ?? []),
+      ...buildPeerChips(agent, labels, clusterHealthTone, peerStatusLabel),
     ],
     error: agent.descriptor_error,
   }));
+}
+
+function buildMeshChips(
+  agent: ProtocolAgentDescriptor,
+  labels: {
+    meshRoleChip: string;
+    relayChip: string;
+    meshGroupChip: string;
+    yes: string;
+    no: string;
+  },
+) {
+  if (!agent.mesh) return [];
+
+  return [
+    ...(agent.mesh.topology_role
+      ? [
+          {
+            key: `${agent.id}-mesh-role`,
+            label: `${labels.meshRoleChip}: ${agent.mesh.topology_role}`,
+            tone: agent.mesh.topology_role === "relay_candidate" ? "watch" : "quiet",
+          },
+        ]
+      : []),
+    {
+      key: `${agent.id}-mesh-relay`,
+      label: `${labels.relayChip}: ${agent.mesh.relay_candidate ? labels.yes : labels.no}`,
+      tone: agent.mesh.relay_candidate ? "watch" : "quiet",
+    },
+    ...(agent.mesh.peer_group_id
+      ? [
+          {
+            key: `${agent.id}-mesh-group`,
+            label: `${labels.meshGroupChip}: ${agent.mesh.peer_group_id}`,
+            tone: "quiet",
+            title: agent.mesh.peer_group_id,
+          },
+        ]
+      : []),
+  ];
+}
+
+function buildPeerChips(
+  agent: ProtocolAgentDescriptor,
+  labels: {
+    peerState: string;
+  },
+  clusterHealthTone: (score: number | null | undefined) => string,
+  peerStatusLabel: (status: string | undefined) => string,
+) {
+  const meshPeers = agent.mesh?.peers ?? [];
+
+  if (meshPeers.length > 0) {
+    return meshPeers.slice(0, 2).map((peer) => ({
+      key: `${agent.id}-${peer.id}`,
+      label: peer.id,
+      tone: clusterHealthTone(peer.health_score),
+      title: `${peer.address} · ${labels.peerState}: ${peerStatusLabel(peer.status)}`,
+    }));
+  }
+
+  return (
+    agent.descriptor?.runtime?.peers?.slice(0, 2).map((peer) => ({
+      key: `${agent.id}-${peer.address}`,
+      label: peer.address,
+      tone: clusterHealthTone(
+        peer.status === "healthy" ? 100 : peer.status === "degraded" ? 65 : peer.status === "seed" ? 85 : 25,
+      ),
+      title: `${labels.peerState}: ${peerStatusLabel(peer.status)}`,
+    })) ?? []
+  );
 }
 
 function buildLeaseChips(

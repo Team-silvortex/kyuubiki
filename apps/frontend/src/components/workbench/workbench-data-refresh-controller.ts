@@ -190,8 +190,13 @@ export function useWorkbenchDataRefreshController({
           return registered
             ? {
                 ...agent,
+                control_mode: registered.control_mode ?? agent.control_mode,
+                orch_id: registered.orch_id ?? agent.orch_id,
+                orch_session_id: registered.orch_session_id ?? agent.orch_session_id,
+                cluster_id: registered.cluster_id ?? agent.cluster_id,
                 execution_state: registered.execution_state,
                 active_lease: registered.active_lease,
+                mesh: registered.mesh ?? agent.mesh,
               }
             : agent;
         }),

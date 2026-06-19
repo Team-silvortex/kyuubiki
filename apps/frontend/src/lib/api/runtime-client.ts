@@ -11,10 +11,31 @@ import type {
   WorkflowCatalogPayload,
   WorkflowGraphDefinition,
   WorkflowGraphJobResult,
+  WorkflowGraphResponseOptions,
   WorkflowOperatorCatalogQuery,
   WorkflowOperatorCatalogPayload,
 } from "./index";
 import { requestJson } from "./core";
+
+const LARGE_WORKFLOW_COMPACT_THRESHOLD = 1024;
+
+function compactWorkflowResponseOptions(): WorkflowGraphResponseOptions {
+  return {
+    include_artifact_lineage: false,
+    include_artifacts: false,
+    include_branch_decisions: false,
+    include_dataset_lineage: false,
+    include_node_runs: false,
+  };
+}
+
+function defaultWorkflowGraphResponseOptions(
+  graph?: WorkflowGraphDefinition,
+): WorkflowGraphResponseOptions | undefined {
+  return graph && graph.nodes.length >= LARGE_WORKFLOW_COMPACT_THRESHOLD
+    ? compactWorkflowResponseOptions()
+    : undefined;
+}
 
 function appendQuery(url: string, query?: Record<string, string | undefined>) {
   if (!query) return url;
@@ -65,24 +86,28 @@ export function fetchWorkflowOperators(
 export function submitWorkflowCatalogJob(
   workflowId: string,
   inputArtifacts: Record<string, unknown>,
+  responseOptions?: WorkflowGraphResponseOptions,
 ): Promise<JobEnvelope<WorkflowGraphJobResult>> {
   return requestJson<JobEnvelope<WorkflowGraphJobResult>>(`/api/v1/workflows/catalog/${workflowId}/jobs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input_artifacts: inputArtifacts }),
+    body: JSON.stringify({ input_artifacts: inputArtifacts, ...(responseOptions ? { response_options: responseOptions } : {}) }),
   });
 }
 
 export function submitWorkflowGraphJob(
   graph: WorkflowGraphDefinition,
   inputArtifacts: Record<string, unknown>,
+  responseOptions: WorkflowGraphResponseOptions | undefined = defaultWorkflowGraphResponseOptions(graph),
 ): Promise<JobEnvelope<WorkflowGraphJobResult>> {
   return requestJson<JobEnvelope<WorkflowGraphJobResult>>("/api/v1/workflows/graph/jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ graph, input_artifacts: inputArtifacts }),
+    body: JSON.stringify({ graph, input_artifacts: inputArtifacts, ...(responseOptions ? { response_options: responseOptions } : {}) }),
   });
 }
+
+export { compactWorkflowResponseOptions };
 
 export function updateJobRecord(
   jobId: string,

@@ -136,7 +136,8 @@ export function summarizeWorkflowResultArtifacts(result: WorkflowGraphJobResult)
       .join(", ");
     return preview || null;
   }
-  const legacyArtifact = result.artifacts["json_output.json"];
+  const legacyArtifact = result.artifacts?.["json_output.json"];
+  if (legacyArtifact === undefined) return null;
   const envelope = normalizeEnvelope(legacyArtifact);
   const rawContent = envelope?.content ?? legacyArtifact;
   const parsed =

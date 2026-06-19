@@ -267,6 +267,60 @@ defmodule KyuubikiWeb.Api.WorkflowAsyncBridgeApiTest do
     assert_in_delta summary["max_stress"], 34_477_611.940298505, 1.0e-6
   end
 
+  test "submits a compact asynchronous workflow graph job" do
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/jobs",
+        Jason.encode!(%{
+          "graph" => %{
+            "schema_version" => "kyuubiki.workflow-graph/v1",
+            "id" => "workflow.input-to-output-compact",
+            "entry_nodes" => ["input_node"],
+            "output_nodes" => ["output_node"],
+            "nodes" => [
+              %{
+                "id" => "input_node",
+                "kind" => "input",
+                "outputs" => [%{"id" => "value", "artifact_type" => "export/json"}]
+              },
+              %{
+                "id" => "output_node",
+                "kind" => "output",
+                "inputs" => [%{"id" => "value", "artifact_type" => "export/json"}],
+                "outputs" => []
+              }
+            ],
+            "edges" => [
+              %{
+                "id" => "e0",
+                "from" => %{"node" => "input_node", "port" => "value"},
+                "to" => %{"node" => "output_node", "port" => "value"},
+                "artifact_type" => "export/json"
+              }
+            ]
+          },
+          "input_artifacts" => %{"input_node" => %{"ok" => true}},
+          "response_options" => KyuubikiWeb.WorkflowGraphResponse.compact_options()
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["workflow_id"] == "workflow.input-to-output-compact"
+    assert result_payload["result"]["completed_nodes"] == ["input_node", "output_node"]
+    refute Map.has_key?(result_payload["result"], "artifacts")
+    refute Map.has_key?(result_payload["result"], "node_runs")
+    refute Map.has_key?(result_payload["result"], "artifact_lineage")
+    refute Map.has_key?(result_payload["result"], "dataset_lineage")
+    refute Map.has_key?(result_payload["result"], "branch_decisions")
+  end
+
   test "runs an electrostatic to heat workflow graph with an explicit bridge contract" do
     {:ok, _pid} =
       WorkflowApi.start_fake_agent_sessions([

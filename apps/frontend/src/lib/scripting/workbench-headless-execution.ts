@@ -12,6 +12,7 @@ import {
   fetchResultRecord,
   isWorkflowRunTerminalStatus,
   resolveJobStatusDetailLabel,
+  compactWorkflowResponseOptions,
   submitWorkflowCatalogJob,
   submitWorkflowGraphJob,
   type DirectMeshSelectionMode,
@@ -104,11 +105,19 @@ async function runExecutionAction(action: string, payload: Record<string, unknow
     return { model_version_id: response.version.version_id, kind: response.version.kind };
   }
   if (action === "workflow_submit_catalog") {
-    const response = await submitWorkflowCatalogJob(String(payload.workflow_id ?? ""), asRecord(payload.input_artifacts));
+    const response = await submitWorkflowCatalogJob(
+      String(payload.workflow_id ?? ""),
+      asRecord(payload.input_artifacts),
+      compactWorkflowResponseOptions(),
+    );
     return { job_id: response.job.job_id, status: response.job.status, status_detail: response.job.status_detail ?? null };
   }
   if (action === "workflow_submit_graph") {
-    const response = await submitWorkflowGraphJob(payload.graph as WorkflowGraphDefinition, asRecord(payload.input_artifacts));
+    const response = await submitWorkflowGraphJob(
+      payload.graph as WorkflowGraphDefinition,
+      asRecord(payload.input_artifacts),
+      compactWorkflowResponseOptions(),
+    );
     return { job_id: response.job.job_id, status: response.job.status, status_detail: response.job.status_detail ?? null };
   }
   if (action === "job_fetch") {

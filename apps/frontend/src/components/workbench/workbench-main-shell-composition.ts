@@ -261,7 +261,6 @@ export function buildWorkbenchMainShellComposition(props: Record<string, any>) {
     trussModel: workspaceState.trussModel,
     thermalTrussModel: workspaceState.thermalTrussModel,
     thermalTruss3dModel: workspaceState.thermalTruss3dModel,
-    trussDiagnostics: studyResultDerived.trussDiagnostics,
     updateSelectedElement: editControllers.updateSelectedElement,
     assignSelectedElementMaterial: editControllers.assignSelectedElementMaterial,
     updateSelectedTruss3dElement: editControllers.updateSelectedTruss3dElement,

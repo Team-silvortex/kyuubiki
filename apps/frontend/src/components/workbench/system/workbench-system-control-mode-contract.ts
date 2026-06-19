@@ -1,6 +1,11 @@
 "use client";
 
 import type { DirectMeshSelectionMode, FrontendRuntimeMode, ProtocolAgentDescriptor } from "@/lib/api";
+import type { WorkbenchControlGroupSummary } from "@/components/workbench/system/workbench-system-control-groups-helpers";
+import { controlGroupsFromMeshClusters, summarizeWorkbenchDirectGroups, summarizeWorkbenchOrchestratedGroups } from "@/components/workbench/system/workbench-system-control-groups-helpers";
+import type { WorkbenchMeshClusterSummary } from "@/components/workbench/system/workbench-system-mesh-topology-helpers";
+import { summarizeWorkbenchMeshClusters } from "@/components/workbench/system/workbench-system-mesh-topology-helpers";
+import { controlWindowModeForAuthority, countWorkbenchControlEndpoints, countWorkbenchControlPeers, formatWorkbenchControlAgeLabel, pickWorkbenchControlEntryAgentId, summarizeWorkbenchPeerHealth, summarizeWorkbenchPeerObservability } from "@/components/workbench/system/workbench-system-control-runtime-helpers";
 import {
   buildWorkbenchGovernanceEnforcementPlan,
   buildWorkbenchGovernanceRuntimeDiagnostics,
@@ -34,6 +39,13 @@ export type WorkbenchSystemControlModeCopy = {
     meshEntryHealthLabel: string;
     meshPeersLabel: string;
     meshGraphLabel: string;
+    meshClusterCountLabel: string;
+    meshRelayCandidateCountLabel: string;
+    meshUnclusteredCountLabel: string;
+    groupCountLabel: string;
+    groupSummaryLabel: string;
+    groupEntryLabel: string;
+    groupSessionsLabel: string;
     meshRouteTraceLabel: string;
     meshLastSeenLabel: string;
     meshHopLabel: string;
@@ -55,6 +67,9 @@ export type WorkbenchSystemControlTopologySummary = {
   entryAgentId: string;
   entryHealthLabel: string;
   peerCount: number;
+  meshClusterCount: number;
+  meshRelayCandidateCount: number;
+  meshUnclusteredCount: number;
   graphSummaryLabel: string;
   routeTraceLabel: string;
   lastSeenLabel: string;
@@ -71,6 +86,8 @@ export type WorkbenchSystemControlTopologySummary = {
   downgradeReason: string;
   runtimeLabel: string;
   directStrategyLabel: string;
+  meshClusters: WorkbenchMeshClusterSummary[];
+  controlGroups: WorkbenchControlGroupSummary[];
 };
 
 export type WorkbenchSystemTopologySnapshot = {
@@ -96,6 +113,27 @@ export type WorkbenchSystemTopologySnapshot = {
   failover_reason: string;
   safe_mode_active: boolean;
   downgrade_reason: string;
+  mesh_cluster_count: number;
+  mesh_relay_candidate_count: number;
+  mesh_unclustered_count: number;
+  mesh_clusters: Array<{
+    cluster_id: string;
+    agent_count: number;
+    relay_candidate_count: number;
+    peer_count: number;
+    average_health_score: number | null;
+    entry_agent_id: string;
+  }>;
+  control_groups: Array<{
+    id: string;
+    kind: "orchestrated" | "direct" | "mesh";
+    agent_count: number;
+    relay_candidate_count: number;
+    peer_count: number;
+    average_health_score: number | null;
+    entry_agent_id: string;
+    session_count: number;
+  }>;
   agents: Array<{
     id: string;
     endpoint: string;
@@ -115,82 +153,6 @@ function localizedRecord<T>(language: ControlLanguage, values: { zh: T; ja: T; e
   if (language === "ja") return values.ja;
   if (language === "es" && values.es !== undefined) return values.es;
   return values.en;
-}
-
-function countEndpoints(value: string) {
-  return value
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean).length;
-}
-
-function countPeers(agents: readonly ProtocolAgentDescriptor[]) {
-  const uniquePeers = new Set<string>();
-  for (const agent of agents) {
-    for (const peer of agent.descriptor?.runtime.peers ?? []) {
-      if (peer.address) uniquePeers.add(peer.address);
-    }
-  }
-  return uniquePeers.size;
-}
-
-function summarizePeerHealth(agents: readonly ProtocolAgentDescriptor[]) {
-  let healthy = 0;
-  let degraded = 0;
-  let stale = 0;
-  for (const agent of agents) {
-    for (const peer of agent.descriptor?.runtime.peers ?? []) {
-      if (peer.status === "healthy" || peer.status === "online") healthy += 1;
-      else if (peer.status === "stale" || peer.status === "offline") stale += 1;
-      else degraded += 1;
-    }
-  }
-  return { healthy, degraded, stale };
-}
-
-function summarizePeerObservability(agents: readonly ProtocolAgentDescriptor[], nowUnixS: number) {
-  let latestSeen: number | null = null;
-  let totalFailureCount = 0;
-  for (const agent of agents) {
-    for (const peer of agent.descriptor?.runtime.peers ?? []) {
-      if (typeof peer.last_seen_unix_s === "number") {
-        latestSeen = latestSeen === null ? peer.last_seen_unix_s : Math.max(latestSeen, peer.last_seen_unix_s);
-      }
-      totalFailureCount += peer.failure_count ?? 0;
-    }
-  }
-
-  const ageSeconds = latestSeen === null ? null : Math.max(0, nowUnixS - latestSeen);
-  return { latestSeen, ageSeconds, totalFailureCount };
-}
-
-function formatAgeLabel(ageSeconds: number | null) {
-  if (ageSeconds === null) return "--";
-  if (ageSeconds < 60) return `${ageSeconds}s ago`;
-  if (ageSeconds < 3600) return `${Math.floor(ageSeconds / 60)}m ago`;
-  if (ageSeconds < 86400) return `${Math.floor(ageSeconds / 3600)}h ago`;
-  return `${Math.floor(ageSeconds / 86400)}d ago`;
-}
-
-function pickEntryAgentId(
-  agents: readonly ProtocolAgentDescriptor[],
-  directMeshSelectionMode: DirectMeshSelectionMode,
-  frontendRuntimeMode: FrontendRuntimeMode,
-) {
-  if (agents.length === 0) return frontendRuntimeMode === "direct_mesh_gui" ? "direct-mesh seed" : "orchestra";
-  if (directMeshSelectionMode === "healthiest") {
-    return [...agents].sort((left, right) => {
-      const leftScore = left.descriptor?.runtime.health_score ?? -1;
-      const rightScore = right.descriptor?.runtime.health_score ?? -1;
-      return rightScore - leftScore;
-    })[0]?.id ?? agents[0]?.id ?? "entry-agent";
-  }
-  return agents[0]?.id ?? "entry-agent";
-}
-
-function controlWindowModeForAuthority(authorityMode: "single_orchestrator" | "offline_mesh", agentCount: number): ControlWindowMode {
-  if (authorityMode === "single_orchestrator") return "orchestrated";
-  return agentCount > 1 ? "mesh" : "direct";
 }
 
 export function buildWorkbenchSystemControlModeCopy(
@@ -250,6 +212,13 @@ export function buildWorkbenchSystemControlModeCopy(
       meshEntryHealthLabel: localizedRecord(language, { zh: "入口健康度", ja: "入口ヘルス", en: "Entry health" }),
       meshPeersLabel: localizedRecord(language, { zh: "可传播 peers", ja: "伝播可能 peers", en: "Propagating peers" }),
       meshGraphLabel: localizedRecord(language, { zh: "Mesh 图摘要", ja: "mesh グラフ要約", en: "Mesh graph" }),
+      meshClusterCountLabel: localizedRecord(language, { zh: "Mesh 集群", ja: "mesh クラスタ", en: "Mesh clusters" }),
+      meshRelayCandidateCountLabel: localizedRecord(language, { zh: "Relay 候选", ja: "relay 候補", en: "Relay candidates" }),
+      meshUnclusteredCountLabel: localizedRecord(language, { zh: "未分组节点", ja: "未分類ノード", en: "Unclustered nodes" }),
+      groupCountLabel: localizedRecord(language, { zh: "控制分组", ja: "制御グループ", en: "Control groups" }),
+      groupSummaryLabel: localizedRecord(language, { zh: "分组概览", ja: "グループ概要", en: "Group overview" }),
+      groupEntryLabel: localizedRecord(language, { zh: "入口", ja: "入口", en: "Entry" }),
+      groupSessionsLabel: localizedRecord(language, { zh: "会话数", ja: "セッション数", en: "Sessions" }),
       meshRouteTraceLabel: localizedRecord(language, { zh: "路由轨迹", ja: "ルート軌跡", en: "Route trace" }),
       meshLastSeenLabel: localizedRecord(language, { zh: "最近观测", ja: "最終観測", en: "Last seen" }),
       meshHopLabel: localizedRecord(language, { zh: "估计 hop", ja: "推定 hop", en: "Estimated hops" }),
@@ -310,12 +279,16 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
   });
   const mode = controlWindowModeForAuthority(authorityMode, input.protocolAgents.length);
   const nowUnixS = input.nowUnixS ?? Math.floor(Date.now() / 1000);
-  const entryAgentId = pickEntryAgentId(input.protocolAgents, input.directMeshSelectionMode, input.frontendRuntimeMode);
+  const entryAgentId = pickWorkbenchControlEntryAgentId(input.protocolAgents, input.directMeshSelectionMode, input.frontendRuntimeMode);
   const entryAgent = input.protocolAgents.find((agent) => agent.id === entryAgentId);
   const entryHealthScore = entryAgent?.descriptor?.runtime.health_score ?? null;
-  const peerHealth = summarizePeerHealth(input.protocolAgents);
-  const peerObservability = summarizePeerObservability(input.protocolAgents, nowUnixS);
-  const peerCount = countPeers(input.protocolAgents);
+  const peerHealth = summarizeWorkbenchPeerHealth(input.protocolAgents);
+  const peerObservability = summarizeWorkbenchPeerObservability(input.protocolAgents, nowUnixS);
+  const peerCount = countWorkbenchControlPeers(input.protocolAgents);
+  const meshSummary = summarizeWorkbenchMeshClusters(input.protocolAgents);
+  const orchestratedGroups = summarizeWorkbenchOrchestratedGroups(input.protocolAgents);
+  const directGroups = summarizeWorkbenchDirectGroups(input.protocolAgents, input.frontendRuntimeMode);
+  const meshGroups = controlGroupsFromMeshClusters(meshSummary.clusters);
   const estimatedHopCount = peerCount > 0 ? Math.min(3, Math.max(1, Math.ceil(peerCount / Math.max(input.protocolAgents.length || 1, 1)))) : 0;
   const graphSummaryLabel = `${peerHealth.healthy}/${peerCount || 0} healthy · ${peerObservability.totalFailureCount} failures`;
   const routeTraceLabel =
@@ -343,11 +316,14 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
         ? "--"
         : `${Math.round(entryHealthScore * 100)}%`,
     peerCount,
+    meshClusterCount: meshSummary.clusterCount,
+    meshRelayCandidateCount: meshSummary.relayCandidateCount,
+    meshUnclusteredCount: meshSummary.unclusteredCount,
     graphSummaryLabel,
     routeTraceLabel,
-    lastSeenLabel: formatAgeLabel(peerObservability.ageSeconds),
+    lastSeenLabel: formatWorkbenchControlAgeLabel(peerObservability.ageSeconds),
     estimatedHopCount,
-    endpointCount: countEndpoints(input.directMeshEndpointsText),
+    endpointCount: countWorkbenchControlEndpoints(input.directMeshEndpointsText),
     visibleAgentCount: input.protocolAgents.length,
     auditCount: input.auditCount,
     protocolOnline: input.protocolOnline,
@@ -369,6 +345,13 @@ export function buildWorkbenchSystemControlTopologySummary(input: {
     downgradeReason: governanceEnforcement.reason ?? governanceDiagnostics.driftLabel,
     runtimeLabel: input.copy.runtimeLabels[input.frontendRuntimeMode],
     directStrategyLabel: input.copy.directStrategyLabels[input.directMeshSelectionMode],
+    meshClusters: meshSummary.clusters,
+    controlGroups:
+      mode === "orchestrated"
+        ? orchestratedGroups
+        : mode === "direct"
+          ? directGroups
+          : meshGroups,
   };
 }
 
@@ -393,7 +376,7 @@ export function buildWorkbenchSystemTopologySnapshot(input: {
     entry_health_score:
       input.protocolAgents.find((agent) => agent.id === input.topology.entryAgentId)?.descriptor?.runtime.health_score ?? null,
     direct_mesh_strategy: input.directMeshSelectionMode,
-    endpoint_count: countEndpoints(input.directMeshEndpointsText),
+    endpoint_count: countWorkbenchControlEndpoints(input.directMeshEndpointsText),
     visible_agent_count: input.topology.visibleAgentCount,
     peer_count: input.topology.peerCount,
     estimated_hop_count: input.topology.estimatedHopCount,
@@ -405,6 +388,27 @@ export function buildWorkbenchSystemTopologySnapshot(input: {
     failover_reason: input.topology.failoverReason,
     safe_mode_active: input.topology.safeModeActive,
     downgrade_reason: input.topology.downgradeReason,
+    mesh_cluster_count: input.topology.meshClusterCount,
+    mesh_relay_candidate_count: input.topology.meshRelayCandidateCount,
+    mesh_unclustered_count: input.topology.meshUnclusteredCount,
+    mesh_clusters: input.topology.meshClusters.map((cluster) => ({
+      cluster_id: cluster.clusterId,
+      agent_count: cluster.agentCount,
+      relay_candidate_count: cluster.relayCandidateCount,
+      peer_count: cluster.peerCount,
+      average_health_score: cluster.averageHealthScore,
+      entry_agent_id: cluster.entryAgentId,
+    })),
+    control_groups: input.topology.controlGroups.map((group) => ({
+      id: group.id,
+      kind: group.kind,
+      agent_count: group.agentCount,
+      relay_candidate_count: group.relayCandidateCount,
+      peer_count: group.peerCount,
+      average_health_score: group.averageHealthScore,
+      entry_agent_id: group.entryAgentId,
+      session_count: group.sessionCount,
+    })),
     agents: input.protocolAgents.map((agent) => {
       const peers = agent.descriptor?.runtime.peers ?? [];
       const latestPeerSeen = peers.reduce<number | null>((latest, peer) => {
@@ -453,6 +457,40 @@ export function parseWorkbenchSystemTopologySnapshot(value: unknown): WorkbenchS
     failover_reason: typeof record.failover_reason === "string" ? record.failover_reason : "--",
     safe_mode_active: record.safe_mode_active === true,
     downgrade_reason: typeof record.downgrade_reason === "string" ? record.downgrade_reason : "--",
+    mesh_cluster_count: typeof record.mesh_cluster_count === "number" ? record.mesh_cluster_count : 0,
+    mesh_relay_candidate_count: typeof record.mesh_relay_candidate_count === "number" ? record.mesh_relay_candidate_count : 0,
+    mesh_unclustered_count: typeof record.mesh_unclustered_count === "number" ? record.mesh_unclustered_count : 0,
+    mesh_clusters: Array.isArray(record.mesh_clusters)
+      ? record.mesh_clusters.flatMap((entry) => {
+          if (!entry || typeof entry !== "object") return [];
+          const cluster = entry as Record<string, unknown>;
+          return [{
+            cluster_id: typeof cluster.cluster_id === "string" ? cluster.cluster_id : "unknown",
+            agent_count: typeof cluster.agent_count === "number" ? cluster.agent_count : 0,
+            relay_candidate_count: typeof cluster.relay_candidate_count === "number" ? cluster.relay_candidate_count : 0,
+            peer_count: typeof cluster.peer_count === "number" ? cluster.peer_count : 0,
+            average_health_score: typeof cluster.average_health_score === "number" ? cluster.average_health_score : null,
+            entry_agent_id: typeof cluster.entry_agent_id === "string" ? cluster.entry_agent_id : "unknown",
+          }];
+        })
+      : [],
+    control_groups: Array.isArray(record.control_groups)
+      ? record.control_groups.flatMap((entry) => {
+          if (!entry || typeof entry !== "object") return [];
+          const group = entry as Record<string, unknown>;
+          if (group.kind !== "orchestrated" && group.kind !== "direct" && group.kind !== "mesh") return [];
+          return [{
+            id: typeof group.id === "string" ? group.id : "unknown",
+            kind: group.kind,
+            agent_count: typeof group.agent_count === "number" ? group.agent_count : 0,
+            relay_candidate_count: typeof group.relay_candidate_count === "number" ? group.relay_candidate_count : 0,
+            peer_count: typeof group.peer_count === "number" ? group.peer_count : 0,
+            average_health_score: typeof group.average_health_score === "number" ? group.average_health_score : null,
+            entry_agent_id: typeof group.entry_agent_id === "string" ? group.entry_agent_id : "unknown",
+            session_count: typeof group.session_count === "number" ? group.session_count : 0,
+          }];
+        })
+      : [],
     agents: record.agents.flatMap((entry) => {
       if (!entry || typeof entry !== "object") return [];
       const agent = entry as Record<string, unknown>;
@@ -494,5 +532,26 @@ export function buildControlTopologySummaryFromSnapshot(
     downgradeReason: snapshot.downgrade_reason,
     runtimeLabel: copy.runtimeLabels[snapshot.runtime_mode],
     directStrategyLabel: copy.directStrategyLabels[snapshot.direct_mesh_strategy],
+    meshClusterCount: snapshot.mesh_cluster_count,
+    meshRelayCandidateCount: snapshot.mesh_relay_candidate_count,
+    meshUnclusteredCount: snapshot.mesh_unclustered_count,
+    meshClusters: snapshot.mesh_clusters.map((cluster) => ({
+      clusterId: cluster.cluster_id,
+      agentCount: cluster.agent_count,
+      relayCandidateCount: cluster.relay_candidate_count,
+      peerCount: cluster.peer_count,
+      averageHealthScore: cluster.average_health_score,
+      entryAgentId: cluster.entry_agent_id,
+    })),
+    controlGroups: snapshot.control_groups.map((group) => ({
+      id: group.id,
+      kind: group.kind,
+      agentCount: group.agent_count,
+      relayCandidateCount: group.relay_candidate_count,
+      peerCount: group.peer_count,
+      averageHealthScore: group.average_health_score,
+      entryAgentId: group.entry_agent_id,
+      sessionCount: group.session_count,
+    })),
   };
 }

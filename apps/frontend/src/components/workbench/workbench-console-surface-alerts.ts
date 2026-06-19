@@ -1,10 +1,12 @@
 "use client";
 
+import type { Dispatch, SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { dismissWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
   dismissWorkbenchNotice,
   type WorkbenchNoticeItem,
+  type WorkbenchNoticeStateSetter,
   workbenchNoticeToAlertItem,
 } from "@/components/workbench/workbench-notice-state";
 import type { TrussDiagnostics } from "@/components/workbench/workbench-defaults";
@@ -15,10 +17,10 @@ import {
 
 type BuildWorkbenchConsoleSurfaceAlertsParams = {
   importNotice?: WorkbenchNoticeItem | null;
-  setImportNotice?: ((value: WorkbenchNoticeItem | null) => void) | undefined;
+  setImportNotice?: WorkbenchNoticeStateSetter | undefined;
   runtimeRecovery?: WorkbenchRuntimeRecoveryState;
   systemAlerts?: WorkbenchAlertItem[];
-  setSystemAlerts?: ((value: WorkbenchAlertItem[] | ((current: WorkbenchAlertItem[]) => WorkbenchAlertItem[])) => void) | undefined;
+  setSystemAlerts?: Dispatch<SetStateAction<WorkbenchAlertItem[]>> | undefined;
   trussDiagnostics?: TrussDiagnostics | null;
   includeIntegrityAlerts?: boolean;
 };

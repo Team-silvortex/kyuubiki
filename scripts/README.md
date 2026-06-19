@@ -58,6 +58,14 @@ Useful smoke wrappers:
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks
   exercise the live workbench benchmark surface.
+- `cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_large_graph_report_test.exs`
+  Runs the orchestrated large-graph workflow benchmark suite and writes a
+  machine-readable JSON report with per-case performance summaries at
+  `../tmp/workflow-large-graph-benchmark.json` from `apps/web`, which is the
+  repository-level `tmp/workflow-large-graph-benchmark.json`.
+- `cd apps/web && mix test test/kyuubiki_web/api/workflow_large_graph_api_test.exs && elixir -pa $(find _build/test/lib -maxdepth 2 -type d -name ebin -print | tr '\n' ' ') ../../scripts/workflow-large-graph-benchmark.exs 96 256 512 --output ../../tmp/workflow-large-graph-benchmark.json`
+  Lower-level host script path for environments that allow plain Elixir TCP
+  sockets outside `mix test`.
 
 Examples now include:
 

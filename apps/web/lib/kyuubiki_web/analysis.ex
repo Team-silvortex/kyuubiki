@@ -11,6 +11,7 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.Jobs.Store
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowGraphRunner
+  alias KyuubikiWeb.WorkflowGraphResponse
   alias KyuubikiWeb.WorkflowOperatorCatalog
   alias KyuubikiWeb.WorkflowOperatorRuntime
   alias KyuubikiWeb.WorkflowTemplateCatalog
@@ -239,22 +240,12 @@ defmodule KyuubikiWeb.Analysis do
   @spec run_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def run_workflow_graph(params) when is_map(params) do
     normalized = AnalysisJobSupport.stringify_keys(params)
+    response_options = WorkflowGraphResponse.normalize_options(Map.get(normalized, "response_options"))
 
     with %{} = graph <- Map.get(normalized, "graph"),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, result} <- execute_workflow_graph(graph, input_artifacts) do
-      {:ok,
-       %{
-         "workflow_id" => Map.get(graph, "id"),
-         "dataset_contract" => Map.get(graph, "dataset_contract"),
-         "completed_nodes" => Map.get(result, "completed_nodes", []),
-         "skipped_nodes" => Map.get(result, "skipped_nodes", []),
-         "branch_decisions" => Map.get(result, "branch_decisions", []),
-         "node_runs" => Map.get(result, "node_runs", []),
-         "artifact_lineage" => Map.get(result, "artifact_lineage", []),
-         "dataset_lineage" => Map.get(result, "dataset_lineage", []),
-         "artifacts" => Map.get(result, "artifacts", %{})
-       }}
+      {:ok, WorkflowGraphResponse.shape(graph, result, response_options)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
       [] -> {:error, :invalid_workflow_graph_request}
@@ -267,6 +258,7 @@ defmodule KyuubikiWeb.Analysis do
   def submit_catalog_workflow(workflow_id, params)
       when is_binary(workflow_id) and is_map(params) do
     normalized = AnalysisJobSupport.stringify_keys(params)
+    response_options = WorkflowGraphResponse.normalize_options(Map.get(normalized, "response_options"))
 
     with {:ok, graph} <- WorkflowTemplateCatalog.graph_by_id(workflow_id),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
@@ -274,6 +266,7 @@ defmodule KyuubikiWeb.Analysis do
            submit_workflow_graph(%{
              "graph" => graph,
              "input_artifacts" => input_artifacts,
+             "response_options" => response_options,
              "tags" => Map.get(normalized, "tags", []),
              "requested_agent_id" => Map.get(normalized, "requested_agent_id"),
              "requested_capability" => Map.get(normalized, "requested_capability"),
@@ -293,6 +286,7 @@ defmodule KyuubikiWeb.Analysis do
   @spec submit_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def submit_workflow_graph(params) when is_map(params) do
     normalized = AnalysisJobSupport.stringify_keys(params)
+    response_options = WorkflowGraphResponse.normalize_options(Map.get(normalized, "response_options"))
 
     with %{} = graph <- Map.get(normalized, "graph"),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
@@ -307,10 +301,17 @@ defmodule KyuubikiWeb.Analysis do
           "progress_events" => [],
           "completed_nodes" => [],
           "artifacts" => %{},
+          "response_options" => response_options,
           "orchestration_context" => orchestration_context
         })
 
-      start_background_workflow_job(job.job_id, graph, input_artifacts, orchestration_context)
+      start_background_workflow_job(
+        job.job_id,
+        graph,
+        input_artifacts,
+        orchestration_context,
+        response_options
+      )
       {:ok, AnalysisJobSupport.serialize_payload(job)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
@@ -405,9 +406,21 @@ defmodule KyuubikiWeb.Analysis do
     end)
   end
 
-  defp start_background_workflow_job(job_id, graph, input_artifacts, orchestration_context) do
+  defp start_background_workflow_job(
+         job_id,
+         graph,
+         input_artifacts,
+         orchestration_context,
+         response_options
+       ) do
     Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      execute_background_workflow_job(job_id, graph, input_artifacts, orchestration_context)
+      execute_background_workflow_job(
+        job_id,
+        graph,
+        input_artifacts,
+        orchestration_context,
+        response_options
+      )
     end)
   end
 
@@ -468,7 +481,13 @@ defmodule KyuubikiWeb.Analysis do
     end
   end
 
-  defp execute_background_workflow_job(job_id, graph, input_artifacts, orchestration_context) do
+  defp execute_background_workflow_job(
+         job_id,
+         graph,
+         input_artifacts,
+         orchestration_context,
+         response_options
+       ) do
     timeout_ms = watchdog_job_timeout_ms()
 
     task =
@@ -486,20 +505,17 @@ defmodule KyuubikiWeb.Analysis do
     case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
       {:ok, {:ok, result}} ->
         unless cancelled?(job_id) do
+          shaped_result = WorkflowGraphResponse.shape(graph, result, response_options)
+
           :ok =
-            AnalysisResultStore.put(job_id, %{
-              "workflow_id" => Map.get(graph, "id"),
-              "dataset_contract" => Map.get(graph, "dataset_contract"),
-              "current_node" => nil,
-              "progress_events" => workflow_progress_events(job_id),
-              "completed_nodes" => Map.get(result, "completed_nodes", []),
-              "skipped_nodes" => Map.get(result, "skipped_nodes", []),
-              "branch_decisions" => Map.get(result, "branch_decisions", []),
-              "node_runs" => Map.get(result, "node_runs", []),
-              "artifact_lineage" => Map.get(result, "artifact_lineage", []),
-              "dataset_lineage" => Map.get(result, "dataset_lineage", []),
-              "artifacts" => Map.get(result, "artifacts", %{})
-            })
+            AnalysisResultStore.put(
+              job_id,
+              shaped_result
+              |> Map.put("workflow_id", Map.get(graph, "id"))
+              |> Map.put("current_node", nil)
+              |> Map.put("progress_events", workflow_progress_events(job_id))
+              |> Map.put("response_options", response_options)
+            )
 
           _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
         end
@@ -591,6 +607,7 @@ defmodule KyuubikiWeb.Analysis do
     |> maybe_put_orchestration_value("control_mode", Map.get(normalized, "control_mode"))
     |> maybe_put_orchestration_value("orch_id", Map.get(normalized, "orch_id"))
     |> maybe_put_orchestration_value("orch_session_id", Map.get(normalized, "orch_session_id"))
+    |> maybe_put_orchestration_value("cluster_id", Map.get(normalized, "cluster_id"))
   end
 
   defp maybe_put_orchestration_value(context, _key, nil), do: context

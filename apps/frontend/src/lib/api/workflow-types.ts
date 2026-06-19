@@ -177,6 +177,14 @@ export type WorkflowGraphDefinition = {
   edges?: WorkflowGraphEdge[];
 };
 
+export type WorkflowGraphResponseOptions = Partial<{
+  include_artifact_lineage: boolean;
+  include_artifacts: boolean;
+  include_branch_decisions: boolean;
+  include_dataset_lineage: boolean;
+  include_node_runs: boolean;
+}>;
+
 export type WorkflowCatalogRuntimeManifest = {
   required_operator_ids: string[];
   sample_input_node_ids: string[];
@@ -268,6 +276,7 @@ export type WorkflowGraphJobResult = {
   workflow_id: string;
   current_node?: string | null;
   progress_events?: WorkflowProgressEvent[];
+  response_options?: WorkflowGraphResponseOptions;
   completed_nodes: string[];
   skipped_nodes?: string[];
   branch_decisions?: Array<{
@@ -289,5 +298,5 @@ export type WorkflowGraphJobResult = {
     port_id: string;
     source_artifacts?: string[];
   }>;
-  artifacts: Record<string, WorkflowGraphArtifactValue>;
+  artifacts?: Record<string, WorkflowGraphArtifactValue>;
 };

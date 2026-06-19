@@ -117,6 +117,27 @@ export type HealthPayload = {
   };
   remote_solver_registry?: {
     active_agents: number;
+    control_modes?: Record<string, number>;
+    session_states?: Record<string, number>;
+    mesh_topology?: {
+      managed_orchestrators?: Array<{
+        orch_id?: string | null;
+        agent_count: number;
+        agent_ids: string[];
+        session_ids: string[];
+      }>;
+      offline_mesh?: {
+        agent_count: number;
+        agent_ids: string[];
+        clustered_meshes?: Array<{
+          cluster_id: string;
+          agent_count: number;
+          agent_ids: string[];
+          relay_candidate_ids: string[];
+        }>;
+        unclustered_agent_ids?: string[];
+      };
+    };
   };
   security?: {
     api_token_configured: boolean;
@@ -154,6 +175,10 @@ export type ProtocolAgentDescriptor = {
   id: string;
   host: string;
   port: number;
+  control_mode?: string | null;
+  orch_id?: string | null;
+  orch_session_id?: string | null;
+  cluster_id?: string | null;
   tags?: string[];
   capacity?: number | null;
   region?: string | null;
@@ -171,6 +196,21 @@ export type ProtocolAgentDescriptor = {
     claimed_at?: string | null;
     age_ms?: number | null;
     is_stale?: boolean | null;
+  } | null;
+  mesh?: {
+    cluster_id?: string | null;
+    peer_group_id?: string | null;
+    peer_count?: number;
+    topology_role?: string | null;
+    relay_candidate?: boolean;
+    peers?: Array<{
+      id: string;
+      address: string;
+      cluster_id?: string | null;
+      health_score?: number | null;
+      status?: string;
+      topology_role?: string | null;
+    }>;
   } | null;
   descriptor?: {
     program: string;
@@ -223,8 +263,13 @@ export type ProtocolAgentListPayload = {
 
 export type RegisteredAgentSnapshot = {
   id: string;
+  control_mode?: string | null;
+  orch_id?: string | null;
+  orch_session_id?: string | null;
+  cluster_id?: string | null;
   execution_state?: "idle" | "leased" | "lease_stale";
   active_lease?: ProtocolAgentDescriptor["active_lease"];
+  mesh?: ProtocolAgentDescriptor["mesh"];
 };
 
 export type RegisteredAgentRegistryPayload = {

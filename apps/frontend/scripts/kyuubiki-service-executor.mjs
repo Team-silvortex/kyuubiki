@@ -4,6 +4,16 @@ import { resolveStudyKindAndInput } from "./kyuubiki-study-resolver.mjs";
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:3000";
 const TERMINAL_JOB_STATUSES = new Set(["completed", "failed", "cancelled"]);
 
+function compactWorkflowResponseOptions() {
+  return {
+    include_artifact_lineage: false,
+    include_artifacts: false,
+    include_branch_decisions: false,
+    include_dataset_lineage: false,
+    include_node_runs: false,
+  };
+}
+
 function pickFirstString(payload, keys) {
   for (const key of keys) {
     if (typeof payload?.[key] === "string" && payload[key].trim()) return payload[key].trim();
@@ -132,6 +142,7 @@ async function executeWorkflowSubmitCatalog(step, runtime) {
     method: "POST",
     body: JSON.stringify({
       input_artifacts: payload.input_artifacts && typeof payload.input_artifacts === "object" ? payload.input_artifacts : {},
+      response_options: compactWorkflowResponseOptions(),
     }),
   });
   return { message: `Submitted catalog workflow ${workflowId}`, result };
@@ -144,6 +155,7 @@ async function executeWorkflowSubmitGraph(step, runtime) {
     body: JSON.stringify({
       graph: payload.graph,
       input_artifacts: payload.input_artifacts && typeof payload.input_artifacts === "object" ? payload.input_artifacts : {},
+      response_options: compactWorkflowResponseOptions(),
     }),
   });
   return { message: "Submitted workflow graph job", result };

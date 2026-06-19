@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { WorkbenchAlertStrip } from "@/components/workbench/workbench-alert-strip";
 import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
@@ -63,7 +62,6 @@ import {
   describeSensitivePresetSaveError,
 } from "@/lib/scripting/workbench-script-preset-security";
 import { serializeWorkbenchPythonLiteral } from "@/lib/scripting/workbench-script-python-format";
-
 type WorkbenchScriptPanelProps = {
   language: WorkbenchScriptLanguage;
   snapshot: WorkbenchScriptSnapshot;
@@ -73,15 +71,11 @@ type WorkbenchScriptPanelProps = {
   onToggleRecordingMode: () => void;
   onInvokeAction: (action: string, payload?: Record<string, unknown>) => Promise<unknown>;
 };
-
 type RuntimeStatus = "idle" | "loading" | "ready" | "running" | "error";
-
 const STORAGE_KEY = "kyuubiki-workbench-python-panel", DSL_STORAGE_KEY = "kyuubiki-workbench-dsl-panel";
-
 function stringifyPayload(payload: Record<string, unknown> | undefined): string {
   return serializeWorkbenchPythonLiteral(payload ?? {});
 }
-
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
   const t = workbenchScriptPanelCopy[language] as WorkbenchScriptPanelCopyEntry;
   const [headlessFrontendMacroAssets, setHeadlessFrontendMacroAssets] = useState<FrontendMacroAssetRecord[]>([]);
@@ -96,31 +90,25 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const [presetRecords, setPresetRecords] = useState<WorkbenchMacroPresetRecord[]>([]);
   const [snippetPresetRecords, setSnippetPresetRecords] = useState<WorkbenchScriptSnippetPresetRecord[]>([]);
   const [macroDraftBuffer, setMacroDraftBuffer] = useState<ReturnType<typeof buildWorkbenchRecordedMacroDraft> | null>(null);
-
   useEffect(() => {
     const stored = safeWorkbenchPanelStorageGet(STORAGE_KEY);
     if (stored?.code) setScriptCode(stored.code);
     const storedDsl = safeWorkbenchPanelStorageGet(DSL_STORAGE_KEY);
     if (storedDsl?.code) setDslCode(storedDsl.code);
   }, []);
-
   useEffect(() => {
     writeWorkbenchPanelStorage(STORAGE_KEY, scriptCode);
   }, [scriptCode]);
-
   useEffect(() => {
     writeWorkbenchPanelStorage(DSL_STORAGE_KEY, dslCode);
   }, [dslCode]);
-
   useEffect(() => {
     setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
     setSnippetPresetRecords(listWorkbenchSnippetPresets(snapshot.selectedProjectId));
   }, [snapshot.selectedProjectId]);
-
   const appendOutput = (line: string) => {
     setOutput((current) => [...current.slice(-199), line]);
   };
-
   const reportPresetSaveError = (error: unknown) => {
     const sensitive = describeSensitivePresetSaveError(error);
     if (sensitive) {
@@ -134,7 +122,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     appendOutput(`[preset] ${message}`);
     setRuntimeError(message);
   };
-
   const refreshPresetRecords = () => {
     setPresetRecords(listWorkbenchMacroPresets(snapshot.selectedProjectId));
   };
@@ -150,9 +137,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     };
     setHeadlessFrontendMacroAssets((current) => [nextRecord, ...current].slice(0, 16));
   };
-
   const resolveCurrentDraft = () => macroDraftBuffer ?? buildWorkbenchRecordedMacroDraft(actionLog);
-
   const loadRuntime = async () => {
     setRuntimeError(null);
     setRuntimeStatus("loading");
@@ -172,7 +157,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       appendOutput(`[runtime] ${message}`);
     }
   };
-
   const compileDslToScript = () => {
     try {
       const document = parseWorkbenchFrontendDslDocument(dslCode);
@@ -189,7 +173,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       return null;
     }
   };
-
   const runScript = async () => {
     setRuntimeError(null);
     setRuntimeStatus("running");
@@ -210,11 +193,9 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       appendOutput(`[error] ${message}`);
     }
   };
-
   const runDsl = async () => {
     const compiled = compileDslToScript();
     if (!compiled) return;
-
     setRuntimeError(null);
     setRuntimeStatus("running");
     try {
@@ -237,20 +218,16 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       appendOutput(`[dsl] ${message}`);
     }
   };
-
   const insertAction = (action: WorkbenchScriptActionDefinition) => {
     setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.invoke("${action.id}", ${stringifyPayload(action.payloadExample)})\n`);
   };
-
   const insertMacro = (macroId: string, payload?: Record<string, unknown>) => {
     setScriptCode((current) => `${current.trimEnd()}\n\nawait ky.run_macro("${macroId}", ${stringifyPayload(payload)})\n`);
   };
-
   const insertSnippet = (snippet: WorkbenchScriptSnippetDefinition, parameters?: WorkbenchScriptSnippetParameters) => {
     setScriptCode((current) => `${current.trimEnd()}\n\n${renderWorkbenchScriptSnippet(snippet, parameters)}`);
     appendOutput(`[snippet] ${snippet.id}`);
   };
-
   const saveSnippetPreset = (snippet: WorkbenchScriptSnippetDefinition, parameters: WorkbenchScriptSnippetParameters) => {
     if (!snapshot.selectedProjectId) {
       appendOutput(`[preset] ${t.noProjectSelected}`);
@@ -271,7 +248,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       reportPresetSaveError(error);
     }
   };
-
   const insertSnippetPreset = (preset: WorkbenchScriptSnippetPresetRecord) => {
     const snippet = WORKBENCH_SCRIPT_SNIPPETS.find((entry) => entry.id === preset.snippetId);
     if (!snippet) {
@@ -280,18 +256,15 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     }
     insertSnippet(snippet, preset.parameters);
   };
-
   const deleteSnippetPreset = (preset: WorkbenchScriptSnippetPresetRecord) => {
     deleteWorkbenchSnippetPreset(preset.presetId);
     refreshSnippetPresetRecords();
     appendOutput(`[preset] Deleted snippet preset ${preset.name}`);
   };
-
   const exportSnippetPresetJson = (preset: WorkbenchScriptSnippetPresetRecord) => {
     downloadTextFile(`${preset.name.replace(/\s+/g, "-").toLowerCase() || preset.presetId}.json`, serializeWorkbenchSnippetPresetRecord(preset));
     appendOutput(`[preset] Exported snippet preset ${preset.name}`);
   };
-
   const importSnippetPresetJson = async (snippet: WorkbenchScriptSnippetDefinition, file: File | undefined) => {
     if (!file) return;
     if (!snapshot.selectedProjectId) {
@@ -316,7 +289,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       reportPresetSaveError(error);
     }
   };
-
   const insertMacroDraftFromLog = () => {
     const draft = buildWorkbenchRecordedMacroDraft(actionLog);
     if (!draft) {
@@ -327,7 +299,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.macroDraftInserted}`);
   };
-
   const exportMacroDraftJson = () => {
     const draft = buildWorkbenchRecordedMacroDraft(actionLog);
     if (!draft) {
@@ -338,7 +309,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     downloadTextFile(`${draft.id}.json`, serializeWorkbenchRecordedMacroDraft(draft));
     appendOutput(`[macro] ${t.macroJsonExported}`);
   };
-
   const importMacroJson = async (file: File | undefined) => {
     if (!file) return;
     try {
@@ -352,7 +322,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       setRuntimeError(message);
     }
   };
-
   const saveCurrentPreset = () => {
     if (!snapshot.selectedProjectId) {
       appendOutput(`[preset] ${t.noProjectSelected}`);
@@ -378,26 +347,22 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       reportPresetSaveError(error);
     }
   };
-
   const insertPreset = (preset: WorkbenchMacroPresetRecord) => {
     setMacroDraftBuffer(preset.macro);
     setPresetName(preset.name);
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(preset.macro)}\n`);
     appendOutput(`[preset] ${t.presetInserted}`);
   };
-
   const exportPresetJson = (preset: WorkbenchMacroPresetRecord) => {
     setMacroDraftBuffer(preset.macro);
     downloadTextFile(`${preset.name.replace(/\s+/g, "-").toLowerCase() || preset.presetId}.json`, serializeWorkbenchRecordedMacroDraft(preset.macro));
     appendOutput(`[macro] ${t.macroJsonExported}`);
   };
-
   const deletePreset = (preset: WorkbenchMacroPresetRecord) => {
     deleteWorkbenchMacroPreset(preset.presetId);
     refreshPresetRecords();
     appendOutput(`[preset] ${t.presetDeleted}`);
   };
-
   const insertExternalMacroDraft = (draft: ReturnType<typeof parseWorkbenchRecordedMacroDraft>) => {
     setMacroDraftBuffer(draft);
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
@@ -438,17 +403,14 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.restoreBridgeMacroToFrontend}`);
   };
-
   const insertTimelineStep = (entry: WorkbenchScriptActionLogEntry) => {
     setScriptCode((current) => `${current.trimEnd()}\n\n${buildTimelineReplaySnippet(entry)}\n`);
     appendOutput(`[macro] ${t.insertActionStep}`);
   };
-
   const continueTimelineFromEntry = (entry: WorkbenchScriptActionLogEntry) => {
     setScriptCode((current) => `${current.trimEnd()}\n\n${buildTimelineContinuationSnippet(actionLog, entry)}\n`);
     appendOutput(`[macro] ${t.continueFromStep}`);
   };
-
   const insertTimelineMacroDraft = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
     const draft = buildWorkbenchRecordedMacroDraftFromEntries(actionLog, {
       includedEntryIds,
@@ -464,7 +426,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     setScriptCode((current) => `${current.trimEnd()}\n\n${serializeWorkbenchMacroPythonSnippet(draft)}\n`);
     appendOutput(`[macro] ${t.timelineMacroDraftInserted}`);
   };
-
   const saveTimelineMacroPreset = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
     if (!snapshot.selectedProjectId) {
       appendOutput(`[preset] ${t.noProjectSelected}`);
@@ -496,7 +457,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
       reportPresetSaveError(error);
     }
   };
-
   const sendTimelineMacroToHeadless = (entry: WorkbenchScriptActionLogEntry, includedEntryIds?: string[]) => {
     const draft = buildWorkbenchRecordedMacroDraftFromEntries(actionLog, {
       includedEntryIds,
@@ -512,7 +472,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
     pushHeadlessFrontendMacroAsset(draft, "timeline_selection");
     appendOutput(`[macro] ${t.sendTimelineMacroToHeadless}`);
   };
-
   return (
     <>
       {presetSecurityNotice ? (
@@ -532,7 +491,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
           />
         </section>
       ) : null}
-
       <WorkbenchScriptLaunchCard
         clearOutput={() => setOutput([])}
         copy={t}
@@ -544,7 +502,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         runtimeStatus={runtimeStatus}
         toggleRecordingMode={onToggleRecordingMode}
       />
-
       <WorkbenchScriptAuthorPanel
         copy={t}
         deriveFrontendMacroAsset={deriveFrontendMacroAsset}
@@ -557,7 +514,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         scriptCode={scriptCode}
         setScriptCode={setScriptCode}
       />
-
       <WorkbenchScriptDslCard
         dslCode={dslCode}
         dslError={dslError}
@@ -571,7 +527,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         onUseCurrentMacroDraft={useCurrentMacroDraftAsDsl}
         setDslCode={setDslCode}
       />
-
       <WorkbenchScriptInspectPanel
         actionCatalogCount={WORKBENCH_SCRIPT_ACTIONS.length}
         actionLog={actionLog}
@@ -586,7 +541,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         scriptCode={scriptCode}
         snapshot={snapshot}
       />
-
       <WorkbenchScriptCatalogPanel
         actions={WORKBENCH_SCRIPT_ACTIONS}
         copy={t}
@@ -611,7 +565,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         snippets={WORKBENCH_SCRIPT_SNIPPETS}
         snippetPresetRecords={snippetPresetRecords}
       />
-
       <section className="sidebar-card sidebar-card--compact">
         <div className="card-head">
           <h2>{t.headlessSurface}</h2>
@@ -619,7 +572,6 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         </div>
         <p className="card-copy">{t.headlessSurfaceHint}</p>
       </section>
-
       <WorkbenchHeadlessWorkflowPanel
         frontendMacroAssets={headlessFrontendMacroAssets}
         language={language}

@@ -5,6 +5,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   use GenServer
 
+  alias KyuubikiWeb.Playground.AgentMeshTopology
   alias KyuubikiWeb.Playground.AgentSessionState
 
   @type execution_lease :: %{
@@ -86,6 +87,10 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
 
   @spec public_agent(agent() | map()) :: map()
   def public_agent(agent) when is_map(agent) do
+    public_agent(agent, agents())
+  end
+
+  defp public_agent(agent, all_agents) when is_map(agent) and is_list(all_agents) do
     control_mode =
       Map.get(agent, :control_mode) || Map.get(agent, "control_mode") || "orch_managed"
 
@@ -151,6 +156,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       "active_lease" => public_lease,
       "last_session_transition" =>
         Map.get(agent, :last_session_transition) || Map.get(agent, "last_session_transition"),
+      "mesh" => AgentMeshTopology.public_mesh(agent, all_agents),
       "last_seen_at" =>
         format_last_seen(Map.get(agent, :last_seen_at) || Map.get(agent, "last_seen_at")),
       "authority" => authority
@@ -239,7 +245,9 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       |> Map.values()
       |> sort_agents()
       |> Enum.map(&attach_active_lease(&1, state.leases))
-      |> Enum.map(&public_agent/1)
+      |> then(fn agents ->
+        Enum.map(agents, &public_agent(&1, agents))
+      end)
 
     {:reply, public_agents, state}
   end
@@ -268,7 +276,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
        active_execution_leases: summarize_active_execution_leases(state.leases, state.agents),
        recent_session_transitions: summarize_recent_session_transitions(agents),
        authority_groups: summarize_authority_groups(agents),
-       mesh_topology: summarize_mesh_topology(agents)
+       mesh_topology: AgentMeshTopology.summarize_mesh_topology(agents)
      }, state}
   end
 
@@ -626,38 +634,6 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
     |> Enum.sort_by(fn group ->
       {group.control_mode, group.orch_id || "", group.orch_session_id || ""}
     end)
-  end
-
-  defp summarize_mesh_topology(agents) do
-    managed_agents = Enum.filter(agents, &(&1.control_mode == "orch_managed"))
-    offline_mesh_agents = Enum.filter(agents, &(&1.control_mode == "offline_mesh"))
-
-    %{
-      managed_orchestrators: summarize_managed_orchestrators(managed_agents),
-      offline_mesh: %{
-        agent_count: length(offline_mesh_agents),
-        agent_ids: offline_mesh_agents |> Enum.map(& &1.id) |> Enum.sort()
-      }
-    }
-  end
-
-  defp summarize_managed_orchestrators(agents) do
-    agents
-    |> Enum.group_by(& &1.orch_id)
-    |> Enum.map(fn {orch_id, grouped_agents} ->
-      %{
-        orch_id: orch_id,
-        agent_count: length(grouped_agents),
-        agent_ids: grouped_agents |> Enum.map(& &1.id) |> Enum.sort(),
-        session_ids:
-          grouped_agents
-          |> Enum.map(& &1.orch_session_id)
-          |> Enum.reject(&is_nil/1)
-          |> Enum.uniq()
-          |> Enum.sort()
-      }
-    end)
-    |> Enum.sort_by(&(&1.orch_id || ""))
   end
 
   defp authority_group_key(agent), do: {agent.control_mode, agent.orch_id, agent.orch_session_id}
