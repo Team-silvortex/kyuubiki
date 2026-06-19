@@ -59,6 +59,7 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     runWorkflowCatalogEntry: workflowController.runWorkflowCatalogEntry,
     runWorkflowDraft: workflowController.runWorkflowDraft,
     openHistoryJob: primaryActionsController.openHistoryJob,
+    setSystemAlerts: workspaceState.setSystemAlerts,
     libraryTab: workspaceState.libraryTab,
     handleLibraryTabChange: uiActionController.handleLibraryTabChange,
     librarySampleRows: studyResultDerived.librarySampleRows,

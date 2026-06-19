@@ -7,8 +7,8 @@ use kyuubiki_headless_sdk::{
     HeadlessTemplateDescriptor, HeadlessValidationReport, HeadlessWorkflowDocument,
     HybridHeadlessExecutor, MockHeadlessExecutor, ServiceHeadlessExecutor, build_template_document,
     collect_executor_compatibility_issues, execute_batch_with_executor,
-    normalize_workflow_document, run_batch_dry, search_templates, summarize_batch,
-    suggest_template_details, suggest_templates, validate_batch,
+    normalize_workflow_document, run_batch_dry, search_templates, suggest_template_details,
+    suggest_templates, summarize_batch, validate_batch,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -100,7 +100,10 @@ fn print_template_groups(templates: &[&HeadlessTemplateDescriptor]) {
     categories.dedup();
     for category in categories {
         println!("\n[{}]", category);
-        for template in templates.iter().filter(|template| template.category == category) {
+        for template in templates
+            .iter()
+            .filter(|template| template.category == category)
+        {
             let view = TemplateView::from_descriptor(template);
             println!("- {} ({} steps)", view.id, view.step_count);
             println!("  {}", view.title);

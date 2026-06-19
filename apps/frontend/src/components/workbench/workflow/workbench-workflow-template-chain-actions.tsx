@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
+import { WorkbenchPanelNotice } from "@/components/workbench/workbench-panel-notice";
+import {
+  showWorkbenchNotice,
+  type WorkbenchNoticeItem,
+} from "@/components/workbench/workbench-notice-state";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 import type { WorkflowGraphNode } from "@/lib/api";
 import {
@@ -38,6 +46,7 @@ type WorkbenchWorkflowTemplateChainActionsProps = {
     sourceNodeId?: string | null,
   ) => void;
   selectedNodes?: WorkflowGraphNode[];
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
 function sortChainsByPriority(
@@ -71,11 +80,12 @@ export function WorkbenchWorkflowTemplateChainActions({
   selectedSourceNodeId,
   onInsertTemplateChain,
   selectedNodes = [],
+  setSystemAlerts,
 }: WorkbenchWorkflowTemplateChainActionsProps) {
   const [favoriteChainIds, setFavoriteChainIds] = useState<string[]>([]);
   const [favoriteChainAliases, setFavoriteChainAliases] = useState<Record<string, string>>({});
   const [importedChains, setImportedChains] = useState<WorkflowTemplateChainDefinition[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<WorkbenchNoticeItem | null>(null);
   const [query, setQuery] = useState("");
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const builtInChains = useMemo(() => listBuiltInWorkflowTemplateChains(), []);
@@ -187,14 +197,37 @@ export function WorkbenchWorkflowTemplateChainActions({
       const json = await readJsonFile(file);
       const pkg = asWorkflowTemplateChainPackage(json);
       if (!pkg) {
-        setMessage(labels.templateChainImportInvalidLabel);
+        upsertWorkbenchAlert(setSystemAlerts, {
+          id: "workflow-template-chain-import-error",
+          message: labels.templateChainImportInvalidLabel,
+          tone: "error",
+        });
+        showWorkbenchNotice(setNotice, {
+          id: "workflow-template-chain-import-invalid",
+          message: labels.templateChainImportInvalidLabel,
+          tone: "error",
+        });
         return;
       }
       saveImportedWorkflowTemplateChain(packageToWorkflowTemplateChainDefinition(pkg));
       setImportedChains(listStoredWorkflowTemplateChains());
-      setMessage(labels.templateChainImportSuccessLabel);
+      dismissWorkbenchAlert(setSystemAlerts, "workflow-template-chain-import-error");
+      showWorkbenchNotice(setNotice, {
+        id: "workflow-template-chain-import-success",
+        message: labels.templateChainImportSuccessLabel,
+        tone: "info",
+      });
     } catch {
-      setMessage(labels.templateChainImportInvalidLabel);
+      upsertWorkbenchAlert(setSystemAlerts, {
+        id: "workflow-template-chain-import-error",
+        message: labels.templateChainImportInvalidLabel,
+        tone: "error",
+      });
+      showWorkbenchNotice(setNotice, {
+        id: "workflow-template-chain-import-invalid",
+        message: labels.templateChainImportInvalidLabel,
+        tone: "error",
+      });
     }
   }
 
@@ -250,7 +283,11 @@ export function WorkbenchWorkflowTemplateChainActions({
       buildImportedTemplateChainFromNodes({ label: nextLabel, nodes: selectedNodes }),
     );
     setImportedChains(listStoredWorkflowTemplateChains());
-    setMessage(labels.templateChainSaveSelectionSuccessLabel);
+    showWorkbenchNotice(setNotice, {
+      id: "workflow-template-chain-save-selection-success",
+      message: labels.templateChainSaveSelectionSuccessLabel,
+      tone: "info",
+    });
   }
 
   function renameImportedChain(chain: WorkflowTemplateChainDefinition) {
@@ -312,7 +349,7 @@ export function WorkbenchWorkflowTemplateChainActions({
           ref={importInputRef}
           type="file"
         />
-        {message ? <p className="card-copy">{message}</p> : null}
+        <WorkbenchPanelNotice notice={notice} setNotice={setNotice} />
       </div>
 
       {pinnedFavoriteChains.length > 0 ? (

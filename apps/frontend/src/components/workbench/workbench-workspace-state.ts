@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import type { WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
 import {
   defaultAxial,
   defaultBeam1d,
@@ -170,6 +172,8 @@ export function useWorkbenchWorkspaceState(params: {
   const [projectDescriptionDraft, setProjectDescriptionDraft] = useState("");
   const [loadedModelName, setLoadedModelName] = useState(defaultLoadedModelName);
   const [message, setMessage] = useState(defaultMessage);
+  const [importNotice, setImportNotice] = useState<WorkbenchNoticeItem | null>(null);
+  const [systemAlerts, setSystemAlerts] = useState<WorkbenchAlertItem[]>([]);
   const [hiddenMaterials, setHiddenMaterials] = useState<Record<StudyKind, string[]>>({
     axial_bar_1d: [],
     heat_bar_1d: [],
@@ -300,6 +304,10 @@ export function useWorkbenchWorkspaceState(params: {
     setLoadedModelName,
     message,
     setMessage,
+    importNotice,
+    setImportNotice,
+    systemAlerts,
+    setSystemAlerts,
     hiddenMaterials,
     setHiddenMaterials,
     sidebarSection,

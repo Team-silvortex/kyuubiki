@@ -277,12 +277,13 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
         thermo_nodes[3]["temperature_delta"].as_f64(),
         Some(second_average)
     );
-    assert!(run
-        .artifacts
-        .get("summary_output.summary")
-        .and_then(|summary| summary.get("max_temperature_delta"))
-        .and_then(|value| value.as_f64())
-        .is_some_and(|value| value > 0.0));
+    assert!(
+        run.artifacts
+            .get("summary_output.summary")
+            .and_then(|summary| summary.get("max_temperature_delta"))
+            .and_then(|value| value.as_f64())
+            .is_some_and(|value| value > 0.0)
+    );
 }
 
 fn heat_triangle_result() -> SolveHeatPlaneTriangle2dResult {

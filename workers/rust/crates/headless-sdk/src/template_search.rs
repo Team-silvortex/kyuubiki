@@ -3,7 +3,8 @@ pub(super) fn normalize_search_token(value: &str) -> String {
 }
 
 pub(super) fn tokenize_search_query(query: Option<&str>) -> Vec<String> {
-    query.unwrap_or_default()
+    query
+        .unwrap_or_default()
         .split(|char: char| !char.is_ascii_alphanumeric())
         .map(normalize_search_token)
         .filter(|token| !token.is_empty())

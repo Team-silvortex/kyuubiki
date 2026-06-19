@@ -1,9 +1,10 @@
 use crate::{
+    EngineSolveRequest,
     operator_sdk_runtime::{
         run_registered_export_operator, run_registered_extract_operator,
         run_registered_transform_operator,
     },
-    solve, EngineSolveRequest,
+    solve,
 };
 use kyuubiki_protocol::{
     AnalysisResult, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
@@ -63,6 +64,11 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.compose_diagnostics_bundle",
     "transform.evaluate_diagnostics_bundle_guard",
     "transform.compose_diagnostics_report_payload",
+    "transform.select_focus_payload",
+    "transform.compose_focus_chain_input",
+    "transform.compose_focus_bridge_request",
+    "transform.resolve_focus_bridge_execution",
+    "transform.execute_focus_bridge_execution",
 ];
 
 const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &[
@@ -70,8 +76,11 @@ const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &[
     "extract.field_statistics",
     "extract.field_hotspots",
     "extract.electrostatic_result_diagnostics",
+    "extract.electrostatic_peak_field",
     "extract.thermal_result_diagnostics",
+    "extract.heat_peak_flux",
     "extract.thermo_result_diagnostics",
+    "extract.thermo_peak_response",
 ];
 
 const SUPPORTED_EXPORT_OPERATORS: &[&str] = &[
@@ -149,6 +158,7 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.select_best_summary"
         || operator_id == "transform.compose_diagnostics_bundle"
         || operator_id == "transform.compose_diagnostics_report_payload"
+        || operator_id == "transform.resolve_focus_bridge_execution"
 }
 
 pub fn resolve_named_input_payloads(
@@ -523,7 +533,12 @@ pub fn run_transform_operator(
         | "transform.evaluate_thermal_guard"
         | "transform.benchmark_coupled_heat_pair"
         | "transform.compose_diagnostics_bundle"
-        | "transform.evaluate_diagnostics_bundle_guard" => {
+        | "transform.evaluate_diagnostics_bundle_guard"
+        | "transform.select_focus_payload"
+        | "transform.compose_focus_chain_input"
+        | "transform.compose_focus_bridge_request"
+        | "transform.resolve_focus_bridge_execution"
+        | "transform.execute_focus_bridge_execution" => {
             run_registered_transform_operator(operator_id, payload, config)
         }
         "transform.compose_diagnostics_report_payload" => {

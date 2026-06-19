@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { resolveWorkflowRunStatusTone } from "@/lib/api";
 import type {
   JobState,
@@ -66,6 +67,7 @@ type WorkbenchWorkflowSidebarProps = {
     inputArtifacts: Record<string, unknown>,
   ) => void;
   onOpenWorkflowRun: (jobId: string) => void;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
 function scoreWorkflowRunComplexity(run: WorkflowRunRecord) {
@@ -120,6 +122,7 @@ export function WorkbenchWorkflowSidebar({
   onRunWorkflowCatalog,
   onRunWorkflowDraft,
   onOpenWorkflowRun,
+  setSystemAlerts,
 }: WorkbenchWorkflowSidebarProps) {
   const latestRun = workflowRuns[0] ?? null;
   const latestRunForSelectedWorkflow = selectedWorkflow ? workflowRuns.find((entry) => entry.workflowId === selectedWorkflow.id) ?? null : null;
@@ -475,6 +478,7 @@ export function WorkbenchWorkflowSidebar({
           onRefreshWorkflowCatalog={onRefreshWorkflowCatalog}
           onRunWorkflowCatalog={onRunWorkflowCatalog}
           onRunWorkflowDraft={onRunWorkflowDraft}
+          setSystemAlerts={setSystemAlerts}
           selectedWorkflow={selectedWorkflow}
           traceFocusNodeId={builderTraceFocus?.nodeId ?? null}
           traceFocusToken={builderTraceFocus?.token}

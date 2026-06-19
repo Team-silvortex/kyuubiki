@@ -7,9 +7,7 @@ pub fn direct_fem_submit_route(action: &str) -> Option<&'static str> {
         "solve_electrostatic_plane_triangle_2d" => {
             Some("/api/v1/fem/electrostatic-plane-triangle-2d/jobs")
         }
-        "solve_electrostatic_plane_quad_2d" => {
-            Some("/api/v1/fem/electrostatic-plane-quad-2d/jobs")
-        }
+        "solve_electrostatic_plane_quad_2d" => Some("/api/v1/fem/electrostatic-plane-quad-2d/jobs"),
         "solve_heat_plane_triangle_2d" => Some("/api/v1/fem/heat-plane-triangle-2d/jobs"),
         "solve_heat_plane_quad_2d" => Some("/api/v1/fem/heat-plane-quad-2d/jobs"),
         "solve_thermal_truss_2d" => Some("/api/v1/fem/thermal-truss-2d/jobs"),

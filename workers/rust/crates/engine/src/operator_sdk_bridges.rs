@@ -8,7 +8,7 @@ use crate::heat_bridge::{
     bridge_heat_result_to_thermal_plane_triangle_model_with_contract,
     resolve_heat_to_thermo_bridge_contract,
 };
-use crate::operator_sdk_runtime::{run_summary_only, WorkflowOperatorEnvelope};
+use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunResult, SolveElectrostaticPlaneQuad2dResult,

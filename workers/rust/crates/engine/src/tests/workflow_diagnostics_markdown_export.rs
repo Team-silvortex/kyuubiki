@@ -38,7 +38,12 @@ fn sample_report_payload() -> serde_json::Value {
                 "diagnostic_node_count": 4,
                 "diagnostic_element_count": 1,
                 "diagnostic_metric_groups": ["temperature_delta", "stress"],
-                "thermo_stress_peak": 220.0
+                "thermo_stress_peak": 220.0,
+                "peak_element_id": "te1",
+                "peak_stress_x": 14.0,
+                "peak_stress_y": 9.0,
+                "peak_tau_xy": 3.0,
+                "peak_element_temperature_delta": 35.0
             }
         }),
         serde_json::json!({}),
@@ -83,6 +88,10 @@ fn exports_diagnostics_bundle_markdown() {
     assert!(content.contains("[info] Electrostatic field peak: 10.0"));
     assert!(content.contains("[attention] Thermal temperature peak: 125.0"));
     assert!(content.contains("[attention] Thermo stress peak: 220.0"));
+    assert!(content.contains("  - source: thermo"));
+    assert!(content.contains("  - value_field: thermo_stress_peak"));
+    assert!(content.contains("  - peak_stress_x: 14.0"));
+    assert!(content.contains("  - peak_element_id: te1"));
     assert!(content.contains("## Diagnostics Sources"));
     assert!(content.contains("## Guard Decision"));
     assert!(content.contains("### Guard Triggers"));

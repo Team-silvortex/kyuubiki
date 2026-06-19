@@ -113,6 +113,9 @@ fn build_bundle_highlights_section(object: &serde_json::Map<String, Value>) -> V
     let Some(highlights) = object.get("report_highlights").and_then(Value::as_array) else {
         return Vec::new();
     };
+    let focus_context = object
+        .get("report_focus_context")
+        .and_then(Value::as_object);
     if highlights.is_empty() {
         return Vec::new();
     }
@@ -136,7 +139,62 @@ fn build_bundle_highlights_section(object: &serde_json::Map<String, Value>) -> V
             .unwrap_or(false);
         let marker = if attention { "attention" } else { "info" };
         lines.push(format!("- [{marker}] {label}: {value}"));
+        let Some(metric_id) = highlight.get("id").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(context) = focus_context
+            .and_then(|items| items.get(metric_id))
+            .and_then(Value::as_object)
+        else {
+            continue;
+        };
+        lines.extend(render_highlight_context(context));
     }
+    lines
+}
+
+fn render_highlight_context(context: &serde_json::Map<String, Value>) -> Vec<String> {
+    let preferred_fields = [
+        "source",
+        "value_field",
+        "peak_node_id",
+        "peak_element_id",
+        "peak_displacement_x",
+        "peak_displacement_y",
+        "peak_node_temperature_delta",
+        "peak_electric_field_x",
+        "peak_electric_field_y",
+        "peak_flux_density_x",
+        "peak_flux_density_y",
+        "peak_heat_flux_x",
+        "peak_heat_flux_y",
+        "peak_temperature_gradient_x",
+        "peak_temperature_gradient_y",
+        "peak_stress_x",
+        "peak_stress_y",
+        "peak_tau_xy",
+        "peak_element_temperature_delta",
+        "thermo_peak_thermal_strain_id",
+    ];
+    let mut consumed = Vec::new();
+    let mut lines = preferred_fields
+        .iter()
+        .filter_map(|field| {
+            let value = context.get(*field)?;
+            consumed.push(*field);
+            Some(format!("  - {field}: {}", markdown_value(value)))
+        })
+        .collect::<Vec<_>>();
+    let mut extra_fields = context
+        .iter()
+        .filter(|(field, _)| !consumed.iter().any(|used| used == field))
+        .collect::<Vec<_>>();
+    extra_fields.sort_by(|left, right| left.0.cmp(right.0));
+    lines.extend(
+        extra_fields
+            .into_iter()
+            .map(|(field, value)| format!("  - {field}: {}", markdown_value(value))),
+    );
     lines
 }
 

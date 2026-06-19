@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, type Dispatch, type RefObject, type SetStateAction, type UIEvent as ReactUIEvent } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import { strategyResultWindowLimit, type ViewportRenderStrategy } from "@/components/workbench/workbench-render-diagnostics";
 import { fetchDirectMeshResultChunk, fetchResultChunk, type FrontendRuntimeMode, type ResultChunkPayload } from "@/lib/api";
 import {
@@ -85,6 +87,7 @@ type UseWorkbenchResultWindowControllerArgs = {
   resultWindowOffset: number;
   setCanvasViewportWidth: Dispatch<SetStateAction<number>>;
   setMessage: Dispatch<SetStateAction<string>>;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
   setResultWindow: Dispatch<SetStateAction<ResultWindowState | null>>;
   setResultWindowLimit: Dispatch<SetStateAction<number>>;
   setResultWindowOffset: Dispatch<SetStateAction<number>>;
@@ -150,6 +153,7 @@ export function useWorkbenchResultWindowController({
   resultWindowOffset,
   setCanvasViewportWidth,
   setMessage,
+  setSystemAlerts,
   setResultWindow,
   setResultWindowLimit,
   setResultWindowOffset,
@@ -210,6 +214,7 @@ export function useWorkbenchResultWindowController({
 
   useEffect(() => {
     if (!jobId || !result || isAxialResult(result)) {
+      dismissWorkbenchAlert(setSystemAlerts, "result-window-timeout");
       setResultWindow(null);
       return;
     }
@@ -221,6 +226,7 @@ export function useWorkbenchResultWindowController({
     const totalItems = Math.max(totalNodes, totalElements);
 
     if (totalNodes <= RESULT_WINDOW_THRESHOLD && totalElements <= RESULT_WINDOW_THRESHOLD) {
+      dismissWorkbenchAlert(setSystemAlerts, "result-window-timeout");
       setResultWindow(null);
       return;
     }
@@ -295,6 +301,7 @@ export function useWorkbenchResultWindowController({
 
         if (cancelled) return;
 
+        dismissWorkbenchAlert(setSystemAlerts, "result-window-timeout");
         setResultWindow({
           jobId,
           studyKind: nextStudyKind,
@@ -324,6 +331,11 @@ export function useWorkbenchResultWindowController({
         ).catch(() => undefined);
       } catch (error) {
         if (!cancelled && error instanceof Error && error.message.startsWith("request timed out:")) {
+          upsertWorkbenchAlert(setSystemAlerts, {
+            id: "result-window-timeout",
+            message: requestTimedOutLabel,
+            tone: "warning",
+          });
           setMessage(requestTimedOutLabel);
         }
       }
@@ -360,6 +372,7 @@ export function useWorkbenchResultWindowController({
     renderStrategy,
     resultWindowOffset,
     setMessage,
+    setSystemAlerts,
     setResultWindow,
     setResultWindowLimit,
     studyKind,

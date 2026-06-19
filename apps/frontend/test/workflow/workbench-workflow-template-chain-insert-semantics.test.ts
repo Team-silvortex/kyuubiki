@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { applyTemplateChainNodeSemantics } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-insert-semantics.ts";
-import { DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN } from "../../src/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset.ts";
+import {
+  DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN,
+  PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN,
+} from "../../src/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset.ts";
 import {
   buildDiagnosticsCreatedNodes,
   buildDiagnosticsTemplateChainGraph,
@@ -44,4 +47,29 @@ test("applyTemplateChainNodeSemantics leaves non-diagnostics chains untouched", 
   );
 
   assert.deepEqual(createdNodes.map((node) => node.id), ["node_1", "node_2"]);
+});
+
+test("applyTemplateChainNodeSemantics assigns semantic ids for peak diagnostics chains", () => {
+  const graph = buildDiagnosticsTemplateChainGraph();
+  const createdNodes = buildDiagnosticsCreatedNodes();
+  graph.nodes = [...graph.nodes, ...createdNodes];
+
+  applyTemplateChainNodeSemantics(
+    graph as never,
+    PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN as never,
+    createdNodes as never,
+  );
+
+  assert.deepEqual(
+    createdNodes.map((node) => node.id),
+    [
+      "extract_electrostatic_peak",
+      "extract_thermal_peak",
+      "extract_thermo_peak",
+      "compose_diagnostics_bundle",
+      "evaluate_diagnostics_guard",
+      "compose_diagnostics_report",
+      "export_diagnostics_markdown",
+    ],
+  );
 });

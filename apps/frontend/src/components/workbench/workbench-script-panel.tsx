@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WorkbenchAlertStrip } from "@/components/workbench/workbench-alert-strip";
 import { WorkbenchHeadlessWorkflowPanel } from "@/components/workbench/workbench-headless-workflow-panel";
 import type { FrontendMacroAssetRecord } from "@/components/workbench/workbench-headless-workflow-panel";
 import {
@@ -58,6 +59,9 @@ import {
   type WorkbenchScriptSnippetPresetRecord,
   type WorkbenchScriptSnapshot,
 } from "@/lib/scripting/workbench-script-runtime";
+import {
+  describeSensitivePresetSaveError,
+} from "@/lib/scripting/workbench-script-preset-security";
 import { serializeWorkbenchPythonLiteral } from "@/lib/scripting/workbench-script-python-format";
 
 type WorkbenchScriptPanelProps = {
@@ -87,6 +91,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus>("idle");
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [dslError, setDslError] = useState<string | null>(null);
+  const [presetSecurityNotice, setPresetSecurityNotice] = useState<string | null>(null);
   const [presetName, setPresetName] = useState("");
   const [presetRecords, setPresetRecords] = useState<WorkbenchMacroPresetRecord[]>([]);
   const [snippetPresetRecords, setSnippetPresetRecords] = useState<WorkbenchScriptSnippetPresetRecord[]>([]);
@@ -114,6 +119,20 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   const appendOutput = (line: string) => {
     setOutput((current) => [...current.slice(-199), line]);
+  };
+
+  const reportPresetSaveError = (error: unknown) => {
+    const sensitive = describeSensitivePresetSaveError(error);
+    if (sensitive) {
+      const message = `${t.sensitivePresetRejected} ${t.sensitivePresetRejectedDetails} ${sensitive.details}`;
+      appendOutput(`[preset] ${message}`);
+      setRuntimeError(message);
+      setPresetSecurityNotice(message);
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    appendOutput(`[preset] ${message}`);
+    setRuntimeError(message);
   };
 
   const refreshPresetRecords = () => {
@@ -245,12 +264,11 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         name: `${snippet.id.replace(/^snippet\//, "")} ${timestamp}`,
         parameters,
       });
+      setPresetSecurityNotice(null);
       refreshSnippetPresetRecords();
       appendOutput(`[preset] Saved snippet preset for ${snippet.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput(`[preset] ${message}`);
-      setRuntimeError(message);
+      reportPresetSaveError(error);
     }
   };
 
@@ -291,12 +309,11 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         name: parsed.name,
         parameters: parsed.parameters,
       });
+      setPresetSecurityNotice(null);
       refreshSnippetPresetRecords();
       appendOutput(`[preset] Imported snippet preset for ${snippet.id}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput(`[preset] ${message}`);
-      setRuntimeError(message);
+      reportPresetSaveError(error);
     }
   };
 
@@ -352,14 +369,13 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         name: presetName || draft.id.replace(/^macro\//, "").replaceAll("-", " "),
         macro: draft,
       });
+      setPresetSecurityNotice(null);
       setMacroDraftBuffer(saved.macro);
       setPresetName(saved.name);
       refreshPresetRecords();
       appendOutput(`[preset] ${t.presetSaved}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput(`[preset] ${message}`);
-      setRuntimeError(message);
+      reportPresetSaveError(error);
     }
   };
 
@@ -471,14 +487,13 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         name: nextPresetName,
         macro: draft,
       });
+      setPresetSecurityNotice(null);
       setMacroDraftBuffer(saved.macro);
       setPresetName(saved.name);
       refreshPresetRecords();
       appendOutput(`[preset] ${t.timelineMacroPresetSaved}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      appendOutput(`[preset] ${message}`);
-      setRuntimeError(message);
+      reportPresetSaveError(error);
     }
   };
 
@@ -500,6 +515,24 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
 
   return (
     <>
+      {presetSecurityNotice ? (
+        <section className="sidebar-card sidebar-card--compact">
+          <div className="card-head">
+            <h2>{t.projectPresets}</h2>
+            <span>{t.riskSensitive}</span>
+          </div>
+          <WorkbenchAlertStrip
+            alerts={[
+              {
+                id: "preset-security-notice",
+                message: presetSecurityNotice,
+                tone: "warning",
+              },
+            ]}
+          />
+        </section>
+      ) : null}
+
       <WorkbenchScriptLaunchCard
         clearOutput={() => setOutput([])}
         copy={t}
@@ -507,7 +540,7 @@ export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLo
         recordingMode={recordingMode}
         resetScript={() => setScriptCode(DEFAULT_WORKBENCH_PYTHON)}
         runScript={() => void runScript()}
-        runtimeError={runtimeError}
+        runtimeError={runtimeError === presetSecurityNotice ? null : runtimeError}
         runtimeStatus={runtimeStatus}
         toggleRecordingMode={onToggleRecordingMode}
       />

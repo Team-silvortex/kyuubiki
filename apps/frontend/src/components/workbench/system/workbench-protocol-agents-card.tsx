@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 type ProtocolAgentMetric = {
   label: string;
@@ -37,11 +38,7 @@ export const WorkbenchProtocolAgentsCard = memo(function WorkbenchProtocolAgents
   agents,
 }: WorkbenchProtocolAgentsCardProps) {
   return (
-    <section className="sidebar-card sidebar-card--compact">
-      <div className="card-head">
-        <h2>{title}</h2>
-        <span>{countLabel}</span>
-      </div>
+    <WorkbenchSystemOverviewCard title={title} status={countLabel}>
       {agents.length === 0 ? (
         <p className="card-copy">{emptyLabel}</p>
       ) : (
@@ -85,6 +82,6 @@ export const WorkbenchProtocolAgentsCard = memo(function WorkbenchProtocolAgents
           ))}
         </div>
       )}
-    </section>
+    </WorkbenchSystemOverviewCard>
   );
 });

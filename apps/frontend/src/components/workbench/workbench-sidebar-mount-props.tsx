@@ -97,6 +97,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         runWorkflowCatalogEntry={props.runWorkflowCatalogEntry}
         runWorkflowDraft={props.runWorkflowDraft}
         openHistoryJob={props.openHistoryJob}
+        setSystemAlerts={props.setSystemAlerts}
       />
     ),
     librarySection: (

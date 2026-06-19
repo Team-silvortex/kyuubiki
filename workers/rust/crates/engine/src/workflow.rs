@@ -12,8 +12,8 @@ use kyuubiki_protocol::{
 };
 use serde_json::Value;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
 
 fn incoming_artifact_keys(
     incoming: &[&kyuubiki_protocol::WorkflowEdge],

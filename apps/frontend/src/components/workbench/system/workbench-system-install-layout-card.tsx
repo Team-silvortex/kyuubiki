@@ -1,6 +1,7 @@
 "use client";
 
 import { buildWorkbenchInstallGovernanceDiagnostics, WORKBENCH_STANDARD_STORAGE_CONTRACT } from "@/components/workbench/system/workbench-system-storage-contract";
+import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 type WorkbenchSystemInstallLayoutCardProps = {
   title: string;
@@ -33,12 +34,7 @@ export function WorkbenchSystemInstallLayoutCard({
   ] as const;
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
-      <div className="card-head">
-        <h2>{title}</h2>
-        <span>local</span>
-      </div>
-      <p className="card-copy">{hint}</p>
+    <WorkbenchSystemOverviewCard hint={hint} status="local" title={title}>
       <div className="sidebar-list">
         {rows.map(([label, value]) => (
           <div className="sidebar-list__row" key={label}>
@@ -47,6 +43,6 @@ export function WorkbenchSystemInstallLayoutCard({
           </div>
         ))}
       </div>
-    </section>
+    </WorkbenchSystemOverviewCard>
   );
 }

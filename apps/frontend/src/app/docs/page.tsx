@@ -12,7 +12,7 @@ const DOCS = [
     href: "/docs/workflow-architecture",
     title: "Workflow Architecture",
     summary:
-      "System-wide overview of operators, graph contracts, runtime records, artifacts, and audit surfaces.",
+      "System-wide overview of operators, graph contracts, runtime records, artifacts, audit surfaces, and the newer peak diagnostics flow.",
   },
   {
     href: "/docs/workflow-bridge-contracts",
@@ -45,7 +45,8 @@ export default function DocsPage() {
         <p style={copyStyle}>
           This documentation hub collects the architectural and contract-level references for the
           workflow system so the builder, headless SDK, and future runtime targets can align on one
-          shared model.
+          shared model. It also tracks newer workflow families such as the dedicated peak
+          diagnostics review path.
         </p>
 
         <section style={{ marginTop: 32, display: "grid", gap: 16 }}>

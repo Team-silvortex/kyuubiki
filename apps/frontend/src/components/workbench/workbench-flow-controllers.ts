@@ -27,6 +27,7 @@ export function useWorkbenchFlowControllers(props: Record<string, any>) {
     setDirectMeshExecution: props.setDirectMeshExecution,
     setJob: props.setJob,
     setResult: props.setResult,
+    setSystemAlerts: props.setSystemAlerts,
     studyKind: props.studyKind,
     axialForm: props.axialForm,
     beamModel: props.beamModel,

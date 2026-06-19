@@ -218,11 +218,11 @@
         </p>
         <div class="summary-grid">
           <article class="summary-card">
-            <strong>4</strong>
+            <strong>5</strong>
             <span class="muted">已收口的高关注存储链</span>
           </article>
           <article class="summary-card">
-            <strong>1</strong>
+            <strong>0</strong>
             <span class="muted">剩余中风险内容载荷面</span>
           </article>
           <article class="summary-card">
@@ -276,6 +276,18 @@
               旧的浏览器本地草稿会在读取时自动迁移并从 <code>localStorage</code> 删除。
             </p>
           </article>
+          <article class="finding">
+            <header>
+              <span class="pill low">Closed</span>
+              <h3>宏预设与 snippet 预设已拦截疑似密钥字段</h3>
+            </header>
+            <p>
+              保存预设时，如果参数键名或宏 payload 字段路径中出现明显像
+              <code>token</code>、<code>secret</code>、<code>apiKey</code>、
+              <code>authorization</code>、<code>cookie</code> 这类字段，
+              当前版本会直接拒绝写盘，避免把疑似凭据长期保留在浏览器本地。
+            </p>
+          </article>
         </div>
       </section>
 
@@ -284,18 +296,18 @@
         <div class="finding-grid">
           <article class="finding">
             <header>
-              <span class="pill medium">Priority 1</span>
-              <h3>宏预设和代码片段预设会保留自动化 payload</h3>
+              <span class="pill low">Operational</span>
+              <h3>预设仍然会保留非敏感自动化参数</h3>
             </header>
             <p>
               <code>kyuubiki-workbench-macro-presets</code> 与
               <code>kyuubiki-workbench-snippet-presets</code> 当前会保存宏步骤、snippet 参数和项目级预设。
-              这些数据本身不是认证密钥，但可能包含 URL、选择器、业务字段、项目路径、
-              甚至被用户手工写进去的凭据。
+              现在疑似密钥字段已经被写盘拦截，但 URL、选择器、业务字段、项目路径等
+              非密钥自动化参数仍然会作为项目预设长期保留。
             </p>
             <ul>
-              <li>建议增加导出型预设与本地临时预设分层。</li>
-              <li>建议对明显像 token / key / secret 的字段做写盘前拦截或提醒。</li>
+              <li>建议后续增加“临时预设”和“长期预设”分层。</li>
+              <li>建议在 UI 上补一条可见提示，明确说明哪些字段不会被允许保存。</li>
             </ul>
           </article>
         </div>
@@ -329,6 +341,11 @@
                 <td>Python / DSL 草稿仍可自动恢复，但不再跨浏览器重启长期残留。</td>
               </tr>
               <tr>
+                <td>宏预设与 snippet 预设</td>
+                <td><span class="pill low">Low</span></td>
+                <td>疑似密钥字段已在保存时被拒绝，剩余持久化内容主要是非敏感自动化参数。</td>
+              </tr>
+              <tr>
                 <td>工作流模板链收藏、算子搜索收藏、最近使用记录</td>
                 <td><span class="pill low">Low</span></td>
                 <td>属于偏好类元数据，不直接承载敏感业务内容。</td>
@@ -351,7 +368,7 @@
       <section class="section">
         <h2>建议落地顺序</h2>
         <ul>
-          <li>第一步：给宏预设 / snippet 预设加入敏感字段写盘提醒或字段级过滤。</li>
+          <li>第一步：在 UI 上补充预设保存失败时的显式敏感字段提示。</li>
           <li>第二步：在系统存储面板里把“内容载荷类存储”和“偏好类存储”分开显示。</li>
           <li>第三步：把“本地不会长期保留敏感输入”的策略同步到 UI 文案和用户文档。</li>
           <li>第四步：如果后续支持账号体系，再把预设类数据切到显式导出 / 导入或云端托管。</li>

@@ -7,12 +7,14 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
   alias KyuubikiWeb.WorkflowTemplateElectromagneticEntries
   alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardEntries
   alias KyuubikiWeb.WorkflowTemplateElectromagneticGuardThermoEntries
+  alias KyuubikiWeb.WorkflowTemplateFocusEntries
   alias KyuubikiWeb.WorkflowTemplateSolverContractGraphs
   alias KyuubikiWeb.WorkflowTemplateThermalEntries
 
   def list do
     WorkflowTemplateElectromagneticEntries.list() ++
       WorkflowTemplateDiagnosticsEntries.list() ++
+      WorkflowTemplateFocusEntries.list() ++
       WorkflowTemplateElectromagneticGuardEntries.list() ++
       WorkflowTemplateElectromagneticGuardThermoEntries.list() ++
       WorkflowTemplateBridgeEntries.list() ++
@@ -124,5 +126,4 @@ defmodule KyuubikiWeb.WorkflowTemplateCustomEntries do
       "output_artifacts" => output_artifacts
     }
   end
-
 end

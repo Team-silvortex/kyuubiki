@@ -81,7 +81,7 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     ],
     mode: "careful",
     cleanupLabel: "Manual review first",
-    detail: "Saved macro presets and snippet presets tied to project scripting workflows.",
+    detail: "Saved macro presets and snippet presets tied to project scripting workflows. Secret-like fields are blocked at save time, but non-sensitive automation parameters are still persisted.",
   },
   {
     id: "workflow_favorites",

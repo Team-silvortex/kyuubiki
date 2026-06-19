@@ -16,7 +16,13 @@ import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflo
 import { listStoredWorkflowSnapshots } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
 import { listWorkflowDiagnosticsReports } from "@/components/workbench/workflow/workbench-workflow-diagnostics-report-contract";
 import {
+  buildWorkflowDiagnosticsFocusCardSummary,
   formatWorkflowDiagnosticsMetricValue,
+  orderWorkflowDiagnosticsFocusMetrics,
+  orderWorkflowDiagnosticsHighlights,
+  resolveWorkflowDiagnosticsFocusContext,
+  resolveWorkflowDiagnosticsReportMode,
+  resolveWorkflowDiagnosticsReportTitle,
   summarizeWorkflowDiagnosticsReport,
 } from "@/components/workbench/workflow/workbench-workflow-diagnostics-presentation";
 import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
@@ -132,10 +138,11 @@ function renderSummaryArtifactRows(run: WorkflowRunRecord) {
 function renderDiagnosticsHighlightRows(run: WorkflowRunRecord) {
   const report = listWorkflowDiagnosticsReports(run.result ?? null)[0];
   if (!report) return "";
-  return report.payload.report_highlights
+  const mode = resolveWorkflowDiagnosticsReportMode(report);
+  return orderWorkflowDiagnosticsHighlights(report)
     .map(
       (highlight) =>
-        `<tr><td>${renderToneBadge(highlight.attention ? "attention" : "info", highlight.attention ? "risk" : "watch")}</td><td>${escapeHtml(highlight.label)}</td><td>${escapeHtml(formatWorkflowDiagnosticsMetricValue(highlight.value))}</td><td>${escapeHtml(highlight.id)}</td></tr>`,
+        `<tr><td>${renderToneBadge(mode === "peak" ? (highlight.attention ? "peak" : "review") : (highlight.attention ? "attention" : "info"), highlight.attention ? "risk" : "watch")}</td><td>${escapeHtml(highlight.label)}</td><td>${escapeHtml(formatWorkflowDiagnosticsMetricValue(highlight.value))}</td><td>${escapeHtml(highlight.id)}</td><td>${renderDiagnosticsContextSections(highlight.id, report)}</td></tr>`,
     )
     .join("");
 }
@@ -143,10 +150,27 @@ function renderDiagnosticsHighlightRows(run: WorkflowRunRecord) {
 function renderDiagnosticsFocusRows(run: WorkflowRunRecord) {
   const report = listWorkflowDiagnosticsReports(run.result ?? null)[0];
   if (!report) return "";
-  return Object.entries(report.payload.report_focus_metrics)
+  return orderWorkflowDiagnosticsFocusMetrics(report)
     .map(
       ([key, value]) =>
-        `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(formatWorkflowDiagnosticsMetricValue(value))}</td></tr>`,
+        `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(formatWorkflowDiagnosticsMetricValue(value))}</td><td>${renderDiagnosticsContextSections(key, report)}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderDiagnosticsContextSections(
+  key: string,
+  report: NonNullable<ReturnType<typeof listWorkflowDiagnosticsReports>[number]>,
+) {
+  const summary = buildWorkflowDiagnosticsFocusCardSummary(
+    key,
+    resolveWorkflowDiagnosticsFocusContext(report, key),
+  );
+  if (summary.sections.length === 0) return "<ul><li>--</li></ul>";
+  return summary.sections
+    .map(
+      (section) =>
+        `<div><strong>${escapeHtml(section.label)}</strong><ul>${renderList(section.lines)}</ul></div>`,
     )
     .join("");
 }
@@ -277,6 +301,7 @@ export function buildWorkflowRunAuditReportHtml({
   const diagnosticsFocusRows = renderDiagnosticsFocusRows(run);
   const diagnosticsReport = listWorkflowDiagnosticsReports(run.result ?? null)[0] ?? null;
   const diagnosticsPreview = summarizeWorkflowDiagnosticsReport(diagnosticsReport);
+  const diagnosticsTitle = resolveWorkflowDiagnosticsReportTitle(diagnosticsReport);
   const contractWarningRows = renderWarningRows(contractWarnings);
   const summaryArtifactCount = listWorkflowSummaryArtifacts(run.result ?? null).length;
   const supportedNodeCount = graph?.nodes.filter((node) => isWorkflowNodeSupportedInRuntime(node)).length ?? 0;
@@ -432,17 +457,17 @@ export function buildWorkflowRunAuditReportHtml({
       <table><thead><tr><th>bridge</th><th>design field map</th><th>design transform</th><th>seed model</th><th>runtime upstream</th><th>runtime downstream</th><th>source</th><th>target</th><th>status</th></tr></thead><tbody>${bridgeContractCompareRows || '<tr><td colspan="9">--</td></tr>'}</tbody></table>
     </section>
     <section>
-      <h2>Diagnostics focus</h2>
+      <h2>${escapeHtml(diagnosticsTitle)}</h2>
       <table class="meta"><tbody>${renderRows([
         ["report artifact", diagnosticsReport?.artifactKey ?? "--"],
         ["guard status", diagnosticsReport?.payload.report_guard_status ?? "--"],
         ["recommendation", diagnosticsReport?.payload.report_guard_recommendation ?? "--"],
         ["summary preview", diagnosticsPreview ?? "--"],
-        ["highlight count", String(diagnosticsReport?.payload.report_highlights.length ?? 0)],
-        ["focus metric count", String(Object.keys(diagnosticsReport?.payload.report_focus_metrics ?? {}).length)],
+        ["highlight count", String(orderWorkflowDiagnosticsHighlights(diagnosticsReport).length)],
+        ["focus metric count", String(orderWorkflowDiagnosticsFocusMetrics(diagnosticsReport).length)],
       ])}</tbody></table>
-      <table><thead><tr><th>tone</th><th>highlight</th><th>value</th><th>id</th></tr></thead><tbody>${diagnosticsHighlightRows || '<tr><td colspan="4">--</td></tr>'}</tbody></table>
-      <table><thead><tr><th>metric</th><th>value</th></tr></thead><tbody>${diagnosticsFocusRows || '<tr><td colspan="2">--</td></tr>'}</tbody></table>
+      <table><thead><tr><th>tone</th><th>highlight</th><th>value</th><th>id</th><th>context</th></tr></thead><tbody>${diagnosticsHighlightRows || '<tr><td colspan="5">--</td></tr>'}</tbody></table>
+      <table><thead><tr><th>metric</th><th>value</th><th>context</th></tr></thead><tbody>${diagnosticsFocusRows || '<tr><td colspan="3">--</td></tr>'}</tbody></table>
     </section>
     <section>
       <h2>Summary artifact contracts</h2>

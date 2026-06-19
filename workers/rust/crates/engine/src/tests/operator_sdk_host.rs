@@ -1,12 +1,12 @@
 use crate::{
+    BuiltInOperatorRegistryKind, ExternalOperatorHostConfig, ExternalOperatorTrustPolicy,
     built_in_registry_with_external_packages, load_external_operator_packages_with_deferred_host,
-    load_external_operator_packages_with_dynamic_host, BuiltInOperatorRegistryKind,
-    ExternalOperatorHostConfig, ExternalOperatorTrustPolicy,
+    load_external_operator_packages_with_dynamic_host,
 };
 use kyuubiki_operator_sdk::{
-    current_platform_library_file_name, current_platform_library_path, partial_validation,
     OperatorDescriptorBuilder, OperatorHandler, OperatorPackageActivator, OperatorPackageLoadError,
     OperatorPackageLoadPlan, OperatorRegistry, OperatorSdkError,
+    current_platform_library_file_name, current_platform_library_path, partial_validation,
 };
 use kyuubiki_protocol::{OperatorKind, OperatorRunContext, OperatorRunRequest, OperatorRunResult};
 use std::collections::BTreeSet;
@@ -151,9 +151,11 @@ fn deferred_host_reports_dynamic_loading_as_not_enabled() {
         Err(error) => error,
     };
 
-    assert!(error
-        .to_string()
-        .contains("runtime host has not enabled dynamic loading"));
+    assert!(
+        error
+            .to_string()
+            .contains("runtime host has not enabled dynamic loading")
+    );
     assert!(error.to_string().contains("operator.beta"));
 }
 
@@ -267,9 +269,11 @@ fn host_policy_rejects_disallowed_runtime() {
         Err(error) => error,
     };
 
-    assert!(error
-        .to_string()
-        .contains("runtime python_wasm is not allowed"));
+    assert!(
+        error
+            .to_string()
+            .contains("runtime python_wasm is not allowed")
+    );
     assert!(error.to_string().contains("operator.epsilon"));
 }
 

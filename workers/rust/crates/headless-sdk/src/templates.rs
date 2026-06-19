@@ -1,8 +1,8 @@
 use crate::template_search::{
     matches_search_tokens, normalize_search_token, score_search_tokens, tokenize_search_query,
 };
-use crate::{HeadlessRuntimeStyle, HeadlessTemplateDescriptor, HeadlessWorkflowDocument};
 use crate::template_workflows::build_template_workflow;
+use crate::{HeadlessRuntimeStyle, HeadlessTemplateDescriptor, HeadlessWorkflowDocument};
 use serde::Serialize;
 use std::collections::BTreeSet;
 
@@ -296,18 +296,25 @@ pub fn search_templates(
         })
         .filter_map(|template| {
             let metadata = template_search_metadata(template);
-            matches_search_tokens(&metadata.fields, &tokens)
-                .then_some((template, score_search_tokens(&metadata.weighted_fields, &tokens)))
+            matches_search_tokens(&metadata.fields, &tokens).then_some((
+                template,
+                score_search_tokens(&metadata.weighted_fields, &tokens),
+            ))
         })
         .collect::<Vec<_>>();
     if !tokens.is_empty() {
-        templates.sort_by(|(left_template, left_score), (right_template, right_score)| {
-            right_score
-                .cmp(left_score)
-                .then_with(|| left_template.id.cmp(right_template.id))
-        });
+        templates.sort_by(
+            |(left_template, left_score), (right_template, right_score)| {
+                right_score
+                    .cmp(left_score)
+                    .then_with(|| left_template.id.cmp(right_template.id))
+            },
+        );
     }
-    templates.into_iter().map(|(template, _)| template).collect()
+    templates
+        .into_iter()
+        .map(|(template, _)| template)
+        .collect()
 }
 
 pub fn suggest_templates(query: &str, limit: usize) -> Vec<&'static HeadlessTemplateDescriptor> {
@@ -316,15 +323,20 @@ pub fn suggest_templates(query: &str, limit: usize) -> Vec<&'static HeadlessTemp
         .iter()
         .map(|template| {
             let metadata = template_search_metadata(template);
-            (template, score_search_tokens(&metadata.weighted_fields, &tokens))
+            (
+                template,
+                score_search_tokens(&metadata.weighted_fields, &tokens),
+            )
         })
         .filter(|(_, score)| *score > 0)
         .collect::<Vec<_>>();
-    templates.sort_by(|(left_template, left_score), (right_template, right_score)| {
-        right_score
-            .cmp(left_score)
-            .then_with(|| left_template.id.cmp(right_template.id))
-    });
+    templates.sort_by(
+        |(left_template, left_score), (right_template, right_score)| {
+            right_score
+                .cmp(left_score)
+                .then_with(|| left_template.id.cmp(right_template.id))
+        },
+    );
     templates
         .into_iter()
         .take(limit)
@@ -341,30 +353,39 @@ pub fn suggest_template_details(query: &str, limit: usize) -> Vec<HeadlessTempla
             let score = score_search_tokens(&metadata.weighted_fields, &tokens);
             let matched_terms = tokens
                 .iter()
-                .filter(|token| metadata.fields.iter().any(|field| field.contains(token.as_str())))
+                .filter(|token| {
+                    metadata
+                        .fields
+                        .iter()
+                        .any(|field| field.contains(token.as_str()))
+                })
                 .cloned()
                 .collect::<Vec<_>>();
             (template, score, matched_terms)
         })
         .filter(|(_, score, _)| *score > 0)
         .collect::<Vec<_>>();
-    templates.sort_by(|(left_template, left_score, _), (right_template, right_score, _)| {
-        right_score
-            .cmp(left_score)
-            .then_with(|| left_template.id.cmp(right_template.id))
-    });
+    templates.sort_by(
+        |(left_template, left_score, _), (right_template, right_score, _)| {
+            right_score
+                .cmp(left_score)
+                .then_with(|| left_template.id.cmp(right_template.id))
+        },
+    );
     templates
         .into_iter()
         .take(limit)
-        .map(|(template, score, matched_terms)| HeadlessTemplateSuggestion {
-            id: template.id.to_string(),
-            title: template.title.to_string(),
-            category: template.category.to_string(),
-            runtime_style: template.runtime_style,
-            tags: template.tags.iter().map(|tag| (*tag).to_string()).collect(),
-            score,
-            matched_terms,
-        })
+        .map(
+            |(template, score, matched_terms)| HeadlessTemplateSuggestion {
+                id: template.id.to_string(),
+                title: template.title.to_string(),
+                category: template.category.to_string(),
+                runtime_style: template.runtime_style,
+                tags: template.tags.iter().map(|tag| (*tag).to_string()).collect(),
+                score,
+                matched_terms,
+            },
+        )
         .collect()
 }
 
@@ -404,7 +425,12 @@ fn template_search_metadata(template: &HeadlessTemplateDescriptor) -> TemplateSe
     let title = normalize_search_token(template.title);
     let description = normalize_search_token(template.description);
     let category = normalize_search_token(template.category);
-    let mut fields = vec![id.clone(), title.clone(), description.clone(), category.clone()];
+    let mut fields = vec![
+        id.clone(),
+        title.clone(),
+        description.clone(),
+        category.clone(),
+    ];
     fields.extend(tags.iter().cloned());
     fields.extend(action_tokens.iter().cloned());
     let mut weighted_fields = vec![(id, 5usize), (title, 4), (category, 3), (description, 1)];

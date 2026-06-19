@@ -1,3 +1,6 @@
+use crate::workflow_bundle_focus::{
+    report_focus_context, report_focus_metrics, report_focus_payloads,
+};
 use serde_json::Value;
 
 pub fn compose_diagnostics_bundle(payload: Value, config: Value) -> Result<Value, String> {
@@ -214,6 +217,8 @@ pub fn compose_diagnostics_report_payload(payload: Value, config: Value) -> Resu
         .and_then(Value::as_bool)
         .unwrap_or(true);
     let focus_metrics = report_focus_metrics(bundle);
+    let focus_context = report_focus_context(bundle);
+    let focus_payloads = report_focus_payloads(bundle);
     let highlights = report_highlights(bundle, guard);
 
     let mut report = Value::Object(bundle.clone());
@@ -250,105 +255,21 @@ pub fn compose_diagnostics_report_payload(payload: Value, config: Value) -> Resu
                 .cloned()
                 .unwrap_or_else(|| Value::Array(Vec::new())),
         );
-        report_object.insert("report_focus_metrics".to_string(), Value::Object(focus_metrics));
+        report_object.insert(
+            "report_focus_metrics".to_string(),
+            Value::Object(focus_metrics),
+        );
+        report_object.insert(
+            "report_focus_context".to_string(),
+            Value::Object(focus_context),
+        );
+        report_object.insert(
+            "report_focus_payloads".to_string(),
+            Value::Object(focus_payloads),
+        );
         report_object.insert("report_highlights".to_string(), Value::Array(highlights));
     }
     Ok(report)
-}
-
-fn report_focus_metrics(bundle: &serde_json::Map<String, Value>) -> serde_json::Map<String, Value> {
-    let mut focus = serde_json::Map::new();
-    let Some(payloads) = bundle.get("bundle_payloads").and_then(Value::as_object) else {
-        return focus;
-    };
-
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "electrostatic",
-        &["electrostatic_potential_max"],
-        "electrostatic.potential_max",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "electrostatic",
-        &["electrostatic_peak_field", "electrostatic_field_peak_magnitude"],
-        "electrostatic.field_peak",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermal",
-        &["thermal_temperature_max"],
-        "thermal.temperature_max",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermal",
-        &["thermal_peak_flux", "thermal_flux_peak_magnitude"],
-        "thermal.flux_peak",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermo",
-        &["thermo_temperature_delta_max"],
-        "thermo.temperature_delta_max",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermo",
-        &["thermo_peak_displacement", "thermo_displacement_peak_magnitude"],
-        "thermo.displacement_peak",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermo",
-        &["thermo_peak_stress", "thermo_stress_peak"],
-        "thermo.stress_peak",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermo",
-        &["thermo_peak_thermal_strain", "thermo_thermal_strain_peak"],
-        "thermo.thermal_strain_peak",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermo",
-        &["thermo_peak_mechanical_strain", "thermo_mechanical_strain_peak"],
-        "thermo.mechanical_strain_peak",
-    );
-    insert_focus_metric(
-        &mut focus,
-        payloads,
-        "thermo",
-        &["thermo_peak_total_strain", "thermo_total_strain_peak"],
-        "thermo.total_strain_peak",
-    );
-
-    focus
-}
-
-fn insert_focus_metric(
-    focus: &mut serde_json::Map<String, Value>,
-    payloads: &serde_json::Map<String, Value>,
-    source: &str,
-    fields: &[&str],
-    key: &str,
-) {
-    let Some(payload) = payloads.get(source).and_then(Value::as_object) else {
-        return;
-    };
-    if let Some(value) = fields.iter().find_map(|field| payload.get(*field).cloned()) {
-        focus.insert(key.to_string(), value);
-    }
 }
 
 fn report_highlights(
@@ -379,7 +300,10 @@ fn report_highlights(
         "electrostatic.field_peak",
         "Electrostatic field peak",
         &triggered_fields,
-        &["electrostatic_peak_field", "electrostatic_field_peak_magnitude"],
+        &[
+            "electrostatic_peak_field",
+            "electrostatic_field_peak_magnitude",
+        ],
     );
     push_highlight(
         &mut highlights,

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import type { WorkflowGraphEdge, WorkflowGraphJobResult, WorkflowGraphNode, WorkflowGraphPort, WorkflowOperatorDescriptor } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
@@ -39,6 +41,7 @@ type WorkbenchWorkflowTopologyCardProps = {
   onAddEdge: () => void;
   onRemoveEdge: (edgeId: string) => void;
   onUpdateEdge: (edgeId: string, updater: (edge: WorkflowGraphEdge) => WorkflowGraphEdge) => void;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
 const NODE_KIND_OPTIONS = ["input", "solve", "transform", "extract", "export", "output", "condition"];
@@ -81,6 +84,7 @@ export function WorkbenchWorkflowTopologyCard({
   onAddEdge,
   onRemoveEdge,
   onUpdateEdge,
+  setSystemAlerts,
 }: WorkbenchWorkflowTopologyCardProps) {
   const [nextNodeKind, setNextNodeKind] = useState("transform");
   const [nextOperatorId, setNextOperatorId] = useState("");
@@ -196,7 +200,7 @@ export function WorkbenchWorkflowTopologyCard({
         <button onClick={() => onAddNode({ kind: nextNodeKind, operatorId: nextOperatorId || undefined })} type="button">{labels.addNodeLabel}</button>
       </div>
       <WorkbenchWorkflowOperatorDescriptorSummary descriptor={nextOperatorDescriptor} labels={labels} />
-      <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={selectedNodes[0]?.id ?? null} selectedNodes={selectedNodes} />
+      <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={selectedNodes[0]?.id ?? null} selectedNodes={selectedNodes} setSystemAlerts={setSystemAlerts} />
       <div className="sidebar-stack workflow-topology-node-stack" data-workflow-topology-stack="nodes">
         {selectedNodes.map((node) => (
           <WorkbenchWorkflowTopologyNodeSection

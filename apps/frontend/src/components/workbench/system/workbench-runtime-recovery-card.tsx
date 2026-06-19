@@ -1,6 +1,7 @@
 "use client";
 
 import type { WorkbenchRuntimeRecoveryState } from "@/components/workbench/workbench-runtime-recovery";
+import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 type WorkbenchRuntimeRecoveryCardProps = {
   language: "en" | "zh" | "ja" | "es";
@@ -77,11 +78,20 @@ export function WorkbenchRuntimeRecoveryCard({
         : copy.healthy;
 
   return (
-    <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-      <div className="card-head">
-        <h2>{copy.title}</h2>
-        <span>{statusLabel}</span>
-      </div>
+    <WorkbenchSystemOverviewCard
+      className="runtime-overview-card"
+      status={statusLabel}
+      title={copy.title}
+      actions={
+        <>
+          <button onClick={onRetryAll} type="button">{copy.retryAll}</button>
+          <button onClick={onRetryHealth} type="button">{copy.health}</button>
+          <button onClick={onRetryProjects} type="button">{copy.projects}</button>
+          <button onClick={onRetrySecurityEvents} type="button">{copy.security}</button>
+          <button onClick={onRetryWorkflowCatalog} type="button">{copy.workflow}</button>
+        </>
+      }
+    >
       {recovery.issues.length === 0 ? (
         <p className="card-copy">{copy.empty}</p>
       ) : (
@@ -102,13 +112,6 @@ export function WorkbenchRuntimeRecoveryCard({
           ))}
         </div>
       )}
-      <div className="button-row" style={{ flexWrap: "wrap" }}>
-        <button onClick={onRetryAll} type="button">{copy.retryAll}</button>
-        <button onClick={onRetryHealth} type="button">{copy.health}</button>
-        <button onClick={onRetryProjects} type="button">{copy.projects}</button>
-        <button onClick={onRetrySecurityEvents} type="button">{copy.security}</button>
-        <button onClick={onRetryWorkflowCatalog} type="button">{copy.workflow}</button>
-      </div>
-    </section>
+    </WorkbenchSystemOverviewCard>
   );
 }

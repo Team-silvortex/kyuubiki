@@ -84,17 +84,19 @@ pub fn extract_thermo_result_diagnostics(payload: Value, config: Value) -> Resul
             &["displacement_magnitude"],
         )),
     );
-    let explicit_stress_peak = if let Some(field) = config.get("stress_field").and_then(Value::as_str) {
-        peak_scalar_entry(elements, field)
-    } else {
-        peak_scalar_entry_any(elements, &["von_mises_stress", "von_mises"])
-    };
+    let explicit_stress_peak =
+        if let Some(field) = config.get("stress_field").and_then(Value::as_str) {
+            peak_scalar_entry(elements, field)
+        } else {
+            peak_scalar_entry_any(elements, &["von_mises_stress", "von_mises"])
+        };
     let payload_stress_peak = object.get("max_stress").and_then(Value::as_f64);
-    let component_stress_peak =
-        peak_scalar_component_entry_any(elements, &["stress_x", "stress_y", "stress_z", "stress_xy"]);
+    let component_stress_peak = peak_scalar_component_entry_any(
+        elements,
+        &["stress_x", "stress_y", "stress_z", "stress_xy"],
+    );
     let thermal_strain_peak = resolve_thermo_strain_peak(elements, &config, "thermal_strain");
-    let mechanical_strain_peak =
-        resolve_thermo_strain_peak(elements, &config, "mechanical_strain");
+    let mechanical_strain_peak = resolve_thermo_strain_peak(elements, &config, "mechanical_strain");
     let total_strain_peak = resolve_thermo_strain_peak(elements, &config, "total_strain");
 
     let diagnostics = serde_json::json!({
@@ -129,7 +131,12 @@ pub fn extract_thermo_result_diagnostics(payload: Value, config: Value) -> Resul
             }),
         )
     } else {
-        merge_peak_scalar(diagnostics, &prefix, "stress", component_stress_peak.as_ref())
+        merge_peak_scalar(
+            diagnostics,
+            &prefix,
+            "stress",
+            component_stress_peak.as_ref(),
+        )
     };
     let diagnostics = merge_peak_scalar(
         diagnostics,
@@ -143,8 +150,12 @@ pub fn extract_thermo_result_diagnostics(payload: Value, config: Value) -> Resul
         "mechanical_strain",
         mechanical_strain_peak.as_ref(),
     );
-    let diagnostics =
-        merge_peak_scalar(diagnostics, &prefix, "total_strain", total_strain_peak.as_ref());
+    let diagnostics = merge_peak_scalar(
+        diagnostics,
+        &prefix,
+        "total_strain",
+        total_strain_peak.as_ref(),
+    );
 
     ensure_non_empty_diagnostics(
         diagnostics,
@@ -464,7 +475,8 @@ fn merge_peak_vector(
 
 fn entry_as_identifier(entry: &Value) -> Value {
     entry.get("id").cloned().unwrap_or_else(|| {
-        entry.as_str()
+        entry
+            .as_str()
             .map(Value::from)
             .unwrap_or_else(|| Value::String("unknown".to_string()))
     })

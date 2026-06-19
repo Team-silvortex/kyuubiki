@@ -56,6 +56,6 @@ test("benchmark-style workflow previews prefer diagnostics report highlights", (
 
   assert.equal(
     summarizeWorkflowResultArtifacts(result),
-    "Thermal temperature peak=4.125e+2, Thermal flux peak=8.820e+1",
+    "peak review: Thermal flux peak=8.820e+1, Thermal temperature peak=4.125e+2",
   );
 });

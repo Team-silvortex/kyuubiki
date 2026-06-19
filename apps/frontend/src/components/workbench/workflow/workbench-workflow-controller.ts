@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
   fetchJobStatus,
   fetchWorkflowCatalog,
@@ -52,6 +54,7 @@ type UseWorkbenchWorkflowControllerArgs = {
   setRuntimeRecovery: Dispatch<SetStateAction<WorkbenchRuntimeRecoveryState>>;
   setJob: Dispatch<SetStateAction<JobEnvelope["job"] | null>>;
   setMessage: Dispatch<SetStateAction<string>>;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
   openWorkflowRunsSurface: (workflowId: string) => void;
 };
 
@@ -81,6 +84,7 @@ export function useWorkbenchWorkflowController({
   setRuntimeRecovery,
   setJob,
   setMessage,
+  setSystemAlerts,
   openWorkflowRunsSurface,
 }: UseWorkbenchWorkflowControllerArgs) {
   const [workflowCatalog, setWorkflowCatalog] = useState<WorkflowCatalogEntry[]>([]);
@@ -106,9 +110,16 @@ export function useWorkbenchWorkflowController({
           ? current
           : [...localEntries, ...payload.workflows][0]?.id ?? null,
       );
+      dismissWorkbenchAlert(setSystemAlerts, "workflow-catalog-error");
       setRuntimeRecovery((current) => clearWorkbenchRuntimeRecoveryIssue(current, "workflow_catalog"));
       setMessage(labels.workflowCatalogLoaded);
     } catch (error) {
+      const message = error instanceof Error ? error.message : labels.initialFailed;
+      upsertWorkbenchAlert(setSystemAlerts, {
+        id: "workflow-catalog-error",
+        message,
+        tone: "error",
+      });
       setRuntimeRecovery((current) =>
         upsertWorkbenchRuntimeRecoveryIssue({
           channel: "workflow_catalog",
@@ -117,11 +128,11 @@ export function useWorkbenchWorkflowController({
           scopeLabel: "Workflow catalog",
         }),
       );
-      setMessage(error instanceof Error ? error.message : labels.initialFailed);
+      setMessage(message);
     } finally {
       setWorkflowCatalogBusy(false);
     }
-  }, [labels.initialFailed, labels.workflowCatalogLoaded, setMessage]);
+  }, [labels.initialFailed, labels.workflowCatalogLoaded, setMessage, setSystemAlerts]);
 
   const runWorkflowJob = useCallback(async (params: {
     sourceWorkflowId: string;
@@ -132,6 +143,11 @@ export function useWorkbenchWorkflowController({
     const inputArtifacts =
       params.inputArtifacts ?? builtInWorkflowSampleInputArtifacts(params.sourceWorkflowId);
     if (!inputArtifacts) {
+      upsertWorkbenchAlert(setSystemAlerts, {
+        id: "workflow-run-error",
+        message: labels.workflowCatalogUnsupported,
+        tone: "warning",
+      });
       setMessage(labels.workflowCatalogUnsupported);
       return;
     }
@@ -139,6 +155,7 @@ export function useWorkbenchWorkflowController({
     setWorkflowCatalogBusy(true);
 
     try {
+      dismissWorkbenchAlert(setSystemAlerts, "workflow-run-error");
       const payload = params.graph
         ? await submitWorkflowGraphJob(params.graph, inputArtifacts)
         : await submitWorkflowCatalogJob(params.sourceWorkflowId, inputArtifacts);
@@ -195,6 +212,7 @@ export function useWorkbenchWorkflowController({
         if (next.job.status === "completed" && next.result && isWorkflowGraphResult(next.result)) {
           await refreshJobHistory();
           const summary = summarizeWorkflowArtifacts(next.result);
+          dismissWorkbenchAlert(setSystemAlerts, "workflow-run-error");
           setMessage(
             summary
               ? `${labels.workflowCatalogCompleted}: ${next.result.workflow_id} (${summary})`
@@ -205,6 +223,11 @@ export function useWorkbenchWorkflowController({
 
         if (isWorkflowRunFailureStatus(next.job.status)) {
           await refreshJobHistory();
+          upsertWorkbenchAlert(setSystemAlerts, {
+            id: "workflow-run-error",
+            message: labels.workflowCatalogFailed,
+            tone: "error",
+          });
           setMessage(labels.workflowCatalogFailed);
           return;
         }
@@ -231,7 +254,13 @@ export function useWorkbenchWorkflowController({
       await refreshJobHistory();
       setMessage(labels.pollingDetached);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : labels.initialFailed);
+      const message = error instanceof Error ? error.message : labels.initialFailed;
+      upsertWorkbenchAlert(setSystemAlerts, {
+        id: "workflow-run-error",
+        message,
+        tone: "error",
+      });
+      setMessage(message);
     } finally {
       setWorkflowCatalogBusy(false);
     }
@@ -247,6 +276,7 @@ export function useWorkbenchWorkflowController({
     refreshJobHistory,
     setJob,
     setMessage,
+    setSystemAlerts,
   ]);
 
   const runWorkflowCatalogEntry = useCallback(
@@ -255,6 +285,11 @@ export function useWorkbenchWorkflowController({
       if (localWorkflow) {
         const parsedInputs = parseWorkflowInputArtifactTexts(localWorkflow.inputArtifactTexts ?? {});
         if (parsedInputs.invalidKeys.length > 0) {
+          upsertWorkbenchAlert(setSystemAlerts, {
+            id: "workflow-run-error",
+            message: labels.workflowCatalogUnsupported,
+            tone: "warning",
+          });
           setMessage(labels.workflowCatalogUnsupported);
           return;
         }
@@ -270,7 +305,7 @@ export function useWorkbenchWorkflowController({
       }
       return runWorkflowJob({ sourceWorkflowId: workflowId, displayWorkflowId: workflowId });
     },
-    [labels.workflowCatalogUnsupported, runWorkflowJob, setMessage],
+    [labels.workflowCatalogUnsupported, runWorkflowJob, setMessage, setSystemAlerts],
   );
 
   const runWorkflowDraft = useCallback(

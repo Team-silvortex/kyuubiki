@@ -2,6 +2,7 @@
 
 import { buildWorkbenchAdminDataEffects } from "@/components/workbench/workbench-admin-context";
 import { createWorkbenchProjectStorageController } from "@/components/workbench/workbench-project-storage-controller";
+import type { WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
 
 export function buildWorkbenchProjectFlows(props: Record<string, any>) {
   let projectStorageControllerRef: { openModelVersionById?: (versionId: string) => void } | null = null;
@@ -97,7 +98,19 @@ export function buildWorkbenchProjectFlows(props: Record<string, any>) {
     importedProjectLabel: props.t.projectImported,
     importedVersionLabel: props.t.versionLoaded,
     importFailedLabel: props.t.importFailed,
+    formatImportNotice: (skippedSensitivePresetCount: number): WorkbenchNoticeItem => ({
+      id: "project-import-notice",
+      tone: "warning",
+      message:
+        props.language === "zh"
+          ? `项目导入时跳过了 ${skippedSensitivePresetCount} 个敏感自动化预设。`
+          : props.language === "ja"
+            ? `プロジェクトの取り込み時に機微な automation preset を ${skippedSensitivePresetCount} 件スキップしました。`
+            : `Skipped ${skippedSensitivePresetCount} sensitive automation preset(s) during project import.`,
+    }),
     setMessage: props.setMessage,
+    setSystemAlerts: props.setSystemAlerts,
+    setImportNotice: props.setImportNotice,
     setSelectedProjectId: props.setSelectedProjectId,
     setSidebarSection: props.setSidebarSection,
     setLoadedModelName: props.setLoadedModelName,

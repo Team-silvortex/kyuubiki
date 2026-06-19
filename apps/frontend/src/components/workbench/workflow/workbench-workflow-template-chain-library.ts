@@ -2,7 +2,10 @@
 
 import type { WorkflowNodeTemplateSelection } from "@/components/workbench/workflow/workbench-workflow-node-templates";
 import { createBridgeConfigForOperator } from "@/components/workbench/workflow/workbench-workflow-bridge-contract";
-import { DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN } from "@/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset";
+import {
+  DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN,
+  PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN,
+} from "@/components/workbench/workflow/workbench-workflow-template-chain-diagnostics-preset";
 import { ELECTROMAGNETIC_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-electromagnetic-presets";
 import { HOTSPOT_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-hotspot-presets";
 import { STATISTICS_TEMPLATE_CHAINS } from "@/components/workbench/workflow/workbench-workflow-template-chain-statistics-presets";
@@ -232,6 +235,7 @@ const BUILT_IN_TEMPLATE_CHAINS: WorkflowTemplateChainDefinition[] = [
   ...ELECTROMAGNETIC_TEMPLATE_CHAINS,
   ...HOTSPOT_TEMPLATE_CHAINS,
   DIAGNOSTICS_BUNDLE_GUARD_REPORT_TEMPLATE_CHAIN,
+  PEAK_DIAGNOSTICS_BUNDLE_REPORT_TEMPLATE_CHAIN,
   {
     id: "condition_branch_merge_export",
     label: "condition -> branch -> merge",

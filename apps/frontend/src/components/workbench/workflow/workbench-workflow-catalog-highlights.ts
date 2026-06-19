@@ -4,6 +4,7 @@ import type { WorkflowCatalogEntry, WorkflowGraphDefinition } from "@/lib/api";
 
 export const PINNED_WORKFLOW_IDS = [
   "workflow.diagnostics-bundle-guard-report-markdown",
+  "workflow.peak-diagnostics-bundle-report-markdown",
   "workflow.electrostatic-plane-quad-2d",
   "workflow.electrostatic-plane-quad-field-statistics-json",
   "workflow.electrostatic-preheat-guard-markdown",
@@ -45,10 +46,14 @@ function detectChain(tags: string[]) {
   const hasGuard = includesTag(tags, "guard");
   const hasReport = includesTag(tags, "report");
   const hasMarkdown = includesTag(tags, "markdown");
+  const hasPeak = includesTag(tags, "peak");
   const hasElectrostatic = includesTag(tags, "electrostatic");
   const hasHeat = includesTag(tags, "heat");
   const hasThermal = includesTag(tags, "thermal") || includesTag(tags, "thermo_mechanical");
 
+  if (hasPeak && hasDiagnostics && hasGuard && (hasReport || hasMarkdown)) {
+    return "peak -> guard -> report";
+  }
   if (hasDiagnostics && hasGuard && (hasReport || hasMarkdown)) {
     return "diagnostics -> guard -> report";
   }

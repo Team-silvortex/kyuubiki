@@ -4,6 +4,7 @@ import type {
   WorkbenchScriptSnippetParameters,
   WorkbenchScriptSnippetPresetRecord,
 } from "./workbench-script-runtime-types";
+import { assertSnippetPresetIsSafe } from "./workbench-script-preset-security";
 
 const WORKBENCH_SNIPPET_PRESETS_KEY = "kyuubiki-workbench-snippet-presets";
 
@@ -75,6 +76,7 @@ export function saveWorkbenchSnippetPreset(params: {
   const records = safeReadWorkbenchSnippetPresetRecords();
   const now = new Date().toISOString();
   const presetId = params.presetId?.trim() || `snippet_preset_${Math.random().toString(36).slice(2, 10)}`;
+  assertSnippetPresetIsSafe(params.parameters);
   const nextRecord: WorkbenchScriptSnippetPresetRecord = {
     presetId,
     projectId,

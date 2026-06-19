@@ -1,7 +1,12 @@
 "use client";
 
+import type { WorkbenchAlertItem } from "./workbench-alert-strip";
+import { buildWorkbenchConsoleSurfaceAlerts } from "./workbench-console-surface-alerts";
+import type { WorkbenchNoticeItem } from "./workbench-notice-state";
 import { WorkbenchConsole, type WorkbenchConsoleElement } from "./workbench-console";
 import type { WorkbenchCopy } from "./workbench-copy";
+import type { TrussDiagnostics } from "./workbench-defaults";
+import type { WorkbenchRuntimeRecoveryState } from "./workbench-runtime-recovery";
 
 type NodeSelectionData = {
   id?: string;
@@ -45,6 +50,12 @@ type ConsoleMountProps = {
     | "maxTorque"
   >;
   message: string;
+  importNotice?: WorkbenchNoticeItem | null;
+  setImportNotice?: ((value: WorkbenchNoticeItem | null) => void) | undefined;
+  runtimeRecovery?: WorkbenchRuntimeRecoveryState;
+  systemAlerts?: WorkbenchAlertItem[];
+  setSystemAlerts?: ((value: WorkbenchAlertItem[] | ((current: WorkbenchAlertItem[]) => WorkbenchAlertItem[])) => void) | undefined;
+  trussDiagnostics?: TrussDiagnostics | null;
   isPlane: boolean;
   isBeam: boolean;
   isTorsion: boolean;
@@ -80,6 +91,12 @@ export function WorkbenchConsoleMount({
   sidebarSection,
   t,
   message,
+  importNotice,
+  setImportNotice,
+  runtimeRecovery,
+  systemAlerts = [],
+  setSystemAlerts,
+  trussDiagnostics,
   isPlane,
   isBeam,
   isTorsion,
@@ -209,8 +226,17 @@ export function WorkbenchConsoleMount({
         : isTruss3d
           ? displayTruss3dElements
           : isFrameLike || isBeam
-            ? displayTrussElements
-            : planeElements) as WorkbenchConsoleElement[];
+          ? displayTrussElements
+          : planeElements) as WorkbenchConsoleElement[];
+  const alerts: WorkbenchAlertItem[] = buildWorkbenchConsoleSurfaceAlerts({
+    importNotice,
+    setImportNotice,
+    runtimeRecovery,
+    systemAlerts,
+    setSystemAlerts,
+    trussDiagnostics,
+    includeIntegrityAlerts: sidebarSection !== "model",
+  });
 
   return (
     <div
@@ -225,6 +251,7 @@ export function WorkbenchConsoleMount({
         modelMessageTitle={t.dragNode}
         reportMessageTitle={t.messages}
         message={message}
+        alerts={alerts}
         dragNodeLabel={t.dragNode}
         noNodeSelectedLabel={t.noNodeSelected}
         loadCaseLabel={t.loadCase}

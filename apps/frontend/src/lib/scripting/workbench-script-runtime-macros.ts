@@ -7,6 +7,7 @@ import type {
   WorkbenchScriptMacroStep,
   WorkbenchScriptSnapshot,
 } from "./workbench-script-runtime-types";
+import { assertMacroPresetIsSafe } from "./workbench-script-preset-security";
 import { serializeWorkbenchPythonLiteral } from "./workbench-script-python-format";
 
 const MACRO_TEMPLATE_EXACT_RE = /^\{\{\s*(payload|state)\.([a-zA-Z0-9_]+)\s*\}\}$/;
@@ -212,11 +213,13 @@ export function saveWorkbenchMacroPreset(params: {
   const records = safeReadWorkbenchMacroPresetRecords();
   const now = new Date().toISOString();
   const presetId = params.presetId?.trim() || `preset_${Math.random().toString(36).slice(2, 10)}`;
+  const macro = parseWorkbenchRecordedMacroDraft(params.macro);
+  assertMacroPresetIsSafe(macro.steps);
   const nextRecord: WorkbenchMacroPresetRecord = {
     presetId,
     projectId,
     name,
-    macro: parseWorkbenchRecordedMacroDraft(params.macro),
+    macro,
     updatedAt: now,
   };
 

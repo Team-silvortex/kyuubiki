@@ -69,6 +69,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     setRuntimeRecovery: props.setRuntimeRecovery,
     setJob: props.setJob,
     setMessage: props.setMessage,
+    setSystemAlerts: props.setSystemAlerts,
     openWorkflowRunsSurface: () => {
       props.setSidebarSection("workflow");
     },
@@ -142,6 +143,7 @@ export function useWorkbenchSessionComposition(props: Record<string, any>) {
     setModelVersions: props.setModelVersions,
     setSidebarSection: props.setSidebarSection,
     setMessage: props.setMessage,
+    setSystemAlerts: props.setSystemAlerts,
     language: props.language,
     t: props.t,
     startTransition: props.startTransition,

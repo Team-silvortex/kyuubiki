@@ -223,6 +223,12 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         <WorkbenchConsoleMount
           sidebarSection={props.sidebarSection}
           message={props.message}
+          importNotice={props.importNotice}
+          setImportNotice={props.setImportNotice}
+          runtimeRecovery={props.runtimeRecovery}
+          systemAlerts={props.systemAlerts}
+          setSystemAlerts={props.setSystemAlerts}
+          trussDiagnostics={props.trussDiagnostics}
           t={props.t}
           isPlane={props.isPlane}
           isBeam={props.isBeam}

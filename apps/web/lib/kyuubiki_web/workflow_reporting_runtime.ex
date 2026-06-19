@@ -3,6 +3,7 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
 
   alias KyuubikiWeb.WorkflowSummaryRuntime
   alias KyuubikiWeb.WorkflowElectrostaticRuntime
+  alias KyuubikiWeb.WorkflowPeakRuntime
   alias KyuubikiWeb.WorkflowThermalRuntime
 
   def extract_result_summary(payload, config) when is_map(payload) and is_map(config) do
@@ -191,8 +192,17 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
   def extract_electrostatic_result_diagnostics(payload, config),
     do: WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(payload, config)
 
+  def extract_electrostatic_peak_field(payload, config),
+    do: WorkflowPeakRuntime.extract_electrostatic_peak_field(payload, config)
+
   def extract_thermo_result_diagnostics(payload, config),
     do: WorkflowThermalRuntime.extract_thermo_result_diagnostics(payload, config)
+
+  def extract_heat_peak_flux(payload, config),
+    do: WorkflowPeakRuntime.extract_heat_peak_flux(payload, config)
+
+  def extract_thermo_peak_response(payload, config),
+    do: WorkflowPeakRuntime.extract_thermo_peak_response(payload, config)
 
   def export_alert_markdown(payload, config) when is_map(payload) and is_map(config) do
     fields =
@@ -266,21 +276,16 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
   end
 
   defp build_bundle_highlights_section(payload) do
+    focus_context = Map.get(payload, "report_focus_context", %{})
     case Map.get(payload, "report_highlights", []) do
       highlights when is_list(highlights) and highlights != [] ->
         ["", "## Key Highlights"] ++
           Enum.flat_map(highlights, fn
             %{} = highlight ->
-              marker =
-                if Map.get(highlight, "attention", false) do
-                  "attention"
-                else
-                  "info"
-                end
-
+              marker = if(Map.get(highlight, "attention", false), do: "attention", else: "info")
               [
                 "- [#{marker}] #{Map.get(highlight, "label", Map.get(highlight, "id", "unknown"))}: #{markdown_value(Map.get(highlight, "value"))}"
-              ]
+              ] ++ render_highlight_context(focus_context, Map.get(highlight, "id"))
 
             _ ->
               []
@@ -290,6 +295,55 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
         []
     end
   end
+
+  defp render_highlight_context(focus_context, metric_id)
+       when is_map(focus_context) and is_binary(metric_id) do
+    case Map.get(focus_context, metric_id) do
+      %{} = context ->
+        preferred_fields = [
+          "source",
+          "value_field",
+          "peak_node_id",
+          "peak_element_id",
+          "peak_displacement_x",
+          "peak_displacement_y",
+          "peak_node_temperature_delta",
+          "peak_electric_field_x",
+          "peak_electric_field_y",
+          "peak_flux_density_x",
+          "peak_flux_density_y",
+          "peak_heat_flux_x",
+          "peak_heat_flux_y",
+          "peak_temperature_gradient_x",
+          "peak_temperature_gradient_y",
+          "peak_stress_x",
+          "peak_stress_y",
+          "peak_tau_xy",
+          "peak_element_temperature_delta",
+          "thermo_peak_thermal_strain_id"
+        ]
+
+        preferred_lines =
+          Enum.flat_map(preferred_fields, fn field ->
+            case Map.fetch(context, field) do
+              {:ok, value} -> ["  - #{field}: #{markdown_value(value)}"]
+              :error -> []
+            end
+          end)
+        extra_lines =
+          context
+          |> Enum.reject(fn {field, _value} -> field in preferred_fields end)
+          |> Enum.sort_by(fn {field, _value} -> field end)
+          |> Enum.map(fn {field, value} -> "  - #{field}: #{markdown_value(value)}" end)
+
+        preferred_lines ++ extra_lines
+
+      _ ->
+        []
+    end
+  end
+
+  defp render_highlight_context(_focus_context, _metric_id), do: []
 
   defp build_bundle_items_section(payload, config) do
     case Map.get(payload, "bundle_items", []) do

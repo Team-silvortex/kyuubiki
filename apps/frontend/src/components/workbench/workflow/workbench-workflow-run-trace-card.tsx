@@ -18,10 +18,17 @@ import {
 import { collectWorkflowInputArtifactContractWarnings } from "@/components/workbench/workflow/workbench-workflow-fem-validation";
 import { measureWorkflowTraceCardReady } from "@/components/workbench/workflow/workbench-workflow-perf";
 import { WorkbenchWorkflowBridgeRuntimeCard } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-card";
+import { WorkbenchWorkflowDiagnosticsFocusCard } from "@/components/workbench/workflow/workbench-workflow-diagnostics-focus-card";
 import { buildWorkflowRunAuditReportHtml } from "@/components/workbench/workflow/workbench-workflow-run-trace-report";
 import { listWorkflowDiagnosticsReports } from "@/components/workbench/workflow/workbench-workflow-diagnostics-report-contract";
 import {
   formatWorkflowDiagnosticsMetricValue,
+  orderWorkflowDiagnosticsFocusMetrics,
+  orderWorkflowDiagnosticsHighlights,
+  resolveWorkflowDiagnosticsFocusContext,
+  resolveWorkflowDiagnosticsReportMode,
+  resolveWorkflowDiagnosticsReportTitle,
+  summarizeWorkflowDiagnosticsFocusContext,
   summarizeWorkflowDiagnosticsReport,
 } from "@/components/workbench/workflow/workbench-workflow-diagnostics-presentation";
 import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
@@ -105,6 +112,22 @@ export function WorkbenchWorkflowRunTraceCard({
   );
   const diagnosticsPreview = useMemo(
     () => summarizeWorkflowDiagnosticsReport(diagnosticsReport),
+    [diagnosticsReport],
+  );
+  const diagnosticsTitle = useMemo(
+    () => resolveWorkflowDiagnosticsReportTitle(diagnosticsReport),
+    [diagnosticsReport],
+  );
+  const diagnosticsMode = useMemo(
+    () => resolveWorkflowDiagnosticsReportMode(diagnosticsReport),
+    [diagnosticsReport],
+  );
+  const orderedDiagnosticsHighlights = useMemo(
+    () => orderWorkflowDiagnosticsHighlights(diagnosticsReport),
+    [diagnosticsReport],
+  );
+  const orderedDiagnosticsFocusMetrics = useMemo(
+    () => orderWorkflowDiagnosticsFocusMetrics(diagnosticsReport),
     [diagnosticsReport],
   );
   const previousSummaryArtifactsByKind = useMemo(
@@ -219,7 +242,7 @@ export function WorkbenchWorkflowRunTraceCard({
         <div className="workflow-trace-panel-section">
           <div className="workflow-trace-diagnostics">
             <div className="workflow-trace-diagnostics__head">
-              <p className="card-copy">diagnostics focus</p>
+              <p className="card-copy">{diagnosticsTitle.toLowerCase()}</p>
               {!diagnosticsReport ? <span className="card-copy">--</span> : null}
             </div>
             {diagnosticsReport ? (
@@ -239,44 +262,66 @@ export function WorkbenchWorkflowRunTraceCard({
                 </div>
                 <div className="workflow-trace-diagnostics__meta">
                   <span className="status-pill status-pill--watch">
-                    {`${diagnosticsReport.payload.report_highlights.length} highlights`}
+                    {`${orderedDiagnosticsHighlights.length} highlights`}
                   </span>
                   <span className="status-pill status-pill--watch">
-                    {`${Object.keys(diagnosticsReport.payload.report_focus_metrics).length} focus metrics`}
+                    {`${orderedDiagnosticsFocusMetrics.length} focus metrics`}
                   </span>
                 </div>
-                {diagnosticsReport.payload.report_highlights.length > 0 ? (
+                {orderedDiagnosticsHighlights.length > 0 ? (
                   <div className="workflow-trace-diagnostics__highlights">
-                    {diagnosticsReport.payload.report_highlights.slice(0, 5).map((highlight) => (
-                      <div
-                        className={`workflow-trace-diagnostics__highlight${highlight.attention ? " workflow-trace-diagnostics__highlight--attention" : ""}`}
+                    {orderedDiagnosticsHighlights.slice(0, 5).map((highlight) => (
+                      <WorkbenchWorkflowDiagnosticsFocusCard
+                        artifactKey={diagnosticsReport.artifactKey}
+                        attention={highlight.attention}
+                        id={highlight.id}
                         key={`${diagnosticsReport.artifactKey}:highlight:${highlight.id}`}
-                      >
-                        <span className="workflow-trace-diagnostics__highlight-head">
-                          {renderStatusPill(
-                            highlight.attention ? "attention" : "info",
-                            highlight.attention ? "risk" : "watch",
-                          )}
-                          <strong>{highlight.label}</strong>
-                        </span>
-                        <span className="card-copy">{formatWorkflowDiagnosticsMetricValue(highlight.value)}</span>
-                      </div>
+                        label={highlight.label}
+                        mode={diagnosticsMode}
+                        report={diagnosticsReport}
+                        tone={renderStatusPill(
+                          diagnosticsMode === "peak"
+                            ? highlight.attention
+                              ? "peak"
+                              : "review"
+                            : highlight.attention
+                              ? "attention"
+                              : "info",
+                          highlight.attention ? "risk" : "watch",
+                        )}
+                        value={highlight.value}
+                      />
                     ))}
                   </div>
                 ) : null}
-                {Object.keys(diagnosticsReport.payload.report_focus_metrics).length > 0 ? (
+                {orderedDiagnosticsFocusMetrics.length > 0 ? (
                   <details className="workflow-trace-diagnostics__focus">
                     <summary className="card-copy" style={{ cursor: "pointer" }}>
                       focus metrics
                     </summary>
                     <div className="workflow-trace-diagnostics__focus-grid">
-                      {Object.entries(diagnosticsReport.payload.report_focus_metrics)
+                      {orderedDiagnosticsFocusMetrics
                         .slice(0, 8)
-                        .map(([key, value]) => (
-                          <span className="card-copy" key={`${diagnosticsReport.artifactKey}:focus:${key}`}>
-                            {`${key}: ${formatWorkflowDiagnosticsMetricValue(value)}`}
-                          </span>
-                        ))}
+                        .flatMap(([key, value]) => {
+                          const rows = [
+                            <span className="card-copy" key={`${diagnosticsReport.artifactKey}:focus:${key}`}>
+                              {`${key}: ${formatWorkflowDiagnosticsMetricValue(value)}`}
+                            </span>,
+                          ];
+                          const contextEntries = summarizeWorkflowDiagnosticsFocusContext(
+                            resolveWorkflowDiagnosticsFocusContext(diagnosticsReport, key),
+                          ).slice(0, 3);
+                          return rows.concat(
+                            contextEntries.map((line, index) => (
+                              <span
+                                className="card-copy"
+                                key={`${diagnosticsReport.artifactKey}:focus:${key}:context:${index}`}
+                              >
+                                {line}
+                              </span>
+                            )),
+                          );
+                        })}
                     </div>
                   </details>
                 ) : null}

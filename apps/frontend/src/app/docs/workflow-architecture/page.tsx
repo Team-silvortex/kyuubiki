@@ -75,6 +75,20 @@ const GAPS = [
   "Distributed agent and direct-mesh control remain important to the project vision, but they are not yet as structurally integrated as the workflow workbench itself.",
 ];
 
+const PEAK_DIAGNOSTICS_FLOW = [
+  "Peak diagnostics flows are not a separate execution architecture. They are a specialized reporting family built on the same operator descriptors, workflow graph model, dataset contracts, and runtime records as standard diagnostics flows.",
+  "The dedicated peak extracts narrow each domain down to a few contract-stable extrema: electrostatic field peak, thermal flux peak, and thermo-mechanical displacement or stress peaks. That makes them better suited for limit review, release checks, and concise operator comparisons.",
+  "The bundle, guard, report, and markdown export stages stay shared. What changes is the meaning of the upstream summaries and the ordering of the resulting focus metrics and highlights.",
+  "In practice this gives tamamono two complementary inspection lanes: full diagnostics for broader field review, and peak diagnostics for fast threshold-oriented review.",
+];
+
+const PEAK_REFERENCES = [
+  "workers/rust/crates/engine/src/operator_sdk_workflow_extensions.rs",
+  "apps/web/lib/kyuubiki_web/workflow_peak_runtime.ex",
+  "apps/web/lib/kyuubiki_web/workflow_template_diagnostics_entries.ex",
+  "apps/frontend/src/components/workbench/workflow/workbench-workflow-diagnostics-presentation.ts",
+];
+
 const MERMAID_OVERVIEW = `flowchart TD
   A["Operator Descriptors"]
   B["Workflow Graph Definition"]
@@ -163,6 +177,28 @@ export default function WorkflowArchitecturePage() {
               <li key={entry}>{entry}</li>
             ))}
           </ul>
+        </section>
+
+        <section style={{ marginTop: 32 }}>
+          <h2>Peak Diagnostics Flow</h2>
+          <p style={copyStyle}>
+            Peak diagnostics is now a first-class workflow pattern inside tamamono. It exists for
+            cases where users care more about extrema and guard thresholds than about carrying the
+            entire diagnostic field narrative through every surface.
+          </p>
+          <ul style={listStyle}>
+            {PEAK_DIAGNOSTICS_FLOW.map((entry) => (
+              <li key={entry}>{entry}</li>
+            ))}
+          </ul>
+          <div style={{ ...cardStyle, marginTop: 18 }}>
+            <h3 style={{ margin: 0 }}>Peak Flow References</h3>
+            <ul style={listStyle}>
+              {PEAK_REFERENCES.map((reference) => (
+                <li key={reference}>{reference}</li>
+              ))}
+            </ul>
+          </div>
         </section>
 
         <section style={{ marginTop: 32 }}>

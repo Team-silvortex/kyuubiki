@@ -7,7 +7,7 @@ use crate::heat_bridge::{
     bridge_heat_result_to_thermal_plane_quad_model,
     bridge_heat_result_to_thermal_plane_triangle_model,
 };
-use crate::{solve, EngineSolveRequest};
+use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
     AnalysisResult, ElectrostaticHeatToThermoPlaneQuad2dWorkflowRequest,
     ElectrostaticHeatToThermoPlaneQuad2dWorkflowResult,
@@ -16,7 +16,7 @@ use kyuubiki_protocol::{
     HeatToThermoPlaneQuad2dWorkflowResult, HeatToThermoPlaneTriangle2dWorkflowRequest,
     HeatToThermoPlaneTriangle2dWorkflowResult,
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub fn run_heat_to_thermo_plane_quad_2d_workflow(
     request: HeatToThermoPlaneQuad2dWorkflowRequest,

@@ -1,4 +1,6 @@
 import type { MutableRefObject } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import {
   createAxialBarJob,
   createBeam1dJob,
@@ -168,6 +170,7 @@ type RunWorkbenchAnalysisArgs = {
   setDirectMeshExecution: (value: DirectMeshExecutionState | null) => void;
   setJob: (value: JobEnvelope["job"] | null) => void;
   setMessage: (value: string) => void;
+  setSystemAlerts: (value: WorkbenchAlertItem[] | ((current: WorkbenchAlertItem[]) => WorkbenchAlertItem[])) => void;
   setResult: (value: AnyStudyResult | null) => void;
   spring2dModel: Spring2dStudyJobInput;
   spring3dModel: Spring3dStudyJobInput;
@@ -302,6 +305,7 @@ export async function runWorkbenchAnalysis({
   setDirectMeshExecution,
   setJob,
   setMessage,
+  setSystemAlerts,
   setResult,
   spring2dModel,
   spring3dModel,
@@ -319,12 +323,19 @@ export async function runWorkbenchAnalysis({
 }: RunWorkbenchAnalysisArgs) {
   const precheckErrors = trussDiagnostics?.blockingMessages ?? [];
   if (precheckErrors.length > 0) {
-    setMessage(`${labels.precheckPrefix}: ${precheckErrors[0]}`);
+    const precheckMessage = `${labels.precheckPrefix}: ${precheckErrors[0]}`;
+    upsertWorkbenchAlert(setSystemAlerts, {
+      id: "precheck-blocking",
+      message: precheckMessage,
+      tone: "error",
+    });
+    setMessage(precheckMessage);
     setResult(null);
     setJob(null);
     return;
   }
 
+  dismissWorkbenchAlert(setSystemAlerts, "precheck-blocking");
   setMessage(labels.dispatching);
   setResult(null);
   jobPollTokenRef.current += 1;

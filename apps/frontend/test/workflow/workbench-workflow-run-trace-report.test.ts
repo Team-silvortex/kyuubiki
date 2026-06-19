@@ -29,6 +29,14 @@ function buildRun(): WorkflowRunRecord {
               "thermal.temperature_max": 125.0,
               "thermo.stress_peak": 220.0,
             },
+            report_focus_context: {
+              "thermo.stress_peak": {
+                source: "thermo",
+                value_field: "thermo_stress_peak",
+                peak_element_id: "te1",
+                peak_stress_x: 14.0,
+              },
+            },
             report_highlights: [
               {
                 id: "thermal.temperature_max",
@@ -53,12 +61,18 @@ function buildRun(): WorkflowRunRecord {
 test("buildWorkflowRunAuditReportHtml includes diagnostics focus sections", () => {
   const html = buildWorkflowRunAuditReportHtml({ run: buildRun() });
 
-  assert.match(html, /<h2>Diagnostics focus<\/h2>/);
+  assert.match(html, /<h2>Peak diagnostics focus<\/h2>/);
   assert.match(html, /hold_and_review/);
   assert.match(html, /summary preview/);
-  assert.match(html, /Thermal temperature peak=1\.250e\+2, Thermo stress peak=2\.200e\+2/);
+  assert.match(html, /peak review: Thermo stress peak=2\.200e\+2, Thermal temperature peak=1\.250e\+2/);
+  assert.match(html, /<span class="pill pill--risk">peak<\/span>/);
+  assert.match(html, /<span class="pill pill--risk">peak<\/span><\/td><td>Thermal temperature peak<\/td>/);
   assert.match(html, /Thermal temperature peak/);
   assert.match(html, /Thermo stress peak/);
   assert.match(html, /thermal\.temperature_max/);
   assert.match(html, /thermo\.stress_peak/);
+  assert.match(html, /<strong>sample<\/strong>/);
+  assert.match(html, /source thermo · field thermo_stress_peak · anchor te1/);
+  assert.match(html, /<strong>response<\/strong>/);
+  assert.match(html, /stress: x=1\.400e\+1/);
 });

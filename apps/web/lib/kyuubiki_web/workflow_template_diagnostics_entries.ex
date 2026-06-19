@@ -6,6 +6,7 @@ defmodule KyuubikiWeb.WorkflowTemplateDiagnosticsEntries do
   def list do
     [
       diagnostics_bundle_guard_report_entry(),
+      peak_diagnostics_bundle_report_entry(),
       electrostatic_heat_thermo_diagnostics_entry()
     ]
   end
@@ -74,6 +75,39 @@ defmodule KyuubikiWeb.WorkflowTemplateDiagnosticsEntries do
           "node_id" => "markdown_output",
           "artifact_type" => "export/markdown",
           "description" => "Markdown diagnostics report for the electrostatic -> heat -> thermo chain."
+        }
+      ]
+    }
+  end
+
+  defp peak_diagnostics_bundle_report_entry do
+    %{
+      "id" => "workflow.peak-diagnostics-bundle-report-markdown",
+      "name" => "Peak diagnostics bundle report markdown",
+      "version" => "1.0.0",
+      "summary" =>
+        "Compose electrostatic, thermal, and thermo-mechanical peak extracts into a shared bundle, evaluate a unified guard decision, and export a markdown report.",
+      "domains" => ["electromagnetic", "thermal", "thermo_mechanical"],
+      "capability_tags" => [
+        "peak",
+        "diagnostics",
+        "bundle",
+        "guard",
+        "report",
+        "markdown",
+        "headless_safe"
+      ],
+      "graph" => build_peak_graph(),
+      "entry_inputs" => [
+        entry_input("electrostatic_input", "electrostatic peak summary"),
+        entry_input("thermal_input", "thermal peak summary"),
+        entry_input("thermo_input", "thermo-mechanical peak summary")
+      ],
+      "output_artifacts" => [
+        %{
+          "node_id" => "markdown_output",
+          "artifact_type" => "export/markdown",
+          "description" => "Markdown peak diagnostics bundle report with unified guard decision."
         }
       ]
     }
@@ -317,6 +351,52 @@ defmodule KyuubikiWeb.WorkflowTemplateDiagnosticsEntries do
     }
   end
 
+  defp build_peak_graph do
+    %{
+      "schema_version" => "kyuubiki.workflow-graph/v1",
+      "id" => "workflow.peak-diagnostics-bundle-report-markdown",
+      "name" => "Peak diagnostics bundle report markdown",
+      "version" => "1.0.0",
+      "dataset_contract" =>
+        WorkflowCatalogSupport.workflow_dataset_contract(
+          "kyuubiki.dataset.peak_diagnostics_bundle_guard_report/v1",
+          [
+            dataset_value("electrostatic_diagnostics", "result", "artifact/json"),
+            dataset_value("thermal_diagnostics", "result", "artifact/json"),
+            dataset_value("thermo_diagnostics", "result", "artifact/json"),
+            dataset_value("diagnostics_bundle", "result", "artifact/json"),
+            dataset_value("guard_result", "result", "artifact/json"),
+            dataset_value("report_payload", "result", "artifact/json"),
+            dataset_value("markdown_report", "export", "export/markdown", "utf8_text")
+          ],
+          %{"workflow_family" => "peak_diagnostics_bundle_guard_report"}
+        ),
+      "entry_nodes" => ["electrostatic_input", "thermal_input", "thermo_input"],
+      "output_nodes" => ["markdown_output"],
+      "defaults" => %{"cache_policy" => "cached", "orchestrated" => true},
+      "nodes" => [
+        input_node("electrostatic_input", "electrostatic", "electrostatic_diagnostics"),
+        input_node("thermal_input", "thermal", "thermal_diagnostics"),
+        input_node("thermo_input", "thermo", "thermo_diagnostics"),
+        bundle_node(),
+        peak_guard_node(),
+        report_node(),
+        export_node("Peak Diagnostics Bundle Report"),
+        output_node()
+      ],
+      "edges" => [
+        edge("e0", "electrostatic_input", "summary", "bundle", "electrostatic"),
+        edge("e1", "thermal_input", "summary", "bundle", "thermal"),
+        edge("e2", "thermo_input", "summary", "bundle", "thermo"),
+        edge("e3", "bundle", "result", "guard", "bundle"),
+        edge("e4", "bundle", "result", "report", "bundle"),
+        edge("e5", "guard", "result", "report", "guard"),
+        edge("e6", "report", "result", "export", "bundle"),
+        edge("e7", "export", "markdown", "markdown_output", "markdown", "export/markdown")
+      ]
+    }
+  end
+
   defp input_node(id, dataset_value, input_label) do
     %{
       "id" => id,
@@ -381,6 +461,23 @@ defmodule KyuubikiWeb.WorkflowTemplateDiagnosticsEntries do
           %{"source" => "electrostatic", "field" => "electrostatic_field_peak_magnitude", "comparison" => "gt", "threshold" => 9.0, "severity" => "warn", "label" => "field ceiling"},
           %{"source" => "thermal", "field" => "thermal_temperature_max", "comparison" => "gt", "threshold" => 120.0, "severity" => "warn", "label" => "thermal temperature"},
           %{"source" => "thermo", "field" => "thermo_stress_peak", "comparison" => "gt", "threshold" => 180.0, "severity" => "block", "label" => "stress ceiling"}
+        ]
+      },
+      "inputs" => [%{"id" => "bundle", "artifact_type" => "artifact/json", "dataset_value" => "diagnostics_bundle"}],
+      "outputs" => [%{"id" => "result", "artifact_type" => "artifact/json", "dataset_value" => "guard_result"}]
+    }
+  end
+
+  defp peak_guard_node do
+    %{
+      "id" => "guard",
+      "kind" => "transform",
+      "operator_id" => "transform.evaluate_diagnostics_bundle_guard",
+      "config" => %{
+        "rules" => [
+          %{"source" => "electrostatic", "field" => "electrostatic_field_peak_magnitude", "comparison" => "gt", "threshold" => 9.0, "severity" => "warn", "label" => "field ceiling"},
+          %{"source" => "thermal", "field" => "thermal_flux_peak_magnitude", "comparison" => "gt", "threshold" => 25.0, "severity" => "warn", "label" => "thermal flux peak"},
+          %{"source" => "thermo", "field" => "thermo_peak_stress", "comparison" => "gt", "threshold" => 180.0, "severity" => "block", "label" => "thermo stress peak"}
         ]
       },
       "inputs" => [%{"id" => "bundle", "artifact_type" => "artifact/json", "dataset_value" => "diagnostics_bundle"}],

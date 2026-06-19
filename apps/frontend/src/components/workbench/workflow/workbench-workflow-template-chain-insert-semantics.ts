@@ -29,18 +29,33 @@ export function applyTemplateChainNodeSemantics(
   chain: WorkflowTemplateChainDefinition,
   createdNodes: WorkflowGraphNode[],
 ) {
-  if (chain.id !== "diagnostics_bundle_guard_report") return;
+  if (
+    chain.id !== "diagnostics_bundle_guard_report" &&
+    chain.id !== "peak_diagnostics_bundle_report"
+  )
+    return;
   if (createdNodes.length === 0) return;
 
-  const semanticIds = [
-    "extract_electrostatic_diagnostics",
-    "extract_thermal_diagnostics",
-    "extract_thermo_diagnostics",
-    "compose_diagnostics_bundle",
-    "evaluate_diagnostics_guard",
-    "compose_diagnostics_report",
-    "export_diagnostics_markdown",
-  ];
+  const semanticIds =
+    chain.id === "peak_diagnostics_bundle_report"
+      ? [
+          "extract_electrostatic_peak",
+          "extract_thermal_peak",
+          "extract_thermo_peak",
+          "compose_diagnostics_bundle",
+          "evaluate_diagnostics_guard",
+          "compose_diagnostics_report",
+          "export_diagnostics_markdown",
+        ]
+      : [
+          "extract_electrostatic_diagnostics",
+          "extract_thermal_diagnostics",
+          "extract_thermo_diagnostics",
+          "compose_diagnostics_bundle",
+          "evaluate_diagnostics_guard",
+          "compose_diagnostics_report",
+          "export_diagnostics_markdown",
+        ];
   const existingIds = new Set(
     graph.nodes
       .filter((node) => !createdNodes.includes(node))

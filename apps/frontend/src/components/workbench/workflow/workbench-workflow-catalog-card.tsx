@@ -20,6 +20,30 @@ function formatWorkflowTags(tags?: string[]) {
   return normalized.length > 0 ? normalized.join(", ") : null;
 }
 
+function deriveWorkflowIntentNote(workflow: WorkflowCatalogEntry) {
+  const tags = workflow.capability_tags ?? workflow.local?.tags ?? [];
+  const hasPeak = tags.includes("peak");
+  const hasDiagnostics = tags.includes("diagnostics");
+  const hasGuard = tags.includes("guard");
+  const hasReport = tags.includes("report") || tags.includes("markdown");
+
+  if (hasPeak && hasDiagnostics && hasGuard && hasReport) {
+    return {
+      label: "focus",
+      value: "Peak-response review flow for electrostatic, thermal, and thermo limits.",
+    };
+  }
+
+  if (hasDiagnostics && hasGuard && hasReport) {
+    return {
+      label: "focus",
+      value: "Multi-stage diagnostics review flow with shared guard and markdown report.",
+    };
+  }
+
+  return null;
+}
+
 export function WorkbenchWorkflowCatalogCard(props: {
   activeQuery?: string;
   bridgeRuntimeSummary?: string | null;
@@ -38,6 +62,7 @@ export function WorkbenchWorkflowCatalogCard(props: {
     props;
   const localWorkflowTags = formatWorkflowTags(workflow.local?.tags);
   const highlights = deriveWorkflowCatalogHighlights(workflow);
+  const intentNote = deriveWorkflowIntentNote(workflow);
 
   return (
     <section className="sidebar-card sidebar-card--compact runtime-overview-card">
@@ -70,6 +95,14 @@ export function WorkbenchWorkflowCatalogCard(props: {
               <strong>{entry.value}</strong>
             </div>
           ))}
+        </div>
+      ) : null}
+      {intentNote ? (
+        <div className="sidebar-list">
+          <div className="sidebar-list__row">
+            <span>{intentNote.label}</span>
+            <strong>{intentNote.value}</strong>
+          </div>
         </div>
       ) : null}
       {workflow.local ? (

@@ -122,6 +122,46 @@ const SAMPLE_INPUTS: Record<string, WorkflowSampleInputDefinition> = {
       }),
     },
   },
+  peak_diagnostics_bundle_guard_report: {
+    artifacts: {
+      electrostatic_input: sampleInputArtifact("workflow_diagnostics/electrostatic_peak_summary", {
+        summary: {
+          electrostatic_peak_field: 8.4,
+          electrostatic_field_peak_magnitude: 8.4,
+          electrostatic_peak_flux_density: 2.1,
+          electrostatic_peak_field_id: "eq1",
+          electrostatic_potential_max: 12.0,
+          max_potential: 12.0,
+          max_electric_field: 8.4,
+          max_flux_density: 2.1,
+        },
+      }),
+      thermal_input: sampleInputArtifact("workflow_diagnostics/thermal_peak_summary", {
+        summary: {
+          thermal_peak_flux: 16.5,
+          thermal_flux_peak_magnitude: 16.5,
+          thermal_peak_flux_id: "hq1",
+          thermal_temperature_max: 92.0,
+          max_temperature: 92.0,
+          max_heat_flux: 16.5,
+        },
+      }),
+      thermo_input: sampleInputArtifact("workflow_diagnostics/thermo_peak_summary", {
+        summary: {
+          thermo_peak_displacement: 0.0028,
+          thermo_displacement_peak_magnitude: 0.0028,
+          thermo_peak_displacement_id: "t1",
+          thermo_peak_stress: 142.0,
+          thermo_stress_peak: 142.0,
+          thermo_peak_stress_id: "te1",
+          thermo_temperature_delta_max: 88.0,
+          max_displacement: 0.0028,
+          max_stress: 142.0,
+          max_temperature_delta: 88.0,
+        },
+      }),
+    },
+  },
   bar_1d: {
     artifacts: {
       bar_1d_model: sampleInputArtifact("study_model/bar_1d", { length: 1, area: 0.01, youngs_modulus: 210000000000, elements: 2, tip_force: 1200 }),
@@ -259,6 +299,7 @@ const SAMPLE_INPUT_ALIASES: Record<string, keyof typeof SAMPLE_INPUTS> = {
   "workflow.electrostatic-heat-thermo-summary-json": "electrostatic_plane_quad",
   "solve.heat_plane_quad_2d": "heat_plane_quad",
   "workflow.diagnostics-bundle-guard-report-markdown": "diagnostics_bundle_guard_report",
+  "workflow.peak-diagnostics-bundle-report-markdown": "peak_diagnostics_bundle_guard_report",
   "workflow.bar-1d-summary-json": "bar_1d",
   "solve.bar_1d": "bar_1d",
   "workflow.thermal-bar-1d-summary-json": "thermal_bar_1d",

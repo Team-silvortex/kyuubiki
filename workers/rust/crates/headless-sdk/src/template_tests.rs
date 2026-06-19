@@ -1,7 +1,7 @@
 use crate::{
-    HeadlessRuntimeStyle, build_template_document, find_action_contract,
-    list_template_categories, list_templates, normalize_workflow_document, search_templates,
-    suggest_template_details, suggest_templates, validate_batch,
+    HeadlessRuntimeStyle, build_template_document, find_action_contract, list_template_categories,
+    list_templates, normalize_workflow_document, search_templates, suggest_template_details,
+    suggest_templates, validate_batch,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -82,7 +82,10 @@ fn search_templates_supports_runtime_category_and_tag_filters() {
 #[test]
 fn search_templates_matches_query_against_actions_and_metadata() {
     let matches = search_templates(None, None, None, Some("electrostatic result_fetch"));
-    let ids = matches.iter().map(|template| template.id).collect::<Vec<_>>();
+    let ids = matches
+        .iter()
+        .map(|template| template.id)
+        .collect::<Vec<_>>();
     assert_eq!(
         ids,
         vec!["direct_electrostatic_quad", "direct_electrostatic_triangle"]
@@ -92,7 +95,10 @@ fn search_templates_matches_query_against_actions_and_metadata() {
 #[test]
 fn search_templates_ranks_closest_query_first() {
     let matches = search_templates(None, None, None, Some("spring 3d"));
-    let ids = matches.iter().map(|template| template.id).collect::<Vec<_>>();
+    let ids = matches
+        .iter()
+        .map(|template| template.id)
+        .collect::<Vec<_>>();
     assert_eq!(ids.first().copied(), Some("direct_spring_3d"));
 }
 
@@ -116,7 +122,9 @@ fn suggest_templates_returns_best_fuzzy_candidates() {
 #[test]
 fn suggest_template_details_exposes_scores_and_matched_terms() {
     let suggestions = suggest_template_details("spring 3d", 3);
-    let first = suggestions.first().expect("expected at least one suggestion");
+    let first = suggestions
+        .first()
+        .expect("expected at least one suggestion");
     assert_eq!(first.id, "direct_spring_3d");
     assert!(first.score > 0);
     assert!(first.matched_terms.iter().any(|term| term == "spring"));
@@ -135,21 +143,27 @@ fn every_template_builds_normalizes_and_validates() {
             template.id
         );
 
-        let batch = normalize_workflow_document(&document)
-            .unwrap_or_else(|error| panic!("failed to normalize template {}: {}", template.id, error));
+        let batch = normalize_workflow_document(&document).unwrap_or_else(|error| {
+            panic!("failed to normalize template {}: {}", template.id, error)
+        });
         let report = validate_batch(&batch);
-        assert!(report.ok, "template {} validation issues: {:?}", template.id, report.issues);
+        assert!(
+            report.ok,
+            "template {} validation issues: {:?}",
+            template.id, report.issues
+        );
     }
 }
 
 #[test]
 fn template_category_distribution_matches_current_catalog() {
-    let distribution = list_templates()
-        .iter()
-        .fold(BTreeMap::<&str, usize>::new(), |mut counts, template| {
-            *counts.entry(template.category).or_default() += 1;
-            counts
-        });
+    let distribution =
+        list_templates()
+            .iter()
+            .fold(BTreeMap::<&str, usize>::new(), |mut counts, template| {
+                *counts.entry(template.category).or_default() += 1;
+                counts
+            });
     let expected = BTreeMap::from([
         ("browser", 1usize),
         ("electromagnetic", 2),
@@ -174,8 +188,7 @@ fn template_runtime_style_matches_policy_summary() {
             .policy
             .unwrap_or_else(|| panic!("missing policy for template {}", template.id));
         assert_eq!(
-            policy.recommended_runtime,
-            template.runtime_style,
+            policy.recommended_runtime, template.runtime_style,
             "template {} runtime style drifted from policy",
             template.id
         );
@@ -184,13 +197,10 @@ fn template_runtime_style_matches_policy_summary() {
 
 #[test]
 fn direct_service_templates_keep_job_follow_up_chain() {
-    for template in list_templates()
-        .iter()
-        .filter(|template| {
-            template.runtime_style == HeadlessRuntimeStyle::ServiceOnly
-                && template.tags.contains(&"direct")
-        })
-    {
+    for template in list_templates().iter().filter(|template| {
+        template.runtime_style == HeadlessRuntimeStyle::ServiceOnly
+            && template.tags.contains(&"direct")
+    }) {
         let document = build_template_document(template.id, None).unwrap();
         let actions = document
             .workflow
@@ -203,7 +213,12 @@ fn direct_service_templates_keep_job_follow_up_chain() {
             "template {} should keep solve/wait/result structure",
             template.id
         );
-        assert_eq!(actions[actions.len() - 2], "job_wait", "template {}", template.id);
+        assert_eq!(
+            actions[actions.len() - 2],
+            "job_wait",
+            "template {}",
+            template.id
+        );
         assert_eq!(
             actions[actions.len() - 1],
             "result_fetch",

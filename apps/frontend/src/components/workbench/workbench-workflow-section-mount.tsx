@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import type {
   JobState,
   ProtocolAgentDescriptor,
@@ -49,6 +50,7 @@ type WorkbenchWorkflowSectionMountProps = {
     inputArtifacts: Record<string, unknown>,
   ) => void;
   openHistoryJob: (jobId: string) => void;
+  setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
 export function WorkbenchWorkflowSectionMount({
@@ -74,6 +76,7 @@ export function WorkbenchWorkflowSectionMount({
   runWorkflowCatalogEntry,
   runWorkflowDraft,
   openHistoryJob,
+  setSystemAlerts,
 }: WorkbenchWorkflowSectionMountProps) {
   useEffect(() => {
     installWorkflowDebugBridge({
@@ -115,6 +118,7 @@ export function WorkbenchWorkflowSectionMount({
       onRunWorkflowCatalog={runWorkflowCatalogEntry}
       onRunWorkflowDraft={runWorkflowDraft}
       onOpenWorkflowRun={openHistoryJob}
+      setSystemAlerts={setSystemAlerts}
     />
   );
 }

@@ -131,10 +131,10 @@ test("applyHistoryJobPayload opens workflow history entries with diagnostics hig
   assert.ok(jobValue);
   assert.equal(
     workflowRuns[0]?.summary,
-    "Thermal temperature peak=1.250e+2, Thermo stress peak=2.200e+2",
+    "peak review: Thermo stress peak=2.200e+2, Thermal temperature peak=1.250e+2",
   );
   assert.equal(
     message,
-    "workflow completed: workflow.electrostatic-heat-thermo-diagnostics-markdown (Thermal temperature peak=1.250e+2, Thermo stress peak=2.200e+2)",
+    "workflow completed: workflow.electrostatic-heat-thermo-diagnostics-markdown (peak review: Thermo stress peak=2.200e+2, Thermal temperature peak=1.250e+2)",
   );
 });

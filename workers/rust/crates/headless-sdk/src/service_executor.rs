@@ -71,9 +71,12 @@ impl HeadlessExecutor for ServiceHeadlessExecutor {
             | "solve_plane_triangle_2d"
             | "solve_plane_quad_2d"
             | "solve_frame_2d"
-            | "solve_frame_3d" => {
-                execute_direct_fem_submit(&self.base_url, self.api_token.as_deref(), action, payload)
-            }
+            | "solve_frame_3d" => execute_direct_fem_submit(
+                &self.base_url,
+                self.api_token.as_deref(),
+                action,
+                payload,
+            ),
             "workflow_submit_catalog" => {
                 execute_workflow_submit_catalog(&self.base_url, self.api_token.as_deref(), payload)
             }

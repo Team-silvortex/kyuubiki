@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 import {
   clearWorkbenchSafeStorage,
@@ -49,11 +50,11 @@ export function WorkbenchSystemStorageCard() {
   const storageRules = listWorkbenchStorageRules();
 
   return (
-    <section className="sidebar-card sidebar-card--compact runtime-overview-card">
-      <div className="card-head">
-        <h2>Disk usage</h2>
-        <span>{formatBytes(snapshot?.totalBytes ?? null)}</span>
-      </div>
+    <WorkbenchSystemOverviewCard
+      className="runtime-overview-card"
+      status={formatBytes(snapshot?.totalBytes ?? null)}
+      title="Disk usage"
+    >
       <div className="panel-tabs">
         <button
           className={`panel-tab${page === "overview" ? " panel-tab--active" : ""}`}
@@ -190,6 +191,6 @@ export function WorkbenchSystemStorageCard() {
           </div>
         </div>
       ) : null}
-    </section>
+    </WorkbenchSystemOverviewCard>
   );
 }

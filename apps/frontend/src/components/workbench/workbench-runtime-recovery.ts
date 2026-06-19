@@ -1,5 +1,6 @@
 "use client";
 
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import type { WorkbenchRequestError, WorkbenchRequestFailureKind } from "@/lib/api/request-errors";
 
 export type WorkbenchRuntimeRecoveryChannel =
@@ -76,4 +77,15 @@ export function upsertWorkbenchRuntimeRecoveryIssue(params: {
     issues,
     lastFailureAt: issues[0]?.lastFailureAt ?? null,
   } satisfies WorkbenchRuntimeRecoveryState;
+}
+
+export function buildWorkbenchRuntimeRecoveryAlerts(
+  recovery: WorkbenchRuntimeRecoveryState,
+  limit = 2,
+): WorkbenchAlertItem[] {
+  return recovery.issues.slice(0, limit).map((issue) => ({
+    id: `runtime-recovery-${issue.channel}`,
+    message: `${issue.scopeLabel}: ${issue.message}`,
+    tone: issue.kind === "offline" ? "error" : "warning",
+  }));
 }

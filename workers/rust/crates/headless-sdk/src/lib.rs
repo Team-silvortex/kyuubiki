@@ -5,10 +5,10 @@ mod hybrid_executor;
 mod run;
 mod service_executor;
 mod template_search;
-mod template_workflows;
-mod templates;
 #[cfg(test)]
 mod template_tests;
+mod template_workflows;
+mod templates;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -29,9 +29,8 @@ pub use run::{
 };
 pub use service_executor::ServiceHeadlessExecutor;
 pub use templates::{
-    HeadlessTemplateSuggestion, build_template_document, find_template,
-    list_template_categories, list_templates, search_templates, suggest_template_details,
-    suggest_templates,
+    HeadlessTemplateSuggestion, build_template_document, find_template, list_template_categories,
+    list_templates, search_templates, suggest_template_details, suggest_templates,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

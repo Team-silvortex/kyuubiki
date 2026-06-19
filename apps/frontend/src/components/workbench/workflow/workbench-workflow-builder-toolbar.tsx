@@ -1,6 +1,8 @@
 "use client";
 
 import type { ChangeEvent, RefObject } from "react";
+import { WorkbenchPanelNotice } from "@/components/workbench/workbench-panel-notice";
+import type { WorkbenchNoticeItem, WorkbenchNoticeStateSetter } from "@/components/workbench/workbench-notice-state";
 import type { WorkflowCatalogEntry } from "@/lib/api";
 import type { WorkflowSidebarLabels } from "@/components/workbench/workflow/workbench-workflow-types";
 
@@ -10,7 +12,8 @@ type WorkbenchWorkflowBuilderToolbarProps = {
   canRunDraft: boolean;
   canExportDataset: boolean;
   draftBlockingIssueCount: number;
-  importMessage: string | null;
+  importNotice: WorkbenchNoticeItem | null;
+  setImportNotice: WorkbenchNoticeStateSetter;
   graphInputRef: RefObject<HTMLInputElement | null>;
   datasetInputRef: RefObject<HTMLInputElement | null>;
   onRunCatalog: () => void;
@@ -32,7 +35,8 @@ export function WorkbenchWorkflowBuilderToolbar({
   canRunDraft,
   canExportDataset,
   draftBlockingIssueCount,
-  importMessage,
+  importNotice,
+  setImportNotice,
   graphInputRef,
   datasetInputRef,
   onRunCatalog,
@@ -126,7 +130,11 @@ export function WorkbenchWorkflowBuilderToolbar({
       </div>
       <input accept="application/json,.json" hidden onChange={onGraphFileChange} ref={graphInputRef} type="file" />
       <input accept="application/json,.json" hidden onChange={onDatasetFileChange} ref={datasetInputRef} type="file" />
-      {importMessage ? <p className="card-copy" data-workflow-import-message="text">{importMessage}</p> : null}
+      <WorkbenchPanelNotice
+        notice={importNotice}
+        setNotice={setImportNotice}
+        wrapperProps={{ "data-workflow-import-message": "text" }}
+      />
     </section>
   );
 }

@@ -88,6 +88,7 @@ export function useWorkbenchCoreComposition(props: Record<string, any>) {
     resultWindowOffset: rootState.resultWindowOffset,
     setCanvasViewportWidth: rootState.setCanvasViewportWidth,
     setMessage: rootState.setMessage,
+    setSystemAlerts: rootState.setSystemAlerts,
     setResultWindow: rootState.setResultWindow,
     setResultWindowLimit: rootState.setResultWindowLimit,
     setResultWindowOffset: rootState.setResultWindowOffset,

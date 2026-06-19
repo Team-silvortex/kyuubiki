@@ -2763,8 +2763,8 @@ mod tests {
         HeatToThermoPlaneTriangle2dWorkflowResult, Job, JobStatus, OperatorArtifactRef,
         OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
         OperatorRunRequest, OperatorRunResult, OperatorSchemaRef, OperatorValidationProfile,
-        OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent, RpcMethod, RpcProgress,
-        RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
+        OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent, RPC_VERSION, RpcMethod,
+        RpcProgress, RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
         SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
         SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
         SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
@@ -2785,7 +2785,7 @@ mod tests {
         Torsion1dNodeInput, WorkflowCachePolicy, WorkflowDatasetAxis, WorkflowDatasetContract,
         WorkflowDatasetEncoding, WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults,
         WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode,
-        WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, RPC_VERSION,
+        WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort,
     };
 
     #[test]

@@ -132,6 +132,21 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.compose_diagnostics_report_payload" when is_map(config) ->
         WorkflowBundleRuntime.compose_diagnostics_report_payload(payload, config)
 
+      "transform.select_focus_payload" when is_map(config) ->
+        WorkflowBundleRuntime.select_focus_payload(payload, config)
+
+      "transform.compose_focus_chain_input" when is_map(config) ->
+        WorkflowBundleRuntime.compose_focus_chain_input(payload, config)
+
+      "transform.compose_focus_bridge_request" when is_map(config) ->
+        WorkflowBundleRuntime.compose_focus_bridge_request(payload, config)
+
+      "transform.resolve_focus_bridge_execution" when is_map(config) ->
+        WorkflowBundleRuntime.resolve_focus_bridge_execution(payload, config)
+
+      "transform.execute_focus_bridge_execution" when is_map(config) ->
+        execute_focus_bridge_execution(payload, config)
+
       "transform.evaluate_diagnostics_bundle_guard" when is_map(config) ->
         WorkflowSummaryRuntime.evaluate_diagnostics_bundle_guard(payload, config)
 
@@ -149,6 +164,29 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   def run_transform_operator(operator_id, _payload, _config),
     do: {:error, {:unsupported_workflow_transform_operator, operator_id}}
 
+  defp execute_focus_bridge_execution(payload, config) do
+    with {:ok, execution} <- WorkflowBundleRuntime.resolve_focus_bridge_execution(payload, config),
+         operator_id when is_binary(operator_id) <- Map.get(execution, "operator_id"),
+         %{} = bridge_payload <- Map.get(execution, "bridge_payload"),
+         %{} = bridge_config <- Map.get(execution, "bridge_config"),
+         {:ok, bridge_result} <- run_transform_operator(operator_id, bridge_payload, bridge_config) do
+      {:ok,
+       %{
+         "result_contract" => "kyuubiki.workflow_focus_bridge_result/v1",
+         "result_kind" => "focus_bridge_result",
+         "operator_id" => operator_id,
+         "bridge_result" => bridge_result,
+         "execution_payload" => execution,
+         "metric_id" => Map.get(execution, "metric_id"),
+         "focus_value" => Map.get(execution, "focus_value"),
+         "bridge_payload_source" => Map.get(execution, "bridge_payload_source")
+       }}
+    else
+      {:error, reason} -> {:error, reason}
+      _ -> {:error, :invalid_focus_bridge_execution}
+    end
+  end
+
   def run_extract_operator(operator_id, payload, config) when is_map(payload) do
     case operator_id do
       "extract.result_summary" ->
@@ -163,11 +201,20 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "extract.electrostatic_result_diagnostics" ->
         WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(payload, config || %{})
 
+      "extract.electrostatic_peak_field" ->
+        WorkflowReportingRuntime.extract_electrostatic_peak_field(payload, config || %{})
+
       "extract.thermal_result_diagnostics" ->
         WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config || %{})
 
+      "extract.heat_peak_flux" ->
+        WorkflowReportingRuntime.extract_heat_peak_flux(payload, config || %{})
+
       "extract.thermo_result_diagnostics" ->
         WorkflowReportingRuntime.extract_thermo_result_diagnostics(payload, config || %{})
+
+      "extract.thermo_peak_response" ->
+        WorkflowReportingRuntime.extract_thermo_peak_response(payload, config || %{})
 
       _ ->
         {:error, {:unsupported_workflow_extract_operator, operator_id}}

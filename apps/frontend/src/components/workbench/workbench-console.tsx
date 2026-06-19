@@ -1,6 +1,7 @@
 "use client";
 
 import { memo } from "react";
+import { WorkbenchAlertStrip, type WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { VirtualList } from "@/components/ui/virtual-list";
 
 type SidebarSection = "study" | "model" | "workflow" | "library" | "system";
@@ -29,6 +30,7 @@ export type WorkbenchConsoleProps = {
   modelMessageTitle: string;
   reportMessageTitle: string;
   message: string;
+  alerts?: WorkbenchAlertItem[];
   dragNodeLabel: string;
   noNodeSelectedLabel: string;
   loadCaseLabel: string;
@@ -61,6 +63,7 @@ function WorkbenchConsoleInner({
   modelMessageTitle,
   reportMessageTitle,
   message,
+  alerts = [],
   dragNodeLabel,
   noNodeSelectedLabel,
   loadCaseLabel,
@@ -110,7 +113,10 @@ function WorkbenchConsoleInner({
               </div>
             </div>
           ) : (
-            <p>{message}</p>
+            <>
+              <WorkbenchAlertStrip alerts={alerts} />
+              <p>{message}</p>
+            </>
           )}
         </div>
         <div className="console-card">

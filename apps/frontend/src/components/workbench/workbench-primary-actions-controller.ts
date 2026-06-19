@@ -25,6 +25,7 @@ import {
   ensurePlaneModelMaterials,
   ensureTrussModelMaterials,
 } from "@/lib/workbench/material-commands";
+import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
 import { scientific, serializeCurrentModel } from "@/lib/workbench/helpers";
 import {
   generatePrattTruss,
@@ -53,6 +54,7 @@ type PrimaryActionsControllerDeps = {
   setDirectMeshExecution: (value: any) => void;
   setJob: (value: any) => void;
   setResult: (value: any) => void;
+  setSystemAlerts: (value: any) => void;
   studyKind: any;
   axialForm: any;
   beamModel: any;
@@ -139,6 +141,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.startTransition(() => {
       void (async () => {
         try {
+          dismissWorkbenchAlert(deps.setSystemAlerts, "run-analysis-error");
           await runWorkbenchAnalysis({
             axialForm: deps.axialForm,
             beamModel: deps.beamModel,
@@ -166,6 +169,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
             setDirectMeshExecution: deps.setDirectMeshExecution,
             setJob: deps.setJob,
             setMessage: deps.setMessage,
+            setSystemAlerts: deps.setSystemAlerts,
             setResult: deps.setResult,
             spring2dModel: deps.spring2dModel,
             spring3dModel: deps.spring3dModel,
@@ -182,13 +186,18 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
             trussModel: deps.trussModel,
           });
         } catch (error) {
-          deps.setMessage(
+          const message =
             error instanceof Error
               ? error.message.startsWith("request timed out:")
                 ? deps.t.requestTimedOut
                 : error.message
-              : deps.t.initialFailed,
-          );
+              : deps.t.initialFailed;
+          upsertWorkbenchAlert(deps.setSystemAlerts, {
+            id: "run-analysis-error",
+            message,
+            tone: error instanceof Error && error.message.startsWith("request timed out:") ? "warning" : "error",
+          });
+          deps.setMessage(message);
         }
       })();
     });
@@ -200,6 +209,7 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
     deps.startTransition(() => {
       void (async () => {
         try {
+          dismissWorkbenchAlert(deps.setSystemAlerts, "history-open-error");
           const payload = await deps.fetchJobStatus(jobId);
           applyHistoryJobPayload(payload, {
             activeMaterial: deps.activeMaterial,
@@ -238,7 +248,13 @@ export function createWorkbenchPrimaryActionsController(deps: PrimaryActionsCont
             setPlaneModel: deps.setPlaneModel,
           });
         } catch (error) {
-          deps.setMessage(error instanceof Error ? error.message : deps.t.initialFailed);
+          const message = error instanceof Error ? error.message : deps.t.initialFailed;
+          upsertWorkbenchAlert(deps.setSystemAlerts, {
+            id: "history-open-error",
+            message,
+            tone: "error",
+          });
+          deps.setMessage(message);
         }
       })();
     });

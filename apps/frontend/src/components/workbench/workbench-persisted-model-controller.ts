@@ -1,10 +1,14 @@
 "use client";
 
 import { applyImportedWorkbenchModel } from "@/components/workbench/workbench-model-load";
+import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
+import { dismissWorkbenchAlert, upsertWorkbenchAlert } from "@/components/workbench/workbench-alert-state";
+import { dismissWorkbenchNotice, showWorkbenchNotice, type WorkbenchNoticeItem } from "@/components/workbench/workbench-notice-state";
 import type { ModelRecord, ModelVersionRecord } from "@/lib/api";
 import { parsePlaygroundModel } from "@/lib/models";
 import { parseProjectBundleFile } from "@/lib/projects";
 import { saveWorkbenchMacroPreset, saveWorkbenchSnippetPreset } from "@/lib/scripting/workbench-script-runtime";
+import { isSensitivePresetSaveError } from "@/lib/scripting/workbench-script-preset-security";
 
 type PersistedModelEffects = {
   setLoadedModelName: (value: string) => void;
@@ -53,7 +57,10 @@ type PersistedModelControllerDeps = PersistedModelEffects & {
   importedProjectLabel: string;
   importedVersionLabel: string;
   importFailedLabel: string;
+  formatImportNotice: (skippedSensitivePresetCount: number) => WorkbenchNoticeItem;
   setMessage: (value: string) => void;
+  setSystemAlerts: (value: WorkbenchAlertItem[] | ((current: WorkbenchAlertItem[]) => WorkbenchAlertItem[])) => void;
+  setImportNotice: (value: WorkbenchNoticeItem | null) => void;
   setSelectedProjectId: (value: string | null) => void;
   setSidebarSection?: (value: any) => void;
 };
@@ -82,6 +89,8 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
   if (!file) return;
 
   try {
+    dismissWorkbenchAlert(effects.setSystemAlerts, "project-import-error");
+    dismissWorkbenchNotice(effects.setImportNotice);
     const bundle = await parseProjectBundleFile(file);
     const createdProject = await effects.createProject({
       name: bundle.project.name,
@@ -123,6 +132,7 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
       }
     }
 
+    let skippedSensitivePresetCount = 0;
     for (const preset of bundle.automation_presets ?? []) {
       try {
         saveWorkbenchMacroPreset({
@@ -131,7 +141,10 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
           name: preset.name,
           macro: preset.macro,
         });
-      } catch {
+      } catch (error) {
+        if (isSensitivePresetSaveError(error)) {
+          skippedSensitivePresetCount += 1;
+        }
         // Ignore malformed preset payloads so model/project import stays usable.
       }
     }
@@ -144,7 +157,10 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
           name: preset.name,
           parameters: preset.parameters,
         });
-      } catch {
+      } catch (error) {
+        if (isSensitivePresetSaveError(error)) {
+          skippedSensitivePresetCount += 1;
+        }
         // Ignore malformed snippet preset payloads so model/project import stays usable.
       }
     }
@@ -171,14 +187,28 @@ export async function importWorkbenchProjectBundle(file: File | undefined, effec
     }
 
     effects.setMessage(effects.importedProjectLabel);
+    if (skippedSensitivePresetCount > 0) {
+      showWorkbenchNotice(effects.setImportNotice, effects.formatImportNotice(skippedSensitivePresetCount));
+    } else {
+      dismissWorkbenchNotice(effects.setImportNotice);
+    }
   } catch (error) {
-    effects.setMessage(error instanceof Error ? error.message : effects.importFailedLabel);
+    dismissWorkbenchNotice(effects.setImportNotice);
+    const message = error instanceof Error ? error.message : effects.importFailedLabel;
+    upsertWorkbenchAlert(effects.setSystemAlerts, {
+      id: "project-import-error",
+      message,
+      tone: "error",
+    });
+    effects.setMessage(message);
   }
 }
 
 export function openPersistedWorkbenchModel(model: ModelRecord, effects: PersistedModelControllerDeps) {
   const run = async () => {
     try {
+      dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-model-open-error");
+      dismissWorkbenchNotice(effects.setImportNotice);
       const payload = await effects.fetchModel(model.model_id);
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.model.payload, payload.model.name, effects);
@@ -188,7 +218,13 @@ export function openPersistedWorkbenchModel(model: ModelRecord, effects: Persist
       await effects.refreshVersions(payload.model.model_id);
       effects.setMessage(effects.importedModelLabel);
     } catch (error) {
-      effects.setMessage(error instanceof Error ? error.message : effects.importFailedLabel);
+      const message = error instanceof Error ? error.message : effects.importFailedLabel;
+      upsertWorkbenchAlert(effects.setSystemAlerts, {
+        id: "persisted-model-open-error",
+        message,
+        tone: "error",
+      });
+      effects.setMessage(message);
     }
   };
 
@@ -209,6 +245,8 @@ export function openPersistedWorkbenchVersion(version: ModelVersionRecord, effec
 export function openPersistedWorkbenchVersionById(versionId: string, effects: PersistedModelControllerDeps) {
   const run = async () => {
     try {
+      dismissWorkbenchAlert(effects.setSystemAlerts, "persisted-version-open-error");
+      dismissWorkbenchNotice(effects.setImportNotice);
       const payload = await effects.fetchModelVersion(versionId);
       effects.recordHistory(effects.historyActionLabel);
       applyPersistedWorkbenchPayload(payload.version.payload, payload.version.name, effects);
@@ -218,7 +256,13 @@ export function openPersistedWorkbenchVersionById(versionId: string, effects: Pe
       effects.setMessage(effects.importedVersionLabel);
       effects.setSidebarSection?.("model");
     } catch (error) {
-      effects.setMessage(error instanceof Error ? error.message : effects.importFailedLabel);
+      const message = error instanceof Error ? error.message : effects.importFailedLabel;
+      upsertWorkbenchAlert(effects.setSystemAlerts, {
+        id: "persisted-version-open-error",
+        message,
+        tone: "error",
+      });
+      effects.setMessage(message);
     }
   };
 

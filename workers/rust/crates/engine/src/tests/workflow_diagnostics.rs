@@ -122,9 +122,18 @@ fn extracts_thermo_result_diagnostics_with_payload_and_strain_fallbacks() {
         Some(13.0)
     );
     assert_eq!(diagnostics["thermo_peak_displacement"].as_f64(), Some(13.0));
-    assert_eq!(diagnostics["thermo_peak_displacement_id"].as_str(), Some("n1"));
-    assert_eq!(diagnostics["thermo_displacement_peak_x"].as_f64(), Some(5.0));
-    assert_eq!(diagnostics["thermo_displacement_peak_y"].as_f64(), Some(12.0));
+    assert_eq!(
+        diagnostics["thermo_peak_displacement_id"].as_str(),
+        Some("n1")
+    );
+    assert_eq!(
+        diagnostics["thermo_displacement_peak_x"].as_f64(),
+        Some(5.0)
+    );
+    assert_eq!(
+        diagnostics["thermo_displacement_peak_y"].as_f64(),
+        Some(12.0)
+    );
     assert_eq!(
         diagnostics["thermo_displacement_peak_element_id"].as_str(),
         Some("n1")
@@ -145,7 +154,10 @@ fn extracts_thermo_result_diagnostics_with_payload_and_strain_fallbacks() {
         diagnostics["thermo_peak_thermal_strain_id"].as_str(),
         Some("e1")
     );
-    approx_eq(diagnostics["thermo_peak_mechanical_strain"].as_f64(), -3.0e-4);
+    approx_eq(
+        diagnostics["thermo_peak_mechanical_strain"].as_f64(),
+        -3.0e-4,
+    );
     approx_eq(diagnostics["thermo_peak_total_strain"].as_f64(), 2.0e-4);
 }
 

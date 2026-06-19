@@ -16,6 +16,7 @@ export type WorkflowDiagnosticsReportPayload = {
   report_contract: string;
   report_kind: string;
   report_focus_metrics: Record<string, WorkflowSummaryArtifactFieldValue>;
+  report_focus_context?: Record<string, Record<string, WorkflowSummaryArtifactFieldValue>>;
   report_highlights: WorkflowDiagnosticsReportHighlight[];
   report_guard_status?: string;
   report_guard_recommendation?: string;
@@ -61,6 +62,18 @@ function normalizeFocusMetrics(value: unknown) {
   return Object.fromEntries(entries) as Record<string, WorkflowSummaryArtifactFieldValue>;
 }
 
+function normalizeFocusContext(value: unknown) {
+  if (!isRecord(value)) return undefined;
+  const entries = Object.entries(value).flatMap(([key, entry]) => {
+    if (!isRecord(entry)) return [];
+    const fields = Object.entries(entry).filter((item) => isFieldValue(item[1]));
+    return fields.length > 0 ? [[key, Object.fromEntries(fields)]] : [];
+  });
+  return entries.length > 0
+    ? (Object.fromEntries(entries) as Record<string, Record<string, WorkflowSummaryArtifactFieldValue>>)
+    : undefined;
+}
+
 function normalizeHighlights(value: unknown) {
   if (!Array.isArray(value)) return null;
   const items = value.flatMap((entry) => {
@@ -89,12 +102,14 @@ function normalizeDiagnosticsReportPayload(value: unknown): WorkflowDiagnosticsR
   if (value.report_contract !== "kyuubiki.workflow_report_payload/v1") return null;
   if (value.report_kind !== "diagnostics_bundle_report_payload") return null;
   const report_focus_metrics = normalizeFocusMetrics(value.report_focus_metrics) ?? {};
+  const report_focus_context = normalizeFocusContext(value.report_focus_context);
   const report_highlights = normalizeHighlights(value.report_highlights) ?? [];
   if (Object.keys(report_focus_metrics).length === 0 && report_highlights.length === 0) return null;
   return {
     report_contract: value.report_contract,
     report_kind: value.report_kind,
     report_focus_metrics,
+    report_focus_context,
     report_highlights,
     report_guard_status:
       typeof value.report_guard_status === "string" ? value.report_guard_status : undefined,

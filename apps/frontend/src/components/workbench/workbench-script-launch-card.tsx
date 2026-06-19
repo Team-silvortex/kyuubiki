@@ -1,5 +1,6 @@
 "use client";
 
+import { WorkbenchAlertStrip } from "@/components/workbench/workbench-alert-strip";
 import type { WorkbenchScriptPanelCopyEntry } from "@/components/workbench/workbench-script-panel-copy";
 
 type RuntimeStatus = "idle" | "loading" | "ready" | "running" | "error";
@@ -47,7 +48,19 @@ export function WorkbenchScriptLaunchCard({
       <p className="card-copy">{copy.subtitle}</p>
       <p className="card-copy">{copy.frontendSurfaceHint}</p>
       <p className="card-copy">{copy.firstRun}</p>
-      {runtimeError ? <p className="card-copy">{runtimeError}</p> : null}
+      <WorkbenchAlertStrip
+        alerts={
+          runtimeError
+            ? [
+                {
+                  id: "script-runtime-error",
+                  message: runtimeError,
+                  tone: "error",
+                },
+              ]
+            : []
+        }
+      />
       <div className="button-row">
         <button className="ghost-button" onClick={loadRuntime} type="button">
           {copy.loadRuntime}
