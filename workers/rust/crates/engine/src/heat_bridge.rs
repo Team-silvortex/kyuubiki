@@ -1,10 +1,7 @@
 use crate::bridge::BridgeDiagnostics;
-use crate::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult, HeatPlaneNodeResult, HeatToThermoPlaneQuad2dWorkflowRequest,
-    HeatToThermoPlaneQuad2dWorkflowResult, SolveHeatPlaneQuad2dResult,
-    SolveHeatPlaneTriangle2dResult, SolveThermalPlaneQuad2dRequest,
-    SolveThermalPlaneTriangle2dRequest,
+    HeatPlaneNodeResult, SolveHeatPlaneQuad2dResult, SolveHeatPlaneTriangle2dResult,
+    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
 };
 use serde_json::Value;
 
@@ -145,31 +142,16 @@ pub(crate) fn bridge_heat_result_to_thermal_plane_triangle_model_with_contract(
     ))
 }
 
-pub fn run_heat_to_thermo_plane_quad_2d_workflow(
-    request: HeatToThermoPlaneQuad2dWorkflowRequest,
-) -> Result<HeatToThermoPlaneQuad2dWorkflowResult, String> {
-    let heat_result = match solve(EngineSolveRequest::HeatPlaneQuad2d(request.heat_model))? {
-        AnalysisResult::HeatPlaneQuad2d(result) => result,
-        _ => return Err("heat-plane-quad workflow produced an unexpected heat result".to_string()),
-    };
-
-    let (bridged_model, _) =
-        bridge_heat_result_to_thermal_plane_quad_model(&heat_result, &request.thermo_seed_model)?;
-    let thermo_result = match solve(EngineSolveRequest::ThermalPlaneQuad2d(
-        bridged_model.clone(),
-    ))? {
-        AnalysisResult::ThermalPlaneQuad2d(result) => result,
-        _ => {
-            return Err("heat-to-thermo workflow produced an unexpected thermo result".to_string());
-        }
-    };
-
-    Ok(HeatToThermoPlaneQuad2dWorkflowResult {
-        workflow_id: "workflow.heat-to-thermo-quad-2d".to_string(),
+pub fn bridge_heat_result_to_thermal_plane_triangle_model(
+    heat_result: &SolveHeatPlaneTriangle2dResult,
+    thermo_seed_model: &SolveThermalPlaneTriangle2dRequest,
+) -> Result<(SolveThermalPlaneTriangle2dRequest, BridgeDiagnostics), String> {
+    let contract = default_heat_to_thermo_bridge_contract();
+    bridge_heat_result_to_thermal_plane_triangle_model_with_contract(
         heat_result,
-        bridged_model,
-        thermo_result,
-    })
+        thermo_seed_model,
+        &contract,
+    )
 }
 
 fn default_heat_to_thermo_bridge_contract() -> HeatToThermoBridgeContract {

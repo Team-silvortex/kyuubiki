@@ -23,6 +23,7 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
                "workflow.electrostatic-preheat-guard-heat-json",
                "workflow.electrostatic-preheat-guard-heat-thermo-json",
                "workflow.diagnostics-bundle-guard-report-markdown",
+               "workflow.electrostatic-heat-thermo-diagnostics-markdown",
                "workflow.electrostatic-triangle-preheat-guard-markdown",
                "workflow.electrostatic-triangle-preheat-guard-heat-json",
                "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
@@ -73,6 +74,11 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
         workflow["id"] == "workflow.diagnostics-bundle-guard-report-markdown"
       end)
 
+    coupled_diagnostics_workflow =
+      Enum.find(workflows, fn workflow ->
+        workflow["id"] == "workflow.electrostatic-heat-thermo-diagnostics-markdown"
+      end)
+
     electrostatic_workflow =
       Enum.find(workflows, fn workflow ->
         workflow["id"] == "workflow.electrostatic-plane-quad-2d"
@@ -103,11 +109,15 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
     assert diagnostics_bundle_workflow["name"] ==
              "Diagnostics bundle guard report markdown"
 
+    assert coupled_diagnostics_workflow["name"] ==
+             "Electrostatic heat thermo diagnostics markdown"
+
     assert electrostatic_heat_thermo_workflow["name"] ==
              "Electrostatic heat thermo quad summary JSON"
 
     assert electrostatic_heat_thermo_workflow["version"] == "1.0.0"
     assert diagnostics_bundle_workflow["version"] == "1.0.0"
+    assert coupled_diagnostics_workflow["version"] == "1.0.0"
     assert electrostatic_workflow["name"] == "Electrostatic plane quad"
     assert electrostatic_workflow["version"] == "1.0.0"
     assert workflow["name"] == "Heat to thermo quad"
@@ -204,6 +214,40 @@ defmodule KyuubikiWeb.Api.WorkflowCatalogApiTest do
 
     assert electrostatic_heat_thermo_triangle_fetched["graph"]["dataset_contract"]["metadata"] ==
              %{"workflow_family" => "electrostatic_heat_thermo_triangle"}
+
+    coupled_diagnostics_fetch_conn =
+      :get
+      |> conn("/api/v1/workflows/catalog/workflow.electrostatic-heat-thermo-diagnostics-markdown")
+      |> Router.call(@opts)
+
+    assert coupled_diagnostics_fetch_conn.status == 200
+
+    coupled_diagnostics_fetched =
+      Jason.decode!(coupled_diagnostics_fetch_conn.resp_body)["workflow"]
+
+    assert coupled_diagnostics_fetched["id"] ==
+             "workflow.electrostatic-heat-thermo-diagnostics-markdown"
+
+    assert coupled_diagnostics_fetched["graph"]["output_nodes"] == ["markdown_output"]
+
+    assert coupled_diagnostics_fetched["graph"]["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "electrostatic_heat_thermo_diagnostics_markdown"
+           }
+
+    assert Enum.any?(
+             coupled_diagnostics_fetched["graph"]["nodes"],
+             &(&1["operator_id"] == "extract.electrostatic_result_diagnostics")
+           )
+
+    assert Enum.any?(
+             coupled_diagnostics_fetched["graph"]["nodes"],
+             &(&1["operator_id"] == "extract.thermal_result_diagnostics")
+           )
+
+    assert Enum.any?(
+             coupled_diagnostics_fetched["graph"]["nodes"],
+             &(&1["operator_id"] == "extract.thermo_result_diagnostics")
+           )
 
     electrostatic_heat_triangle_fetch_conn =
       :get

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Testing And CI · Kyuubiki Book</title>
+    <link rel="stylesheet" href="./docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Testing Mirror · Verification Route</div>
+        <h1>Verification and workflow preflight</h1>
+        <p class="docs-copy">
+          Use this page when you need the shortest map for repo checks, CI
+          layers, and workflow-heavy frontend validation.
+        </p>
+        <p class="docs-copy">
+          This is the short Hub mirror for the central verification docs around
+          <code>docs/testing-and-ci.md</code>.
+        </p>
+        <div class="docs-links">
+          <a class="docs-link" href="./index.html">Back to book entry</a>
+          <a class="docs-link" href="../../../../docs/testing-and-ci.md">Open source doc</a>
+          <a class="docs-link" href="../../../../docs/release-prep-1.8.md">Open 1.8 release prep</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Main verification layers</h2>
+          <ul class="docs-list">
+            <li><strong>Frontend test</strong>: typecheck plus production build validation.</li>
+            <li><strong>Workflow preflight</strong>: workflow unit checks, topology regression, and browser-backed layout/search guards.</li>
+            <li><strong>Integration smoke</strong>: orchestrator, agent, direct-mesh, and UI representative paths.</li>
+            <li><strong>Desktop smoke</strong>: Hub, Installer, and Workbench shell checks.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>When to run workflow preflight</h2>
+          <ul class="docs-list">
+            <li>Workflow builder layout changed.</li>
+            <li>Operator search, template-chain search, or workflow toolbar behavior changed.</li>
+            <li>Dataset editor, import diagnostics, snapshot, validation, or integrity panels changed.</li>
+            <li>A release includes workflow-heavy frontend work and should not rely on build success alone.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Operator flow</h2>
+          <ul class="docs-list">
+            <li>Start <code>npm run dev</code> inside <code>apps/frontend</code>.</li>
+            <li>Run the dedicated workflow preflight path from the central docs.</li>
+            <li>If it fails, inspect workflow layout/search behavior before chasing packaging or runtime causes.</li>
+          </ul>
+          <div class="docs-links">
+            <a class="docs-link" href="./troubleshooting.html">Troubleshooting</a>
+            <a class="docs-link" href="./operations.html">Operations</a>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

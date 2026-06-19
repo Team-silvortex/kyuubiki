@@ -27,6 +27,8 @@ The repository now keeps validation split by responsibility.
   Rust workspace tests under `workers/rust`
 - `make test-frontend`
   frontend typecheck plus production build validation
+- `make workflow-preflight`
+  workflow unit/topology plus browser-backed search/layout guard validation
 
 ### SDK checks
 
@@ -81,6 +83,14 @@ Use these when you want the repo to choose the right lower-level commands:
 For narrower SDK or frontend-only entrypoints, use the package or Make targets
 listed above.
 
+For workflow-heavy frontend work, prefer the dedicated preflight entrypoint:
+
+- `./scripts/kyuubiki workflow-preflight`
+
+Start `npm run dev` inside `apps/frontend` first. The layout/search guard needs
+the live benchmark route and is intentionally separate from `frontend-test`, so
+plain build validation can stay fast and headless.
+
 ## CI structure
 
 Current GitHub Actions jobs are intentionally separated:
@@ -121,6 +131,8 @@ Typical examples:
 
 - UI/runtime protocol change:
   `make test-frontend && make test-sdk`
+- workflow builder or operator-search UI change:
+  `make workflow-preflight`
 - orchestrator behavior change:
   `make test-web && make test-integration-api`
 - SDK-only change:

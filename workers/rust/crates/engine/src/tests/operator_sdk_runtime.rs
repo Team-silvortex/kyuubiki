@@ -1,6 +1,7 @@
 use crate::{
-    EngineSolveRequest, solve,
+    solve,
     workflow_executor::{run_export_operator, run_extract_operator, run_transform_operator},
+    EngineSolveRequest,
 };
 use kyuubiki_protocol::{
     AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput, SolveHeatPlaneQuad2dRequest,
@@ -44,11 +45,9 @@ fn runs_export_operator_through_sdk_registry() {
     .expect("export.summary_json should succeed");
 
     assert_eq!(export["format"].as_str(), Some("json"));
-    assert!(
-        export["content"]
-            .as_str()
-            .is_some_and(|content| content.contains("\"max_temperature\": 22.0"))
-    );
+    assert!(export["content"]
+        .as_str()
+        .is_some_and(|content| content.contains("\"max_temperature\": 22.0")));
 }
 
 #[test]

@@ -3,43 +3,41 @@
 import type {
   AxialBarResult,
   Beam1dResult,
+  HeatBar1dResult,
+  Spring1dResult,
+  ThermalBeam1dResult,
+  Torsion1dResult,
+  ThermalBar1dResult,
+} from "@/lib/api/fem-1d";
+import type {
+  Frame2dResult,
+  Spring2dResult,
+  ThermalFrame2dResult,
+  ThermalTruss2dResult,
+  Truss2dResult,
+} from "@/lib/api/fem-2d-line";
+import type {
   ElectrostaticPlaneQuad2dResult,
   ElectrostaticPlaneTriangle2dResult,
-  Frame2dResult,
-  HeatBar1dResult,
   HeatPlaneQuad2dResult,
   HeatPlaneTriangle2dResult,
-  JobEnvelope,
   PlaneQuad2dResult,
   PlaneTriangle2dResult,
-  ThermalBar1dResult,
-  ThermalBeam1dResult,
-  ThermalFrame2dResult,
   ThermalPlaneQuad2dResult,
   ThermalPlaneTriangle2dResult,
-  ThermalTruss2dResult,
-  ThermalTruss3dResult,
-  Truss2dResult,
-  Truss3dResult,
-  WorkflowGraphJobResult,
-  Spring1dResult,
-  Spring2dResult,
-  Spring3dResult,
-  Torsion1dResult,
-} from "@/lib/api";
-import { resolveJobStatusDetailLabel } from "@/lib/api";
-import { createMaterialDefinition } from "@/lib/materials";
+} from "@/lib/api/fem-2d-surface";
+import type { Spring3dResult, ThermalTruss3dResult, Truss3dResult } from "@/lib/api/fem-3d";
+import type { JobEnvelope } from "@/lib/api/fem-shared";
+import type { WorkflowGraphJobResult } from "@/lib/api/workflow-types";
+import { resolveJobStatusDetailLabel } from "@/lib/api/job-status";
+import { createMaterialDefinition } from "@/lib/materials/materials";
 import {
   ensureFrameModelMaterials,
   ensurePlaneModelMaterials,
   ensureTruss3dModelMaterials,
   ensureTrussModelMaterials,
 } from "@/lib/workbench/material-commands";
-import {
-  isWorkflowGraphResult,
-  summarizeWorkflowArtifacts,
-  upsertWorkflowRunRecord,
-} from "@/components/workbench/workflow/workbench-workflow-controller";
+import { summarizeWorkflowResultArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 import type { WorkflowRunRecord } from "@/components/workbench/workflow/workbench-workflow-types";
 
 type HistoryResultCopy = {
@@ -106,6 +104,25 @@ type HistoryJobResult =
   | ThermalPlaneTriangle2dResult
   | ThermalPlaneQuad2dResult
   | WorkflowGraphJobResult;
+
+function isWorkflowGraphResult(value: unknown): value is WorkflowGraphJobResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "workflow_id" in value &&
+    "completed_nodes" in value &&
+    "artifacts" in value
+  );
+}
+
+function summarizeWorkflowArtifacts(result: WorkflowGraphJobResult): string | null {
+  return summarizeWorkflowResultArtifacts(result);
+}
+
+function upsertWorkflowRunRecord(current: WorkflowRunRecord[], next: WorkflowRunRecord): WorkflowRunRecord[] {
+  const withoutMatch = current.filter((entry) => entry.jobId !== next.jobId);
+  return [next, ...withoutMatch].slice(0, 12);
+}
 
 function isAxialResult(value: unknown): value is AxialBarResult {
   return typeof value === "object" && value !== null && "displacements" in value && "strains" in value && "input" in value;

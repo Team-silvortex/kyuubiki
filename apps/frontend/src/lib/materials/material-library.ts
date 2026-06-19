@@ -1,5 +1,5 @@
-import type { ModelMaterial } from "@/lib/api";
-import { createMaterialDefinition } from "@/lib/materials";
+import type { ModelMaterial } from "@/lib/api/fem-shared";
+import { createMaterialDefinition } from "@/lib/materials/materials";
 
 function positiveNumber(value: unknown, field: string) {
   const number = Number(value);

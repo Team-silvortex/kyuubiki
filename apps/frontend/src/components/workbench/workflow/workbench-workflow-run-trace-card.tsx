@@ -19,6 +19,11 @@ import { collectWorkflowInputArtifactContractWarnings } from "@/components/workb
 import { measureWorkflowTraceCardReady } from "@/components/workbench/workflow/workbench-workflow-perf";
 import { WorkbenchWorkflowBridgeRuntimeCard } from "@/components/workbench/workflow/workbench-workflow-bridge-runtime-card";
 import { buildWorkflowRunAuditReportHtml } from "@/components/workbench/workflow/workbench-workflow-run-trace-report";
+import { listWorkflowDiagnosticsReports } from "@/components/workbench/workflow/workbench-workflow-diagnostics-report-contract";
+import {
+  formatWorkflowDiagnosticsMetricValue,
+  summarizeWorkflowDiagnosticsReport,
+} from "@/components/workbench/workflow/workbench-workflow-diagnostics-presentation";
 import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 import {
   resolveWorkflowTraceBranchPredicateTone,
@@ -47,6 +52,13 @@ type WorkbenchWorkflowRunTraceCardProps = {
 
 function renderStatusPill(label: string, tone: WorkflowTraceStatusTone) {
   return <span className={`status-pill status-pill--${tone}`}>{label}</span>;
+}
+
+function resolveDiagnosticsGuardTone(status: string | undefined): WorkflowTraceStatusTone {
+  if (status === "block") return "risk";
+  if (status === "warn") return "watch";
+  if (status === "pass") return "good";
+  return "watch";
 }
 
 function renderInlineList(values: string[] | undefined, empty = "--") {
@@ -86,6 +98,14 @@ export function WorkbenchWorkflowRunTraceCard({
   const recentSummaryArtifacts = useMemo(
     () => listWorkflowSummaryArtifacts(run.result ?? null).slice(0, 3),
     [run.result],
+  );
+  const diagnosticsReport = useMemo(
+    () => listWorkflowDiagnosticsReports(run.result ?? null)[0] ?? null,
+    [run.result],
+  );
+  const diagnosticsPreview = useMemo(
+    () => summarizeWorkflowDiagnosticsReport(diagnosticsReport),
+    [diagnosticsReport],
   );
   const previousSummaryArtifactsByKind = useMemo(
     () =>
@@ -195,6 +215,74 @@ export function WorkbenchWorkflowRunTraceCard({
             onLocateIssue={(issue) => onSelectNode?.(issue.nodeId)}
             result={run.result ?? null}
           />
+        </div>
+        <div>
+          <div className="workflow-trace-diagnostics">
+            <div className="workflow-trace-diagnostics__head">
+              <p className="card-copy">diagnostics focus</p>
+              {!diagnosticsReport ? <span className="card-copy">--</span> : null}
+            </div>
+            {diagnosticsReport ? (
+              <div className="workflow-trace-diagnostics__stack">
+                <div className="workflow-trace-diagnostics__status">
+                  {renderStatusPill(
+                    diagnosticsReport.payload.report_guard_status ?? "report",
+                    resolveDiagnosticsGuardTone(diagnosticsReport.payload.report_guard_status),
+                  )}
+                  {diagnosticsReport.payload.report_guard_recommendation ? (
+                    <span className="card-copy">{diagnosticsReport.payload.report_guard_recommendation}</span>
+                  ) : null}
+                </div>
+                <div className="workflow-trace-diagnostics__preview">
+                  <span className="card-copy">summary preview</span>
+                  <strong>{diagnosticsPreview ?? "--"}</strong>
+                </div>
+                <div className="workflow-trace-diagnostics__meta">
+                  <span className="status-pill status-pill--watch">
+                    {`${diagnosticsReport.payload.report_highlights.length} highlights`}
+                  </span>
+                  <span className="status-pill status-pill--watch">
+                    {`${Object.keys(diagnosticsReport.payload.report_focus_metrics).length} focus metrics`}
+                  </span>
+                </div>
+                {diagnosticsReport.payload.report_highlights.length > 0 ? (
+                  <div className="workflow-trace-diagnostics__highlights">
+                    {diagnosticsReport.payload.report_highlights.slice(0, 5).map((highlight) => (
+                      <div
+                        className={`workflow-trace-diagnostics__highlight${highlight.attention ? " workflow-trace-diagnostics__highlight--attention" : ""}`}
+                        key={`${diagnosticsReport.artifactKey}:highlight:${highlight.id}`}
+                      >
+                        <span className="workflow-trace-diagnostics__highlight-head">
+                          {renderStatusPill(
+                            highlight.attention ? "attention" : "info",
+                            highlight.attention ? "risk" : "watch",
+                          )}
+                          <strong>{highlight.label}</strong>
+                        </span>
+                        <span className="card-copy">{formatWorkflowDiagnosticsMetricValue(highlight.value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {Object.keys(diagnosticsReport.payload.report_focus_metrics).length > 0 ? (
+                  <details className="workflow-trace-diagnostics__focus">
+                    <summary className="card-copy" style={{ cursor: "pointer" }}>
+                      focus metrics
+                    </summary>
+                    <div className="workflow-trace-diagnostics__focus-grid">
+                      {Object.entries(diagnosticsReport.payload.report_focus_metrics)
+                        .slice(0, 8)
+                        .map(([key, value]) => (
+                          <span className="card-copy" key={`${diagnosticsReport.artifactKey}:focus:${key}`}>
+                            {`${key}: ${formatWorkflowDiagnosticsMetricValue(value)}`}
+                          </span>
+                        ))}
+                    </div>
+                  </details>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div>
           <p className="card-copy">latest branch</p>

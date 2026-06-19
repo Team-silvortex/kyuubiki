@@ -1,12 +1,15 @@
 use crate::workflow_executor::run_transform_operator;
 use crate::{
-    EngineSolveRequest, bridge_heat_result_to_thermal_plane_quad_model,
-    run_heat_to_thermo_plane_quad_2d_workflow, solve,
+    bridge_heat_result_to_thermal_plane_quad_model,
+    bridge_heat_result_to_thermal_plane_triangle_model, run_heat_to_thermo_plane_quad_2d_workflow,
+    run_heat_to_thermo_plane_triangle_2d_workflow, solve, EngineSolveRequest,
 };
 use kyuubiki_protocol::{
-    AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput,
-    HeatToThermoPlaneQuad2dWorkflowRequest, SolveHeatPlaneQuad2dRequest,
-    SolveThermalPlaneQuad2dRequest, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
+    AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput, HeatPlaneTriangleElementInput,
+    HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneTriangle2dWorkflowRequest,
+    SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, ThermalPlaneNodeInput, ThermalPlaneQuadElementInput,
+    ThermalPlaneTriangleElementInput,
 };
 
 #[test]
@@ -240,6 +243,201 @@ fn runs_heat_to_thermo_plane_quad_workflow() {
     assert_eq!(result.workflow_id, "workflow.heat-to-thermo-quad-2d");
     assert_eq!(result.heat_result.max_temperature, 100.0);
     assert_eq!(result.bridged_model.nodes[1].temperature_delta, 60.0);
+    assert_eq!(result.thermo_result.max_temperature_delta, 100.0);
+    assert!(result.thermo_result.max_stress > 0.0);
+}
+
+#[test]
+fn bridges_heat_triangle_temperatures_into_thermo_model() {
+    let solved = solve(EngineSolveRequest::HeatPlaneTriangle2d(
+        SolveHeatPlaneTriangle2dRequest {
+            nodes: vec![
+                HeatPlaneNodeInput {
+                    id: "h0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_temperature: true,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "h1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_temperature: true,
+                    temperature: 20.0,
+                    heat_load: 0.0,
+                },
+                HeatPlaneNodeInput {
+                    id: "h2".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    fix_temperature: true,
+                    temperature: 40.0,
+                    heat_load: 0.0,
+                },
+            ],
+            elements: vec![HeatPlaneTriangleElementInput {
+                id: "ht0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                thickness: 0.02,
+                conductivity: 45.0,
+            }],
+        },
+    ))
+    .expect("heat triangle should solve");
+    let heat_result = match solved {
+        AnalysisResult::HeatPlaneTriangle2d(result) => result,
+        _ => unreachable!("expected heat triangle result"),
+    };
+
+    let (bridged, diagnostics) = bridge_heat_result_to_thermal_plane_triangle_model(
+        &heat_result,
+        &SolveThermalPlaneTriangle2dRequest {
+            nodes: vec![
+                ThermalPlaneNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    temperature_delta: 0.0,
+                },
+                ThermalPlaneNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    y: 0.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    temperature_delta: 0.0,
+                },
+                ThermalPlaneNodeInput {
+                    id: "n2".to_string(),
+                    x: 0.0,
+                    y: 1.0,
+                    fix_x: true,
+                    fix_y: true,
+                    load_x: 0.0,
+                    load_y: 0.0,
+                    temperature_delta: 0.0,
+                },
+            ],
+            elements: vec![ThermalPlaneTriangleElementInput {
+                id: "tt0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                node_k: 2,
+                thickness: 0.02,
+                youngs_modulus: 70.0e9,
+                poisson_ratio: 0.33,
+                thermal_expansion: 11.0e-6,
+            }],
+        },
+    )
+    .expect("triangle bridge should build");
+
+    assert_eq!(diagnostics.bridge_kind, "heat_to_thermo_triangle_2d");
+    assert_eq!(bridged.nodes[0].temperature_delta, 100.0);
+    assert_eq!(bridged.nodes[1].temperature_delta, 20.0);
+    assert_eq!(bridged.nodes[2].temperature_delta, 40.0);
+}
+
+#[test]
+fn runs_heat_to_thermo_plane_triangle_workflow() {
+    let result =
+        run_heat_to_thermo_plane_triangle_2d_workflow(HeatToThermoPlaneTriangle2dWorkflowRequest {
+            heat_model: SolveHeatPlaneTriangle2dRequest {
+                nodes: vec![
+                    HeatPlaneNodeInput {
+                        id: "h0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_temperature: true,
+                        temperature: 100.0,
+                        heat_load: 0.0,
+                    },
+                    HeatPlaneNodeInput {
+                        id: "h1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_temperature: true,
+                        temperature: 20.0,
+                        heat_load: 0.0,
+                    },
+                    HeatPlaneNodeInput {
+                        id: "h2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_temperature: true,
+                        temperature: 40.0,
+                        heat_load: 0.0,
+                    },
+                ],
+                elements: vec![HeatPlaneTriangleElementInput {
+                    id: "ht0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    conductivity: 45.0,
+                }],
+            },
+            thermo_seed_model: SolveThermalPlaneTriangle2dRequest {
+                nodes: vec![
+                    ThermalPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 5.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 5.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 5.0,
+                    },
+                ],
+                elements: vec![ThermalPlaneTriangleElementInput {
+                    id: "tt0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                    thermal_expansion: 11.0e-6,
+                }],
+            },
+        })
+        .expect("triangle workflow should run");
+
+    assert_eq!(result.workflow_id, "workflow.heat-to-thermo-triangle-2d");
+    assert_eq!(result.heat_result.max_temperature, 100.0);
+    assert_eq!(result.bridged_model.nodes[0].temperature_delta, 100.0);
     assert_eq!(result.thermo_result.max_temperature_delta, 100.0);
     assert!(result.thermo_result.max_stress > 0.0);
 }

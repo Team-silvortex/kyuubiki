@@ -239,13 +239,16 @@ When packaging desktop deliverables, the smoothest path is now:
 
 1. inspect current readiness:
    `make desktop-status PLATFORM=all`
-2. stage or refresh rollout scaffolds:
+2. if the change touches workflow-heavy frontend surfaces, start `npm run dev`
+   in `apps/frontend` and run:
+   `make workflow-preflight`
+3. stage or refresh rollout scaffolds:
    `make desktop-stage PLATFORM=all`
-3. build host-native desktop bundles:
+4. build host-native desktop bundles:
    `make desktop-build-host`
-4. run the integrated release pass for the current host:
+5. run the integrated release pass for the current host:
    `make desktop-release`
-5. re-check descriptors and icon coverage:
+6. re-check descriptors and icon coverage:
    `make desktop-verify PLATFORM=all`
 
 `desktop-status` is intentionally the first stop. It gives operators one place

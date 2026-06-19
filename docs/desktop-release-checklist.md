@@ -37,12 +37,12 @@ Use a predictable versioned prefix for all desktop-facing outputs:
 - `kyuubiki-hub-v<version>-<platform>-<bundle>`
 - `kyuubiki-workbench-v<version>-<platform>-<bundle>`
 
-Examples for the current `1.6.0` release line:
+Examples for the current `1.8.0` release line:
 
-- `kyuubiki-installer-v1.6.0-macos-dmg`
-- `kyuubiki-hub-v1.6.0-linux-appimage`
-- `kyuubiki-workbench-v1.6.0-linux-appimage`
-- `kyuubiki-installer-v1.6.0-windows-msi`
+- `kyuubiki-installer-v1.8.0-macos-dmg`
+- `kyuubiki-hub-v1.8.0-linux-appimage`
+- `kyuubiki-workbench-v1.8.0-linux-appimage`
+- `kyuubiki-installer-v1.8.0-windows-msi`
 
 Keep these names aligned with:
 
@@ -54,6 +54,10 @@ Keep these names aligned with:
 
 - Review current readiness:
   - `./scripts/kyuubiki desktop-status all`
+- If the release includes workflow builder, operator search, package-import,
+  dataset editor, or workflow integrity UI changes:
+  - start `npm run dev` under `apps/frontend` in a separate shell
+  - run `./scripts/kyuubiki workflow-preflight`
 - Confirm brand assets exist under:
   - [assets/icons/app](../assets/icons/app)
 - Confirm desktop icon copies exist under:
@@ -168,15 +172,17 @@ When preparing a release, keep the order stable:
 1. Update version notes and changelog.
 2. Inspect readiness and missing pieces:
    `./scripts/kyuubiki desktop-status all`
-3. Refresh runtime scaffold:
+3. If the release touches workflow-heavy frontend surfaces, run:
+   `./scripts/kyuubiki workflow-preflight`
+4. Refresh runtime scaffold:
    `./scripts/kyuubiki desktop-stage all`
-4. Refresh desktop manifests:
+5. Refresh desktop manifests:
    `./scripts/kyuubiki desktop-verify all`
-5. Build the current host-platform desktop bundles:
+6. Build the current host-platform desktop bundles:
    - `./scripts/kyuubiki desktop-build-host`
-6. Run the host release wrapper:
+7. Run the host release wrapper:
    - `./scripts/kyuubiki desktop-release <host-platform>`
-7. Review staged host artifacts:
+8. Review staged host artifacts:
    - `dist/<host-platform>/desktop/<app>/artifacts`
    - `dist/<host-platform>/desktop/<app>/artifacts.json`
    - `dist/<host-platform>/desktop/artifacts-summary.json`
@@ -188,8 +194,8 @@ When preparing a release, keep the order stable:
    - on macOS, distinguish:
      - `automated session result`: good for validating `.app` bundling and artifact indexing
      - `full desktop terminal result`: the authoritative confirmation that `.dmg` creation also works
-8. Verify icon inputs and manifest bundle targets for all three supported platforms.
-9. Publish artifacts using the naming convention above.
+9. Verify icon inputs and manifest bundle targets for all three supported platforms.
+10. Publish artifacts using the naming convention above.
 
 ## Notes
 

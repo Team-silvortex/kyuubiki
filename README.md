@@ -178,6 +178,7 @@ The main repo-level verification entrypoints are:
 - `make test-web`
 - `make test-rust`
 - `make test-frontend`
+- `make workflow-preflight`
 - `make test-sdk`
 - `make test-integration`
 - `make test-hub-gui`
@@ -193,6 +194,11 @@ The packaging/output map and smoke breakdown live in:
 - [docs/packaging-and-deployment.md](docs/packaging-and-deployment.md)
 - [docs/testing-and-ci.md](docs/testing-and-ci.md)
 - [tests/integration/README.md](tests/integration/README.md)
+
+For workflow-heavy frontend changes, `workflow-preflight` is the release-facing
+guard for topology, search, and layout regressions. It is intentionally kept
+separate from `test-frontend` and expects `npm run dev` to be running under
+`apps/frontend`.
 
 ## Deployment Notes
 

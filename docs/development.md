@@ -53,6 +53,7 @@ Use `./scripts/kyuubiki` as the top-level local launcher.
 - `./scripts/kyuubiki smoke` runs the current Elixir -> Rust integration flow
 - `./scripts/kyuubiki sdk-smoke` runs the Python / Elixir / Rust SDK smoke suite
 - `./scripts/kyuubiki frontend-test` runs frontend typecheck plus production build verification
+- `./scripts/kyuubiki workflow-preflight` runs the workflow topology plus browser-backed search/layout guard suite
 - `./scripts/kyuubiki hot-local` runs the full local dev stack with restart-on-change
 - `./scripts/kyuubiki hot-cloud` runs the full cloud/postgres dev stack with restart-on-change
 - `./scripts/kyuubiki hot-distributed` runs the distributed control-plane dev loop with restart-on-change
@@ -116,6 +117,11 @@ Fast verification shortcuts:
 - `make tdd-rust FILTER=protocol`
 - `make test`
 - `make verify`
+
+When the change is workflow-heavy in `apps/frontend`, add one more pass:
+
+- start `npm run dev` inside `apps/frontend`
+- run `./scripts/kyuubiki workflow-preflight`
 
 ## Active development priorities
 

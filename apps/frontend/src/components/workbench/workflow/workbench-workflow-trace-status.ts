@@ -1,6 +1,6 @@
 "use client";
 
-import { resolveWorkflowRunStatusTone } from "@/lib/api";
+import { resolveWorkflowRunStatusTone } from "@/lib/api/job-status";
 
 export type WorkflowTraceStatusTone = "good" | "watch" | "risk";
 export type WorkflowTraceNodeRunStatus = "completed" | "skipped";

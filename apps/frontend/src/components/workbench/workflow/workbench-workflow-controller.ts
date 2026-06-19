@@ -3,18 +3,22 @@
 import { useCallback, useMemo, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import {
   fetchJobStatus,
-  isWorkflowRunFailureStatus,
-  isWorkflowRunTerminalStatus,
   fetchWorkflowCatalog,
   fetchWorkflowOperators,
   submitWorkflowCatalogJob,
   submitWorkflowGraphJob,
-  type JobEnvelope,
-  type WorkflowCatalogEntry,
-  type WorkflowGraphDefinition,
-  type WorkflowGraphJobResult,
-  type WorkflowOperatorDescriptor,
-} from "@/lib/api";
+} from "@/lib/api/runtime-client";
+import {
+  isWorkflowRunFailureStatus,
+  isWorkflowRunTerminalStatus,
+} from "@/lib/api/job-status";
+import type { JobEnvelope } from "@/lib/api/fem-shared";
+import type {
+  WorkflowCatalogEntry,
+  WorkflowGraphDefinition,
+  WorkflowGraphJobResult,
+  WorkflowOperatorDescriptor,
+} from "@/lib/api/workflow-types";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
 import {

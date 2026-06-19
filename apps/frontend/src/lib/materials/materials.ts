@@ -1,4 +1,4 @@
-import type { ModelMaterial } from "@/lib/api";
+import type { ModelMaterial } from "@/lib/api/fem-shared";
 
 export type MaterialPreset = {
   label: string;

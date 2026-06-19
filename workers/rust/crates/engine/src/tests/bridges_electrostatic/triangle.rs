@@ -3,7 +3,7 @@ use crate::bridge::{
     bridge_electrostatic_result_to_heat_plane_triangle_model,
     resolve_electrostatic_to_heat_bridge_contract,
 };
-use crate::{EngineSolveRequest, solve};
+use crate::{solve, EngineSolveRequest};
 use kyuubiki_protocol::{
     AnalysisResult, HeatPlaneNodeInput, HeatPlaneTriangleElementInput,
     SolveElectrostaticPlaneTriangle2dRequest,

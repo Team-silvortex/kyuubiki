@@ -231,6 +231,7 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
         "- Total Elements: #{Map.get(payload, "bundle_total_element_count", 0)}"
       ] ++
         build_bundle_metric_groups_section(payload) ++
+        build_bundle_highlights_section(payload) ++
         build_bundle_items_section(payload, config) ++
         build_bundle_guard_section(payload, config)
 
@@ -258,6 +259,32 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
     case Map.get(payload, "bundle_metric_groups", []) do
       groups when is_list(groups) and groups != [] ->
         ["", "## Metric Groups", "", "- " <> Enum.join(groups, ", ")]
+
+      _ ->
+        []
+    end
+  end
+
+  defp build_bundle_highlights_section(payload) do
+    case Map.get(payload, "report_highlights", []) do
+      highlights when is_list(highlights) and highlights != [] ->
+        ["", "## Key Highlights"] ++
+          Enum.flat_map(highlights, fn
+            %{} = highlight ->
+              marker =
+                if Map.get(highlight, "attention", false) do
+                  "attention"
+                else
+                  "info"
+                end
+
+              [
+                "- [#{marker}] #{Map.get(highlight, "label", Map.get(highlight, "id", "unknown"))}: #{markdown_value(Map.get(highlight, "value"))}"
+              ]
+
+            _ ->
+              []
+          end)
 
       _ ->
         []

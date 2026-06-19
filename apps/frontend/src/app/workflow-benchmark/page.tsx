@@ -197,6 +197,7 @@ function buildSyntheticRuns(): WorkflowRunRecord[] {
       { artifact_key: "artifact.source", node_id: "input.source", port_id: "out" },
       { artifact_key: "artifact.summary", node_id: "extract.summary", port_id: "summary", source_artifacts: ["artifact.source"] },
       { artifact_key: "artifact.normalized", node_id: "transform.normalize", port_id: "normalized", source_artifacts: ["artifact.summary"] },
+      { artifact_key: "report.result", node_id: "transform.normalize", port_id: "report", source_artifacts: ["artifact.normalized"] },
       { artifact_key: "artifact.export", node_id: "export.summary", port_id: "file", source_artifacts: ["artifact.normalized"] },
     ],
     artifacts: {
@@ -243,6 +244,43 @@ function buildSyntheticRuns(): WorkflowRunRecord[] {
           fields: { temperature_peak: 412.5, heat_flux_peak: 88.2, displacement_peak: 0.0042 },
         }),
       },
+      "report.result": {
+        artifact_key: "report.result",
+        artifact_type: "artifact/json",
+        node_id: "transform.normalize",
+        port_id: "report",
+        payload: {
+          report_contract: "kyuubiki.workflow_report_payload/v1",
+          report_kind: "diagnostics_bundle_report_payload",
+          report_guard_status: "warn",
+          report_guard_recommendation: "review_before_continue",
+          report_focus_metrics: {
+            "thermal.temperature_max": 412.5,
+            "thermal.flux_peak": 88.2,
+            "thermo.displacement_peak": 0.0042,
+          },
+          report_highlights: [
+            {
+              id: "thermal.temperature_max",
+              label: "Thermal temperature peak",
+              value: 412.5,
+              attention: true,
+            },
+            {
+              id: "thermal.flux_peak",
+              label: "Thermal flux peak",
+              value: 88.2,
+              attention: false,
+            },
+            {
+              id: "thermo.displacement_peak",
+              label: "Thermo displacement peak",
+              value: 0.0042,
+              attention: false,
+            },
+          ],
+        },
+      },
     },
   };
   return [{
@@ -251,7 +289,7 @@ function buildSyntheticRuns(): WorkflowRunRecord[] {
     status: "completed",
     progress: 1,
     currentNode: "export.summary",
-    summary: "Synthetic workflow benchmark run",
+    summary: "Thermal temperature peak=4.125e+2, Thermal flux peak=8.820e+1",
     updatedAt: emittedAt,
     skippedNodes: result.skipped_nodes,
     branchDecisions: result.branch_decisions,

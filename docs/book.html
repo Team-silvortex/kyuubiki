@@ -198,12 +198,14 @@
           <li>Accuracy baselines and expansion plan are explicit.</li>
           <li>Security and destructive actions are meant to stay visible and auditable.</li>
           <li>Installation and update behavior must be configuration-visible and residue-conscious.</li>
+          <li>Workflow-heavy frontend changes should pass a dedicated preflight instead of relying on build success alone.</li>
         </ul>
         <div class="docs-links">
           <a class="docs-link" href="./book-ch07-trust-and-safety.html">Open chapter page</a>
           <a class="docs-link" href="./accuracy-plan.md">accuracy-plan.md</a>
           <a class="docs-link" href="./accuracy-baselines.md">accuracy-baselines.md</a>
           <a class="docs-link" href="./security.md">security.md</a>
+          <a class="docs-link" href="./testing-and-ci.md">testing-and-ci.md</a>
           <a class="docs-link" href="./installation-integrity-contract.html">installation-integrity-contract.html</a>
           <a class="docs-link" href="./update-catalog.html">update-catalog.html</a>
         </div>
@@ -216,7 +218,8 @@
           <li id="path-frontend"><strong>Frontend / Workbench engineer</strong>: philosophy -> frontend style -> frontend implementation -> UI automation contract -> rendering roadmap.</li>
           <li id="path-runtime"><strong>Runtime / agent engineer</strong>: system overview -> agent-orchestrator boundary -> headless agent contract -> protocols -> operations.</li>
           <li id="path-sdk"><strong>SDK / extension engineer</strong>: operator SDK -> headless SDKs -> workflow graph -> workflow dataset -> protocols.</li>
-          <li id="path-release"><strong>Release / packaging owner</strong>: packaging and deployment -> desktop release checklist -> installation integrity contract -> update catalog.</li>
+          <li><strong>Workflow / operator engineer</strong>: workflow graph -> workflow dataset -> development -> testing and CI -> release prep 1.8.</li>
+          <li id="path-release"><strong>Release / packaging owner</strong>: packaging and deployment -> testing and CI -> desktop release checklist -> installation integrity contract -> update catalog.</li>
           <li id="path-llm"><strong>Large model integrator</strong>: this book -> book manifest -> system overview -> app runtime boundaries -> protocols -> headless SDKs -> operator SDK.</li>
         </ul>
         <div class="docs-links">

@@ -336,6 +336,41 @@ fn bridge_descriptors() -> Vec<OperatorDescriptor> {
                 "headless_safe",
             ],
         ),
+        built_in_transform_descriptor(
+            "transform.evaluate_thermal_guard",
+            "multi_domain",
+            "evaluate_thermal_guard",
+            "Evaluate a thermal or thermo-mechanical diagnostic payload against visible threshold rules and emit pass, warn, or block guard state.",
+            &["transform", "thermal", "guard", "threshold", "headless_safe"],
+        ),
+        built_in_transform_descriptor(
+            "transform.benchmark_coupled_heat_pair",
+            "multi_domain",
+            "benchmark_coupled_heat_pair",
+            "Benchmark paired heat or thermo-mechanical summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
+            &["transform", "thermal", "benchmark", "compare", "headless_safe"],
+        ),
+        built_in_transform_descriptor(
+            "transform.compose_diagnostics_bundle",
+            "multi_domain",
+            "compose_diagnostics_bundle",
+            "Compose multiple diagnostics payloads into a single workflow diagnostics bundle with domain, source, and metric-group metadata.",
+            &["transform", "diagnostics", "bundle", "compose", "headless_safe"],
+        ),
+        built_in_transform_descriptor(
+            "transform.evaluate_diagnostics_bundle_guard",
+            "multi_domain",
+            "evaluate_diagnostics_bundle_guard",
+            "Evaluate a workflow diagnostics bundle against visible warn/block rules and emit a unified guard decision.",
+            &["transform", "diagnostics", "bundle", "guard", "headless_safe"],
+        ),
+        built_in_transform_descriptor(
+            "transform.compose_diagnostics_report_payload",
+            "multi_domain",
+            "compose_diagnostics_report_payload",
+            "Compose a diagnostics bundle and guard result into a standard report payload for downstream export operators.",
+            &["transform", "diagnostics", "bundle", "report", "compose", "headless_safe"],
+        ),
     ]
 }
 
@@ -362,6 +397,38 @@ fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             "Extract hotspot candidates from a numeric result field using an absolute or percentile threshold.",
             &["extract", "hotspot", "threshold", "field", "headless_safe"],
         ),
+        built_in_extract_descriptor(
+            "extract.electrostatic_result_diagnostics",
+            "multi_domain",
+            "electrostatic_result_diagnostics",
+            "Extract electrostatic diagnostics such as potential span, charge-density totals, and peak electric-field magnitude from an electrostatic result.",
+            &[
+                "extract",
+                "electrostatic",
+                "diagnostics",
+                "field",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
+            "extract.thermal_result_diagnostics",
+            "multi_domain",
+            "thermal_result_diagnostics",
+            "Extract thermal diagnostics such as temperature span, heat-load totals, and peak gradient or flux magnitudes from a heat result.",
+            &["extract", "thermal", "diagnostics", "heat", "headless_safe"],
+        ),
+        built_in_extract_descriptor(
+            "extract.thermo_result_diagnostics",
+            "multi_domain",
+            "thermo_result_diagnostics",
+            "Extract thermo-mechanical diagnostics such as temperature-delta spread, peak displacement, and peak stress from a thermal structural result.",
+            &[
+                "extract",
+                "thermo_mechanical",
+                "diagnostics",
+                "headless_safe",
+            ],
+        ),
         built_in_export_descriptor(
             "export.summary_json",
             "multi_domain",
@@ -382,6 +449,13 @@ fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             "alert_markdown",
             "Export a summary payload as a readable markdown alert document.",
             &["export", "markdown", "alert", "headless_safe"],
+        ),
+        built_in_export_descriptor(
+            "export.diagnostics_bundle_markdown",
+            "multi_domain",
+            "diagnostics_bundle_markdown",
+            "Export a workflow diagnostics bundle and optional guard result as a readable markdown report.",
+            &["export", "markdown", "diagnostics", "bundle", "headless_safe"],
         ),
     ]
 }

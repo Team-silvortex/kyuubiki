@@ -78,7 +78,11 @@
       "workbench": null,
       "installer": null
     },
-    "frontend_checks": [],
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
     "web_checks": [],
     "rust_checks": [],
     "repo_checks": [

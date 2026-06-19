@@ -8,6 +8,8 @@ import type {
   WorkflowSummaryArtifactPayload,
 } from "@/lib/api";
 import { WORKFLOW_SUMMARY_ARTIFACT_CONTRACT } from "@/lib/workbench/workflow-summary-contract";
+import { listWorkflowDiagnosticsReports } from "@/components/workbench/workflow/workbench-workflow-diagnostics-report-contract";
+import { summarizeWorkflowDiagnosticsReport } from "@/components/workbench/workflow/workbench-workflow-diagnostics-presentation";
 
 export type WorkflowResolvedSummaryArtifact = {
   artifactKey: string;
@@ -120,6 +122,9 @@ export function listWorkflowSummaryArtifacts(result?: WorkflowGraphJobResult | n
 }
 
 export function summarizeWorkflowResultArtifacts(result: WorkflowGraphJobResult): string | null {
+  const diagnosticsReport = listWorkflowDiagnosticsReports(result)[0];
+  const diagnosticsPreview = summarizeWorkflowDiagnosticsReport(diagnosticsReport);
+  if (diagnosticsPreview) return diagnosticsPreview;
   const summaries = listWorkflowSummaryArtifacts(result);
   const firstSummary = summaries[0];
   if (firstSummary) {

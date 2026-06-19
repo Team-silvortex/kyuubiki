@@ -170,6 +170,54 @@ pub struct HeatToThermoPlaneQuad2dWorkflowResult {
     pub thermo_result: SolveThermalPlaneQuad2dResult,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatToThermoPlaneTriangle2dWorkflowRequest {
+    pub heat_model: SolveHeatPlaneTriangle2dRequest,
+    pub thermo_seed_model: SolveThermalPlaneTriangle2dRequest,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HeatToThermoPlaneTriangle2dWorkflowResult {
+    pub workflow_id: String,
+    pub heat_result: SolveHeatPlaneTriangle2dResult,
+    pub bridged_model: SolveThermalPlaneTriangle2dRequest,
+    pub thermo_result: SolveThermalPlaneTriangle2dResult,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticHeatToThermoPlaneQuad2dWorkflowRequest {
+    pub electrostatic_model: SolveElectrostaticPlaneQuad2dRequest,
+    pub heat_seed_model: SolveHeatPlaneQuad2dRequest,
+    pub thermo_seed_model: SolveThermalPlaneQuad2dRequest,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticHeatToThermoPlaneQuad2dWorkflowResult {
+    pub workflow_id: String,
+    pub electrostatic_result: SolveElectrostaticPlaneQuad2dResult,
+    pub bridged_heat_model: SolveHeatPlaneQuad2dRequest,
+    pub heat_result: SolveHeatPlaneQuad2dResult,
+    pub bridged_thermo_model: SolveThermalPlaneQuad2dRequest,
+    pub thermo_result: SolveThermalPlaneQuad2dResult,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticHeatToThermoPlaneTriangle2dWorkflowRequest {
+    pub electrostatic_model: SolveElectrostaticPlaneTriangle2dRequest,
+    pub heat_seed_model: SolveHeatPlaneTriangle2dRequest,
+    pub thermo_seed_model: SolveThermalPlaneTriangle2dRequest,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ElectrostaticHeatToThermoPlaneTriangle2dWorkflowResult {
+    pub workflow_id: String,
+    pub electrostatic_result: SolveElectrostaticPlaneTriangle2dResult,
+    pub bridged_heat_model: SolveHeatPlaneTriangle2dRequest,
+    pub heat_result: SolveHeatPlaneTriangle2dResult,
+    pub bridged_thermo_model: SolveThermalPlaneTriangle2dRequest,
+    pub thermo_result: SolveThermalPlaneTriangle2dResult,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WorkflowCachePolicy {
@@ -2710,31 +2758,34 @@ mod tests {
         Frame2dElementInput, Frame2dNodeInput, Frame3dElementInput, Frame3dNodeInput,
         HeatBar1dElementInput, HeatBar1dNodeInput, HeatPlaneNodeInput, HeatPlaneNodeResult,
         HeatPlaneQuadElementInput, HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput,
-        HeatToThermoPlaneQuad2dWorkflowRequest, HeatToThermoPlaneQuad2dWorkflowResult, Job,
-        JobStatus, OperatorArtifactRef, OperatorDescriptor, OperatorKind, OperatorOrigin,
-        OperatorPortDescriptor, OperatorRunRequest, OperatorRunResult, OperatorSchemaRef,
-        OperatorValidationProfile, OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent,
-        RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse, SolveBarRequest,
-        SolveBeam1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
+        HeatPlaneTriangleElementResult, HeatToThermoPlaneQuad2dWorkflowRequest,
+        HeatToThermoPlaneQuad2dWorkflowResult, HeatToThermoPlaneTriangle2dWorkflowRequest,
+        HeatToThermoPlaneTriangle2dWorkflowResult, Job, JobStatus, OperatorArtifactRef,
+        OperatorDescriptor, OperatorKind, OperatorOrigin, OperatorPortDescriptor,
+        OperatorRunRequest, OperatorRunResult, OperatorSchemaRef, OperatorValidationProfile,
+        OperatorValidationStatus, PlaneQuadElementInput, ProgressEvent, RpcMethod, RpcProgress,
+        RpcRequest, RpcResponse, SolveBarRequest, SolveBeam1dRequest,
+        SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
         SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
         SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneQuad2dResult,
-        SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-        SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-        SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
-        SolveThermalPlaneQuad2dRequest, SolveThermalPlaneQuad2dResult,
-        SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveTorsion1dRequest,
+        SolveHeatPlaneTriangle2dRequest, SolveHeatPlaneTriangle2dResult, SolvePlaneQuad2dRequest,
+        SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
+        SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+        SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+        SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dRequest,
+        SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dRequest, SolveTorsion1dRequest,
         SolveTruss3dRequest, Spring1dElementInput, Spring1dNodeInput, Spring2dElementInput,
         Spring2dNodeInput, Spring3dElementInput, Spring3dNodeInput, ThermalBar1dElementInput,
         ThermalBar1dNodeInput, ThermalBeam1dElementInput, ThermalBeam1dNodeInput,
         ThermalFrame2dElementInput, ThermalFrame2dNodeInput, ThermalFrame3dElementInput,
         ThermalFrame3dNodeInput, ThermalPlaneNodeInput, ThermalPlaneNodeResult,
         ThermalPlaneQuadElementInput, ThermalPlaneQuadElementResult,
-        ThermalPlaneTriangleElementInput, ThermalTruss2dElementInput, ThermalTruss2dNodeInput,
-        Torsion1dElementInput, Torsion1dNodeInput, WorkflowCachePolicy, WorkflowDatasetAxis,
-        WorkflowDatasetContract, WorkflowDatasetEncoding, WorkflowDatasetShape,
-        WorkflowDatasetValueInfo, WorkflowDefaults, WorkflowEdge, WorkflowGraph,
-        WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode, WorkflowNodeKind,
-        WorkflowNodePortRef, WorkflowPort,
+        ThermalPlaneTriangleElementInput, ThermalPlaneTriangleElementResult,
+        ThermalTruss2dElementInput, ThermalTruss2dNodeInput, Torsion1dElementInput,
+        Torsion1dNodeInput, WorkflowCachePolicy, WorkflowDatasetAxis, WorkflowDatasetContract,
+        WorkflowDatasetEncoding, WorkflowDatasetShape, WorkflowDatasetValueInfo, WorkflowDefaults,
+        WorkflowEdge, WorkflowGraph, WorkflowGraphRunRequest, WorkflowGraphRunResult, WorkflowNode,
+        WorkflowNodeKind, WorkflowNodePortRef, WorkflowPort, RPC_VERSION,
     };
 
     #[test]
@@ -3039,6 +3090,173 @@ mod tests {
         let decoded: HeatToThermoPlaneQuad2dWorkflowResult =
             serde_json::from_str(&json).expect("workflow result should decode");
         assert_eq!(decoded.workflow_id, "workflow.heat-to-thermo-quad-2d");
+        assert_eq!(decoded.thermo_result.max_temperature_delta, 80.0);
+    }
+
+    #[test]
+    fn serializes_heat_to_thermo_plane_triangle_workflow_round_trip() {
+        let request = HeatToThermoPlaneTriangle2dWorkflowRequest {
+            heat_model: SolveHeatPlaneTriangle2dRequest {
+                nodes: vec![
+                    HeatPlaneNodeInput {
+                        id: "h0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_temperature: true,
+                        temperature: 100.0,
+                        heat_load: 0.0,
+                    },
+                    HeatPlaneNodeInput {
+                        id: "h1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_temperature: true,
+                        temperature: 20.0,
+                        heat_load: 0.0,
+                    },
+                    HeatPlaneNodeInput {
+                        id: "h2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_temperature: true,
+                        temperature: 40.0,
+                        heat_load: 0.0,
+                    },
+                ],
+                elements: vec![HeatPlaneTriangleElementInput {
+                    id: "ht0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    conductivity: 45.0,
+                }],
+            },
+            thermo_seed_model: SolveThermalPlaneTriangle2dRequest {
+                nodes: vec![
+                    ThermalPlaneNodeInput {
+                        id: "n0".to_string(),
+                        x: 0.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 0.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n1".to_string(),
+                        x: 1.0,
+                        y: 0.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 0.0,
+                    },
+                    ThermalPlaneNodeInput {
+                        id: "n2".to_string(),
+                        x: 0.0,
+                        y: 1.0,
+                        fix_x: true,
+                        fix_y: true,
+                        load_x: 0.0,
+                        load_y: 0.0,
+                        temperature_delta: 0.0,
+                    },
+                ],
+                elements: vec![ThermalPlaneTriangleElementInput {
+                    id: "tt0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    thickness: 0.02,
+                    youngs_modulus: 70.0e9,
+                    poisson_ratio: 0.33,
+                    thermal_expansion: 11.0e-6,
+                }],
+            },
+        };
+
+        let json = serde_json::to_string(&request).expect("workflow request should serialize");
+        let decoded: HeatToThermoPlaneTriangle2dWorkflowRequest =
+            serde_json::from_str(&json).expect("workflow request should decode");
+        assert_eq!(decoded.heat_model.nodes.len(), 3);
+
+        let result = HeatToThermoPlaneTriangle2dWorkflowResult {
+            workflow_id: "workflow.heat-to-thermo-triangle-2d".to_string(),
+            heat_result: SolveHeatPlaneTriangle2dResult {
+                input: decoded.heat_model.clone(),
+                nodes: vec![HeatPlaneNodeResult {
+                    index: 0,
+                    id: "h0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    temperature: 100.0,
+                    heat_load: 0.0,
+                }],
+                elements: vec![HeatPlaneTriangleElementResult {
+                    index: 0,
+                    id: "ht0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    area: 0.5,
+                    average_temperature: 53.333333333333336,
+                    temperature_gradient_x: -80.0,
+                    temperature_gradient_y: -60.0,
+                    heat_flux_x: 3600.0,
+                    heat_flux_y: 2700.0,
+                    heat_flux_magnitude: 4500.0,
+                }],
+                max_temperature: 100.0,
+                max_heat_flux: 4500.0,
+            },
+            bridged_model: decoded.thermo_seed_model.clone(),
+            thermo_result: SolveThermalPlaneTriangle2dResult {
+                input: decoded.thermo_seed_model,
+                nodes: vec![ThermalPlaneNodeResult {
+                    index: 0,
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    y: 0.0,
+                    ux: 0.0,
+                    uy: 0.0,
+                    displacement_magnitude: 0.0,
+                    temperature_delta: 80.0,
+                }],
+                elements: vec![ThermalPlaneTriangleElementResult {
+                    index: 0,
+                    id: "tt0".to_string(),
+                    node_i: 0,
+                    node_j: 1,
+                    node_k: 2,
+                    area: 0.5,
+                    average_temperature_delta: 80.0,
+                    thermal_strain: 8.8e-4,
+                    mechanical_strain_x: 0.0,
+                    mechanical_strain_y: 0.0,
+                    total_strain_x: 0.0,
+                    total_strain_y: 0.0,
+                    gamma_xy: 0.0,
+                    stress_x: -1.0,
+                    stress_y: -1.0,
+                    tau_xy: 0.0,
+                    principal_stress_1: -1.0,
+                    principal_stress_2: -1.0,
+                    max_in_plane_shear: 0.0,
+                    von_mises: 1.0,
+                }],
+                max_displacement: 0.0,
+                max_stress: 1.0,
+                max_temperature_delta: 80.0,
+            },
+        };
+
+        let json = serde_json::to_string(&result).expect("workflow result should serialize");
+        let decoded: HeatToThermoPlaneTriangle2dWorkflowResult =
+            serde_json::from_str(&json).expect("workflow result should decode");
+        assert_eq!(decoded.workflow_id, "workflow.heat-to-thermo-triangle-2d");
         assert_eq!(decoded.thermo_result.max_temperature_delta, 80.0);
     }
 

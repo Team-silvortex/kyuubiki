@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -57,6 +57,7 @@ help:
 	@echo "  make test-web    Run Elixir tests"
 	@echo "  make test-rust   Run Rust workspace tests"
 	@echo "  make test-frontend Run frontend typecheck and production build"
+	@echo "  make workflow-preflight Run workflow topology plus layout/search guards (requires frontend dev server)"
 	@echo "  make test-sdk    Run Python / Elixir / Rust SDK smoke tests"
 	@echo "  make test-hub-gui Run Hub desktop shell smoke tests"
 	@echo "  make test-installer-gui Run installer desktop shell smoke tests"
@@ -239,6 +240,9 @@ test-rust:
 
 test-frontend:
 	@cd apps/frontend && npm run typecheck && npm run build
+
+workflow-preflight:
+	@cd apps/frontend && npm run check:workflow-preflight
 
 test-sdk:
 	@$(ENTRYPOINT) sdk-smoke

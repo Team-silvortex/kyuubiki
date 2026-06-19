@@ -14,21 +14,19 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntimeTest do
   test "extracts electrostatic diagnostics from field and potential results" do
     payload = %{
       "nodes" => [
-        %{"id" => "n0", "electric_potential" => 0.0},
-        %{"id" => "n1", "electric_potential" => 3.0},
-        %{"id" => "n2", "electric_potential" => 5.0}
+        %{"id" => "n0", "potential" => 0.0, "charge_density" => 1.0},
+        %{"id" => "n1", "potential" => 3.0, "charge_density" => 2.0},
+        %{"id" => "n2", "potential" => 5.0, "charge_density" => 1.5}
       ],
       "elements" => [
         %{
           "id" => "e0",
-          "charge_density" => 1.5,
           "electric_field_x" => 3.0,
           "electric_field_y" => 4.0,
           "energy_density" => 2.0
         },
         %{
           "id" => "e1",
-          "charge_density" => 2.5,
           "electric_field_x" => 6.0,
           "electric_field_y" => 8.0,
           "energy_density" => 7.0
@@ -61,9 +59,9 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntimeTest do
     assert diagnostics["electrostatic_potential_max"] == 5.0
     assert diagnostics["electrostatic_potential_mean"] == 8.0 / 3.0
     assert diagnostics["electrostatic_potential_span"] == 5.0
-    assert diagnostics["electrostatic_charge_density_count"] == 2
-    assert diagnostics["electrostatic_charge_density_sum"] == 4.0
-    assert diagnostics["electrostatic_charge_density_mean"] == 2.0
+    assert diagnostics["electrostatic_charge_density_count"] == 3
+    assert diagnostics["electrostatic_charge_density_sum"] == 4.5
+    assert diagnostics["electrostatic_charge_density_mean"] == 1.5
     assert diagnostics["electrostatic_energy_density_peak"] == 7.0
     assert diagnostics["electrostatic_energy_density_peak_element_id"] == "e1"
     assert diagnostics["electrostatic_field_peak_magnitude"] == 10.0
@@ -92,6 +90,7 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntimeTest do
                  "element_source" => "cells",
                  "potential_field" => "voltage",
                  "charge_density_field" => "rho",
+                 "charge_density_source" => "elements",
                  "field_magnitude_field" => "field_abs",
                  "field_x_field" => "missing_x",
                  "field_y_field" => "missing_y",

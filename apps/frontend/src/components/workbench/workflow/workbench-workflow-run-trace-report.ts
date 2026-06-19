@@ -14,6 +14,11 @@ import { buildWorkflowIntegrityReport } from "@/components/workbench/workflow/wo
 import { findStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
 import { isWorkflowNodeSupportedInRuntime } from "@/components/workbench/workflow/workbench-workflow-runtime-support";
 import { listStoredWorkflowSnapshots } from "@/components/workbench/workflow/workbench-workflow-snapshot-storage";
+import { listWorkflowDiagnosticsReports } from "@/components/workbench/workflow/workbench-workflow-diagnostics-report-contract";
+import {
+  formatWorkflowDiagnosticsMetricValue,
+  summarizeWorkflowDiagnosticsReport,
+} from "@/components/workbench/workflow/workbench-workflow-diagnostics-presentation";
 import { listWorkflowSummaryArtifacts } from "@/components/workbench/workflow/workbench-workflow-summary-contract";
 import {
   isWorkflowBridgeContractOperator,
@@ -120,6 +125,28 @@ function renderSummaryArtifactRows(run: WorkflowRunRecord) {
     .map(
       (artifact) =>
         `<tr><td>${escapeHtml(artifact.artifactKey)}</td><td>${escapeHtml(artifact.artifactType)}</td><td>${escapeHtml(artifact.payload.summary_kind ?? "--")}</td><td>${escapeHtml(artifact.payload.source_operator_id ?? "--")}</td><td>${escapeHtml(String(Object.keys(artifact.payload.fields).length))}</td><td>${escapeHtml(artifact.nodeId ?? "--")}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderDiagnosticsHighlightRows(run: WorkflowRunRecord) {
+  const report = listWorkflowDiagnosticsReports(run.result ?? null)[0];
+  if (!report) return "";
+  return report.payload.report_highlights
+    .map(
+      (highlight) =>
+        `<tr><td>${renderToneBadge(highlight.attention ? "attention" : "info", highlight.attention ? "risk" : "watch")}</td><td>${escapeHtml(highlight.label)}</td><td>${escapeHtml(formatWorkflowDiagnosticsMetricValue(highlight.value))}</td><td>${escapeHtml(highlight.id)}</td></tr>`,
+    )
+    .join("");
+}
+
+function renderDiagnosticsFocusRows(run: WorkflowRunRecord) {
+  const report = listWorkflowDiagnosticsReports(run.result ?? null)[0];
+  if (!report) return "";
+  return Object.entries(report.payload.report_focus_metrics)
+    .map(
+      ([key, value]) =>
+        `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(formatWorkflowDiagnosticsMetricValue(value))}</td></tr>`,
     )
     .join("");
 }
@@ -246,6 +273,10 @@ export function buildWorkflowRunAuditReportHtml({
   const runtimeRows = renderRuntimeRows(workflow);
   const datasetRows = renderDatasetValueRows(workflow);
   const summaryArtifactRows = renderSummaryArtifactRows(run);
+  const diagnosticsHighlightRows = renderDiagnosticsHighlightRows(run);
+  const diagnosticsFocusRows = renderDiagnosticsFocusRows(run);
+  const diagnosticsReport = listWorkflowDiagnosticsReports(run.result ?? null)[0] ?? null;
+  const diagnosticsPreview = summarizeWorkflowDiagnosticsReport(diagnosticsReport);
   const contractWarningRows = renderWarningRows(contractWarnings);
   const summaryArtifactCount = listWorkflowSummaryArtifacts(run.result ?? null).length;
   const supportedNodeCount = graph?.nodes.filter((node) => isWorkflowNodeSupportedInRuntime(node)).length ?? 0;
@@ -399,6 +430,19 @@ export function buildWorkflowRunAuditReportHtml({
     <section>
       <h2>Bridge contract design vs runtime</h2>
       <table><thead><tr><th>bridge</th><th>design field map</th><th>design transform</th><th>seed model</th><th>runtime upstream</th><th>runtime downstream</th><th>source</th><th>target</th><th>status</th></tr></thead><tbody>${bridgeContractCompareRows || '<tr><td colspan="9">--</td></tr>'}</tbody></table>
+    </section>
+    <section>
+      <h2>Diagnostics focus</h2>
+      <table class="meta"><tbody>${renderRows([
+        ["report artifact", diagnosticsReport?.artifactKey ?? "--"],
+        ["guard status", diagnosticsReport?.payload.report_guard_status ?? "--"],
+        ["recommendation", diagnosticsReport?.payload.report_guard_recommendation ?? "--"],
+        ["summary preview", diagnosticsPreview ?? "--"],
+        ["highlight count", String(diagnosticsReport?.payload.report_highlights.length ?? 0)],
+        ["focus metric count", String(Object.keys(diagnosticsReport?.payload.report_focus_metrics ?? {}).length)],
+      ])}</tbody></table>
+      <table><thead><tr><th>tone</th><th>highlight</th><th>value</th><th>id</th></tr></thead><tbody>${diagnosticsHighlightRows || '<tr><td colspan="4">--</td></tr>'}</tbody></table>
+      <table><thead><tr><th>metric</th><th>value</th></tr></thead><tbody>${diagnosticsFocusRows || '<tr><td colspan="2">--</td></tr>'}</tbody></table>
     </section>
     <section>
       <h2>Summary artifact contracts</h2>

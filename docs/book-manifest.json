@@ -77,11 +77,12 @@
       "id": "trust-and-safety",
       "title": "Accuracy, trust, and release safety",
       "chapter_page": "docs/book-ch07-trust-and-safety.html",
-      "summary": "Accuracy baselines, security rules, installation integrity, and update visibility.",
+      "summary": "Accuracy baselines, security rules, workflow preflight discipline, installation integrity, and update visibility.",
       "sources": [
         "docs/accuracy-plan.md",
         "docs/accuracy-baselines.md",
         "docs/security.md",
+        "docs/testing-and-ci.md",
         "docs/installation-integrity-contract.html",
         "docs/update-catalog.html"
       ]
@@ -126,6 +127,20 @@
       "docs/workflow-graph.md",
       "docs/workflow-dataset.md",
       "docs/protocols.md"
+    ],
+    "workflow_engineer": [
+      "docs/workflow-graph.md",
+      "docs/workflow-dataset.md",
+      "docs/development.md",
+      "docs/testing-and-ci.md",
+      "docs/release-prep-1.8.md"
+    ],
+    "release_owner": [
+      "docs/packaging-and-deployment.md",
+      "docs/testing-and-ci.md",
+      "docs/desktop-release-checklist.md",
+      "docs/installation-integrity-contract.html",
+      "docs/update-catalog.html"
     ],
     "llm_integrator": [
       "docs/book.html",

@@ -151,7 +151,11 @@ function buildSnapshot(version, options) {
         installer: packageVersion("apps/installer-gui/package.json"),
       },
       collected_desktop_bundle_versions: collectedDesktopBundleVersions,
-      frontend_checks: [],
+      frontend_checks: [
+        "npm run typecheck",
+        "npm run build",
+        "npm run check:workflow-preflight",
+      ],
       web_checks: [],
       rust_checks: [],
       repo_checks: ["git diff --check"],

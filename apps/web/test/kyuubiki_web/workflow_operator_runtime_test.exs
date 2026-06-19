@@ -489,12 +489,20 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
            ]
     assert diagnostics["thermal_temperature_max"] == 80.0
     assert diagnostics["thermal_temperature_span"] == 60.0
+    assert diagnostics["thermal_heat_load_count"] == 3
     assert diagnostics["thermal_total_heat_load"] == 5.0
+    assert diagnostics["thermal_heat_load_mean"] == 5.0 / 3.0
     assert diagnostics["thermal_loaded_node_count"] == 2
     assert diagnostics["thermal_peak_gradient_magnitude"] == 12.0
     assert diagnostics["thermal_peak_gradient_id"] == "e1"
+    assert diagnostics["thermal_peak_gradient_element_id"] == "e1"
+    assert diagnostics["thermal_peak_gradient_x"] == 0.0
+    assert diagnostics["thermal_peak_gradient_y"] == 12.0
     assert diagnostics["thermal_peak_flux_magnitude"] == 13.0
     assert diagnostics["thermal_peak_flux_id"] == "e1"
+    assert diagnostics["thermal_peak_flux_element_id"] == "e1"
+    assert diagnostics["thermal_peak_flux_x"] == 5.0
+    assert diagnostics["thermal_peak_flux_y"] == 12.0
   end
 
   test "extracts dedicated thermo-mechanical diagnostics from a structural thermal result" do
@@ -520,8 +528,20 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
         }
       ],
       "elements" => [
-        %{"id" => "e0", "von_mises_stress" => 120.0},
-        %{"id" => "e1", "von_mises_stress" => 180.0}
+        %{
+          "id" => "e0",
+          "von_mises_stress" => 120.0,
+          "thermal_strain_x" => 2.5e-4,
+          "mechanical_strain_x" => -1.5e-4,
+          "total_strain_x" => 1.0e-4
+        },
+        %{
+          "id" => "e1",
+          "von_mises_stress" => 180.0,
+          "thermal_strain_x" => 4.8e-4,
+          "mechanical_strain_x" => -3.3e-4,
+          "total_strain_x" => 1.5e-4
+        }
       ]
     }
 
@@ -548,8 +568,18 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntimeTest do
     assert diagnostics["thermo_heated_node_count"] == 2
     assert diagnostics["thermo_peak_displacement"] == 10.0
     assert diagnostics["thermo_peak_displacement_id"] == "n2"
+    assert diagnostics["thermo_peak_displacement_element_id"] == "n2"
+    assert diagnostics["thermo_peak_displacement_x"] == 6.0
+    assert diagnostics["thermo_peak_displacement_y"] == 8.0
     assert diagnostics["thermo_peak_stress"] == 180.0
     assert diagnostics["thermo_peak_stress_id"] == "e1"
+    assert diagnostics["thermo_peak_stress_element_id"] == "e1"
+    assert diagnostics["thermo_peak_thermal_strain"] == 4.8e-4
+    assert diagnostics["thermo_peak_thermal_strain_id"] == "e1"
+    assert diagnostics["thermo_peak_mechanical_strain"] == -3.3e-4
+    assert diagnostics["thermo_peak_mechanical_strain_id"] == "e1"
+    assert diagnostics["thermo_peak_total_strain"] == 1.5e-4
+    assert diagnostics["thermo_peak_total_strain_id"] == "e1"
   end
 
   test "evaluates thermal guard thresholds into pass warn block states" do

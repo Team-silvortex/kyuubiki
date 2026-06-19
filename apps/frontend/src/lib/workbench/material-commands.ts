@@ -1,16 +1,16 @@
-import { createCustomMaterial, createMaterialDefinition } from "@/lib/materials";
+import { createCustomMaterial } from "@/lib/materials/material-library";
+import { createMaterialDefinition } from "@/lib/materials/materials";
 import type {
   ElectrostaticPlaneQuad2dJobInput,
   ElectrostaticPlaneTriangle2dJobInput,
-  Frame2dJobInput,
-  ModelMaterial,
   PlaneQuad2dJobInput,
   PlaneTriangle2dJobInput,
   ThermalPlaneQuad2dJobInput,
   ThermalPlaneTriangle2dJobInput,
-  Truss2dJobInput,
-  Truss3dJobInput,
-} from "@/lib/api";
+} from "@/lib/api/fem-2d-surface";
+import type { Frame2dJobInput, Truss2dJobInput } from "@/lib/api/fem-2d-line";
+import type { Truss3dJobInput } from "@/lib/api/fem-3d";
+import type { ModelMaterial } from "@/lib/api/fem-shared";
 
 type PlaneStudyJobInput =
   | ElectrostaticPlaneTriangle2dJobInput

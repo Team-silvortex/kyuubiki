@@ -312,12 +312,11 @@ fn merges_active_condition_branch_back_into_single_lane() {
     assert_eq!(run.branch_decisions.len(), 1);
     assert_eq!(run.branch_decisions[0].chosen_output, "if_true");
     assert_eq!(run.node_runs.len(), 4);
-    assert!(
-        run.artifact_lineage
-            .iter()
-            .any(|entry| entry.artifact_key == "join.merged"
-                && entry.source_artifacts == vec!["gate.if_true".to_string()])
-    );
+    assert!(run
+        .artifact_lineage
+        .iter()
+        .any(|entry| entry.artifact_key == "join.merged"
+            && entry.source_artifacts == vec!["gate.if_true".to_string()]));
     assert_eq!(
         run.artifacts.get("join.merged"),
         run.artifacts.get("gate.if_true")

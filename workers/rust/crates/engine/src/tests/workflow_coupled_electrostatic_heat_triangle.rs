@@ -202,11 +202,9 @@ fn runs_electrostatic_triangle_to_heat_to_thermo_triangle_summary_workflow_graph
     assert_eq!(run.completed_nodes.len(), 8);
     assert!(summary.get("max_displacement").is_some());
     assert!(summary.get("max_stress").is_some());
-    assert!(
-        summary["max_temperature_delta"]
-            .as_f64()
-            .is_some_and(|value| value > 0.0)
-    );
+    assert!(summary["max_temperature_delta"]
+        .as_f64()
+        .is_some_and(|value| value > 0.0));
 }
 
 fn port(id: &str, artifact_type: &str) -> WorkflowPort {

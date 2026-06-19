@@ -30,10 +30,12 @@ A change is not done until all of the following are true:
 - `./scripts/kyuubiki smoke`
 - `./scripts/kyuubiki sdk-smoke`
 - `./scripts/kyuubiki frontend-test`
+- `./scripts/kyuubiki workflow-preflight`
 - `./scripts/kyuubiki worker -- --job-id demo --project-id p1 --case-id c1 --steps 3`
 - `make test`
 - `make test-sdk`
 - `make test-frontend`
+- `make workflow-preflight`
 - `make test-integration-api`
 - `make verify`
 - `make benchmark-compare PROFILE=medium`
@@ -62,4 +64,5 @@ lightweight memory/json backend so tests and quick UI iteration keep working.
 - Elixir unit and integration tests go under `apps/web/test`
 - Rust unit tests live next to code, integration tests go under each crate's `tests/`
 - frontend build/type validation lives under `apps/frontend` and should use `npm run build` plus `npm run typecheck`
+- workflow-heavy frontend changes should also run `npm run check:workflow-preflight` with `npm run dev` running in a separate shell
 - Shared contract changes should be covered in both stacks when relevant

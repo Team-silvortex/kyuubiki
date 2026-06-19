@@ -17,7 +17,8 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
           elements,
           Map.get(config, "gradient_x_field", "temperature_gradient_x"),
           Map.get(config, "gradient_y_field", "temperature_gradient_y"),
-          Map.get(config, "gradient_z_field")
+          Map.get(config, "gradient_z_field"),
+          Map.get(config, "gradient_magnitude_field")
         )
 
       flux_peak =
@@ -25,7 +26,8 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
           elements,
           Map.get(config, "flux_x_field", "heat_flux_x"),
           Map.get(config, "flux_y_field", "heat_flux_y"),
-          Map.get(config, "flux_z_field")
+          Map.get(config, "flux_z_field"),
+          Map.get(config, "flux_magnitude_field", "heat_flux_magnitude")
         )
 
       diagnostics =
@@ -59,11 +61,14 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
     with {:ok, nodes} <- fetch_list(payload, Map.get(config, "node_source", "nodes")),
          {:ok, elements} <- fetch_list(payload, Map.get(config, "element_source", "elements")) do
       prefix = normalize_prefix(Map.get(config, "output_prefix", "thermo"))
-      delta_field = Map.get(config, "temperature_delta_field", "temperature_delta")
-      stress_field = Map.get(config, "stress_field", "von_mises_stress")
+      delta_field = Map.get(config, "temperature_delta_field") || Map.get(config, "temperature_field", "temperature_delta")
+      stress_field = Map.get(config, "stress_field")
       delta_nodes = collect_numeric_entries(nodes, delta_field)
       displacement_peak = peak_displacement_entry(nodes, config)
-      stress_peak = peak_scalar_entry(elements, stress_field)
+      stress_peak = resolve_thermo_stress_peak(payload, elements, stress_field)
+      thermal_strain_peak = resolve_thermo_strain_peak(elements, "thermal_strain")
+      mechanical_strain_peak = resolve_thermo_strain_peak(elements, "mechanical_strain")
+      total_strain_peak = resolve_thermo_strain_peak(elements, "total_strain")
 
       diagnostics =
         %{
@@ -78,6 +83,10 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
         |> maybe_merge_temperature_delta_stats(prefix, delta_nodes)
         |> maybe_merge_peak_magnitude(prefix, "displacement", displacement_peak)
         |> maybe_merge_peak_scalar(prefix, "stress", stress_peak)
+        |> maybe_merge_peak_scalar(prefix, "thermal_strain", thermal_strain_peak)
+        |> maybe_merge_peak_scalar(prefix, "mechanical_strain", mechanical_strain_peak)
+        |> maybe_merge_peak_scalar(prefix, "total_strain", total_strain_peak)
+        |> maybe_merge_thermo_contract_aliases(prefix)
 
       if map_size(diagnostics) <= 2 do
         {:error, :empty_thermo_diagnostics}
@@ -171,6 +180,64 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
 
   def benchmark_coupled_heat_pair(_payload, _config),
     do: {:error, :invalid_coupled_heat_benchmark_pair}
+
+  defp resolve_thermo_stress_peak(payload, elements, stress_field) when is_binary(stress_field) do
+    peak_scalar_entry(elements, stress_field) || payload_scalar_peak(payload, stress_field)
+  end
+
+  defp resolve_thermo_stress_peak(payload, elements, _stress_field) do
+    peak_scalar_entry(elements, "von_mises_stress") ||
+      peak_scalar_entry(elements, "von_mises") ||
+      payload_scalar_peak(payload, "max_stress") ||
+      peak_scalar_entry_by_abs(elements, "stress_x") ||
+      peak_scalar_entry_by_abs(elements, "stress_y") ||
+      peak_scalar_entry_by_abs(elements, "stress_z") ||
+      peak_scalar_entry_by_abs(elements, "stress_xy")
+  end
+
+  defp resolve_thermo_strain_peak(elements, base_field) when is_list(elements) and is_binary(base_field) do
+    peak_scalar_entry_by_abs(elements, base_field) ||
+      peak_scalar_entry_by_abs(elements, "#{base_field}_x") ||
+      peak_scalar_entry_by_abs(elements, "#{base_field}_y") ||
+      peak_scalar_entry_by_abs(elements, "#{base_field}_z") ||
+      peak_scalar_entry_by_abs(elements, "#{base_field}_xy")
+  end
+
+  defp payload_scalar_peak(payload, field) when is_map(payload) and is_binary(field) do
+    case fetch_numeric_field(payload, field) do
+      {:ok, value} -> {field, value}
+      :error -> nil
+    end
+  end
+
+  defp payload_scalar_peak(_payload, _field), do: nil
+
+  defp maybe_merge_thermo_contract_aliases(summary, prefix) do
+    summary
+    |> maybe_alias_field(
+      "#{prefix}_peak_displacement",
+      "#{prefix}_displacement_peak_magnitude"
+    )
+    |> maybe_alias_field(
+      "#{prefix}_peak_displacement_id",
+      "#{prefix}_displacement_peak_element_id"
+    )
+    |> maybe_alias_field(
+      "#{prefix}_peak_stress",
+      "#{prefix}_stress_peak"
+    )
+    |> maybe_alias_field(
+      "#{prefix}_peak_stress_id",
+      "#{prefix}_stress_peak_element_id"
+    )
+  end
+
+  defp maybe_alias_field(summary, source_key, target_key) do
+    case Map.fetch(summary, source_key) do
+      {:ok, value} -> Map.put(summary, target_key, value)
+      :error -> summary
+    end
+  end
 
   defp evaluate_guard_rule(payload, rule) do
     with field when is_binary(field) <- Map.get(rule, "field"),
@@ -354,27 +421,49 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
     |> Enum.max_by(&elem(&1, 1), fn -> nil end)
   end
 
-  defp peak_vector_entry(items, x_field, y_field, z_field) when is_list(items) and is_binary(x_field) do
+  defp peak_scalar_entry_by_abs(items, field) when is_list(items) and is_binary(field) do
+    items
+    |> collect_numeric_entries(field)
+    |> Enum.max_by(&abs(elem(&1, 1)), fn -> nil end)
+  end
+
+  defp peak_vector_entry(items, x_field, y_field, z_field, magnitude_field)
+       when is_list(items) and is_binary(x_field) do
     Enum.reduce(items, nil, fn
       %{} = item, best ->
         components =
-          [x_field, y_field, z_field]
-          |> Enum.filter(&is_binary/1)
-          |> Enum.map(&Map.get(item, &1))
+          [{"x", x_field}, {"y", y_field}, {"z", z_field}]
+          |> Enum.flat_map(fn
+            {axis, field} when is_binary(field) ->
+              case Map.get(item, field) do
+                value when is_number(value) -> [{axis, value * 1.0}]
+                _ -> []
+              end
 
-        if components != [] and Enum.all?(components, &is_number/1) do
-          magnitude =
-            components
-            |> Enum.map(&(&1 * 1.0))
-            |> Enum.map(&(&1 * &1))
-            |> Enum.sum()
-            |> :math.sqrt()
+            _ ->
+              []
+          end)
 
-          candidate = {Map.get(item, "id"), magnitude}
+        magnitude =
+          case Map.get(item, magnitude_field) do
+            value when is_number(value) -> value * 1.0
+            _ when length(components) >= 2 ->
+              components
+              |> Enum.map(&elem(&1, 1))
+              |> Enum.map(&(&1 * &1))
+              |> Enum.sum()
+              |> :math.sqrt()
+
+            _ ->
+              nil
+          end
+
+        if is_number(magnitude) do
+          candidate = {Map.get(item, "id"), magnitude, components}
 
           case best do
             nil -> candidate
-            {_id, best_value} when magnitude > best_value -> candidate
+            {_id, best_value, _components} when magnitude > best_value -> candidate
             _ -> best
           end
         else
@@ -389,10 +478,19 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
   defp peak_displacement_entry(nodes, config) do
     peak_vector_entry(
       nodes,
-      Map.get(config, "displacement_x_field", "displacement_x"),
-      Map.get(config, "displacement_y_field", "displacement_y"),
-      Map.get(config, "displacement_z_field")
-    ) || peak_scalar_entry(nodes, Map.get(config, "displacement_field", "displacement_magnitude"))
+      Map.get(config, "displacement_x_field") || Map.get(config, "ux_field", "ux"),
+      Map.get(config, "displacement_y_field") || Map.get(config, "uy_field", "uy"),
+      Map.get(config, "displacement_z_field") || Map.get(config, "uz_field"),
+      Map.get(config, "displacement_magnitude_field") || Map.get(config, "displacement_field", "displacement_magnitude")
+    ) ||
+      peak_vector_entry(
+        nodes,
+        Map.get(config, "displacement_x_field", "displacement_x"),
+        Map.get(config, "displacement_y_field", "displacement_y"),
+        Map.get(config, "displacement_z_field"),
+        Map.get(config, "displacement_magnitude_field") || Map.get(config, "displacement_field", "displacement_magnitude")
+      ) ||
+      peak_scalar_entry(nodes, Map.get(config, "displacement_magnitude_field") || Map.get(config, "displacement_field", "displacement_magnitude"))
   end
 
   defp maybe_merge_temperature_stats(summary, _prefix, []), do: summary
@@ -419,8 +517,10 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
     loaded_count = Enum.count(values, &(&1 != 0.0))
 
     summary
+    |> Map.put("#{prefix}_heat_load_count", length(values))
     |> Map.put("#{prefix}_loaded_node_count", loaded_count)
     |> Map.put("#{prefix}_total_heat_load", Enum.sum(values))
+    |> Map.put("#{prefix}_heat_load_mean", Enum.sum(values) / length(values))
     |> Map.put("#{prefix}_peak_heat_load", peak_value)
     |> Map.put("#{prefix}_peak_heat_load_node_id", peak_id)
   end
@@ -444,10 +544,13 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
 
   defp maybe_merge_peak_vector(summary, _prefix, _name, nil), do: summary
 
-  defp maybe_merge_peak_vector(summary, prefix, name, {id, magnitude}) do
-    summary
+  defp maybe_merge_peak_vector(summary, prefix, name, {id, magnitude, components}) do
+    Enum.reduce(components, summary, fn {axis, value}, acc ->
+      Map.put(acc, "#{prefix}_peak_#{name}_#{axis}", value)
+    end)
     |> Map.put("#{prefix}_peak_#{name}_magnitude", magnitude)
     |> Map.put("#{prefix}_peak_#{name}_id", id)
+    |> Map.put("#{prefix}_peak_#{name}_element_id", id)
   end
 
   defp maybe_merge_peak_scalar(summary, _prefix, _name, nil), do: summary
@@ -456,14 +559,25 @@ defmodule KyuubikiWeb.WorkflowThermalRuntime do
     summary
     |> Map.put("#{prefix}_peak_#{name}", value)
     |> Map.put("#{prefix}_peak_#{name}_id", id)
+    |> Map.put("#{prefix}_peak_#{name}_element_id", id)
   end
 
   defp maybe_merge_peak_magnitude(summary, _prefix, _name, nil), do: summary
+
+  defp maybe_merge_peak_magnitude(summary, prefix, name, {id, value, components}) do
+    Enum.reduce(components, summary, fn {axis, component}, acc ->
+      Map.put(acc, "#{prefix}_peak_#{name}_#{axis}", component)
+    end)
+    |> Map.put("#{prefix}_peak_#{name}", value)
+    |> Map.put("#{prefix}_peak_#{name}_id", id)
+    |> Map.put("#{prefix}_peak_#{name}_element_id", id)
+  end
 
   defp maybe_merge_peak_magnitude(summary, prefix, name, {id, value}) do
     summary
     |> Map.put("#{prefix}_peak_#{name}", value)
     |> Map.put("#{prefix}_peak_#{name}_id", id)
+    |> Map.put("#{prefix}_peak_#{name}_element_id", id)
   end
 
   defp merge_diagnostic_contract(summary, domain, subject, prefix, metric_groups) do

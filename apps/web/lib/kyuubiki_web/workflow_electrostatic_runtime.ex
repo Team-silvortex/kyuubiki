@@ -6,12 +6,18 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
     with {:ok, nodes} <- fetch_list(payload, Map.get(config, "node_source", "nodes")),
          {:ok, elements} <- fetch_list(payload, Map.get(config, "element_source", "elements")) do
       prefix = normalize_prefix(Map.get(config, "output_prefix", "electrostatic"))
-      potential_field = Map.get(config, "potential_field", "electric_potential")
+      potential_field = Map.get(config, "potential_field", "potential")
       charge_density_field = Map.get(config, "charge_density_field", "charge_density")
       energy_density_field = Map.get(config, "energy_density_field", "energy_density")
+      charge_density_entries =
+        resolve_charge_density_entries(
+          config,
+          nodes,
+          elements
+        )
 
       potential_nodes = collect_numeric_entries(nodes, potential_field)
-      charge_density_elements = collect_numeric_entries(elements, charge_density_field)
+      charge_density_values = collect_numeric_entries(charge_density_entries, charge_density_field)
       energy_density_peak = peak_scalar_entry(elements, energy_density_field)
 
       field_peak =
@@ -35,7 +41,7 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
           "field"
         ])
         |> maybe_merge_range_stats(prefix, "potential", potential_nodes)
-        |> maybe_merge_distribution_stats(prefix, "charge_density", charge_density_elements)
+        |> maybe_merge_distribution_stats(prefix, "charge_density", charge_density_values)
         |> maybe_merge_peak_scalar(prefix, "energy_density", energy_density_peak)
         |> maybe_merge_peak_vector(prefix, "field", field_peak)
 
@@ -57,6 +63,14 @@ defmodule KyuubikiWeb.WorkflowElectrostaticRuntime do
   end
 
   defp fetch_list(_payload, _key), do: {:error, :invalid_result_collection}
+
+  defp resolve_charge_density_entries(config, nodes, elements) do
+    case Map.get(config, "charge_density_source", "nodes") do
+      "elements" -> elements
+      "element" -> elements
+      _ -> nodes
+    end
+  end
 
   defp collect_numeric_entries(entries, field) when is_list(entries) and is_binary(field) do
     entries

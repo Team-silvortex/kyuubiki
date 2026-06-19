@@ -85,6 +85,9 @@ defmodule KyuubikiWeb.Api.WorkflowDiagnosticsBundleExportApiTest do
     assert payload["completed_nodes"] == ["electrostatic_input", "thermal_input", "bundle", "guard", "report", "export", "markdown_output"]
     assert exported["format"] == "markdown"
     assert String.contains?(exported["content"], "# Diagnostics Bundle Report")
+    assert String.contains?(exported["content"], "## Key Highlights")
+    assert String.contains?(exported["content"], "[attention] Thermal temperature peak: 80.0")
+    assert String.contains?(exported["content"], "[attention] Electrostatic field peak: 10.0")
     assert String.contains?(exported["content"], "## Diagnostics Sources")
     assert String.contains?(exported["content"], "## Guard Decision")
     assert String.contains?(exported["content"], "hold_and_review")

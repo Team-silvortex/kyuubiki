@@ -155,16 +155,12 @@ fn runs_electrostatic_triangle_to_heat_triangle_summary_workflow_graph() {
         .cloned()
         .expect("summary artifact should exist");
     assert_eq!(run.completed_nodes.len(), 6);
-    assert!(
-        summary["max_temperature"]
-            .as_f64()
-            .is_some_and(|value| value > 0.0)
-    );
-    assert!(
-        summary["max_heat_flux"]
-            .as_f64()
-            .is_some_and(|value| value > 0.0)
-    );
+    assert!(summary["max_temperature"]
+        .as_f64()
+        .is_some_and(|value| value > 0.0));
+    assert!(summary["max_heat_flux"]
+        .as_f64()
+        .is_some_and(|value| value > 0.0));
 }
 
 fn port(id: &str, artifact_type: &str) -> WorkflowPort {

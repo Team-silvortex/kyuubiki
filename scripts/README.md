@@ -54,6 +54,10 @@ Useful smoke wrappers:
   Python / Elixir / Rust headless SDK smoke suite.
 - `./scripts/kyuubiki frontend-test`
   Frontend typecheck plus production build verification.
+- `./scripts/kyuubiki workflow-preflight`
+  Workflow topology plus search/layout guard suite. Start `npm run dev` under
+  `apps/frontend` in a separate shell first because the browser-backed checks
+  exercise the live workbench benchmark surface.
 
 Examples now include:
 

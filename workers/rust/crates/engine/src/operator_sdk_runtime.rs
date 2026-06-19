@@ -1,5 +1,9 @@
 use crate::catalog::describe_built_in_operator;
 use crate::operator_sdk_bridges::register_bridge_transform_operators;
+use crate::operator_sdk_workflow_extensions::{
+    register_workflow_export_extensions, register_workflow_extract_extensions,
+    register_workflow_transform_extensions,
+};
 use crate::workflow_reporting::{
     export_alert_markdown, export_summary_csv, export_summary_json, extract_field_hotspots,
     extract_field_statistics, extract_result_summary,
@@ -376,6 +380,7 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("extract.field_hotspots"),
                 })
                 .expect("extract.field_hotspots should register");
+            register_workflow_extract_extensions(&mut registry);
         }
         BuiltInOperatorRegistryKind::Export => {
             registry
@@ -393,6 +398,7 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("export.alert_markdown"),
                 })
                 .expect("export.alert_markdown should register");
+            register_workflow_export_extensions(&mut registry);
         }
         BuiltInOperatorRegistryKind::Transform => {
             register_bridge_transform_operators(&mut registry, descriptor);
@@ -426,6 +432,7 @@ pub fn built_in_operator_registry(kind: BuiltInOperatorRegistryKind) -> Operator
                     descriptor: descriptor("transform.select_best_summary"),
                 })
                 .expect("transform.select_best_summary should register");
+            register_workflow_transform_extensions(&mut registry);
         }
     }
     registry

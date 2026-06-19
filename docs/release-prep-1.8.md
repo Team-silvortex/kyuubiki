@@ -67,14 +67,22 @@ node ./scripts/create-release-snapshot.mjs 1.8.0 --status staged --dry-run
 
 4. Advance the shipping contract only when the repository-wide visible version
    is ready to move together.
-5. Rebuild generated release docs after contract changes:
+5. If the release work touches workflow-heavy frontend surfaces such as the
+   builder, operator search, dataset editor, package import diagnostics, or
+   workflow integrity panels, start `npm run dev` in `apps/frontend` and run:
+
+```bash
+./scripts/kyuubiki workflow-preflight
+```
+
+6. Rebuild generated release docs after contract changes:
 
 ```bash
 node ./scripts/build-update-catalog.mjs
 node ./scripts/build-installation-integrity-docs.mjs
 ```
 
-6. Run the audit again with the new expected version.
+7. Run the audit again with the new expected version.
 
 ## What this prep step improves
 
@@ -84,6 +92,7 @@ that future `1.x` transitions stop depending on memory and manual grep passes.
 `scripts/audit-version-line.mjs` is now the first checkpoint before:
 
 - promoting a staged snapshot to current
+- running workflow-heavy release-facing frontend validation
 - rebuilding desktop-facing release docs
 - packaging Hub, Workbench, or Installer bundles
 - claiming a new shipping line in README or docs

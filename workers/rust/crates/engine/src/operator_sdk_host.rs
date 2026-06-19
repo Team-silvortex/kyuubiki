@@ -1,4 +1,4 @@
-use crate::operator_sdk_runtime::{BuiltInOperatorRegistryKind, built_in_operator_registry};
+use crate::operator_sdk_runtime::{built_in_operator_registry, BuiltInOperatorRegistryKind};
 use kyuubiki_operator_sdk::{
     OperatorPackageActivator, OperatorPackageLoadError, OperatorPackageLoadPlan,
     OperatorRegistrationEntrypoint, OperatorRegistry,

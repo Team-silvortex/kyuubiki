@@ -275,6 +275,70 @@ defmodule KyuubikiWeb.WorkflowTemplateCatalogTest do
                "dataset_value" => "guard_result"
              }
            ]
+
+    assert {:ok, %{"id" => "workflow.electrostatic-heat-thermo-diagnostics-markdown"} = coupled_graph} =
+             WorkflowTemplateCatalog.graph_by_id(
+               "workflow.electrostatic-heat-thermo-diagnostics-markdown"
+             )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "solve.electrostatic_plane_quad_2d")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "bridge.electrostatic_field_to_heat_quad_2d")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "solve.heat_plane_quad_2d")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "bridge.temperature_field_to_thermo_quad_2d")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "solve.thermal_plane_quad_2d")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "extract.electrostatic_result_diagnostics")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "extract.thermal_result_diagnostics")
+           )
+
+    assert Enum.any?(
+             coupled_graph["nodes"],
+             &(&1["operator_id"] == "extract.thermo_result_diagnostics")
+           )
+
+    assert coupled_graph["dataset_contract"]["id"] ==
+             "kyuubiki.dataset.electrostatic_heat_thermo_diagnostics_markdown/v1"
+
+    assert coupled_graph["dataset_contract"]["metadata"] == %{
+             "workflow_family" => "electrostatic_heat_thermo_diagnostics_markdown"
+           }
+
+    assert coupled_graph["output_nodes"] == ["markdown_output"]
+
+    export_node = Enum.find(coupled_graph["nodes"], &(&1["id"] == "export"))
+
+    assert export_node["inputs"] == [
+             %{
+               "id" => "bundle",
+               "artifact_type" => "artifact/json",
+               "dataset_value" => "report_payload"
+             }
+           ]
   end
 
   test "can resolve graphs for electromagnetic statistics and comparison workflows" do

@@ -56,3 +56,26 @@ Automation support:
 
 This app should stay API-driven. It should consume control-plane, solver-RPC,
 and schema contracts rather than backend implementation details.
+
+## Workflow Preflight
+
+Before promoting workflow-heavy UI changes, run the workflow guard chain from
+`apps/frontend`:
+
+```bash
+npm run check:workflow-preflight
+```
+
+This currently covers:
+
+- workflow unit tests
+- topology regression checks
+- workflow search and layout guard checks across desktop and phone widths
+
+For the browser-backed layout guards, start the local frontend first:
+
+```bash
+npm run dev
+```
+
+Then run the preflight command in a separate shell.

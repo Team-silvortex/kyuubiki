@@ -15,11 +15,16 @@ defmodule KyuubikiWeb.WorkflowDiagnosticsReportPayloadRuntimeTest do
       "bundle" => %{
         "bundle_contract" => "kyuubiki.workflow_diagnostics_bundle/v1",
         "bundle_sources" => ["electrostatic", "thermal"],
-        "bundle_items" => [%{"source" => "electrostatic"}]
+        "bundle_items" => [%{"source" => "electrostatic"}],
+        "bundle_payloads" => %{
+          "thermal" => %{"thermal_temperature_max" => 125.0},
+          "thermo" => %{"thermo_peak_stress" => 220.0, "thermo_peak_thermal_strain" => 4.8e-4}
+        }
       },
       "guard" => %{
         "guard_status" => "block",
-        "guard_recommendation" => "hold_and_review"
+        "guard_recommendation" => "hold_and_review",
+        "guard_triggers" => [%{"field" => "thermal_temperature_max"}]
       }
     }
 
@@ -35,6 +40,11 @@ defmodule KyuubikiWeb.WorkflowDiagnosticsReportPayloadRuntimeTest do
     assert report_payload["report_sources"] == ["electrostatic", "thermal"]
     assert report_payload["report_guard_status"] == "block"
     assert report_payload["guard_payload"]["guard_recommendation"] == "hold_and_review"
+    assert report_payload["report_focus_metrics"]["thermal.temperature_max"] == 125.0
+    assert report_payload["report_focus_metrics"]["thermo.stress_peak"] == 220.0
+    assert Enum.any?(report_payload["report_highlights"], fn item ->
+             item["id"] == "thermal.temperature_max" and item["attention"] == true
+           end)
     assert report_payload["bundle_contract"] == "kyuubiki.workflow_diagnostics_bundle/v1"
   end
 end

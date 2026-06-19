@@ -1,10 +1,9 @@
 use crate::{
-    EngineSolveRequest,
     operator_sdk_runtime::{
         run_registered_export_operator, run_registered_extract_operator,
         run_registered_transform_operator,
     },
-    solve,
+    solve, EngineSolveRequest,
 };
 use kyuubiki_protocol::{
     AnalysisResult, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
@@ -59,18 +58,27 @@ const SUPPORTED_TRANSFORM_OPERATORS: &[&str] = &[
     "transform.aggregate_summary_collection",
     "transform.normalize_summary_fields",
     "transform.select_best_summary",
+    "transform.evaluate_thermal_guard",
+    "transform.benchmark_coupled_heat_pair",
+    "transform.compose_diagnostics_bundle",
+    "transform.evaluate_diagnostics_bundle_guard",
+    "transform.compose_diagnostics_report_payload",
 ];
 
 const SUPPORTED_EXTRACT_OPERATORS: &[&str] = &[
     "extract.result_summary",
     "extract.field_statistics",
     "extract.field_hotspots",
+    "extract.electrostatic_result_diagnostics",
+    "extract.thermal_result_diagnostics",
+    "extract.thermo_result_diagnostics",
 ];
 
 const SUPPORTED_EXPORT_OPERATORS: &[&str] = &[
     "export.summary_json",
     "export.summary_csv",
     "export.alert_markdown",
+    "export.diagnostics_bundle_markdown",
 ];
 
 pub fn artifact_key(node_id: &str, port_id: &str) -> String {
@@ -139,6 +147,8 @@ pub fn transform_operator_requires_port_map(operator_id: &str) -> bool {
         || operator_id == "transform.compare_summary_pair"
         || operator_id == "transform.aggregate_summary_collection"
         || operator_id == "transform.select_best_summary"
+        || operator_id == "transform.compose_diagnostics_bundle"
+        || operator_id == "transform.compose_diagnostics_report_payload"
 }
 
 pub fn resolve_named_input_payloads(
@@ -509,7 +519,14 @@ pub fn run_transform_operator(
         | "transform.compare_summary_pair"
         | "transform.aggregate_summary_collection"
         | "transform.normalize_summary_fields"
-        | "transform.select_best_summary" => {
+        | "transform.select_best_summary"
+        | "transform.evaluate_thermal_guard"
+        | "transform.benchmark_coupled_heat_pair"
+        | "transform.compose_diagnostics_bundle"
+        | "transform.evaluate_diagnostics_bundle_guard" => {
+            run_registered_transform_operator(operator_id, payload, config)
+        }
+        "transform.compose_diagnostics_report_payload" => {
             run_registered_transform_operator(operator_id, payload, config)
         }
         _ => Err(format!(

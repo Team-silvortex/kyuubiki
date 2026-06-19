@@ -34,6 +34,16 @@ node ./scripts/create-release-snapshot.mjs 1.6.1 --status staged
 The script updates `releases/index.json` and creates
 `releases/snapshots/<version>.json`.
 
+New snapshot scaffolds now seed frontend verification with:
+
+- `npm run typecheck`
+- `npm run build`
+- `npm run check:workflow-preflight`
+
+That keeps workflow topology plus browser-backed layout/search validation
+visible in the release record instead of leaving workflow-heavy frontend
+quality as an unwritten expectation.
+
 If the snapshot is created with `--status current`, the same command also
 advances:
 

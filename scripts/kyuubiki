@@ -68,6 +68,11 @@ run_frontend_tests() {
   exec npm run build
 }
 
+run_workflow_preflight() {
+  cd "$FRONTEND_DIR"
+  exec npm run check:workflow-preflight
+}
+
 run_benchmark() {
   cd "$RUST_DIR"
   exec cargo run -p kyuubiki-benchmark -- "$@"
@@ -401,7 +406,7 @@ Native cross-platform commands:
   project | macro
   build-frontend | build-orchestrator | build-agent
   build-hub-gui | build-installer-gui | build-workbench-gui
-  web-test | rust-test | frontend-test
+  web-test | rust-test | frontend-test | workflow-preflight
   worker | smoke | sdk-smoke | playground-test
   orchestrator | orchestrator-local | orchestrator-cloud | orchestrator-distributed
   agent | frontend
@@ -487,6 +492,10 @@ case "$COMMAND" in
   frontend-test)
     shift
     run_frontend_tests "$@"
+    ;;
+  workflow-preflight)
+    shift
+    run_workflow_preflight "$@"
     ;;
   worker)
     shift

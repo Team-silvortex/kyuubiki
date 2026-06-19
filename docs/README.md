@@ -133,6 +133,9 @@ Then branch by intent:
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
+- `development.md`
+  Day-to-day contributor workflow, including when workflow-heavy frontend work
+  should run the dedicated `workflow-preflight` guard.
 - `accuracy-plan.md`
   Accuracy-validation plan for `v1.x`, with benchmark targets, tolerances,
   and automation priorities by study family.
@@ -179,6 +182,9 @@ Then branch by intent:
 - `desktop-release-checklist.md`
   Platform-specific desktop bundle targets, icon requirements, and release
   checks.
+- `testing-and-ci.md`
+  Verification map for repo checks, CI layers, and the dedicated workflow
+  preflight path used for workflow-heavy frontend changes.
 - `update-catalog.html`
   Generated operator-facing view of the unified update tags, release channels,
   and shipped version bindings.
@@ -202,6 +208,8 @@ Then branch by intent:
 
 - Browser/frontend work:
   `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
+- Workflow-heavy frontend work:
+  `workflow-graph.md` -> `workflow-dataset.md` -> `development.md` -> `testing-and-ci.md` -> `release-prep-1.8.md`
 - Desktop product boundary work:
   `system-overview.md` -> `app-runtime-boundaries.md` -> `agent-orchestrator-boundary.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
 - Orchestrator/control-plane work:
@@ -209,4 +217,4 @@ Then branch by intent:
 - Rust solver/agent work:
   `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `protocols.md`
 - Packaging/release work:
-  `packaging-and-deployment.md` -> `desktop-release-checklist.md` -> `update-catalog.html`
+  `packaging-and-deployment.md` -> `testing-and-ci.md` -> `desktop-release-checklist.md` -> `update-catalog.html`

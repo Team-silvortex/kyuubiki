@@ -1,6 +1,6 @@
 use crate::{
-    EngineSolveRequest, built_in_operator_descriptors, chunk_result, describe_built_in_operator,
-    is_supported_workflow_operator, solve, supported_workflow_operator_ids,
+    built_in_operator_descriptors, chunk_result, describe_built_in_operator,
+    is_supported_workflow_operator, solve, supported_workflow_operator_ids, EngineSolveRequest,
 };
 use kyuubiki_protocol::{
     AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolveBarRequest,
@@ -101,21 +101,17 @@ fn chunks_result_items() {
 fn exposes_verified_built_in_operator_descriptors() {
     let descriptors = built_in_operator_descriptors();
     assert!(descriptors.len() >= 4);
-    assert!(
-        descriptors
-            .iter()
-            .any(|descriptor| descriptor.id == "solve.frame_3d")
-    );
+    assert!(descriptors
+        .iter()
+        .any(|descriptor| descriptor.id == "solve.frame_3d"));
 
     let descriptor = describe_built_in_operator("solve.thermal_frame_3d").expect("descriptor");
     assert_eq!(descriptor.kind, OperatorKind::Solver);
     assert_eq!(descriptor.family, "thermal_frame_3d");
-    assert!(
-        descriptor
-            .capability_tags
-            .iter()
-            .any(|tag| tag == "verified")
-    );
+    assert!(descriptor
+        .capability_tags
+        .iter()
+        .any(|tag| tag == "verified"));
     assert!(descriptors.iter().any(|descriptor| {
         descriptor.id == "bridge.electrostatic_field_to_heat_quad_2d"
             && descriptor.kind == OperatorKind::WorkflowBridge
@@ -188,4 +184,66 @@ fn supported_headless_workflow_operators_have_built_in_descriptors() {
         "supported headless workflow operators missing built-in descriptors: {}",
         undocumented.join(", ")
     );
+}
+
+#[test]
+fn diagnostics_template_matches_rust_workflow_report_chain() {
+    let template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../../apps/web/lib/kyuubiki_web/workflow_template_diagnostics_entries.ex");
+    let template_source =
+        fs::read_to_string(&template_path).expect("diagnostics template source should be readable");
+
+    for required in [
+        "\"id\" => \"workflow.diagnostics-bundle-guard-report-markdown\"",
+        "\"operator_id\" => \"transform.compose_diagnostics_bundle\"",
+        "\"operator_id\" => \"transform.evaluate_diagnostics_bundle_guard\"",
+        "\"operator_id\" => \"transform.compose_diagnostics_report_payload\"",
+        "\"operator_id\" => \"export.diagnostics_bundle_markdown\"",
+        "\"dataset_value\" => \"diagnostics_bundle\"",
+        "\"dataset_value\" => \"guard_result\"",
+        "\"dataset_value\" => \"report_payload\"",
+        "\"dataset_value\" => \"markdown_report\"",
+    ] {
+        assert!(
+            template_source.contains(required),
+            "diagnostics template drifted, missing required fragment: {required}"
+        );
+    }
+}
+
+#[test]
+fn coupled_diagnostics_template_matches_rust_workflow_report_chain() {
+    let template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../../../apps/web/lib/kyuubiki_web/workflow_template_diagnostics_entries.ex");
+    let template_source =
+        fs::read_to_string(&template_path).expect("diagnostics template source should be readable");
+
+    for required in [
+        "\"id\" => \"workflow.electrostatic-heat-thermo-diagnostics-markdown\"",
+        "\"operator_id\" => \"solve.electrostatic_plane_quad_2d\"",
+        "\"operator_id\" => \"bridge.electrostatic_field_to_heat_quad_2d\"",
+        "\"operator_id\" => \"solve.heat_plane_quad_2d\"",
+        "\"operator_id\" => \"bridge.temperature_field_to_thermo_quad_2d\"",
+        "\"operator_id\" => \"solve.thermal_plane_quad_2d\"",
+        "\"extract.electrostatic_result_diagnostics\"",
+        "\"extract.thermal_result_diagnostics\"",
+        "\"extract.thermo_result_diagnostics\"",
+        "\"operator_id\" => \"transform.compose_diagnostics_bundle\"",
+        "\"operator_id\" => \"transform.evaluate_diagnostics_bundle_guard\"",
+        "\"operator_id\" => \"transform.compose_diagnostics_report_payload\"",
+        "\"operator_id\" => \"export.diagnostics_bundle_markdown\"",
+        "\"dataset_value\" => \"electrostatic_diagnostics\"",
+        "\"dataset_value\" => \"thermal_diagnostics\"",
+        "\"dataset_value\" => \"thermo_diagnostics\"",
+        "\"dataset_value\" => \"diagnostics_bundle\"",
+        "\"dataset_value\" => \"guard_result\"",
+        "\"dataset_value\" => \"report_payload\"",
+        "\"dataset_value\" => \"markdown_report\"",
+        "\"field\" => \"thermo_stress_peak\"",
+    ] {
+        assert!(
+            template_source.contains(required),
+            "coupled diagnostics template drifted, missing required fragment: {required}"
+        );
+    }
 }
