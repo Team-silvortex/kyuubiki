@@ -38,6 +38,11 @@ function asStringRecord(value: unknown): Record<string, string> | undefined {
   ) as Record<string, string>;
 }
 
+function stripLegacyLocalWorkflowInputs(records: StoredLocalWorkflow[]) {
+  const sanitized = records.map(({ inputArtifactTexts: _inputArtifactTexts, ...entry }) => entry);
+  return sanitized as StoredLocalWorkflow[];
+}
+
 function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
   if (typeof window === "undefined") return [];
   try {
@@ -45,7 +50,8 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((entry) => {
+    let hadLegacyInputs = false;
+    const records = parsed.flatMap((entry) => {
       if (!isRecord(entry)) return [];
       if (
         typeof entry.id !== "string" ||
@@ -59,6 +65,9 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
       }
       const graph = asWorkflowGraphDefinition(entry.graph);
       if (!graph) return [];
+      if (asStringRecord(entry.inputArtifactTexts)) {
+        hadLegacyInputs = true;
+      }
       return [
         {
           id: entry.id,
@@ -74,7 +83,6 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
           variantOfWorkflowName:
             typeof entry.variantOfWorkflowName === "string" ? entry.variantOfWorkflowName : undefined,
           graph,
-          inputArtifactTexts: asStringRecord(entry.inputArtifactTexts),
           tags:
             Array.isArray(entry.tags) && entry.tags.every((value) => typeof value === "string")
               ? (entry.tags as string[])
@@ -90,6 +98,10 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
         },
       ];
     });
+    if (hadLegacyInputs) {
+      writeStoredLocalWorkflows(records);
+    }
+    return records;
   } catch {
     return [];
   }
@@ -97,7 +109,10 @@ function readStoredLocalWorkflows(): StoredLocalWorkflow[] {
 
 function writeStoredLocalWorkflows(records: StoredLocalWorkflow[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(WORKBENCH_LOCAL_WORKFLOWS_KEY, JSON.stringify(records));
+  window.localStorage.setItem(
+    WORKBENCH_LOCAL_WORKFLOWS_KEY,
+    JSON.stringify(stripLegacyLocalWorkflowInputs(records)),
+  );
 }
 
 function buildLocalWorkflowId(baseName: string) {
@@ -150,7 +165,6 @@ export function saveStoredLocalWorkflow(params: {
     variantOfWorkflowId: params.variantOfWorkflowId,
     variantOfWorkflowName: params.variantOfWorkflowName,
     graph: nextGraph,
-    inputArtifactTexts: params.inputArtifactTexts,
     tags: params.tags,
     importedFromPackageId: params.importedFromPackageId,
     importedFromPackageVersion: params.importedFromPackageVersion,
@@ -219,7 +233,6 @@ export function duplicateStoredLocalWorkflow(workflowId: string): StoredLocalWor
     variantOfWorkflowId: current.id,
     variantOfWorkflowName: current.name,
     graph: nextGraph,
-    inputArtifactTexts: current.inputArtifactTexts,
     tags: current.tags,
     importedFromPackageId: current.importedFromPackageId,
     importedFromPackageVersion: current.importedFromPackageVersion,

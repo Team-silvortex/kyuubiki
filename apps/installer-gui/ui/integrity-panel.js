@@ -129,29 +129,43 @@ function renderLayoutEntry(entry) {
   const card = document.createElement("article");
   card.className = "integrity-card desktop-shell-surface-card";
   const state = entry.present ? "present" : "missing";
-  card.innerHTML = `
-    <div class="integrity-card__top">
-      <strong>${entry.label}</strong>
-      <span class="integrity-pill" data-desktop-state="health">${state}</span>
-    </div>
-    <code>${entry.relative_path}</code>
-    <p>${entry.required ? "Required install path" : "Optional path"} · ${formatBytes(entry.size_bytes)}</p>
-  `;
-  applyDesktopState(card.querySelector(".integrity-pill"), state, { kind: "health" });
+  const header = document.createElement("div");
+  header.className = "integrity-card__top";
+  const title = document.createElement("strong");
+  title.textContent = entry.label;
+  const statePill = document.createElement("span");
+  statePill.className = "integrity-pill";
+  statePill.dataset.desktopState = "health";
+  statePill.textContent = state;
+  header.append(title, statePill);
+
+  const relativePath = document.createElement("code");
+  relativePath.textContent = entry.relative_path;
+  const description = document.createElement("p");
+  description.textContent = `${entry.required ? "Required install path" : "Optional path"} · ${formatBytes(entry.size_bytes)}`;
+
+  card.append(header, relativePath, description);
+  applyDesktopState(statePill, state, { kind: "health" });
   return card;
 }
 
 function renderVersionEntry(check) {
   const row = document.createElement("article");
   row.className = "integrity-version-row";
-  row.innerHTML = `
-    <div>
-      <strong>${check.label}</strong>
-      <p>Expected ${check.expected} · Actual ${check.actual}</p>
-    </div>
-    <span class="integrity-pill" data-desktop-state="health">${check.ok ? "aligned" : "mismatch"}</span>
-  `;
-  applyDesktopState(row.querySelector(".integrity-pill"), check.ok ? "ok" : "missing", {
+  const body = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = check.label;
+  const description = document.createElement("p");
+  description.textContent = `Expected ${check.expected} · Actual ${check.actual}`;
+  body.append(title, description);
+
+  const statePill = document.createElement("span");
+  statePill.className = "integrity-pill";
+  statePill.dataset.desktopState = "health";
+  statePill.textContent = check.ok ? "aligned" : "mismatch";
+
+  row.append(body, statePill);
+  applyDesktopState(statePill, check.ok ? "ok" : "missing", {
     kind: "health",
   });
   return row;
@@ -160,35 +174,50 @@ function renderVersionEntry(check) {
 function renderContractRule(rule) {
   const row = document.createElement("article");
   row.className = "integrity-contract-row";
-  row.innerHTML = `
-    <div>
-      <strong>${rule.label}</strong>
-      <p>${rule.description}</p>
-      <code>${rule.value}</code>
-    </div>
-    <div class="integrity-contract-meta">
-      <span class="integrity-pill" data-desktop-state="activity">${rule.category}</span>
-      <span class="integrity-pill" data-desktop-state="health">${rule.editable ? "editable" : "read-only"}</span>
-    </div>
-  `;
-  const pills = row.querySelectorAll(".integrity-pill");
-  applyDesktopState(pills[0], rule.category, { kind: "activity" });
-  applyDesktopState(pills[1], rule.editable ? "active" : "idle", { kind: "health" });
-  pills[1].textContent = rule.editable ? "editable" : "read-only";
+  const body = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = rule.label;
+  const description = document.createElement("p");
+  description.textContent = rule.description;
+  const value = document.createElement("code");
+  value.textContent = rule.value;
+  body.append(title, description, value);
+
+  const meta = document.createElement("div");
+  meta.className = "integrity-contract-meta";
+  const categoryPill = document.createElement("span");
+  categoryPill.className = "integrity-pill";
+  categoryPill.dataset.desktopState = "activity";
+  categoryPill.textContent = rule.category;
+  const modePill = document.createElement("span");
+  modePill.className = "integrity-pill";
+  modePill.dataset.desktopState = "health";
+  modePill.textContent = rule.editable ? "editable" : "read-only";
+  meta.append(categoryPill, modePill);
+
+  row.append(body, meta);
+  applyDesktopState(categoryPill, rule.category, { kind: "activity" });
+  applyDesktopState(modePill, rule.editable ? "active" : "idle", { kind: "health" });
   return row;
 }
 
 function renderResidueEntry(residue) {
   const row = document.createElement("article");
   row.className = "integrity-residue-row";
-  row.innerHTML = `
-    <div>
-      <strong>${residue.relative_path}</strong>
-      <p>${residue.reason}</p>
-    </div>
-    <span class="integrity-pill" data-desktop-state="health">${residue.removable ? "removable" : "review"}</span>
-  `;
-  applyDesktopState(row.querySelector(".integrity-pill"), residue.removable ? "warning" : "active", {
+  const body = document.createElement("div");
+  const title = document.createElement("strong");
+  title.textContent = residue.relative_path;
+  const description = document.createElement("p");
+  description.textContent = residue.reason;
+  body.append(title, description);
+
+  const statePill = document.createElement("span");
+  statePill.className = "integrity-pill";
+  statePill.dataset.desktopState = "health";
+  statePill.textContent = residue.removable ? "removable" : "review";
+
+  row.append(body, statePill);
+  applyDesktopState(statePill, residue.removable ? "warning" : "active", {
     kind: "health",
   });
   return row;

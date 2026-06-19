@@ -45,6 +45,11 @@ function asTemplateChainPreferences(
   return { favoriteChainIds, favoriteChainAliases };
 }
 
+function stripLegacyDraftInputs(records: StoredWorkflowDraft[]) {
+  const sanitized = records.map(({ inputArtifactTexts: _inputArtifactTexts, ...entry }) => entry);
+  return sanitized as StoredWorkflowDraft[];
+}
+
 function readStoredDrafts(): StoredWorkflowDraft[] {
   if (typeof window === "undefined") return [];
   try {
@@ -52,7 +57,8 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((entry) => {
+    let hadLegacyInputs = false;
+    const records = parsed.flatMap((entry) => {
       if (!isRecord(entry)) return [];
       if (
         typeof entry.id !== "string" ||
@@ -64,6 +70,9 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
       }
       const graph = asWorkflowGraphDefinition(entry.graph);
       if (!graph) return [];
+      if (asStringRecord(entry.inputArtifactTexts)) {
+        hadLegacyInputs = true;
+      }
       return [
         {
           id: entry.id,
@@ -71,13 +80,16 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
           name: entry.name,
           savedAt: entry.savedAt,
           graph,
-          inputArtifactTexts: asStringRecord(entry.inputArtifactTexts),
           templateChainPreferences: asTemplateChainPreferences(
             entry.templateChainPreferences,
           ),
         },
       ];
     });
+    if (hadLegacyInputs) {
+      writeStoredDrafts(records);
+    }
+    return records;
   } catch {
     return [];
   }
@@ -85,7 +97,10 @@ function readStoredDrafts(): StoredWorkflowDraft[] {
 
 function writeStoredDrafts(records: StoredWorkflowDraft[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(WORKBENCH_WORKFLOW_DRAFTS_KEY, JSON.stringify(records));
+  window.localStorage.setItem(
+    WORKBENCH_WORKFLOW_DRAFTS_KEY,
+    JSON.stringify(stripLegacyDraftInputs(records)),
+  );
 }
 
 function buildDraftName(workflowName: string, graph: WorkflowGraphDefinition): string {
@@ -113,7 +128,6 @@ export function saveStoredWorkflowDraft(params: {
     name: buildDraftName(params.workflowName, params.graph),
     savedAt: new Date().toISOString(),
     graph: params.graph,
-    inputArtifactTexts: params.inputArtifactTexts,
     templateChainPreferences: params.templateChainPreferences,
   };
   const next = [nextRecord, ...readStoredDrafts()].slice(0, 40);

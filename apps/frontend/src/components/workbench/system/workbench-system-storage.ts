@@ -59,11 +59,10 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     label: "Runtime temp",
     keyPrefixes: [
       "kyuubiki.workbench.workflowPackageMaintenanceLog.v1",
-      "kyuubiki-workbench-python-panel",
     ],
     mode: "safe",
     cleanupLabel: "Safe to clear",
-    detail: "Short-lived runtime cache, package maintenance receipts, and script editor buffer state.",
+    detail: "Short-lived runtime cache and package maintenance receipts stored in local browser persistence.",
   },
   {
     id: "local_workflows",

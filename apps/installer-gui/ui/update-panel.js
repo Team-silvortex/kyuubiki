@@ -130,20 +130,30 @@ function renderRules(rules) {
   rules.forEach((rule) => {
     const row = document.createElement("article");
     row.className = "integrity-contract-row";
-    row.innerHTML = `
-      <div>
-        <strong>${rule.label}</strong>
-        <p>${rule.description}</p>
-        <code>${rule.value}</code>
-      </div>
-      <div class="integrity-contract-meta">
-        <span class="integrity-pill" data-desktop-state="activity">${rule.category}</span>
-        <span class="integrity-pill" data-desktop-state="health">read-only</span>
-      </div>
-    `;
-    const pills = row.querySelectorAll(".integrity-pill");
-    applyDesktopState(pills[0], rule.category, { kind: "activity" });
-    applyDesktopState(pills[1], "idle", { kind: "health" });
+    const body = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = rule.label;
+    const description = document.createElement("p");
+    description.textContent = rule.description;
+    const value = document.createElement("code");
+    value.textContent = rule.value;
+    body.append(title, description, value);
+
+    const meta = document.createElement("div");
+    meta.className = "integrity-contract-meta";
+    const categoryPill = document.createElement("span");
+    categoryPill.className = "integrity-pill";
+    categoryPill.dataset.desktopState = "activity";
+    categoryPill.textContent = rule.category;
+    const modePill = document.createElement("span");
+    modePill.className = "integrity-pill";
+    modePill.dataset.desktopState = "health";
+    modePill.textContent = "read-only";
+    meta.append(categoryPill, modePill);
+
+    row.append(body, meta);
+    applyDesktopState(categoryPill, rule.category, { kind: "activity" });
+    applyDesktopState(modePill, "idle", { kind: "health" });
     list.appendChild(row);
   });
 }
@@ -158,15 +168,24 @@ function renderArtifacts(artifacts) {
   artifacts.forEach((artifact) => {
     const row = document.createElement("article");
     row.className = "update-artifact-row";
-    row.innerHTML = `
-      <div>
-        <strong>${artifact.product} · ${artifact.platform} · ${artifact.kind}</strong>
-        <p>${artifact.exists ? "Present on this workspace host." : "Declared by channel, not currently present here."}</p>
-        <code>${artifact.path}</code>
-      </div>
-      <span class="integrity-pill" data-desktop-state="health">${artifact.exists ? "present" : "declared"}</span>
-    `;
-    applyDesktopState(row.querySelector(".integrity-pill"), artifact.exists ? "ok" : "idle", {
+    const body = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${artifact.product} · ${artifact.platform} · ${artifact.kind}`;
+    const description = document.createElement("p");
+    description.textContent = artifact.exists
+      ? "Present on this workspace host."
+      : "Declared by channel, not currently present here.";
+    const path = document.createElement("code");
+    path.textContent = artifact.path;
+    body.append(title, description, path);
+
+    const statePill = document.createElement("span");
+    statePill.className = "integrity-pill";
+    statePill.dataset.desktopState = "health";
+    statePill.textContent = artifact.exists ? "present" : "declared";
+
+    row.append(body, statePill);
+    applyDesktopState(statePill, artifact.exists ? "ok" : "idle", {
       kind: "health",
     });
     list.appendChild(row);
@@ -182,14 +201,20 @@ export function renderUpdatePreview(preview) {
     steps.forEach((step) => {
       const row = document.createElement("article");
       row.className = "update-preview-step";
-      row.innerHTML = `
-        <div>
-          <strong>${step.label}</strong>
-          <p>${step.detail}</p>
-        </div>
-        <span class="integrity-pill" data-desktop-state="health">${step.status}</span>
-      `;
-      applyDesktopState(row.querySelector(".integrity-pill"), step.status, { kind: "health" });
+      const body = document.createElement("div");
+      const title = document.createElement("strong");
+      title.textContent = step.label;
+      const detail = document.createElement("p");
+      detail.textContent = step.detail;
+      body.append(title, detail);
+
+      const statusPill = document.createElement("span");
+      statusPill.className = "integrity-pill";
+      statusPill.dataset.desktopState = "health";
+      statusPill.textContent = step.status;
+
+      row.append(body, statusPill);
+      applyDesktopState(statusPill, step.status, { kind: "health" });
       container.appendChild(row);
     });
   }

@@ -28,7 +28,6 @@ export type StoredWorkflowSnapshot = StoredWorkflowSnapshotSummary & {
 
 type PendingSnapshotPayload = {
   graph: WorkflowGraphDefinition;
-  inputArtifactTexts?: Record<string, string>;
 };
 
 type WindowWithIdleCallback = Window & {
@@ -45,17 +44,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function asStringRecord(value: unknown): Record<string, string> | undefined {
-  if (!isRecord(value)) return undefined;
-  return Object.fromEntries(Object.entries(value).filter(([, entryValue]) => typeof entryValue === "string")) as Record<string, string>;
-}
-
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
 }
 
 function buildSnapshotPayload(payload: PendingSnapshotPayload) {
   return JSON.stringify(payload);
+}
+
+function sanitizeLegacySnapshotPayloads(index: StoredWorkflowSnapshotSummary[]) {
+  if (typeof window === "undefined") return;
+  index.forEach((entry) => {
+    if (entry.payloadState !== "full") return;
+    const pendingPayload = pendingSnapshotPayloads.get(entry.id);
+    if (pendingPayload) {
+      pendingSnapshotPayloads.set(entry.id, { graph: pendingPayload.graph });
+    }
+    try {
+      const raw = window.localStorage.getItem(snapshotPayloadKey(entry.id));
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as unknown;
+      if (!isRecord(parsed) || !("inputArtifactTexts" in parsed)) return;
+      const graph = asWorkflowGraphDefinition(parsed.graph);
+      if (!graph) return;
+      window.localStorage.setItem(snapshotPayloadKey(entry.id), buildSnapshotPayload({ graph }));
+    } catch {
+      return;
+    }
+  });
 }
 
 function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
@@ -70,6 +86,7 @@ function readSnapshotIndex(): StoredWorkflowSnapshotSummary[] {
       if (!isRecord(entry) || typeof entry.id !== "string" || typeof entry.workflowId !== "string" || typeof entry.workflowName !== "string" || typeof entry.createdAt !== "string" || typeof entry.reason !== "string") return [];
       return [{ id: entry.id, workflowId: entry.workflowId, workflowName: entry.workflowName, createdAt: entry.createdAt, reason: entry.reason, summary: asStringArray(entry.summary), payloadState: entry.payloadState === "summary_only" ? "summary_only" : "full" }];
     });
+    sanitizeLegacySnapshotPayloads(snapshotIndexCache);
     return snapshotIndexCache;
   } catch {
     return [];
@@ -132,7 +149,7 @@ function scheduleSnapshotPayloadWrite(snapshotId: string, payload: PendingSnapsh
   pendingSnapshotWrites.set(snapshotId, { kind: "timeout", handle });
 }
 
-function buildSnapshotFingerprint(graph: WorkflowGraphDefinition, inputArtifactTexts?: Record<string, string>) {
+function buildSnapshotFingerprint(graph: WorkflowGraphDefinition) {
   return JSON.stringify({
     schema: graph.schema_version,
     id: graph.id,
@@ -182,7 +199,6 @@ function buildSnapshotFingerprint(graph: WorkflowGraphDefinition, inputArtifactT
             .sort((left, right) => left.id.localeCompare(right.id)),
         }
       : null,
-    inputArtifactTexts: stringifySortedRecord(inputArtifactTexts),
   });
 }
 
@@ -205,7 +221,7 @@ function readLatestSnapshotFingerprint(
   if (cached?.snapshotId === latestEntry.id) return cached.fingerprint;
   const latestSnapshot = loadStoredWorkflowSnapshot(latestEntry.id);
   if (!latestSnapshot) return null;
-  const fingerprint = buildSnapshotFingerprint(latestSnapshot.graph, latestSnapshot.inputArtifactTexts);
+  const fingerprint = buildSnapshotFingerprint(latestSnapshot.graph);
   latestSnapshotFingerprintCache.set(latestEntry.workflowId, {
     snapshotId: latestEntry.id,
     fingerprint,
@@ -231,7 +247,7 @@ export function loadStoredWorkflowSnapshot(snapshotId: string): StoredWorkflowSn
     if (!isRecord(parsed)) return null;
     const graph = asWorkflowGraphDefinition(parsed.graph);
     if (!graph) return null;
-    return { ...indexEntry, graph, inputArtifactTexts: asStringRecord(parsed.inputArtifactTexts) };
+    return { ...indexEntry, graph };
   } catch {
     return null;
   }
@@ -247,8 +263,8 @@ export function saveStoredWorkflowSnapshot(params: {
 }) {
   if (typeof window === "undefined") return null;
   const index = readSnapshotIndex();
-  const nextFingerprint = buildSnapshotFingerprint(params.graph, params.inputArtifactTexts);
-  const payload = { graph: params.graph, inputArtifactTexts: params.inputArtifactTexts };
+  const nextFingerprint = buildSnapshotFingerprint(params.graph);
+  const payload = { graph: params.graph };
   const payloadText = buildSnapshotPayload(payload);
   const latestEntry = index.find((entry) => entry.workflowId === params.workflowId);
   if (latestEntry) {

@@ -180,6 +180,8 @@ function renderConnectionEditor(
   active: boolean,
   armed: boolean,
   onArmConnection: (connection: ArmedConnection | null) => void,
+  onConnectionCommitted: (sourcePortKey: string, targetPortKey: string) => void,
+  recentConnectedSource: string | null,
   onRegisterPortButton: (key: string, element: HTMLButtonElement | null) => void,
   selectedNodes: WorkflowGraphNode[],
   selectedEdges: WorkflowGraphEdge[],
@@ -191,8 +193,12 @@ function renderConnectionEditor(
     mode === "outgoing" ? "inputs" : "outputs",
   );
   return (
-    <label style={{ display: "grid", gap: "0.35rem", gridTemplateColumns: "88px minmax(0,1fr)", padding: "0.2rem", borderRadius: "8px", ...buildLaneHighlightStyle(active, tone) }}>
+    <label
+      className={`workflow-control-flow-connection-row${active ? " workflow-control-flow-connection-row--active" : ""}${armed ? " workflow-control-flow-connection-row--armed" : ""}`}
+      style={{ display: "grid", gap: "0.35rem", gridTemplateColumns: "88px minmax(0,1fr)", padding: "0.2rem", borderRadius: "8px", ...buildLaneHighlightStyle(active, tone) }}
+    >
       <button
+        className={`workflow-control-flow-source-port${armed ? " workflow-control-flow-source-port--armed" : ""}${recentConnectedSource === portKey(node.id, portId) ? " workflow-control-flow-source-port--connected" : ""}`}
         onClick={() =>
           onArmConnection(
             armed ? null : { mode, nodeId: node.id, portId },
@@ -205,7 +211,12 @@ function renderConnectionEditor(
         <span className={`status-pill status-pill--${armed ? "watch" : tone}`}>{portId}</span>
       </button>
       <select
-        onChange={(event) => onSetControlFlowEdge(mode, node.id, portId, event.target.value)}
+        onChange={(event) => {
+          onSetControlFlowEdge(mode, node.id, portId, event.target.value);
+          if (event.target.value) {
+            onConnectionCommitted(portKey(node.id, portId), event.target.value);
+          }
+        }}
         value={resolveCurrentTarget(node.id, portId, selectedEdges, mode)}
       >
         <option value="">{labels.addEdgeLabel}</option>
@@ -228,6 +239,8 @@ function renderControlPlaneCanvas(
   selectedLaneKey: string | null,
   armedConnection: ArmedConnection | null,
   onArmConnection: (connection: ArmedConnection | null) => void,
+  onConnectionCommitted: (sourcePortKey: string, targetPortKey: string) => void,
+  recentConnectedSource: string | null,
   onRegisterPortButton: (key: string, element: HTMLButtonElement | null) => void,
 ) {
   if (node.kind === "condition") {
@@ -238,6 +251,7 @@ function renderControlPlaneCanvas(
     const falseLaneActive = selectedLaneKey === laneKey(node.id, "false");
     return (
       <div
+        className="workflow-control-flow-canvas workflow-control-flow-canvas--condition"
         style={{
           display: "grid",
           gap: "0.55rem",
@@ -260,12 +274,16 @@ function renderControlPlaneCanvas(
           <span className="card-copy">true</span>
           {renderEndpointChips(trueTargets, "good")}
         </div>
-        {renderConnectionEditor(labels, "outgoing", node, "if_true", "good", trueLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "if_true", onArmConnection, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+        <div className="workflow-control-flow-lane workflow-control-flow-lane--true">
+          {renderConnectionEditor(labels, "outgoing", node, "if_true", "good", trueLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "if_true", onArmConnection, onConnectionCommitted, recentConnectedSource, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+        </div>
         <div style={{ display: "grid", gap: "0.35rem", gridTemplateColumns: "88px minmax(0,1fr)" }}>
           <span className="card-copy">false</span>
           {renderEndpointChips(falseTargets, "risk")}
         </div>
-        {renderConnectionEditor(labels, "outgoing", node, "if_false", "risk", falseLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "if_false", onArmConnection, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+        <div className="workflow-control-flow-lane workflow-control-flow-lane--false">
+          {renderConnectionEditor(labels, "outgoing", node, "if_false", "risk", falseLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "if_false", onArmConnection, onConnectionCommitted, recentConnectedSource, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+        </div>
       </div>
     );
   }
@@ -277,6 +295,7 @@ function renderControlPlaneCanvas(
   const downstreamLaneActive = selectedLaneKey === laneKey(node.id, "downstream");
   return (
     <div
+      className="workflow-control-flow-canvas workflow-control-flow-canvas--merge"
       style={{
         display: "grid",
         gap: "0.55rem",
@@ -291,12 +310,16 @@ function renderControlPlaneCanvas(
         <span className="card-copy">left</span>
         {renderEndpointChips(leftSources, "watch")}
       </div>
-      {renderConnectionEditor(labels, "incoming", node, "left", "watch", mergeLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "left", onArmConnection, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+      <div className="workflow-control-flow-lane workflow-control-flow-lane--merge">
+        {renderConnectionEditor(labels, "incoming", node, "left", "watch", mergeLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "left", onArmConnection, onConnectionCommitted, recentConnectedSource, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+      </div>
       <div style={{ display: "grid", gap: "0.35rem", gridTemplateColumns: "88px minmax(0,1fr)" }}>
         <span className="card-copy">right</span>
         {renderEndpointChips(rightSources, "watch")}
       </div>
-      {renderConnectionEditor(labels, "incoming", node, "right", "watch", mergeLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "right", onArmConnection, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+      <div className="workflow-control-flow-lane workflow-control-flow-lane--merge">
+        {renderConnectionEditor(labels, "incoming", node, "right", "watch", mergeLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "right", onArmConnection, onConnectionCommitted, recentConnectedSource, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+      </div>
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
         <span className="status-pill status-pill--good">{node.id}</span>
         <span className="card-copy">{labels.controlFlowPlaneMergeLabel}</span>
@@ -305,7 +328,9 @@ function renderControlPlaneCanvas(
         <span className="card-copy">merged</span>
         {renderEndpointChips(mergedTargets, "good")}
       </div>
-      {renderConnectionEditor(labels, "outgoing", node, "merged", "good", downstreamLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "merged", onArmConnection, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+      <div className="workflow-control-flow-lane workflow-control-flow-lane--downstream">
+        {renderConnectionEditor(labels, "outgoing", node, "merged", "good", downstreamLaneActive, armedConnection?.nodeId === node.id && armedConnection?.portId === "merged", onArmConnection, onConnectionCommitted, recentConnectedSource, onRegisterPortButton, selectedNodes, selectedEdges, onSetControlFlowEdge)}
+      </div>
     </div>
   );
 }
@@ -316,9 +341,11 @@ function renderArmableTargetList(
   selectedNodes: WorkflowGraphNode[],
   onSetControlFlowEdge: WorkbenchWorkflowControlFlowPlaneCardProps["onSetControlFlowEdge"],
   onArmConnection: (connection: ArmedConnection | null) => void,
+  onConnectionCommitted: (sourcePortKey: string, targetPortKey: string) => void,
   hoveredTarget: HoveredTarget | null,
   onHoverTarget: (target: HoveredTarget | null) => void,
   onRegisterPortButton: (key: string, element: HTMLButtonElement | null) => void,
+  recentConnectedTarget: string | null,
 ) {
   if (!armedConnection || armedConnection.nodeId === node.id) return null;
   const ports = node[
@@ -331,6 +358,7 @@ function renderArmableTargetList(
       <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
         {ports.map((port) => (
           <button
+            className={`workflow-control-flow-target-port${hoveredTarget?.nodeId === node.id && hoveredTarget?.portId === port.id ? " workflow-control-flow-target-port--active" : ""}${recentConnectedTarget === portKey(node.id, port.id) ? " workflow-control-flow-target-port--connected" : ""}`}
             key={`${node.id}:${port.id}`}
             onMouseEnter={() => onHoverTarget({ nodeId: node.id, portId: port.id })}
             onMouseLeave={() => onHoverTarget(null)}
@@ -341,6 +369,7 @@ function renderArmableTargetList(
                 armedConnection.portId,
                 `${node.id}.${port.id}`,
               );
+              onConnectionCommitted(portKey(armedConnection.nodeId, armedConnection.portId), portKey(node.id, port.id));
               onArmConnection(null);
               onHoverTarget(null);
             }}
@@ -390,6 +419,9 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
   const [armedConnection, setArmedConnection] = useState<ArmedConnection | null>(null);
   const [hoveredTarget, setHoveredTarget] = useState<HoveredTarget | null>(null);
   const [pointerPoint, setPointerPoint] = useState<WorkflowControlFlowWirePoint | null>(null);
+  const [recentConnectedSource, setRecentConnectedSource] = useState<string | null>(null);
+  const [recentConnectedTarget, setRecentConnectedTarget] = useState<string | null>(null);
+  const [recentConnectedNodeId, setRecentConnectedNodeId] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
   const portButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const controlNodes = selectedNodes.filter(isControlFlowNode);
@@ -433,7 +465,22 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [armedConnection]);
+  useEffect(() => {
+    if (!recentConnectedSource && !recentConnectedTarget) return;
+    const handle = window.setTimeout(() => {
+      setRecentConnectedSource(null);
+      setRecentConnectedTarget(null);
+      setRecentConnectedNodeId(null);
+    }, 1200);
+    return () => window.clearTimeout(handle);
+  }, [recentConnectedSource, recentConnectedTarget, recentConnectedNodeId]);
   useEffect(() => { if (!traceFocusBranchNodeId || !traceFocusBranchOutputId) return; setSelectedLaneKey(laneKey(traceFocusBranchNodeId, traceFocusBranchOutputId === "if_false" ? "false" : "true")); }, [traceFocusBranchNodeId, traceFocusBranchOutputId, traceFocusBranchToken]);
+
+  function handleConnectionCommitted(sourcePortKey: string, targetPortKey: string) {
+    setRecentConnectedSource(sourcePortKey);
+    setRecentConnectedTarget(targetPortKey);
+    setRecentConnectedNodeId(targetPortKey.split(".")[0] ?? null);
+  }
 
   return (
     <section
@@ -520,9 +567,9 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
         </section>
       ))}
       <div className="runtime-overview-grid">
-        {controlNodes.map((node) => (
+      {controlNodes.map((node) => (
           <section
-            className="sidebar-card sidebar-card--compact runtime-overview-card"
+            className={`sidebar-card sidebar-card--compact runtime-overview-card${canAcceptArmedConnection(node, armedConnection) ? " workflow-control-flow-accepting-node" : ""}${recentConnectedNodeId === node.id ? " workflow-control-flow-node--connected" : ""}`}
             key={`control:${node.id}`}
             style={canAcceptArmedConnection(node, armedConnection) ? buildLaneHighlightStyle(true, "watch") : undefined}
           >
@@ -537,8 +584,8 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
               </span>
             </div>
             <WorkbenchWorkflowControlFlowTemplateSwapCard labels={labels} node={node} onSyncNodeTemplate={onSyncNodeTemplate} operatorDescriptors={operatorDescriptors} />
-            {renderArmableTargetList(node, armedConnection, selectedNodes, onSetControlFlowEdge, setArmedConnection, hoveredTarget, setHoveredTarget, registerPortButton)}
-            {renderControlPlaneCanvas(node, selectedEdges, labels, selectedNodes, onSetControlFlowEdge, selectedLaneKey, armedConnection, setArmedConnection, registerPortButton)}
+            {renderArmableTargetList(node, armedConnection, selectedNodes, onSetControlFlowEdge, setArmedConnection, handleConnectionCommitted, hoveredTarget, setHoveredTarget, registerPortButton, recentConnectedTarget)}
+            {renderControlPlaneCanvas(node, selectedEdges, labels, selectedNodes, onSetControlFlowEdge, selectedLaneKey, armedConnection, setArmedConnection, handleConnectionCommitted, recentConnectedSource, registerPortButton)}
             <WorkbenchWorkflowControlFlowHint node={node} selectedEdges={selectedEdges} />
           </section>
         ))}
