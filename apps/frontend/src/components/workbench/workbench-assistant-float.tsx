@@ -2,6 +2,8 @@
 
 import { WorkbenchAssistantPanel } from "./workbench-assistant-panel";
 import type { WorkbenchCopy } from "./workbench-copy";
+import type { SidebarSection } from "./workbench-types";
+import type { WorkflowSurfaceTab } from "./workflow/workbench-workflow-types";
 
 type AssistantTransaction = {
   id: string;
@@ -27,6 +29,8 @@ type AssistantFloatProps = {
   >;
   assistantWindowOpen: boolean;
   setAssistantWindowOpen: (updater: boolean | ((current: boolean) => boolean)) => void;
+  sidebarSection: SidebarSection;
+  workflowSurfaceTab?: WorkflowSurfaceTab;
   jobStatus?: string;
   hasAnyResult: boolean;
   frontendRuntimeMode: keyof WorkbenchCopy["frontendModes"];
@@ -57,6 +61,8 @@ export function WorkbenchAssistantFloat({
   t,
   assistantWindowOpen,
   setAssistantWindowOpen,
+  sidebarSection,
+  workflowSurfaceTab,
   jobStatus,
   hasAnyResult,
   frontendRuntimeMode,
@@ -78,12 +84,13 @@ export function WorkbenchAssistantFloat({
   requestLlmAssistantPlan,
   rollbackAssistantTransaction,
 }: AssistantFloatProps) {
+  const dockIntoWorkflowRuns = sidebarSection === "workflow" && workflowSurfaceTab === "runs";
   return (
     <>
       <button
         aria-expanded={assistantWindowOpen}
         aria-label={assistantWindowOpen ? t.assistantClose : t.assistantOpen}
-        className={`assistant-float-launcher${assistantWindowOpen ? " assistant-float-launcher--open" : ""}`}
+        className={`assistant-float-launcher${assistantWindowOpen ? " assistant-float-launcher--open" : ""}${dockIntoWorkflowRuns ? " assistant-float-launcher--workflow-runs" : ""}`}
         onClick={() => setAssistantWindowOpen((current) => !current)}
         type="button"
       >
@@ -95,7 +102,7 @@ export function WorkbenchAssistantFloat({
       </button>
 
       {assistantWindowOpen ? (
-        <aside aria-label={t.assistant} className="assistant-float-panel panel" role="dialog">
+        <aside aria-label={t.assistant} className={`assistant-float-panel panel${dockIntoWorkflowRuns ? " assistant-float-panel--workflow-runs" : ""}`} role="dialog">
           <div className="assistant-float-panel__header">
             <div className="assistant-float-panel__headline">
               <img alt="" className="assistant-float-panel__mark" src="/kyuubiki.png" />

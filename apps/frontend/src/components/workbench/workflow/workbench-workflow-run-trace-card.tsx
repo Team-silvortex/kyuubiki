@@ -187,17 +187,17 @@ export function WorkbenchWorkflowRunTraceCard({
         <div className="sidebar-list__row"><span>dynamic review state</span><strong>{renderStatusPill(dynamicReviewState, resolveWorkflowTraceContractHealthTone(dynamicReviewState))}</strong></div>
         <div className="sidebar-list__row"><span>contract warnings</span><strong>{renderStatusPill(String(contractWarningCount), resolveWorkflowTraceContractWarningTone(contractWarningCount))}</strong></div>
       </div>
-      <div style={{ display: "grid", gap: "0.55rem", marginTop: "0.75rem" }}>
-        <div>
-          <details>
+      <div className="workflow-trace-panel-grid">
+        <div className="workflow-trace-panel-section">
+          <details className="workflow-trace-panel-section__details">
             <summary className="card-copy" style={{ cursor: recentProgressEvents.length > 0 ? "pointer" : "default" }}>
               {`recent phase timeline (${recentProgressEvents.length})`}
             </summary>
-            <div style={{ display: "grid", gap: "0.35rem", marginTop: "0.55rem" }}>
+            <div className="workflow-trace-panel-stack">
               {recentProgressEvents.length === 0 ? <span className="card-copy">--</span> : null}
               {recentProgressEvents.map((event, index) => (
-                <div key={`${run.jobId}:progress:${index}:${event.stage}`} style={{ display: "grid", gap: "0.2rem", padding: "0.45rem 0.55rem", borderRadius: "10px", border: "1px solid var(--line)", background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.16))" }}>
-                  <span className="card-copy" style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+                <div className="workflow-trace-panel-card" key={`${run.jobId}:progress:${index}:${event.stage}`}>
+                  <span className="workflow-trace-panel-card__meta">
                     {renderStatusPill(event.stage, resolveWorkflowTraceProgressStageTone(event.stage))}
                     <span>{Math.round(event.progress * 100)}%</span>
                     {event.kind ? <span>{event.kind}</span> : null}
@@ -209,14 +209,14 @@ export function WorkbenchWorkflowRunTraceCard({
             </div>
           </details>
         </div>
-        <div>
+        <div className="workflow-trace-panel-section">
           <WorkbenchWorkflowBridgeRuntimeCard
             graph={workflow?.graph ?? null}
             onLocateIssue={(issue) => onSelectNode?.(issue.nodeId)}
             result={run.result ?? null}
           />
         </div>
-        <div>
+        <div className="workflow-trace-panel-section">
           <div className="workflow-trace-diagnostics">
             <div className="workflow-trace-diagnostics__head">
               <p className="card-copy">diagnostics focus</p>
@@ -284,32 +284,73 @@ export function WorkbenchWorkflowRunTraceCard({
             ) : null}
           </div>
         </div>
-        <div>
-          <p className="card-copy">latest branch</p>
-          {latestBranch ? <button onClick={() => onSelectBranch?.(latestBranch.node_id, latestBranch.chosen_output)} style={{ all: "unset", cursor: onSelectBranch ? "pointer" : "default" }} type="button"><p className="card-copy" style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>{renderStatusPill(latestBranch.predicate_result ? "true" : "false", resolveWorkflowTraceBranchPredicateTone(latestBranch.predicate_result))}<span>{`${latestBranch.node_id} -> ${latestBranch.chosen_output}`}</span></p></button> : <p className="card-copy">--</p>}
+        <div className="workflow-trace-panel-section">
+          <div className="workflow-trace-panel-section__head">
+            <p className="card-copy">control flow</p>
+            <span className="status-pill status-pill--watch">
+              {`${run.branchDecisions?.length ?? 0} branches · ${run.skippedNodes?.length ?? 0} skipped`}
+            </span>
+          </div>
+          <div className="workflow-trace-panel-grid workflow-trace-panel-grid--control">
+            <div className="workflow-trace-panel-card">
+              <span className="card-copy">latest branch</span>
+              {latestBranch ? (
+                <button
+                  className="workflow-trace-panel-card__button"
+                  onClick={() => onSelectBranch?.(latestBranch.node_id, latestBranch.chosen_output)}
+                  style={{ cursor: onSelectBranch ? "pointer" : "default" }}
+                  type="button"
+                >
+                  <span className="workflow-trace-panel-card__meta">
+                    {renderStatusPill(
+                      latestBranch.predicate_result ? "true" : "false",
+                      resolveWorkflowTraceBranchPredicateTone(latestBranch.predicate_result),
+                    )}
+                    <span>{`${latestBranch.node_id} -> ${latestBranch.chosen_output}`}</span>
+                  </span>
+                </button>
+              ) : (
+                <span className="card-copy">--</span>
+              )}
+            </div>
+            <div className="workflow-trace-panel-card">
+              <span className="card-copy">skipped nodes</span>
+              {(latestSkipped?.length ?? 0) > 0 ? (
+                <div className="workflow-trace-panel-card__meta">
+                  {latestSkipped.map((value) => (
+                    <span className="status-pill status-pill--watch" key={value}>
+                      {value}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="card-copy">--</span>
+              )}
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="card-copy">skipped nodes</p>
-          {renderInlineList(latestSkipped)}
-        </div>
-        <div style={{ display: "grid", gap: "0.35rem" }}>
-          <p className="card-copy">summary artifacts</p>
+        <div className="workflow-trace-panel-section">
+          <div className="workflow-trace-panel-section__head">
+            <p className="card-copy">summary artifacts</p>
+            <span className="status-pill status-pill--watch">{recentSummaryArtifacts.length}</span>
+          </div>
           {recentSummaryArtifacts.length === 0 ? <span className="card-copy">--</span> : null}
+          <div className="workflow-trace-panel-stack">
           {recentSummaryArtifacts.map((artifact) => {
             const lineageEntry = lineageByArtifactKey.get(artifact.artifactKey);
             const compareKey = artifact.payload.summary_kind ?? artifact.artifactType;
             const previousArtifact = previousSummaryArtifactsByKind.get(compareKey);
             return (
-            <div key={`${run.jobId}:${artifact.artifactKey}`} style={{ display: "grid", gap: "0.2rem", padding: "0.45rem 0.55rem", borderRadius: "10px", border: "1px solid var(--line)", background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.16))" }}>
-              <button onClick={() => lineageEntry ? onSelectLineage?.(lineageEntry) : onSelectNode?.(artifact.nodeId ?? "")} style={{ all: "unset", cursor: onSelectLineage || onSelectNode ? "pointer" : "default", justifySelf: "start" }} type="button">
-                <strong style={{ fontSize: "0.92rem" }}>{artifact.payload.summary_kind ?? artifact.artifactType}</strong>
+            <div className="workflow-trace-panel-card workflow-trace-panel-card--summary" key={`${run.jobId}:${artifact.artifactKey}`}>
+              <button className="workflow-trace-panel-card__button" onClick={() => lineageEntry ? onSelectLineage?.(lineageEntry) : onSelectNode?.(artifact.nodeId ?? "")} style={{ cursor: onSelectLineage || onSelectNode ? "pointer" : "default" }} type="button">
+                <strong>{artifact.payload.summary_kind ?? artifact.artifactType}</strong>
               </button>
-              <button onClick={() => lineageEntry ? onSelectLineage?.(lineageEntry) : undefined} style={{ all: "unset", cursor: onSelectLineage && lineageEntry ? "pointer" : "default", justifySelf: "start" }} type="button">
+              <button className="workflow-trace-panel-card__button" onClick={() => lineageEntry ? onSelectLineage?.(lineageEntry) : undefined} style={{ cursor: onSelectLineage && lineageEntry ? "pointer" : "default" }} type="button">
                 <span className="card-copy">{artifact.artifactKey}</span>
               </button>
-              <span className="card-copy" style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
+              <span className="workflow-trace-panel-card__meta">
                 {renderStatusPill(String(Object.keys(artifact.payload.fields).length), "watch")}
-                <button onClick={() => artifact.nodeId ? onSelectNode?.(artifact.nodeId) : undefined} style={{ all: "unset", cursor: onSelectNode && artifact.nodeId ? "pointer" : "default" }} type="button">
+                <button className="workflow-trace-panel-card__button" onClick={() => artifact.nodeId ? onSelectNode?.(artifact.nodeId) : undefined} style={{ cursor: onSelectNode && artifact.nodeId ? "pointer" : "default" }} type="button">
                   <span>{artifact.payload.source_operator_id ?? "unknown operator"}</span>
                 </button>
               </span>
@@ -326,21 +367,21 @@ export function WorkbenchWorkflowRunTraceCard({
                 <summary className="card-copy" style={{ cursor: "pointer" }}>
                   contract details
                 </summary>
-                <div style={{ display: "grid", gap: "0.25rem", marginTop: "0.45rem" }}>
+                <div className="workflow-trace-panel-card__details">
                   <span className="card-copy">
                     contract {artifact.payload.contract_version}
                   </span>
                   <span className="card-copy">
                     namespace {artifact.payload.field_namespace ?? "--"}
                   </span>
-                  <div style={{ display: "grid", gap: "0.2rem" }}>
+                  <div className="workflow-trace-panel-card__details-grid">
                     {Object.entries(artifact.payload.fields).map(([key, value]) => (
                       <span className="card-copy" key={`${artifact.artifactKey}:field:${key}`}>
                         {`${key}: ${formatSummaryValue(value)}`}
                       </span>
                     ))}
                   </div>
-                  <div style={{ display: "grid", gap: "0.2rem" }}>
+                  <div className="workflow-trace-panel-card__details-grid">
                     {previousArtifact ? (
                       Object.entries(artifact.payload.fields).map(([key, value]) => {
                         const previousValue = previousArtifact.payload.fields[key];
@@ -363,7 +404,7 @@ export function WorkbenchWorkflowRunTraceCard({
                       <span className="card-copy">previous run comparison --</span>
                     )}
                   </div>
-                  <div style={{ display: "grid", gap: "0.2rem" }}>
+                  <div className="workflow-trace-panel-card__details-grid">
                     {Object.entries(artifact.payload.metadata ?? {}).length === 0 ? (
                       <span className="card-copy">metadata --</span>
                     ) : (
@@ -378,40 +419,61 @@ export function WorkbenchWorkflowRunTraceCard({
               </details>
             </div>
           )})}
+          </div>
         </div>
-        <div style={{ display: "grid", gap: "0.35rem" }}>
-          <p className="card-copy">recent artifact lineage</p>
-          {recentLineage.length === 0 ? <span className="card-copy">--</span> : null}
-          {recentLineage.map((entry) => (
-            <div key={`${run.jobId}:${entry.artifact_key}`} style={{ display: "grid", gap: "0.2rem", padding: "0.45rem 0.55rem", borderRadius: "10px", border: "1px solid var(--line)", background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.16))" }}>
-              <button onClick={() => onSelectLineage?.(entry)} style={{ all: "unset", cursor: onSelectLineage ? "pointer" : "default", justifySelf: "start" }} type="button">
-                <strong style={{ fontSize: "0.92rem" }}>{entry.artifact_key}</strong>
-              </button>
-              <button onClick={() => onSelectNode?.(entry.node_id)} style={{ all: "unset", cursor: onSelectNode ? "pointer" : "default" }} type="button">
-                <span className="card-copy">{entry.node_id}.{entry.port_id}</span>
-              </button>
-              <span className="card-copy" style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-                {renderStatusPill(resolveWorkflowTraceLineageSourceLabel(entry.source_artifacts), resolveWorkflowTraceLineageSourceTone(entry.source_artifacts))}
-                <span>{(entry.source_artifacts?.length ?? 0) > 0 ? `from ${entry.source_artifacts?.slice(0, 2).join(", ")}` : "source input / root artifact"}</span>
-              </span>
+        <div className="workflow-trace-panel-section">
+          <div className="workflow-trace-panel-section__head">
+            <p className="card-copy">trace lanes</p>
+            <span className="status-pill status-pill--watch">
+              {`${recentLineage.length} lineage · ${recentNodes.length} node events`}
+            </span>
+          </div>
+          <div className="workflow-trace-lanes">
+            <div className="workflow-trace-panel-section">
+              <div className="workflow-trace-panel-section__head">
+                <p className="card-copy">recent artifact lineage</p>
+                <span className="status-pill status-pill--watch">{recentLineage.length}</span>
+              </div>
+              {recentLineage.length === 0 ? <span className="card-copy">--</span> : null}
+              <div className="workflow-trace-panel-stack">
+                {recentLineage.map((entry) => (
+                  <div className="workflow-trace-panel-card" key={`${run.jobId}:${entry.artifact_key}`}>
+                    <button className="workflow-trace-panel-card__button" onClick={() => onSelectLineage?.(entry)} style={{ cursor: onSelectLineage ? "pointer" : "default" }} type="button">
+                      <strong>{entry.artifact_key}</strong>
+                    </button>
+                    <button className="workflow-trace-panel-card__button" onClick={() => onSelectNode?.(entry.node_id)} style={{ cursor: onSelectNode ? "pointer" : "default" }} type="button">
+                      <span className="card-copy">{entry.node_id}.{entry.port_id}</span>
+                    </button>
+                    <span className="workflow-trace-panel-card__meta">
+                      {renderStatusPill(resolveWorkflowTraceLineageSourceLabel(entry.source_artifacts), resolveWorkflowTraceLineageSourceTone(entry.source_artifacts))}
+                      <span>{(entry.source_artifacts?.length ?? 0) > 0 ? `from ${entry.source_artifacts?.slice(0, 2).join(", ")}` : "source input / root artifact"}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-        <div style={{ display: "grid", gap: "0.35rem" }}>
-          <p className="card-copy">recent node activity</p>
-          {recentNodes.length === 0 ? <span className="card-copy">--</span> : null}
-          {recentNodes.map((entry) => (
-            <div key={`${run.jobId}:${entry.node_id}:${entry.status}`} style={{ display: "grid", gap: "0.2rem", padding: "0.45rem 0.55rem", borderRadius: "10px", border: "1px solid var(--line)", background: "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.16))" }}>
-              <button onClick={() => onSelectNode?.(entry.node_id)} style={{ all: "unset", cursor: onSelectNode ? "pointer" : "default", justifySelf: "start" }} type="button">
-                <strong style={{ fontSize: "0.92rem" }}>{entry.node_id}</strong>
-              </button>
-              <span className="card-copy" style={{ display: "flex", gap: "0.35rem", alignItems: "center", flexWrap: "wrap" }}>
-                {renderStatusPill(entry.status, resolveWorkflowTraceNodeRunTone(entry.status))}
-                <span>{entry.kind}{entry.operator_id ? ` · ${entry.operator_id}` : ""}</span>
-              </span>
-              <span className="card-copy">in {entry.consumed_artifacts?.length ?? 0} / out {entry.produced_artifacts?.length ?? 0}</span>
+            <div className="workflow-trace-panel-section">
+              <div className="workflow-trace-panel-section__head">
+                <p className="card-copy">recent node activity</p>
+                <span className="status-pill status-pill--watch">{recentNodes.length}</span>
+              </div>
+              {recentNodes.length === 0 ? <span className="card-copy">--</span> : null}
+              <div className="workflow-trace-panel-stack">
+                {recentNodes.map((entry) => (
+                  <div className="workflow-trace-panel-card" key={`${run.jobId}:${entry.node_id}:${entry.status}`}>
+                    <button className="workflow-trace-panel-card__button" onClick={() => onSelectNode?.(entry.node_id)} style={{ cursor: onSelectNode ? "pointer" : "default" }} type="button">
+                      <strong>{entry.node_id}</strong>
+                    </button>
+                    <span className="workflow-trace-panel-card__meta">
+                      {renderStatusPill(entry.status, resolveWorkflowTraceNodeRunTone(entry.status))}
+                      <span>{entry.kind}{entry.operator_id ? ` · ${entry.operator_id}` : ""}</span>
+                    </span>
+                    <span className="card-copy">in {entry.consumed_artifacts?.length ?? 0} / out {entry.produced_artifacts?.length ?? 0}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>

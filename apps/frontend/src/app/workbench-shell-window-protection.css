@@ -254,6 +254,35 @@
   display: none;
 }
 
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__preview .card-copy,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-section__head .card-copy,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card > .card-copy,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card .workflow-trace-panel-card__button .card-copy,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card__details .card-copy,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__focus-grid .card-copy {
+  display: initial;
+}
+
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-grid,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-lanes,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-grid--control {
+  grid-template-columns: 1fr;
+}
+
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__preview {
+  padding: 8px 9px;
+}
+
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__preview strong {
+  font-size: 0.88rem;
+}
+
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__highlight,
+.workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__focus {
+  padding: 8px 9px;
+}
+
 .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-inspector[data-workbench-inspector-tab="result"][data-workbench-inspector-result-page="details"] > .inspector-stack > .info-card:first-of-type {
   display: none;
 }
@@ -314,6 +343,20 @@
     font-size: 0.61rem;
     line-height: 1.1;
   }
+
+  .workbench-shell[data-workbench-window-mode="narrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-grid--control,
+  .workbench-shell[data-workbench-window-mode="narrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-lanes {
+    grid-template-columns: 1fr;
+  }
+
+  .workbench-shell[data-workbench-window-mode="narrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__preview strong {
+    font-size: 0.92rem;
+  }
+
+  .workbench-shell[data-workbench-window-mode="narrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card,
+  .workbench-shell[data-workbench-window-mode="narrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__highlight {
+    padding: 8px 10px;
+  }
 }
 
 @media (max-width: 780px) {
@@ -368,6 +411,26 @@
   .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] .runtime-overview-card .sidebar-list__row:first-of-type,
   .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] .runtime-overview-card .sidebar-list__row:nth-of-type(2) {
     display: none;
+  }
+
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__status,
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__meta,
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card__meta,
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-section__head {
+    gap: 4px;
+  }
+
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-stack {
+    gap: 5px;
+  }
+
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__preview .card-copy {
+    font-size: 0.66rem;
+  }
+
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-panel-card__button strong,
+  .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="workflow"] [data-workbench-workflow-surface="runs"] .runtime-overview-card .workflow-trace-diagnostics__highlight-head strong {
+    font-size: 0.86rem;
   }
 
   .workbench-shell[data-workbench-window-mode="ultranarrow"] .workspace-sidebar[data-workbench-sidebar-section="library"] .history-item small:first-of-type {

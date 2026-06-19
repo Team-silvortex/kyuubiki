@@ -437,7 +437,8 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
 
   return (
     <section
-      className="sidebar-card sidebar-card--compact"
+      className="sidebar-card sidebar-card--compact workflow-control-flow-card"
+      data-workflow-control-flow="plane"
       onPointerLeave={() => setPointerPoint(null)}
       onPointerMove={(event) => {
         const section = sectionRef.current;
@@ -460,14 +461,14 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
       </div>
       <p className="card-copy">{labels.controlFlowPlaneHint}</p>
       {selectedSourceNodeId ? (
-        <div className="sidebar-list">
+        <div className="sidebar-list workflow-control-flow-deck">
           <div className="sidebar-list__row">
             <span>{labels.localWorkflowSourceLabel}</span>
             <strong>{selectedSourceNodeId}</strong>
           </div>
         </div>
       ) : null}
-      <div className="button-row button-row--adaptive">
+      <div className="button-row button-row--adaptive workflow-control-flow-deck">
         <button onClick={() => onInsertControlFlowPlane(selectedSourceNodeId)} type="button">
           {labels.controlFlowPlaneInsertLabel}
         </button>
@@ -482,6 +483,7 @@ export function WorkbenchWorkflowControlFlowPlaneCard({
       <WorkbenchWorkflowControlFlowQuickAddCard labels={labels} onAddNode={onAddNode} operatorDescriptors={operatorDescriptors} />
       {armedConnection ? (
         <div
+          className="workflow-control-flow-arm-panel"
           style={{
             display: "grid",
             gap: "0.35rem",

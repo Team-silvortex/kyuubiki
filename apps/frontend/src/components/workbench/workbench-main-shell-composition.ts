@@ -37,6 +37,7 @@ export function buildWorkbenchMainShellComposition(props: Record<string, any>) {
     viewportPixelWidth: studyResultDerived.viewportPixelWidth,
     immersiveViewport: shellState.immersiveViewport,
     sidebarSection: workspaceState.sidebarSection,
+    workflowPanelTab: workspaceState.workflowPanelTab,
     modelTab: workspaceState.modelTab,
     modelToolsPage: workspaceState.modelToolsPage,
     isTruss3d: studyResultDerived.isTruss3d,

@@ -13,6 +13,9 @@ type WorkbenchAppRailProps = {
   railItems: RailItem[];
   sidebarSection: SidebarSection;
   onSidebarSectionChange: (section: SidebarSection) => void;
+  assistantLabel: string;
+  assistantOpen: boolean;
+  onAssistantToggle: () => void;
 };
 
 export function WorkbenchAppRail({
@@ -20,6 +23,9 @@ export function WorkbenchAppRail({
   railItems,
   sidebarSection,
   onSidebarSectionChange,
+  assistantLabel,
+  assistantOpen,
+  onAssistantToggle,
 }: WorkbenchAppRailProps) {
   return (
     <aside className="app-rail panel">
@@ -40,6 +46,17 @@ export function WorkbenchAppRail({
             <small>{item.label}</small>
           </button>
         ))}
+      </div>
+      <div className="rail-utility">
+        <button
+          aria-expanded={assistantOpen}
+          className={`rail-button rail-button--assistant${assistantOpen ? " rail-button--active" : ""}`}
+          onClick={onAssistantToggle}
+          type="button"
+        >
+          <span>A</span>
+          <small>{assistantLabel}</small>
+        </button>
       </div>
     </aside>
   );

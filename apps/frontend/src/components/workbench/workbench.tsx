@@ -72,6 +72,9 @@ export function Workbench() {
           railItems={sidebarMountProps.railItems}
           sidebarSection={sidebarMountProps.sidebarSection}
           onSidebarSectionChange={sidebarMountProps.onSidebarSectionChange}
+          assistantLabel={sidebarMountProps.assistantLabel}
+          assistantOpen={sidebarMountProps.assistantOpen}
+          onAssistantToggle={sidebarMountProps.onAssistantToggle}
         />
       }
       sidebar={

@@ -160,14 +160,14 @@ export function WorkbenchWorkflowTopologyCard({
   };
 
   return (
-    <section className="sidebar-card sidebar-card--compact">
+    <section className="sidebar-card sidebar-card--compact workflow-topology-card" data-workflow-topology="editor">
       <div className="card-head">
         <h2>{labels.topologyEditorTitle}</h2>
         <div className="button-row">
           <button onClick={onAddEdge} type="button">{labels.addEdgeLabel}</button>
         </div>
       </div>
-      <div className="form-grid compact">
+      <div className="form-grid compact workflow-topology-toolbar" data-workflow-topology-toolbar="controls">
         <label>
           <span>{labels.kindLabel}</span>
           <select onChange={(event) => setNextNodeKind(event.target.value)} value={nextNodeKind}>
@@ -197,7 +197,7 @@ export function WorkbenchWorkflowTopologyCard({
       </div>
       <WorkbenchWorkflowOperatorDescriptorSummary descriptor={nextOperatorDescriptor} labels={labels} />
       <WorkbenchWorkflowTemplateChainActions labels={labels} onInsertTemplateChain={onInsertTemplateChain} selectedSourceNodeId={selectedNodes[0]?.id ?? null} selectedNodes={selectedNodes} />
-      <div className="sidebar-stack">
+      <div className="sidebar-stack workflow-topology-node-stack" data-workflow-topology-stack="nodes">
         {selectedNodes.map((node) => (
           <WorkbenchWorkflowTopologyNodeSection
             bridgePeerNodes={bridgePeerNodesByNode.get(node.id) ?? []}
@@ -228,7 +228,7 @@ export function WorkbenchWorkflowTopologyCard({
           />
         ))}
       </div>
-      <div className="sidebar-stack">
+      <div className="sidebar-stack workflow-topology-edge-stack" data-workflow-topology-stack="edges">
         {edgeViewModels.map(({ edge, isFocused, isHighlighted, isLocallyHighlighted, sourcePorts, targetPorts }) => (
           <WorkbenchWorkflowTopologyEdgeSection
             edge={edge}

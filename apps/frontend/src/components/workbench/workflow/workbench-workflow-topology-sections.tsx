@@ -43,7 +43,10 @@ function WorkbenchWorkflowPortEditor(props: {
 }) {
   const { labels, nodeId, ports, direction, title, highlightedPortKeys = [], locked = false, onAdd, onRemove, onUpdate } = props;
   return (
-    <div className="sidebar-stack">
+    <div
+      className="sidebar-stack workflow-topology-port-editor"
+      data-workflow-port-editor={direction}
+    >
       <div className="card-head">
         <h3>{title}</h3>
         {locked ? <span className="status-pill status-pill--watch">descriptor</span> : <button onClick={onAdd} type="button">{direction === "inputs" ? labels.addInputPortLabel : labels.addOutputPortLabel}</button>}
@@ -151,7 +154,11 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
 }: WorkbenchWorkflowTopologyNodeSectionProps) {
   const templateLocked = Boolean(operatorDescriptor);
   return (
-    <section className="sidebar-card sidebar-card--compact" data-workflow-node-id={node.id} style={buildNodeHighlightStyle(isFocused, isHighlighted)}>
+    <section
+      className="sidebar-card sidebar-card--compact workflow-topology-node-section"
+      data-workflow-node-id={node.id}
+      style={buildNodeHighlightStyle(isFocused, isHighlighted)}
+    >
       <div className="card-head">
         <h2>{node.id}</h2>
         <div className="button-row">
@@ -160,7 +167,7 @@ function WorkbenchWorkflowTopologyNodeSectionImpl({
           <button onClick={() => onRemoveNode(node.id)} type="button">{labels.removeNodeLabel}</button>
         </div>
       </div>
-      <div className="form-grid compact">
+      <div className="form-grid compact workflow-topology-node-header">
         <label>
           <span>{labels.nodeIdLabel}</span>
           <input data-workflow-node-field={`${node.id}:id`} onChange={(event) => onUpdateNode(node.id, (current) => ({ ...current, id: event.target.value }))} value={node.id} />
@@ -231,7 +238,11 @@ function WorkbenchWorkflowTopologyEdgeSectionImpl({
     }));
   }
   return (
-    <section className="sidebar-card sidebar-card--compact" data-workflow-edge-id={edge.id} style={buildEdgeHighlightStyle(isFocused, isHighlighted, isLocallyHighlighted)}>
+    <section
+      className="sidebar-card sidebar-card--compact workflow-topology-edge-section"
+      data-workflow-edge-id={edge.id}
+      style={buildEdgeHighlightStyle(isFocused, isHighlighted, isLocallyHighlighted)}
+    >
       <div className="card-head">
         <h2>{edge.id}</h2>
         <button onClick={() => onRemoveEdge(edge.id)} type="button">{labels.removeEdgeLabel}</button>

@@ -51,7 +51,10 @@ export function WorkbenchWorkflowControlFlowQuickAddCard({
   }, [operatorDescriptorMap, operatorDescriptors, query]);
 
   return (
-    <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+    <section
+      className="sidebar-card sidebar-card--compact runtime-overview-card workflow-control-flow-quick-add-card"
+      data-workflow-control-flow-quick-add="card"
+    >
       <div className="card-head">
         <h2>{labels.addNodeLabel}</h2>
         <span className="status-pill status-pill--watch">{presets.length}</span>

@@ -56,7 +56,7 @@ export function WorkbenchWorkflowBuilderToolbar({
   const draftStatusTone = canRunDraft ? "good" : "watch";
   const draftStatusLabel = canRunDraft ? labels.statusReadyLabel : String(draftBlockingIssueCount);
   return (
-    <>
+    <section className="workflow-builder-toolbar">
       <div className="card-head">
         <h2>{selectedWorkflow.name}</h2>
         <span className="status-pill status-pill--good">{selectedWorkflow.version}</span>
@@ -127,6 +127,6 @@ export function WorkbenchWorkflowBuilderToolbar({
       <input accept="application/json,.json" hidden onChange={onGraphFileChange} ref={graphInputRef} type="file" />
       <input accept="application/json,.json" hidden onChange={onDatasetFileChange} ref={datasetInputRef} type="file" />
       {importMessage ? <p className="card-copy" data-workflow-import-message="text">{importMessage}</p> : null}
-    </>
+    </section>
   );
 }

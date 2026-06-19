@@ -15,6 +15,8 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     railItems: props.railItems,
     sidebarSection: workspaceState.sidebarSection,
     handleSidebarSectionChange: uiActionController.handleSidebarSectionChange,
+    assistantWindowOpen: shellState.assistantWindowOpen,
+    setAssistantWindowOpen: shellState.setAssistantWindowOpen,
     studyTab: workspaceState.studyTab,
     handleStudyTabChange: uiActionController.handleStudyTabChange,
     loadedModelName: workspaceState.loadedModelName,

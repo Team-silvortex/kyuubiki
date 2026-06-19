@@ -552,7 +552,11 @@ import { buildImportedWorkflowContractHealthMessage, buildWorkflowDraftContractW
   function updateDraftInputText(nodeId: string, value: string) { setDraftInputTexts((current) => ({ ...current, [nodeId]: value })); }
   if (!selectedWorkflow) return <section className="sidebar-card sidebar-card--compact"><p className="card-copy">{labels.noSelectionLabel}</p></section>;
   return (
-    <section className="sidebar-card sidebar-card--compact" ref={builderRootRef}>
+    <section
+      className="sidebar-card sidebar-card--compact workflow-builder-shell"
+      data-workflow-builder-shell="builder"
+      ref={builderRootRef}
+    >
       <WorkbenchWorkflowFocusStrip activeTarget={activeFocusTarget} feedback={policyFeedback} labels={labels} />
       <WorkbenchWorkflowBuilderToolbar
         canExportDataset={Boolean(selectedDatasetContract)}

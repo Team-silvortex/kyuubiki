@@ -37,7 +37,10 @@ export function WorkbenchWorkflowControlFlowReadinessCard({
   const ready = unsupportedNodes.length === 0 && validationIssues.length === 0 && invalidInputCount === 0;
 
   return (
-    <section className="sidebar-card sidebar-card--compact runtime-overview-card">
+    <section
+      className="sidebar-card sidebar-card--compact runtime-overview-card workflow-control-flow-readiness-card"
+      data-workflow-control-flow-readiness="card"
+    >
       <div className="card-head">
         <h2>Workflow readiness</h2>
         <span className={`status-pill status-pill--${ready ? "good" : "risk"}`}>{ready ? labels.statusReadyLabel : labels.statusBusyLabel}</span>

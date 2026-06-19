@@ -30,6 +30,7 @@ export function buildWorkbenchMainShellProps(props: Record<string, any>) {
     viewportPixelWidth: props.viewportPixelWidth,
     immersiveViewport: props.immersiveViewport,
     sidebarSection: props.sidebarSection,
+    workflowPanelTab: props.workflowPanelTab,
     modelTab: props.modelTab,
     modelToolsPage: props.modelToolsPage,
     isTruss3d: props.isTruss3d,

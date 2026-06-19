@@ -14,6 +14,8 @@ export function WorkbenchMainShellMount(props: WorkbenchMainShellMountProps) {
         t={props.t}
         assistantWindowOpen={props.assistantWindowOpen}
         setAssistantWindowOpen={props.setAssistantWindowOpen}
+        sidebarSection={props.sidebarSection}
+        workflowSurfaceTab={props.workflowPanelTab}
         jobStatus={props.job?.status}
         hasAnyResult={props.hasAnyResult}
         frontendRuntimeMode={props.frontendRuntimeMode}

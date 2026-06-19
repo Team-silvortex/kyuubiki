@@ -15,6 +15,9 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
     railItems: props.railItems,
     sidebarSection: props.sidebarSection,
     onSidebarSectionChange: props.handleSidebarSectionChange,
+    assistantLabel: props.t.assistant,
+    assistantOpen: props.assistantWindowOpen,
+    onAssistantToggle: () => props.setAssistantWindowOpen((current: boolean) => !current),
     studySection: (
       <WorkbenchStudySectionMount
         studyTab={props.studyTab}
