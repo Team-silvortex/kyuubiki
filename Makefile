@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -66,6 +66,7 @@ help:
 	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
 	@echo "  make test-integration-cluster Run the protected cluster registration/heartbeat integration smoke test"
 	@echo "  make test-integration-direct-mesh Run the direct_mesh_gui LAN agent solve + chunk smoke test"
+	@echo "  make test-integration-direct-mesh-docker Run the direct_mesh_gui benchmark harness inside Docker and export repeat summaries"
 	@echo "  make test-integration-ui-mechanical Run the Playwright Workbench UI smoke for representative mechanical samples"
 	@echo "  make test-integration-ui-thermal Run the Playwright Workbench UI smoke for representative thermal and thermo-mechanical samples"
 	@echo "  make verify      Run formatting checks and tests"
@@ -77,9 +78,12 @@ help:
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
-	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=medium by default)"
+	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default)"
 	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline"
 	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline"
+	@echo "  make test-integration-direct-mesh-docker-compare Compare a Docker direct-mesh summary against the checked-in baseline"
+	@echo "  make test-integration-direct-mesh-docker-report Run the Docker direct-mesh benchmark and write a baseline comparison report"
+	@echo "  make test-integration-direct-mesh-docker-nightly Run the remote direct-mesh Docker regression flow against the checked-in baseline"
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
 	@echo "  ./scripts/kyuubiki help        Show the unified local entrypoint"
@@ -270,6 +274,19 @@ test-integration-cluster:
 test-integration-direct-mesh:
 	@node --test tests/integration/direct-mesh-gui-smoke.test.mjs
 
+test-integration-direct-mesh-docker:
+	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} bash ./scripts/run-direct-mesh-benchmark-container.sh --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
+
+test-integration-direct-mesh-docker-compare:
+	@node ./scripts/compare-direct-mesh-benchmark.mjs --current $${CURRENT:-tmp/direct-mesh-benchmark-container/latest/summary.json} --baseline $${BASELINE:-tests/integration/benchmarks/direct-mesh-docker-baseline.json} --json-out $${COMPARE_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.json} --report-out $${REPORT_OUT:-tmp/direct-mesh-benchmark-container/latest/compare.md} --fail-on-elapsed-regression-pct $${DIRECT_MESH_ELAPSED_THRESHOLD:-15} --fail-on-rss-regression-pct $${DIRECT_MESH_RSS_THRESHOLD:-20}
+
+test-integration-direct-mesh-docker-report:
+	@$(MAKE) test-integration-direct-mesh-docker REPEAT=$${REPEAT:-3} OUTPUT_DIR=$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
+	@$(MAKE) test-integration-direct-mesh-docker-compare CURRENT=$${CURRENT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/summary.json} COMPARE_OUT=$${COMPARE_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.json} REPORT_OUT=$${REPORT_OUT:-$${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}/compare.md}
+
+test-integration-direct-mesh-docker-nightly:
+	@bash ./scripts/run-direct-mesh-benchmark-regression.sh
+
 test-integration-ui-mechanical:
 	@node --test tests/integration/workbench-ui-mechanical-smoke.test.mjs
 
@@ -288,7 +305,7 @@ verify:
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
 	@$(ENTRYPOINT) sdk-smoke
-	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-1.0}
+	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-5.0}
 	@node --test apps/web/playground/test/fem.test.mjs
 
 tdd-web:
@@ -319,11 +336,11 @@ benchmark:
 	@$(ENTRYPOINT) benchmark $(ARGS)
 
 benchmark-baseline:
-	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-5} --baseline-out benchmarks/$${PROFILE:-medium}-baseline.json
+	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-5} --baseline-out benchmarks/$${PROFILE:-10k}-baseline.json
 
 benchmark-compare:
-	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-1.0}
+	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --fail-on-median-regression-pct $${BENCHMARK_MEDIAN_THRESHOLD:-25} --fail-on-rss-regression-pct $${BENCHMARK_RSS_THRESHOLD:-20} --min-baseline-median-ms $${BENCHMARK_MIN_BASELINE_MS:-5.0}
 
 benchmark-report:
 	@mkdir -p workers/rust/benchmarks/reports
-	@cd workers/rust && cargo run -q -p kyuubiki-benchmark -- --profile $${PROFILE:-medium} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-medium}-baseline.json --compare-report-out benchmarks/reports/$${PROFILE:-medium}-compare.md
+	@cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $${PROFILE:-10k} --repeat $${REPEAT:-3} --baseline-compare benchmarks/$${PROFILE:-10k}-baseline.json --compare-report-out benchmarks/reports/$${PROFILE:-10k}-compare.md

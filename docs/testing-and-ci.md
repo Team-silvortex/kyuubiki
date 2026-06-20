@@ -106,6 +106,38 @@ Current GitHub Actions jobs are intentionally separated:
 - `installer-gui-smoke`
 - `workbench-gui-smoke`
 
+## Direct-mesh Docker regression lane
+
+The repository now keeps a dedicated direct-mesh Docker regression path for the
+shared LAN solver setup.
+
+Use these entrypoints:
+
+- `make test-integration-direct-mesh-docker`
+  Run the Docker direct-mesh benchmark locally or from an operator shell.
+- `make test-integration-direct-mesh-docker-compare CURRENT=tmp/direct-mesh-benchmark-container/latest/summary.json`
+  Compare an existing benchmark summary against the checked-in baseline.
+- `make test-integration-direct-mesh-docker-report REPEAT=3`
+  Run a fresh benchmark and emit comparison artifacts beside the summary.
+- `make test-integration-direct-mesh-docker-nightly`
+  Run the remote `kyuubiki-lab` regression wrapper and fail on threshold regressions.
+
+Baseline and report surfaces:
+
+- baseline snapshot:
+  [tests/integration/benchmarks/direct-mesh-docker-baseline.json](../tests/integration/benchmarks/direct-mesh-docker-baseline.json)
+- local/latest benchmark output:
+  `tmp/direct-mesh-benchmark-container/latest/summary.json`
+- local/latest comparison report:
+  `tmp/direct-mesh-benchmark-container/latest/compare.md`
+
+Current behavior notes:
+
+- direct-mesh Docker runtime defaults to `DOCKER_RUN_NETWORK=host`
+- remote nightly execution assumes a self-hosted runner on the same LAN
+- the remote lab wrapper expects a narrow passwordless sudo rule for the
+  direct-mesh benchmark command path only
+
 ## Failure diagnostics
 
 Integration jobs now provide two failure surfaces:

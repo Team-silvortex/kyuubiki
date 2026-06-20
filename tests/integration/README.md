@@ -41,8 +41,43 @@ Run with:
 - `make test-integration-api`
 - `make test-integration-cluster`
 - `make test-integration-direct-mesh`
+- `make test-integration-direct-mesh-docker`
+- `make test-integration-direct-mesh-docker-compare`
+- `make test-integration-direct-mesh-docker-report`
 - `make test-integration-ui-mechanical`
 - `make test-integration-ui-thermal`
+
+For repeatable host-independent mesh baselines, prefer the Docker harness:
+
+- `make test-integration-direct-mesh-docker REPEAT=3`
+
+That path builds the dedicated benchmark image, runs the direct-mesh suite
+inside the container, and exports machine-readable summaries under
+`tmp/direct-mesh-benchmark-container/`. The Make target defaults
+`DOCKER_RUN_NETWORK=host` so the container can discover LAN direct-mesh agents.
+
+The current checked-in Docker baseline lives at:
+
+- `tests/integration/benchmarks/direct-mesh-docker-baseline.json`
+
+To compare an existing Docker summary against that baseline:
+
+- `make test-integration-direct-mesh-docker-compare CURRENT=tmp/direct-mesh-benchmark-container/latest/summary.json`
+
+To run a fresh repeat-3 Docker benchmark and emit current-vs-baseline reports:
+
+- `make test-integration-direct-mesh-docker-report REPEAT=3`
+
+To run the remote regression flow against `kyuubiki-lab` and fail on threshold
+regressions:
+
+- `make test-integration-direct-mesh-docker-nightly`
+
+The repository also includes `.github/workflows/direct-mesh-docker-nightly.yml`
+for self-hosted runners on the same LAN. It is gated behind
+`vars.KYUUBIKI_DIRECT_MESH_SELF_HOSTED == 'true'` so public GitHub runners do
+not try to reach the private lab machine. The remote regression wrapper also
+expects passwordless `sudo` on the lab host for the benchmark command path.
 
 The Workbench UI smoke suite is split by domain so failures are easier to triage:
 

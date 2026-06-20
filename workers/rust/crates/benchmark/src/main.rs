@@ -5,9 +5,11 @@ use std::{
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::{
-    AnalysisResult, PlaneNodeInput, PlaneTriangleElementInput, SolveBarRequest,
-    SolvePlaneTriangle2dRequest, SolveTruss2dRequest, SolveTruss3dRequest, Truss3dElementInput,
-    Truss3dNodeInput, TrussElementInput, TrussNodeInput,
+    AnalysisResult, HeatPlaneNodeInput, HeatPlaneQuadElementInput, PlaneNodeInput,
+    PlaneQuadElementInput, PlaneTriangleElementInput, SolveBarRequest, SolveHeatPlaneQuad2dRequest,
+    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveTruss2dRequest,
+    SolveTruss3dRequest, Truss3dElementInput, Truss3dNodeInput, TrussElementInput,
+    TrussNodeInput,
 };
 use serde::{Deserialize, Serialize};
 
@@ -121,13 +123,13 @@ impl BenchmarkConfig {
             repeat: 10,
             case_filter: None,
             format: OutputFormat::Table,
-            profile: BenchmarkProfile::Medium,
+            profile: BenchmarkProfile::TenK,
             baseline_out: None,
             baseline_compare: None,
             compare_report_out: None,
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
-            min_baseline_median_ms: 1.0,
+            min_baseline_median_ms: 5.0,
         };
 
         let args = std::env::args().skip(1).collect::<Vec<_>>();
@@ -161,7 +163,7 @@ impl BenchmarkConfig {
                             "10k" => BenchmarkProfile::TenK,
                             "15k" => BenchmarkProfile::FifteenK,
                             "20k" => BenchmarkProfile::TwentyK,
-                            _ => BenchmarkProfile::Medium,
+                            _ => BenchmarkProfile::TenK,
                         };
                     }
                 }
@@ -217,6 +219,8 @@ enum BenchmarkWorkload {
     Truss2d(SolveTruss2dRequest),
     Truss3d(SolveTruss3dRequest),
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
+    PlaneQuad2d(SolvePlaneQuad2dRequest),
+    HeatPlaneQuad2d(SolveHeatPlaneQuad2dRequest),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -286,6 +290,18 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                 family: "plane_triangle_2d",
                 workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(6, 4, 6.0, 4.0)),
             },
+            BenchmarkCase {
+                id: "plane-quad-panel-medium",
+                family: "plane_quad_2d",
+                workload: BenchmarkWorkload::PlaneQuad2d(generate_quad_panel_mesh(6, 4, 6.0, 4.0)),
+            },
+            BenchmarkCase {
+                id: "heat-plane-quad-medium",
+                family: "heat_plane_quad_2d",
+                workload: BenchmarkWorkload::HeatPlaneQuad2d(generate_heat_quad_panel_mesh(
+                    6, 4, 6.0, 4.0,
+                )),
+            },
         ],
         BenchmarkProfile::Large => vec![
             BenchmarkCase {
@@ -312,6 +328,20 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                     21, 21, 21.0, 21.0,
                 )),
             },
+            BenchmarkCase {
+                id: "plane-quad-panel-large",
+                family: "plane_quad_2d",
+                workload: BenchmarkWorkload::PlaneQuad2d(generate_quad_panel_mesh(
+                    21, 21, 21.0, 21.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "heat-plane-quad-large",
+                family: "heat_plane_quad_2d",
+                workload: BenchmarkWorkload::HeatPlaneQuad2d(generate_heat_quad_panel_mesh(
+                    21, 21, 21.0, 21.0,
+                )),
+            },
         ],
         BenchmarkProfile::V2 => vec![
             BenchmarkCase {
@@ -335,6 +365,20 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                 id: "plane-panel-v2",
                 family: "plane_triangle_2d",
                 workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    70, 70, 70.0, 70.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "plane-quad-panel-v2",
+                family: "plane_quad_2d",
+                workload: BenchmarkWorkload::PlaneQuad2d(generate_quad_panel_mesh(
+                    70, 70, 70.0, 70.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "heat-plane-quad-v2",
+                family: "heat_plane_quad_2d",
+                workload: BenchmarkWorkload::HeatPlaneQuad2d(generate_heat_quad_panel_mesh(
                     70, 70, 70.0, 70.0,
                 )),
             },
@@ -366,6 +410,20 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                     99, 99, 99.0, 99.0,
                 )),
             },
+            BenchmarkCase {
+                id: "plane-quad-panel-10k",
+                family: "plane_quad_2d",
+                workload: BenchmarkWorkload::PlaneQuad2d(generate_quad_panel_mesh(
+                    99, 99, 99.0, 99.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "heat-plane-quad-10k",
+                family: "heat_plane_quad_2d",
+                workload: BenchmarkWorkload::HeatPlaneQuad2d(generate_heat_quad_panel_mesh(
+                    99, 99, 99.0, 99.0,
+                )),
+            },
         ],
         BenchmarkProfile::FifteenK => vec![
             BenchmarkCase {
@@ -394,6 +452,20 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                     121, 121, 121.0, 121.0,
                 )),
             },
+            BenchmarkCase {
+                id: "plane-quad-panel-15k",
+                family: "plane_quad_2d",
+                workload: BenchmarkWorkload::PlaneQuad2d(generate_quad_panel_mesh(
+                    121, 121, 121.0, 121.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "heat-plane-quad-15k",
+                family: "heat_plane_quad_2d",
+                workload: BenchmarkWorkload::HeatPlaneQuad2d(generate_heat_quad_panel_mesh(
+                    121, 121, 121.0, 121.0,
+                )),
+            },
         ],
         BenchmarkProfile::TwentyK => vec![
             BenchmarkCase {
@@ -419,6 +491,20 @@ fn benchmark_cases(profile: BenchmarkProfile) -> Vec<BenchmarkCase> {
                 id: "plane-panel-20k",
                 family: "plane_triangle_2d",
                 workload: BenchmarkWorkload::PlaneTriangle2d(generate_panel_mesh(
+                    140, 140, 140.0, 140.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "plane-quad-panel-20k",
+                family: "plane_quad_2d",
+                workload: BenchmarkWorkload::PlaneQuad2d(generate_quad_panel_mesh(
+                    140, 140, 140.0, 140.0,
+                )),
+            },
+            BenchmarkCase {
+                id: "heat-plane-quad-20k",
+                family: "heat_plane_quad_2d",
+                workload: BenchmarkWorkload::HeatPlaneQuad2d(generate_heat_quad_panel_mesh(
                     140, 140, 140.0, 140.0,
                 )),
             },
@@ -482,6 +568,30 @@ fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                     dof_count = result.nodes.len() * 2;
                     max_displacement = result.max_displacement;
                     max_stress = result.max_stress;
+                })
+            }
+            BenchmarkWorkload::PlaneQuad2d(request) => {
+                solve(EngineSolveRequest::PlaneQuad2d(request.clone())).map(|result| {
+                    let AnalysisResult::PlaneQuad2d(result) = result else {
+                        unreachable!("quad plane solve should return quad plane result")
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len() * 2;
+                    max_displacement = result.max_displacement;
+                    max_stress = result.max_stress;
+                })
+            }
+            BenchmarkWorkload::HeatPlaneQuad2d(request) => {
+                solve(EngineSolveRequest::HeatPlaneQuad2d(request.clone())).map(|result| {
+                    let AnalysisResult::HeatPlaneQuad2d(result) = result else {
+                        unreachable!("heat quad solve should return heat quad result")
+                    };
+                    node_count = result.nodes.len();
+                    element_count = result.elements.len();
+                    dof_count = result.nodes.len();
+                    max_displacement = result.max_temperature;
+                    max_stress = result.max_heat_flux;
                 })
             }
             BenchmarkWorkload::Truss3d(request) => {
@@ -559,6 +669,16 @@ fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usize) {
             request.nodes.len(),
             request.elements.len(),
             request.nodes.len() * 2,
+        ),
+        BenchmarkWorkload::PlaneQuad2d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len() * 2,
+        ),
+        BenchmarkWorkload::HeatPlaneQuad2d(request) => (
+            request.nodes.len(),
+            request.elements.len(),
+            request.nodes.len(),
         ),
     }
 }
@@ -928,6 +1048,104 @@ fn generate_panel_mesh(
     SolvePlaneTriangle2dRequest { nodes, elements }
 }
 
+fn generate_quad_panel_mesh(
+    nx: usize,
+    ny: usize,
+    width: f64,
+    height: f64,
+) -> SolvePlaneQuad2dRequest {
+    let dx = width / nx as f64;
+    let dy = height / ny as f64;
+    let mut nodes = Vec::new();
+    let mut elements = Vec::new();
+
+    for j in 0..=ny {
+        for i in 0..=nx {
+            let index = j * (nx + 1) + i;
+            nodes.push(PlaneNodeInput {
+                id: format!("n{index}"),
+                x: i as f64 * dx,
+                y: j as f64 * dy,
+                fix_x: i == 0,
+                fix_y: i == 0 || (j == 0 && i == 0),
+                load_x: if i == nx { 15.0 } else { 0.0 },
+                load_y: if i == nx { -40.0 } else { 0.0 },
+            });
+        }
+    }
+
+    for j in 0..ny {
+        for i in 0..nx {
+            let n0 = j * (nx + 1) + i;
+            let n1 = n0 + 1;
+            let n2 = n0 + (nx + 1);
+            let n3 = n2 + 1;
+
+            elements.push(PlaneQuadElementInput {
+                id: format!("q{}", j * nx + i),
+                node_i: n0,
+                node_j: n1,
+                node_k: n3,
+                node_l: n2,
+                thickness: 0.015,
+                youngs_modulus: 70.0e9,
+                poisson_ratio: 0.33,
+            });
+        }
+    }
+
+    SolvePlaneQuad2dRequest { nodes, elements }
+}
+
+fn generate_heat_quad_panel_mesh(
+    nx: usize,
+    ny: usize,
+    width: f64,
+    height: f64,
+) -> SolveHeatPlaneQuad2dRequest {
+    let dx = width / nx as f64;
+    let dy = height / ny as f64;
+    let mut nodes = Vec::new();
+    let mut elements = Vec::new();
+
+    for j in 0..=ny {
+        for i in 0..=nx {
+            let index = j * (nx + 1) + i;
+            let left_edge = i == 0;
+            let right_edge = i == nx;
+            nodes.push(HeatPlaneNodeInput {
+                id: format!("h{index}"),
+                x: i as f64 * dx,
+                y: j as f64 * dy,
+                fix_temperature: left_edge || right_edge,
+                temperature: if left_edge { 120.0 } else if right_edge { 20.0 } else { 0.0 },
+                heat_load: if !left_edge && !right_edge && j == ny / 2 { 25.0 } else { 0.0 },
+            });
+        }
+    }
+
+    for j in 0..ny {
+        for i in 0..nx {
+            let n0 = j * (nx + 1) + i;
+            let n1 = n0 + 1;
+            let n2 = n0 + (nx + 1);
+            let n3 = n2 + 1;
+
+            elements.push(HeatPlaneQuadElementInput {
+                id: format!("hq{}", j * nx + i),
+                node_i: n0,
+                node_j: n1,
+                node_k: n3,
+                node_l: n2,
+                thickness: 0.02,
+                conductivity: 45.0,
+            });
+        }
+    }
+
+    SolveHeatPlaneQuad2dRequest { nodes, elements }
+}
+
 fn generate_lattice_truss_10k(
     nx: usize,
     ny: usize,
@@ -1155,13 +1373,13 @@ mod tests {
             repeat: 10,
             case_filter: None,
             format: OutputFormat::Table,
-            profile: BenchmarkProfile::Medium,
+            profile: BenchmarkProfile::TenK,
             baseline_out: None,
             baseline_compare: None,
             compare_report_out: None,
             fail_on_median_regression_pct: None,
             fail_on_rss_regression_pct: None,
-            min_baseline_median_ms: 1.0,
+            min_baseline_median_ms: 5.0,
         };
 
         assert_eq!(config.repeat, 10);
@@ -1170,7 +1388,7 @@ mod tests {
 
     #[test]
     fn runs_benchmark_cases() {
-        let cases = benchmark_cases(BenchmarkProfile::Medium);
+        let cases = benchmark_cases(BenchmarkProfile::TenK);
         let result = run_case(&cases[0], 2);
 
         assert_eq!(result.repeat, 2);

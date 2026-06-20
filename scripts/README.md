@@ -58,14 +58,36 @@ Useful smoke wrappers:
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks
   exercise the live workbench benchmark surface.
+- `./scripts/run-direct-mesh-benchmark-container.sh --repeat 3`
+  Build the dedicated Docker harness, run the direct-mesh integration suite
+  multiple times, and write JSON plus Markdown summaries under
+  `tmp/direct-mesh-benchmark-container/`. For LAN agent discovery, prefer
+  `DOCKER_RUN_NETWORK=host`. The current checked-in baseline snapshot is
+  `tests/integration/benchmarks/direct-mesh-docker-baseline.json`.
+- `node ./scripts/compare-direct-mesh-benchmark.mjs --current tmp/direct-mesh-benchmark-container/latest/summary.json --baseline tests/integration/benchmarks/direct-mesh-docker-baseline.json --report-out tmp/direct-mesh-benchmark-container/latest/compare.md --json-out tmp/direct-mesh-benchmark-container/latest/compare.json`
+  Compare a direct-mesh Docker benchmark summary against the checked-in
+  baseline and emit both Markdown and machine-readable diff artifacts.
+- `./scripts/run-direct-mesh-benchmark-regression.sh`
+  Run the remote direct-mesh Docker benchmark on `kyuubiki-lab`, copy the
+  resulting summary back into the local workspace, and compare it against the
+  checked-in baseline with regression thresholds. This wrapper expects
+  passwordless `sudo` on the remote lab host.
 - `cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_large_graph_report_test.exs`
   Runs the orchestrated large-graph workflow benchmark suite and writes a
   machine-readable JSON report with per-case performance summaries at
   `../tmp/workflow-large-graph-benchmark.json` from `apps/web`, which is the
   repository-level `tmp/workflow-large-graph-benchmark.json`.
-- `cd apps/web && mix test test/kyuubiki_web/api/workflow_large_graph_api_test.exs && elixir -pa $(find _build/test/lib -maxdepth 2 -type d -name ebin -print | tr '\n' ' ') ../../scripts/workflow-large-graph-benchmark.exs 96 256 512 --output ../../tmp/workflow-large-graph-benchmark.json`
+- `cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_catalog_report_test.exs`
+  Runs the catalog-backed composite workflow benchmark suite for the current
+  thermal and guarded coupled flows, then writes a machine-readable JSON report
+  at `../tmp/workflow-catalog-benchmark.json` from `apps/web`, which is the
+  repository-level `tmp/workflow-catalog-benchmark.json`.
+- `cd apps/web && mix test test/kyuubiki_web/api/workflow_large_graph_api_test.exs && ELIXIR_PA="$(find "$PWD/_build/test/lib" -maxdepth 2 -type d -name ebin -print | tr '\n' ' ')" elixir -pa $ELIXIR_PA ../../scripts/workflow-large-graph-benchmark.exs 96 256 512 --output ../../tmp/workflow-large-graph-benchmark.json`
   Lower-level host script path for environments that allow plain Elixir TCP
   sockets outside `mix test`.
+- `cd apps/web && mix test test/kyuubiki_web/api/workflow_catalog_thermal_job_api_test.exs test/kyuubiki_web/api/workflow_catalog_guard_job_api_test.exs && ELIXIR_PA="$(find "$PWD/_build/test/lib" -maxdepth 2 -type d -name ebin -print | tr '\n' ' ')" elixir -pa $ELIXIR_PA ../../scripts/workflow-catalog-benchmark.exs --repeat 5 --output ../../tmp/workflow-catalog-benchmark.json`
+  Lower-level host script path for replaying the catalog-backed composite
+  workflow benchmark without going through a dedicated `mix test` report case.
 
 Examples now include:
 

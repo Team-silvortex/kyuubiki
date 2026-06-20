@@ -135,7 +135,8 @@ TCP solver agent, local worker mode, and remote self-registration runtime.
 
 ### `workers/rust/crates/benchmark`
 
-Benchmark profiles for medium, large, v2, and 10k-scale targets.
+Benchmark profiles for medium, large, v2, and 10k-scale targets, with 10k as
+the default local regression tier.
 
 ### `workers/rust/crates/installer`
 

@@ -1,0 +1,87 @@
+{
+  "id": "direct-mesh-docker-baseline",
+  "version": 1,
+  "generated_at": "2026-06-20T05:00:50Z",
+  "source": {
+    "environment": "kyuubiki-lab",
+    "image_tag": "kyuubiki/direct-mesh-benchmark:local",
+    "repeat": 3,
+    "docker_run_network": "host",
+    "artifact_path": "/home/kyuubiki-dev/kyuubiki-bench-709b8c9/tmp/direct-mesh-benchmark-container/remote-repeat3/summary.json"
+  },
+  "aggregate": {
+    "elapsed_s": {
+      "min": 52.61,
+      "max": 54.77,
+      "mean": 53.457
+    },
+    "user_s": {
+      "min": 0.39,
+      "max": 0.43,
+      "mean": 0.413
+    },
+    "sys_s": {
+      "min": 0.13,
+      "max": 0.16,
+      "mean": 0.147
+    },
+    "max_rss_kib": {
+      "min": 84528,
+      "max": 84916,
+      "mean": 84725.333
+    }
+  },
+  "runs": [
+    {
+      "run_index": 1,
+      "elapsed_s": 54.77,
+      "user_s": 0.39,
+      "sys_s": 0.16,
+      "max_rss_kib": 84528,
+      "subtests": [
+        {
+          "name": "direct mesh gui can inspect LAN agents, solve directly, and fetch result chunks",
+          "duration_ms": 27983.942882
+        },
+        {
+          "name": "direct mesh gui can solve official spring samples for 2d and 3d studies",
+          "duration_ms": 26728.133462
+        }
+      ]
+    },
+    {
+      "run_index": 2,
+      "elapsed_s": 52.99,
+      "user_s": 0.43,
+      "sys_s": 0.13,
+      "max_rss_kib": 84916,
+      "subtests": [
+        {
+          "name": "direct mesh gui can inspect LAN agents, solve directly, and fetch result chunks",
+          "duration_ms": 27806.423716
+        },
+        {
+          "name": "direct mesh gui can solve official spring samples for 2d and 3d studies",
+          "duration_ms": 25123.754425
+        }
+      ]
+    },
+    {
+      "run_index": 3,
+      "elapsed_s": 52.61,
+      "user_s": 0.42,
+      "sys_s": 0.15,
+      "max_rss_kib": 84732,
+      "subtests": [
+        {
+          "name": "direct mesh gui can inspect LAN agents, solve directly, and fetch result chunks",
+          "duration_ms": 24139.88217
+        },
+        {
+          "name": "direct mesh gui can solve official spring samples for 2d and 3d studies",
+          "duration_ms": 28402.793952
+        }
+      ]
+    }
+  ]
+}

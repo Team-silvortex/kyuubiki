@@ -1,6 +1,9 @@
 defmodule KyuubikiWeb.Api.WorkflowAsyncBridgeApiTest do
   use KyuubikiWeb.TestSupport.ApiRouterCase
 
+  alias KyuubikiWeb.TestSupport.WorkflowApiFixtures
+  alias KyuubikiWeb.TestSupport.WorkflowLargeGraphBenchmark
+
   test "submits a workflow graph as an asynchronous job" do
     {:ok, _pid} =
       WorkflowApi.start_fake_agent_sessions([
@@ -309,7 +312,7 @@ defmodule KyuubikiWeb.Api.WorkflowAsyncBridgeApiTest do
 
     assert conn.status == 202
     payload = Jason.decode!(conn.resp_body)
-    result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts)
+    result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts, 400)
 
     assert result_payload["job"]["status"] == "completed"
     assert result_payload["result"]["workflow_id"] == "workflow.input-to-output-compact"
@@ -319,6 +322,37 @@ defmodule KyuubikiWeb.Api.WorkflowAsyncBridgeApiTest do
     refute Map.has_key?(result_payload["result"], "artifact_lineage")
     refute Map.has_key?(result_payload["result"], "dataset_lineage")
     refute Map.has_key?(result_payload["result"], "branch_decisions")
+  end
+
+  test "defaults large asynchronous workflow graph jobs to compact responses" do
+    {:ok, _pid} = WorkflowApi.start_fake_agent_sessions(WorkflowApiFixtures.large_graph_frames())
+
+    port = WorkflowApi.await_fake_agent_port()
+    WorkflowApi.configure_fake_agent_pool(port)
+
+    conn =
+      :post
+      |> conn(
+        "/api/v1/workflows/graph/jobs",
+        Jason.encode!(%{
+          "graph" => WorkflowLargeGraphBenchmark.build_graph(1024),
+          "input_artifacts" => %{
+            "heat_model" => WorkflowApi.heat_to_thermo_quad_input_artifacts()["heat_model"]
+          }
+        })
+      )
+      |> put_req_header("content-type", "application/json")
+      |> Router.call(@opts)
+
+    assert conn.status == 202
+    payload = Jason.decode!(conn.resp_body)
+    result_payload = WorkflowApi.wait_for_job(payload["job"]["job_id"], @opts, 2000)
+
+    assert result_payload["job"]["status"] == "completed"
+    assert result_payload["result"]["response_options"]["include_artifacts"] == false
+    refute Map.has_key?(result_payload["result"], "artifacts")
+    refute Map.has_key?(result_payload["result"], "node_runs")
+    refute Map.has_key?(result_payload["result"], "artifact_lineage")
   end
 
   test "runs an electrostatic to heat workflow graph with an explicit bridge contract" do

@@ -1,0 +1,44 @@
+name: Direct Mesh Docker Nightly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 18 * * *"
+
+concurrency:
+  group: direct-mesh-docker-nightly
+  cancel-in-progress: false
+
+jobs:
+  direct-mesh-docker-nightly:
+    if: ${{ vars.KYUUBIKI_DIRECT_MESH_SELF_HOSTED == 'true' }}
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify self-hosted lab access configuration
+        run: |
+          test -n "${KYUUBIKI_LAB_HOST:-}" || { echo "KYUUBIKI_LAB_HOST is required" >&2; exit 1; }
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+
+      - name: Run direct-mesh Docker regression
+        run: |
+          bash ./scripts/run-direct-mesh-benchmark-regression.sh
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+          KYUUBIKI_LAB_BENCH_DIR: ${{ vars.KYUUBIKI_LAB_BENCH_DIR }}
+          REPEAT: "3"
+          DIRECT_MESH_ELAPSED_THRESHOLD: "15"
+          DIRECT_MESH_RSS_THRESHOLD: "20"
+          OUTPUT_SLUG: github-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Upload direct-mesh comparison artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: direct-mesh-docker-nightly-${{ github.run_attempt }}
+          path: |
+            tmp/direct-mesh-benchmark-container/**
+          if-no-files-found: ignore

@@ -59,6 +59,26 @@
             <a class="docs-link" href="./operations.html">Operations</a>
           </div>
         </article>
+
+        <article class="docs-card">
+          <h2>Direct-mesh regression lane</h2>
+          <p class="docs-copy">
+            The Docker direct-mesh benchmark now has its own checked-in baseline,
+            compare path, and remote nightly wrapper instead of living only as an
+            ad hoc lab command.
+          </p>
+          <ul class="docs-list">
+            <li><code>make test-integration-direct-mesh-docker</code> runs the benchmark harness.</li>
+            <li><code>make test-integration-direct-mesh-docker-compare</code> compares a summary against the baseline.</li>
+            <li><code>make test-integration-direct-mesh-docker-report</code> runs a fresh benchmark and emits reports.</li>
+            <li><code>make test-integration-direct-mesh-docker-nightly</code> drives the remote <code>kyuubiki-lab</code> regression wrapper.</li>
+            <li>The container defaults to <code>DOCKER_RUN_NETWORK=host</code> so LAN agents remain discoverable.</li>
+          </ul>
+          <div class="docs-links">
+            <a class="docs-link" href="../../../../docs/testing-and-ci.md">Open central verification doc</a>
+            <a class="docs-link" href="../../../../tests/integration/benchmarks/direct-mesh-docker-baseline.json">Open checked-in baseline</a>
+          </div>
+        </article>
       </section>
     </main>
   </body>

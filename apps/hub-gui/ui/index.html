@@ -393,6 +393,53 @@
                     <strong id="guides-accuracy-baselines-title">Accuracy baselines</strong>
                     <span class="desktop-shell-note" id="guides-accuracy-baselines-copy">Read which benchmark families are already locked into regression and which are still next.</span>
                   </button>
+                  <button class="hub-cluster-card" data-action="open-testing-and-ci-doc" type="button">
+                    <strong id="guides-direct-mesh-title">Direct-mesh regression</strong>
+                    <span class="desktop-shell-note" id="guides-direct-mesh-copy">Open the nightly Docker regression lane, baseline, and verification flow we now use to keep LAN mesh performance honest.</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="hub-card desktop-shell-surface-card">
+                <div class="hub-card__intro">
+                  <div>
+                    <div class="hub-card__eyebrow" id="guides-regression-label">Regression lane</div>
+                    <h2 id="guides-regression-title">Direct-mesh baseline wall</h2>
+                  </div>
+                  <p class="desktop-shell-note" id="guides-regression-copy">Keep the current LAN mesh baseline visible in Hub so nightly regression stays easy to audit before we build a live status plane.</p>
+                </div>
+                <div class="hub-metrics">
+                  <div class="desktop-shell-metric-row"><span id="guides-regression-elapsed-label">Baseline mean</span><strong id="guides-regression-elapsed-value">53.457 s</strong></div>
+                  <div class="desktop-shell-metric-row"><span id="guides-regression-rss-label">Baseline RSS</span><strong id="guides-regression-rss-value">84,725 KiB</strong></div>
+                  <div class="desktop-shell-metric-row"><span id="guides-regression-repeat-label">Repeat</span><strong id="guides-regression-repeat-value">3 runs</strong></div>
+                  <div class="desktop-shell-metric-row"><span id="guides-regression-network-label">Docker network</span><strong id="guides-regression-network-value">host</strong></div>
+                  <div class="desktop-shell-metric-row"><span id="guides-regression-latest-label">Latest mean</span><strong id="guides-regression-latest-value">--</strong></div>
+                  <div class="desktop-shell-metric-row"><span id="guides-regression-status-label">Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="guides-regression-status-value">baseline only</strong></div>
+                </div>
+                <p class="desktop-shell-note" id="guides-regression-note">No local latest summary is loaded yet.</p>
+                <div class="hub-stack">
+                  <div>
+                    <div class="hub-card__eyebrow" id="guides-regression-baseline-path-label">Baseline file</div>
+                    <div class="desktop-shell-note" id="guides-regression-baseline-path">tests/integration/benchmarks/direct-mesh-docker-baseline.json</div>
+                  </div>
+                  <div>
+                    <div class="hub-card__eyebrow" id="guides-regression-output-path-label">Latest output root</div>
+                    <div class="desktop-shell-note" id="guides-regression-output-path">tmp/direct-mesh-benchmark-container/latest</div>
+                  </div>
+                </div>
+                <div class="hub-action-clusters">
+                  <button class="hub-cluster-card" data-action="open-direct-mesh-baseline" type="button">
+                    <strong id="guides-regression-baseline-title">Open baseline</strong>
+                    <span class="desktop-shell-note" id="guides-regression-baseline-copy">Open the checked-in JSON snapshot that anchors the current direct-mesh regression lane.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-direct-mesh-output-dir" type="button">
+                    <strong id="guides-regression-output-title">Open output root</strong>
+                    <span class="desktop-shell-note" id="guides-regression-output-copy">Open the local benchmark output directory where the latest summary and compare report should land.</span>
+                  </button>
+                  <button class="hub-cluster-card" data-action="open-testing-and-ci-doc" type="button">
+                    <strong id="guides-regression-lane-title">Open regression guide</strong>
+                    <span class="desktop-shell-note" id="guides-regression-lane-copy">Jump to the testing and CI guide for the nightly wrapper, compare flow, and threshold policy.</span>
+                  </button>
                 </div>
               </article>
             </div>

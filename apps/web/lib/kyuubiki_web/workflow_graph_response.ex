@@ -8,6 +8,7 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
     "include_dataset_lineage" => true,
     "include_node_runs" => true
   }
+  @large_workflow_compact_threshold 1024
 
   def compact_options do
     %{
@@ -26,6 +27,13 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
   end
 
   def normalize_options(_options), do: @default_options
+
+  def resolve_options(graph, options) when is_map(graph) and is_map(options),
+    do: normalize_options(options)
+
+  def resolve_options(graph, _options) when is_map(graph) do
+    if large_workflow?(graph), do: compact_options(), else: @default_options
+  end
 
   def shape(graph, result, options) when is_map(graph) and is_map(result) and is_map(options) do
     %{
@@ -80,5 +88,12 @@ defmodule KyuubikiWeb.WorkflowGraphResponse do
     else
       payload
     end
+  end
+
+  defp large_workflow?(graph) do
+    graph
+    |> Map.get("nodes", [])
+    |> length()
+    |> Kernel.>=(@large_workflow_compact_threshold)
   end
 end

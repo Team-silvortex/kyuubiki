@@ -407,6 +407,31 @@ const HUB_I18N = {
       accuracyPlanCopy: "See the long-line plan for verified baselines, benchmark expansion, and solver trust.",
       accuracyBaselinesTitle: "Accuracy baselines",
       accuracyBaselinesCopy: "Read which benchmark families are already locked into regression and which are still next.",
+      directMeshTitle: "Direct-mesh regression",
+      directMeshCopy: "Open the nightly Docker regression lane, baseline, and verification flow we now use to keep LAN mesh performance honest.",
+      regressionLabel: "Regression lane",
+      regressionTitle: "Direct-mesh baseline wall",
+      regressionCopy: "Keep the current LAN mesh baseline visible in Hub so nightly regression stays easy to audit before we build a live status plane.",
+      regressionElapsedLabel: "Baseline mean",
+      regressionRssLabel: "Baseline RSS",
+      regressionRepeatLabel: "Repeat",
+      regressionNetworkLabel: "Docker network",
+      regressionLatestLabel: "Latest mean",
+      regressionStatusLabel: "Status",
+      regressionBaselinePathLabel: "Baseline file",
+      regressionOutputPathLabel: "Latest output root",
+      regressionBaselineTitle: "Open baseline",
+      regressionBaselineCopy: "Open the checked-in JSON snapshot that anchors the current direct-mesh regression lane.",
+      regressionOutputTitle: "Open output root",
+      regressionOutputCopy: "Open the local benchmark output directory where the latest summary and compare report should land.",
+      regressionLaneTitle: "Open regression guide",
+      regressionLaneCopy: "Jump to the testing and CI guide for the nightly wrapper, compare flow, and threshold policy.",
+      regressionStatusBaselineOnly: "baseline only",
+      regressionStatusWithinBaseline: "within baseline",
+      regressionStatusRegressed: "regressed",
+      regressionNoteBaselineOnly: "No local latest summary is loaded yet. Run the regression lane or copy a fresh summary into the latest output root.",
+      regressionNoteWithinBaseline: "Latest local summary is present and still within the current direct-mesh baseline envelope.",
+      regressionNoteRegressed: "Latest local summary is present but slower or heavier than the current baseline threshold.",
     },
     assistant: {
       introLabel: "Need help?",
@@ -877,6 +902,31 @@ const HUB_I18N = {
       accuracyPlanCopy: "看 verified baselines、benchmark 扩展和 solver 信任链的长期计划。",
       accuracyBaselinesTitle: "精度基线",
       accuracyBaselinesCopy: "查看哪些 benchmark family 已经锁进回归，哪些还在下一步。",
+      directMeshTitle: "Direct-mesh 回归",
+      directMeshCopy: "打开我们现在用于约束局域网 mesh 性能的 Docker 夜测回归、基线和验证流程。",
+      regressionLabel: "回归通道",
+      regressionTitle: "Direct-mesh 基线墙",
+      regressionCopy: "先把当前局域网 mesh 基线直接放在 Hub 里，在接真实动态状态面板前，也能先把 nightly 回归看清楚。",
+      regressionElapsedLabel: "基线均值",
+      regressionRssLabel: "基线 RSS",
+      regressionRepeatLabel: "重复次数",
+      regressionNetworkLabel: "Docker 网络",
+      regressionLatestLabel: "最新均值",
+      regressionStatusLabel: "状态",
+      regressionBaselinePathLabel: "基线文件",
+      regressionOutputPathLabel: "最新输出根目录",
+      regressionBaselineTitle: "打开基线",
+      regressionBaselineCopy: "打开已纳入仓库的 JSON 基线快照，它是当前 direct-mesh 回归通道的锚点。",
+      regressionOutputTitle: "打开输出目录",
+      regressionOutputCopy: "打开本地 benchmark 输出目录，最新 summary 和 compare 报告应当落在这里。",
+      regressionLaneTitle: "打开回归指南",
+      regressionLaneCopy: "跳到 testing and CI 指南，查看 nightly wrapper、compare 流程与阈值策略。",
+      regressionStatusBaselineOnly: "仅基线",
+      regressionStatusWithinBaseline: "基线内",
+      regressionStatusRegressed: "已回退",
+      regressionNoteBaselineOnly: "还没有加载到本地最新 summary。先跑回归通道，或者把新 summary 放进 latest 输出目录。",
+      regressionNoteWithinBaseline: "已经检测到本地最新 summary，而且它仍然处在当前 direct-mesh 基线包络内。",
+      regressionNoteRegressed: "已经检测到本地最新 summary，但它比当前基线更慢或更重，超出了阈值。",
     },
     assistant: {
       introLabel: "需要帮助？",
@@ -1347,6 +1397,31 @@ const HUB_I18N = {
       accuracyPlanCopy: "verified baseline、benchmark 拡張、solver trust の長期計画を確認します。",
       accuracyBaselinesTitle: "Accuracy baselines",
       accuracyBaselinesCopy: "どの benchmark family が回帰に固定され、どれが次なのかを確認します。",
+      directMeshTitle: "Direct-mesh 回帰",
+      directMeshCopy: "LAN mesh 性能をきちんと縛るために使っている Docker 夜間回帰、baseline、検証フローを開きます。",
+      regressionLabel: "回帰レーン",
+      regressionTitle: "Direct-mesh baseline wall",
+      regressionCopy: "ライブ状態面を作る前でも、現在の LAN mesh baseline を Hub で見えるようにして夜間回帰を追いやすくします。",
+      regressionElapsedLabel: "Baseline mean",
+      regressionRssLabel: "Baseline RSS",
+      regressionRepeatLabel: "Repeat",
+      regressionNetworkLabel: "Docker network",
+      regressionLatestLabel: "Latest mean",
+      regressionStatusLabel: "Status",
+      regressionBaselinePathLabel: "Baseline file",
+      regressionOutputPathLabel: "Latest output root",
+      regressionBaselineTitle: "Open baseline",
+      regressionBaselineCopy: "現在の direct-mesh 回帰レーンを固定するチェックイン済み JSON snapshot を開きます。",
+      regressionOutputTitle: "Open output root",
+      regressionOutputCopy: "最新の summary と compare report が置かれるローカル benchmark 出力ディレクトリを開きます。",
+      regressionLaneTitle: "Open regression guide",
+      regressionLaneCopy: "nightly wrapper、compare flow、threshold policy の testing and CI guide に移動します。",
+      regressionStatusBaselineOnly: "baseline only",
+      regressionStatusWithinBaseline: "within baseline",
+      regressionStatusRegressed: "regressed",
+      regressionNoteBaselineOnly: "ローカルの最新 summary はまだ読み込まれていません。回帰レーンを実行するか、新しい summary を latest 出力ルートへ置いてください。",
+      regressionNoteWithinBaseline: "ローカルの最新 summary が見つかり、現在の direct-mesh baseline の範囲内に収まっています。",
+      regressionNoteRegressed: "ローカルの最新 summary は見つかりましたが、現在の baseline 閾値より遅いか重い状態です。",
     },
     assistant: {
       introLabel: "困ったら",
@@ -1600,6 +1675,31 @@ HUB_I18N.es = {
     docsCopy: "Abre el índice principal de documentación.",
     currentTitle: "Línea actual",
     currentCopy: "Lee la postura actual de tamamono 1.x.",
+    directMeshTitle: "Regresión direct-mesh",
+    directMeshCopy: "Abre la ruta nocturna de regresión en Docker, la línea base y el flujo de verificación que usamos para mantener honesto el rendimiento LAN mesh.",
+    regressionLabel: "Línea de regresión",
+    regressionTitle: "Muro base direct-mesh",
+    regressionCopy: "Mantén visible en Hub la línea base actual de LAN mesh para que la regresión nocturna siga siendo fácil de auditar antes de crear un plano de estado en vivo.",
+    regressionElapsedLabel: "Media base",
+    regressionRssLabel: "RSS base",
+    regressionRepeatLabel: "Repetición",
+    regressionNetworkLabel: "Red Docker",
+    regressionLatestLabel: "Media más reciente",
+    regressionStatusLabel: "Estado",
+    regressionBaselinePathLabel: "Archivo base",
+    regressionOutputPathLabel: "Raíz de salida más reciente",
+    regressionBaselineTitle: "Abrir base",
+    regressionBaselineCopy: "Abre la instantánea JSON versionada que ancla la ruta actual de regresión direct-mesh.",
+    regressionOutputTitle: "Abrir salida",
+    regressionOutputCopy: "Abre el directorio local de benchmark donde deberían aparecer el resumen más reciente y el informe comparativo.",
+    regressionLaneTitle: "Abrir guía de regresión",
+    regressionLaneCopy: "Salta a la guía de testing and CI para el wrapper nocturno, el flujo de comparación y la política de umbrales.",
+    regressionStatusBaselineOnly: "solo base",
+    regressionStatusWithinBaseline: "dentro de la base",
+    regressionStatusRegressed: "regresó",
+    regressionNoteBaselineOnly: "Todavía no hay un summary local reciente cargado. Ejecuta la ruta de regresión o copia un summary nuevo al directorio latest.",
+    regressionNoteWithinBaseline: "El summary local reciente está presente y sigue dentro del margen actual de la base direct-mesh.",
+    regressionNoteRegressed: "El summary local reciente está presente, pero es más lento o más pesado que el umbral actual de la base.",
   },
   assistant: {
     ...HUB_I18N.en.assistant,
@@ -1823,6 +1923,7 @@ const state = {
   releaseVersion: "",
   releaseCodename: "",
   language: "en",
+  directMeshRegressionSnapshot: null,
   assistantApiKey: "",
   assistantTrustedHosts: loadHubAssistantTrustedHosts(),
   remoteTrustedHosts: loadHubTrustedHosts(HUB_REMOTE_TRUSTED_HOSTS_KEY),
@@ -1849,6 +1950,106 @@ function renderToolsPlatformLabel() {
     }),
     "",
   );
+}
+
+function formatRegressionNumber(value, digits = 3) {
+  return Number(value).toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatRegressionInteger(value) {
+  return Math.round(Number(value)).toLocaleString();
+}
+
+function regressionStatusText(status) {
+  const guides = hubCopy().guides;
+  switch (status) {
+    case "within_baseline":
+      return guides.regressionStatusWithinBaseline;
+    case "regressed":
+      return guides.regressionStatusRegressed;
+    case "baseline_only":
+    default:
+      return guides.regressionStatusBaselineOnly;
+  }
+}
+
+function regressionStatusNote(status) {
+  const guides = hubCopy().guides;
+  switch (status) {
+    case "within_baseline":
+      return guides.regressionNoteWithinBaseline;
+    case "regressed":
+      return guides.regressionNoteRegressed;
+    case "baseline_only":
+    default:
+      return guides.regressionNoteBaselineOnly;
+  }
+}
+
+function regressionStateKind(status) {
+  switch (status) {
+    case "within_baseline":
+      return "health";
+    case "regressed":
+      return "danger";
+    case "baseline_only":
+    default:
+      return "activity";
+  }
+}
+
+function renderDirectMeshRegressionSnapshot(snapshot) {
+  if (!snapshot) {
+    return;
+  }
+
+  if (elements.guidesRegressionElapsedValue) {
+    elements.guidesRegressionElapsedValue.textContent = `${formatRegressionNumber(snapshot.baseline_mean_elapsed_s)} s`;
+  }
+  if (elements.guidesRegressionRssValue) {
+    elements.guidesRegressionRssValue.textContent = `${formatRegressionInteger(snapshot.baseline_mean_rss_kib)} KiB`;
+  }
+  if (elements.guidesRegressionRepeatValue) {
+    elements.guidesRegressionRepeatValue.textContent = `${snapshot.repeat} runs`;
+  }
+  if (elements.guidesRegressionNetworkValue) {
+    elements.guidesRegressionNetworkValue.textContent = snapshot.docker_run_network;
+  }
+  if (elements.guidesRegressionBaselinePath) {
+    elements.guidesRegressionBaselinePath.textContent = snapshot.baseline_path;
+  }
+  if (elements.guidesRegressionOutputPath) {
+    elements.guidesRegressionOutputPath.textContent = snapshot.output_root;
+  }
+  if (elements.guidesRegressionLatestValue) {
+    const latestText = snapshot.latest_exists && snapshot.latest_mean_elapsed_s != null
+      ? `${formatRegressionNumber(snapshot.latest_mean_elapsed_s)} s`
+      : "--";
+    elements.guidesRegressionLatestValue.textContent = latestText;
+  }
+  if (elements.guidesRegressionStatusValue) {
+    applyDesktopState(
+      elements.guidesRegressionStatusValue,
+      regressionStatusText(snapshot.status),
+      { kind: regressionStateKind(snapshot.status) },
+    );
+  }
+  if (elements.guidesRegressionNote) {
+    const generatedAt = snapshot.latest_exists && snapshot.latest_generated_at
+      ? ` Latest summary: ${snapshot.latest_generated_at}.`
+      : "";
+    const elapsedDelta = snapshot.latest_exists && snapshot.elapsed_delta_pct != null
+      ? ` Elapsed delta: ${formatRegressionNumber(snapshot.elapsed_delta_pct, 2)}%.`
+      : "";
+    const rssDelta = snapshot.latest_exists && snapshot.rss_delta_pct != null
+      ? ` RSS delta: ${formatRegressionNumber(snapshot.rss_delta_pct, 2)}%.`
+      : "";
+    elements.guidesRegressionNote.textContent =
+      `${regressionStatusNote(snapshot.status)}${generatedAt}${elapsedDelta}${rssDelta}`;
+  }
 }
 
 function hubMessage(template, replacements = {}) {
@@ -2067,6 +2268,34 @@ const elements = {
   guidesAccuracyPlanCopy: document.getElementById("guides-accuracy-plan-copy"),
   guidesAccuracyBaselinesTitle: document.getElementById("guides-accuracy-baselines-title"),
   guidesAccuracyBaselinesCopy: document.getElementById("guides-accuracy-baselines-copy"),
+  guidesDirectMeshTitle: document.getElementById("guides-direct-mesh-title"),
+  guidesDirectMeshCopy: document.getElementById("guides-direct-mesh-copy"),
+  guidesRegressionLabel: document.getElementById("guides-regression-label"),
+  guidesRegressionTitle: document.getElementById("guides-regression-title"),
+  guidesRegressionCopy: document.getElementById("guides-regression-copy"),
+  guidesRegressionElapsedLabel: document.getElementById("guides-regression-elapsed-label"),
+  guidesRegressionRssLabel: document.getElementById("guides-regression-rss-label"),
+  guidesRegressionRepeatLabel: document.getElementById("guides-regression-repeat-label"),
+  guidesRegressionNetworkLabel: document.getElementById("guides-regression-network-label"),
+  guidesRegressionLatestLabel: document.getElementById("guides-regression-latest-label"),
+  guidesRegressionStatusLabel: document.getElementById("guides-regression-status-label"),
+  guidesRegressionBaselinePathLabel: document.getElementById("guides-regression-baseline-path-label"),
+  guidesRegressionOutputPathLabel: document.getElementById("guides-regression-output-path-label"),
+  guidesRegressionBaselineTitle: document.getElementById("guides-regression-baseline-title"),
+  guidesRegressionBaselineCopy: document.getElementById("guides-regression-baseline-copy"),
+  guidesRegressionOutputTitle: document.getElementById("guides-regression-output-title"),
+  guidesRegressionOutputCopy: document.getElementById("guides-regression-output-copy"),
+  guidesRegressionLaneTitle: document.getElementById("guides-regression-lane-title"),
+  guidesRegressionLaneCopy: document.getElementById("guides-regression-lane-copy"),
+  guidesRegressionElapsedValue: document.getElementById("guides-regression-elapsed-value"),
+  guidesRegressionRssValue: document.getElementById("guides-regression-rss-value"),
+  guidesRegressionRepeatValue: document.getElementById("guides-regression-repeat-value"),
+  guidesRegressionNetworkValue: document.getElementById("guides-regression-network-value"),
+  guidesRegressionLatestValue: document.getElementById("guides-regression-latest-value"),
+  guidesRegressionStatusValue: document.getElementById("guides-regression-status-value"),
+  guidesRegressionBaselinePath: document.getElementById("guides-regression-baseline-path"),
+  guidesRegressionOutputPath: document.getElementById("guides-regression-output-path"),
+  guidesRegressionNote: document.getElementById("guides-regression-note"),
   runtimeLocalLabel: document.getElementById("runtime-local-label"),
   runtimeLocalTitle: document.getElementById("runtime-local-title"),
   runtimeLocalCopy: document.getElementById("runtime-local-copy"),
@@ -2453,6 +2682,26 @@ function renderDesktopLanguagePreference() {
   setText(elements.guidesAccuracyPlanCopy, copy.guides.accuracyPlanCopy);
   setText(elements.guidesAccuracyBaselinesTitle, copy.guides.accuracyBaselinesTitle);
   setText(elements.guidesAccuracyBaselinesCopy, copy.guides.accuracyBaselinesCopy);
+  setText(elements.guidesDirectMeshTitle, copy.guides.directMeshTitle);
+  setText(elements.guidesDirectMeshCopy, copy.guides.directMeshCopy);
+  setText(elements.guidesRegressionLabel, copy.guides.regressionLabel);
+  setText(elements.guidesRegressionTitle, copy.guides.regressionTitle);
+  setText(elements.guidesRegressionCopy, copy.guides.regressionCopy);
+  setText(elements.guidesRegressionElapsedLabel, copy.guides.regressionElapsedLabel);
+  setText(elements.guidesRegressionRssLabel, copy.guides.regressionRssLabel);
+  setText(elements.guidesRegressionRepeatLabel, copy.guides.regressionRepeatLabel);
+  setText(elements.guidesRegressionNetworkLabel, copy.guides.regressionNetworkLabel);
+  setText(elements.guidesRegressionLatestLabel, copy.guides.regressionLatestLabel);
+  setText(elements.guidesRegressionStatusLabel, copy.guides.regressionStatusLabel);
+  setText(elements.guidesRegressionBaselinePathLabel, copy.guides.regressionBaselinePathLabel);
+  setText(elements.guidesRegressionOutputPathLabel, copy.guides.regressionOutputPathLabel);
+  setText(elements.guidesRegressionBaselineTitle, copy.guides.regressionBaselineTitle);
+  setText(elements.guidesRegressionBaselineCopy, copy.guides.regressionBaselineCopy);
+  setText(elements.guidesRegressionOutputTitle, copy.guides.regressionOutputTitle);
+  setText(elements.guidesRegressionOutputCopy, copy.guides.regressionOutputCopy);
+  setText(elements.guidesRegressionLaneTitle, copy.guides.regressionLaneTitle);
+  setText(elements.guidesRegressionLaneCopy, copy.guides.regressionLaneCopy);
+  renderDirectMeshRegressionSnapshot(state.directMeshRegressionSnapshot);
   setText(elements.assistantIntroLabel, copy.assistant.introLabel);
   setText(elements.assistantIntroTitle, copy.assistant.introTitle);
   setText(elements.assistantIntroCopy, copy.assistant.introCopy);
@@ -5019,6 +5268,26 @@ async function loadEnvironment() {
   renderAssistantContext();
 }
 
+async function loadDirectMeshRegressionSnapshot() {
+  try {
+    state.directMeshRegressionSnapshot = await invokeTauri("hub_direct_mesh_regression_snapshot");
+    renderDirectMeshRegressionSnapshot(state.directMeshRegressionSnapshot);
+  } catch (error) {
+    if (elements.guidesRegressionStatusValue) {
+      applyDesktopState(
+        elements.guidesRegressionStatusValue,
+        regressionStatusText("baseline_only"),
+        { kind: regressionStateKind("baseline_only") },
+      );
+    }
+    if (elements.guidesRegressionNote) {
+      elements.guidesRegressionNote.textContent = formatHubOperatorError(error, {
+        actionLabel: "Direct-mesh regression snapshot",
+      });
+    }
+  }
+}
+
 async function refreshRuntimeStatus() {
   await refreshRuntimeStatusPanel({
     invokeTauri,
@@ -5453,6 +5722,7 @@ state.language = await loadDesktopLanguagePreference();
 rerenderLocalizedHubShell();
 await applyBrand();
 await loadEnvironment();
+await loadDirectMeshRegressionSnapshot();
 enhanceHubAccessibility();
 state.density = loadHubDensitySettings();
 const hotLogSettings = loadHubHotLogSettings();

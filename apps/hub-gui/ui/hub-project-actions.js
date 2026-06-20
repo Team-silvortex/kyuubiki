@@ -34,6 +34,36 @@ export async function runHubProjectAction(action, options) {
       options.setProjectsPage("guides");
       options.setBusy(false, "ready");
       return true;
+    case "open-accuracy-plan-doc":
+      options.setOperationOutput(await options.invokeTauri("open_accuracy_plan_doc"));
+      options.setSection("projects");
+      options.setProjectsPage("guides");
+      options.setBusy(false, "ready");
+      return true;
+    case "open-accuracy-baselines-doc":
+      options.setOperationOutput(await options.invokeTauri("open_accuracy_baselines_doc"));
+      options.setSection("projects");
+      options.setProjectsPage("guides");
+      options.setBusy(false, "ready");
+      return true;
+    case "open-testing-and-ci-doc":
+      options.setOperationOutput(await options.invokeTauri("open_testing_and_ci_doc"));
+      options.setSection("projects");
+      options.setProjectsPage("guides");
+      options.setBusy(false, "ready");
+      return true;
+    case "open-direct-mesh-baseline":
+      options.setOperationOutput(await options.invokeTauri("open_direct_mesh_baseline"));
+      options.setSection("projects");
+      options.setProjectsPage("guides");
+      options.setBusy(false, "ready");
+      return true;
+    case "open-direct-mesh-output-dir":
+      options.setOperationOutput(await options.invokeTauri("open_direct_mesh_output_dir"));
+      options.setSection("projects");
+      options.setProjectsPage("guides");
+      options.setBusy(false, "ready");
+      return true;
     case "project-inspect":
       await options.runProjectBundleAction({
         action: "project inspect",

@@ -240,9 +240,10 @@ defmodule KyuubikiWeb.Analysis do
   @spec run_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def run_workflow_graph(params) when is_map(params) do
     normalized = AnalysisJobSupport.stringify_keys(params)
-    response_options = WorkflowGraphResponse.normalize_options(Map.get(normalized, "response_options"))
 
     with %{} = graph <- Map.get(normalized, "graph"),
+         response_options <-
+           WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, result} <- execute_workflow_graph(graph, input_artifacts) do
       {:ok, WorkflowGraphResponse.shape(graph, result, response_options)}
@@ -258,9 +259,10 @@ defmodule KyuubikiWeb.Analysis do
   def submit_catalog_workflow(workflow_id, params)
       when is_binary(workflow_id) and is_map(params) do
     normalized = AnalysisJobSupport.stringify_keys(params)
-    response_options = WorkflowGraphResponse.normalize_options(Map.get(normalized, "response_options"))
 
     with {:ok, graph} <- WorkflowTemplateCatalog.graph_by_id(workflow_id),
+         response_options <-
+           WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, payload} <-
            submit_workflow_graph(%{
@@ -286,9 +288,10 @@ defmodule KyuubikiWeb.Analysis do
   @spec submit_workflow_graph(map()) :: {:ok, map()} | {:error, term()}
   def submit_workflow_graph(params) when is_map(params) do
     normalized = AnalysisJobSupport.stringify_keys(params)
-    response_options = WorkflowGraphResponse.normalize_options(Map.get(normalized, "response_options"))
 
     with %{} = graph <- Map.get(normalized, "graph"),
+         response_options <-
+           WorkflowGraphResponse.resolve_options(graph, Map.get(normalized, "response_options")),
          %{} = input_artifacts <- Map.get(normalized, "input_artifacts"),
          {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
          {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
