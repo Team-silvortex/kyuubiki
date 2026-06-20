@@ -65,3 +65,17 @@ Do not treat that directory as source-owned. The source of truth is:
   `./tmp/data/kyuubiki_dev.sqlite3`
 - the shared packaging docs in
   [docs/packaging-and-deployment.md](../../docs/packaging-and-deployment.md)
+
+## Remote deployment guardrails
+
+Remote bootstrap and remote agent startup are intentionally bounded:
+
+- target host must be a plain host token, not a URL
+- remote workspace must be an absolute normalized path
+- orchestrator URL must be `http://` or `https://` without query, fragment, or
+  embedded credentials
+- optional desktop-side allowlists can further constrain remote operations:
+  - `KYUUBIKI_INSTALLER_REMOTE_ALLOWED_HOSTS`
+  - `KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS`
+- installer-managed policy is stored at:
+  - `config/installer-remote-policy.json`

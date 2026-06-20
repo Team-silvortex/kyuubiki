@@ -4,6 +4,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::collections::HashMap;
 
 use serde_json::{Value, json};
 
@@ -13,6 +14,7 @@ const SERVER_SCHEMA_VERSION: &str = "kyuubiki.deploy-server/v1";
 pub struct DeployServerConfig {
     pub host: String,
     pub port: u16,
+    pub auth_token: Option<String>,
     pub workspace_root: PathBuf,
     pub deploy_root: PathBuf,
     pub artifact_root: PathBuf,
@@ -23,6 +25,7 @@ pub struct DeployServerConfig {
 struct Request {
     method: String,
     path: String,
+    headers: HashMap<String, String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -44,10 +47,6 @@ impl DeployServerConfig {
             "version": env!("CARGO_PKG_VERSION"),
             "host": self.host,
             "port": self.port,
-            "workspace_root": self.workspace_root.display().to_string(),
-            "deploy_root": self.deploy_root.display().to_string(),
-            "artifact_root": self.artifact_root.display().to_string(),
-            "update_catalog_path": self.update_catalog_path.display().to_string(),
             "paths": {
                 "update_channels": "/api/v1/update/channels",
                 "workload_catalog": "/api/v1/deploy/workloads",
@@ -75,6 +74,7 @@ pub fn print_help() {
         "Options:\n",
         "  --host <host>                Bind host (default 127.0.0.1)\n",
         "  --port <port>                Bind port (default 4070)\n",
+        "  --token <token>              Require auth on non-health routes\n",
         "  --workspace-root <path>      Repo workspace root\n",
         "  --deploy-root <path>         Deploy descriptor root\n",
         "  --artifact-root <path>       Artifact file root\n",
@@ -82,13 +82,14 @@ pub fn print_help() {
         "Environment:\n",
         "  KYUUBIKI_DEPLOY_SERVER_HOST\n",
         "  KYUUBIKI_DEPLOY_SERVER_PORT\n",
+        "  KYUUBIKI_DEPLOY_SERVER_TOKEN\n",
         "  KYUUBIKI_DEPLOY_SERVER_WORKSPACE_ROOT\n",
         "  KYUUBIKI_DEPLOY_SERVER_DEPLOY_ROOT\n",
         "  KYUUBIKI_DEPLOY_SERVER_ARTIFACT_ROOT\n",
         "  KYUUBIKI_DEPLOY_SERVER_CATALOG_PATH\n\n",
         "Notes:\n",
         "  The server is read-only and defaults to loopback-only binding.\n",
-        "  It serves update metadata, deploy descriptors, and artifacts from visible paths.\n",
+        "  Set a token to protect non-health routes.\n",
     ));
 }
 
@@ -96,6 +97,7 @@ fn parse_cli_args(args: Vec<String>) -> Result<DeployServerConfig, String> {
     let mut host =
         env_string("KYUUBIKI_DEPLOY_SERVER_HOST").unwrap_or_else(|| "127.0.0.1".to_string());
     let mut port = env_u16("KYUUBIKI_DEPLOY_SERVER_PORT").unwrap_or(4070);
+    let mut auth_token = env_string("KYUUBIKI_DEPLOY_SERVER_TOKEN");
     let mut workspace_root =
         env_path("KYUUBIKI_DEPLOY_SERVER_WORKSPACE_ROOT").unwrap_or_else(default_workspace_root);
     let mut deploy_root = env_path("KYUUBIKI_DEPLOY_SERVER_DEPLOY_ROOT");
@@ -133,6 +135,7 @@ fn parse_cli_args(args: Vec<String>) -> Result<DeployServerConfig, String> {
                     .parse::<u16>()
                     .map_err(|_| format!("invalid port: {value}"))?;
             }
+            "--token" => auth_token = Some(value.trim().to_string()),
             "--workspace-root" => workspace_root = PathBuf::from(value),
             "--deploy-root" => deploy_root = Some(PathBuf::from(value)),
             "--artifact-root" => artifact_root = Some(PathBuf::from(value)),
@@ -147,13 +150,14 @@ fn parse_cli_args(args: Vec<String>) -> Result<DeployServerConfig, String> {
     }
 
     let deploy_root = deploy_root.unwrap_or_else(|| workspace_root.join("deploy"));
-    let artifact_root = artifact_root.unwrap_or_else(|| workspace_root.clone());
+    let artifact_root = artifact_root.unwrap_or_else(|| workspace_root.join("dist"));
     let update_catalog_path =
         catalog_path.unwrap_or_else(|| deploy_root.join("update-channels.json"));
 
     Ok(DeployServerConfig {
         host,
         port,
+        auth_token: auth_token.filter(|value| !value.is_empty()),
         workspace_root,
         deploy_root,
         artifact_root,
@@ -201,22 +205,29 @@ fn handle_connection(mut stream: TcpStream, config: &DeployServerConfig) -> Resu
 
 fn parse_request(buffer: &[u8]) -> Result<Request, String> {
     let request = String::from_utf8_lossy(buffer);
-    let first_line = request
-        .lines()
-        .next()
-        .ok_or_else(|| "empty request".to_string())?;
+    let mut lines = request.lines();
+    let first_line = lines.next().ok_or_else(|| "empty request".to_string())?;
     let mut parts = first_line.split_whitespace();
     let method = parts.next().unwrap_or_default().to_string();
     let path = parts.next().unwrap_or_default().to_string();
     if method.is_empty() || path.is_empty() {
         return Err(format!("invalid request line: {first_line}"));
     }
-    Ok(Request { method, path })
+    let mut headers = HashMap::new();
+    for line in lines.take_while(|line| !line.trim().is_empty()) {
+        if let Some((key, value)) = line.split_once(':') {
+            headers.insert(key.trim().to_ascii_lowercase(), value.trim().to_string());
+        }
+    }
+    Ok(Request { method, path, headers })
 }
 
 fn route_request(config: &DeployServerConfig, request: &Request) -> Response {
     if !matches!(request.method.as_str(), "GET" | "HEAD") {
         return json_response(405, json!({ "error": "method_not_allowed" }));
+    }
+    if route_requires_auth(request.path.as_str()) && !request_is_authorized(config, request) {
+        return json_response(401, json!({ "error": "unauthorized" }));
     }
 
     match request.path.as_str() {
@@ -228,16 +239,10 @@ fn route_request(config: &DeployServerConfig, request: &Request) -> Response {
             serve_json_file(&config.deploy_root.join("workload-catalog.example.json"))
         }
         "/api/v1/deploy/agents/local" => {
-            serve_json_file(&first_existing_path(
-                &config.deploy_root,
-                &["agents.local.json", "agents.local.example.json"],
-            ))
+            serve_json_file(&config.deploy_root.join("agents.local.example.json"))
         }
         "/api/v1/deploy/agents/distributed" => {
-            serve_json_file(&first_existing_path(
-                &config.deploy_root,
-                &["agents.distributed.json", "agents.distributed.example.json"],
-            ))
+            serve_json_file(&config.deploy_root.join("agents.distributed.example.json"))
         }
         "/api/v1/deploy/integrity-contract" => serve_json_file(
             &config
@@ -254,6 +259,20 @@ fn route_request(config: &DeployServerConfig, request: &Request) -> Response {
                 "path": request.path,
             }),
         ),
+    }
+}
+
+fn route_requires_auth(path: &str) -> bool {
+    !matches!(path, "/health" | "/api/health")
+}
+
+fn request_is_authorized(config: &DeployServerConfig, request: &Request) -> bool {
+    let Some(token) = config.auth_token.as_deref() else {
+        return true;
+    };
+    match request.headers.get("authorization") {
+        Some(value) if value.strip_prefix("Bearer ").map(str::trim) == Some(token) => true,
+        _ => request.headers.get("x-kyuubiki-token").map(String::as_str) == Some(token),
     }
 }
 
@@ -280,14 +299,13 @@ fn root_payload(config: &DeployServerConfig) -> Value {
     })
 }
 
-fn health_payload(config: &DeployServerConfig) -> Value {
+fn health_payload(_config: &DeployServerConfig) -> Value {
     json!({
         "status": "ok",
         "service": "kyuubiki-deploy-server",
         "version": env!("CARGO_PKG_VERSION"),
         "schema_version": SERVER_SCHEMA_VERSION,
         "timestamp": unix_timestamp(),
-        "workspace_root": config.workspace_root.display().to_string(),
     })
 }
 
@@ -320,17 +338,6 @@ fn serve_channel_details(config: &DeployServerConfig, path: &str) -> Response {
             }),
         ),
     }
-}
-
-fn first_existing_path(root: &Path, candidates: &[&str]) -> PathBuf {
-    for candidate in candidates {
-        let path = root.join(candidate);
-        if path.exists() {
-            return path;
-        }
-    }
-
-    root.join(candidates[0])
 }
 
 fn serve_release_manifest(config: &DeployServerConfig, path: &str) -> Response {
@@ -478,6 +485,7 @@ fn write_response(
 fn status_text(status_code: u16) -> &'static str {
     match status_code {
         200 => "OK",
+        401 => "Unauthorized",
         400 => "Bad Request",
         404 => "Not Found",
         405 => "Method Not Allowed",
@@ -518,68 +526,4 @@ fn unix_timestamp() -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn safe_join_blocks_parent_escape() {
-        let root = PathBuf::from("/tmp/kyuubiki");
-        let error = safe_join(&root, "../secrets.txt").unwrap_err();
-        assert!(error.contains("escapes configured root"));
-    }
-
-    #[test]
-    fn channel_route_uses_catalog_payload() {
-        let root = unique_test_root("channel");
-        fs::create_dir_all(root.join("deploy")).unwrap();
-        fs::write(
-            root.join("deploy").join("update-channels.json"),
-            serde_json::to_vec_pretty(&json!({
-                "channels": [
-                    { "id": "stable", "version": "1.8.0" }
-                ]
-            }))
-            .unwrap(),
-        )
-        .unwrap();
-
-        let config = test_config(&root);
-        let response = serve_channel_details(&config, "/api/v1/update/channels/stable");
-        assert_eq!(response.status_code, 200);
-        let body = String::from_utf8(response.body).unwrap();
-        assert!(body.contains("\"stable\""));
-    }
-
-    #[test]
-    fn artifact_route_serves_file_body() {
-        let root = unique_test_root("artifact");
-        fs::create_dir_all(root.join("artifacts")).unwrap();
-        fs::write(root.join("artifacts").join("demo.txt"), "hello artifact").unwrap();
-
-        let mut config = test_config(&root);
-        config.artifact_root = root.join("artifacts");
-        let response = serve_artifact(&config, "/artifacts/demo.txt");
-        assert_eq!(response.status_code, 200);
-        assert_eq!(String::from_utf8(response.body).unwrap(), "hello artifact");
-    }
-
-    fn test_config(root: &Path) -> DeployServerConfig {
-        DeployServerConfig {
-            host: "127.0.0.1".to_string(),
-            port: 4070,
-            workspace_root: root.to_path_buf(),
-            deploy_root: root.join("deploy"),
-            artifact_root: root.to_path_buf(),
-            update_catalog_path: root.join("deploy").join("update-channels.json"),
-        }
-    }
-
-    fn unique_test_root(label: &str) -> PathBuf {
-        let root = env::temp_dir().join(format!(
-            "kyuubiki-deploy-server-{label}-{}",
-            unix_timestamp()
-        ));
-        let _ = fs::remove_dir_all(&root);
-        root
-    }
-}
+mod tests;

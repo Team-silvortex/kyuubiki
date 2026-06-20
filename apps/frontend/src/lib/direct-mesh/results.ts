@@ -27,25 +27,50 @@ export type DirectMeshCachedResult = {
 };
 
 type ChunkKind = "nodes" | "elements";
+type DirectMeshCachedEntry = DirectMeshCachedResult & { storedAtUnixMs: number };
+
+const DIRECT_MESH_RESULT_TTL_MS = 10 * 60 * 1000;
+const DIRECT_MESH_RESULT_CACHE_MAX_ENTRIES = 24;
+const DIRECT_MESH_RESULT_CHUNK_MAX_LIMIT = 1_000;
 
 function resultCache() {
   const globalWithCache = globalThis as typeof globalThis & {
-    __kyuubikiDirectMeshResults?: Map<string, DirectMeshCachedResult>;
+    __kyuubikiDirectMeshResults?: Map<string, DirectMeshCachedEntry>;
   };
 
   if (!globalWithCache.__kyuubikiDirectMeshResults) {
-    globalWithCache.__kyuubikiDirectMeshResults = new Map<string, DirectMeshCachedResult>();
+    globalWithCache.__kyuubikiDirectMeshResults = new Map<string, DirectMeshCachedEntry>();
   }
 
-  return globalWithCache.__kyuubikiDirectMeshResults;
+  return globalWithCache.__kyuubikiDirectMeshResults as Map<string, DirectMeshCachedEntry>;
+}
+
+function pruneExpiredResults(now = Date.now()) {
+  const cache = resultCache();
+  for (const [jobId, entry] of cache.entries()) {
+    if (now - entry.storedAtUnixMs > DIRECT_MESH_RESULT_TTL_MS) {
+      cache.delete(jobId);
+    }
+  }
 }
 
 export function putDirectMeshResult(jobId: string, entry: DirectMeshCachedResult) {
-  resultCache().set(jobId, entry);
+  const cache = resultCache();
+  pruneExpiredResults();
+  cache.set(jobId, { ...entry, storedAtUnixMs: Date.now() });
+
+  while (cache.size > DIRECT_MESH_RESULT_CACHE_MAX_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (typeof oldestKey !== "string") break;
+    cache.delete(oldestKey);
+  }
 }
 
 export function getDirectMeshResult(jobId: string) {
-  return resultCache().get(jobId) ?? null;
+  pruneExpiredResults();
+  const entry = resultCache().get(jobId);
+  if (!entry) return null;
+  return entry;
 }
 
 export function chunkDirectMeshResult(
@@ -58,12 +83,14 @@ export function chunkDirectMeshResult(
     throw new Error(`no cached direct mesh result for ${jobId}`);
   }
 
-  const collection = Array.isArray((entry.result as { [key: string]: unknown[] })[kind])
-    ? (((entry.result as { [key: string]: unknown[] })[kind] as unknown[]) ?? [])
-    : [];
+  const rawCollection = (entry.result as Record<string, unknown>)[kind];
+  const collection = Array.isArray(rawCollection) ? rawCollection : [];
 
   const safeOffset = Math.min(Math.max(0, options.offset ?? 0), collection.length);
-  const safeLimit = Math.max(1, options.limit ?? 200);
+  const safeLimit = Math.min(
+    DIRECT_MESH_RESULT_CHUNK_MAX_LIMIT,
+    Math.max(1, options.limit ?? 200),
+  );
   const items = collection.slice(safeOffset, safeOffset + safeLimit);
 
   return {

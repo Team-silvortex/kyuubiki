@@ -60,9 +60,60 @@ export type DirectMeshSolveEnvelope = {
 };
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+const DIRECT_MESH_MAX_ENDPOINTS = 32;
 
 function normalizeEndpoints(input: string[]): string[] {
   return [...new Set(input.map((value) => value.trim()).filter(Boolean))];
+}
+
+function isHostnameLabel(value: string) {
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(value);
+}
+
+function isIpv4Host(value: string) {
+  const parts = value.split(".");
+  return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+}
+
+function isDnsHost(value: string) {
+  return value.split(".").every(isHostnameLabel);
+}
+
+export function parseDirectMeshEndpoint(endpoint: string) {
+  const normalized = endpoint.trim();
+  if (!normalized || normalized.length > 255) {
+    throw new Error(`invalid direct mesh endpoint: ${endpoint}`);
+  }
+  if (
+    normalized.includes("://") ||
+    normalized.includes("/") ||
+    normalized.includes("?") ||
+    normalized.includes("#") ||
+    normalized.includes("@") ||
+    normalized.startsWith(":") ||
+    normalized.endsWith(":")
+  ) {
+    throw new Error(`invalid direct mesh endpoint: ${endpoint}`);
+  }
+
+  const segments = normalized.split(":");
+  if (segments.length !== 2) {
+    throw new Error(`invalid direct mesh endpoint: ${endpoint}`);
+  }
+
+  const [host, portValue] = segments;
+  const port = Number(portValue);
+  if (!host || Number.isNaN(port) || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`invalid direct mesh endpoint: ${endpoint}`);
+  }
+  if (host === "*" || host === "0.0.0.0" || host === "[::]" || host === "::") {
+    throw new Error(`direct mesh endpoint must target a concrete host: ${endpoint}`);
+  }
+  if (!isIpv4Host(host) && !isDnsHost(host) && host !== "localhost") {
+    throw new Error(`invalid direct mesh endpoint host: ${endpoint}`);
+  }
+
+  return { endpoint: `${host}:${port}`, host, port };
 }
 
 function endpointsFromEnv() {
@@ -74,7 +125,11 @@ function endpointsFromEnv() {
 
 export function resolveDirectMeshEndpoints(input?: string[]) {
   const normalized = normalizeEndpoints(input ?? []);
-  return normalized.length > 0 ? normalized : endpointsFromEnv();
+  const endpoints = normalized.length > 0 ? normalized : endpointsFromEnv();
+  if (endpoints.length > DIRECT_MESH_MAX_ENDPOINTS) {
+    throw new Error(`too many direct mesh endpoints; max ${DIRECT_MESH_MAX_ENDPOINTS}`);
+  }
+  return endpoints.map((endpoint) => parseDirectMeshEndpoint(endpoint).endpoint);
 }
 
 export function normalizeDirectMeshEndpoints(input: string[]) {
@@ -86,21 +141,12 @@ function descriptorHealthScore(agent: DirectMeshAgentSummary) {
   return typeof score === "number" ? score : 0;
 }
 
-function splitEndpoint(endpoint: string) {
-  const [host, portValue] = endpoint.split(":");
-  const port = Number(portValue);
-  if (!host || Number.isNaN(port) || port <= 0) {
-    throw new Error(`invalid direct mesh endpoint: ${endpoint}`);
-  }
-  return { host, port };
-}
-
 async function requestRpcFrameSequence(
   endpoint: string,
   method: RpcMethod,
   params: Record<string, unknown>,
 ): Promise<{ response: Extract<RpcFrame, { ok: boolean }>; progressFrames: Array<Record<string, unknown>> }> {
-  const { host, port } = splitEndpoint(endpoint);
+  const { host, port } = parseDirectMeshEndpoint(endpoint);
 
   return new Promise((resolve, reject) => {
     const socket = net.createConnection({ host, port });
@@ -188,7 +234,7 @@ export async function describeDirectMeshAgents(input?: string[]) {
 
   const agents = await Promise.all(
     endpoints.map(async (endpoint): Promise<DirectMeshAgentSummary> => {
-      const { host, port } = splitEndpoint(endpoint);
+      const { host, port } = parseDirectMeshEndpoint(endpoint);
 
       try {
         const { response } = await requestRpcFrameSequence(endpoint, "describe_agent", {});

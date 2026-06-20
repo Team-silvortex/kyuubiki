@@ -449,6 +449,9 @@
               <div>
                 <p class="section-eyebrow desktop-shell-eyebrow">Remote deployment</p>
                 <h2>Operate remote solver nodes</h2>
+                <p class="desktop-shell-note">
+                  Installer enforces bounded remote targets: absolute workspace paths only, plain host fields only, and optional host/workspace allowlists from the desktop environment.
+                </p>
               </div>
             </div>
 
@@ -478,6 +481,41 @@
                 <button class="primary" data-action="remote-bootstrap">Remote bootstrap</button>
               </div>
             </div>
+
+            <div class="form-shell">
+              <div class="panel-header">
+                <h2>Remote policy</h2>
+              </div>
+              <div class="field-grid">
+                <label class="field field-span-2">
+                  <span>Allowed hosts</span>
+                  <input id="remote-policy-allowed-hosts" type="text" placeholder="192.168.1.12,solver-a" />
+                </label>
+                <label class="field field-span-2">
+                  <span>Allowed workspace roots</span>
+                  <input id="remote-policy-allowed-workspaces" type="text" placeholder="/opt/kyuubiki,/srv/kyuubiki" />
+                </label>
+              </div>
+              <div class="field-grid">
+                <label class="field field-span-2">
+                  <span>Effective hosts</span>
+                  <code id="remote-policy-effective-hosts">(unbounded)</code>
+                </label>
+                <label class="field field-span-2">
+                  <span>Effective workspace roots</span>
+                  <code id="remote-policy-effective-workspaces">(unbounded)</code>
+                </label>
+                <label class="field field-span-2">
+                  <span>Config path</span>
+                  <code id="remote-policy-config-path">config/installer-remote-policy.json</code>
+                </label>
+              </div>
+              <div class="action-row">
+                <button data-action="refresh-remote-policy">Refresh policy</button>
+                <button class="primary" data-action="save-remote-policy">Save policy</button>
+              </div>
+            </div>
+            <div class="form-shell"><div class="panel-header"><h2>Remote nodes</h2></div><label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.168.1.12","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"orchestrator_url":"http://192.168.1.10:4000","agent_id":"solver-lab-a","advertise_host":"192.168.1.12","agent_port":5001}]'></textarea></label><pre id="remote-node-summary"></pre><div id="remote-node-cards" class="remote-node-grid"></div><div class="action-row"><button data-action="refresh-remote-nodes">Refresh nodes</button><button data-action="use-first-remote-node">Use first node</button><button data-action="probe-remote-node">Probe node</button><button class="primary" data-action="save-remote-nodes">Save nodes</button></div></div>
 
             <div class="form-shell">
               <div class="panel-header">

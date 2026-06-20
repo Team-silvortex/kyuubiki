@@ -62,6 +62,49 @@ export function currentRemoteAgentPayload() {
   };
 }
 
+export function currentRemotePolicyPayload() {
+  return {
+    allowedHosts: document.getElementById("remote-policy-allowed-hosts").value.trim(),
+    allowedWorkspaceRoots: document.getElementById("remote-policy-allowed-workspaces").value.trim(),
+  };
+}
+
+export function currentRemoteNodeRegistryPayload() {
+  const raw = document.getElementById("remote-node-registry").value.trim();
+  if (!raw) return { nodes: [] };
+  return { nodes: JSON.parse(raw) };
+}
+
+export function hydrateRemotePolicy(policy) {
+  if (!policy) return;
+  document.getElementById("remote-policy-allowed-hosts").value = policy.allowed_hosts || "";
+  document.getElementById("remote-policy-allowed-workspaces").value =
+    policy.allowed_workspace_roots || "";
+  document.getElementById("remote-policy-effective-hosts").textContent =
+    policy.effective_allowed_hosts || "(unbounded)";
+  document.getElementById("remote-policy-effective-workspaces").textContent =
+    policy.effective_allowed_workspace_roots || "(unbounded)";
+  document.getElementById("remote-policy-config-path").textContent = policy.config_path || "";
+}
+
+export function hydrateRemoteNodeRegistry(registry) {
+  if (!registry) return;
+  document.getElementById("remote-node-registry").value = JSON.stringify(registry.nodes || [], null, 2);
+  document.getElementById("remote-node-summary").textContent = registry.rendered || "installer remote nodes";
+}
+
+export function applyRemoteNodeToForm(node) {
+  if (!node) return;
+  document.getElementById("remote-ssh-user").value = node.ssh_user || "";
+  document.getElementById("remote-target-host").value = node.target_host || "";
+  document.getElementById("remote-ssh-port").value = node.ssh_port ?? "";
+  document.getElementById("remote-workspace").value = node.remote_workspace || "";
+  document.getElementById("remote-agent-id").value = node.agent_id || "";
+  document.getElementById("remote-advertise-host").value = node.advertise_host || "";
+  document.getElementById("remote-agent-port").value = node.agent_port ?? 5001;
+  document.getElementById("remote-orchestrator-url").value = node.orchestrator_url || "";
+}
+
 export function renderDoctor(report, platformLabel, workspaceLabel, doctorGrid) {
   platformLabel.textContent = desktopPlatformLabel(report.platform);
   workspaceLabel.textContent = report.workspace;

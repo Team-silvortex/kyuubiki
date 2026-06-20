@@ -98,6 +98,34 @@ h3 {
   color: #7fd0a2;
 }
 
+.remote-node-grid {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0 0;
+}
+
+.remote-node-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(35, 39, 45, 0.92);
+}
+
+.remote-node-card__header,
+.remote-node-card__meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--muted);
+}
+
+.remote-node-card__header strong {
+  color: var(--text);
+}
+
 @media (max-width: 720px) {
   .shell {
     padding: 18px;

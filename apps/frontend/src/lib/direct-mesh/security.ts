@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { parseDirectMeshEndpoint } from "@/lib/direct-mesh/rpc";
+
+const DIRECT_MESH_MAX_REQUEST_ENDPOINTS = 32;
 
 function extractToken(request: Request) {
   const authorization = request.headers.get("authorization");
@@ -11,6 +14,13 @@ function extractToken(request: Request) {
 
 function normalizeEndpoints(input: string[]) {
   return [...new Set(input.map((value) => value.trim()).filter(Boolean))];
+}
+
+function validateAuthorizedEndpoints(input: string[]) {
+  if (input.length > DIRECT_MESH_MAX_REQUEST_ENDPOINTS) {
+    throw new Error(`too many direct mesh endpoints; max ${DIRECT_MESH_MAX_REQUEST_ENDPOINTS}`);
+  }
+  return input.map((endpoint) => parseDirectMeshEndpoint(endpoint).endpoint);
 }
 
 function configuredDirectMeshEndpoints() {
@@ -61,8 +71,8 @@ export function authorizeDirectMeshRequest(request: Request) {
 }
 
 export function resolveAuthorizedDirectMeshEndpoints(input?: string[]) {
-  const requested = normalizeEndpoints(input ?? []);
-  const configured = configuredDirectMeshEndpoints();
+  const requested = validateAuthorizedEndpoints(normalizeEndpoints(input ?? []));
+  const configured = validateAuthorizedEndpoints(configuredDirectMeshEndpoints());
 
   if (requested.length === 0) {
     if (configured.length > 0) return configured;

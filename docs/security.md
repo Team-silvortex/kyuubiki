@@ -97,6 +97,31 @@ Endpoint policy:
   use `KYUUBIKI_DIRECT_MESH_ENDPOINTS` for the default safe path, and only turn
   on `KYUUBIKI_DIRECT_MESH_ALLOW_REQUEST_ENDPOINTS=true` when you explicitly
   want operator-supplied endpoints
+- endpoint syntax
+  only concrete `host:port` targets are accepted; schemes, paths, wildcard
+  hosts, and oversized endpoint lists are rejected before RPC dispatch
+- direct-mesh GUI result cache
+  cached solve results now use a bounded in-process retention window and chunk
+  reads are capped so one browser session cannot grow server memory without limit
+
+### Deploy server
+
+The lightweight deploy server is still intended for trusted local or LAN use,
+but it now supports a simple read-protection gate:
+
+- `KYUUBIKI_DEPLOY_SERVER_TOKEN=<token>`
+- `Authorization: Bearer <token>`
+- `x-kyuubiki-token: <token>`
+
+Behavior:
+
+- token omitted
+  deploy metadata and artifacts stay readable on the bound interface
+- token configured
+  every non-health route on the deploy server requires the configured token
+- health routes
+  `/health` and `/api/health` remain unauthenticated for probes and local
+  supervision
 
 ### Frontend operator settings
 
@@ -216,6 +241,20 @@ for deployment setup.
 - do not expose solver RPC directly to the public internet
 - prefer control-plane mediation unless direct mesh is explicitly needed
 
+### Deploy server
+
+The deploy/update server is intentionally treated as a metadata and release
+artifact surface, not a general workspace file browser.
+
+Current safety defaults:
+
+- loopback-only binding unless an operator explicitly changes the bind host
+- `/api/v1/deploy/agents/local` serves the checked-in example manifest rather
+  than any machine-local untracked deployment file
+- `/artifacts/*` now defaults to the staged `dist/` tree instead of the whole
+  repository workspace
+- `/api/v1/server/config` no longer returns absolute local filesystem paths
+
 ## Current gaps
 
 These areas are not yet finished security features:
@@ -318,6 +357,15 @@ Sensitivity levels:
 - Remote deployment through the Tauri installer uses SSH and shell command
   construction. Treat all changes there as critical even when inputs appear to
   be operator-only.
+- Installer remote deployment is no longer a free-form SSH pass-through:
+  target host, workspace path, advertise host, and orchestrator URL are all
+  shape-validated before any remote command runs, and desktop operators can
+  enforce host/workspace allowlists through the installer-visible
+  `config/installer-remote-policy.json` file or through
+  `KYUUBIKI_INSTALLER_REMOTE_ALLOWED_HOSTS` and
+  `KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS`. When those environment
+  variables are set, they override the file-backed allowlists for the active
+  desktop session.
 - Browser-resident operator secrets are now intentionally in-memory only during
   an active page session, not persisted browser settings. Do not reintroduce
   token serialization through project/model exports, assistant snapshots, or
