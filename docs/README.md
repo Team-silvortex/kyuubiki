@@ -200,6 +200,9 @@ Then branch by intent:
   Deployment descriptors, agent manifests, and workload-catalog examples.
 - `tmp/README.md`
   Disposable local runtime state, working data, and dev-only paths.
+- `../tmp/nightly-overview.html`
+  Human-readable local index for the latest retained nightly regression
+  artifacts across direct-mesh, workflow-catalog, and standard benchmark lanes.
 - `schemas/README.md`
   Shared JSON contract map for jobs, projects, materials, catalogs, language
   packs, and workflow graphs.

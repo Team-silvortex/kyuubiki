@@ -138,6 +138,69 @@ Current behavior notes:
 - the remote lab wrapper expects a narrow passwordless sudo rule for the
   direct-mesh benchmark command path only
 
+## Standard benchmark regression lane
+
+The repository now also keeps a dedicated standard Rust benchmark regression
+path for the checked `mechanical-core`, `thermal-core`, and `compound-core`
+matrix trio.
+
+Use these entrypoints:
+
+- `make benchmark-standard-baselines PROFILE=10k REPEAT=3`
+  Refresh the local checked baseline trio for a given standard profile tier.
+- `make benchmark-standard-compare PROFILE=10k REPEAT=1`
+  Run the standard matrix regression gate locally against the checked-in
+  baselines.
+- `make benchmark-standard-report PROFILE=10k REPEAT=1`
+  Emit per-matrix reports plus one merged local standard comparison report.
+- `make benchmark-standard-nightly`
+  Sync benchmark-only source to `kyuubiki-lab`, run the standard regression
+  trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.
+
+Baseline and report surfaces:
+
+- overview ladder:
+  [workers/rust/benchmarks/BASELINE-OVERVIEW.md](../workers/rust/benchmarks/BASELINE-OVERVIEW.md)
+- checked baseline family:
+  `workers/rust/benchmarks/*-core-<profile>-baseline.json`
+- local/latest merged report:
+  `tmp/standard-benchmark/<slug>/standard-<profile>-compare.md`
+- local/latest per-matrix reports:
+  `tmp/standard-benchmark/<slug>/*-core-<profile>-compare.md`
+- local run index:
+  `tmp/standard-benchmark/index.json`, `tmp/standard-benchmark/README.md`, and
+  `tmp/standard-benchmark/index.html`
+
+Current behavior notes:
+
+- local laptop runs are useful for functional regression gates, but reference
+  timing should prefer `kyuubiki-lab`
+- the current nightly lane is intentionally anchored at `PROFILE=10k` and
+  `REPEAT=1` so it stays stable and affordable as a first always-on signal
+- cases under `5.0 ms` baseline median remain visible in reports but are not
+  treated as hard failures by default
+- the remote wrapper syncs benchmark-only source and does not rely on checked-in
+  server-specific runtime configuration files
+- local retained run folders are now indexed and pruned by retention count so
+  nightly artifact history does not sprawl indefinitely on the runner workspace
+
+## Nightly lane map
+
+Current self-hosted nightly flows have distinct jobs:
+
+- direct-mesh Docker nightly:
+  end-to-end LAN direct-mesh regression through the Docker harness
+- workflow catalog nightly:
+  orchestrated composite workflow regression through the Elixir catalog path
+- standard benchmark nightly:
+  solver-family performance regression for the standard Rust matrix trio on the
+  reference lab machine
+
+Local nightly artifacts are also indexed together under:
+
+- `tmp/nightly-overview.json`
+- `tmp/nightly-overview.html`
+
 ## Failure diagnostics
 
 Integration jobs now provide two failure surfaces:

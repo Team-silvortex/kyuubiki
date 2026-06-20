@@ -1,0 +1,26 @@
+{
+  "repeat": 3,
+  "profile": "ten_k",
+  "matrix": "thermal-core",
+  "generated_at_unix_s": 1781950237,
+  "cases": [
+    {
+      "id": "heat-plane-quad-10k",
+      "family": "heat_plane_quad_2d",
+      "ok": true,
+      "error": null,
+      "repeat": 3,
+      "min_ms": 2595.3060419999997,
+      "median_ms": 2606.220625,
+      "mean_ms": 2663.8280003333334,
+      "p95_ms": 2789.9573339999997,
+      "max_ms": 2789.9573339999997,
+      "dof_count": 10000,
+      "node_count": 10000,
+      "element_count": 9801,
+      "peak_rss_kib": 17728,
+      "max_displacement": 632.253400475732,
+      "max_stress": 1908.425509442442
+    }
+  ]
+}

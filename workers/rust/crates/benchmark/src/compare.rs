@@ -84,6 +84,7 @@ pub(crate) fn render_comparison_report(
         "# Kyuubiki Benchmark Comparison".to_string(),
         String::new(),
         format!("- Profile: `{}`", report.profile.as_str()),
+        format!("- Matrix: `{}`", report.matrix),
         format!("- Repeat count: `{}`", report.repeat),
         format!("- Generated at (unix): `{}`", report.generated_at_unix_s),
         format!(
@@ -131,10 +132,12 @@ pub(crate) fn print_table(
     results: &[BenchmarkResult],
     repeat: usize,
     profile: BenchmarkProfile,
+    matrix: &str,
     comparison: Option<&BenchmarkComparison>,
 ) {
     println!("kyuubiki benchmark suite");
     println!("profile: {}", profile.as_str());
+    println!("matrix: {matrix}");
     println!("repeat count: {repeat}");
     if let Some(comparison) = comparison {
         println!(

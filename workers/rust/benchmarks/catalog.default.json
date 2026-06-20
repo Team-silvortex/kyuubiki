@@ -19,7 +19,17 @@
       "owned_templates": []
     },
     {
+      "name": "mechanical-core",
+      "template_stems": ["axial-bar", "truss-roof", "space-frame", "plane-panel", "plane-quad-panel"],
+      "owned_templates": []
+    },
+    {
       "name": "thermal",
+      "template_stems": ["heat-plane-quad"],
+      "owned_templates": []
+    },
+    {
+      "name": "thermal-core",
       "template_stems": ["heat-plane-quad"],
       "owned_templates": []
     },
@@ -30,6 +40,13 @@
     },
     {
       "name": "compound",
+      "template_stems": ["truss-roof", "space-frame", "heat-plane-quad"],
+      "owned_templates": [
+        { "stem": "compound-surface-panel", "family": "plane_quad2d" }
+      ]
+    },
+    {
+      "name": "compound-core",
       "template_stems": ["truss-roof", "space-frame", "heat-plane-quad"],
       "owned_templates": [
         { "stem": "compound-surface-panel", "family": "plane_quad2d" }

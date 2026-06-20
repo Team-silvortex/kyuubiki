@@ -456,7 +456,7 @@ function loadAgentPorts() {
 }
 
 function loadManifestAgentPorts(env) {
-  const manifestPath = resolveWorkspacePath(env.KYUUBIKI_AGENT_MANIFEST_PATH ?? "./deploy/agents.local.json");
+  const manifestPath = resolveWorkspacePath(env.KYUUBIKI_AGENT_MANIFEST_PATH ?? "./deploy/agents.local.example.json");
   try {
     const payload = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     return Array.isArray(payload.agents)

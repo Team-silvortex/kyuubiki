@@ -9,6 +9,7 @@ pub(crate) fn build_report(
     selected: &[&BenchmarkCase],
     repeat: usize,
     profile: crate::config::BenchmarkProfile,
+    matrix: &str,
 ) -> BenchmarkReport {
     let cases = selected
         .iter()
@@ -18,6 +19,7 @@ pub(crate) fn build_report(
     BenchmarkReport {
         repeat,
         profile,
+        matrix: matrix.to_string(),
         generated_at_unix_s: unix_timestamp(),
         cases,
     }

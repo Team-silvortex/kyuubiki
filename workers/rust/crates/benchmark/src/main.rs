@@ -20,7 +20,7 @@ fn main() {
     let config = BenchmarkConfig::from_env();
     let cases = benchmark_cases(config.profile, &config.matrix);
     let selected = select_cases(&cases, config.case_filter.as_deref());
-    let report = build_report(&selected, config.repeat, config.profile);
+    let report = build_report(&selected, config.repeat, config.profile, &config.matrix);
 
     if let Some(path) = &config.baseline_out {
         let payload = serde_json::to_string_pretty(&report).expect("report should serialize");
@@ -49,6 +49,7 @@ fn main() {
             &report.cases,
             config.repeat,
             config.profile,
+            &report.matrix,
             comparison.as_ref(),
         ),
     }
@@ -142,7 +143,7 @@ mod tests {
         let spec = default_catalog_spec();
 
         assert_eq!(spec.templates.len(), 6);
-        assert!(spec.matrices.len() >= 5);
+        assert!(spec.matrices.len() >= 8);
         assert_eq!(spec.profiles.len(), 7);
         assert!(
             spec.profiles
@@ -181,5 +182,29 @@ mod tests {
                 .any(|case| case.id == "compound-surface-panel-10k")
         );
         assert!(cases.iter().any(|case| case.id == "heat-plane-quad-10k"));
+    }
+
+    #[test]
+    fn report_captures_matrix_identity() {
+        let cases = benchmark_cases(BenchmarkProfile::TenK, "thermal");
+        let selected = cases.iter().collect::<Vec<_>>();
+        let report = crate::runner::build_report(&selected, 1, BenchmarkProfile::TenK, "thermal");
+
+        assert_eq!(report.matrix, "thermal");
+        assert_eq!(report.profile, BenchmarkProfile::TenK);
+    }
+
+    #[test]
+    fn standard_matrices_exist_for_v19_baselines() {
+        let spec = default_catalog_spec();
+        let names = spec
+            .matrices
+            .iter()
+            .map(|matrix| matrix.name.as_str())
+            .collect::<Vec<_>>();
+
+        assert!(names.contains(&"mechanical-core"));
+        assert!(names.contains(&"thermal-core"));
+        assert!(names.contains(&"compound-core"));
     }
 }

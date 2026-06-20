@@ -154,7 +154,23 @@ pub(crate) fn default_catalog_spec() -> BenchmarkCatalogSpec {
                 owned_templates: vec![],
             },
             BenchmarkMatrixSpec {
+                name: "mechanical-core".to_string(),
+                template_stems: vec![
+                    "axial-bar".to_string(),
+                    "truss-roof".to_string(),
+                    "space-frame".to_string(),
+                    "plane-panel".to_string(),
+                    "plane-quad-panel".to_string(),
+                ],
+                owned_templates: vec![],
+            },
+            BenchmarkMatrixSpec {
                 name: "thermal".to_string(),
+                template_stems: vec!["heat-plane-quad".to_string()],
+                owned_templates: vec![],
+            },
+            BenchmarkMatrixSpec {
+                name: "thermal-core".to_string(),
                 template_stems: vec!["heat-plane-quad".to_string()],
                 owned_templates: vec![],
             },
@@ -169,6 +185,18 @@ pub(crate) fn default_catalog_spec() -> BenchmarkCatalogSpec {
             },
             BenchmarkMatrixSpec {
                 name: "compound".to_string(),
+                template_stems: vec![
+                    "truss-roof".to_string(),
+                    "space-frame".to_string(),
+                    "heat-plane-quad".to_string(),
+                ],
+                owned_templates: vec![CaseTemplateSpec {
+                    stem: "compound-surface-panel".to_string(),
+                    family: BenchmarkFamily::PlaneQuad2d,
+                }],
+            },
+            BenchmarkMatrixSpec {
+                name: "compound-core".to_string(),
                 template_stems: vec![
                     "truss-roof".to_string(),
                     "space-frame".to_string(),

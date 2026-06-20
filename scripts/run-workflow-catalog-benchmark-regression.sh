@@ -64,6 +64,9 @@ node "$ROOT_DIR/scripts/compare-workflow-catalog-benchmark.mjs" \
   --fail-on-median-regression-pct "$WORKFLOW_MEDIAN_THRESHOLD" \
   --fail-on-avg-regression-pct "$WORKFLOW_AVG_THRESHOLD"
 
+node "$ROOT_DIR/scripts/build-nightly-artifact-overview.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
 echo "remote summary copied to $CURRENT_SUMMARY_LOCAL"
 echo "comparison json: $COMPARE_JSON_LOCAL"
 echo "comparison report: $COMPARE_MD_LOCAL"

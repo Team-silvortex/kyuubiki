@@ -228,10 +228,16 @@ fn route_request(config: &DeployServerConfig, request: &Request) -> Response {
             serve_json_file(&config.deploy_root.join("workload-catalog.example.json"))
         }
         "/api/v1/deploy/agents/local" => {
-            serve_json_file(&config.deploy_root.join("agents.local.json"))
+            serve_json_file(&first_existing_path(
+                &config.deploy_root,
+                &["agents.local.json", "agents.local.example.json"],
+            ))
         }
         "/api/v1/deploy/agents/distributed" => {
-            serve_json_file(&config.deploy_root.join("agents.distributed.example.json"))
+            serve_json_file(&first_existing_path(
+                &config.deploy_root,
+                &["agents.distributed.json", "agents.distributed.example.json"],
+            ))
         }
         "/api/v1/deploy/integrity-contract" => serve_json_file(
             &config
@@ -314,6 +320,17 @@ fn serve_channel_details(config: &DeployServerConfig, path: &str) -> Response {
             }),
         ),
     }
+}
+
+fn first_existing_path(root: &Path, candidates: &[&str]) -> PathBuf {
+    for candidate in candidates {
+        let path = root.join(candidate);
+        if path.exists() {
+            return path;
+        }
+    }
+
+    root.join(candidates[0])
 }
 
 fn serve_release_manifest(config: &DeployServerConfig, path: &str) -> Response {

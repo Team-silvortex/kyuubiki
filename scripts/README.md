@@ -101,6 +101,26 @@ Useful smoke wrappers:
 - `make test-integration-workflow-catalog-nightly`
   Makefile entry for the remote workflow catalog regression flow against the
   checked-in baseline.
+- `./scripts/run-standard-benchmark-regression.sh`
+  Sync benchmark-only source to `kyuubiki-lab`, run the standard Rust
+  benchmark regression trio there, and pull the merged/per-matrix comparison
+  reports back into `tmp/standard-benchmark/`. The wrapper also refreshes
+  `tmp/standard-benchmark/index.json` plus `README.md` and prunes old run
+  folders by retention count.
+- `./scripts/build-standard-benchmark-index.mjs`
+  Rebuild the local standard benchmark run index under `tmp/standard-benchmark/`
+  and prune older run directories outside the retained window. This emits
+  `index.json`, `README.md`, and `index.html`.
+- `./scripts/build-nightly-artifact-overview.mjs`
+  Rebuild the top-level `tmp/` nightly artifact overview across the direct-mesh,
+  workflow-catalog, and standard-benchmark lanes. This emits `tmp/README.md`,
+  `tmp/nightly-overview.json`, and `tmp/nightly-overview.html`.
+- `make benchmark-standard-nightly`
+  Makefile entry for the remote standard benchmark regression flow against the
+  checked-in standard baselines.
+- `.github/workflows/standard-benchmark-nightly.yml`
+  Self-hosted GitHub Actions entry for the remote standard benchmark
+  regression flow and artifact upload path.
 - `.github/workflows/workflow-catalog-nightly.yml`
   Self-hosted GitHub Actions entry for the remote workflow catalog regression
   flow and artifact upload path.

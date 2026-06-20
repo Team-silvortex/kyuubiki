@@ -48,7 +48,7 @@ agent_discovery =
 agent_manifest_path =
   System.get_env(
     "KYUUBIKI_AGENT_MANIFEST_PATH",
-    Path.expand("../../../deploy/agents.local.json", __DIR__)
+    Path.expand("../../../deploy/agents.local.example.json", __DIR__)
   )
 
 database_url =

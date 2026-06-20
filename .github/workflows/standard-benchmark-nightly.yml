@@ -1,0 +1,46 @@
+name: Standard Benchmark Nightly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "40 18 * * *"
+
+concurrency:
+  group: standard-benchmark-nightly
+  cancel-in-progress: false
+
+jobs:
+  standard-benchmark-nightly:
+    if: ${{ vars.KYUUBIKI_STANDARD_BENCHMARK_SELF_HOSTED == 'true' }}
+    runs-on: self-hosted
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify self-hosted lab access configuration
+        run: |
+          test -n "${KYUUBIKI_LAB_HOST:-}" || { echo "KYUUBIKI_LAB_HOST is required" >&2; exit 1; }
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+
+      - name: Run standard benchmark regression
+        run: |
+          bash ./scripts/run-standard-benchmark-regression.sh
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+          KYUUBIKI_LAB_BENCH_DIR: ${{ vars.KYUUBIKI_LAB_BENCH_DIR }}
+          PROFILE: "10k"
+          REPEAT: "1"
+          BENCHMARK_MEDIAN_THRESHOLD: "25"
+          BENCHMARK_RSS_THRESHOLD: "20"
+          BENCHMARK_MIN_BASELINE_MS: "5.0"
+          OUTPUT_SLUG: github-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Upload standard benchmark comparison artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standard-benchmark-nightly-${{ github.run_attempt }}
+          path: |
+            tmp/standard-benchmark/**
+          if-no-files-found: ignore

@@ -27,6 +27,7 @@ pub(crate) enum BenchmarkWorkload {
 pub(crate) struct BenchmarkReport {
     pub(crate) repeat: usize,
     pub(crate) profile: BenchmarkProfile,
+    pub(crate) matrix: String,
     pub(crate) generated_at_unix_s: u64,
     pub(crate) cases: Vec<BenchmarkResult>,
 }

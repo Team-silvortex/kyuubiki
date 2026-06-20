@@ -5,7 +5,7 @@ import { mountIntegrityPanel, renderIntegrityReport } from "./integrity-panel.js
 import { currentUpdateSourcePayload, hydrateUpdateSourceConfig, mountUpdatePanel, renderLatestAppliedUpdate, renderLatestDownloadedUpdate, renderLatestStagedUpdate, renderUpdatePlan, renderUpdatePreview, selectedUpdateChannel } from "./update-panel.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 (function () {
-  const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.json", DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json", DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
+  const DEFAULT_AGENT_MANIFEST_PATH = "./deploy/agents.local.example.json", DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH = "./deploy/agents.distributed.example.json", DEFAULT_SQLITE_DATABASE_PATH = "./tmp/data/kyuubiki_dev.sqlite3";
   const DEFAULT_PRESET = {
     agentManifestPath: DEFAULT_AGENT_MANIFEST_PATH,
     distributedAgentManifestPath: DEFAULT_DISTRIBUTED_AGENT_MANIFEST_PATH,

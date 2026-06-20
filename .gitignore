@@ -15,6 +15,16 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Deploy / host-local configuration
+deploy/*.env
+deploy/Caddyfile
+deploy/agents.local.json
+deploy/agents.distributed.json
+deploy/workload-catalog.json
+!deploy/*.example
+!deploy/*.example.json
+!deploy/*.env.example
+
 # Elixir / BEAM build output
 _build/
 deps/
