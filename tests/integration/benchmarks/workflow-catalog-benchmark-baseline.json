@@ -1,0 +1,556 @@
+{
+  "id": "workflow-catalog-benchmark-baseline",
+  "version": 1,
+  "generated_at": "2026-06-20T07:51:03Z",
+  "source": {
+    "environment": "kyuubiki-lab",
+    "repeat": 3,
+    "default_case_count": 8,
+    "artifact_path": "/home/kyuubiki-dev/kyuubiki/tmp/workflow-catalog-benchmark.remote.json"
+  },
+  "summary": {
+    "case_count": 8,
+    "fastest_case_id": "workflow.electrostatic-preheat-guard-heat-thermo-blocked-json",
+    "median_elapsed_ms_range": [
+      13,
+      25
+    ],
+    "slowest_case_id": "workflow.heat-thermo-quad-benchmark-json"
+  },
+  "cases": [
+    {
+      "case_id": "workflow.heat-thermo-quad-benchmark-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 85,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 1,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "benchmark_margin": 3.0,
+            "benchmark_winner": "thermo",
+            "thermal_score": 1.5,
+            "thermo_score": 4.5
+          }
+        },
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 2,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "benchmark_margin": 3.0,
+            "benchmark_winner": "thermo",
+            "thermal_score": 1.5,
+            "thermo_score": 4.5
+          }
+        },
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 3,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "benchmark_margin": 3.0,
+            "benchmark_winner": "thermo",
+            "thermal_score": 1.5,
+            "thermo_score": 4.5
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 45.0,
+        "completed_node_count_range": [
+          9,
+          9
+        ],
+        "max_elapsed_ms": 85,
+        "median_elapsed_ms": 25,
+        "min_elapsed_ms": 25,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.heat-thermo-quad-benchmark-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-heat-thermo-summary-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 1,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0015,
+            "max_stress": 18000000.0,
+            "max_temperature_delta": 70.0
+          }
+        },
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 2,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0015,
+            "max_stress": 18000000.0,
+            "max_temperature_delta": 70.0
+          }
+        },
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 27,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 3,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0015,
+            "max_stress": 18000000.0,
+            "max_temperature_delta": 70.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 25.666666666666668,
+        "completed_node_count_range": [
+          9,
+          9
+        ],
+        "max_elapsed_ms": 27,
+        "median_elapsed_ms": 25,
+        "min_elapsed_ms": 25,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-heat-thermo-summary-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-preheat-guard-heat-thermo-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 24,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 1,
+          "skipped_node_count": 1,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0015,
+            "max_stress": 18000000.0,
+            "max_temperature_delta": 70.0
+          }
+        },
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 2,
+          "skipped_node_count": 1,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0015,
+            "max_stress": 18000000.0,
+            "max_temperature_delta": 70.0
+          }
+        },
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 24,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 3,
+          "skipped_node_count": 1,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0015,
+            "max_stress": 18000000.0,
+            "max_temperature_delta": 70.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 24.333333333333332,
+        "completed_node_count_range": [
+          11,
+          11
+        ],
+        "max_elapsed_ms": 25,
+        "median_elapsed_ms": 24,
+        "min_elapsed_ms": 24,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-preheat-guard-heat-thermo-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-preheat-guard-heat-thermo-blocked-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 7,
+          "completed_node_count": 7,
+          "elapsed_ms": 14,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 7,
+          "run_index": 1,
+          "skipped_node_count": 5,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "field_hotspot_count": 1,
+            "field_hotspot_max": 10.0,
+            "field_threshold": 10.0
+          }
+        },
+        {
+          "artifact_count": 7,
+          "completed_node_count": 7,
+          "elapsed_ms": 12,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 7,
+          "run_index": 2,
+          "skipped_node_count": 5,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "field_hotspot_count": 1,
+            "field_hotspot_max": 10.0,
+            "field_threshold": 10.0
+          }
+        },
+        {
+          "artifact_count": 7,
+          "completed_node_count": 7,
+          "elapsed_ms": 13,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 7,
+          "run_index": 3,
+          "skipped_node_count": 5,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "field_hotspot_count": 1,
+            "field_hotspot_max": 10.0,
+            "field_threshold": 10.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 13.0,
+        "completed_node_count_range": [
+          7,
+          7
+        ],
+        "max_elapsed_ms": 14,
+        "median_elapsed_ms": 13,
+        "min_elapsed_ms": 12,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-preheat-guard-heat-thermo-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-heat-thermo-triangle-summary-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 26,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 1,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0025,
+            "max_stress": 22500000.0,
+            "max_temperature_delta": 75.0
+          }
+        },
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 2,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0025,
+            "max_stress": 22500000.0,
+            "max_temperature_delta": 75.0
+          }
+        },
+        {
+          "artifact_count": 9,
+          "completed_node_count": 9,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 9,
+          "run_index": 3,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0025,
+            "max_stress": 22500000.0,
+            "max_temperature_delta": 75.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 25.333333333333332,
+        "completed_node_count_range": [
+          9,
+          9
+        ],
+        "max_elapsed_ms": 26,
+        "median_elapsed_ms": 25,
+        "min_elapsed_ms": 25,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-heat-thermo-triangle-summary-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-quad-triangle-compare-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 1,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "delta_potential_peak": 2.0,
+            "quad_potential_peak": 10.0,
+            "summary_shared_numeric_field_count": 6,
+            "triangle_potential_peak": 12.0
+          }
+        },
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 24,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 2,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "delta_potential_peak": 2.0,
+            "quad_potential_peak": 10.0,
+            "summary_shared_numeric_field_count": 6,
+            "triangle_potential_peak": 12.0
+          }
+        },
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 24,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 3,
+          "skipped_node_count": 0,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "delta_potential_peak": 2.0,
+            "quad_potential_peak": 10.0,
+            "summary_shared_numeric_field_count": 6,
+            "triangle_potential_peak": 12.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 24.333333333333332,
+        "completed_node_count_range": [
+          11,
+          11
+        ],
+        "max_elapsed_ms": 25,
+        "median_elapsed_ms": 24,
+        "min_elapsed_ms": 24,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-quad-triangle-compare-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 26,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 1,
+          "skipped_node_count": 1,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0025,
+            "max_stress": 22500000.0,
+            "max_temperature_delta": 75.0
+          }
+        },
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 2,
+          "skipped_node_count": 1,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0025,
+            "max_stress": 22500000.0,
+            "max_temperature_delta": 75.0
+          }
+        },
+        {
+          "artifact_count": 11,
+          "completed_node_count": 11,
+          "elapsed_ms": 25,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 11,
+          "run_index": 3,
+          "skipped_node_count": 1,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "max_displacement": 0.0025,
+            "max_stress": 22500000.0,
+            "max_temperature_delta": 75.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 25.333333333333332,
+        "completed_node_count_range": [
+          11,
+          11
+        ],
+        "max_elapsed_ms": 26,
+        "median_elapsed_ms": 25,
+        "min_elapsed_ms": 25,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
+    },
+    {
+      "case_id": "workflow.electrostatic-triangle-preheat-guard-heat-thermo-blocked-json",
+      "repeat": 3,
+      "runs": [
+        {
+          "artifact_count": 7,
+          "completed_node_count": 7,
+          "elapsed_ms": 14,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 7,
+          "run_index": 1,
+          "skipped_node_count": 5,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "field_hotspot_count": 1,
+            "field_hotspot_max": 10.0,
+            "field_threshold": 10.0
+          }
+        },
+        {
+          "artifact_count": 7,
+          "completed_node_count": 7,
+          "elapsed_ms": 13,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 7,
+          "run_index": 2,
+          "skipped_node_count": 5,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "field_hotspot_count": 1,
+            "field_hotspot_max": 10.0,
+            "field_threshold": 10.0
+          }
+        },
+        {
+          "artifact_count": 7,
+          "completed_node_count": 7,
+          "elapsed_ms": 12,
+          "performance": {},
+          "performance_available": false,
+          "progress_event_count": 7,
+          "run_index": 3,
+          "skipped_node_count": 5,
+          "slowest_nodes": [],
+          "summary_excerpt": {
+            "field_hotspot_count": 1,
+            "field_hotspot_max": 10.0,
+            "field_threshold": 10.0
+          }
+        }
+      ],
+      "summary": {
+        "avg_elapsed_ms": 13.0,
+        "completed_node_count_range": [
+          7,
+          7
+        ],
+        "max_elapsed_ms": 14,
+        "median_elapsed_ms": 13,
+        "min_elapsed_ms": 12,
+        "run_count": 3
+      },
+      "workflow_id": "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json"
+    }
+  ]
+}

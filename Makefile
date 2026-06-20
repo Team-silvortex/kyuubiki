@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report
 
 help:
 	@echo "Available targets:"
@@ -78,12 +78,15 @@ help:
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
-	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default)"
-	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline"
-	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline"
+	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k supported)"
+	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k)"
+	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k)"
 	@echo "  make test-integration-direct-mesh-docker-compare Compare a Docker direct-mesh summary against the checked-in baseline"
 	@echo "  make test-integration-direct-mesh-docker-report Run the Docker direct-mesh benchmark and write a baseline comparison report"
 	@echo "  make test-integration-direct-mesh-docker-nightly Run the remote direct-mesh Docker regression flow against the checked-in baseline"
+	@echo "  make test-integration-workflow-catalog-compare Compare a workflow catalog benchmark summary against the checked-in baseline"
+	@echo "  make test-integration-workflow-catalog-report Run the workflow catalog benchmark and write a baseline comparison report"
+	@echo "  make test-integration-workflow-catalog-nightly Run the remote workflow catalog regression flow against the checked-in baseline"
 	@echo "  make tdd-web     Run a focused Elixir test by FILE=... or TEST=..."
 	@echo "  make tdd-rust    Run focused Rust tests with FILTER=..."
 	@echo "  ./scripts/kyuubiki help        Show the unified local entrypoint"
@@ -286,6 +289,16 @@ test-integration-direct-mesh-docker-report:
 
 test-integration-direct-mesh-docker-nightly:
 	@bash ./scripts/run-direct-mesh-benchmark-regression.sh
+
+test-integration-workflow-catalog-compare:
+	@node ./scripts/compare-workflow-catalog-benchmark.mjs --current $${CURRENT:-tmp/workflow-catalog-benchmark.json} --baseline $${BASELINE:-tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json} --json-out $${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} --report-out $${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md} --fail-on-median-regression-pct $${WORKFLOW_MEDIAN_THRESHOLD:-50} --fail-on-avg-regression-pct $${WORKFLOW_AVG_THRESHOLD:-80}
+
+test-integration-workflow-catalog-report:
+	@cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_catalog_report_test.exs
+	@$(MAKE) test-integration-workflow-catalog-compare CURRENT=$${CURRENT:-tmp/workflow-catalog-benchmark.json} COMPARE_OUT=$${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} REPORT_OUT=$${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md}
+
+test-integration-workflow-catalog-nightly:
+	@bash ./scripts/run-workflow-catalog-benchmark-regression.sh
 
 test-integration-ui-mechanical:
 	@node --test tests/integration/workbench-ui-mechanical-smoke.test.mjs

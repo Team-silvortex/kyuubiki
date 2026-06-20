@@ -6,7 +6,13 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
 
   @default_case_ids [
     "workflow.heat-thermo-quad-benchmark-json",
-    "workflow.electrostatic-preheat-guard-heat-thermo-json"
+    "workflow.electrostatic-heat-thermo-summary-json",
+    "workflow.electrostatic-preheat-guard-heat-thermo-json",
+    "workflow.electrostatic-preheat-guard-heat-thermo-blocked-json",
+    "workflow.electrostatic-heat-thermo-triangle-summary-json",
+    "workflow.electrostatic-quad-triangle-compare-json",
+    "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
+    "workflow.electrostatic-triangle-preheat-guard-heat-thermo-blocked-json"
   ]
 
   def default_case_ids, do: @default_case_ids
@@ -163,6 +169,216 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
     }
   end
 
+  defp benchmark_case!("workflow.electrostatic-heat-thermo-summary-json") do
+    %{
+      workflow_id: "workflow.electrostatic-heat-thermo-summary-json",
+      input_artifacts: &WorkflowApi.electrostatic_plane_quad_input_artifacts/0,
+      frame_sessions: fn -> WorkflowApiFixtures.guarded_quad_frames(:continued) end,
+      summary_excerpt: fn summary ->
+        %{
+          "max_displacement" => summary["max_displacement"],
+          "max_stress" => summary["max_stress"],
+          "max_temperature_delta" => summary["max_temperature_delta"]
+        }
+      end,
+      verify: fn result_payload, summary ->
+        result = result_payload["result"]
+
+        unless result_payload["job"]["status"] == "completed" do
+          raise "quad coupled job did not complete"
+        end
+
+        unless length(result["completed_nodes"]) == 9 do
+          raise "quad coupled completed node count drifted"
+        end
+
+        unless summary["max_displacement"] == 0.0015 and
+                 summary["max_stress"] == 18_000_000.0 and
+                 summary["max_temperature_delta"] == 70.0 do
+          raise "quad coupled summary drifted"
+        end
+      end
+    }
+  end
+
+  defp benchmark_case!("workflow.electrostatic-preheat-guard-heat-thermo-blocked-json") do
+    %{
+      workflow_id: "workflow.electrostatic-preheat-guard-heat-thermo-json",
+      input_artifacts: &WorkflowApi.electrostatic_plane_quad_input_artifacts/0,
+      frame_sessions: fn -> WorkflowApiFixtures.guarded_quad_frames(:blocked) end,
+      summary_excerpt: fn summary ->
+        %{
+          "field_hotspot_count" => summary["field_hotspot_count"],
+          "field_hotspot_max" => summary["field_hotspot_max"],
+          "field_threshold" => summary["field_threshold"]
+        }
+      end,
+      verify: fn result_payload, summary ->
+        result = result_payload["result"]
+
+        unless result_payload["job"]["status"] == "completed" do
+          raise "guarded blocked job did not complete"
+        end
+
+        unless length(result["completed_nodes"]) == 7 do
+          raise "guarded blocked completed node count drifted"
+        end
+
+        unless length(result["skipped_nodes"]) >= 5 do
+          raise "guarded blocked skipped node count drifted"
+        end
+
+        unless summary["field_hotspot_count"] == 1 and
+                 summary["field_hotspot_max"] == 10.0 and
+                 summary["field_threshold"] == 10.0 do
+          raise "guarded blocked summary drifted"
+        end
+      end
+    }
+  end
+
+  defp benchmark_case!("workflow.electrostatic-heat-thermo-triangle-summary-json") do
+    %{
+      workflow_id: "workflow.electrostatic-heat-thermo-triangle-summary-json",
+      input_artifacts: &WorkflowApi.electrostatic_plane_triangle_input_artifacts/0,
+      frame_sessions: &electrostatic_heat_thermo_triangle_frames/0,
+      summary_excerpt: fn summary ->
+        %{
+          "max_displacement" => summary["max_displacement"],
+          "max_stress" => summary["max_stress"],
+          "max_temperature_delta" => summary["max_temperature_delta"]
+        }
+      end,
+      verify: fn result_payload, summary ->
+        result = result_payload["result"]
+
+        unless result_payload["job"]["status"] == "completed" do
+          raise "triangle coupled job did not complete"
+        end
+
+        unless length(result["completed_nodes"]) == 9 do
+          raise "triangle coupled completed node count drifted"
+        end
+
+        unless summary["max_displacement"] == 0.0025 and
+                 summary["max_stress"] == 22_500_000.0 and
+                 summary["max_temperature_delta"] == 75.0 do
+          raise "triangle coupled summary drifted"
+        end
+      end
+    }
+  end
+
+  defp benchmark_case!("workflow.electrostatic-quad-triangle-compare-json") do
+    %{
+      workflow_id: "workflow.electrostatic-quad-triangle-compare-json",
+      input_artifacts: &electrostatic_quad_triangle_compare_input_artifacts/0,
+      frame_sessions: &electrostatic_quad_triangle_compare_frames/0,
+      summary_excerpt: fn summary ->
+        %{
+          "quad_potential_peak" => summary["quad_potential_peak"],
+          "triangle_potential_peak" => summary["triangle_potential_peak"],
+          "delta_potential_peak" => summary["delta_potential_peak"],
+          "summary_shared_numeric_field_count" => summary["summary_shared_numeric_field_count"]
+        }
+      end,
+      verify: fn result_payload, summary ->
+        result = result_payload["result"]
+
+        unless result_payload["job"]["status"] == "completed" do
+          raise "electrostatic compare job did not complete"
+        end
+
+        unless length(result["completed_nodes"]) == 11 do
+          raise "electrostatic compare completed node count drifted"
+        end
+
+        unless summary["quad_potential_peak"] == 10.0 and
+                 summary["triangle_potential_peak"] == 12.0 and
+                 summary["delta_potential_peak"] == 2.0 and
+                 summary["ratio_potential_peak"] == 1.2 and
+                 summary["percent_change_potential_peak"] == 20.0 and
+                 summary["delta_electric_field_peak"] == 0.0 and
+                 summary["delta_flux_density_peak"] == 0.0 and
+                 summary["summary_shared_numeric_field_count"] == 6 do
+          raise "electrostatic compare summary drifted"
+        end
+      end
+    }
+  end
+
+  defp benchmark_case!("workflow.electrostatic-triangle-preheat-guard-heat-thermo-json") do
+    %{
+      workflow_id: "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
+      input_artifacts: &WorkflowApi.electrostatic_plane_triangle_input_artifacts/0,
+      frame_sessions: fn -> WorkflowApiFixtures.guarded_triangle_frames(:continued) end,
+      summary_excerpt: fn summary ->
+        %{
+          "max_displacement" => summary["max_displacement"],
+          "max_stress" => summary["max_stress"],
+          "max_temperature_delta" => summary["max_temperature_delta"]
+        }
+      end,
+      verify: fn result_payload, summary ->
+        result = result_payload["result"]
+
+        unless result_payload["job"]["status"] == "completed" do
+          raise "guarded triangle coupled job did not complete"
+        end
+
+        unless length(result["completed_nodes"]) == 11 do
+          raise "guarded triangle completed node count drifted"
+        end
+
+        unless length(result["skipped_nodes"]) == 1 do
+          raise "guarded triangle skipped node count drifted"
+        end
+
+        unless summary["max_displacement"] == 0.0025 and
+                 summary["max_stress"] == 22_500_000.0 and
+                 summary["max_temperature_delta"] == 75.0 do
+          raise "guarded triangle summary drifted"
+        end
+      end
+    }
+  end
+
+  defp benchmark_case!("workflow.electrostatic-triangle-preheat-guard-heat-thermo-blocked-json") do
+    %{
+      workflow_id: "workflow.electrostatic-triangle-preheat-guard-heat-thermo-json",
+      input_artifacts: &WorkflowApi.electrostatic_plane_triangle_input_artifacts/0,
+      frame_sessions: fn -> WorkflowApiFixtures.guarded_triangle_frames(:blocked) end,
+      summary_excerpt: fn summary ->
+        %{
+          "field_hotspot_count" => summary["field_hotspot_count"],
+          "field_hotspot_max" => summary["field_hotspot_max"],
+          "field_threshold" => summary["field_threshold"]
+        }
+      end,
+      verify: fn result_payload, summary ->
+        result = result_payload["result"]
+
+        unless result_payload["job"]["status"] == "completed" do
+          raise "guarded triangle blocked job did not complete"
+        end
+
+        unless length(result["completed_nodes"]) == 7 do
+          raise "guarded triangle blocked completed node count drifted"
+        end
+
+        unless length(result["skipped_nodes"]) >= 5 do
+          raise "guarded triangle blocked skipped node count drifted"
+        end
+
+        unless summary["field_hotspot_count"] == 1 and
+                 summary["field_hotspot_max"] == 10.0 and
+                 summary["field_threshold"] == 10.0 do
+          raise "guarded triangle blocked summary drifted"
+        end
+      end
+    }
+  end
+
   defp benchmark_case!(case_id) do
     raise "unknown workflow catalog benchmark case: #{case_id}"
   end
@@ -253,6 +469,126 @@ defmodule KyuubikiWeb.TestSupport.WorkflowCatalogBenchmark do
                 "von_mises_stress" => 1200.0,
                 "stress_x" => -1200.0,
                 "stress_y" => -1200.0
+              }
+            ]
+          }
+        }
+      ]
+    ]
+  end
+
+  defp electrostatic_quad_triangle_compare_input_artifacts do
+    WorkflowApi.electrostatic_plane_quad_input_artifacts()
+    |> Map.merge(WorkflowApi.electrostatic_plane_triangle_input_artifacts())
+  end
+
+  defp electrostatic_quad_triangle_compare_frames do
+    WorkflowApiFixtures.electrostatic_quad_summary_frames() ++
+      [List.first(electrostatic_heat_thermo_triangle_frames())]
+  end
+
+  defp electrostatic_heat_thermo_triangle_frames do
+    [
+      [
+        %{
+          "ok" => true,
+          "result" => %{
+            "nodes" => [
+              %{"index" => 0, "id" => "e0", "x" => 0.0, "y" => 0.0, "potential" => 12.0},
+              %{"index" => 1, "id" => "e1", "x" => 1.0, "y" => 0.0, "potential" => 0.0},
+              %{"index" => 2, "id" => "e2", "x" => 0.0, "y" => 1.0, "potential" => 6.0}
+            ],
+            "elements" => [
+              %{
+                "index" => 0,
+                "id" => "et0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "area" => 0.5,
+                "electric_field_x" => 6.0,
+                "electric_field_y" => 8.0,
+                "electric_field_magnitude" => 10.0,
+                "electric_flux_density_x" => 12.0,
+                "electric_flux_density_y" => 16.0,
+                "electric_flux_density_magnitude" => 20.0
+              }
+            ],
+            "max_potential" => 12.0,
+            "max_electric_field" => 10.0,
+            "max_flux_density" => 20.0,
+            "input" => %{
+              "elements" => [
+                %{
+                  "id" => "et0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "thickness" => 0.05,
+                  "permittivity" => 2.0
+                }
+              ]
+            }
+          }
+        }
+      ],
+      [
+        %{
+          "ok" => true,
+          "result" => %{
+            "max_temperature" => 75.0,
+            "max_heat_flux" => 900.0,
+            "nodes" => [
+              %{"id" => "t0", "x" => 0.0, "y" => 0.0, "temperature" => 75.0, "heat_load" => 500.0},
+              %{"id" => "t1", "x" => 1.0, "y" => 0.0, "temperature" => 55.0, "heat_load" => 500.0},
+              %{"id" => "t2", "x" => 0.0, "y" => 1.0, "temperature" => 35.0, "heat_load" => 500.0}
+            ],
+            "elements" => [
+              %{
+                "id" => "ht0",
+                "node_i" => 0,
+                "node_j" => 1,
+                "node_k" => 2,
+                "temperature_gradient_x" => 20.0,
+                "temperature_gradient_y" => -40.0,
+                "heat_flux_x" => -450.0,
+                "heat_flux_y" => 900.0
+              }
+            ],
+            "input" => %{
+              "elements" => [
+                %{
+                  "id" => "ht0",
+                  "node_i" => 0,
+                  "node_j" => 1,
+                  "node_k" => 2,
+                  "thickness" => 0.02,
+                  "conductivity" => 45.0
+                }
+              ]
+            }
+          }
+        }
+      ],
+      [
+        %{
+          "ok" => true,
+          "result" => %{
+            "max_displacement" => 0.0025,
+            "max_stress" => 22_500_000.0,
+            "max_temperature_delta" => 75.0,
+            "nodes" => [
+              %{"id" => "t0", "temperature_delta" => 75.0},
+              %{"id" => "t1", "temperature_delta" => 55.0},
+              %{"id" => "t2", "temperature_delta" => 35.0}
+            ],
+            "elements" => [
+              %{
+                "id" => "tt0",
+                "stress_x" => -22_500_000.0,
+                "stress_y" => -18_000_000.0,
+                "mechanical_strain_x" => -2.2e-4,
+                "mechanical_strain_y" => -1.8e-4
               }
             ]
           }

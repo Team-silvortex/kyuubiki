@@ -1,0 +1,111 @@
+{
+  "templates": [
+    { "stem": "axial-bar", "family": "axial_bar" },
+    { "stem": "truss-roof", "family": "truss2d" },
+    { "stem": "space-frame", "family": "truss_frame3d" },
+    { "stem": "plane-panel", "family": "plane_triangle2d" },
+    { "stem": "plane-quad-panel", "family": "plane_quad2d" },
+    { "stem": "heat-plane-quad", "family": "heat_plane_quad2d" }
+  ],
+  "matrices": [
+    {
+      "name": "core",
+      "template_stems": ["axial-bar", "truss-roof", "space-frame", "plane-panel", "plane-quad-panel", "heat-plane-quad"],
+      "owned_templates": []
+    },
+    {
+      "name": "structural",
+      "template_stems": ["axial-bar", "truss-roof", "space-frame", "plane-panel", "plane-quad-panel"],
+      "owned_templates": []
+    },
+    {
+      "name": "thermal",
+      "template_stems": ["heat-plane-quad"],
+      "owned_templates": []
+    },
+    {
+      "name": "surface",
+      "template_stems": ["plane-panel", "plane-quad-panel", "heat-plane-quad"],
+      "owned_templates": []
+    },
+    {
+      "name": "compound",
+      "template_stems": ["truss-roof", "space-frame", "heat-plane-quad"],
+      "owned_templates": [
+        { "stem": "compound-surface-panel", "family": "plane_quad2d" }
+      ]
+    }
+  ],
+  "profiles": [
+    {
+      "profile": "medium",
+      "suffix": "medium",
+      "axial_elements": 120,
+      "truss": { "kind": "pratt", "bays": 12, "span": 24.0, "height": 5.0 },
+      "space_frame": { "nx": 4, "ny": 4, "width": 8.0, "depth": 8.0, "height": 2.8 },
+      "plane_triangle": { "nx": 6, "ny": 4, "width": 6.0, "height": 4.0 },
+      "plane_quad": { "nx": 6, "ny": 4, "width": 6.0, "height": 4.0 },
+      "heat_plane_quad": { "nx": 6, "ny": 4, "width": 6.0, "height": 4.0 }
+    },
+    {
+      "profile": "large",
+      "suffix": "large",
+      "axial_elements": 2500,
+      "truss": { "kind": "pratt", "bays": 127, "span": 64.0, "height": 12.0 },
+      "space_frame": { "nx": 14, "ny": 14, "width": 28.0, "depth": 28.0, "height": 4.8 },
+      "plane_triangle": { "nx": 21, "ny": 21, "width": 21.0, "height": 21.0 },
+      "plane_quad": { "nx": 21, "ny": 21, "width": 21.0, "height": 21.0 },
+      "heat_plane_quad": { "nx": 21, "ny": 21, "width": 21.0, "height": 21.0 }
+    },
+    {
+      "profile": "v2",
+      "suffix": "v2",
+      "axial_elements": 5000,
+      "truss": { "kind": "pratt", "bays": 2500, "span": 1250.0, "height": 80.0 },
+      "space_frame": { "nx": 34, "ny": 34, "width": 68.0, "depth": 68.0, "height": 10.0 },
+      "plane_triangle": { "nx": 70, "ny": 70, "width": 70.0, "height": 70.0 },
+      "plane_quad": { "nx": 70, "ny": 70, "width": 70.0, "height": 70.0 },
+      "heat_plane_quad": { "nx": 70, "ny": 70, "width": 70.0, "height": 70.0 }
+    },
+    {
+      "profile": "ten_k",
+      "suffix": "10k",
+      "axial_elements": 10000,
+      "truss": { "kind": "lattice", "nx": 99, "ny": 99, "width": 120.0, "height": 120.0 },
+      "space_frame": { "nx": 70, "ny": 70, "width": 140.0, "depth": 140.0, "height": 16.0 },
+      "plane_triangle": { "nx": 99, "ny": 99, "width": 99.0, "height": 99.0 },
+      "plane_quad": { "nx": 99, "ny": 99, "width": 99.0, "height": 99.0 },
+      "heat_plane_quad": { "nx": 99, "ny": 99, "width": 99.0, "height": 99.0 }
+    },
+    {
+      "profile": "fifteen_k",
+      "suffix": "15k",
+      "axial_elements": 15000,
+      "truss": { "kind": "lattice", "nx": 121, "ny": 121, "width": 146.0, "height": 146.0 },
+      "space_frame": { "nx": 86, "ny": 86, "width": 172.0, "depth": 172.0, "height": 18.0 },
+      "plane_triangle": { "nx": 121, "ny": 121, "width": 121.0, "height": 121.0 },
+      "plane_quad": { "nx": 121, "ny": 121, "width": 121.0, "height": 121.0 },
+      "heat_plane_quad": { "nx": 121, "ny": 121, "width": 121.0, "height": 121.0 }
+    },
+    {
+      "profile": "twenty_k",
+      "suffix": "20k",
+      "axial_elements": 20000,
+      "truss": { "kind": "lattice", "nx": 140, "ny": 140, "width": 168.0, "height": 168.0 },
+      "space_frame": { "nx": 99, "ny": 99, "width": 198.0, "depth": 198.0, "height": 20.0 },
+      "plane_triangle": { "nx": 140, "ny": 140, "width": 140.0, "height": 140.0 },
+      "plane_quad": { "nx": 140, "ny": 140, "width": 140.0, "height": 140.0 },
+      "heat_plane_quad": { "nx": 140, "ny": 140, "width": 140.0, "height": 140.0 }
+    },
+    {
+      "profile": "hundred_k",
+      "suffix": "100k",
+      "axial_elements": 100000,
+      "truss": { "kind": "lattice", "nx": 315, "ny": 315, "width": 378.0, "height": 378.0 },
+      "space_frame": { "nx": 223, "ny": 223, "width": 446.0, "depth": 446.0, "height": 28.0 },
+      "plane_triangle": { "nx": 315, "ny": 315, "width": 315.0, "height": 315.0 },
+      "plane_quad": { "nx": 315, "ny": 315, "width": 315.0, "height": 315.0 },
+      "heat_plane_quad": { "nx": 315, "ny": 315, "width": 315.0, "height": 315.0 }
+    }
+  ]
+}

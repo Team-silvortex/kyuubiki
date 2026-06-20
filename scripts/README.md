@@ -79,9 +79,31 @@ Useful smoke wrappers:
   repository-level `tmp/workflow-large-graph-benchmark.json`.
 - `cd apps/web && mix test test/kyuubiki_web/benchmark/workflow_catalog_report_test.exs`
   Runs the catalog-backed composite workflow benchmark suite for the current
-  thermal and guarded coupled flows, then writes a machine-readable JSON report
-  at `../tmp/workflow-catalog-benchmark.json` from `apps/web`, which is the
-  repository-level `tmp/workflow-catalog-benchmark.json`.
+  thermal and guarded coupled flows across the default 8-case quad/triangle
+  suite, then writes a machine-readable JSON report at
+  `../tmp/workflow-catalog-benchmark.json` from `apps/web`, which is the
+  repository-level `tmp/workflow-catalog-benchmark.json`. The current checked-in
+  baseline snapshot is
+  `tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json`.
+- `node ./scripts/compare-workflow-catalog-benchmark.mjs --current tmp/workflow-catalog-benchmark.json --baseline tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json --report-out tmp/workflow-catalog-benchmark.compare.md --json-out tmp/workflow-catalog-benchmark.compare.json`
+  Compare a workflow catalog benchmark report against the checked-in 8-case
+  baseline and emit both Markdown and machine-readable diff artifacts.
+- `make test-integration-workflow-catalog-compare CURRENT=tmp/workflow-catalog-benchmark.json`
+  Makefile entry for comparing a workflow catalog benchmark report against the
+  checked-in 8-case baseline.
+- `make test-integration-workflow-catalog-report`
+  Run the local workflow catalog benchmark report case and compare it against
+  the checked-in baseline.
+- `./scripts/run-workflow-catalog-benchmark-regression.sh`
+  Run the remote workflow catalog benchmark on `kyuubiki-lab`, copy the
+  resulting summary back into the local workspace, and compare it against the
+  checked-in baseline with per-case regression thresholds.
+- `make test-integration-workflow-catalog-nightly`
+  Makefile entry for the remote workflow catalog regression flow against the
+  checked-in baseline.
+- `.github/workflows/workflow-catalog-nightly.yml`
+  Self-hosted GitHub Actions entry for the remote workflow catalog regression
+  flow and artifact upload path.
 - `cd apps/web && mix test test/kyuubiki_web/api/workflow_large_graph_api_test.exs && ELIXIR_PA="$(find "$PWD/_build/test/lib" -maxdepth 2 -type d -name ebin -print | tr '\n' ' ')" elixir -pa $ELIXIR_PA ../../scripts/workflow-large-graph-benchmark.exs 96 256 512 --output ../../tmp/workflow-large-graph-benchmark.json`
   Lower-level host script path for environments that allow plain Elixir TCP
   sockets outside `mix test`.

@@ -60,6 +60,24 @@ The current checked-in Docker baseline lives at:
 
 - `tests/integration/benchmarks/direct-mesh-docker-baseline.json`
 
+The current checked-in workflow catalog baseline lives at:
+
+- `tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json`
+
+To compare an existing workflow catalog benchmark report against that baseline:
+
+- `node ./scripts/compare-workflow-catalog-benchmark.mjs --current tmp/workflow-catalog-benchmark.json --baseline tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json --report-out tmp/workflow-catalog-benchmark.compare.md --json-out tmp/workflow-catalog-benchmark.compare.json`
+- `make test-integration-workflow-catalog-compare CURRENT=tmp/workflow-catalog-benchmark.json`
+
+To run a fresh workflow catalog benchmark and emit current-vs-baseline reports:
+
+- `make test-integration-workflow-catalog-report`
+
+To run the remote workflow catalog regression flow against `kyuubiki-lab`:
+
+- `./scripts/run-workflow-catalog-benchmark-regression.sh`
+- `make test-integration-workflow-catalog-nightly`
+
 To compare an existing Docker summary against that baseline:
 
 - `make test-integration-direct-mesh-docker-compare CURRENT=tmp/direct-mesh-benchmark-container/latest/summary.json`
@@ -78,6 +96,11 @@ for self-hosted runners on the same LAN. It is gated behind
 `vars.KYUUBIKI_DIRECT_MESH_SELF_HOSTED == 'true'` so public GitHub runners do
 not try to reach the private lab machine. The remote regression wrapper also
 expects passwordless `sudo` on the lab host for the benchmark command path.
+
+The repository also includes `.github/workflows/workflow-catalog-nightly.yml`
+for self-hosted runners on the same LAN. It is gated behind
+`vars.KYUUBIKI_WORKFLOW_CATALOG_SELF_HOSTED == 'true'` so public GitHub runners
+do not try to reach the private lab machine.
 
 The Workbench UI smoke suite is split by domain so failures are easier to triage:
 

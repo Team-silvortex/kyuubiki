@@ -27,8 +27,8 @@ It currently contains:
   Read-only Rust download/deployment metadata server for update catalogs,
   deploy descriptors, and artifact file distribution.
 - `crates/benchmark`
-  Benchmark profiles for medium, large, v2, and `10k`-plus scale targets, with
-  `10k` now treated as the default local regression tier.
+  Benchmark profiles for medium, large, v2, and `10k`-plus scale targets up to
+  `100k`, with `10k` now treated as the default local regression tier.
 - `crates/installer`
   Cross-platform installer/deployment CLI reused by the Tauri installer GUI.
 

@@ -1,0 +1,44 @@
+name: Workflow Catalog Nightly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 18 * * *"
+
+concurrency:
+  group: workflow-catalog-nightly
+  cancel-in-progress: false
+
+jobs:
+  workflow-catalog-nightly:
+    if: ${{ vars.KYUUBIKI_WORKFLOW_CATALOG_SELF_HOSTED == 'true' }}
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify self-hosted lab access configuration
+        run: |
+          test -n "${KYUUBIKI_LAB_HOST:-}" || { echo "KYUUBIKI_LAB_HOST is required" >&2; exit 1; }
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+
+      - name: Run workflow catalog regression
+        run: |
+          bash ./scripts/run-workflow-catalog-benchmark-regression.sh
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+          KYUUBIKI_LAB_WORKFLOW_BENCH_DIR: ${{ vars.KYUUBIKI_LAB_WORKFLOW_BENCH_DIR }}
+          REPEAT: "3"
+          WORKFLOW_MEDIAN_THRESHOLD: "50"
+          WORKFLOW_AVG_THRESHOLD: "80"
+          OUTPUT_SLUG: github-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Upload workflow catalog comparison artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-catalog-nightly-${{ github.run_attempt }}
+          path: |
+            tmp/workflow-catalog-benchmark/**
+          if-no-files-found: ignore
