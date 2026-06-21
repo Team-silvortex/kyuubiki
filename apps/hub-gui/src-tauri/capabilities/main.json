@@ -22,6 +22,7 @@
     "allow-open-current-line-doc",
     "allow-open-operations-doc",
     "allow-open-troubleshooting-doc",
-    "allow-hub-environment"
+    "allow-hub-environment",
+    "allow-hub-regression-gate-report"
   ]
 }

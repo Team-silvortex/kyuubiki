@@ -9,6 +9,33 @@ use kyuubiki_installer::{
     unified_update_preview as build_unified_update_preview,
 };
 use serde::Serialize;
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(serde::Deserialize, Serialize)]
+pub struct RegressionGateLanePayload {
+    id: String,
+    title: String,
+    category: String,
+    status: String,
+    gate_status: String,
+    gate_reasons: Vec<String>,
+    generated_at_unix_s: u64,
+    links: Vec<String>,
+}
+
+#[derive(serde::Deserialize, Serialize)]
+pub struct RegressionGateReportPayload {
+    schema_version: String,
+    generated_at_unix_s: u64,
+    catalog_path: String,
+    overall_gate_status: String,
+    failing_lane_count: usize,
+    warning_lane_count: usize,
+    lanes: Vec<RegressionGateLanePayload>,
+    #[serde(default)]
+    rendered: String,
+}
 
 #[derive(Serialize)]
 pub struct DoctorReportPayload {
@@ -153,6 +180,10 @@ struct UnifiedUpdatePreviewStepPayload {
     detail: String,
 }
 
+fn workspace_root() -> PathBuf {
+    kyuubiki_installer::workspace_root()
+}
+
 #[tauri::command]
 pub fn doctor_report() -> Result<DoctorReportPayload, String> {
     let report = build_doctor_report();
@@ -224,6 +255,22 @@ pub fn installation_integrity_report() -> Result<InstallationIntegrityPayload, S
             .collect(),
         issues: report.issues,
     })
+}
+
+#[tauri::command]
+pub fn regression_gate_report() -> Result<RegressionGateReportPayload, String> {
+    let report_path = workspace_root()
+        .join("tmp")
+        .join("regression-gate-report.json");
+    let content = fs::read_to_string(&report_path)
+        .map_err(|error| format!("failed to read regression gate report: {error}"))?;
+    let mut payload: RegressionGateReportPayload = serde_json::from_str(&content)
+        .map_err(|error| format!("invalid regression gate report: {error}"))?;
+    payload.rendered = format!(
+        "overall gate: {} | failing lanes: {} | warning lanes: {}",
+        payload.overall_gate_status, payload.failing_lane_count, payload.warning_lane_count
+    );
+    Ok(payload)
 }
 
 #[tauri::command]

@@ -329,6 +329,10 @@ defmodule KyuubikiWeb.Playground.AgentClient do
         "orch_session_id",
         Map.get(orchestration, :orch_session_id) || Map.get(orchestration, "orch_session_id")
       )
+      |> maybe_put_lease_value(
+        "cluster_id",
+        Map.get(orchestration, :cluster_id) || Map.get(orchestration, "cluster_id")
+      )
 
     Keyword.put(opts, :execution_lease, lease)
   end

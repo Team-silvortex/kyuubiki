@@ -22,9 +22,12 @@ test("hub shell defines a least-privilege main-window capability", () => {
   assert.ok(capability.permissions.includes("allow-service-status"));
   assert.ok(capability.permissions.includes("allow-project-bundle-inspect"));
   assert.ok(capability.permissions.includes("allow-hub-environment"));
+  assert.ok(capability.permissions.includes("allow-hub-regression-gate-report"));
   assert.match(permissions, /identifier = "allow-service-status"/);
   assert.match(permissions, /commands\.allow = \["service_status"\]/);
   assert.match(permissions, /identifier = "allow-guarded-mutation-action"/);
+  assert.match(permissions, /identifier = "allow-hub-regression-gate-report"/);
+  assert.match(permissions, /commands\.allow = \["hub_regression_gate_report"\]/);
 });
 
 test("hub shell exposes the desktop information architecture", () => {

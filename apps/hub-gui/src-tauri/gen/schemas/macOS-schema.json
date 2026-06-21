@@ -213,6 +213,12 @@
           "markdownDescription": "Enables the hub_environment command."
         },
         {
+          "description": "Enables the hub_regression_gate_report command.",
+          "type": "string",
+          "const": "allow-hub-regression-gate-report",
+          "markdownDescription": "Enables the hub_regression_gate_report command."
+        },
+        {
           "description": "Enables the launch_installer_gui command.",
           "type": "string",
           "const": "allow-launch-installer-gui",

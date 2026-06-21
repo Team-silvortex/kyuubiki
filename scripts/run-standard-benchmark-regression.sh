@@ -86,6 +86,12 @@ scp "$REMOTE_HOST:$REMOTE_DIR/workers/rust/benchmarks/reports/compound-core-$PRO
 node "$ROOT_DIR/scripts/build-standard-benchmark-index.mjs" \
   --root "$ROOT_DIR/tmp/standard-benchmark" \
   --retain "$RETAIN_RUNS"
+node "$ROOT_DIR/scripts/build-regression-lane-catalog.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
+node "$ROOT_DIR/scripts/build-regression-gate-report.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
 node "$ROOT_DIR/scripts/build-nightly-artifact-overview.mjs" \
   --tmp-root "$ROOT_DIR/tmp"
 

@@ -16,6 +16,14 @@ export const HUB_INFORMATION_ARCHITECTURE_PATTERNS = [
   /Open workbench/,
   /data-action="open-installer"/,
   /data-projects-page="guides"/,
+  /guides-gate-title/,
+  /guides-gate-status-value/,
+  /guides-gate-warning-count/,
+  /guides-gate-failing-count/,
+  /guides-gate-lane-count/,
+  /guides-gate-catalog-path/,
+  /guides-gate-note/,
+  /guides-gate-reasons/,
   /data-action="open-docs-index"/,
   /data-action="open-current-line-doc"/,
   /data-action="open-operations-doc"/,
@@ -132,6 +140,9 @@ export const HUB_PLATFORM_HELPER_PATTERNS = [
   /detectDesktopPlatform/,
   /normalizeDesktopPlatform/,
   /desktopPlatformContextLabel/,
+  /loadRegressionGateReport/,
+  /renderRegressionGateReport/,
+  /hub_regression_gate_report/,
 ];
 
 export const HUB_APP_RUNTIME_PATTERNS = [

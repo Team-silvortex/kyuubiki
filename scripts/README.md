@@ -98,6 +98,26 @@ Useful smoke wrappers:
   Run the remote workflow catalog benchmark on `kyuubiki-lab`, copy the
   resulting summary back into the local workspace, and compare it against the
   checked-in baseline with per-case regression thresholds.
+- `./scripts/run-workflow-mesh-regression.sh`
+  Run the current three-test distributed workflow mesh regression trio in
+  strict sequence on the local machine so the shared local orchestrator port
+  does not collide across tests. This emits `run.log`, `summary.json`, and
+  `README.md` under `tmp/workflow-mesh-regression/<slug>/`.
+- `./scripts/run-workflow-mesh-regression-remote.sh`
+  Sync the mesh workflow regression wrappers plus integration tests to
+  `kyuubiki-lab`, run the distributed workflow mesh regression trio there,
+  and pull the combined run log plus summary artifacts back into
+  `tmp/workflow-mesh-regression/`.
+- `./scripts/build-workflow-mesh-regression-summary.mjs --log tmp/workflow-mesh-regression/<slug>/run.log --output-dir tmp/workflow-mesh-regression/<slug>`
+  Rebuild the machine-readable and human-readable summary artifacts for a
+  workflow mesh regression run from the captured TAP log.
+- `./scripts/build-workflow-mesh-regression-index.mjs --root tmp/workflow-mesh-regression`
+  Rebuild the retained workflow mesh run index and emit `index.json`,
+  `README.md`, and `index.html` under `tmp/workflow-mesh-regression/`.
+- `make test-integration-workflow-mesh`
+  Makefile entry for the local distributed workflow mesh regression trio.
+- `make test-integration-workflow-mesh-nightly`
+  Makefile entry for the remote `kyuubiki-lab` workflow mesh regression flow.
 - `make test-integration-workflow-catalog-nightly`
   Makefile entry for the remote workflow catalog regression flow against the
   checked-in baseline.
@@ -115,15 +135,32 @@ Useful smoke wrappers:
   Rebuild the top-level `tmp/` nightly artifact overview across the direct-mesh,
   workflow-catalog, and standard-benchmark lanes. This emits `tmp/README.md`,
   `tmp/nightly-overview.json`, and `tmp/nightly-overview.html`.
+- `./scripts/build-regression-lane-catalog.mjs --tmp-root tmp`
+  Rebuild the normalized cross-lane regression catalog for the latest retained
+  direct-mesh, workflow-catalog, and workflow-mesh outputs. This emits
+  `tmp/regression-lane-catalog.json`, `tmp/regression-lane-catalog.md`, and
+  `tmp/regression-lane-catalog.html`, including a shared `gate` decision layer
+  with per-lane reasons plus the catalog-level `overall_gate_status`.
+- `./scripts/build-regression-gate-report.mjs --tmp-root tmp`
+  Collapse the shared regression lane catalog into a CI/installer-friendly gate
+  output. This emits `tmp/regression-gate-report.json` plus
+  `tmp/regression-gate-report.md`, prints the overall gate status, exits `2`
+  for `fail`, and can exit non-zero for `warn` via `--fail-on-warn`.
 - `make benchmark-standard-nightly`
   Makefile entry for the remote standard benchmark regression flow against the
   checked-in standard baselines.
 - `.github/workflows/standard-benchmark-nightly.yml`
   Self-hosted GitHub Actions entry for the remote standard benchmark
   regression flow and artifact upload path.
+- `.github/workflows/workflow-mesh-nightly.yml`
+  Self-hosted GitHub Actions entry for the remote workflow mesh regression
+  flow, unified gate refresh, and artifact upload path.
 - `.github/workflows/workflow-catalog-nightly.yml`
   Self-hosted GitHub Actions entry for the remote workflow catalog regression
   flow and artifact upload path.
+- `.github/workflows/direct-mesh-docker-nightly.yml`
+  Self-hosted GitHub Actions entry for the remote direct-mesh Docker
+  regression flow, unified gate refresh, and artifact upload path.
 - `cd apps/web && mix test test/kyuubiki_web/api/workflow_large_graph_api_test.exs && ELIXIR_PA="$(find "$PWD/_build/test/lib" -maxdepth 2 -type d -name ebin -print | tr '\n' ' ')" elixir -pa $ELIXIR_PA ../../scripts/workflow-large-graph-benchmark.exs 96 256 512 --output ../../tmp/workflow-large-graph-benchmark.json`
   Lower-level host script path for environments that allow plain Elixir TCP
   sockets outside `mix test`.

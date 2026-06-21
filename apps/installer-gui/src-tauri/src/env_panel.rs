@@ -129,12 +129,20 @@ pub fn read_env_file() -> Result<EnvFormPayload, String> {
                 form.kyuubiki_cluster_api_token_configured = !value.is_empty()
             }
             "KYUUBIKI_CLUSTER_ALLOWED_AGENT_IDS" => form.kyuubiki_cluster_allowed_agent_ids = value,
-            "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS" => form.kyuubiki_cluster_allowed_cluster_ids = value,
-            "KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT" => form.kyuubiki_cluster_require_fingerprint = value == "true",
-            "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS" => form.kyuubiki_cluster_timestamp_window_ms = value,
+            "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS" => {
+                form.kyuubiki_cluster_allowed_cluster_ids = value
+            }
+            "KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT" => {
+                form.kyuubiki_cluster_require_fingerprint = value == "true"
+            }
+            "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS" => {
+                form.kyuubiki_cluster_timestamp_window_ms = value
+            }
             "KYUUBIKI_PROTECT_READS" => form.kyuubiki_protect_reads = value == "true",
             "KYUUBIKI_DIRECT_MESH_ENABLED" => form.kyuubiki_direct_mesh_enabled = value != "false",
-            "KYUUBIKI_DIRECT_MESH_TOKEN" => form.kyuubiki_direct_mesh_token_configured = !value.is_empty(),
+            "KYUUBIKI_DIRECT_MESH_TOKEN" => {
+                form.kyuubiki_direct_mesh_token_configured = !value.is_empty()
+            }
             _ => {}
         }
     }
@@ -156,10 +164,16 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
     ];
 
     if !payload.agent_manifest_path.trim().is_empty() {
-        lines.push(format!("KYUUBIKI_AGENT_MANIFEST_PATH={}", payload.agent_manifest_path.trim()));
+        lines.push(format!(
+            "KYUUBIKI_AGENT_MANIFEST_PATH={}",
+            payload.agent_manifest_path.trim()
+        ));
     }
     if !payload.sqlite_database_path.trim().is_empty() {
-        lines.push(format!("SQLITE_DATABASE_PATH={}", payload.sqlite_database_path.trim()));
+        lines.push(format!(
+            "SQLITE_DATABASE_PATH={}",
+            payload.sqlite_database_path.trim()
+        ));
     }
     if let Some(database_url) = resolve_sensitive_env_value(
         &payload.database_url,
@@ -170,7 +184,10 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
         lines.push(format!("DATABASE_URL={database_url}"));
     }
     if !payload.agent_endpoints.trim().is_empty() {
-        lines.push(format!("KYUUBIKI_AGENT_ENDPOINTS={}", payload.agent_endpoints.trim()));
+        lines.push(format!(
+            "KYUUBIKI_AGENT_ENDPOINTS={}",
+            payload.agent_endpoints.trim()
+        ));
     }
     if let Some(api_token) = resolve_sensitive_env_value(
         &payload.kyuubiki_api_token,
@@ -194,7 +211,11 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
             payload.kyuubiki_cluster_allowed_agent_ids.trim()
         ));
     }
-    if !payload.kyuubiki_cluster_allowed_cluster_ids.trim().is_empty() {
+    if !payload
+        .kyuubiki_cluster_allowed_cluster_ids
+        .trim()
+        .is_empty()
+    {
         lines.push(format!(
             "KYUUBIKI_CLUSTER_ALLOWED_CLUSTER_IDS={}",
             payload.kyuubiki_cluster_allowed_cluster_ids.trim()
@@ -202,9 +223,17 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
     }
     lines.push(format!(
         "KYUUBIKI_CLUSTER_REQUIRE_FINGERPRINT={}",
-        if payload.kyuubiki_cluster_require_fingerprint { "true" } else { "false" }
+        if payload.kyuubiki_cluster_require_fingerprint {
+            "true"
+        } else {
+            "false"
+        }
     ));
-    if !payload.kyuubiki_cluster_timestamp_window_ms.trim().is_empty() {
+    if !payload
+        .kyuubiki_cluster_timestamp_window_ms
+        .trim()
+        .is_empty()
+    {
         lines.push(format!(
             "KYUUBIKI_CLUSTER_TIMESTAMP_WINDOW_MS={}",
             payload.kyuubiki_cluster_timestamp_window_ms.trim()
@@ -212,11 +241,19 @@ pub fn write_env_file(payload: WriteEnvPayload) -> Result<String, String> {
     }
     lines.push(format!(
         "KYUUBIKI_PROTECT_READS={}",
-        if payload.kyuubiki_protect_reads { "true" } else { "false" }
+        if payload.kyuubiki_protect_reads {
+            "true"
+        } else {
+            "false"
+        }
     ));
     lines.push(format!(
         "KYUUBIKI_DIRECT_MESH_ENABLED={}",
-        if payload.kyuubiki_direct_mesh_enabled { "true" } else { "false" }
+        if payload.kyuubiki_direct_mesh_enabled {
+            "true"
+        } else {
+            "false"
+        }
     ));
     if let Some(direct_mesh_token) = resolve_sensitive_env_value(
         &payload.kyuubiki_direct_mesh_token,

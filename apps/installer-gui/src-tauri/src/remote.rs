@@ -1,15 +1,17 @@
 use std::env;
 use std::fs;
 use std::path::{Component, Path};
-use std::process::Command;
 
+use crate::remote_certificates::prepare_remote_certificate_material;
+use crate::remote_exec::{run_remote_ssh_command, shell_escape};
 use crate::remote_nodes::{normalize_peer_endpoints, validate_cluster_id, validate_control_mode};
 use kyuubiki_installer::workspace_root;
 use serde::Serialize;
 use serde_json::{Value, json};
 
 pub(crate) const REMOTE_ALLOWED_HOSTS_ENV: &str = "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_HOSTS";
-pub(crate) const REMOTE_ALLOWED_WORKSPACE_ROOTS_ENV: &str = "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS";
+pub(crate) const REMOTE_ALLOWED_WORKSPACE_ROOTS_ENV: &str =
+    "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS";
 pub(crate) const REMOTE_POLICY_SCHEMA_VERSION: &str = "kyuubiki.installer.remote-policy/v1";
 #[cfg(test)]
 pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -34,6 +36,7 @@ pub struct RemoteAgentPayload {
     pub agent_port: u16,
     pub cluster_id: Option<String>,
     pub peer_endpoints: Option<Vec<String>>,
+    pub certificate_id: Option<String>,
     pub ssh_port: Option<u16>,
 }
 #[derive(Clone, Debug, Serialize)]
@@ -101,7 +104,7 @@ pub fn probe_remote_node(payload: RemoteBootstrapPayload) -> Result<String, Stri
         "cd {workspace} && printf '%s' 'kyuubiki-remote-ok'",
         workspace = shell_escape(&remote_workspace)
     );
-    run_remote_ssh(payload.ssh_port, &target, &remote_command)
+    run_remote_ssh_command(payload.ssh_port, &target, &remote_command)
 }
 #[tauri::command]
 pub fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, String> {
@@ -114,7 +117,7 @@ pub fn remote_bootstrap(payload: RemoteBootstrapPayload) -> Result<String, Strin
         workspace = shell_escape(&remote_workspace)
     );
 
-    run_remote_ssh(payload.ssh_port, &target, &remote_command)
+    run_remote_ssh_command(payload.ssh_port, &target, &remote_command)
 }
 
 #[tauri::command]
@@ -129,6 +132,26 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
     let peer_endpoints = normalize_peer_endpoints(payload.peer_endpoints.unwrap_or_default())?;
     let target = format!("{ssh_user}@{target_host}");
     let screen_name = format!("kyuubiki_remote_agent_{}", payload.agent_port);
+    let prepared_certificate = prepare_remote_certificate_material(
+        payload.ssh_port,
+        &target,
+        &remote_workspace,
+        payload.certificate_id.as_deref(),
+        &agent_id,
+        &target_host,
+        &advertise_host,
+        &control_mode,
+    )?;
+    let certificate_env = prepared_certificate
+        .as_ref()
+        .map(|material| {
+            material
+                .remote_env_exports
+                .iter()
+                .map(|(key, value)| format!("{key}={} ", shell_escape(value)))
+                .collect::<String>()
+        })
+        .unwrap_or_default();
     let remote_command = match control_mode.as_str() {
         "offline_mesh" => build_remote_mesh_agent_command(
             &remote_workspace,
@@ -138,6 +161,7 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
             payload.agent_port,
             cluster_id.as_deref(),
             &peer_endpoints,
+            &certificate_env,
         ),
         _ => build_remote_orchestrated_agent_command(
             &remote_workspace,
@@ -146,9 +170,21 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
             &agent_id,
             &advertise_host,
             payload.agent_port,
+            &certificate_env,
         ),
     };
-    run_remote_ssh(payload.ssh_port, &target, &remote_command)
+    let started = run_remote_ssh_command(payload.ssh_port, &target, &remote_command)?;
+    Ok(match prepared_certificate {
+        Some(material) => format!(
+            "{started}\ncertificate_id: {}\nfingerprint: {}\nremote_cert_path: {}\nremote_key_path: {}\nremote_ca_cert_path: {}",
+            material.certificate_id,
+            material.fingerprint,
+            material.remote_cert_path,
+            material.remote_key_path,
+            material.remote_ca_cert_path
+        ),
+        None => started,
+    })
 }
 fn build_remote_orchestrated_agent_command(
     remote_workspace: &str,
@@ -157,11 +193,13 @@ fn build_remote_orchestrated_agent_command(
     agent_id: &str,
     advertise_host: &str,
     agent_port: u16,
+    certificate_env: &str,
 ) -> String {
     format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
+        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && {certificate_env}KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
         workspace = shell_escape(remote_workspace),
         screen = shell_escape(screen_name),
+        certificate_env = certificate_env,
         orchestrator = shell_escape(orchestrator_url),
         agent_id = shell_escape(agent_id),
         advertise_host = shell_escape(advertise_host),
@@ -176,6 +214,7 @@ fn build_remote_mesh_agent_command(
     agent_port: u16,
     cluster_id: Option<&str>,
     peer_endpoints: &[String],
+    certificate_env: &str,
 ) -> String {
     let cluster_flag = cluster_id
         .map(|value| format!(" --cluster-id {}", shell_escape(value)))
@@ -188,10 +227,11 @@ fn build_remote_mesh_agent_command(
         .map(|value| format!("KYUUBIKI_AGENT_CLUSTER_ID={} ", shell_escape(value)))
         .unwrap_or_default();
     format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && {cluster_env}KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host}{cluster_flag}{peer_flags}'",
+        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && {cluster_env}{certificate_env}KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host}{cluster_flag}{peer_flags}'",
         workspace = shell_escape(remote_workspace),
         screen = shell_escape(screen_name),
         cluster_env = cluster_env,
+        certificate_env = certificate_env,
         agent_id = shell_escape(agent_id),
         advertise_host = shell_escape(advertise_host),
         port = agent_port,
@@ -220,7 +260,11 @@ pub(crate) fn validate_host_token(value: &str, label: &str) -> Result<String, St
     if trimmed.starts_with('-') {
         return Err(format!("{label} must not start with '-'"));
     }
-    if trimmed.contains("://") || trimmed.contains('/') || trimmed.contains('?') || trimmed.contains('#') {
+    if trimmed.contains("://")
+        || trimmed.contains('/')
+        || trimmed.contains('?')
+        || trimmed.contains('#')
+    {
         return Err(format!("{label} must be a plain host or IPv4 address"));
     }
     if !trimmed
@@ -278,7 +322,9 @@ pub(crate) fn validate_remote_workspace(value: &str) -> Result<String, String> {
             .iter()
             .any(|root| trimmed == root || trimmed.starts_with(&format!("{root}/")))
     {
-        return Err(format!("remote workspace is outside installer remote policy: {trimmed}"));
+        return Err(format!(
+            "remote workspace is outside installer remote policy: {trimmed}"
+        ));
     }
 
     Ok(trimmed.to_string())
@@ -291,7 +337,11 @@ pub(crate) fn validate_orchestrator_url(value: &str) -> Result<String, String> {
     if !(trimmed.starts_with("http://") || trimmed.starts_with("https://")) {
         return Err("orchestrator url must start with http:// or https://".to_string());
     }
-    if trimmed.contains('@') || trimmed.contains('?') || trimmed.contains('#') || trimmed.contains(' ') {
+    if trimmed.contains('@')
+        || trimmed.contains('?')
+        || trimmed.contains('#')
+        || trimmed.contains(' ')
+    {
         return Err("orchestrator url contains unsupported components".to_string());
     }
     Ok(trimmed.to_string())
@@ -324,7 +374,9 @@ fn normalize_csv_entries(value: &str) -> Vec<String> {
         .collect::<Vec<_>>()
 }
 fn remote_policy_path() -> std::path::PathBuf {
-    workspace_root().join("config").join("installer-remote-policy.json")
+    workspace_root()
+        .join("config")
+        .join("installer-remote-policy.json")
 }
 fn read_remote_policy_config() -> Result<RemoteDeployPolicyConfig, String> {
     let path = remote_policy_path();
@@ -367,7 +419,11 @@ fn json_array_strings(value: Option<&Value>) -> Vec<String> {
 fn effective_allowed_hosts() -> Result<Vec<String>, String> {
     let configured = read_remote_policy_config()?.allowed_hosts;
     let env_hosts = env_csv(REMOTE_ALLOWED_HOSTS_ENV);
-    Ok(if env_hosts.is_empty() { configured } else { env_hosts })
+    Ok(if env_hosts.is_empty() {
+        configured
+    } else {
+        env_hosts
+    })
 }
 fn effective_allowed_workspace_roots() -> Result<Vec<String>, String> {
     let configured = read_remote_policy_config()?.allowed_workspace_roots;
@@ -395,7 +451,10 @@ fn build_remote_deploy_policy_payload() -> Result<RemoteDeployPolicyPayload, Str
     let rendered = [
         "installer remote deployment policy".to_string(),
         format!("config_path: {}", remote_policy_path().display()),
-        format!("allowed_hosts: {}", csv_or_placeholder(&config.allowed_hosts)),
+        format!(
+            "allowed_hosts: {}",
+            csv_or_placeholder(&config.allowed_hosts)
+        ),
         format!(
             "allowed_workspace_roots: {}",
             csv_or_placeholder(&config.allowed_workspace_roots)
@@ -429,47 +488,6 @@ fn csv_or_placeholder(items: &[String]) -> String {
     } else {
         items.join(",")
     }
-}
-fn run_remote_ssh(
-    ssh_port: Option<u16>,
-    target: &str,
-    remote_command: &str,
-) -> Result<String, String> {
-    let mut command = Command::new("ssh");
-    command
-        .arg("-o")
-        .arg("StrictHostKeyChecking=accept-new")
-        .arg("-o")
-        .arg("ConnectTimeout=10")
-        .arg("-o")
-        .arg("ServerAliveInterval=15")
-        .arg("-o")
-        .arg("ServerAliveCountMax=3");
-    if let Some(port) = ssh_port {
-        command.arg("-p").arg(port.to_string());
-    }
-
-    let output = command
-        .arg(target)
-        .arg(remote_command)
-        .output()
-        .map_err(|error| format!("failed to run ssh command: {error}"))?;
-
-    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-
-    if output.status.success() {
-        Ok(if stdout.is_empty() {
-            format!("remote command completed on {target}")
-        } else {
-            stdout
-        })
-    } else {
-        Err(if stderr.is_empty() { stdout } else { stderr })
-    }
-}
-fn shell_escape(value: &str) -> String {
-    format!("'{}'", value.replace('\'', "'\"'\"'"))
 }
 #[cfg(test)]
 mod tests {

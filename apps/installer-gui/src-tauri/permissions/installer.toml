@@ -4,6 +4,11 @@ description = "Enables the doctor_report command."
 commands.allow = ["doctor_report"]
 
 [[permission]]
+identifier = "allow-regression-gate-report"
+description = "Enables the regression_gate_report command."
+commands.allow = ["regression_gate_report"]
+
+[[permission]]
 identifier = "allow-export-launch"
 description = "Enables the export_launch command."
 commands.allow = ["export_launch"]
@@ -12,6 +17,11 @@ commands.allow = ["export_launch"]
 identifier = "allow-read-env-file"
 description = "Enables the read_env_file command."
 commands.allow = ["read_env_file"]
+
+[[permission]]
+identifier = "allow-certificate-authority-policy"
+description = "Enables the certificate_authority_policy command."
+commands.allow = ["certificate_authority_policy"]
 
 [[permission]]
 identifier = "allow-service-status"

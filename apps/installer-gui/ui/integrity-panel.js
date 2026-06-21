@@ -52,7 +52,7 @@ export function mountIntegrityPanel() {
         </article>
         <article class="integrity-policy-card desktop-shell-surface-card">
           <div class="panel-header desktop-shell-section-header"><h3>Repair safety scope</h3></div>
-          <p id="integrity-safe-scope">Repair keeps `.env.local`, model data, manifests, and desktop shells intact.</p>
+          <p id="integrity-safe-scope">Repair keeps \`.env.local\`, model data, manifests, and desktop shells intact.</p>
         </article>
       </div>
     </section>

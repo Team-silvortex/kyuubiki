@@ -64,6 +64,12 @@ node "$ROOT_DIR/scripts/compare-workflow-catalog-benchmark.mjs" \
   --fail-on-median-regression-pct "$WORKFLOW_MEDIAN_THRESHOLD" \
   --fail-on-avg-regression-pct "$WORKFLOW_AVG_THRESHOLD"
 
+node "$ROOT_DIR/scripts/build-regression-lane-catalog.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
+node "$ROOT_DIR/scripts/build-regression-gate-report.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
 node "$ROOT_DIR/scripts/build-nightly-artifact-overview.mjs" \
   --tmp-root "$ROOT_DIR/tmp"
 

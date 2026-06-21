@@ -2,24 +2,37 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+mod certificates;
+mod certificates_openssl;
+mod certificates_store;
+mod certificates_types;
 mod diagnostics;
 mod env_panel;
 mod remote;
+mod remote_certificates;
+mod remote_exec;
 mod remote_nodes;
 mod runtime_logs;
 
+use certificates::{
+    certificate_authority_policy, initialize_certificate_authority, issue_node_certificate,
+    revoke_node_certificate, write_certificate_authority_policy,
+};
+use certificates_types::{
+    IssueNodeCertificatePayload, RevokeNodeCertificatePayload,
+    WriteCertificateAuthorityPolicyPayload,
+};
 use diagnostics::{
     doctor_report, installation_integrity_report, latest_applied_update_record,
-    latest_downloaded_update_record, latest_staged_update_record, unified_update_plan,
-    unified_update_preview, update_source_config,
+    latest_downloaded_update_record, latest_staged_update_record, regression_gate_report,
+    unified_update_plan, unified_update_preview, update_source_config,
 };
 use env_panel::{WriteEnvPayload, read_env_file, write_env_file};
 use kyuubiki_desktop_runtime::{
     ServiceMode, ServiceStatusSummary, append_desktop_audit_line as desktop_append_audit_line,
     read_global_language_preference as desktop_read_global_language_preference,
-    service_restart as desktop_service_restart,
-    service_start as desktop_service_start, service_status as desktop_service_status,
-    service_stop as desktop_service_stop,
+    service_restart as desktop_service_restart, service_start as desktop_service_start,
+    service_status as desktop_service_status, service_stop as desktop_service_stop,
     summarize_service_status as desktop_summarize_service_status,
     write_global_language_preference as desktop_write_global_language_preference,
 };
@@ -33,11 +46,12 @@ use kyuubiki_installer::{
     write_update_source_config as installer_write_update_source_config,
 };
 use remote::{
-    RemoteAgentPayload, RemoteBootstrapPayload, WriteRemoteDeployPolicyPayload,
-    probe_remote_node, remote_bootstrap, remote_deploy_policy, remote_start_agent,
-    write_remote_deploy_policy,
+    RemoteAgentPayload, RemoteBootstrapPayload, WriteRemoteDeployPolicyPayload, probe_remote_node,
+    remote_bootstrap, remote_deploy_policy, remote_start_agent, write_remote_deploy_policy,
 };
-use remote_nodes::{WriteRemoteNodeRegistryPayload, remote_node_registry, write_remote_node_registry};
+use remote_nodes::{
+    WriteRemoteNodeRegistryPayload, remote_node_registry, write_remote_node_registry,
+};
 use runtime_logs::{read_runtime_log, start_log_stream, stop_log_stream};
 use serde::Serialize;
 use serde_json::json;
@@ -82,6 +96,9 @@ struct InstallerGuardedMutationPayload {
     remote_agent: Option<RemoteAgentPayload>,
     remote_policy: Option<WriteRemoteDeployPolicyPayload>,
     remote_nodes: Option<WriteRemoteNodeRegistryPayload>,
+    certificate_policy: Option<WriteCertificateAuthorityPolicyPayload>,
+    certificate_issue: Option<IssueNodeCertificatePayload>,
+    certificate_revoke: Option<RevokeNodeCertificatePayload>,
 }
 
 #[derive(Serialize)]
@@ -257,6 +274,28 @@ fn guarded_mutation_action(payload: InstallerGuardedMutationPayload) -> Result<S
                 .ok_or_else(|| "remote node registry payload is required".to_string())?;
             write_remote_node_registry(remote_nodes)
         }
+        "write_certificate_policy" => {
+            let certificate_policy = payload
+                .certificate_policy
+                .clone()
+                .ok_or_else(|| "certificate policy payload is required".to_string())?;
+            write_certificate_authority_policy(certificate_policy)
+        }
+        "initialize_certificate_authority" => initialize_certificate_authority(),
+        "issue_node_certificate" => {
+            let certificate_issue = payload
+                .certificate_issue
+                .clone()
+                .ok_or_else(|| "certificate issue payload is required".to_string())?;
+            issue_node_certificate(certificate_issue)
+        }
+        "revoke_node_certificate" => {
+            let certificate_revoke = payload
+                .certificate_revoke
+                .clone()
+                .ok_or_else(|| "certificate revoke payload is required".to_string())?;
+            revoke_node_certificate(certificate_revoke)
+        }
         "probe_remote_node" => {
             let remote = payload
                 .remote_bootstrap
@@ -320,6 +359,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             doctor_report,
             installation_integrity_report,
+            regression_gate_report,
             latest_applied_update_record,
             latest_downloaded_update_record,
             latest_staged_update_record,
@@ -334,6 +374,7 @@ fn main() {
             read_runtime_log,
             start_log_stream,
             stop_log_stream,
+            certificate_authority_policy,
             remote_deploy_policy,
             remote_node_registry,
             guarded_mutation_action

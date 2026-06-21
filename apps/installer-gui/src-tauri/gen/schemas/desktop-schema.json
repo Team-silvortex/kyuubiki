@@ -177,6 +177,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the certificate_authority_policy command.",
+          "type": "string",
+          "const": "allow-certificate-authority-policy",
+          "markdownDescription": "Enables the certificate_authority_policy command."
+        },
+        {
           "description": "Enables the doctor_report command.",
           "type": "string",
           "const": "allow-doctor-report",
@@ -211,6 +217,12 @@
           "type": "string",
           "const": "allow-read-runtime-log",
           "markdownDescription": "Enables the read_runtime_log command."
+        },
+        {
+          "description": "Enables the regression_gate_report command.",
+          "type": "string",
+          "const": "allow-regression-gate-report",
+          "markdownDescription": "Enables the regression_gate_report command."
         },
         {
           "description": "Enables the service_status command.",

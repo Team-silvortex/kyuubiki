@@ -66,6 +66,10 @@ struct AgentConfig {
     orchestrator_url: Option<String>,
     cluster_api_token: Option<String>,
     agent_fingerprint: Option<String>,
+    certificate_id: Option<String>,
+    cert_path: Option<String>,
+    key_path: Option<String>,
+    ca_cert_path: Option<String>,
     register_interval_ms: u64,
     cluster_id: Option<String>,
     peers: Vec<String>,
@@ -139,6 +143,10 @@ impl AgentConfig {
             orchestrator_url: None,
             cluster_api_token: None,
             agent_fingerprint: None,
+            certificate_id: None,
+            cert_path: None,
+            key_path: None,
+            ca_cert_path: None,
             register_interval_ms: 5_000,
             cluster_id: None,
             peers: vec![],
@@ -183,6 +191,26 @@ impl AgentConfig {
                         config.agent_fingerprint = Some(value.clone());
                     }
                 }
+                "--certificate-id" => {
+                    if let Some(value) = args.next() {
+                        config.certificate_id = Some(value.clone());
+                    }
+                }
+                "--cert-path" => {
+                    if let Some(value) = args.next() {
+                        config.cert_path = Some(value.clone());
+                    }
+                }
+                "--key-path" => {
+                    if let Some(value) = args.next() {
+                        config.key_path = Some(value.clone());
+                    }
+                }
+                "--ca-cert-path" => {
+                    if let Some(value) = args.next() {
+                        config.ca_cert_path = Some(value.clone());
+                    }
+                }
                 "--register-interval-ms" => {
                     if let Some(value) = args.next() {
                         config.register_interval_ms =
@@ -225,6 +253,18 @@ impl AgentConfig {
 
         if config.agent_fingerprint.is_none() {
             config.agent_fingerprint = std::env::var("KYUUBIKI_AGENT_FINGERPRINT").ok();
+        }
+        if config.certificate_id.is_none() {
+            config.certificate_id = std::env::var("KYUUBIKI_AGENT_CERTIFICATE_ID").ok();
+        }
+        if config.cert_path.is_none() {
+            config.cert_path = std::env::var("KYUUBIKI_AGENT_CERT_PATH").ok();
+        }
+        if config.key_path.is_none() {
+            config.key_path = std::env::var("KYUUBIKI_AGENT_KEY_PATH").ok();
+        }
+        if config.ca_cert_path.is_none() {
+            config.ca_cert_path = std::env::var("KYUUBIKI_AGENT_CA_CERT_PATH").ok();
         }
 
         if config.peers.is_empty() {
@@ -1999,11 +2039,26 @@ fn registration_payload(config: &AgentConfig) -> serde_json::Value {
         "port": config.port,
         "role": "solver",
         "cluster_id": config.cluster_id,
-        "tags": if config.peers.is_empty() { vec!["headless", "standalone"] } else { vec!["headless", "peer-mesh"] },
+        "tags": registration_tags(config),
         "methods": descriptor.protocol.methods,
         "capabilities": descriptor.capabilities,
         "health_score": descriptor.runtime.health_score
     })
+}
+
+fn registration_tags(config: &AgentConfig) -> Vec<&'static str> {
+    let mut tags = if config.peers.is_empty() {
+        vec!["headless", "standalone"]
+    } else {
+        vec!["headless", "peer-mesh"]
+    };
+    if config.certificate_id.is_some() || config.cert_path.is_some() {
+        tags.push("certificate-bound");
+    }
+    if config.agent_fingerprint.is_some() {
+        tags.push("fingerprint-bound");
+    }
+    tags
 }
 
 fn agent_runtime_mode(config: &AgentConfig) -> &'static str {
@@ -2775,6 +2830,10 @@ mod tests {
                 orchestrator_url: None,
                 cluster_api_token: None,
                 agent_fingerprint: None,
+                certificate_id: None,
+                cert_path: None,
+                key_path: None,
+                ca_cert_path: None,
                 register_interval_ms: 5_000,
                 cluster_id: None,
                 peers: vec![],
@@ -4355,6 +4414,10 @@ mod tests {
             orchestrator_url: None,
             cluster_api_token: None,
             agent_fingerprint: None,
+            certificate_id: None,
+            cert_path: None,
+            key_path: None,
+            ca_cert_path: None,
             register_interval_ms: 5_000,
             cluster_id: Some("lan-a".to_string()),
             peers: vec!["10.0.0.11:5001".to_string(), "10.0.0.12:5001".to_string()],

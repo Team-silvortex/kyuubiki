@@ -8,5 +8,6 @@ test("tauri backend exposes hub runtime commands", () => {
   const runtimeRust = read("../../workers/rust/crates/desktop-runtime/src/lib.rs");
 
   assertMatches(rust, HUB_BACKEND_PATTERNS);
+  assert.match(rust, /hub_regression_gate_report/);
   assert.match(runtimeRust, /failed to read .* log:/);
 });

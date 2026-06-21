@@ -57,6 +57,7 @@ async function waitFor(url, predicate, timeoutMs = 30_000, intervalMs = 500) {
 }
 
 function clusterHeaders(extra = {}) {
+  const nonce = `nonce-${AGENT_ID}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   return {
     "content-type": "application/json",
     "x-kyuubiki-token": CLUSTER_TOKEN,
@@ -64,6 +65,15 @@ function clusterHeaders(extra = {}) {
     "x-kyuubiki-cluster-id": CLUSTER_ID,
     "x-kyuubiki-agent-fingerprint": FINGERPRINT,
     "x-kyuubiki-cluster-ts": `${Date.now()}`,
+    "x-kyuubiki-cluster-nonce": nonce,
+    ...extra,
+  };
+}
+
+function controlHeaders(extra = {}) {
+  return {
+    "content-type": "application/json",
+    "x-kyuubiki-token": CONTROL_TOKEN,
     ...extra,
   };
 }
@@ -79,6 +89,8 @@ test("local control plane accepts protected cluster register, heartbeat, and unr
         payload?.security?.cluster_fingerprint_required === true &&
         payload?.security?.cluster_agent_allowlist_count === 1,
       60_000,
+      500,
+      { headers: controlHeaders() },
     );
 
     assert.equal(health.status, "ok");
@@ -146,7 +158,9 @@ test("local control plane accepts protected cluster register, heartbeat, and unr
     assert.equal(heartbeat.agent.capacity, 6);
     assert.deepEqual(heartbeat.agent.tags, ["solver", "mesh", "heartbeat"]);
 
-    const agentsResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/agents`);
+    const agentsResponse = await fetch(`${ORCHESTRATOR_URL}/api/v1/agents`, {
+      headers: controlHeaders(),
+    });
     assert.equal(agentsResponse.status, 200);
     const agentsPayload = await agentsResponse.json();
     assert.equal(agentsPayload.summary.total_agents, 1);
@@ -162,7 +176,9 @@ test("local control plane accepts protected cluster register, heartbeat, and unr
     const removed = await removeResponse.json();
     assert.equal(removed.status, "removed");
 
-    const afterRemove = await fetch(`${ORCHESTRATOR_URL}/api/v1/agents`);
+    const afterRemove = await fetch(`${ORCHESTRATOR_URL}/api/v1/agents`, {
+      headers: controlHeaders(),
+    });
     assert.equal(afterRemove.status, 200);
     const afterRemovePayload = await afterRemove.json();
     assert.equal(afterRemovePayload.summary.total_agents, 0);

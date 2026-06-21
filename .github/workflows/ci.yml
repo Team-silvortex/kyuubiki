@@ -231,18 +231,119 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  workbench-gui-smoke:
-    name: workbench-gui-smoke
+  desktop-gui-smoke:
+    name: desktop-gui-smoke-${{ matrix.target }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: hub
+            working_directory: apps/hub-gui
+            cache_path: apps/hub-gui/package-lock.json
+          - target: installer
+            working_directory: apps/installer-gui
+            cache_path: apps/installer-gui/package-lock.json
+          - target: workbench
+            working_directory: apps/workbench-gui
+            cache_path: apps/workbench-gui/package-lock.json
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: apps/workbench-gui/package-lock.json
-      - working-directory: apps/workbench-gui
+          cache-dependency-path: ${{ matrix.cache_path }}
+      - working-directory: ${{ matrix.working_directory }}
         run: npm ci
-      - working-directory: apps/workbench-gui
+      - working-directory: ${{ matrix.working_directory }}
         run: npm run test:smoke
+
+  desktop-gui-regression:
+    name: desktop-gui-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/frontend/package-lock.json
+      - working-directory: apps/frontend
+        run: npm ci
+      - working-directory: apps/frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run desktop GUI regression gate
+        run: make test-integration-desktop-gui
+      - name: Upload desktop GUI regression artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-gui-regression-artifacts-${{ github.run_attempt }}
+          path: tmp/desktop-gui-regression-artifacts
+          if-no-files-found: ignore
+      - name: Summarize desktop GUI regression artifacts
+        if: failure()
+        run: |
+          {
+            echo "## Desktop GUI Regression Artifacts"
+            echo
+            if [ -d tmp/desktop-gui-regression-artifacts ]; then
+              echo "### Latest screenshots"
+              echo
+              latest_pngs="$(find tmp/desktop-gui-regression-artifacts -type f -name '*.png' | sort | tail -n 12)"
+              if [ -n "$latest_pngs" ]; then
+                echo '```text'
+                printf '%s\n' "$latest_pngs"
+                echo '```'
+              else
+                echo "_No screenshot files were captured._"
+              fi
+              echo
+
+              echo "### Latest DOM snapshots"
+              echo
+              latest_html="$(find tmp/desktop-gui-regression-artifacts -type f -name '*.html' | sort | tail -n 12)"
+              if [ -n "$latest_html" ]; then
+                echo '```text'
+                printf '%s\n' "$latest_html"
+                echo '```'
+              else
+                echo "_No HTML snapshot files were captured._"
+              fi
+              echo
+
+              echo "### Latest JSON state summaries"
+              echo
+              latest_json="$(find tmp/desktop-gui-regression-artifacts -type f -name '*.json' | sort | tail -n 12)"
+              if [ -n "$latest_json" ]; then
+                echo '```text'
+                printf '%s\n' "$latest_json"
+                echo '```'
+
+                echo
+                echo "### Parsed failure overview"
+                echo
+                echo "| Suite | Scenario | Viewport | Title | Location | Mock Errors |"
+                echo "| --- | --- | --- | --- | --- | ---: |"
+                printf '%s\n' "$latest_json" | while IFS= read -r file; do
+                  python3 -c 'import json, pathlib, sys; file = pathlib.Path(sys.argv[1]); payload = json.loads(file.read_text()); state = payload.get("state") or {}; clean = lambda value: str(value or "--").replace("|", "/"); print(f"| {clean(payload.get(\"suite\") or file.parent.name)} | {clean(payload.get(\"scenario\"))} | {clean(payload.get(\"viewport\"))} | {clean(state.get(\"title\"))} | {clean(state.get(\"location\"))} | {len(state.get(\"mockErrors\") or [])} |")' "$file" \
+                    || echo "| $(basename "$(dirname "$file")") | unreadable | -- | -- | $file | parse error |"
+                done
+              else
+                echo "_No JSON summary files were captured._"
+              fi
+              echo
+
+              echo "### Captured files"
+              echo
+              echo '```text'
+              find tmp/desktop-gui-regression-artifacts -type f | sort
+              echo '```'
+            else
+              echo "No desktop GUI regression artifacts were captured."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

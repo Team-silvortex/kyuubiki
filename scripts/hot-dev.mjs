@@ -408,7 +408,7 @@ function createAgentTask({ port }) {
     name: `agent:${port}`,
     cwd: APPS.rust,
     command: "cargo",
-    args: ["run", "-p", "kyuubiki-cli", "--", "agent", "--port", String(port)],
+    args: ["run", "-p", "kyuubiki-cli", "--bin", "kyuubiki-cli", "--", "agent", "--port", String(port)],
     env: envWith({ KYUUBIKI_HOT_RELOAD: "true" }),
     watch: {
       roots: [

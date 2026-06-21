@@ -25,6 +25,7 @@ pub struct RemoteNodeRecord {
     pub agent_port: u16,
     pub cluster_id: Option<String>,
     pub peer_endpoints: Option<Vec<String>>,
+    pub certificate_id: Option<String>,
     pub last_probe_status: Option<String>,
     pub last_probe_summary: Option<String>,
     pub last_probe_unix_ms: Option<u64>,
@@ -57,7 +58,9 @@ pub fn remote_node_registry() -> Result<RemoteNodeRegistryPayload, String> {
 }
 
 #[tauri::command]
-pub fn write_remote_node_registry(payload: WriteRemoteNodeRegistryPayload) -> Result<String, String> {
+pub fn write_remote_node_registry(
+    payload: WriteRemoteNodeRegistryPayload,
+) -> Result<String, String> {
     let nodes = payload
         .nodes
         .into_iter()
@@ -117,7 +120,9 @@ fn validate_peer_endpoint(value: &str) -> Result<String, String> {
         return Err("peer endpoint must be host:port".to_string());
     };
     crate::remote::validate_host_token(host, "peer endpoint host")?;
-    let port = port.parse::<u16>().map_err(|_| "peer endpoint port must be 1-65535".to_string())?;
+    let port = port
+        .parse::<u16>()
+        .map_err(|_| "peer endpoint port must be 1-65535".to_string())?;
     if port == 0 {
         return Err("peer endpoint port must be 1-65535".to_string());
     }
@@ -125,7 +130,9 @@ fn validate_peer_endpoint(value: &str) -> Result<String, String> {
 }
 
 fn remote_nodes_path() -> std::path::PathBuf {
-    workspace_root().join("config").join("installer-remote-nodes.json")
+    workspace_root()
+        .join("config")
+        .join("installer-remote-nodes.json")
 }
 
 fn read_remote_node_registry() -> Result<Vec<RemoteNodeRecord>, String> {
@@ -179,11 +186,25 @@ fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecor
         advertise_host: validate_advertise_host(&node.advertise_host)?,
         agent_port: node.agent_port,
         cluster_id,
-        peer_endpoints: if peer_endpoints.is_empty() { None } else { Some(peer_endpoints) },
-        last_probe_status: node.last_probe_status.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
-        last_probe_summary: node.last_probe_summary.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        peer_endpoints: if peer_endpoints.is_empty() {
+            None
+        } else {
+            Some(peer_endpoints)
+        },
+        certificate_id: validate_certificate_id(node.certificate_id.as_deref())?,
+        last_probe_status: node
+            .last_probe_status
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        last_probe_summary: node
+            .last_probe_summary
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
         last_probe_unix_ms: node.last_probe_unix_ms,
-        last_action: node.last_action.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        last_action: node
+            .last_action
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
         last_action_unix_ms: node.last_action_unix_ms,
     })
 }
@@ -214,19 +235,43 @@ fn render_remote_nodes(nodes: &[RemoteNodeRecord]) -> String {
                 node.orchestrator_url.as_str()
             }
         ));
+        if let Some(certificate_id) = &node.certificate_id {
+            lines.push(format!("  certificate_id: {}", certificate_id));
+        }
         if let Some(peers) = &node.peer_endpoints {
             if !peers.is_empty() {
                 lines.push(format!("  peers: {}", peers.join(",")));
             }
         }
         if let Some(status) = &node.last_probe_status {
-            lines.push(format!("  probe: {} @ {}", status, node.last_probe_unix_ms.unwrap_or(0)));
+            lines.push(format!(
+                "  probe: {} @ {}",
+                status,
+                node.last_probe_unix_ms.unwrap_or(0)
+            ));
         }
         if let Some(action) = &node.last_action {
-            lines.push(format!("  action: {} @ {}", action, node.last_action_unix_ms.unwrap_or(0)));
+            lines.push(format!(
+                "  action: {} @ {}",
+                action,
+                node.last_action_unix_ms.unwrap_or(0)
+            ));
         }
     }
     lines.join("\n")
+}
+
+fn validate_certificate_id(value: Option<&str>) -> Result<Option<String>, String> {
+    let Some(trimmed) = value.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if !trimmed
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_'))
+    {
+        return Err("certificate id contains unsupported characters".to_string());
+    }
+    Ok(Some(trimmed.to_string()))
 }
 
 #[cfg(test)]
@@ -253,6 +298,7 @@ mod tests {
             agent_port: 5001,
             cluster_id: Some("lan-a".to_string()),
             peer_endpoints: Some(vec!["10.0.0.11:5001".to_string()]),
+            certificate_id: Some("mesh-a-cert".to_string()),
             last_probe_status: None,
             last_probe_summary: None,
             last_probe_unix_ms: None,

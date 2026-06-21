@@ -159,6 +159,7 @@ async function startOrchestrator(mode) {
   const env = buildModeEnv(mode);
   env.PORT = String(SERVICE_PORTS.orchestrator);
   env.KYUUBIKI_AGENT_ENDPOINTS = agentEndpointsValue();
+  env.KYUUBIKI_AGENT_DISCOVERY = agentDiscoveryValue();
   spawnManaged({
     pidPath: SERVICE_FILES.orchestrator.pid,
     logPath: SERVICE_FILES.orchestrator.log,
@@ -205,7 +206,7 @@ async function startAgent(port) {
     logPath: files.log,
     cwd: RUST_DIR,
     command: platformCommand("cargo"),
-    args: ["run", "-p", "kyuubiki-cli", "--", "agent", "--port", String(port)],
+    args: ["run", "-p", "kyuubiki-cli", "--bin", "kyuubiki-cli", "--", "agent", "--port", String(port)],
     env: process.env,
   });
 
@@ -469,12 +470,23 @@ function loadManifestAgentPorts(env) {
 
 function agentEndpointsValue() {
   const env = loadEnvValues();
+  if (Object.prototype.hasOwnProperty.call(process.env, "KYUUBIKI_AGENT_ENDPOINTS")) {
+    return process.env.KYUUBIKI_AGENT_ENDPOINTS;
+  }
   return env.KYUUBIKI_AGENT_ENDPOINTS ?? DEFAULT_AGENT_ENDPOINTS;
+}
+
+function agentDiscoveryValue() {
+  const env = loadEnvValues();
+  if (Object.prototype.hasOwnProperty.call(process.env, "KYUUBIKI_AGENT_DISCOVERY")) {
+    return process.env.KYUUBIKI_AGENT_DISCOVERY;
+  }
+  return env.KYUUBIKI_AGENT_DISCOVERY ?? "static";
 }
 
 function buildModeEnv(mode) {
   const env = loadEnvValues();
-  const merged = { ...process.env, ...env };
+  const merged = { ...env, ...process.env };
   if (mode === "local") {
     merged.KYUUBIKI_STORAGE_BACKEND = "sqlite";
     merged.SQLITE_DATABASE_PATH = env.SQLITE_DATABASE_PATH ?? "./tmp/data/kyuubiki_dev.sqlite3";

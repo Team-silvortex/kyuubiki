@@ -68,6 +68,31 @@ struct DirectMeshRegressionSnapshotPayload {
     status: String,
 }
 
+#[derive(Deserialize, Serialize)]
+struct RegressionGateLanePayload {
+    id: String,
+    title: String,
+    category: String,
+    status: String,
+    gate_status: String,
+    gate_reasons: Vec<String>,
+    generated_at_unix_s: u64,
+    links: Vec<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+struct RegressionGateReportPayload {
+    schema_version: String,
+    generated_at_unix_s: u64,
+    catalog_path: String,
+    overall_gate_status: String,
+    failing_lane_count: usize,
+    warning_lane_count: usize,
+    lanes: Vec<RegressionGateLanePayload>,
+    #[serde(default)]
+    rendered: String,
+}
+
 #[derive(Serialize)]
 struct RuntimeLogPayload {
     service: String,
@@ -1147,6 +1172,20 @@ fn hub_direct_mesh_regression_snapshot() -> Result<DirectMeshRegressionSnapshotP
 }
 
 #[tauri::command]
+fn hub_regression_gate_report() -> Result<RegressionGateReportPayload, String> {
+    let report_path = workspace_root().join("tmp").join("regression-gate-report.json");
+    let content = fs::read_to_string(&report_path)
+        .map_err(|error| format!("failed to read regression gate report: {error}"))?;
+    let mut payload: RegressionGateReportPayload =
+        serde_json::from_str(&content).map_err(|error| format!("invalid regression gate report: {error}"))?;
+    payload.rendered = format!(
+        "overall gate: {} | failing lanes: {} | warning lanes: {}",
+        payload.overall_gate_status, payload.failing_lane_count, payload.warning_lane_count
+    );
+    Ok(payload)
+}
+
+#[tauri::command]
 fn hub_environment() -> HubEnvironmentPayload {
     HubEnvironmentPayload {
         hub_role: "desktop-orchestration-shell".to_string(),
@@ -1188,6 +1227,7 @@ fn main() {
             open_direct_mesh_baseline,
             open_direct_mesh_output_dir,
             hub_direct_mesh_regression_snapshot,
+            hub_regression_gate_report,
             hub_environment
         ])
         .run(tauri::generate_context!())

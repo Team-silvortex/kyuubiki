@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -66,7 +66,10 @@ help:
 	@echo "  make test-integration-api Run the local orchestrator + agent + API integration smoke test"
 	@echo "  make test-integration-cluster Run the protected cluster registration/heartbeat integration smoke test"
 	@echo "  make test-integration-direct-mesh Run the direct_mesh_gui LAN agent solve + chunk smoke test"
+	@echo "  make test-integration-desktop-gui Run Hub + Installer + Workbench desktop preview regression checks"
 	@echo "  make test-integration-direct-mesh-docker Run the direct_mesh_gui benchmark harness inside Docker and export repeat summaries"
+	@echo "  make test-integration-workflow-mesh Run the distributed workflow mesh regression trio in sequence"
+	@echo "  make test-integration-workflow-mesh-nightly Run the remote workflow mesh regression flow on kyuubiki-lab and pull logs back"
 	@echo "  make test-integration-ui-mechanical Run the Playwright Workbench UI smoke for representative mechanical samples"
 	@echo "  make test-integration-ui-thermal Run the Playwright Workbench UI smoke for representative thermal and thermo-mechanical samples"
 	@echo "  make verify      Run formatting checks and tests"
@@ -85,6 +88,7 @@ help:
 	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k>"
 	@echo "  make benchmark-standard-report Write per-matrix reports plus a merged standard comparison report"
 	@echo "  make benchmark-standard-nightly Run the remote kyuubiki-lab standard benchmark regression flow and pull reports back"
+	@echo "  make regression-gate-report Rebuild the normalized regression catalog and compact gate report under tmp/"
 	@echo "  make test-integration-direct-mesh-docker-compare Compare a Docker direct-mesh summary against the checked-in baseline"
 	@echo "  make test-integration-direct-mesh-docker-report Run the Docker direct-mesh benchmark and write a baseline comparison report"
 	@echo "  make test-integration-direct-mesh-docker-nightly Run the remote direct-mesh Docker regression flow against the checked-in baseline"
@@ -217,6 +221,11 @@ build-installation-docs:
 build-update-catalog:
 	@node ./scripts/build-update-catalog.mjs
 
+regression-gate-report:
+	@node ./scripts/build-regression-lane-catalog.mjs --tmp-root ./tmp
+	@node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
+	@node ./scripts/build-nightly-artifact-overview.mjs --tmp-root ./tmp
+
 check-doc-book:
 	@node ./scripts/check-doc-book.mjs
 
@@ -270,7 +279,7 @@ test-installer-gui:
 test-workbench-gui:
 	@cd apps/workbench-gui && npm run test:smoke
 
-test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-ui-mechanical test-integration-ui-thermal
+test-integration: test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-ui-mechanical test-integration-ui-thermal
 
 test-integration-api:
 	@node --test tests/integration/orchestrator-agent-api-smoke.test.mjs
@@ -280,6 +289,9 @@ test-integration-cluster:
 
 test-integration-direct-mesh:
 	@node --test tests/integration/direct-mesh-gui-smoke.test.mjs
+
+test-integration-desktop-gui:
+	@node --test tests/integration/desktop-shell-regression.test.mjs tests/integration/workbench-shell-regression.test.mjs
 
 test-integration-direct-mesh-docker:
 	@DOCKER_RUN_NETWORK=$${DOCKER_RUN_NETWORK:-host} bash ./scripts/run-direct-mesh-benchmark-container.sh --repeat $${REPEAT:-3} --output-dir $${OUTPUT_DIR:-tmp/direct-mesh-benchmark-container/latest}
@@ -293,6 +305,12 @@ test-integration-direct-mesh-docker-report:
 
 test-integration-direct-mesh-docker-nightly:
 	@bash ./scripts/run-direct-mesh-benchmark-regression.sh
+
+test-integration-workflow-mesh:
+	@bash ./scripts/run-workflow-mesh-regression.sh
+
+test-integration-workflow-mesh-nightly:
+	@bash ./scripts/run-workflow-mesh-regression-remote.sh
 
 test-integration-workflow-catalog-compare:
 	@node ./scripts/compare-workflow-catalog-benchmark.mjs --current $${CURRENT:-tmp/workflow-catalog-benchmark.json} --baseline $${BASELINE:-tests/integration/benchmarks/workflow-catalog-benchmark-baseline.json} --json-out $${COMPARE_OUT:-tmp/workflow-catalog-benchmark.compare.json} --report-out $${REPORT_OUT:-tmp/workflow-catalog-benchmark.compare.md} --fail-on-median-regression-pct $${WORKFLOW_MEDIAN_THRESHOLD:-50} --fail-on-avg-regression-pct $${WORKFLOW_AVG_THRESHOLD:-80}

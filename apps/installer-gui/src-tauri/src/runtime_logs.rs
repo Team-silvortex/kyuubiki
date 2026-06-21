@@ -78,7 +78,10 @@ pub fn start_log_stream(app: AppHandle, payload: LogPayload) -> Result<String, S
         }
     });
 
-    Ok(format!("started runtime log stream for {}", payload.service))
+    Ok(format!(
+        "started runtime log stream for {}",
+        payload.service
+    ))
 }
 
 #[tauri::command]
@@ -88,8 +91,14 @@ pub fn stop_log_stream(payload: LogPayload) -> Result<String, String> {
         .map_err(|_| "failed to lock log stream registry".to_string())?;
     if let Some(flag) = streams.remove(&payload.service) {
         flag.store(true, Ordering::Relaxed);
-        Ok(format!("stopped runtime log stream for {}", payload.service))
+        Ok(format!(
+            "stopped runtime log stream for {}",
+            payload.service
+        ))
     } else {
-        Ok(format!("no active runtime log stream for {}", payload.service))
+        Ok(format!(
+            "no active runtime log stream for {}",
+            payload.service
+        ))
     }
 }

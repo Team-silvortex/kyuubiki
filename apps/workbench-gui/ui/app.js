@@ -210,7 +210,9 @@ async function loadEnvironment() {
   elements.workbenchUrl.textContent = environment.workbench_url;
   elements.orchestratorUrl.textContent = environment.orchestrator_url;
   applyDesktopState(elements.deploymentMode, environment.deployment_mode, { kind: "activity" });
-  elements.shellRoot?.dataset.hostPlatform = normalizeDesktopPlatform(environment.host_platform);
+  if (elements.shellRoot) {
+    elements.shellRoot.dataset.hostPlatform = normalizeDesktopPlatform(environment.host_platform);
+  }
 }
 
 function loadWorkbenchFrame() {

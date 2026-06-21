@@ -197,6 +197,30 @@
                   When the stack is healthy, use Services to inspect logs, then stage a release or build the installer bundle.
                 </p>
               </article>
+              <article class="completion-card">
+                <p class="section-eyebrow desktop-shell-eyebrow">Regression gate</p>
+                <h3 id="regression-gate-title">Unified lane posture</h3>
+                <p id="regression-gate-copy">
+                  Surface the nightly benchmark and workflow gate here so packaging decisions stay tied to the latest measured drift.
+                </p>
+                <div class="hub-metrics">
+                  <div class="desktop-shell-metric-row"><span>Status</span><strong class="desktop-shell-state" data-desktop-state="activity" id="regression-gate-status">loading</strong></div>
+                  <div class="desktop-shell-metric-row"><span>Warnings</span><strong id="regression-gate-warning-count">0</strong></div>
+                  <div class="desktop-shell-metric-row"><span>Failures</span><strong id="regression-gate-failing-count">0</strong></div>
+                </div>
+                <div class="hub-stack">
+                  <div>
+                    <div class="hub-card__eyebrow">Catalog</div>
+                    <div class="desktop-shell-note" id="regression-gate-catalog-path">tmp/regression-lane-catalog.json</div>
+                  </div>
+                  <div>
+                    <div class="hub-card__eyebrow">Lane summary</div>
+                    <div class="desktop-shell-note" id="regression-gate-summary">Waiting for the latest gate report.</div>
+                  </div>
+                </div>
+                <div class="hub-card__eyebrow">Top reasons</div>
+                <div class="desktop-shell-note" id="regression-gate-reasons">No unified gate report loaded yet.</div>
+              </article>
             </div>
           </section>
 
@@ -444,97 +468,7 @@
             </div>
           </section>
 
-          <section class="panel" data-panel="remote">
-            <div class="section-header">
-              <div>
-                <p class="section-eyebrow desktop-shell-eyebrow">Remote deployment</p>
-                <h2>Operate remote solver nodes</h2>
-                <p class="desktop-shell-note">
-                  Installer enforces bounded remote targets: absolute workspace paths only, plain host fields only, and optional host/workspace allowlists from the desktop environment.
-                </p>
-              </div>
-            </div>
-
-            <div class="form-shell">
-              <div class="panel-header">
-                <h2>SSH target</h2>
-              </div>
-              <div class="field-grid">
-                <label class="field">
-                  <span>SSH user</span>
-                  <input id="remote-ssh-user" type="text" placeholder="ubuntu" />
-                </label>
-                <label class="field">
-                  <span>Target host</span>
-                  <input id="remote-target-host" type="text" placeholder="10.20.0.11" />
-                </label>
-                <label class="field">
-                  <span>SSH port</span>
-                  <input id="remote-ssh-port" type="number" placeholder="22" />
-                </label>
-                <label class="field field-span-2">
-                  <span>Remote workspace</span>
-                  <input id="remote-workspace" type="text" placeholder="/opt/kyuubiki" />
-                </label>
-              </div>
-              <div class="action-row">
-                <button class="primary" data-action="remote-bootstrap">Remote bootstrap</button>
-              </div>
-            </div>
-
-            <div class="form-shell">
-              <div class="panel-header">
-                <h2>Remote policy</h2>
-              </div>
-              <div class="field-grid">
-                <label class="field field-span-2">
-                  <span>Allowed hosts</span>
-                  <input id="remote-policy-allowed-hosts" type="text" placeholder="192.168.1.12,solver-a" />
-                </label>
-                <label class="field field-span-2">
-                  <span>Allowed workspace roots</span>
-                  <input id="remote-policy-allowed-workspaces" type="text" placeholder="/opt/kyuubiki,/srv/kyuubiki" />
-                </label>
-              </div>
-              <div class="field-grid">
-                <label class="field field-span-2">
-                  <span>Effective hosts</span>
-                  <code id="remote-policy-effective-hosts">(unbounded)</code>
-                </label>
-                <label class="field field-span-2">
-                  <span>Effective workspace roots</span>
-                  <code id="remote-policy-effective-workspaces">(unbounded)</code>
-                </label>
-                <label class="field field-span-2">
-                  <span>Config path</span>
-                  <code id="remote-policy-config-path">config/installer-remote-policy.json</code>
-                </label>
-              </div>
-              <div class="action-row">
-                <button data-action="refresh-remote-policy">Refresh policy</button>
-                <button class="primary" data-action="save-remote-policy">Save policy</button>
-              </div>
-            </div>
-            <div class="form-shell"><div class="panel-header"><h2>Remote nodes</h2></div><label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.168.1.12","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"orchestrated","orchestrator_url":"http://192.168.1.10:4000","agent_id":"solver-lab-a","advertise_host":"192.168.1.12","agent_port":5001},{"label":"mesh-b","target_host":"192.168.1.22","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"offline_mesh","cluster_id":"lan-a","peer_endpoints":["192.168.1.23:5001"],"agent_id":"solver-mesh-b","advertise_host":"192.168.1.22","agent_port":5001}]'></textarea></label><pre id="remote-node-summary"></pre><div class="field-grid"><label class="field"><span>Search nodes</span><input id="remote-node-search" type="text" placeholder="label, host, agent, cluster" /></label><label class="field"><span>Filter status</span><select id="remote-node-filter"><option value="all">All</option><option value="ok">Healthy</option><option value="failed">Failed</option><option value="unknown">Unknown</option></select></label><label class="field"><span>Filter mode</span><select id="remote-node-mode-filter"><option value="all">All</option><option value="orchestrated">Orchestrated</option><option value="offline_mesh">Offline mesh</option></select></label><label class="field"><span>Group by</span><select id="remote-node-group"><option value="none">None</option><option value="status">Status</option><option value="workspace">Workspace</option><option value="control_mode">Control mode</option><option value="orchestrator">Orchestrator</option></select></label></div><div class="action-row"><button data-remote-bulk-action="probe">Probe visible</button><button data-remote-bulk-action="mesh-preflight">Mesh preflight</button><button data-remote-bulk-action="bootstrap">Bootstrap visible</button><button data-remote-bulk-action="start">Start visible</button></div><div id="remote-mesh-health" class="remote-mesh-health"></div><div id="remote-mesh-issues" class="remote-mesh-issues"></div><div id="remote-mesh-clusters" class="remote-mesh-clusters"></div><div id="remote-node-cards" class="remote-node-grid"></div><div class="action-row"><button data-action="refresh-remote-nodes">Refresh nodes</button><button data-action="use-first-remote-node">Use first node</button><button data-action="probe-remote-node">Probe node</button><button class="primary" data-action="save-remote-nodes">Save nodes</button></div></div>
-
-            <div class="form-shell">
-              <div class="panel-header">
-                <h2>Remote agent</h2>
-              </div>
-              <div class="field-grid">
-                <label class="field"><span>Control mode</span><select id="remote-control-mode"><option value="orchestrated">Orchestrated</option><option value="offline_mesh">Offline mesh</option></select></label>
-                <label class="field"><span>Agent id</span><input id="remote-agent-id" type="text" placeholder="solver-shanghai-a" /></label>
-                <label class="field"><span>Advertise host</span><input id="remote-advertise-host" type="text" placeholder="10.20.0.11" /></label>
-                <label class="field"><span>Agent port</span><input id="remote-agent-port" type="number" placeholder="5001" /></label>
-                <label class="field field-span-2"><span>Orchestrator URL</span><input id="remote-orchestrator-url" type="text" placeholder="http://control-plane.example.com:4000" /></label>
-                <label class="field"><span>Mesh cluster id</span><input id="remote-cluster-id" type="text" placeholder="lan-a" /></label>
-                <label class="field field-span-2"><span>Peer endpoints</span><input id="remote-peer-endpoints" type="text" placeholder="10.0.0.11:5001,10.0.0.12:5001" /></label>
-              </div>
-              <div class="action-row">
-                <button class="primary" data-action="remote-start-agent">Start remote agent</button>
-              </div>
-            </div>
-          </section>
+          <section class="panel" data-panel="remote" id="remote-panel-root"></section>
 
           <section class="panel" data-panel="release">
             <div class="section-header">

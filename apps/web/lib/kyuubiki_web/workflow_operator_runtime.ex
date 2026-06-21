@@ -299,6 +299,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     |> put_orchestration_value(:control_mode, Map.get(context, "control_mode"))
     |> put_orchestration_value(:orch_id, Map.get(context, "orch_id"))
     |> put_orchestration_value(:orch_session_id, Map.get(context, "orch_session_id"))
+    |> put_orchestration_value(:cluster_id, Map.get(context, "cluster_id"))
   end
 
   defp normalize_orchestration_context(_context), do: %{}

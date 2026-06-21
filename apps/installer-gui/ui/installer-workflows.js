@@ -61,6 +61,7 @@ export function currentRemoteAgentPayload() {
     advertiseHost: document.getElementById("remote-advertise-host").value.trim(),
     agentPort: Number(document.getElementById("remote-agent-port").value || "5001"),
     clusterId: document.getElementById("remote-cluster-id").value.trim(),
+    certificateId: document.getElementById("remote-certificate-id").value.trim(),
     peerEndpoints: document.getElementById("remote-peer-endpoints").value
       .split(",")
       .map((value) => value.trim())
@@ -111,6 +112,7 @@ export function applyRemoteNodeToForm(node) {
   document.getElementById("remote-agent-port").value = node.agent_port ?? 5001;
   document.getElementById("remote-orchestrator-url").value = node.orchestrator_url || "";
   document.getElementById("remote-cluster-id").value = node.cluster_id || "";
+  document.getElementById("remote-certificate-id").value = node.certificate_id || "";
   document.getElementById("remote-peer-endpoints").value = Array.isArray(node.peer_endpoints) ? node.peer_endpoints.join(",") : "";
 }
 

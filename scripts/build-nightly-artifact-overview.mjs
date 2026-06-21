@@ -137,6 +137,43 @@ async function readWorkflowCatalogLane(tmpRoot) {
   };
 }
 
+async function readWorkflowMeshLane(tmpRoot) {
+  const indexPath = path.join(tmpRoot, "workflow-mesh-regression", "index.json");
+  if (!(await exists(indexPath))) {
+    return null;
+  }
+
+  const payload = JSON.parse(await readFile(indexPath, "utf8"));
+  const run = Array.isArray(payload.retained_runs) ? payload.retained_runs[0] : null;
+  if (!run) {
+    return {
+      id: "workflow-mesh",
+      title: "Workflow mesh nightly",
+      summary: "No retained workflow mesh runs yet.",
+      generatedAtUnixS: payload.generated_at_unix_s ?? 0,
+      links: [
+        "workflow-mesh-regression/index.html",
+        "workflow-mesh-regression/index.json",
+        "workflow-mesh-regression/README.md",
+      ],
+    };
+  }
+
+  return {
+    id: "workflow-mesh",
+    title: "Workflow mesh nightly",
+    summary: `Latest run \`${run.slug}\` from the remote distributed workflow mesh regression trio.`,
+    generatedAtUnixS: run.generated_at_unix_s ?? payload.generated_at_unix_s ?? 0,
+    links: [
+      `workflow-mesh-regression/${run.slug}/summary.json`,
+      `workflow-mesh-regression/${run.slug}/README.md`,
+      `workflow-mesh-regression/${run.slug}/run.log`,
+      "workflow-mesh-regression/index.html",
+      "workflow-mesh-regression/index.json",
+    ],
+  };
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -151,6 +188,8 @@ function renderReadme(tmpRoot, lanes) {
     "",
     `- Root: \`${path.relative(process.cwd(), tmpRoot) || "."}\``,
     "- Purpose: disposable local runtime state, benchmark artifacts, and nightly comparison outputs.",
+    "- Cross-lane regression catalog: `regression-lane-catalog.json`, `regression-lane-catalog.md`, `regression-lane-catalog.html`.",
+    "- Gate report: `regression-gate-report.json`, `regression-gate-report.md`.",
     "",
     "## Nightly lanes",
     "",
@@ -215,6 +254,8 @@ function renderHtml(tmpRoot, lanes) {
         <div class="docs-links">
           <a class="docs-link" href="./README.md">Open tmp README</a>
           <a class="docs-link" href="./nightly-overview.json">Open JSON index</a>
+          <a class="docs-link" href="./regression-lane-catalog.html">Open regression catalog</a>
+          <a class="docs-link" href="./regression-gate-report.json">Open gate report</a>
           <a class="docs-link" href="../docs/testing-and-ci.md">Open testing guide</a>
         </div>
       </section>
@@ -233,6 +274,7 @@ async function main() {
   const lanes = (
     await Promise.all([
       readDirectMeshLane(options.tmpRoot),
+      readWorkflowMeshLane(options.tmpRoot),
       readWorkflowCatalogLane(options.tmpRoot),
       readStandardLane(options.tmpRoot),
     ])

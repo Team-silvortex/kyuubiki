@@ -7,7 +7,6 @@ import {
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
-  applyDesktopState,
 } from "./shared/tauri-bridge.js";
 import {
   desktopReleaseRootPattern,
@@ -27,6 +26,9 @@ import {
   renderDoctor,
   withRemoteNodeStatus,
 } from "./installer-workflows.js";
+import { mountCertificatePanel } from "./certificate-panel.js";
+import { renderRegressionGateReport } from "./regression-gate-panel.js";
+import { mountRemotePanel } from "./remote-panel.js";
 import { mountRemoteNodePanel } from "./remote-node-panel.js";
 import { createRuntimeLogController } from "./runtime-log-panel.js";
 import { runInstallerStartup } from "./installer-startup.js";
@@ -45,6 +47,7 @@ import {
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
 
 (function () {
+  mountRemotePanel();
   const DEFAULT_PRESET = {
     agentManifestPath: "./deploy/agents.local.example.json",
     distributedAgentManifestPath: "./deploy/agents.distributed.example.json",
@@ -64,26 +67,25 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     releaseTargetInput: ids("release-target"),
     workspaceLabel: ids("workspace-label"),
     currentModeLabel: ids("current-mode-label"),
-    languageLabel: ids("shell-language-label"),
-    languageSelect: ids("shell-language-select"),
-    serviceModePill: ids("service-mode-pill"),
-    completionGuide: ids("completion-guide"),
-    liveTailToggle: ids("log-autorefresh"),
-    logServiceSelect: ids("log-service"),
+    languageLabel: ids("shell-language-label"), languageSelect: ids("shell-language-select"),
+    serviceModePill: ids("service-mode-pill"), completionGuide: ids("completion-guide"),
+    regressionGateTitle: ids("regression-gate-title"), regressionGateCopy: ids("regression-gate-copy"),
+    regressionGateStatus: ids("regression-gate-status"), regressionGateWarningCount: ids("regression-gate-warning-count"),
+    regressionGateFailingCount: ids("regression-gate-failing-count"), regressionGateCatalogPath: ids("regression-gate-catalog-path"),
+    regressionGateSummary: ids("regression-gate-summary"), regressionGateReasons: ids("regression-gate-reasons"),
+    liveTailToggle: ids("log-autorefresh"), logServiceSelect: ids("log-service"),
   };
   let brandConfig = null;
   let currentLanguage = "en";
   const sensitiveEnvFieldIds = ["database-url", "api-token", "cluster-api-token", "direct-mesh-token"];
 
-  mountIntegrityPanel();
-  mountUpdatePanel();
-  populateDesktopPlatformSelect(ui.releasePlatformSelect);
+  mountIntegrityPanel(); mountUpdatePanel(); populateDesktopPlatformSelect(ui.releasePlatformSelect);
+  const { currentCertificateIssuePayload, currentCertificatePolicyPayload, currentCertificateRevokePayload, getActiveCertificates, hydrateCertificateAuthority } = mountCertificatePanel();
 
   const releaseLabel = () => {
     const version = String(brandConfig?.releaseVersion || "").replace(/^v/u, "");
     const codename = String(brandConfig?.releaseCodename || "").trim();
-    const tag = [codename, version].filter(Boolean).join(" ");
-    return tag ? `Kyuubiki Installer · ${tag}` : "Kyuubiki Installer";
+    return [codename, version].filter(Boolean).join(" ") ? `Kyuubiki Installer · ${[codename, version].filter(Boolean).join(" ")}` : "Kyuubiki Installer";
   };
 
   const renderDesktopLanguagePreference = () => {
@@ -310,6 +312,11 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     hydrateRemotePolicy(policy);
     return policy.rendered;
   };
+  const refreshCertificateAuthority = async () => {
+    const policy = await invoke("certificate_authority_policy");
+    hydrateCertificateAuthority(policy);
+    return policy.rendered;
+  };
 
   const { refreshRuntimeLog, startRuntimeLogStream } = createRuntimeLogController({
     invoke,
@@ -324,6 +331,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     runAction,
     invokeGuardedMutation,
     applyRemoteNodeToForm,
+    getActiveCertificates,
     showCompletion,
     currentRemoteBootstrapPayload,
     currentRemoteAgentPayload,
@@ -471,6 +479,37 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
       showCompletion("Remote deployment policy saved.");
       return result;
     }),
+    "refresh-certificate-policy": () => runAction("refresh-certificate-policy", refreshCertificateAuthority),
+    "save-certificate-policy": () => runAction("save-certificate-policy", async () => {
+      const result = await invokeGuardedMutation("write_certificate_policy", {
+        certificatePolicy: currentCertificatePolicyPayload(),
+      });
+      await refreshCertificateAuthority();
+      showCompletion("Certificate policy saved. PKI storage and enforcement toggles are now aligned.");
+      return result;
+    }),
+    "initialize-certificate-authority": () => runAction("initialize-certificate-authority", async () => {
+      const result = await invokeGuardedMutation("initialize_certificate_authority");
+      await refreshCertificateAuthority();
+      showCompletion("Certificate authority initialized. You can now issue node certificates.");
+      return result;
+    }),
+    "issue-node-certificate": () => runAction("issue-node-certificate", async () => {
+      const result = await invokeGuardedMutation("issue_node_certificate", {
+        certificateIssue: currentCertificateIssuePayload(),
+      });
+      await refreshCertificateAuthority();
+      showCompletion("Node certificate issued and added to the installer inventory.");
+      return result;
+    }),
+    "revoke-node-certificate": () => runAction("revoke-node-certificate", async () => {
+      const result = await invokeGuardedMutation("revoke_node_certificate", {
+        certificateRevoke: currentCertificateRevokePayload(),
+      });
+      await refreshCertificateAuthority();
+      showCompletion("Selected certificate marked as revoked in the installer inventory.");
+      return result;
+    }),
     "refresh-remote-nodes": () => runAction("refresh-remote-nodes", refreshRemoteNodes),
     "save-remote-nodes": () => runAction("save-remote-nodes", async () => {
       const result = await invokeGuardedMutation("write_remote_nodes", { remoteNodes: currentRemoteNodeRegistryPayload() });
@@ -539,6 +578,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     defaultPreset: DEFAULT_PRESET,
     setModeCard,
     hydrateRemotePolicy,
+    hydrateCertificateAuthority,
     hydrateRemoteNodeRegistry: applyRemoteRegistry,
     releasePlatformSelect: ui.releasePlatformSelect,
     populateDesktopPlatformSelect,
@@ -549,6 +589,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     renderRuntimeLog,
     liveTailToggle: ui.liveTailToggle,
     startRuntimeLogStream,
+    renderRegressionGateReport: (report) => renderRegressionGateReport(ui, report),
     showCompletion,
     brandConfigName: () => brandConfig?.installerName || "Installer GUI",
   });

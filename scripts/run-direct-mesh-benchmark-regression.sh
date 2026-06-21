@@ -127,6 +127,12 @@ node "$ROOT_DIR/scripts/compare-direct-mesh-benchmark.mjs" \
   --fail-on-elapsed-regression-pct "$DIRECT_MESH_ELAPSED_THRESHOLD" \
   --fail-on-rss-regression-pct "$DIRECT_MESH_RSS_THRESHOLD"
 
+node "$ROOT_DIR/scripts/build-regression-lane-catalog.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
+node "$ROOT_DIR/scripts/build-regression-gate-report.mjs" \
+  --tmp-root "$ROOT_DIR/tmp"
+
 node "$ROOT_DIR/scripts/build-nightly-artifact-overview.mjs" \
   --tmp-root "$ROOT_DIR/tmp"
 

@@ -14,6 +14,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
           optional(:control_mode) => String.t(),
           optional(:orch_id) => String.t(),
           optional(:orch_session_id) => String.t(),
+          optional(:cluster_id) => String.t(),
           optional(:job_id) => String.t(),
           optional(:method) => String.t(),
           required(:claimed_at) => DateTime.t()
@@ -347,6 +348,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
          control_mode: optional_string(attrs, "control_mode") || agent.control_mode,
          orch_id: optional_string(attrs, "orch_id") || agent.orch_id,
          orch_session_id: optional_string(attrs, "orch_session_id") || agent.orch_session_id,
+         cluster_id: optional_string(attrs, "cluster_id") || agent.cluster_id,
          job_id: optional_string(attrs, "job_id"),
          method: optional_string(attrs, "method"),
          claimed_at: DateTime.utc_now()
@@ -697,6 +699,7 @@ defmodule KyuubikiWeb.Playground.AgentRegistry do
       "control_mode" => Map.get(lease, :control_mode) || Map.get(lease, "control_mode"),
       "orch_id" => Map.get(lease, :orch_id) || Map.get(lease, "orch_id"),
       "orch_session_id" => Map.get(lease, :orch_session_id) || Map.get(lease, "orch_session_id"),
+      "cluster_id" => Map.get(lease, :cluster_id) || Map.get(lease, "cluster_id"),
       "job_id" => Map.get(lease, :job_id) || Map.get(lease, "job_id"),
       "method" => Map.get(lease, :method) || Map.get(lease, "method"),
       "claimed_at" => format_last_seen(claimed_at),

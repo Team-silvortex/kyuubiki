@@ -41,6 +41,7 @@ protect_reads? =
 
 agent_discovery =
   case System.get_env("KYUUBIKI_AGENT_DISCOVERY") do
+    "registry" -> :registry
     "manifest" -> :manifest
     _ -> :static
   end

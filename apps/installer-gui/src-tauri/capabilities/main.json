@@ -6,8 +6,10 @@
   "permissions": [
     "core:default",
     "allow-doctor-report",
+    "allow-regression-gate-report",
     "allow-export-launch",
     "allow-read-env-file",
+    "allow-certificate-authority-policy",
     "allow-service-status",
     "allow-get-global-language-preference",
     "allow-set-global-language-preference",

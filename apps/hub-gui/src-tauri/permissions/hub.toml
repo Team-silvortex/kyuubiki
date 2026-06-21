@@ -87,3 +87,8 @@ commands.allow = ["open_troubleshooting_doc"]
 identifier = "allow-hub-environment"
 description = "Enables the hub_environment command."
 commands.allow = ["hub_environment"]
+
+[[permission]]
+identifier = "allow-hub-regression-gate-report"
+description = "Enables the hub_regression_gate_report command."
+commands.allow = ["hub_regression_gate_report"]

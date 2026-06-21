@@ -23,6 +23,7 @@ export async function runInstallerStartup({
   defaultPreset,
   setModeCard,
   hydrateRemotePolicy,
+  hydrateCertificateAuthority,
   hydrateRemoteNodeRegistry,
   releasePlatformSelect,
   populateDesktopPlatformSelect,
@@ -31,6 +32,7 @@ export async function runInstallerStartup({
   renderServiceStatus,
   refreshRuntimeLog,
   renderRuntimeLog,
+  renderRegressionGateReport,
   liveTailToggle,
   startRuntimeLogStream,
   showCompletion,
@@ -50,9 +52,11 @@ export async function runInstallerStartup({
         stagedUpdate,
         envForm,
         status,
+        regressionGate,
         language,
         brand,
         remotePolicy,
+        certificateAuthority,
         remoteNodes,
       ] = await Promise.all([
         invoke("doctor_report"),
@@ -65,9 +69,11 @@ export async function runInstallerStartup({
         invoke("latest_staged_update_record").catch(() => null),
         invoke("read_env_file").catch(() => null),
         invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
+        invoke("regression_gate_report").catch(() => null),
         loadDesktopLanguagePreference().catch(() => "en"),
         loadDesktopBrand().catch(() => null),
         invoke("remote_deploy_policy").catch(() => null),
+        invoke("certificate_authority_policy").catch(() => null),
         invoke("remote_node_registry").catch(() => null),
       ]);
 
@@ -100,6 +106,9 @@ export async function runInstallerStartup({
       if (remotePolicy) {
         hydrateRemotePolicy(remotePolicy);
       }
+      if (certificateAuthority) {
+        hydrateCertificateAuthority(certificateAuthority);
+      }
       if (remoteNodes) {
         hydrateRemoteNodeRegistry(remoteNodes);
       }
@@ -111,6 +120,7 @@ export async function runInstallerStartup({
       }
       syncReleaseTarget(releasePlatformSelect?.value);
       renderServiceStatus(status.rendered);
+      renderRegressionGateReport(regressionGate);
       await refreshRuntimeLog().catch(() => {
         renderRuntimeLog("runtime log unavailable");
       });
@@ -118,7 +128,9 @@ export async function runInstallerStartup({
         await startRuntimeLogStream().catch(() => {});
       }
       const readyMessage =
-        integrityReport && Array.isArray(integrityReport.issues) && integrityReport.issues.length > 0
+        regressionGate && regressionGate.overall_gate_status && regressionGate.overall_gate_status !== "pass"
+          ? `${brandConfigName()} ready. Unified regression gate is ${regressionGate.overall_gate_status}; review benchmark or workflow drift before packaging or rollout.`
+          : integrityReport && Array.isArray(integrityReport.issues) && integrityReport.issues.length > 0
           ? `${brandConfigName()} ready. Integrity panel has flagged install contract drift; clear that before packaging a release.`
           : `${brandConfigName()} ready. Pick a profile, write env, then start services and watch live logs here.`;
       showCompletion(readyMessage);

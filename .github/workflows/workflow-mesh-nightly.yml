@@ -1,0 +1,50 @@
+name: Workflow Mesh Nightly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 18 * * *"
+
+concurrency:
+  group: workflow-mesh-nightly
+  cancel-in-progress: false
+
+jobs:
+  workflow-mesh-nightly:
+    if: ${{ vars.KYUUBIKI_WORKFLOW_MESH_SELF_HOSTED == 'true' }}
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify self-hosted lab access configuration
+        run: |
+          test -n "${KYUUBIKI_LAB_HOST:-}" || { echo "KYUUBIKI_LAB_HOST is required" >&2; exit 1; }
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+
+      - name: Run workflow mesh regression
+        run: |
+          bash ./scripts/run-workflow-mesh-regression-remote.sh
+        env:
+          KYUUBIKI_LAB_HOST: ${{ vars.KYUUBIKI_LAB_HOST }}
+          KYUUBIKI_LAB_WORKFLOW_MESH_DIR: ${{ vars.KYUUBIKI_LAB_WORKFLOW_MESH_DIR }}
+          OUTPUT_SLUG: github-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Evaluate unified regression gate
+        if: always()
+        run: |
+          node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
+
+      - name: Upload workflow mesh artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workflow-mesh-nightly-${{ github.run_attempt }}
+          path: |
+            tmp/workflow-mesh-regression/**
+            tmp/regression-lane-catalog.*
+            tmp/regression-gate-report.*
+            tmp/nightly-overview.*
+            tmp/README.md
+          if-no-files-found: ignore

@@ -1924,6 +1924,7 @@ const state = {
   releaseCodename: "",
   language: "en",
   directMeshRegressionSnapshot: null,
+  regressionGateReport: null,
   assistantApiKey: "",
   assistantTrustedHosts: loadHubAssistantTrustedHosts(),
   remoteTrustedHosts: loadHubTrustedHosts(HUB_REMOTE_TRUSTED_HOSTS_KEY),
@@ -2001,6 +2002,18 @@ function regressionStateKind(status) {
   }
 }
 
+function unifiedGateStateKind(status) {
+  switch (status) {
+    case "pass":
+      return "health";
+    case "fail":
+      return "danger";
+    case "warn":
+    default:
+      return "activity";
+  }
+}
+
 function renderDirectMeshRegressionSnapshot(snapshot) {
   if (!snapshot) {
     return;
@@ -2047,8 +2060,70 @@ function renderDirectMeshRegressionSnapshot(snapshot) {
     const rssDelta = snapshot.latest_exists && snapshot.rss_delta_pct != null
       ? ` RSS delta: ${formatRegressionNumber(snapshot.rss_delta_pct, 2)}%.`
       : "";
+    const regressionGate =
+      state.regressionGateReport && state.regressionGateReport.overall_gate_status
+        ? ` Unified gate: ${state.regressionGateReport.overall_gate_status}.`
+        : "";
     elements.guidesRegressionNote.textContent =
-      `${regressionStatusNote(snapshot.status)}${generatedAt}${elapsedDelta}${rssDelta}`;
+      `${regressionStatusNote(snapshot.status)}${generatedAt}${elapsedDelta}${rssDelta}${regressionGate}`;
+  }
+}
+
+function renderRegressionGateReport(report) {
+  if (!report) {
+    if (elements.guidesGateStatusValue) {
+      applyDesktopState(elements.guidesGateStatusValue, "unavailable", { kind: "activity" });
+    }
+    if (elements.guidesGateWarningCount) elements.guidesGateWarningCount.textContent = "0";
+    if (elements.guidesGateFailingCount) elements.guidesGateFailingCount.textContent = "0";
+    if (elements.guidesGateLaneCount) elements.guidesGateLaneCount.textContent = "0";
+    if (elements.guidesGateCatalogPath) elements.guidesGateCatalogPath.textContent = "tmp/regression-lane-catalog.json";
+    if (elements.guidesGateNote) elements.guidesGateNote.textContent = "Unified regression gate report unavailable on this machine.";
+    if (elements.guidesGateReasons) elements.guidesGateReasons.textContent = "No gate reasons loaded yet.";
+    return;
+  }
+
+  const lanes = Array.isArray(report.lanes) ? report.lanes : [];
+  const warnings =
+    Number.isFinite(report.warning_lane_count) ? report.warning_lane_count : lanes.filter((lane) => lane.gate_status === "warn").length;
+  const failures =
+    Number.isFinite(report.failing_lane_count) ? report.failing_lane_count : lanes.filter((lane) => lane.gate_status === "fail").length;
+  const reasons = lanes.flatMap((lane) =>
+    Array.isArray(lane.gate_reasons)
+      ? lane.gate_reasons.map((reason) => `${lane.title || lane.id || "lane"}: ${reason}`)
+      : Array.isArray(lane.reasons)
+      ? lane.reasons.map((reason) => `${lane.title || lane.id || "lane"}: ${reason}`)
+      : [],
+  );
+
+  if (elements.guidesGateStatusValue) {
+    applyDesktopState(elements.guidesGateStatusValue, report.overall_gate_status || "unknown", {
+      kind: unifiedGateStateKind(report.overall_gate_status),
+    });
+  }
+  if (elements.guidesGateWarningCount) elements.guidesGateWarningCount.textContent = String(warnings);
+  if (elements.guidesGateFailingCount) elements.guidesGateFailingCount.textContent = String(failures);
+  if (elements.guidesGateLaneCount) elements.guidesGateLaneCount.textContent = String(lanes.length);
+  if (elements.guidesGateCatalogPath) {
+    elements.guidesGateCatalogPath.textContent = report.catalog_path || "tmp/regression-lane-catalog.json";
+  }
+  if (elements.guidesGateNote) {
+    elements.guidesGateNote.textContent =
+      `${lanes.length} lanes tracked. ${warnings} warning lanes, ${failures} failing lanes.`;
+  }
+  if (elements.guidesGateReasons) {
+    elements.guidesGateReasons.textContent = reasons.length > 0 ? reasons.slice(0, 4).join(" | ") : "All tracked lanes are within gate.";
+  }
+}
+
+async function loadRegressionGateReport() {
+  try {
+    state.regressionGateReport = await invokeTauri("hub_regression_gate_report");
+    renderRegressionGateReport(state.regressionGateReport);
+    renderDirectMeshRegressionSnapshot(state.directMeshRegressionSnapshot);
+  } catch {
+    state.regressionGateReport = null;
+    renderRegressionGateReport(null);
   }
 }
 
@@ -2296,6 +2371,15 @@ const elements = {
   guidesRegressionBaselinePath: document.getElementById("guides-regression-baseline-path"),
   guidesRegressionOutputPath: document.getElementById("guides-regression-output-path"),
   guidesRegressionNote: document.getElementById("guides-regression-note"),
+  guidesGateTitle: document.getElementById("guides-gate-title"),
+  guidesGateCopy: document.getElementById("guides-gate-copy"),
+  guidesGateStatusValue: document.getElementById("guides-gate-status-value"),
+  guidesGateWarningCount: document.getElementById("guides-gate-warning-count"),
+  guidesGateFailingCount: document.getElementById("guides-gate-failing-count"),
+  guidesGateLaneCount: document.getElementById("guides-gate-lane-count"),
+  guidesGateCatalogPath: document.getElementById("guides-gate-catalog-path"),
+  guidesGateNote: document.getElementById("guides-gate-note"),
+  guidesGateReasons: document.getElementById("guides-gate-reasons"),
   runtimeLocalLabel: document.getElementById("runtime-local-label"),
   runtimeLocalTitle: document.getElementById("runtime-local-title"),
   runtimeLocalCopy: document.getElementById("runtime-local-copy"),
@@ -5723,6 +5807,7 @@ rerenderLocalizedHubShell();
 await applyBrand();
 await loadEnvironment();
 await loadDirectMeshRegressionSnapshot();
+await loadRegressionGateReport();
 enhanceHubAccessibility();
 state.density = loadHubDensitySettings();
 const hotLogSettings = loadHubHotLogSettings();

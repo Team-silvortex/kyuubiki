@@ -34,6 +34,11 @@ jobs:
           DIRECT_MESH_RSS_THRESHOLD: "20"
           OUTPUT_SLUG: github-${{ github.run_id }}-${{ github.run_attempt }}
 
+      - name: Evaluate unified regression gate
+        if: always()
+        run: |
+          node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
+
       - name: Upload direct-mesh comparison artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,4 +46,8 @@ jobs:
           name: direct-mesh-docker-nightly-${{ github.run_attempt }}
           path: |
             tmp/direct-mesh-benchmark-container/**
+            tmp/regression-lane-catalog.*
+            tmp/regression-gate-report.*
+            tmp/nightly-overview.*
+            tmp/README.md
           if-no-files-found: ignore

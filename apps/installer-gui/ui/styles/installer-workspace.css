@@ -51,7 +51,8 @@
 .sidebar-tab,
 button,
 select,
-input {
+input,
+textarea {
   border-radius: 14px;
   font: inherit;
 }
@@ -159,6 +160,44 @@ button.primary {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
 
+.hub-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 0.9rem;
+}
+
+.hub-metrics .desktop-shell-metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.hub-metrics .desktop-shell-metric-row strong,
+.hub-stack strong {
+  color: var(--text);
+}
+
+.hub-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.hub-stack > div {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.hub-stack .desktop-shell-note,
+#regression-gate-reasons {
+  overflow-wrap: anywhere;
+}
+
 .integrity-subnav {
   display: flex;
   gap: 10px;
@@ -243,7 +282,8 @@ button.primary {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   border: 1px solid var(--line);
   background: rgba(30, 33, 39, 0.92);
@@ -527,6 +567,70 @@ pre {
 #output {
   min-height: 360px;
   flex: 1;
+}
+
+.certificate-record-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.certificate-record {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(36, 40, 46, 0.96);
+}
+
+.certificate-record__top,
+.certificate-record__meta,
+.certificate-record__paths {
+  display: grid;
+  gap: 6px;
+}
+
+.certificate-record__top {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.certificate-record__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(69, 75, 84, 0.96);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.certificate-record__pill[data-status="active"] {
+  color: var(--ok);
+}
+
+.certificate-record__pill[data-status="revoked"] {
+  color: var(--warn);
+}
+
+.certificate-record__meta,
+.certificate-record__paths {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.certificate-record code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(24, 27, 32, 0.92);
+  color: #d6dde8;
+  overflow: auto;
 }
 
 @media (max-width: 1120px) {

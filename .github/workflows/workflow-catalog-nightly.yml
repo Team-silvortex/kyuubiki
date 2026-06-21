@@ -34,6 +34,11 @@ jobs:
           WORKFLOW_AVG_THRESHOLD: "80"
           OUTPUT_SLUG: github-${{ github.run_id }}-${{ github.run_attempt }}
 
+      - name: Evaluate unified regression gate
+        if: always()
+        run: |
+          node ./scripts/build-regression-gate-report.mjs --tmp-root ./tmp
+
       - name: Upload workflow catalog comparison artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -41,4 +46,8 @@ jobs:
           name: workflow-catalog-nightly-${{ github.run_attempt }}
           path: |
             tmp/workflow-catalog-benchmark/**
+            tmp/regression-lane-catalog.*
+            tmp/regression-gate-report.*
+            tmp/nightly-overview.*
+            tmp/README.md
           if-no-files-found: ignore
