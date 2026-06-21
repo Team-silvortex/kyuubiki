@@ -3,13 +3,16 @@ use std::fs;
 use std::path::{Component, Path};
 use std::process::Command;
 
+use crate::remote_nodes::{normalize_peer_endpoints, validate_cluster_id, validate_control_mode};
 use kyuubiki_installer::workspace_root;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-const REMOTE_ALLOWED_HOSTS_ENV: &str = "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_HOSTS";
-const REMOTE_ALLOWED_WORKSPACE_ROOTS_ENV: &str = "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS";
-const REMOTE_POLICY_SCHEMA_VERSION: &str = "kyuubiki.installer.remote-policy/v1";
+pub(crate) const REMOTE_ALLOWED_HOSTS_ENV: &str = "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_HOSTS";
+pub(crate) const REMOTE_ALLOWED_WORKSPACE_ROOTS_ENV: &str = "KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS";
+pub(crate) const REMOTE_POLICY_SCHEMA_VERSION: &str = "kyuubiki.installer.remote-policy/v1";
+#[cfg(test)]
+pub(crate) static TEST_ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 #[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RemoteBootstrapPayload {
@@ -24,10 +27,13 @@ pub struct RemoteAgentPayload {
     pub target_host: String,
     pub ssh_user: String,
     pub remote_workspace: String,
+    pub control_mode: Option<String>,
     pub orchestrator_url: String,
     pub agent_id: String,
     pub advertise_host: String,
     pub agent_port: u16,
+    pub cluster_id: Option<String>,
+    pub peer_endpoints: Option<Vec<String>>,
     pub ssh_port: Option<u16>,
 }
 #[derive(Clone, Debug, Serialize)]
@@ -43,36 +49,11 @@ pub struct RemoteDeployPolicyPayload {
     pub env_allowed_workspace_roots: String,
     pub rendered: String,
 }
-#[derive(Clone, Debug, Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RemoteNodeRecord {
-    pub label: String,
-    pub target_host: String,
-    pub ssh_user: String,
-    pub remote_workspace: String,
-    pub ssh_port: Option<u16>,
-    pub orchestrator_url: String,
-    pub agent_id: String,
-    pub advertise_host: String,
-    pub agent_port: u16,
-}
-#[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RemoteNodeRegistryPayload {
-    pub config_path: String,
-    pub nodes: Vec<RemoteNodeRecord>,
-    pub rendered: String,
-}
 #[derive(Clone, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WriteRemoteDeployPolicyPayload {
     pub allowed_hosts: String,
     pub allowed_workspace_roots: String,
-}
-#[derive(Clone, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WriteRemoteNodeRegistryPayload {
-    pub nodes: Vec<RemoteNodeRecord>,
 }
 #[derive(Clone, Debug)]
 struct RemoteDeployPolicyConfig {
@@ -111,38 +92,6 @@ pub fn write_remote_deploy_policy(
     Ok(build_remote_deploy_policy_payload()?.rendered)
 }
 #[tauri::command]
-pub fn remote_node_registry() -> Result<RemoteNodeRegistryPayload, String> {
-    let nodes = read_remote_node_registry()?;
-    Ok(RemoteNodeRegistryPayload {
-        config_path: remote_nodes_path().display().to_string(),
-        rendered: render_remote_nodes(&nodes),
-        nodes,
-    })
-}
-#[tauri::command]
-pub fn write_remote_node_registry(payload: WriteRemoteNodeRegistryPayload) -> Result<String, String> {
-    let nodes = payload
-        .nodes
-        .into_iter()
-        .map(validate_remote_node_record)
-        .collect::<Result<Vec<_>, _>>()?;
-    let path = remote_nodes_path();
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|error| format!("failed to create {}: {error}", parent.display()))?;
-    }
-    fs::write(
-        &path,
-        serde_json::to_string_pretty(&json!({
-            "schema_version": REMOTE_POLICY_SCHEMA_VERSION,
-            "nodes": nodes,
-        }))
-        .map_err(|error| error.to_string())?,
-    )
-    .map_err(|error| format!("failed to write {}: {error}", path.display()))?;
-    Ok(render_remote_nodes(&read_remote_node_registry()?))
-}
-#[tauri::command]
 pub fn probe_remote_node(payload: RemoteBootstrapPayload) -> Result<String, String> {
     let ssh_user = validate_ssh_identity(&payload.ssh_user, "ssh user")?;
     let target_host = validate_target_host(&payload.target_host)?;
@@ -173,24 +122,84 @@ pub fn remote_start_agent(payload: RemoteAgentPayload) -> Result<String, String>
     let ssh_user = validate_ssh_identity(&payload.ssh_user, "ssh user")?;
     let target_host = validate_target_host(&payload.target_host)?;
     let remote_workspace = validate_remote_workspace(&payload.remote_workspace)?;
-    let orchestrator_url = validate_orchestrator_url(&payload.orchestrator_url)?;
+    let control_mode = validate_control_mode(payload.control_mode.as_deref())?;
     let agent_id = validate_agent_id(&payload.agent_id)?;
     let advertise_host = validate_advertise_host(&payload.advertise_host)?;
+    let cluster_id = validate_cluster_id(payload.cluster_id.as_deref())?;
+    let peer_endpoints = normalize_peer_endpoints(payload.peer_endpoints.unwrap_or_default())?;
     let target = format!("{ssh_user}@{target_host}");
     let screen_name = format!("kyuubiki_remote_agent_{}", payload.agent_port);
-    let remote_command = format!(
-        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
-        workspace = shell_escape(&remote_workspace),
-        screen = shell_escape(&screen_name),
-        orchestrator = shell_escape(&orchestrator_url),
-        agent_id = shell_escape(&agent_id),
-        advertise_host = shell_escape(&advertise_host),
-        port = payload.agent_port
-    );
-
+    let remote_command = match control_mode.as_str() {
+        "offline_mesh" => build_remote_mesh_agent_command(
+            &remote_workspace,
+            &screen_name,
+            &agent_id,
+            &advertise_host,
+            payload.agent_port,
+            cluster_id.as_deref(),
+            &peer_endpoints,
+        ),
+        _ => build_remote_orchestrated_agent_command(
+            &remote_workspace,
+            &screen_name,
+            &validate_orchestrator_url(&payload.orchestrator_url)?,
+            &agent_id,
+            &advertise_host,
+            payload.agent_port,
+        ),
+    };
     run_remote_ssh(payload.ssh_port, &target, &remote_command)
 }
-fn validate_target_host(value: &str) -> Result<String, String> {
+fn build_remote_orchestrated_agent_command(
+    remote_workspace: &str,
+    screen_name: &str,
+    orchestrator_url: &str,
+    agent_id: &str,
+    advertise_host: &str,
+    agent_port: u16,
+) -> String {
+    format!(
+        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && KYUUBIKI_ORCHESTRATOR_URL={orchestrator} KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host} --orchestrator-url {orchestrator}'",
+        workspace = shell_escape(remote_workspace),
+        screen = shell_escape(screen_name),
+        orchestrator = shell_escape(orchestrator_url),
+        agent_id = shell_escape(agent_id),
+        advertise_host = shell_escape(advertise_host),
+        port = agent_port
+    )
+}
+fn build_remote_mesh_agent_command(
+    remote_workspace: &str,
+    screen_name: &str,
+    agent_id: &str,
+    advertise_host: &str,
+    agent_port: u16,
+    cluster_id: Option<&str>,
+    peer_endpoints: &[String],
+) -> String {
+    let cluster_flag = cluster_id
+        .map(|value| format!(" --cluster-id {}", shell_escape(value)))
+        .unwrap_or_default();
+    let peer_flags = peer_endpoints
+        .iter()
+        .map(|value| format!(" --peer {}", shell_escape(value)))
+        .collect::<String>();
+    let cluster_env = cluster_id
+        .map(|value| format!("KYUUBIKI_AGENT_CLUSTER_ID={} ", shell_escape(value)))
+        .unwrap_or_default();
+    format!(
+        "cd {workspace} && screen -S {screen} -X quit >/dev/null 2>&1 || true && screen -dmS {screen} sh -lc 'cd workers/rust && {cluster_env}KYUUBIKI_AGENT_ID={agent_id} KYUUBIKI_AGENT_ADVERTISE_HOST={advertise_host} cargo run -p kyuubiki-cli -- agent --host 0.0.0.0 --port {port} --agent-id {agent_id} --advertise-host {advertise_host}{cluster_flag}{peer_flags}'",
+        workspace = shell_escape(remote_workspace),
+        screen = shell_escape(screen_name),
+        cluster_env = cluster_env,
+        agent_id = shell_escape(agent_id),
+        advertise_host = shell_escape(advertise_host),
+        port = agent_port,
+        cluster_flag = cluster_flag,
+        peer_flags = peer_flags
+    )
+}
+pub(crate) fn validate_target_host(value: &str) -> Result<String, String> {
     let host = validate_host_token(value, "target host")?;
     let allowed = effective_allowed_hosts()?;
     if !allowed.is_empty() && !allowed.iter().any(|candidate| candidate == &host) {
@@ -200,10 +209,10 @@ fn validate_target_host(value: &str) -> Result<String, String> {
     }
     Ok(host)
 }
-fn validate_advertise_host(value: &str) -> Result<String, String> {
+pub(crate) fn validate_advertise_host(value: &str) -> Result<String, String> {
     validate_host_token(value, "advertise host")
 }
-fn validate_host_token(value: &str, label: &str) -> Result<String, String> {
+pub(crate) fn validate_host_token(value: &str, label: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err(format!("{label} is required"));
@@ -222,7 +231,7 @@ fn validate_host_token(value: &str, label: &str) -> Result<String, String> {
     }
     Ok(trimmed.to_string())
 }
-fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
+pub(crate) fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err(format!("{label} is required"));
@@ -238,7 +247,7 @@ fn validate_ssh_identity(value: &str, label: &str) -> Result<String, String> {
     }
     Ok(trimmed.to_string())
 }
-fn validate_remote_workspace(value: &str) -> Result<String, String> {
+pub(crate) fn validate_remote_workspace(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err("remote workspace is required".to_string());
@@ -274,7 +283,7 @@ fn validate_remote_workspace(value: &str) -> Result<String, String> {
 
     Ok(trimmed.to_string())
 }
-fn validate_orchestrator_url(value: &str) -> Result<String, String> {
+pub(crate) fn validate_orchestrator_url(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err("orchestrator url is required".to_string());
@@ -287,7 +296,7 @@ fn validate_orchestrator_url(value: &str) -> Result<String, String> {
     }
     Ok(trimmed.to_string())
 }
-fn validate_agent_id(value: &str) -> Result<String, String> {
+pub(crate) fn validate_agent_id(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
         return Err("agent id is required".to_string());
@@ -313,9 +322,6 @@ fn normalize_csv_entries(value: &str) -> Vec<String> {
         .filter(|entry| !entry.is_empty())
         .map(ToString::to_string)
         .collect::<Vec<_>>()
-}
-fn remote_nodes_path() -> std::path::PathBuf {
-    workspace_root().join("config").join("installer-remote-nodes.json")
 }
 fn remote_policy_path() -> std::path::PathBuf {
     workspace_root().join("config").join("installer-remote-policy.json")
@@ -343,73 +349,6 @@ fn read_remote_policy_config() -> Result<RemoteDeployPolicyConfig, String> {
         allowed_hosts: json_array_strings(value.get("allowed_hosts")),
         allowed_workspace_roots: json_array_strings(value.get("allowed_workspace_roots")),
     })
-}
-fn read_remote_node_registry() -> Result<Vec<RemoteNodeRecord>, String> {
-    let path = remote_nodes_path();
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
-    let contents = fs::read_to_string(&path)
-        .map_err(|error| format!("failed to read {}: {error}", path.display()))?;
-    let value: Value = serde_json::from_str(&contents)
-        .map_err(|error| format!("failed to parse {}: {error}", path.display()))?;
-    value
-        .get("nodes")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .cloned()
-                .map(serde_json::from_value::<RemoteNodeRecord>)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| error.to_string())
-        })
-        .unwrap_or_else(|| Ok(Vec::new()))?
-        .into_iter()
-        .map(validate_remote_node_record)
-        .collect()
-}
-fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecord, String> {
-    let target_host = validate_target_host(&node.target_host)?;
-    Ok(RemoteNodeRecord {
-        label: if node.label.trim().is_empty() {
-            target_host.clone()
-        } else {
-            node.label.trim().to_string()
-        },
-        target_host,
-        ssh_user: validate_ssh_identity(&node.ssh_user, "ssh user")?,
-        remote_workspace: validate_remote_workspace(&node.remote_workspace)?,
-        ssh_port: node.ssh_port,
-        orchestrator_url: validate_orchestrator_url(&node.orchestrator_url)?,
-        agent_id: validate_agent_id(&node.agent_id)?,
-        advertise_host: validate_advertise_host(&node.advertise_host)?,
-        agent_port: node.agent_port,
-    })
-}
-fn render_remote_nodes(nodes: &[RemoteNodeRecord]) -> String {
-    let mut lines = vec![
-        "installer remote nodes".to_string(),
-        format!("config_path: {}", remote_nodes_path().display()),
-    ];
-    if nodes.is_empty() {
-        lines.push("nodes: (none)".to_string());
-        return lines.join("\n");
-    }
-    for node in nodes {
-        lines.push(format!(
-            "[node] {} ssh={}@{}:{} workspace={} agent={} advertise={} orchestrator={}",
-            node.label,
-            node.ssh_user,
-            node.target_host,
-            node.ssh_port.unwrap_or(22),
-            node.remote_workspace,
-            node.agent_id,
-            node.advertise_host,
-            node.orchestrator_url
-        ));
-    }
-    lines.join("\n")
 }
 fn json_array_strings(value: Option<&Value>) -> Vec<String> {
     value
@@ -556,6 +495,7 @@ mod tests {
 
     #[test]
     fn rejects_target_host_outside_allowlist() {
+        let _guard = TEST_ENV_LOCK.lock().unwrap();
         unsafe {
             env::set_var(REMOTE_ALLOWED_HOSTS_ENV, "192.168.1.12,solver-a");
         }

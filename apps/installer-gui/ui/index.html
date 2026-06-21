@@ -515,29 +515,20 @@
                 <button class="primary" data-action="save-remote-policy">Save policy</button>
               </div>
             </div>
-            <div class="form-shell"><div class="panel-header"><h2>Remote nodes</h2></div><label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.168.1.12","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"orchestrator_url":"http://192.168.1.10:4000","agent_id":"solver-lab-a","advertise_host":"192.168.1.12","agent_port":5001}]'></textarea></label><pre id="remote-node-summary"></pre><div id="remote-node-cards" class="remote-node-grid"></div><div class="action-row"><button data-action="refresh-remote-nodes">Refresh nodes</button><button data-action="use-first-remote-node">Use first node</button><button data-action="probe-remote-node">Probe node</button><button class="primary" data-action="save-remote-nodes">Save nodes</button></div></div>
+            <div class="form-shell"><div class="panel-header"><h2>Remote nodes</h2></div><label class="field"><span>Node registry JSON</span><textarea id="remote-node-registry" rows="8" placeholder='[{"label":"lab-a","target_host":"192.168.1.12","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"orchestrated","orchestrator_url":"http://192.168.1.10:4000","agent_id":"solver-lab-a","advertise_host":"192.168.1.12","agent_port":5001},{"label":"mesh-b","target_host":"192.168.1.22","ssh_user":"kyuubiki-dev","remote_workspace":"/opt/kyuubiki","ssh_port":22,"control_mode":"offline_mesh","cluster_id":"lan-a","peer_endpoints":["192.168.1.23:5001"],"agent_id":"solver-mesh-b","advertise_host":"192.168.1.22","agent_port":5001}]'></textarea></label><pre id="remote-node-summary"></pre><div class="field-grid"><label class="field"><span>Search nodes</span><input id="remote-node-search" type="text" placeholder="label, host, agent, cluster" /></label><label class="field"><span>Filter status</span><select id="remote-node-filter"><option value="all">All</option><option value="ok">Healthy</option><option value="failed">Failed</option><option value="unknown">Unknown</option></select></label><label class="field"><span>Filter mode</span><select id="remote-node-mode-filter"><option value="all">All</option><option value="orchestrated">Orchestrated</option><option value="offline_mesh">Offline mesh</option></select></label><label class="field"><span>Group by</span><select id="remote-node-group"><option value="none">None</option><option value="status">Status</option><option value="workspace">Workspace</option><option value="control_mode">Control mode</option><option value="orchestrator">Orchestrator</option></select></label></div><div class="action-row"><button data-remote-bulk-action="probe">Probe visible</button><button data-remote-bulk-action="mesh-preflight">Mesh preflight</button><button data-remote-bulk-action="bootstrap">Bootstrap visible</button><button data-remote-bulk-action="start">Start visible</button></div><div id="remote-mesh-health" class="remote-mesh-health"></div><div id="remote-mesh-issues" class="remote-mesh-issues"></div><div id="remote-mesh-clusters" class="remote-mesh-clusters"></div><div id="remote-node-cards" class="remote-node-grid"></div><div class="action-row"><button data-action="refresh-remote-nodes">Refresh nodes</button><button data-action="use-first-remote-node">Use first node</button><button data-action="probe-remote-node">Probe node</button><button class="primary" data-action="save-remote-nodes">Save nodes</button></div></div>
 
             <div class="form-shell">
               <div class="panel-header">
                 <h2>Remote agent</h2>
               </div>
               <div class="field-grid">
-                <label class="field">
-                  <span>Agent id</span>
-                  <input id="remote-agent-id" type="text" placeholder="solver-shanghai-a" />
-                </label>
-                <label class="field">
-                  <span>Advertise host</span>
-                  <input id="remote-advertise-host" type="text" placeholder="10.20.0.11" />
-                </label>
-                <label class="field">
-                  <span>Agent port</span>
-                  <input id="remote-agent-port" type="number" placeholder="5001" />
-                </label>
-                <label class="field field-span-2">
-                  <span>Orchestrator URL</span>
-                  <input id="remote-orchestrator-url" type="text" placeholder="http://control-plane.example.com:4000" />
-                </label>
+                <label class="field"><span>Control mode</span><select id="remote-control-mode"><option value="orchestrated">Orchestrated</option><option value="offline_mesh">Offline mesh</option></select></label>
+                <label class="field"><span>Agent id</span><input id="remote-agent-id" type="text" placeholder="solver-shanghai-a" /></label>
+                <label class="field"><span>Advertise host</span><input id="remote-advertise-host" type="text" placeholder="10.20.0.11" /></label>
+                <label class="field"><span>Agent port</span><input id="remote-agent-port" type="number" placeholder="5001" /></label>
+                <label class="field field-span-2"><span>Orchestrator URL</span><input id="remote-orchestrator-url" type="text" placeholder="http://control-plane.example.com:4000" /></label>
+                <label class="field"><span>Mesh cluster id</span><input id="remote-cluster-id" type="text" placeholder="lan-a" /></label>
+                <label class="field field-span-2"><span>Peer endpoints</span><input id="remote-peer-endpoints" type="text" placeholder="10.0.0.11:5001,10.0.0.12:5001" /></label>
               </div>
               <div class="action-row">
                 <button class="primary" data-action="remote-start-agent">Start remote agent</button>

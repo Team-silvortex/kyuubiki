@@ -25,6 +25,7 @@ import {
   hydrateRemoteNodeRegistry,
   hydrateRemotePolicy,
   renderDoctor,
+  withRemoteNodeStatus,
 } from "./installer-workflows.js";
 import { mountRemoteNodePanel } from "./remote-node-panel.js";
 import { createRuntimeLogController } from "./runtime-log-panel.js";
@@ -326,6 +327,9 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     showCompletion,
     currentRemoteBootstrapPayload,
     currentRemoteAgentPayload,
+    currentRemoteNodeRegistryPayload,
+    hydrateRemoteNodeRegistry,
+    withRemoteNodeStatus,
   });
   const applyRemoteRegistry = (registry) => {
     hydrateRemoteNodeRegistry(registry);

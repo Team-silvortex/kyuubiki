@@ -5,6 +5,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 mod diagnostics;
 mod env_panel;
 mod remote;
+mod remote_nodes;
 mod runtime_logs;
 
 use diagnostics::{
@@ -33,9 +34,10 @@ use kyuubiki_installer::{
 };
 use remote::{
     RemoteAgentPayload, RemoteBootstrapPayload, WriteRemoteDeployPolicyPayload,
-    WriteRemoteNodeRegistryPayload, probe_remote_node, remote_bootstrap, remote_deploy_policy,
-    remote_node_registry, remote_start_agent, write_remote_deploy_policy, write_remote_node_registry,
+    probe_remote_node, remote_bootstrap, remote_deploy_policy, remote_start_agent,
+    write_remote_deploy_policy,
 };
+use remote_nodes::{WriteRemoteNodeRegistryPayload, remote_node_registry, write_remote_node_registry};
 use runtime_logs::{read_runtime_log, start_log_stream, stop_log_stream};
 use serde::Serialize;
 use serde_json::json;

@@ -35,6 +35,13 @@ test("installer shell exposes setup, services, remote, and release surfaces", ()
     /data-tab="release"/,
     /Run doctor/,
     /Bootstrap workspace/,
+    /id="remote-control-mode"/,
+    /id="remote-node-mode-filter"/,
+    /id="remote-mesh-health"/,
+    /id="remote-mesh-issues"/,
+    /id="remote-mesh-clusters"/,
+    /mesh-preflight/,
+    /offline_mesh/,
     /placeholder="dist\/\{platform\}"/,
   ]);
 });

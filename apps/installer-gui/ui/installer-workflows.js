@@ -55,10 +55,16 @@ export function currentRemoteBootstrapPayload() {
 export function currentRemoteAgentPayload() {
   return {
     ...currentRemoteBootstrapPayload(),
+    controlMode: document.getElementById("remote-control-mode").value || "orchestrated",
     orchestratorUrl: document.getElementById("remote-orchestrator-url").value.trim(),
     agentId: document.getElementById("remote-agent-id").value.trim(),
     advertiseHost: document.getElementById("remote-advertise-host").value.trim(),
     agentPort: Number(document.getElementById("remote-agent-port").value || "5001"),
+    clusterId: document.getElementById("remote-cluster-id").value.trim(),
+    peerEndpoints: document.getElementById("remote-peer-endpoints").value
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
   };
 }
 
@@ -99,10 +105,20 @@ export function applyRemoteNodeToForm(node) {
   document.getElementById("remote-target-host").value = node.target_host || "";
   document.getElementById("remote-ssh-port").value = node.ssh_port ?? "";
   document.getElementById("remote-workspace").value = node.remote_workspace || "";
+  document.getElementById("remote-control-mode").value = node.control_mode || "orchestrated";
   document.getElementById("remote-agent-id").value = node.agent_id || "";
   document.getElementById("remote-advertise-host").value = node.advertise_host || "";
   document.getElementById("remote-agent-port").value = node.agent_port ?? 5001;
   document.getElementById("remote-orchestrator-url").value = node.orchestrator_url || "";
+  document.getElementById("remote-cluster-id").value = node.cluster_id || "";
+  document.getElementById("remote-peer-endpoints").value = Array.isArray(node.peer_endpoints) ? node.peer_endpoints.join(",") : "";
+}
+
+export function withRemoteNodeStatus(node, patch) {
+  return {
+    ...node,
+    ...patch,
+  };
 }
 
 export function renderDoctor(report, platformLabel, workspaceLabel, doctorGrid) {
