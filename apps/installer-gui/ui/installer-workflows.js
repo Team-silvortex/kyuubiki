@@ -116,10 +116,29 @@ export function applyRemoteNodeToForm(node) {
   document.getElementById("remote-peer-endpoints").value = Array.isArray(node.peer_endpoints) ? node.peer_endpoints.join(",") : "";
 }
 
+export function appendRemoteNodeWorkflowSnapshot(node, snapshot, limit = 16) {
+  const existing = Array.isArray(node.workflow_snapshots) ? node.workflow_snapshots : [];
+  return [
+    ...existing,
+    {
+      ...snapshot,
+      recorded_at_unix_ms: snapshot.recorded_at_unix_ms ?? Date.now(),
+    },
+  ].slice(-limit);
+}
+
 export function withRemoteNodeStatus(node, patch) {
-  return {
+  const workflowSnapshot = patch.workflowSnapshot;
+  const next = {
     ...node,
     ...patch,
+  };
+  delete next.workflowSnapshot;
+  if (workflowSnapshot) {
+    next.workflow_snapshots = appendRemoteNodeWorkflowSnapshot(node, workflowSnapshot);
+  }
+  return {
+    ...next,
   };
 }
 

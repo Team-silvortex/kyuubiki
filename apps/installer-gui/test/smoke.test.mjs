@@ -62,13 +62,16 @@ test("installer shell exposes setup, services, remote, and release surfaces", ()
     /id="remote-certificate-health"/,
     /id="remote-mesh-health"/,
     /id="remote-mesh-issues"/,
+    /id="remote-mesh-rollout-failures"/,
     /id="remote-mesh-clusters"/,
+    /id="remote-node-timeline"/,
     /id="certificate-policy-storage-root"/,
     /id="certificate-ca-fingerprint"/,
     /id="certificate-issue-agent-id"/,
     /id="certificate-revoke-id"/,
     /id="certificate-inventory-list"/,
     /mesh-preflight/,
+    /mesh-rollout/,
     /assign-certificates/,
     /clear-certificates/,
     /<option value="ambiguous">Ambiguous<\/option>/,
@@ -82,6 +85,8 @@ test("installer shell wires core install and runtime actions", () => {
   const regressionGatePanel = read("ui/regression-gate-panel.js");
   const remoteNodeCertificates = read("ui/remote-node-certificates.js");
   const remoteNodeMesh = read("ui/remote-node-mesh.js");
+  const remoteNodeRenderer = read("ui/remote-node-renderer.js");
+  const remoteNodeTimeline = read("ui/remote-node-timeline.js");
   const remotePanel = read("ui/remote-panel.js");
   const bridge = read("ui/shared/tauri-bridge.js");
   const platform = read("ui/shared/platform.js");
@@ -99,6 +104,8 @@ test("installer shell wires core install and runtime actions", () => {
     /mountRemotePanel/,
   ]);
   assert.match(certificatePanel, /currentCertificatePolicyPayload/);
+  assert.match(read("ui/installer-workflows.js"), /appendRemoteNodeWorkflowSnapshot/);
+  assert.match(read("ui/installer-workflows.js"), /workflow_snapshots/);
   assert.match(certificatePanel, /getActiveCertificates/);
   assert.match(certificatePanel, /hydrateCertificateAuthority/);
   assert.match(certificatePanel, /use-for-remote-agent/);
@@ -110,8 +117,18 @@ test("installer shell wires core install and runtime actions", () => {
   assert.match(remotePanel, /mountRemotePanel/);
   assert.match(read("ui/remote-node-panel.js"), /createRemoteNodeCertificateController/);
   assert.match(read("ui/remote-node-panel.js"), /createRemoteNodeMeshController/);
+  assert.match(read("ui/remote-node-panel.js"), /createRemoteNodeTimelineController/);
+  assert.match(read("ui/remote-node-panel.js"), /renderRemoteNodeGroups/);
+  assert.match(read("ui/remote-node-panel.js"), /workflowSnapshotFor/);
+  assert.match(read("ui/remote-node-panel.js"), /runRecommendedAction/);
+  assert.match(read("ui/remote-node-panel.js"), /focusField/);
+  assert.match(read("ui/remote-node-panel.js"), /remote-peer-endpoints/);
+  assert.match(read("ui/remote-node-panel.js"), /remote-cluster-id/);
+  assert.match(read("ui/remote-node-panel.js"), /remote-certificate-id/);
   assert.match(remoteNodeCertificates, /assignCertificatesForVisibleNodes/);
+  assert.match(remoteNodeCertificates, /assignCertificateForNodeIndex/);
   assert.match(remoteNodeCertificates, /clearCertificatesForVisibleNodes/);
+  assert.match(remoteNodeCertificates, /resolveCertificateForNodeIndex/);
   assert.match(remoteNodeCertificates, /certificateStatusFor/);
   assert.match(remoteNodeCertificates, /certificateFilterSelect/);
   assert.match(remoteNodeCertificates, /renderCertificateHealth/);
@@ -119,14 +136,51 @@ test("installer shell wires core install and runtime actions", () => {
   assert.match(remotePanel, /certificate-focus-action/);
   assert.match(remoteNodeCertificates, /Assign certificates for visible state/);
   assert.match(remoteNodeMesh, /renderMeshDiagnostics/);
+  assert.match(remoteNodeMesh, /runVisibleMeshRollout/);
+  assert.match(remoteNodeMesh, /recordStageFailure/);
+  assert.match(remoteNodeMesh, /renderRolloutFailures/);
+  assert.match(remoteNodeMesh, /retryFailedNodes/);
+  assert.match(remoteNodeMesh, /retry-failures/);
   assert.match(remoteNodeMesh, /data-remote-cluster-action/);
   assert.match(remoteNodeMesh, /focus-cluster/);
   assert.match(remoteNodeMesh, /preflight-missing/);
-  assert.match(read("ui/remote-node-panel.js"), /dataset\.certificateStatus/);
-  assert.match(read("ui/remote-node-panel.js"), /remote-node-card__certificate-pill/);
+  assert.match(remoteNodeRenderer, /dataset\.certificateStatus/);
+  assert.match(remoteNodeRenderer, /remoteNodeCardIndex/);
+  assert.match(remoteNodeRenderer, /remote-node-card__certificate-pill/);
+  assert.match(remoteNodeRenderer, /groupRemoteNodes/);
+  assert.match(remoteNodeTimeline, /selectNode/);
+  assert.match(remoteNodeTimeline, /selectEntry/);
+  assert.match(remoteNodeTimeline, /workflow_snapshots/);
+  assert.match(remoteNodeTimeline, /remote-node-timeline__details/);
+  assert.match(remoteNodeTimeline, /remote-node-timeline__summary-grid/);
+  assert.match(remoteNodeTimeline, /Additional fields/);
+  assert.match(remoteNodeTimeline, /renderSemanticBadges/);
+  assert.match(remoteNodeTimeline, /workflowKindMeta/);
+  assert.match(remoteNodeTimeline, /statusMeta/);
+  assert.match(remoteNodeTimeline, /recommendedActions/);
+  assert.match(remoteNodeTimeline, /Recommended actions/);
+  assert.match(remoteNodeTimeline, /data-recommended-action/);
+  assert.match(remoteNodeTimeline, /remote-node-timeline__recommendation-action/);
+  assert.match(remoteNodeTimeline, /focus-cluster/);
+  assert.match(remoteNodeTimeline, /focus-peer-endpoints/);
+  assert.match(remoteNodeTimeline, /focus-certificate/);
+  assert.match(remoteNodeTimeline, /data-stage-tone/);
+  assert.match(remoteNodeTimeline, /data-timeline-entry-index/);
   assert.match(read("ui/styles.css"), /data-certificate-status="aligned"/);
   assert.match(read("ui/styles.css"), /remote-certificate-health__metric/);
+  assert.match(read("ui/styles.css"), /remote-mesh-rollout-failures__item/);
   assert.match(read("ui/styles.css"), /remote-node-card__certificate-pill/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__item/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__details/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__body/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__badges/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__badge/);
+  assert.match(read("ui/styles.css"), /data-stage-tone="preflight"/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__summary-slot/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__recommendation-item/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__recommendation-action/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__recommendations/);
+  assert.match(read("ui/styles.css"), /remote-node-timeline__detail-section-title/);
   assert.match(remoteNodeCertificates, /certificate auto-match/);
   assert.match(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
   assert.match(platform, /desktop-shared\/ui\/platform\.js/);
@@ -147,5 +201,9 @@ test("tauri backend exposes installer command surface", () => {
     /issue_node_certificate/,
     /revoke_node_certificate/,
   ]);
+  assert.match(rust, /remote_node_registry/);
+  assert.match(read("src-tauri/src/remote_nodes.rs"), /RemoteNodeWorkflowSnapshot/);
+  assert.match(read("src-tauri/src/remote_nodes.rs"), /validate_workflow_snapshot/);
+  assert.match(read("src-tauri/src/remote_nodes.rs"), /workflow_snapshots/);
   assert.match(rust, /regression_gate_report/);
 });

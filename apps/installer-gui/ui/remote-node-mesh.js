@@ -1,6 +1,7 @@
 export function createRemoteNodeMeshController({
   meshHealthHost,
   meshIssuesHost,
+  meshRolloutFailuresHost,
   meshClustersHost,
   getLastNodes,
   modeFilterSelect,
@@ -10,6 +11,10 @@ export function createRemoteNodeMeshController({
   showCompletion,
   executeNodeAction,
 }) {
+  let lastRolloutFailures = [];
+  const meshNodesFrom = (nodes) =>
+    nodes.filter((node) => (node.control_mode || "orchestrated") === "offline_mesh");
+
   const meshDiagnostics = (nodes) => {
     const meshNodes = nodes.filter((node) => (node.control_mode || "orchestrated") === "offline_mesh");
     const issues = [];
@@ -99,6 +104,24 @@ export function createRemoteNodeMeshController({
       `).join("");
   };
 
+  const renderRolloutFailures = (failures) => {
+    if (!meshRolloutFailuresHost) return;
+    lastRolloutFailures = Array.isArray(failures) ? failures : [];
+    meshRolloutFailuresHost.innerHTML = lastRolloutFailures.length === 0
+      ? ""
+      : `
+        <div class="action-row">
+          <button data-remote-mesh-failure-action="retry-failures">Retry failed nodes</button>
+        </div>
+        ${lastRolloutFailures.map((entry) => `
+          <article class="remote-mesh-rollout-failures__item">
+            <strong>${entry.stage} · ${entry.label}</strong>
+            <span>${entry.message}</span>
+          </article>
+        `).join("")}
+      `;
+  };
+
   const pendingClusterMeshNodes = (clusterId) =>
     getLastNodes().filter((node) =>
       (node.control_mode || "orchestrated") === "offline_mesh" &&
@@ -112,6 +135,88 @@ export function createRemoteNodeMeshController({
       node.cluster_id === clusterId &&
       node.last_action !== "start_agent",
     );
+
+  const recordStageFailure = (failures, stage, node, error) => {
+    failures.push({
+      stage,
+      label: node.label || node.target_host || "unknown node",
+      message: error?.message || String(error),
+      ref: {
+        agentId: node.agent_id || "",
+        clusterId: node.cluster_id || "",
+        targetHost: node.target_host || "",
+      },
+    });
+  };
+
+  const findFailureNodeIndex = (failure) =>
+    getLastNodes().findIndex((node) =>
+      (node.agent_id || "") === (failure.ref?.agentId || "") &&
+      (node.cluster_id || "") === (failure.ref?.clusterId || "") &&
+      (node.target_host || "") === (failure.ref?.targetHost || ""),
+    );
+
+  const retryFailedNodes = async () => {
+    if (lastRolloutFailures.length === 0) {
+      showCompletion("No failed mesh rollout nodes to retry.");
+      return { retried: 0, remaining: 0 };
+    }
+    const retryFailures = [];
+    let retried = 0;
+    for (const failure of lastRolloutFailures) {
+      const nodeIndex = findFailureNodeIndex(failure);
+      if (nodeIndex < 0) {
+        retryFailures.push({ ...failure, message: "node no longer exists in registry" });
+        continue;
+      }
+      try {
+        await executeNodeAction(nodeIndex, failure.stage);
+        retried += 1;
+      } catch (error) {
+        retryFailures.push({ ...failure, message: error?.message || String(error) });
+      }
+    }
+    renderRolloutFailures(retryFailures);
+    return { retried, remaining: retryFailures.length };
+  };
+
+  const runVisibleMeshRollout = async (nodes) => {
+    const meshNodes = meshNodesFrom(nodes);
+    if (meshNodes.length === 0) throw new Error("no visible offline_mesh nodes");
+    let bootstrapped = 0;
+    let preflighted = 0;
+    let started = 0;
+    const failures = [];
+    for (const node of meshNodes) {
+      const nodeIndex = getLastNodes().indexOf(node);
+      try {
+        await executeNodeAction(nodeIndex, "bootstrap");
+        bootstrapped += 1;
+      } catch (error) {
+        recordStageFailure(failures, "bootstrap", node, error);
+      }
+    }
+    for (const node of meshNodes) {
+      const nodeIndex = getLastNodes().indexOf(node);
+      try {
+        await executeNodeAction(nodeIndex, "mesh-preflight");
+        preflighted += 1;
+      } catch (error) {
+        recordStageFailure(failures, "mesh-preflight", node, error);
+      }
+    }
+    for (const node of meshNodes) {
+      const nodeIndex = getLastNodes().indexOf(node);
+      try {
+        await executeNodeAction(nodeIndex, "start");
+        started += 1;
+      } catch (error) {
+        recordStageFailure(failures, "start", node, error);
+      }
+    }
+    renderRolloutFailures(failures);
+    return { bootstrapped, failures, preflighted, started, total: meshNodes.length };
+  };
 
   const bindEvents = () => {
     meshClustersHost?.addEventListener("click", async (event) => {
@@ -137,6 +242,7 @@ export function createRemoteNodeMeshController({
           await executeNodeAction(nodeIndex, "start");
         }
         showCompletion(`Started ${pendingNodes.length} pending agent(s) in ${clusterId}.`);
+        renderRolloutFailures([]);
         return;
       }
       if (target.dataset.remoteClusterAction !== "preflight-missing") return;
@@ -150,11 +256,21 @@ export function createRemoteNodeMeshController({
         await executeNodeAction(nodeIndex, "mesh-preflight");
       }
       showCompletion(`Completed mesh preflight for ${pendingNodes.length} pending node(s) in ${clusterId}.`);
+      renderRolloutFailures([]);
+    });
+    meshRolloutFailuresHost?.addEventListener("click", async (event) => {
+      const target = event.target.closest("[data-remote-mesh-failure-action]");
+      if (!target || target.dataset.remoteMeshFailureAction !== "retry-failures") return;
+      const result = await retryFailedNodes();
+      showCompletion(`Retried ${result.retried} failed node action(s); remaining failures ${result.remaining}.`);
     });
   };
 
   return {
     bindEvents,
     renderMeshDiagnostics,
+    renderRolloutFailures,
+    retryFailedNodes,
+    runVisibleMeshRollout,
   };
 }

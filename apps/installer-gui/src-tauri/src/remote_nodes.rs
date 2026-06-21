@@ -12,6 +12,17 @@ use crate::remote::{
 
 #[derive(Clone, Debug, Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RemoteNodeWorkflowSnapshot {
+    pub workflow_kind: String,
+    pub stage: String,
+    pub status: String,
+    pub summary: Option<String>,
+    pub recorded_at_unix_ms: Option<u64>,
+    pub details: Option<Value>,
+}
+
+#[derive(Clone, Debug, Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RemoteNodeRecord {
     pub label: String,
     pub target_host: String,
@@ -31,6 +42,7 @@ pub struct RemoteNodeRecord {
     pub last_probe_unix_ms: Option<u64>,
     pub last_action: Option<String>,
     pub last_action_unix_ms: Option<u64>,
+    pub workflow_snapshots: Option<Vec<RemoteNodeWorkflowSnapshot>>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -166,6 +178,12 @@ fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecor
     let control_mode = validate_control_mode(node.control_mode.as_deref())?;
     let cluster_id = validate_cluster_id(node.cluster_id.as_deref())?;
     let peer_endpoints = normalize_peer_endpoints(node.peer_endpoints.unwrap_or_default())?;
+    let workflow_snapshots = node
+        .workflow_snapshots
+        .unwrap_or_default()
+        .into_iter()
+        .map(validate_workflow_snapshot)
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(RemoteNodeRecord {
         label: if node.label.trim().is_empty() {
             target_host.clone()
@@ -206,6 +224,11 @@ fn validate_remote_node_record(node: RemoteNodeRecord) -> Result<RemoteNodeRecor
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty()),
         last_action_unix_ms: node.last_action_unix_ms,
+        workflow_snapshots: if workflow_snapshots.is_empty() {
+            None
+        } else {
+            Some(workflow_snapshots.into_iter().rev().take(16).collect::<Vec<_>>().into_iter().rev().collect())
+        },
     })
 }
 
@@ -257,8 +280,51 @@ fn render_remote_nodes(nodes: &[RemoteNodeRecord]) -> String {
                 node.last_action_unix_ms.unwrap_or(0)
             ));
         }
+        if let Some(snapshot) = node
+            .workflow_snapshots
+            .as_ref()
+            .and_then(|snapshots| snapshots.last())
+        {
+            lines.push(format!(
+                "  workflow: {} stage={} status={} @ {}",
+                snapshot.workflow_kind,
+                snapshot.stage,
+                snapshot.status,
+                snapshot.recorded_at_unix_ms.unwrap_or(0)
+            ));
+        }
     }
     lines.join("\n")
+}
+
+fn validate_snapshot_token(value: &str, label: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(format!("{label} must not be empty"));
+    }
+    if !trimmed
+        .chars()
+        .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-' | '_'))
+    {
+        return Err(format!("{label} contains unsupported characters"));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn validate_workflow_snapshot(
+    snapshot: RemoteNodeWorkflowSnapshot,
+) -> Result<RemoteNodeWorkflowSnapshot, String> {
+    Ok(RemoteNodeWorkflowSnapshot {
+        workflow_kind: validate_snapshot_token(&snapshot.workflow_kind, "workflow snapshot kind")?,
+        stage: validate_snapshot_token(&snapshot.stage, "workflow snapshot stage")?,
+        status: validate_snapshot_token(&snapshot.status, "workflow snapshot status")?,
+        summary: snapshot
+            .summary
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        recorded_at_unix_ms: snapshot.recorded_at_unix_ms,
+        details: snapshot.details,
+    })
 }
 
 fn validate_certificate_id(value: Option<&str>) -> Result<Option<String>, String> {
@@ -304,9 +370,24 @@ mod tests {
             last_probe_unix_ms: None,
             last_action: None,
             last_action_unix_ms: None,
+            workflow_snapshots: Some(vec![RemoteNodeWorkflowSnapshot {
+                workflow_kind: "mesh_rollout_stage".to_string(),
+                stage: "mesh_preflight".to_string(),
+                status: "succeeded".to_string(),
+                summary: Some("mesh preflight ok".to_string()),
+                recorded_at_unix_ms: Some(1),
+                details: None,
+            }]),
         })
         .unwrap();
         assert_eq!(node.control_mode.as_deref(), Some("offline_mesh"));
         assert_eq!(node.cluster_id.as_deref(), Some("lan-a"));
+        assert_eq!(
+            node.workflow_snapshots
+                .as_ref()
+                .and_then(|items| items.last())
+                .map(|item| item.stage.as_str()),
+            Some("mesh_preflight")
+        );
     }
 }

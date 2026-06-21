@@ -1,5 +1,7 @@
 import { createRemoteNodeCertificateController } from "./remote-node-certificates.js";
 import { createRemoteNodeMeshController } from "./remote-node-mesh.js";
+import { groupRemoteNodes, renderRemoteNodeGroups } from "./remote-node-renderer.js";
+import { createRemoteNodeTimelineController } from "./remote-node-timeline.js";
 
 export function mountRemoteNodePanel({
   invoke,
@@ -18,7 +20,9 @@ export function mountRemoteNodePanel({
   const meshHealthHost = document.getElementById("remote-mesh-health");
   const certificateHealthHost = document.getElementById("remote-certificate-health");
   const meshIssuesHost = document.getElementById("remote-mesh-issues");
+  const meshRolloutFailuresHost = document.getElementById("remote-mesh-rollout-failures");
   const meshClustersHost = document.getElementById("remote-mesh-clusters");
+  const timelineHost = document.getElementById("remote-node-timeline");
   const searchInput = document.getElementById("remote-node-search");
   const filterSelect = document.getElementById("remote-node-filter");
   const modeFilterSelect = document.getElementById("remote-node-mode-filter");
@@ -26,6 +30,14 @@ export function mountRemoteNodePanel({
   const certificateBulkActionButton = document.getElementById("remote-certificate-bulk-action");
   const groupSelect = document.getElementById("remote-node-group");
   let lastNodes = [];
+  const focusField = (fieldId) => {
+    const field = document.getElementById(fieldId);
+    if (!field) return false;
+    field.scrollIntoView({ block: "center", behavior: "smooth" });
+    field.focus?.();
+    if (typeof field.select === "function" && ("value" in field)) field.select();
+    return true;
+  };
   const statusOf = (node) => node.last_probe_status === "ok" ? "ok" : node.last_probe_status === "failed" ? "failed" : "unknown";
   const summary = (node) =>
     node.last_probe_summary || (node.last_probe_status ? `Last probe: ${node.last_probe_status}` : "No probe yet");
@@ -90,43 +102,38 @@ export function mountRemoteNodePanel({
     showCompletion,
     syncRegistry,
   });
-  const groupKeyFor = (node) => {
-    switch (groupSelect?.value || "none") {
-      case "status":
-        return statusOf(node);
-      case "workspace":
-        return node.remote_workspace || "(workspace unset)";
-      case "control_mode":
-        return node.control_mode || "orchestrated";
-      case "orchestrator":
-        return node.control_mode === "offline_mesh"
-          ? node.cluster_id || "(mesh cluster unset)"
-          : node.orchestrator_url || "(orchestrator unset)";
-      default:
-        return "__all__";
-    }
-  };
-  const groupNodes = (nodes) => {
-    const groups = new Map();
-    nodes.forEach((node) => {
-      const key = groupKeyFor(node);
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(node);
-    });
-    return groups;
-  };
   const stamp = () => Date.now();
+  const workflowSnapshotFor = (node, actionKind, status, summary) => ({
+    workflow_kind: actionKind.startsWith("mesh") ? "mesh_rollout_stage" : "remote_node_action",
+    stage: actionKind,
+    status,
+    summary,
+    recorded_at_unix_ms: stamp(),
+    details: {
+      agent_id: node.agent_id || "",
+      target_host: node.target_host || "",
+      control_mode: node.control_mode || "orchestrated",
+      cluster_id: node.cluster_id || "",
+    },
+  });
   const persistNodeState = (index, patch) =>
     syncRegistry((nodes) =>
       nodes.map((entry, idx) => (idx === index ? withRemoteNodeStatus(entry, patch) : entry)),
     );
-  const runNodeAction = async (name, index, actionKind, runner, onSuccess) => {
+  const runNodeAction = async (name, node, index, actionKind, runner, onSuccess) => {
     try {
       const result = await runAction(name, runner);
+      const successPatch = onSuccess(result);
       await persistNodeState(index, {
-        ...onSuccess(result),
+        ...successPatch,
         last_action: actionKind,
         last_action_unix_ms: stamp(),
+        workflowSnapshot: workflowSnapshotFor(
+          node,
+          actionKind,
+          "succeeded",
+          successPatch.last_probe_summary || (typeof result === "string" ? result : `${actionKind} succeeded`),
+        ),
       });
       return result;
     } catch (error) {
@@ -136,6 +143,7 @@ export function mountRemoteNodePanel({
         last_probe_unix_ms: stamp(),
         last_action: `${actionKind}_failed`,
         last_action_unix_ms: stamp(),
+        workflowSnapshot: workflowSnapshotFor(node, actionKind, "failed", error.message || String(error)),
       });
       throw error;
     }
@@ -146,6 +154,7 @@ export function mountRemoteNodePanel({
     host.innerHTML = "";
     meshController.renderMeshDiagnostics(lastNodes);
     certificateController.renderCertificateHealth(lastNodes);
+    timelineController.renderTimeline();
     const filteredNodes = visibleNodes(lastNodes);
     if (lastNodes.length === 0) {
       host.innerHTML = `<article class="remote-node-card"><strong>No registered nodes</strong><span>Save JSON nodes above to get one-click remote actions here.</span></article>`;
@@ -156,55 +165,14 @@ export function mountRemoteNodePanel({
       return;
     }
 
-    const groups = groupNodes(filteredNodes);
-    groups.forEach((groupNodesForKey, key) => {
-      const groupShell = document.createElement("section");
-      groupShell.className = "remote-node-group";
-      if (key !== "__all__") {
-        const title = document.createElement("h3");
-        title.className = "remote-node-group__title";
-        title.textContent = key;
-        groupShell.appendChild(title);
-      }
-      groupNodesForKey.forEach((node) => {
-      const index = lastNodes.indexOf(node);
-      const card = document.createElement("article");
-      card.className = "remote-node-card";
-      card.dataset.nodeStatus = statusOf(node);
-      const certificateStatus = certificateController.certificateStatusFor(node);
-      card.dataset.certificateStatus = certificateStatus.tone;
-      card.innerHTML = `
-        <div class="remote-node-card__header">
-          <strong>${node.label || node.target_host}</strong>
-          <span>${node.ssh_user}@${node.target_host}:${node.ssh_port ?? 22}</span>
-        </div>
-        <div class="remote-node-card__meta">
-          <span>${node.remote_workspace}</span>
-          <span>${node.control_mode || "orchestrated"} · ${node.agent_id} · ${node.advertise_host}:${node.agent_port}</span>
-          <span class="remote-node-card__certificate">
-            <span class="remote-node-card__certificate-pill" data-certificate-tone="${certificateStatus.tone}">
-              ${certificateStatus.tone}
-            </span>
-            <span>${certificateStatus.summary}</span>
-          </span>
-          <span>certificate ${certificateStatus.tone} · ${certificateStatus.detail}</span>
-        </div>
-        <div class="remote-node-card__status">
-          <strong>${statusOf(node).toUpperCase()}</strong>
-          <span>${node.control_mode === "offline_mesh" ? `cluster ${node.cluster_id || "(unset)"} · peers ${(node.peer_endpoints || []).length}` : node.orchestrator_url || "orchestrator unset"}</span>
-          <span>${summary(node)}</span>
-          <span>Probe: ${timeLabel(node.last_probe_unix_ms)} · Action: ${timeLabel(node.last_action_unix_ms)}</span>
-        </div>
-        <div class="action-row">
-          <button data-remote-node-action="use" data-remote-node-index="${index}">Use</button>
-          <button data-remote-node-action="probe" data-remote-node-index="${index}">Probe</button>
-          <button data-remote-node-action="bootstrap" data-remote-node-index="${index}">Bootstrap</button>
-          <button class="primary" data-remote-node-action="start" data-remote-node-index="${index}">Start agent</button>
-        </div>
-      `;
-        groupShell.appendChild(card);
-      });
-      host.appendChild(groupShell);
+    renderRemoteNodeGroups({
+      host,
+      groups: groupRemoteNodes(filteredNodes, groupSelect?.value || "none", statusOf),
+      lastNodes,
+      statusOf,
+      summary,
+      timeLabel,
+      certificateStatusFor: certificateController.certificateStatusFor,
     });
   }
 
@@ -214,7 +182,7 @@ export function mountRemoteNodePanel({
     if (!node) throw new Error("remote node no longer exists");
     applyRemoteNodeToForm(node);
     if (actionKind === "probe") {
-      return runNodeAction("probe-remote-node-card", nodeIndex, "probe", () =>
+      return runNodeAction("probe-remote-node-card", node, nodeIndex, "probe", () =>
         invokeGuardedMutation("probe_remote_node", {
           remoteBootstrap: currentRemoteBootstrapPayload(),
         }),
@@ -226,7 +194,7 @@ export function mountRemoteNodePanel({
       );
     }
     if (actionKind === "bootstrap") {
-      return runNodeAction("remote-bootstrap-card", nodeIndex, "bootstrap", () =>
+      return runNodeAction("remote-bootstrap-card", node, nodeIndex, "bootstrap", () =>
         invokeGuardedMutation("remote_bootstrap", {
           remoteBootstrap: currentRemoteBootstrapPayload(),
         }),
@@ -234,7 +202,7 @@ export function mountRemoteNodePanel({
       );
     }
     if (actionKind === "start") {
-      return runNodeAction("remote-start-agent-card", nodeIndex, "start_agent", () =>
+      return runNodeAction("remote-start-agent-card", node, nodeIndex, "start_agent", () =>
         invokeGuardedMutation("remote_start_agent", {
           remoteAgent: currentRemoteAgentPayload(),
         }),
@@ -245,7 +213,7 @@ export function mountRemoteNodePanel({
     }
     if (actionKind === "mesh-preflight") {
       const meshSummary = validateMeshNode(node);
-      return runNodeAction("remote-mesh-preflight-card", nodeIndex, "mesh_preflight", async () => {
+      return runNodeAction("remote-mesh-preflight-card", node, nodeIndex, "mesh_preflight", async () => {
         const result = await invokeGuardedMutation("probe_remote_node", {
           remoteBootstrap: currentRemoteBootstrapPayload(),
         });
@@ -262,6 +230,7 @@ export function mountRemoteNodePanel({
   const meshController = createRemoteNodeMeshController({
     meshHealthHost,
     meshIssuesHost,
+    meshRolloutFailuresHost,
     meshClustersHost,
     getLastNodes: () => lastNodes,
     modeFilterSelect,
@@ -271,8 +240,66 @@ export function mountRemoteNodePanel({
     showCompletion,
     executeNodeAction,
   });
+  const timelineController = createRemoteNodeTimelineController({
+    host: timelineHost,
+    getLastNodes: () => lastNodes,
+    runRecommendedAction: async (actionKind, nodeIndex) => {
+      const node = lastNodes[nodeIndex];
+      if (!node) throw new Error("remote node no longer exists");
+      applyRemoteNodeToForm(node);
+      if (actionKind === "focus-cluster") {
+        focusField("remote-cluster-id");
+        showCompletion(`Focused mesh cluster id for ${node.label || node.target_host}.`);
+        return;
+      }
+      if (actionKind === "focus-peer-endpoints") {
+        focusField("remote-peer-endpoints");
+        showCompletion(`Focused peer endpoints for ${node.label || node.target_host}.`);
+        return;
+      }
+      if (actionKind === "focus-certificate") {
+        const focused = focusField("remote-certificate-id") || focusField("certificate-revoke-id");
+        if (focused) {
+          showCompletion(`Focused certificate controls for ${node.label || node.target_host}.`);
+        } else {
+          showCompletion(`Loaded certificate controls for ${node.label || node.target_host}.`);
+        }
+        return;
+      }
+      if (actionKind === "resolve-certificate") {
+        const result = await certificateController.resolveCertificateForNodeIndex(nodeIndex);
+        if (result.outcome === "assigned" || result.outcome === "unchanged") {
+          showCompletion(`Resolved certificate state for ${node.label || node.target_host} with ${result.certificateId}.`);
+        } else if (result.outcome === "cleared") {
+          showCompletion(`Cleared stale certificate binding for ${node.label || node.target_host}.`);
+        } else if (result.outcome === "aligned") {
+          showCompletion(`Certificate state already aligned for ${node.label || node.target_host}.`);
+        } else if (result.outcome === "ambiguous") {
+          showCompletion(`Multiple active certificates match ${node.label || node.target_host}; pick one from inventory.`);
+        } else {
+          showCompletion(`No active certificate match available for ${node.label || node.target_host}.`);
+        }
+        return;
+      }
+      if (actionKind === "inspect") {
+        showCompletion(`Loaded ${node.label || node.target_host} into the form for manual review.`);
+        return;
+      }
+      await executeNodeAction(nodeIndex, actionKind);
+      const actionLabel = actionKind === "mesh-preflight"
+        ? "mesh preflight"
+        : actionKind === "start"
+          ? "start agent"
+          : actionKind;
+      showCompletion(`Completed ${actionLabel} for ${node.label || node.target_host}.`);
+    },
+  });
 
   host.addEventListener("click", async (event) => {
+    const card = event.target.closest("[data-remote-node-card-index]");
+    if (card?.dataset.remoteNodeCardIndex) {
+      timelineController.selectNode(Number(card.dataset.remoteNodeCardIndex));
+    }
     const target = event.target.closest("[data-remote-node-action]");
     if (!target) return;
 
@@ -284,6 +311,7 @@ export function mountRemoteNodePanel({
 
     switch (target.dataset.remoteNodeAction) {
       case "use":
+        timelineController.selectNode(nodeIndex);
         showCompletion(`Loaded remote node ${node.label || node.target_host}.`);
         break;
       case "probe":
@@ -321,10 +349,21 @@ export function mountRemoteNodePanel({
         await certificateController.runFocusedCertificateAction();
         return;
       }
+      if (actionKind === "mesh-rollout") {
+        const result = await meshController.runVisibleMeshRollout(visibleNodes(lastNodes));
+        const failureSummary = result.failures.length === 0
+          ? "no failures"
+          : `failures ${result.failures.length}: ${result.failures.map((entry) => `${entry.stage} ${entry.label}`).join(", ")}`;
+        showCompletion(
+          `Completed mesh rollout for ${result.total} visible node(s): bootstrap ${result.bootstrapped}, preflight ${result.preflighted}, start ${result.started}; ${failureSummary}.`,
+        );
+        return;
+      }
       const visible = visibleNodes(lastNodes).filter((node) =>
         actionKind === "mesh-preflight" ? (node.control_mode || "orchestrated") === "offline_mesh" : true,
       );
       if (visible.length === 0) throw new Error("no visible remote nodes");
+      if (actionKind === "mesh-preflight") meshController.renderRolloutFailures([]);
       for (const node of visible) {
         const nodeIndex = lastNodes.indexOf(node);
         await executeNodeAction(nodeIndex, actionKind);

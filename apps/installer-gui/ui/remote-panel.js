@@ -115,6 +115,7 @@ export function mountRemotePanel() {
       <div class="action-row">
         <button data-remote-bulk-action="probe">Probe visible</button>
         <button data-remote-bulk-action="mesh-preflight">Mesh preflight</button>
+        <button data-remote-bulk-action="mesh-rollout">Mesh rollout visible</button>
         <button data-remote-bulk-action="bootstrap">Bootstrap visible</button>
         <button data-remote-bulk-action="start">Start visible</button>
         <button data-remote-bulk-action="assign-certificates">Assign certificates</button>
@@ -124,8 +125,10 @@ export function mountRemotePanel() {
       <div id="remote-mesh-health" class="remote-mesh-health"></div>
       <div id="remote-certificate-health" class="remote-certificate-health"></div>
       <div id="remote-mesh-issues" class="remote-mesh-issues"></div>
+      <div id="remote-mesh-rollout-failures" class="remote-mesh-rollout-failures"></div>
       <div id="remote-mesh-clusters" class="remote-mesh-clusters"></div>
       <div id="remote-node-cards" class="remote-node-grid"></div>
+      <div id="remote-node-timeline" class="remote-node-timeline"></div>
       <div class="action-row">
         <button data-action="refresh-remote-nodes">Refresh nodes</button>
         <button data-action="use-first-remote-node">Use first node</button>

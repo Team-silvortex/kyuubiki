@@ -103,6 +103,26 @@ export function createRemoteNodeCertificateController({
     return { assigned, unchanged, missing, ambiguous, total: visible.length };
   };
 
+  const assignCertificateForNodeIndex = async (nodeIndex) => {
+    const lastNodes = getLastNodes();
+    const node = lastNodes[nodeIndex];
+    if (!node) throw new Error("remote node no longer exists");
+    const certificates = getActiveCertificates?.() || [];
+    const match = matchCertificate(node, certificates);
+    if (match.kind === "matched") {
+      await syncRegistry((nodes) =>
+        nodes.map((entry, index) => (
+          index === nodeIndex ? { ...entry, certificate_id: match.certificateId } : entry
+        )),
+      );
+      return { outcome: node.certificate_id === match.certificateId ? "unchanged" : "assigned", certificateId: match.certificateId };
+    }
+    if (match.kind === "ambiguous") {
+      return { outcome: "ambiguous" };
+    }
+    return { outcome: "missing" };
+  };
+
   const clearCertificatesForVisibleNodes = async () => {
     const lastNodes = getLastNodes();
     const visible = getVisibleNodes(lastNodes);
@@ -117,6 +137,27 @@ export function createRemoteNodeCertificateController({
       }),
     );
     return { cleared, total: visible.length };
+  };
+
+  const clearCertificateForNodeIndex = async (nodeIndex) => {
+    const lastNodes = getLastNodes();
+    const node = lastNodes[nodeIndex];
+    if (!node) throw new Error("remote node no longer exists");
+    if (!node.certificate_id) return { outcome: "empty" };
+    await syncRegistry((nodes) =>
+      nodes.map((entry, index) => (index === nodeIndex ? { ...entry, certificate_id: "" } : entry)),
+    );
+    return { outcome: "cleared" };
+  };
+
+  const resolveCertificateForNodeIndex = async (nodeIndex) => {
+    const lastNodes = getLastNodes();
+    const node = lastNodes[nodeIndex];
+    if (!node) throw new Error("remote node no longer exists");
+    const status = certificateStatusFor(node).tone;
+    if (status === "aligned") return { outcome: "aligned" };
+    if (status === "stale") return clearCertificateForNodeIndex(nodeIndex);
+    return assignCertificateForNodeIndex(nodeIndex);
   };
 
   const renderCertificateHealth = (nodes) => {
@@ -164,11 +205,14 @@ export function createRemoteNodeCertificateController({
   };
 
   return {
+    assignCertificateForNodeIndex,
     assignCertificatesForVisibleNodes,
     bindEvents,
     certificateStatusFor,
+    clearCertificateForNodeIndex,
     clearCertificatesForVisibleNodes,
     renderCertificateHealth,
+    resolveCertificateForNodeIndex,
     runFocusedCertificateAction,
   };
 }
