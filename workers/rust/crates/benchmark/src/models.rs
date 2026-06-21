@@ -33,6 +33,12 @@ pub(crate) struct BenchmarkReport {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub(crate) struct BenchmarkMemoryStage {
+    pub(crate) label: String,
+    pub(crate) rss_kib: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct BenchmarkResult {
     pub(crate) id: String,
     pub(crate) family: String,
@@ -48,6 +54,8 @@ pub(crate) struct BenchmarkResult {
     pub(crate) node_count: usize,
     pub(crate) element_count: usize,
     pub(crate) peak_rss_kib: u64,
+    #[serde(default)]
+    pub(crate) memory_stages: Vec<BenchmarkMemoryStage>,
     pub(crate) max_displacement: f64,
     pub(crate) max_stress: f64,
 }

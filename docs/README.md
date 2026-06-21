@@ -61,6 +61,9 @@ Then branch by intent:
   Quality direction and verification policy.
 - `accuracy-baselines.md`
   Current numerical baselines.
+- `solver-matrix-optimization-pack.md`
+  Benchmark-backed note for the retained Rust solver matrix optimizations and
+  the experiments that should not be repeated blindly.
 - `operator-sdk.md`
   Current extension-contract direction for new operator capabilities.
 - `workflow-graph.md`
@@ -133,6 +136,9 @@ Then branch by intent:
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
+- `solver-matrix-optimization-pack.md`
+  Current matrix-side optimization pack for the Rust solver, with A/B evidence
+  and benchmark interpretation notes.
 - `development.md`
   Day-to-day contributor workflow, including when workflow-heavy frontend work
   should run the dedicated `workflow-preflight` guard.
@@ -218,6 +224,6 @@ Then branch by intent:
 - Orchestrator/control-plane work:
   `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `operations.md`
 - Rust solver/agent work:
-  `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `protocols.md`
+  `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `protocols.md` -> `solver-matrix-optimization-pack.md`
 - Packaging/release work:
   `packaging-and-deployment.md` -> `testing-and-ci.md` -> `desktop-release-checklist.md` -> `update-catalog.html`

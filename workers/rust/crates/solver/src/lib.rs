@@ -4,7 +4,7 @@ use kyuubiki_protocol::{
     ElectrostaticPlaneQuadElementResult, ElectrostaticPlaneTriangleElementInput,
     ElectrostaticPlaneTriangleElementResult, ElementResult, Frame2dElementResult,
     Frame2dNodeResult, Frame3dElementResult, Frame3dNodeResult, HeatBar1dElementResult,
-    HeatBar1dNodeResult, HeatPlaneNodeResult, HeatPlaneQuadElementInput,
+    HeatBar1dNodeResult, HeatPlaneNodeInput, HeatPlaneNodeResult, HeatPlaneQuadElementInput,
     HeatPlaneQuadElementResult, HeatPlaneTriangleElementInput, HeatPlaneTriangleElementResult, Job,
     JobStatus, NodeResult, PlaneNodeResult, PlaneQuadElementInput, PlaneQuadElementResult,
     PlaneTriangleElementInput, PlaneTriangleElementResult, ProgressEvent, SolveBarRequest,
@@ -138,7 +138,7 @@ pub fn solve_thermal_bar_1d(
     validate_thermal_bar_1d_request(request)?;
 
     let dof_count = request.nodes.len();
-    let mut global_stiffness = SparseMatrix::new(dof_count);
+    let mut global_stiffness = SparseMatrix::with_uniform_row_capacity(dof_count, 12);
     let mut force_vector = vec![0.0; dof_count];
 
     for (index, node) in request.nodes.iter().enumerate() {
@@ -911,16 +911,47 @@ pub fn solve_electrostatic_plane_quad_2d(
 pub fn solve_heat_plane_quad_2d(
     request: &SolveHeatPlaneQuad2dRequest,
 ) -> Result<SolveHeatPlaneQuad2dResult, String> {
+    solve_heat_plane_quad_2d_internal(request, false).map(|profile| profile.result)
+}
+
+#[derive(Debug, Clone)]
+pub struct HeatPlaneQuadMemoryStage {
+    pub label: &'static str,
+    pub rss_kib: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct HeatPlaneQuadProfile {
+    pub result: SolveHeatPlaneQuad2dResult,
+    pub memory_stages: Vec<HeatPlaneQuadMemoryStage>,
+}
+
+pub fn profile_heat_plane_quad_2d(
+    request: &SolveHeatPlaneQuad2dRequest,
+) -> Result<HeatPlaneQuadProfile, String> {
+    solve_heat_plane_quad_2d_internal(request, true)
+}
+
+fn solve_heat_plane_quad_2d_internal(
+    request: &SolveHeatPlaneQuad2dRequest,
+    collect_memory_stages: bool,
+) -> Result<HeatPlaneQuadProfile, String> {
     validate_heat_plane_quad_request(request)?;
 
     let dof_count = request.nodes.len();
     let mut global_stiffness = SparseMatrix::new(dof_count);
     let mut heat_vector = vec![0.0; dof_count];
+    let mut memory_stages = Vec::new();
     let computed_elements = request
         .elements
         .iter()
         .map(|element| precompute_heat_plane_quad_element(request, element))
         .collect::<Result<Vec<_>, String>>()?;
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "precompute",
+    );
 
     for (index, node) in request.nodes.iter().enumerate() {
         heat_vector[index] = node.heat_load;
@@ -960,9 +991,20 @@ pub fn solve_heat_plane_quad_2d(
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
 
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "assemble_global",
+    );
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
+    push_heat_plane_quad_memory_stage(
+        &mut memory_stages,
+        collect_memory_stages,
+        "reduce_system",
+    );
     let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
+    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "solve_system");
 
     let mut temperatures = vec![0.0; dof_count];
     for &(index, value) in &prescribed {
@@ -1052,12 +1094,17 @@ pub fn solve_heat_plane_quad_2d(
         .map(|element| element.heat_flux_magnitude.abs())
         .fold(0.0_f64, f64::max);
 
-    Ok(SolveHeatPlaneQuad2dResult {
-        input: request.clone(),
-        nodes,
-        elements,
-        max_temperature,
-        max_heat_flux,
+    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "assemble");
+
+    Ok(HeatPlaneQuadProfile {
+        result: SolveHeatPlaneQuad2dResult {
+            input: request.clone(),
+            nodes,
+            elements,
+            max_temperature,
+            max_heat_flux,
+        },
+        memory_stages,
     })
 }
 
@@ -5952,9 +5999,16 @@ fn precompute_heat_plane_triangle_element(
     request: &SolveHeatPlaneTriangle2dRequest,
     element: &HeatPlaneTriangleElementInput,
 ) -> Result<HeatPlaneTriangleComputed, String> {
-    let node_i = &request.nodes[element.node_i];
-    let node_j = &request.nodes[element.node_j];
-    let node_k = &request.nodes[element.node_k];
+    precompute_heat_plane_triangle_element_from_nodes(&request.nodes, element)
+}
+
+fn precompute_heat_plane_triangle_element_from_nodes(
+    nodes: &[HeatPlaneNodeInput],
+    element: &HeatPlaneTriangleElementInput,
+) -> Result<HeatPlaneTriangleComputed, String> {
+    let node_i = &nodes[element.node_i];
+    let node_j = &nodes[element.node_j];
+    let node_k = &nodes[element.node_k];
     let signed_area = 0.5
         * ((node_j.x - node_i.x) * (node_k.y - node_i.y)
             - (node_k.x - node_i.x) * (node_j.y - node_i.y));
@@ -6156,14 +6210,9 @@ fn precompute_heat_plane_quad_element(
         thickness: element.thickness,
         conductivity: element.conductivity,
     };
-    let triangle_request = SolveHeatPlaneTriangle2dRequest {
-        nodes: request.nodes.clone(),
-        elements: vec![],
-    };
-
     Ok(HeatPlaneQuadComputed {
-        first: precompute_heat_plane_triangle_element(&triangle_request, &first)?,
-        second: precompute_heat_plane_triangle_element(&triangle_request, &second)?,
+        first: precompute_heat_plane_triangle_element_from_nodes(&request.nodes, &first)?,
+        second: precompute_heat_plane_triangle_element_from_nodes(&request.nodes, &second)?,
     })
 }
 
@@ -6299,6 +6348,48 @@ fn get_spatial_bounds(points: &[(f64, f64, f64)]) -> f64 {
     let max_z = points.iter().map(|point| point.2).fold(1.0_f64, f64::max);
 
     (max_x - min_x).max(max_y - min_y).max(max_z - min_z)
+}
+
+fn push_heat_plane_quad_memory_stage(
+    stages: &mut Vec<HeatPlaneQuadMemoryStage>,
+    enabled: bool,
+    label: &'static str,
+) {
+    if !enabled {
+        return;
+    }
+
+    stages.push(HeatPlaneQuadMemoryStage {
+        label,
+        rss_kib: current_rss_kib(),
+    });
+}
+
+fn current_rss_kib() -> u64 {
+    #[cfg(target_os = "linux")]
+    {
+        if let Ok(statm) = std::fs::read_to_string("/proc/self/statm")
+            && let Some(resident_pages) = statm.split_whitespace().nth(1)
+            && let Ok(resident_pages) = resident_pages.parse::<u64>()
+        {
+            let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+            if page_size > 0 {
+                return resident_pages * page_size as u64 / 1024;
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        let mut usage = std::mem::MaybeUninit::<libc::rusage>::uninit();
+        let status = unsafe { libc::getrusage(libc::RUSAGE_SELF, usage.as_mut_ptr()) };
+        if status == 0 {
+            let usage = unsafe { usage.assume_init() };
+            return (usage.ru_maxrss as u64) / 1024;
+        }
+    }
+
+    0
 }
 
 fn transpose_3x6(input: &[[f64; 6]; 3]) -> [[f64; 3]; 6] {
@@ -6878,8 +6969,25 @@ impl SparseMatrix {
         }
     }
 
+    fn with_uniform_row_capacity(size: usize, row_capacity: usize) -> Self {
+        Self {
+            rows: (0..size)
+                .map(|_| Vec::with_capacity(row_capacity))
+                .collect(),
+        }
+    }
+
     fn size(&self) -> usize {
         self.rows.len()
+    }
+
+    fn non_zero_count(&self) -> usize {
+        self.rows.iter().map(Vec::len).sum()
+    }
+
+    fn average_row_non_zero_hint(&self) -> usize {
+        let size = self.size().max(1);
+        self.non_zero_count().div_ceil(size).max(1)
     }
 
     fn add_at(&mut self, row: usize, column: usize, value: f64) {
@@ -6888,6 +6996,26 @@ impl SparseMatrix {
         }
 
         let row_entries = &mut self.rows[row];
+        if row_entries.is_empty() {
+            row_entries.push((column, value));
+            return;
+        }
+
+        if let Some((last_column, last_value)) = row_entries.last_mut() {
+            if *last_column == column {
+                *last_value += value;
+                if last_value.abs() <= 1.0e-18 {
+                    row_entries.pop();
+                }
+                return;
+            }
+
+            if *last_column < column {
+                row_entries.push((column, value));
+                return;
+            }
+        }
+
         match row_entries.binary_search_by_key(&column, |(entry_column, _)| *entry_column) {
             Ok(index) => {
                 row_entries[index].1 += value;
@@ -6897,6 +7025,29 @@ impl SparseMatrix {
             }
             Err(index) => row_entries.insert(index, (column, value)),
         }
+    }
+
+    fn push_sorted_entry(&mut self, row: usize, column: usize, value: f64) {
+        if value.abs() <= 1.0e-18 {
+            return;
+        }
+
+        let row_entries = &mut self.rows[row];
+        if let Some((last_column, last_value)) = row_entries.last_mut() {
+            debug_assert!(
+                *last_column <= column,
+                "push_sorted_entry requires non-decreasing columns"
+            );
+            if *last_column == column {
+                *last_value += value;
+                if last_value.abs() <= 1.0e-18 {
+                    row_entries.pop();
+                }
+                return;
+            }
+        }
+
+        row_entries.push((column, value));
     }
 
     fn diagonal_value(&self, row: usize) -> f64 {
@@ -7005,7 +7156,8 @@ fn reduce_sparse_system(
         free_map[global] = reduced;
     }
 
-    let mut reduced = SparseMatrix::new(free.len());
+    let mut reduced =
+        SparseMatrix::with_uniform_row_capacity(free.len(), matrix.average_row_non_zero_hint());
     let mut reduced_force = vec![0.0; free.len()];
 
     for (reduced_row, &global_row) in free.iter().enumerate() {
@@ -7013,7 +7165,7 @@ fn reduce_sparse_system(
         for &(global_col, value) in &matrix.rows[global_row] {
             let reduced_col = free_map[global_col];
             if reduced_col != usize::MAX {
-                reduced.add_at(reduced_row, reduced_col, value);
+                reduced.push_sorted_entry(reduced_row, reduced_col, value);
             }
         }
     }
@@ -7042,7 +7194,8 @@ fn reduce_sparse_system_with_prescribed(
         free_map[global] = reduced;
     }
 
-    let mut reduced = SparseMatrix::new(free.len());
+    let mut reduced =
+        SparseMatrix::with_uniform_row_capacity(free.len(), matrix.average_row_non_zero_hint());
     let mut reduced_force = vec![0.0; free.len()];
 
     for (reduced_row, &global_row) in free.iter().enumerate() {
@@ -7053,7 +7206,7 @@ fn reduce_sparse_system_with_prescribed(
             } else {
                 let reduced_col = free_map[global_col];
                 if reduced_col != usize::MAX {
-                    reduced.add_at(reduced_row, reduced_col, value);
+                    reduced.push_sorted_entry(reduced_row, reduced_col, value);
                 }
             }
         }
@@ -7074,13 +7227,17 @@ fn solve_spd_system(matrix: &SparseMatrix, rhs: &[f64]) -> Result<Vec<f64>, Stri
     if size <= 1024 {
         return solve_linear_system(sparse_to_dense(matrix), rhs.to_vec());
     }
-    let (scaled_matrix, scaled_rhs, scaling) = diagonally_scale_sparse_system(matrix, rhs);
+    let scaling = diagonal_sparse_scaling(matrix);
+    let scaled_rhs = scale_sparse_rhs(rhs, &scaling);
+    let scaled_matrix = scale_sparse_matrix(matrix, &scaling);
+    let diagonal_scale = average_diagonal_magnitude(&scaled_matrix).max(1.0);
     let compressed = scaled_matrix.compress();
+    drop(scaled_matrix);
 
-    match solve_spd_compressed(&compressed, &scaled_rhs, &scaled_matrix) {
+    match solve_spd_compressed(&compressed, &scaled_rhs, matrix) {
         Ok(solution) => Ok(solution),
         Err(error) => {
-            let diagonal_scale = average_diagonal_magnitude(&scaled_matrix).max(1.0);
+            let scaled_matrix = scale_sparse_matrix(matrix, &scaling);
 
             for factor in [1.0e-10, 1.0e-8, 1.0e-6] {
                 let regularized =
@@ -7117,8 +7274,9 @@ fn solve_spd_compressed(
 
     for index in 0..size {
         let diag = matrix.diagonal(index);
-        diagonal[index] = if diag.abs() < 1.0e-12 { 1.0e-12 } else { diag };
-        z[index] = r[index] / diagonal[index];
+        let safe_diag = if diag.abs() < 1.0e-12 { 1.0e-12 } else { diag };
+        diagonal[index] = safe_diag;
+        z[index] = r[index] / safe_diag;
         p[index] = z[index];
     }
 
@@ -7210,10 +7368,7 @@ fn sparse_to_dense(matrix: &SparseMatrix) -> Vec<Vec<f64>> {
     dense
 }
 
-fn diagonally_scale_sparse_system(
-    matrix: &SparseMatrix,
-    rhs: &[f64],
-) -> (SparseMatrix, Vec<f64>, Vec<f64>) {
+fn diagonal_sparse_scaling(matrix: &SparseMatrix) -> Vec<f64> {
     let size = matrix.size();
     let mut scaling = vec![1.0; size];
 
@@ -7230,21 +7385,27 @@ fn diagonally_scale_sparse_system(
         };
     }
 
-    let mut scaled = SparseMatrix::new(size);
+    scaling
+}
+
+fn scale_sparse_matrix(matrix: &SparseMatrix, scaling: &[f64]) -> SparseMatrix {
+    let size = matrix.size();
+    let mut scaled =
+        SparseMatrix::with_uniform_row_capacity(size, matrix.average_row_non_zero_hint());
     for (row_index, row) in matrix.rows.iter().enumerate() {
         let row_scale = scaling[row_index];
         for &(column, value) in row {
-            scaled.add_at(row_index, column, value * row_scale * scaling[column]);
+            scaled.push_sorted_entry(row_index, column, value * row_scale * scaling[column]);
         }
     }
+    scaled
+}
 
-    let scaled_rhs = rhs
-        .iter()
+fn scale_sparse_rhs(rhs: &[f64], scaling: &[f64]) -> Vec<f64> {
+    rhs.iter()
         .enumerate()
         .map(|(index, value)| value * scaling[index])
-        .collect::<Vec<_>>();
-
-    (scaled, scaled_rhs, scaling)
+        .collect()
 }
 
 fn unscale_solution(solution: &[f64], scaling: &[f64]) -> Vec<f64> {
@@ -7268,7 +7429,14 @@ fn average_diagonal_magnitude(matrix: &SparseMatrix) -> f64 {
 }
 
 fn regularize_sparse_diagonal(matrix: &SparseMatrix, epsilon: f64) -> SparseMatrix {
-    let mut regularized = matrix.clone();
+    let mut regularized = SparseMatrix::with_uniform_row_capacity(
+        matrix.size(),
+        matrix.average_row_non_zero_hint() + 1,
+    );
+
+    for (row_index, row) in matrix.rows.iter().enumerate() {
+        regularized.rows[row_index].extend(row.iter().copied());
+    }
 
     for row in 0..regularized.size() {
         regularized.add_at(row, row, epsilon);

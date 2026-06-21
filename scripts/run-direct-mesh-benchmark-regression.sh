@@ -5,6 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REMOTE_HOST="${KYUUBIKI_LAB_HOST:-kyuubiki-lab}"
 REMOTE_DIR="${KYUUBIKI_LAB_BENCH_DIR:-~/kyuubiki-bench-709b8c9}"
+REMOTE_ARTIFACT_DIR="${KYUUBIKI_LAB_ARTIFACT_DIR:-$REMOTE_DIR}"
 REMOTE_BENCHMARK_WRAPPER="${KYUUBIKI_LAB_BENCHMARK_WRAPPER:-/usr/local/bin/kyuubiki-direct-mesh-benchmark}"
 OUTPUT_SLUG="${OUTPUT_SLUG:-nightly-$(date -u +"%Y%m%dT%H%M%SZ")}"
 OUTPUT_DIR_REMOTE="${OUTPUT_DIR_REMOTE:-tmp/direct-mesh-benchmark-container/$OUTPUT_SLUG}"
@@ -31,7 +32,8 @@ checked-in baseline.
 
 Environment:
   KYUUBIKI_LAB_HOST                 SSH host alias. Default: kyuubiki-lab
-  KYUUBIKI_LAB_BENCH_DIR            Remote benchmark workspace
+  KYUUBIKI_LAB_BENCH_DIR            Remote benchmark workspace used to launch the wrapper
+  KYUUBIKI_LAB_ARTIFACT_DIR         Remote workspace root used to read benchmark artifacts
   KYUUBIKI_LAB_BENCHMARK_WRAPPER    Remote root-owned benchmark wrapper
   OUTPUT_SLUG                       Run folder name under tmp/direct-mesh-benchmark-container/
   OUTPUT_DIR_REMOTE                 Remote benchmark output directory
@@ -94,7 +96,28 @@ done
 
 ssh "$REMOTE_HOST" "cd $REMOTE_DIR &&$remote_exports sudo -n $preserve_env_arg $REMOTE_BENCHMARK_WRAPPER --skip-build --repeat $(printf '%q' "$REPEAT") --output-dir $(printf '%q' "$OUTPUT_DIR_REMOTE")"
 
-scp "$REMOTE_HOST:$REMOTE_DIR/$OUTPUT_DIR_REMOTE/summary.json" "$CURRENT_SUMMARY_LOCAL"
+REMOTE_SUMMARY_PATH="$(
+  ssh "$REMOTE_HOST" "
+    set -e
+    for candidate in $(printf '%q ' \
+      "$REMOTE_ARTIFACT_DIR/$OUTPUT_DIR_REMOTE/summary.json" \
+      "$REMOTE_DIR/$OUTPUT_DIR_REMOTE/summary.json" \
+      '$HOME/kyuubiki-bench-709b8c9/'"$OUTPUT_DIR_REMOTE"'/summary.json' \
+      '$HOME/kyuubiki/'"$OUTPUT_DIR_REMOTE"'/summary.json'); do
+      resolved_candidate=\$(eval printf '%s' \"\$candidate\")
+      if [ -f \"\$resolved_candidate\" ]; then
+        printf '%s\n' \"\$resolved_candidate\"
+        exit 0
+      fi
+    done
+    exit 1
+  "
+)" || {
+  echo "failed to locate remote summary.json under $OUTPUT_DIR_REMOTE on $REMOTE_HOST" >&2
+  exit 1
+}
+
+scp "$REMOTE_HOST:$REMOTE_SUMMARY_PATH" "$CURRENT_SUMMARY_LOCAL"
 
 node "$ROOT_DIR/scripts/compare-direct-mesh-benchmark.mjs" \
   --current "$CURRENT_SUMMARY_LOCAL" \
@@ -108,5 +131,6 @@ node "$ROOT_DIR/scripts/build-nightly-artifact-overview.mjs" \
   --tmp-root "$ROOT_DIR/tmp"
 
 echo "remote summary copied to $CURRENT_SUMMARY_LOCAL"
+echo "remote summary source: $REMOTE_SUMMARY_PATH"
 echo "comparison json: $COMPARE_JSON_LOCAL"
 echo "comparison report: $COMPARE_MD_LOCAL"

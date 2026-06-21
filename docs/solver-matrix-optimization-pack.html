@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki Solver Matrix Optimization Pack</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Rust solver optimization pack</div>
+        <h1>Retained matrix optimizations for thermal quad benchmarks</h1>
+        <p class="docs-copy">
+          This page records the matrix-side optimization set that is currently
+          worth keeping in the Rust solver, the experiments that were rejected,
+          and the benchmark evidence that justifies the retained pack.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Anchor workload: heat-plane-quad-10k</span>
+          <span class="docs-chip">Primary profile: 10k / thermal</span>
+          <span class="docs-chip">Reference lab: kyuubiki-lab</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./README.md">Back to docs readme</a>
+          <a class="docs-link" href="./solver-matrix-optimization-pack.md">Open Markdown source</a>
+          <a class="docs-link" href="./testing-and-ci.md">Open verification map</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Keep these changes</h2>
+          <ul class="docs-list">
+            <li><strong>Heat quad precompute split</strong>: use <code>precompute_heat_plane_triangle_element_from_nodes</code> so quad precompute stops cloning full node lists.</li>
+            <li><strong>Stage RSS visibility</strong>: keep <code>profile_heat_plane_quad_2d</code> and the stage chain <code>precompute -&gt; assemble_global -&gt; reduce_system -&gt; solve_system -&gt; assemble</code>.</li>
+            <li><strong>Row-capacity hints</strong>: keep <code>SparseMatrix::with_uniform_row_capacity</code> and <code>average_row_non_zero_hint</code> for derived sparse matrices.</li>
+            <li><strong>Sorted append for derived matrices</strong>: keep <code>push_sorted_entry</code> for reduced and scaled matrices that are already emitted in non-decreasing column order.</li>
+            <li><strong>Reduced and scaled matrix paths</strong>: keep the sorted-append path in <code>reduce_sparse_system</code>, <code>reduce_sparse_system_with_prescribed</code>, and <code>scale_sparse_matrix</code>.</li>
+            <li><strong>Solver success-path lifetime trim</strong>: keep the change that avoids holding one extra long-lived scaled sparse matrix after compression.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Rejected experiments</h2>
+          <ul class="docs-list">
+            <li><strong>Unordered global assembly then finalize</strong>: structurally interesting, but it did not beat the retained variant and should not come back without new evidence.</li>
+            <li><strong>Per-iteration diagonal reread in CG</strong>: regressed local benchmark behavior.</li>
+            <li><strong>Using stage-end RSS as peak-RSS proof</strong>: useful for steady-state interpretation, but not enough to explain release-mode spikes on its own.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Current evidence</h2>
+          <ul class="docs-list">
+            <li><strong>Local optimized worktree</strong>: <code>heat-plane-quad-10k</code> repeat 3, median <code>657.5775 ms</code>, peak RSS <code>15 MiB</code>.</li>
+            <li><strong>Clean HEAD control group</strong>: same command, median <code>6797.5630 ms</code>, peak RSS <code>22 MiB</code>.</li>
+            <li><strong>Physical lab release reference</strong>: <code>thermal-core</code> repeat 3 on <code>kyuubiki-lab</code>, median <code>30.8742 ms</code>, peak RSS <code>29 MiB</code>.</li>
+            <li><strong>Stage-end RSS on the lab</strong>: stable at <code>15 MiB</code>, which suggests the remaining release spike is a short-lived internal allocation rather than a stage-end steady-state footprint.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>How to evaluate future changes</h2>
+          <ol class="docs-list">
+            <li>Run <code>cargo test -p kyuubiki-solver</code>.</li>
+            <li>Run the local thermal benchmark: <code>cargo run -p kyuubiki-benchmark -- --profile 10k --matrix thermal --case heat-plane-quad --repeat 3</code>.</li>
+            <li>If the local result is credible, run the physical-lab release benchmark against the checked baseline.</li>
+            <li>Only keep a change if it improves runtime, memory, or clarity without introducing a benchmark regression.</li>
+          </ol>
+        </article>
+
+        <article class="docs-card">
+          <h2>Next likely targets</h2>
+          <ul class="docs-list">
+            <li>Short-lived allocation spikes inside compressed-matrix solve internals.</li>
+            <li>Compressed representation construction costs beyond the current sorted-append and row-capacity improvements.</li>
+            <li>Extending the same retained derived-matrix strategy to other solver families only after family-specific benchmarks exist.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

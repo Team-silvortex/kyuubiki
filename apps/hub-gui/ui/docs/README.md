@@ -35,6 +35,9 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
 - `update-catalog.html`
   Hub mirror for the centralized book's update-visibility material and release
   channel posture.
+- `solver-matrix-optimization-pack.html`
+  Hub mirror for the retained Rust solver matrix optimization set and its
+  benchmark-backed validation note.
 
 If a topic needs long-form engineering detail, put that detail under `docs/`
 and keep the Hub page as the short desktop entrypoint.

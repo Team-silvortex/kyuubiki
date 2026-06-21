@@ -122,6 +122,13 @@ pub(crate) fn render_comparison_report(
         if let Some(error) = &result.error {
             lines.push(format!("|  | error | `{}` |  |  |  |", error));
         }
+
+        if !result.memory_stages.is_empty() {
+            lines.push(format!(
+                "|  | stage rss | `{}` |  |  |  |",
+                format_memory_stages(result)
+            ));
+        }
     }
 
     lines.push(String::new());
@@ -181,6 +188,9 @@ pub(crate) fn print_table(
         if let Some(error) = &result.error {
             println!("  error: {error}");
         }
+        if !result.memory_stages.is_empty() {
+            println!("  stage rss: {}", format_memory_stages(result));
+        }
         if let Some(delta) = comparison
             .and_then(|comparison| comparison.cases.iter().find(|case| case.id == result.id))
         {
@@ -202,4 +212,13 @@ fn percent_delta(old: f64, new: f64) -> f64 {
     } else {
         ((new - old) / old) * 100.0
     }
+}
+
+fn format_memory_stages(result: &BenchmarkResult) -> String {
+    result
+        .memory_stages
+        .iter()
+        .map(|stage| format!("{}={} MiB", stage.label, kib_to_mib(stage.rss_kib)))
+        .collect::<Vec<_>>()
+        .join(", ")
 }

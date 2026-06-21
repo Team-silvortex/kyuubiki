@@ -2,8 +2,11 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
 use kyuubiki_protocol::AnalysisResult;
+use kyuubiki_solver::profile_heat_plane_quad_2d;
 
-use crate::models::{BenchmarkCase, BenchmarkReport, BenchmarkResult, BenchmarkWorkload};
+use crate::models::{
+    BenchmarkCase, BenchmarkMemoryStage, BenchmarkReport, BenchmarkResult, BenchmarkWorkload,
+};
 
 pub(crate) fn build_report(
     selected: &[&BenchmarkCase],
@@ -31,6 +34,7 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
     let mut max_displacement = 0.0;
     let mut max_stress = 0.0;
     let mut peak_rss_kib = current_peak_rss_kib();
+    let mut memory_stages = Vec::new();
     let mut error = None;
 
     for _ in 0..repeat {
@@ -85,15 +89,21 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                 })
             }
             BenchmarkWorkload::HeatPlaneQuad2d(request) => {
-                solve(EngineSolveRequest::HeatPlaneQuad2d(request.clone())).map(|result| {
-                    let AnalysisResult::HeatPlaneQuad2d(result) = result else {
-                        unreachable!("heat quad solve should return heat quad result")
-                    };
+                profile_heat_plane_quad_2d(request).map(|profile| {
+                    let result = profile.result;
                     node_count = result.nodes.len();
                     element_count = result.elements.len();
                     dof_count = result.nodes.len();
                     max_displacement = result.max_temperature;
                     max_stress = result.max_heat_flux;
+                    memory_stages = profile
+                        .memory_stages
+                        .into_iter()
+                        .map(|stage| BenchmarkMemoryStage {
+                            label: stage.label.to_string(),
+                            rss_kib: stage.rss_kib,
+                        })
+                        .collect();
                 })
             }
             BenchmarkWorkload::Truss3d(request) => {
@@ -145,6 +155,7 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
         node_count,
         element_count,
         peak_rss_kib,
+        memory_stages,
         max_displacement,
         max_stress,
     }

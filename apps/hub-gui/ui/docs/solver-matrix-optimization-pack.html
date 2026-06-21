@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solver Matrix Pack · Kyuubiki Book</title>
+    <link rel="stylesheet" href="./docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Solver mirror · benchmark route</div>
+        <h1>Rust solver matrix optimization pack</h1>
+        <p class="docs-copy">
+          Use this page when you need the shortest Hub-facing summary of which
+          matrix-side solver optimizations are currently trusted, which
+          experiments were rejected, and how to validate future changes.
+        </p>
+        <p class="docs-copy">
+          This is the short desktop mirror for the deeper source note in
+          <code>docs/solver-matrix-optimization-pack.md</code>.
+        </p>
+        <div class="docs-links">
+          <a class="docs-link" href="./index.html">Back to book entry</a>
+          <a class="docs-link" href="../../../../docs/solver-matrix-optimization-pack.html">Open central HTML doc</a>
+          <a class="docs-link" href="../../../../docs/solver-matrix-optimization-pack.md">Open Markdown source</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Retained pack</h2>
+          <ul class="docs-list">
+            <li>Heat quad precompute no longer clones the full node list for every split triangle.</li>
+            <li>Thermal quad benchmarking keeps stage RSS visibility so later tuning has a stable reference.</li>
+            <li>Derived sparse matrices use row-capacity hints and sorted append instead of repeated binary-search insertion.</li>
+            <li>The solve success path no longer keeps one extra long-lived scaled sparse matrix alive after compression.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Rejected ideas</h2>
+          <ul class="docs-list">
+            <li>Global unordered assembly plus one final row merge for the heat quad path.</li>
+            <li>Re-reading diagonals on every CG iteration.</li>
+            <li>Treating stage-end RSS as if it fully explained release-mode peak RSS.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Current benchmark anchor</h2>
+          <ul class="docs-list">
+            <li><strong>Local optimized path</strong>: repeat 3, median <code>657.5775 ms</code>, peak RSS <code>15 MiB</code>.</li>
+            <li><strong>Clean control group</strong>: repeat 3, median <code>6797.5630 ms</code>, peak RSS <code>22 MiB</code>.</li>
+            <li><strong>Physical lab release</strong>: repeat 3, median <code>30.8742 ms</code>, peak RSS <code>29 MiB</code>.</li>
+          </ul>
+          <div class="docs-links">
+            <a class="docs-link" href="./testing-and-ci.html">Open testing mirror</a>
+            <a class="docs-link" href="../../../../docs/testing-and-ci.md">Open central verification doc</a>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

@@ -45,6 +45,11 @@ Crate-level test expectations stay close to the code:
 Prefer colocated crate tests so runtime behavior stays near the code it
 validates.
 
+For the currently retained thermal-quad matrix optimization set and its
+benchmark evidence, also read:
+
+- `../../docs/solver-matrix-optimization-pack.md`
+
 ## Layout skeletons
 
 - `linux/`

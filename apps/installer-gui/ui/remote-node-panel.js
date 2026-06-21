@@ -116,6 +116,13 @@ export function mountRemoteNodePanel({
           missingPreflightCount: state.nodes.length - state.readyCount,
           missingStartCount: state.nodes.filter((node) => node.last_action !== "start_agent").length,
           readiness: state.nodes.length >= 2 && state.peerCount >= state.nodes.length && state.readyCount === state.nodes.length ? "ready" : "warning",
+          finalReadiness:
+            state.nodes.length >= 2 &&
+            state.peerCount >= state.nodes.length &&
+            state.readyCount === state.nodes.length &&
+            state.nodes.every((node) => node.last_action === "start_agent")
+              ? "go"
+              : "hold",
         }))
         .sort((left, right) => left.clusterId.localeCompare(right.clusterId)),
     };
@@ -139,10 +146,11 @@ export function mountRemoteNodePanel({
       : diagnostics.clusters.map((cluster) => `
         <article class="remote-mesh-cluster" data-readiness="${cluster.readiness}">
           <strong>${cluster.clusterId}</strong>
+          <span><strong>${cluster.finalReadiness === "go" ? "Ready for run" : "Hold"}</strong></span>
           <span>nodes ${cluster.nodeCount} · peers ${cluster.peerCount}</span>
           <span>preflight ok ${cluster.readyCount}/${cluster.nodeCount}</span>
           <span>agents started ${cluster.nodeCount - cluster.missingStartCount}/${cluster.nodeCount}</span>
-          <span>${cluster.readiness === "ready" ? "mesh readiness aligned" : `needs ${cluster.missingPreflightCount} more verified node(s)`}</span>
+          <span>${cluster.finalReadiness === "go" ? "preflight and agent startup aligned" : cluster.readiness === "ready" ? "start remaining agents before workload tests" : `needs ${cluster.missingPreflightCount} more verified node(s)`}</span>
           <div class="action-row">
             <button data-remote-cluster-action="focus-cluster" data-remote-cluster-id="${cluster.clusterId}">Focus cluster</button>
             ${cluster.missingStartCount === 0 ? "" : `<button data-remote-cluster-action="start-missing" data-remote-cluster-id="${cluster.clusterId}">Start missing agents</button>`}
