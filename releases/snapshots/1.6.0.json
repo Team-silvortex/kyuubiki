@@ -2,7 +2,7 @@
   "version": "1.6.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-06-12",
   "git_commit": "fdfbb65bc5946ad6328d7a7a68d600b30ed891ea",
   "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",

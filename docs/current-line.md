@@ -28,20 +28,26 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The current published release snapshot in this line is `tamamono 1.8.0`.
+The current published release snapshot in this line is `tamamono 1.10.0`.
 
-The current working point in the repository is `tamamono 1.8.1`, where the
-main focus remains hardening work inside `1.8.x`:
+The current shipping point now sits inside the wider `1.9.x` to `1.20.x`
+industrialization range, where the main job is still hardening trust,
+contracts, and operator-visible runtime behavior rather than inflating feature
+count.
 
-- workflow-run lifecycle cleanup
-- clearer task failure semantics
-- bug fixing and runtime consistency
+The immediate hardening focus is:
+
+- benchmark-backed accuracy claims instead of anecdotal confidence
+- clearer task, failure, and recovery semantics across runtime surfaces
+- stronger workflow and asset contracts instead of ad hoc payload growth
+- more explicit Installer-side remote deployment and runtime-control behavior
 
 These expectations are meant to remain true across later `1.x` releases too.
 
 ## Current backend momentum
 
-Recent operator work is following the `tamamono 1.x` rule in the right order:
+Recent operator work and runtime-control work are following the `tamamono 1.x`
+rule in the right order:
 
 - add the solver and protocol path
 - add agent/runtime support
@@ -56,8 +62,9 @@ The current example is the now-verified `frame_3d` / `thermal_frame_3d` / `therm
 - formal accuracy baselines exist
 - official-sample orchestrated API smoke exists for all three studies
 
-That is the kind of operator growth this line should prefer: narrower, more
-verified, and less speculative.
+That is the kind of growth this line should prefer: narrower, more verified,
+less speculative, and easier to explain across Workbench, Installer, SDK, and
+agent surfaces.
 
 ## Current reading path
 
@@ -81,6 +88,10 @@ verified, and less speculative.
 7. [workflow-dataset.md](workflow-dataset.md)
    ONNX-like cross-operator data contract for workflow-carried values, with
    named datasets, shape semantics, and schema references shared across nodes.
-8. [language-packs.md](language-packs.md)
+8. [installer-remote-control.md](installer-remote-control.md)
+   Installer-owned remote deployment and runtime-control surface, including
+   workflow snapshots, certificate alignment, and mesh-oriented operator
+   guidance.
+9. [language-packs.md](language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.

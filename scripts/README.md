@@ -17,6 +17,10 @@ This directory contains host-native operational entry points.
 - `build-installation-integrity-docs.mjs`
   Generate the installation integrity HTML docs for both the repository-level
   book and the Hub-facing mirror shelf.
+- `upload-desktop-release-remote.sh`
+  Upload generated desktop bundles, staged `dist/` outputs, and release
+  metadata to a remote download server, with an optional post-upload local
+  cleanup path for disk-constrained workstations.
 - `audit-version-line.mjs`
   Audit repository-wide version contracts and inventory visible version
   references before advancing a shipping line such as `tamamono 1.7.0`.
@@ -45,6 +49,7 @@ Typical responsibilities:
 - release snapshot scaffolding
 - unified update-catalog generation
 - release metadata normalization across `releases/` and `deploy/`
+- remote release artifact upload and local bundle cleanup
 
 Useful smoke wrappers:
 
@@ -58,6 +63,13 @@ Useful smoke wrappers:
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks
   exercise the live workbench benchmark surface.
+- `./scripts/kyuubiki desktop-upload-remote macos`
+  Upload the current shipping-version desktop release outputs to the remote
+  download server. Override the target with
+  `KYUUBIKI_RELEASE_REMOTE_HOST=user@host`, optionally provide
+  `KYUUBIKI_RELEASE_REMOTE_PASSWORD=...` for `sshpass`-backed non-interactive
+  auth, and set `PURGE_LOCAL=1` to remove local `dist/` and Tauri bundle
+  outputs after a successful upload.
 - `./scripts/run-direct-mesh-benchmark-container.sh --repeat 3`
   Build the dedicated Docker harness, run the direct-mesh integration suite
   multiple times, and write JSON plus Markdown summaries under
@@ -186,6 +198,7 @@ Examples now include:
 - `build-workbench-gui`
 - `package-runtime`
 - `package-desktop`
+- `desktop-upload-remote`
 - `desktop-status`
 - `desktop-stage`
 - `desktop-build-host`

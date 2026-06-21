@@ -2,7 +2,7 @@
   "version": "1.8.0",
   "codename": "tamamono",
   "line": "1.x",
-  "status": "current",
+  "status": "archived",
   "date": "2026-06-16",
   "git_commit": "e132bbe96dd41814f8b077716232065aa8b04024",
   "summary": "Runtime and release-contract alignment kickoff for the tamamono 1.8.x push, with shipping-version contracts, desktop shell metadata, generated update surfaces, and lab deployment workflow moved onto the new line.",

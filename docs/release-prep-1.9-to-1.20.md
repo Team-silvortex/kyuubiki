@@ -6,8 +6,8 @@ Use this page as the industrialization map for the second half of the
 This document is not the broad product north star. For that, use
 [fem-blender-roadmap.md](fem-blender-roadmap.md).
 
-This document is also not a single-release hygiene checklist like
-[release-prep-1.8.md](release-prep-1.8.md).
+This document is also not a single-release hygiene checklist tied to one older
+minor-line transition.
 
 It is the staged roadmap for turning the current platform skeleton into a
 durable industrial product before `2.0`.
@@ -112,6 +112,8 @@ Focus:
   [accuracy-plan.md](accuracy-plan.md)
 - add explicit benchmark case, reference metrics, tolerance, and automation
   status for each core family
+- align operator-facing docs and control surfaces so trust claims, remote
+  runtime behavior, and verification posture say the same thing
 
 What should be true before moving on:
 
@@ -369,4 +371,4 @@ Use these related docs alongside it:
 - [accuracy-plan.md](accuracy-plan.md)
 - [fem-blender-roadmap.md](fem-blender-roadmap.md)
 - [testing-and-ci.md](testing-and-ci.md)
-- [release-prep-1.8.md](release-prep-1.8.md)
+- [installer-remote-control.md](installer-remote-control.md)

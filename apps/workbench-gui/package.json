@@ -1,6 +1,6 @@
 {
   "name": "kyuubiki-workbench-gui",
-  "version": "1.8.0",
+  "version": "1.10.0",
   "private": true,
   "scripts": {
     "sync:shared": "node ../desktop-shared/scripts/sync-desktop-shared.mjs",

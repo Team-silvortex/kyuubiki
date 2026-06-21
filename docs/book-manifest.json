@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.docs-book/v1",
   "title": "Kyuubiki Book",
-  "version_line": "tamamono 1.8.0",
+  "version_line": "tamamono 1.x",
   "entry_html": "docs/book.html",
   "purpose": "Single-entry documentation guide for humans and large models.",
   "chapters": [
@@ -47,6 +47,7 @@
       "sources": [
         "docs/operations.md",
         "docs/packaging-and-deployment.md",
+        "docs/installer-remote-control.md",
         "docs/desktop-release-checklist.md"
       ]
     },
@@ -83,6 +84,7 @@
         "docs/accuracy-baselines.md",
         "docs/security.md",
         "docs/testing-and-ci.md",
+        "docs/installer-remote-control.md",
         "docs/installation-integrity-contract.html",
         "docs/update-catalog.html"
       ]
@@ -133,7 +135,14 @@
       "docs/workflow-dataset.md",
       "docs/development.md",
       "docs/testing-and-ci.md",
-      "docs/release-prep-1.8.md"
+      "docs/release-prep-1.9-to-1.20.md"
+    ],
+    "installer_remote_engineer": [
+      "docs/system-overview.md",
+      "docs/app-runtime-boundaries.md",
+      "docs/installer-remote-control.md",
+      "docs/security.md",
+      "docs/testing-and-ci.md"
     ],
     "release_owner": [
       "docs/packaging-and-deployment.md",

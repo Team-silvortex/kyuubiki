@@ -11,6 +11,7 @@ deployment- and lifecycle-focused surface in the repository.
 - runtime and agent install / uninstall flows
 - local/cloud/distributed deployment configuration
 - lifecycle, repair, cleanup, and integrity actions
+- remote node bootstrap, certificate alignment, and mesh-oriented runtime control
 - release staging and desktop installer packaging
 - security/runtime settings input
 
@@ -79,3 +80,27 @@ Remote bootstrap and remote agent startup are intentionally bounded:
   - `KYUUBIKI_INSTALLER_REMOTE_ALLOWED_WORKSPACE_ROOTS`
 - installer-managed policy is stored at:
   - `config/installer-remote-policy.json`
+
+## Remote control surface
+
+The remote node panel is now a first-class Installer subsystem rather than one
+large convenience script.
+
+Main UI controllers:
+
+- `ui/remote-node-panel.js`
+- `ui/remote-node-renderer.js`
+- `ui/remote-node-executor.js`
+- `ui/remote-node-actions.js`
+- `ui/remote-node-bulk-actions.js`
+- `ui/remote-node-certificates.js`
+- `ui/remote-node-mesh.js`
+- `ui/remote-node-timeline.js`
+
+That split keeps remote deployment logic, certificate state, mesh rollout, and
+workflow snapshot rendering understandable as the `1.10.x` line hardens the
+operator-facing remote control model.
+
+Deeper source note:
+
+- [../../docs/installer-remote-control.md](../../docs/installer-remote-control.md)

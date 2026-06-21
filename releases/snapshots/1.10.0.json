@@ -1,0 +1,158 @@
+{
+  "version": "1.10.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-21",
+  "git_commit": "b0fb9155a2727e3692e7b37a348df211ff18c98f",
+  "summary": "Workspace-version alignment point for the tamamono 1.x line, with desktop shells, frontend-facing docs, installer integrity contracts, and local workflow metadata moved onto the 1.10.0 shipping version.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.10.0",
+      "notes": [
+        "Workbench-facing docs, app-rail branding, and local workflow snapshot metadata now align to the 1.10.0 shipping version.",
+        "Workflow contract reference pages and window-protection docs now present the 1.10.0 line consistently."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.10.0",
+      "notes": [
+        "Hub package metadata, Tauri bundle version, shell branding, and mirrored docs now align to the 1.10.0 shipping line.",
+        "Hub desktop reading entry and current-line mirrors now match the promoted release point."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.10.0",
+      "notes": [
+        "Workbench desktop shell package metadata, bundle version, and visible brand assets now match the 1.10.0 shipping version."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.10.0",
+      "notes": [
+        "Installer package metadata, bundle version, remote-control docs, and integrity surfaces now align to the 1.10.0 shipping version."
+      ]
+    },
+    "web_api": {
+      "version": "1.10.0",
+      "notes": [
+        "Release metadata, docs, and generated update surfaces now track 1.10.0 as the current public shipping version."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "current",
+    "capabilities": [
+      "Workflow docs and contract references align to the 1.10.0 shipping version.",
+      "Local promoted and duplicated workflow records now write 1.10.0-scoped local graph versions."
+    ]
+  },
+  "operator_sdk": {
+    "status": "current",
+    "capabilities": [
+      "Release-facing docs and version metadata are aligned for continued 1.10.x operator-SDK work on the promoted shipping line."
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.10.0_aarch64.dmg",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.10.0_aarch64.dmg",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.10.0_aarch64.dmg"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M README.md",
+        " M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/src/app/docs/page.tsx",
+        " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/docs/current-line.html",
+        " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/docs/installation-integrity.html",
+        " M apps/hub-gui/ui/docs/testing-and-ci.html",
+        " M apps/hub-gui/ui/docs/update-catalog.html",
+        " M apps/hub-gui/ui/index.html",
+        " M apps/installer-gui/README.md",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/test/smoke.test.mjs",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/installer-gui/ui/index.html",
+        " M apps/installer-gui/ui/remote-node-panel.js",
+        " M apps/installer-gui/ui/remote-node-timeline.js",
+        " M apps/installer-gui/ui/styles.css",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/ui/index.html",
+        " M deploy/installation-integrity-contract.json",
+        " M docs/README.md",
+        " M docs/book-manifest.json",
+        " M docs/book.html",
+        " M docs/current-line.md",
+        " M docs/desktop-release-checklist.md",
+        " M docs/installation-integrity-contract.html",
+        " M docs/release-prep-1.9-to-1.20.md",
+        " M docs/system-overview.md",
+        " M docs/update-catalog.html",
+        " M docs/version-line.md",
+        " M releases/index.json",
+        " M releases/update-catalog.json",
+        "?? apps/installer-gui/ui/remote-node-actions.js",
+        "?? apps/installer-gui/ui/remote-node-bulk-actions.js",
+        "?? apps/installer-gui/ui/remote-node-executor.js",
+        "?? apps/installer-gui/ui/styles/installer-remote-nodes.css",
+        "?? apps/installer-gui/ui/styles/installer-remote-timeline.css",
+        "?? docs/installer-remote-control.md",
+        "?? releases/snapshots/1.10.0.json"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.10.0",
+      "workbench": "1.10.0",
+      "installer": "1.10.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check"
+    ]
+  }
+}

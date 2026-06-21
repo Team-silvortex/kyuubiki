@@ -82,6 +82,7 @@ Use these commands when building deployable layouts:
   Verifies staged manifests and required icon inputs for each desktop app
 - `./scripts/kyuubiki package-desktop macos|linux|windows`
 - `./scripts/kyuubiki package-desktop all`
+- `./scripts/kyuubiki desktop-upload-remote macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-status macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-stage macos|linux|windows|all`
 - `./scripts/kyuubiki desktop-build-host`
@@ -107,6 +108,43 @@ Current staged runtime layout:
 - `dist/<platform>/manifests`
 - `dist/<platform>/scripts`
 - `dist/<platform>/exports`
+
+## Remote artifact retention
+
+Generated desktop bundles are not expected to live permanently on a local
+MacBook or dev workstation.
+
+Preferred flow:
+
+1. stage or build the release locally
+2. upload the generated outputs to the remote download server
+3. optionally remove local generated bundle outputs after a successful upload
+
+Primary command:
+
+- `./scripts/kyuubiki desktop-upload-remote macos|linux|windows|all`
+
+Environment overrides:
+
+- `KYUUBIKI_RELEASE_REMOTE_HOST`
+  SSH host or alias for the download server. A typical example is
+  `kyuubiki-dev@192.168.1.12`.
+- `KYUUBIKI_RELEASE_REMOTE_DIR`
+  Remote root path that will receive `releases/<version>/...`.
+- `KYUUBIKI_RELEASE_REMOTE_PASSWORD`
+  Optional password for `sshpass`-backed non-interactive uploads when the
+  remote host is not yet configured for key-based auth.
+- `KYUUBIKI_RELEASE_VERSION`
+  Override the version folder. By default the script uses
+  `deploy/update-channels.json` `shipping_version`.
+- `KYUUBIKI_RELEASE_REMOTE_SSH_OPTS`
+  Optional SSH flags. Defaults to `-o StrictHostKeyChecking=accept-new`.
+- `PURGE_LOCAL=1`
+  Removes uploaded local `dist/<platform>` trees and Tauri `target/release/bundle`
+  directories after a successful upload.
+
+This keeps the release source-of-truth on the remote server while preserving
+the local repository as the place where metadata is authored and generated.
 
 ## Output boundaries
 

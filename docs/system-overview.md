@@ -83,6 +83,12 @@ At the product level, each major surface owns a different concern:
 - `Runtime / agents`
   protocol-driven execution and compute surface
 
+The Installer surface now also carries a bounded remote runtime-control panel
+for node bootstrap, certificate alignment, mesh preparation, and workflow
+snapshot inspection. That control surface is part of the product boundary, but
+it should remain deployment- and operator-oriented rather than turning into a
+second Workbench.
+
 That boundary matters because it prevents two common failures:
 
 - frontend code quietly becoming the runtime architecture
@@ -188,3 +194,4 @@ See:
 - [protocols.md](protocols.md)
 - [security.md](security.md)
 - [operations.md](operations.md)
+- [installer-remote-control.md](installer-remote-control.md)

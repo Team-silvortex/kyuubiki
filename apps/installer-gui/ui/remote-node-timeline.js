@@ -6,6 +6,10 @@ function timelineEntriesFor(node) {
   return Array.isArray(node?.workflow_snapshots) ? [...node.workflow_snapshots].slice().reverse() : [];
 }
 
+function nodeIdentity(node) {
+  return [node?.agent_id || "", node?.target_host || "", node?.cluster_id || ""].join("::");
+}
+
 function titleCase(value) {
   return value
     .split("_")
@@ -203,6 +207,13 @@ function renderDetails(entry, selectedNodeIndex) {
 export function createRemoteNodeTimelineController({ host, getLastNodes, runRecommendedAction }) {
   let selectedNodeIndex = null;
   let selectedEntryIndex = 0;
+  let selectedNodeIdentity = "";
+  let lastSeenLatestSnapshotKey = "";
+
+  const latestSnapshotKeyFor = (node) => {
+    const latest = timelineEntriesFor(node)[0];
+    return latest ? `${latest.stage || "unknown"}::${latest.recorded_at_unix_ms || 0}::${latest.status || "unknown"}` : "";
+  };
 
   const renderTimeline = () => {
     if (!host) return;
@@ -213,6 +224,12 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
       return;
     }
     const entries = timelineEntriesFor(node);
+    const latestSnapshotKey = latestSnapshotKeyFor(node);
+    const shouldFollowLatest = latestSnapshotKey && latestSnapshotKey !== lastSeenLatestSnapshotKey;
+    if (shouldFollowLatest) {
+      selectedEntryIndex = 0;
+      lastSeenLatestSnapshotKey = latestSnapshotKey;
+    }
     const activeEntry = entries[selectedEntryIndex] || entries[0] || null;
     host.innerHTML = entries.length === 0
       ? `<article class="remote-node-timeline__empty"><strong>${node.label || node.target_host}</strong><span>No workflow snapshots recorded yet.</span></article>`
@@ -221,6 +238,9 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
           <strong>${node.label || node.target_host}</strong>
           <span>${node.agent_id || "agent unset"} · ${node.control_mode || "orchestrated"}</span>
           <span>${entries.length} snapshot(s) · latest ${formatTime(entries[0]?.recorded_at_unix_ms)}</span>
+          <span class="remote-node-timeline__follow-state" data-fresh="${shouldFollowLatest ? "true" : "false"}">
+            ${shouldFollowLatest ? "Auto-focused latest snapshot" : "Following selected node context"}
+          </span>
         </article>
         <div class="remote-node-timeline__body">
           <div class="remote-node-timeline__list">
@@ -231,6 +251,7 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
                 data-stage-tone="${stageMeta(entry.stage).tone}"
                 data-timeline-entry-index="${index}"
                 data-selected="${index === selectedEntryIndex ? "true" : "false"}"
+                data-latest="${index === 0 ? "true" : "false"}"
               >
                 <strong>${workflowKindMeta(entry.workflow_kind).label} · ${stageMeta(entry.stage).label}</strong>
                 <span>${statusMeta(entry.status).label} · ${formatTime(entry.recorded_at_unix_ms)}</span>
@@ -247,6 +268,10 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
   const selectNode = (nodeIndex) => {
     selectedNodeIndex = typeof nodeIndex === "number" ? nodeIndex : null;
     selectedEntryIndex = 0;
+    const nodes = getLastNodes();
+    const node = typeof selectedNodeIndex === "number" ? nodes[selectedNodeIndex] : null;
+    selectedNodeIdentity = nodeIdentity(node);
+    lastSeenLatestSnapshotKey = node ? latestSnapshotKeyFor(node) : "";
     renderTimeline();
   };
 
@@ -255,9 +280,22 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
     renderTimeline();
   };
 
+  const keepNodeContext = (nodeIndex) => {
+    const nodes = getLastNodes();
+    const candidate = typeof nodeIndex === "number" ? nodes[nodeIndex] : null;
+    if (!candidate) return;
+    const candidateIdentity = nodeIdentity(candidate);
+    if (candidateIdentity && candidateIdentity === selectedNodeIdentity) {
+      selectedNodeIndex = nodeIndex;
+      return;
+    }
+    selectNode(nodeIndex);
+  };
+
   host?.addEventListener("click", (event) => {
     const action = event.target.closest("[data-recommended-action]");
     if (action?.dataset.recommendedAction && action.dataset.recommendedNodeIndex) {
+      keepNodeContext(Number(action.dataset.recommendedNodeIndex));
       runRecommendedAction?.(action.dataset.recommendedAction, Number(action.dataset.recommendedNodeIndex));
       return;
     }
@@ -267,6 +305,7 @@ export function createRemoteNodeTimelineController({ host, getLastNodes, runReco
   });
 
   return {
+    keepNodeContext,
     renderTimeline,
     selectEntry,
     selectNode,

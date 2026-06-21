@@ -415,6 +415,7 @@ Native cross-platform commands:
   desktop-stage
   desktop-status | desktop-verify
   package-desktop
+  desktop-upload-remote
 
 Legacy zsh-backed commands:
   desktop-build-host, desktop-release, test, verify,
@@ -580,6 +581,13 @@ case "$COMMAND" in
     shift
     shift || true
     run_package_desktop "$PLATFORM"
+    ;;
+  desktop-upload-remote)
+    PLATFORM="${2:-$(host_platform)}"
+    shift
+    shift || true
+    cd "$ROOT_DIR"
+    exec bash "$ROOT_DIR/scripts/upload-desktop-release-remote.sh" "$PLATFORM"
     ;;
   install)
     shift

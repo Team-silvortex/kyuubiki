@@ -9,7 +9,8 @@ For the broader product narrative, release posture, and reading path, use
 
 - codename: `tamamono`
 - active line: `1.x`
-- current shipping version: `tamamono 1.8.0`
+- current shipping version: `tamamono 1.10.0`
+- current documentation target: `tamamono 1.10.x` active line
 - major-version policy:
   unless there is a deliberate structural reset later, the major version is
   expected to remain `1`
@@ -19,6 +20,7 @@ For the broader product narrative, release posture, and reading path, use
 - confirming the current formal line name
 - confirming the current shipping point in that line
 - checking the major-version policy without reading the broader narrative first
+- checking which preparation window the docs are currently being aligned for
 
 ## What this page is not for
 

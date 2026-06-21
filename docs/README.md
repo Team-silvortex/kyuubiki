@@ -25,6 +25,7 @@ Read these first, in order:
 6. `repository-structure.md`
 7. `testing-and-ci.md`
 8. `maintenance.md`
+9. `installer-remote-control.md`
 
 ## Central Book
 
@@ -70,6 +71,9 @@ Then branch by intent:
   Multi-operator composition model for shader-like workflow growth.
 - `workflow-dataset.md`
   ONNX-like cross-operator data contract for workflow-carried values.
+- `installer-remote-control.md`
+  Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
+  control-surface note for the `1.10.x` preparation line.
 - `fem-blender-roadmap.md`
   Product north star linking workbench, workflow, SDK, and operator-ecosystem growth.
 
@@ -120,18 +124,21 @@ Then branch by intent:
 - `workflow-dataset.md`
   Portable dataset/value contract shared across workflow nodes, ports, and
   operator schemas.
+- `installer-remote-control.md`
+  Installer-side remote deployment and runtime-control contract for the
+  operator-facing remote node surface.
 
 ### Verify changes
 
 - `version-line.md`
   Current version-line note for `tamamono 1.x`, including codename and major
   version policy.
-- `release-prep-1.8.md`
-  Practical upgrade checklist and audit entrypoint for moving the repository
-  from the current `1.7.x` shipping point toward `1.8.x`.
 - `release-prep-1.9-to-1.20.md`
   Industrialization roadmap for the second half of `tamamono 1.x`, covering
   the boundary-hardening path from `1.9.x` through `1.20.x` before `2.0`.
+- `installer-remote-control.md`
+  Source-of-truth note for the Installer remote control surface that now sits
+  inside the `1.10.x` trust-hardening and `1.11.x` asset-formalization path.
 - `tamamono-minor-lines.md`
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`
@@ -218,7 +225,9 @@ Then branch by intent:
 - Browser/frontend work:
   `philosophy.md` -> `frontend-style.md` -> `frontend-implementation.md` -> `ui-automation-contract.html` -> `rendering-roadmap.html`
 - Workflow-heavy frontend work:
-  `workflow-graph.md` -> `workflow-dataset.md` -> `development.md` -> `testing-and-ci.md` -> `release-prep-1.8.md`
+  `workflow-graph.md` -> `workflow-dataset.md` -> `development.md` -> `testing-and-ci.md` -> `release-prep-1.9-to-1.20.md`
+- Installer remote/runtime-control work:
+  `system-overview.md` -> `app-runtime-boundaries.md` -> `installer-remote-control.md` -> `security.md` -> `testing-and-ci.md`
 - Desktop product boundary work:
   `system-overview.md` -> `app-runtime-boundaries.md` -> `agent-orchestrator-boundary.md` -> `architecture-red-lines.md` -> `hub-architecture.md` -> `repository-structure.md`
 - Orchestrator/control-plane work:

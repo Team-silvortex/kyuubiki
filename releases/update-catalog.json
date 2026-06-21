@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-06-16T09:09:15.258Z",
-  "shipping_version": "1.8.0",
+  "generated_at": "2026-06-21T13:30:51.796Z",
+  "shipping_version": "1.10.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.8",
-        "tamamono:1.8.0"
+        "tamamono:1.10",
+        "tamamono:1.10.0"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.8.0",
-      "summary": "TODO: summarize tamamono 1.8.0.",
-      "date": "2026-06-16",
+      "version": "1.10.0",
+      "summary": "Workspace-version alignment point for the tamamono 1.x line, with desktop shells, frontend-facing docs, installer integrity contracts, and local workflow metadata moved onto the 1.10.0 shipping version.",
+      "date": "2026-06-21",
       "notes": [
         "Primary operator-facing update track for the current shipping line.",
         "Targets standard installs that follow the visible installation contract."
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.8.0.json",
+      "snapshot_path": "releases/snapshots/1.10.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -69,33 +69,35 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Workbench-facing docs, app-rail branding, and local workflow snapshot metadata now align to the 1.10.0 shipping version.",
+            "Workflow contract reference pages and window-protection docs now present the 1.10.0 line consistently."
           ]
         },
         "hub_gui": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Hub package metadata, Tauri bundle version, shell branding, and mirrored docs now align to the 1.10.0 shipping line.",
+            "Hub desktop reading entry and current-line mirrors now match the promoted release point."
           ]
         },
         "workbench_gui": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Workbench desktop shell package metadata, bundle version, and visible brand assets now match the 1.10.0 shipping version."
           ]
         },
         "installer_gui": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Installer package metadata, bundle version, remote-control docs, and integrity surfaces now align to the 1.10.0 shipping version."
           ]
         },
         "web_api": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Release metadata, docs, and generated update surfaces now track 1.10.0 as the current public shipping version."
           ]
         }
       },
@@ -111,7 +113,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.8.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.10.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -125,7 +127,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.8.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.10.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -139,7 +141,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.8.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.10.0_aarch64.dmg",
           "exists": false
         }
       ]
@@ -147,12 +149,12 @@
   ],
   "versions": [
     {
-      "version": "1.8.0",
+      "version": "1.10.0",
       "line": "1.x",
       "status": "current",
-      "date": "2026-06-16",
-      "summary": "TODO: summarize tamamono 1.8.0.",
-      "snapshot_path": "releases/snapshots/1.8.0.json",
+      "date": "2026-06-21",
+      "summary": "Workspace-version alignment point for the tamamono 1.x line, with desktop shells, frontend-facing docs, installer integrity contracts, and local workflow metadata moved onto the 1.10.0 shipping version.",
+      "snapshot_path": "releases/snapshots/1.10.0.json",
       "channels": [
         "stable"
       ],
@@ -160,38 +162,126 @@
         "tamamono:stable",
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.8",
-        "tamamono:1.8.0"
+        "tamamono:1.10",
+        "tamamono:1.10.0"
       ],
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe frontend/workbench changes."
+            "Workbench-facing docs, app-rail branding, and local workflow snapshot metadata now align to the 1.10.0 shipping version.",
+            "Workflow contract reference pages and window-protection docs now present the 1.10.0 line consistently."
           ]
         },
         "hub_gui": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe Hub desktop-shell changes."
+            "Hub package metadata, Tauri bundle version, shell branding, and mirrored docs now align to the 1.10.0 shipping line.",
+            "Hub desktop reading entry and current-line mirrors now match the promoted release point."
           ]
         },
         "workbench_gui": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe Workbench desktop-shell changes."
+            "Workbench desktop shell package metadata, bundle version, and visible brand assets now match the 1.10.0 shipping version."
           ]
         },
         "installer_gui": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe Installer desktop-shell changes."
+            "Installer package metadata, bundle version, remote-control docs, and integrity surfaces now align to the 1.10.0 shipping version."
           ]
         },
         "web_api": {
-          "version": "1.6.0",
+          "version": "1.10.0",
           "notes": [
-            "TODO: describe API/control-plane changes."
+            "Release metadata, docs, and generated update surfaces now track 1.10.0 as the current public shipping version."
+          ]
+        }
+      },
+      "desktop_artifacts": [
+        {
+          "product": "hub",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+          "exists": false
+        },
+        {
+          "product": "hub",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.10.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+          "exists": false
+        },
+        {
+          "product": "workbench",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.10.0_aarch64.dmg",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "app",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+          "exists": false
+        },
+        {
+          "product": "installer",
+          "kind": "dmg",
+          "platform": "macos",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.10.0_aarch64.dmg",
+          "exists": false
+        }
+      ]
+    },
+    {
+      "version": "1.8.0",
+      "line": "1.x",
+      "status": "archived",
+      "date": "2026-06-16",
+      "summary": "Runtime and release-contract alignment kickoff for the tamamono 1.8.x push, with shipping-version contracts, desktop shell metadata, generated update surfaces, and lab deployment workflow moved onto the new line.",
+      "snapshot_path": "releases/snapshots/1.8.0.json",
+      "channels": [],
+      "tags": [],
+      "product_surfaces": {
+        "frontend_workbench": {
+          "version": "1.8.0",
+          "notes": [
+            "Release-line kickoff alignment for workflow-facing UI and built-in docs."
+          ]
+        },
+        "hub_gui": {
+          "version": "1.8.0",
+          "notes": [
+            "Desktop shell metadata and mirrored docs are now staged on the 1.8.0 line."
+          ]
+        },
+        "workbench_gui": {
+          "version": "1.8.0",
+          "notes": [
+            "Workbench desktop shell metadata is aligned to the 1.8.0 release contract."
+          ]
+        },
+        "installer_gui": {
+          "version": "1.8.0",
+          "notes": [
+            "Installer update and integrity surfaces now read from the 1.8.0 contract line."
+          ]
+        },
+        "web_api": {
+          "version": "1.8.0",
+          "notes": [
+            "Control-plane release metadata and generated catalog surfaces are staged for 1.8.0."
           ]
         }
       },
@@ -243,7 +333,7 @@
     {
       "version": "1.6.0",
       "line": "1.x",
-      "status": "current",
+      "status": "archived",
       "date": "2026-06-12",
       "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",
       "snapshot_path": "releases/snapshots/1.6.0.json",

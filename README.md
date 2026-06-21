@@ -1,4 +1,4 @@
-# kyuubiki tamamono 1.8.0
+# kyuubiki tamamono 1.x
 
 Kyuubiki is an engine-first FEM workstation and control plane with a browser-first workbench:
 
@@ -7,7 +7,12 @@ Kyuubiki is an engine-first FEM workstation and control plane with a browser-fir
 - `Rust` solver agents for FEM data-plane computation, benchmarking, and engine-style reusable core logic
 - an emerging `Kyuubiki Hub` desktop shell for project launch, runtime control, and operator-facing orchestration
 
-`tamamono 1.8.0` is the current repository-wide version line.
+`tamamono 1.x` is the active repository-wide version line.
+
+The latest broadly documented shipping snapshot remains `tamamono 1.8.0`, while
+the current documentation posture is being aligned for the `1.10.x`
+preparation window inside the wider `1.9.x` to `1.20.x` industrialization
+range.
 
 It also now has an explicit deployment split:
 
@@ -77,6 +82,9 @@ Start here if you need orientation:
   Short current-line posture for `tamamono 1.x`.
 - [docs/system-overview.md](docs/system-overview.md)
   Runtime map across GUI, control plane, and solver data plane.
+- [docs/installer-remote-control.md](docs/installer-remote-control.md)
+  Installer remote deployment and runtime-control source note for the new
+  operator-facing remote surface.
 - [docs/fem-blender-roadmap.md](docs/fem-blender-roadmap.md)
   Product north star for becoming the Blender of FEM.
 
@@ -100,7 +108,7 @@ Start here if you need orientation:
   [docs/frontend-implementation.md](docs/frontend-implementation.md),
   [apps/frontend/README.md](apps/frontend/README.md)
 
-## What tamamono 1.8.0 Can Do
+## What tamamono 1.x Currently Covers
 
 ### Supported analysis domains
 
