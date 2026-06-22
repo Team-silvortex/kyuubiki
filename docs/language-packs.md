@@ -26,6 +26,8 @@ Each pack is a JSON object with:
 - `language`
 - `name`
 - `version`
+- optional `versionLine`
+- optional `targetAppVersion`
 - `source`
 - `updatedAt`
 - optional `description`
@@ -44,6 +46,8 @@ to replace the keys it cares about.
   "language": "fr",
   "name": "French custom pack",
   "version": "1.6.0",
+  "versionLine": "tamamono 1.x",
+  "targetAppVersion": "1.10.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
   "description": "Overrides a few high-traffic labels first.",
@@ -66,6 +70,8 @@ to replace the keys it cares about.
 - imported packs can override the active language immediately
 - built-in copy remains the fallback for keys not supplied by the pack
 - installed packs can be exported again from the same UI surface
+- packs may declare a product-line target and a shipped app-version target so
+  operators can see whether a pack was prepared for the current Workbench line
 
 ## What it does not do yet
 
@@ -77,3 +83,11 @@ to replace the keys it cares about.
 That last point is deliberate for now. The schema exists so the format can
 stabilize early, even before the remote delivery and validation stack is wired
 in.
+
+## Recommended packaging posture
+
+- keep `versionLine` aligned with the active line such as `tamamono 1.x`
+- set `targetAppVersion` when a pack is prepared against a specific shipped UI
+  build such as `1.10.0`
+- treat packs without either field as generic overrides, not as audited release
+  assets

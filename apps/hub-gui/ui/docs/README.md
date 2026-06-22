@@ -35,6 +35,9 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
 - `current-line.html`
 - `installation-integrity.html`
 - `operations.html`
+- `language-packs.html`
+  Hub mirror for the current localization posture: built-in languages,
+  local-first pack import/export, and the future remote catalog direction.
 - `testing-and-ci.html`
   Hub mirror for verification posture, workflow preflight, headless live
   execution checks, and direct-mesh regression entrypoints.

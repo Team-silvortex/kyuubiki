@@ -3,7 +3,12 @@
 import type { Dispatch, SetStateAction } from "react";
 import type { WorkbenchCopy, WorkbenchLanguage } from "@/components/workbench/workbench-copy";
 import type { WorkbenchLanguagePack } from "@/lib/workbench/helpers";
-import { WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION } from "@/lib/workbench/helpers";
+import {
+  WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
+  WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION,
+  WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
+  getWorkbenchLanguagePackCompatibility,
+} from "@/lib/workbench/helpers";
 
 function triggerWorkbenchJsonDownload(filename: string, payload: Record<string, unknown>) {
   if (typeof window === "undefined") return;
@@ -28,13 +33,15 @@ export function downloadWorkbenchLanguagePackTemplate(params: {
     language,
     name: `${t.languages[language]} custom pack`,
     version: "1.8.0",
+    versionLine: WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
+    targetAppVersion: WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION,
     source: "imported",
     description:
       language === "zh"
-        ? "从这个模板开始覆盖 Workbench 文案。"
+        ? "从这个模板开始覆盖 Workbench 文案，并保留版本线与目标版本元数据。"
         : language === "ja"
-          ? "このテンプレートから Workbench 文言を上書きします。"
-          : "Start from this template to override Workbench copy.",
+          ? "このテンプレートから Workbench 文言を上書きし、バージョン系メタデータも保持します。"
+          : "Start from this template to override Workbench copy and keep version metadata aligned.",
     overrides: {},
   });
   setMessage(
@@ -100,12 +107,17 @@ export async function importWorkbenchLanguagePack(params: {
       language: raw.language,
       name: raw.name,
       version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.8.0",
+      versionLine: typeof raw.versionLine === "string" && raw.versionLine.trim() ? raw.versionLine.trim() : undefined,
+      targetAppVersion:
+        typeof raw.targetAppVersion === "string" && raw.targetAppVersion.trim() ? raw.targetAppVersion.trim() : undefined,
       source: raw.source === "downloaded" ? "downloaded" : "imported",
       updatedAt: new Date().toISOString(),
       description: typeof raw.description === "string" ? raw.description : undefined,
       overrides:
         raw.overrides && typeof raw.overrides === "object" && !Array.isArray(raw.overrides) ? raw.overrides : {},
     };
+
+    const compatibility = getWorkbenchLanguagePackCompatibility(nextPack);
 
     setLanguagePacks((current) => {
       const next = current.filter(
@@ -116,10 +128,16 @@ export async function importWorkbenchLanguagePack(params: {
 
     setMessage(
       language === "zh"
-        ? "语言包已导入。"
+        ? compatibility === "mismatch"
+          ? "语言包已导入，但它的目标版本与当前 Workbench 不完全对齐。"
+          : "语言包已导入。"
         : language === "ja"
-          ? "言語パックを取り込みました。"
-          : "Language pack imported.",
+          ? compatibility === "mismatch"
+            ? "言語パックを取り込みましたが、対象バージョンが現在の Workbench と完全には一致していません。"
+            : "言語パックを取り込みました。"
+          : compatibility === "mismatch"
+            ? "Language pack imported, but its target version does not fully match the current Workbench."
+            : "Language pack imported.",
     );
   } catch {
     setMessage(

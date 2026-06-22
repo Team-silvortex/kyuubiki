@@ -72,8 +72,13 @@ type WorkbenchSystemConfigCardProps = {
     language: string;
     name: string;
     version: string;
+    versionLine?: string;
+    targetAppVersion?: string;
     source: "imported" | "downloaded";
     updatedAt: string;
+    description?: string;
+    compatibilityLabel: string;
+    targetLabel: string;
   }>;
   catalogLanguagePacks: Array<{ id: string; language: string; name: string; status: string }>;
   frontendModeOptions: Array<{ value: FrontendRuntimeMode; label: string }>;
@@ -342,6 +347,9 @@ export function WorkbenchSystemConfigCard({
                       {languagePackNameLabel}: {pack.name} · {languagePackVersionLabel}: {pack.version} ·{" "}
                       {pack.source === "downloaded" ? languagePackSourceDownloadedLabel : languagePackSourceImportedLabel}
                     </p>
+                    <p className="history-meta">{pack.targetLabel}</p>
+                    <p className="history-meta">{pack.compatibilityLabel}</p>
+                    {pack.description ? <p className="history-meta">{pack.description}</p> : null}
                     <p className="history-meta">{pack.updatedAt}</p>
                   </div>
                   <div className="history-actions">

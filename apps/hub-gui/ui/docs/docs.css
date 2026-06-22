@@ -67,6 +67,71 @@ body {
   margin-top: 16px;
 }
 
+.docs-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.docs-panel-link,
+.docs-role-card {
+  text-decoration: none;
+}
+
+.docs-panel-link {
+  display: grid;
+  gap: 10px;
+  min-height: 112px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(149, 181, 255, 0.2);
+  background:
+    linear-gradient(180deg, rgba(47, 73, 123, 0.34), rgba(16, 27, 47, 0.82));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.docs-panel-link:hover,
+.docs-role-card:hover {
+  border-color: rgba(171, 198, 255, 0.34);
+  background:
+    linear-gradient(180deg, rgba(64, 95, 157, 0.42), rgba(20, 34, 58, 0.9));
+}
+
+.docs-panel-index {
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #93b4ff;
+}
+
+.docs-panel-title {
+  color: #f3f8ff;
+  font-size: 16px;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
+.docs-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.docs-role-card {
+  display: flex;
+  align-items: center;
+  min-height: 64px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(149, 181, 255, 0.2);
+  background: rgba(28, 46, 80, 0.72);
+  color: #edf4ff;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .docs-kicker {
   font-size: 12px;
   letter-spacing: 0.16em;

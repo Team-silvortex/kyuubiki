@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Language Packs · Kyuubiki Book</title>
+    <link rel="stylesheet" href="./docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell">
+      <section class="docs-hero">
+        <div class="docs-kicker">Localization Mirror · Chapter 6</div>
+        <h1>Language packs and localization posture</h1>
+        <p class="docs-copy">
+          Use this page when the question is how Kyuubiki should grow beyond the
+          built-in interface languages without hard-wiring every future locale
+          into the repo.
+        </p>
+        <p class="docs-copy">
+          This is the short Hub mirror of
+          <code>docs/language-packs.md</code>.
+        </p>
+        <div class="docs-links">
+          <a class="docs-link" href="./index.html">Back to book entry</a>
+          <a class="docs-link" href="../../../../docs/language-packs.md">Open source doc</a>
+          <a class="docs-link" href="../../../../schemas/language-pack.schema.json">Open language-pack schema</a>
+        </div>
+      </section>
+
+      <section class="docs-stack">
+        <article class="docs-card">
+          <h2>Current product posture</h2>
+          <ul class="docs-list">
+            <li><strong>Built-in languages</strong>: English, Chinese, and Japanese remain first-class in the shipped UI.</li>
+            <li><strong>Growth path</strong>: future languages should prefer language packs over hard-coded repo-wide copy forks.</li>
+            <li><strong>Current delivery</strong>: packs are local-first today, imported as JSON through the Workbench system surface.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>What a language pack is</h2>
+          <p class="docs-copy">
+            A language pack is a partial override tree that patches the built-in
+            Workbench copy dictionary. It does not need to redefine every key.
+          </p>
+          <ul class="docs-list">
+            <li>schema version: <code>kyuubiki.language-pack/v1</code></li>
+            <li>required shape: identity fields plus an <code>overrides</code> object</li>
+            <li>recommended metadata: <code>versionLine</code> and <code>targetAppVersion</code></li>
+            <li>fallback rule: missing keys keep using the built-in copy</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Operator flow today</h2>
+          <ul class="docs-list">
+            <li>Download a template from <strong>System -> Config -> Language packs</strong>.</li>
+            <li>Edit the JSON locally for the target language.</li>
+            <li>Import the pack into the current browser workspace.</li>
+            <li>Check the displayed compatibility state before treating the pack as release-ready.</li>
+            <li>Export or remove the installed pack from the same UI surface.</li>
+          </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>What is intentionally not finished yet</h2>
+          <ul class="docs-list">
+            <li>No remote language-pack catalog download flow yet.</li>
+            <li>No signature or provenance chain yet.</li>
+            <li>No heavyweight browser-side schema validator dependency yet.</li>
+          </ul>
+          <p class="docs-copy">
+            That is deliberate for now. The format is being stabilized first so
+            remote catalog delivery can be added later without inventing a second
+            translation contract.
+          </p>
+        </article>
+
+        <article class="docs-card">
+          <h2>Recommended direction</h2>
+          <ul class="docs-list">
+            <li>Keep core operator-critical copy shipped and reviewed in-tree.</li>
+            <li>Use packs for additional locales, regional variants, and faster iteration.</li>
+            <li>Route future remote pack delivery through the same visible System surface instead of a hidden auto-download path.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

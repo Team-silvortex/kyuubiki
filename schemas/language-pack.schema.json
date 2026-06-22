@@ -36,6 +36,14 @@
       "type": "string",
       "minLength": 1
     },
+    "versionLine": {
+      "type": "string",
+      "description": "Optional product line target such as tamamono 1.x."
+    },
+    "targetAppVersion": {
+      "type": "string",
+      "description": "Optional shipped desktop/workbench version target such as 1.10.0."
+    },
     "source": {
       "type": "string",
       "enum": ["imported", "downloaded"]

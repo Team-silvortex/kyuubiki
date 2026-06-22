@@ -8,6 +8,7 @@ import { WorkbenchSystemConfigCard } from "@/components/workbench/system/workben
 import { buildWorkbenchSystemControlModeCopy, buildWorkbenchSystemControlTopologySummary, buildWorkbenchSystemTopologySnapshot } from "@/components/workbench/system/workbench-system-control-mode-contract";
 import { WorkbenchSystemInstallLayoutCard } from "@/components/workbench/system/workbench-system-install-layout-card";
 import { WorkbenchSystemInstallPolicyMount } from "@/components/workbench/system/workbench-system-install-policy-mount";
+import { buildWorkbenchLanguagePackPresentation } from "@/components/workbench/system/workbench-system-language-pack-presentation";
 import { WorkbenchSystemRuntimePanel } from "@/components/workbench/system/workbench-system-runtime-panel";
 import { WorkbenchSystemSidebar } from "@/components/workbench/system/workbench-system-sidebar";
 import { applyWorkbenchGovernancePatch, buildWorkbenchGovernanceConfig, buildWorkbenchGovernanceRows } from "@/lib/workbench/governance";
@@ -76,8 +77,11 @@ type WorkbenchSystemSidebarMountProps = {
     language: string;
     name: string;
     version: string;
+    versionLine?: string;
+    targetAppVersion?: string;
     source: "imported" | "downloaded";
     updatedAt: string;
+    description?: string;
   }>;
   languagePackCatalogRows: Array<{ id: string; language: string; name: string; status: string }>;
   setTheme: (value: "linen" | "marine" | "graphite") => void;
@@ -308,6 +312,7 @@ export function WorkbenchSystemSidebarMount({
     frontendRuntimeMode, directMeshEndpointsText, controlPlaneApiToken, clusterApiToken, directMeshApiToken,
   });
   const governanceRows = buildWorkbenchGovernanceRows(governanceConfig);
+  const installedLanguagePackRows = buildWorkbenchLanguagePackPresentation(language, languagePacks);
   return (
     <WorkbenchSystemSidebar
       systemPanelTab={systemPanelTab}
@@ -390,7 +395,7 @@ export function WorkbenchSystemSidebarMount({
               { value: "ja", label: t.languages.ja },
               { value: "es", label: t.languages.es },
             ]}
-            installedLanguagePacks={languagePacks}
+            installedLanguagePacks={installedLanguagePackRows}
             catalogLanguagePacks={languagePackCatalogRows}
             frontendModeOptions={[
               { value: "orchestrated_gui", label: t.frontendModes.orchestrated_gui },

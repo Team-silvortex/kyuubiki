@@ -35,6 +35,10 @@ export const WORKBENCH_SETTINGS_KEY = "kyuubiki-workbench-settings";
 export const WORKBENCH_SECRETS_KEY = "kyuubiki-workbench-secrets";
 export const WORKBENCH_LANGUAGE_PACKS_KEY = "kyuubiki-workbench-language-packs";
 export const WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
+export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "tamamono 1.x";
+export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = "1.10.0";
+
+export type WorkbenchLanguagePackCompatibility = "exact" | "line" | "unscoped" | "mismatch";
 
 export type StoredWorkbenchSettings = {
   theme?: string;
@@ -60,6 +64,8 @@ export type WorkbenchLanguagePack = {
   language: string;
   name: string;
   version: string;
+  versionLine?: string;
+  targetAppVersion?: string;
   source: "imported" | "downloaded";
   updatedAt: string;
   description?: string;
@@ -269,6 +275,8 @@ export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {
         typeof entry.language === "string" &&
         typeof entry.name === "string" &&
         typeof entry.version === "string" &&
+        (entry.versionLine === undefined || typeof entry.versionLine === "string") &&
+        (entry.targetAppVersion === undefined || typeof entry.targetAppVersion === "string") &&
         (entry.source === "imported" || entry.source === "downloaded") &&
         typeof entry.updatedAt === "string" &&
         entry.overrides &&
@@ -284,6 +292,31 @@ export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {
 export function persistWorkbenchLanguagePacks(packs: WorkbenchLanguagePack[]) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(WORKBENCH_LANGUAGE_PACKS_KEY, JSON.stringify(packs));
+}
+
+export function getWorkbenchLanguagePackCompatibility(
+  pack: Pick<WorkbenchLanguagePack, "versionLine" | "targetAppVersion">,
+): WorkbenchLanguagePackCompatibility {
+  const versionLine = pack.versionLine?.trim();
+  const targetAppVersion = pack.targetAppVersion?.trim();
+
+  if (targetAppVersion && targetAppVersion !== WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION) {
+    return "mismatch";
+  }
+
+  if (versionLine && versionLine !== WORKBENCH_LANGUAGE_PACK_VERSION_LINE) {
+    return "mismatch";
+  }
+
+  if (targetAppVersion === WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION) {
+    return "exact";
+  }
+
+  if (versionLine === WORKBENCH_LANGUAGE_PACK_VERSION_LINE) {
+    return "line";
+  }
+
+  return "unscoped";
 }
 
 export function mergeLanguagePack<T extends Record<string, unknown>>(

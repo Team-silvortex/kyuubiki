@@ -35,34 +35,67 @@
           <a class="docs-link" href="../../../../docs/book-manifest.json">Open book manifest</a>
           <a class="docs-link" href="../../../../docs/navigation-matrix.html">Open navigation matrix</a>
           <a class="docs-link" href="../../../../docs/installer-remote-control.md">Open remote control doc</a>
+          <a class="docs-link" href="./language-packs.html">Open language-pack mirror</a>
         </div>
       </section>
 
       <section class="docs-card docs-section">
         <h2>Chapter entry</h2>
-        <div class="docs-toc">
-          <a class="docs-link" href="../../../../docs/book-ch01-what-is-kyuubiki.html">Chapter 1: What Kyuubiki is</a>
-          <a class="docs-link" href="../../../../docs/book-ch02-tamamono-line.html">Chapter 2: What tamamono 1.x is optimizing for</a>
-          <a class="docs-link" href="../../../../docs/book-ch03-architecture-boundaries.html">Chapter 3: The hard architecture boundaries</a>
-          <a class="docs-link" href="../../../../docs/book-ch04-runtime-modes.html">Chapter 4: Runtime and deployment modes</a>
-          <a class="docs-link" href="../../../../docs/book-ch05-workflow-and-operators.html">Chapter 5: Workflow and operator philosophy</a>
-          <a class="docs-link" href="../../../../docs/book-ch06-sdk-surfaces.html">Chapter 6: SDK and automation surfaces</a>
-          <a class="docs-link" href="../../../../docs/book-ch07-trust-and-safety.html">Chapter 7: Accuracy, trust, and release safety</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Chapter 8: Reading paths by job</a>
+        <p class="docs-copy">
+          Read top to bottom if you need the full product narrative. Jump by panel
+          if you already know which layer you are touching.
+        </p>
+        <div class="docs-panel-grid">
+          <a class="docs-panel-link" href="../../../../docs/book-ch01-what-is-kyuubiki.html">
+            <span class="docs-panel-index">01</span>
+            <span class="docs-panel-title">What Kyuubiki is</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch02-tamamono-line.html">
+            <span class="docs-panel-index">02</span>
+            <span class="docs-panel-title">What tamamono 1.x is optimizing for</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch03-architecture-boundaries.html">
+            <span class="docs-panel-index">03</span>
+            <span class="docs-panel-title">The hard architecture boundaries</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch04-runtime-modes.html">
+            <span class="docs-panel-index">04</span>
+            <span class="docs-panel-title">Runtime and deployment modes</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch05-workflow-and-operators.html">
+            <span class="docs-panel-index">05</span>
+            <span class="docs-panel-title">Workflow and operator philosophy</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch06-sdk-surfaces.html">
+            <span class="docs-panel-index">06</span>
+            <span class="docs-panel-title">SDK and automation surfaces</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch07-trust-and-safety.html">
+            <span class="docs-panel-index">07</span>
+            <span class="docs-panel-title">Accuracy, trust, and release safety</span>
+          </a>
+          <a class="docs-panel-link" href="../../../../docs/book-ch08-reading-paths.html">
+            <span class="docs-panel-index">08</span>
+            <span class="docs-panel-title">Reading paths by job</span>
+          </a>
         </div>
       </section>
 
       <section class="docs-section docs-card">
         <h2>Quick entry by role</h2>
-        <div class="docs-links">
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Operator / product owner</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Frontend / Workbench engineer</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Runtime / agent engineer</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">SDK / extension engineer</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Workflow / operator engineer</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Installer / remote-control engineer</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Release / packaging owner</a>
-          <a class="docs-link" href="../../../../docs/book-ch08-reading-paths.html">Large model integrator</a>
+        <p class="docs-copy">
+          Use these shortcuts when the question starts from responsibility rather
+          than from subsystem.
+        </p>
+        <div class="docs-role-grid">
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Operator / product owner</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Frontend / Workbench engineer</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Runtime / agent engineer</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">SDK / extension engineer</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Workflow / operator engineer</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Installer / remote-control engineer</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Release / packaging owner</a>
+          <a class="docs-role-card" href="../../../../docs/book-ch08-reading-paths.html">Large model integrator</a>
         </div>
       </section>
 
@@ -126,6 +159,19 @@
             <div class="docs-links">
               <a class="docs-link" href="../../../../docs/installer-remote-control.md">Open central remote control doc</a>
               <a class="docs-link" href="../../../../docs/remote-pilot.md">Open remote pilot</a>
+            </div>
+          </article>
+
+          <article class="docs-card">
+            <h2>Language packs</h2>
+            <p class="docs-copy">
+              Review how future locales should enter the product through
+              language-pack JSON overrides instead of expanding the built-in copy
+              set without a clear contract.
+            </p>
+            <div class="docs-links">
+              <a class="docs-link" href="./language-packs.html">Open localization mirror</a>
+              <a class="docs-link" href="../../../../docs/language-packs.md">Open central source doc</a>
             </div>
           </article>
         </div>
@@ -227,6 +273,7 @@
           <li>Jump into the central chapter pages when you need the deeper source narrative instead of the short mirror.</li>
           <li>Use <strong>Current line</strong> before changing product direction or release posture.</li>
           <li>Use <strong>Operations</strong>, <strong>Install integrity</strong>, and <strong>Update visibility</strong> for desktop-runtime behavior.</li>
+          <li>Use <strong>Language packs</strong> when UI copy needs to grow into more locales without forking the built-in translation set.</li>
           <li>Use <strong>Troubleshooting</strong> when something looks partial, unhealthy, or inconsistent with the documented contract.</li>
           <li>Use <strong>Testing and CI</strong> when the issue is workflow layout, operator search, or workflow-builder regression.</li>
         </ul>
