@@ -49,9 +49,28 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"transform.evaluate_thermal_guard", "evaluate_thermal_guard",
      "Evaluate a thermal or thermo-mechanical diagnostic payload against visible threshold rules and emit pass, warn, or block guard state.",
      ["transform", "thermal", "guard", "threshold", "headless_safe"]},
+    {"transform.evaluate_electrostatic_guard", "evaluate_electrostatic_guard",
+     "Evaluate an electrostatic diagnostic payload against visible threshold rules and emit pass, warn, or block guard state.",
+     ["transform", "electrostatic", "guard", "threshold", "headless_safe"]},
+    {"transform.validate_electrostatic_heat_bridge", "validate_electrostatic_heat_bridge",
+     "Rebuild and verify a bridged heat model against its electrostatic source result and bridge contract before downstream solve execution.",
+     ["transform", "workflow_bridge", "electrostatic", "heat", "integrity", "headless_safe"]},
     {"transform.benchmark_coupled_heat_pair", "benchmark_coupled_heat_pair",
      "Benchmark paired heat or thermo-mechanical summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
-     ["transform", "thermal", "benchmark", "compare", "headless_safe"]}
+     ["transform", "thermal", "benchmark", "compare", "headless_safe"]},
+    {"transform.benchmark_electrostatic_pair", "benchmark_electrostatic_pair",
+     "Benchmark paired electrostatic summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
+     ["transform", "electrostatic", "benchmark", "compare", "headless_safe"]},
+    {"transform.validate_heat_thermo_bridge", "validate_heat_thermo_bridge",
+     "Rebuild and verify a bridged thermo-mechanical model against its heat source result and bridge contract before downstream solve execution.",
+     [
+       "transform",
+       "workflow_bridge",
+       "thermal",
+       "thermo_mechanical",
+       "integrity",
+       "headless_safe"
+     ]}
   ]
 
   @extract_specs [
@@ -81,7 +100,10 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
      ["extract", "thermo_mechanical", "diagnostics", "headless_safe"]},
     {"extract.thermo_peak_response", "thermo_peak_response",
      "Extract the peak displacement node and peak von-Mises element from a thermo-mechanical quad result.",
-     ["extract", "thermo_mechanical", "peak_response", "postprocess", "headless_safe"]}
+     ["extract", "thermo_mechanical", "peak_response", "postprocess", "headless_safe"]},
+    {"extract.bridge_integrity_diagnostics", "bridge_integrity_diagnostics",
+     "Extract a bridge-integrity validation report into a standard diagnostics payload for bundle guard and report workflows.",
+     ["extract", "workflow_bridge", "integrity", "diagnostics", "headless_safe"]}
   ]
 
   @export_specs [

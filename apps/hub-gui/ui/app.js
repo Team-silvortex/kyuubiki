@@ -84,7 +84,43 @@ import {
 } from "./hub-runtime-helpers.js";
 import { applyHubDocsI18n } from "./hub-i18n-docs.js";
 import { applyHubGuidesI18n } from "./hub-i18n-guides.js";
+import { applyHubLocalizationI18n } from "./hub-i18n-localization.js";
 import { applyHubAssistantI18n } from "./hub-i18n-assistant.js";
+import { applyHubWorkloadsI18n } from "./hub-i18n-workloads.js";
+import { renderAssistantShellCopy } from "./hub-assistant-shell.js";
+import { renderHubBundlesCopy } from "./hub-bundles-copy.js";
+import { renderHubHomeCopy } from "./hub-home-copy.js";
+import { bindHubLibraryControls } from "./hub-library-controls.js";
+import { renderHubLibraryCopy } from "./hub-library-copy.js";
+import { renderHubPanelCopy } from "./hub-panel-copy.js";
+import { bindHubRecentActionControls } from "./hub-recent-actions.js";
+import { renderHubWorkloadLibraryList, renderWorkloadFilters as renderWorkloadFiltersModule } from "./hub-workload-list.js";
+import {
+  attachCurrentBundleToWorkload as attachCurrentBundleToWorkloadModule,
+  clearHubWorkloadLibrary as clearHubWorkloadLibraryModule,
+  currentWorkloadLibrarySearchQuery as currentWorkloadLibrarySearchQueryModule,
+  downloadRemoteWorkloadBundle as downloadRemoteWorkloadBundleModule,
+  exportHubWorkloadLibrary as exportHubWorkloadLibraryModule,
+  importHubWorkloadLibrary as importHubWorkloadLibraryModule,
+  matchesWorkloadFamilyFilter as matchesWorkloadFamilyFilterModule,
+  matchesWorkloadFilter as matchesWorkloadFilterModule,
+  matchesWorkloadSearchQuery as matchesWorkloadSearchQueryModule,
+  openWorkloadInWorkbench as openWorkloadInWorkbenchModule,
+  registerCurrentBundleAsWorkload as registerCurrentBundleAsWorkloadModule,
+  saveHubWorkloadLibrary as saveHubWorkloadLibraryModule,
+  syncLocalControlPlaneWorkloads as syncLocalControlPlaneWorkloadsModule,
+  syncRemoteWorkloadCatalog as syncRemoteWorkloadCatalogModule,
+} from "./hub-workload-runtime.js";
+import { resolveHubCopy } from "./hub-copy-registry.js";
+import {
+  renderDirectMeshRegressionLoadError,
+  renderDirectMeshRegressionSnapshot,
+  renderGuidesPanelCopy,
+  renderRegressionGateReport,
+} from "./hub-guides-panel.js";
+import {
+  bindHubLocalizationPanel,
+} from "./hub-localization-panel.js";
 
 const HUB_I18N = {
   en: {
@@ -322,9 +358,6 @@ const HUB_I18N = {
       },
     },
     library: {
-      introLabel: "Managed intake",
-      introTitle: "Workload library",
-      introCopy: "Keep downloaded bundles, standalone imports, and future server-delivered workloads in one Hub-managed library.",
       catalogUrl: "Catalog URL",
       labelOrNote: "Label or note",
       register: "Register current bundle",
@@ -333,7 +366,6 @@ const HUB_I18N = {
       export: "Export library JSON",
       import: "Import library JSON",
       clear: "Clear library",
-      managedWorkloads: "Managed workloads",
       all: "All",
       mechanical: "Mechanical",
       thermal: "Thermal",
@@ -343,9 +375,9 @@ const HUB_I18N = {
       beams: "Beams & Frames",
       trusses: "Trusses",
       planes: "Planes",
-      workflowCatalogLabel: "Workflow catalog",
-      workflowCatalogTitle: "Named workflow runs",
-      workflowCatalogCopy: "Discover built-in multi-operator workflows and run a reference sample without pasting a raw graph.",
+      workloadSearchLabel: "Search workloads",
+      workloadSearchPlaceholder: "bridge frame axial thermal",
+      workloadSearchClear: "Clear search",
       workflowCatalogSearchLabel: "Search workflows",
       workflowCatalogSearchPlaceholder: "bridge thermal export",
       workflowCatalogSearchClear: "Clear search",
@@ -354,33 +386,13 @@ const HUB_I18N = {
       ready: "Workload library is ready.",
     },
     bundles: {
-      introLabel: "Bundle operations",
-      introTitle: "Project bundle tools",
-      introCopy: "Keep the repetitive archive work in one place, then move straight into analysis.",
-      bundlePath: "Bundle path",
-      comparePath: "Compare path",
-      outputPath: "Output path",
-      inspect: "Inspect .kyuubiki",
-      validate: "Validate .kyuubiki",
-      normalize: "Normalize bundle",
-      unpack: "Unpack bundle",
-      pack: "Pack project",
-      diff: "Diff bundles",
-      openWorkbench: "Open workbench",
-      desktopTools: "Desktop tools",
-      recentBundles: "Recent bundles",
-      recentCompare: "Recent compare paths",
-      recentOutputs: "Recent outputs",
-      recentActions: "Recent bundle actions",
       all: "All",
       failed: "Failed",
       keepFailed: "Keep failed only",
       import: "Import JSON",
       export: "Export JSON",
       clear: "Clear history",
-      favorites: "Favorites",
       recent: "Recent",
-      ready: "Project bundle tools are ready.",
     },
     guides: {
       overviewTroubleshootingTitle: "Find the shortest path",
@@ -393,31 +405,6 @@ const HUB_I18N = {
       accuracyPlanCopy: "See the long-line plan for verified baselines, benchmark expansion, and solver trust.",
       accuracyBaselinesTitle: "Accuracy baselines",
       accuracyBaselinesCopy: "Read which benchmark families are already locked into regression and which are still next.",
-      directMeshTitle: "Direct-mesh regression",
-      directMeshCopy: "Open the nightly Docker regression lane, baseline, and verification flow we now use to keep LAN mesh performance honest.",
-      regressionLabel: "Regression lane",
-      regressionTitle: "Direct-mesh baseline wall",
-      regressionCopy: "Keep the current LAN mesh baseline visible in Hub so nightly regression stays easy to audit before we build a live status plane.",
-      regressionElapsedLabel: "Baseline mean",
-      regressionRssLabel: "Baseline RSS",
-      regressionRepeatLabel: "Repeat",
-      regressionNetworkLabel: "Docker network",
-      regressionLatestLabel: "Latest mean",
-      regressionStatusLabel: "Status",
-      regressionBaselinePathLabel: "Baseline file",
-      regressionOutputPathLabel: "Latest output root",
-      regressionBaselineTitle: "Open baseline",
-      regressionBaselineCopy: "Open the checked-in JSON snapshot that anchors the current direct-mesh regression lane.",
-      regressionOutputTitle: "Open output root",
-      regressionOutputCopy: "Open the local benchmark output directory where the latest summary and compare report should land.",
-      regressionLaneTitle: "Open regression guide",
-      regressionLaneCopy: "Jump to the testing and CI guide for the nightly wrapper, compare flow, and threshold policy.",
-      regressionStatusBaselineOnly: "baseline only",
-      regressionStatusWithinBaseline: "within baseline",
-      regressionStatusRegressed: "regressed",
-      regressionNoteBaselineOnly: "No local latest summary is loaded yet. Run the regression lane or copy a fresh summary into the latest output root.",
-      regressionNoteWithinBaseline: "Latest local summary is present and still within the current direct-mesh baseline envelope.",
-      regressionNoteRegressed: "Latest local summary is present but slower or heavier than the current baseline threshold.",
     },
     assistant: {
       close: "Close",
@@ -494,7 +481,7 @@ const HUB_I18N = {
       pinnedFavoritesEmpty: "No pinned favorites yet.",
       nonPinnedEmpty: "No non-pinned actions in this view.",
       managedWorkloadsEmpty: "No managed workloads yet. Register a current bundle or sync a remote catalog.",
-      managedWorkloadsFilterEmpty: "No workloads match {domain} / {family}.",
+      managedWorkloadsFilterEmpty: "No workloads match {domain} / {family} for \"{query}\".",
       workflowCatalogEmpty: "No named workflows are available yet.",
       workflowCatalogNoSearchMatches: "No workflows match \"{query}\" right now.",
       workflowCatalogSuggestedBadge: "score {score}",
@@ -771,7 +758,6 @@ const HUB_I18N = {
       export: "导出库 JSON",
       import: "导入库 JSON",
     clear: "清空库",
-    managedWorkloads: "已管理工作负载",
     all: "全部",
     mechanical: "力学",
     thermal: "热",
@@ -781,9 +767,9 @@ const HUB_I18N = {
     beams: "梁与刚架",
     trusses: "桁架",
     planes: "平面",
-    workflowCatalogLabel: "工作流目录",
-    workflowCatalogTitle: "命名工作流运行",
-    workflowCatalogCopy: "发现内建多算子工作流，并直接运行参考样板，不必手填 raw graph。",
+    workloadSearchLabel: "搜索工作负载",
+    workloadSearchPlaceholder: "bridge frame axial thermal",
+    workloadSearchClear: "清空搜索",
     workflowCatalogSearchLabel: "搜索工作流",
     workflowCatalogSearchPlaceholder: "bridge thermal export",
     workflowCatalogSearchClear: "清空搜索",
@@ -792,33 +778,13 @@ const HUB_I18N = {
     ready: "工作负载库已就绪。",
   },
     bundles: {
-      introLabel: "Bundle 操作",
-      introTitle: "项目 bundle 工具",
-      introCopy: "把重复的归档操作收在一个地方，然后直接继续分析。",
-      bundlePath: "Bundle 路径",
-      comparePath: "对比路径",
-      outputPath: "输出路径",
-      inspect: "检查 .kyuubiki",
-      validate: "验证 .kyuubiki",
-      normalize: "规范化 bundle",
-      unpack: "解包 bundle",
-      pack: "打包项目",
-      diff: "对比 bundle",
-      openWorkbench: "打开 Workbench",
-      desktopTools: "桌面工具",
-      recentBundles: "最近 bundles",
-      recentCompare: "最近对比路径",
-      recentOutputs: "最近输出",
-      recentActions: "最近 bundle 动作",
       all: "全部",
       failed: "失败",
       keepFailed: "只保留失败项",
       import: "导入 JSON",
       export: "导出 JSON",
       clear: "清空历史",
-      favorites: "收藏",
       recent: "最近",
-      ready: "项目 bundle 工具已就绪。",
     },
     guides: {
       overviewTroubleshootingTitle: "找到最短路径",
@@ -831,31 +797,6 @@ const HUB_I18N = {
       accuracyPlanCopy: "看 verified baselines、benchmark 扩展和 solver 信任链的长期计划。",
       accuracyBaselinesTitle: "精度基线",
       accuracyBaselinesCopy: "查看哪些 benchmark family 已经锁进回归，哪些还在下一步。",
-      directMeshTitle: "Direct-mesh 回归",
-      directMeshCopy: "打开我们现在用于约束局域网 mesh 性能的 Docker 夜测回归、基线和验证流程。",
-      regressionLabel: "回归通道",
-      regressionTitle: "Direct-mesh 基线墙",
-      regressionCopy: "先把当前局域网 mesh 基线直接放在 Hub 里，在接真实动态状态面板前，也能先把 nightly 回归看清楚。",
-      regressionElapsedLabel: "基线均值",
-      regressionRssLabel: "基线 RSS",
-      regressionRepeatLabel: "重复次数",
-      regressionNetworkLabel: "Docker 网络",
-      regressionLatestLabel: "最新均值",
-      regressionStatusLabel: "状态",
-      regressionBaselinePathLabel: "基线文件",
-      regressionOutputPathLabel: "最新输出根目录",
-      regressionBaselineTitle: "打开基线",
-      regressionBaselineCopy: "打开已纳入仓库的 JSON 基线快照，它是当前 direct-mesh 回归通道的锚点。",
-      regressionOutputTitle: "打开输出目录",
-      regressionOutputCopy: "打开本地 benchmark 输出目录，最新 summary 和 compare 报告应当落在这里。",
-      regressionLaneTitle: "打开回归指南",
-      regressionLaneCopy: "跳到 testing and CI 指南，查看 nightly wrapper、compare 流程与阈值策略。",
-      regressionStatusBaselineOnly: "仅基线",
-      regressionStatusWithinBaseline: "基线内",
-      regressionStatusRegressed: "已回退",
-      regressionNoteBaselineOnly: "还没有加载到本地最新 summary。先跑回归通道，或者把新 summary 放进 latest 输出目录。",
-      regressionNoteWithinBaseline: "已经检测到本地最新 summary，而且它仍然处在当前 direct-mesh 基线包络内。",
-      regressionNoteRegressed: "已经检测到本地最新 summary，但它比当前基线更慢或更重，超出了阈值。",
     },
     assistant: {
       close: "关闭",
@@ -932,7 +873,7 @@ const HUB_I18N = {
       pinnedFavoritesEmpty: "还没有置顶收藏。",
       nonPinnedEmpty: "当前视图里没有未置顶动作。",
       managedWorkloadsEmpty: "还没有已管理工作负载。先注册当前 bundle，或同步远端 catalog。",
-      managedWorkloadsFilterEmpty: "没有工作负载匹配 {domain} / {family}。",
+      managedWorkloadsFilterEmpty: "没有工作负载在 {domain} / {family} 下匹配“{query}”。",
       workflowCatalogEmpty: "当前还没有可用的命名工作流。",
       workflowCatalogNoSearchMatches: "当前没有工作流匹配“{query}”。",
       workflowCatalogSuggestedBadge: "评分 {score}",
@@ -1209,7 +1150,6 @@ const HUB_I18N = {
       export: "ライブラリ JSON を出力",
       import: "ライブラリ JSON を読み込み",
       clear: "ライブラリをクリア",
-      managedWorkloads: "管理された workloads",
       all: "すべて",
       mechanical: "力学",
       thermal: "熱",
@@ -1219,9 +1159,9 @@ const HUB_I18N = {
       beams: "梁・フレーム",
       trusses: "トラス",
       planes: "平面",
-      workflowCatalogLabel: "workflow catalog",
-      workflowCatalogTitle: "名前付き workflow 実行",
-      workflowCatalogCopy: "raw graph を貼り付けずに、組み込み multi-operator workflow を見つけて reference sample を実行します。",
+      workloadSearchLabel: "workload を検索",
+      workloadSearchPlaceholder: "bridge frame axial thermal",
+      workloadSearchClear: "検索をクリア",
       workflowCatalogSearchLabel: "workflow を検索",
       workflowCatalogSearchPlaceholder: "bridge thermal export",
       workflowCatalogSearchClear: "検索をクリア",
@@ -1230,33 +1170,13 @@ const HUB_I18N = {
       ready: "ワークロードライブラリの準備ができました。",
     },
     bundles: {
-      introLabel: "Bundle 操作",
-      introTitle: "プロジェクト bundle ツール",
-      introCopy: "繰り返しのアーカイブ作業を一か所に集め、そのまま解析へ進みます。",
-      bundlePath: "Bundle パス",
-      comparePath: "比較パス",
-      outputPath: "出力パス",
-      inspect: ".kyuubiki を確認",
-      validate: ".kyuubiki を検証",
-      normalize: "bundle を正規化",
-      unpack: "bundle を展開",
-      pack: "project を pack",
-      diff: "bundle を diff",
-      openWorkbench: "Workbench を開く",
-      desktopTools: "Desktop tools",
-      recentBundles: "最近の bundles",
-      recentCompare: "最近の比較パス",
-      recentOutputs: "最近の出力",
-      recentActions: "最近の bundle 操作",
       all: "すべて",
       failed: "失敗",
       keepFailed: "失敗だけ残す",
       import: "JSON を読み込み",
       export: "JSON を出力",
       clear: "履歴をクリア",
-      favorites: "お気に入り",
       recent: "最近",
-      ready: "プロジェクト bundle ツールの準備ができました。",
     },
     guides: {
       overviewTroubleshootingTitle: "最短経路を見つける",
@@ -1269,31 +1189,6 @@ const HUB_I18N = {
       accuracyPlanCopy: "verified baseline、benchmark 拡張、solver trust の長期計画を確認します。",
       accuracyBaselinesTitle: "Accuracy baselines",
       accuracyBaselinesCopy: "どの benchmark family が回帰に固定され、どれが次なのかを確認します。",
-      directMeshTitle: "Direct-mesh 回帰",
-      directMeshCopy: "LAN mesh 性能をきちんと縛るために使っている Docker 夜間回帰、baseline、検証フローを開きます。",
-      regressionLabel: "回帰レーン",
-      regressionTitle: "Direct-mesh baseline wall",
-      regressionCopy: "ライブ状態面を作る前でも、現在の LAN mesh baseline を Hub で見えるようにして夜間回帰を追いやすくします。",
-      regressionElapsedLabel: "Baseline mean",
-      regressionRssLabel: "Baseline RSS",
-      regressionRepeatLabel: "Repeat",
-      regressionNetworkLabel: "Docker network",
-      regressionLatestLabel: "Latest mean",
-      regressionStatusLabel: "Status",
-      regressionBaselinePathLabel: "Baseline file",
-      regressionOutputPathLabel: "Latest output root",
-      regressionBaselineTitle: "Open baseline",
-      regressionBaselineCopy: "現在の direct-mesh 回帰レーンを固定するチェックイン済み JSON snapshot を開きます。",
-      regressionOutputTitle: "Open output root",
-      regressionOutputCopy: "最新の summary と compare report が置かれるローカル benchmark 出力ディレクトリを開きます。",
-      regressionLaneTitle: "Open regression guide",
-      regressionLaneCopy: "nightly wrapper、compare flow、threshold policy の testing and CI guide に移動します。",
-      regressionStatusBaselineOnly: "baseline only",
-      regressionStatusWithinBaseline: "within baseline",
-      regressionStatusRegressed: "regressed",
-      regressionNoteBaselineOnly: "ローカルの最新 summary はまだ読み込まれていません。回帰レーンを実行するか、新しい summary を latest 出力ルートへ置いてください。",
-      regressionNoteWithinBaseline: "ローカルの最新 summary が見つかり、現在の direct-mesh baseline の範囲内に収まっています。",
-      regressionNoteRegressed: "ローカルの最新 summary は見つかりましたが、現在の baseline 閾値より遅いか重い状態です。",
     },
     assistant: {
       close: "閉じる",
@@ -1479,10 +1374,9 @@ HUB_I18N.es = {
     export: "Exportar biblioteca JSON",
     import: "Importar biblioteca JSON",
     clear: "Vaciar biblioteca",
-    managedWorkloads: "Cargas gestionadas",
-    workflowCatalogLabel: "Catálogo de workflows",
-    workflowCatalogTitle: "Ejecuciones con nombre",
-    workflowCatalogCopy: "Descubre workflows integrados de varios operadores y ejecuta una muestra de referencia sin pegar un grafo crudo.",
+    workloadSearchLabel: "Buscar workloads",
+    workloadSearchPlaceholder: "bridge frame axial thermal",
+    workloadSearchClear: "Limpiar búsqueda",
     workflowCatalogSearchLabel: "Buscar workflows",
     workflowCatalogSearchPlaceholder: "bridge thermal export",
     workflowCatalogSearchClear: "Limpiar búsqueda",
@@ -1491,40 +1385,9 @@ HUB_I18N.es = {
   },
   bundles: {
     ...HUB_I18N.en.bundles,
-    introLabel: "Herramientas de bundle",
-    introTitle: "Trabajar con bundles",
-    introCopy: "Inspecciona, valida y compara bundles de proyecto sin salir de Hub.",
-    bundlePath: "Ruta del bundle",
-    comparePath: "Ruta a comparar",
-    outputPath: "Ruta de salida",
   },
   guides: {
     ...HUB_I18N.en.guides,
-    directMeshTitle: "Regresión direct-mesh",
-    directMeshCopy: "Abre la ruta nocturna de regresión en Docker, la línea base y el flujo de verificación que usamos para mantener honesto el rendimiento LAN mesh.",
-    regressionLabel: "Línea de regresión",
-    regressionTitle: "Muro base direct-mesh",
-    regressionCopy: "Mantén visible en Hub la línea base actual de LAN mesh para que la regresión nocturna siga siendo fácil de auditar antes de crear un plano de estado en vivo.",
-    regressionElapsedLabel: "Media base",
-    regressionRssLabel: "RSS base",
-    regressionRepeatLabel: "Repetición",
-    regressionNetworkLabel: "Red Docker",
-    regressionLatestLabel: "Media más reciente",
-    regressionStatusLabel: "Estado",
-    regressionBaselinePathLabel: "Archivo base",
-    regressionOutputPathLabel: "Raíz de salida más reciente",
-    regressionBaselineTitle: "Abrir base",
-    regressionBaselineCopy: "Abre la instantánea JSON versionada que ancla la ruta actual de regresión direct-mesh.",
-    regressionOutputTitle: "Abrir salida",
-    regressionOutputCopy: "Abre el directorio local de benchmark donde deberían aparecer el resumen más reciente y el informe comparativo.",
-    regressionLaneTitle: "Abrir guía de regresión",
-    regressionLaneCopy: "Salta a la guía de testing and CI para el wrapper nocturno, el flujo de comparación y la política de umbrales.",
-    regressionStatusBaselineOnly: "solo base",
-    regressionStatusWithinBaseline: "dentro de la base",
-    regressionStatusRegressed: "regresó",
-    regressionNoteBaselineOnly: "Todavía no hay un summary local reciente cargado. Ejecuta la ruta de regresión o copia un summary nuevo al directorio latest.",
-    regressionNoteWithinBaseline: "El summary local reciente está presente y sigue dentro del margen actual de la base direct-mesh.",
-    regressionNoteRegressed: "El summary local reciente está presente, pero es más lento o más pesado que el umbral actual de la base.",
   },
   assistant: {
     ...HUB_I18N.en.assistant,
@@ -1595,7 +1458,9 @@ HUB_I18N.es = {
 
 applyHubDocsI18n(HUB_I18N);
 applyHubGuidesI18n(HUB_I18N);
+applyHubLocalizationI18n(HUB_I18N);
 applyHubAssistantI18n(HUB_I18N);
+applyHubWorkloadsI18n(HUB_I18N);
 
 const HUB_RECENTS_KEY = "kyuubiki.hub.recents.v1";
 const HUB_WORKLOAD_LIBRARY_KEY = "kyuubiki.hub.workloads.v1";
@@ -1723,7 +1588,7 @@ let hotRuntimeLogPollHandle = null;
 let observeRuntimeLogPollHandle = null;
 
 function hubCopy() {
-  return HUB_I18N[state.language] || HUB_I18N.en;
+  return resolveHubCopy(HUB_I18N, state.language);
 }
 
 function renderToolsPlatformLabel() {
@@ -1742,177 +1607,28 @@ function renderToolsPlatformLabel() {
   );
 }
 
-function formatRegressionNumber(value, digits = 3) {
-  return Number(value).toLocaleString(undefined, {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  });
-}
-
-function formatRegressionInteger(value) {
-  return Math.round(Number(value)).toLocaleString();
-}
-
-function regressionStatusText(status) {
-  const guides = hubCopy().guides;
-  switch (status) {
-    case "within_baseline":
-      return guides.regressionStatusWithinBaseline;
-    case "regressed":
-      return guides.regressionStatusRegressed;
-    case "baseline_only":
-    default:
-      return guides.regressionStatusBaselineOnly;
-  }
-}
-
-function regressionStatusNote(status) {
-  const guides = hubCopy().guides;
-  switch (status) {
-    case "within_baseline":
-      return guides.regressionNoteWithinBaseline;
-    case "regressed":
-      return guides.regressionNoteRegressed;
-    case "baseline_only":
-    default:
-      return guides.regressionNoteBaselineOnly;
-  }
-}
-
-function regressionStateKind(status) {
-  switch (status) {
-    case "within_baseline":
-      return "health";
-    case "regressed":
-      return "danger";
-    case "baseline_only":
-    default:
-      return "activity";
-  }
-}
-
-function unifiedGateStateKind(status) {
-  switch (status) {
-    case "pass":
-      return "health";
-    case "fail":
-      return "danger";
-    case "warn":
-    default:
-      return "activity";
-  }
-}
-
-function renderDirectMeshRegressionSnapshot(snapshot) {
-  if (!snapshot) {
-    return;
-  }
-
-  if (elements.guidesRegressionElapsedValue) {
-    elements.guidesRegressionElapsedValue.textContent = `${formatRegressionNumber(snapshot.baseline_mean_elapsed_s)} s`;
-  }
-  if (elements.guidesRegressionRssValue) {
-    elements.guidesRegressionRssValue.textContent = `${formatRegressionInteger(snapshot.baseline_mean_rss_kib)} KiB`;
-  }
-  if (elements.guidesRegressionRepeatValue) {
-    elements.guidesRegressionRepeatValue.textContent = `${snapshot.repeat} runs`;
-  }
-  if (elements.guidesRegressionNetworkValue) {
-    elements.guidesRegressionNetworkValue.textContent = snapshot.docker_run_network;
-  }
-  if (elements.guidesRegressionBaselinePath) {
-    elements.guidesRegressionBaselinePath.textContent = snapshot.baseline_path;
-  }
-  if (elements.guidesRegressionOutputPath) {
-    elements.guidesRegressionOutputPath.textContent = snapshot.output_root;
-  }
-  if (elements.guidesRegressionLatestValue) {
-    const latestText = snapshot.latest_exists && snapshot.latest_mean_elapsed_s != null
-      ? `${formatRegressionNumber(snapshot.latest_mean_elapsed_s)} s`
-      : "--";
-    elements.guidesRegressionLatestValue.textContent = latestText;
-  }
-  if (elements.guidesRegressionStatusValue) {
-    applyDesktopState(
-      elements.guidesRegressionStatusValue,
-      regressionStatusText(snapshot.status),
-      { kind: regressionStateKind(snapshot.status) },
-    );
-  }
-  if (elements.guidesRegressionNote) {
-    const generatedAt = snapshot.latest_exists && snapshot.latest_generated_at
-      ? ` Latest summary: ${snapshot.latest_generated_at}.`
-      : "";
-    const elapsedDelta = snapshot.latest_exists && snapshot.elapsed_delta_pct != null
-      ? ` Elapsed delta: ${formatRegressionNumber(snapshot.elapsed_delta_pct, 2)}%.`
-      : "";
-    const rssDelta = snapshot.latest_exists && snapshot.rss_delta_pct != null
-      ? ` RSS delta: ${formatRegressionNumber(snapshot.rss_delta_pct, 2)}%.`
-      : "";
-    const regressionGate =
-      state.regressionGateReport && state.regressionGateReport.overall_gate_status
-        ? ` Unified gate: ${state.regressionGateReport.overall_gate_status}.`
-        : "";
-    elements.guidesRegressionNote.textContent =
-      `${regressionStatusNote(snapshot.status)}${generatedAt}${elapsedDelta}${rssDelta}${regressionGate}`;
-  }
-}
-
-function renderRegressionGateReport(report) {
-  if (!report) {
-    if (elements.guidesGateStatusValue) {
-      applyDesktopState(elements.guidesGateStatusValue, "unavailable", { kind: "activity" });
-    }
-    if (elements.guidesGateWarningCount) elements.guidesGateWarningCount.textContent = "0";
-    if (elements.guidesGateFailingCount) elements.guidesGateFailingCount.textContent = "0";
-    if (elements.guidesGateLaneCount) elements.guidesGateLaneCount.textContent = "0";
-    if (elements.guidesGateCatalogPath) elements.guidesGateCatalogPath.textContent = "tmp/regression-lane-catalog.json";
-    if (elements.guidesGateNote) elements.guidesGateNote.textContent = "Unified regression gate report unavailable on this machine.";
-    if (elements.guidesGateReasons) elements.guidesGateReasons.textContent = "No gate reasons loaded yet.";
-    return;
-  }
-
-  const lanes = Array.isArray(report.lanes) ? report.lanes : [];
-  const warnings =
-    Number.isFinite(report.warning_lane_count) ? report.warning_lane_count : lanes.filter((lane) => lane.gate_status === "warn").length;
-  const failures =
-    Number.isFinite(report.failing_lane_count) ? report.failing_lane_count : lanes.filter((lane) => lane.gate_status === "fail").length;
-  const reasons = lanes.flatMap((lane) =>
-    Array.isArray(lane.gate_reasons)
-      ? lane.gate_reasons.map((reason) => `${lane.title || lane.id || "lane"}: ${reason}`)
-      : Array.isArray(lane.reasons)
-      ? lane.reasons.map((reason) => `${lane.title || lane.id || "lane"}: ${reason}`)
-      : [],
-  );
-
-  if (elements.guidesGateStatusValue) {
-    applyDesktopState(elements.guidesGateStatusValue, report.overall_gate_status || "unknown", {
-      kind: unifiedGateStateKind(report.overall_gate_status),
-    });
-  }
-  if (elements.guidesGateWarningCount) elements.guidesGateWarningCount.textContent = String(warnings);
-  if (elements.guidesGateFailingCount) elements.guidesGateFailingCount.textContent = String(failures);
-  if (elements.guidesGateLaneCount) elements.guidesGateLaneCount.textContent = String(lanes.length);
-  if (elements.guidesGateCatalogPath) {
-    elements.guidesGateCatalogPath.textContent = report.catalog_path || "tmp/regression-lane-catalog.json";
-  }
-  if (elements.guidesGateNote) {
-    elements.guidesGateNote.textContent =
-      `${lanes.length} lanes tracked. ${warnings} warning lanes, ${failures} failing lanes.`;
-  }
-  if (elements.guidesGateReasons) {
-    elements.guidesGateReasons.textContent = reasons.length > 0 ? reasons.slice(0, 4).join(" | ") : "All tracked lanes are within gate.";
-  }
-}
-
 async function loadRegressionGateReport() {
   try {
     state.regressionGateReport = await invokeTauri("hub_regression_gate_report");
-    renderRegressionGateReport(state.regressionGateReport);
-    renderDirectMeshRegressionSnapshot(state.directMeshRegressionSnapshot);
+    renderRegressionGateReport({
+      elements,
+      report: state.regressionGateReport,
+      applyDesktopState,
+    });
+    renderDirectMeshRegressionSnapshot({
+      elements,
+      snapshot: state.directMeshRegressionSnapshot,
+      copy: hubCopy(),
+      regressionGateReport: state.regressionGateReport,
+      applyDesktopState,
+    });
   } catch {
     state.regressionGateReport = null;
-    renderRegressionGateReport(null);
+    renderRegressionGateReport({
+      elements,
+      report: null,
+      applyDesktopState,
+    });
   }
 }
 
@@ -2058,6 +1774,9 @@ const elements = {
   libraryActionImport: document.getElementById("library-action-import"),
   libraryActionClear: document.getElementById("library-action-clear"),
   libraryManagedWorkloadsLabel: document.getElementById("library-managed-workloads-label"),
+  librarySearchLabel: document.getElementById("library-search-label"),
+  workloadLibrarySearch: document.getElementById("workload-library-search"),
+  librarySearchClear: document.getElementById("library-search-clear"),
   libraryFilterAll: document.getElementById("library-filter-all"),
   libraryFilterMechanical: document.getElementById("library-filter-mechanical"),
   libraryFilterThermal: document.getElementById("library-filter-thermal"),
@@ -2169,6 +1888,27 @@ const elements = {
   guidesGateCatalogPath: document.getElementById("guides-gate-catalog-path"),
   guidesGateNote: document.getElementById("guides-gate-note"),
   guidesGateReasons: document.getElementById("guides-gate-reasons"),
+  guidesLocalizationLabel: document.getElementById("guides-localization-label"),
+  guidesLocalizationTitle: document.getElementById("guides-localization-title"),
+  guidesLocalizationCopy: document.getElementById("guides-localization-copy"),
+  guidesLocalizationActiveLanguageLabel: document.getElementById("guides-localization-active-language-label"),
+  guidesLocalizationActiveLanguageValue: document.getElementById("guides-localization-active-language-value"),
+  guidesLocalizationInstalledLanguagesLabel: document.getElementById("guides-localization-installed-languages-label"),
+  guidesLocalizationInstalledLanguagesValue: document.getElementById("guides-localization-installed-languages-value"),
+  guidesLocalizationDefaultLayerLabel: document.getElementById("guides-localization-default-layer-label"),
+  guidesLocalizationDefaultLayerValue: document.getElementById("guides-localization-default-layer-value"),
+  guidesLocalizationImportModeLabel: document.getElementById("guides-localization-import-mode-label"),
+  guidesLocalizationImportModeValue: document.getElementById("guides-localization-import-mode-value"),
+  guidesLocalizationLatestAssetLabel: document.getElementById("guides-localization-latest-asset-label"),
+  guidesLocalizationLatestAssetValue: document.getElementById("guides-localization-latest-asset-value"),
+  guidesLocalizationStorageKeyLabel: document.getElementById("guides-localization-storage-key-label"),
+  guidesLocalizationStorageKeyValue: document.getElementById("guides-localization-storage-key-value"),
+  guidesLocalizationImport: document.getElementById("guides-localization-import"),
+  guidesLocalizationExport: document.getElementById("guides-localization-export"),
+  guidesLocalizationClear: document.getElementById("guides-localization-clear"),
+  guidesLocalizationImportInput: document.getElementById("guides-localization-import-input"),
+  guidesLocalizationOutput: document.getElementById("guides-localization-output"),
+  guidesLocalizationHint: document.getElementById("guides-localization-hint"),
   runtimeLocalLabel: document.getElementById("runtime-local-label"),
   runtimeLocalTitle: document.getElementById("runtime-local-title"),
   runtimeLocalCopy: document.getElementById("runtime-local-copy"),
@@ -2414,210 +2154,43 @@ function renderDesktopLanguagePreference() {
   if (!state.isBusy && elements.actionState) {
     elements.actionState.textContent = copy.shell.idle;
   }
-  if (elements.projectsTabStart) {
-    elements.projectsTabStart.textContent = copy.home.tabs.start;
-  }
-  if (elements.projectsTabLibrary) {
-    elements.projectsTabLibrary.textContent = copy.home.tabs.library;
-  }
-  if (elements.projectsTabBundles) {
-    elements.projectsTabBundles.textContent = copy.home.tabs.bundles;
-  }
-  if (elements.projectsTabGuides) {
-    elements.projectsTabGuides.textContent = copy.home.tabs.guides;
-  }
-  setText(elements.homeStep1Label, copy.home.steps.step1Label);
-  setText(elements.homeStep1Title, copy.home.steps.step1Title);
-  setText(elements.homeStep1Copy, copy.home.steps.step1Copy);
-  setText(elements.homeStep2Label, copy.home.steps.step2Label);
-  setText(elements.homeStep2Title, copy.home.steps.step2Title);
-  setText(elements.homeStep2Copy, copy.home.steps.step2Copy);
-  setText(elements.homeStep3Label, copy.home.steps.step3Label);
-  setText(elements.homeStep3Title, copy.home.steps.step3Title);
-  setText(elements.homeStep3Copy, copy.home.steps.step3Copy);
-  setText(elements.homePathLabel, copy.home.path.label);
-  setText(elements.homePathTitle, copy.home.path.title);
-  setText(elements.homePathCopy, copy.home.path.copy);
-  setText(elements.homeFlow1Title, copy.home.flow.title1);
-  setText(elements.homeFlow1Copy, copy.home.flow.copy1);
-  setText(elements.homeFlow2Title, copy.home.flow.title2);
-  setText(elements.homeFlow2Copy, copy.home.flow.copy2);
-  setText(elements.homeFlow3Title, copy.home.flow.title3);
-  setText(elements.homeFlow3Copy, copy.home.flow.copy3);
-  setText(elements.homeQuickLabel, copy.home.quick.label);
-  setText(elements.homeQuickTitle, copy.home.quick.title);
-  setText(elements.homeQuickCopy, copy.home.quick.copy);
-  setText(elements.homeClusterLibraryTitle, copy.home.quick.libraryTitle);
-  setText(elements.homeClusterLibraryCopy, copy.home.quick.libraryCopy);
-  setText(elements.homeClusterBundlesTitle, copy.home.quick.bundlesTitle);
-  setText(elements.homeClusterBundlesCopy, copy.home.quick.bundlesCopy);
-  setText(elements.homeClusterGuidesTitle, copy.home.quick.guidesTitle);
-  setText(elements.homeClusterGuidesCopy, copy.home.quick.guidesCopy);
-  setText(elements.homeClusterInstallerTitle, copy.home.quick.installerTitle);
-  setText(elements.homeClusterInstallerCopy, copy.home.quick.installerCopy);
-  setText(elements.homeClusterRuntimesTitle, copy.home.quick.runtimesTitle);
-  setText(elements.homeClusterRuntimesCopy, copy.home.quick.runtimesCopy);
-  setText(elements.homeActionStart, copy.home.actions.start);
-  setText(elements.homeActionSync, copy.home.actions.sync);
-  setText(elements.homeActionOpen, copy.home.actions.open);
-  setText(elements.libraryIntroLabel, copy.library.introLabel);
-  setText(elements.libraryIntroTitle, copy.library.introTitle);
-  setText(elements.libraryIntroCopy, copy.library.introCopy);
-  setText(elements.libraryCatalogUrlLabel, copy.library.catalogUrl);
-  setText(elements.libraryLabelNoteLabel, copy.library.labelOrNote);
-  setText(elements.libraryActionRegister, copy.library.register);
-  setText(elements.libraryActionSyncLocal, copy.library.syncLocal);
-  setText(elements.libraryActionSyncRemote, copy.library.syncRemote);
-  setText(elements.libraryActionExport, copy.library.export);
-  setText(elements.libraryActionImport, copy.library.import);
-  setText(elements.libraryActionClear, copy.library.clear);
-  setText(elements.libraryManagedWorkloadsLabel, copy.library.managedWorkloads);
-  setText(elements.libraryFilterAll, copy.library.all);
-  setText(elements.libraryFilterMechanical, copy.library.mechanical);
-  setText(elements.libraryFilterThermal, copy.library.thermal);
-  setText(elements.libraryFilterThermo, copy.library.thermo);
-  setText(elements.libraryFamilyAll, copy.library.allFamilies);
-  setText(elements.libraryFamilyAxial, copy.library.axial);
-  setText(elements.libraryFamilyBeams, copy.library.beams);
-  setText(elements.libraryFamilyTrusses, copy.library.trusses);
-  setText(elements.libraryFamilyPlanes, copy.library.planes);
-  setText(elements.workflowCatalogLabel, copy.library.workflowCatalogLabel);
-  setText(elements.workflowCatalogTitle, copy.library.workflowCatalogTitle);
-  setText(elements.workflowCatalogCopy, copy.library.workflowCatalogCopy);
-  setText(elements.workflowCatalogSearchLabel, copy.library.workflowCatalogSearchLabel);
-  if (elements.workflowCatalogSearch) {
-    elements.workflowCatalogSearch.placeholder = copy.library.workflowCatalogSearchPlaceholder;
-  }
-  setText(elements.workflowCatalogSearchClear, copy.library.workflowCatalogSearchClear);
-  setText(elements.workflowCatalogRefresh, copy.library.workflowCatalogRefresh);
-  if (elements.workflowCatalogOutput && !state.workflowCatalogBusy) {
-    elements.workflowCatalogOutput.textContent = copy.library.workflowCatalogReady;
-  }
-  if (elements.workloadLibraryOutput && !state.isBusy) {
-    elements.workloadLibraryOutput.textContent = copy.library.ready;
-  }
-  setText(elements.bundlesIntroLabel, copy.bundles.introLabel);
-  setText(elements.bundlesIntroTitle, copy.bundles.introTitle);
-  setText(elements.bundlesIntroCopy, copy.bundles.introCopy);
-  setText(elements.bundlesBundlePathLabel, copy.bundles.bundlePath);
-  setText(elements.bundlesComparePathLabel, copy.bundles.comparePath);
-  setText(elements.bundlesOutputPathLabel, copy.bundles.outputPath);
-  setText(elements.bundlesActionInspect, copy.bundles.inspect);
-  setText(elements.bundlesActionValidate, copy.bundles.validate);
-  setText(elements.bundlesActionNormalize, copy.bundles.normalize);
-  setText(elements.bundlesActionUnpack, copy.bundles.unpack);
-  setText(elements.bundlesActionPack, copy.bundles.pack);
-  setText(elements.bundlesActionDiff, copy.bundles.diff);
-  setText(elements.bundlesActionOpenWorkbench, copy.bundles.openWorkbench);
-  setText(elements.bundlesActionDesktopTools, copy.bundles.desktopTools);
-  setText(elements.bundlesRecentBundlesLabel, copy.bundles.recentBundles);
-  setText(elements.bundlesRecentCompareLabel, copy.bundles.recentCompare);
-  setText(elements.bundlesRecentOutputsLabel, copy.bundles.recentOutputs);
-  setText(elements.bundlesRecentActionsLabel, copy.bundles.recentActions);
-  setText(elements.bundlesHistoryAll, copy.bundles.all);
-  setText(elements.bundlesHistoryFailed, copy.bundles.failed);
-  setText(elements.bundlesHistoryInspect, copy.bundles.inspect);
-  setText(elements.bundlesHistoryNormalize, copy.bundles.normalize);
-  setText(elements.bundlesHistoryDiff, copy.bundles.diff);
-  setText(elements.bundlesHistoryKeepFailed, copy.bundles.keepFailed);
-  setText(elements.bundlesHistoryImport, copy.bundles.import);
-  setText(elements.bundlesHistoryExport, copy.bundles.export);
-  setText(elements.bundlesHistoryClear, copy.bundles.clear);
-  setText(elements.bundlesFavoritesLabel, copy.bundles.favorites);
-  setText(elements.bundlesRecentLabel, copy.bundles.recent);
-  if (elements.projectBundleOutput && !state.isBusy) {
-    elements.projectBundleOutput.textContent = copy.bundles.ready;
-  }
-  setText(elements.guidesPrimaryLabel, copy.guides.primaryLabel);
-  setText(elements.guidesPrimaryTitle, copy.guides.primaryTitle);
-  setText(elements.guidesPrimaryCopy, copy.guides.primaryCopy);
-  setText(elements.guidesDocsTitle, copy.guides.docsTitle);
-  setText(elements.guidesDocsCopy, copy.guides.docsCopy);
-  setText(elements.guidesCurrentTitle, copy.guides.currentTitle);
-  setText(elements.guidesCurrentCopy, copy.guides.currentCopy);
-  setText(elements.guidesOverviewDocsLabel, copy.guides.overviewDocsLabel);
-  setText(elements.guidesOverviewDocsTitle, copy.guides.overviewDocsTitle);
-  setText(elements.guidesOverviewDocsCopy, copy.guides.overviewDocsCopy);
-  setText(elements.guidesOverviewCurrentLabel, copy.guides.overviewCurrentLabel);
-  setText(elements.guidesOverviewCurrentTitle, copy.guides.overviewCurrentTitle);
-  setText(elements.guidesOverviewCurrentCopy, copy.guides.overviewCurrentCopy);
-  setText(elements.guidesOverviewTroubleshootingLabel, copy.guides.overviewTroubleshootingLabel);
-  setText(elements.guidesOverviewTroubleshootingTitle, copy.guides.overviewTroubleshootingTitle);
-  setText(elements.guidesOverviewTroubleshootingCopy, copy.guides.overviewTroubleshootingCopy);
-  setText(elements.guidesOperationsTitle, copy.guides.operationsTitle);
-  setText(elements.guidesOperationsCopy, copy.guides.operationsCopy);
-  setText(elements.guidesTroubleshootingTitle, copy.guides.troubleshootingTitle);
-  setText(elements.guidesTroubleshootingCopy, copy.guides.troubleshootingCopy);
-  setText(elements.guidesAccuracyLabel, copy.guides.accuracyLabel);
-  setText(elements.guidesAccuracyTitle, copy.guides.accuracyTitle);
-  setText(elements.guidesAccuracyCopy, copy.guides.accuracyCopy);
-  setText(elements.guidesAccuracyPlanTitle, copy.guides.accuracyPlanTitle);
-  setText(elements.guidesAccuracyPlanCopy, copy.guides.accuracyPlanCopy);
-  setText(elements.guidesAccuracyBaselinesTitle, copy.guides.accuracyBaselinesTitle);
-  setText(elements.guidesAccuracyBaselinesCopy, copy.guides.accuracyBaselinesCopy);
-  setText(elements.guidesDirectMeshTitle, copy.guides.directMeshTitle);
-  setText(elements.guidesDirectMeshCopy, copy.guides.directMeshCopy);
-  setText(elements.guidesRegressionLabel, copy.guides.regressionLabel);
-  setText(elements.guidesRegressionTitle, copy.guides.regressionTitle);
-  setText(elements.guidesRegressionCopy, copy.guides.regressionCopy);
-  setText(elements.guidesRegressionElapsedLabel, copy.guides.regressionElapsedLabel);
-  setText(elements.guidesRegressionRssLabel, copy.guides.regressionRssLabel);
-  setText(elements.guidesRegressionRepeatLabel, copy.guides.regressionRepeatLabel);
-  setText(elements.guidesRegressionNetworkLabel, copy.guides.regressionNetworkLabel);
-  setText(elements.guidesRegressionLatestLabel, copy.guides.regressionLatestLabel);
-  setText(elements.guidesRegressionStatusLabel, copy.guides.regressionStatusLabel);
-  setText(elements.guidesRegressionBaselinePathLabel, copy.guides.regressionBaselinePathLabel);
-  setText(elements.guidesRegressionOutputPathLabel, copy.guides.regressionOutputPathLabel);
-  setText(elements.guidesRegressionBaselineTitle, copy.guides.regressionBaselineTitle);
-  setText(elements.guidesRegressionBaselineCopy, copy.guides.regressionBaselineCopy);
-  setText(elements.guidesRegressionOutputTitle, copy.guides.regressionOutputTitle);
-  setText(elements.guidesRegressionOutputCopy, copy.guides.regressionOutputCopy);
-  setText(elements.guidesRegressionLaneTitle, copy.guides.regressionLaneTitle);
-  setText(elements.guidesRegressionLaneCopy, copy.guides.regressionLaneCopy);
-  renderDirectMeshRegressionSnapshot(state.directMeshRegressionSnapshot);
-  setText(elements.assistantIntroLabel, copy.assistant.introLabel);
-  setText(elements.assistantIntroTitle, copy.assistant.introTitle);
-  setText(elements.assistantIntroCopy, copy.assistant.introCopy);
-  setText(elements.assistantClose, copy.assistant.close);
-  setText(elements.assistantEngineLabel, copy.assistant.engine);
-  setText(elements.assistantContextSectionLabel, copy.assistant.section);
-  setText(elements.assistantContextRuntimeLabel, copy.assistant.runtime);
-  setText(elements.assistantContextBundleLabel, copy.assistant.bundle);
-  setText(elements.assistantLocalActionsLabel, copy.assistant.quickActions);
-  setText(elements.assistantLocalActionStart, copy.assistant.quickStart);
-  setText(elements.assistantLocalActionLibrary, copy.assistant.quickLibrary);
-  setText(elements.assistantLocalActionBundles, copy.assistant.quickBundles);
-  setText(elements.assistantLocalActionGuides, copy.assistant.quickGuides);
-  setText(elements.assistantLocalAskLabel, copy.assistant.ask);
-  setText(elements.assistantLocalPromptLabel, copy.assistant.askLabel);
-  setText(elements.assistantLocalAsk, copy.assistant.askButton);
-  if (elements.assistantLocalOutput && !state.isBusy) {
-    elements.assistantLocalOutput.textContent = copy.assistant.askEmpty;
-  }
-  setText(elements.assistantDocsLabel, copy.assistant.docs);
-  setText(elements.assistantDocsIndexTitle, copy.assistant.docsIndexTitle);
-  setText(elements.assistantDocsIndexCopy, copy.assistant.docsIndexCopy);
-  setText(elements.assistantDocsCurrentTitle, copy.assistant.docsCurrentTitle);
-  setText(elements.assistantDocsCurrentCopy, copy.assistant.docsCurrentCopy);
-  setText(elements.assistantDocsOperationsTitle, copy.assistant.docsOperationsTitle);
-  setText(elements.assistantDocsOperationsCopy, copy.assistant.docsOperationsCopy);
-  setText(elements.assistantDocsTroubleshootingTitle, copy.assistant.docsTroubleshootingTitle);
-  setText(elements.assistantDocsTroubleshootingCopy, copy.assistant.docsTroubleshootingCopy);
-  setText(elements.assistantSuggestedLabel, copy.assistant.suggested);
-  setText(elements.assistantLlmIntroCopy, copy.assistant.llmIntro);
-  setText(elements.assistantBaseUrlLabel, copy.assistant.baseUrl);
-  setText(elements.assistantApiKeyLabel, copy.assistant.apiKey);
-  setText(elements.assistantPresetLabel, copy.assistant.preset);
-  setText(elements.assistantModelLabel, copy.assistant.model);
-  setText(elements.assistantRequestLabel, copy.assistant.request);
-  setText(elements.assistantRequestPlan, copy.assistant.generate);
-  setText(elements.assistantApproveLabel, copy.assistant.approve);
-  setText(elements.assistantExecutePlan, copy.assistant.execute);
-  setText(elements.assistantEndpointPolicy, copy.dynamic.endpointPolicyDefault);
-  if (elements.assistantOutput && !state.isBusy) {
-    elements.assistantOutput.textContent = copy.assistant.ready;
-  }
-  setText(elements.assistantAuditLabel, copy.assistant.audit);
+  renderHubHomeCopy({
+    elements,
+    copy,
+    setText,
+  });
+  renderHubLibraryCopy({
+    elements,
+    copy,
+    isBusy: state.isBusy,
+    workflowCatalogBusy: state.workflowCatalogBusy,
+    setText,
+  });
+  renderHubBundlesCopy({
+    elements,
+    copy,
+    isBusy: state.isBusy,
+    setText,
+  });
+  renderGuidesPanelCopy({
+    elements,
+    copy,
+    activeLanguage: state.language,
+    setText,
+  });
+  renderDirectMeshRegressionSnapshot({
+    elements,
+    snapshot: state.directMeshRegressionSnapshot,
+    copy,
+    regressionGateReport: state.regressionGateReport,
+    applyDesktopState,
+  });
+  renderAssistantShellCopy({
+    elements,
+    copy,
+    isBusy: state.isBusy,
+    setText,
+  });
   renderPanelLanguage(copy);
 
   const activeSectionCopy = copy.sections[state.activeSection];
@@ -2637,117 +2210,13 @@ function rerenderLocalizedHubShell() {
   renderAssistantPanel();
 }
 
-function renderOverviewStrip(section, items) {
-  const cards = document.querySelectorAll(`#${section}-panel .hub-overview-card`);
-  items?.forEach((item, index) => {
-    const card = cards[index];
-    if (!card) return;
-    const eyebrow = card.querySelector(".hub-card__eyebrow");
-    const title = card.querySelector("h2");
-    const copy = card.querySelector(".desktop-shell-note");
-    if (eyebrow) eyebrow.textContent = item.label;
-    if (title) title.textContent = item.title;
-    if (copy) copy.textContent = item.copy;
-  });
-}
-
-function renderPanelTabGroup(group, labels) {
-  const buttons = document.querySelectorAll(`[data-panel-page-group="${group}"]`);
-  labels?.forEach((label, index) => {
-    const button = buttons[index];
-    if (button) button.textContent = label;
-  });
-}
-
 function renderPanelLanguage(copy) {
-  renderPanelTabGroup("runtimes", copy.panels.runtimes.tabs);
-  renderPanelTabGroup("deploy", copy.panels.deploy.tabs);
-  renderPanelTabGroup("observe", copy.panels.observe.tabs);
-  renderPanelTabGroup("tools", copy.panels.tools.tabs);
-  renderOverviewStrip("runtimes", copy.panels.runtimes.overview);
-  renderOverviewStrip("observe", copy.panels.observe.overview);
-  renderOverviewStrip("tools", copy.panels.tools.overview);
-  setText(elements.runtimeLocalLabel, copy.panels.runtimes.local.label);
-  setText(elements.runtimeLocalTitle, copy.panels.runtimes.local.title);
-  setText(elements.runtimeLocalCopy, copy.panels.runtimes.local.copy);
-  setText(elements.runtimeLocalStatusLabel, copy.panels.runtimes.local.status);
-  setText(elements.runtimeLocalFrontendLabel, copy.panels.runtimes.local.frontend);
-  setText(elements.runtimeLocalControlLabel, copy.panels.runtimes.local.controlPlane);
-  setText(elements.runtimeLocalAgentsLabel, copy.panels.runtimes.local.agents);
-  setText(elements.runtimeHotLabel, copy.panels.runtimes.hot.label);
-  setText(elements.runtimeHotTitle, copy.panels.runtimes.hot.title);
-  setText(elements.runtimeHotCopy, copy.panels.runtimes.hot.copy);
-  setText(elements.runtimeHotStatusLabel, copy.panels.runtimes.hot.status);
-  setText(elements.runtimeHotModeLabel, copy.panels.runtimes.hot.mode);
-  setText(elements.runtimeHotActionLocal, copy.panels.runtimes.hot.local);
-  setText(elements.runtimeHotActionCloud, copy.panels.runtimes.hot.cloud);
-  setText(elements.runtimeHotActionDistributed, copy.panels.runtimes.hot.distributed);
-  setText(elements.runtimeHotActionRefresh, copy.panels.runtimes.hot.refreshStatus);
-  setText(elements.runtimeHotActionStop, copy.panels.runtimes.hot.stop);
-  setText(elements.runtimeHotLogsLabel, copy.panels.runtimes.hot.logs);
-  setText(elements.runtimeHotAutoLabel, copy.panels.runtimes.hot.autoRefresh);
-  setText(elements.runtimeHotIntervalLabel, copy.panels.runtimes.hot.interval);
-  setText(elements.runtimeHotRefreshLog, copy.panels.runtimes.hot.refreshLog);
-  setText(elements.runtimeHotCopyTail, copy.panels.runtimes.hot.copyTail);
-  setText(elements.runtimeHotClearView, copy.panels.runtimes.hot.clearView);
-  setText(elements.runtimeHotNote, copy.panels.runtimes.hot.note);
-  setText(elements.runtimeTargetsLabel, copy.panels.runtimes.targets.label);
-  setText(elements.runtimeTargetsTitle, copy.panels.runtimes.targets.title);
-  setText(elements.runtimeTargetsCopy, copy.panels.runtimes.targets.copy);
-  setText(elements.deployModesLabel, copy.panels.deploy.modes.label);
-  setText(elements.deployModesTitle, copy.panels.deploy.modes.title);
-  setText(elements.deployModesCopy, copy.panels.deploy.modes.copy);
-  setText(elements.deployActionLocal, copy.panels.deploy.modes.local);
-  setText(elements.deployActionCloud, copy.panels.deploy.modes.cloud);
-  setText(elements.deployActionDistributed, copy.panels.deploy.modes.distributed);
-  setText(elements.deployActionRestart, copy.panels.deploy.modes.restart);
-  setText(elements.deployBootstrapLabel, copy.panels.deploy.bootstrap.label);
-  setText(elements.deployBootstrapTitle, copy.panels.deploy.bootstrap.title);
-  setText(elements.deployBootstrapCopy, copy.panels.deploy.bootstrap.copy);
-  setText(elements.deployBootstrapValidate, copy.panels.deploy.bootstrap.validate);
-  setText(elements.deployBootstrapStage, copy.panels.deploy.bootstrap.stage);
-  setText(elements.deployBootstrapDoctor, copy.panels.deploy.bootstrap.doctor);
-  setText(elements.deployReleaseLabel, copy.panels.deploy.release.label);
-  setText(elements.deployReleaseTitle, copy.panels.deploy.release.title);
-  setText(elements.deployReleaseCopy, copy.panels.deploy.release.copy);
-  setText(elements.observeHealthLabel, copy.panels.observe.health.label);
-  setText(elements.observeHealthTitle, copy.panels.observe.health.title);
-  setText(elements.observeHealthCopy, copy.panels.observe.health.copy);
-  setText(elements.observeHealthWatchdogLabel, copy.panels.observe.health.watchdog);
-  setText(elements.observeHealthSecurityLabel, copy.panels.observe.health.security);
-  setText(elements.observeHealthFailuresLabel, copy.panels.observe.health.failures);
-  setText(elements.observeRuntimeTitle, copy.panels.observe.runtime.title);
-  setText(elements.observeRuntimeStatusLabel, copy.panels.observe.runtime.localRuntime);
-  setText(elements.observeRuntimeHotLabel, copy.panels.observe.runtime.hotLoop);
-  setText(elements.observeRuntimeModeLabel, copy.panels.observe.runtime.mode);
-  setText(elements.observeRuntimeSourceLabel, copy.panels.observe.runtime.logSource);
-  setText(elements.observeRuntimeOpen, copy.panels.observe.runtime.open);
-  setText(elements.observeRuntimeRefresh, copy.panels.observe.runtime.refresh);
-  setText(elements.observeRuntimeCopy, copy.panels.observe.runtime.copy);
-  setText(elements.observeStackTitle, copy.panels.observe.stack.title);
-  setText(elements.observeStackLogsLabel, copy.panels.observe.stack.logs);
-  setText(elements.observeStackAutoLabel, copy.panels.observe.stack.auto);
-  setText(elements.observeStackRefresh, copy.panels.observe.stack.refresh);
-  setText(elements.observeStackCopy, copy.panels.observe.stack.copy);
-  setText(elements.observeStackNote, copy.panels.observe.stack.note);
-  setText(elements.toolsPackagesLabel, copy.panels.tools.packages.label);
-  setText(elements.toolsPackagesTitle, copy.panels.tools.packages.title);
-  setText(elements.toolsPackagesCopy, copy.panels.tools.packages.copy);
-  renderToolsPlatformLabel();
-  setText(elements.toolsPackagesBenchmark, copy.panels.tools.packages.benchmark);
-  setText(elements.toolsPackagesValidate, copy.panels.tools.packages.validate);
-  setText(elements.toolsPackagesExport, copy.panels.tools.packages.export);
-  setText(elements.toolsPackagesStatus, copy.panels.tools.packages.status);
-  setText(elements.toolsPackagesStage, copy.panels.tools.packages.stage);
-  setText(elements.toolsPackagesBuild, copy.panels.tools.packages.build);
-  setText(elements.toolsPackagesVerify, copy.panels.tools.packages.verify);
-  setText(elements.toolsPackagesStop, copy.panels.tools.packages.stop);
-  setText(elements.toolsStatusLabel, copy.panels.tools.status.label);
-  setText(elements.toolsStatusTitle, copy.panels.tools.status.title);
-  setText(elements.toolsStatusCopy, copy.panels.tools.status.copy);
-  setText(elements.toolsOutputLabel, copy.panels.tools.output.label);
-  setText(elements.toolsOutputTitle, copy.panels.tools.output.title);
-  setText(elements.toolsOutputCopy, copy.panels.tools.output.copy);
+  renderHubPanelCopy({
+    elements,
+    copy,
+    setText,
+    renderToolsPlatformLabel,
+  });
 }
 
 function loadHubRecents() {
@@ -3225,326 +2694,131 @@ function workloadFamilyLabel(family) {
   return resolveWorkloadFamilyLabel(family);
 }
 
-function markHubWorkloadDownloaded(entry) {
-  const next = loadHubWorkloadLibrary().map((candidate) => {
-    if (workloadIdentity(candidate) !== workloadIdentity(entry)) {
-      return candidate;
-    }
-
-    return {
-      ...candidate,
-      downloadedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-  });
-  saveHubWorkloadLibrary(next);
-}
-
-function updateHubWorkloadEntry(entry, updater) {
-  const next = loadHubWorkloadLibrary()
-    .map((candidate) => {
-      if (workloadIdentity(candidate) !== workloadIdentity(entry)) {
-        return candidate;
-      }
-
-      return normalizeHubWorkloadEntry(
-        updater({
-          ...candidate,
-        }),
-      );
-    })
-    .filter(Boolean);
-  saveHubWorkloadLibrary(next);
+function workloadRuntimeContext() {
+  return {
+    downloadHubBlob,
+    downloadHubJson,
+    elements,
+    ensureDefaultWorkloadCatalogUrl,
+    ensureRemoteHostTrust,
+    inferDownloadFilename,
+    invokeTauri,
+    loadHubWorkloadLibrary,
+    mergeHubWorkloadLibrary,
+    normalizeHubWorkloadEntry,
+    persistHubWorkloadLibrary,
+    projectSummaryFromInspectPayload,
+    renderAssistantContext,
+    renderHubAssistantLocalCards,
+    renderHubWorkloadLibrary,
+    runAction,
+    saveHubWorkloadLibrary,
+    setWorkloadLibraryOutput,
+    state,
+    validateHubCatalogUrl,
+    validateRemoteWorkloadCatalogPayload,
+    normalizeRemoteWorkloadCatalogPayload,
+    workloadIdentity,
+  };
 }
 
 async function downloadRemoteWorkloadBundle(entry) {
-  const validation = validateHubCatalogUrl(entry.downloadUrl || "");
-  if (!validation.ok) {
-    throw new Error(validation.reason);
-  }
-
-  if (!ensureRemoteHostTrust(validation.normalized, "This workload download")) {
-    throw new Error("workload download cancelled before contacting the remote host");
-  }
-
-  const response = await fetch(validation.normalized);
-  if (!response.ok) {
-    throw new Error(`bundle download failed (${response.status})`);
-  }
-
-  const blob = await response.blob();
-  const filename = inferDownloadFilename(validation.normalized);
-  downloadHubBlob(filename, blob);
-  markHubWorkloadDownloaded(entry);
-  setWorkloadLibraryOutput(`downloaded ${entry.label} as ${filename}`);
+  return downloadRemoteWorkloadBundleModule(workloadRuntimeContext(), entry);
 }
 
 async function openWorkloadInWorkbench(entry) {
-  if (!entry.bundlePath) {
-    throw new Error("This workload does not have a local bundle path yet.");
-  }
-
-  elements.projectBundlePath.value = entry.bundlePath;
-  renderAssistantContext();
-  renderHubAssistantLocalCards();
-  setWorkloadLibraryOutput(`loaded ${entry.label} into the bundle path and opening Workbench`);
-  await runAction("open-workbench");
+  return openWorkloadInWorkbenchModule(workloadRuntimeContext(), entry);
 }
 
 async function attachCurrentBundleToWorkload(entry) {
-  const bundlePath = String(elements.projectBundlePath?.value || "").trim();
-  if (!bundlePath) {
-    throw new Error("Fill in the current bundle path before attaching it to this workload.");
-  }
-
-  const inspectRaw = await invokeTauri("project_bundle_inspect", { payload: { path: bundlePath } });
-  const summary = projectSummaryFromInspectPayload(inspectRaw);
-  updateHubWorkloadEntry(entry, (candidate) => ({
-    ...candidate,
-    bundlePath,
-    projectId: summary.projectId || candidate.projectId,
-    projectName: summary.projectName || candidate.projectName,
-    schema: summary.schema || candidate.schema,
-    layout: summary.layout || candidate.layout,
-    modelCount: summary.modelCount,
-    versionCount: summary.versionCount,
-    jobCount: summary.jobCount,
-    resultCount: summary.resultCount,
-    analysisDomains: summary.analysisDomains,
-    analysisFamilies: summary.analysisFamilies,
-    thermalIntents: summary.thermalIntents,
-    attachedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }));
-  setWorkloadLibraryOutput(`attached local bundle ${bundlePath} to ${entry.label}`);
+  return attachCurrentBundleToWorkloadModule(workloadRuntimeContext(), entry);
 }
 
 function saveHubWorkloadLibrary(entries) {
-  persistHubWorkloadLibrary(entries);
-  renderHubWorkloadLibrary(entries);
+  return saveHubWorkloadLibraryModule(workloadRuntimeContext(), entries);
 }
 
 function matchesWorkloadFilter(entry) {
-  if (state.workloadFilter === "all") {
-    return matchesWorkloadFamilyFilter(entry);
-  }
-  return entry.analysisDomains.includes(state.workloadFilter) && matchesWorkloadFamilyFilter(entry);
+  return matchesWorkloadFilterModule(workloadRuntimeContext(), entry);
 }
 
 function matchesWorkloadFamilyFilter(entry) {
-  if (state.workloadFamilyFilter === "all") {
-    return true;
-  }
-  return entry.analysisFamilies.includes(state.workloadFamilyFilter);
+  return matchesWorkloadFamilyFilterModule(workloadRuntimeContext(), entry);
+}
+
+function currentWorkloadLibrarySearchQuery() {
+  return currentWorkloadLibrarySearchQueryModule(workloadRuntimeContext());
+}
+
+function matchesWorkloadSearchQuery(entry) {
+  return matchesWorkloadSearchQueryModule(workloadRuntimeContext(), entry);
 }
 
 function renderWorkloadFilters() {
-  elements.workloadFilterButtons.forEach((button) => {
-    const matches = button.dataset.workloadFilter === state.workloadFilter;
-    button.classList.toggle("desktop-shell-button-primary", matches);
-    button.classList.toggle("desktop-shell-button-ghost", !matches);
-  });
-  elements.workloadFamilyFilterButtons.forEach((button) => {
-    const matches = button.dataset.workloadFamilyFilter === state.workloadFamilyFilter;
-    button.classList.toggle("desktop-shell-button-primary", matches);
-    button.classList.toggle("desktop-shell-button-ghost", !matches);
-  });
+  return renderWorkloadFiltersModule({ elements, state });
 }
 
 function renderHubWorkloadLibrary(entries = loadHubWorkloadLibrary()) {
-  if (!elements.workloadLibraryList) {
-    return;
-  }
-
-  renderWorkloadFilters();
-  elements.workloadLibraryList.innerHTML = "";
-  if (!entries.length) {
-    renderEmptyHistoryState(
-      elements.workloadLibraryList,
+  const domainLabel = localizedWorkloadFilterLabel(state.workloadFilter);
+  const familyLabel = localizedWorkloadFamilyFilterLabel(state.workloadFamilyFilter);
+  const query = currentWorkloadLibrarySearchQuery();
+  return renderHubWorkloadLibraryList({
+    elements,
+    entries,
+    state,
+    renderWorkloadFilters,
+    renderEmptyHistoryState,
+    emptyMessage:
       hubCopy().dynamic?.managedWorkloadsEmpty
-        || HUB_I18N.en.dynamic?.managedWorkloadsEmpty
-        || "No managed workloads yet. Register a current bundle or sync a remote catalog.",
-    );
-    return;
-  }
-
-  const filteredEntries = entries.filter((entry) => matchesWorkloadFilter(entry));
-  if (!filteredEntries.length) {
-    const domainLabel = localizedWorkloadFilterLabel(state.workloadFilter);
-    const familyLabel = localizedWorkloadFamilyFilterLabel(state.workloadFamilyFilter);
-    renderEmptyHistoryState(
-      elements.workloadLibraryList,
-      hubMessage(
-        hubCopy().dynamic?.managedWorkloadsFilterEmpty
-          || HUB_I18N.en.dynamic?.managedWorkloadsFilterEmpty
-          || "No workloads match {domain} / {family}.",
-        { domain: domainLabel, family: familyLabel },
-      ),
-    );
-    return;
-  }
-
-  filteredEntries.forEach((entry) => {
-    const shell = document.createElement("div");
-    shell.className = "hub-history-item";
-
-    const summary = document.createElement("button");
-    summary.type = "button";
-    summary.className = "hub-history-item__summary desktop-shell-button-ghost";
-    const [sourceLabel, sourceClass] = workloadSourceBadge(entry);
-    const metaBits = [
-      entry.projectId ? `project ${entry.projectId}` : "",
-      entry.schema || "",
-      entry.layout || "",
-      entry.attachedAt ? `attached ${formatProjectActionTime(entry.attachedAt)}` : "",
-      entry.downloadedAt ? `downloaded ${formatProjectActionTime(entry.downloadedAt)}` : "",
-    ].filter(Boolean);
-    const heading = document.createElement("div");
-    heading.className = "hub-history-item__heading";
-    appendTextElement(heading, "strong", entry.label);
-    const meta = document.createElement("div");
-    meta.className = "hub-history-item__meta";
-    appendTextElement(meta, "span", sourceLabel, sourceClass);
-    entry.analysisDomains.forEach((domain) => {
-      appendTextElement(meta, "span", workloadDomainLabel(domain), "desktop-shell-chip");
-    });
-    entry.analysisFamilies.forEach((family) => {
-      appendTextElement(meta, "span", workloadFamilyLabel(family), "desktop-shell-chip");
-    });
-    heading.appendChild(meta);
-    summary.appendChild(heading);
-    appendTextElement(summary, "span", metaBits.join(" · ") || "workload entry", "hub-history-item__alias");
-    appendTextElement(summary, "span", entry.note || entry.bundlePath || entry.downloadUrl || "--");
-    appendTextElement(summary, "span", workloadProvenanceLabel(entry), "hub-history-item__provenance");
-    if (entry.thermalIntents.length) {
-      appendTextElement(summary, "span", `thermal: ${entry.thermalIntents.join(", ")}`, "desktop-shell-note");
-    }
-    summary.addEventListener("click", () => {
-      if (entry.bundlePath) {
-        elements.projectBundlePath.value = entry.bundlePath;
-      }
-      if (entry.downloadUrl && elements.workloadCatalogUrl) {
-        elements.workloadCatalogUrl.value = entry.downloadUrl;
-      }
-      setWorkloadLibraryOutput(
-        hubMessage(
-          hubCopy().dynamic?.restoredWorkloadContext
-            || HUB_I18N.en.dynamic?.restoredWorkloadContext
-            || "restored workload context for {label}",
-          { label: entry.label },
-        ),
-      );
-      renderAssistantContext();
-      renderHubAssistantLocalCards();
-    });
-
-    const controls = document.createElement("div");
-    controls.className = "hub-history-item__controls";
-
-    const useButton = document.createElement("button");
-    useButton.type = "button";
-    useButton.className = "desktop-shell-button-ghost";
-    useButton.textContent = hubCopy().dynamic?.workloadUse || HUB_I18N.en.dynamic?.workloadUse || "Use";
-    useButton.addEventListener("click", () => {
-      if (entry.bundlePath) {
-        elements.projectBundlePath.value = entry.bundlePath;
-      }
-      setWorkloadLibraryOutput(
-        hubMessage(
-          hubCopy().dynamic?.loadedWorkloadContext
-            || HUB_I18N.en.dynamic?.loadedWorkloadContext
-            || "loaded {label} into the bundle path",
-          { label: entry.label },
-        ),
-      );
-      renderAssistantContext();
-      renderHubAssistantLocalCards();
-    });
-
-    const workbenchButton = document.createElement("button");
-    workbenchButton.type = "button";
-    workbenchButton.className = "desktop-shell-button-ghost";
-    workbenchButton.textContent = hubCopy().dynamic?.workloadOpenWorkbench || HUB_I18N.en.dynamic?.workloadOpenWorkbench || "Open in Workbench";
-    workbenchButton.disabled = !entry.bundlePath;
-    workbenchButton.addEventListener("click", () => {
-      void openWorkloadInWorkbench(entry).catch((error) => {
-        setWorkloadLibraryOutput(formatHubOperatorError(error, {
-          actionLabel: "Opening this workload in Workbench",
-        }));
-      });
-    });
-
-    const inspectButton = document.createElement("button");
-    inspectButton.type = "button";
-    inspectButton.className = "desktop-shell-button-ghost";
-    inspectButton.textContent = hubCopy().dynamic?.workloadInspect || HUB_I18N.en.dynamic?.workloadInspect || "Inspect";
-    inspectButton.disabled = !entry.bundlePath;
-    inspectButton.addEventListener("click", () => {
-      if (entry.bundlePath) {
-        elements.projectBundlePath.value = entry.bundlePath;
-        void runAction("project-inspect");
-      }
-    });
-
-    const validateButton = document.createElement("button");
-    validateButton.type = "button";
-    validateButton.className = "desktop-shell-button-ghost";
-    validateButton.textContent = hubCopy().dynamic?.workloadValidate || HUB_I18N.en.dynamic?.workloadValidate || "Validate";
-    validateButton.disabled = !entry.bundlePath;
-    validateButton.addEventListener("click", () => {
-      if (entry.bundlePath) {
-        elements.projectBundlePath.value = entry.bundlePath;
-        void runAction("project-validate");
-      }
-    });
-
-    const downloadButton = document.createElement("button");
-    downloadButton.type = "button";
-    downloadButton.className = "desktop-shell-button-ghost";
-    downloadButton.textContent = hubCopy().dynamic?.workloadDownload || HUB_I18N.en.dynamic?.workloadDownload || "Download";
-    downloadButton.disabled = !entry.downloadUrl;
-    downloadButton.addEventListener("click", () => {
-      void downloadRemoteWorkloadBundle(entry).catch((error) => {
-        setWorkloadLibraryOutput(formatHubOperatorError(error, {
-          actionLabel: "Downloading this workload",
-        }));
-      });
-    });
-
-    const attachButton = document.createElement("button");
-    attachButton.type = "button";
-    attachButton.className = "desktop-shell-button-ghost";
-    attachButton.textContent = entry.bundlePath
-      ? hubCopy().dynamic?.workloadReattach || HUB_I18N.en.dynamic?.workloadReattach || "Reattach bundle"
-      : hubCopy().dynamic?.workloadAttach || HUB_I18N.en.dynamic?.workloadAttach || "Attach current bundle";
-    attachButton.addEventListener("click", () => {
-      void attachCurrentBundleToWorkload(entry).catch((error) => {
-        setWorkloadLibraryOutput(formatHubOperatorError(error, {
-          actionLabel: "Attaching the current bundle",
-        }));
-      });
-    });
-
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.className = "desktop-shell-button-ghost";
-    removeButton.textContent = hubCopy().dynamic?.workloadRemove || HUB_I18N.en.dynamic?.workloadRemove || "Remove";
-    removeButton.addEventListener("click", () => {
-      const next = loadHubWorkloadLibrary().filter((candidate) => workloadIdentity(candidate) !== workloadIdentity(entry));
-      saveHubWorkloadLibrary(next);
-      setWorkloadLibraryOutput(
-        hubMessage(
-          hubCopy().dynamic?.removedWorkload
-            || HUB_I18N.en.dynamic?.removedWorkload
-            || "removed {label} from the workload library",
-          { label: entry.label },
-        ),
-      );
-    });
-
-    controls.append(useButton, workbenchButton, inspectButton, validateButton, downloadButton, attachButton, removeButton);
-    shell.append(summary, controls);
-    elements.workloadLibraryList.appendChild(shell);
+      || HUB_I18N.en.dynamic?.managedWorkloadsEmpty
+      || "No managed workloads yet. Register a current bundle or sync a remote catalog.",
+    filterEmptyMessage: hubMessage(
+      hubCopy().dynamic?.managedWorkloadsFilterEmpty
+        || HUB_I18N.en.dynamic?.managedWorkloadsFilterEmpty
+        || "No workloads match {domain} / {family} for \"{query}\".",
+      {
+        domain: domainLabel,
+        family: familyLabel,
+        query: query || "--",
+      },
+    ),
+    matchesWorkloadFilter,
+    matchesWorkloadSearchQuery,
+    workloadSourceBadge,
+    formatProjectActionTime,
+    appendTextElement,
+    workloadDomainLabel,
+    workloadFamilyLabel,
+    workloadProvenanceLabel,
+    currentSearchQuery: query,
+    setWorkloadLibraryOutput,
+    hubMessage,
+    restoredWorkloadContextMessage:
+      hubCopy().dynamic?.restoredWorkloadContext
+      || HUB_I18N.en.dynamic?.restoredWorkloadContext
+      || "restored workload context for {label}",
+    loadedWorkloadContextMessage:
+      hubCopy().dynamic?.loadedWorkloadContext
+      || HUB_I18N.en.dynamic?.loadedWorkloadContext
+      || "loaded {label} into the bundle path",
+    removedWorkloadMessage:
+      hubCopy().dynamic?.removedWorkload
+      || HUB_I18N.en.dynamic?.removedWorkload
+      || "removed {label} from the workload library",
+    renderAssistantContext,
+    renderHubAssistantLocalCards,
+    openWorkloadInWorkbench,
+    formatHubOperatorError,
+    runAction,
+    downloadRemoteWorkloadBundle,
+    attachCurrentBundleToWorkload,
+    loadHubWorkloadLibrary,
+    saveHubWorkloadLibrary,
+    workloadIdentity,
+    projectBundlePath: elements.projectBundlePath,
+    workloadCatalogUrl: elements.workloadCatalogUrl,
+    hubCopy,
+    hubI18nEn: HUB_I18N.en,
   });
 }
 
@@ -3553,36 +2827,7 @@ function projectSummaryFromInspectPayload(raw) {
 }
 
 async function registerCurrentBundleAsWorkload() {
-  const bundlePath = String(elements.projectBundlePath?.value || "").trim();
-  if (!bundlePath) {
-    throw new Error("Fill in a bundle path before registering a workload.");
-  }
-
-  const inspectRaw = await invokeTauri("project_bundle_inspect", { payload: { path: bundlePath } });
-  const summary = projectSummaryFromInspectPayload(inspectRaw);
-  const note = String(elements.workloadLabel?.value || "").trim();
-  const entry = normalizeHubWorkloadEntry({
-    label: note || summary.projectName || summary.projectId || bundlePath,
-    note: note || `Registered from local bundle ${bundlePath}`,
-    sourceKind: "local-bundle",
-    sourceLabel: "Hub local registration",
-    bundlePath,
-    projectId: summary.projectId,
-    projectName: summary.projectName,
-    schema: summary.schema,
-    layout: summary.layout,
-    modelCount: summary.modelCount,
-    versionCount: summary.versionCount,
-    jobCount: summary.jobCount,
-    resultCount: summary.resultCount,
-    analysisDomains: summary.analysisDomains,
-    analysisFamilies: summary.analysisFamilies,
-    thermalIntents: summary.thermalIntents,
-  });
-
-  const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), [entry]);
-  saveHubWorkloadLibrary(next);
-  setWorkloadLibraryOutput(`registered ${entry.label} in the workload library`);
+  return registerCurrentBundleAsWorkloadModule(workloadRuntimeContext());
 }
 
 function validateHubCatalogUrl(value) {
@@ -3598,76 +2843,23 @@ function normalizeRemoteWorkloadCatalogPayload(payload, catalogUrl) {
 }
 
 async function syncRemoteWorkloadCatalog(urlOverride = "") {
-  const selectedUrl =
-    String(urlOverride || "").trim() || String(elements.workloadCatalogUrl?.value || "").trim();
-  const validation = validateHubCatalogUrl(selectedUrl);
-  if (!validation.ok) {
-    throw new Error(validation.reason);
-  }
-
-  if (elements.workloadCatalogUrl) {
-    elements.workloadCatalogUrl.value = validation.normalized;
-  }
-
-  if (!ensureRemoteHostTrust(validation.normalized, "This remote catalog sync")) {
-    throw new Error("remote catalog sync cancelled before contacting the remote host");
-  }
-
-  const response = await fetch(validation.normalized);
-  if (!response.ok) {
-    throw new Error(`catalog sync failed (${response.status})`);
-  }
-
-  const payload = await response.json();
-  const payloadValidation = validateRemoteWorkloadCatalogPayload(payload);
-  if (!payloadValidation.ok) {
-    throw new Error(payloadValidation.reason);
-  }
-  const normalized = normalizeRemoteWorkloadCatalogPayload(payload, validation.normalized);
-  const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), normalized);
-  saveHubWorkloadLibrary(next);
-  setWorkloadLibraryOutput(`synced ${normalized.length} workload entries from remote catalog`);
+  return syncRemoteWorkloadCatalogModule(workloadRuntimeContext(), urlOverride);
 }
 
 async function syncLocalControlPlaneWorkloads() {
-  const catalogUrl = ensureDefaultWorkloadCatalogUrl(true);
-  await syncRemoteWorkloadCatalog(catalogUrl);
+  return syncLocalControlPlaneWorkloadsModule(workloadRuntimeContext());
 }
 
 function exportHubWorkloadLibrary() {
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    workloadCount: loadHubWorkloadLibrary().length,
-    workloads: loadHubWorkloadLibrary(),
-  };
-  downloadHubJson("kyuubiki-hub-workloads.json", payload);
-  setWorkloadLibraryOutput(`exported ${payload.workloadCount} workload entries as JSON`);
+  return exportHubWorkloadLibraryModule(workloadRuntimeContext());
 }
 
 async function importHubWorkloadLibrary(file) {
-  if (!file) {
-    return;
-  }
-
-  const raw = await file.text();
-  const parsed = JSON.parse(raw);
-  const imported = Array.isArray(parsed?.workloads) ? parsed.workloads : [];
-  const normalized = imported
-    .map((entry) =>
-      normalizeHubWorkloadEntry({
-        ...entry,
-        sourceKind: entry?.sourceKind || "imported-library",
-      }),
-    )
-    .filter(Boolean);
-  const next = mergeHubWorkloadLibrary(loadHubWorkloadLibrary(), normalized);
-  saveHubWorkloadLibrary(next);
-  setWorkloadLibraryOutput(`imported ${normalized.length} workload entries into the Hub library`);
+  return importHubWorkloadLibraryModule(workloadRuntimeContext(), file);
 }
 
 function clearHubWorkloadLibrary() {
-  saveHubWorkloadLibrary([]);
-  setWorkloadLibraryOutput("cleared the Hub workload library");
+  return clearHubWorkloadLibraryModule(workloadRuntimeContext());
 }
 
 function pushRecentValue(values, value) {
@@ -4164,10 +3356,6 @@ function matchesHistoryFilter(entry) {
   }
 }
 
-function currentFilteredHistoryActions(actions = loadHubRecents().actions ?? []) {
-  return actions.filter((entry) => matchesHistoryFilter(entry));
-}
-
 function togglePinnedProjectAction(entry) {
   const recents = loadHubRecents();
   const identity = actionIdentity(entry);
@@ -4207,71 +3395,6 @@ function renamePinnedProjectAction(entry) {
   });
   saveHubRecents(recents);
   setProjectBundleOutput(`updated label for ${entry.action}`);
-}
-
-function downloadHubJson(filename, payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = window.URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  window.URL.revokeObjectURL(url);
-}
-
-function exportRecentActionHistory() {
-  const recents = loadHubRecents();
-  const actions = currentFilteredHistoryActions(recents.actions ?? []);
-  const payload = {
-    exportedAt: new Date().toISOString(),
-    filter: state.historyFilter,
-    actionCount: actions.length,
-    actions,
-  };
-
-  downloadHubJson(`kyuubiki-hub-recent-actions-${state.historyFilter}.json`, payload);
-  setProjectBundleOutput(`exported ${actions.length} recent actions as JSON`);
-}
-
-async function importRecentActionHistory(file) {
-  if (!file) {
-    return;
-  }
-
-  const raw = await file.text();
-  const parsed = JSON.parse(raw);
-  const importedActions = Array.isArray(parsed?.actions) ? parsed.actions : [];
-  const recents = loadHubRecents();
-  recents.actions = mergeProjectActionHistory(recents.actions ?? [], importedActions);
-  saveHubRecents(recents);
-  setProjectBundleOutput(`imported ${recents.actions.length} recent actions from JSON`);
-}
-
-function manageRecentActionHistory(mode) {
-  const recents = loadHubRecents();
-
-  switch (mode) {
-    case "keep-failed":
-      recents.actions = (recents.actions ?? []).filter((entry) => entry.status === "failed");
-      saveHubRecents(recents);
-      setProjectBundleOutput("kept failed recent actions only");
-      return;
-    case "import-json":
-      elements.historyImportInput?.click();
-      return;
-    case "clear":
-      recents.actions = [];
-      saveHubRecents(recents);
-      setProjectBundleOutput("cleared recent action history");
-      return;
-    case "export-json":
-      exportRecentActionHistory();
-      return;
-    default:
-      return;
-  }
 }
 
 function restoreProjectActionContext(entry) {
@@ -5144,20 +4267,21 @@ async function loadEnvironment() {
 async function loadDirectMeshRegressionSnapshot() {
   try {
     state.directMeshRegressionSnapshot = await invokeTauri("hub_direct_mesh_regression_snapshot");
-    renderDirectMeshRegressionSnapshot(state.directMeshRegressionSnapshot);
+    renderDirectMeshRegressionSnapshot({
+      elements,
+      snapshot: state.directMeshRegressionSnapshot,
+      copy: hubCopy(),
+      regressionGateReport: state.regressionGateReport,
+      applyDesktopState,
+    });
   } catch (error) {
-    if (elements.guidesRegressionStatusValue) {
-      applyDesktopState(
-        elements.guidesRegressionStatusValue,
-        regressionStatusText("baseline_only"),
-        { kind: regressionStateKind("baseline_only") },
-      );
-    }
-    if (elements.guidesRegressionNote) {
-      elements.guidesRegressionNote.textContent = formatHubOperatorError(error, {
-        actionLabel: "Direct-mesh regression snapshot",
-      });
-    }
+    renderDirectMeshRegressionLoadError({
+      elements,
+      copy: hubCopy(),
+      error,
+      applyDesktopState,
+      formatHubOperatorError,
+    });
   }
 }
 
@@ -5499,69 +4623,31 @@ elements.assistantExecutePlan?.addEventListener("click", async () => {
   }
 });
 
-elements.historyFilterButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    state.historyFilter = button.dataset.historyFilter || "all";
-    renderHubRecents();
-    setProjectBundleOutput(`filtered recent actions: ${state.historyFilter}`);
-  });
+bindHubRecentActionControls({
+  elements,
+  state,
+  renderHubRecents,
+  setProjectBundleOutput,
+  loadHubRecents,
+  saveHubRecents,
+  mergeProjectActionHistory,
+  formatHubOperatorError,
 });
 
-elements.workloadFilterButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    state.workloadFilter = button.dataset.workloadFilter || "all";
-    renderHubWorkloadLibrary();
-    setWorkloadLibraryOutput(`filtered workloads: ${state.workloadFilter} / ${state.workloadFamilyFilter}`);
-  });
-});
-
-elements.workloadFamilyFilterButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    state.workloadFamilyFilter = button.dataset.workloadFamilyFilter || "all";
-    renderHubWorkloadLibrary();
-    setWorkloadLibraryOutput(`filtered workloads: ${state.workloadFilter} / ${state.workloadFamilyFilter}`);
-  });
-});
-
-elements.workflowCatalogSearch?.addEventListener("input", () => {
-  renderWorkflowCatalog();
-});
-
-elements.workflowCatalogSearchClear?.addEventListener("click", () => {
-  if (elements.workflowCatalogSearch) {
-    elements.workflowCatalogSearch.value = "";
-  }
-  renderWorkflowCatalog();
-  setWorkflowCatalogOutput(localizedWorkflowCatalogLabel("workflowCatalogReady"));
-});
-
-elements.historyManageButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    manageRecentActionHistory(button.dataset.historyManage || "");
-  });
+bindHubLibraryControls({
+  elements,
+  state,
+  renderHubWorkloadLibrary,
+  setWorkloadLibraryOutput,
+  renderWorkflowCatalog,
+  setWorkflowCatalogOutput,
+  localizedWorkflowCatalogLabel,
 });
 
 elements.densityToggleButtons.forEach((button) => {
   button.addEventListener("click", () => {
     toggleHubDensityPanel(button.dataset.densityToggle || "");
   });
-});
-
-elements.historyImportInput?.addEventListener("change", async (event) => {
-  const input = event.currentTarget;
-  const file = input?.files?.[0];
-
-  try {
-    await importRecentActionHistory(file);
-  } catch (error) {
-    setProjectBundleOutput(formatHubOperatorError(error, {
-      actionLabel: "Importing recent action history",
-    }));
-  } finally {
-    if (input) {
-      input.value = "";
-    }
-  }
 });
 
 elements.workloadImportInput?.addEventListener("change", async (event) => {
@@ -5579,6 +4665,13 @@ elements.workloadImportInput?.addEventListener("change", async (event) => {
       input.value = "";
     }
   }
+});
+
+bindHubLocalizationPanel({
+  elements,
+  hubCopy,
+  rerenderLocalizedHubShell,
+  setOperationOutput,
 });
 
 elements.languageSelect?.addEventListener("change", async (event) => {

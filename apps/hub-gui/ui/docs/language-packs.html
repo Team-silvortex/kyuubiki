@@ -31,9 +31,11 @@
         <article class="docs-card">
           <h2>Current product posture</h2>
           <ul class="docs-list">
-            <li><strong>Built-in languages</strong>: English, Chinese, and Japanese remain first-class in the shipped UI.</li>
+            <li><strong>Built-in languages</strong>: English, Chinese, Japanese, and Spanish remain first-class in the shipped UI.</li>
             <li><strong>Growth path</strong>: future languages should prefer language packs over hard-coded repo-wide copy forks.</li>
             <li><strong>Current delivery</strong>: packs are local-first today, imported as JSON through the Workbench system surface.</li>
+            <li><strong>Hub alignment</strong>: Hub now resolves copy through a local override registry so future pack delivery has the same deep-merge seam.</li>
+            <li><strong>Hub entry</strong>: the current management card lives at <strong>Home -> Guides -> Localization overrides</strong>.</li>
           </ul>
         </article>
 
@@ -49,6 +51,11 @@
             <li>recommended metadata: <code>versionLine</code> and <code>targetAppVersion</code></li>
             <li>fallback rule: missing keys keep using the built-in copy</li>
           </ul>
+          <p class="docs-copy">
+            In Hub, the same panel now accepts either one language-pack envelope
+            or a full override registry snapshot, and it shows which shape was
+            imported most recently.
+          </p>
         </article>
 
         <article class="docs-card">

@@ -1,0 +1,113 @@
+function renderOverviewStrip(section, items) {
+  const cards = document.querySelectorAll(`#${section}-panel .hub-overview-card`);
+  items?.forEach((item, index) => {
+    const card = cards[index];
+    if (!card) return;
+    const eyebrow = card.querySelector(".hub-card__eyebrow");
+    const title = card.querySelector("h2");
+    const copy = card.querySelector(".desktop-shell-note");
+    if (eyebrow) eyebrow.textContent = item.label;
+    if (title) title.textContent = item.title;
+    if (copy) copy.textContent = item.copy;
+  });
+}
+
+function renderPanelTabGroup(group, labels) {
+  const buttons = document.querySelectorAll(`[data-panel-page-group="${group}"]`);
+  labels?.forEach((label, index) => {
+    const button = buttons[index];
+    if (button) button.textContent = label;
+  });
+}
+
+export function renderHubPanelCopy(params) {
+  const { elements, copy, setText, renderToolsPlatformLabel } = params;
+  renderPanelTabGroup("runtimes", copy.panels.runtimes.tabs);
+  renderPanelTabGroup("deploy", copy.panels.deploy.tabs);
+  renderPanelTabGroup("observe", copy.panels.observe.tabs);
+  renderPanelTabGroup("tools", copy.panels.tools.tabs);
+  renderOverviewStrip("runtimes", copy.panels.runtimes.overview);
+  renderOverviewStrip("observe", copy.panels.observe.overview);
+  renderOverviewStrip("tools", copy.panels.tools.overview);
+  setText(elements.runtimeLocalLabel, copy.panels.runtimes.local.label);
+  setText(elements.runtimeLocalTitle, copy.panels.runtimes.local.title);
+  setText(elements.runtimeLocalCopy, copy.panels.runtimes.local.copy);
+  setText(elements.runtimeLocalStatusLabel, copy.panels.runtimes.local.status);
+  setText(elements.runtimeLocalFrontendLabel, copy.panels.runtimes.local.frontend);
+  setText(elements.runtimeLocalControlLabel, copy.panels.runtimes.local.controlPlane);
+  setText(elements.runtimeLocalAgentsLabel, copy.panels.runtimes.local.agents);
+  setText(elements.runtimeHotLabel, copy.panels.runtimes.hot.label);
+  setText(elements.runtimeHotTitle, copy.panels.runtimes.hot.title);
+  setText(elements.runtimeHotCopy, copy.panels.runtimes.hot.copy);
+  setText(elements.runtimeHotStatusLabel, copy.panels.runtimes.hot.status);
+  setText(elements.runtimeHotModeLabel, copy.panels.runtimes.hot.mode);
+  setText(elements.runtimeHotActionLocal, copy.panels.runtimes.hot.local);
+  setText(elements.runtimeHotActionCloud, copy.panels.runtimes.hot.cloud);
+  setText(elements.runtimeHotActionDistributed, copy.panels.runtimes.hot.distributed);
+  setText(elements.runtimeHotActionRefresh, copy.panels.runtimes.hot.refreshStatus);
+  setText(elements.runtimeHotActionStop, copy.panels.runtimes.hot.stop);
+  setText(elements.runtimeHotLogsLabel, copy.panels.runtimes.hot.logs);
+  setText(elements.runtimeHotAutoLabel, copy.panels.runtimes.hot.autoRefresh);
+  setText(elements.runtimeHotIntervalLabel, copy.panels.runtimes.hot.interval);
+  setText(elements.runtimeHotRefreshLog, copy.panels.runtimes.hot.refreshLog);
+  setText(elements.runtimeHotCopyTail, copy.panels.runtimes.hot.copyTail);
+  setText(elements.runtimeHotClearView, copy.panels.runtimes.hot.clearView);
+  setText(elements.runtimeHotNote, copy.panels.runtimes.hot.note);
+  setText(elements.runtimeTargetsLabel, copy.panels.runtimes.targets.label);
+  setText(elements.runtimeTargetsTitle, copy.panels.runtimes.targets.title);
+  setText(elements.runtimeTargetsCopy, copy.panels.runtimes.targets.copy);
+  setText(elements.deployModesLabel, copy.panels.deploy.modes.label);
+  setText(elements.deployModesTitle, copy.panels.deploy.modes.title);
+  setText(elements.deployModesCopy, copy.panels.deploy.modes.copy);
+  setText(elements.deployActionLocal, copy.panels.deploy.modes.local);
+  setText(elements.deployActionCloud, copy.panels.deploy.modes.cloud);
+  setText(elements.deployActionDistributed, copy.panels.deploy.modes.distributed);
+  setText(elements.deployActionRestart, copy.panels.deploy.modes.restart);
+  setText(elements.deployBootstrapLabel, copy.panels.deploy.bootstrap.label);
+  setText(elements.deployBootstrapTitle, copy.panels.deploy.bootstrap.title);
+  setText(elements.deployBootstrapCopy, copy.panels.deploy.bootstrap.copy);
+  setText(elements.deployBootstrapValidate, copy.panels.deploy.bootstrap.validate);
+  setText(elements.deployBootstrapStage, copy.panels.deploy.bootstrap.stage);
+  setText(elements.deployBootstrapDoctor, copy.panels.deploy.bootstrap.doctor);
+  setText(elements.deployReleaseLabel, copy.panels.deploy.release.label);
+  setText(elements.deployReleaseTitle, copy.panels.deploy.release.title);
+  setText(elements.deployReleaseCopy, copy.panels.deploy.release.copy);
+  setText(elements.observeHealthLabel, copy.panels.observe.health.label);
+  setText(elements.observeHealthTitle, copy.panels.observe.health.title);
+  setText(elements.observeHealthCopy, copy.panels.observe.health.copy);
+  setText(elements.observeHealthWatchdogLabel, copy.panels.observe.health.watchdog);
+  setText(elements.observeHealthSecurityLabel, copy.panels.observe.health.security);
+  setText(elements.observeHealthFailuresLabel, copy.panels.observe.health.failures);
+  setText(elements.observeRuntimeTitle, copy.panels.observe.runtime.title);
+  setText(elements.observeRuntimeStatusLabel, copy.panels.observe.runtime.localRuntime);
+  setText(elements.observeRuntimeHotLabel, copy.panels.observe.runtime.hotLoop);
+  setText(elements.observeRuntimeModeLabel, copy.panels.observe.runtime.mode);
+  setText(elements.observeRuntimeSourceLabel, copy.panels.observe.runtime.logSource);
+  setText(elements.observeRuntimeOpen, copy.panels.observe.runtime.open);
+  setText(elements.observeRuntimeRefresh, copy.panels.observe.runtime.refresh);
+  setText(elements.observeRuntimeCopy, copy.panels.observe.runtime.copy);
+  setText(elements.observeStackTitle, copy.panels.observe.stack.title);
+  setText(elements.observeStackLogsLabel, copy.panels.observe.stack.logs);
+  setText(elements.observeStackAutoLabel, copy.panels.observe.stack.auto);
+  setText(elements.observeStackRefresh, copy.panels.observe.stack.refresh);
+  setText(elements.observeStackCopy, copy.panels.observe.stack.copy);
+  setText(elements.observeStackNote, copy.panels.observe.stack.note);
+  setText(elements.toolsPackagesLabel, copy.panels.tools.packages.label);
+  setText(elements.toolsPackagesTitle, copy.panels.tools.packages.title);
+  setText(elements.toolsPackagesCopy, copy.panels.tools.packages.copy);
+  renderToolsPlatformLabel();
+  setText(elements.toolsPackagesBenchmark, copy.panels.tools.packages.benchmark);
+  setText(elements.toolsPackagesValidate, copy.panels.tools.packages.validate);
+  setText(elements.toolsPackagesExport, copy.panels.tools.packages.export);
+  setText(elements.toolsPackagesStatus, copy.panels.tools.packages.status);
+  setText(elements.toolsPackagesStage, copy.panels.tools.packages.stage);
+  setText(elements.toolsPackagesBuild, copy.panels.tools.packages.build);
+  setText(elements.toolsPackagesVerify, copy.panels.tools.packages.verify);
+  setText(elements.toolsPackagesStop, copy.panels.tools.packages.stop);
+  setText(elements.toolsStatusLabel, copy.panels.tools.status.label);
+  setText(elements.toolsStatusTitle, copy.panels.tools.status.title);
+  setText(elements.toolsStatusCopy, copy.panels.tools.status.copy);
+  setText(elements.toolsOutputLabel, copy.panels.tools.output.label);
+  setText(elements.toolsOutputTitle, copy.panels.tools.output.title);
+  setText(elements.toolsOutputCopy, copy.panels.tools.output.copy);
+}

@@ -2,6 +2,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   @moduledoc false
 
   alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.WorkflowBridgeIntegrityRuntime
   alias KyuubikiWeb.WorkflowBundleRuntime
   alias KyuubikiWeb.WorkflowElectrostaticRuntime
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
@@ -153,8 +154,20 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.evaluate_thermal_guard" when is_map(config) ->
         WorkflowThermalRuntime.evaluate_thermal_guard(payload, config)
 
+      "transform.evaluate_electrostatic_guard" when is_map(config) ->
+        WorkflowElectrostaticRuntime.evaluate_electrostatic_guard(payload, config)
+
+      "transform.validate_electrostatic_heat_bridge" when is_map(config) ->
+        WorkflowBridgeIntegrityRuntime.validate_electrostatic_heat_bridge(payload, config)
+
       "transform.benchmark_coupled_heat_pair" when is_map(config) ->
         WorkflowThermalRuntime.benchmark_coupled_heat_pair(payload, config)
+
+      "transform.benchmark_electrostatic_pair" when is_map(config) ->
+        WorkflowElectrostaticRuntime.benchmark_electrostatic_pair(payload, config)
+
+      "transform.validate_heat_thermo_bridge" when is_map(config) ->
+        WorkflowBridgeIntegrityRuntime.validate_heat_thermo_bridge(payload, config)
 
       _ ->
         {:error, {:unsupported_workflow_transform_operator, operator_id}}
@@ -169,7 +182,8 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
          operator_id when is_binary(operator_id) <- Map.get(execution, "operator_id"),
          %{} = bridge_payload <- Map.get(execution, "bridge_payload"),
          %{} = bridge_config <- Map.get(execution, "bridge_config"),
-         {:ok, bridge_result} <- run_transform_operator(operator_id, bridge_payload, bridge_config) do
+         {:ok, bridge_result} <-
+           run_transform_operator(operator_id, bridge_payload, bridge_config) do
       {:ok,
        %{
          "result_contract" => "kyuubiki.workflow_focus_bridge_result/v1",
@@ -199,7 +213,10 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
         WorkflowReportingRuntime.extract_field_hotspots(payload, config || %{})
 
       "extract.electrostatic_result_diagnostics" ->
-        WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(payload, config || %{})
+        WorkflowElectrostaticRuntime.extract_electrostatic_result_diagnostics(
+          payload,
+          config || %{}
+        )
 
       "extract.electrostatic_peak_field" ->
         WorkflowReportingRuntime.extract_electrostatic_peak_field(payload, config || %{})
@@ -215,6 +232,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "extract.thermo_peak_response" ->
         WorkflowReportingRuntime.extract_thermo_peak_response(payload, config || %{})
+
+      "extract.bridge_integrity_diagnostics" ->
+        WorkflowBridgeIntegrityRuntime.extract_bridge_integrity_diagnostics(
+          payload,
+          config || %{}
+        )
 
       _ ->
         {:error, {:unsupported_workflow_extract_operator, operator_id}}

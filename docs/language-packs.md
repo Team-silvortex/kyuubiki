@@ -1,7 +1,7 @@
 # Workbench Language Packs
 
 Workbench language packs let `tamamono 1.x` grow beyond the built-in `en`,
-`zh`, and `ja` copy sets without hard-wiring every future language into the
+`zh`, `ja`, and `es` copy sets without hard-wiring every future language into the
 repo first.
 
 This is intentionally a local-first workflow today:
@@ -13,6 +13,30 @@ This is intentionally a local-first workflow today:
 
 The same surface is also the planned home for future remote language-pack
 delivery.
+
+## Hub alignment
+
+Hub is now wired to the same local-first copy philosophy through a lightweight
+override registry:
+
+- storage key: `hub.copy-overrides.v1`
+- merge rule: deep partial override on top of the built-in Hub dictionary
+- current scope: built-in Hub locales still ship in-tree, while overrides act as
+  the compatibility seam for future pack delivery
+- current operator entry: `Home -> Guides -> Localization overrides`
+
+This means Workbench already has operator-facing import and export flows, and
+Hub now has the underlying override contract ready without having to fork the
+entire built-in copy tree first.
+
+Hub currently accepts two local JSON entry shapes from that panel:
+
+- a single language-pack envelope with `language` plus `overrides`
+- a full Hub override registry with `defaults` and/or `languages`
+
+Single-pack imports are merged into the current Hub override registry and kept
+visible as pack metadata. Full-registry imports replace the current registry
+snapshot in one go.
 
 ## Current contract
 

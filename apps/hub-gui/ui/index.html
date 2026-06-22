@@ -204,6 +204,13 @@
               <input accept="application/json" class="hidden" id="workload-import-input" type="file" />
               <div class="hub-history-section">
                 <div class="desktop-shell-note" id="library-managed-workloads-label">Managed workloads</div>
+                <div class="hub-stack desktop-shell-action-row">
+                  <label class="hub-field hub-field--stacked hub-workflow-catalog-search">
+                    <span id="library-search-label">Search workloads</span>
+                    <input id="workload-library-search" placeholder="bridge frame axial thermal" type="text" />
+                  </label>
+                  <button id="library-search-clear" type="button">Clear search</button>
+                </div>
                 <div class="hub-filter-stack">
                   <div class="hub-history-filters desktop-shell-action-row">
                     <button class="desktop-shell-button-primary" data-workload-filter="all" id="library-filter-all">All</button>
@@ -472,6 +479,39 @@
                     <div class="hub-card__eyebrow">Top reasons</div>
                     <div class="desktop-shell-note" id="guides-gate-reasons">No gate reasons loaded yet.</div>
                   </div>
+                </article>
+
+                <article class="hub-card desktop-shell-surface-card">
+                  <div class="hub-card__intro">
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-localization-label">Localization overrides</div>
+                      <h2 id="guides-localization-title">Manage Hub copy overrides</h2>
+                    </div>
+                    <p class="desktop-shell-note" id="guides-localization-copy">
+                      Keep future Hub language growth visible. Import, export, or clear the local override registry without forking the built-in UI copy.
+                    </p>
+                  </div>
+                  <div class="hub-metrics">
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-active-language-label">Current language</span><strong id="guides-localization-active-language-value">English · built-in only</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-installed-languages-label">Override languages</span><strong id="guides-localization-installed-languages-value">none</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-default-layer-label">Default layer</span><strong id="guides-localization-default-layer-value">disabled</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-import-mode-label">Import shape</span><strong id="guides-localization-import-mode-value">none yet</strong></div>
+                    <div class="desktop-shell-metric-row"><span id="guides-localization-latest-asset-label">Latest asset</span><strong id="guides-localization-latest-asset-value">none</strong></div>
+                  </div>
+                  <div class="hub-stack">
+                    <div>
+                      <div class="hub-card__eyebrow" id="guides-localization-storage-key-label">Storage key</div>
+                      <div class="desktop-shell-note" id="guides-localization-storage-key-value">hub.copy-overrides.v1</div>
+                    </div>
+                  </div>
+                  <div class="hub-stack desktop-shell-action-row">
+                    <button id="guides-localization-import" type="button">Import JSON</button>
+                    <button id="guides-localization-export" type="button">Export registry</button>
+                    <button id="guides-localization-clear" type="button">Clear overrides</button>
+                  </div>
+                  <input accept="application/json" class="hidden" id="guides-localization-import-input" type="file" />
+                  <pre class="hub-log hub-log--compact" id="guides-localization-output">No Hub copy overrides are installed yet.</pre>
+                  <p class="desktop-shell-note" id="guides-localization-hint">Accepts either a single language-pack envelope or a full Hub registry JSON.</p>
                 </article>
               </div>
             </div>

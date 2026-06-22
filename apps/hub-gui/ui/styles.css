@@ -721,6 +721,14 @@ button:focus-visible,
   overflow-wrap: anywhere;
 }
 
+.hub-search-mark {
+  background: rgba(255, 184, 76, 0.28);
+  color: var(--text);
+  border: 1px solid rgba(255, 184, 76, 0.36);
+  border-radius: 0.3rem;
+  padding: 0 0.16rem;
+}
+
 .hub-history-item__controls {
   display: flex;
   gap: 0.45rem;
