@@ -1,6 +1,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use kyuubiki_engine::{EngineSolveRequest, solve};
+use kyuubiki_headless_sdk::{action_capability_manifest, direct_fem_capability_manifest};
 use kyuubiki_protocol::AnalysisResult;
 use kyuubiki_solver::profile_heat_plane_quad_2d;
 
@@ -118,6 +119,39 @@ pub(crate) fn run_case(case: &BenchmarkCase, repeat: usize) -> BenchmarkResult {
                     max_stress = result.max_stress;
                 })
             }
+            BenchmarkWorkload::HeadlessActionManifest => {
+                let manifest = action_capability_manifest();
+                let payload = serde_json::to_vec(&manifest)
+                    .map_err(|error| format!("manifest serialization failed: {error}"));
+                payload.map(|payload| {
+                    node_count = manifest.len();
+                    element_count = manifest
+                        .iter()
+                        .filter(|entry| entry.direct_fem_route.is_some())
+                        .count();
+                    dof_count = manifest
+                        .iter()
+                        .map(|entry| entry.required_payload_keys.len() + entry.output_keys.len())
+                        .sum();
+                    max_displacement = element_count as f64;
+                    max_stress = payload.len() as f64;
+                })
+            }
+            BenchmarkWorkload::DirectFemManifest => {
+                let manifest = direct_fem_capability_manifest();
+                let payload = serde_json::to_vec(&manifest)
+                    .map_err(|error| format!("direct FEM manifest serialization failed: {error}"));
+                payload.map(|payload| {
+                    node_count = manifest.len();
+                    element_count = manifest.len();
+                    dof_count = manifest
+                        .iter()
+                        .map(|entry| entry.required_payload_keys.len() + entry.output_keys.len())
+                        .sum();
+                    max_displacement = manifest.len() as f64;
+                    max_stress = payload.len() as f64;
+                })
+            }
         };
 
         durations.push(started.elapsed().as_secs_f64() * 1000.0);
@@ -191,6 +225,8 @@ fn workload_shape(workload: &BenchmarkWorkload) -> (usize, usize, usize) {
             request.elements.len(),
             request.nodes.len(),
         ),
+        BenchmarkWorkload::HeadlessActionManifest => (0, 0, 0),
+        BenchmarkWorkload::DirectFemManifest => (0, 0, 0),
     }
 }
 

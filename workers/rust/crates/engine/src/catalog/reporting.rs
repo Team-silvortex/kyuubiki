@@ -1,0 +1,133 @@
+use crate::catalog::descriptors::{built_in_export_descriptor, built_in_extract_descriptor};
+use kyuubiki_protocol::OperatorDescriptor;
+
+pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
+    vec![
+        built_in_extract_descriptor(
+            "extract.result_summary",
+            "multi_domain",
+            "result_summary",
+            "Extract a compact summary from a solver result artifact.",
+            &["extract", "summary", "headless_safe"],
+        ),
+        built_in_extract_descriptor(
+            "extract.field_statistics",
+            "multi_domain",
+            "field_statistics",
+            "Extract min/max/mean/sum/count statistics from a numeric field on result nodes or elements.",
+            &["extract", "statistics", "field", "headless_safe"],
+        ),
+        built_in_extract_descriptor(
+            "extract.field_hotspots",
+            "multi_domain",
+            "field_hotspots",
+            "Extract hotspot candidates from a numeric result field using an absolute or percentile threshold.",
+            &["extract", "hotspot", "threshold", "field", "headless_safe"],
+        ),
+        built_in_extract_descriptor(
+            "extract.electrostatic_result_diagnostics",
+            "multi_domain",
+            "electrostatic_result_diagnostics",
+            "Extract electrostatic diagnostics such as potential span, charge-density totals, and peak electric-field magnitude from an electrostatic result.",
+            &[
+                "extract",
+                "electrostatic",
+                "diagnostics",
+                "field",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
+            "extract.electrostatic_peak_field",
+            "electromagnetic",
+            "electrostatic_peak_field",
+            "Extract the peak electric-field element and flux-density extrema from an electrostatic quad result.",
+            &[
+                "extract",
+                "electrostatic",
+                "peak_field",
+                "postprocess",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
+            "extract.thermal_result_diagnostics",
+            "multi_domain",
+            "thermal_result_diagnostics",
+            "Extract thermal diagnostics such as temperature span, heat-load totals, and peak gradient or flux magnitudes from a heat result.",
+            &["extract", "thermal", "diagnostics", "heat", "headless_safe"],
+        ),
+        built_in_extract_descriptor(
+            "extract.heat_peak_flux",
+            "thermal",
+            "heat_peak_flux",
+            "Extract the peak heat-flux element and temperature-gradient extrema from a heat quad result.",
+            &[
+                "extract",
+                "thermal",
+                "heat_flux",
+                "postprocess",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
+            "extract.thermo_result_diagnostics",
+            "multi_domain",
+            "thermo_result_diagnostics",
+            "Extract thermo-mechanical diagnostics such as temperature-delta spread, peak displacement, and peak stress from a thermal structural result.",
+            &[
+                "extract",
+                "thermo_mechanical",
+                "diagnostics",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
+            "extract.thermo_peak_response",
+            "thermo_mechanical",
+            "thermo_peak_response",
+            "Extract the peak displacement node and peak von-Mises element from a thermo-mechanical quad result.",
+            &[
+                "extract",
+                "thermo_mechanical",
+                "peak_response",
+                "postprocess",
+                "headless_safe",
+            ],
+        ),
+        built_in_export_descriptor(
+            "export.summary_json",
+            "multi_domain",
+            "summary_json",
+            "Export a compact summary artifact as structured JSON content.",
+            &["export", "json", "summary", "headless_safe"],
+        ),
+        built_in_export_descriptor(
+            "export.summary_csv",
+            "multi_domain",
+            "summary_csv",
+            "Export a compact summary artifact as CSV text for downstream delivery.",
+            &["export", "csv", "summary", "headless_safe"],
+        ),
+        built_in_export_descriptor(
+            "export.alert_markdown",
+            "multi_domain",
+            "alert_markdown",
+            "Export a summary payload as a readable markdown alert document.",
+            &["export", "markdown", "alert", "headless_safe"],
+        ),
+        built_in_export_descriptor(
+            "export.diagnostics_bundle_markdown",
+            "multi_domain",
+            "diagnostics_bundle_markdown",
+            "Export a workflow diagnostics bundle and optional guard result as a readable markdown report.",
+            &[
+                "export",
+                "markdown",
+                "diagnostics",
+                "bundle",
+                "headless_safe",
+            ],
+        ),
+    ]
+}

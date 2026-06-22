@@ -1,5 +1,6 @@
 mod builtins;
 mod descriptors;
+mod reporting;
 
 use kyuubiki_protocol::OperatorDescriptor;
 

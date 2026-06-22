@@ -8,6 +8,7 @@ use std::process::Command;
 mod cross_platform;
 mod integrity;
 mod integrity_contract;
+mod integrity_versions;
 mod release;
 #[cfg(test)]
 mod tests;

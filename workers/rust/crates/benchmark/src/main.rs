@@ -1,9 +1,11 @@
 use std::{fs, process};
 
 mod catalog;
+mod catalog_defaults;
 mod compare;
 mod config;
 mod generators;
+mod headless_cases;
 mod models;
 mod runner;
 
@@ -13,12 +15,17 @@ use compare::{
     render_comparison_report,
 };
 use config::{BenchmarkConfig, OutputFormat};
+use headless_cases::{headless_sdk_cases, is_headless_sdk_matrix};
 use models::select_cases;
 use runner::build_report;
 
 fn main() {
     let config = BenchmarkConfig::from_env();
-    let cases = benchmark_cases(config.profile, &config.matrix);
+    let cases = if is_headless_sdk_matrix(&config.matrix) {
+        headless_sdk_cases()
+    } else {
+        benchmark_cases(config.profile, &config.matrix)
+    };
     let selected = select_cases(&cases, config.case_filter.as_deref());
     let report = build_report(&selected, config.repeat, config.profile, &config.matrix);
 
@@ -69,7 +76,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{BenchmarkConfig, OutputFormat, benchmark_cases};
+    use super::{BenchmarkConfig, OutputFormat, benchmark_cases, headless_sdk_cases};
     use crate::catalog::{
         BenchmarkCatalogSpec, catalog_spec_path_candidates, default_catalog_spec,
     };
@@ -206,5 +213,29 @@ mod tests {
         assert!(names.contains(&"mechanical-core"));
         assert!(names.contains(&"thermal-core"));
         assert!(names.contains(&"compound-core"));
+    }
+
+    #[test]
+    fn headless_sdk_matrix_runs_manifest_benchmarks() {
+        let cases = headless_sdk_cases();
+        let selected = cases.iter().collect::<Vec<_>>();
+        let report =
+            crate::runner::build_report(&selected, 2, BenchmarkProfile::Medium, "headless-sdk");
+
+        assert_eq!(report.matrix, "headless-sdk");
+        assert_eq!(report.cases.len(), 2);
+        assert!(report.cases.iter().all(|case| case.ok));
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.id == "headless-action-manifest" && case.node_count >= 40)
+        );
+        assert!(
+            report
+                .cases
+                .iter()
+                .any(|case| case.id == "direct-fem-manifest" && case.node_count == 26)
+        );
     }
 }

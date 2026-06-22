@@ -21,6 +21,8 @@ pub(crate) enum BenchmarkWorkload {
     PlaneTriangle2d(SolvePlaneTriangle2dRequest),
     PlaneQuad2d(SolvePlaneQuad2dRequest),
     HeatPlaneQuad2d(SolveHeatPlaneQuad2dRequest),
+    HeadlessActionManifest,
+    DirectFemManifest,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

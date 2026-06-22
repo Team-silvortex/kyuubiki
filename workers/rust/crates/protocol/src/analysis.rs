@@ -1,0 +1,68 @@
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+use crate::{
+    SolveBarResult, SolveBeam1dResult, SolveElectrostaticBar1dResult,
+    SolveElectrostaticPlaneQuad2dResult, SolveElectrostaticPlaneTriangle2dResult,
+    SolveFrame2dResult, SolveFrame3dResult, SolveHeatBar1dResult, SolveHeatPlaneQuad2dResult,
+    SolveHeatPlaneTriangle2dResult, SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult,
+    SolveSpring1dResult, SolveSpring2dResult, SolveSpring3dResult, SolveThermalBar1dResult,
+    SolveThermalBeam1dResult, SolveThermalFrame2dResult, SolveThermalFrame3dResult,
+    SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dResult,
+    SolveThermalTruss3dResult, SolveTorsion1dResult, SolveTruss2dResult, SolveTruss3dResult,
+};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AnalysisResult {
+    Bar1d(SolveBarResult),
+    ThermalBar1d(SolveThermalBar1dResult),
+    HeatBar1d(SolveHeatBar1dResult),
+    ElectrostaticBar1d(SolveElectrostaticBar1dResult),
+    ElectrostaticPlaneTriangle2d(SolveElectrostaticPlaneTriangle2dResult),
+    ElectrostaticPlaneQuad2d(SolveElectrostaticPlaneQuad2dResult),
+    HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dResult),
+    HeatPlaneQuad2d(SolveHeatPlaneQuad2dResult),
+    ThermalTruss2d(SolveThermalTruss2dResult),
+    ThermalTruss3d(SolveThermalTruss3dResult),
+    Spring1d(SolveSpring1dResult),
+    Spring2d(SolveSpring2dResult),
+    Spring3d(SolveSpring3dResult),
+    Beam1d(SolveBeam1dResult),
+    ThermalBeam1d(SolveThermalBeam1dResult),
+    Torsion1d(SolveTorsion1dResult),
+    Truss2d(SolveTruss2dResult),
+    Truss3d(SolveTruss3dResult),
+    Frame3d(SolveFrame3dResult),
+    PlaneTriangle2d(SolvePlaneTriangle2dResult),
+    ThermalPlaneTriangle2d(SolveThermalPlaneTriangle2dResult),
+    PlaneQuad2d(SolvePlaneQuad2dResult),
+    ThermalPlaneQuad2d(SolveThermalPlaneQuad2dResult),
+    Frame2d(SolveFrame2dResult),
+    ThermalFrame2d(SolveThermalFrame2dResult),
+    ThermalFrame3d(SolveThermalFrame3dResult),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ResultChunkKind {
+    Nodes,
+    Elements,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResultChunkRequest {
+    pub kind: ResultChunkKind,
+    pub offset: usize,
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResultChunkResponse {
+    pub kind: ResultChunkKind,
+    pub offset: usize,
+    pub limit: usize,
+    pub returned: usize,
+    pub total: usize,
+    pub items: Vec<Value>,
+}

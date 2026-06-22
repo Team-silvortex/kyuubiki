@@ -7,8 +7,8 @@ use std::thread;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use kyuubiki_protocol::{
-    AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, Job,
-    JobStatus, ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
+    AgentClusterDescriptor, AgentDescriptor, CancelJobRequest, ClusterPeerDescriptor, JobStatus,
+    ProgressEvent, RPC_VERSION, RpcMethod, RpcProgress, RpcRequest, RpcResponse,
     RuntimeAuthorityDescriptor, SolveBarRequest, SolveBeam1dRequest,
     SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
@@ -20,268 +20,35 @@ use kyuubiki_protocol::{
     SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
-    MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d,
-    solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,
-    solve_frame_3d, solve_heat_bar_1d, solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
-    solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
-    solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
-    solve_thermal_frame_3d, solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
-    solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
-    solve_truss_3d,
+    solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
+    solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
+    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
+    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
+    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
+    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
+
+mod config;
+mod transport;
+mod worker;
+
+use config::{AgentConfig, Command};
+use transport::{
+    AgentReply, FrameReadError, HeartbeatHandle, frame_error_message, read_frame,
+    write_agent_reply, write_frame,
+};
+use worker::run_worker;
 
 fn main() {
     match Command::from_env() {
-        Command::Worker(config) => {
-            let job = Job::new(config.job_id, config.project_id, config.case_id);
-            let solver = MockSolver::new(config.steps);
-
-            for event in solver.solve(&job) {
-                println!("{}", format_event(&event));
-            }
-        }
+        Command::Worker(config) => run_worker(config),
         Command::Agent(config) => {
             if let Err(error) = run_agent(&config) {
                 eprintln!("agent error: {error}");
                 std::process::exit(1);
             }
         }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct WorkerConfig {
-    job_id: String,
-    project_id: String,
-    case_id: String,
-    steps: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-struct AgentConfig {
-    host: String,
-    port: u16,
-    agent_id: Option<String>,
-    advertise_host: Option<String>,
-    orchestrator_url: Option<String>,
-    cluster_api_token: Option<String>,
-    agent_fingerprint: Option<String>,
-    certificate_id: Option<String>,
-    cert_path: Option<String>,
-    key_path: Option<String>,
-    ca_cert_path: Option<String>,
-    register_interval_ms: u64,
-    cluster_id: Option<String>,
-    peers: Vec<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum Command {
-    Worker(WorkerConfig),
-    Agent(AgentConfig),
-}
-
-impl Command {
-    fn from_env() -> Self {
-        let args = std::env::args().skip(1).collect::<Vec<_>>();
-
-        match args.first().map(String::as_str) {
-            Some("agent") => Self::Agent(AgentConfig::from_args(&args[1..])),
-            _ => Self::Worker(WorkerConfig::from_args(&args)),
-        }
-    }
-}
-
-impl WorkerConfig {
-    fn from_args(args: &[String]) -> Self {
-        let mut config = Self {
-            job_id: "job-local-1".to_string(),
-            project_id: "project-local-1".to_string(),
-            case_id: "case-local-1".to_string(),
-            steps: 5,
-        };
-
-        let mut args = args.iter();
-
-        while let Some(arg) = args.next() {
-            match arg.as_str() {
-                "--job-id" => {
-                    if let Some(value) = args.next() {
-                        config.job_id = value.clone();
-                    }
-                }
-                "--project-id" => {
-                    if let Some(value) = args.next() {
-                        config.project_id = value.clone();
-                    }
-                }
-                "--case-id" => {
-                    if let Some(value) = args.next() {
-                        config.case_id = value.clone();
-                    }
-                }
-                "--steps" => {
-                    if let Some(value) = args.next() {
-                        config.steps = value.parse().unwrap_or(config.steps);
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        config
-    }
-}
-
-impl AgentConfig {
-    fn from_args(args: &[String]) -> Self {
-        let mut config = Self {
-            host: "127.0.0.1".to_string(),
-            port: 5001,
-            agent_id: None,
-            advertise_host: None,
-            orchestrator_url: None,
-            cluster_api_token: None,
-            agent_fingerprint: None,
-            certificate_id: None,
-            cert_path: None,
-            key_path: None,
-            ca_cert_path: None,
-            register_interval_ms: 5_000,
-            cluster_id: None,
-            peers: vec![],
-        };
-
-        let mut args = args.iter();
-
-        while let Some(arg) = args.next() {
-            match arg.as_str() {
-                "--host" => {
-                    if let Some(value) = args.next() {
-                        config.host = value.clone();
-                    }
-                }
-                "--port" => {
-                    if let Some(value) = args.next() {
-                        config.port = value.parse().unwrap_or(config.port);
-                    }
-                }
-                "--agent-id" => {
-                    if let Some(value) = args.next() {
-                        config.agent_id = Some(value.clone());
-                    }
-                }
-                "--advertise-host" => {
-                    if let Some(value) = args.next() {
-                        config.advertise_host = Some(value.clone());
-                    }
-                }
-                "--orchestrator-url" => {
-                    if let Some(value) = args.next() {
-                        config.orchestrator_url = Some(value.clone());
-                    }
-                }
-                "--cluster-api-token" => {
-                    if let Some(value) = args.next() {
-                        config.cluster_api_token = Some(value.clone());
-                    }
-                }
-                "--agent-fingerprint" => {
-                    if let Some(value) = args.next() {
-                        config.agent_fingerprint = Some(value.clone());
-                    }
-                }
-                "--certificate-id" => {
-                    if let Some(value) = args.next() {
-                        config.certificate_id = Some(value.clone());
-                    }
-                }
-                "--cert-path" => {
-                    if let Some(value) = args.next() {
-                        config.cert_path = Some(value.clone());
-                    }
-                }
-                "--key-path" => {
-                    if let Some(value) = args.next() {
-                        config.key_path = Some(value.clone());
-                    }
-                }
-                "--ca-cert-path" => {
-                    if let Some(value) = args.next() {
-                        config.ca_cert_path = Some(value.clone());
-                    }
-                }
-                "--register-interval-ms" => {
-                    if let Some(value) = args.next() {
-                        config.register_interval_ms =
-                            value.parse().unwrap_or(config.register_interval_ms);
-                    }
-                }
-                "--cluster-id" => {
-                    if let Some(value) = args.next() {
-                        config.cluster_id = Some(value.clone());
-                    }
-                }
-                "--peer" => {
-                    if let Some(value) = args.next() {
-                        config.peers.push(value.clone());
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        if config.agent_id.is_none() {
-            config.agent_id = std::env::var("KYUUBIKI_AGENT_ID").ok();
-        }
-
-        if config.advertise_host.is_none() {
-            config.advertise_host = std::env::var("KYUUBIKI_AGENT_ADVERTISE_HOST").ok();
-        }
-
-        if config.orchestrator_url.is_none() {
-            config.orchestrator_url = std::env::var("KYUUBIKI_ORCHESTRATOR_URL").ok();
-        }
-
-        if config.cluster_id.is_none() {
-            config.cluster_id = std::env::var("KYUUBIKI_AGENT_CLUSTER_ID").ok();
-        }
-
-        if config.cluster_api_token.is_none() {
-            config.cluster_api_token = std::env::var("KYUUBIKI_CLUSTER_API_TOKEN").ok();
-        }
-
-        if config.agent_fingerprint.is_none() {
-            config.agent_fingerprint = std::env::var("KYUUBIKI_AGENT_FINGERPRINT").ok();
-        }
-        if config.certificate_id.is_none() {
-            config.certificate_id = std::env::var("KYUUBIKI_AGENT_CERTIFICATE_ID").ok();
-        }
-        if config.cert_path.is_none() {
-            config.cert_path = std::env::var("KYUUBIKI_AGENT_CERT_PATH").ok();
-        }
-        if config.key_path.is_none() {
-            config.key_path = std::env::var("KYUUBIKI_AGENT_KEY_PATH").ok();
-        }
-        if config.ca_cert_path.is_none() {
-            config.ca_cert_path = std::env::var("KYUUBIKI_AGENT_CA_CERT_PATH").ok();
-        }
-
-        if config.peers.is_empty() {
-            config.peers = std::env::var("KYUUBIKI_AGENT_PEERS")
-                .ok()
-                .map(|value| {
-                    value
-                        .split(',')
-                        .map(str::trim)
-                        .filter(|entry| !entry.is_empty())
-                        .map(ToString::to_string)
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-        }
-
-        config
     }
 }
 
@@ -2115,47 +1882,6 @@ fn build_progress_frames(
         .collect()
 }
 
-fn read_frame(stream: &mut TcpStream) -> Result<Vec<u8>, FrameReadError> {
-    let mut header = [0_u8; 4];
-
-    match stream.read_exact(&mut header) {
-        Ok(()) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::UnexpectedEof => {
-            return Err(FrameReadError::ConnectionClosed);
-        }
-        Err(error) => return Err(FrameReadError::Io(error)),
-    }
-
-    let frame_length = u32::from_be_bytes(header) as usize;
-    let mut payload = vec![0_u8; frame_length];
-    stream
-        .read_exact(&mut payload)
-        .map_err(FrameReadError::Io)?;
-
-    Ok(payload)
-}
-
-fn write_frame(stream: &mut TcpStream, payload: &[u8]) -> std::io::Result<()> {
-    let frame_length = u32::try_from(payload.len()).map_err(|_| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "payload too large for 4-byte frame length",
-        )
-    })?;
-
-    stream.write_all(&frame_length.to_be_bytes())?;
-    stream.write_all(payload)
-}
-
-enum FrameReadError {
-    ConnectionClosed,
-    Io(std::io::Error),
-}
-
-enum AgentReply {
-    Stream(Vec<RpcProgress>, RpcResponse),
-}
-
 fn cancellation_registry() -> &'static Mutex<HashSet<String>> {
     static REGISTRY: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
     REGISTRY.get_or_init(|| Mutex::new(HashSet::new()))
@@ -2181,39 +1907,6 @@ fn extract_job_id(params: &serde_json::Value) -> Option<String> {
         .and_then(|value| value.get("job_id"))
         .and_then(|value| value.as_str())
         .map(|value| value.to_string())
-}
-
-fn write_agent_reply(writer: &Arc<Mutex<TcpStream>>, reply: AgentReply) -> Result<(), String> {
-    match reply {
-        AgentReply::Stream(progress_frames, final_response) => {
-            for progress_frame in progress_frames {
-                write_json_frame(writer, &progress_frame)?;
-            }
-
-            write_json_frame(writer, &final_response)?;
-            Ok(())
-        }
-    }
-}
-
-fn write_json_frame<T: serde::Serialize>(
-    writer: &Arc<Mutex<TcpStream>>,
-    payload: &T,
-) -> Result<(), String> {
-    let encoded = serde_json::to_vec(payload)
-        .map_err(|error| format!("failed to serialize response frame: {error}"))?;
-
-    let mut guard = writer
-        .lock()
-        .map_err(|_| "failed to lock tcp writer".to_string())?;
-
-    write_frame(&mut guard, &encoded)
-        .map_err(|error| format!("failed to write response frame: {error}"))
-}
-
-struct HeartbeatHandle {
-    running: Arc<AtomicBool>,
-    join_handle: Option<thread::JoinHandle<()>>,
 }
 
 struct AgentRegistrationHandle {
@@ -2515,13 +2208,6 @@ fn request_agent_descriptor(address: &str) -> Result<AgentDescriptor, String> {
         .map_err(|error| format!("failed to decode peer descriptor: {error}"))
 }
 
-fn frame_error_message(error: FrameReadError) -> String {
-    match error {
-        FrameReadError::ConnectionClosed => "connection closed".to_string(),
-        FrameReadError::Io(error) => error.to_string(),
-    }
-}
-
 fn post_json(
     url: &str,
     payload: &serde_json::Value,
@@ -2687,87 +2373,17 @@ fn parse_http_url(url: &str) -> Result<ParsedHttpUrl, String> {
     Ok(ParsedHttpUrl { host, port, path })
 }
 
-impl HeartbeatHandle {
-    fn spawn(writer: Arc<Mutex<TcpStream>>, request_id: String, job_id: String) -> Self {
-        let running = Arc::new(AtomicBool::new(true));
-        let running_clone = running.clone();
-
-        let join_handle = thread::spawn(move || {
-            while running_clone.load(Ordering::SeqCst) {
-                thread::sleep(Duration::from_millis(1_000));
-
-                if !running_clone.load(Ordering::SeqCst) {
-                    break;
-                }
-
-                let heartbeat = RpcProgress::heartbeat(
-                    request_id.clone(),
-                    ProgressEvent {
-                        job_id: job_id.clone(),
-                        stage: JobStatus::Solving,
-                        progress: 0.7,
-                        residual: None,
-                        iteration: None,
-                        peak_memory: None,
-                        message: Some("agent heartbeat: solver still active".to_string()),
-                    },
-                );
-
-                if write_json_frame(&writer, &heartbeat).is_err() {
-                    break;
-                }
-            }
-        });
-
-        Self {
-            running,
-            join_handle: Some(join_handle),
-        }
-    }
-
-    fn stop(mut self) {
-        self.running.store(false, Ordering::SeqCst);
-
-        if let Some(join_handle) = self.join_handle.take() {
-            let _ = join_handle.join();
-        }
-    }
-}
-
-fn format_event(event: &ProgressEvent) -> String {
-    format!(
-        "event|{}|{}|{:.2}|{}|{}|{}|{}",
-        event.job_id,
-        event.stage.as_str(),
-        event.progress,
-        optional_u64(event.iteration),
-        optional_f64(event.residual),
-        optional_u64(event.peak_memory),
-        optional_string(event.message.as_deref())
-    )
-}
-
-fn optional_u64(value: Option<u64>) -> String {
-    value.map(|number| number.to_string()).unwrap_or_default()
-}
-
-fn optional_f64(value: Option<f64>) -> String {
-    value.map(|number| number.to_string()).unwrap_or_default()
-}
-
-fn optional_string(value: Option<&str>) -> String {
-    value.unwrap_or_default().replace('|', "/")
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
     use super::{
-        AgentConfig, AgentReply, Command, WorkerConfig, build_agent_descriptor,
-        build_peer_descriptors, compute_cluster_health_score, filter_self_peers, format_event,
-        handle_request_bytes, normalize_peer_addresses, parse_http_url,
+        build_agent_descriptor, build_peer_descriptors, compute_cluster_health_score,
+        filter_self_peers, handle_request_bytes, normalize_peer_addresses, parse_http_url,
     };
+    use crate::config::{AgentConfig, Command, WorkerConfig};
+    use crate::transport::AgentReply;
+    use crate::worker::format_event;
     use kyuubiki_protocol::{
         AgentDescriptor, Beam1dElementInput, Beam1dNodeInput, ClusterPeerDescriptor,
         ElectrostaticBar1dElementInput, ElectrostaticBar1dNodeInput, ElectrostaticPlaneNodeInput,

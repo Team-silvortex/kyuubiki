@@ -1,3 +1,6 @@
+mod capabilities;
+#[cfg(test)]
+mod contract_tests;
 mod contracts;
 mod direct_fem;
 mod executor;
@@ -19,11 +22,17 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeSet, HashMap};
 
+pub use capabilities::{
+    HeadlessActionCapability, action_capability_manifest, find_action_capability,
+};
 pub use contracts::{
     HeadlessActionContract, HeadlessEngine, HeadlessRisk, HeadlessRuntimeStyle,
     all_action_contracts, find_action_contract,
 };
-pub use direct_fem::direct_fem_submit_route;
+pub use direct_fem::{
+    DirectFemCapability, DirectFemRoute, all_direct_fem_routes, direct_fem_capability_manifest,
+    direct_fem_submit_route,
+};
 pub use executor::{
     HeadlessExecutor, HeadlessExecutorError, HeadlessExecutorOutcome, MockHeadlessExecutor,
     collect_executor_compatibility_issues, execute_batch_with_executor, executor_supports_action,

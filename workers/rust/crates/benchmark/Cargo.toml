@@ -6,6 +6,7 @@ license.workspace = true
 
 [dependencies]
 kyuubiki-engine = { path = "../engine" }
+kyuubiki-headless-sdk = { path = "../headless-sdk" }
 kyuubiki-protocol = { path = "../protocol" }
 kyuubiki-solver = { path = "../solver" }
 libc = "0.2"
