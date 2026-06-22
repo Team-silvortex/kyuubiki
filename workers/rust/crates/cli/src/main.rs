@@ -338,6 +338,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(test)]
 fn handle_request_bytes(payload: &[u8]) -> AgentReply {
     let request = match serde_json::from_slice::<RpcRequest>(payload) {
         Ok(request) => request,

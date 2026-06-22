@@ -111,6 +111,8 @@ They now also expose a small workflow layer:
 - generate Rust-driven material screening workflows, starting with a thermal
   heat-spreader candidate comparison for Aluminum 6061, Copper C110, and
   in-plane pyrolytic graphite
+- generate structural panel material workflows over aluminum, steel, and carbon
+  fiber candidates without opening the Workbench
 - build material research reports from headless result payloads, with explicit
   metric specs, weighted ranking, and visible missing-metric warnings
 - expose optimization profiles as first-class report contracts, including
@@ -131,4 +133,5 @@ kyuubiki-material-report heat-spreader --results results.json --out report.json 
 kyuubiki-material-report thermo-shield --results thermo-results.json --out thermo-report.json --json
 kyuubiki-material-report thermo-shield --results thermo-results.json --profile profile.json --json
 kyuubiki-material-report structural-panel --results structural-results.json --json
+kyuubiki-material-report structural-panel --results headless-run-report.json --json
 ```

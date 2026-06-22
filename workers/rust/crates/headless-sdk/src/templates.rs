@@ -48,6 +48,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["material", "thermo", "screening", "stress"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_structural_panel_screening",
+        title: "Material Structural Panel Screening",
+        description: "Compare aluminum, steel, and carbon fiber candidates in a lightweight structural panel study.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &["material", "mechanical", "screening", "stiffness"],
+    },
+    HeadlessTemplateDescriptor {
         id: "direct_plane_quad",
         title: "Direct Plane Quad",
         description: "Submit a plane quad structural solve directly and fetch the final result.",

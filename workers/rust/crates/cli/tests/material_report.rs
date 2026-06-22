@@ -241,3 +241,49 @@ fn material_report_cli_builds_structural_panel_report() {
         Some(5)
     );
 }
+
+#[test]
+fn material_report_cli_reads_headless_run_report_result_fetch_steps() {
+    let input = write_temp_json(
+        "headless-run",
+        &json!({
+            "schema_version": "kyuubiki.headless-execution-run/v1",
+            "workflow_id": "template.material_structural_panel_screening",
+            "mode": "execute:service",
+            "status": "ok",
+            "steps": [
+                { "index": 1, "action": "solve_plane_quad_2d", "status": "executed", "result_preview": { "job_id": "job-a" } },
+                { "index": 2, "action": "job_wait", "status": "executed", "result_preview": { "status": "completed" } },
+                { "index": 3, "action": "result_fetch", "status": "executed", "result_preview": { "result": { "max_stress": 210.0e6, "max_displacement": 0.0009 } } },
+                { "index": 4, "action": "solve_plane_quad_2d", "status": "executed", "result_preview": { "job_id": "job-b" } },
+                { "index": 5, "action": "job_wait", "status": "executed", "result_preview": { "status": "completed" } },
+                { "index": 6, "action": "result_fetch", "status": "executed", "result_preview": { "result": { "max_stress": 160.0e6, "max_displacement": 0.00042 } } },
+                { "index": 7, "action": "solve_plane_quad_2d", "status": "executed", "result_preview": { "job_id": "job-c" } },
+                { "index": 8, "action": "job_wait", "status": "executed", "result_preview": { "status": "completed" } },
+                { "index": 9, "action": "result_fetch", "status": "executed", "result_preview": { "result": { "max_stress": 120.0e6, "max_displacement": 0.00055 } } }
+            ]
+        }),
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args([
+            "structural-panel",
+            "--results",
+            input.to_str().expect("input path"),
+            "--json",
+        ])
+        .output()
+        .expect("run material report");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("stdout report json");
+    assert_eq!(
+        report["winner_candidate_id"].as_str(),
+        Some("carbon_fiber_quasi_iso")
+    );
+    assert_eq!(report["warnings"].as_array().map(Vec::len), Some(0));
+}

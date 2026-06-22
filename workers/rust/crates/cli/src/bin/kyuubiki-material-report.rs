@@ -123,7 +123,7 @@ impl Flags {
 }
 
 fn usage() -> String {
-    "kyuubiki-material-report <heat-spreader|thermo-shield|structural-panel> --results results.json [--profile profile.json] [--out report.json] [--json]".to_string()
+    "kyuubiki-material-report <heat-spreader|thermo-shield|structural-panel> --results results.json [--profile profile.json] [--out report.json] [--json]\n\nresults.json may be a raw result array, an object with results/result_payloads, or a kyuubiki.headless-execution-run/v1 report.".to_string()
 }
 
 fn read_json(path: &str) -> Result<Value, String> {
@@ -152,12 +152,45 @@ fn extract_result_payloads(payload: &Value) -> Result<Vec<Value>, String> {
     if let Some(array) = payload.as_array() {
         return Ok(array.clone());
     }
+    if payload.get("schema_version").and_then(Value::as_str)
+        == Some("kyuubiki.headless-execution-run/v1")
+    {
+        return extract_result_payloads_from_headless_run(payload);
+    }
     for key in ["results", "result_payloads"] {
         if let Some(array) = payload.get(key).and_then(Value::as_array) {
             return Ok(array.clone());
         }
     }
-    Err("material report input must be an array or include a results array".to_string())
+    Err("material report input must be an array, include a results array, or be a headless execution run report".to_string())
+}
+
+fn extract_result_payloads_from_headless_run(payload: &Value) -> Result<Vec<Value>, String> {
+    let results = payload
+        .get("steps")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter(|step| {
+            step.get("action").and_then(Value::as_str) == Some("result_fetch")
+                && step.get("status").and_then(Value::as_str) != Some("blocked")
+                && step.get("status").and_then(Value::as_str) != Some("failed")
+        })
+        .filter_map(|step| {
+            let preview = step.get("result_preview")?;
+            preview
+                .get("result")
+                .cloned()
+                .or_else(|| Some(preview.clone()))
+        })
+        .collect::<Vec<_>>();
+    if results.is_empty() {
+        return Err(
+            "headless execution run report does not contain successful result_fetch payloads"
+                .to_string(),
+        );
+    }
+    Ok(results)
 }
 
 fn print_report(report: &Value) {
