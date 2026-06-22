@@ -99,7 +99,10 @@ fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
         .env("MIX_ENV", "test")
         .env("KYUUBIKI_STORAGE_BACKEND", "sqlite")
         .env("KYUUBIKI_DEPLOYMENT_MODE", "local")
-        .env("KYUUBIKI_HEADLESS_LIVE_SCENARIO", "electrostatic_quad_summary")
+        .env(
+            "KYUUBIKI_HEADLESS_LIVE_SCENARIO",
+            "electrostatic_quad_summary",
+        )
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
@@ -110,7 +113,11 @@ fn start_live_server() -> Result<LiveServer, Box<dyn Error>> {
     let stderr_log = Arc::new(Mutex::new(String::new()));
     let (ready_tx, ready_rx) = mpsc::channel();
 
-    spawn_log_reader(BufReader::new(stdout), Arc::clone(&stdout_log), Some(ready_tx));
+    spawn_log_reader(
+        BufReader::new(stdout),
+        Arc::clone(&stdout_log),
+        Some(ready_tx),
+    );
     spawn_log_reader(BufReader::new(stderr), Arc::clone(&stderr_log), None);
 
     let port = ready_rx.recv_timeout(Duration::from_secs(60))?;
@@ -393,16 +400,27 @@ fn rust_headless_cli_executes_live_workflow_graph_submit() {
     let workflow_payload = parse_json_output(&workflow_output);
     assert_eq!(workflow_payload["status"], "ok");
     assert_eq!(workflow_payload["executed_step_count"], 3);
-    assert_eq!(workflow_payload["steps"][0]["result_preview"]["status"], "queued");
-    assert_eq!(workflow_payload["steps"][1]["result_preview"]["status"], "completed");
-    assert_eq!(workflow_payload["steps"][2]["result_preview"]["status"], "completed");
+    assert_eq!(
+        workflow_payload["steps"][0]["result_preview"]["status"],
+        "queued"
+    );
+    assert_eq!(
+        workflow_payload["steps"][1]["result_preview"]["status"],
+        "completed"
+    );
+    assert_eq!(
+        workflow_payload["steps"][2]["result_preview"]["status"],
+        "completed"
+    );
     assert_eq!(
         workflow_payload["steps"][2]["result_preview"]["result"]["workflow_id"],
         "workflow.inline.electrostatic-plane-quad-2d"
     );
-    assert!(workflow_payload["steps"][2]["result_preview"]["result"]["completed_nodes"]
-        .as_array()
-        .is_some_and(|nodes| nodes.iter().any(|node| node == "solve_electrostatic")));
+    assert!(
+        workflow_payload["steps"][2]["result_preview"]["result"]["completed_nodes"]
+            .as_array()
+            .is_some_and(|nodes| nodes.iter().any(|node| node == "solve_electrostatic"))
+    );
     assert!(
         workflow_payload["steps"][2]["result_preview"]["result"]["artifacts"]["result_output.result"]["max_electric_field"]
             .as_f64()

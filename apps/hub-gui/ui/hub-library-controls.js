@@ -9,6 +9,22 @@ export function bindHubLibraryControls(params) {
     localizedWorkflowCatalogLabel,
   } = params;
 
+  const scheduleRender = (render) => {
+    let frame = 0;
+    return () => {
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        render();
+      });
+    };
+  };
+
+  const scheduleWorkflowCatalogRender = scheduleRender(renderWorkflowCatalog);
+  const scheduleWorkloadLibraryRender = scheduleRender(renderHubWorkloadLibrary);
+
   elements.workloadFilterButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.workloadFilter = button.dataset.workloadFilter || "all";
@@ -26,11 +42,11 @@ export function bindHubLibraryControls(params) {
   });
 
   elements.workflowCatalogSearch?.addEventListener("input", () => {
-    renderWorkflowCatalog();
+    scheduleWorkflowCatalogRender();
   });
 
   elements.workloadLibrarySearch?.addEventListener("input", () => {
-    renderHubWorkloadLibrary();
+    scheduleWorkloadLibraryRender();
   });
 
   elements.librarySearchClear?.addEventListener("click", () => {

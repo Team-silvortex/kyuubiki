@@ -1,7 +1,8 @@
 use crate::{
-    HeadlessRuntimeStyle, build_template_document, find_action_contract, list_template_categories,
-    list_templates, normalize_workflow_document, search_templates, suggest_template_details,
-    suggest_templates, validate_batch,
+    HeadlessRuntimeStyle, build_execution_plan, build_template_document, find_action_contract,
+    heat_spreader_screening_candidates, list_template_categories, list_templates,
+    normalize_workflow_document, search_templates, suggest_template_details, suggest_templates,
+    validate_batch,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -54,6 +55,7 @@ fn template_category_index_is_sorted_and_unique() {
             "browser",
             "electromagnetic",
             "hybrid",
+            "materials",
             "mechanical",
             "mesh",
             "orchestration",
@@ -168,6 +170,7 @@ fn template_category_distribution_matches_current_catalog() {
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
+        ("materials", 1),
         ("mechanical", 12),
         ("mesh", 1),
         ("orchestration", 1),
@@ -176,6 +179,56 @@ fn template_category_distribution_matches_current_catalog() {
         ("thermo_mechanical", 7),
     ]);
     assert_eq!(distribution, expected);
+}
+
+#[test]
+fn material_screening_template_expands_candidate_solve_chains() {
+    let candidates = heat_spreader_screening_candidates();
+    assert_eq!(candidates.len(), 3);
+
+    let document = build_template_document("material_heat_spreader_screening", None)
+        .expect("material screening template should build");
+    let steps = &document.workflow.steps;
+    assert_eq!(steps.len(), candidates.len() * 3);
+
+    for (candidate_index, candidate) in candidates.iter().enumerate() {
+        let base = candidate_index * 3;
+        let solve_step_number = base + 1;
+        assert_eq!(steps[base].action, "solve_heat_plane_quad_2d");
+        assert_eq!(steps[base + 1].action, "job_wait");
+        assert_eq!(steps[base + 2].action, "result_fetch");
+        assert_eq!(
+            steps[base].payload["research"]["candidate_id"],
+            candidate.id
+        );
+        assert_eq!(
+            steps[base].payload["model"]["elements"][0]["conductivity"],
+            candidate.thermal_conductivity_w_mk
+        );
+        assert_eq!(
+            steps[base + 1].payload["job_id"],
+            format!("{{{{steps.{solve_step_number}.result.job_id}}}}")
+        );
+    }
+
+    let batch = normalize_workflow_document(&document).unwrap();
+    let plan = build_execution_plan(&batch);
+    assert!(plan.ok);
+    assert!(plan.compatibility.service_only_ok);
+    let policy = plan
+        .policy
+        .as_ref()
+        .expect("material screening plan should include policy");
+    assert_eq!(
+        policy.recommended_runtime,
+        HeadlessRuntimeStyle::ServiceOnly
+    );
+    assert_eq!(plan.steps.len(), 9);
+    assert!(
+        plan.executor_matrix
+            .iter()
+            .any(|entry| entry.executor == "service" && entry.compatible)
+    );
 }
 
 #[test]
@@ -193,6 +246,33 @@ fn template_runtime_style_matches_policy_summary() {
             template.id
         );
     }
+}
+
+#[test]
+fn execution_plan_reports_runtime_and_confirmation_gates() {
+    let service_document = build_template_document("workflow_submit_monitor", None).unwrap();
+    let service_batch = normalize_workflow_document(&service_document).unwrap();
+    let service_plan = build_execution_plan(&service_batch);
+    assert_eq!(service_plan.schema_version, "kyuubiki.headless-plan/v1");
+    assert!(service_plan.ok);
+    assert!(service_plan.compatibility.service_only_ok);
+    assert_eq!(service_plan.confirmation_count, 0);
+    assert_eq!(service_plan.steps[1].bindings[0].source_step, 1);
+    assert_eq!(service_plan.steps[1].bindings[0].output, "job_id");
+
+    let browser_document = build_template_document("browser_capture_review", None).unwrap();
+    let browser_batch = normalize_workflow_document(&browser_document).unwrap();
+    let browser_plan = build_execution_plan(&browser_batch);
+    assert!(browser_plan.compatibility.browser_session_required);
+    assert_eq!(browser_plan.confirmation_count, 1);
+    assert_eq!(browser_plan.confirmations[0].flag, "--allow-sensitive");
+    let service_executor = browser_plan
+        .executor_matrix
+        .iter()
+        .find(|entry| entry.executor == "service")
+        .expect("service executor plan");
+    assert!(!service_executor.compatible);
+    assert_eq!(service_executor.issue_count, 3);
 }
 
 #[test]

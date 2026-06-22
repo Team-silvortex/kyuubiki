@@ -32,6 +32,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["mesh", "direct", "solve"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_heat_spreader_screening",
+        title: "Material Heat Spreader Screening",
+        description: "Compare aluminum, copper, and pyrolytic graphite candidates in a service-only heat-spreader study.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &["material", "thermal", "screening", "conductivity"],
+    },
+    HeadlessTemplateDescriptor {
         id: "direct_plane_quad",
         title: "Direct Plane Quad",
         description: "Submit a plane quad structural solve directly and fetch the final result.",

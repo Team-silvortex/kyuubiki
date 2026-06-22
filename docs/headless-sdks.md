@@ -16,6 +16,8 @@ The headless SDK layer gives them a cleaner tool surface:
 - poll job state
 - describe reachable solver agents
 - talk directly to solver RPC agents when the control plane is optional
+- build a machine-readable Rust execution plan before running a workflow
+- start concrete material-research examples without opening the workbench
 
 ## Language targets
 
@@ -103,6 +105,12 @@ They now also expose a small workflow layer:
 
 - submit one job by solve kind
 - submit many jobs in sequence
+- plan headless workflow execution before submission, including runtime style,
+  engine mix, step bindings, executor compatibility, and required
+  sensitive/destructive confirmations
+- generate Rust-driven material screening workflows, starting with a thermal
+  heat-spreader candidate comparison for Aluminum 6061, Copper C110, and
+  in-plane pyrolytic graphite
 - validate workflow graphs and workflow dataset contracts before submission
 - wait for terminal job states by polling the control plane
 - optionally bypass the control plane and solve directly over solver RPC

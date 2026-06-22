@@ -56,6 +56,11 @@ Recent additions:
 - workflow catalog and inline-graph runs lifted into the session and agent layers
 - catalog workflow descriptors can be fetched directly, and catalog runs can auto-resolve
   their backing graph for output validation
+- headless workflow plans now expose runtime style, engine mix, step bindings,
+  and required confirmation flags before live execution
+- the Rust headless SDK now includes a concrete material-research template,
+  `material_heat_spreader_screening`, for comparing thermal heat-spreader
+  candidates through solve/wait/result chains
 
 The current SDK cut focuses on the smallest useful headless surface plus a
 thin workflow layer:
@@ -64,6 +69,7 @@ thin workflow layer:
 - reachable agent discovery
 - jobs/results/export CRUD through the control plane
 - workflow catalog discovery, operator discovery, and workflow job submission
+- headless workflow plan/preflight reports for CI and agent policy checks
 - workflow graph and workflow dataset contract validation helpers
 - distributed workflow execution hints through dispatch policy, operator fetch
   plan, placement tags, and required capability fields

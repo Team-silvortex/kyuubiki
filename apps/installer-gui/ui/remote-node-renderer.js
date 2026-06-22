@@ -35,6 +35,24 @@ export function renderRemoteNodeGroups({
   timeLabel,
   certificateStatusFor,
 }) {
+  const appendText = (parent, tagName, text, className = "") => {
+    const element = document.createElement(tagName);
+    if (className) element.className = className;
+    element.textContent = String(text ?? "");
+    parent.appendChild(element);
+    return element;
+  };
+
+  const appendActionButton = (parent, action, label, index, className = "") => {
+    const button = document.createElement("button");
+    if (className) button.className = className;
+    button.dataset.remoteNodeAction = action;
+    button.dataset.remoteNodeIndex = String(index);
+    button.textContent = label;
+    parent.appendChild(button);
+    return button;
+  };
+
   groups.forEach((groupNodesForKey, key) => {
     const groupShell = document.createElement("section");
     groupShell.className = "remote-node-group";
@@ -52,35 +70,41 @@ export function renderRemoteNodeGroups({
       card.dataset.nodeStatus = statusOf(node);
       card.dataset.certificateStatus = certificateStatus.tone;
       card.dataset.remoteNodeCardIndex = String(index);
-      card.innerHTML = `
-        <div class="remote-node-card__header">
-          <strong>${node.label || node.target_host}</strong>
-          <span>${node.ssh_user}@${node.target_host}:${node.ssh_port ?? 22}</span>
-        </div>
-        <div class="remote-node-card__meta">
-          <span>${node.remote_workspace}</span>
-          <span>${node.control_mode || "orchestrated"} · ${node.agent_id} · ${node.advertise_host}:${node.agent_port}</span>
-          <span class="remote-node-card__certificate">
-            <span class="remote-node-card__certificate-pill" data-certificate-tone="${certificateStatus.tone}">
-              ${certificateStatus.tone}
-            </span>
-            <span>${certificateStatus.summary}</span>
-          </span>
-          <span>certificate ${certificateStatus.tone} · ${certificateStatus.detail}</span>
-        </div>
-        <div class="remote-node-card__status">
-          <strong>${statusOf(node).toUpperCase()}</strong>
-          <span>${node.control_mode === "offline_mesh" ? `cluster ${node.cluster_id || "(unset)"} · peers ${(node.peer_endpoints || []).length}` : node.orchestrator_url || "orchestrator unset"}</span>
-          <span>${summary(node)}</span>
-          <span>Probe: ${timeLabel(node.last_probe_unix_ms)} · Action: ${timeLabel(node.last_action_unix_ms)}</span>
-        </div>
-        <div class="action-row">
-          <button data-remote-node-action="use" data-remote-node-index="${index}">Use</button>
-          <button data-remote-node-action="probe" data-remote-node-index="${index}">Probe</button>
-          <button data-remote-node-action="bootstrap" data-remote-node-index="${index}">Bootstrap</button>
-          <button class="primary" data-remote-node-action="start" data-remote-node-index="${index}">Start agent</button>
-        </div>
-      `;
+
+      const header = document.createElement("div");
+      header.className = "remote-node-card__header";
+      appendText(header, "strong", node.label || node.target_host);
+      appendText(header, "span", `${node.ssh_user}@${node.target_host}:${node.ssh_port ?? 22}`);
+
+      const meta = document.createElement("div");
+      meta.className = "remote-node-card__meta";
+      appendText(meta, "span", node.remote_workspace);
+      appendText(meta, "span", `${node.control_mode || "orchestrated"} · ${node.agent_id} · ${node.advertise_host}:${node.agent_port}`);
+      const certificate = document.createElement("span");
+      certificate.className = "remote-node-card__certificate";
+      const certificatePill = appendText(certificate, "span", certificateStatus.tone, "remote-node-card__certificate-pill");
+      certificatePill.dataset.certificateTone = certificateStatus.tone;
+      appendText(certificate, "span", certificateStatus.summary);
+      meta.appendChild(certificate);
+      appendText(meta, "span", `certificate ${certificateStatus.tone} · ${certificateStatus.detail}`);
+
+      const status = document.createElement("div");
+      status.className = "remote-node-card__status";
+      appendText(status, "strong", statusOf(node).toUpperCase());
+      appendText(status, "span", node.control_mode === "offline_mesh"
+        ? `cluster ${node.cluster_id || "(unset)"} · peers ${(node.peer_endpoints || []).length}`
+        : node.orchestrator_url || "orchestrator unset");
+      appendText(status, "span", summary(node));
+      appendText(status, "span", `Probe: ${timeLabel(node.last_probe_unix_ms)} · Action: ${timeLabel(node.last_action_unix_ms)}`);
+
+      const actions = document.createElement("div");
+      actions.className = "action-row";
+      appendActionButton(actions, "use", "Use", index);
+      appendActionButton(actions, "probe", "Probe", index);
+      appendActionButton(actions, "bootstrap", "Bootstrap", index);
+      appendActionButton(actions, "start", "Start agent", index, "primary");
+
+      card.append(header, meta, status, actions);
       groupShell.appendChild(card);
     });
     host.appendChild(groupShell);

@@ -90,6 +90,10 @@ export function WorkbenchSystemStorageCard() {
           <span>local storage keys</span>
           <strong>{snapshot?.localStorageKeys ?? "--"}</strong>
         </div>
+        <div className="sidebar-list__row">
+          <span>unregistered keys</span>
+          <strong>{snapshot ? `${snapshot.unknownKeys} / ${formatBytes(snapshot.unknownBytes)}` : "--"}</strong>
+        </div>
       </div>
 
       {largestBuckets.length > 0 ? (
@@ -100,10 +104,14 @@ export function WorkbenchSystemStorageCard() {
                 <span>{bucket.label}</span>
                 <strong>{formatBytes(bucket.bytes)}</strong>
               </div>
-              <div className="sidebar-list__row">
-                <span>entries</span>
-                <strong>{bucket.entries}</strong>
-              </div>
+                  <div className="sidebar-list__row">
+                    <span>entries</span>
+                    <strong>{bucket.entries}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>class</span>
+                    <strong>{bucket.dataClass}</strong>
+                  </div>
               {bucket.mode === "safe" ? (
                 <div className="button-row">
                   <button
@@ -156,6 +164,10 @@ export function WorkbenchSystemStorageCard() {
               <span>read-only rules</span>
               <strong>careful buckets are inspect-first</strong>
             </div>
+            <div className="sidebar-list__row">
+              <span>unregistered local keys</span>
+              <strong>{snapshot ? `${snapshot.unknownKeys} / ${formatBytes(snapshot.unknownBytes)}` : "--"}</strong>
+            </div>
           </div>
           <div style={{ display: "grid", gap: "0.65rem" }}>
             {storageRules.map((rule) => {
@@ -169,6 +181,18 @@ export function WorkbenchSystemStorageCard() {
                   <div className="sidebar-list__row">
                     <span>policy</span>
                     <strong>{rule.cleanupLabel}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>authority</span>
+                    <strong>{rule.authority}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>data class</span>
+                    <strong>{rule.dataClass}</strong>
+                  </div>
+                  <div className="sidebar-list__row">
+                    <span>portable</span>
+                    <strong>{rule.portable ? "yes" : "no"}</strong>
                   </div>
                   <span className="card-copy">{rule.detail}</span>
                   {rule.keyPrefixes.map((prefix) => (

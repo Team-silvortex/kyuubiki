@@ -1,6 +1,7 @@
 import path from "node:path";
 import { collectArtifactManifest, printFailedAutomationStep, readOptionalJsonFile, resolveRunModeLabel, withAutomationExecutor, fail } from "./kyuubiki-cli-runtime.mjs";
 import { loadHeadlessInputDocument, normalizeHeadlessExecutionBatch, runHeadlessExecutionBatch, summarizeHeadlessExecutionBatch, validateHeadlessExecutionBatch } from "./kyuubiki-headless-batch.mjs";
+import { buildHeadlessExecutionPlan } from "./kyuubiki-headless-plan.mjs";
 import { buildHeadlessTemplateDocument, listHeadlessTemplates, resolveHeadlessTemplateSelection } from "./kyuubiki-headless-templates.mjs";
 import { writeOutputFile } from "./kyuubiki-project-bundle-io.mjs";
 
@@ -111,6 +112,30 @@ export async function handleHeadlessValidate(inputPath, flags) {
   for (const warning of report.warnings) console.log(`warning: ${warning}`);
   for (const issue of report.issues) console.log(`- ${issue}`);
   if (!report.ok) process.exitCode = 1;
+}
+
+export async function handleHeadlessPlan(inputPath, flags) {
+  const batch = normalizeHeadlessExecutionBatch(await loadHeadlessInputDocument(inputPath));
+  const plan = buildHeadlessExecutionPlan(batch);
+  if (typeof flags.out === "string") {
+    await writeOutputFile(flags.out, JSON.stringify(plan, null, 2));
+  }
+  if (flags.json) {
+    console.log(JSON.stringify(plan, null, 2));
+    if (!plan.ok) process.exitCode = 1;
+    return;
+  }
+  console.log(`Headless plan: ${plan.workflow_id}`);
+  console.log(`Runtime: ${plan.policy?.recommended_runtime ?? "unknown"}`);
+  console.log(`Steps: ${plan.steps.length}`);
+  console.log(`Confirmations: ${plan.confirmation_count}`);
+  console.log(`Service only: ${plan.compatibility.service_only.ok ? "yes" : "no"}`);
+  if (plan.compatibility.browser_session_required) console.log("Requires desktop browser session: yes");
+  for (const confirmation of plan.confirmations) {
+    console.log(`confirm: step ${confirmation.index} ${confirmation.action} needs ${confirmation.flag}`);
+  }
+  if (typeof flags.out === "string") console.log(`Plan: ${path.resolve(flags.out)}`);
+  if (!plan.ok) process.exitCode = 1;
 }
 
 export async function handleHeadlessRun(inputPath, flags) {

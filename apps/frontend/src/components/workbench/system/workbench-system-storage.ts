@@ -5,6 +5,9 @@ type StorageBucketDefinition = {
   label: string;
   keyPrefixes: string[];
   mode: "safe" | "careful";
+  authority: "workbench" | "hub" | "installer" | "legacy";
+  dataClass: "source_of_truth" | "cache" | "preference" | "receipt" | "legacy";
+  portable: boolean;
   cleanupLabel: string;
   detail: string;
 };
@@ -15,6 +18,9 @@ export type WorkbenchStorageBucket = {
   bytes: number;
   entries: number;
   mode: "safe" | "careful";
+  authority: StorageBucketDefinition["authority"];
+  dataClass: StorageBucketDefinition["dataClass"];
+  portable: boolean;
 };
 
 export type WorkbenchStorageSnapshot = {
@@ -23,6 +29,8 @@ export type WorkbenchStorageSnapshot = {
   quotaBytes: number | null;
   usageBytes: number | null;
   buckets: WorkbenchStorageBucket[];
+  unknownKeys: number;
+  unknownBytes: number;
 };
 
 export type WorkbenchStorageRule = {
@@ -30,8 +38,16 @@ export type WorkbenchStorageRule = {
   label: string;
   keyPrefixes: string[];
   mode: "safe" | "careful";
+  authority: StorageBucketDefinition["authority"];
+  dataClass: StorageBucketDefinition["dataClass"];
+  portable: boolean;
   cleanupLabel: string;
   detail: string;
+};
+
+export type WorkbenchStorageManifestEntry = WorkbenchStorageRule & {
+  entries: number;
+  bytes: number;
 };
 
 const STORAGE_BUCKETS: StorageBucketDefinition[] = [
@@ -43,6 +59,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
       "kyuubiki.workbench.workflowSnapshots.payload.v1:",
     ],
     mode: "safe",
+    authority: "workbench",
+    dataClass: "cache",
+    portable: true,
     cleanupLabel: "Safe to clear",
     detail: "Execution snapshots and deferred payload chunks used for workflow trace replay.",
   },
@@ -51,6 +70,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     label: "Workflow drafts",
     keyPrefixes: ["kyuubiki.workbench.workflowDrafts.v1"],
     mode: "safe",
+    authority: "workbench",
+    dataClass: "cache",
+    portable: true,
     cleanupLabel: "Safe to clear",
     detail: "Temporary workflow draft saves created during composition before promotion.",
   },
@@ -61,6 +83,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
       "kyuubiki.workbench.workflowPackageMaintenanceLog.v1",
     ],
     mode: "safe",
+    authority: "workbench",
+    dataClass: "receipt",
+    portable: false,
     cleanupLabel: "Safe to clear",
     detail: "Short-lived runtime cache and package maintenance receipts stored in local browser persistence.",
   },
@@ -69,6 +94,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
     label: "Local workflow library",
     keyPrefixes: ["kyuubiki.workbench.workflowLibrary.v1"],
     mode: "careful",
+    authority: "workbench",
+    dataClass: "source_of_truth",
+    portable: true,
     cleanupLabel: "Manual review first",
     detail: "User-kept local workflow assets promoted from catalog or package imports.",
   },
@@ -80,6 +108,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
       "kyuubiki-workbench-snippet-presets",
     ],
     mode: "careful",
+    authority: "workbench",
+    dataClass: "preference",
+    portable: true,
     cleanupLabel: "Manual review first",
     detail: "Saved macro presets and snippet presets tied to project scripting workflows. Secret-like fields are blocked at save time, but non-sensitive automation parameters are still persisted.",
   },
@@ -91,6 +122,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
       "kyuubiki.workflow.favoriteTemplateChainAliases",
     ],
     mode: "careful",
+    authority: "workbench",
+    dataClass: "preference",
+    portable: true,
     cleanupLabel: "Manual review first",
     detail: "Favorite template chains and user aliases used by workflow search and quick insertion.",
   },
@@ -103,6 +137,9 @@ const STORAGE_BUCKETS: StorageBucketDefinition[] = [
       "kyuubiki-workbench-language-packs",
     ],
     mode: "careful",
+    authority: "legacy",
+    dataClass: "legacy",
+    portable: false,
     cleanupLabel: "Manual review first",
     detail: "Theme, runtime mode, language packs, and legacy workbench storage keys. Runtime secrets now stay in memory for the active session.",
   },
@@ -127,6 +164,10 @@ function listLocalStorageEntries() {
 
 function bucketMatchesKey(bucket: StorageBucketDefinition, key: string) {
   return bucket.keyPrefixes.some((prefix) => key === prefix || key.startsWith(prefix));
+}
+
+function findBucketForKey(key: string) {
+  return STORAGE_BUCKETS.find((bucket) => bucketMatchesKey(bucket, key)) ?? null;
 }
 
 async function readStorageEstimate() {
@@ -158,6 +199,9 @@ export async function inspectWorkbenchStorage(): Promise<WorkbenchStorageSnapsho
       bytes,
       entries: matchingEntries.length,
       mode: bucket.mode,
+      authority: bucket.authority,
+      dataClass: bucket.dataClass,
+      portable: bucket.portable,
     } satisfies WorkbenchStorageBucket;
   }).sort((left, right) => right.bytes - left.bytes);
 
@@ -166,6 +210,11 @@ export async function inspectWorkbenchStorage(): Promise<WorkbenchStorageSnapsho
     0,
   );
   const estimate = await readStorageEstimate();
+  const unknownEntries = entries.filter((entry) => !findBucketForKey(entry.key));
+  const unknownBytes = unknownEntries.reduce(
+    (sum, entry) => sum + encodeBytes(entry.key) + encodeBytes(entry.value),
+    0,
+  );
 
   return {
     totalBytes,
@@ -173,6 +222,8 @@ export async function inspectWorkbenchStorage(): Promise<WorkbenchStorageSnapsho
     quotaBytes: estimate.quotaBytes,
     usageBytes: estimate.usageBytes,
     buckets,
+    unknownKeys: unknownEntries.length,
+    unknownBytes,
   };
 }
 
@@ -182,9 +233,25 @@ export function listWorkbenchStorageRules(): WorkbenchStorageRule[] {
     label: bucket.label,
     keyPrefixes: bucket.keyPrefixes,
     mode: bucket.mode,
+    authority: bucket.authority,
+    dataClass: bucket.dataClass,
+    portable: bucket.portable,
     cleanupLabel: bucket.cleanupLabel,
     detail: bucket.detail,
   }));
+}
+
+export async function buildWorkbenchStorageManifest(): Promise<WorkbenchStorageManifestEntry[]> {
+  const snapshot = await inspectWorkbenchStorage();
+  const rules = listWorkbenchStorageRules();
+  return rules.map((rule) => {
+    const bucket = snapshot.buckets.find((entry) => entry.id === rule.id);
+    return {
+      ...rule,
+      entries: bucket?.entries ?? 0,
+      bytes: bucket?.bytes ?? 0,
+    };
+  });
 }
 
 export function clearWorkbenchStorageBucket(bucketId: string) {

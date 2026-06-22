@@ -22,7 +22,14 @@ It currently contains:
   FEM kernels, sparse/dense solve paths, and numerical utilities.
 - `crates/cli`
   TCP solver agent, local runtime entry point, and remote self-registration
-  behavior.
+  behavior. The `kyuubiki-headless` binary also exposes workflow
+  template/init/inspect/validate/plan/run flows for service-only, browser-only,
+  and hybrid headless automation. `plan` emits executor compatibility for
+  `mock`, `service`, and `hybrid` before a live run is attempted.
+- `crates/headless-sdk`
+  Rust-first headless workflow templates, execution plans, dry-run support, and
+  concrete R&D examples such as `material_heat_spreader_screening` for thermal
+  material candidate comparison.
 - `crates/deploy-server`
   Read-only Rust download/deployment metadata server for update catalogs,
   deploy descriptors, and artifact file distribution.

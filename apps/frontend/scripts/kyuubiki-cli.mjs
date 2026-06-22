@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { fail, parseFlags, positionalArgs } from "./kyuubiki-cli-runtime.mjs";
-import { assertHeadlessInputPath, handleHeadlessInit, handleHeadlessInspect, handleHeadlessRender, handleHeadlessRun, handleHeadlessTemplates, handleHeadlessValidate } from "./kyuubiki-cli-headless.mjs";
+import { assertHeadlessInputPath, handleHeadlessInit, handleHeadlessInspect, handleHeadlessPlan, handleHeadlessRender, handleHeadlessRun, handleHeadlessTemplates, handleHeadlessValidate } from "./kyuubiki-cli-headless.mjs";
 import {
   handleProjectAutomationPresets,
   handleProjectAutomationRender,
@@ -40,6 +40,7 @@ Usage:
   kyuubiki headless init [--template <id>] [--runtime-style service_only|browser_only|hybrid] [--query text] [--workflow-id workflow.id] [--out output.json] [--json]
   kyuubiki headless inspect <input> [--json]
   kyuubiki headless validate <input> [--json]
+  kyuubiki headless plan <input> [--json] [--out plan.json]
   kyuubiki headless render <input> [--json] [--out output.json]
   kyuubiki headless run <input> [--state context.json] [--json] [--report-out report.json] [--execute] [--allow-sensitive] [--allow-destructive] [--artifacts-dir dir] [--api-base-url url]
   kyuubiki macro inspect <macro.json> [--json]
@@ -88,6 +89,7 @@ async function handleHeadlessScope(command, args, flags) {
   assertHeadlessInputPath(inputPath);
   if (command === "inspect") return handleHeadlessInspect(inputPath, flags);
   if (command === "validate") return handleHeadlessValidate(inputPath, flags);
+  if (command === "plan") return handleHeadlessPlan(inputPath, flags);
   if (command === "render") return handleHeadlessRender(inputPath, flags);
   if (command === "run") return handleHeadlessRun(inputPath, flags);
   fail(`unknown headless command: ${command}`);

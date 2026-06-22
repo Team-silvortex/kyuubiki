@@ -38,6 +38,7 @@ pub(super) fn build_template_workflow(
                 json!({ "job_id": "{{steps.1.result.job_id}}" }),
             ),
         ],
+        "material_heat_spreader_screening" => crate::build_heat_spreader_screening_steps(),
         "direct_plane_quad" => vec![
             HeadlessWorkflowStep::new(
                 "solve_plane_quad_2d",

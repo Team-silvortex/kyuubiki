@@ -2,6 +2,8 @@ mod contracts;
 mod direct_fem;
 mod executor;
 mod hybrid_executor;
+mod material_research;
+mod plan;
 mod run;
 mod service_executor;
 mod template_search;
@@ -24,6 +26,14 @@ pub use executor::{
     collect_executor_compatibility_issues, execute_batch_with_executor, executor_supports_action,
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
+pub use material_research::{
+    MaterialResearchCandidate, build_heat_spreader_screening_steps,
+    heat_spreader_screening_candidates,
+};
+pub use plan::{
+    HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,
+    HeadlessPlanConfirmation, HeadlessPlanStep, build_execution_plan,
+};
 pub use run::{
     HeadlessBlockedConfirmation, HeadlessExecutionStepReport, HeadlessRunReport, run_batch_dry,
 };

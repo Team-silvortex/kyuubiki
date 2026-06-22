@@ -12,7 +12,11 @@ test("hub shell registers section switching behavior", () => {
   const projectBundles = read("ui/hub-project-bundles.js");
   const runtimeHelpers = read("ui/hub-runtime-helpers.js");
   const assistantEngine = read("ui/hub-assistant-engine.js");
+  const assistantI18n = read("ui/hub-i18n-assistant.js");
+  const homeCopy = read("ui/hub-home-copy.js");
+  const recentActions = read("ui/hub-recent-actions.js");
   const workloadLibrary = read("ui/hub-workload-library.js");
+  const workloadRuntime = read("ui/hub-workload-runtime.js");
   const workloadActions = read("ui/hub-workload-actions.js");
   const runtimeActions = read("ui/hub-runtime-actions.js");
   const projectActions = read("ui/hub-project-actions.js");
@@ -26,6 +30,10 @@ test("hub shell registers section switching behavior", () => {
   assertMatches(runtimeActions, HUB_MODULE_PATTERNS.runtimeActions);
   assertMatches(desktopActions, HUB_MODULE_PATTERNS.desktopActions);
   assertMatches(assistantEngine, HUB_MODULE_PATTERNS.assistantEngine);
+  assertMatches(assistantI18n, HUB_MODULE_PATTERNS.assistantI18n);
+  assertMatches(homeCopy, HUB_MODULE_PATTERNS.homeCopy);
+  assertMatches(recentActions, HUB_MODULE_PATTERNS.recentActions);
   assertMatches(workloadLibrary, HUB_MODULE_PATTERNS.workloadLibrary);
+  assertMatches(workloadRuntime, HUB_MODULE_PATTERNS.workloadRuntime);
   assertMatches(workloadActions, HUB_MODULE_PATTERNS.workloadActions);
 });

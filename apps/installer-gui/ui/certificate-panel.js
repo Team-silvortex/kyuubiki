@@ -6,6 +6,14 @@ function formatTime(unixMs) {
   return typeof unixMs === "number" && unixMs > 0 ? new Date(unixMs).toLocaleString() : "n/a";
 }
 
+function appendText(parent, tagName, text, className = "") {
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = String(text ?? "");
+  parent.appendChild(element);
+  return element;
+}
+
 export function mountCertificatePanel() {
   const inventoryHost = ids("certificate-inventory-list");
   const summaryHost = ids("certificate-inventory-summary");
@@ -53,29 +61,40 @@ export function mountCertificatePanel() {
     lastCertificates.forEach((entry) => {
       const article = document.createElement("article");
       article.className = "certificate-record";
-      article.innerHTML = `
-        <div class="certificate-record__top">
-          <strong>${entry.label}</strong>
-          <span class="certificate-record__pill" data-status="${entry.status}">${entry.status}</span>
-        </div>
-        <div class="certificate-record__meta">
-          <span>${entry.control_mode} · ${entry.agent_id}</span>
-          <span>${entry.target_host} -> ${entry.advertise_host}</span>
-          <span>serial ${entry.serial || "n/a"}</span>
-          <span>expires ${entry.not_after || "n/a"}</span>
-        </div>
-        <code>${entry.certificate_id}</code>
-        <code>${entry.fingerprint || "fingerprint unavailable"}</code>
-        <div class="certificate-record__paths">
-          <span>cert ${entry.cert_path}</span>
-          <span>key ${entry.key_path}</span>
-          <span>issued ${formatTime(entry.issued_at_unix_ms)}</span>
-          <span>revoked ${formatTime(entry.revoked_at_unix_ms)}</span>
-        </div>
-        <div class="action-row">
-          <button data-certificate-action="use-for-remote-agent" data-certificate-id="${entry.certificate_id}" ${entry.status !== "active" ? "disabled" : ""}>Use for remote agent</button>
-        </div>
-      `;
+
+      const top = document.createElement("div");
+      top.className = "certificate-record__top";
+      appendText(top, "strong", entry.label);
+      const pill = appendText(top, "span", entry.status, "certificate-record__pill");
+      pill.dataset.status = entry.status || "";
+
+      const meta = document.createElement("div");
+      meta.className = "certificate-record__meta";
+      appendText(meta, "span", `${entry.control_mode} · ${entry.agent_id}`);
+      appendText(meta, "span", `${entry.target_host} -> ${entry.advertise_host}`);
+      appendText(meta, "span", `serial ${entry.serial || "n/a"}`);
+      appendText(meta, "span", `expires ${entry.not_after || "n/a"}`);
+
+      const paths = document.createElement("div");
+      paths.className = "certificate-record__paths";
+      appendText(paths, "span", `cert ${entry.cert_path}`);
+      appendText(paths, "span", `key ${entry.key_path}`);
+      appendText(paths, "span", `issued ${formatTime(entry.issued_at_unix_ms)}`);
+      appendText(paths, "span", `revoked ${formatTime(entry.revoked_at_unix_ms)}`);
+
+      const actions = document.createElement("div");
+      actions.className = "action-row";
+      const useButton = document.createElement("button");
+      useButton.dataset.certificateAction = "use-for-remote-agent";
+      useButton.dataset.certificateId = entry.certificate_id || "";
+      useButton.disabled = entry.status !== "active";
+      useButton.textContent = "Use for remote agent";
+      actions.appendChild(useButton);
+
+      appendText(article, "code", entry.certificate_id);
+      article.prepend(top, meta);
+      appendText(article, "code", entry.fingerprint || "fingerprint unavailable");
+      article.append(paths, actions);
       inventoryHost.appendChild(article);
     });
   }

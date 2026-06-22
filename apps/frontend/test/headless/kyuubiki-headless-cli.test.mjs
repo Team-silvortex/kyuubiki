@@ -78,6 +78,44 @@ test("headless validate accepts a generated service workflow and reports service
   assert.equal(report.policy.safe_for_service_only, true);
 });
 
+test("headless plan reports service runtime and step bindings", async () => {
+  const tempDir = await makeTempDir();
+  const workflowPath = path.join(tempDir, "workflow.json");
+  const planPath = path.join(tempDir, "plan.json");
+
+  const init = runCli(["headless", "init", "--template", "workflow_submit_monitor", "--out", workflowPath]);
+  assert.equal(init.status, 0, init.stderr);
+
+  const plan = runCli(["headless", "plan", workflowPath, "--json", "--out", planPath]);
+  assert.equal(plan.status, 0, plan.stderr);
+  const payload = JSON.parse(plan.stdout);
+  assert.equal(payload.schema_version, "kyuubiki.headless-plan/v1");
+  assert.equal(payload.policy.recommended_runtime, "service_only");
+  assert.equal(payload.compatibility.service_only.ok, true);
+  assert.equal(payload.confirmation_count, 0);
+  assert.deepEqual(payload.steps[1].bindings, [{ source_step: 1, output: "job_id" }]);
+
+  const savedPlan = JSON.parse(await readFile(planPath, "utf8"));
+  assert.equal(savedPlan.workflow_id, payload.workflow_id);
+});
+
+test("headless plan surfaces sensitive confirmation gates", async () => {
+  const tempDir = await makeTempDir();
+  const workflowPath = path.join(tempDir, "workflow.json");
+
+  const init = runCli(["headless", "init", "--template", "browser_capture_review", "--out", workflowPath]);
+  assert.equal(init.status, 0, init.stderr);
+
+  const plan = runCli(["headless", "plan", workflowPath, "--json"]);
+  assert.equal(plan.status, 0, plan.stderr);
+  const payload = JSON.parse(plan.stdout);
+  assert.equal(payload.policy.recommended_runtime, "browser_only");
+  assert.equal(payload.compatibility.browser_session_required, true);
+  assert.equal(payload.confirmation_count, 1);
+  assert.equal(payload.confirmations[0].action, "snapshot");
+  assert.equal(payload.confirmations[0].flag, "--allow-sensitive");
+});
+
 test("headless run simulates a workflow document and resolves prior-step bindings", async () => {
   const tempDir = await makeTempDir();
   const workflowPath = path.join(tempDir, "workflow.json");
