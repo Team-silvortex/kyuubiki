@@ -91,10 +91,35 @@ collect_platform_paths() {
   append_if_exists "dist/$platform"
 }
 
+bundle_subdirs_for_platform() {
+  case "$1" in
+    macos) printf '%s\n' macos dmg ;;
+    linux) printf '%s\n' appimage deb rpm ;;
+    windows) printf '%s\n' msi nsis ;;
+    *) return 1 ;;
+  esac
+}
+
 collect_bundle_paths() {
-  append_if_exists "apps/hub-gui/src-tauri/target/release/bundle"
-  append_if_exists "apps/workbench-gui/src-tauri/target/release/bundle"
-  append_if_exists "apps/installer-gui/src-tauri/target/release/bundle"
+  local platform="$1"
+  local app=""
+  local subdir=""
+  for app in hub-gui workbench-gui installer-gui; do
+    for subdir in $(bundle_subdirs_for_platform "$platform"); do
+      append_if_exists "apps/$app/src-tauri/target/release/bundle/$subdir"
+    done
+  done
+}
+
+purge_bundle_paths() {
+  local platform="$1"
+  local app=""
+  local subdir=""
+  for app in hub-gui workbench-gui installer-gui; do
+    for subdir in $(bundle_subdirs_for_platform "$platform"); do
+      rm -rf "$ROOT_DIR/apps/$app/src-tauri/target/release/bundle/$subdir"
+    done
+  done
 }
 
 append_if_exists "releases/index.json"
@@ -111,10 +136,13 @@ if [[ "$PLATFORM" == "all" ]]; then
   collect_platform_paths "macos"
   collect_platform_paths "linux"
   collect_platform_paths "windows"
+  collect_bundle_paths "macos"
+  collect_bundle_paths "linux"
+  collect_bundle_paths "windows"
 else
   collect_platform_paths "$PLATFORM"
+  collect_bundle_paths "$PLATFORM"
 fi
-collect_bundle_paths
 
 if [[ "${#EXISTING_PATHS[@]}" -eq 0 ]]; then
   echo "no local release outputs were found to upload" >&2
@@ -162,14 +190,13 @@ if [[ "$PURGE_LOCAL" == "1" ]]; then
       "$ROOT_DIR/dist/macos" \
       "$ROOT_DIR/dist/linux" \
       "$ROOT_DIR/dist/windows"
+    purge_bundle_paths "macos"
+    purge_bundle_paths "linux"
+    purge_bundle_paths "windows"
   else
     rm -rf "$ROOT_DIR/dist/$PLATFORM"
+    purge_bundle_paths "$PLATFORM"
   fi
-
-  rm -rf \
-    "$ROOT_DIR/apps/hub-gui/src-tauri/target/release/bundle" \
-    "$ROOT_DIR/apps/workbench-gui/src-tauri/target/release/bundle" \
-    "$ROOT_DIR/apps/installer-gui/src-tauri/target/release/bundle"
 fi
 
 echo "uploaded release artifacts for version $VERSION"

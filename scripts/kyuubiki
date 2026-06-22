@@ -68,6 +68,21 @@ run_frontend_tests() {
   exec npm run build
 }
 
+run_headless_tests() {
+  cd "$FRONTEND_DIR"
+  exec npm run test:unit:headless
+}
+
+run_headless_live_tests() {
+  cd "$FRONTEND_DIR"
+  exec npm run test:unit:headless-live
+}
+
+run_headless_rust_live_tests() {
+  cd "$RUST_DIR"
+  exec cargo test -p kyuubiki-cli --test headless_live -- --test-threads=1
+}
+
 run_workflow_preflight() {
   cd "$FRONTEND_DIR"
   exec npm run check:workflow-preflight
@@ -406,7 +421,7 @@ Native cross-platform commands:
   project | macro
   build-frontend | build-orchestrator | build-agent
   build-hub-gui | build-installer-gui | build-workbench-gui
-  web-test | rust-test | frontend-test | workflow-preflight
+  web-test | rust-test | frontend-test | headless-test | headless-live-test | headless-rust-live-test | workflow-preflight
   worker | smoke | sdk-smoke | playground-test
   orchestrator | orchestrator-local | orchestrator-cloud | orchestrator-distributed
   agent | frontend
@@ -493,6 +508,18 @@ case "$COMMAND" in
   frontend-test)
     shift
     run_frontend_tests "$@"
+    ;;
+  headless-test)
+    shift
+    run_headless_tests "$@"
+    ;;
+  headless-live-test)
+    shift
+    run_headless_live_tests "$@"
+    ;;
+  headless-rust-live-test)
+    shift
+    run_headless_rust_live_tests "$@"
     ;;
   workflow-preflight)
     shift

@@ -60,6 +60,37 @@ function normalizeActionName(action) {
     .replaceAll(/[.\s-]+/g, "_");
 }
 
+function normalizeJobSubmissionResult(result) {
+  if (!result?.job || typeof result.job !== "object") return result;
+  return {
+    job_id: result.job.job_id ?? null,
+    status: result.job.status ?? null,
+    progress: result.job.progress ?? null,
+    job: result.job,
+    raw: result,
+  };
+}
+
+function normalizeJobStateResult(result) {
+  if (!result?.job || typeof result.job !== "object") return result;
+  return {
+    job_id: result.job.job_id ?? null,
+    status: result.job.status ?? null,
+    progress: result.job.progress ?? null,
+    result: result.result ?? null,
+    job: result.job,
+    raw: result,
+  };
+}
+
+function normalizeResultFetchResult(jobId, result) {
+  return {
+    job_id: jobId,
+    result,
+    raw: result,
+  };
+}
+
 async function executeServiceHealth(step, runtime) {
   const payload = step.payload ?? {};
   const requestPath = pickFirstString(payload, ["path"]) ?? "/api/health";
@@ -145,7 +176,7 @@ async function executeWorkflowSubmitCatalog(step, runtime) {
       response_options: compactWorkflowResponseOptions(),
     }),
   });
-  return { message: `Submitted catalog workflow ${workflowId}`, result };
+  return { message: `Submitted catalog workflow ${workflowId}`, result: normalizeJobSubmissionResult(result) };
 }
 
 async function executeWorkflowSubmitGraph(step, runtime) {
@@ -158,7 +189,7 @@ async function executeWorkflowSubmitGraph(step, runtime) {
       response_options: compactWorkflowResponseOptions(),
     }),
   });
-  return { message: "Submitted workflow graph job", result };
+  return { message: "Submitted workflow graph job", result: normalizeJobSubmissionResult(result) };
 }
 
 async function executeJobWait(step, runtime) {
@@ -170,8 +201,9 @@ async function executeJobWait(step, runtime) {
 
   while (Date.now() <= deadline) {
     const result = await requestJson(runtime.baseUrl, `/api/v1/jobs/${jobId}`, { method: "GET" });
-    if (TERMINAL_JOB_STATUSES.has(result?.job?.status)) {
-      return { message: `Job ${jobId} reached ${result.job.status}`, result };
+    const normalized = normalizeJobStateResult(result);
+    if (TERMINAL_JOB_STATUSES.has(normalized?.status)) {
+      return { message: `Job ${jobId} reached ${normalized.status}`, result: normalized };
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
@@ -183,7 +215,7 @@ async function executeJobFetch(step, runtime) {
   const payload = step.payload ?? {};
   const jobId = pickFirstString(payload, ["job_id", "jobId"]);
   const result = await requestJson(runtime.baseUrl, `/api/v1/jobs/${jobId}`, { method: "GET" });
-  return { message: `Fetched job ${jobId}`, result };
+  return { message: `Fetched job ${jobId}`, result: normalizeJobStateResult(result) };
 }
 
 async function executeResultFetch(step, runtime) {
@@ -193,7 +225,7 @@ async function executeResultFetch(step, runtime) {
   if (preferJobResult) {
     const envelope = await requestJson(runtime.baseUrl, `/api/v1/jobs/${jobId}`, { method: "GET" });
     if (envelope?.result) {
-      return { message: `Fetched result from job envelope ${jobId}`, result: envelope };
+      return { message: `Fetched result from job envelope ${jobId}`, result: normalizeJobStateResult(envelope) };
     }
   }
   if (payload.direct_mesh === true) {
@@ -205,7 +237,7 @@ async function executeResultFetch(step, runtime) {
     };
   }
   const result = await requestJson(runtime.baseUrl, `/api/v1/results/${jobId}`, { method: "GET" });
-  return { message: `Fetched result record ${jobId}`, result };
+  return { message: `Fetched result record ${jobId}`, result: normalizeResultFetchResult(jobId, result) };
 }
 
 async function executeDirectMeshSolve(step, runtime) {
@@ -225,7 +257,13 @@ async function executeDirectMeshSolve(step, runtime) {
       selection_mode: pickFirstString(payload, ["selection_mode", "selectionMode"]) ?? "first_reachable",
     }),
   });
-  return { message: `Submitted direct-mesh solve for ${studyKind}`, result };
+  return {
+    message: `Submitted direct-mesh solve for ${studyKind}`,
+    result: {
+      ...normalizeJobSubmissionResult(result),
+      endpoint: result?.direct_mesh?.endpoint ?? null,
+    },
+  };
 }
 
 async function executeSolveFromModelVersion(step, runtime) {

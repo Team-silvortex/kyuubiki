@@ -37,15 +37,18 @@ const updateCatalogDocs = {
 };
 
 function artifactEntry(product, key, relativePath) {
-  const kind = key.split("_").pop();
+  const tokens = key.split("_");
+  const platformToken = tokens.find((token, index) => index > 0 && ["macos", "linux", "windows"].includes(token));
+  const kind = platformToken ? tokens.slice(tokens.indexOf(platformToken) + 1).join("_") : tokens.at(-1);
   const platform =
-    kind === "dmg" || kind === "app"
+    platformToken ??
+    (kind === "dmg" || kind === "app"
       ? "macos"
       : kind === "appimage" || kind === "deb" || kind === "rpm"
         ? "linux"
         : kind === "msi" || kind === "nsis"
           ? "windows"
-          : "unknown";
+          : "unknown");
 
   return {
     product,

@@ -126,10 +126,19 @@ export function desktopArtifactPaths(version) {
   return {
     hub_app: "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
     hub_dmg: `apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_${version}_aarch64.dmg`,
+    hub_macos_manifest: "dist/macos/desktop/hub-gui/manifest.json",
+    hub_linux_manifest: "dist/linux/desktop/hub-gui/manifest.json",
+    hub_windows_manifest: "dist/windows/desktop/hub-gui/manifest.json",
     workbench_app: "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
     workbench_dmg: `apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_${version}_aarch64.dmg`,
+    workbench_macos_manifest: "dist/macos/desktop/workbench-gui/manifest.json",
+    workbench_linux_manifest: "dist/linux/desktop/workbench-gui/manifest.json",
+    workbench_windows_manifest: "dist/windows/desktop/workbench-gui/manifest.json",
     installer_app: "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
     installer_dmg: `apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_${version}_aarch64.dmg`,
+    installer_macos_manifest: "dist/macos/desktop/installer-gui/manifest.json",
+    installer_linux_manifest: "dist/linux/desktop/installer-gui/manifest.json",
+    installer_windows_manifest: "dist/windows/desktop/installer-gui/manifest.json",
   };
 }
 

@@ -141,7 +141,7 @@ Environment overrides:
   Optional SSH flags. Defaults to `-o StrictHostKeyChecking=accept-new`.
 - `PURGE_LOCAL=1`
   Removes uploaded local `dist/<platform>` trees and Tauri `target/release/bundle`
-  directories after a successful upload.
+  directories for the selected platform after a successful upload.
 
 This keeps the release source-of-truth on the remote server while preserving
 the local repository as the place where metadata is authored and generated.

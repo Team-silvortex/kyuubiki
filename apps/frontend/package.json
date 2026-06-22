@@ -13,6 +13,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:unit": "node ./scripts/test-unit.mjs",
+    "test:unit:headless": "node ./scripts/test-unit.mjs headless",
+    "test:unit:headless-live": "node ./scripts/test-unit.mjs kyuubiki-headless-live",
     "test:unit:workflow": "node ./scripts/test-unit.mjs workflow",
     "check:file-lines": "node ./scripts/check-file-lines.mjs",
     "check:ui-layout": "node ./scripts/check-ui-layout.mjs",

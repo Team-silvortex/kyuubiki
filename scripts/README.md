@@ -59,6 +59,17 @@ Useful smoke wrappers:
   Python / Elixir / Rust headless SDK smoke suite.
 - `./scripts/kyuubiki frontend-test`
   Frontend typecheck plus production build verification.
+- `./scripts/kyuubiki headless-test`
+  Frontend-owned headless CLI regression suite covering template selection,
+  workflow export, validation, dry-run execution, and risk gating.
+- `./scripts/kyuubiki headless-live-test`
+  Live headless smoke that boots a temporary local control plane with fake
+  solver sessions, then drives real `headless run --execute` workflow jobs
+  through the service executor over HTTP.
+- `./scripts/kyuubiki headless-rust-live-test`
+  Rust `kyuubiki-headless` live integration suite against the same temporary
+  local control plane, covering service-health and catalog-workflow execution
+  through the Rust service executor.
 - `./scripts/kyuubiki workflow-preflight`
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks
@@ -68,8 +79,8 @@ Useful smoke wrappers:
   download server. Override the target with
   `KYUUBIKI_RELEASE_REMOTE_HOST=user@host`, optionally provide
   `KYUUBIKI_RELEASE_REMOTE_PASSWORD=...` for `sshpass`-backed non-interactive
-  auth, and set `PURGE_LOCAL=1` to remove local `dist/` and Tauri bundle
-  outputs after a successful upload.
+  auth, and set `PURGE_LOCAL=1` to remove local `dist/` and platform-matched
+  Tauri bundle outputs after a successful upload.
 - `./scripts/run-direct-mesh-benchmark-container.sh --repeat 3`
   Build the dedicated Docker harness, run the direct-mesh integration suite
   multiple times, and write JSON plus Markdown summaries under
