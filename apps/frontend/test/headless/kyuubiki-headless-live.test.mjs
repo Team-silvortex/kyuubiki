@@ -32,6 +32,50 @@ const ELECTROSTATIC_PLANE_QUAD_INPUT_ARTIFACTS = {
   },
 };
 
+const ELECTROSTATIC_INLINE_GRAPH = {
+  schema_version: "kyuubiki.workflow-graph/v1",
+  id: "workflow.inline.electrostatic-plane-quad-2d",
+  name: "Inline electrostatic plane quad",
+  version: "1.0.0",
+  entry_nodes: ["electrostatic_model"],
+  output_nodes: ["result_output"],
+  defaults: { cache_policy: "cached", orchestrated: true },
+  nodes: [
+    {
+      id: "electrostatic_model",
+      kind: "input",
+      outputs: [{ id: "model", artifact_type: "study_model/electrostatic_plane_quad_2d" }],
+    },
+    {
+      id: "solve_electrostatic",
+      kind: "solve",
+      operator_id: "solve.electrostatic_plane_quad_2d",
+      inputs: [{ id: "model", artifact_type: "study_model/electrostatic_plane_quad_2d" }],
+      outputs: [{ id: "result", artifact_type: "result/electrostatic_plane_quad_2d" }],
+    },
+    {
+      id: "result_output",
+      kind: "output",
+      inputs: [{ id: "result", artifact_type: "result/electrostatic_plane_quad_2d" }],
+      outputs: [],
+    },
+  ],
+  edges: [
+    {
+      id: "edge-input-model",
+      from: { node: "electrostatic_model", port: "model" },
+      to: { node: "solve_electrostatic", port: "model" },
+      artifact_type: "study_model/electrostatic_plane_quad_2d",
+    },
+    {
+      id: "edge-solve-result",
+      from: { node: "solve_electrostatic", port: "result" },
+      to: { node: "result_output", port: "result" },
+      artifact_type: "result/electrostatic_plane_quad_2d",
+    },
+  ],
+};
+
 function runCli(args) {
   const result = spawnSync("node", [CLI_PATH, ...args], {
     cwd: FRONTEND_ROOT,
@@ -200,4 +244,65 @@ test("headless live workflow submit executes against the temporary control plane
   assert.equal(typeof payload.report.steps[0].result.job_id, "string");
   assert.ok(payload.report.steps[0].result.job_id.length > 0);
   assert.equal(payload.report.steps[2].result.result.workflow_id, "workflow.electrostatic-plane-quad-2d");
+});
+
+test("headless live workflow graph submit surfaces agent execution failures", { timeout: 60_000 }, async () => {
+  const tempDir = await makeTempDir();
+  const workflowPath = path.join(tempDir, "graph-workflow.json");
+
+  const workflow = {
+    schema_version: "kyuubiki.headless-workflow/v1",
+    exported_at: new Date().toISOString(),
+    language: "en",
+    workflow: {
+      id: "workflow.live.graph-submit",
+      steps: [
+        {
+          action: "workflow_submit_graph",
+          payload: {
+            graph: ELECTROSTATIC_INLINE_GRAPH,
+            input_artifacts: ELECTROSTATIC_PLANE_QUAD_INPUT_ARTIFACTS,
+          },
+        },
+        {
+          action: "job_wait",
+          payload: {
+            job_id: "{{steps.1.result.job_id}}",
+            interval_ms: 20,
+            timeout_ms: 5000,
+          },
+        },
+        {
+          action: "result_fetch",
+          payload: {
+            job_id: "{{steps.1.result.job_id}}",
+          },
+        },
+      ],
+    },
+  };
+
+  await writeFile(workflowPath, `${JSON.stringify(workflow, null, 2)}\n`);
+
+  const result = runCli([
+    "headless",
+    "run",
+    workflowPath,
+    "--json",
+    "--execute",
+    "--api-base-url",
+    `http://127.0.0.1:${liveServer.port}`,
+  ]);
+
+  assert.equal(result.status, 0, `${result.stderr}\n${JSON.stringify(liveServer.getLogs())}`);
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.report.dry_run, false);
+  assert.equal(payload.report.status, "completed");
+  assert.equal(payload.report.executed_step_count, 3);
+  assert.equal(payload.report.steps[0].result.status, "queued");
+  assert.equal(payload.report.steps[1].result.status, "failed");
+  assert.equal(payload.report.steps[2].result.status, "failed");
+  assert.equal(payload.report.steps[2].result.result.workflow_id, "workflow.inline.electrostatic-plane-quad-2d");
+  assert.equal(payload.report.steps[2].result.result.current_node, "electrostatic_model");
+  assert.match(payload.report.steps[2].result.job.message, /all_agents_failed/);
 });

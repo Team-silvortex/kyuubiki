@@ -3,6 +3,16 @@
 This document defines the control-binding contract for distributed Kyuubiki
 agents.
 
+Use this file as the primary source for:
+
+- control modes
+- visible binding fields
+- legal authority transitions
+
+Do not restate the full headless transport or operator procedure story here;
+those belong to [headless-agent-contract.md](headless-agent-contract.md) and
+[operations.md](operations.md).
+
 The rule is simple:
 
 - one agent may be bound to exactly one `orchestra`
@@ -94,6 +104,10 @@ That ambiguity is especially dangerous now that:
 - workflow dispatch may span multiple machines
 
 The agent has to know who its authority is, or that it has no authority at all.
+
+For the runtime-facing consequences of this rule in direct solver RPC, control
+plane mediation, and frontend gateway flows, use
+[headless-agent-contract.md](headless-agent-contract.md).
 
 ## Relation To Operator Library Centralization
 

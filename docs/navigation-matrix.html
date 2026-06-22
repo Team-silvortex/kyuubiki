@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kyuubiki Navigation Matrix</title>
+    <link rel="stylesheet" href="../apps/hub-gui/ui/docs/docs.css" />
+  </head>
+  <body>
+    <main class="docs-shell docs-stack">
+      <section class="docs-hero">
+        <div class="docs-kicker">Kyuubiki Navigation Matrix</div>
+        <h1>One cross-cutting map for tamamono 1.10.x</h1>
+        <p class="docs-copy">
+          Use this page when the normal chapter order is not enough and you need
+          the shortest route across book orientation, testing, Installer remote
+          control, mesh/runtime posture, and headless SDK or service-executor work.
+        </p>
+        <div class="docs-meta">
+          <span class="docs-chip">Shipping version: 1.10.0</span>
+          <span class="docs-chip">Current prep: 1.10.x</span>
+          <span class="docs-chip">Audience: operators + engineers + assistants</span>
+        </div>
+        <div class="docs-links">
+          <a class="docs-link" href="./book.html">Open central book</a>
+          <a class="docs-link" href="./book-ch08-reading-paths.html">Open reading paths chapter</a>
+          <a class="docs-link" href="../apps/hub-gui/ui/docs/index.html">Open Hub shelf mirror</a>
+        </div>
+      </section>
+
+      <section class="docs-grid">
+        <article class="docs-card">
+          <h2>Book spine</h2>
+          <p class="docs-copy">
+            Start here when the question is “what is Kyuubiki supposed to be?”
+          </p>
+          <div class="docs-links">
+            <a class="docs-link" href="./book.html">book.html</a>
+            <a class="docs-link" href="./book-manifest.json">book-manifest.json</a>
+          </div>
+        </article>
+
+        <article class="docs-card">
+          <h2>Verification spine</h2>
+          <p class="docs-copy">
+            Start here when the question is “how do we prove this still works?”
+          </p>
+          <div class="docs-links">
+            <a class="docs-link" href="./testing-and-ci.md">testing-and-ci.md</a>
+            <a class="docs-link" href="./development.md">development.md</a>
+          </div>
+        </article>
+
+        <article class="docs-card">
+          <h2>Remote-control spine</h2>
+          <p class="docs-copy">
+            Start here when the question is “who deploys, certifies, or controls nodes?”
+          </p>
+          <div class="docs-links">
+            <a class="docs-link" href="./installer-remote-control.md">installer-remote-control.md</a>
+            <a class="docs-link" href="./operations.md">operations.md</a>
+          </div>
+        </article>
+
+        <article class="docs-card">
+          <h2>Mesh and headless spine</h2>
+          <p class="docs-copy">
+            Start here when the question is “what bypasses the frontend and what does not?”
+          </p>
+          <div class="docs-links">
+            <a class="docs-link" href="./headless-agent-contract.md">headless-agent-contract.md</a>
+            <a class="docs-link" href="./protocols.md">protocols.md</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Role Matrix</h2>
+        <table class="docs-table">
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Start Here</th>
+              <th>Then Read</th>
+              <th>Critical Lane</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Operator / product owner</strong></td>
+              <td><a class="docs-link" href="./book.html">book.html</a></td>
+              <td><a class="docs-link" href="./current-line.md">current-line.md</a> and <a class="docs-link" href="./system-overview.md">system-overview.md</a></td>
+              <td><a class="docs-link" href="./operations.md">operations.md</a> and <a class="docs-link" href="./security.md">security.md</a></td>
+            </tr>
+            <tr>
+              <td><strong>Frontend / Workbench engineer</strong></td>
+              <td><a class="docs-link" href="./book-ch05-workflow-and-operators.html">workflow chapter</a></td>
+              <td><a class="docs-link" href="./frontend-implementation.md">frontend-implementation.md</a> and <a class="docs-link" href="./ui-automation-contract.html">ui-automation-contract.html</a></td>
+              <td><a class="docs-link" href="./testing-and-ci.md">testing-and-ci.md</a> for workflow preflight and headless live checks</td>
+            </tr>
+            <tr>
+              <td><strong>Runtime / agent engineer</strong></td>
+              <td><a class="docs-link" href="./app-runtime-boundaries.md">app-runtime-boundaries.md</a></td>
+              <td><a class="docs-link" href="./agent-orchestrator-boundary.md">agent-orchestrator-boundary.md</a> and <a class="docs-link" href="./agent-control-authority.md">agent-control-authority.md</a></td>
+              <td><a class="docs-link" href="./headless-agent-contract.md">headless-agent-contract.md</a> plus direct-mesh and offline-mesh posture</td>
+            </tr>
+            <tr>
+              <td><strong>SDK / extension engineer</strong></td>
+              <td><a class="docs-link" href="./book-ch06-sdk-surfaces.html">SDK chapter</a></td>
+              <td><a class="docs-link" href="./operator-sdk.md">operator-sdk.md</a> and <a class="docs-link" href="./headless-sdks.md">headless-sdks.md</a></td>
+              <td><a class="docs-link" href="./workflow-dataset.md">workflow-dataset.md</a> and <a class="docs-link" href="./workflow-graph.md">workflow-graph.md</a></td>
+            </tr>
+            <tr>
+              <td><strong>Installer / remote-control engineer</strong></td>
+              <td><a class="docs-link" href="./installer-remote-control.md">installer-remote-control.md</a></td>
+              <td><a class="docs-link" href="./packaging-and-deployment.md">packaging-and-deployment.md</a> and <a class="docs-link" href="./security.md">security.md</a></td>
+              <td><a class="docs-link" href="./agent-control-authority.md">agent-control-authority.md</a> for orch-managed versus offline-mesh posture</td>
+            </tr>
+            <tr>
+              <td><strong>Release / packaging owner</strong></td>
+              <td><a class="docs-link" href="./version-line.md">version-line.md</a></td>
+              <td><a class="docs-link" href="./desktop-release-checklist.md">desktop-release-checklist.md</a> and <a class="docs-link" href="./update-catalog.html">update-catalog.html</a></td>
+              <td><a class="docs-link" href="./testing-and-ci.md">testing-and-ci.md</a> for regression and live validation gates</td>
+            </tr>
+            <tr>
+              <td><strong>Large model integrator</strong></td>
+              <td><a class="docs-link" href="./book-manifest.json">book-manifest.json</a></td>
+              <td><a class="docs-link" href="./system-overview.md">system-overview.md</a> and <a class="docs-link" href="./protocols.md">protocols.md</a></td>
+              <td><a class="docs-link" href="./headless-sdks.md">headless-sdks.md</a> plus <a class="docs-link" href="./headless-agent-contract.md">headless-agent-contract.md</a></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="docs-note">
+          The two places most likely to be confused are:
+          `Installer remote control` versus `headless SDKs`, and
+          `direct-mesh/offline-mesh` versus `orchestrated control-plane` execution.
+          If a workflow, automation, or node-control design blurs those lines, route back through the book and the authority docs before changing code.
+        </div>
+      </section>
+
+      <section class="docs-card docs-section">
+        <h2>Current Cross-Cutting Routes</h2>
+        <ul class="docs-list">
+          <li><strong>Workflow contract route</strong>: `workflow-graph.md` -> `workflow-dataset.md` -> `testing-and-ci.md`.</li>
+          <li><strong>Headless live route</strong>: `testing-and-ci.md` -> `scripts/README.md` -> frontend and Rust `headless-live` suites.</li>
+          <li><strong>Remote deployment route</strong>: `installer-remote-control.md` -> `operations.md` -> `security.md`.</li>
+          <li><strong>Mesh authority route</strong>: `agent-control-authority.md` -> `agent-orchestrator-boundary.md` -> `headless-agent-contract.md`.</li>
+        </ul>
+        <div class="docs-links">
+          <a class="docs-link" href="./runtime-doc-ownership.md">Open runtime doc ownership</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

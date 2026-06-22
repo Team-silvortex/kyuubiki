@@ -72,24 +72,22 @@ for the stricter role split.
 
 ## Product boundary
 
-At the product level, each major surface owns a different concern:
+Use this file for the whole-system picture, not for the full product-role rule
+book.
 
-- `Hub`
-  global workload shell, runtime target overview, launch surface
-- `Workbench`
-  concrete modeling, workflow, and result interaction surface
-- `Installer`
-  deployment, installation, integrity, update, and cleanup surface
-- `Runtime / agents`
-  protocol-driven execution and compute surface
+The short version is:
 
-The Installer surface now also carries a bounded remote runtime-control panel
-for node bootstrap, certificate alignment, mesh preparation, and workflow
-snapshot inspection. That control surface is part of the product boundary, but
-it should remain deployment- and operator-oriented rather than turning into a
-second Workbench.
+- `Hub` owns the desktop entry and workload shell
+- `Workbench` owns engineering workflow interaction
+- `Installer` owns deployment, integrity, update, and remote-node lifecycle
+- `Runtime / agents` own protocol-driven execution
 
-That boundary matters because it prevents two common failures:
+The deeper role split lives in
+[app-runtime-boundaries.md](app-runtime-boundaries.md).
+The Installer-owned remote node surface is described in
+[installer-remote-control.md](installer-remote-control.md).
+
+Those boundaries exist to prevent two common failures:
 
 - frontend code quietly becoming the runtime architecture
 - runtime code quietly absorbing UI-specific assumptions
@@ -128,57 +126,37 @@ This mode is the best fit for:
 
 ### `headless peer mesh`
 
-Rust agents can now run without a GUI or orchestrator:
+Rust agents can now run without a GUI or orchestrator in:
 
 - standalone
 - orchestrated
 - peer mesh
 
-Peer mesh mode currently covers:
+For authority rules around peer mesh versus orchestrator-managed nodes, use:
 
-- self-description
-- cluster identity
-- lightweight peer gossip
-- health scoring
+- [agent-control-authority.md](agent-control-authority.md)
+- [headless-agent-contract.md](headless-agent-contract.md)
 
 ## Responsibilities by layer
 
 ### Frontend GUI
 
-- modeling
-- viewport interaction
-- material editing
-- project and result browsing
-- chunked large-result review
-- direct mesh runtime selection
-
-The frontend may observe and command runtimes, but it should not define runtime
-shape or agent architecture.
+Owns product interaction and runtime selection, but not runtime architecture.
+See [app-runtime-boundaries.md](app-runtime-boundaries.md).
 
 ### Control plane
 
-- job submission
-- persistence
-- cluster-aware routing
-- watchdog scanning
-- cancellation
-- result chunk APIs
-- remote agent registration
-
-When viewed from the Hub, the control plane behaves as a managed runtime target
-rather than as the desktop shell itself.
+Owns job submission, persistence, routing, watchdog work, and remote-agent
+coordination.
 
 ### Solver data plane
 
-- FEM kernels
-- benchmark and baseline tooling
-- framed solver RPC
-- progress and heartbeat frames
-- cluster self-description
+Owns FEM kernels, solver RPC, progress signaling, cluster self-description, and
+compute-side benchmarking.
 
-The solver/runtime layer should remain usable through Hub, Workbench,
-Installer-driven flows, or headless SDK clients without inheriting frontend
-implementation details.
+For the stricter runtime-side split between control plane, agents, frontend
+gateways, and headless callers, use
+[agent-orchestrator-boundary.md](agent-orchestrator-boundary.md).
 
 ## Shared contracts
 

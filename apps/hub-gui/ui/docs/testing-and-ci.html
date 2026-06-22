@@ -32,6 +32,7 @@
           <ul class="docs-list">
             <li><strong>Frontend test</strong>: typecheck plus production build validation.</li>
             <li><strong>Workflow preflight</strong>: workflow unit checks, topology regression, and browser-backed layout/search guards.</li>
+            <li><strong>Headless live</strong>: temporary local control-plane boot plus real HTTP execution for frontend and Rust headless workflows.</li>
             <li><strong>Integration smoke</strong>: orchestrator, agent, direct-mesh, and UI representative paths.</li>
             <li><strong>Desktop smoke</strong>: Hub, Installer, and Workbench shell checks.</li>
           </ul>
@@ -45,6 +46,20 @@
             <li>Dataset editor, import diagnostics, snapshot, validation, or integrity panels changed.</li>
             <li>A release includes workflow-heavy frontend work and should not rely on build success alone.</li>
           </ul>
+        </article>
+
+        <article class="docs-card">
+          <h2>Headless live checks</h2>
+          <ul class="docs-list">
+            <li><code>./scripts/kyuubiki headless-live-test</code> validates the frontend-owned service executor over real HTTP.</li>
+            <li><code>./scripts/kyuubiki headless-rust-live-test</code> validates the Rust <code>kyuubiki-headless</code> service executor against the same temporary control plane.</li>
+            <li>Use these before broader integration suites when changing headless workflow contracts, service-executor payloads, or live graph submission behavior.</li>
+            <li>The current live path covers <code>service_health</code>, <code>workflow_submit_catalog</code>, and <code>workflow_submit_graph</code>.</li>
+          </ul>
+          <div class="docs-links">
+            <a class="docs-link" href="../../../../docs/testing-and-ci.md">Open central verification doc</a>
+            <a class="docs-link" href="../../../../scripts/README.md">Open script entrypoints</a>
+          </div>
         </article>
 
         <article class="docs-card">

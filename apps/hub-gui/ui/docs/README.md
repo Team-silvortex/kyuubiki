@@ -28,9 +28,16 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
 - `index.html`
   Desktop dispatch page that links both the short Hub mirrors and the
   repository-level chapter pages of the centralized book.
+- `../../../../docs/navigation-matrix.html`
+  Central role-and-lane matrix for routing readers between book chapters,
+  verification, Installer remote control, mesh posture, and headless SDK
+  surfaces.
 - `current-line.html`
 - `installation-integrity.html`
 - `operations.html`
+- `testing-and-ci.html`
+  Hub mirror for verification posture, workflow preflight, headless live
+  execution checks, and direct-mesh regression entrypoints.
 - `troubleshooting.html`
 - `update-catalog.html`
   Hub mirror for the centralized book's update-visibility material and release
@@ -38,6 +45,13 @@ This directory is the desktop-facing HTML docs shelf used by the Hub shell.
 - `solver-matrix-optimization-pack.html`
   Hub mirror for the retained Rust solver matrix optimization set and its
   benchmark-backed validation note.
+
+Keep these four desktop-reading threads connected:
+
+- the central book and this Hub shelf mirror
+- Installer remote control and deployment authority
+- orchestrated versus direct-mesh runtime posture
+- headless live verification before broader regression lanes
 
 If a topic needs long-form engineering detail, put that detail under `docs/`
 and keep the Hub page as the short desktop entrypoint.

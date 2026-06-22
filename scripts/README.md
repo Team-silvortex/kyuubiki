@@ -65,11 +65,14 @@ Useful smoke wrappers:
 - `./scripts/kyuubiki headless-live-test`
   Live headless smoke that boots a temporary local control plane with fake
   solver sessions, then drives real `headless run --execute` workflow jobs
-  through the service executor over HTTP.
+  through the service executor over HTTP. The current suite covers
+  `service_health`, catalog-backed workflow submission, and inline
+  `workflow_submit_graph` submission with explicit agent-failure surfacing.
 - `./scripts/kyuubiki headless-rust-live-test`
   Rust `kyuubiki-headless` live integration suite against the same temporary
-  local control plane, covering service-health and catalog-workflow execution
-  through the Rust service executor.
+  local control plane, covering service-health, catalog-workflow execution,
+  and inline `workflow_submit_graph` execution through the Rust service
+  executor.
 - `./scripts/kyuubiki workflow-preflight`
   Workflow topology plus search/layout guard suite. Start `npm run dev` under
   `apps/frontend` in a separate shell first because the browser-backed checks

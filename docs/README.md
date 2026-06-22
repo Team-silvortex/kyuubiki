@@ -19,13 +19,21 @@ Read these first, in order:
 
 1. `book.html`
 2. `book-manifest.json`
-3. `current-line.md`
-4. `system-overview.md`
-5. `protocols.md`
-6. `repository-structure.md`
-7. `testing-and-ci.md`
-8. `maintenance.md`
-9. `installer-remote-control.md`
+3. `navigation-matrix.html`
+4. `current-line.md`
+5. `system-overview.md`
+6. `protocols.md`
+7. `repository-structure.md`
+8. `testing-and-ci.md`
+9. `maintenance.md`
+10. `installer-remote-control.md`
+
+For the current `1.10.x` hardening path, keep four threads mentally linked:
+
+- centralized docs book and Hub shelf mirrors
+- headless live execution checks
+- Installer-owned remote control
+- orchestrated and direct-mesh runtime posture
 
 ## Central Book
 
@@ -35,6 +43,9 @@ Read these first, in order:
 - `book-manifest.json`
   Machine-readable chapter map and reading-path manifest for future large-model
   ingestion and tooling.
+- `navigation-matrix.html`
+  Cross-cutting role and lane matrix that ties the book, verification, remote
+  control, mesh posture, and headless SDK paths together.
 - `book-ch*.html`
   Chapter pages for the centralized book, so the book can grow by section
   without turning the main entrypoint back into one oversized page.
@@ -46,6 +57,9 @@ Read these first, in order:
 - `maintenance.md`
   Curation rules for deciding which docs are source-of-truth, planning-only,
   generated, or desktop-facing mirrors.
+- `runtime-doc-ownership.md`
+  Runtime, authority, mesh, and Installer remote-control documentation
+  ownership map for avoiding duplicate narrative drift.
 
 Then branch by intent:
 
@@ -74,6 +88,9 @@ Then branch by intent:
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
   control-surface note for the `1.10.x` preparation line.
+- `remote-pilot.md`
+  Practical first-Ubuntu-host rollout sketch for introducing remote solver
+  nodes, then remote control-plane and workload-source validation.
 - `fem-blender-roadmap.md`
   Product north star linking workbench, workflow, SDK, and operator-ecosystem growth.
 
@@ -127,6 +144,9 @@ Then branch by intent:
 - `installer-remote-control.md`
   Installer-side remote deployment and runtime-control contract for the
   operator-facing remote node surface.
+- `remote-pilot.md`
+  Operator rollout sketch for bringing up the first Ubuntu-hosted remote target
+  without overloading `operations.md`.
 
 ### Verify changes
 
@@ -143,6 +163,9 @@ Then branch by intent:
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`
   Test-layer map, local verification entry points, and CI job layout.
+- frontend and Rust headless live execution now sit here as first-class
+  service-executor validation paths for `service_health`,
+  `workflow_submit_catalog`, and `workflow_submit_graph`
 - `solver-matrix-optimization-pack.md`
   Current matrix-side optimization pack for the Rust solver, with A/B evidence
   and benchmark interpretation notes.
@@ -188,6 +211,9 @@ Then branch by intent:
   Lightweight release-snapshot registry for shipped or staged product points.
 - `operations.md`
   Deployment modes, watchdog knobs, and runtime entry points.
+- `installer-remote-control.md`
+  Installer-owned remote node, certificate, mesh, and workflow-snapshot
+  control surface for operator-facing deployment work.
 - `security.md`
   Current guardrails, token protection, and deployment safety notes.
 - `packaging-and-deployment.md`

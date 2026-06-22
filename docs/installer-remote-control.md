@@ -206,6 +206,7 @@ especially relevant to the `1.10.x` and `1.11.x` themes:
 - [app-runtime-boundaries.md](app-runtime-boundaries.md)
 - [agent-orchestrator-boundary.md](agent-orchestrator-boundary.md)
 - [headless-agent-contract.md](headless-agent-contract.md)
+- [remote-pilot.md](remote-pilot.md)
 - [workflow-graph.md](workflow-graph.md)
 - [workflow-dataset.md](workflow-dataset.md)
 - [installation-integrity-contract.html](installation-integrity-contract.html)

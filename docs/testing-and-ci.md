@@ -50,10 +50,16 @@ These tests use small local loopback fixtures and focus on:
 
 - `make test-integration`
   top-level cross-process smoke suite
+- `./scripts/kyuubiki headless-live-test`
+  frontend-owned live headless service-executor suite
+- `./scripts/kyuubiki headless-rust-live-test`
+  Rust `kyuubiki-headless` live service-executor suite
 
 The current integration family covers:
 
 - orchestrator + Rust agents + HTTP solve flow
+- temporary local control-plane boot plus real headless HTTP execution for
+  `service_health`, `workflow_submit_catalog`, and `workflow_submit_graph`
 - sample-backed `thermal_bar_1d`, `spring_1d`, `spring_2d`, `spring_3d`, `thermal_beam_1d`, `torsion_1d`, `heat_bar_1d`, `heat_plane_triangle_2d`, `heat_plane_quad_2d`, `frame_2d`, `frame_3d`, `truss_2d`, `truss_3d`, `plane_triangle_2d`, `plane_quad_2d`, `thermal_frame_2d`, `thermal_plane_triangle_2d`, `thermal_plane_quad_2d`, `thermal_truss_2d`, `thermal_frame_3d`, and `thermal_truss_3d` orchestrated API smoke
 - protected cluster register / heartbeat / unregister flow
 - frontend direct-mesh LAN agent solve and chunk flow
@@ -90,6 +96,15 @@ For workflow-heavy frontend work, prefer the dedicated preflight entrypoint:
 Start `npm run dev` inside `apps/frontend` first. The layout/search guard needs
 the live benchmark route and is intentionally separate from `frontend-test`, so
 plain build validation can stay fast and headless.
+
+For service-executor and headless workflow contract changes, prefer the live
+headless entrypoints before broader integration suites:
+
+- `./scripts/kyuubiki headless-live-test`
+- `./scripts/kyuubiki headless-rust-live-test`
+
+These boot the temporary local control plane under `apps/web/test/support` and
+exercise real HTTP execution instead of dry-run-only fixtures.
 
 ## CI structure
 

@@ -168,6 +168,75 @@ fn electrostatic_plane_quad_input_artifacts() -> Value {
     })
 }
 
+fn electrostatic_inline_graph() -> Value {
+    json!({
+        "schema_version": "kyuubiki.workflow-graph/v1",
+        "id": "workflow.inline.electrostatic-plane-quad-2d",
+        "name": "Inline electrostatic plane quad",
+        "version": "1.0.0",
+        "entry_nodes": ["electrostatic_model"],
+        "output_nodes": ["result_output"],
+        "defaults": {
+            "cache_policy": "cached",
+            "orchestrated": true
+        },
+        "nodes": [
+            {
+                "id": "electrostatic_model",
+                "kind": "input",
+                "outputs": [
+                    {
+                        "id": "model",
+                        "artifact_type": "study_model/electrostatic_plane_quad_2d"
+                    }
+                ]
+            },
+            {
+                "id": "solve_electrostatic",
+                "kind": "solve",
+                "operator_id": "solve.electrostatic_plane_quad_2d",
+                "inputs": [
+                    {
+                        "id": "model",
+                        "artifact_type": "study_model/electrostatic_plane_quad_2d"
+                    }
+                ],
+                "outputs": [
+                    {
+                        "id": "result",
+                        "artifact_type": "result/electrostatic_plane_quad_2d"
+                    }
+                ]
+            },
+            {
+                "id": "result_output",
+                "kind": "output",
+                "inputs": [
+                    {
+                        "id": "result",
+                        "artifact_type": "result/electrostatic_plane_quad_2d"
+                    }
+                ],
+                "outputs": []
+            }
+        ],
+        "edges": [
+            {
+                "id": "edge-input-model",
+                "from": { "node": "electrostatic_model", "port": "model" },
+                "to": { "node": "solve_electrostatic", "port": "model" },
+                "artifact_type": "study_model/electrostatic_plane_quad_2d"
+            },
+            {
+                "id": "edge-solve-result",
+                "from": { "node": "solve_electrostatic", "port": "result" },
+                "to": { "node": "result_output", "port": "result" },
+                "artifact_type": "result/electrostatic_plane_quad_2d"
+            }
+        ]
+    })
+}
+
 #[test]
 fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
     let server = start_live_server().expect("start live server");
@@ -267,5 +336,83 @@ fn rust_headless_cli_executes_live_service_health_and_workflow_submit() {
     );
 
     let _ = fs::remove_file(health_path);
+    let _ = fs::remove_file(workflow_path);
+}
+
+#[test]
+fn rust_headless_cli_executes_live_workflow_graph_submit() {
+    let server = start_live_server().expect("start live server");
+    let base_url = format!("http://127.0.0.1:{}", server.port);
+
+    let workflow_path = write_temp_json(
+        "workflow-graph-submit",
+        &json!({
+            "schema_version": "kyuubiki.headless-workflow/v1",
+            "exported_at": "2026-06-22T00:00:00Z",
+            "language": "en",
+            "workflow": {
+                "id": "workflow.live.graph-submit",
+                "steps": [
+                    {
+                        "action": "workflow_submit_graph",
+                        "payload": {
+                            "graph": electrostatic_inline_graph(),
+                            "input_artifacts": electrostatic_plane_quad_input_artifacts()
+                        }
+                    },
+                    {
+                        "action": "job_wait",
+                        "payload": {
+                            "job_id": "{{steps.1.result.job_id}}",
+                            "interval_ms": 20,
+                            "timeout_ms": 5000
+                        }
+                    },
+                    {
+                        "action": "result_fetch",
+                        "payload": {
+                            "job_id": "{{steps.1.result.job_id}}"
+                        }
+                    }
+                ]
+            }
+        }),
+    );
+
+    let workflow_output = run_headless_command(&[
+        "run",
+        workflow_path.to_str().expect("workflow path"),
+        "--json",
+        "--execute",
+        "--executor",
+        "service",
+        "--api-base-url",
+        &base_url,
+    ]);
+    assert_command_ok(&workflow_output, &server.logs());
+    let workflow_payload = parse_json_output(&workflow_output);
+    assert_eq!(workflow_payload["status"], "ok");
+    assert_eq!(workflow_payload["executed_step_count"], 3);
+    assert_eq!(workflow_payload["steps"][0]["result_preview"]["status"], "queued");
+    assert_eq!(workflow_payload["steps"][1]["result_preview"]["status"], "completed");
+    assert_eq!(workflow_payload["steps"][2]["result_preview"]["status"], "completed");
+    assert_eq!(
+        workflow_payload["steps"][2]["result_preview"]["result"]["workflow_id"],
+        "workflow.inline.electrostatic-plane-quad-2d"
+    );
+    assert!(workflow_payload["steps"][2]["result_preview"]["result"]["completed_nodes"]
+        .as_array()
+        .is_some_and(|nodes| nodes.iter().any(|node| node == "solve_electrostatic")));
+    assert!(
+        workflow_payload["steps"][2]["result_preview"]["result"]["artifacts"]["result_output.result"]["max_electric_field"]
+            .as_f64()
+            .is_some_and(|value| value > 0.0)
+    );
+    assert!(
+        workflow_payload["steps"][2]["result_preview"]["job"]["message"]
+            .as_str()
+            .is_some_and(|value| value.contains("completed workflow node result_output"))
+    );
+
     let _ = fs::remove_file(workflow_path);
 }

@@ -34,6 +34,7 @@
             <li><strong>Local workstation</strong>: frontend + orchestrator + local Rust agents with SQLite.</li>
             <li><strong>Cloud control plane</strong>: frontend and orchestrator deployed centrally with PostgreSQL.</li>
             <li><strong>Distributed control plane</strong>: remote solver agents discovered by manifest or registry.</li>
+            <li><strong>Direct mesh / offline mesh</strong>: selective mode where direct agent paths and mesh authority matter as much as orchestrated paths.</li>
           </ul>
         </article>
 
@@ -55,6 +56,21 @@
           </ul>
           <div class="docs-links">
             <a class="docs-link" href="../../../../docs/operations.md">Open source doc</a>
+            <a class="docs-link" href="../../../../docs/installer-remote-control.md">Installer remote control</a>
+            <a class="docs-link" href="../../../../docs/headless-agent-contract.md">Headless agent contract</a>
+          </div>
+        </article>
+
+        <article class="docs-card">
+          <h2>Authority and mesh posture</h2>
+          <ul class="docs-list">
+            <li>Keep orchestrated and direct-mesh modes explicit instead of blending them into one hidden runtime state.</li>
+            <li>Installer-owned remote control handles node bootstrap, certificate alignment, mesh preparation, and workflow snapshot inspection.</li>
+            <li>One orchestrator controls an agent at a time unless the node is intentionally operating in offline mesh mode.</li>
+          </ul>
+          <div class="docs-links">
+            <a class="docs-link" href="../../../../docs/agent-control-authority.md">Agent control authority</a>
+            <a class="docs-link" href="../../../../docs/agent-orchestrator-boundary.md">Agent-orchestrator boundary</a>
           </div>
         </article>
       </section>

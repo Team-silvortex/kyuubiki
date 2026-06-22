@@ -2,6 +2,13 @@
 
 This document defines the top-level product boundary for Kyuubiki.
 
+Use this file as the primary source for product-role separation.
+Do not duplicate detailed agent authority or headless transport rules here;
+those belong to
+[agent-control-authority.md](agent-control-authority.md),
+[agent-orchestrator-boundary.md](agent-orchestrator-boundary.md), and
+[headless-agent-contract.md](headless-agent-contract.md).
+
 The hard rule is:
 
 - frontend surfaces and runtime execution are architecturally decoupled
@@ -101,6 +108,11 @@ They should not own:
 - Installer UX assumptions
 
 The runtime must be usable without inheriting the frontend's internal shape.
+
+For the stricter runtime-side split between Rust agents and the Elixir control
+plane, see [agent-orchestrator-boundary.md](agent-orchestrator-boundary.md).
+For the headless caller and direct-mesh contract, see
+[headless-agent-contract.md](headless-agent-contract.md).
 
 ## Architectural Consequences
 

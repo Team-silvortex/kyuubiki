@@ -79,6 +79,13 @@ reading surfaces, not the deeper repository narrative source.
 - `current-line.md` vs `version-line.md`
   Keep `current-line.md` as the broader narrative and `version-line.md` as the
   short formal release-line note.
+- `system-overview.md` vs `app-runtime-boundaries.md` vs
+  `agent-orchestrator-boundary.md` vs `headless-agent-contract.md` vs
+  `agent-control-authority.md` vs `operations.md` vs
+  `installer-remote-control.md`
+  Use `runtime-doc-ownership.md` as the primary ownership map so runtime,
+  authority, mesh, and remote-control edits do not duplicate whole sections
+  across several files.
 - `operations.md` vs `packaging-and-deployment.md` vs `desktop-release-checklist.md`
   Keep runtime behavior in `operations.md`, build/output mechanics in
   `packaging-and-deployment.md`, and release steps in

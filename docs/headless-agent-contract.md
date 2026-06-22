@@ -91,6 +91,9 @@ should compile down to stable control-plane or solver-RPC requests.
 
 ## Authority rules
 
+Use this section for headless-runtime consequences of authority, not for the
+full binding-state rulebook.
+
 Headless agents must follow these invariants:
 
 - one agent may be bound to at most one orchestrator authority at a time
@@ -100,12 +103,8 @@ Headless agents must follow these invariants:
 - SDK callers may choose direct solver RPC or control-plane mediation, but must
   not mix both authorities in one implicit submission path
 
-These rules match the current project direction:
-
-- `single_orchestrator`
-- `offline_mesh`
-- no multi-orchestrator dual registration
-- no hidden frontend ownership of runtime authority
+The primary ownership of binding modes, visible fields, and legal transitions
+lives in [agent-control-authority.md](agent-control-authority.md).
 
 ## Required descriptor shape
 
@@ -156,6 +155,10 @@ Use these paths intentionally.
 - Workbench -> headless handoff registry -> SDK or runtime executor
   Valid for workflow export and deferred execution, but not itself the solver
   protocol.
+
+For operator-facing deployment and runtime procedures around these paths, use
+[operations.md](operations.md) and
+[installer-remote-control.md](installer-remote-control.md).
 
 ### Anti-patterns
 

@@ -98,6 +98,10 @@ It is one runtime target family that product surfaces can manage.
 
 ## Product-Side Boundary
 
+Use this section only for the runtime-facing consequences of product shells.
+The primary owner of Hub / Workbench / Installer role separation is
+[app-runtime-boundaries.md](app-runtime-boundaries.md).
+
 Frontend and desktop surfaces may:
 
 - inspect agent health
@@ -124,6 +128,11 @@ If a UI needs runtime behavior, that behavior must be exposed through:
 - dataset contracts
 - operator descriptors
 
+For the headless transport and gateway-vs-runtime rulebook, use
+[headless-agent-contract.md](headless-agent-contract.md).
+For one-orchestrator-versus-offline-mesh binding rules, use
+[agent-control-authority.md](agent-control-authority.md).
+
 ## Allowed Deployment Shapes
 
 This boundary supports several valid shapes:
@@ -139,6 +148,9 @@ This boundary supports several valid shapes:
 
 The existence of several shapes is exactly why the agent must not inherit UI
 or orchestrator internals.
+
+Use [system-overview.md](system-overview.md) for the broader system map and
+[operations.md](operations.md) for operator procedures inside those shapes.
 
 ## Transitional Reality In This Repository
 
