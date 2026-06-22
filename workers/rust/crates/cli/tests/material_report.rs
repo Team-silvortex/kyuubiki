@@ -193,3 +193,51 @@ fn material_report_cli_accepts_custom_optimization_profile() {
         Some("aluminum_6061_t6")
     );
 }
+
+#[test]
+fn material_report_cli_builds_structural_panel_report() {
+    let input = write_temp_json(
+        "structural-results",
+        &json!([
+            { "result": { "max_stress": 210.0e6, "max_displacement": 0.0009 } },
+            { "result": { "max_stress": 160.0e6, "max_displacement": 0.00042 } },
+            { "max_stress": 120.0e6, "max_displacement": 0.00055 }
+        ]),
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args([
+            "structural-panel",
+            "--results",
+            input.to_str().expect("input path"),
+            "--json",
+        ])
+        .output()
+        .expect("run material report");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("stdout report json");
+    assert_eq!(
+        report["schema_version"].as_str(),
+        Some("kyuubiki.structural-material-report/v1")
+    );
+    assert_eq!(
+        report["winner_candidate_id"].as_str(),
+        Some("carbon_fiber_quasi_iso")
+    );
+    assert_eq!(
+        report["optimization"]["id"].as_str(),
+        Some("material.structural_panel_screening.optimization.v1")
+    );
+    assert_eq!(report["candidates"].as_array().map(Vec::len), Some(3));
+    assert_eq!(
+        report["candidates"][0]["optimization_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(5)
+    );
+}

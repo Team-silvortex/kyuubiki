@@ -130,4 +130,5 @@ Rust material reports can be generated headlessly:
 kyuubiki-material-report heat-spreader --results results.json --out report.json --json
 kyuubiki-material-report thermo-shield --results thermo-results.json --out thermo-report.json --json
 kyuubiki-material-report thermo-shield --results thermo-results.json --profile profile.json --json
+kyuubiki-material-report structural-panel --results structural-results.json --json
 ```

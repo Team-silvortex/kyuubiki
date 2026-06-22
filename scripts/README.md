@@ -27,6 +27,9 @@ This directory contains host-native operational entry points.
 - `check-doc-book.mjs`
   Verify the centralized docs book and Hub mirrors for version alignment,
   broken local links, required chapter markers, and old legacy wording.
+- `validate-commercial-readiness.mjs`
+  Verify the `2.0` commercial-readiness manifest against its Markdown gate,
+  including gate count, evidence links, and the shared exit statement.
 - `sync-doc-book-version.mjs`
   Update the hand-maintained book entry pages to the current shipping version
   without touching the generated installation or update-catalog pages.

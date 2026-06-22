@@ -259,6 +259,52 @@ Key outcomes:
 - better operator validation and compatibility reporting
 - clear promotion path from local operator to reusable ecosystem capability
 
+## Major-Version Commercial Strategy
+
+The FEM-Blender north star should not force `2.0` to carry every final
+industrial ambition at once.
+
+### `2.0`: credible early commercial trust line
+
+`2.0` should be the first version that can be offered to selected research
+partners, early commercial users, and internal R&D automation teams with a
+straight face.
+
+It should prove:
+
+- bounded real engineering workflows can run end to end
+- solver claims are backed by benchmarks and documented limits
+- workflow assets, material studies, optimization reports, and result lineage
+  are durable enough for review
+- headless SDK and workbench paths are coherent rather than two separate
+  products
+- install, update, recovery, security, and audit behavior are predictable
+
+`2.0` is therefore not the final war against incumbent FEM giants.
+It is the first trust line where Kyuubiki stops being only a promising platform
+and starts being a commercial product.
+
+### `2.x`: industrial hardening and ecosystem growth
+
+The `2.x` line should turn the early commercial baseline into a stronger
+industrial platform:
+
+- broader verified solver coverage
+- deeper material and multiphysics workflows
+- more serious post-processing and comparison tools
+- stronger distributed execution and mesh operation
+- operator ecosystem growth through stable contracts
+- boringly reliable project persistence and lineage
+
+### `3.0`: direct giant-challenge line
+
+`3.0` is the point where Kyuubiki can start positioning itself for direct
+strategic competition with established FEM giants.
+
+By then, Kyuubiki should have enough numerical trust, workflow depth,
+distributed runtime maturity, operator ecosystem strength, and real project
+history to make that claim without sounding aspirational.
+
 ## Near-Term Translation For The Current Codebase
 
 In practical terms, the current repository should keep prioritizing:

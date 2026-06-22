@@ -2,8 +2,10 @@ use std::fs;
 
 use kyuubiki_headless_sdk::{
     MaterialOptimizationProfile, build_heat_spreader_screening_report,
-    build_heat_spreader_screening_report_with_optimization, build_thermo_shield_screening_report,
-    build_thermo_shield_screening_report_with_optimization,
+    build_heat_spreader_screening_report_with_optimization,
+    build_structural_panel_screening_report,
+    build_structural_panel_screening_report_with_optimization,
+    build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
 };
 use serde_json::Value;
 
@@ -41,6 +43,16 @@ fn run() -> Result<(), String> {
                     profile,
                 ),
                 None => build_thermo_shield_screening_report(&result_payloads),
+            }?)
+            .map_err(|error| error.to_string())?
+        }
+        "structural-panel" | "material_structural_panel_screening" => {
+            serde_json::to_value(match profile {
+                Some(profile) => build_structural_panel_screening_report_with_optimization(
+                    &result_payloads,
+                    profile,
+                ),
+                None => build_structural_panel_screening_report(&result_payloads),
             }?)
             .map_err(|error| error.to_string())?
         }
@@ -111,7 +123,7 @@ impl Flags {
 }
 
 fn usage() -> String {
-    "kyuubiki-material-report <heat-spreader|thermo-shield> --results results.json [--profile profile.json] [--out report.json] [--json]".to_string()
+    "kyuubiki-material-report <heat-spreader|thermo-shield|structural-panel> --results results.json [--profile profile.json] [--out report.json] [--json]".to_string()
 }
 
 fn read_json(path: &str) -> Result<Value, String> {

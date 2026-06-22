@@ -72,26 +72,29 @@ agent surfaces.
    Formal version-line note, codename, and major-version policy.
 2. [tamamono-minor-lines.md](tamamono-minor-lines.md)
    Suggested long-range grouping for the `1.x` minors.
-3. [accuracy-plan.md](accuracy-plan.md)
+3. [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
+   Trust-gate checklist for deciding whether the line is ready to become a
+   credible `2.0` early-commercial product.
+4. [accuracy-plan.md](accuracy-plan.md)
    Accuracy roadmap, benchmark targets, and verification priorities.
-4. [accuracy-baselines.md](accuracy-baselines.md)
+5. [accuracy-baselines.md](accuracy-baselines.md)
    Concrete benchmark baselines already enforced in automation.
-5. [operator-sdk.md](operator-sdk.md)
+6. [operator-sdk.md](operator-sdk.md)
    Current extension-contract direction for growing operator capabilities
    without turning every family into a one-off vertical slice.
-6. [workflow-graph.md](workflow-graph.md)
+7. [workflow-graph.md](workflow-graph.md)
    Multi-operator composition direction for shader-like workflow growth.
    The first headless reference runner now exists for
    `heat_plane_quad_2d -> thermal_plane_quad_2d`, and the control plane now
    exposes a first built-in workflow catalog entry for
    `workflow.heat-to-thermo-quad-2d`.
-7. [workflow-dataset.md](workflow-dataset.md)
+8. [workflow-dataset.md](workflow-dataset.md)
    ONNX-like cross-operator data contract for workflow-carried values, with
    named datasets, shape semantics, and schema references shared across nodes.
-8. [installer-remote-control.md](installer-remote-control.md)
+9. [installer-remote-control.md](installer-remote-control.md)
    Installer-owned remote deployment and runtime-control surface, including
    workflow snapshots, certificate alignment, and mesh-oriented operator
    guidance.
-9. [language-packs.md](language-packs.md)
+10. [language-packs.md](language-packs.md)
    Local-first multilingual extension path for the Workbench UI, with a stable
    schema ready before remote delivery lands.

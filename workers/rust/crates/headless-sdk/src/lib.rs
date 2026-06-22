@@ -4,6 +4,7 @@ mod executor;
 mod hybrid_executor;
 mod material_optimization;
 mod material_research;
+mod material_structural;
 mod material_thermo;
 mod plan;
 mod run;
@@ -39,6 +40,12 @@ pub use material_research::{
     MaterialResearchReport, build_heat_spreader_screening_report,
     build_heat_spreader_screening_report_with_optimization, build_heat_spreader_screening_steps,
     heat_spreader_screening_candidates, heat_spreader_screening_metric_specs,
+};
+pub use material_structural::{
+    StructuralMaterialCandidate, StructuralMaterialCandidateReport, StructuralMaterialReport,
+    build_structural_panel_screening_report,
+    build_structural_panel_screening_report_with_optimization,
+    build_structural_panel_screening_steps, structural_panel_screening_candidates,
 };
 pub use material_thermo::{
     ThermoMaterialCandidate, ThermoMaterialCandidateReport, ThermoMaterialReport,

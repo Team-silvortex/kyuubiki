@@ -65,8 +65,16 @@ Then branch by intent:
 
 - `tamamono-minor-lines.md`
   Long-range `tamamono 1.x` roadmap.
+- `commercial-readiness-2.0.md`
+  Trust-gate checklist for deciding whether `2.0` can honestly ship as an
+  early-commercial / research-partner line.
+- `commercial-readiness-2.0.manifest.json`
+  Machine-readable gate map for the same `2.0` checklist, validated by
+  `node ./scripts/validate-commercial-readiness.mjs`.
 - `fem-blender-roadmap.md`
-  Product north star and staged path toward becoming the Blender of FEM.
+  Product north star and staged path toward becoming the Blender of FEM,
+  including the `2.0` early-commercial trust line and `3.0`
+  giant-challenge line.
 - `rendering-roadmap.html`
   Render-capability upgrade path from the current SVG viewport toward a
   dedicated simulation field renderer.
@@ -155,7 +163,12 @@ Then branch by intent:
   version policy.
 - `release-prep-1.9-to-1.20.md`
   Industrialization roadmap for the second half of `tamamono 1.x`, covering
-  the boundary-hardening path from `1.9.x` through `1.20.x` before `2.0`.
+  the boundary-hardening path from `1.9.x` through `1.20.x` before `2.0`,
+  plus the commercial distinction between `2.0`, `2.x`, and `3.0`.
+- `commercial-readiness-2.0.md`
+  Commercial trust-gate checklist for numerical confidence, workflow assets,
+  SDK credibility, installer/update hygiene, agent authority, security, UX, and
+  docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
   inside the `1.10.x` trust-hardening and `1.11.x` asset-formalization path.
@@ -261,4 +274,4 @@ Then branch by intent:
 - Rust solver/agent work:
   `philosophy.md` -> `system-overview.md` -> `agent-orchestrator-boundary.md` -> `protocols.md` -> `solver-matrix-optimization-pack.md`
 - Packaging/release work:
-  `packaging-and-deployment.md` -> `testing-and-ci.md` -> `desktop-release-checklist.md` -> `update-catalog.html`
+  `packaging-and-deployment.md` -> `testing-and-ci.md` -> `desktop-release-checklist.md` -> `commercial-readiness-2.0.md` -> `update-catalog.html`

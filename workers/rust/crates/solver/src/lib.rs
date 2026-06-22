@@ -947,11 +947,7 @@ fn solve_heat_plane_quad_2d_internal(
         .iter()
         .map(|element| precompute_heat_plane_quad_element(request, element))
         .collect::<Result<Vec<_>, String>>()?;
-    push_heat_plane_quad_memory_stage(
-        &mut memory_stages,
-        collect_memory_stages,
-        "precompute",
-    );
+    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "precompute");
 
     for (index, node) in request.nodes.iter().enumerate() {
         heat_vector[index] = node.heat_load;
@@ -991,18 +987,10 @@ fn solve_heat_plane_quad_2d_internal(
         .filter_map(|(index, node)| node.fix_temperature.then_some((index, node.temperature)))
         .collect::<Vec<_>>();
 
-    push_heat_plane_quad_memory_stage(
-        &mut memory_stages,
-        collect_memory_stages,
-        "assemble_global",
-    );
+    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "assemble_global");
     let (reduced_stiffness, reduced_heat, free) =
         reduce_sparse_system_with_prescribed(&global_stiffness, &heat_vector, &prescribed);
-    push_heat_plane_quad_memory_stage(
-        &mut memory_stages,
-        collect_memory_stages,
-        "reduce_system",
-    );
+    push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "reduce_system");
     let reduced_temperatures = solve_spd_system(&reduced_stiffness, &reduced_heat)?;
     push_heat_plane_quad_memory_stage(&mut memory_stages, collect_memory_stages, "solve_system");
 

@@ -355,6 +355,77 @@ should be:
 If a proposed feature does not strengthen at least one of those three threads,
 it probably belongs after the industrial baseline is stronger.
 
+## Commercial Posture: `2.0` Is The First Trust Line, Not The Final War
+
+`2.0` should be treated as the first credible commercial line, not as the point
+where Kyuubiki already tries to defeat every incumbent industrial FEM suite.
+
+The commercial promise for `2.0` should be:
+
+`a trustworthy early commercial / research-partner platform for programmable,
+workflow-driven FEM work`
+
+That means `2.0` must be good enough for selected early customers, research
+partners, internal R&D teams, and automation-heavy users to trust the system
+for bounded real work.
+
+It does not need to claim full parity with mature suites across every legacy
+industrial workflow.
+
+### What `2.0` must prove
+
+- installation, update, cleanup, and recovery behavior are predictable
+- headless SDK and workbench flows share the same conceptual model
+- solver claims are benchmark-backed rather than demo-backed
+- workflow assets, result reports, optimization metrics, and lineage are
+  persistent enough for real engineering review
+- agent and mesh execution have clear authority, security, and audit rules
+- docs are coherent enough for humans and large-model agents to understand the
+  product without oral tradition
+
+The detailed release gate lives in
+[commercial-readiness-2.0.md](commercial-readiness-2.0.md).
+
+### What `2.0` should not pretend
+
+- full replacement of incumbent FEM giants
+- mature coverage of every industry-specific workflow
+- complete third-party operator marketplace maturity
+- final rendering and post-processing parity with long-lived commercial tools
+- absence of rough edges in advanced deployment scenarios
+
+### The role of the `2.x` line
+
+The `2.x` line should convert the early commercial baseline into a harder
+industrial product:
+
+- broaden benchmark coverage and independent verification
+- deepen material, contact, nonlinear, multiphysics, and optimization workflows
+- mature distributed agent execution and offline/direct mesh operation
+- turn operator extension from promising SDK into a real ecosystem
+- make project persistence, lineage, and result comparison feel boringly
+  reliable
+
+### The `3.0` decision point
+
+`3.0` is the line where Kyuubiki can aim at a direct strategic contest with
+established FEM giants.
+
+By `3.0`, the product should have:
+
+- a battle-tested solver and benchmark story
+- a serious post-processing and visualization layer
+- a strong operator ecosystem and extension path
+- enterprise-grade installation, update, security, and audit posture
+- distributed execution that is normal product behavior, not a lab demo
+- enough real-world project history to justify higher-trust commercial claims
+
+In short:
+
+- `2.0` = credible early commercial trust line
+- `2.x` = industrial hardening and ecosystem growth
+- `3.0` = direct giant-challenge line
+
 ## How to use this page
 
 Use this document when:
@@ -368,6 +439,7 @@ Use these related docs alongside it:
 
 - [current-line.md](current-line.md)
 - [tamamono-minor-lines.md](tamamono-minor-lines.md)
+- [commercial-readiness-2.0.md](commercial-readiness-2.0.md)
 - [accuracy-plan.md](accuracy-plan.md)
 - [fem-blender-roadmap.md](fem-blender-roadmap.md)
 - [testing-and-ci.md](testing-and-ci.md)

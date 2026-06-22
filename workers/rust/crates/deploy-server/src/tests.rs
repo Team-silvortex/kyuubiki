@@ -29,7 +29,11 @@ fn channel_route_uses_catalog_payload() {
     let config = test_config(&root);
     let response = serve_channel_details(&config, "/api/v1/update/channels/stable");
     assert_eq!(response.status_code, 200);
-    assert!(String::from_utf8(response.body).unwrap().contains("\"stable\""));
+    assert!(
+        String::from_utf8(response.body)
+            .unwrap()
+            .contains("\"stable\"")
+    );
 }
 
 #[test]
@@ -60,8 +64,16 @@ fn config_descriptor_does_not_expose_host_paths() {
 fn local_agent_route_serves_checked_in_example_shape() {
     let root = unique_test_root("local-agent-example");
     fs::create_dir_all(root.join("deploy")).unwrap();
-    fs::write(root.join("deploy").join("agents.local.example.json"), br#"{"source":"example"}"#).unwrap();
-    fs::write(root.join("deploy").join("agents.local.json"), br#"{"source":"local"}"#).unwrap();
+    fs::write(
+        root.join("deploy").join("agents.local.example.json"),
+        br#"{"source":"example"}"#,
+    )
+    .unwrap();
+    fs::write(
+        root.join("deploy").join("agents.local.json"),
+        br#"{"source":"local"}"#,
+    )
+    .unwrap();
 
     let response = route_request(
         &test_config(&root),
@@ -72,7 +84,11 @@ fn local_agent_route_serves_checked_in_example_shape() {
         },
     );
     assert_eq!(response.status_code, 200);
-    assert!(String::from_utf8(response.body).unwrap().contains("example"));
+    assert!(
+        String::from_utf8(response.body)
+            .unwrap()
+            .contains("example")
+    );
 }
 
 #[test]
@@ -96,7 +112,8 @@ fn non_health_routes_require_token_when_configured() {
         &Request {
             method: "GET".to_string(),
             path: "/api/v1/server/config".to_string(),
-            headers: iter::once(("authorization".to_string(), "Bearer secret".to_string())).collect(),
+            headers: iter::once(("authorization".to_string(), "Bearer secret".to_string()))
+                .collect(),
         },
     );
     assert_eq!(authorized.status_code, 200);
@@ -115,7 +132,10 @@ fn test_config(root: &Path) -> DeployServerConfig {
 }
 
 fn unique_test_root(label: &str) -> PathBuf {
-    let root = env::temp_dir().join(format!("kyuubiki-deploy-server-{label}-{}", unix_timestamp()));
+    let root = env::temp_dir().join(format!(
+        "kyuubiki-deploy-server-{label}-{}",
+        unix_timestamp()
+    ));
     let _ = fs::remove_dir_all(&root);
     root
 }

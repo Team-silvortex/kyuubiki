@@ -5,10 +5,7 @@ import type {
   WorkflowGraphDefinition,
 } from "@/lib/api";
 import type { WorkflowGraphValidationIssue } from "@/components/workbench/workflow/workbench-workflow-validation-types";
-
-function buildNodeMap(graph: WorkflowGraphDefinition) {
-  return new Map(graph.nodes.map((node) => [node.id, node] as const));
-}
+import { buildWorkflowGraphKernelIndex } from "@/lib/workbench/frontend-kernel";
 
 export function validateCatalogArtifacts(
   graph: WorkflowGraphDefinition,
@@ -16,10 +13,10 @@ export function validateCatalogArtifacts(
   mode: "entry" | "output",
 ): WorkflowGraphValidationIssue[] {
   const issues: WorkflowGraphValidationIssue[] = [];
-  const nodeMap = buildNodeMap(graph);
+  const { nodeById } = buildWorkflowGraphKernelIndex(graph);
 
   for (const artifact of artifacts) {
-    const node = nodeMap.get(artifact.node_id);
+    const node = nodeById.get(artifact.node_id);
     if (!node) {
       issues.push({
         id: `${mode}:missing-node:${artifact.node_id}:${artifact.artifact_type}`,

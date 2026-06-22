@@ -1,0 +1,183 @@
+{
+  "schema_version": "kyuubiki.commercial-readiness/v1",
+  "release_target": "2.0",
+  "posture": "credible early commercial trust line",
+  "exit_statement": "A bounded real FEM workflow can be installed, run, audited, explained, updated, and repeated without relying on hidden state or private knowledge.",
+  "classification_values": [
+    "required",
+    "acceptable limitation",
+    "defer to 2.x",
+    "blocker"
+  ],
+  "gates": [
+    {
+      "id": "numerical_trust",
+      "title": "Numerical Trust",
+      "required": [
+        "core solver families have benchmark-backed baselines",
+        "benchmark docs include reference values, tolerances, and automation status",
+        "solver limitations are visible in docs and product-facing descriptions",
+        "result drift is detectable across releases"
+      ],
+      "acceptable_limitations": [
+        "some advanced solver families can remain experimental if clearly labeled"
+      ],
+      "blockers": [
+        "claiming industrial trust from demos or hand-picked screenshots alone"
+      ],
+      "evidence_docs": [
+        "accuracy-plan.md",
+        "accuracy-baselines.md",
+        "solver-matrix-optimization-pack.md"
+      ]
+    },
+    {
+      "id": "workflow_asset_durability",
+      "title": "Workflow And Asset Durability",
+      "required": [
+        "workflow graphs and dataset contracts are stable enough to export, import, replay, and explain",
+        "results can be traced back to model inputs, material data, workflow version, operator version, runtime path, and agent context",
+        "snapshots, reports, and result bundles have visible lifecycle and cleanup rules",
+        "optimization metrics are first-class report contracts, not informal notes"
+      ],
+      "acceptable_limitations": [
+        "project persistence can still be file-first if the file contract is clear"
+      ],
+      "blockers": [
+        "important result meaning depends on hidden UI state or untracked local state"
+      ],
+      "evidence_docs": [
+        "workflow-graph.md",
+        "workflow-dataset.md",
+        "headless-sdks.md"
+      ]
+    },
+    {
+      "id": "headless_sdk_credibility",
+      "title": "Headless SDK Credibility",
+      "required": [
+        "Rust headless SDK supports real workflow initialization, plan, run, and report paths",
+        "material research examples include optimization profiles and candidate-level score explanations",
+        "CLI and SDK surfaces produce machine-readable outputs suitable for AI agents and CI",
+        "frontend wasm Python automation and backend headless SDK responsibilities are clearly separated"
+      ],
+      "acceptable_limitations": [
+        "Python and Elixir parity can lag behind Rust for advanced material research if the gap is documented"
+      ],
+      "blockers": [
+        "headless paths are only demos and cannot run without frontend-only behavior"
+      ],
+      "evidence_docs": [
+        "headless-sdks.md",
+        "headless-agent-contract.md"
+      ]
+    },
+    {
+      "id": "installer_update_disk_hygiene",
+      "title": "Installer, Update, And Disk Hygiene",
+      "required": [
+        "standard install paths are documented for supported platforms",
+        "update source, download, staging, apply, rollback, and cleanup behavior are visible",
+        "old residue cleanup is explicit and safe",
+        "large build/download artifacts do not silently accumulate on developer or user machines"
+      ],
+      "acceptable_limitations": [
+        "some platform packagers can remain manual if the support level is clearly marked"
+      ],
+      "blockers": [
+        "users cannot predict where files go or how to recover from a failed update"
+      ],
+      "evidence_docs": [
+        "packaging-and-deployment.md",
+        "desktop-release-checklist.md",
+        "installer-remote-control.md"
+      ]
+    },
+    {
+      "id": "agent_mesh_runtime_authority",
+      "title": "Agent, Mesh, And Runtime Authority",
+      "required": [
+        "agent authority rules are explicit",
+        "one agent cannot be ambiguously controlled by multiple orchestrators",
+        "offline direct mesh and orchestrated control-plane modes are separated",
+        "operator pull/cache/cleanup behavior is visible and auditable",
+        "remote runtime actions are logged with enough context for diagnosis"
+      ],
+      "acceptable_limitations": [
+        "direct mesh can remain narrower than orchestrated mode if its boundary is honest"
+      ],
+      "blockers": [
+        "runtime authority is ambiguous or hidden behind UI convenience"
+      ],
+      "evidence_docs": [
+        "agent-orchestrator-boundary.md",
+        "agent-control-authority.md",
+        "operator-library-centralization.md"
+      ]
+    },
+    {
+      "id": "security_audit",
+      "title": "Security And Audit",
+      "required": [
+        "certificate, token, and remote-control behavior is documented",
+        "sensitive configuration is not committed into project data",
+        "privileged installer and remote actions are audited",
+        "user-visible configuration distinguishes editable and read-only settings"
+      ],
+      "acceptable_limitations": [
+        "enterprise policy integrations can wait for 2.x if local trust behavior is solid"
+      ],
+      "blockers": [
+        "secrets, certificates, or remote credentials are handled as ordinary project files"
+      ],
+      "evidence_docs": [
+        "security.md",
+        "installation-integrity-contract.html",
+        "installer-remote-control.md"
+      ]
+    },
+    {
+      "id": "workbench_ux_stability",
+      "title": "Workbench And UX Stability",
+      "required": [
+        "core UI flows avoid overlapping or unusable layouts at supported resolutions",
+        "workbench and SDK use the same concepts for workflows, materials, results, and reports",
+        "UI automation selectors stay product-owned and stable",
+        "error recovery paths are visible to users"
+      ],
+      "acceptable_limitations": [
+        "advanced rendering can remain staged if current visualization limits are clear"
+      ],
+      "blockers": [
+        "successful workflows require fragile UI-only gestures that cannot be automated or recovered"
+      ],
+      "evidence_docs": [
+        "frontend-style.md",
+        "frontend-implementation.md",
+        "ui-automation-contract.html",
+        "rendering-roadmap.html"
+      ]
+    },
+    {
+      "id": "documentation_infrastructure",
+      "title": "Documentation As Product Infrastructure",
+      "required": [
+        "the central docs book is coherent enough for humans and large-model agents",
+        "release posture, architecture boundaries, SDK paths, installer behavior, and troubleshooting are findable from the docs map",
+        "limitations are documented near the relevant capability"
+      ],
+      "acceptable_limitations": [
+        "some desktop-facing HTML mirrors can lag briefly if repository docs remain source-of-truth"
+      ],
+      "blockers": [
+        "critical operational knowledge exists only in chat history or local memory"
+      ],
+      "evidence_docs": [
+        "README.md",
+        "book.html",
+        "navigation-matrix.html",
+        "troubleshooting.md"
+      ]
+    }
+  ]
+}

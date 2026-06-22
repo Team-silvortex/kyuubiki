@@ -1,10 +1,10 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::{Component, Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
-use std::collections::HashMap;
 
 use serde_json::{Value, json};
 
@@ -219,7 +219,11 @@ fn parse_request(buffer: &[u8]) -> Result<Request, String> {
             headers.insert(key.trim().to_ascii_lowercase(), value.trim().to_string());
         }
     }
-    Ok(Request { method, path, headers })
+    Ok(Request {
+        method,
+        path,
+        headers,
+    })
 }
 
 fn route_request(config: &DeployServerConfig, request: &Request) -> Response {

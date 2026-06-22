@@ -82,6 +82,31 @@ Good fits:
 - assistant/runtime bridges
 - selection helpers, geometry transforms, and chunk-window logic
 
+### Frontend kernel and wasm boundary
+
+Keep wasm as an optional hot-path backend, not as the default UI runtime.
+
+The first stable boundary is `src/lib/workbench/frontend-kernel.ts`. It owns
+pure compute kernels that can run in TypeScript today and move to Rust wasm
+later without changing component APIs.
+
+Good wasm candidates:
+
+- large workflow graph indexing, topology sort, cycle detection, and validation
+- bulk material candidate scoring and constraint filtering
+- layout safety scans that check many panel rectangles across resolutions
+- light geometry preprocessing for viewport helpers
+
+Bad wasm candidates:
+
+- normal React state updates
+- routing, fetch orchestration, and form state
+- small workflow edits where wasm cold start costs more than the work
+- UI extension surfaces, because Workbench UI remains product-owned and fixed
+
+Use TypeScript until the workload is repeated or large enough to cross the
+kernel threshold. Cold wasm should never be on the first interaction path.
+
 Bad fits:
 
 - JSX fragments
