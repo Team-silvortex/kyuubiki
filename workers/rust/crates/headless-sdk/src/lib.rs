@@ -2,7 +2,9 @@ mod contracts;
 mod direct_fem;
 mod executor;
 mod hybrid_executor;
+mod material_optimization;
 mod material_research;
+mod material_thermo;
 mod plan;
 mod run;
 mod service_executor;
@@ -26,9 +28,22 @@ pub use executor::{
     collect_executor_compatibility_issues, execute_batch_with_executor, executor_supports_action,
 };
 pub use hybrid_executor::HybridHeadlessExecutor;
+pub use material_optimization::{
+    MaterialOptimizationConstraint, MaterialOptimizationProfile, MaterialOptimizationTerm,
+    MaterialOptimizationWeight, less_equal_status, material_optimization_constraint,
+    material_optimization_profile, material_optimization_term, material_optimization_weight,
+    profile_weight,
+};
 pub use material_research::{
-    MaterialResearchCandidate, build_heat_spreader_screening_steps,
-    heat_spreader_screening_candidates,
+    MaterialResearchCandidate, MaterialResearchCandidateReport, MaterialResearchMetricSpec,
+    MaterialResearchReport, build_heat_spreader_screening_report,
+    build_heat_spreader_screening_report_with_optimization, build_heat_spreader_screening_steps,
+    heat_spreader_screening_candidates, heat_spreader_screening_metric_specs,
+};
+pub use material_thermo::{
+    ThermoMaterialCandidate, ThermoMaterialCandidateReport, ThermoMaterialReport,
+    build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
+    build_thermo_shield_screening_steps, thermo_shield_screening_candidates,
 };
 pub use plan::{
     HeadlessExecutionPlan, HeadlessPlanBinding, HeadlessPlanCompatibility,

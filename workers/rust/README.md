@@ -25,7 +25,9 @@ It currently contains:
   behavior. The `kyuubiki-headless` binary also exposes workflow
   template/init/inspect/validate/plan/run flows for service-only, browser-only,
   and hybrid headless automation. `plan` emits executor compatibility for
-  `mock`, `service`, and `hybrid` before a live run is attempted.
+  `mock`, `service`, and `hybrid` before a live run is attempted. The
+  `kyuubiki-material-report` binary turns material screening result payloads
+  into ranked research reports.
 - `crates/headless-sdk`
   Rust-first headless workflow templates, execution plans, dry-run support, and
   concrete R&D examples such as `material_heat_spreader_screening` for thermal

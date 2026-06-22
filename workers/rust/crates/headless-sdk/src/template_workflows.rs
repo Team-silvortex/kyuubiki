@@ -39,6 +39,7 @@ pub(super) fn build_template_workflow(
             ),
         ],
         "material_heat_spreader_screening" => crate::build_heat_spreader_screening_steps(),
+        "material_thermo_shield_screening" => crate::build_thermo_shield_screening_steps(),
         "direct_plane_quad" => vec![
             HeadlessWorkflowStep::new(
                 "solve_plane_quad_2d",

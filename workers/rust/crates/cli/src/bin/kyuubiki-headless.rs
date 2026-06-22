@@ -12,8 +12,8 @@ use kyuubiki_headless_sdk::{
 };
 use serde::Serialize;
 use serde_json::Value;
+#[path = "kyuubiki-headless/plan.rs"]
 mod kyuubiki_headless_plan;
-
 fn main() {
     if let Err(error) = run() {
         eprintln!("{error}");

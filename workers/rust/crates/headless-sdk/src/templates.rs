@@ -40,6 +40,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["material", "thermal", "screening", "conductivity"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_thermo_shield_screening",
+        title: "Material Thermo Shield Screening",
+        description: "Compare aluminum, titanium, and Invar candidates in a thermo-mechanical shield study.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &["material", "thermo", "screening", "stress"],
+    },
+    HeadlessTemplateDescriptor {
         id: "direct_plane_quad",
         title: "Direct Plane Quad",
         description: "Submit a plane quad structural solve directly and fetch the final result.",

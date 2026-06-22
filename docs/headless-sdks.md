@@ -111,6 +111,11 @@ They now also expose a small workflow layer:
 - generate Rust-driven material screening workflows, starting with a thermal
   heat-spreader candidate comparison for Aluminum 6061, Copper C110, and
   in-plane pyrolytic graphite
+- build material research reports from headless result payloads, with explicit
+  metric specs, weighted ranking, and visible missing-metric warnings
+- expose optimization profiles as first-class report contracts, including
+  score formulas, constraints, normalized metric scores, and weighted
+  candidate contributions
 - validate workflow graphs and workflow dataset contracts before submission
 - wait for terminal job states by polling the control plane
 - optionally bypass the control plane and solve directly over solver RPC
@@ -118,3 +123,11 @@ They now also expose a small workflow layer:
 - browse large result windows in chunked pages
 - retry transient failures without retrying auth or logic errors
 - classify failures into machine-usable buckets for agent policy layers
+
+Rust material reports can be generated headlessly:
+
+```bash
+kyuubiki-material-report heat-spreader --results results.json --out report.json --json
+kyuubiki-material-report thermo-shield --results thermo-results.json --out thermo-report.json --json
+kyuubiki-material-report thermo-shield --results thermo-results.json --profile profile.json --json
+```

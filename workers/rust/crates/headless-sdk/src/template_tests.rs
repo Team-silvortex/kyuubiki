@@ -170,7 +170,7 @@ fn template_category_distribution_matches_current_catalog() {
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
-        ("materials", 1),
+        ("materials", 2),
         ("mechanical", 12),
         ("mesh", 1),
         ("orchestration", 1),
