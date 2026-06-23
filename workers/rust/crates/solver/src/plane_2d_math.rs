@@ -19,11 +19,11 @@ pub(super) struct PlaneTriangleState {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct PlanarStressMetrics {
-    principal_stress_1: f64,
-    principal_stress_2: f64,
-    max_in_plane_shear: f64,
-    von_mises: f64,
+pub(super) struct PlanarStressMetrics {
+    pub(super) principal_stress_1: f64,
+    pub(super) principal_stress_2: f64,
+    pub(super) max_in_plane_shear: f64,
+    pub(super) von_mises: f64,
 }
 
 pub(super) fn precompute_plane_triangle_element(
@@ -120,7 +120,11 @@ fn triangle_element_data(
     Ok((stiffness, area, b_matrix, d_matrix))
 }
 
-fn derive_planar_stress_metrics(sigma_x: f64, sigma_y: f64, tau_xy: f64) -> PlanarStressMetrics {
+pub(super) fn derive_planar_stress_metrics(
+    sigma_x: f64,
+    sigma_y: f64,
+    tau_xy: f64,
+) -> PlanarStressMetrics {
     let center = 0.5 * (sigma_x + sigma_y);
     let radius = (((0.5 * (sigma_x - sigma_y)).powi(2)) + tau_xy.powi(2)).sqrt();
     let principal_stress_1 = center + radius;
@@ -172,7 +176,7 @@ fn multiply_matrix_6x3_3x6(lhs: &[[f64; 3]; 6], rhs: &[[f64; 6]; 3]) -> [[f64; 6
     output
 }
 
-fn multiply_matrix_vector_3x6(matrix: &[[f64; 6]; 3], vector: &[f64; 6]) -> [f64; 3] {
+pub(super) fn multiply_matrix_vector_3x6(matrix: &[[f64; 6]; 3], vector: &[f64; 6]) -> [f64; 3] {
     let mut output = [0.0; 3];
     for row in 0..3 {
         output[row] = (0..6).map(|index| matrix[row][index] * vector[index]).sum();
@@ -180,10 +184,42 @@ fn multiply_matrix_vector_3x6(matrix: &[[f64; 6]; 3], vector: &[f64; 6]) -> [f64
     output
 }
 
-fn multiply_matrix_vector_3x3(matrix: &[[f64; 3]; 3], vector: &[f64; 3]) -> [f64; 3] {
+pub(super) fn multiply_matrix_vector_3x3(matrix: &[[f64; 3]; 3], vector: &[f64; 3]) -> [f64; 3] {
     let mut output = [0.0; 3];
     for row in 0..3 {
         output[row] = (0..3).map(|index| matrix[row][index] * vector[index]).sum();
     }
     output
+}
+
+pub(super) fn subtract_vector_3(left: &[f64; 3], right: &[f64; 3]) -> [f64; 3] {
+    [left[0] - right[0], left[1] - right[1], left[2] - right[2]]
+}
+
+pub(super) fn thermal_plane_triangle_equivalent_load(
+    b_matrix: &[[f64; 6]; 3],
+    d_matrix: &[[f64; 3]; 3],
+    area: f64,
+    thickness: f64,
+    thermal_expansion: f64,
+    average_temperature_delta: f64,
+) -> [f64; 6] {
+    let thermal_strain = [
+        thermal_expansion * average_temperature_delta,
+        thermal_expansion * average_temperature_delta,
+        0.0,
+    ];
+    let thermal_stress = multiply_matrix_vector_3x3(d_matrix, &thermal_strain);
+    let bt = transpose_3x6(b_matrix);
+    let mut equivalent_load = [0.0; 6];
+
+    for row in 0..6 {
+        equivalent_load[row] = (0..3)
+            .map(|index| bt[row][index] * thermal_stress[index])
+            .sum::<f64>()
+            * thickness
+            * area;
+    }
+
+    equivalent_load
 }
