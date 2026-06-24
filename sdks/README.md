@@ -84,6 +84,21 @@ kyuubiki-material-report thermo-shield --results thermo-results.json --out therm
 kyuubiki-material-report thermo-shield --results thermo-results.json --profile profile.json --json
 ```
 
+For a first end-to-end local material exploration prototype, run:
+
+```bash
+kyuubiki-material-explore heat-spreader --json
+kyuubiki-material-explore dielectric-screening
+kyuubiki-material-explore thermo-shield --out thermo-exploration.json
+kyuubiki-material-explore structural-panel
+```
+
+`kyuubiki-material-explore` enumerates the study candidates, runs the generated
+models through local Rust solver kernels, and feeds the real result payloads
+back into the material report ranking layer. The output uses the reusable
+`kyuubiki.material-exploration-run/v1` SDK contract, so later local, remote
+agent, and mesh runners can share the same result shape.
+
 `list` and `describe` expose the machine-readable study contract: aliases,
 template id, report schema, research domain, objective, and metric specs.
 
@@ -108,7 +123,7 @@ thin workflow layer:
 The current solve-kind dispatcher now covers:
 
 - `axial_bar_1d` / `bar_1d`
-- `thermal_bar_1d`, `heat_bar_1d`, `electrostatic_bar_1d`
+- `thermal_bar_1d`, `heat_bar_1d`, `electrostatic_bar_1d`, `magnetostatic_bar_1d`
 - `beam_1d`, `thermal_beam_1d`, `torsion_1d`
 - `spring_1d`, `spring_2d`, `spring_3d`
 - `truss_2d`, `thermal_truss_2d`, `truss_3d`, `thermal_truss_3d`

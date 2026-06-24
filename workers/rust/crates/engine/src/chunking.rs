@@ -26,6 +26,12 @@ pub fn chunk_result(
         (AnalysisResult::ElectrostaticBar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::MagnetostaticBar1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::MagnetostaticBar1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::ElectrostaticPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }

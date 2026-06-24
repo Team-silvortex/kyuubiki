@@ -9,8 +9,8 @@ use kyuubiki_protocol::{
     SolveBeam1dRequest, SolveElectrostaticBar1dRequest, SolveElectrostaticPlaneQuad2dRequest,
     SolveElectrostaticPlaneTriangle2dRequest, SolveFrame2dRequest, SolveFrame3dRequest,
     SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
-    SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest, SolveSpring1dRequest,
-    SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
+    SolveMagnetostaticBar1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
     SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
     SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
     SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
@@ -18,11 +18,12 @@ use kyuubiki_protocol::{
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d, solve_electrostatic_plane_quad_2d,
     solve_electrostatic_plane_triangle_2d, solve_frame_2d, solve_frame_3d, solve_heat_bar_1d,
-    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_plane_quad_2d,
-    solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d, solve_spring_3d,
-    solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
-    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
-    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+    solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d, solve_magnetostatic_bar_1d,
+    solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d, solve_spring_2d,
+    solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d, solve_thermal_frame_2d,
+    solve_thermal_frame_3d, solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d,
+    solve_thermal_truss_2d, solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d,
+    solve_truss_3d,
 };
 
 use crate::agent_state::{
@@ -91,6 +92,16 @@ pub(crate) fn handle_request(
                 "electrostatic bar result",
                 |params| params.nodes.len(),
                 solve_electrostatic_bar_1d,
+            )
+        }
+        RpcMethod::SolveMagnetostaticBar1d => {
+            run_solver::<SolveMagnetostaticBar1dRequest, _, _, _>(
+                request,
+                writer,
+                "1d magnetostatic bar",
+                "magnetostatic bar result",
+                |params| params.nodes.len(),
+                solve_magnetostatic_bar_1d,
             )
         }
         RpcMethod::SolveThermalTruss2d => run_solver::<SolveThermalTruss2dRequest, _, _, _>(

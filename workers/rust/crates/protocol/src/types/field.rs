@@ -88,6 +88,32 @@ pub struct SolveElectrostaticBar1dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticBar1dNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub fix_magnetic_potential: bool,
+    #[serde(default)]
+    pub magnetic_potential: f64,
+    #[serde(default)]
+    pub magnetomotive_source: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticBar1dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub permeability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveMagnetostaticBar1dRequest {
+    pub nodes: Vec<MagnetostaticBar1dNodeInput>,
+    pub elements: Vec<MagnetostaticBar1dElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneNodeInput {
     pub id: String,
     pub x: f64,

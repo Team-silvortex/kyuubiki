@@ -125,6 +125,47 @@ fn serializes_electrostatic_bar_1d_rpc_round_trip() {
 }
 
 #[test]
+fn serializes_magnetostatic_bar_1d_rpc_round_trip() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-magnetostatic-bar".to_string(),
+        method: RpcMethod::SolveMagnetostaticBar1d,
+        params: serde_json::to_value(SolveMagnetostaticBar1dRequest {
+            nodes: vec![
+                MagnetostaticBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_magnetic_potential: true,
+                    magnetic_potential: 10.0,
+                    magnetomotive_source: 0.0,
+                },
+                MagnetostaticBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_magnetic_potential: true,
+                    magnetic_potential: 0.0,
+                    magnetomotive_source: 0.0,
+                },
+            ],
+            elements: vec![MagnetostaticBar1dElementInput {
+                id: "mb0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                permeability: 1.25663706212e-6,
+            }],
+        })
+        .expect("request params should serialize"),
+    };
+
+    let json = serde_json::to_string(&request).expect("request should serialize");
+    let decoded: RpcRequest = serde_json::from_str(&json).expect("request should decode");
+
+    assert_eq!(decoded.method, RpcMethod::SolveMagnetostaticBar1d);
+    assert_eq!(decoded.id, "rpc-magnetostatic-bar");
+}
+
+#[test]
 fn serializes_electrostatic_plane_triangle_2d_rpc_round_trip() {
     let request = RpcRequest {
         rpc_version: RPC_VERSION,

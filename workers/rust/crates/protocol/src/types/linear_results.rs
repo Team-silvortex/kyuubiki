@@ -2,9 +2,9 @@ use crate::{
     SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
     SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest, SolveHeatPlaneTriangle2dRequest,
-    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-    SolveThermalBeam1dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
-    SolveTorsion1dRequest,
+    SolveMagnetostaticBar1dRequest, SolveSpring1dRequest, SolveSpring2dRequest,
+    SolveSpring3dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
 };
 use serde::{Deserialize, Serialize};
 
@@ -130,6 +130,38 @@ pub struct SolveElectrostaticBar1dResult {
     pub elements: Vec<ElectrostaticBar1dElementResult>,
     pub max_potential: f64,
     pub max_electric_field: f64,
+    pub max_flux_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticBar1dNodeResult {
+    pub index: usize,
+    pub id: String,
+    pub x: f64,
+    pub magnetic_potential: f64,
+    pub magnetomotive_source: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticBar1dElementResult {
+    pub index: usize,
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub length: f64,
+    pub average_magnetic_potential: f64,
+    pub magnetic_potential_gradient: f64,
+    pub magnetic_field_strength: f64,
+    pub magnetic_flux_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveMagnetostaticBar1dResult {
+    pub input: SolveMagnetostaticBar1dRequest,
+    pub nodes: Vec<MagnetostaticBar1dNodeResult>,
+    pub elements: Vec<MagnetostaticBar1dElementResult>,
+    pub max_magnetic_potential: f64,
+    pub max_magnetic_field_strength: f64,
     pub max_flux_density: f64,
 }
 

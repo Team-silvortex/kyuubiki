@@ -4,6 +4,7 @@ import {
   normalizeWorkbenchGovernanceRuntime,
   type WorkbenchGovernanceConfig,
 } from "@/lib/workbench/governance";
+import { mergeLanguagePack } from "@/lib/workbench/language-pack-merge";
 import type {
   AxialBarJobInput,
   Beam1dJobInput,
@@ -39,6 +40,7 @@ export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "tamamono 1.x";
 export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = "1.11.0";
 
 export type WorkbenchLanguagePackCompatibility = "exact" | "line" | "unscoped" | "mismatch";
+export { mergeLanguagePack };
 
 export type StoredWorkbenchSettings = {
   theme?: string;
@@ -62,6 +64,7 @@ export type WorkbenchLanguagePack = {
   schema_version: string;
   id: string;
   language: string;
+  targetSurface?: "workbench";
   name: string;
   version: string;
   versionLine?: string;
@@ -273,6 +276,7 @@ export function readWorkbenchLanguagePacks(): WorkbenchLanguagePack[] {
         typeof entry.id === "string" &&
         typeof entry.schema_version === "string" &&
         typeof entry.language === "string" &&
+        (entry.targetSurface === undefined || entry.targetSurface === "workbench") &&
         typeof entry.name === "string" &&
         typeof entry.version === "string" &&
         (entry.versionLine === undefined || typeof entry.versionLine === "string") &&
@@ -317,35 +321,6 @@ export function getWorkbenchLanguagePackCompatibility(
   }
 
   return "unscoped";
-}
-
-export function mergeLanguagePack<T extends Record<string, unknown>>(
-  base: T,
-  overrides?: Record<string, unknown> | null,
-): T {
-  if (!overrides) return base;
-
-  const mergeValue = (left: unknown, right: unknown): unknown => {
-    if (right === undefined) return left;
-    if (Array.isArray(right)) return right.slice();
-    if (
-      left &&
-      right &&
-      typeof left === "object" &&
-      typeof right === "object" &&
-      !Array.isArray(left) &&
-      !Array.isArray(right)
-    ) {
-      const result: Record<string, unknown> = { ...(left as Record<string, unknown>) };
-      for (const [key, value] of Object.entries(right as Record<string, unknown>)) {
-        result[key] = mergeValue(result[key], value);
-      }
-      return result;
-    }
-    return right;
-  };
-
-  return mergeValue(base, overrides) as T;
 }
 
 export function parseDirectMeshEndpoints(value: string) {

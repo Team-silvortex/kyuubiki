@@ -58,6 +58,13 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             &["verified", "electromagnetic", "electrostatic", "bar", "1d"],
         ),
         built_in_solver_descriptor(
+            "solve.magnetostatic_bar_1d",
+            "electromagnetic",
+            "magnetostatic_bar_1d",
+            "Solve a 1D magnetostatic bar model and expose magnetic potential, H-field, and B-field results.",
+            &["verified", "electromagnetic", "magnetostatic", "bar", "1d"],
+        ),
+        built_in_solver_descriptor(
             "solve.electrostatic_plane_triangle_2d",
             "electromagnetic",
             "electrostatic_plane_triangle_2d",

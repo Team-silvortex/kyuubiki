@@ -14,6 +14,7 @@ _FEM_JOB_PATHS: dict[str, str] = {
     "thermal_bar_1d": "/api/v1/fem/thermal-bar-1d/jobs",
     "heat_bar_1d": "/api/v1/fem/heat-bar-1d/jobs",
     "electrostatic_bar_1d": "/api/v1/fem/electrostatic-bar-1d/jobs",
+    "magnetostatic_bar_1d": "/api/v1/fem/magnetostatic-bar-1d/jobs",
     "beam_1d": "/api/v1/fem/beam-1d/jobs",
     "thermal_beam_1d": "/api/v1/fem/thermal-beam-1d/jobs",
     "torsion_1d": "/api/v1/fem/torsion-1d/jobs",

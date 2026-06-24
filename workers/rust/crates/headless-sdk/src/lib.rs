@@ -6,6 +6,7 @@ mod direct_fem;
 mod executor;
 mod hybrid_executor;
 mod material_dielectric;
+mod material_exploration;
 mod material_optimization;
 mod material_reports;
 mod material_research;
@@ -42,6 +43,10 @@ pub use material_dielectric::{
     build_dielectric_screening_report, build_dielectric_screening_report_with_optimization,
     build_dielectric_screening_steps, dielectric_screening_candidates,
     dielectric_screening_metric_specs,
+};
+pub use material_exploration::{
+    MATERIAL_EXPLORATION_SCHEMA_VERSION, MaterialExplorationRun, build_material_exploration_run,
+    material_exploration_steps,
 };
 pub use material_optimization::{
     MaterialOptimizationConstraint, MaterialOptimizationProfile, MaterialOptimizationTerm,

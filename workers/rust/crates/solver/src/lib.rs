@@ -11,6 +11,7 @@ mod frame_3d_math;
 mod heat_plane_2d;
 mod heat_plane_2d_validation;
 mod linear_algebra;
+mod magnetostatic_bar_1d;
 mod plane_2d;
 mod plane_2d_math;
 mod spring;
@@ -34,6 +35,7 @@ pub use heat_plane_2d::{
     HeatPlaneQuadMemoryStage, HeatPlaneQuadProfile, profile_heat_plane_quad_2d,
     solve_heat_plane_quad_2d, solve_heat_plane_triangle_2d,
 };
+pub use magnetostatic_bar_1d::solve_magnetostatic_bar_1d;
 pub use plane_2d::{solve_plane_quad_2d, solve_plane_triangle_2d};
 pub use spring::{solve_spring_1d, solve_spring_2d, solve_spring_3d};
 pub use thermal_frame_3d::solve_thermal_frame_3d;

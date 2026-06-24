@@ -177,3 +177,52 @@ fn handles_electrostatic_bar_1d_rpc_requests() {
     assert!((result.max_electric_field - 10.0).abs() < 1.0e-6);
     assert!((result.max_flux_density - 20.0).abs() < 1.0e-6);
 }
+
+#[test]
+fn handles_magnetostatic_bar_1d_rpc_requests() {
+    let request = RpcRequest {
+        rpc_version: RPC_VERSION,
+        id: "rpc-magnetostatic-bar".to_string(),
+        method: RpcMethod::SolveMagnetostaticBar1d,
+        params: serde_json::to_value(SolveMagnetostaticBar1dRequest {
+            nodes: vec![
+                MagnetostaticBar1dNodeInput {
+                    id: "n0".to_string(),
+                    x: 0.0,
+                    fix_magnetic_potential: true,
+                    magnetic_potential: 10.0,
+                    magnetomotive_source: 0.0,
+                },
+                MagnetostaticBar1dNodeInput {
+                    id: "n1".to_string(),
+                    x: 1.0,
+                    fix_magnetic_potential: true,
+                    magnetic_potential: 0.0,
+                    magnetomotive_source: 0.0,
+                },
+            ],
+            elements: vec![MagnetostaticBar1dElementInput {
+                id: "mb0".to_string(),
+                node_i: 0,
+                node_j: 1,
+                area: 0.02,
+                permeability: 2.0,
+            }],
+        })
+        .expect("params"),
+    };
+
+    let response =
+        handle_request_bytes(&serde_json::to_vec(&request).expect("request should serialize"));
+
+    let AgentReply::Stream(progress_frames, final_response) = response;
+
+    assert_eq!(progress_frames.len(), 4);
+    assert!(final_response.ok);
+    let result: kyuubiki_protocol::SolveMagnetostaticBar1dResult =
+        serde_json::from_value(final_response.result.expect("solver result"))
+            .expect("magnetostatic bar result");
+    assert_eq!(result.max_magnetic_potential, 10.0);
+    assert!((result.max_magnetic_field_strength - 10.0).abs() < 1.0e-6);
+    assert!((result.max_flux_density - 20.0).abs() < 1.0e-6);
+}

@@ -9,6 +9,7 @@ const SOLVER_METHODS: &[(&str, &str)] = &[
     ("thermal_bar_1d", "solve_thermal_bar_1d"),
     ("heat_bar_1d", "solve_heat_bar_1d"),
     ("electrostatic_bar_1d", "solve_electrostatic_bar_1d"),
+    ("magnetostatic_bar_1d", "solve_magnetostatic_bar_1d"),
     ("beam_1d", "solve_beam_1d"),
     ("thermal_beam_1d", "solve_thermal_beam_1d"),
     ("torsion_1d", "solve_torsion_1d"),

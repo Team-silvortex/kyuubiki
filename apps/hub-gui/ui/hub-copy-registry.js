@@ -43,20 +43,39 @@ function cloneValue(value) {
   return result;
 }
 
-function mergeCopyBranch(base, override) {
+function mergeCopyBranch(base, override, options = {}) {
   if (!isPlainObject(base)) {
-    return override === undefined ? cloneValue(base) : cloneValue(override);
+    if (override === undefined) {
+      return cloneValue(base);
+    }
+    if (options.preserveShape && base !== undefined && isPlainObject(override)) {
+      return cloneValue(base);
+    }
+    if (options.preserveShape && Array.isArray(base) !== Array.isArray(override) && base !== undefined) {
+      return cloneValue(base);
+    }
+    return cloneValue(override);
   }
 
   const result = cloneValue(base);
   if (!isPlainObject(override)) {
-    return override === undefined ? result : cloneValue(override);
+    return override === undefined || options.preserveShape ? result : cloneValue(override);
   }
 
   Object.entries(override).forEach(([key, entry]) => {
     if (isPlainObject(result[key]) && isPlainObject(entry)) {
-      result[key] = mergeCopyBranch(result[key], entry);
+      result[key] = mergeCopyBranch(result[key], entry, options);
       return;
+    }
+
+    if (options.preserveShape && result[key] !== undefined) {
+      const leftIsObject = isPlainObject(result[key]);
+      const rightIsObject = isPlainObject(entry);
+      const leftIsArray = Array.isArray(result[key]);
+      const rightIsArray = Array.isArray(entry);
+      if (leftIsObject !== rightIsObject || leftIsArray !== rightIsArray) {
+        return;
+      }
     }
 
     result[key] = cloneValue(entry);
@@ -158,7 +177,8 @@ function normalizeHubCopyImportManifest(payload) {
 function buildLanguagePackDescriptor(payload) {
   const language = typeof payload.language === "string" ? payload.language.trim() : "";
   const name = typeof payload.name === "string" ? payload.name.trim() : "";
-  if (!language || !name || !isPlainObject(payload.overrides)) {
+  const targetSurface = typeof payload.targetSurface === "string" ? payload.targetSurface.trim() : "";
+  if (!language || !name || !isPlainObject(payload.overrides) || (targetSurface && targetSurface !== "hub")) {
     return null;
   }
 
@@ -345,7 +365,7 @@ export function resolveHubCopy(baseI18n, language, options = {}) {
     typeof language === "string" && isPlainObject(baseI18n?.[language]) ? language : fallbackLanguage;
   const baseCopy = baseI18n?.[baseLanguage] || baseI18n?.[fallbackLanguage] || {};
   const registry = loadHubCopyOverrideRegistryRaw(options.storage);
-  const mergedDefaults = mergeCopyBranch(baseCopy, registry.defaults);
+  const mergedDefaults = mergeCopyBranch(baseCopy, registry.defaults, { preserveShape: true });
   const languageOverrides = registry.languages[baseLanguage] || {};
-  return mergeCopyBranch(mergedDefaults, languageOverrides);
+  return mergeCopyBranch(mergedDefaults, languageOverrides, { preserveShape: true });
 }

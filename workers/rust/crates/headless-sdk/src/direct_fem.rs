@@ -35,6 +35,10 @@ const DIRECT_FEM_ROUTES: &[DirectFemRoute] = &[
         route: "/api/v1/fem/electrostatic-bar-1d/jobs",
     },
     DirectFemRoute {
+        action: "solve_magnetostatic_bar_1d",
+        route: "/api/v1/fem/magnetostatic-bar-1d/jobs",
+    },
+    DirectFemRoute {
         action: "solve_electrostatic_plane_triangle_2d",
         route: "/api/v1/fem/electrostatic-plane-triangle-2d/jobs",
     },
@@ -221,7 +225,7 @@ mod tests {
             .map(|entry| entry.route)
             .collect::<BTreeSet<_>>();
 
-        assert_eq!(routes.len(), 26);
+        assert_eq!(routes.len(), 27);
         assert_eq!(actions.len(), routes.len(), "duplicate direct FEM actions");
         assert_eq!(paths.len(), routes.len(), "duplicate direct FEM routes");
 

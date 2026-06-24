@@ -31,6 +31,7 @@ export function downloadWorkbenchLanguagePackTemplate(params: {
     schema_version: WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
     id: `${language}-custom-pack`,
     language,
+    targetSurface: "workbench",
     name: `${t.languages[language]} custom pack`,
     version: "1.11.0",
     versionLine: WORKBENCH_LANGUAGE_PACK_VERSION_LINE,
@@ -97,6 +98,9 @@ export async function importWorkbenchLanguagePack(params: {
     if (!raw || typeof raw !== "object" || typeof raw.language !== "string" || typeof raw.name !== "string") {
       throw new Error("invalid-pack");
     }
+    if (raw.targetSurface !== undefined && raw.targetSurface !== "workbench") {
+      throw new Error("wrong-surface");
+    }
 
     const nextPack: WorkbenchLanguagePack = {
       schema_version:
@@ -105,6 +109,7 @@ export async function importWorkbenchLanguagePack(params: {
           : WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION,
       id: typeof raw.id === "string" && raw.id.trim() ? raw.id.trim() : `${raw.language}-${Date.now()}`,
       language: raw.language,
+      targetSurface: "workbench",
       name: raw.name,
       version: typeof raw.version === "string" && raw.version.trim() ? raw.version.trim() : "1.11.0",
       versionLine: typeof raw.versionLine === "string" && raw.versionLine.trim() ? raw.versionLine.trim() : undefined,

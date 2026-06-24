@@ -79,6 +79,8 @@ pub enum RpcMethod {
     SolveHeatBar1d,
     #[serde(rename = "solve_electrostatic_bar_1d")]
     SolveElectrostaticBar1d,
+    #[serde(rename = "solve_magnetostatic_bar_1d")]
+    SolveMagnetostaticBar1d,
     #[serde(rename = "solve_electrostatic_plane_triangle_2d")]
     SolveElectrostaticPlaneTriangle2d,
     #[serde(rename = "solve_electrostatic_plane_quad_2d")]
@@ -229,6 +231,7 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveThermalBar1d,
                 RpcMethod::SolveHeatBar1d,
                 RpcMethod::SolveElectrostaticBar1d,
+                RpcMethod::SolveMagnetostaticBar1d,
                 RpcMethod::SolveElectrostaticPlaneTriangle2d,
                 RpcMethod::SolveElectrostaticPlaneQuad2d,
                 RpcMethod::SolveHeatPlaneTriangle2d,
@@ -299,6 +302,18 @@ impl AgentDescriptor {
                     tags: vec![
                         "electromagnetic".to_string(),
                         "electrostatic".to_string(),
+                        "bar".to_string(),
+                        "line".to_string(),
+                        "cpu".to_string(),
+                    ],
+                },
+                CapabilityDescriptor {
+                    id: "magnetostatic-bar-1d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveMagnetostaticBar1d],
+                    tags: vec![
+                        "electromagnetic".to_string(),
+                        "magnetostatic".to_string(),
                         "bar".to_string(),
                         "line".to_string(),
                         "cpu".to_string(),

@@ -48,6 +48,7 @@ Each pack is a JSON object with:
 - `schema_version`
 - `id`
 - `language`
+- optional `targetSurface` (`workbench` or `hub`; omit only for legacy local packs)
 - `name`
 - `version`
 - optional `versionLine`
@@ -68,6 +69,7 @@ to replace the keys it cares about.
   "schema_version": "kyuubiki.language-pack/v1",
   "id": "fr-custom-pack",
   "language": "fr",
+  "targetSurface": "workbench",
   "name": "French custom pack",
   "version": "1.6.0",
   "versionLine": "tamamono 1.x",
@@ -93,6 +95,8 @@ to replace the keys it cares about.
 - packs are stored locally in browser storage
 - imported packs can override the active language immediately
 - built-in copy remains the fallback for keys not supplied by the pack
+- `targetSurface` prevents Workbench packs and Hub packs from being imported into
+  the wrong UI surface once the pack declares a surface
 - installed packs can be exported again from the same UI surface
 - packs may declare a product-line target and a shipped app-version target so
   operators can see whether a pack was prepared for the current Workbench line
@@ -111,6 +115,7 @@ in.
 ## Recommended packaging posture
 
 - keep `versionLine` aligned with the active line such as `tamamono 1.x`
+- set `targetSurface` to `workbench` or `hub` for every newly generated pack
 - set `targetAppVersion` when a pack is prepared against a specific shipped UI
   build such as `1.11.0`
 - treat packs without either field as generic overrides, not as audited release

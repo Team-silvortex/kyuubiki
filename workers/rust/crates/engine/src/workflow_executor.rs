@@ -10,11 +10,12 @@ use kyuubiki_protocol::{
     AnalysisResult, SolveBarRequest, SolveBeam1dRequest, SolveElectrostaticBar1dRequest,
     SolveElectrostaticPlaneQuad2dRequest, SolveElectrostaticPlaneTriangle2dRequest,
     SolveFrame2dRequest, SolveFrame3dRequest, SolveHeatBar1dRequest, SolveHeatPlaneQuad2dRequest,
-    SolveHeatPlaneTriangle2dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
-    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
-    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveHeatPlaneTriangle2dRequest, SolveMagnetostaticBar1dRequest, SolvePlaneQuad2dRequest,
+    SolvePlaneTriangle2dRequest, SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveThermalBar1dRequest, SolveThermalBeam1dRequest, SolveThermalFrame2dRequest,
+    SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest,
+    SolveThermalTruss2dRequest, SolveThermalTruss3dRequest, SolveTorsion1dRequest,
+    SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -24,6 +25,7 @@ const SUPPORTED_SOLVE_OPERATORS: &[&str] = &[
     "solve.thermal_bar_1d",
     "solve.heat_bar_1d",
     "solve.electrostatic_bar_1d",
+    "solve.magnetostatic_bar_1d",
     "solve.electrostatic_plane_triangle_2d",
     "solve.electrostatic_plane_quad_2d",
     "solve.heat_plane_triangle_2d",
@@ -305,6 +307,15 @@ pub fn run_solve_operator(operator_id: &str, payload: Value) -> Result<Value, St
             let result = match solve(EngineSolveRequest::ElectrostaticBar1d(request))? {
                 AnalysisResult::ElectrostaticBar1d(result) => result,
                 _ => unreachable!("solve.electrostatic_bar_1d returned unexpected result"),
+            };
+            serde_json::to_value(result).map_err(|err| err.to_string())
+        }
+        "solve.magnetostatic_bar_1d" => {
+            let request: SolveMagnetostaticBar1dRequest =
+                serde_json::from_value(payload).map_err(|err| err.to_string())?;
+            let result = match solve(EngineSolveRequest::MagnetostaticBar1d(request))? {
+                AnalysisResult::MagnetostaticBar1d(result) => result,
+                _ => unreachable!("solve.magnetostatic_bar_1d returned unexpected result"),
             };
             serde_json::to_value(result).map_err(|err| err.to_string())
         }

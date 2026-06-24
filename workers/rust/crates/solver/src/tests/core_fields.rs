@@ -159,6 +159,45 @@ fn solves_a_small_electrostatic_bar_1d_gradient() {
 }
 
 #[test]
+fn solves_a_small_magnetostatic_bar_1d_gradient() {
+    let result = solve_magnetostatic_bar_1d(&SolveMagnetostaticBar1dRequest {
+        nodes: vec![
+            MagnetostaticBar1dNodeInput {
+                id: "n0".to_string(),
+                x: 0.0,
+                fix_magnetic_potential: true,
+                magnetic_potential: 10.0,
+                magnetomotive_source: 0.0,
+            },
+            MagnetostaticBar1dNodeInput {
+                id: "n1".to_string(),
+                x: 1.0,
+                fix_magnetic_potential: true,
+                magnetic_potential: 0.0,
+                magnetomotive_source: 0.0,
+            },
+        ],
+        elements: vec![MagnetostaticBar1dElementInput {
+            id: "mb0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            area: 0.02,
+            permeability: 2.0,
+        }],
+    })
+    .expect("magnetostatic bar should solve");
+
+    assert_eq!(result.nodes[0].magnetic_potential, 10.0);
+    assert_eq!(result.nodes[1].magnetic_potential, 0.0);
+    assert!((result.elements[0].magnetic_potential_gradient + 10.0).abs() < 1.0e-9);
+    assert!((result.elements[0].magnetic_field_strength - 10.0).abs() < 1.0e-9);
+    assert!((result.elements[0].magnetic_flux_density - 20.0).abs() < 1.0e-9);
+    assert_eq!(result.max_magnetic_potential, 10.0);
+    assert!((result.max_magnetic_field_strength - 10.0).abs() < 1.0e-9);
+    assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+}
+
+#[test]
 fn solves_a_small_electrostatic_plane_triangle_2d_patch() {
     let result = solve_electrostatic_plane_triangle_2d(&SolveElectrostaticPlaneTriangle2dRequest {
         nodes: vec![

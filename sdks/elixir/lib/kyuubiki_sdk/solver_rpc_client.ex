@@ -8,6 +8,7 @@ defmodule KyuubikiSdk.SolverRpcClient do
     "thermal_bar_1d" => "solve_thermal_bar_1d",
     "heat_bar_1d" => "solve_heat_bar_1d",
     "electrostatic_bar_1d" => "solve_electrostatic_bar_1d",
+    "magnetostatic_bar_1d" => "solve_magnetostatic_bar_1d",
     "beam_1d" => "solve_beam_1d",
     "thermal_beam_1d" => "solve_thermal_beam_1d",
     "torsion_1d" => "solve_torsion_1d",
@@ -47,7 +48,10 @@ defmodule KyuubikiSdk.SolverRpcClient do
   def solve_bar_1d(client, payload), do: solve_study(client, "bar_1d", payload)
   def solve_truss_2d(client, payload), do: solve_study(client, "truss_2d", payload)
   def solve_truss_3d(client, payload), do: solve_study(client, "truss_3d", payload)
-  def solve_plane_triangle_2d(client, payload), do: solve_study(client, "plane_triangle_2d", payload)
+
+  def solve_plane_triangle_2d(client, payload),
+    do: solve_study(client, "plane_triangle_2d", payload)
+
   def cancel_job(client, job_id), do: call(client, "cancel_job", %{"job_id" => job_id})
 
   def solve_study(client, solve_kind, payload) do
@@ -59,7 +63,12 @@ defmodule KyuubikiSdk.SolverRpcClient do
 
   def call(client, method, params) do
     with {:ok, socket} <-
-           :gen_tcp.connect(client.host, client.port, [:binary, active: false, packet: 0], client.timeout),
+           :gen_tcp.connect(
+             client.host,
+             client.port,
+             [:binary, active: false, packet: 0],
+             client.timeout
+           ),
          :ok <- :gen_tcp.send(socket, encode_frame(method, params)),
          {:ok, response} <- recv_until_response(socket, []) do
       :gen_tcp.close(socket)
@@ -102,7 +111,9 @@ defmodule KyuubikiSdk.SolverRpcClient do
     end
   end
 
-  defp normalize_solve_kind(kind) when is_atom(kind), do: normalize_solve_kind(Atom.to_string(kind))
+  defp normalize_solve_kind(kind) when is_atom(kind),
+    do: normalize_solve_kind(Atom.to_string(kind))
+
   defp normalize_solve_kind("axial_bar_1d"), do: "bar_1d"
   defp normalize_solve_kind(kind) when is_binary(kind), do: String.downcase(kind)
 end

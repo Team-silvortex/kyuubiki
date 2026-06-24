@@ -9,6 +9,7 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     "thermal_bar_1d" => "/api/v1/fem/thermal-bar-1d/jobs",
     "heat_bar_1d" => "/api/v1/fem/heat-bar-1d/jobs",
     "electrostatic_bar_1d" => "/api/v1/fem/electrostatic-bar-1d/jobs",
+    "magnetostatic_bar_1d" => "/api/v1/fem/magnetostatic-bar-1d/jobs",
     "beam_1d" => "/api/v1/fem/beam-1d/jobs",
     "thermal_beam_1d" => "/api/v1/fem/thermal-beam-1d/jobs",
     "torsion_1d" => "/api/v1/fem/torsion-1d/jobs",
@@ -53,18 +54,30 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   def protocol(client), do: request(client, :get, "/api/v1/protocol")
   def agents(client), do: request(client, :get, "/api/v1/protocol/agents")
   def list_workflow_catalog(client), do: request(client, :get, "/api/v1/workflows/catalog")
-  def fetch_workflow_catalog_workflow(client, workflow_id), do: request(client, :get, "/api/v1/workflows/catalog/#{URI.encode(workflow_id)}")
-  def list_workflow_operators(client, opts \\ []), do: request(client, :get, append_query("/api/v1/operators", opts))
-  def fetch_workflow_operator(client, operator_id), do: request(client, :get, "/api/v1/operators/#{URI.encode(operator_id)}")
+
+  def fetch_workflow_catalog_workflow(client, workflow_id),
+    do: request(client, :get, "/api/v1/workflows/catalog/#{URI.encode(workflow_id)}")
+
+  def list_workflow_operators(client, opts \\ []),
+    do: request(client, :get, append_query("/api/v1/operators", opts))
+
+  def fetch_workflow_operator(client, operator_id),
+    do: request(client, :get, "/api/v1/operators/#{URI.encode(operator_id)}")
+
   def list_jobs(client), do: request(client, :get, "/api/v1/jobs")
   def fetch_job(client, job_id), do: request(client, :get, "/api/v1/jobs/#{job_id}")
-  def update_job(client, job_id, payload), do: request(client, :patch, "/api/v1/jobs/#{job_id}", payload)
+
+  def update_job(client, job_id, payload),
+    do: request(client, :patch, "/api/v1/jobs/#{job_id}", payload)
+
   def cancel_job(client, job_id), do: request(client, :post, "/api/v1/jobs/#{job_id}/cancel")
   def delete_job(client, job_id), do: request(client, :delete, "/api/v1/jobs/#{job_id}")
   def create_axial_bar_job(client, payload), do: submit_fem_job(client, "bar_1d", payload)
   def create_truss_2d_job(client, payload), do: submit_fem_job(client, "truss_2d", payload)
   def create_truss_3d_job(client, payload), do: submit_fem_job(client, "truss_3d", payload)
-  def create_plane_triangle_2d_job(client, payload), do: submit_fem_job(client, "plane_triangle_2d", payload)
+
+  def create_plane_triangle_2d_job(client, payload),
+    do: submit_fem_job(client, "plane_triangle_2d", payload)
 
   def submit_fem_job(client, solve_kind, payload) do
     case Map.fetch(@fem_job_paths, normalize_solve_kind(solve_kind)) do
@@ -72,11 +85,20 @@ defmodule KyuubikiSdk.ControlPlaneClient do
       :error -> {:error, Error.rpc("unsupported solve kind: #{solve_kind}")}
     end
   end
+
   def submit_workflow_catalog_job(client, workflow_id, input_artifacts \\ %{}),
-    do: request(client, :post, "/api/v1/workflows/catalog/#{workflow_id}/jobs", %{"input_artifacts" => input_artifacts})
+    do:
+      request(client, :post, "/api/v1/workflows/catalog/#{workflow_id}/jobs", %{
+        "input_artifacts" => input_artifacts
+      })
 
   def submit_workflow_graph_job(client, graph, input_artifacts \\ %{}),
-    do: request(client, :post, "/api/v1/workflows/graph/jobs", %{"graph" => graph, "input_artifacts" => input_artifacts})
+    do:
+      request(client, :post, "/api/v1/workflows/graph/jobs", %{
+        "graph" => graph,
+        "input_artifacts" => input_artifacts
+      })
+
   def list_results(client), do: request(client, :get, "/api/v1/results")
   def fetch_result(client, job_id), do: request(client, :get, "/api/v1/results/#{job_id}")
 
@@ -90,7 +112,9 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     request(client, :get, path <> if(query == [], do: "", else: "?" <> URI.encode_query(query)))
   end
 
-  def update_result(client, job_id, result), do: request(client, :patch, "/api/v1/results/#{job_id}", %{"result" => result})
+  def update_result(client, job_id, result),
+    do: request(client, :patch, "/api/v1/results/#{job_id}", %{"result" => result})
+
   def delete_result(client, job_id), do: request(client, :delete, "/api/v1/results/#{job_id}")
   def export_database(client), do: request(client, :get, "/api/v1/export/database")
 
@@ -105,10 +129,14 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   defp request(client, method, path, payload \\ nil) do
     :inets.start()
     url = String.to_charlist(client.base_url <> path)
+
     headers =
       [{~c"content-type", ~c"application/json"}] ++
         if client.auth,
-          do: [{String.to_charlist(client.auth.header_name), String.to_charlist(client.auth.header_value)}],
+          do: [
+            {String.to_charlist(client.auth.header_name),
+             String.to_charlist(client.auth.header_value)}
+          ],
           else: []
 
     body = if payload, do: Jason.encode!(payload), else: ""
@@ -136,10 +164,14 @@ defmodule KyuubikiSdk.ControlPlaneClient do
   defp request_text(client, method, path) do
     :inets.start()
     url = String.to_charlist(client.base_url <> path)
+
     headers =
       [{~c"content-type", ~c"application/json"}] ++
         if client.auth,
-          do: [{String.to_charlist(client.auth.header_name), String.to_charlist(client.auth.header_value)}],
+          do: [
+            {String.to_charlist(client.auth.header_name),
+             String.to_charlist(client.auth.header_value)}
+          ],
           else: []
 
     options = [body_format: :binary]
@@ -165,7 +197,9 @@ defmodule KyuubikiSdk.ControlPlaneClient do
     path <> if(query == [], do: "", else: "?" <> URI.encode_query(query))
   end
 
-  defp normalize_solve_kind(kind) when is_atom(kind), do: normalize_solve_kind(Atom.to_string(kind))
+  defp normalize_solve_kind(kind) when is_atom(kind),
+    do: normalize_solve_kind(Atom.to_string(kind))
+
   defp normalize_solve_kind("axial_bar_1d"), do: "bar_1d"
   defp normalize_solve_kind(kind) when is_binary(kind), do: String.downcase(kind)
 end
