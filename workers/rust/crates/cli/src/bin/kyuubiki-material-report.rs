@@ -1,12 +1,10 @@
 use std::fs;
 
 use kyuubiki_headless_sdk::{
-    MaterialOptimizationProfile, build_heat_spreader_screening_report,
-    build_heat_spreader_screening_report_with_optimization,
-    build_structural_panel_screening_report,
-    build_structural_panel_screening_report_with_optimization,
-    build_thermo_shield_screening_report, build_thermo_shield_screening_report_with_optimization,
+    MaterialOptimizationProfile, build_material_report_with_optimization, describe_material_study,
+    extract_material_result_payloads, material_study_catalog,
 };
+use serde::Serialize;
 use serde_json::Value;
 
 fn main() {
@@ -18,46 +16,19 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let flags = Flags::parse(std::env::args().skip(1).collect::<Vec<_>>())?;
+    match flags.command {
+        CommandMode::List => return print_study_list(flags.json),
+        CommandMode::Describe => return print_study_description(&flags.study, flags.json),
+        CommandMode::BuildReport => {}
+    }
     let payload = read_json(&flags.input)?;
-    let result_payloads = extract_result_payloads(&payload)?;
+    let result_payloads = extract_material_result_payloads(&payload)?;
     let profile = flags
         .profile
         .as_deref()
         .map(read_optimization_profile)
         .transpose()?;
-    let report = match flags.study.as_str() {
-        "heat-spreader" | "material_heat_spreader_screening" => {
-            serde_json::to_value(match profile {
-                Some(profile) => build_heat_spreader_screening_report_with_optimization(
-                    &result_payloads,
-                    profile,
-                ),
-                None => build_heat_spreader_screening_report(&result_payloads),
-            }?)
-            .map_err(|error| error.to_string())?
-        }
-        "thermo-shield" | "material_thermo_shield_screening" => {
-            serde_json::to_value(match profile {
-                Some(profile) => build_thermo_shield_screening_report_with_optimization(
-                    &result_payloads,
-                    profile,
-                ),
-                None => build_thermo_shield_screening_report(&result_payloads),
-            }?)
-            .map_err(|error| error.to_string())?
-        }
-        "structural-panel" | "material_structural_panel_screening" => {
-            serde_json::to_value(match profile {
-                Some(profile) => build_structural_panel_screening_report_with_optimization(
-                    &result_payloads,
-                    profile,
-                ),
-                None => build_structural_panel_screening_report(&result_payloads),
-            }?)
-            .map_err(|error| error.to_string())?
-        }
-        other => return Err(format!("unsupported material report study: {other}")),
-    };
+    let report = build_material_report_with_optimization(&flags.study, &result_payloads, profile)?;
 
     if let Some(out) = &flags.out {
         write_json(out, &report)?;
@@ -75,6 +46,7 @@ fn run() -> Result<(), String> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Flags {
+    command: CommandMode,
     study: String,
     input: String,
     profile: Option<String>,
@@ -82,39 +54,62 @@ struct Flags {
     json: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CommandMode {
+    BuildReport,
+    List,
+    Describe,
+}
+
 impl Flags {
     fn parse(args: Vec<String>) -> Result<Self, String> {
         if args.is_empty() || args.iter().any(|arg| arg == "--help" || arg == "help") {
             return Err(usage());
         }
-        let study = args[0].clone();
+        let mut command = CommandMode::BuildReport;
+        let mut study = args[0].clone();
+        let mut index = 1;
+        if args[0] == "list" || args[0] == "studies" {
+            command = CommandMode::List;
+            study = String::new();
+        } else if args[0] == "describe" {
+            command = CommandMode::Describe;
+            study = args
+                .get(1)
+                .cloned()
+                .ok_or_else(|| "describe requires a material study id or alias".to_string())?;
+            index = 2;
+        }
         let mut input = None;
         let mut profile = None;
         let mut out = None;
         let mut json = false;
-        let mut index = 1;
         while index < args.len() {
             match args[index].as_str() {
+                "--json" => json = true,
                 "--results" | "--input" => {
-                    index += 1;
-                    input = args.get(index).cloned();
+                    require_build_command(&command, "--results")?;
+                    input = Some(take_value(&args, &mut index, "--results")?);
                 }
                 "--out" => {
-                    index += 1;
-                    out = args.get(index).cloned();
+                    require_build_command(&command, "--out")?;
+                    out = Some(take_value(&args, &mut index, "--out")?);
                 }
                 "--profile" => {
-                    index += 1;
-                    profile = args.get(index).cloned();
+                    require_build_command(&command, "--profile")?;
+                    profile = Some(take_value(&args, &mut index, "--profile")?);
                 }
-                "--json" => json = true,
                 other => return Err(format!("unsupported flag: {other}\n\n{}", usage())),
             }
             index += 1;
         }
+        if command == CommandMode::BuildReport && input.is_none() {
+            return Err(usage());
+        }
         Ok(Self {
+            command,
             study,
-            input: input.ok_or_else(usage)?,
+            input: input.unwrap_or_default(),
             profile,
             out,
             json,
@@ -122,8 +117,70 @@ impl Flags {
     }
 }
 
+fn require_build_command(command: &CommandMode, option: &str) -> Result<(), String> {
+    if *command == CommandMode::BuildReport {
+        return Ok(());
+    }
+    Err(format!(
+        "{option} is only valid when building a material report"
+    ))
+}
+
+fn take_value(args: &[String], index: &mut usize, option: &str) -> Result<String, String> {
+    *index += 1;
+    let Some(value) = args.get(*index) else {
+        return Err(format!("{option} requires a value"));
+    };
+    if value.starts_with("--") {
+        return Err(format!("{option} requires a value"));
+    }
+    Ok(value.clone())
+}
+
 fn usage() -> String {
-    "kyuubiki-material-report <heat-spreader|thermo-shield|structural-panel> --results results.json [--profile profile.json] [--out report.json] [--json]\n\nresults.json may be a raw result array, an object with results/result_payloads, or a kyuubiki.headless-execution-run/v1 report.".to_string()
+    "kyuubiki-material-report list [--json]\nkyuubiki-material-report describe <study> [--json]\nkyuubiki-material-report <heat-spreader|dielectric-screening|thermo-shield|structural-panel> --results results.json [--profile profile.json] [--out report.json] [--json]\n\nresults.json may be a raw result array, an object with results/result_payloads, or a kyuubiki.headless-execution-run/v1 report.".to_string()
+}
+
+fn print_study_list(json: bool) -> Result<(), String> {
+    let studies = material_study_catalog();
+    if json {
+        return print_json(&serde_json::json!({
+            "schema_version": "kyuubiki.material-study-catalog/v1",
+            "study_count": studies.len(),
+            "studies": studies,
+        }));
+    }
+    println!("Material studies: {}", studies.len());
+    for study in studies {
+        println!("- {} [{}]", study.id, study.domain);
+        println!("  {}", study.objective);
+        println!("  template: {}", study.template_id);
+        println!("  metrics: {}", study.metric_specs.len());
+    }
+    Ok(())
+}
+
+fn print_study_description(study: &str, json: bool) -> Result<(), String> {
+    let description = describe_material_study(study)
+        .ok_or_else(|| format!("unsupported material report study: {study}"))?;
+    if json {
+        return print_json(&description);
+    }
+    println!("Material study: {}", description.id);
+    println!("Title: {}", description.title);
+    println!("Domain: {}", description.domain);
+    println!("Objective: {}", description.objective);
+    println!("Schema: {}", description.schema_version);
+    println!("Template: {}", description.template_id);
+    println!("Aliases: {}", description.aliases.join(", "));
+    println!("Metrics: {}", description.metric_specs.len());
+    for metric in description.metric_specs {
+        println!(
+            "- {} [{}] {} weight={}",
+            metric.id, metric.unit, metric.objective, metric.weight
+        );
+    }
+    Ok(())
 }
 
 fn read_json(path: &str) -> Result<Value, String> {
@@ -142,55 +199,10 @@ fn write_json(path: &str, report: &Value) -> Result<(), String> {
     fs::write(path, bytes).map_err(|error| format!("failed to write {path}: {error}"))
 }
 
-fn print_json(report: &Value) -> Result<(), String> {
+fn print_json<T: Serialize>(report: &T) -> Result<(), String> {
     let text = serde_json::to_string_pretty(report).map_err(|error| error.to_string())?;
     println!("{text}");
     Ok(())
-}
-
-fn extract_result_payloads(payload: &Value) -> Result<Vec<Value>, String> {
-    if let Some(array) = payload.as_array() {
-        return Ok(array.clone());
-    }
-    if payload.get("schema_version").and_then(Value::as_str)
-        == Some("kyuubiki.headless-execution-run/v1")
-    {
-        return extract_result_payloads_from_headless_run(payload);
-    }
-    for key in ["results", "result_payloads"] {
-        if let Some(array) = payload.get(key).and_then(Value::as_array) {
-            return Ok(array.clone());
-        }
-    }
-    Err("material report input must be an array, include a results array, or be a headless execution run report".to_string())
-}
-
-fn extract_result_payloads_from_headless_run(payload: &Value) -> Result<Vec<Value>, String> {
-    let results = payload
-        .get("steps")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter(|step| {
-            step.get("action").and_then(Value::as_str) == Some("result_fetch")
-                && step.get("status").and_then(Value::as_str) != Some("blocked")
-                && step.get("status").and_then(Value::as_str) != Some("failed")
-        })
-        .filter_map(|step| {
-            let preview = step.get("result_preview")?;
-            preview
-                .get("result")
-                .cloned()
-                .or_else(|| Some(preview.clone()))
-        })
-        .collect::<Vec<_>>();
-    if results.is_empty() {
-        return Err(
-            "headless execution run report does not contain successful result_fetch payloads"
-                .to_string(),
-        );
-    }
-    Ok(results)
 }
 
 fn print_report(report: &Value) {
@@ -260,6 +272,7 @@ fn print_report(report: &Value) {
 fn primary_metric(candidate: &Value) -> Option<f64> {
     candidate
         .get("peak_temperature_c")
+        .or_else(|| candidate.get("max_electric_field_v_m"))
         .or_else(|| candidate.get("max_stress_pa"))
         .and_then(Value::as_f64)
 }

@@ -39,6 +39,7 @@ pub(super) fn build_template_workflow(
             ),
         ],
         "material_heat_spreader_screening" => crate::build_heat_spreader_screening_steps(),
+        "material_dielectric_screening" => crate::build_dielectric_screening_steps(),
         "material_thermo_shield_screening" => crate::build_thermo_shield_screening_steps(),
         "material_structural_panel_screening" => crate::build_structural_panel_screening_steps(),
         "direct_plane_quad" => vec![

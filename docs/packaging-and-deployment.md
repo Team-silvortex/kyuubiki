@@ -64,6 +64,9 @@ These are thin wrappers over the component-native toolchains:
 
 Use these commands when building deployable layouts:
 
+- `make check-elixir-self-host`
+  Verifies the current machine's Elixir/Mix/OTP runtime and the orchestrator
+  self-host environment contract before installer-managed deployment.
 - `make desktop-status PLATFORM=macos|linux|windows|all`
   Prints host-aware desktop packaging readiness, including staged runtime
   scaffold state, desktop manifest presence, icon readiness, and host bundle
@@ -106,8 +109,42 @@ Current staged runtime layout:
 - `dist/<platform>/desktop/build-summary.json`
 - `dist/<platform>/logs`
 - `dist/<platform>/manifests`
+- `dist/<platform>/manifests/embedded-runtimes.json`
+- `dist/<platform>/runtimes`
 - `dist/<platform>/scripts`
 - `dist/<platform>/exports`
+
+## Embedded runtime posture
+
+Self-hosted installs should not require users to manually install Elixir/OTP or
+Node before Kyuubiki can run. The installer-managed release scaffold now writes:
+
+- `dist/<platform>/manifests/embedded-runtimes.json`
+- `dist/<platform>/runtimes`
+
+The manifest is generated from `config/toolchains.json` and declares the
+runtime payloads expected for self-host operation:
+
+- `elixir-otp` for the control plane, workflow mesh checks, and live headless
+  tests
+- `node` for runtime scripts, frontend launch surfaces, and docs/contract
+  checks
+
+The first implementation is manifest-first: it makes versions, target paths,
+and host-fallback policy visible before payload download/extraction is wired
+into the installer. Missing runtime payloads should be treated as deployment
+blockers for self-host releases, not as hidden user prerequisites.
+
+Launch scripts and `scripts/kyuubiki-runtime.mjs` now resolve runtime commands
+in this order:
+
+1. installer-managed runtime paths declared by `embedded-runtimes.json`
+2. host-installed tools only as visible fallback
+3. hard failure when `KYUUBIKI_RUNTIME_STRICT=1` and a required embedded
+   runtime command is missing
+
+This keeps local development flexible while making self-host deployment
+version choices deterministic and inspectable.
 
 ## Remote artifact retention
 

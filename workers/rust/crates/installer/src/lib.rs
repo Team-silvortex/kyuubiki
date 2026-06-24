@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 mod cross_platform;
+mod embedded_runtime;
 mod integrity;
 mod integrity_contract;
 mod integrity_versions;
@@ -17,6 +18,9 @@ mod update_source;
 
 pub use cross_platform::{
     CrossPlatformAuditIssue, CrossPlatformAuditReport, cross_platform_audit_report,
+};
+pub use embedded_runtime::{
+    EmbeddedRuntimeReport, build_embedded_runtime_manifest, embedded_runtime_report,
 };
 pub use integrity::{
     InstallationIntegrityEntry, InstallationIntegrityReport, IntegrityContractRule,
@@ -127,6 +131,7 @@ pub fn print_help() {
         "  doctor           Check local prerequisites for the current platform\n",
         "  installation-integrity  Validate install layout, versions, and residue\n",
         "  cross-platform-audit  Validate dist/ parity across macOS, Linux, and Windows\n",
+        "  embedded-runtimes  Show installer-managed runtime payload contract\n",
         "  update-plan      Show the unified channel-based update target\n",
         "  update-preview   Show pre-apply checks and blockers for a channel update\n",
         "  prepare-staged-update  Repair, stage, and record a channel update scaffold\n",
@@ -167,7 +172,7 @@ pub fn prepare_layout() -> Result<String, String> {
     let root = workspace_root();
     let mut prepared = Vec::new();
 
-    for relative in ["tmp/run", "tmp/data", "dist"] {
+    for relative in ["tmp/run", "tmp/data", "dist", "runtimes"] {
         let path = root.join(relative);
         fs::create_dir_all(&path)
             .map_err(|error| format!("failed to create {}: {error}", path.display()))?;
@@ -214,6 +219,7 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         "data",
         "logs",
         "manifests",
+        "runtimes",
         "scripts",
         "exports",
     ] {
@@ -231,6 +237,7 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
     }
 
     let manifest_path = release_dir.join("manifests").join("release-manifest.json");
+    let runtime_manifest_path = release_dir.join("manifests").join("embedded-runtimes.json");
     let launch_path = release_dir.join("manifests").join("launch.json");
     let readme_path = release_dir.join("README.txt");
     let env_example_target = release_dir.join("config").join(".env.example");
@@ -241,6 +248,16 @@ pub fn stage_release(platform: Platform, target_dir: Option<PathBuf>) -> Result<
         build_release_manifest(&root, &release_dir, platform),
     )
     .map_err(|error| format!("failed to write {}: {error}", manifest_path.display()))?;
+    fs::write(
+        &runtime_manifest_path,
+        build_embedded_runtime_manifest(&root, platform)?,
+    )
+    .map_err(|error| {
+        format!(
+            "failed to write {}: {error}",
+            runtime_manifest_path.display()
+        )
+    })?;
     fs::write(&launch_path, build_launch_manifest(&root, platform))
         .map_err(|error| format!("failed to write {}: {error}", launch_path.display()))?;
     fs::write(&readme_path, build_release_readme(platform))
@@ -527,6 +544,6 @@ pub fn parse_platform(value: Option<String>) -> Platform {
     Platform::parse(value.as_deref())
 }
 
-fn escape_json(value: &str) -> String {
+pub(crate) fn escape_json(value: &str) -> String {
     value.replace('\\', "\\\\").replace('"', "\\\"")
 }

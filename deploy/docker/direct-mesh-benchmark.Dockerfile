@@ -8,7 +8,7 @@ ARG http_proxy
 ARG https_proxy
 ARG no_proxy
 ARG NODE_VERSION=20.19.2
-ARG RUST_TOOLCHAIN=1.85.0
+ARG RUST_TOOLCHAIN=1.88.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MIX_ENV=test

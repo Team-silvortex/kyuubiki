@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 ENTRYPOINT := ./scripts/kyuubiki
 
-.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version audit-rust-lines start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
+.PHONY: help tree build-frontend build-orchestrator build-agent build-hub-gui build-installer-gui build-workbench-gui package-runtime package-desktop desktop-status desktop-stage desktop-build-host desktop-release desktop-verify sync-desktop-shared build-installation-docs build-update-catalog check-doc-book sync-doc-book-version check-toolchains check-elixir-self-host audit-rust-lines start start-local start-cloud start-distributed status stop restart restart-local restart-cloud restart-distributed hot-local hot-cloud hot-distributed hot-web hot-agent hot-hub-gui hot-installer-gui hot-workbench-gui export-db install doctor validate-env package hub-gui-dev hub-gui-build installer-gui-dev installer-gui-build workbench-gui-dev workbench-gui-build test test-web test-rust test-frontend workflow-preflight test-sdk test-playground test-hub-gui test-installer-gui test-workbench-gui test-integration test-integration-api test-integration-cluster test-integration-direct-mesh test-integration-desktop-gui test-integration-direct-mesh-docker test-integration-direct-mesh-docker-compare test-integration-direct-mesh-docker-report test-integration-direct-mesh-docker-nightly test-integration-workflow-mesh test-integration-workflow-mesh-nightly test-integration-workflow-catalog-compare test-integration-workflow-catalog-report test-integration-workflow-catalog-nightly test-integration-ui-mechanical test-integration-ui-thermal verify format format-web format-rust tdd-web tdd-rust smoke worker agent orchestrator playground frontend benchmark benchmark-profile-remote benchmark-baseline benchmark-compare benchmark-report benchmark-standard-baselines benchmark-standard-compare benchmark-standard-report benchmark-standard-nightly regression-gate-report
 
 help:
 	@echo "Available targets:"
@@ -47,6 +47,8 @@ help:
 	@echo "  make build-update-catalog Regenerate the unified update catalog JSON and HTML docs"
 	@echo "  make check-doc-book Verify the centralized book and Hub mirrors for version/link/text drift"
 	@echo "  make sync-doc-book-version Sync hand-maintained book entry pages to the current shipping version"
+	@echo "  make check-toolchains Verify Docker, Mix, Node, Rust, and lab defaults against config/toolchains.json"
+	@echo "  make check-elixir-self-host Verify Elixir/Mix/OTP and self-host orchestrator env contracts"
 	@echo "  make audit-rust-lines Enforce the Rust source file line-count ceiling"
 	@echo "  make hub-gui-dev         Run the Tauri Hub GUI in development mode"
 	@echo "  make hub-gui-build       Build the Tauri Hub GUI bundles"
@@ -82,11 +84,12 @@ help:
 	@echo "  make playground  Legacy alias for the orchestrator API"
 	@echo "  make frontend    Run the Next.js workbench UI"
 	@echo "  make benchmark   Run the Rust solver benchmark suite"
-	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k supported)"
-	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k)"
-	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k)"
-	@echo "  make benchmark-standard-baselines Write the 1.9 standard matrix baselines for PROFILE=<10k|15k|20k|100k>"
-	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k>"
+	@echo "  make benchmark-profile-remote Run one remote benchmark profile/matrix smoke (PROFILE=200k MATRIX=thermal-core REPEAT=3)"
+	@echo "  make benchmark-baseline Write a benchmark baseline snapshot (PROFILE=10k by default; 100k/200k supported)"
+	@echo "  make benchmark-compare Compare current benchmark output against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k)"
+	@echo "  make benchmark-report Write a Markdown comparison report against a checked-in baseline (PROFILE=10k/15k/20k/100k/200k)"
+	@echo "  make benchmark-standard-baselines Write the 1.9 standard matrix baselines for PROFILE=<10k|15k|20k|100k|200k>"
+	@echo "  make benchmark-standard-compare Run the 1.9 standard matrix regression gate trio for PROFILE=<10k|15k|20k|100k|200k>"
 	@echo "  make benchmark-standard-report Write per-matrix reports plus a merged standard comparison report"
 	@echo "  make benchmark-standard-nightly Run the remote kyuubiki-lab standard benchmark regression flow and pull reports back"
 	@echo "  make regression-gate-report Rebuild the normalized regression catalog and compact gate report under tmp/"
@@ -233,6 +236,12 @@ check-doc-book:
 sync-doc-book-version:
 	@node ./scripts/sync-doc-book-version.mjs
 
+check-toolchains:
+	@node ./scripts/check-toolchain-contract.mjs
+
+check-elixir-self-host:
+	@node ./scripts/check-elixir-self-host.mjs
+
 audit-rust-lines:
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
 
@@ -341,6 +350,8 @@ format-rust:
 	@cd workers/rust && cargo fmt
 
 verify:
+	@$(MAKE) check-toolchains
+	@$(MAKE) check-elixir-self-host
 	@cd apps/web && mix format --check-formatted && mix test
 	@cd workers/rust && cargo fmt --check && cargo test
 	@node ./scripts/audit-rust-line-counts.mjs --max $${MAX_LINES:-600}
@@ -374,6 +385,9 @@ frontend:
 
 benchmark:
 	@$(ENTRYPOINT) benchmark $(ARGS)
+
+benchmark-profile-remote:
+	@bash ./scripts/run-benchmark-profile-remote.sh
 
 benchmark-baseline:
 	@matrix=$${MATRIX:-core}; profile=$${PROFILE:-10k}; baseline=$$( [ "$$matrix" = "core" ] && printf 'benchmarks/%s-baseline.json' "$$profile" || printf 'benchmarks/%s-%s-baseline.json' "$$matrix" "$$profile" ); cd workers/rust && cargo run --release -q -p kyuubiki-benchmark -- --profile $$profile --matrix $$matrix --repeat $${REPEAT:-5} --baseline-out $$baseline

@@ -40,6 +40,14 @@ const TEMPLATES: &[HeadlessTemplateDescriptor] = &[
         tags: &["material", "thermal", "screening", "conductivity"],
     },
     HeadlessTemplateDescriptor {
+        id: "material_dielectric_screening",
+        title: "Material Dielectric Screening",
+        description: "Compare dielectric candidates by electrostatic field margin, loss proxy, and mass.",
+        runtime_style: crate::HeadlessRuntimeStyle::ServiceOnly,
+        category: "materials",
+        tags: &["material", "electromagnetic", "dielectric", "screening"],
+    },
+    HeadlessTemplateDescriptor {
         id: "material_thermo_shield_screening",
         title: "Material Thermo Shield Screening",
         description: "Compare aluminum, titanium, and Invar candidates in a thermo-mechanical shield study.",

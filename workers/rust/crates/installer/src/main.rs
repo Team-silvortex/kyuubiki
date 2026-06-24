@@ -2,8 +2,8 @@ use std::env;
 use std::path::PathBuf;
 
 use kyuubiki_installer::{
-    cross_platform_audit_report, exit_on_err, export_launch_config, init_env,
-    installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
+    cross_platform_audit_report, embedded_runtime_report, exit_on_err, export_launch_config,
+    init_env, installation_integrity_report, parse_platform, prepare_layout, prepare_staged_update,
     print_help, repair_installation, run_doctor, stage_release, unified_update_plan,
     unified_update_preview, validate_env_file,
 };
@@ -17,6 +17,7 @@ fn main() {
         "doctor" => run_doctor(),
         "installation-integrity" => println!("{}", installation_integrity_report().render()),
         "cross-platform-audit" => println!("{}", cross_platform_audit_report().render()),
+        "embedded-runtimes" => exit_on_err(embedded_runtime_report().map(|report| report.render())),
         "update-plan" => {
             let channel = args.next();
             exit_on_err(unified_update_plan(channel).map(|report| report.render()))

@@ -30,6 +30,9 @@ This directory contains host-native operational entry points.
 - `check-doc-book.mjs`
   Verify the centralized docs book and Hub mirrors for version alignment,
   broken local links, required chapter markers, and old legacy wording.
+- `check-elixir-self-host.mjs`
+  Verify the Elixir/Mix/OTP runtime plus the orchestrator self-host
+  environment contract before a machine is treated as installer-managed.
 - `validate-commercial-readiness.mjs`
   Verify the `2.0` commercial-readiness manifest against its Markdown gate,
   including gate count, evidence links, and the shared exit statement.
@@ -66,6 +69,19 @@ Useful smoke wrappers:
 - `./scripts/kyuubiki rust-line-audit`
   Enforce the Rust source file line-count ceiling without running the full
   Rust test suite.
+- `make check-elixir-self-host`
+  Check the current machine's Elixir, Mix, OTP, and orchestrator environment
+  contract against `config/toolchains.json`. Use `node
+  ./scripts/check-elixir-self-host.mjs --static-only --json` when preparing an
+  installer image where Elixir is not yet installed.
+- `cargo run -p kyuubiki-installer -- embedded-runtimes`
+  Print the installer-managed runtime payload contract for the current
+  platform. The same data is written to
+  `dist/<platform>/manifests/embedded-runtimes.json` during `stage-release`.
+- `KYUUBIKI_RUNTIME_STRICT=1 ./scripts/kyuubiki-runtime.mjs status`
+  Resolve runtime commands from the embedded runtime manifest and fail if a
+  required self-host runtime payload is missing instead of silently using the
+  host PATH.
 - `./scripts/kyuubiki frontend-test`
   Frontend typecheck plus production build verification.
 - `./scripts/kyuubiki headless-test`
@@ -156,6 +172,10 @@ Useful smoke wrappers:
 - `make test-integration-workflow-catalog-nightly`
   Makefile entry for the remote workflow catalog regression flow against the
   checked-in baseline.
+- `PROFILE=200k MATRIX=thermal-core REPEAT=3 ./scripts/run-benchmark-profile-remote.sh`
+  Run one remote Rust benchmark profile/matrix smoke without requiring a
+  checked baseline. Use this for new scale tiers before promoting them into
+  the standard regression gate. Outputs land under `tmp/benchmark-profile/`.
 - `./scripts/run-standard-benchmark-regression.sh`
   Sync benchmark-only source to `kyuubiki-lab`, run the standard Rust
   benchmark regression trio there, and pull the merged/per-matrix comparison

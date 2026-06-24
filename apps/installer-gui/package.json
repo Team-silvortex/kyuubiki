@@ -2,6 +2,9 @@
   "name": "kyuubiki-installer-gui",
   "version": "1.11.0",
   "private": true,
+  "engines": {
+    "node": ">=20.19.2 <21"
+  },
   "scripts": {
     "sync:shared": "node ../desktop-shared/scripts/sync-desktop-shared.mjs",
     "test:smoke": "node --test ./test/smoke.test.mjs",

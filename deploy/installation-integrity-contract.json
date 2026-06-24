@@ -30,6 +30,11 @@
       "required": true
     },
     {
+      "label": "installer-managed runtime payloads",
+      "path": "runtimes",
+      "required": true
+    },
+    {
       "label": "platform release staging",
       "path": "dist/{platform}",
       "required": true
@@ -95,9 +100,16 @@
     {
       "category": "layout",
       "label": "runtime roots",
-      "value": "tmp/, dist/, releases/",
+      "value": "tmp/, dist/, runtimes/, releases/",
       "editable": false,
       "description": "Standard repo-local roots that every platform install must expose."
+    },
+    {
+      "category": "runtime",
+      "label": "embedded runtime manifest",
+      "value": "dist/{platform}/manifests/embedded-runtimes.json",
+      "editable": false,
+      "description": "Installer-managed Elixir/OTP and Node payloads are visible in the staged release manifest before launch."
     },
     {
       "category": "protection",

@@ -6,6 +6,9 @@
   "bin": {
     "kyuubiki": "./scripts/kyuubiki-cli.mjs"
   },
+  "engines": {
+    "node": ">=20.19.2 <21"
+  },
   "scripts": {
     "cli": "node ./scripts/kyuubiki-cli.mjs",
     "dev": "next dev",

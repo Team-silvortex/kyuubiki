@@ -151,11 +151,16 @@ mod tests {
 
         assert_eq!(spec.templates.len(), 6);
         assert!(spec.matrices.len() >= 8);
-        assert_eq!(spec.profiles.len(), 7);
+        assert_eq!(spec.profiles.len(), 8);
         assert!(
             spec.profiles
                 .iter()
                 .any(|profile| profile.profile == BenchmarkProfile::HundredK)
+        );
+        assert!(
+            spec.profiles
+                .iter()
+                .any(|profile| profile.profile == BenchmarkProfile::TwoHundredK)
         );
     }
 

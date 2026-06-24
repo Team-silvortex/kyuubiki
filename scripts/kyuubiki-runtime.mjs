@@ -7,6 +7,7 @@ import process from "node:process";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRuntimeEnv } from "./kyuubiki-runtime-env.mjs";
+import { createRuntimeResolver } from "./kyuubiki-runtime-resolver.mjs";
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_DIR = path.join(ROOT_DIR, "apps/web");
@@ -38,6 +39,9 @@ const {
   rootDir: ROOT_DIR,
   envFile: ENV_FILE,
   envExampleFile: ENV_EXAMPLE_FILE,
+});
+const { renderRuntimeResolution, resolveRuntimeCommand, withRuntimePath } = createRuntimeResolver({
+  rootDir: ROOT_DIR,
 });
 
 async function main() {
@@ -111,6 +115,7 @@ async function renderServiceStatus() {
   lines.push(`deployment-mode: ${mode}`);
   lines.push(`control-mode: ${controlModeLabel(mode)}`);
   lines.push(`authority-mode: ${authorityModeLabel(mode)}`);
+  lines.push(...renderRuntimeResolution());
   lines.push(await formatHttpStatus("orchestrator", SERVICE_FILES.orchestrator.pid, SERVICE_PORTS.orchestrator));
   lines.push(await formatHttpStatus("frontend", SERVICE_FILES.frontend.pid, SERVICE_PORTS.frontend));
   for (const port of agents) {
@@ -180,9 +185,9 @@ async function startOrchestrator(mode) {
     pidPath: SERVICE_FILES.orchestrator.pid,
     logPath: SERVICE_FILES.orchestrator.log,
     cwd: WEB_DIR,
-    command: platformCommand("mix"),
+    command: resolveRuntimeCommand("mix").command,
     args: ["run", "--no-halt"],
-    env,
+    env: withRuntimePath(env),
   });
 
   await waitForPortState(SERVICE_PORTS.orchestrator, true, 15_000);
@@ -201,9 +206,9 @@ async function startFrontend() {
     pidPath: SERVICE_FILES.frontend.pid,
     logPath: SERVICE_FILES.frontend.log,
     cwd: FRONTEND_DIR,
-    command: platformCommand("npm"),
+    command: resolveRuntimeCommand("npm").command,
     args: ["run", "dev"],
-    env: process.env,
+    env: withRuntimePath(process.env),
   });
 
   await waitForPortState(SERVICE_PORTS.frontend, true, 20_000);
@@ -246,7 +251,7 @@ async function startHotStack(mode) {
     pidPath: SERVICE_FILES.hot.pid,
     logPath: SERVICE_FILES.hot.log,
     cwd: ROOT_DIR,
-    command: platformCommand("node"),
+    command: resolveRuntimeCommand("node").command,
     args: [
       "./scripts/hot-dev.mjs",
       "stack",
@@ -259,7 +264,7 @@ async function startHotStack(mode) {
       "--agent-endpoints",
       agentEndpointsValue(),
     ],
-    env,
+    env: withRuntimePath(env),
   });
 
   console.log(`started managed hot-reload loop (${hotModeLabel(mode)})`);

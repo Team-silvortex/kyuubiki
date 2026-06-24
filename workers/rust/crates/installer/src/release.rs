@@ -13,51 +13,93 @@ pub(crate) fn write_release_scripts(release_dir: &Path, platform: Platform) -> R
 
 pub(crate) fn expected_release_script_contents(platform: Platform) -> Vec<(String, String)> {
     if platform == Platform::Windows {
+        let node_path = format!(
+            ".\\dist\\{}\\runtimes\\{}\\node\\node.exe",
+            platform.as_str(),
+            platform.as_str()
+        );
         return vec![
             (
                 "scripts/start.cmd".to_string(),
-                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs start\r\n".to_string(),
+                windows_runtime_script(&node_path, "start"),
             ),
             (
                 "scripts/stop.cmd".to_string(),
-                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs stop\r\n".to_string(),
+                windows_runtime_script(&node_path, "stop"),
             ),
             (
                 "scripts/status.cmd".to_string(),
-                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs status\r\n".to_string(),
+                windows_runtime_script(&node_path, "status"),
             ),
             (
                 "scripts/export-db.cmd".to_string(),
-                "@echo off\r\ncd /d %~dp0\\..\\..\r\nnode .\\scripts\\kyuubiki-runtime.mjs export-db > .\\dist\\windows\\exports\\kyuubiki-database.json\r\n"
-                    .to_string(),
+                windows_runtime_script_with_redirect(
+                    &node_path,
+                    "export-db",
+                    ".\\dist\\windows\\exports\\kyuubiki-database.json",
+                ),
             ),
         ];
     }
 
+    let node_path = format!(
+        "./dist/{}/runtimes/{}/node/bin/node",
+        platform.as_str(),
+        platform.as_str()
+    );
     vec![
         (
             "scripts/start.sh".to_string(),
-            "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs start\n"
-                .to_string(),
+            unix_runtime_script(&node_path, "start"),
         ),
         (
             "scripts/stop.sh".to_string(),
-            "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs stop\n"
-                .to_string(),
+            unix_runtime_script(&node_path, "stop"),
         ),
         (
             "scripts/status.sh".to_string(),
-            "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs status\n"
-                .to_string(),
+            unix_runtime_script(&node_path, "status"),
         ),
         (
             "scripts/export-db.sh".to_string(),
-            format!(
-                "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nnode ./scripts/kyuubiki-runtime.mjs export-db > ./dist/{}/exports/kyuubiki-database.json\n",
-                platform.as_str()
+            unix_runtime_script_with_redirect(
+                &node_path,
+                "export-db",
+                &format!(
+                    "./dist/{}/exports/kyuubiki-database.json",
+                    platform.as_str()
+                ),
             ),
         ),
     ]
+}
+
+fn unix_runtime_script(node_path: &str, command: &str) -> String {
+    format!(
+        "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nNODE_BIN=\"{node_path}\"\nif [ ! -x \"$NODE_BIN\" ]; then NODE_BIN=\"node\"; fi\n\"$NODE_BIN\" ./scripts/kyuubiki-runtime.mjs {command}\n"
+    )
+}
+
+fn unix_runtime_script_with_redirect(node_path: &str, command: &str, output_path: &str) -> String {
+    format!(
+        "#!/usr/bin/env sh\nset -e\ncd \"$(dirname \"$0\")/../..\"\nNODE_BIN=\"{node_path}\"\nif [ ! -x \"$NODE_BIN\" ]; then NODE_BIN=\"node\"; fi\n\"$NODE_BIN\" ./scripts/kyuubiki-runtime.mjs {command} > {output_path}\n"
+    )
+}
+
+fn windows_runtime_script(node_path: &str, command: &str) -> String {
+    format!(
+        "@echo off\r\ncd /d %~dp0\\..\\..\r\nset NODE_BIN={node_path}\r\nif not exist \"%NODE_BIN%\" set NODE_BIN=node\r\n\"%NODE_BIN%\" .\\scripts\\kyuubiki-runtime.mjs {command}\r\n"
+    )
+}
+
+fn windows_runtime_script_with_redirect(
+    node_path: &str,
+    command: &str,
+    output_path: &str,
+) -> String {
+    format!(
+        "@echo off\r\ncd /d %~dp0\\..\\..\r\nset NODE_BIN={node_path}\r\nif not exist \"%NODE_BIN%\" set NODE_BIN=node\r\n\"%NODE_BIN%\" .\\scripts\\kyuubiki-runtime.mjs {command} > {output_path}\r\n"
+    )
 }
 
 pub(crate) fn build_release_manifest(
@@ -80,6 +122,7 @@ pub(crate) fn build_release_manifest(
             "    \"logs\",\n",
             "    \"exports\",\n",
             "    \"manifests\",\n",
+            "    \"runtimes\",\n",
             "    \"scripts\"\n",
             "  ],\n",
             "  \"recommended_flow\": [\n",
@@ -135,6 +178,7 @@ pub(crate) fn build_release_readme(platform: Platform) -> String {
             "- desktop/    desktop-shell packaging placeholders\n",
             "- logs/       runtime logs\n",
             "- manifests/  release and launch manifests\n",
+            "- runtimes/   installer-managed embedded language/runtime payloads\n",
             "- scripts/    operator entry points\n",
             "- exports/    snapshots and operator exports\n\n",
             "Suggested flow:\n",

@@ -3,17 +3,24 @@ use std::fs;
 use std::path::PathBuf;
 
 use kyuubiki_headless_sdk::{
-    HeadlessEngine, HeadlessExecutionBatch, HeadlessRunReport, HeadlessRuntimeStyle,
-    HeadlessTemplateDescriptor, HeadlessValidationReport, HeadlessWorkflowDocument,
-    HybridHeadlessExecutor, MockHeadlessExecutor, ServiceHeadlessExecutor, build_template_document,
-    collect_executor_compatibility_issues, execute_batch_with_executor,
+    HeadlessExecutionBatch, HeadlessRuntimeStyle, HeadlessTemplateDescriptor,
+    HeadlessValidationReport, HeadlessWorkflowDocument, HybridHeadlessExecutor,
+    MockHeadlessExecutor, ServiceHeadlessExecutor, build_material_report_from_run,
+    build_template_document, collect_executor_compatibility_issues, execute_batch_with_executor,
     normalize_workflow_document, run_batch_dry, search_templates, suggest_template_details,
     suggest_templates, summarize_batch, validate_batch,
 };
 use serde::Serialize;
 use serde_json::Value;
+#[path = "kyuubiki-headless/flags.rs"]
+mod kyuubiki_headless_flags;
 #[path = "kyuubiki-headless/plan.rs"]
 mod kyuubiki_headless_plan;
+#[path = "kyuubiki-headless/run_report.rs"]
+mod kyuubiki_headless_run_report;
+#[path = "kyuubiki-headless/usage.rs"]
+mod kyuubiki_headless_usage;
+use kyuubiki_headless_flags::Flags;
 fn main() {
     if let Err(error) = run() {
         eprintln!("{error}");
@@ -26,7 +33,7 @@ fn run() -> Result<(), String> {
     let command = args.first().map(String::as_str).unwrap_or("help");
     match command {
         "help" | "--help" | "-h" => {
-            print_usage();
+            kyuubiki_headless_usage::print_usage();
             Ok(())
         }
         "templates" => handle_templates(&args[1..]),
@@ -40,14 +47,8 @@ fn run() -> Result<(), String> {
     }
 }
 
-fn print_usage() {
-    println!(
-        "kyuubiki headless (Rust)\n\nUsage:\n  kyuubiki-headless help\n  kyuubiki-headless templates [--runtime service_only|browser_only|hybrid] [--category name] [--tag label] [--query text] [--json]\n  kyuubiki-headless suggest <query> [--json]\n  kyuubiki-headless init [--template <id>] [--runtime-style service_only|browser_only|hybrid] [--category name] [--tag label] [--query text] [--workflow-id workflow.id] [--out output.json] [--json]\n  kyuubiki-headless inspect <input> [--json]\n  kyuubiki-headless validate <input> [--json]\n  kyuubiki-headless plan <input> [--json] [--out plan.json]\n  kyuubiki-headless run <input> [--json] [--report-out report.json] [--allow-sensitive] [--allow-destructive] [--execute] [--executor mock|service|hybrid] [--api-base-url http://127.0.0.1:3000] [--api-token token]"
-    );
-}
-
 fn handle_templates(args: &[String]) -> Result<(), String> {
-    let flags = Flags::parse(args);
+    let flags = Flags::parse(args)?;
     let templates = filter_templates(&flags);
     if flags.json {
         print_json(&TemplateListOutput {
@@ -65,7 +66,7 @@ fn handle_templates(args: &[String]) -> Result<(), String> {
 }
 
 fn handle_suggest(args: &[String]) -> Result<(), String> {
-    let flags = Flags::parse(args);
+    let flags = Flags::parse(args)?;
     let query = flags
         .query
         .clone()
@@ -118,7 +119,7 @@ fn print_template_groups(templates: &[&HeadlessTemplateDescriptor]) {
 }
 
 fn handle_init(args: &[String]) -> Result<(), String> {
-    let flags = Flags::parse(args);
+    let flags = Flags::parse(args)?;
     let template = resolve_template(&flags)?;
     let document = build_template_document(template.id, flags.workflow_id.as_deref())
         .ok_or_else(|| format!("failed to build template {}", template.id))?;
@@ -145,7 +146,7 @@ fn handle_init(args: &[String]) -> Result<(), String> {
 }
 
 fn handle_inspect(args: &[String]) -> Result<(), String> {
-    let flags = Flags::parse(args);
+    let flags = Flags::parse(args)?;
     let input_path = flags.input_path()?;
     let batch = load_batch_from_path(&input_path)?;
     let summary = summarize_batch(&batch);
@@ -163,7 +164,7 @@ fn handle_inspect(args: &[String]) -> Result<(), String> {
 }
 
 fn handle_validate(args: &[String]) -> Result<(), String> {
-    let flags = Flags::parse(args);
+    let flags = Flags::parse(args)?;
     let input_path = flags.input_path()?;
     let batch = load_batch_from_path(&input_path)?;
     let report = validate_batch(&batch);
@@ -184,7 +185,7 @@ fn handle_validate(args: &[String]) -> Result<(), String> {
 }
 
 fn handle_run(args: &[String]) -> Result<(), String> {
-    let flags = Flags::parse(args);
+    let flags = Flags::parse(args)?;
     let input_path = flags.input_path()?;
     let batch = load_batch_from_path(&input_path)?;
     let report = if flags.execute {
@@ -259,6 +260,22 @@ fn handle_run(args: &[String]) -> Result<(), String> {
         fs::write(report_out, output_bytes)
             .map_err(|error| format!("failed to write {}: {error}", report_out))?;
     }
+    let material_report = flags
+        .material_report
+        .as_deref()
+        .map(|study| build_material_report_from_run(study, &report))
+        .transpose()?;
+    if flags.json && material_report.is_some() && flags.material_report_out.is_none() {
+        return Err("--material-report with --json requires --material-report-out".to_string());
+    }
+    if let Some(material_report) = &material_report {
+        if let Some(output_path) = &flags.material_report_out {
+            let output_bytes =
+                serde_json::to_vec_pretty(material_report).map_err(|error| error.to_string())?;
+            fs::write(output_path, output_bytes)
+                .map_err(|error| format!("failed to write {}: {error}", output_path))?;
+        }
+    }
     if flags.json {
         print_json(&report)?;
         return if report.validation.ok {
@@ -267,7 +284,10 @@ fn handle_run(args: &[String]) -> Result<(), String> {
             Err("run report generated from invalid batch".to_string())
         };
     }
-    print_run_report(&report);
+    kyuubiki_headless_run_report::print_run_report(&report);
+    if let Some(material_report) = &material_report {
+        kyuubiki_headless_run_report::print_material_report_summary(material_report);
+    }
     if report.validation.ok {
         Ok(())
     } else {
@@ -402,7 +422,7 @@ fn print_validation_report(report: &HeadlessValidationReport) {
             policy
                 .required_engines
                 .iter()
-                .map(engine_label)
+                .map(kyuubiki_headless_run_report::engine_label)
                 .collect::<Vec<_>>()
                 .join(", ")
         );
@@ -438,132 +458,10 @@ fn print_validation_report(report: &HeadlessValidationReport) {
     }
 }
 
-fn print_run_report(report: &HeadlessRunReport) {
-    println!("Headless run: {}", report.workflow_id);
-    println!("Mode: {}", report.mode);
-    println!("Status: {}", report.status);
-    println!(
-        "Executed steps: {}/{}",
-        report.executed_step_count,
-        report.steps.len()
-    );
-    if report.warning_count > 0 {
-        println!("Warnings: {}", report.warning_count);
-    }
-    if let Some(blocked) = &report.blocked_by_confirmation {
-        println!(
-            "Blocked: step {} requires {:?} confirmation",
-            blocked.index, blocked.risk
-        );
-    }
-    for step in &report.steps {
-        println!("{}. {} -> {}", step.index, step.action, step.status);
-        println!("   payload: {}", step.payload);
-        println!("   preview: {}", step.result_preview);
-    }
-}
-
-fn engine_label(engine: &HeadlessEngine) -> &'static str {
-    match engine {
-        HeadlessEngine::Browser => "browser",
-        HeadlessEngine::Service => "service",
-    }
-}
-
 fn print_json<T: Serialize>(value: &T) -> Result<(), String> {
     let payload = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
     println!("{payload}");
     Ok(())
-}
-
-#[derive(Debug, Default)]
-struct Flags {
-    positional: Vec<String>,
-    json: bool,
-    execute: bool,
-    executor: Option<String>,
-    allow_sensitive: bool,
-    allow_destructive: bool,
-    api_base_url: Option<String>,
-    api_token: Option<String>,
-    runtime: Option<String>,
-    category: Option<String>,
-    tag: Option<String>,
-    query: Option<String>,
-    template: Option<String>,
-    workflow_id: Option<String>,
-    out: Option<String>,
-    report_out: Option<String>,
-}
-
-impl Flags {
-    fn parse(args: &[String]) -> Self {
-        let mut flags = Self::default();
-        let mut index = 0;
-        while index < args.len() {
-            match args[index].as_str() {
-                "--json" => flags.json = true,
-                "--execute" => flags.execute = true,
-                "--executor" => {
-                    index += 1;
-                    flags.executor = args.get(index).cloned();
-                }
-                "--allow-sensitive" => flags.allow_sensitive = true,
-                "--allow-destructive" => flags.allow_destructive = true,
-                "--api-base-url" => {
-                    index += 1;
-                    flags.api_base_url = args.get(index).cloned();
-                }
-                "--api-token" => {
-                    index += 1;
-                    flags.api_token = args.get(index).cloned();
-                }
-                "--runtime" | "--runtime-style" => {
-                    index += 1;
-                    flags.runtime = args.get(index).cloned();
-                }
-                "--category" => {
-                    index += 1;
-                    flags.category = args.get(index).cloned();
-                }
-                "--tag" => {
-                    index += 1;
-                    flags.tag = args.get(index).cloned();
-                }
-                "--query" | "--search" => {
-                    index += 1;
-                    flags.query = args.get(index).cloned();
-                }
-                "--template" => {
-                    index += 1;
-                    flags.template = args.get(index).cloned();
-                }
-                "--workflow-id" => {
-                    index += 1;
-                    flags.workflow_id = args.get(index).cloned();
-                }
-                "--out" => {
-                    index += 1;
-                    flags.out = args.get(index).cloned();
-                }
-                "--report-out" => {
-                    index += 1;
-                    flags.report_out = args.get(index).cloned();
-                }
-                value if value.starts_with("--") => {}
-                value => flags.positional.push(value.to_string()),
-            }
-            index += 1;
-        }
-        flags
-    }
-
-    fn input_path(&self) -> Result<String, String> {
-        self.positional
-            .first()
-            .cloned()
-            .ok_or_else(|| "command requires an input path".to_string())
-    }
 }
 
 #[derive(Debug, Serialize)]

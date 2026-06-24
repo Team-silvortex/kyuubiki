@@ -1,0 +1,46 @@
+{
+  "schema_version": "kyuubiki.toolchains/v1",
+  "policy": {
+    "owner": "installer",
+    "mode": "self_host_ready",
+    "description": "Single source of truth for local, lab, container, installer, and self-host bootstrap toolchains."
+  },
+  "rust": {
+    "minimum": "1.88.0",
+    "preferred": "1.88.0",
+    "channel": "1.88.0",
+    "profile": "minimal",
+    "components": ["rustfmt", "clippy"]
+  },
+  "elixir": {
+    "constraint": "~> 1.19",
+    "minimum": "1.19.0",
+    "otp_minimum": "28.0",
+    "container_base": "elixir:1.19",
+    "lab_otp": "28.4",
+    "lab_elixir": "1.20.1-otp-28",
+    "self_host_required_env": [
+      "KYUUBIKI_DEPLOYMENT_MODE",
+      "KYUUBIKI_STORAGE_BACKEND",
+      "KYUUBIKI_HTTP_BIND_IP",
+      "KYUUBIKI_API_TOKEN",
+      "KYUUBIKI_AGENT_DISCOVERY"
+    ],
+    "self_host_optional_env": [
+      "DATABASE_URL",
+      "SQLITE_DATABASE_PATH",
+      "KYUUBIKI_AGENT_MANIFEST_PATH",
+      "KYUUBIKI_CLUSTER_API_TOKEN"
+    ]
+  },
+  "node": {
+    "minimum": "20.19.2",
+    "preferred": "20.19.2",
+    "package_engine": ">=20.19.2 <21"
+  },
+  "docker": {
+    "headless_live_test_image": "kyuubiki/headless-live-test",
+    "direct_mesh_benchmark_image": "kyuubiki/direct-mesh-benchmark",
+    "postgres_image": "postgres:16"
+  }
+}

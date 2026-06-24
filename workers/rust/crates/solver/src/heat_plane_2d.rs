@@ -426,13 +426,14 @@ fn push_heat_plane_quad_memory_stage(
 fn current_rss_kib() -> u64 {
     #[cfg(target_os = "linux")]
     {
-        if let Ok(statm) = std::fs::read_to_string("/proc/self/statm")
-            && let Some(resident_pages) = statm.split_whitespace().nth(1)
-            && let Ok(resident_pages) = resident_pages.parse::<u64>()
-        {
-            let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
-            if page_size > 0 {
-                return resident_pages * page_size as u64 / 1024;
+        if let Ok(statm) = std::fs::read_to_string("/proc/self/statm") {
+            if let Some(resident_pages) = statm.split_whitespace().nth(1) {
+                if let Ok(resident_pages) = resident_pages.parse::<u64>() {
+                    let page_size = unsafe { libc::sysconf(libc::_SC_PAGESIZE) };
+                    if page_size > 0 {
+                        return resident_pages * page_size as u64 / 1024;
+                    }
+                }
             }
         }
     }

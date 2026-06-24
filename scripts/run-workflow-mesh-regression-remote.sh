@@ -3,6 +3,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TOOLCHAIN_ENV_JSON="${TOOLCHAIN_ENV_JSON:-$(node "$ROOT_DIR/scripts/toolchain-env.mjs" --json)}"
+
+toolchain_value() {
+  local key="$1"
+  node -e 'const key = process.argv[1]; let data = ""; process.stdin.on("data", (chunk) => data += chunk); process.stdin.on("end", () => console.log(JSON.parse(data)[key] ?? ""));' "$key" <<<"$TOOLCHAIN_ENV_JSON"
+}
+
 REMOTE_HOST="${KYUUBIKI_LAB_HOST:-kyuubiki-lab}"
 REMOTE_DIR="${KYUUBIKI_LAB_WORKFLOW_MESH_DIR:-~/kyuubiki}"
 OUTPUT_SLUG="${OUTPUT_SLUG:-workflow-mesh-$(date -u +"%Y%m%dT%H%M%SZ")}"
@@ -10,8 +17,8 @@ LOCAL_OUTPUT_DIR="${LOCAL_OUTPUT_DIR:-$ROOT_DIR/tmp/workflow-mesh-regression/$OU
 REMOTE_OUTPUT_DIR="${REMOTE_OUTPUT_DIR:-tmp/workflow-mesh-regression/$OUTPUT_SLUG}"
 LOCAL_LOG_PATH="${LOCAL_LOG_PATH:-$LOCAL_OUTPUT_DIR/run.log}"
 REMOTE_LOG_PATH="${REMOTE_LOG_PATH:-$REMOTE_DIR/$REMOTE_OUTPUT_DIR/run.log}"
-REMOTE_OTP_VERSION="${REMOTE_OTP_VERSION:-28.4}"
-REMOTE_ELIXIR_VERSION="${REMOTE_ELIXIR_VERSION:-1.20.1-otp-28}"
+REMOTE_OTP_VERSION="${REMOTE_OTP_VERSION:-$(toolchain_value KYUUBIKI_REMOTE_OTP_VERSION)}"
+REMOTE_ELIXIR_VERSION="${REMOTE_ELIXIR_VERSION:-$(toolchain_value KYUUBIKI_REMOTE_ELIXIR_VERSION)}"
 REMOTE_PG_BIN_DIR="${REMOTE_PG_BIN_DIR:-/usr/lib/postgresql/16/bin}"
 REMOTE_PG_PORT="${REMOTE_PG_PORT:-55432}"
 REMOTE_PG_USER="${REMOTE_PG_USER:-kyuubiki}"

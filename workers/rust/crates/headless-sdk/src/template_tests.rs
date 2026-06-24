@@ -1,8 +1,9 @@
 use crate::{
-    HeadlessRuntimeStyle, build_execution_plan, build_template_document, find_action_contract,
-    heat_spreader_screening_candidates, list_template_categories, list_templates,
-    normalize_workflow_document, search_templates, structural_panel_screening_candidates,
-    suggest_template_details, suggest_templates, validate_batch,
+    HeadlessRuntimeStyle, build_execution_plan, build_template_document,
+    dielectric_screening_candidates, find_action_contract, heat_spreader_screening_candidates,
+    list_template_categories, list_templates, normalize_workflow_document, search_templates,
+    structural_panel_screening_candidates, suggest_template_details, suggest_templates,
+    validate_batch,
 };
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -90,7 +91,11 @@ fn search_templates_matches_query_against_actions_and_metadata() {
         .collect::<Vec<_>>();
     assert_eq!(
         ids,
-        vec!["direct_electrostatic_quad", "direct_electrostatic_triangle"]
+        vec![
+            "direct_electrostatic_quad",
+            "direct_electrostatic_triangle",
+            "material_dielectric_screening"
+        ]
     );
 }
 
@@ -170,7 +175,7 @@ fn template_category_distribution_matches_current_catalog() {
         ("browser", 1usize),
         ("electromagnetic", 2),
         ("hybrid", 1),
-        ("materials", 3),
+        ("materials", 4),
         ("mechanical", 12),
         ("mesh", 1),
         ("orchestration", 1),
@@ -229,6 +234,43 @@ fn material_screening_template_expands_candidate_solve_chains() {
             .iter()
             .any(|entry| entry.executor == "service" && entry.compatible)
     );
+}
+
+#[test]
+fn dielectric_material_template_expands_candidate_solve_chains() {
+    let candidates = dielectric_screening_candidates();
+    assert_eq!(candidates.len(), 3);
+
+    let document = build_template_document("material_dielectric_screening", None)
+        .expect("dielectric material template should build");
+    let steps = &document.workflow.steps;
+    assert_eq!(steps.len(), candidates.len() * 3);
+
+    for (candidate_index, candidate) in candidates.iter().enumerate() {
+        let base = candidate_index * 3;
+        let solve_step_number = base + 1;
+        assert_eq!(steps[base].action, "solve_electrostatic_plane_quad_2d");
+        assert_eq!(steps[base + 1].action, "job_wait");
+        assert_eq!(steps[base + 2].action, "result_fetch");
+        assert_eq!(
+            steps[base].payload["research"]["candidate_id"],
+            candidate.id
+        );
+        assert_eq!(
+            steps[base].payload["research"]["relative_permittivity"],
+            candidate.relative_permittivity
+        );
+        assert_eq!(
+            steps[base + 1].payload["job_id"],
+            format!("{{{{steps.{solve_step_number}.result.job_id}}}}")
+        );
+    }
+
+    let batch = normalize_workflow_document(&document).unwrap();
+    let plan = build_execution_plan(&batch);
+    assert!(plan.ok);
+    assert!(plan.compatibility.service_only_ok);
+    assert_eq!(plan.steps.len(), 9);
 }
 
 #[test]

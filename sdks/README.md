@@ -61,19 +61,31 @@ Recent additions:
 - the Rust headless SDK now includes a concrete material-research template,
   `material_heat_spreader_screening`, for comparing thermal heat-spreader
   candidates through solve/wait/result chains
+- the Rust headless SDK also includes `material_dielectric_screening`, an
+  electrostatic dielectric material study that ranks breakdown margin, field
+  intensity, dielectric loss proxy, and mass
 - Rust material research helpers can turn the resulting payloads into a
   ranked report with explicit metric contracts and missing-metric warnings
 - material reports include first-class optimization profiles so downstream
   agents can inspect score formulas, constraints, normalized scores, and
   weighted metric contributions
+- Rust SDK callers can now use one material-report dispatch surface to extract
+  successful `result_fetch` payloads from a headless run and build the matching
+  heat-spreader, dielectric, thermo-shield, or structural-panel report
 
 The same report path is also exposed as a Rust CLI:
 
 ```bash
+kyuubiki-material-report list --json
+kyuubiki-material-report describe dielectric-screening --json
 kyuubiki-material-report heat-spreader --results results.json --out report.json --json
+kyuubiki-material-report dielectric-screening --results dielectric-results.json --json
 kyuubiki-material-report thermo-shield --results thermo-results.json --out thermo-report.json --json
 kyuubiki-material-report thermo-shield --results thermo-results.json --profile profile.json --json
 ```
+
+`list` and `describe` expose the machine-readable study contract: aliases,
+template id, report schema, research domain, objective, and metric specs.
 
 The current SDK cut focuses on the smallest useful headless surface plus a
 thin workflow layer:

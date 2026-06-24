@@ -79,6 +79,109 @@ fn material_report_cli_builds_ranked_heat_spreader_report() {
 }
 
 #[test]
+fn material_report_cli_lists_study_catalog() {
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args(["list", "--json"])
+        .output()
+        .expect("run material report list");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let payload: Value = serde_json::from_slice(&output.stdout).expect("catalog json");
+    assert_eq!(
+        payload["schema_version"].as_str(),
+        Some("kyuubiki.material-study-catalog/v1")
+    );
+    assert_eq!(payload["study_count"].as_u64(), Some(4));
+    assert!(payload["studies"].as_array().is_some_and(|studies| {
+        studies.iter().any(|study| {
+            study["id"] == "material_dielectric_screening"
+                && study["metric_specs"]
+                    .as_array()
+                    .is_some_and(|metrics| !metrics.is_empty())
+        })
+    }));
+}
+
+#[test]
+fn material_report_cli_describes_study_alias() {
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args(["describe", "structural-panel", "--json"])
+        .output()
+        .expect("run material report describe");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let payload: Value = serde_json::from_slice(&output.stdout).expect("study json");
+    assert_eq!(
+        payload["id"].as_str(),
+        Some("material_structural_panel_screening")
+    );
+    assert_eq!(payload["domain"].as_str(), Some("structural"));
+    assert!(payload["metric_specs"].as_array().is_some_and(|metrics| {
+        metrics
+            .iter()
+            .any(|metric| metric["id"].as_str() == Some("yield_safety_factor"))
+    }));
+}
+
+#[test]
+fn material_report_cli_builds_dielectric_report() {
+    let input = write_temp_json(
+        "dielectric-results",
+        &json!([
+            { "result": { "max_electric_field": 42.0e6, "max_flux_density": 1.2e-3 } },
+            { "result": { "result": { "max_electric_field": 38.0e6, "max_flux_density": 3.3e-3 } } },
+            { "max_electric_field": 48.0e6, "max_flux_density": 0.9e-3 }
+        ]),
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args([
+            "dielectric-screening",
+            "--results",
+            input.to_str().expect("input path"),
+            "--json",
+        ])
+        .output()
+        .expect("run material report");
+
+    assert!(
+        output.status.success(),
+        "stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let report: Value = serde_json::from_slice(&output.stdout).expect("stdout report json");
+    assert_eq!(
+        report["schema_version"].as_str(),
+        Some("kyuubiki.dielectric-material-report/v1")
+    );
+    assert_eq!(
+        report["winner_candidate_id"].as_str(),
+        Some("polyimide_film")
+    );
+    assert_eq!(
+        report["optimization"]["id"].as_str(),
+        Some("material.dielectric_screening.optimization.v1")
+    );
+    assert_eq!(report["candidates"].as_array().map(Vec::len), Some(3));
+    assert_eq!(
+        report["candidates"][0]["optimization_terms"]
+            .as_array()
+            .map(Vec::len),
+        Some(4)
+    );
+}
+
+#[test]
 fn material_report_cli_rejects_unknown_study() {
     let input = write_temp_json("results", &json!([]));
     let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
@@ -92,6 +195,31 @@ fn material_report_cli_rejects_unknown_study() {
 
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).contains("unsupported material report study"));
+}
+
+#[test]
+fn material_report_cli_rejects_missing_flag_value() {
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args(["heat-spreader", "--results"])
+        .output()
+        .expect("run material report");
+
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("--results requires a value"));
+}
+
+#[test]
+fn material_report_cli_rejects_build_flags_on_catalog_commands() {
+    let output = Command::new(env!("CARGO_BIN_EXE_kyuubiki-material-report"))
+        .args(["list", "--results", "ignored.json"])
+        .output()
+        .expect("run material report list");
+
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr)
+            .contains("--results is only valid when building a material report")
+    );
 }
 
 #[test]
