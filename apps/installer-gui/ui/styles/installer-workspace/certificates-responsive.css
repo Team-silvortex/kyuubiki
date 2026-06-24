@@ -1,0 +1,91 @@
+.certificate-record-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.certificate-record {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(36, 40, 46, 0.96);
+}
+
+.certificate-record__top,
+.certificate-record__meta,
+.certificate-record__paths {
+  display: grid;
+  gap: 6px;
+}
+
+.certificate-record__top {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.certificate-record__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(69, 75, 84, 0.96);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.certificate-record__pill[data-status="active"] {
+  color: var(--ok);
+}
+
+.certificate-record__pill[data-status="revoked"] {
+  color: var(--warn);
+}
+
+.certificate-record__meta,
+.certificate-record__paths {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.certificate-record code {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(24, 27, 32, 0.92);
+  color: #d6dde8;
+  overflow: auto;
+}
+
+@media (max-width: 1120px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-span-2 {
+    grid-column: auto;
+  }
+
+  .integrity-card__top,
+  .integrity-version-row,
+  .integrity-residue-row,
+  .integrity-target-grid,
+  .integrity-contract-row {
+    flex-direction: column;
+  }
+
+  .integrity-contract-meta {
+    justify-items: start;
+  }
+}

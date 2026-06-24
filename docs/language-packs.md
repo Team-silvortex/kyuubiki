@@ -71,7 +71,7 @@ to replace the keys it cares about.
   "name": "French custom pack",
   "version": "1.6.0",
   "versionLine": "tamamono 1.x",
-  "targetAppVersion": "1.10.0",
+  "targetAppVersion": "1.11.0",
   "source": "imported",
   "updatedAt": "2026-05-21T00:00:00.000Z",
   "description": "Overrides a few high-traffic labels first.",
@@ -112,6 +112,6 @@ in.
 
 - keep `versionLine` aligned with the active line such as `tamamono 1.x`
 - set `targetAppVersion` when a pack is prepared against a specific shipped UI
-  build such as `1.10.0`
+  build such as `1.11.0`
 - treat packs without either field as generic overrides, not as audited release
   assets

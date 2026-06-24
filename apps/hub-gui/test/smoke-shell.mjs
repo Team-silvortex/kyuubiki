@@ -37,9 +37,13 @@ test("hub shell exposes the desktop information architecture", () => {
 
 test("hub shell normalizes host platform through shared desktop helpers", () => {
   const js = read("ui/app.js");
+  const state = read("ui/hub-state.js");
+  const toolsPlatformLabel = read("ui/hub-tools-platform-label.js");
+  const guidesPanel = read("ui/hub-guides-panel.js");
   const platform = read("ui/shared/platform.js");
+  const shellSource = [js, state, toolsPlatformLabel, guidesPanel].join("\n");
 
-  assertMatches(js, HUB_PLATFORM_HELPER_PATTERNS);
+  assertMatches(shellSource, HUB_PLATFORM_HELPER_PATTERNS);
   assert.doesNotMatch(js, /hostPlatform:\s*"macos"/);
   assert.match(platform, /desktop-shared\/ui\/platform\.js/);
 });

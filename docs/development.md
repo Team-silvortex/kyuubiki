@@ -43,6 +43,8 @@ Use these baseline docs to stay aligned:
 - Treat `tmp/` and `dist/` as generated/runtime directories
 - Reach first for `make tdd-web` or `make tdd-rust` instead of editing code
   without a failing test
+- Keep Rust source and test files under the `600` line ceiling; use
+  `make audit-rust-lines` before wrapping structural refactors
 - Prefer extending existing tokens, contracts, and module boundaries before
   inventing parallel patterns
 
@@ -82,6 +84,8 @@ The shortest useful loops are:
   distributed control-plane loop
 - `./scripts/kyuubiki test`
   broad repository test pass
+- `make audit-rust-lines`
+  Rust module size guard for the `600` line ceiling
 - `./scripts/kyuubiki verify`
   higher-confidence pre-merge check
 

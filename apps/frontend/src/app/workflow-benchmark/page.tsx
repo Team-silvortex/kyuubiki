@@ -20,7 +20,7 @@ function buildSyntheticOperatorDescriptors(): WorkflowOperatorDescriptor[] {
   return [
     {
       id: "transform.normalize_summary_fields",
-      version: "1.8.0-bench",
+      version: "1.11.0-bench",
       domain: "thermal",
       family: "summary_pipeline",
       kind: "transform",
@@ -37,7 +37,7 @@ function buildSyntheticOperatorDescriptors(): WorkflowOperatorDescriptor[] {
     },
     {
       id: "transform.aggregate_hotspots",
-      version: "1.8.0-bench",
+      version: "1.11.0-bench",
       domain: "thermal",
       family: "summary_pipeline",
       kind: "transform",
@@ -54,7 +54,7 @@ function buildSyntheticOperatorDescriptors(): WorkflowOperatorDescriptor[] {
     },
     {
       id: "transform.bridge_metric_table",
-      version: "1.8.0-bench",
+      version: "1.11.0-bench",
       domain: "mechanical",
       family: "bridge_runtime",
       kind: "transform",
@@ -77,7 +77,7 @@ function buildSyntheticGraph(workflowId: string, name: string): WorkflowGraphDef
     schema_version: "kyuubiki.workflow-graph/v1",
     id: workflowId,
     name,
-    version: "1.8.0-bench",
+    version: "1.11.0-bench",
     dataset_contract: {
       schema_version: "kyuubiki.workflow-dataset/v1",
       id: `${workflowId}.dataset`,
@@ -150,7 +150,7 @@ function buildSyntheticWorkflow(config: {
   return {
     id: config.id,
     name: config.name,
-    version: "1.8.0-bench",
+    version: "1.11.0-bench",
     summary: config.summary,
     domains: config.domains,
     capability_tags: config.capabilityTags,

@@ -236,3 +236,29 @@ export function renderDirectMeshRegressionLoadError(params) {
     });
   }
 }
+
+export async function loadRegressionGateReportPanel(params) {
+  const {
+    applyDesktopState,
+    elements,
+    hubCopy,
+    invokeTauri,
+    renderDirectMeshRegressionSnapshot,
+    renderRegressionGateReport,
+    state,
+  } = params;
+  try {
+    state.regressionGateReport = await invokeTauri("hub_regression_gate_report");
+    renderRegressionGateReport({ elements, report: state.regressionGateReport, applyDesktopState });
+    renderDirectMeshRegressionSnapshot({
+      elements,
+      snapshot: state.directMeshRegressionSnapshot,
+      copy: hubCopy(),
+      regressionGateReport: state.regressionGateReport,
+      applyDesktopState,
+    });
+  } catch {
+    state.regressionGateReport = null;
+    renderRegressionGateReport({ elements, report: null, applyDesktopState });
+  }
+}

@@ -24,6 +24,9 @@ This directory contains host-native operational entry points.
 - `audit-version-line.mjs`
   Audit repository-wide version contracts and inventory visible version
   references before advancing a shipping line such as `tamamono 1.7.0`.
+- `audit-rust-line-counts.mjs`
+  Enforce the Rust source line-count ceiling, currently `600` lines per file,
+  so crate and test modules stay split before they become hard to review.
 - `check-doc-book.mjs`
   Verify the centralized docs book and Hub mirrors for version alignment,
   broken local links, required chapter markers, and old legacy wording.
@@ -60,6 +63,9 @@ Useful smoke wrappers:
   Current Elixir -> Rust integration smoke flow.
 - `./scripts/kyuubiki sdk-smoke`
   Python / Elixir / Rust headless SDK smoke suite.
+- `./scripts/kyuubiki rust-line-audit`
+  Enforce the Rust source file line-count ceiling without running the full
+  Rust test suite.
 - `./scripts/kyuubiki frontend-test`
   Frontend typecheck plus production build verification.
 - `./scripts/kyuubiki headless-test`

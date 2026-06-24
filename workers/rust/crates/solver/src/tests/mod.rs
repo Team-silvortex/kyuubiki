@@ -1,4 +1,3 @@
-
 use super::{
     MockSolver, solve_bar_1d, solve_beam_1d, solve_electrostatic_bar_1d,
     solve_electrostatic_plane_quad_2d, solve_electrostatic_plane_triangle_2d, solve_frame_2d,

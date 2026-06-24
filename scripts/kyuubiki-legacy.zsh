@@ -96,7 +96,8 @@ Commands:
   test              Run all tests
   verify            Run formatting checks and tests
   web-test          Run Elixir tests
-  rust-test         Run Rust tests
+  rust-test         Run Rust tests and the Rust line-count audit
+  rust-line-audit   Enforce the Rust source file line-count ceiling
   frontend-test     Run frontend typecheck and production build
   integration-ui-mechanical Run the Playwright Workbench UI smoke for representative mechanical samples
   integration-ui-thermal Run the Playwright Workbench UI smoke for representative thermal and thermo-mechanical samples
@@ -1750,6 +1751,10 @@ case "$command" in
       cd "$RUST_DIR"
       cargo test "$@"
     )
+    node "$ROOT_DIR/scripts/audit-rust-line-counts.mjs" --max "${MAX_LINES:-600}"
+    ;;
+  rust-line-audit)
+    node "$ROOT_DIR/scripts/audit-rust-line-counts.mjs" --max "${MAX_LINES:-600}"
     ;;
   frontend-test)
     (

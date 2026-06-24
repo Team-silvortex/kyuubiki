@@ -36,7 +36,7 @@ export const WORKBENCH_SECRETS_KEY = "kyuubiki-workbench-secrets";
 export const WORKBENCH_LANGUAGE_PACKS_KEY = "kyuubiki-workbench-language-packs";
 export const WORKBENCH_LANGUAGE_PACK_SCHEMA_VERSION = "kyuubiki.language-pack/v1";
 export const WORKBENCH_LANGUAGE_PACK_VERSION_LINE = "tamamono 1.x";
-export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = "1.10.0";
+export const WORKBENCH_LANGUAGE_PACK_TARGET_APP_VERSION = "1.11.0";
 
 export type WorkbenchLanguagePackCompatibility = "exact" | "line" | "unscoped" | "mismatch";
 

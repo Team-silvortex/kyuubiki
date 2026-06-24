@@ -21,8 +21,10 @@ fn channel_route_uses_catalog_payload() {
     fs::create_dir_all(root.join("deploy")).unwrap();
     fs::write(
         root.join("deploy").join("update-channels.json"),
-        serde_json::to_vec_pretty(&json!({ "channels": [{ "id": "stable", "version": "1.8.0" }] }))
-            .unwrap(),
+        serde_json::to_vec_pretty(
+            &json!({ "channels": [{ "id": "stable", "version": "1.11.0" }] }),
+        )
+        .unwrap(),
     )
     .unwrap();
 

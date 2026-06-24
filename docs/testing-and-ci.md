@@ -25,6 +25,12 @@ The repository now keeps validation split by responsibility.
   Elixir control-plane tests under `apps/web/test`
 - `make test-rust`
   Rust workspace tests under `workers/rust`
+- `make audit-rust-lines`
+  Rust source organization guard; fails when any `workers/rust/crates/**/*.rs`
+  file exceeds the current `600` line ceiling
+- `./scripts/kyuubiki rust-line-audit`
+  Same guard through the unified launcher, useful on remote hosts and CI jobs
+  that do not enter through Make
 - `make test-frontend`
   frontend typecheck plus production build validation
 - `make workflow-preflight`
@@ -85,6 +91,7 @@ Use these when you want the repo to choose the right lower-level commands:
 - `./scripts/kyuubiki test`
 - `./scripts/kyuubiki verify`
 - `./scripts/kyuubiki smoke`
+- `make audit-rust-lines`
 
 For narrower SDK or frontend-only entrypoints, use the package or Make targets
 listed above.
@@ -112,6 +119,8 @@ Current GitHub Actions jobs are intentionally separated:
 
 - `web-test`
 - `rust-test`
+  Runs Rust formatting, workspace tests, the `600` line-count audit, and the
+  medium benchmark regression gate.
 - `frontend-test`
 - `sdk-smoke`
 - `integration-smoke-api`

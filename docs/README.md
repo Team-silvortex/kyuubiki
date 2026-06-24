@@ -28,7 +28,7 @@ Read these first, in order:
 9. `maintenance.md`
 10. `installer-remote-control.md`
 
-For the current `1.10.x` hardening path, keep four threads mentally linked:
+For the current `1.11.x` hardening path, keep four threads mentally linked:
 
 - centralized docs book and Hub shelf mirrors
 - headless live execution checks
@@ -95,7 +95,7 @@ Then branch by intent:
   ONNX-like cross-operator data contract for workflow-carried values.
 - `installer-remote-control.md`
   Installer-owned remote deployment, certificate, mesh, and workflow-snapshot
-  control-surface note for the `1.10.x` preparation line.
+  control-surface note for the `1.11.x` preparation line.
 - `remote-pilot.md`
   Practical first-Ubuntu-host rollout sketch for introducing remote solver
   nodes, then remote control-plane and workload-source validation.
@@ -163,7 +163,7 @@ Then branch by intent:
   version policy.
 - `release-prep-1.9-to-1.20.md`
   Industrialization roadmap for the second half of `tamamono 1.x`, covering
-  the boundary-hardening path from `1.9.x` through `1.20.x` before `2.0`,
+  the boundary-hardening path from `1.11.x` through `1.20.x` before `2.0`,
   plus the commercial distinction between `2.0`, `2.x`, and `3.0`.
 - `commercial-readiness-2.0.md`
   Commercial trust-gate checklist for numerical confidence, workflow assets,
@@ -171,7 +171,7 @@ Then branch by intent:
   docs readiness before `2.0`.
 - `installer-remote-control.md`
   Source-of-truth note for the Installer remote control surface that now sits
-  inside the `1.10.x` trust-hardening and `1.11.x` asset-formalization path.
+  inside the `1.11.x` trust-hardening and `1.11.x` asset-formalization path.
 - `tamamono-minor-lines.md`
   Suggested long-range grouping for the `tamamono 1.x` minor releases.
 - `testing-and-ci.md`

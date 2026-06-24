@@ -1,0 +1,162 @@
+{
+  "version": "1.11.0",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-23",
+  "git_commit": "4322bf0f81ee1ca8fc75cc95d6144a74d964a702",
+  "summary": "Current-line alignment snapshot for tamamono 1.11.0, promoting desktop shells, update metadata, installation integrity contracts, workflow defaults, language-pack targets, and documentation entry points onto the 1.11.x line.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.11.0",
+      "notes": [
+        "Workbench-facing docs, app rail branding, workflow local metadata, benchmark fixtures, and language-pack defaults now align to the 1.11.0 shipping version.",
+        "Workflow documentation pages and current-line references present 1.11.x as the active preparation line."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.11.0",
+      "notes": [
+        "Hub package metadata, Tauri bundle version, shell branding, and mirrored documentation now align to the 1.11.0 shipping line.",
+        "Hub update-catalog and installation-integrity pages are regenerated from the 1.11.0 release contracts."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.11.0",
+      "notes": [
+        "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.0 shipping version."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.11.0",
+      "notes": [
+        "Installer package metadata, bundle version, visible shell branding, README line references, and integrity surfaces now align to 1.11.0."
+      ]
+    },
+    "web_api": {
+      "version": "1.11.0",
+      "notes": [
+        "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.0 as the current public shipping version."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "aligned",
+    "capabilities": [
+      "Local workflow snapshots and duplicated graph metadata use the 1.11.0 local line.",
+      "Workflow package fixtures and import/export tests now use 1.11.0 graph versions.",
+      "Benchmark graph examples use 1.11.0-bench identifiers."
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Rust workspace package version is aligned to 1.11.0 for solver, engine, installer, benchmark, and SDK crates.",
+      "Direct FEM and headless SDK contracts continue to be verified by the existing Rust test matrix."
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.0_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.0_aarch64.dmg",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.0_aarch64.dmg",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/src/app/docs/page.tsx",
+        " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/frontend/src/lib/workbench/helpers.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/docs/current-line.html",
+        " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/docs/installation-integrity.html",
+        " M apps/hub-gui/ui/docs/update-catalog.html",
+        " M apps/hub-gui/ui/index.html",
+        " M apps/installer-gui/README.md",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/installer-gui/ui/index.html",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/ui/index.html",
+        " M deploy/installation-integrity-contract.json",
+        " M deploy/update-channels.json",
+        " M docs/README.md",
+        " M docs/book-manifest.json",
+        " M docs/book.html",
+        " M docs/current-line.md",
+        " M docs/desktop-release-checklist.md",
+        " M docs/installation-integrity-contract.html",
+        " M docs/installer-remote-control.md",
+        " M docs/language-packs.md",
+        " M docs/navigation-matrix.html",
+        " M docs/ui-automation-contract.json",
+        " M docs/update-catalog.html",
+        " M docs/version-line.md",
+        " M releases/index.json",
+        " M releases/update-catalog.json",
+        " M schemas/language-pack.schema.json",
+        " M workers/rust/crates/installer/src/tests.rs"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.11.0",
+      "workbench": "1.11.0",
+      "installer": "1.11.0"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check"
+    ]
+  }
+}

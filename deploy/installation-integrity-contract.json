@@ -1,8 +1,8 @@
 {
   "schema_version": "kyuubiki.installation-contract/v1",
   "product_line": "tamamono 1.x",
-  "shipping_version": "1.10.0",
-  "workspace_version": "1.10.0",
+  "shipping_version": "1.11.0",
+  "workspace_version": "1.11.0",
   "required_layout": [
     {
       "label": "workspace root",
@@ -108,8 +108,8 @@
     },
     {
       "category": "version",
-      "label": "required workspace version",
-      "value": "1.10.0",
+      "label": "required shipping version",
+      "value": "1.11.0",
       "editable": false,
       "description": "Desktop shells, workspace packages, and local release descriptors are expected to align to this working version."
     },

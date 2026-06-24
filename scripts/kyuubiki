@@ -59,7 +59,13 @@ run_web_tests() {
 
 run_rust_tests() {
   cd "$RUST_DIR"
-  exec cargo test "$@"
+  cargo test "$@"
+  run_rust_line_audit
+}
+
+run_rust_line_audit() {
+  cd "$ROOT_DIR"
+  exec node "$ROOT_DIR/scripts/audit-rust-line-counts.mjs" --max "${MAX_LINES:-600}"
 }
 
 run_frontend_tests() {
@@ -421,7 +427,8 @@ Native cross-platform commands:
   project | macro
   build-frontend | build-orchestrator | build-agent
   build-hub-gui | build-installer-gui | build-workbench-gui
-  web-test | rust-test | frontend-test | headless-test | headless-live-test | headless-rust-live-test | workflow-preflight
+  web-test | rust-test | rust-line-audit | frontend-test | headless-test | headless-live-test | headless-rust-live-test | workflow-preflight
+  rust-line-audit  Enforce the Rust source file line-count ceiling
   worker | smoke | sdk-smoke | playground-test
   orchestrator | orchestrator-local | orchestrator-cloud | orchestrator-distributed
   agent | frontend
@@ -504,6 +511,10 @@ case "$COMMAND" in
   rust-test)
     shift
     run_rust_tests "$@"
+    ;;
+  rust-line-audit)
+    shift
+    run_rust_line_audit "$@"
     ;;
   frontend-test)
     shift

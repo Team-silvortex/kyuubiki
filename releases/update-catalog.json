@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-06-22T01:18:58.369Z",
-  "shipping_version": "1.10.0",
+  "generated_at": "2026-06-23T15:22:33.611Z",
+  "shipping_version": "1.11.0",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -16,14 +16,14 @@
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.10",
-        "tamamono:1.10.0"
+        "tamamono:1.11",
+        "tamamono:1.11.0"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.10.0",
-      "summary": "Workspace-version alignment point for the tamamono 1.x line, with desktop shells, frontend-facing docs, installer integrity contracts, and local workflow metadata moved onto the 1.10.0 shipping version.",
-      "date": "2026-06-21",
+      "version": "1.11.0",
+      "summary": "Current-line alignment snapshot for tamamono 1.11.0, promoting desktop shells, update metadata, installation integrity contracts, workflow defaults, language-pack targets, and documentation entry points onto the 1.11.x line.",
+      "date": "2026-06-23",
       "notes": [
         "Primary operator-facing update track for the current shipping line.",
         "Targets standard installs that follow the visible installation contract."
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.10.0.json",
+      "snapshot_path": "releases/snapshots/1.11.0.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -69,35 +69,35 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Workbench-facing docs, app-rail branding, and local workflow snapshot metadata now align to the 1.10.0 shipping version.",
-            "Workflow contract reference pages and window-protection docs now present the 1.10.0 line consistently."
+            "Workbench-facing docs, app rail branding, workflow local metadata, benchmark fixtures, and language-pack defaults now align to the 1.11.0 shipping version.",
+            "Workflow documentation pages and current-line references present 1.11.x as the active preparation line."
           ]
         },
         "hub_gui": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Hub package metadata, Tauri bundle version, shell branding, and mirrored docs now align to the 1.10.0 shipping line.",
-            "Hub desktop reading entry and current-line mirrors now match the promoted release point."
+            "Hub package metadata, Tauri bundle version, shell branding, and mirrored documentation now align to the 1.11.0 shipping line.",
+            "Hub update-catalog and installation-integrity pages are regenerated from the 1.11.0 release contracts."
           ]
         },
         "workbench_gui": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Workbench desktop shell package metadata, bundle version, and visible brand assets now match the 1.10.0 shipping version."
+            "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.0 shipping version."
           ]
         },
         "installer_gui": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Installer package metadata, bundle version, remote-control docs, and integrity surfaces now align to the 1.10.0 shipping version."
+            "Installer package metadata, bundle version, visible shell branding, README line references, and integrity surfaces now align to 1.11.0."
           ]
         },
         "web_api": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Release metadata, docs, and generated update surfaces now track 1.10.0 as the current public shipping version."
+            "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.0 as the current public shipping version."
           ]
         }
       },
@@ -113,7 +113,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.10.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -121,21 +121,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -148,7 +148,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.10.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -156,21 +156,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -183,7 +183,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.10.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -191,33 +191,33 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     }
   ],
   "versions": [
     {
-      "version": "1.10.0",
+      "version": "1.11.0",
       "line": "1.x",
       "status": "current",
-      "date": "2026-06-21",
-      "summary": "Workspace-version alignment point for the tamamono 1.x line, with desktop shells, frontend-facing docs, installer integrity contracts, and local workflow metadata moved onto the 1.10.0 shipping version.",
-      "snapshot_path": "releases/snapshots/1.10.0.json",
+      "date": "2026-06-23",
+      "summary": "Current-line alignment snapshot for tamamono 1.11.0, promoting desktop shells, update metadata, installation integrity contracts, workflow defaults, language-pack targets, and documentation entry points onto the 1.11.x line.",
+      "snapshot_path": "releases/snapshots/1.11.0.json",
       "channels": [
         "stable"
       ],
@@ -225,40 +225,40 @@
         "tamamono:stable",
         "tamamono:latest",
         "tamamono:1",
-        "tamamono:1.10",
-        "tamamono:1.10.0"
+        "tamamono:1.11",
+        "tamamono:1.11.0"
       ],
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Workbench-facing docs, app-rail branding, and local workflow snapshot metadata now align to the 1.10.0 shipping version.",
-            "Workflow contract reference pages and window-protection docs now present the 1.10.0 line consistently."
+            "Workbench-facing docs, app rail branding, workflow local metadata, benchmark fixtures, and language-pack defaults now align to the 1.11.0 shipping version.",
+            "Workflow documentation pages and current-line references present 1.11.x as the active preparation line."
           ]
         },
         "hub_gui": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Hub package metadata, Tauri bundle version, shell branding, and mirrored docs now align to the 1.10.0 shipping line.",
-            "Hub desktop reading entry and current-line mirrors now match the promoted release point."
+            "Hub package metadata, Tauri bundle version, shell branding, and mirrored documentation now align to the 1.11.0 shipping line.",
+            "Hub update-catalog and installation-integrity pages are regenerated from the 1.11.0 release contracts."
           ]
         },
         "workbench_gui": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Workbench desktop shell package metadata, bundle version, and visible brand assets now match the 1.10.0 shipping version."
+            "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.0 shipping version."
           ]
         },
         "installer_gui": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Installer package metadata, bundle version, remote-control docs, and integrity surfaces now align to the 1.10.0 shipping version."
+            "Installer package metadata, bundle version, visible shell branding, README line references, and integrity surfaces now align to 1.11.0."
           ]
         },
         "web_api": {
-          "version": "1.10.0",
+          "version": "1.11.0",
           "notes": [
-            "Release metadata, docs, and generated update surfaces now track 1.10.0 as the current public shipping version."
+            "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.0 as the current public shipping version."
           ]
         }
       },
@@ -274,7 +274,7 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.10.0_aarch64.dmg",
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -282,21 +282,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/hub-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
@@ -309,7 +309,7 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.10.0_aarch64.dmg",
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -317,21 +317,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/workbench-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
@@ -344,7 +344,7 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.10.0_aarch64.dmg",
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.0_aarch64.dmg",
           "exists": false
         },
         {
@@ -352,21 +352,21 @@
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "linux",
           "path": "dist/linux/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": true
+          "exists": false
         }
       ]
     },

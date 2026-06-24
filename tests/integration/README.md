@@ -35,6 +35,14 @@ Current orchestrated API smoke now includes:
 - `thermal_frame_3d`
 - `thermal_truss_3d`
 
+The orchestrator API smoke entrypoint is intentionally small:
+
+- `orchestrator-agent-api-smoke.test.mjs`
+- `orchestrator-agent-api-smoke/axial-thermal-smoke.test.mjs`
+- `orchestrator-agent-api-smoke/structural-smoke.test.mjs`
+- `orchestrator-agent-api-smoke/frame-thermal-smoke.test.mjs`
+- `orchestrator-agent-api-smoke/workflow-smoke.test.mjs`
+
 Run with:
 
 - `make test-integration`

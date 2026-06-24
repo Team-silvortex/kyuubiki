@@ -6,6 +6,7 @@ import path from "node:path";
 import process from "node:process";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createRuntimeEnv } from "./kyuubiki-runtime-env.mjs";
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WEB_DIR = path.join(ROOT_DIR, "apps/web");
@@ -23,6 +24,21 @@ const SERVICE_FILES = {
   hot: { pid: path.join(HOT_RUN_DIR, "stack.pid"), log: path.join(HOT_RUN_DIR, "stack.console.log") },
 };
 const DEFAULT_AGENT_ENDPOINTS = "127.0.0.1:5001,127.0.0.1:5002";
+const {
+  authorityModeLabel,
+  buildModeEnv,
+  controlModeLabel,
+  deploymentModeLabel,
+  hotModeLabel,
+  loadEnvValues,
+  resolveDeploymentMode,
+  resolveWorkspacePath,
+  storageModeLabel,
+} = createRuntimeEnv({
+  rootDir: ROOT_DIR,
+  envFile: ENV_FILE,
+  envExampleFile: ENV_EXAMPLE_FILE,
+});
 
 async function main() {
   const [command = "help", ...args] = process.argv.slice(2);
@@ -484,95 +500,6 @@ function agentDiscoveryValue() {
   return env.KYUUBIKI_AGENT_DISCOVERY ?? "static";
 }
 
-function buildModeEnv(mode) {
-  const env = loadEnvValues();
-  const merged = { ...env, ...process.env };
-  if (mode === "local") {
-    merged.KYUUBIKI_STORAGE_BACKEND = "sqlite";
-    merged.SQLITE_DATABASE_PATH = env.SQLITE_DATABASE_PATH ?? "./tmp/data/kyuubiki_dev.sqlite3";
-    merged.KYUUBIKI_DEPLOYMENT_MODE = "local";
-  } else if (mode === "cloud") {
-    requireEnv(merged.DATABASE_URL, "DATABASE_URL is required for cloud mode");
-    merged.KYUUBIKI_STORAGE_BACKEND = "postgres";
-    merged.KYUUBIKI_DEPLOYMENT_MODE = "cloud";
-  } else if (mode === "distributed") {
-    requireEnv(merged.DATABASE_URL, "DATABASE_URL is required for distributed mode");
-    merged.KYUUBIKI_STORAGE_BACKEND = "postgres";
-    merged.KYUUBIKI_DEPLOYMENT_MODE = "distributed";
-  }
-  return merged;
-}
-
-function storageModeLabel(mode) {
-  if (mode === "local") {
-    return "sqlite";
-  }
-  if (mode === "cloud" || mode === "distributed") {
-    return "postgres";
-  }
-  return loadEnvValues().KYUUBIKI_STORAGE_BACKEND ?? "sqlite";
-}
-
-function deploymentModeLabel(mode) {
-  return resolveDeploymentMode(mode);
-}
-
-function resolveDeploymentMode(mode) {
-  if (mode === "local" || mode === "cloud" || mode === "distributed") {
-    return mode;
-  }
-  return loadEnvValues().KYUUBIKI_DEPLOYMENT_MODE ?? "local";
-}
-
-function controlModeLabel(mode) {
-  return resolveDeploymentMode(mode) === "local" ? "standalone" : "orch_managed";
-}
-
-function authorityModeLabel(mode) {
-  return resolveDeploymentMode(mode) === "local" ? "self_directed" : "single_orchestrator";
-}
-
-function hotModeLabel(mode) {
-  return mode === "cloud" || mode === "distributed" ? mode : "local";
-}
-
-function loadEnvValues() {
-  if (loadEnvValues.cache) {
-    return loadEnvValues.cache;
-  }
-
-  const values = {};
-  for (const envPath of [ENV_EXAMPLE_FILE, ENV_FILE]) {
-    if (!fs.existsSync(envPath)) {
-      continue;
-    }
-
-    const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/u);
-    for (const rawLine of lines) {
-      const line = rawLine.trim();
-      if (!line || line.startsWith("#")) {
-        continue;
-      }
-      const separator = line.indexOf("=");
-      if (separator <= 0) {
-        continue;
-      }
-      const key = line.slice(0, separator).trim();
-      const value = line.slice(separator + 1).trim();
-      values[key] = value;
-    }
-  }
-
-  loadEnvValues.cache = values;
-  return values;
-}
-
-loadEnvValues.cache = null;
-
-function resolveWorkspacePath(value) {
-  return path.isAbsolute(value) ? value : path.join(ROOT_DIR, value);
-}
-
 function agentFiles(port) {
   return { pid: path.join(RUN_DIR, `agent-${port}.pid`), log: path.join(RUN_DIR, `agent-${port}.log`) };
 }
@@ -614,12 +541,6 @@ function runCommand(command, args) {
       }
     });
   });
-}
-
-function requireEnv(value, message) {
-  if (!value) {
-    throw new Error(message);
-  }
 }
 
 function sleep(ms) {

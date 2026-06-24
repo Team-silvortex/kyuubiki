@@ -2,7 +2,7 @@
   "schema_version": "kyuubiki.docs-book/v1",
   "title": "Kyuubiki Book",
   "version_line": "tamamono 1.x",
-  "shipping_version": "1.10.0",
+  "shipping_version": "1.11.0",
   "entry_html": "docs/book.html",
   "purpose": "Single-entry documentation guide for humans and large models.",
   "chapters": [
