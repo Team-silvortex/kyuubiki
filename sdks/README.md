@@ -64,12 +64,12 @@ Recent additions:
 - the Rust headless SDK also includes `material_dielectric_screening`, an
   electrostatic dielectric material study that ranks breakdown margin, field
   intensity, dielectric loss proxy, and mass
-- Rust material research helpers can turn the resulting payloads into a
+- Rust, Python, and Elixir material research helpers can turn result payloads into a
   ranked report with explicit metric contracts and missing-metric warnings
 - material reports include first-class optimization profiles so downstream
   agents can inspect score formulas, constraints, normalized scores, and
   weighted metric contributions
-- Rust SDK callers can now use one material-report dispatch surface to extract
+- Rust, Python, and Elixir SDK callers can now use one material-report dispatch surface to extract
   successful `result_fetch` payloads from a headless run and build the matching
   heat-spreader, dielectric, thermo-shield, or structural-panel report
 

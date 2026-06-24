@@ -13,6 +13,13 @@ from .errors import (
 )
 from .session import KyuubikiSession
 from .solver_rpc import SolverRpcClient
+from .material_reports import (
+    build_material_report,
+    build_material_report_from_payload,
+    describe_material_study,
+    extract_material_result_payloads,
+    material_study_catalog,
+)
 from .workflow_builders import (
     build_workflow_axis,
     build_workflow_dataset_contract,
@@ -42,6 +49,11 @@ from .workflow_results import (
 __all__ = [
     "ControlPlaneClient",
     "SolverRpcClient",
+    "build_material_report",
+    "build_material_report_from_payload",
+    "describe_material_study",
+    "extract_material_result_payloads",
+    "material_study_catalog",
     "KyuubikiSession",
     "KyuubikiAgentClient",
     "KyuubikiRetryPolicy",

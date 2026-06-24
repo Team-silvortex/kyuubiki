@@ -74,6 +74,14 @@ graph =
 
 {:ok, output_manifest} = KyuubikiSdk.build_workflow_output_manifest(graph)
 {:ok, validated_outputs} = KyuubikiSdk.validate_workflow_result_against_graph(graph, workflow_run.result)
+{:ok, material_report} =
+  KyuubikiSdk.build_material_report_from_payload("dielectric-screening", %{
+    "result_payloads" => [
+      %{"result" => %{"max_electric_field" => 42.0e6, "max_flux_density" => 1.2e-3}},
+      %{"result" => %{"max_electric_field" => 38.0e6, "max_flux_density" => 3.3e-3}},
+      %{"result" => %{"max_electric_field" => 48.0e6, "max_flux_density" => 0.9e-3}}
+    ]
+  })
 ```
 
 Highlights:
@@ -92,6 +100,7 @@ Highlights:
 - distributed workflow execution-hint fields for dispatch policy, operator fetch
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
+- material-study catalog, headless result extraction, and report ranking helpers
 - BEAM-friendly thin wrapper over the public protocol
 
 Example:

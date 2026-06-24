@@ -10,6 +10,7 @@ from kyuubiki_sdk import (
     KyuubikiRetryPolicy,
     KyuubikiSession,
     SolverRpcClient,
+    build_material_report_from_payload,
     build_workflow_dataset_contract,
     build_workflow_dataset_value,
     build_workflow_edge,
@@ -137,6 +138,16 @@ workflow_graph_run = agent.run_workflow_graph(
 )
 output_manifest = build_workflow_output_manifest(graph)
 validated_outputs = validate_workflow_result_against_graph(graph, workflow_graph_run["result"])
+material_report = build_material_report_from_payload(
+    "dielectric-screening",
+    {
+        "result_payloads": [
+            {"result": {"max_electric_field": 42.0e6, "max_flux_density": 1.2e-3}},
+            {"result": {"max_electric_field": 38.0e6, "max_flux_density": 3.3e-3}},
+            {"result": {"max_electric_field": 48.0e6, "max_flux_density": 0.9e-3}},
+        ]
+    },
+)
 ```
 
 Highlights:
@@ -151,6 +162,7 @@ Highlights:
 - distributed workflow execution-hint fields for dispatch policy, operator fetch
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
+- material-study catalog, headless result extraction, and report ranking helpers
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access
 - high-level `KyuubikiSession` for submit/wait flows
