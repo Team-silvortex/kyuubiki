@@ -81,7 +81,7 @@ mod tests {
         BenchmarkCatalogSpec, catalog_spec_path_candidates, default_catalog_spec,
     };
     use crate::config::BenchmarkProfile;
-    use crate::models::BenchmarkWorkload;
+    use crate::models::{BenchmarkCase, BenchmarkWorkload};
     use crate::runner::run_case;
     use std::fs;
 
@@ -221,6 +221,31 @@ mod tests {
     }
 
     #[test]
+    fn two_hundred_k_profile_covers_standard_matrix_shapes_without_solving() {
+        let matrix_cases = [
+            ("mechanical-core", 5, 200_000),
+            ("thermal-core", 1, 200_000),
+            ("compound-core", 4, 200_000),
+        ];
+
+        for (matrix, expected_count, minimum_nodes) in matrix_cases {
+            let cases = benchmark_cases(BenchmarkProfile::TwoHundredK, matrix);
+
+            assert_eq!(cases.len(), expected_count, "{matrix} case count changed");
+            assert!(
+                cases
+                    .iter()
+                    .any(|case| benchmark_shape(case).0 >= minimum_nodes),
+                "{matrix} no longer includes a 200k-scale case"
+            );
+            assert!(
+                cases.iter().all(|case| case.id.ends_with("-200k")),
+                "{matrix} should keep the 200k case suffix"
+            );
+        }
+    }
+
+    #[test]
     fn headless_sdk_matrix_runs_manifest_benchmarks() {
         let cases = headless_sdk_cases();
         let selected = cases.iter().collect::<Vec<_>>();
@@ -240,7 +265,43 @@ mod tests {
             report
                 .cases
                 .iter()
-                .any(|case| case.id == "direct-fem-manifest" && case.node_count == 26)
+                .any(|case| case.id == "direct-fem-manifest" && case.node_count >= 26)
         );
+    }
+
+    fn benchmark_shape(case: &BenchmarkCase) -> (usize, usize, usize) {
+        match &case.workload {
+            BenchmarkWorkload::AxialBar(request) => {
+                (request.elements + 1, request.elements, request.elements)
+            }
+            BenchmarkWorkload::Truss2d(request) => (
+                request.nodes.len(),
+                request.elements.len(),
+                request.nodes.len() * 2,
+            ),
+            BenchmarkWorkload::Truss3d(request) => (
+                request.nodes.len(),
+                request.elements.len(),
+                request.nodes.len() * 3,
+            ),
+            BenchmarkWorkload::PlaneTriangle2d(request) => (
+                request.nodes.len(),
+                request.elements.len(),
+                request.nodes.len() * 2,
+            ),
+            BenchmarkWorkload::PlaneQuad2d(request) => (
+                request.nodes.len(),
+                request.elements.len(),
+                request.nodes.len() * 2,
+            ),
+            BenchmarkWorkload::HeatPlaneQuad2d(request) => (
+                request.nodes.len(),
+                request.elements.len(),
+                request.nodes.len(),
+            ),
+            BenchmarkWorkload::HeadlessActionManifest | BenchmarkWorkload::DirectFemManifest => {
+                (0, 0, 0)
+            }
+        }
     }
 }

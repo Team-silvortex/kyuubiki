@@ -52,13 +52,17 @@ test("desktop shell registers local runtime actions and shortcuts", () => {
     /guarded_mutation_action/,
     /invokeGuardedMutation/,
     /read_runtime_log/,
+    /watchDesktopLanguagePreference/,
     /setShellPage/,
     /renderShellPages/,
     /normalizeDesktopPlatform/,
     /keydown/,
   ]);
-  assert.match(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
-  assert.match(platform, /desktop-shared\/ui\/platform\.js/);
+  assert.match(bridge, /export async function invokeTauri/);
+  assert.match(bridge, /export function applyDesktopState/);
+  assert.doesNotMatch(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
+  assert.match(platform, /export function normalizeDesktopPlatform/);
+  assert.doesNotMatch(platform, /desktop-shared\/ui\/platform\.js/);
 });
 
 test("tauri backend exposes workbench runtime commands", () => {

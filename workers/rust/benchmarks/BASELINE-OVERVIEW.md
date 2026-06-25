@@ -20,6 +20,12 @@ This page tracks the first standardized performance-baseline ladder for the
   Mid-scale confirmation tier for the same standard matrices.
 - `20k`
   Heavy local validation tier before selected `100k` pushes.
+- `100k`
+  Checked heavy-tier ladder for representative standard matrices.
+- `200k`
+  Remote-first exploratory tier. Functional coverage is enforced through
+  catalog shape tests; timing baselines should be produced on `kyuubiki-lab`
+  before they are treated as release evidence.
 
 ## Naming rules
 
@@ -34,6 +40,7 @@ cd <repo>
 make benchmark-standard-baselines PROFILE=10k REPEAT=3
 make benchmark-standard-baselines PROFILE=15k REPEAT=3
 make benchmark-standard-baselines PROFILE=20k REPEAT=3
+make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1
 ```
 
 ## Current checked baseline set
@@ -74,3 +81,7 @@ make benchmark-standard-baselines PROFILE=20k REPEAT=3
   runs validated on `kyuubiki-lab`.
 - Selected `100k` pushes should continue to target the most representative
   standard matrices instead of trying to expand every path at once.
+- `200k` coverage currently means the standard matrix catalog must still
+  generate 200k-scale cases, and selected remote smoke runs should be captured
+  under `tmp/benchmark-profile/` or promoted to checked baselines only after the
+  lab result is stable.

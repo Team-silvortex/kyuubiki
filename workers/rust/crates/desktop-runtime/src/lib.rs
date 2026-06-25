@@ -78,13 +78,17 @@ pub fn workspace_root() -> PathBuf {
         .expect("failed to resolve workspace root")
 }
 
-fn normalize_language(value: &str) -> Option<&'static str> {
-    match value.trim() {
-        "en" => Some("en"),
-        "zh" => Some("zh"),
-        "ja" => Some("ja"),
-        "es" => Some("es"),
-        _ => None,
+fn normalize_language(value: &str) -> Option<String> {
+    let language = value.trim();
+    if !language.is_empty()
+        && language.len() <= 32
+        && language
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_')
+    {
+        Some(language.to_string())
+    } else {
+        None
     }
 }
 
@@ -103,7 +107,7 @@ fn desktop_audit_path(file_name: &str) -> Result<PathBuf, String> {
 pub fn read_global_language_preference() -> Option<String> {
     let path = global_language_path().ok()?;
     let raw = fs::read_to_string(path).ok()?;
-    normalize_language(raw.trim()).map(str::to_string)
+    normalize_language(raw.trim())
 }
 
 pub fn write_global_language_preference(language: &str) -> Result<String, String> {
@@ -362,7 +366,8 @@ fn parse_agent_status(line: &str) -> Option<ServiceEndpointSummary> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ServiceEndpointSummary, ServiceStatusSummary, parse_service_status_summary, workspace_root,
+        ServiceEndpointSummary, ServiceStatusSummary, normalize_language, parse_service_status_summary,
+        workspace_root,
     };
 
     #[test]
@@ -410,5 +415,13 @@ mod tests {
                 ],
             }
         );
+    }
+
+    #[test]
+    fn accepts_language_pack_locale_codes() {
+        assert_eq!(normalize_language("fr-CA"), Some("fr-CA".to_string()));
+        assert_eq!(normalize_language("ko_custom"), Some("ko_custom".to_string()));
+        assert_eq!(normalize_language(""), None);
+        assert_eq!(normalize_language("../fr"), None);
     }
 }

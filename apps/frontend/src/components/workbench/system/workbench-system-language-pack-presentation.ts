@@ -1,6 +1,6 @@
 import { getWorkbenchLanguagePackCompatibility } from "@/lib/workbench/helpers";
 
-type PresentedLanguage = "en" | "zh" | "ja" | "es";
+type PresentedLanguage = string;
 
 type LanguagePackSummary = {
   id: string;

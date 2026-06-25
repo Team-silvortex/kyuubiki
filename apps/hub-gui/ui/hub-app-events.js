@@ -38,6 +38,7 @@ export function bindHubAppEvents({
   setAssistantMode,
   setAssistantOutput,
   setAssistantPanelOpen,
+  setEventMessage,
   setOperationOutput,
   setPanelPage,
   setProjectBundleOutput,
@@ -52,6 +53,24 @@ export function bindHubAppEvents({
   toggleHubDensityPanel,
   updateAssistantEndpointPolicy,
 }) {
+  document.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target?.closest?.("[data-action], button, select, input, textarea, a");
+      if (!target) {
+        return;
+      }
+      const label =
+        target.dataset?.action ||
+        target.id ||
+        target.getAttribute?.("aria-label") ||
+        target.textContent?.trim()?.slice(0, 48) ||
+        target.tagName;
+      setEventMessage?.(`captured click: ${label}`, `target:${target.tagName?.toLowerCase?.() || "unknown"}`);
+    },
+    true,
+  );
+
   elements.navItems.forEach((item) => {
     item.addEventListener("click", () => setSection(item.dataset.target));
   });
@@ -117,6 +136,8 @@ export function bindHubAppEvents({
   
   for (const button of document.querySelectorAll("[data-action]")) {
     button.addEventListener("click", async () => {
+      window.__kyuubikiHubDomClickAt = Date.now();
+      setEventMessage?.(`button click: ${button.dataset.action}`, "dom:click");
       await runAction(button.dataset.action);
     });
   }
@@ -272,9 +293,14 @@ export function bindHubAppEvents({
   });
   
   elements.languageSelect?.addEventListener("change", async (event) => {
+    window.__kyuubikiHubLanguageChangeAt = Date.now();
+    setEventMessage?.(`language select changed: ${event.target.value}`, "dom:change");
     state.language = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
     rerenderLocalizedHubShell();
     renderToolsPlatformLabel();
+    applyDesktopState(elements.actionState, "ready", { kind: "activity" });
+    setOperationOutput(`Language changed to ${state.language}.`);
+    setEventMessage?.(`language applied: ${state.language}`, "language:complete");
     window.requestAnimationFrame(() => {
       rerenderLocalizedHubShell();
       renderToolsPlatformLabel();

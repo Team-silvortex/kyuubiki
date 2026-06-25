@@ -1,3 +1,32 @@
+function afterFirstPaint(task) {
+  const schedule = window.requestAnimationFrame
+    ? (callback) => window.requestAnimationFrame(() => window.requestAnimationFrame(callback))
+    : (callback) => window.setTimeout(callback, 0);
+
+  return new Promise((resolve) => {
+    schedule(() => resolve(task()));
+  });
+}
+
+function duringIdle(task) {
+  return new Promise((resolve) => {
+    const run = () => resolve(task());
+    if (window.requestIdleCallback) {
+      window.requestIdleCallback(run, { timeout: 1200 });
+      return;
+    }
+    window.setTimeout(run, 48);
+  });
+}
+
+async function settleInstallerStartup(label, task) {
+  try {
+    await task();
+  } catch (error) {
+    console.warn(`Installer startup phase failed: ${label}`, error);
+  }
+}
+
 export async function runInstallerStartup({
   invoke,
   runAction,
@@ -38,43 +67,21 @@ export async function runInstallerStartup({
   showCompletion,
   brandConfigName,
 }) {
-  return runAction(
+  const startupResult = await runAction(
     "startup",
     async () => {
       const [
         doctor,
-        integrityReport,
-        updatePlan,
-        updateSource,
-        updatePreview,
-        downloadedUpdate,
-        appliedUpdate,
-        stagedUpdate,
         envForm,
         status,
-        regressionGate,
         language,
         brand,
-        remotePolicy,
-        certificateAuthority,
-        remoteNodes,
       ] = await Promise.all([
         invoke("doctor_report"),
-        invoke("installation_integrity_report").catch(() => null),
-        invoke("unified_update_plan", { channel: "stable" }).catch(() => null),
-        invoke("update_source_config").catch(() => null),
-        invoke("unified_update_preview", { channel: "stable" }).catch(() => null),
-        invoke("latest_downloaded_update_record").catch(() => null),
-        invoke("latest_applied_update_record").catch(() => null),
-        invoke("latest_staged_update_record").catch(() => null),
         invoke("read_env_file").catch(() => null),
         invoke("service_status").catch(() => ({ rendered: "service status unavailable" })),
-        invoke("regression_gate_report").catch(() => null),
         loadDesktopLanguagePreference().catch(() => "en"),
         loadDesktopBrand().catch(() => null),
-        invoke("remote_deploy_policy").catch(() => null),
-        invoke("certificate_authority_policy").catch(() => null),
-        invoke("remote_node_registry").catch(() => null),
       ]);
 
       setCurrentLanguage(language);
@@ -84,19 +91,6 @@ export async function runInstallerStartup({
       }
       syncDesktopStates();
       renderDoctor(doctor, platformLabel, workspaceLabel, doctorGrid);
-      if (integrityReport) {
-        renderIntegrityReport(integrityReport, brand);
-      }
-      if (updatePlan) {
-        renderUpdatePlan(updatePlan);
-      }
-      hydrateUpdateSourceConfig(updateSource);
-      if (updatePreview) {
-        renderUpdatePreview(updatePreview);
-      }
-      renderLatestDownloadedUpdate(downloadedUpdate);
-      renderLatestAppliedUpdate(appliedUpdate);
-      renderLatestStagedUpdate(stagedUpdate);
       if (envForm) {
         hydrateEnv(envForm);
       } else {
@@ -120,22 +114,89 @@ export async function runInstallerStartup({
       }
       syncReleaseTarget(releasePlatformSelect?.value);
       renderServiceStatus(status.rendered);
-      renderRegressionGateReport(regressionGate);
-      await refreshRuntimeLog().catch(() => {
-        renderRuntimeLog("runtime log unavailable");
-      });
-      if (liveTailToggle.checked) {
-        await startRuntimeLogStream().catch(() => {});
-      }
-      const readyMessage =
-        regressionGate && regressionGate.overall_gate_status && regressionGate.overall_gate_status !== "pass"
-          ? `${brandConfigName()} ready. Unified regression gate is ${regressionGate.overall_gate_status}; review benchmark or workflow drift before packaging or rollout.`
-          : integrityReport && Array.isArray(integrityReport.issues) && integrityReport.issues.length > 0
-          ? `${brandConfigName()} ready. Integrity panel has flagged install contract drift; clear that before packaging a release.`
-          : `${brandConfigName()} ready. Pick a profile, write env, then start services and watch live logs here.`;
-      showCompletion(readyMessage);
+      showCompletion(`${brandConfigName()} ready. Heavy reports continue loading in the background.`);
       return "installer gui ready";
     },
     { skipOutput: false },
   );
+
+  void afterFirstPaint(async () => {
+    let integrityReport = null;
+    let regressionGate = null;
+
+    await duringIdle(() =>
+      settleInstallerStartup("integrity-report", async () => {
+        integrityReport = await invoke("installation_integrity_report");
+        renderIntegrityReport(integrityReport);
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("update-plan", async () => {
+        renderUpdatePlan(await invoke("unified_update_plan", { channel: "stable" }));
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("update-source", async () => {
+        hydrateUpdateSourceConfig(await invoke("update_source_config"));
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("update-preview", async () => {
+        renderUpdatePreview(await invoke("unified_update_preview", { channel: "stable" }));
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("update-records", async () => {
+        const [downloadedUpdate, appliedUpdate, stagedUpdate] = await Promise.all([
+          invoke("latest_downloaded_update_record").catch(() => null),
+          invoke("latest_applied_update_record").catch(() => null),
+          invoke("latest_staged_update_record").catch(() => null),
+        ]);
+        renderLatestDownloadedUpdate(downloadedUpdate);
+        renderLatestAppliedUpdate(appliedUpdate);
+        renderLatestStagedUpdate(stagedUpdate);
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("remote-policy", async () => {
+        hydrateRemotePolicy(await invoke("remote_deploy_policy"));
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("certificate-authority", async () => {
+        hydrateCertificateAuthority(await invoke("certificate_authority_policy"));
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("remote-nodes", async () => {
+        hydrateRemoteNodeRegistry(await invoke("remote_node_registry"));
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("regression-gate", async () => {
+        regressionGate = await invoke("regression_gate_report");
+        renderRegressionGateReport(regressionGate);
+      }),
+    );
+    await duringIdle(() =>
+      settleInstallerStartup("runtime-log", async () => {
+        await refreshRuntimeLog().catch(() => {
+          renderRuntimeLog("runtime log unavailable");
+        });
+        if (liveTailToggle.checked) {
+          await startRuntimeLogStream().catch(() => {});
+        }
+      }),
+    );
+
+    const readyMessage =
+      regressionGate && regressionGate.overall_gate_status && regressionGate.overall_gate_status !== "pass"
+        ? `${brandConfigName()} ready. Unified regression gate is ${regressionGate.overall_gate_status}; review benchmark or workflow drift before packaging or rollout.`
+        : integrityReport && Array.isArray(integrityReport.issues) && integrityReport.issues.length > 0
+          ? `${brandConfigName()} ready. Integrity panel has flagged install contract drift; clear that before packaging a release.`
+          : `${brandConfigName()} ready. Pick a profile, write env, then start services and watch live logs here.`;
+    showCompletion(readyMessage);
+  });
+
+  return startupResult;
 }

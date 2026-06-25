@@ -249,3 +249,5 @@ button.is-busy {
 }
 
 .hidden {
+  display: none !important;
+}

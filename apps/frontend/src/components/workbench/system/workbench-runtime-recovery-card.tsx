@@ -4,7 +4,7 @@ import type { WorkbenchRuntimeRecoveryState } from "@/components/workbench/workb
 import { WorkbenchSystemOverviewCard } from "@/components/workbench/system/workbench-system-overview-card";
 
 type WorkbenchRuntimeRecoveryCardProps = {
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   recovery: WorkbenchRuntimeRecoveryState;
   onRetryAll: () => void;
   onRetryHealth: () => void;

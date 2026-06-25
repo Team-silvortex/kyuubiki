@@ -234,6 +234,7 @@ export const HUB_APP_RUNTIME_PATTERNS = [
   /renamePinnedProjectAction/,
   /renderHubRecents/,
   /renderDesktopLanguagePreference/,
+  /watchDesktopLanguagePreference/,
   /renderHubHomeCopy/,
   /renderAssistantPanel\(\);\s*rere?nderLocalizedHubShell\(\);\s*syncDesktopStates\(\);/,
   /renderRecentActionHistory/,
@@ -316,7 +317,7 @@ export const HUB_APP_RUNTIME_PATTERNS = [
 ];
 
 export const HUB_MODULE_PATTERNS = {
-  bridge: [/desktop-shared\/ui\/tauri-bridge\.js/],
+  bridge: [/export async function invokeTauri/, /export function applyDesktopState/, /export function syncDesktopStates/],
   projectBundles: [/status: "ok"/, /status: "failed"/],
   runtimeHelpers: [
     /sanitizeRuntimeLogForClipboard/,

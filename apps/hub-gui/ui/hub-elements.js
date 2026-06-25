@@ -344,6 +344,8 @@ export function collectHubElements(document) {
   currentRuntimeMode: document.getElementById("current-runtime-mode"),
   currentProfile: document.getElementById("current-profile"),
   actionState: document.getElementById("hub-action-state"),
+  eventMessage: document.getElementById("hub-event-message"),
+  eventMeta: document.getElementById("hub-event-meta"),
   desktopStatusOutput: document.getElementById("hub-desktop-status-output"),
   actionButtons: Array.from(document.querySelectorAll("[data-action]")),
   sectionJumpButtons: Array.from(document.querySelectorAll("[data-target-section]")),
@@ -407,3 +409,4 @@ export function collectHubElements(document) {
   densityToggleButtons: Array.from(document.querySelectorAll("[data-density-toggle]")),
   densityPanels: Array.from(document.querySelectorAll("[data-density-panel]")),
 };
+}

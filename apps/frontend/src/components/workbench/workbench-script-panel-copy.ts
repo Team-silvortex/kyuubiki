@@ -1,4 +1,4 @@
-import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-runtime"; export const workbenchScriptPanelCopy = {
+export const workbenchScriptPanelCopy = {
   en: {
     title: "WASM Python",
     subtitle: "Frontend automation surface powered by Pyodide and the registered browser action catalog.",
@@ -595,5 +595,5 @@ import type { WorkbenchScriptLanguage } from "@/lib/scripting/workbench-script-r
       job: "Job",
       history: "History",
       viewport: "Viewport", data: "Data", macro: "Macro",
-    },},} as const satisfies Record<WorkbenchScriptLanguage, Record<string, unknown>>;
+    },},} as const;
 export type WorkbenchScriptPanelCopyEntry = (typeof workbenchScriptPanelCopy)["en"];

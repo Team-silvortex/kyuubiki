@@ -28,7 +28,7 @@ The default posture is:
 - improve confidence before widening scope
 - only add new capability when it strengthens the industrial baseline
 
-The current published release snapshot in this line is `tamamono 1.11.0`.
+The current published release snapshot in this line is `tamamono 1.11.5`.
 
 The current shipping point now sits inside the wider `1.11.x` to `1.20.x`
 industrialization range, where the main job is still hardening trust,

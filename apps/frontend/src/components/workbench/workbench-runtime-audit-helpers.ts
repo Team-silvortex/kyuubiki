@@ -1,7 +1,7 @@
 import type { SecurityEventRecord } from "@/lib/api";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
 
-export function buildRuntimeAuditSummaryRows(language: "en" | "zh" | "ja" | "es", securityEventRecords: SecurityEventRecord[]) {
+export function buildRuntimeAuditSummaryRows(language: string, securityEventRecords: SecurityEventRecord[]) {
   const countByRisk = securityEventRecords.reduce<Record<string, number>>((accumulator, entry) => {
     accumulator[entry.risk] = (accumulator[entry.risk] ?? 0) + 1;
     return accumulator;
@@ -22,7 +22,7 @@ export function buildRuntimeAuditSummaryRows(language: "en" | "zh" | "ja" | "es"
 }
 
 export function buildRuntimeAuditTrendBars(
-  language: "en" | "zh" | "ja" | "es",
+  language: string,
   securityEventRecords: SecurityEventRecord[],
   securityEventWindowFilter: SecurityEventWindow,
 ) {
@@ -76,7 +76,7 @@ export function buildRuntimeAuditTrendBars(
   }));
 }
 
-export function buildRuntimeAuditSourceStatusFacets(language: "en" | "zh" | "ja" | "es", securityEventRecords: SecurityEventRecord[]) {
+export function buildRuntimeAuditSourceStatusFacets(language: string, securityEventRecords: SecurityEventRecord[]) {
   const counts = securityEventRecords.reduce<Map<string, number>>((accumulator, entry) => {
     const key = `${entry.source}:${entry.status}`;
     accumulator.set(key, (accumulator.get(key) ?? 0) + 1);

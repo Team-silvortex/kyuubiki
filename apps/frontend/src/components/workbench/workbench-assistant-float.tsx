@@ -35,7 +35,7 @@ type AssistantFloatProps = {
   hasAnyResult: boolean;
   frontendRuntimeMode: keyof WorkbenchCopy["frontendModes"];
   studyKind: keyof WorkbenchCopy["kinds"];
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   assistantApiKey: string;
   assistantApiBaseUrl: string;
   assistantModel: string;

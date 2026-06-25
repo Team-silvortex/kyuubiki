@@ -36,7 +36,7 @@ export function ensureDatasetContract(
     graph.dataset_contract = {
       schema_version: "kyuubiki.workflow-dataset/v1",
       id: `${graph.id}.dataset`,
-      version: graph.version ?? "1.11.0",
+      version: graph.version ?? "1.11.5",
       name: `${graph.name ?? graph.id} dataset contract`,
       values: [],
       metadata: {},

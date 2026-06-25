@@ -3,7 +3,7 @@
 type WorkbenchScriptDslCardProps = {
   dslCode: string;
   dslError: string | null;
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   onCompileDsl: () => void;
   onLoadDslTemplate: () => void;
   onRunDsl: () => void;

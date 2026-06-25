@@ -42,7 +42,11 @@ export function createHubActionRunner(context) {
   }
 
   async function runActionWithOptions(action, options = {}) {
+    context.setEventMessage?.(`action received: ${action}`, "action:received");
     if (context.state.isBusy) {
+      context.setOperationOutput(`Hub is still finishing the current action. Try again after the activity state returns to idle. Requested action: ${action}`);
+      context.applyDesktopState(context.elements.actionState, "busy", { kind: "activity" });
+      context.setEventMessage?.(`busy: ignored ${action}`, "action:busy");
       return;
     }
 
@@ -53,8 +57,12 @@ export function createHubActionRunner(context) {
     }
 
     context.setBusy(true, "running");
+    window.__kyuubikiHubActionStartedAt = Date.now();
+    window.__kyuubikiHubLastAction = action;
+    context.setEventMessage?.(`running: ${action}`, "action:running");
 
     try {
+      let handled = false;
       if (await runHubProjectAction(action, buildHubProjectActionContext({
         invokeTauri: context.invokeTauri,
         setOperationOutput: context.setOperationOutput,
@@ -67,10 +75,10 @@ export function createHubActionRunner(context) {
         currentProjectBundleComparePayload,
         setProjectBundleOutput: context.setProjectBundleOutput,
       }))) {
-        return;
+        handled = true;
       }
 
-      if (await runHubRuntimeAction(action, buildHubRuntimeActionContext({
+      if (!handled && await runHubRuntimeAction(action, buildHubRuntimeActionContext({
         invokeGuardedMutation,
         setOperationOutput: context.setOperationOutput,
         refreshRuntimeStatus: context.refreshRuntimeStatus,
@@ -85,10 +93,10 @@ export function createHubActionRunner(context) {
         hubDynamic: context.hubDynamic,
         setBusy: context.setBusy,
       }))) {
-        return;
+        handled = true;
       }
 
-      if (await runHubWorkloadAction(action, buildHubWorkloadActionContext({
+      if (!handled && await runHubWorkloadAction(action, buildHubWorkloadActionContext({
         registerCurrentBundleAsWorkload: context.registerCurrentBundleAsWorkload,
         syncLocalControlPlaneWorkloads: context.syncLocalControlPlaneWorkloads,
         syncRemoteWorkloadCatalog: context.syncRemoteWorkloadCatalog,
@@ -98,10 +106,10 @@ export function createHubActionRunner(context) {
         workloadImportInput: context.elements.workloadImportInput,
         setBusy: context.setBusy,
       }))) {
-        return;
+        handled = true;
       }
 
-      if (await runHubDesktopAction(action, buildHubDesktopActionContext({
+      if (!handled && await runHubDesktopAction(action, buildHubDesktopActionContext({
         invokeTauri: context.invokeTauri,
         setOperationOutput: context.setOperationOutput,
         setSection: context.setSection,
@@ -109,15 +117,28 @@ export function createHubActionRunner(context) {
         refreshDesktopStatusOutput: context.refreshDesktopStatusOutput,
         hubDynamic: context.hubDynamic,
       }))) {
-        return;
+        handled = true;
       }
 
-      context.setBusy(false, "idle");
+      if (!handled) {
+        context.setOperationOutput(`No Hub action handler is registered for: ${action}`);
+        context.setEventMessage?.(`unhandled action: ${action}`, "action:missing");
+      } else {
+        window.__kyuubikiHubActionCompletedAt = Date.now();
+        window.__kyuubikiHubLastCompletedAction = action;
+        context.setEventMessage?.(`completed: ${action}`, "action:complete");
+      }
     } catch (error) {
       context.setOperationOutput(context.formatHubOperatorError(error, {
         actionLabel: "This desktop action",
       }));
+      context.setEventMessage?.(`failed: ${action}`, "action:failed");
       context.setBusy(false, "failed");
+      return;
+    } finally {
+      if (context.state.isBusy) {
+        context.setBusy(false, "idle");
+      }
     }
   }
 

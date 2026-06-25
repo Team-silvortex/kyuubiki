@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Kyuubiki Hub</title>
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles/hub-diagnostics.css" />
   </head>
   <body>
     <a class="hub-skip-link" href="#hub-main">Skip to main content</a>
@@ -16,7 +17,7 @@
             <div class="desktop-shell-action-row">
               <strong id="brand-hub-title">Hub</strong>
               <span class="desktop-shell-chip desktop-shell-chip--shell" id="brand-hub-role-chip">Operator shell</span>
-              <span class="desktop-shell-chip" id="brand-hub-version">tamamono 1.11.0</span>
+              <span class="desktop-shell-chip" id="brand-hub-version">tamamono 1.11.5</span>
             </div>
             <span class="desktop-shell-note" id="brand-hub-focus">runtime orchestration</span>
           </div>
@@ -1041,8 +1042,15 @@
           </section>
         </article>
       </section>
+
+      <aside aria-live="polite" class="hub-event-bar" id="hub-event-bar">
+        <span class="hub-event-bar__label">event</span>
+        <strong class="hub-event-bar__message" id="hub-event-message">Hub event monitor is ready.</strong>
+        <code class="hub-event-bar__meta" id="hub-event-meta">idle</code>
+      </aside>
     </div>
 
+    <script src="./hub-boot-probe.js"></script>
     <script type="module" src="./app.js"></script>
   </body>
 </html>

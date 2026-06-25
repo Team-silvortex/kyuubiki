@@ -18,7 +18,7 @@ type AssistantCard = {
 
 type WorkbenchAssistantPanelProps = {
   variant?: "sidebar" | "floating";
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   mode: AssistantMode;
   onModeChange: (mode: AssistantMode) => void;
   currentStudyLabel: string;

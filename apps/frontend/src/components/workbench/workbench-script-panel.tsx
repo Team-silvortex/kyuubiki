@@ -77,7 +77,7 @@ function stringifyPayload(payload: Record<string, unknown> | undefined): string 
   return serializeWorkbenchPythonLiteral(payload ?? {});
 }
 export function WorkbenchScriptPanel({ language, snapshot, getSnapshot, actionLog, recordingMode, onToggleRecordingMode, onInvokeAction }: WorkbenchScriptPanelProps) {
-  const t = workbenchScriptPanelCopy[language] as WorkbenchScriptPanelCopyEntry;
+  const t = (workbenchScriptPanelCopy[language as keyof typeof workbenchScriptPanelCopy] ?? workbenchScriptPanelCopy.en) as WorkbenchScriptPanelCopyEntry;
   const [headlessFrontendMacroAssets, setHeadlessFrontendMacroAssets] = useState<FrontendMacroAssetRecord[]>([]);
   const [scriptCode, setScriptCode] = useState(DEFAULT_WORKBENCH_PYTHON);
   const [dslCode, setDslCode] = useState(DEFAULT_WORKBENCH_FRONTEND_DSL);

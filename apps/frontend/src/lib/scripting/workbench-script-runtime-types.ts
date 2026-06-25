@@ -1,6 +1,6 @@
 "use client";
 
-export type WorkbenchScriptLanguage = "en" | "zh" | "ja" | "es";
+export type WorkbenchScriptLanguage = string;
 
 export type WorkbenchScriptSnapshot = {
   studyKind: string;

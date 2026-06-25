@@ -7,6 +7,7 @@ import {
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
+  watchDesktopLanguagePreference,
 } from "./shared/tauri-bridge.js";
 import { normalizeDesktopPlatform } from "./shared/platform.js";
 import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/runtime-status-summary.js";
@@ -381,6 +382,15 @@ elements.languageSelect?.addEventListener("change", async (event) => {
   state.language = await saveDesktopLanguagePreference(nextLanguage);
   renderLanguage();
   postLanguageToWorkbench();
+});
+
+watchDesktopLanguagePreference({
+  getCurrentLanguage: () => state.language,
+  onChange: (language) => {
+    state.language = language;
+    renderLanguage();
+    postLanguageToWorkbench();
+  },
 });
 
 window.addEventListener("message", async (event) => {

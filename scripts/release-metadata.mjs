@@ -169,6 +169,7 @@ export function syncCurrentReleaseContracts({ version, codename, line }) {
     ...contract,
     product_line: lineLabel,
     shipping_version: version,
+    workspace_version: version,
     visible_rules: (contract.visible_rules ?? []).map((rule) =>
       rule.label === "required shipping version" ? { ...rule, value: version } : rule,
     ),

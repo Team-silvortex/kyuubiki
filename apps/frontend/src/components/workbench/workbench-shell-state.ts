@@ -12,6 +12,7 @@ import {
 } from "@/lib/workbench/helpers";
 import {
   copyByLanguage,
+  resolveWorkbenchBaseCopy,
   type WorkbenchCopy,
 } from "@/components/workbench/workbench-copy";
 import type {
@@ -66,12 +67,11 @@ export function useWorkbenchShellState({
   const [truss3dBatchLoadZ, setTruss3dBatchLoadZ] = useState(0);
 
   const applyLanguagePreference = (nextLanguage: Language) => {
+    const nextCopy = resolveWorkbenchBaseCopy(nextLanguage);
     setLanguage(nextLanguage);
     setLoadedModelName((current) =>
-      current === copyByLanguage.en.defaultModel ||
-      current === copyByLanguage.zh.defaultModel ||
-      current === copyByLanguage.ja.defaultModel
-        ? copyByLanguage[nextLanguage].defaultModel
+      Object.values(copyByLanguage).some((copy) => copy.defaultModel === current)
+        ? nextCopy.defaultModel
         : current,
     );
   };
@@ -81,7 +81,7 @@ export function useWorkbenchShellState({
     [language, languagePacks],
   );
   const t = useMemo(
-    () => mergeLanguagePack<WorkbenchCopy>(copyByLanguage[language], activeLanguagePack?.overrides ?? null),
+    () => mergeLanguagePack<WorkbenchCopy>(resolveWorkbenchBaseCopy(language), activeLanguagePack?.overrides ?? null),
     [activeLanguagePack?.overrides, language],
   );
   const languagePackCatalogRows = useMemo(
@@ -142,15 +142,15 @@ export function useWorkbenchShellState({
       setAssistantModel(stored.assistantModel);
     }
     const bootLanguage =
-      desktopLanguage === "en" || desktopLanguage === "zh" || desktopLanguage === "ja" || desktopLanguage === "es"
-        ? desktopLanguage
-        : stored.language === "en" || stored.language === "zh" || stored.language === "ja" || stored.language === "es"
-          ? stored.language
+      typeof desktopLanguage === "string" && desktopLanguage.trim()
+        ? desktopLanguage.trim()
+        : typeof stored.language === "string" && stored.language.trim()
+          ? stored.language.trim()
           : null;
 
     if (bootLanguage) {
       applyLanguagePreference(bootLanguage);
-      setMessage(copyByLanguage[bootLanguage].initialLoaded);
+      setMessage(resolveWorkbenchBaseCopy(bootLanguage).initialLoaded);
     }
     setLanguagePacks(readWorkbenchLanguagePacks());
   }, [setLoadedModelName, setMessage]);
@@ -161,8 +161,8 @@ export function useWorkbenchShellState({
     const handleDesktopLanguage = (event: MessageEvent) => {
       if (event.data?.type !== "kyuubiki:set-language") return;
       const nextLanguage = event.data.language;
-      if (nextLanguage === "en" || nextLanguage === "zh" || nextLanguage === "ja" || nextLanguage === "es") {
-        applyLanguagePreference(nextLanguage);
+      if (typeof nextLanguage === "string" && nextLanguage.trim()) {
+        applyLanguagePreference(nextLanguage.trim());
       }
     };
 

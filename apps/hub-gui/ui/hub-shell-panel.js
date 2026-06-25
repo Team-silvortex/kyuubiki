@@ -1,4 +1,8 @@
 export function createHubShellPanel(context) {
+  function activateStreamChunk(...ids) {
+    context.streamingRuntime?.()?.activateOnly(ids.filter(Boolean), { group: "main" });
+  }
+
   function setSection(section) {
     const next = context.hubCopy().sections[section];
     if (!next) {
@@ -28,8 +32,12 @@ export function createHubShellPanel(context) {
 
     if (section === "projects") {
       renderProjectsPages();
+      activateStreamChunk(`section:${section}`, `projects:${context.state.projectsPage}`);
     } else if (section in context.state.panelPages) {
       renderPanelPages(section);
+      activateStreamChunk(`section:${section}`, `panel:${section}:${context.state.panelPages[section]}`);
+    } else {
+      activateStreamChunk(`section:${section}`);
     }
 
     context.renderAssistantContext();
@@ -125,6 +133,9 @@ export function createHubShellPanel(context) {
     context.state.projectsPage =
       page === "library" || page === "bundles" || page === "guides" ? page : "start";
     renderProjectsPages();
+    if (context.state.activeSection === "projects") {
+      activateStreamChunk("section:projects", `projects:${context.state.projectsPage}`);
+    }
     if (
       context.state.projectsPage === "library"
       && !context.state.workflowCatalog.length
@@ -159,6 +170,9 @@ export function createHubShellPanel(context) {
     }
     context.state.panelPages[group] = page || context.state.panelPages[group];
     renderPanelPages(group);
+    if (context.state.activeSection === group) {
+      activateStreamChunk(`section:${group}`, `panel:${group}:${context.state.panelPages[group]}`);
+    }
   }
 
   function renderHubDensityToggles() {

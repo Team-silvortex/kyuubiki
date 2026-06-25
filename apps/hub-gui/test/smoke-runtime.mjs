@@ -43,8 +43,10 @@ test("hub shell registers section switching behavior", () => {
   const runtimeActions = read("ui/hub-runtime-actions.js");
   const projectActions = read("ui/hub-project-actions.js");
   const desktopActions = read("ui/hub-desktop-actions.js");
+  const startupPhases = read("ui/hub-startup-phases.js");
   const appRuntimeSource = [
     js,
+    startupPhases,
     actionRunner,
     assistantAuditStore,
     assistantAudit,

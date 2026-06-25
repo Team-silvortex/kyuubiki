@@ -493,7 +493,7 @@ export function buildWorkbenchSelectionData({
   };
 }
 
-export function buildWorkbenchSecurityUi(language: "en" | "zh" | "ja" | "es") {
+export function buildWorkbenchSecurityUi(language: string) {
   return language === "zh"
     ? {
         controlPlaneToken: "控制面 API Token",

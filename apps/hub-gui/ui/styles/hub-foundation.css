@@ -377,3 +377,7 @@ button:focus-visible,
 }
 
 .hub-projects-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}

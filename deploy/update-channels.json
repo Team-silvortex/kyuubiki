@@ -1,6 +1,6 @@
 {
   "schema_version": "kyuubiki.update-channels/v1",
-  "shipping_version": "1.11.0",
+  "shipping_version": "1.11.5",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "channels": [
@@ -8,12 +8,12 @@
       "id": "stable",
       "label": "Stable",
       "tag": "tamamono:stable",
-      "version": "1.11.0",
+      "version": "1.11.5",
       "aliases": [
         "tamamono:latest",
         "tamamono:1",
         "tamamono:1.11",
-        "tamamono:1.11.0"
+        "tamamono:1.11.5"
       ],
       "notes": [
         "Primary operator-facing update track for the current shipping line.",

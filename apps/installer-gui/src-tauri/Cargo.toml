@@ -1,6 +1,6 @@
 [package]
 name = "kyuubiki-installer-gui"
-version = "1.11.0"
+version = "1.11.5"
 edition = "2024"
 license = "MIT"
 build = "build.rs"

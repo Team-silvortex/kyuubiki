@@ -1,6 +1,16 @@
 export function createHubOutputPanel({ elements, formatRuntimeReport }) {
+  function setEventMessage(message, meta = "event") {
+    if (elements.eventMessage) {
+      elements.eventMessage.textContent = message;
+    }
+    if (elements.eventMeta) {
+      elements.eventMeta.textContent = meta;
+    }
+  }
+
   function setOperationOutput(value) {
     elements.operationOutput.textContent = value;
+    setEventMessage(String(value || "operation updated").split("\n")[0], "operation");
   }
 
   function setDesktopStatusOutput(value) {
@@ -42,6 +52,7 @@ export function createHubOutputPanel({ elements, formatRuntimeReport }) {
 
   return {
     setDesktopStatusOutput,
+    setEventMessage,
     setHotRuntimeLogOutput,
     setHotRuntimeStatusOutput,
     setObserveRuntimeLogOutput,

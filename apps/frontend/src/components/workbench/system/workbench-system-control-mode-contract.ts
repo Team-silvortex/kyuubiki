@@ -13,7 +13,7 @@ import {
 } from "@/lib/workbench/governance";
 
 type ControlWindowMode = "orchestrated" | "direct" | "mesh";
-type ControlLanguage = "en" | "zh" | "ja" | "es";
+type ControlLanguage = string;
 
 export type WorkbenchSystemControlModeCopy = {
   pageLabel: string;

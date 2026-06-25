@@ -45,7 +45,8 @@ test("hub shell normalizes host platform through shared desktop helpers", () => 
 
   assertMatches(shellSource, HUB_PLATFORM_HELPER_PATTERNS);
   assert.doesNotMatch(js, /hostPlatform:\s*"macos"/);
-  assert.match(platform, /desktop-shared\/ui\/platform\.js/);
+  assert.match(platform, /export function normalizeDesktopPlatform/);
+  assert.doesNotMatch(platform, /desktop-shared\/ui\/platform\.js/);
 });
 
 test("hub workflow catalog suggestions rank the closest workflow first", () => {

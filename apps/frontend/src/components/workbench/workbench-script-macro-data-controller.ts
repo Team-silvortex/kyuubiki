@@ -13,7 +13,7 @@ type ScriptMacroDataControllerDeps = {
   payload: Record<string, unknown>;
   source: WorkbenchSecurityAuditSource;
   note?: string;
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   getScriptSnapshot: () => WorkbenchScriptSnapshot;
   invokeScriptAction: (
     action: string,

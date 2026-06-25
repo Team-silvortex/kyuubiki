@@ -34,6 +34,22 @@ function describeLanguage(language) {
   return HUB_LANGUAGE_LABELS[language] || language;
 }
 
+export function buildHubLanguageOptions() {
+  const registry = loadHubCopyOverrideRegistry();
+  const manifest = loadHubCopyImportManifest();
+  const packNames = new Map(manifest.packs.map((pack) => [pack.language, pack.name]));
+  const languages = [
+    ...Object.keys(HUB_LANGUAGE_LABELS),
+    ...Object.keys(registry.languages).filter((language) => hasNestedEntries(registry.languages[language])),
+  ];
+  return [...new Set(languages)]
+    .filter((language) => typeof language === "string" && language.trim())
+    .map((language) => ({
+      value: language,
+      label: HUB_LANGUAGE_LABELS[language] || (packNames.get(language) ? `${packNames.get(language)} (${language.toUpperCase()})` : language.toUpperCase()),
+    }));
+}
+
 function describeImportMode(mode, copy) {
   if (mode === "pack") return copy.guides.localizationImportModePack;
   if (mode === "registry") return copy.guides.localizationImportModeRegistry;

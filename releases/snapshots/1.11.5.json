@@ -1,0 +1,197 @@
+{
+  "version": "1.11.5",
+  "codename": "tamamono",
+  "line": "1.x",
+  "status": "current",
+  "date": "2026-06-24",
+  "git_commit": "908b8cb9fa930c4244f07e0798fa183f4ab0a456",
+  "summary": "Current-line reinstall snapshot for tamamono 1.11.5, aligning desktop packages, installer contracts, update channels, language-pack driven localization, and generated documentation before the 1.12.0 shell refresh.",
+  "docs": {
+    "current_line": "docs/current-line.md",
+    "version_line": "docs/version-line.md",
+    "packaging": "docs/packaging-and-deployment.md",
+    "desktop_release_checklist": "docs/desktop-release-checklist.md",
+    "operator_sdk": "docs/operator-sdk.md",
+    "workflow_graph": "docs/workflow-graph.md",
+    "workflow_dataset": "docs/workflow-dataset.md"
+  },
+  "product_surfaces": {
+    "frontend_workbench": {
+      "version": "1.11.5",
+      "notes": [
+        "Workbench language selection now accepts language-pack-only locale codes and falls back to the stable English copy shape before applying pack overrides.",
+        "Workbench package metadata, docs pages, app rail branding, workflow local metadata, and language-pack targets now align to 1.11.5."
+      ]
+    },
+    "hub_gui": {
+      "version": "1.11.5",
+      "notes": [
+        "Hub package metadata, Tauri bundle version, visible brand assets, and mirrored docs now align to 1.11.5.",
+        "Hub language packs can expose non-built-in locale choices in the shell language selector and resolve them through the requested-language override path."
+      ]
+    },
+    "workbench_gui": {
+      "version": "1.11.5",
+      "notes": [
+        "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.5 shipping version."
+      ]
+    },
+    "installer_gui": {
+      "version": "1.11.5",
+      "notes": [
+        "Installer package metadata, bundle version, visible shell branding, and integrity surfaces now align to 1.11.5."
+      ]
+    },
+    "web_api": {
+      "version": "1.11.5",
+      "notes": [
+        "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.5 as the current public shipping version."
+      ]
+    }
+  },
+  "workflow_builder": {
+    "status": "aligned",
+    "capabilities": [
+      "Local workflow snapshots and duplicated graph metadata use the 1.11.5 local line.",
+      "Workflow package fixtures and import/export tests now use 1.11.5 graph versions.",
+      "Benchmark graph examples keep 1.11.0-bench identifiers as historical benchmark fixtures."
+    ]
+  },
+  "operator_sdk": {
+    "status": "active",
+    "capabilities": [
+      "Rust workspace package version is aligned to 1.11.5 for solver, engine, installer, benchmark, and SDK crates.",
+      "Desktop runtime language preference now accepts safe language-pack locale codes instead of a fixed four-language whitelist."
+    ]
+  },
+  "desktop_artifacts": {
+    "hub_app": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
+    "hub_dmg": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.5_aarch64.dmg",
+    "hub_macos_manifest": "dist/macos/desktop/hub-gui/manifest.json",
+    "hub_linux_manifest": "dist/linux/desktop/hub-gui/manifest.json",
+    "hub_windows_manifest": "dist/windows/desktop/hub-gui/manifest.json",
+    "workbench_app": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
+    "workbench_dmg": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.5_aarch64.dmg",
+    "workbench_macos_manifest": "dist/macos/desktop/workbench-gui/manifest.json",
+    "workbench_linux_manifest": "dist/linux/desktop/workbench-gui/manifest.json",
+    "workbench_windows_manifest": "dist/windows/desktop/workbench-gui/manifest.json",
+    "installer_app": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
+    "installer_dmg": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.5_aarch64.dmg",
+    "installer_macos_manifest": "dist/macos/desktop/installer-gui/manifest.json",
+    "installer_linux_manifest": "dist/linux/desktop/installer-gui/manifest.json",
+    "installer_windows_manifest": "dist/windows/desktop/installer-gui/manifest.json"
+  },
+  "verification": {
+    "git_worktree": {
+      "clean": false,
+      "status_short": [
+        "M README.md",
+        " M apps/desktop-shared/ui/tauri-bridge.js",
+        " M apps/frontend/package-lock.json",
+        " M apps/frontend/package.json",
+        " M apps/frontend/src/app/docs/page.tsx",
+        " M apps/frontend/src/app/docs/workbench-window-protection/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-architecture/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-bridge-contracts/page.tsx",
+        " M apps/frontend/src/app/docs/workflow-summary-contracts/page.tsx",
+        " M apps/frontend/src/components/workbench/model/workbench-material-library-card.tsx",
+        " M apps/frontend/src/components/workbench/system/workbench-runtime-recovery-card.tsx",
+        " M apps/frontend/src/components/workbench/system/workbench-system-config-card.tsx",
+        " M apps/frontend/src/components/workbench/system/workbench-system-control-mode-contract.ts",
+        " M apps/frontend/src/components/workbench/system/workbench-system-language-pack-presentation.ts",
+        " M apps/frontend/src/components/workbench/workbench-app-rail.tsx",
+        " M apps/frontend/src/components/workbench/workbench-assistant-audit-controller.ts",
+        " M apps/frontend/src/components/workbench/workbench-assistant-float.tsx",
+        " M apps/frontend/src/components/workbench/workbench-assistant-panel.tsx",
+        " M apps/frontend/src/components/workbench/workbench-copy.ts",
+        " M apps/frontend/src/components/workbench/workbench-inspector-derived.ts",
+        " M apps/frontend/src/components/workbench/workbench-language-pack-controller.ts",
+        " M apps/frontend/src/components/workbench/workbench-runtime-audit-helpers.ts",
+        " M apps/frontend/src/components/workbench/workbench-script-dsl-card.tsx",
+        " M apps/frontend/src/components/workbench/workbench-script-macro-data-controller.ts",
+        " M apps/frontend/src/components/workbench/workbench-script-nav-controller.ts",
+        " M apps/frontend/src/components/workbench/workbench-script-panel-copy.ts",
+        " M apps/frontend/src/components/workbench/workbench-script-panel.tsx",
+        " M apps/frontend/src/components/workbench/workbench-script-state-controller.ts",
+        " M apps/frontend/src/components/workbench/workbench-shell-frame.tsx",
+        " M apps/frontend/src/components/workbench/workbench-shell-state.ts",
+        " M apps/frontend/src/components/workbench/workbench-system-sidebar-mount.tsx",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-builder-utils.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-local-storage.ts",
+        " M apps/frontend/src/components/workbench/workflow/workbench-workflow-topology-actions.ts",
+        " M apps/frontend/src/lib/scripting/workbench-script-runtime-types.ts",
+        " M apps/frontend/src/lib/workbench/helpers.ts",
+        " M apps/frontend/test/support/workflow-package-fixtures.ts",
+        " M apps/frontend/test/support/workflow-template-chain-fixtures.ts",
+        " M apps/frontend/test/workflow/workbench-language-pack-merge.test.ts",
+        " M apps/frontend/test/workflow/workbench-workflow-builder-import.test.ts",
+        " M apps/frontend/test/workflow/workbench-workflow-builder-validation.test.ts",
+        " M apps/hub-gui/package-lock.json",
+        " M apps/hub-gui/package.json",
+        " M apps/hub-gui/src-tauri/Cargo.toml",
+        " M apps/hub-gui/src-tauri/tauri.conf.json",
+        " M apps/hub-gui/test/hub-copy-registry.test.mjs",
+        " M apps/hub-gui/test/smoke-runtime.mjs",
+        " M apps/hub-gui/ui/app.js",
+        " M apps/hub-gui/ui/assets/brand.json",
+        " M apps/hub-gui/ui/docs/current-line.html",
+        " M apps/hub-gui/ui/docs/index.html",
+        " M apps/hub-gui/ui/docs/installation-integrity.html",
+        " M apps/hub-gui/ui/docs/update-catalog.html",
+        " M apps/hub-gui/ui/hub-copy-registry.js",
+        " M apps/hub-gui/ui/hub-localization-panel.js",
+        " M apps/hub-gui/ui/hub-localized-shell.js",
+        " M apps/installer-gui/package-lock.json",
+        " M apps/installer-gui/package.json",
+        " M apps/installer-gui/src-tauri/Cargo.toml",
+        " M apps/installer-gui/src-tauri/tauri.conf.json",
+        " M apps/installer-gui/ui/assets/brand.json",
+        " M apps/workbench-gui/package-lock.json",
+        " M apps/workbench-gui/package.json",
+        " M apps/workbench-gui/src-tauri/Cargo.toml",
+        " M apps/workbench-gui/src-tauri/tauri.conf.json",
+        " M apps/workbench-gui/ui/assets/brand.json",
+        " M docs/book-manifest.json",
+        " M docs/book.html",
+        " M docs/current-line.md",
+        " M docs/desktop-release-checklist.md",
+        " M docs/installation-integrity-contract.html",
+        " M docs/language-packs.md",
+        " M docs/navigation-matrix.html",
+        " M docs/testing-and-ci.md",
+        " M docs/update-catalog.html",
+        " M docs/version-line.md",
+        " M schemas/language-pack.schema.json",
+        " M scripts/build-standard-benchmark-index.mjs",
+        " M scripts/release-metadata.mjs",
+        " M workers/rust/Cargo.toml",
+        " M workers/rust/benchmarks/BASELINE-OVERVIEW.md",
+        " M workers/rust/benchmarks/README.md",
+        " M workers/rust/crates/benchmark/src/main.rs",
+        " M workers/rust/crates/desktop-runtime/src/lib.rs",
+        "?? apps/frontend/src/components/workbench/workbench-language-options.ts",
+        "?? apps/hub-gui/ui/hub-startup-phases.js"
+      ]
+    },
+    "desktop_bundle_versions": {
+      "hub": "1.11.5",
+      "workbench": "1.11.5",
+      "installer": "1.11.5"
+    },
+    "collected_desktop_bundle_versions": {
+      "hub": null,
+      "workbench": null,
+      "installer": null
+    },
+    "frontend_checks": [
+      "npm run typecheck",
+      "npm run build",
+      "npm run check:workflow-preflight"
+    ],
+    "web_checks": [],
+    "rust_checks": [],
+    "repo_checks": [
+      "git diff --check"
+    ]
+  }
+}

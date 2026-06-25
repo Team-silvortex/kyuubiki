@@ -27,6 +27,11 @@ export function createHubAssistantPanel(context) {
 
   function setAssistantPanelOpen(open) {
     context.state.assistantOpen = open === true;
+    if (context.state.assistantOpen) {
+      context.streamingRuntime?.()?.activateChunk("overlay:assistant");
+    } else {
+      context.streamingRuntime?.()?.deactivateChunk("overlay:assistant");
+    }
     renderAssistantPanel();
   }
 

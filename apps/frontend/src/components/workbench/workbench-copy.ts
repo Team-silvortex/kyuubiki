@@ -3,8 +3,17 @@ import { copyEnExtended } from "@/components/workbench/workbench-copy-en-extende
 import { copyJa } from "@/components/workbench/workbench-copy-ja";
 import { copyZhCore } from "@/components/workbench/workbench-copy-zh-core";
 import { copyZhExtended } from "@/components/workbench/workbench-copy-zh-extended";
-
-export type WorkbenchLanguage = "en" | "zh" | "ja" | "es";
+import {
+  isBuiltInWorkbenchLanguage,
+  type BuiltInWorkbenchLanguage,
+  type WorkbenchLanguage,
+} from "@/components/workbench/workbench-language-options";
+export {
+  BUILTIN_WORKBENCH_LANGUAGE_CODES,
+  isBuiltInWorkbenchLanguage,
+  type BuiltInWorkbenchLanguage,
+  type WorkbenchLanguage,
+} from "@/components/workbench/workbench-language-options";
 
 type WidenLiteral<T> =
   T extends string ? string
@@ -26,7 +35,7 @@ const copyZh = {
 
 export type WorkbenchCopy = WidenLiteral<typeof copyEn>;
 
-export const copyByLanguage: Record<WorkbenchLanguage, WorkbenchCopy> = {
+export const copyByLanguage: Record<BuiltInWorkbenchLanguage, WorkbenchCopy> = {
   en: copyEn,
   zh: copyZh,
   ja: copyJa,
@@ -39,6 +48,10 @@ export const copyByLanguage: Record<WorkbenchLanguage, WorkbenchCopy> = {
     },
   },
 };
+
+export function resolveWorkbenchBaseCopy(language: WorkbenchLanguage): WorkbenchCopy {
+  return isBuiltInWorkbenchLanguage(language) ? copyByLanguage[language] : copyByLanguage.en;
+}
 
 export function humanizeSolverFailure(message: string | null | undefined, languageCopy: WorkbenchCopy) {
   if (!message) return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 type WorkbenchShellFrameProps = {
@@ -28,7 +28,7 @@ export function WorkbenchShellFrame({
   const [windowMode, setWindowMode] = useState<WorkbenchWindowMode>("standard");
   const [fullscreen, setFullscreen] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (typeof window === "undefined") return undefined;
 
     const syncWindowState = () => {

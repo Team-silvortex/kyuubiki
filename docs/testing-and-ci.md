@@ -180,6 +180,9 @@ Use these entrypoints:
 - `make benchmark-standard-nightly`
   Sync benchmark-only source to `kyuubiki-lab`, run the standard regression
   trio there, and pull the resulting reports back under `tmp/standard-benchmark/`.
+- `make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1`
+  Run a remote exploratory 200k profile smoke without requiring a checked
+  baseline yet.
 
 Baseline and report surfaces:
 
@@ -191,6 +194,9 @@ Baseline and report surfaces:
   `tmp/standard-benchmark/<slug>/standard-<profile>-compare.md`
 - local/latest per-matrix reports:
   `tmp/standard-benchmark/<slug>/*-core-<profile>-compare.md`
+- exploratory profile smoke output:
+  `tmp/benchmark-profile/<slug>/<matrix>-<profile>.json` plus a generated
+  `README.md`
 - local run index:
   `tmp/standard-benchmark/index.json`, `tmp/standard-benchmark/README.md`, and
   `tmp/standard-benchmark/index.html`
@@ -201,6 +207,8 @@ Current behavior notes:
   timing should prefer `kyuubiki-lab`
 - the current nightly lane is intentionally anchored at `PROFILE=10k` and
   `REPEAT=1` so it stays stable and affordable as a first always-on signal
+- `200k` is remote-first: CI checks the catalog shape, while timing evidence
+  should be collected from `kyuubiki-lab` before adding checked baselines
 - cases under `5.0 ms` baseline median remain visible in reports but are not
   treated as hard failures by default
 - the remote wrapper syncs benchmark-only source and does not rely on checked-in

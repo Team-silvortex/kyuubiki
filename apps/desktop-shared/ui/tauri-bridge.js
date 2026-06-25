@@ -30,7 +30,7 @@ export async function loadDesktopBrand() {
 }
 
 export function normalizeDesktopLanguage(value) {
-  return value === "zh" || value === "ja" || value === "es" ? value : "en";
+  return typeof value === "string" && value.trim() ? value.trim() : "en";
 }
 
 export async function loadDesktopLanguagePreference() {
@@ -47,6 +47,60 @@ export async function saveDesktopLanguagePreference(language) {
     payload: { language: normalizeDesktopLanguage(language) },
   });
   return normalizeDesktopLanguage(payload?.language);
+}
+
+export function watchDesktopLanguagePreference({
+  getCurrentLanguage,
+  onChange,
+  intervalMs = 2000,
+} = {}) {
+  if (typeof onChange !== "function") {
+    return () => {};
+  }
+
+  let disposed = false;
+  let pending = false;
+  const readCurrentLanguage =
+    typeof getCurrentLanguage === "function" ? getCurrentLanguage : () => undefined;
+
+  const checkLanguage = async () => {
+    if (disposed || pending) {
+      return;
+    }
+
+    pending = true;
+    try {
+      const nextLanguage = await loadDesktopLanguagePreference();
+      if (nextLanguage && nextLanguage !== normalizeDesktopLanguage(readCurrentLanguage())) {
+        await onChange(nextLanguage);
+      }
+    } finally {
+      pending = false;
+    }
+  };
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState !== "hidden") {
+      void checkLanguage();
+    }
+  };
+
+  window.addEventListener("focus", checkLanguage);
+  window.addEventListener("pageshow", checkLanguage);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  const timer = window.setInterval(() => {
+    if (document.visibilityState !== "hidden") {
+      void checkLanguage();
+    }
+  }, Math.max(500, intervalMs));
+
+  return () => {
+    disposed = true;
+    window.clearInterval(timer);
+    window.removeEventListener("focus", checkLanguage);
+    window.removeEventListener("pageshow", checkLanguage);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+  };
 }
 
 export function setText(target, value) {

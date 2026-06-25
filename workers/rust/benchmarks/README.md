@@ -22,7 +22,7 @@ Baseline naming convention:
 1.9 baseline workflow:
 
 - use `make benchmark-standard-baselines PROFILE=10k REPEAT=3` to refresh the first-line checked baseline set
-- expand the same trio to `15k`, `20k`, and selected `100k` runs as hardware budget allows
+- expand the same trio to `15k`, `20k`, selected `100k`, and remote `200k` runs as hardware budget allows
 - use `make benchmark-standard-compare PROFILE=10k REPEAT=1` to run the standard regression gate trio
 - use `make benchmark-standard-report PROFILE=10k REPEAT=1` to emit the per-matrix reports plus one merged summary report
 - use `make benchmark-standard-nightly PROFILE=10k REPEAT=1` to run the same trio on `kyuubiki-lab` and pull the reports back locally
@@ -43,15 +43,18 @@ make benchmark-baseline PROFILE=10k MATRIX=compound-core REPEAT=1
 make benchmark-standard-baselines PROFILE=10k REPEAT=3
 make benchmark-standard-compare PROFILE=10k REPEAT=1
 make benchmark-standard-report PROFILE=10k REPEAT=1
+make benchmark-profile-remote PROFILE=200k MATRIX=thermal-core REPEAT=1
 ```
 
 These Make targets run the benchmark crate in `--release` mode so checked-in
 baselines and current comparisons stay on the same performance footing.
 
-For the `100k` profile, prefer running on a dedicated remote/Linux host instead
-of a laptop-class development machine. A full `repeat=3` baseline can take
-significantly longer than the default `10k` tier and may peak above
-`500 MiB` RSS depending on the case mix.
+For the `100k` and `200k` profiles, prefer running on a dedicated remote/Linux
+host instead of a laptop-class development machine. A full `repeat=3` baseline
+can take significantly longer than the default `10k` tier and may peak above
+`500 MiB` RSS depending on the case mix. Use `make benchmark-profile-remote`
+for 200k smoke coverage before promoting a matrix into the checked regression
+baseline set.
 
 Current regression-gate default:
 

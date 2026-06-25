@@ -32,7 +32,7 @@ test("hub language-pack overrides cannot flatten required copy branches", () => 
       language: "zh",
       targetSurface: "hub",
       name: "Broken shape pack",
-      version: "1.11.0",
+      version: "1.11.5",
       source: "imported",
       updatedAt: "2026-06-24T00:00:00.000Z",
       overrides: {
@@ -89,7 +89,7 @@ test("hub language-pack import rejects packs targeted at another surface", () =>
           language: "zh",
           targetSurface: "workbench",
           name: "Workbench pack",
-          version: "1.11.0",
+          version: "1.11.5",
           source: "imported",
           updatedAt: "2026-06-24T00:00:00.000Z",
           overrides: {
@@ -102,4 +102,36 @@ test("hub language-pack import rejects packs targeted at another surface", () =>
       ),
     /invalid-hub-copy-pack/,
   );
+});
+
+test("hub pack-only languages use fallback structure with requested language overrides", () => {
+  const storage = new MemoryStorage();
+  importHubCopyPayload(
+    {
+      schema_version: "kyuubiki.language-pack/v1",
+      id: "fr-hub-pack",
+      language: "fr",
+      targetSurface: "hub",
+      name: "French hub pack",
+      version: "1.11.5",
+      source: "imported",
+      updatedAt: "2026-06-24T00:00:00.000Z",
+      overrides: {
+        shell: {
+          language: "Langue",
+        },
+      },
+    },
+    storage,
+  );
+
+  const copy = resolveHubCopy(
+    {
+      en: { shell: { language: "Language", idle: "idle" } },
+    },
+    "fr",
+    { storage },
+  );
+
+  assert.deepEqual(copy.shell, { language: "Langue", idle: "idle" });
 });

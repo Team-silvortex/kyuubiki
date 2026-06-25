@@ -7,6 +7,7 @@ import {
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
+  watchDesktopLanguagePreference,
 } from "./shared/tauri-bridge.js";
 import {
   desktopReleaseRootPattern,
@@ -353,6 +354,7 @@ import { formatRuntimeStatusReport, renderRuntimeStatusPlane } from "./shared/ru
     currentLanguage = await saveDesktopLanguagePreference(normalizeDesktopLanguage(event.target.value));
     renderDesktopLanguagePreference();
   });
+  watchDesktopLanguagePreference({ getCurrentLanguage: () => currentLanguage, onChange: (language) => { currentLanguage = language; renderDesktopLanguagePreference(); } });
   document.querySelectorAll(".sidebar-tab").forEach((tab) => {
     tab.addEventListener("click", () => {
       document.querySelectorAll(".sidebar-tab").forEach((item) => item.classList.remove("active"));

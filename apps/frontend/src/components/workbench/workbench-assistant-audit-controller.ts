@@ -25,7 +25,7 @@ type AssistantPlanAction = {
 };
 
 type AssistantAuditControllerDeps = {
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   scriptRecordingMode: boolean;
   frontendRuntimeMode: string;
   directMeshEndpointsText: string;

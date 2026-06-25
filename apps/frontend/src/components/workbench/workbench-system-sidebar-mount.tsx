@@ -1,6 +1,7 @@
 "use client";
 import type { Dispatch, MouseEvent, ReactNode, SetStateAction } from "react";
 import type { WorkbenchCopy } from "@/components/workbench/workbench-copy";
+import { buildWorkbenchLanguageOptions } from "@/components/workbench/workbench-language-options";
 import { WorkbenchScriptPanel } from "@/components/workbench/workbench-script-panel";
 import { WorkbenchSystemDataMount } from "@/components/workbench/workbench-system-data-mount";
 import type { SecurityEventWindow } from "@/components/workbench/workbench-types";
@@ -63,7 +64,7 @@ type WorkbenchSystemSidebarMountProps = {
   }>;
   runtimeWatchdogRows: Array<{ label: string; value: ReactNode }>;
   theme: "linen" | "marine" | "graphite";
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   frontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   directMeshSelectionMode: "healthiest" | "first_reachable";
   directMeshEndpointsText: string;
@@ -85,7 +86,7 @@ type WorkbenchSystemSidebarMountProps = {
   }>;
   languagePackCatalogRows: Array<{ id: string; language: string; name: string; status: string }>;
   setTheme: (value: "linen" | "marine" | "graphite") => void;
-  handleLanguageChange: (value: "en" | "zh" | "ja" | "es") => void;
+  handleLanguageChange: (value: string) => void;
   handleDownloadLanguagePackTemplate: () => void;
   handleExportInstalledLanguagePack: () => void;
   handleImportLanguagePack: (file: File) => Promise<void>;
@@ -389,12 +390,7 @@ export function WorkbenchSystemSidebarMount({
               { value: "marine", label: t.themes.marine },
               { value: "graphite", label: t.themes.graphite },
             ]}
-            languageOptions={[
-              { value: "en", label: t.languages.en },
-              { value: "zh", label: t.languages.zh },
-              { value: "ja", label: t.languages.ja },
-              { value: "es", label: t.languages.es },
-            ]}
+            languageOptions={buildWorkbenchLanguageOptions({ copy: t, languagePacks, currentLanguage: language })}
             installedLanguagePacks={installedLanguagePackRows}
             catalogLanguagePacks={languagePackCatalogRows}
             frontendModeOptions={[

@@ -5,7 +5,7 @@ import type { WorkbenchStudyKind } from "@/lib/workbench/history";
 type ScriptStateControllerDeps = {
   action: string;
   payload: Record<string, unknown>;
-  language: "en" | "zh" | "ja" | "es";
+  language: string;
   setStudyKind: (value: WorkbenchStudyKind) => void;
   setParametric: (updater: (current: any) => any) => void;
   setPanelParametric: (updater: (current: any) => any) => void;

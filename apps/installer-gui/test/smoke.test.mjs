@@ -100,6 +100,7 @@ test("installer shell wires core install and runtime actions", () => {
     /doctor_report/,
     /guarded_mutation_action/,
     /invokeGuardedMutation/,
+    /watchDesktopLanguagePreference/,
     /populateDesktopPlatformSelect/,
     /syncDesktopReleaseTargetInput/,
     /certificate_authority_policy/,
@@ -209,8 +210,11 @@ test("installer shell wires core install and runtime actions", () => {
   assert.match(remoteTimelineStyles, /remote-node-timeline__recommendations/);
   assert.match(remoteTimelineStyles, /remote-node-timeline__detail-section-title/);
   assert.match(remoteNodeCertificates, /certificate auto-match/);
-  assert.match(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
-  assert.match(platform, /desktop-shared\/ui\/platform\.js/);
+  assert.match(bridge, /export async function invokeTauri/);
+  assert.match(bridge, /export function applyDesktopState/);
+  assert.doesNotMatch(bridge, /desktop-shared\/ui\/tauri-bridge\.js/);
+  assert.match(platform, /export function normalizeDesktopPlatform/);
+  assert.doesNotMatch(platform, /desktop-shared\/ui\/platform\.js/);
   assert.match(read("ui\/installer-startup.js"), /regression_gate_report/);
 });
 

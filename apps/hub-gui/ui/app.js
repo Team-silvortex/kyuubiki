@@ -6,6 +6,7 @@ import {
   saveDesktopLanguagePreference,
   setText,
   syncDesktopStates,
+  watchDesktopLanguagePreference,
 } from "./shared/tauri-bridge.js";
 import { createHubWorkflowPanel } from "./hub-workflow-panel.js";
 import { createHubAssistantAuditPanel } from "./hub-assistant-audit-panel.js";
@@ -96,10 +97,13 @@ import {
 import {
   bindHubLocalizationPanel,
 } from "./hub-localization-panel.js";
+import { runHubStartupPhases } from "./hub-startup-phases.js";
+import { setupHubStreamingRuntime } from "./hub-streaming-setup.js";
 
 const state = createHubState();
 
 let hubActionRunner;
+let hubStreamingRuntime;
 
 function hubCopy() {
   return resolveHubCopy(HUB_I18N, state.language);
@@ -158,6 +162,7 @@ const {
 
 const {
   setDesktopStatusOutput,
+  setEventMessage,
   setHotRuntimeLogOutput,
   setHotRuntimeStatusOutput,
   setObserveRuntimeLogOutput,
@@ -239,6 +244,7 @@ const {
   renderAssistantContext: (...args) => renderAssistantContext(...args),
   renderHubAssistantLocalCards: (...args) => renderHubAssistantLocalCards(...args),
   state,
+  streamingRuntime: () => hubStreamingRuntime,
   syncHotRuntimeLogPolling: (...args) => syncHotRuntimeLogPolling(...args),
   syncObserveRuntimeLogPolling: (...args) => syncObserveRuntimeLogPolling(...args),
 });
@@ -297,6 +303,7 @@ const {
   setSection,
   setText,
   state,
+  streamingRuntime: () => hubStreamingRuntime,
 });
 
 const {
@@ -434,38 +441,6 @@ const {
   syncHotRuntimeLogPolling,
 });
 
-hubActionRunner = createHubActionRunner({
-  applyDesktopState,
-  clearHotRuntimeLogView,
-  clearHubWorkloadLibrary,
-  copyHotRuntimeLogView,
-  copyObserveRuntimeLogView,
-  currentHotRuntimeLogService,
-  currentObserveRuntimeLogService,
-  directActionRisk: HUB_DIRECT_ACTION_RISK,
-  elements,
-  exportHubWorkloadLibrary,
-  fetchWorkflowCatalog,
-  formatHubOperatorError,
-  hubDynamic,
-  invokeTauri,
-  refreshDesktopStatusOutput,
-  refreshHotRuntimeLog,
-  refreshHotRuntimeStatus,
-  refreshObserveRuntimeLog,
-  refreshRuntimeStatus,
-  registerCurrentBundleAsWorkload,
-  runProjectBundleAction,
-  setBusy,
-  setOperationOutput,
-  setProjectBundleOutput,
-  setProjectsPage,
-  setSection,
-  state,
-  syncLocalControlPlaneWorkloads,
-  syncRemoteWorkloadCatalog,
-});
-
 function setProjectBundleOutput(value) {
   elements.projectBundleOutput.textContent = value;
 }
@@ -508,6 +483,48 @@ const {
   state,
 });
 
+hubStreamingRuntime = setupHubStreamingRuntime({
+  elements,
+  fetchWorkflowCatalog,
+  refreshHotRuntimeLog,
+  refreshObserveRuntimeLog,
+  setEventMessage,
+  state,
+});
+
+hubActionRunner = createHubActionRunner({
+  applyDesktopState,
+  clearHotRuntimeLogView,
+  clearHubWorkloadLibrary,
+  copyHotRuntimeLogView,
+  copyObserveRuntimeLogView,
+  currentHotRuntimeLogService,
+  currentObserveRuntimeLogService,
+  directActionRisk: HUB_DIRECT_ACTION_RISK,
+  elements,
+  exportHubWorkloadLibrary,
+  fetchWorkflowCatalog,
+  formatHubOperatorError,
+  hubDynamic,
+  invokeTauri,
+  refreshDesktopStatusOutput,
+  refreshHotRuntimeLog,
+  refreshHotRuntimeStatus,
+  refreshObserveRuntimeLog,
+  refreshRuntimeStatus,
+  registerCurrentBundleAsWorkload,
+  runProjectBundleAction,
+  setBusy,
+  setEventMessage,
+  setOperationOutput,
+  setProjectBundleOutput,
+  setProjectsPage,
+  setSection,
+  state,
+  syncLocalControlPlaneWorkloads,
+  syncRemoteWorkloadCatalog,
+});
+
 function hubDynamic(key, replacements = {}) {
   return hubMessage(hubCopy().dynamic?.[key] || HUB_I18N.en.dynamic?.[key] || "", replacements);
 }
@@ -546,54 +563,30 @@ function buildHubAppEventsContext() {
     persistCurrentHotLogSettings, persistCurrentObserveRuntimeLogSettings,
     syncHotRuntimeLogPolling, syncObserveRuntimeLogPolling,
     renderHubRecents, renderToolsPlatformLabel, rerenderLocalizedHubShell, runAction,
-    setOperationOutput, setPanelPage, setProjectBundleOutput, setProjectsPage, setSection,
+    setEventMessage, setOperationOutput, setPanelPage, setProjectBundleOutput, setProjectsPage, setSection,
     toggleHubDensityPanel,
   };
 }
 
 bindHubAppEvents(buildHubAppEventsContext());
+watchDesktopLanguagePreference({
+  getCurrentLanguage: () => state.language,
+  onChange: (language) => {
+    state.language = language;
+    rerenderLocalizedHubShell();
+    renderToolsPlatformLabel();
+    setEventMessage(`language synced: ${language}`, "language:sync");
+  },
+});
+window.__kyuubikiHubAppReadyAt = Date.now();
+setEventMessage("Hub app module ready.", "app:ready");
 
-state.language = await loadDesktopLanguagePreference();
-rerenderLocalizedHubShell();
-await applyBrand();
-await loadEnvironment();
-await loadDirectMeshRegressionSnapshot();
-await loadRegressionGateReport();
-enhanceHubAccessibility();
-state.density = loadHubDensitySettings();
-const hotLogSettings = loadHubHotLogSettings();
-const runtimeLogSettings = loadHubRuntimeLogSettings();
-if (elements.hotRuntimeLogService) {
-  elements.hotRuntimeLogService.value = hotLogSettings.service;
-}
-if (elements.hotRuntimeLogAuto) {
-  elements.hotRuntimeLogAuto.checked = hotLogSettings.autoRefresh;
-}
-if (elements.hotRuntimeLogInterval) {
-  elements.hotRuntimeLogInterval.value = hotLogSettings.interval;
-}
-if (elements.observeRuntimeLogService) {
-  elements.observeRuntimeLogService.value = runtimeLogSettings.service;
-}
-if (elements.observeRuntimeLogAuto) {
-  elements.observeRuntimeLogAuto.checked = runtimeLogSettings.autoRefresh;
-}
-renderHotRuntimeLogServiceLabel();
-syncDesktopStates();
-renderHubDensityToggles();
-renderPanelPages("runtimes");
-renderPanelPages("deploy");
-renderPanelPages("observe");
-renderPanelPages("tools");
-renderHubRecents();
-applyAssistantSettings();
-renderAssistantPanel();
-rerenderLocalizedHubShell();
-syncDesktopStates();
-setSection(state.activeSection);
-setBusy(false, "idle");
-await refreshRuntimeStatus();
-await refreshHotRuntimeStatus();
-await refreshDesktopStatusOutput();
-await fetchWorkflowCatalog({ silent: true });
-rerenderLocalizedHubShell();
+void runHubStartupPhases({
+  applyAssistantSettings, applyBrand, elements, enhanceHubAccessibility,
+  fetchWorkflowCatalog, loadDesktopLanguagePreference, loadDirectMeshRegressionSnapshot,
+  loadEnvironment, loadHubDensitySettings, loadHubHotLogSettings, loadHubRuntimeLogSettings,
+  loadRegressionGateReport, refreshDesktopStatusOutput, refreshHotRuntimeStatus,
+  refreshRuntimeStatus, renderAssistantPanel, renderHotRuntimeLogServiceLabel,
+  renderHubDensityToggles, renderHubRecents, renderPanelPages, rerenderLocalizedHubShell,
+  setBusy, setEventMessage, setSection, state, syncDesktopStates,
+});

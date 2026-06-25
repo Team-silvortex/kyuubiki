@@ -65,32 +65,6 @@ fn spawn_background_command(mut command: Command, failure_context: &str) -> Resu
     Ok(())
 }
 
-fn launch_desktop_dev_app(app_dir: &str, label: &str) -> Result<String, String> {
-    let root = workspace_root();
-    let dir = root.join("apps").join(app_dir);
-
-    let command = if cfg!(target_os = "windows") {
-        let mut cmd = Command::new("cmd");
-        cmd.arg("/C")
-            .arg("npm run tauri:dev")
-            .current_dir(&dir);
-        cmd
-    } else {
-        let mut cmd = Command::new("sh");
-        cmd.arg("-lc")
-            .arg("npm run tauri:dev")
-            .current_dir(&dir);
-        cmd
-    };
-
-    spawn_background_command(
-        command,
-        &format!("launch {} dev shell from {}", label, dir.display()),
-    )?;
-
-    Ok(format!("launched {} dev shell from {}", label, dir.display()))
-}
-
 fn current_platform_binary_name(crate_name: &str) -> String {
     if cfg!(target_os = "windows") {
         format!("{crate_name}.exe")
@@ -99,13 +73,27 @@ fn current_platform_binary_name(crate_name: &str) -> String {
     }
 }
 
+fn installed_app_candidates(product_name: &str) -> Vec<PathBuf> {
+    if !cfg!(target_os = "macos") {
+        return Vec::new();
+    }
+
+    let app_name = format!("{product_name}.app");
+    let mut candidates = vec![PathBuf::from("/Applications").join(&app_name)];
+    if let Some(home) = std::env::var_os("HOME") {
+        candidates.push(PathBuf::from(home).join("Applications").join(app_name));
+    }
+    candidates
+}
+
 fn built_app_candidates(app_dir: &str, product_name: &str, crate_name: &str) -> Vec<PathBuf> {
     let root = workspace_root();
     let tauri_target = root.join("apps").join(app_dir).join("src-tauri").join("target");
     let binary_name = current_platform_binary_name(crate_name);
 
     if cfg!(target_os = "macos") {
-        vec![
+        let mut candidates = installed_app_candidates(product_name);
+        candidates.extend([
             tauri_target
                 .join("release")
                 .join("bundle")
@@ -118,7 +106,8 @@ fn built_app_candidates(app_dir: &str, product_name: &str, crate_name: &str) -> 
                 .join(format!("{product_name}.app")),
             tauri_target.join("release").join(&binary_name),
             tauri_target.join("debug").join(&binary_name),
-        ]
+        ]);
+        candidates
     } else if cfg!(target_os = "windows") {
         vec![
             tauri_target.join("release").join(&binary_name),
@@ -172,7 +161,9 @@ fn launch_desktop_app_with_fallback(
 ) -> Result<String, String> {
     match launch_built_desktop_app(app_dir, product_name, crate_name) {
         Ok(message) => Ok(message),
-        Err(_) => launch_desktop_dev_app(app_dir, label),
+        Err(error) => Err(format!(
+            "{error}. Install {product_name} or build its desktop bundle first; Hub no longer falls back to the {label} dev shell."
+        )),
     }
 }
 

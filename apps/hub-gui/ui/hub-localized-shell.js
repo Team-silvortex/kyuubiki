@@ -7,6 +7,7 @@ import {
   renderDirectMeshRegressionSnapshot,
   renderGuidesPanelCopy,
 } from "./hub-guides-panel.js";
+import { buildHubLanguageOptions } from "./hub-localization-panel.js";
 
 export function createHubLocalizedShell(context) {
   function localizedHistoryFilterLabel(filter) {
@@ -71,6 +72,15 @@ export function createHubLocalizedShell(context) {
     document.documentElement.lang = context.state.language;
     context.setText(context.elements.languageLabel, copy.shell.language);
     if (context.elements.languageSelect) {
+      const options = buildHubLanguageOptions();
+      context.elements.languageSelect.replaceChildren(
+        ...options.map((option) => {
+          const element = document.createElement("option");
+          element.value = option.value;
+          element.textContent = option.label;
+          return element;
+        }),
+      );
       context.elements.languageSelect.value = context.state.language;
     }
     context.setText(context.elements.actionStatusLabel, copy.shell.actionStatus);

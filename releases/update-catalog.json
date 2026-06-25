@@ -1,7 +1,7 @@
 {
   "schema_version": "kyuubiki.update-catalog/v1",
-  "generated_at": "2026-06-23T15:22:33.611Z",
-  "shipping_version": "1.11.0",
+  "generated_at": "2026-06-25T02:14:48.791Z",
+  "shipping_version": "1.11.5",
   "default_channel": "stable",
   "line": "tamamono 1.x",
   "source": {
@@ -17,13 +17,13 @@
         "tamamono:latest",
         "tamamono:1",
         "tamamono:1.11",
-        "tamamono:1.11.0"
+        "tamamono:1.11.5"
       ],
       "line": "1.x",
       "status": "current",
-      "version": "1.11.0",
-      "summary": "Current-line alignment snapshot for tamamono 1.11.0, promoting desktop shells, update metadata, installation integrity contracts, workflow defaults, language-pack targets, and documentation entry points onto the 1.11.x line.",
-      "date": "2026-06-23",
+      "version": "1.11.5",
+      "summary": "Current-line reinstall snapshot for tamamono 1.11.5, aligning desktop packages, installer contracts, update channels, language-pack driven localization, and generated documentation before the 1.12.0 shell refresh.",
+      "date": "2026-06-24",
       "notes": [
         "Primary operator-facing update track for the current shipping line.",
         "Targets standard installs that follow the visible installation contract."
@@ -57,7 +57,7 @@
         "cleanup_policy": "allowlisted",
         "rollback": "same-channel reinstall"
       },
-      "snapshot_path": "releases/snapshots/1.11.0.json",
+      "snapshot_path": "releases/snapshots/1.11.5.json",
       "docs": {
         "current_line": "docs/current-line.md",
         "version_line": "docs/version-line.md",
@@ -69,35 +69,35 @@
       },
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Workbench-facing docs, app rail branding, workflow local metadata, benchmark fixtures, and language-pack defaults now align to the 1.11.0 shipping version.",
-            "Workflow documentation pages and current-line references present 1.11.x as the active preparation line."
+            "Workbench language selection now accepts language-pack-only locale codes and falls back to the stable English copy shape before applying pack overrides.",
+            "Workbench package metadata, docs pages, app rail branding, workflow local metadata, and language-pack targets now align to 1.11.5."
           ]
         },
         "hub_gui": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Hub package metadata, Tauri bundle version, shell branding, and mirrored documentation now align to the 1.11.0 shipping line.",
-            "Hub update-catalog and installation-integrity pages are regenerated from the 1.11.0 release contracts."
+            "Hub package metadata, Tauri bundle version, visible brand assets, and mirrored docs now align to 1.11.5.",
+            "Hub language packs can expose non-built-in locale choices in the shell language selector and resolve them through the requested-language override path."
           ]
         },
         "workbench_gui": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.0 shipping version."
+            "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.5 shipping version."
           ]
         },
         "installer_gui": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Installer package metadata, bundle version, visible shell branding, README line references, and integrity surfaces now align to 1.11.0."
+            "Installer package metadata, bundle version, visible shell branding, and integrity surfaces now align to 1.11.5."
           ]
         },
         "web_api": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.0 as the current public shipping version."
+            "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.5 as the current public shipping version."
           ]
         }
       },
@@ -113,15 +113,15 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.0_aarch64.dmg",
-          "exists": false
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.5_aarch64.dmg",
+          "exists": true
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -148,15 +148,15 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.0_aarch64.dmg",
-          "exists": false
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.5_aarch64.dmg",
+          "exists": true
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -183,15 +183,15 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.0_aarch64.dmg",
-          "exists": false
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.5_aarch64.dmg",
+          "exists": true
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -212,12 +212,12 @@
   ],
   "versions": [
     {
-      "version": "1.11.0",
+      "version": "1.11.5",
       "line": "1.x",
       "status": "current",
-      "date": "2026-06-23",
-      "summary": "Current-line alignment snapshot for tamamono 1.11.0, promoting desktop shells, update metadata, installation integrity contracts, workflow defaults, language-pack targets, and documentation entry points onto the 1.11.x line.",
-      "snapshot_path": "releases/snapshots/1.11.0.json",
+      "date": "2026-06-24",
+      "summary": "Current-line reinstall snapshot for tamamono 1.11.5, aligning desktop packages, installer contracts, update channels, language-pack driven localization, and generated documentation before the 1.12.0 shell refresh.",
+      "snapshot_path": "releases/snapshots/1.11.5.json",
       "channels": [
         "stable"
       ],
@@ -226,39 +226,39 @@
         "tamamono:latest",
         "tamamono:1",
         "tamamono:1.11",
-        "tamamono:1.11.0"
+        "tamamono:1.11.5"
       ],
       "product_surfaces": {
         "frontend_workbench": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Workbench-facing docs, app rail branding, workflow local metadata, benchmark fixtures, and language-pack defaults now align to the 1.11.0 shipping version.",
-            "Workflow documentation pages and current-line references present 1.11.x as the active preparation line."
+            "Workbench language selection now accepts language-pack-only locale codes and falls back to the stable English copy shape before applying pack overrides.",
+            "Workbench package metadata, docs pages, app rail branding, workflow local metadata, and language-pack targets now align to 1.11.5."
           ]
         },
         "hub_gui": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Hub package metadata, Tauri bundle version, shell branding, and mirrored documentation now align to the 1.11.0 shipping line.",
-            "Hub update-catalog and installation-integrity pages are regenerated from the 1.11.0 release contracts."
+            "Hub package metadata, Tauri bundle version, visible brand assets, and mirrored docs now align to 1.11.5.",
+            "Hub language packs can expose non-built-in locale choices in the shell language selector and resolve them through the requested-language override path."
           ]
         },
         "workbench_gui": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.0 shipping version."
+            "Workbench desktop shell package metadata, bundle version, visible brand assets, and package locks now match the 1.11.5 shipping version."
           ]
         },
         "installer_gui": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Installer package metadata, bundle version, visible shell branding, README line references, and integrity surfaces now align to 1.11.0."
+            "Installer package metadata, bundle version, visible shell branding, and integrity surfaces now align to 1.11.5."
           ]
         },
         "web_api": {
-          "version": "1.11.0",
+          "version": "1.11.5",
           "notes": [
-            "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.0 as the current public shipping version."
+            "Release metadata, update channels, installation contracts, and generated catalog surfaces now track 1.11.5 as the current public shipping version."
           ]
         }
       },
@@ -274,15 +274,15 @@
           "product": "hub",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.0_aarch64.dmg",
-          "exists": false
+          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.11.5_aarch64.dmg",
+          "exists": true
         },
         {
           "product": "hub",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/hub-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "hub",
@@ -309,15 +309,15 @@
           "product": "workbench",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.0_aarch64.dmg",
-          "exists": false
+          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.11.5_aarch64.dmg",
+          "exists": true
         },
         {
           "product": "workbench",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/workbench-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "workbench",
@@ -344,15 +344,15 @@
           "product": "installer",
           "kind": "dmg",
           "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.0_aarch64.dmg",
-          "exists": false
+          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.11.5_aarch64.dmg",
+          "exists": true
         },
         {
           "product": "installer",
           "kind": "manifest",
           "platform": "macos",
           "path": "dist/macos/desktop/installer-gui/manifest.json",
-          "exists": false
+          "exists": true
         },
         {
           "product": "installer",
@@ -366,270 +366,6 @@
           "kind": "manifest",
           "platform": "windows",
           "path": "dist/windows/desktop/installer-gui/manifest.json",
-          "exists": false
-        }
-      ]
-    },
-    {
-      "version": "1.8.0",
-      "line": "1.x",
-      "status": "archived",
-      "date": "2026-06-16",
-      "summary": "Runtime and release-contract alignment kickoff for the tamamono 1.8.x push, with shipping-version contracts, desktop shell metadata, generated update surfaces, and lab deployment workflow moved onto the new line.",
-      "snapshot_path": "releases/snapshots/1.8.0.json",
-      "channels": [],
-      "tags": [],
-      "product_surfaces": {
-        "frontend_workbench": {
-          "version": "1.8.0",
-          "notes": [
-            "Release-line kickoff alignment for workflow-facing UI and built-in docs."
-          ]
-        },
-        "hub_gui": {
-          "version": "1.8.0",
-          "notes": [
-            "Desktop shell metadata and mirrored docs are now staged on the 1.8.0 line."
-          ]
-        },
-        "workbench_gui": {
-          "version": "1.8.0",
-          "notes": [
-            "Workbench desktop shell metadata is aligned to the 1.8.0 release contract."
-          ]
-        },
-        "installer_gui": {
-          "version": "1.8.0",
-          "notes": [
-            "Installer update and integrity surfaces now read from the 1.8.0 contract line."
-          ]
-        },
-        "web_api": {
-          "version": "1.8.0",
-          "notes": [
-            "Control-plane release metadata and generated catalog surfaces are staged for 1.8.0."
-          ]
-        }
-      },
-      "desktop_artifacts": [
-        {
-          "product": "hub",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
-        },
-        {
-          "product": "hub",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.8.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.8.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.8.0_aarch64.dmg",
-          "exists": false
-        }
-      ]
-    },
-    {
-      "version": "1.6.0",
-      "line": "1.x",
-      "status": "archived",
-      "date": "2026-06-12",
-      "summary": "Diagnostic hardening point for the tamamono 1.x line, with a connected system install-policy surface, workflow diagnostics plane, preview-first validation and repair flows, and repository-wide 1.6.0 version alignment across desktop shells, release metadata, and packaged docs.",
-      "snapshot_path": "releases/snapshots/1.6.0.json",
-      "channels": [],
-      "tags": [],
-      "product_surfaces": {
-        "frontend_workbench": {
-          "version": "1.6.0",
-          "notes": [
-            "System install policy can now jump into Workflow Builder targets and trigger safe preview or scan actions",
-            "Workflow Builder now groups validation, component integrity, and package-install maintenance into one diagnostics plane",
-            "Validation and package maintenance both expose preview-first panels instead of burying repair intent inside plain list rows"
-          ]
-        },
-        "hub_gui": {
-          "version": "1.6.0",
-          "notes": [
-            "Hub shell, packaged docs, and release-facing version badges now report the tamamono 1.6.0 shipping line"
-          ]
-        },
-        "workbench_gui": {
-          "version": "1.6.0",
-          "notes": [
-            "Workbench desktop shell and bundled assets now align with the 1.6.0 line and visible product-version contract"
-          ]
-        },
-        "installer_gui": {
-          "version": "1.6.0",
-          "notes": [
-            "Installer update and integrity panels now speak the 1.6.0 contract and keep visible version alignment with release metadata"
-          ]
-        },
-        "web_api": {
-          "version": "1.6.0",
-          "notes": [
-            "Shared workflow metadata defaults, language-pack defaults, and release-facing update catalogs now align to 1.6.0"
-          ]
-        }
-      },
-      "desktop_artifacts": [
-        {
-          "product": "hub",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
-        },
-        {
-          "product": "hub",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.6.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.6.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.6.0_aarch64.dmg",
-          "exists": false
-        }
-      ]
-    },
-    {
-      "version": "1.4.0",
-      "line": "1.x",
-      "status": "archived",
-      "date": "2026-06-08",
-      "summary": "Industrial hardening point for the tamamono 1.x line, with richer workflow authoring, operator descriptor APIs, Blender-leaning workbench styling, responsive layout validation, and desktop bundles rebuilt as 1.4.0.",
-      "snapshot_path": "releases/snapshots/1.4.0.json",
-      "channels": [],
-      "tags": [],
-      "product_surfaces": {
-        "frontend_workbench": {
-          "version": "1.4.0",
-          "notes": [
-            "Graphite default theme with Blender-like darker industrial panel language",
-            "Responsive layout guard and Playwright UI overlap/overflow validation",
-            "Workflow Builder supports topology, dataset, interface, draft storage, local workflow library, lineage, notes, and draft execution"
-          ]
-        },
-        "hub_gui": {
-          "version": "1.4.0",
-          "notes": [
-            "Docs entrypoints now open packaged HTML docs instead of local markdown files"
-          ]
-        },
-        "workbench_gui": {
-          "version": "1.4.0",
-          "notes": [
-            "Desktop shell rebuilt after workflow and UI responsiveness updates"
-          ]
-        },
-        "installer_gui": {
-          "version": "1.4.0",
-          "notes": [
-            "Desktop installer shell rebuilt in line with current version chain"
-          ]
-        },
-        "web_api": {
-          "version": "1.4.0",
-          "notes": [
-            "Operator descriptor endpoints exposed at /api/v1/operators and /api/v1/operators/:operator_id",
-            "Workflow graph synchronous and async execution APIs available",
-            "Named workflow catalog API available"
-          ]
-        }
-      },
-      "desktop_artifacts": [
-        {
-          "product": "hub",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/macos/Kyuubiki Hub.app",
-          "exists": false
-        },
-        {
-          "product": "hub",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/hub-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Hub_1.4.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/macos/Kyuubiki Workbench.app",
-          "exists": false
-        },
-        {
-          "product": "workbench",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/workbench-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Workbench_1.4.0_aarch64.dmg",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "app",
-          "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/macos/Kyuubiki Installer.app",
-          "exists": false
-        },
-        {
-          "product": "installer",
-          "kind": "dmg",
-          "platform": "macos",
-          "path": "apps/installer-gui/src-tauri/target/release/bundle/dmg/Kyuubiki Installer_1.4.0_aarch64.dmg",
           "exists": false
         }
       ]

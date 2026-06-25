@@ -54,6 +54,7 @@ async function listRunDirectories(root) {
       `standard-15k-compare.md`,
       `standard-20k-compare.md`,
       `standard-100k-compare.md`,
+      `standard-200k-compare.md`,
     ];
 
     let mergedReport = null;

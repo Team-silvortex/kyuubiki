@@ -361,11 +361,13 @@ export function importHubCopyPayload(payload, storage = window.localStorage) {
 
 export function resolveHubCopy(baseI18n, language, options = {}) {
   const fallbackLanguage = options.fallbackLanguage || "en";
+  const requestedLanguage =
+    typeof language === "string" && language.trim() ? language.trim() : fallbackLanguage;
   const baseLanguage =
-    typeof language === "string" && isPlainObject(baseI18n?.[language]) ? language : fallbackLanguage;
+    isPlainObject(baseI18n?.[requestedLanguage]) ? requestedLanguage : fallbackLanguage;
   const baseCopy = baseI18n?.[baseLanguage] || baseI18n?.[fallbackLanguage] || {};
   const registry = loadHubCopyOverrideRegistryRaw(options.storage);
   const mergedDefaults = mergeCopyBranch(baseCopy, registry.defaults, { preserveShape: true });
-  const languageOverrides = registry.languages[baseLanguage] || {};
+  const languageOverrides = registry.languages[requestedLanguage] || registry.languages[baseLanguage] || {};
   return mergeCopyBranch(mergedDefaults, languageOverrides, { preserveShape: true });
 }

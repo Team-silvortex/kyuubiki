@@ -20,7 +20,7 @@ type ScriptNavControllerDeps = {
   setSystemPanelTab: (value: "config" | "scripts" | "runtime" | "data") => void;
   setAssistantWindowOpen: (value: boolean) => void;
   setSystemDataTab: (value: "jobs" | "results") => void;
-  handleLanguageChange: (value: "en" | "zh" | "ja" | "es") => void;
+  handleLanguageChange: (value: string) => void;
   setTheme: (value: "linen" | "marine" | "graphite") => void;
   currentFrontendRuntimeMode: "orchestrated_gui" | "direct_mesh_gui";
   setFrontendRuntimeMode: (value: "orchestrated_gui" | "direct_mesh_gui") => void;
@@ -129,8 +129,8 @@ export async function handleWorkbenchScriptNavAction({
       return { ok: true, action };
     }
     case "settings/patch": {
-      if (payload.language === "en" || payload.language === "zh" || payload.language === "ja" || payload.language === "es") {
-        handleLanguageChange(payload.language);
+      if (typeof payload.language === "string" && payload.language.trim()) {
+        handleLanguageChange(payload.language.trim());
       }
       if (payload.theme === "linen" || payload.theme === "marine" || payload.theme === "graphite") {
         setTheme(payload.theme);
