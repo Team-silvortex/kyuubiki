@@ -20,6 +20,15 @@ from .material_reports import (
     extract_material_result_payloads,
     material_study_catalog,
 )
+from .advanced_solver_workflows import (
+    build_contact_gap_1d_workflow,
+    build_magnetostatic_plane_quad_2d_workflow,
+    build_magnetostatic_plane_triangle_2d_workflow,
+    build_modal_frame_2d_workflow,
+    build_modal_frame_3d_workflow,
+    build_nonlinear_spring_1d_workflow,
+    build_single_solver_workflow,
+)
 from .workflow_builders import (
     build_workflow_axis,
     build_workflow_dataset_contract,
@@ -54,6 +63,13 @@ __all__ = [
     "describe_material_study",
     "extract_material_result_payloads",
     "material_study_catalog",
+    "build_contact_gap_1d_workflow",
+    "build_magnetostatic_plane_quad_2d_workflow",
+    "build_magnetostatic_plane_triangle_2d_workflow",
+    "build_modal_frame_2d_workflow",
+    "build_modal_frame_3d_workflow",
+    "build_nonlinear_spring_1d_workflow",
+    "build_single_solver_workflow",
     "KyuubikiSession",
     "KyuubikiAgentClient",
     "KyuubikiRetryPolicy",

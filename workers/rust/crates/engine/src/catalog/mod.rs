@@ -1,3 +1,4 @@
+mod bridges;
 mod builtins;
 mod descriptors;
 mod reporting;

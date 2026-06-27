@@ -1,4 +1,5 @@
 use crate::{
+    magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics,
     workflow_diagnostics::{
         extract_electrostatic_result_diagnostics, extract_thermal_result_diagnostics,
         extract_thermo_result_diagnostics,
@@ -238,6 +239,64 @@ fn extracts_electrostatic_result_diagnostics() {
 }
 
 #[test]
+fn extracts_magnetostatic_result_diagnostics() {
+    let diagnostics = extract_magnetostatic_result_diagnostics(
+        serde_json::json!({
+            "nodes": [
+                { "id": "n0", "vector_potential": 0.0, "current_density": 1.0 },
+                { "id": "n1", "vector_potential": 2.0, "current_density": 3.0 },
+                { "id": "n2", "vector_potential": 5.0, "current_density": 2.0 }
+            ],
+            "elements": [
+                {
+                    "id": "m0",
+                    "magnetic_field_strength_x": 3.0,
+                    "magnetic_field_strength_y": 4.0,
+                    "magnetic_flux_density_x": 6.0,
+                    "magnetic_flux_density_y": 8.0,
+                    "energy_area_density": 2.5
+                },
+                {
+                    "id": "m1",
+                    "magnetic_field_strength_x": 5.0,
+                    "magnetic_field_strength_y": 12.0,
+                    "magnetic_flux_density_x": 8.0,
+                    "magnetic_flux_density_y": 15.0,
+                    "energy_area_density": 7.0
+                }
+            ]
+        }),
+        serde_json::json!({}),
+    )
+    .expect("magnetostatic diagnostics should succeed");
+
+    assert_eq!(
+        diagnostics["diagnostic_domain"].as_str(),
+        Some("magnetostatic")
+    );
+    assert_eq!(
+        diagnostics["magnetostatic_vector_potential_max"].as_f64(),
+        Some(5.0)
+    );
+    approx_eq(
+        diagnostics["magnetostatic_current_density_sum"].as_f64(),
+        6.0,
+    );
+    approx_eq(
+        diagnostics["magnetostatic_energy_density_peak"].as_f64(),
+        7.0,
+    );
+    assert_eq!(
+        diagnostics["magnetostatic_field_peak_magnitude"].as_f64(),
+        Some(13.0)
+    );
+    assert_eq!(
+        diagnostics["magnetostatic_flux_peak_magnitude"].as_f64(),
+        Some(17.0)
+    );
+}
+
+#[test]
 fn runs_diagnostics_extract_operator_through_workflow_executor() {
     let diagnostics = run_extract_operator(
         "extract.thermo_result_diagnostics",
@@ -263,4 +322,29 @@ fn runs_diagnostics_extract_operator_through_workflow_executor() {
         Some(5.0)
     );
     approx_eq(diagnostics["candidate_stress_peak"].as_f64(), 150.0);
+}
+
+#[test]
+fn runs_magnetostatic_diagnostics_extract_operator_through_workflow_executor() {
+    let diagnostics = run_extract_operator(
+        "extract.magnetostatic_result_diagnostics",
+        serde_json::json!({
+            "nodes": [
+                { "id": "n0", "vector_potential": 1.0 },
+                { "id": "n1", "vector_potential": 4.0 }
+            ],
+            "elements": [
+                { "id": "m0", "stored_energy": 3.5, "magnetic_flux_density_magnitude": 11.0 }
+            ]
+        }),
+        serde_json::json!({
+            "output_prefix": "mag"
+        }),
+    )
+    .expect("workflow extract operator should succeed");
+
+    assert_eq!(diagnostics["diagnostic_prefix"].as_str(), Some("mag"));
+    approx_eq(diagnostics["mag_vector_potential_span"].as_f64(), 3.0);
+    approx_eq(diagnostics["mag_energy_density_peak"].as_f64(), 3.5);
+    approx_eq(diagnostics["mag_flux_peak_magnitude"].as_f64(), 11.0);
 }

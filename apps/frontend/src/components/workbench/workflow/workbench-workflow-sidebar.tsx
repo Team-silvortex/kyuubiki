@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import type { WorkbenchAlertItem } from "@/components/workbench/workbench-alert-strip";
 import { resolveWorkflowRunStatusTone } from "@/lib/api";
-import type { JobState, ProtocolAgentDescriptor, WorkflowCatalogEntry, WorkflowGraphDefinition, WorkflowOperatorDescriptor } from "@/lib/api";
+import type { JobState, ProtocolAgentDescriptor, WorkflowCatalogEntry, WorkflowGraphDefinition, WorkflowOperatorDescriptor, WorkflowOperatorModuleSummary } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 
 import { WorkbenchWorkflowBuilderCard } from "@/components/workbench/workflow/workbench-workflow-builder-card";
@@ -17,6 +17,7 @@ import {
 } from "@/components/workbench/workflow/workbench-workflow-contract-health";
 import { PINNED_WORKFLOW_IDS } from "@/components/workbench/workflow/workbench-workflow-catalog-highlights";
 import { removeStoredLocalWorkflow } from "@/components/workbench/workflow/workbench-workflow-local-storage";
+import { WorkbenchWorkflowOperatorModuleSummary } from "@/components/workbench/workflow/workbench-workflow-operator-module-summary";
 import {
   markWorkflowSurfaceIntent,
   measureWorkflowSurfaceReady,
@@ -26,6 +27,10 @@ import {
   suggestWorkflowCatalogEntries,
 } from "@/components/workbench/workflow/workbench-workflow-catalog-search";
 import { groupWorkflowCatalogEntriesByDomain } from "@/components/workbench/workflow/workbench-workflow-domain-groups";
+import {
+  describeWorkflowRunComplexity,
+  scoreWorkflowRunComplexity,
+} from "@/components/workbench/workflow/workbench-workflow-run-complexity";
 import { WorkbenchWorkflowRunTraceCard } from "@/components/workbench/workflow/workbench-workflow-run-trace-card";
 import type {
   WorkflowRunRecord,
@@ -40,6 +45,7 @@ type WorkbenchWorkflowSidebarProps = {
   labels: WorkflowSidebarLabels;
   workflowCatalogEntries: WorkflowCatalogEntry[];
   workflowOperatorDescriptors?: WorkflowOperatorDescriptor[];
+  workflowOperatorModules?: WorkflowOperatorModuleSummary[];
   workflowCatalogBusy: boolean;
   selectedWorkflowId: string | null;
   selectedWorkflow: WorkflowCatalogEntry | null;
@@ -63,42 +69,13 @@ type WorkbenchWorkflowSidebarProps = {
   setSystemAlerts: Dispatch<SetStateAction<WorkbenchAlertItem[]>>;
 };
 
-function scoreWorkflowRunComplexity(run: WorkflowRunRecord) {
-  if (!run.traceSummary) {
-    return (run.branchDecisions?.length ?? 0) * 3 +
-      (run.skippedNodes?.length ?? 0) * 2 +
-      (run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) > 0).length ?? 0);
-  }
-  return run.traceSummary.branchDecisionCount * 3 +
-    run.traceSummary.skippedNodeRunCount * 2 +
-    run.traceSummary.derivedArtifactCount +
-    Math.min(run.traceSummary.progressEventCount, 6);
-}
-
-function describeWorkflowRunComplexity(run: WorkflowRunRecord) {
-  const branches = run.traceSummary?.branchDecisionCount ?? run.branchDecisions?.length ?? 0;
-  const derived =
-    run.traceSummary?.derivedArtifactCount ??
-    run.artifactLineage?.filter((entry) => (entry.source_artifacts?.length ?? 0) > 0).length ??
-    0;
-  const skipped = run.traceSummary?.skippedNodeRunCount ?? run.skippedNodes?.length ?? 0;
-  const progressEvents = run.traceSummary?.progressEventCount ?? 0;
-  const score = scoreWorkflowRunComplexity(run);
-  const tags: Array<{ label: string; tone: "watch" | "good" | "risk" }> = [];
-  if (score >= 8) tags.push({ label: "complex", tone: "risk" });
-  if (branches >= 2) tags.push({ label: "branch-heavy", tone: "watch" });
-  if (derived >= 3) tags.push({ label: "lineage-heavy", tone: "good" });
-  if (tags.length < 2 && progressEvents >= 4) tags.push({ label: "eventful", tone: "watch" });
-  if (tags.length === 0 && skipped > 0) tags.push({ label: "skip-path", tone: "watch" });
-  return tags.slice(0, 2);
-}
-
 export function WorkbenchWorkflowSidebar({
   surfaceTab,
   onSurfaceTabChange,
   labels,
   workflowCatalogEntries,
   workflowOperatorDescriptors,
+  workflowOperatorModules,
   workflowCatalogBusy,
   selectedWorkflowId,
   selectedWorkflow,
@@ -135,6 +112,14 @@ export function WorkbenchWorkflowSidebar({
   }, [workflowRuns]);
   const workflowById = useMemo(() => new Map(workflowCatalogEntries.map((entry) => [entry.id, entry] as const)), [workflowCatalogEntries]);
   const overviewBridgeSummary = useMemo(() => summarizeBridgeRuntimeStates(workflowCatalogEntries, latestRunByWorkflowId), [latestRunByWorkflowId, workflowCatalogEntries]);
+  const operatorModuleSummary = useMemo(
+    () =>
+      [...(workflowOperatorModules ?? [])].sort((left, right) => {
+        const laneDiff = left.lane.localeCompare(right.lane);
+        return laneDiff !== 0 ? laneDiff : left.label.localeCompare(right.label);
+      }),
+    [workflowOperatorModules],
+  );
   const latestRunStatusByWorkflowId = useMemo(() => new Map(workflowRuns.map((run) => [run.workflowId, run.status] as const)), [workflowRuns]);
   const sortedWorkflowRuns = useMemo(
     () =>
@@ -410,6 +395,7 @@ export function WorkbenchWorkflowSidebar({
           </div>
           <p className="card-copy">{labels.catalogHint}</p>
           {catalogMessage ? <p className="card-copy">{catalogMessage}</p> : null}
+          <WorkbenchWorkflowOperatorModuleSummary modules={operatorModuleSummary} />
           <label>
             <span>{labels.catalogSearchLabel}</span>
             <input

@@ -78,7 +78,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           }
         }
       ],
-      "validation" => validation_profile(family, ["workflow_graph", "catalog_job"])
+      "validation" =>
+        validation_profile(family, ["workflow_graph", "catalog_job"], spec["capability_tags"])
     }
   end
 
@@ -132,7 +133,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           }
         }
       ],
-      "validation" => validation_profile(family, ["workflow_graph", "catalog_job"])
+      "validation" =>
+        validation_profile(family, ["workflow_graph", "catalog_job"], spec["capability_tags"])
     }
   end
 
@@ -176,7 +178,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           "kyuubiki.operator.#{family}.bridge_output"
         )
       ],
-      "validation" => validation_profile(family, ["workflow_graph", "catalog_job"])
+      "validation" =>
+        validation_profile(family, ["workflow_graph", "catalog_job"], spec["capability_tags"])
     }
   end
 
@@ -218,7 +221,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           "kyuubiki.operator.#{family}.transform_output"
         )
       ],
-      "validation" => validation_profile(family, ["workflow_graph", "draft_builder"])
+      "validation" =>
+        validation_profile(family, ["workflow_graph", "draft_builder"], spec["capability_tags"])
     }
   end
 
@@ -260,7 +264,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           "kyuubiki.operator.#{family}.extract_output"
         )
       ],
-      "validation" => validation_profile(family, ["workflow_graph", "draft_builder"])
+      "validation" =>
+        validation_profile(family, ["workflow_graph", "draft_builder"], spec["capability_tags"])
     }
   end
 
@@ -302,7 +307,8 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
           "kyuubiki.operator.#{family}.export_output"
         )
       ],
-      "validation" => validation_profile(family, ["workflow_graph", "draft_builder"])
+      "validation" =>
+        validation_profile(family, ["workflow_graph", "draft_builder"], spec["capability_tags"])
     }
   end
 
@@ -316,12 +322,22 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
     }
   end
 
-  defp validation_profile(family, smoke_paths) do
+  defp validation_profile(family, smoke_paths, tags) do
+    baseline_status = validation_status(tags || [])
+
     %{
-      "baseline_status" => "verified",
-      "baseline_cases" => ["#{family}_baseline"],
+      "baseline_status" => baseline_status,
+      "baseline_cases" => if(baseline_status == "verified", do: ["#{family}_baseline"], else: []),
       "smoke_paths" => smoke_paths
     }
+  end
+
+  defp validation_status(tags) do
+    cond do
+      "unverified" in tags -> "unverified"
+      "partial" in tags or "roadmap" in tags -> "partial"
+      true -> "verified"
+    end
   end
 
   defp electrostatic_to_heat_contract_support(%{"shape" => "triangle"}) do

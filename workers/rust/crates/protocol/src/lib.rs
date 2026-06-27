@@ -5,8 +5,10 @@ mod workflow;
 
 mod types {
     pub mod field;
+    pub mod field_results;
     pub mod linear_results;
     pub mod linear_structural;
+    pub mod nonlinear_structural;
     pub mod plane_frame;
     pub mod rpc;
     pub mod space_structural;
@@ -22,8 +24,10 @@ pub use operator::{
     WorkflowDatasetValueInfo,
 };
 pub use types::field::*;
+pub use types::field_results::*;
 pub use types::linear_results::*;
 pub use types::linear_structural::*;
+pub use types::nonlinear_structural::*;
 pub use types::plane_frame::*;
 pub use types::rpc::*;
 pub use types::space_structural::*;

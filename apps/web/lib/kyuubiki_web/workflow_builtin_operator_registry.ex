@@ -89,6 +89,9 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
     {"extract.electrostatic_peak_field", "electrostatic_peak_field",
      "Extract the peak electric-field element and flux-density extrema from an electrostatic quad result.",
      ["extract", "electrostatic", "peak_field", "postprocess", "headless_safe"]},
+    {"extract.magnetostatic_result_diagnostics", "magnetostatic_result_diagnostics",
+     "Extract magnetostatic diagnostics such as vector-potential span, current-density totals, and peak H/B field magnitudes.",
+     ["extract", "magnetostatic", "diagnostics", "field", "headless_safe"]},
     {"extract.thermal_result_diagnostics", "thermal_result_diagnostics",
      "Extract thermal diagnostics such as temperature span, heat-load totals, and peak gradient or flux magnitudes from a heat result.",
      ["extract", "thermal", "diagnostics", "heat", "headless_safe"]},
@@ -124,6 +127,7 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
   def list do
     heat_to_thermo_bridge_specs() ++
       electrostatic_to_heat_bridge_specs() ++
+      magnetostatic_to_heat_bridge_specs() ++
       Enum.map(@transform_specs, &transform_spec/1) ++
       Enum.map(@extract_specs, &extract_spec/1) ++
       Enum.map(@export_specs, &export_spec/1)
@@ -172,6 +176,81 @@ defmodule KyuubikiWeb.WorkflowBuiltinOperatorRegistry do
         "Heat triangle model with bridged nodal heat loads",
         ["node_i", "node_j", "node_k"]
       )
+    ]
+  end
+
+  defp magnetostatic_to_heat_bridge_specs do
+    [
+      %{
+        "id" => "bridge.magnetostatic_field_to_heat_quad_2d",
+        "kind" => "workflow_bridge",
+        "domain" => "electromagnetic",
+        "family" => "magnetostatic_to_heat_quad_2d",
+        "summary" =>
+          "Bridge magnetostatic quad fields or stored magnetic energy density into heat loads for downstream thermal solves.",
+        "capability_tags" => [
+          "verified",
+          "workflow_bridge",
+          "magnetostatic",
+          "stored_energy",
+          "heat",
+          "quad",
+          "2d"
+        ],
+        "origin" => "built_in",
+        "config_schema" => %{
+          "schema" => "kyuubiki.bridge-contract.magnetostatic_to_heat.v1",
+          "version" => "1"
+        },
+        "config_example" => %{
+          "contract" => %{
+            "source" => %{
+              "distribution" => "element_to_nodes",
+              "field" => "magnetic_flux_density_magnitude",
+              "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
+            },
+            "transform" => %{"scale" => 1.0, "reduction" => "mean"},
+            "target" => %{"field" => "heat_load"}
+          }
+        },
+        "source_artifact_type" => "result/magnetostatic_plane_quad_2d",
+        "target_artifact_type" => "study_model/heat_plane_quad_2d",
+        "input_description" => "Magnetostatic quad result payload to bridge from",
+        "output_description" => "Heat quad model with bridged nodal heat loads",
+        "validation" => %{
+          "baseline_status" => "verified",
+          "baseline_cases" => ["magnetostatic_to_heat_quad_bridge"],
+          "smoke_paths" => ["bridge.magnetostatic_field_to_heat_quad_2d"]
+        },
+        "runtime" => %{
+          "bridge_type" => "magnetostatic_to_heat",
+          "config_schema" => %{
+            "source" => %{
+              "distribution" => "element_to_nodes",
+              "field" => "magnetic_flux_density_magnitude",
+              "node_index_fields" => ["node_i", "node_j", "node_k", "node_l"]
+            },
+            "transform" => %{"scale" => 1.0, "reduction" => "mean"},
+            "target" => %{"field" => "heat_load"}
+          }
+        },
+        "execution" => %{
+          "mode" => "workflow_bridge_runtime",
+          "entrypoint" => "bridge.magnetostatic_field_to_heat_quad_2d"
+        },
+        "package" => %{
+          "uri" => "orchestra://operator/bridge.magnetostatic_field_to_heat_quad_2d",
+          "version" => "1.0.0",
+          "integrity" => "built-in"
+        },
+        "contracts" => [
+          %{
+            "input" => "result/magnetostatic_plane_quad_2d",
+            "output" => "study_model/heat_plane_quad_2d",
+            "mapping" => "field_to_heat_load"
+          }
+        ]
+      }
     ]
   end
 

@@ -11,6 +11,9 @@ from kyuubiki_sdk import (
     KyuubikiSession,
     SolverRpcClient,
     build_material_report_from_payload,
+    build_contact_gap_1d_workflow,
+    build_modal_frame_2d_workflow,
+    build_nonlinear_spring_1d_workflow,
     build_workflow_dataset_contract,
     build_workflow_dataset_value,
     build_workflow_edge,
@@ -29,6 +32,9 @@ print(cp.health())
 
 rpc = SolverRpcClient("127.0.0.1", 5001)
 print(rpc.describe_agent())
+print(rpc.solve_study("modal_frame_2d", {"nodes": [], "elements": []}))
+print(rpc.solve_study("nonlinear_spring_1d", {"nodes": [], "elements": []}))
+print(rpc.solve_study("contact_gap_1d", {"nodes": [], "elements": [], "contacts": []}))
 
 session = KyuubikiSession.from_endpoints(
     "http://127.0.0.1:4000",
@@ -131,6 +137,9 @@ graph = build_workflow_graph(
     placement_tags=["mesh-enabled"],
     required_capabilities=["artifact-cache"],
 )
+modal_graph = build_modal_frame_2d_workflow()
+nonlinear_graph = build_nonlinear_spring_1d_workflow(orchestrated=False)
+contact_graph = build_contact_gap_1d_workflow()
 workflow_graph_run = agent.run_workflow_graph(
     graph,
     {"thermal_case": {"loadcase": "baseline"}},
@@ -157,7 +166,7 @@ Highlights:
 - direct workflow catalog descriptor fetch plus auto graph resolution for catalog runs
 - operator catalog filtering plus single-operator descriptor fetch
 - expanded solve-kind coverage across structural, thermal,
-  thermo-mechanical, and electrostatic study families
+  thermo-mechanical, electrostatic, modal, and nonlinear study families
 - built-in workflow graph and dataset-contract validation helpers
 - distributed workflow execution-hint fields for dispatch policy, operator fetch
   plan, placement tags, and required capabilities
@@ -165,6 +174,8 @@ Highlights:
 - material-study catalog, headless result extraction, and report ranking helpers
 - builder helpers for graph, node, edge, port, and dataset contract assembly
 - direct solver-RPC access
+- advanced solver workflow templates for modal frame, nonlinear spring, and
+  contact gap runs
 - high-level `KyuubikiSession` for submit/wait flows
 - `KyuubikiAgentClient` for run-study, workflow-run, and chunk-browse flows
 - retry policy, failure classification, and chunk iteration helpers
@@ -174,6 +185,7 @@ Highlights:
 Example:
 
 - Run from [run_study.py](examples/run_study.py)
+- Advanced solver example: [run_advanced_solvers.py](examples/run_advanced_solvers.py)
 - Typical invocation:
   `PYTHONPATH=sdks/python KYUUBIKI_BASE_URL=http://127.0.0.1:4000 python3 sdks/python/examples/run_study.py`
 - Smoke test:

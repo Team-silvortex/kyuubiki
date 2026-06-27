@@ -32,6 +32,18 @@ pub fn chunk_result(
         (AnalysisResult::MagnetostaticBar1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::MagnetostaticPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::MagnetostaticPlaneTriangle2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::MagnetostaticPlaneQuad2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::MagnetostaticPlaneQuad2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::ElectrostaticPlaneTriangle2d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }
@@ -70,6 +82,18 @@ pub fn chunk_result(
         }
         (AnalysisResult::Spring1d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Spring1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::NonlinearSpring1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::NonlinearSpring1d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ContactGap1d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::ContactGap1d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
         (AnalysisResult::Spring2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
@@ -145,6 +169,18 @@ pub fn chunk_result(
         (AnalysisResult::Frame2d(result), ResultChunkKind::Nodes) => encode_slice(&result.nodes)?,
         (AnalysisResult::Frame2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
+        }
+        (AnalysisResult::ModalFrame2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.input.nodes)?
+        }
+        (AnalysisResult::ModalFrame2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.modes)?
+        }
+        (AnalysisResult::ModalFrame3d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.input.nodes)?
+        }
+        (AnalysisResult::ModalFrame3d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.modes)?
         }
     };
 

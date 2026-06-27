@@ -187,6 +187,51 @@ pub struct SolveElectrostaticPlaneQuad2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticPlaneNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    pub fix_vector_potential: bool,
+    #[serde(default)]
+    pub vector_potential: f64,
+    #[serde(default)]
+    pub current_density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticPlaneTriangleElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub thickness: f64,
+    pub permeability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveMagnetostaticPlaneTriangle2dRequest {
+    pub nodes: Vec<MagnetostaticPlaneNodeInput>,
+    pub elements: Vec<MagnetostaticPlaneTriangleElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MagnetostaticPlaneQuadElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub thickness: f64,
+    pub permeability: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveMagnetostaticPlaneQuad2dRequest {
+    pub nodes: Vec<MagnetostaticPlaneNodeInput>,
+    pub elements: Vec<MagnetostaticPlaneQuadElementInput>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HeatPlaneQuadElementInput {
     pub id: String,
     pub node_i: usize,

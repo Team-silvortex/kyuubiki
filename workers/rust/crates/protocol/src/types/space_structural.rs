@@ -211,3 +211,45 @@ pub struct SolveFrame3dResult {
     pub max_moment: f64,
     pub max_stress: f64,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModalFrame3dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub shear_modulus: f64,
+    pub torsion_constant: f64,
+    pub moment_of_inertia_y: f64,
+    pub moment_of_inertia_z: f64,
+    pub density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveModalFrame3dRequest {
+    pub nodes: Vec<Frame3dNodeInput>,
+    pub elements: Vec<ModalFrame3dElementInput>,
+    pub mode_count: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModalFrame3dModeResult {
+    pub index: usize,
+    pub eigenvalue_rad_s_squared: f64,
+    pub natural_frequency_rad_s: f64,
+    pub natural_frequency_hz: f64,
+    pub period_s: f64,
+    pub participation_norm: f64,
+    pub shape: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveModalFrame3dResult {
+    pub input: SolveModalFrame3dRequest,
+    pub modes: Vec<ModalFrame3dModeResult>,
+    pub free_dofs: Vec<usize>,
+    pub total_mass: f64,
+    pub min_frequency_hz: f64,
+    pub max_frequency_hz: f64,
+}

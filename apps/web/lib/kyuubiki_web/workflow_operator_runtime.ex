@@ -16,13 +16,25 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   def run_solve_operator(operator_id, payload, node) when is_map(payload) and is_map(node) do
     case WorkflowSolverRegistry.fetch(operator_id) do
-      {:ok, %{method: method}} -> dispatch_solve_operator(method, payload, node)
-      :error -> {:error, {:unsupported_workflow_solve_operator, operator_id}}
+      {:ok, %{capability_tags: tags, method: method}} ->
+        if roadmap_operator_tags?(tags) do
+          {:error, {:roadmap_workflow_solve_operator, operator_id}}
+        else
+          dispatch_solve_operator(method, payload, node)
+        end
+
+      :error ->
+        {:error, {:unsupported_workflow_solve_operator, operator_id}}
     end
   end
 
   def run_solve_operator(operator_id, _payload, _node),
     do: {:error, {:unsupported_workflow_solve_operator, operator_id}}
+
+  defp roadmap_operator_tags?(tags) when is_list(tags),
+    do: "partial" in tags or "roadmap" in tags
+
+  defp roadmap_operator_tags?(_tags), do: false
 
   def run_transform_operator(
         "bridge.temperature_field_to_thermo_quad_2d",
@@ -102,6 +114,21 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
     with {:ok, bridge_contract} <- resolve_electrostatic_to_heat_bridge_contract(config) do
       WorkflowOperatorBridgeRuntime.bridge_electrostatic_result_to_heat_plane_triangle_model(
         electrostatic_result,
+        heat_seed_model,
+        bridge_contract
+      )
+    end
+  end
+
+  def run_transform_operator(
+        "bridge.magnetostatic_field_to_heat_quad_2d",
+        magnetostatic_result,
+        %{"seed_model" => heat_seed_model} = config
+      )
+      when is_map(magnetostatic_result) and is_map(heat_seed_model) and is_map(config) do
+    with {:ok, bridge_contract} <- resolve_magnetostatic_to_heat_bridge_contract(config) do
+      WorkflowOperatorBridgeRuntime.bridge_magnetostatic_result_to_heat_plane_quad_model(
+        magnetostatic_result,
         heat_seed_model,
         bridge_contract
       )
@@ -221,6 +248,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "extract.electrostatic_peak_field" ->
         WorkflowReportingRuntime.extract_electrostatic_peak_field(payload, config || %{})
 
+      "extract.magnetostatic_result_diagnostics" ->
+        KyuubikiWeb.WorkflowMagnetostaticRuntime.extract_magnetostatic_result_diagnostics(
+          payload,
+          config || %{}
+        )
+
       "extract.thermal_result_diagnostics" ->
         WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config || %{})
 
@@ -336,6 +369,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
   defp resolve_electrostatic_to_heat_bridge_contract(config),
     do: WorkflowOperatorBridgeRuntime.resolve_electrostatic_to_heat_bridge_contract(config)
+
+  defp resolve_magnetostatic_to_heat_bridge_contract(config),
+    do: WorkflowOperatorBridgeRuntime.resolve_magnetostatic_to_heat_bridge_contract(config)
 
   defp resolve_heat_to_thermo_bridge_contract(config),
     do: WorkflowOperatorHeatBridgeRuntime.resolve_heat_to_thermo_bridge_contract(config)

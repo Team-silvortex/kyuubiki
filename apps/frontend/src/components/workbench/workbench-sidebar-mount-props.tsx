@@ -80,6 +80,7 @@ export function buildWorkbenchSidebarMountProps(props: Record<string, any>) {
         labels={props.workflowLabels}
         workflowCatalogEntries={props.workflowCatalog}
         workflowOperatorDescriptors={props.workflowOperatorDescriptors}
+        workflowOperatorModules={props.workflowOperatorModules}
         workflowCatalogBusy={props.workflowCatalogBusy}
         selectedWorkflowId={props.selectedWorkflowId}
         selectedWorkflow={props.selectedWorkflow}

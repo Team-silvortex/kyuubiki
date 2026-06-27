@@ -277,12 +277,14 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
 
   defp build_bundle_highlights_section(payload) do
     focus_context = Map.get(payload, "report_focus_context", %{})
+
     case Map.get(payload, "report_highlights", []) do
       highlights when is_list(highlights) and highlights != [] ->
         ["", "## Key Highlights"] ++
           Enum.flat_map(highlights, fn
             %{} = highlight ->
               marker = if(Map.get(highlight, "attention", false), do: "attention", else: "info")
+
               [
                 "- [#{marker}] #{Map.get(highlight, "label", Map.get(highlight, "id", "unknown"))}: #{markdown_value(Map.get(highlight, "value"))}"
               ] ++ render_highlight_context(focus_context, Map.get(highlight, "id"))
@@ -330,6 +332,7 @@ defmodule KyuubikiWeb.WorkflowReportingRuntime do
               :error -> []
             end
           end)
+
         extra_lines =
           context
           |> Enum.reject(fn {field, _value} -> field in preferred_fields end)

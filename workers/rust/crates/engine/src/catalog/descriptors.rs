@@ -44,9 +44,10 @@ pub fn built_in_solver_descriptor(
             Some(&format!("{family}_result")),
             Some(&format!("kyuubiki.operator.{family}.output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "orchestrated_api"],
+            capability_tags,
         ),
     }
 }
@@ -92,9 +93,10 @@ pub fn built_in_bridge_descriptor(
             Some("bridged_model"),
             Some(&format!("kyuubiki.operator.{family}.bridge_output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "catalog_job"],
+            capability_tags,
         ),
     }
 }
@@ -144,9 +146,10 @@ pub fn built_in_explicit_bridge_descriptor(
             Some(output_dataset_value),
             Some(&format!("kyuubiki.operator.{family}.bridge_output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "catalog_job"],
+            capability_tags,
         ),
     }
 }
@@ -201,9 +204,10 @@ pub fn built_in_transform_descriptor(
             Some("merged"),
             Some(&format!("kyuubiki.operator.{family}.transform_output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "draft_builder"],
+            capability_tags,
         ),
     }
 }
@@ -264,9 +268,10 @@ pub fn built_in_explicit_transform_descriptor(
             Some(output_dataset_value),
             Some(&format!("kyuubiki.operator.{family}.transform_output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "draft_builder"],
+            capability_tags,
         ),
     }
 }
@@ -312,9 +317,10 @@ pub fn built_in_extract_descriptor(
             Some("summary"),
             Some(&format!("kyuubiki.operator.{family}.extract_output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "draft_builder"],
+            capability_tags,
         ),
     }
 }
@@ -360,9 +366,10 @@ pub fn built_in_export_descriptor(
             Some("export_artifact"),
             Some(&format!("kyuubiki.operator.{family}.export_output")),
         )],
-        validation: verified_operator_validation_profile(
+        validation: operator_validation_profile(
             family,
             &["workflow_graph", "draft_builder"],
+            capability_tags,
         ),
     }
 }
@@ -386,13 +393,28 @@ fn operator_port_descriptor(
     }
 }
 
-fn verified_operator_validation_profile(
+fn operator_validation_profile(
     family: &str,
     smoke_paths: &[&str],
+    capability_tags: &[&str],
 ) -> OperatorValidationProfile {
+    let baseline_status = if capability_tags.contains(&"unverified") {
+        OperatorValidationStatus::Unverified
+    } else if capability_tags.contains(&"partial") || capability_tags.contains(&"roadmap") {
+        OperatorValidationStatus::Partial
+    } else {
+        OperatorValidationStatus::Verified
+    };
+
+    let baseline_cases = if baseline_status == OperatorValidationStatus::Verified {
+        vec![format!("{family}_baseline")]
+    } else {
+        vec![]
+    };
+
     OperatorValidationProfile {
-        baseline_status: OperatorValidationStatus::Verified,
-        baseline_cases: vec![format!("{family}_baseline")],
+        baseline_status,
+        baseline_cases,
         smoke_paths: smoke_paths.iter().map(|path| (*path).to_string()).collect(),
     }
 }

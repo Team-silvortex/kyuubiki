@@ -29,12 +29,16 @@ defmodule KyuubikiSdk.SmokeTest do
     session = Session.new(base_url: base_url)
 
     {:ok, outcome} =
-      AgentClient.run_study(session, "truss_2d", %{"nodes" => [], "elements" => []}, timeout: 5_000)
+      AgentClient.run_study(session, "truss_2d", %{"nodes" => [], "elements" => []},
+        timeout: 5_000
+      )
 
     assert get_in(outcome, [:terminal, "job", "status"]) == "completed"
     assert is_map(outcome.result)
 
-    {:ok, page} = AgentClient.browse_result_chunks(session, "job-smoke", "nodes", offset: 0, limit: 2)
+    {:ok, page} =
+      AgentClient.browse_result_chunks(session, "job-smoke", "nodes", offset: 0, limit: 2)
+
     assert page["returned"] == 2
     assert page["total"] == 3
   end
@@ -46,7 +50,10 @@ defmodule KyuubikiSdk.SmokeTest do
     assert Enum.at(operators["operators"], 0)["id"] == "solver.truss_2d"
 
     {:ok, workflow} =
-      KyuubikiSdk.ControlPlaneClient.fetch_workflow_catalog_workflow(client, "workflow.test-graph")
+      KyuubikiSdk.ControlPlaneClient.fetch_workflow_catalog_workflow(
+        client,
+        "workflow.test-graph"
+      )
 
     assert workflow["workflow"]["graph"]["id"] == "workflow.test-graph"
 
@@ -76,12 +83,26 @@ defmodule KyuubikiSdk.SmokeTest do
       )
 
     assert get_in(catalog_outcome, [:terminal, "job", "status"]) == "completed"
+
     assert get_in(catalog_outcome, [:result, "result", "artifacts", "mesh.result", "artifact_id"]) ==
              "artifact.catalog.result"
-    assert get_in(catalog_outcome, [:validated_outputs, "artifacts", "output.mesh_result", "artifact_id"]) ==
+
+    assert get_in(catalog_outcome, [
+             :validated_outputs,
+             "artifacts",
+             "output.mesh_result",
+             "artifact_id"
+           ]) ==
              "artifact.catalog.result"
+
     assert get_in(catalog_outcome, [:workflow_runtime, "run_id"]) == "run-workflow-catalog"
-    assert get_in(catalog_outcome, [:workflow_progression, "snapshots", Access.at(0), "current_node"]) == "output"
+
+    assert get_in(catalog_outcome, [
+             :workflow_progression,
+             "snapshots",
+             Access.at(0),
+             "current_node"
+           ]) == "output"
 
     graph_definition = %{
       "schema_version" => "kyuubiki.workflow-graph/v1",
@@ -91,12 +112,29 @@ defmodule KyuubikiSdk.SmokeTest do
       "entry_nodes" => ["input"],
       "output_nodes" => ["output"],
       "nodes" => [
-        %{"id" => "input", "kind" => "input", "inputs" => [], "outputs" => [%{"id" => "mesh", "artifact_type" => "mesh.input"}]},
-        %{"id" => "solve", "kind" => "solve", "operator_id" => "solver.truss_2d", "inputs" => [], "outputs" => []},
-        %{"id" => "output", "kind" => "output", "inputs" => [%{"id" => "mesh_result", "artifact_type" => "mesh.result"}], "outputs" => []}
+        %{
+          "id" => "input",
+          "kind" => "input",
+          "inputs" => [],
+          "outputs" => [%{"id" => "mesh", "artifact_type" => "mesh.input"}]
+        },
+        %{
+          "id" => "solve",
+          "kind" => "solve",
+          "operator_id" => "solver.truss_2d",
+          "inputs" => [],
+          "outputs" => []
+        },
+        %{
+          "id" => "output",
+          "kind" => "output",
+          "inputs" => [%{"id" => "mesh_result", "artifact_type" => "mesh.result"}],
+          "outputs" => []
+        }
       ],
       "edges" => []
     }
+
     {:ok, graph_outcome} =
       AgentClient.run_workflow_graph(
         session,
@@ -106,13 +144,24 @@ defmodule KyuubikiSdk.SmokeTest do
       )
 
     assert get_in(graph_outcome, [:terminal, "job", "status"]) == "completed"
+
     assert get_in(graph_outcome, [:result, "result", "artifacts", "mesh.result", "artifact_id"]) ==
              "artifact.graph.result"
+
     assert get_in(graph_outcome, [:output_manifest, "graph_id"]) == "workflow.test-inline"
-    assert get_in(graph_outcome, [:validated_outputs, "artifacts", "output.mesh_result", "artifact_id"]) ==
+
+    assert get_in(graph_outcome, [
+             :validated_outputs,
+             "artifacts",
+             "output.mesh_result",
+             "artifact_id"
+           ]) ==
              "artifact.graph.result"
+
     assert get_in(graph_outcome, [:workflow_runtime, "current_node"]) == "output"
-    assert get_in(graph_outcome, [:workflow_progression, "latest", "run_id"]) == "run-workflow-graph"
+
+    assert get_in(graph_outcome, [:workflow_progression, "latest", "run_id"]) ==
+             "run-workflow-graph"
   end
 
   test "session supports expanded solve kinds", %{base_url: base_url} do
@@ -129,7 +178,7 @@ defmodule KyuubikiSdk.SmokeTest do
     assert thermal_frame["job"]["job_id"] == "job-thermal-frame-3d"
   end
 
-  test "session supports direct rpc for expanded solve kinds" do
+  test "session supports direct rpc for advanced solve kinds" do
     {:ok, listener} =
       :gen_tcp.listen(0, [:binary, packet: 0, active: false, reuseaddr: true])
 
@@ -137,23 +186,29 @@ defmodule KyuubikiSdk.SmokeTest do
 
     server =
       spawn_link(fn ->
-        {:ok, socket} = :gen_tcp.accept(listener)
-        {:ok, <<size::unsigned-big-32>>} = :gen_tcp.recv(socket, 4)
-        {:ok, payload} = :gen_tcp.recv(socket, size)
-        request = Jason.decode!(payload)
-        assert request["method"] == "solve_electrostatic_plane_quad_2d"
+        for expected <- [
+              "solve_modal_frame_2d",
+              "solve_nonlinear_spring_1d",
+              "solve_contact_gap_1d"
+            ] do
+          {:ok, socket} = :gen_tcp.accept(listener)
+          {:ok, <<size::unsigned-big-32>>} = :gen_tcp.recv(socket, 4)
+          {:ok, payload} = :gen_tcp.recv(socket, size)
+          request = Jason.decode!(payload)
+          assert request["method"] == expected
 
-        response =
-          Jason.encode!(%{
-            ok: true,
-            result: %{
-              "solver" => "electrostatic_plane_quad_2d",
-              "input" => request["params"]
-            }
-          })
+          response =
+            Jason.encode!(%{
+              ok: true,
+              result: %{
+                "solver" => String.replace_prefix(expected, "solve_", ""),
+                "input" => request["params"]
+              }
+            })
 
-        :ok = :gen_tcp.send(socket, <<byte_size(response)::unsigned-big-32, response::binary>>)
-        :gen_tcp.close(socket)
+          :ok = :gen_tcp.send(socket, <<byte_size(response)::unsigned-big-32, response::binary>>)
+          :gen_tcp.close(socket)
+        end
       end)
 
     on_exit(fn ->
@@ -163,10 +218,22 @@ defmodule KyuubikiSdk.SmokeTest do
 
     session = Session.new(rpc_host: "127.0.0.1", rpc_port: port)
 
-    {:ok, result} =
-      Session.solve_direct(session, "electrostatic_plane_quad_2d", %{"nodes" => [], "elements" => []})
+    {:ok, modal} =
+      Session.solve_direct(session, "modal_frame_2d", %{"nodes" => [], "elements" => []})
 
-    assert result["solver"] == "electrostatic_plane_quad_2d"
+    {:ok, nonlinear} =
+      Session.solve_direct(session, "nonlinear_spring_1d", %{"nodes" => [], "elements" => []})
+
+    {:ok, contact} =
+      Session.solve_direct(session, "contact_gap_1d", %{
+        "nodes" => [],
+        "elements" => [],
+        "contacts" => []
+      })
+
+    assert modal["solver"] == "modal_frame_2d"
+    assert nonlinear["solver"] == "nonlinear_spring_1d"
+    assert contact["solver"] == "contact_gap_1d"
   end
 
   defp accept_loop(listener, parent) do
@@ -190,10 +257,14 @@ defmodule KyuubikiSdk.SmokeTest do
           json_response(202, %{"job" => %{"job_id" => "job-axial", "status" => "queued"}})
 
         {"POST", "/api/v1/fem/thermal-frame-3d/jobs"} ->
-          json_response(202, %{"job" => %{"job_id" => "job-thermal-frame-3d", "status" => "queued"}})
+          json_response(202, %{
+            "job" => %{"job_id" => "job-thermal-frame-3d", "status" => "queued"}
+          })
 
         {"POST", "/api/v1/workflows/catalog/workflow.test-graph/jobs"} ->
-          json_response(202, %{"job" => %{"job_id" => "workflow-catalog-job", "status" => "queued"}})
+          json_response(202, %{
+            "job" => %{"job_id" => "workflow-catalog-job", "status" => "queued"}
+          })
 
         {"GET", "/api/v1/workflows/catalog/workflow.test-graph"} ->
           json_response(200, %{
@@ -207,8 +278,18 @@ defmodule KyuubikiSdk.SmokeTest do
                 "entry_nodes" => ["input"],
                 "output_nodes" => ["output"],
                 "nodes" => [
-                  %{"id" => "input", "kind" => "input", "inputs" => [], "outputs" => [%{"id" => "mesh", "artifact_type" => "mesh.input"}]},
-                  %{"id" => "output", "kind" => "output", "inputs" => [%{"id" => "mesh_result", "artifact_type" => "mesh.result"}], "outputs" => []}
+                  %{
+                    "id" => "input",
+                    "kind" => "input",
+                    "inputs" => [],
+                    "outputs" => [%{"id" => "mesh", "artifact_type" => "mesh.input"}]
+                  },
+                  %{
+                    "id" => "output",
+                    "kind" => "output",
+                    "inputs" => [%{"id" => "mesh_result", "artifact_type" => "mesh.result"}],
+                    "outputs" => []
+                  }
                 ],
                 "edges" => []
               }
@@ -259,7 +340,9 @@ defmodule KyuubikiSdk.SmokeTest do
           })
 
         {"GET", "/api/v1/jobs/job-smoke"} ->
-          json_response(200, %{"job" => %{"job_id" => "job-smoke", "status" => "completed", "progress" => 1.0}})
+          json_response(200, %{
+            "job" => %{"job_id" => "job-smoke", "status" => "completed", "progress" => 1.0}
+          })
 
         {"GET", "/api/v1/jobs/workflow-catalog-job"} ->
           json_response(200, %{
@@ -289,7 +372,11 @@ defmodule KyuubikiSdk.SmokeTest do
           json_response(200, %{
             "job_id" => "job-smoke",
             "result" => %{
-              "nodes" => [%{"index" => 0, "id" => "n0"}, %{"index" => 1, "id" => "n1"}, %{"index" => 2, "id" => "n2"}],
+              "nodes" => [
+                %{"index" => 0, "id" => "n0"},
+                %{"index" => 1, "id" => "n1"},
+                %{"index" => 2, "id" => "n2"}
+              ],
               "elements" => [%{"index" => 0, "id" => "e0"}],
               "max_displacement" => 1.0e-6,
               "max_stress" => 7.0e4
@@ -345,6 +432,7 @@ defmodule KyuubikiSdk.SmokeTest do
 
   defp json_response(status, payload) do
     body = Jason.encode!(payload)
+
     reason =
       case status do
         200 -> "OK"

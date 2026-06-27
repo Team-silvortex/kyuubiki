@@ -16,6 +16,12 @@ from kyuubiki_sdk import (
     build_workflow_port,
     build_workflow_schema_ref,
     build_workflow_shape,
+    build_contact_gap_1d_workflow,
+    build_magnetostatic_plane_quad_2d_workflow,
+    build_magnetostatic_plane_triangle_2d_workflow,
+    build_modal_frame_2d_workflow,
+    build_modal_frame_3d_workflow,
+    build_nonlinear_spring_1d_workflow,
 )
 
 
@@ -107,6 +113,27 @@ class WorkflowBuilderTest(unittest.TestCase):
         self.assertEqual(graph["dispatch_policy"], "central_fetch")
         self.assertFalse(graph["defaults"]["orchestrated"])
         self.assertEqual(graph["operator_fetch_plan"][0]["node_id"], "solve")
+
+    def test_builds_advanced_solver_workflow_templates(self) -> None:
+        modal = build_modal_frame_2d_workflow()
+        modal_3d = build_modal_frame_3d_workflow()
+        nonlinear = build_nonlinear_spring_1d_workflow(orchestrated=False)
+        contact = build_contact_gap_1d_workflow()
+        magnetic = build_magnetostatic_plane_triangle_2d_workflow()
+        magnetic_quad = build_magnetostatic_plane_quad_2d_workflow()
+
+        self.assertEqual(modal["nodes"][1]["operator_id"], "solve.modal_frame_2d")
+        self.assertEqual(modal["edges"][1]["artifact_type"], "result/modal_frame_2d")
+        self.assertEqual(modal_3d["nodes"][1]["operator_id"], "solve.modal_frame_3d")
+        self.assertEqual(modal_3d["edges"][1]["artifact_type"], "result/modal_frame_3d")
+        self.assertEqual(nonlinear["nodes"][1]["operator_id"], "solve.nonlinear_spring_1d")
+        self.assertFalse(nonlinear["defaults"]["orchestrated"])
+        self.assertEqual(contact["nodes"][1]["operator_id"], "solve.contact_gap_1d")
+        self.assertEqual(contact["edges"][1]["artifact_type"], "result/contact_gap_1d")
+        self.assertEqual(magnetic["nodes"][1]["operator_id"], "solve.magnetostatic_plane_triangle_2d")
+        self.assertEqual(magnetic["edges"][1]["artifact_type"], "result/magnetostatic_plane_triangle_2d")
+        self.assertEqual(magnetic_quad["nodes"][1]["operator_id"], "solve.magnetostatic_plane_quad_2d")
+        self.assertEqual(magnetic_quad["edges"][1]["artifact_type"], "result/magnetostatic_plane_quad_2d")
 
 
 if __name__ == "__main__":

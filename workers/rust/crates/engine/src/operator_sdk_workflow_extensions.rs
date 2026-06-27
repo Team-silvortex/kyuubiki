@@ -2,6 +2,7 @@ mod operator_sdk_focus_chain_operators;
 mod operator_sdk_peak_summaries;
 
 use crate::catalog::describe_built_in_operator;
+use crate::magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics;
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_focus_chain_operators::register_focus_chain_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_peak_summaries::{
@@ -28,6 +29,9 @@ struct ElectrostaticResultDiagnosticsOperator {
     descriptor: OperatorDescriptor,
 }
 struct ElectrostaticPeakFieldOperator {
+    descriptor: OperatorDescriptor,
+}
+struct MagnetostaticResultDiagnosticsOperator {
     descriptor: OperatorDescriptor,
 }
 struct ThermalResultDiagnosticsOperator {
@@ -145,6 +149,23 @@ impl JsonOperator for ThermalResultDiagnosticsOperator {
         run_summary_only(
             &self.descriptor.id,
             extract_thermal_result_diagnostics(input.payload, input.config),
+        )
+    }
+}
+
+impl JsonOperator for MagnetostaticResultDiagnosticsOperator {
+    type Input = WorkflowOperatorEnvelope;
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        run_summary_only(
+            &self.descriptor.id,
+            extract_magnetostatic_result_diagnostics(input.payload, input.config),
         )
     }
 }
@@ -414,6 +435,11 @@ pub fn register_workflow_extract_extensions(registry: &mut OperatorRegistry) {
             descriptor: descriptor("extract.electrostatic_peak_field"),
         })
         .expect("extract.electrostatic_peak_field should register");
+    registry
+        .register_json(MagnetostaticResultDiagnosticsOperator {
+            descriptor: descriptor("extract.magnetostatic_result_diagnostics"),
+        })
+        .expect("extract.magnetostatic_result_diagnostics should register");
     registry
         .register_json(ThermalResultDiagnosticsOperator {
             descriptor: descriptor("extract.thermal_result_diagnostics"),

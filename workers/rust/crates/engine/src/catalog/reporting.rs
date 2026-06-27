@@ -51,6 +51,19 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_extract_descriptor(
+            "extract.magnetostatic_result_diagnostics",
+            "electromagnetic",
+            "magnetostatic_result_diagnostics",
+            "Extract magnetostatic diagnostics such as vector-potential span, current-density totals, and peak H/B field magnitudes.",
+            &[
+                "extract",
+                "magnetostatic",
+                "diagnostics",
+                "field",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
             "extract.thermal_result_diagnostics",
             "multi_domain",
             "thermal_result_diagnostics",

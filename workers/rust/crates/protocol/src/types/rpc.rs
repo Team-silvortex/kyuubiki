@@ -81,6 +81,10 @@ pub enum RpcMethod {
     SolveElectrostaticBar1d,
     #[serde(rename = "solve_magnetostatic_bar_1d")]
     SolveMagnetostaticBar1d,
+    #[serde(rename = "solve_magnetostatic_plane_triangle_2d")]
+    SolveMagnetostaticPlaneTriangle2d,
+    #[serde(rename = "solve_magnetostatic_plane_quad_2d")]
+    SolveMagnetostaticPlaneQuad2d,
     #[serde(rename = "solve_electrostatic_plane_triangle_2d")]
     SolveElectrostaticPlaneTriangle2d,
     #[serde(rename = "solve_electrostatic_plane_quad_2d")]
@@ -111,6 +115,8 @@ pub enum RpcMethod {
     SolveTruss3d,
     #[serde(rename = "solve_frame_3d")]
     SolveFrame3d,
+    #[serde(rename = "solve_modal_frame_3d")]
+    SolveModalFrame3d,
     #[serde(rename = "solve_plane_triangle_2d")]
     SolvePlaneTriangle2d,
     #[serde(rename = "solve_thermal_plane_triangle_2d")]
@@ -121,6 +127,8 @@ pub enum RpcMethod {
     SolveThermalPlaneQuad2d,
     #[serde(rename = "solve_frame_2d")]
     SolveFrame2d,
+    #[serde(rename = "solve_modal_frame_2d")]
+    SolveModalFrame2d,
     #[serde(rename = "solve_thermal_frame_2d")]
     SolveThermalFrame2d,
     #[serde(rename = "solve_thermal_frame_3d")]
@@ -232,6 +240,8 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveHeatBar1d,
                 RpcMethod::SolveElectrostaticBar1d,
                 RpcMethod::SolveMagnetostaticBar1d,
+                RpcMethod::SolveMagnetostaticPlaneTriangle2d,
+                RpcMethod::SolveMagnetostaticPlaneQuad2d,
                 RpcMethod::SolveElectrostaticPlaneTriangle2d,
                 RpcMethod::SolveElectrostaticPlaneQuad2d,
                 RpcMethod::SolveHeatPlaneTriangle2d,
@@ -247,11 +257,13 @@ impl RpcProtocolDescriptor {
                 RpcMethod::SolveTruss2d,
                 RpcMethod::SolveTruss3d,
                 RpcMethod::SolveFrame3d,
+                RpcMethod::SolveModalFrame3d,
                 RpcMethod::SolvePlaneTriangle2d,
                 RpcMethod::SolveThermalPlaneTriangle2d,
                 RpcMethod::SolvePlaneQuad2d,
                 RpcMethod::SolveThermalPlaneQuad2d,
                 RpcMethod::SolveFrame2d,
+                RpcMethod::SolveModalFrame2d,
                 RpcMethod::SolveThermalFrame2d,
                 RpcMethod::SolveThermalFrame3d,
                 RpcMethod::CancelJob,
@@ -277,47 +289,51 @@ impl AgentDescriptor {
                     id: "thermal-bar-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalBar1d],
-                    tags: vec![
-                        "bar".to_string(),
-                        "thermal".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["bar", "thermal", "line", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "heat-bar-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveHeatBar1d],
-                    tags: vec![
-                        "heat".to_string(),
-                        "bar".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["heat", "bar", "line", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "electrostatic-bar-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveElectrostaticBar1d],
-                    tags: vec![
-                        "electromagnetic".to_string(),
-                        "electrostatic".to_string(),
-                        "bar".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["electromagnetic", "electrostatic", "bar", "line", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "magnetostatic-bar-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveMagnetostaticBar1d],
-                    tags: vec![
-                        "electromagnetic".to_string(),
-                        "magnetostatic".to_string(),
-                        "bar".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["electromagnetic", "magnetostatic", "bar", "line", "cpu"]),
+                },
+                CapabilityDescriptor {
+                    id: "magnetostatic-plane-triangle-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveMagnetostaticPlaneTriangle2d],
+                    tags: tags(&[
+                        "electromagnetic",
+                        "magnetostatic",
+                        "plane",
+                        "triangle",
+                        "2d",
+                        "cpu",
+                    ]),
+                },
+                CapabilityDescriptor {
+                    id: "magnetostatic-plane-quad-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveMagnetostaticPlaneQuad2d],
+                    tags: tags(&[
+                        "electromagnetic",
+                        "magnetostatic",
+                        "plane",
+                        "quad",
+                        "2d",
+                        "cpu",
+                    ]),
                 },
                 CapabilityDescriptor {
                     id: "electrostatic-plane-triangle-2d".to_string(),
@@ -349,114 +365,61 @@ impl AgentDescriptor {
                     id: "heat-plane-triangle-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveHeatPlaneTriangle2d],
-                    tags: vec![
-                        "heat".to_string(),
-                        "plane".to_string(),
-                        "mesh".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["heat", "plane", "mesh", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "heat-plane-quad-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveHeatPlaneQuad2d],
-                    tags: vec![
-                        "heat".to_string(),
-                        "plane".to_string(),
-                        "mesh".to_string(),
-                        "quad".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["heat", "plane", "mesh", "quad", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-truss-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalTruss2d],
-                    tags: vec![
-                        "truss".to_string(),
-                        "thermal".to_string(),
-                        "plane".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["truss", "thermal", "plane", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-truss-3d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalTruss3d],
-                    tags: vec![
-                        "truss".to_string(),
-                        "thermal".to_string(),
-                        "space".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["truss", "thermal", "space", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "spring-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveSpring1d],
-                    tags: vec![
-                        "spring".to_string(),
-                        "line".to_string(),
-                        "support".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["spring", "line", "support", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "spring-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveSpring2d],
-                    tags: vec![
-                        "spring".to_string(),
-                        "plane".to_string(),
-                        "support".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["spring", "plane", "support", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "spring-3d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveSpring3d],
-                    tags: vec![
-                        "spring".to_string(),
-                        "space".to_string(),
-                        "support".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["spring", "space", "support", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "beam-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveBeam1d],
-                    tags: vec![
-                        "beam".to_string(),
-                        "bending".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["beam", "bending", "line", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-beam-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalBeam1d],
-                    tags: vec![
-                        "beam".to_string(),
-                        "thermal".to_string(),
-                        "bending".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["beam", "thermal", "bending", "line", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-frame-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalFrame2d],
-                    tags: vec![
-                        "frame".to_string(),
-                        "thermal".to_string(),
-                        "beam".to_string(),
-                        "bending".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["frame", "thermal", "beam", "bending", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "thermal-frame-3d".to_string(),
@@ -475,12 +438,7 @@ impl AgentDescriptor {
                     id: "torsion-1d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveTorsion1d],
-                    tags: vec![
-                        "torsion".to_string(),
-                        "shaft".to_string(),
-                        "line".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["torsion", "shaft", "line", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "truss-2d".to_string(),
@@ -507,6 +465,12 @@ impl AgentDescriptor {
                     ],
                 },
                 CapabilityDescriptor {
+                    id: "modal-frame-3d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveModalFrame3d],
+                    tags: tags(&["modal", "frame", "space", "vibration", "cpu"]),
+                },
+                CapabilityDescriptor {
                     id: "plane-triangle-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolvePlaneTriangle2d],
@@ -516,12 +480,7 @@ impl AgentDescriptor {
                     id: "thermal-plane-triangle-2d".to_string(),
                     role: "solver".to_string(),
                     methods: vec![RpcMethod::SolveThermalPlaneTriangle2d],
-                    tags: vec![
-                        "plane".to_string(),
-                        "thermal".to_string(),
-                        "mesh".to_string(),
-                        "cpu".to_string(),
-                    ],
+                    tags: tags(&["plane", "thermal", "mesh", "cpu"]),
                 },
                 CapabilityDescriptor {
                     id: "plane-quad-2d".to_string(),
@@ -558,6 +517,12 @@ impl AgentDescriptor {
                     ],
                 },
                 CapabilityDescriptor {
+                    id: "modal-frame-2d".to_string(),
+                    role: "solver".to_string(),
+                    methods: vec![RpcMethod::SolveModalFrame2d],
+                    tags: tags(&["modal", "frame", "vibration", "cpu"]),
+                },
+                CapabilityDescriptor {
                     id: "control".to_string(),
                     role: "runtime".to_string(),
                     methods: vec![
@@ -591,4 +556,8 @@ impl AgentDescriptor {
             },
         }
     }
+}
+
+fn tags(values: &[&str]) -> Vec<String> {
+    values.iter().map(|value| (*value).to_string()).collect()
 }

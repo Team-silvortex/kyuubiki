@@ -35,13 +35,13 @@ pub(crate) fn attach_bridge_diagnostics<T: Serialize>(
 
 #[derive(Debug, Clone)]
 pub(crate) struct ElectrostaticToHeatBridgeContract {
-    source_field: String,
-    distribution: String,
-    node_index_fields: Vec<String>,
-    scale: f64,
-    reduction: String,
-    default_value: f64,
-    target_field: String,
+    pub(crate) source_field: String,
+    pub(crate) distribution: String,
+    pub(crate) node_index_fields: Vec<String>,
+    pub(crate) scale: f64,
+    pub(crate) reduction: String,
+    pub(crate) default_value: f64,
+    pub(crate) target_field: String,
 }
 
 pub(crate) fn resolve_electrostatic_to_heat_bridge_contract(
@@ -313,7 +313,7 @@ fn derive_direct_nodal_target_field(
     Ok((source_values, nodal_values))
 }
 
-fn derive_element_nodal_target_field<TElement>(
+pub(crate) fn derive_element_nodal_target_field<TElement>(
     elements: &[TElement],
     node_count: usize,
     contract: &ElectrostaticToHeatBridgeContract,

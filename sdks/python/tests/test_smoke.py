@@ -335,26 +335,32 @@ class SmokeTest(unittest.TestCase):
         thermal_frame = session.submit_job("thermal_frame_3d", {"nodes": [], "elements": []})
         self.assertEqual(thermal_frame["job"]["job_id"], "job-thermal-frame-3d")
 
-    def test_session_supports_direct_rpc_for_expanded_solve_kinds(self) -> None:
+    def test_session_supports_direct_rpc_for_advanced_solve_kinds(self) -> None:
         listener = socket.create_server(("127.0.0.1", 0))
         host, port = listener.getsockname()
+        expected_methods = [
+            "solve_modal_frame_2d",
+            "solve_nonlinear_spring_1d",
+            "solve_contact_gap_1d",
+        ]
 
         def serve_once() -> None:
-            conn, _addr = listener.accept()
-            with conn:
-                size = struct.unpack(">I", _recv_exact(conn, 4))[0]
-                payload = json.loads(_recv_exact(conn, size).decode("utf-8"))
-                self.assertEqual(payload["method"], "solve_electrostatic_plane_quad_2d")
-                frame = json.dumps(
-                    {
-                        "ok": True,
-                        "result": {
-                            "solver": "electrostatic_plane_quad_2d",
-                            "input": payload["params"],
-                        },
-                    }
-                ).encode("utf-8")
-                conn.sendall(struct.pack(">I", len(frame)) + frame)
+            for expected_method in expected_methods:
+                conn, _addr = listener.accept()
+                with conn:
+                    size = struct.unpack(">I", _recv_exact(conn, 4))[0]
+                    payload = json.loads(_recv_exact(conn, size).decode("utf-8"))
+                    self.assertEqual(payload["method"], expected_method)
+                    frame = json.dumps(
+                        {
+                            "ok": True,
+                            "result": {
+                                "solver": expected_method.removeprefix("solve_"),
+                                "input": payload["params"],
+                            },
+                        }
+                    ).encode("utf-8")
+                    conn.sendall(struct.pack(">I", len(frame)) + frame)
 
         thread = threading.Thread(target=serve_once, daemon=True)
         thread.start()
@@ -364,11 +370,12 @@ class SmokeTest(unittest.TestCase):
                 rpc_host=host,
                 rpc_port=port,
             )
-            result = session.solve_direct(
-                "electrostatic_plane_quad_2d",
-                {"nodes": [], "elements": []},
-            )
-            self.assertEqual(result["solver"], "electrostatic_plane_quad_2d")
+            modal = session.solve_direct("modal_frame_2d", {"nodes": [], "elements": []})
+            nonlinear = session.solve_direct("nonlinear_spring_1d", {"nodes": [], "elements": []})
+            contact = session.solve_direct("contact_gap_1d", {"nodes": [], "elements": [], "contacts": []})
+            self.assertEqual(modal["solver"], "modal_frame_2d")
+            self.assertEqual(nonlinear["solver"], "nonlinear_spring_1d")
+            self.assertEqual(contact["solver"], "contact_gap_1d")
         finally:
             listener.close()
             thread.join(timeout=1)

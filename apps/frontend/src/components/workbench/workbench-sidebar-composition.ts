@@ -44,6 +44,7 @@ export function buildWorkbenchSidebarComposition(props: Record<string, any>) {
     workflowLabels: props.workflowLabels,
     workflowCatalog: workflowController.workflowCatalog,
     workflowOperatorDescriptors: workflowController.workflowOperatorDescriptors,
+    workflowOperatorModules: workflowController.workflowOperatorModules,
     workflowCatalogBusy: workflowController.workflowCatalogBusy,
     selectedWorkflowId: workflowController.selectedWorkflowId,
     selectedWorkflow: workflowController.selectedWorkflow,

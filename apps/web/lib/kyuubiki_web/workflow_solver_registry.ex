@@ -12,6 +12,18 @@ defmodule KyuubikiWeb.WorkflowSolverRegistry do
      "electrostatic_bar_1d",
      "Solve a 1D electrostatic bar model and expose potential, field, and flux results.",
      ["verified", "electromagnetic", "electrostatic", "bar", "1d"]},
+    {"solve.magnetostatic_bar_1d", :solve_magnetostatic_bar_1d, "electromagnetic",
+     "magnetostatic_bar_1d",
+     "Solve a 1D magnetostatic bar model and expose magnetic potential, H-field, and B-field results.",
+     ["verified", "electromagnetic", "magnetostatic", "bar", "1d"]},
+    {"solve.magnetostatic_plane_triangle_2d", :solve_magnetostatic_plane_triangle_2d,
+     "electromagnetic", "magnetostatic_plane_triangle_2d",
+     "Solve a 2D magnetostatic triangle model with vector potential, H-field, B-field, and stored magnetic energy outputs.",
+     ["verified", "electromagnetic", "magnetostatic", "plane", "triangle", "2d"]},
+    {"solve.magnetostatic_plane_quad_2d", :solve_magnetostatic_plane_quad_2d, "electromagnetic",
+     "magnetostatic_plane_quad_2d",
+     "Solve a 2D magnetostatic quad model with vector potential, H-field, B-field, and stored magnetic energy outputs.",
+     ["verified", "electromagnetic", "magnetostatic", "plane", "quad", "2d"]},
     {"solve.electrostatic_plane_triangle_2d", :solve_electrostatic_plane_triangle_2d,
      "electromagnetic", "electrostatic_plane_triangle_2d",
      "Solve a 2D electrostatic triangle model and expose potential, field, and flux results.",
@@ -85,7 +97,19 @@ defmodule KyuubikiWeb.WorkflowSolverRegistry do
      ["verified", "mechanical", "frame", "2d"]},
     {"solve.thermal_frame_2d", :solve_thermal_frame_2d, "thermo_mechanical", "thermal_frame_2d",
      "Solve a thermal 2D frame model with restrained expansion and gradients.",
-     ["verified", "thermo_mechanical", "frame", "2d"]}
+     ["verified", "thermo_mechanical", "frame", "2d"]},
+    {"solve.modal_frame_2d", :solve_modal_frame_2d, "mechanical", "modal_frame_2d",
+     "Solve a 2D frame modal model and emit natural frequencies with normalized mode-shape vectors.",
+     ["verified", "mechanical", "modal", "vibration", "frame", "2d"]},
+    {"solve.modal_frame_3d", :solve_modal_frame_3d, "mechanical", "modal_frame_3d",
+     "Solve a 3D frame modal model and emit natural frequencies with six-DOF mode-shape vectors.",
+     ["verified", "mechanical", "modal", "vibration", "frame", "3d"]},
+    {"solve.nonlinear_spring_1d", :solve_nonlinear_spring_1d, "mechanical", "nonlinear_spring_1d",
+     "Solve a nonlinear 1D spring chain with load stepping, tangent stiffness, and Newton convergence diagnostics.",
+     ["verified", "mechanical", "nonlinear", "spring", "1d"]},
+    {"solve.contact_gap_1d", :solve_contact_gap_1d, "mechanical", "contact_gap_1d",
+     "Solve a 1D gap-contact model with active-set contact state, penetration checks, and reaction output.",
+     ["verified", "mechanical", "contact", "gap", "1d"]}
   ]
 
   @solvers Enum.map(@solver_specs, fn {id, method, domain, family, summary, capability_tags} ->
@@ -143,11 +167,23 @@ defmodule KyuubikiWeb.WorkflowSolverRegistry do
         )
       ],
       "validation" => %{
-        "baseline_status" => "verified",
-        "baseline_cases" => ["#{family}_baseline"],
+        "baseline_status" => validation_status(tags),
+        "baseline_cases" => baseline_cases(family, tags),
         "smoke_paths" => ["workflow_graph", "orchestrated_api"]
       }
     }
+  end
+
+  defp validation_status(tags) do
+    cond do
+      "unverified" in tags -> "unverified"
+      "partial" in tags or "roadmap" in tags -> "partial"
+      true -> "verified"
+    end
+  end
+
+  defp baseline_cases(family, tags) do
+    if validation_status(tags) == "verified", do: ["#{family}_baseline"], else: []
   end
 
   defp port_descriptor(id, artifact_type, description, dataset_value, schema_ref) do

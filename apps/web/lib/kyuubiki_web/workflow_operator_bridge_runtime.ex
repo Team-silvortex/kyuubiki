@@ -6,14 +6,36 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
         heat_seed_model,
         bridge_contract
       ),
-      do: bridge_electrostatic_result_to_heat_model(electrostatic_result, heat_seed_model, bridge_contract)
+      do:
+        bridge_electrostatic_result_to_heat_model(
+          electrostatic_result,
+          heat_seed_model,
+          bridge_contract
+        )
 
   def bridge_electrostatic_result_to_heat_plane_triangle_model(
         electrostatic_result,
         heat_seed_model,
         bridge_contract
       ),
-      do: bridge_electrostatic_result_to_heat_model(electrostatic_result, heat_seed_model, bridge_contract)
+      do:
+        bridge_electrostatic_result_to_heat_model(
+          electrostatic_result,
+          heat_seed_model,
+          bridge_contract
+        )
+
+  def bridge_magnetostatic_result_to_heat_plane_quad_model(
+        magnetostatic_result,
+        heat_seed_model,
+        bridge_contract
+      ),
+      do:
+        bridge_electrostatic_result_to_heat_model(
+          magnetostatic_result,
+          heat_seed_model,
+          bridge_contract
+        )
 
   def resolve_electrostatic_to_heat_bridge_contract(config) when is_map(config) do
     contract = Map.get(config, "contract", %{})
@@ -69,6 +91,28 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
   def resolve_electrostatic_to_heat_bridge_contract(_config),
     do: {:error, :invalid_bridge_contract}
 
+  def resolve_magnetostatic_to_heat_bridge_contract(config) when is_map(config) do
+    config
+    |> put_in_default_source_field("magnetic_flux_density_magnitude")
+    |> resolve_electrostatic_to_heat_bridge_contract()
+    |> case do
+      {:ok, bridge_contract} ->
+        validate_magnetostatic_bridge_source_field(
+          bridge_contract.source_field,
+          bridge_contract.distribution
+        )
+        |> case do
+          :ok -> {:ok, bridge_contract}
+          error -> error
+        end
+
+      error ->
+        error
+    end
+  end
+
+  def resolve_magnetostatic_to_heat_bridge_contract(_config),
+    do: {:error, :invalid_bridge_contract}
 
   defp bridge_electrostatic_result_to_heat_model(
          %{"nodes" => electrostatic_nodes, "elements" => electrostatic_elements},
@@ -103,7 +147,12 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
          bridge_contract
        ) do
     with :ok <- ensure_node_alignment(electrostatic_nodes, heat_nodes),
-         :ok <- validate_electrostatic_bridge_shape(electrostatic_elements, heat_elements, bridge_contract),
+         :ok <-
+           validate_electrostatic_bridge_shape(
+             electrostatic_elements,
+             heat_elements,
+             bridge_contract
+           ),
          nodal_heat_loads <-
            derive_nodal_target_field(
              electrostatic_nodes,
@@ -111,17 +160,17 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
              length(heat_nodes),
              bridge_contract
            ) do
-        bridged_nodes =
-          Enum.with_index(heat_nodes)
-          |> Enum.map(fn {heat_node, index} ->
-            Map.put(
-              heat_node,
-              bridge_contract.target_field,
-              Enum.at(nodal_heat_loads, index, bridge_contract.default_value)
-            )
-          end)
+      bridged_nodes =
+        Enum.with_index(heat_nodes)
+        |> Enum.map(fn {heat_node, index} ->
+          Map.put(
+            heat_node,
+            bridge_contract.target_field,
+            Enum.at(nodal_heat_loads, index, bridge_contract.default_value)
+          )
+        end)
 
-        {:ok, Map.put(heat_seed_model, "nodes", bridged_nodes)}
+      {:ok, Map.put(heat_seed_model, "nodes", bridged_nodes)}
     end
   end
 
@@ -130,7 +179,11 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
        }),
        do: :ok
 
-  defp validate_electrostatic_bridge_shape(electrostatic_elements, heat_elements, _bridge_contract) do
+  defp validate_electrostatic_bridge_shape(
+         electrostatic_elements,
+         heat_elements,
+         _bridge_contract
+       ) do
     if length(electrostatic_elements) == length(heat_elements),
       do: :ok,
       else: {:error, :element_count_mismatch}
@@ -153,7 +206,12 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
          nodes,
          _elements,
          _node_count,
-         %{distribution: "node_to_node", source_field: source_field, scale: scale, default_value: default_value}
+         %{
+           distribution: "node_to_node",
+           source_field: source_field,
+           scale: scale,
+           default_value: default_value
+         }
        ) do
     Enum.map(nodes, fn node ->
       node
@@ -187,6 +245,7 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
             |> electrostatic_bridge_source_value(source_field, bridge_contract.default_value)
 
           weight = normalize_numeric_value(Map.get(element, "area", 1.0))
+
           node_indexes =
             Enum.map(node_index_fields, &Map.get(element, &1)) |> Enum.filter(&is_integer/1)
 
@@ -196,31 +255,35 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
             fn node_index,
                {totals_acc, counts_acc, weighted_totals_acc, weight_sums_acc, minima_acc,
                 maxima_acc} ->
-            next_min =
-              minima_acc
-              |> Enum.at(node_index)
-              |> case do
-                nil -> magnitude * scale
-                current -> min(current, magnitude * scale)
-              end
+              next_min =
+                minima_acc
+                |> Enum.at(node_index)
+                |> case do
+                  nil -> magnitude * scale
+                  current -> min(current, magnitude * scale)
+                end
 
-            next_max =
-              maxima_acc
-              |> Enum.at(node_index)
-              |> case do
-                nil -> magnitude * scale
-                current -> max(current, magnitude * scale)
-              end
+              next_max =
+                maxima_acc
+                |> Enum.at(node_index)
+                |> case do
+                  nil -> magnitude * scale
+                  current -> max(current, magnitude * scale)
+                end
 
-            {
-              List.update_at(totals_acc, node_index, &(&1 + magnitude * scale)),
-              List.update_at(counts_acc, node_index, &(&1 + 1)),
-              List.update_at(weighted_totals_acc, node_index, &(&1 + magnitude * scale * weight)),
-              List.update_at(weight_sums_acc, node_index, &(&1 + weight)),
-              List.replace_at(minima_acc, node_index, next_min),
-              List.replace_at(maxima_acc, node_index, next_max)
-            }
-          end
+              {
+                List.update_at(totals_acc, node_index, &(&1 + magnitude * scale)),
+                List.update_at(counts_acc, node_index, &(&1 + 1)),
+                List.update_at(
+                  weighted_totals_acc,
+                  node_index,
+                  &(&1 + magnitude * scale * weight)
+                ),
+                List.update_at(weight_sums_acc, node_index, &(&1 + weight)),
+                List.replace_at(minima_acc, node_index, next_min),
+                List.replace_at(maxima_acc, node_index, next_max)
+              }
+            end
           )
         end
       )
@@ -261,8 +324,11 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
        ) do
     Enum.zip([weighted_totals, weight_sums, counts])
     |> Enum.map(fn
-      {weighted_total, weight_sum, count} when count > 0 and weight_sum > 0 -> weighted_total / weight_sum
-      {_weighted_total, _weight_sum, _count} -> default_value
+      {weighted_total, weight_sum, count} when count > 0 and weight_sum > 0 ->
+        weighted_total / weight_sum
+
+      {_weighted_total, _weight_sum, _count} ->
+        default_value
     end)
   end
 
@@ -285,8 +351,8 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
          _minima,
          maxima,
          %{
-         reduction: "max",
-         default_value: default_value
+           reduction: "max",
+           default_value: default_value
          }
        ) do
     Enum.zip(maxima, counts)
@@ -314,7 +380,10 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
 
   defp electrostatic_bridge_source_value(element, "flux_magnitude", default_value) do
     element
-    |> Map.get("electric_flux_density_magnitude", default_value)
+    |> Map.get(
+      "electric_flux_density_magnitude",
+      Map.get(element, "magnetic_flux_density_magnitude", default_value)
+    )
     |> normalize_numeric_value()
   end
 
@@ -384,13 +453,112 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
        ),
        do: :ok
 
+  defp validate_electrostatic_bridge_source_field("vector_potential", "node_to_node"), do: :ok
+  defp validate_electrostatic_bridge_source_field("current_density", "node_to_node"), do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "magnetic_field_strength_magnitude",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "magnetic_field_strength_x",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "magnetic_field_strength_y",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "average_vector_potential",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "magnetic_flux_density_magnitude",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "magnetic_flux_density_x",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_electrostatic_bridge_source_field(
+         "magnetic_flux_density_y",
+         "element_to_nodes"
+       ),
+       do: :ok
+
   defp validate_electrostatic_bridge_source_field(_source_field, _distribution),
     do: {:error, :invalid_bridge_contract_source_field}
 
   defp validate_electrostatic_bridge_target_field("heat_load"), do: :ok
   defp validate_electrostatic_bridge_target_field("temperature"), do: :ok
+
   defp validate_electrostatic_bridge_target_field(_target_field),
     do: {:error, :invalid_bridge_contract_target_field}
+
+  defp validate_magnetostatic_bridge_source_field("vector_potential", "node_to_node"), do: :ok
+  defp validate_magnetostatic_bridge_source_field("current_density", "node_to_node"), do: :ok
+
+  defp validate_magnetostatic_bridge_source_field(
+         "magnetic_field_strength_magnitude",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_magnetostatic_bridge_source_field(
+         "magnetic_field_strength_x",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_magnetostatic_bridge_source_field(
+         "magnetic_field_strength_y",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_magnetostatic_bridge_source_field("average_vector_potential", "element_to_nodes"),
+    do: :ok
+
+  defp validate_magnetostatic_bridge_source_field("flux_magnitude", "element_to_nodes"), do: :ok
+
+  defp validate_magnetostatic_bridge_source_field(
+         "magnetic_flux_density_magnitude",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_magnetostatic_bridge_source_field("magnetic_flux_density_x", "element_to_nodes"),
+    do: :ok
+
+  defp validate_magnetostatic_bridge_source_field("magnetic_flux_density_y", "element_to_nodes"),
+    do: :ok
+
+  defp validate_magnetostatic_bridge_source_field("stored_energy", "element_to_nodes"), do: :ok
+  defp validate_magnetostatic_bridge_source_field("energy", "element_to_nodes"), do: :ok
+
+  defp validate_magnetostatic_bridge_source_field(
+         "stored_energy_area_density",
+         "element_to_nodes"
+       ),
+       do: :ok
+
+  defp validate_magnetostatic_bridge_source_field("energy_area_density", "element_to_nodes"),
+    do: :ok
+
+  defp validate_magnetostatic_bridge_source_field(_source_field, _distribution),
+    do: {:error, :invalid_bridge_contract_source_field}
 
   defp normalize_node_index_fields(fields) when is_list(fields) do
     normalized =
@@ -410,6 +578,19 @@ defmodule KyuubikiWeb.WorkflowOperatorBridgeRuntime do
 
   defp normalize_numeric_value(value) when is_number(value), do: value
   defp normalize_numeric_value(_value), do: 0.0
+
+  defp put_in_default_source_field(config, default_field) do
+    contract = Map.get(config, "contract", %{})
+    source = Map.get(contract, "source", %{})
+
+    if Map.has_key?(source, "field") do
+      config
+    else
+      source = Map.put(source, "field", default_field)
+      contract = Map.put(contract, "source", source)
+      Map.put(config, "contract", contract)
+    end
+  end
 
   defp close_enough?(left, right) when is_number(left) and is_number(right),
     do: abs(left - right) <= 1.0e-9

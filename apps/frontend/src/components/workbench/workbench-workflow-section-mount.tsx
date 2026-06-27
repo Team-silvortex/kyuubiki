@@ -9,6 +9,7 @@ import type {
   WorkflowCatalogEntry,
   WorkflowGraphDefinition,
   WorkflowOperatorDescriptor,
+  WorkflowOperatorModuleSummary,
 } from "@/lib/api";
 import type { HeatPlaneStudyJobInput, PlaneStudyJobInput, StudyKind } from "@/components/workbench/workbench-types";
 
@@ -29,6 +30,7 @@ type WorkbenchWorkflowSectionMountProps = {
   labels: WorkflowSidebarLabels;
   workflowCatalogEntries: WorkflowCatalogEntry[];
   workflowOperatorDescriptors?: WorkflowOperatorDescriptor[];
+  workflowOperatorModules?: WorkflowOperatorModuleSummary[];
   workflowCatalogBusy: boolean;
   selectedWorkflowId: string | null;
   selectedWorkflow: WorkflowCatalogEntry | null;
@@ -59,6 +61,7 @@ export function WorkbenchWorkflowSectionMount({
   labels,
   workflowCatalogEntries,
   workflowOperatorDescriptors,
+  workflowOperatorModules,
   workflowCatalogBusy,
   selectedWorkflowId,
   selectedWorkflow,
@@ -102,6 +105,7 @@ export function WorkbenchWorkflowSectionMount({
       labels={labels}
       workflowCatalogEntries={workflowCatalogEntries}
       workflowOperatorDescriptors={workflowOperatorDescriptors}
+      workflowOperatorModules={workflowOperatorModules}
       workflowCatalogBusy={workflowCatalogBusy}
       selectedWorkflowId={selectedWorkflowId}
       selectedWorkflow={selectedWorkflow}

@@ -127,6 +127,26 @@ pub struct SolveFrame2dRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModalFrame2dElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub area: f64,
+    pub youngs_modulus: f64,
+    pub moment_of_inertia: f64,
+    pub section_modulus: f64,
+    pub density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveModalFrame2dRequest {
+    pub nodes: Vec<Frame2dNodeInput>,
+    pub elements: Vec<ModalFrame2dElementInput>,
+    #[serde(default)]
+    pub mode_count: Option<usize>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ThermalFrame2dNodeInput {
     pub id: String,
     pub x: f64,
@@ -402,6 +422,27 @@ pub struct SolveFrame2dResult {
     pub max_rotation: f64,
     pub max_moment: f64,
     pub max_stress: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModalFrame2dModeResult {
+    pub index: usize,
+    pub eigenvalue_rad_s_squared: f64,
+    pub natural_frequency_rad_s: f64,
+    pub natural_frequency_hz: f64,
+    pub period_s: f64,
+    pub participation_norm: f64,
+    pub shape: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveModalFrame2dResult {
+    pub input: SolveModalFrame2dRequest,
+    pub modes: Vec<ModalFrame2dModeResult>,
+    pub free_dofs: Vec<usize>,
+    pub total_mass: f64,
+    pub min_frequency_hz: f64,
+    pub max_frequency_hz: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

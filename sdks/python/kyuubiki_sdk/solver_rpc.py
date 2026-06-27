@@ -14,15 +14,20 @@ _SOLVER_METHODS: dict[str, str] = {
     "heat_bar_1d": "solve_heat_bar_1d",
     "electrostatic_bar_1d": "solve_electrostatic_bar_1d",
     "magnetostatic_bar_1d": "solve_magnetostatic_bar_1d",
+    "magnetostatic_plane_triangle_2d": "solve_magnetostatic_plane_triangle_2d",
+    "magnetostatic_plane_quad_2d": "solve_magnetostatic_plane_quad_2d",
     "beam_1d": "solve_beam_1d",
     "thermal_beam_1d": "solve_thermal_beam_1d",
     "torsion_1d": "solve_torsion_1d",
     "spring_1d": "solve_spring_1d",
+    "nonlinear_spring_1d": "solve_nonlinear_spring_1d",
+    "contact_gap_1d": "solve_contact_gap_1d",
     "spring_2d": "solve_spring_2d",
     "spring_3d": "solve_spring_3d",
     "truss_2d": "solve_truss_2d",
     "thermal_truss_2d": "solve_thermal_truss_2d",
     "frame_2d": "solve_frame_2d",
+    "modal_frame_2d": "solve_modal_frame_2d",
     "thermal_frame_2d": "solve_thermal_frame_2d",
     "plane_triangle_2d": "solve_plane_triangle_2d",
     "heat_plane_triangle_2d": "solve_heat_plane_triangle_2d",
@@ -35,6 +40,7 @@ _SOLVER_METHODS: dict[str, str] = {
     "truss_3d": "solve_truss_3d",
     "thermal_truss_3d": "solve_thermal_truss_3d",
     "frame_3d": "solve_frame_3d",
+    "modal_frame_3d": "solve_modal_frame_3d",
     "thermal_frame_3d": "solve_thermal_frame_3d",
 }
 
@@ -115,8 +121,26 @@ class SolverRpcClient:
     def solve_truss_3d(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.solve_study("truss_3d", payload)
 
+    def solve_modal_frame_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("modal_frame_2d", payload)
+
+    def solve_modal_frame_3d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("modal_frame_3d", payload)
+
+    def solve_nonlinear_spring_1d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("nonlinear_spring_1d", payload)
+
+    def solve_contact_gap_1d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("contact_gap_1d", payload)
+
     def solve_plane_triangle_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self.solve_study("plane_triangle_2d", payload)
+
+    def solve_magnetostatic_plane_triangle_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("magnetostatic_plane_triangle_2d", payload)
+
+    def solve_magnetostatic_plane_quad_2d(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.solve_study("magnetostatic_plane_quad_2d", payload)
 
     def cancel_job(self, job_id: str) -> dict[str, Any]:
         return self._call("cancel_job", {"job_id": job_id})

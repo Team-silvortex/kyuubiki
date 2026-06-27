@@ -20,6 +20,7 @@ import type {
   WorkflowGraphDefinition,
   WorkflowGraphJobResult,
   WorkflowOperatorDescriptor,
+  WorkflowOperatorModuleSummary,
 } from "@/lib/api/workflow-types";
 import type { WorkflowRunRecord, WorkflowSurfaceTab } from "@/components/workbench/workflow/workbench-workflow-types";
 import { builtInWorkflowSampleInputArtifacts } from "@/components/workbench/workflow/workbench-workflow-sample-inputs";
@@ -89,6 +90,7 @@ export function useWorkbenchWorkflowController({
 }: UseWorkbenchWorkflowControllerArgs) {
   const [workflowCatalog, setWorkflowCatalog] = useState<WorkflowCatalogEntry[]>([]);
   const [workflowOperatorDescriptors, setWorkflowOperatorDescriptors] = useState<WorkflowOperatorDescriptor[]>([]);
+  const [workflowOperatorModules, setWorkflowOperatorModules] = useState<WorkflowOperatorModuleSummary[]>([]);
   const [workflowCatalogBusy, setWorkflowCatalogBusy] = useState(false);
   const [workflowPanelTab, setWorkflowPanelTab] = useState<WorkflowSurfaceTab>("overview");
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
@@ -100,10 +102,14 @@ export function useWorkbenchWorkflowController({
     try {
       const [payload, operatorPayload] = await Promise.all([
         fetchWorkflowCatalog(),
-        fetchWorkflowOperators().catch(() => ({ operators: [] as WorkflowOperatorDescriptor[] })),
+        fetchWorkflowOperators().catch(() => ({
+          modules: [] as WorkflowOperatorModuleSummary[],
+          operators: [] as WorkflowOperatorDescriptor[],
+        })),
       ]);
       const localEntries = buildStoredLocalWorkflowCatalogEntries();
       setWorkflowOperatorDescriptors(operatorPayload.operators ?? []);
+      setWorkflowOperatorModules(operatorPayload.modules ?? []);
       setWorkflowCatalog([...localEntries, ...payload.workflows]);
       setSelectedWorkflowId((current) =>
         current && [...localEntries, ...payload.workflows].some((entry) => entry.id === current)
@@ -333,6 +339,7 @@ export function useWorkbenchWorkflowController({
   return {
     workflowCatalog,
     workflowOperatorDescriptors,
+    workflowOperatorModules,
     workflowCatalogBusy,
     workflowPanelTab,
     setWorkflowPanelTab,

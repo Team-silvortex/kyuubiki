@@ -13,6 +13,9 @@ client = KyuubikiSdk.ControlPlaneClient.new("http://127.0.0.1:4000", auth: auth)
 
 rpc = KyuubikiSdk.SolverRpcClient.new("127.0.0.1", 5001)
 {:ok, descriptor} = KyuubikiSdk.SolverRpcClient.describe_agent(rpc)
+{:ok, modal} = KyuubikiSdk.SolverRpcClient.solve_modal_frame_2d(rpc, %{"nodes" => [], "elements" => []})
+{:ok, nonlinear} = KyuubikiSdk.SolverRpcClient.solve_nonlinear_spring_1d(rpc, %{"nodes" => [], "elements" => []})
+{:ok, contact} = KyuubikiSdk.SolverRpcClient.solve_contact_gap_1d(rpc, %{"nodes" => [], "elements" => [], "contacts" => []})
 
 session =
   KyuubikiSdk.new_session(
@@ -71,6 +74,9 @@ graph =
       required_capabilities: ["artifact-cache"]
     }
   )
+modal_graph = KyuubikiSdk.modal_frame_2d_workflow()
+nonlinear_graph = KyuubikiSdk.nonlinear_spring_1d_workflow(%{orchestrated: false})
+contact_graph = KyuubikiSdk.contact_gap_1d_workflow()
 
 {:ok, output_manifest} = KyuubikiSdk.build_workflow_output_manifest(graph)
 {:ok, validated_outputs} = KyuubikiSdk.validate_workflow_result_against_graph(graph, workflow_run.result)
@@ -90,13 +96,15 @@ Highlights:
 - operator catalog listing, filtering, and descriptor fetch
 - workflow catalog descriptor fetch plus auto graph resolution for catalog runs
 - expanded solve-kind coverage across structural, thermal,
-  thermo-mechanical, and electrostatic study families
+  thermo-mechanical, electrostatic, modal, and nonlinear study families
 - direct framed TCP solver-RPC access
 - `KyuubikiSdk.Session` for submit/batch/wait flows
 - `KyuubikiSdk.AgentClient` for run-study, workflow-run, and chunk-browse flows
 - retry, failure classification, and chunk streaming helpers
 - `KyuubikiSdk.Auth` and structured `KyuubikiSdk.Error`
 - workflow contract validation and builder helpers
+- advanced solver workflow templates for modal frame, nonlinear spring, and
+  contact gap runs
 - distributed workflow execution-hint fields for dispatch policy, operator fetch
   plan, placement tags, and required capabilities
 - workflow output manifest and result validation helpers
@@ -106,6 +114,7 @@ Highlights:
 Example:
 
 - Run from [run_study.exs](examples/run_study.exs)
+- Advanced solver example: [run_advanced_solvers.exs](examples/run_advanced_solvers.exs)
 - Typical invocation:
   `cd sdks/elixir && KYUUBIKI_BASE_URL=http://127.0.0.1:4000 mix run examples/run_study.exs`
 - Smoke test:

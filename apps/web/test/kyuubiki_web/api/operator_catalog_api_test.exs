@@ -220,6 +220,24 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
         operator["id"] == "solve.electrostatic_plane_quad_2d"
       end)
 
+    modal_frame_operator =
+      Enum.find(operators, fn operator -> operator["id"] == "solve.modal_frame_2d" end)
+
+    magnetostatic_quad_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "solve.magnetostatic_plane_quad_2d"
+      end)
+
+    magnetostatic_heat_bridge_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "bridge.magnetostatic_field_to_heat_quad_2d"
+      end)
+
+    magnetostatic_diagnostics_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "extract.magnetostatic_result_diagnostics"
+      end)
+
     assert electrostatic_plane_operator["kind"] == "solver"
     assert electrostatic_plane_operator["family"] == "electrostatic_plane_triangle_2d"
     assert electrostatic_plane_operator["domain"] == "electromagnetic"
@@ -228,6 +246,14 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert electrostatic_plane_quad_operator["family"] == "electrostatic_plane_quad_2d"
     assert electrostatic_plane_quad_operator["domain"] == "electromagnetic"
     assert "quad" in electrostatic_plane_quad_operator["capability_tags"]
+    assert modal_frame_operator["validation"]["baseline_status"] == "verified"
+    assert "modal" in modal_frame_operator["capability_tags"]
+    assert magnetostatic_quad_operator["validation"]["baseline_status"] == "verified"
+    assert "magnetostatic" in magnetostatic_quad_operator["capability_tags"]
+    assert magnetostatic_heat_bridge_operator["kind"] == "workflow_bridge"
+    assert magnetostatic_heat_bridge_operator["validation"]["baseline_status"] == "verified"
+    assert magnetostatic_diagnostics_operator["kind"] == "extract"
+    assert magnetostatic_diagnostics_operator["validation"]["baseline_status"] == "verified"
 
     fetch_conn =
       :get
@@ -281,6 +307,22 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert thermal_module["operator_count"] == length(operators)
     assert thermal_module["verified_count"] == length(operators)
     assert "heat" in thermal_module["capability_tags"]
+  end
+
+  test "surfaces verified modal physics operators as mechanical module coverage" do
+    conn =
+      :get
+      |> conn("/api/v1/operators?q=modal")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    operators = payload["operators"]
+    mechanical_module = Enum.find(payload["modules"], &(&1["id"] == "mechanical.solver"))
+
+    assert Enum.any?(operators, &(&1["id"] == "solve.modal_frame_2d"))
+    assert Enum.any?(operators, &(&1["id"] == "solve.modal_frame_3d"))
+    assert mechanical_module["verified_count"] >= 2
   end
 
   test "returns 404 for an unknown operator descriptor" do
