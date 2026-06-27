@@ -7,219 +7,40 @@ defmodule KyuubikiWeb.Analysis do
   alias KyuubikiWeb.AnalysisJobRecords
   alias KyuubikiWeb.AnalysisJobSupport
   alias KyuubikiWeb.AnalysisResultStore
-  alias KyuubikiWeb.FemModelNormalizer
   alias KyuubikiWeb.Jobs.Store
-  alias KyuubikiWeb.Playground.AgentClient
+  alias KyuubikiWeb.AnalysisSolverSubmissions
   alias KyuubikiWeb.WorkflowGraphRunner
   alias KyuubikiWeb.WorkflowGraphResponse
   alias KyuubikiWeb.WorkflowOperatorCatalog
   alias KyuubikiWeb.WorkflowOperatorRuntime
   alias KyuubikiWeb.WorkflowTemplateCatalog
 
-  @spec submit_axial_bar(map()) :: {:ok, map()} | {:error, term()}
-  def submit_axial_bar(params) when is_map(params),
-    do: submit_solver_job(params, &FemModelNormalizer.normalize_axial_bar/1, "solve_bar_1d")
-
-  @spec submit_thermal_bar_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_bar_1d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_thermal_bar_1d/1,
-        "solve_thermal_bar_1d"
-      )
-
-  @spec submit_heat_bar_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_heat_bar_1d(params) when is_map(params),
-    do:
-      submit_solver_job(params, &FemModelNormalizer.normalize_heat_bar_1d/1, "solve_heat_bar_1d")
-
-  @spec submit_electrostatic_bar_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_electrostatic_bar_1d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_electrostatic_bar_1d/1,
-        "solve_electrostatic_bar_1d"
-      )
-
-  @spec submit_electrostatic_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_electrostatic_plane_triangle_2d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_electrostatic_plane_triangle_2d/1,
-        "solve_electrostatic_plane_triangle_2d"
-      )
-
-  @spec submit_electrostatic_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_electrostatic_plane_quad_2d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_electrostatic_plane_quad_2d/1,
-        "solve_electrostatic_plane_quad_2d"
-      )
-
-  @spec submit_heat_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_heat_plane_triangle_2d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_heat_plane_triangle_2d/1,
-        "solve_heat_plane_triangle_2d"
-      )
-
-  @spec submit_heat_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_heat_plane_quad_2d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_heat_plane_quad_2d/1,
-        "solve_heat_plane_quad_2d"
-      )
-
-  @spec submit_thermal_truss_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_truss_2d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_thermal_truss_2d/1,
-        "solve_thermal_truss_2d"
-      )
-
-  @spec submit_thermal_truss_3d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_truss_3d(params) when is_map(params),
-    do:
-      submit_solver_job(
-        params,
-        &FemModelNormalizer.normalize_thermal_truss_3d/1,
-        "solve_thermal_truss_3d"
-      )
-
-  @spec submit_beam_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_beam_1d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_beam_1d/1, "solve_beam_1d")
-  end
-
-  @spec submit_thermal_beam_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_beam_1d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_thermal_beam_1d/1,
-      "solve_thermal_beam_1d"
-    )
-  end
-
-  @spec submit_torsion_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_torsion_1d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_torsion_1d/1, "solve_torsion_1d")
-  end
-
-  @spec submit_spring_1d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_spring_1d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_spring_1d/1, "solve_spring_1d")
-  end
-
-  @spec submit_spring_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_spring_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_spring_2d/1, "solve_spring_2d")
-  end
-
-  @spec submit_spring_3d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_spring_3d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_spring_3d/1, "solve_spring_3d")
-  end
-
-  @spec submit_truss_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_truss_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_truss_2d/1, "solve_truss_2d")
-  end
-
-  @spec submit_truss_3d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_truss_3d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_truss_3d/1, "solve_truss_3d")
-  end
-
-  @spec submit_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_plane_triangle_2d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_plane_triangle_2d/1,
-      "solve_plane_triangle_2d"
-    )
-  end
-
-  @spec submit_thermal_plane_triangle_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_plane_triangle_2d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_thermal_plane_triangle_2d/1,
-      "solve_thermal_plane_triangle_2d"
-    )
-  end
-
-  @spec submit_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_plane_quad_2d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_plane_quad_2d/1,
-      "solve_plane_quad_2d"
-    )
-  end
-
-  @spec submit_thermal_plane_quad_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_plane_quad_2d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_thermal_plane_quad_2d/1,
-      "solve_thermal_plane_quad_2d"
-    )
-  end
-
-  @spec submit_frame_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_frame_2d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_frame_2d/1, "solve_frame_2d")
-  end
-
-  @spec submit_frame_3d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_frame_3d(params) when is_map(params) do
-    submit_solver_job(params, &FemModelNormalizer.normalize_frame_3d/1, "solve_frame_3d")
-  end
-
-  @spec submit_thermal_frame_2d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_frame_2d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_thermal_frame_2d/1,
-      "solve_thermal_frame_2d"
-    )
-  end
-
-  @spec submit_thermal_frame_3d(map()) :: {:ok, map()} | {:error, term()}
-  def submit_thermal_frame_3d(params) when is_map(params) do
-    submit_solver_job(
-      params,
-      &FemModelNormalizer.normalize_thermal_frame_3d/1,
-      "solve_thermal_frame_3d"
-    )
-  end
-
-  defp submit_solver_job(params, normalizer, method)
-       when is_map(params) and is_function(normalizer, 1) and is_binary(method) do
-    with {:ok, normalized} <- normalizer.(params),
-         {:ok, job_context} <- AnalysisJobSupport.derive_job_context(params),
-         {:ok, job} <- AnalysisJobSupport.create_job(job_context) do
-      start_background_job(
-        job.job_id,
-        method,
-        normalized,
-        orchestration_context_from_params(params)
-      )
-
-      {:ok, AnalysisJobSupport.serialize_payload(job)}
-    end
-  end
+  defdelegate submit_axial_bar(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_bar_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_heat_bar_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_electrostatic_bar_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_electrostatic_plane_triangle_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_electrostatic_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_heat_plane_triangle_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_heat_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_truss_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_truss_3d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_beam_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_beam_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_torsion_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_spring_1d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_spring_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_spring_3d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_truss_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_truss_3d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_plane_triangle_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_plane_triangle_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_plane_quad_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_frame_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_frame_3d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_frame_2d(params), to: AnalysisSolverSubmissions
+  defdelegate submit_thermal_frame_3d(params), to: AnalysisSolverSubmissions
 
   @spec list_workflow_catalog(map()) :: map()
   def list_workflow_catalog(filters \\ %{}) when is_map(filters),
@@ -227,7 +48,7 @@ defmodule KyuubikiWeb.Analysis do
 
   @spec list_operator_catalog(map()) :: map()
   def list_operator_catalog(filters \\ %{}) when is_map(filters),
-    do: %{"operators" => WorkflowOperatorCatalog.list(filters)}
+    do: WorkflowOperatorCatalog.catalog(filters)
 
   @spec fetch_workflow_catalog_entry(String.t()) :: {:ok, map()} | {:error, term()}
   def fetch_workflow_catalog_entry(workflow_id) when is_binary(workflow_id),
@@ -315,6 +136,7 @@ defmodule KyuubikiWeb.Analysis do
         orchestration_context,
         response_options
       )
+
       {:ok, AnalysisJobSupport.serialize_payload(job)}
     else
       nil -> {:error, :invalid_workflow_graph_request}
@@ -403,12 +225,6 @@ defmodule KyuubikiWeb.Analysis do
        ),
        do: {:error, :invalid_workflow_graph}
 
-  defp start_background_job(job_id, method, params, orchestration_context) do
-    Task.Supervisor.start_child(KyuubikiWeb.TaskSupervisor, fn ->
-      execute_background_job(job_id, method, params, orchestration_context)
-    end)
-  end
-
   defp start_background_workflow_job(
          job_id,
          graph,
@@ -425,63 +241,6 @@ defmodule KyuubikiWeb.Analysis do
         response_options
       )
     end)
-  end
-
-  defp apply_agent_progress(job_id, progress) when is_binary(job_id) and is_map(progress) do
-    case Store.get(job_id) do
-      {:ok, %{status: :cancelled}} ->
-        :ok
-
-      {:ok, _job} ->
-        attrs =
-          progress
-          |> Map.take(["stage", "progress", "residual", "iteration", "peak_memory", "message"])
-          |> Enum.into(%{}, fn {key, value} -> {String.to_atom(key), value} end)
-          |> Map.put(:job_id, job_id)
-
-        _ = Store.apply_progress(attrs)
-        :ok
-
-      :error ->
-        :ok
-    end
-  end
-
-  defp execute_background_job(job_id, method, params, orchestration_context) do
-    timeout_ms = watchdog_job_timeout_ms()
-
-    task =
-      Task.async(fn ->
-        AgentClient.request_with_agent(
-          method,
-          params,
-          &apply_agent_progress(job_id, &1),
-          orchestration: orchestration_context,
-          job_id: job_id
-        )
-      end)
-
-    case Task.yield(task, timeout_ms) || Task.shutdown(task, :brutal_kill) do
-      {:ok, {:ok, result, endpoint}} ->
-        unless cancelled?(job_id) do
-          {:ok, _job} = Store.assign_worker(job_id, AgentClient.worker_id(endpoint))
-          :ok = AnalysisResultStore.put(job_id, result)
-          _ = Store.apply_progress(%{job_id: job_id, stage: "completed", progress: 1.0})
-        end
-
-      {:ok, {:error, {:rpc_error, "cancelled", message}}} ->
-        cancel_job_with_message(job_id, message)
-
-      {:ok, {:error, reason}} ->
-        unless cancelled?(job_id) do
-          fail_job(job_id, inspect(reason))
-        end
-
-      nil ->
-        unless cancelled?(job_id) do
-          fail_job(job_id, "job execution timed out after #{timeout_ms} ms")
-        end
-    end
   end
 
   defp execute_background_workflow_job(

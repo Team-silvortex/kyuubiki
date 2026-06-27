@@ -121,6 +121,7 @@ pub struct ElectrostaticBar1dElementResult {
     pub potential_gradient: f64,
     pub electric_field: f64,
     pub electric_flux_density: f64,
+    pub stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -131,6 +132,7 @@ pub struct SolveElectrostaticBar1dResult {
     pub max_potential: f64,
     pub max_electric_field: f64,
     pub max_flux_density: f64,
+    pub total_stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,6 +155,7 @@ pub struct MagnetostaticBar1dElementResult {
     pub magnetic_potential_gradient: f64,
     pub magnetic_field_strength: f64,
     pub magnetic_flux_density: f64,
+    pub stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -163,6 +166,7 @@ pub struct SolveMagnetostaticBar1dResult {
     pub max_magnetic_potential: f64,
     pub max_magnetic_field_strength: f64,
     pub max_flux_density: f64,
+    pub total_stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -227,6 +231,7 @@ pub struct ElectrostaticPlaneTriangleElementResult {
     pub electric_flux_density_x: f64,
     pub electric_flux_density_y: f64,
     pub electric_flux_density_magnitude: f64,
+    pub stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -237,6 +242,7 @@ pub struct SolveElectrostaticPlaneTriangle2dResult {
     pub max_potential: f64,
     pub max_electric_field: f64,
     pub max_flux_density: f64,
+    pub total_stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -257,6 +263,7 @@ pub struct ElectrostaticPlaneQuadElementResult {
     pub electric_flux_density_x: f64,
     pub electric_flux_density_y: f64,
     pub electric_flux_density_magnitude: f64,
+    pub stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -267,6 +274,7 @@ pub struct SolveElectrostaticPlaneQuad2dResult {
     pub max_potential: f64,
     pub max_electric_field: f64,
     pub max_flux_density: f64,
+    pub total_stored_energy: f64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

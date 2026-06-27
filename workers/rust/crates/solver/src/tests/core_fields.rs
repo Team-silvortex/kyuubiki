@@ -156,6 +156,8 @@ fn solves_a_small_electrostatic_bar_1d_gradient() {
     assert_eq!(result.max_potential, 10.0);
     assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
     assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    assert!((result.elements[0].stored_energy - 2.0).abs() < 1.0e-9);
+    assert!((result.total_stored_energy - 2.0).abs() < 1.0e-9);
 }
 
 #[test]
@@ -195,6 +197,8 @@ fn solves_a_small_magnetostatic_bar_1d_gradient() {
     assert_eq!(result.max_magnetic_potential, 10.0);
     assert!((result.max_magnetic_field_strength - 10.0).abs() < 1.0e-9);
     assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    assert!((result.elements[0].stored_energy - 2.0).abs() < 1.0e-9);
+    assert!((result.total_stored_energy - 2.0).abs() < 1.0e-9);
 }
 
 #[test]
@@ -248,6 +252,8 @@ fn solves_a_small_electrostatic_plane_triangle_2d_patch() {
     assert_eq!(result.max_potential, 10.0);
     assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
     assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    assert!((result.elements[0].stored_energy - 2.5).abs() < 1.0e-9);
+    assert!((result.total_stored_energy - 2.5).abs() < 1.0e-9);
 }
 
 #[test]
@@ -311,6 +317,8 @@ fn solves_a_small_electrostatic_plane_quad_2d_patch() {
     assert_eq!(result.max_potential, 10.0);
     assert!((result.max_electric_field - 10.0).abs() < 1.0e-9);
     assert!((result.max_flux_density - 20.0).abs() < 1.0e-9);
+    assert!((result.elements[0].stored_energy - 5.0).abs() < 1.0e-9);
+    assert!((result.total_stored_energy - 5.0).abs() < 1.0e-9);
 }
 
 #[test]

@@ -63,7 +63,8 @@ fn runs_electrostatic_peak_extract_operator_through_sdk_registry() {
                     "electric_field_magnitude": 8.2462112512,
                     "electric_flux_density_x": 4.0,
                     "electric_flux_density_y": 1.0,
-                    "electric_flux_density_magnitude": 4.1231056256
+                    "electric_flux_density_magnitude": 4.1231056256,
+                    "stored_energy": 1.5
                 },
                 {
                     "index": 1,
@@ -81,12 +82,14 @@ fn runs_electrostatic_peak_extract_operator_through_sdk_registry() {
                     "electric_field_magnitude": 10.7703296143,
                     "electric_flux_density_x": 5.0,
                     "electric_flux_density_y": 2.0,
-                    "electric_flux_density_magnitude": 5.3851648071
+                    "electric_flux_density_magnitude": 5.3851648071,
+                    "stored_energy": 3.5
                 }
             ],
             "max_potential": 12.0,
             "max_electric_field": 10.7703296143,
-            "max_flux_density": 5.3851648071
+            "max_flux_density": 5.3851648071,
+            "total_stored_energy": 5.0
         }),
         serde_json::Value::Null,
     )
@@ -101,6 +104,8 @@ fn runs_electrostatic_peak_extract_operator_through_sdk_registry() {
     assert_eq!(summary["electrostatic_field_peak_y"].as_f64(), Some(4.0));
     assert_eq!(summary["peak_flux_density_x"].as_f64(), Some(5.0));
     assert_eq!(summary["peak_flux_density_y"].as_f64(), Some(2.0));
+    assert_eq!(summary["peak_stored_energy"].as_f64(), Some(3.5));
+    assert_eq!(summary["total_stored_energy"].as_f64(), Some(5.0));
     assert_eq!(
         summary["peak_potential_gradient_magnitude"].as_f64(),
         Some(10.770329614269007)

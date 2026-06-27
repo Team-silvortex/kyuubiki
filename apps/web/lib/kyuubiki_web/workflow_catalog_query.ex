@@ -17,7 +17,9 @@ defmodule KyuubikiWeb.WorkflowCatalogQuery do
       matches_value?(
         get_in(descriptor, ["validation", "baseline_status"]),
         Map.get(filters, "validation", "")
-      ) and matches_capability?(descriptor["capability_tags"], Map.get(filters, "capability", ""))
+      ) and
+      matches_value?(get_in(descriptor, ["module", "id"]), Map.get(filters, "module", "")) and
+      matches_capability?(descriptor["capability_tags"], Map.get(filters, "capability", ""))
   end
 
   def matches_workflow?(workflow, filters) when is_map(workflow) and is_map(filters) do
@@ -70,6 +72,9 @@ defmodule KyuubikiWeb.WorkflowCatalogQuery do
       descriptor["family"],
       descriptor["domain"],
       descriptor["kind"],
+      get_in(descriptor, ["module", "id"]),
+      get_in(descriptor, ["module", "label"]),
+      get_in(descriptor, ["module", "lane"]),
       descriptor["summary"],
       Enum.join(descriptor["capability_tags"] || [], " ")
     ]

@@ -6,6 +6,12 @@ export const HUB_I18N_JA = {
       observe: "観察",
       tools: "ツール",
     },
+    workspaceGroups: {
+      project: { label: "Project", copy: "Assets、bundle、catalog、主導線をまとめます。" },
+      runtime: { label: "Runtime", copy: "ローカル loop、hot reload、agent、実行状態。" },
+      release: { label: "Release", copy: "Installer 連携、deploy 姿勢、workstation check。" },
+      diagnostics: { label: "Diagnostics", copy: "観察 signal、logs、validation、operator tools。" },
+    },
     sections: {
       projects: {
         title: "ホーム",
@@ -54,6 +60,17 @@ export const HUB_I18N_JA = {
         library: "ライブラリ",
         bundles: "Bundle ツール",
         guides: "ガイド",
+      },
+      mainline: {
+        label: "メインワークフロー",
+        title: "次の一手に沿って進む",
+        copy: "Hub の主経路です。runtime、取り込み、bundle 確認、解析の順に進みます。",
+        steps: [
+          { index: "01", title: "Runtime を準備", copy: "作業が依存する前に、ローカル loop を起動または確認します。", action: "runtimes" },
+          { index: "02", title: "作業を取り込む", copy: "bundle を登録するか、ローカル/リモートの workload 棚を同期します。", action: "library" },
+          { index: "03", title: "Bundle を確認", copy: "深い解析の前に、現在の project bundle を inspect / validate します。", action: "bundles" },
+          { index: "04", title: "Workbench へ入る", copy: "滑走路が安全に見えてから解析面を開きます。", action: "open-workbench" },
+        ],
       },
       steps: {
         step1Label: "ステップ 1",

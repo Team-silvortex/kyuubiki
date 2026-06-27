@@ -1,13 +1,19 @@
 export function createHubI18nEs(en) {
   return {
-  ...en,
-  nav: {
-    projects: "Inicio",
-    runtimes: "Runtimes",
-    deploy: "Despliegue",
-    observe: "Observación",
-    tools: "Herramientas",
-  },
+    ...en,
+    nav: {
+      projects: "Inicio",
+      runtimes: "Runtimes",
+      deploy: "Despliegue",
+      observe: "Observación",
+      tools: "Herramientas",
+    },
+    workspaceGroups: {
+      project: { label: "Project", copy: "Assets, bundles, catálogos y ruta principal." },
+      runtime: { label: "Runtime", copy: "Loops locales, hot reload, agentes y estado de ejecución." },
+      release: { label: "Release", copy: "Traspaso a Installer, postura de deploy y checks de estación." },
+      diagnostics: { label: "Diagnostics", copy: "Señales, logs, validación y herramientas de operador." },
+    },
   sections: {
     projects: {
       title: "Inicio",
@@ -58,6 +64,17 @@ export function createHubI18nEs(en) {
       library: "Biblioteca",
       bundles: "Herramientas de bundle",
       guides: "Guías",
+    },
+    mainline: {
+      label: "Workflow principal",
+      title: "Sigue el siguiente paso",
+      copy: "Esta es la ruta principal de Hub: runtime, entrada de trabajo, revisión del bundle y luego análisis.",
+      steps: [
+        { index: "01", title: "Preparar runtime", copy: "Inicia o revisa el loop local antes de que el trabajo dependa de él.", action: "runtimes" },
+        { index: "02", title: "Traer trabajo", copy: "Registra un bundle o sincroniza la biblioteca local/remota.", action: "library" },
+        { index: "03", title: "Revisar bundle", copy: "Inspecciona y valida el bundle activo antes del análisis profundo.", action: "bundles" },
+        { index: "04", title: "Entrar a Workbench", copy: "Abre la superficie de análisis solo cuando la pista sea segura.", action: "open-workbench" },
+      ],
     },
     steps: {
       step1Label: "PASO 1",

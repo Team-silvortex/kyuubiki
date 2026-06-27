@@ -366,8 +366,8 @@ fn parse_agent_status(line: &str) -> Option<ServiceEndpointSummary> {
 #[cfg(test)]
 mod tests {
     use super::{
-        ServiceEndpointSummary, ServiceStatusSummary, normalize_language, parse_service_status_summary,
-        workspace_root,
+        ServiceEndpointSummary, ServiceStatusSummary, normalize_language,
+        parse_service_status_summary, workspace_root,
     };
 
     #[test]
@@ -420,7 +420,10 @@ mod tests {
     #[test]
     fn accepts_language_pack_locale_codes() {
         assert_eq!(normalize_language("fr-CA"), Some("fr-CA".to_string()));
-        assert_eq!(normalize_language("ko_custom"), Some("ko_custom".to_string()));
+        assert_eq!(
+            normalize_language("ko_custom"),
+            Some("ko_custom".to_string())
+        );
         assert_eq!(normalize_language(""), None);
         assert_eq!(normalize_language("../fr"), None);
     }

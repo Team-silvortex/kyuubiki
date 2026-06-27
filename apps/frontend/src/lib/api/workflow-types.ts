@@ -36,6 +36,30 @@ export type WorkflowOperatorExecutionDescriptor = {
   agent_fetchable?: boolean;
 };
 
+export type WorkflowOperatorModuleDescriptor = {
+  id: string;
+  label: string;
+  domain: string;
+  kind: WorkflowOperatorDescriptor["kind"];
+  lane: "physics" | "coupling" | "dataflow" | "delivery" | "workflow";
+  operator_scope: "physics" | "coupling" | "dataflow" | "delivery" | "inspection" | "workflow";
+  management: {
+    library_authority: "central_operator_library";
+    agent_replication: "forbidden";
+    agent_cache_policy: "job_fetch";
+    ui_group: string;
+  };
+};
+
+export type WorkflowOperatorModuleSummary = WorkflowOperatorModuleDescriptor & {
+  operator_count: number;
+  verified_count: number;
+  partial_count: number;
+  unverified_count: number;
+  capability_tags: string[];
+  operator_ids: string[];
+};
+
 export type WorkflowBridgeContractSupport = {
   source: {
     fields: string[];
@@ -71,11 +95,13 @@ export type WorkflowOperatorDescriptor = {
   inputs: WorkflowOperatorPortDescriptor[];
   outputs: WorkflowOperatorPortDescriptor[];
   validation: WorkflowOperatorValidationProfile;
+  module?: WorkflowOperatorModuleDescriptor;
   execution?: WorkflowOperatorExecutionDescriptor;
 };
 
 export type WorkflowOperatorCatalogPayload = {
   operators: WorkflowOperatorDescriptor[];
+  modules?: WorkflowOperatorModuleSummary[];
 };
 
 export type WorkflowCatalogQuery = Partial<{
@@ -91,6 +117,7 @@ export type WorkflowOperatorCatalogQuery = Partial<{
   q: string;
   domain: string;
   kind: WorkflowOperatorDescriptor["kind"];
+  module: string;
   validation: WorkflowOperatorValidationProfile["baseline_status"];
   capability: string;
 }>;

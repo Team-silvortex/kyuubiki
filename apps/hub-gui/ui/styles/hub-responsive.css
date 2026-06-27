@@ -26,8 +26,24 @@
 @media (max-width: 860px) {
   .hub-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto;
     gap: 0.85rem;
     padding: 0.85rem;
+  }
+
+  .hub-rail {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .hub-main {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .hub-event-bar {
+    grid-column: 1;
+    grid-row: 3;
   }
 
   .hub-grid {
@@ -35,6 +51,10 @@
   }
 
   .hub-primary-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .hub-mainline-track {
     grid-template-columns: 1fr;
   }
 

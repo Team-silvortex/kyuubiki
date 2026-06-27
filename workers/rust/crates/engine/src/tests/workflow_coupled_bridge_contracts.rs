@@ -91,9 +91,13 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
                         ]
                     },
                     "contract": {
-                        "source": { "field": "potential", "distribution": "node_to_node" },
-                        "transform": { "scale": 2.0, "default_value": 0.0 },
-                        "target": { "field": "temperature" }
+                        "source": {
+                            "field": "stored_energy_area_density",
+                            "distribution": "element_to_nodes",
+                            "node_index_fields": ["node_i", "node_j", "node_k"]
+                        },
+                        "transform": { "scale": 120.0, "reduction": "area_weighted_mean", "default_value": 0.0 },
+                        "target": { "field": "heat_load" }
                     }
                 })),
                 cache_policy: None,
@@ -243,6 +247,11 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
         .get("solve_heat.result")
         .cloned()
         .expect("heat result should exist");
+    let heat_model = run
+        .artifacts
+        .get("bridge_field_to_heat.heat_model")
+        .cloned()
+        .expect("heat bridge output should exist");
     let thermo_model = run
         .artifacts
         .get("bridge_temperature.bridged_model")
@@ -260,6 +269,17 @@ fn runs_electrostatic_to_heat_to_thermo_triangle_workflow_with_contract_bridges(
     let second_average = elements[1]["average_temperature"]
         .as_f64()
         .expect("second element average should be numeric");
+    assert_eq!(
+        heat_model["__bridge_diagnostics"]["source_field"].as_str(),
+        Some("stored_energy_area_density")
+    );
+    assert!(
+        heat_model["nodes"]
+            .as_array()
+            .expect("heat model nodes should exist")
+            .iter()
+            .any(|node| node["heat_load"].as_f64().is_some_and(|value| value > 0.0))
+    );
 
     assert_eq!(
         thermo_nodes[0]["temperature_delta"].as_f64(),

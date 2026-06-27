@@ -383,6 +383,10 @@ fn electrostatic_bridge_source_value(
         "electric_flux_density_x" => Ok(element.electric_flux_density_x),
         "electric_flux_density_y" => Ok(element.electric_flux_density_y),
         "average_potential" => Ok(element.average_potential),
+        "stored_energy" | "energy" => Ok(element.stored_energy),
+        "stored_energy_area_density" | "energy_area_density" => {
+            Ok(element.stored_energy / element.area.max(f64::EPSILON))
+        }
         other => Err(format!(
             "unsupported electrostatic-to-heat bridge source field: {other}"
         )),
@@ -403,6 +407,10 @@ fn electrostatic_triangle_bridge_source_value(
         }
         "electric_flux_density_x" => Ok(element.electric_flux_density_x),
         "electric_flux_density_y" => Ok(element.electric_flux_density_y),
+        "stored_energy" | "energy" => Ok(element.stored_energy),
+        "stored_energy_area_density" | "energy_area_density" => {
+            Ok(element.stored_energy / element.area.max(f64::EPSILON))
+        }
         _ => Err(format!(
             "unsupported electrostatic triangle bridge source field: {field}"
         )),

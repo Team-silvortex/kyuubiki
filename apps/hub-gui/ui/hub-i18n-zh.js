@@ -6,6 +6,12 @@ export const HUB_I18N_ZH = {
       observe: "观察",
       tools: "工具",
     },
+    workspaceGroups: {
+      project: { label: "Project", copy: "资产、bundle、catalog 和用户主线入口。" },
+      runtime: { label: "Runtime", copy: "本地 loop、热重载、agent 和执行状态。" },
+      release: { label: "Release", copy: "Installer 交接、部署姿态和工作站检查。" },
+      diagnostics: { label: "Diagnostics", copy: "观察信号、日志、验证和操作员工具。" },
+    },
     sections: {
       projects: {
         title: "首页",
@@ -54,6 +60,17 @@ export const HUB_I18N_ZH = {
         library: "库",
         bundles: "Bundle 工具",
         guides: "文档",
+      },
+      mainline: {
+        label: "主线工作流",
+        title: "按下一步推进",
+        copy: "这是 Hub 的主入口路线：先运行时，再带入工作，再检查 bundle，最后进入分析。",
+        steps: [
+          { index: "01", title: "准备运行时", copy: "先启动或检查本地 loop，避免后续工作踩空。", action: "runtimes" },
+          { index: "02", title: "带入工作", copy: "注册 bundle，或同步本地/远端工作负载架。", action: "library" },
+          { index: "03", title: "检查 Bundle", copy: "进入深层分析前，先 inspect 和 validate 当前项目 bundle。", action: "bundles" },
+          { index: "04", title: "进入 Workbench", copy: "只有跑道看起来安全后，再打开分析工作台。", action: "open-workbench" },
+        ],
       },
       steps: {
         step1Label: "步骤 1",

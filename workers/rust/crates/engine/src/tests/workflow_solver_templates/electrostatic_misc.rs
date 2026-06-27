@@ -20,11 +20,17 @@ fn runs_electrostatic_plane_triangle_extract_export_graph() {
                 { "id": "et0", "node_i": 0, "node_j": 1, "node_k": 2, "thickness": 0.01, "permittivity": 2.5 }
             ]
         }),
-        &["max_potential", "max_electric_field", "max_flux_density"],
+        &[
+            "max_potential",
+            "max_electric_field",
+            "max_flux_density",
+            "total_stored_energy",
+        ],
     );
 
     let content = exported_content(&run);
     assert!(content.contains("max_potential"));
     assert!(content.contains("max_electric_field"));
     assert!(content.contains("max_flux_density"));
+    assert!(content.contains("total_stored_energy"));
 }

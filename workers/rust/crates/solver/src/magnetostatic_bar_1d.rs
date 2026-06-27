@@ -89,6 +89,12 @@ pub fn solve_magnetostatic_bar_1d(
                 / length;
             let magnetic_field_strength = -magnetic_potential_gradient;
             let magnetic_flux_density = element.permeability * magnetic_field_strength;
+            let stored_energy = 0.5
+                * element.permeability
+                * magnetic_field_strength
+                * magnetic_field_strength
+                * element.area
+                * length;
 
             MagnetostaticBar1dElementResult {
                 index,
@@ -100,6 +106,7 @@ pub fn solve_magnetostatic_bar_1d(
                 magnetic_potential_gradient,
                 magnetic_field_strength,
                 magnetic_flux_density,
+                stored_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -116,6 +123,7 @@ pub fn solve_magnetostatic_bar_1d(
         .iter()
         .map(|element| element.magnetic_flux_density.abs())
         .fold(0.0_f64, f64::max);
+    let total_stored_energy = elements.iter().map(|element| element.stored_energy).sum();
 
     Ok(SolveMagnetostaticBar1dResult {
         input: request.clone(),
@@ -124,6 +132,7 @@ pub fn solve_magnetostatic_bar_1d(
         max_magnetic_potential,
         max_magnetic_field_strength,
         max_flux_density,
+        total_stored_energy,
     })
 }
 

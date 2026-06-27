@@ -152,6 +152,40 @@ That does not require every field to be enforced immediately.
 It does require the central-library model to be reflected in the descriptor
 shape from now on.
 
+## Managed operator modules
+
+The catalog now treats every operator as part of a managed module.
+
+The module id is intentionally simple:
+
+- `<domain>.<kind>`
+- examples: `mechanical.solver`, `thermal.solver`,
+  `electromagnetic.workflow_bridge`
+
+Each operator descriptor carries a `module` block for:
+
+- UI grouping
+- catalog filtering
+- deployment and cache policy visibility
+- future package ownership and integrity checks
+
+The first managed fields are:
+
+- `module.id`
+  stable query and grouping key
+- `module.label`
+  user-facing group name
+- `module.lane`
+  broad workflow lane such as `physics`, `coupling`, `dataflow`, or `delivery`
+- `module.operator_scope`
+  operator execution scope such as `physics`, `coupling`, or `inspection`
+- `module.management`
+  central-library policy for agent fetch, cache, and UI grouping
+
+This keeps large operator catalogs from becoming a flat list.
+It also gives Workbench, Hub, headless SDKs, and future installer tooling the
+same vocabulary for deciding where an operator belongs.
+
 ## Non-goals for now
 
 `tamamono 1.x` does not need all of the following before using this model:

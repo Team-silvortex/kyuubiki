@@ -10,7 +10,9 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert list_conn.status == 200
     payload = Jason.decode!(list_conn.resp_body)
     operators = payload["operators"]
+    modules = payload["modules"]
     assert length(operators) >= 8
+    assert Enum.any?(modules, &(&1["id"] == "mechanical.solver"))
 
     frame_operator =
       Enum.find(operators, fn operator -> operator["id"] == "solve.frame_3d" end)
@@ -38,9 +40,20 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert frame_operator["input_schema"]["schema"] == "kyuubiki.operator.frame_3d.input"
     assert frame_operator["execution"]["authority_mode"] == "central_operator_library"
     assert frame_operator["execution"]["execution_mode"] == "orchestra_fetch"
-    assert frame_operator["execution"]["package_ref"] == "orchestra://operator-package/solve.frame_3d"
+
+    assert frame_operator["execution"]["package_ref"] ==
+             "orchestra://operator-package/solve.frame_3d"
+
     assert "frame" in frame_operator["execution"]["placement_tags"]
     assert "solver_rpc" in frame_operator["execution"]["required_capabilities"]
+    assert frame_operator["module"]["id"] == "mechanical.solver"
+    assert frame_operator["module"]["label"] == "Structural Solvers"
+    assert frame_operator["module"]["lane"] == "physics"
+
+    assert frame_operator["module"]["management"]["library_authority"] ==
+             "central_operator_library"
+
+    assert frame_operator["module"]["management"]["agent_replication"] == "forbidden"
     assert frame_operator["validation"]["baseline_status"] == "verified"
     assert frame_operator["validation"]["baseline_cases"] == ["frame_3d_baseline"]
     assert "orchestrated_api" in frame_operator["validation"]["smoke_paths"]
@@ -84,10 +97,17 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
            ] = electrostatic_operator["outputs"]
 
     assert electrostatic_heat_bridge_operator["kind"] == "workflow_bridge"
+    assert electrostatic_heat_bridge_operator["module"]["id"] == "electromagnetic.workflow_bridge"
+    assert electrostatic_heat_bridge_operator["module"]["lane"] == "coupling"
+
     assert electrostatic_heat_bridge_operator["execution"]["source_ref"] ==
              "orchestra://operator/bridge.electrostatic_field_to_heat_quad_2d"
+
     assert "bridge" in electrostatic_heat_bridge_operator["execution"]["placement_tags"]
-    assert "workflow_bridge_runtime" in electrostatic_heat_bridge_operator["execution"]["required_capabilities"]
+
+    assert "workflow_bridge_runtime" in electrostatic_heat_bridge_operator["execution"][
+             "required_capabilities"
+           ]
 
     assert electrostatic_heat_bridge_operator["config_schema"]["schema"] ==
              "kyuubiki.bridge-contract.electrostatic_to_heat.v1"
@@ -237,6 +257,30 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert Enum.all?(operators, &(&1["kind"] == "solver"))
     assert Enum.all?(operators, &(&1["validation"]["baseline_status"] == "verified"))
     assert Enum.all?(operators, &("heat" in (&1["capability_tags"] || [])))
+  end
+
+  test "filters built-in operators by managed module" do
+    conn =
+      :get
+      |> conn("/api/v1/operators?module=thermal.solver")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    operators = payload["operators"]
+    modules = payload["modules"]
+    assert Enum.any?(operators, &(&1["id"] == "solve.heat_plane_quad_2d"))
+    assert Enum.all?(operators, &(&1["module"]["id"] == "thermal.solver"))
+
+    assert Enum.all?(
+             operators,
+             &(&1["module"]["management"]["agent_cache_policy"] == "job_fetch")
+           )
+
+    assert [%{"id" => "thermal.solver"} = thermal_module] = modules
+    assert thermal_module["operator_count"] == length(operators)
+    assert thermal_module["verified_count"] == length(operators)
+    assert "heat" in thermal_module["capability_tags"]
   end
 
   test "returns 404 for an unknown operator descriptor" do

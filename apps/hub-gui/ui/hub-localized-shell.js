@@ -3,6 +3,7 @@ import { renderHubBundlesCopy } from "./hub-bundles-copy.js";
 import { renderHubHomeCopy } from "./hub-home-copy.js";
 import { renderHubLibraryCopy } from "./hub-library-copy.js";
 import { renderHubPanelCopy } from "./hub-panel-copy.js";
+import { renderHubWorkspaceGroups } from "./hub-workspace-groups.js";
 import {
   renderDirectMeshRegressionSnapshot,
   renderGuidesPanelCopy,
@@ -89,6 +90,7 @@ export function createHubLocalizedShell(context) {
     context.setText(context.elements.navDeploy, copy.nav.deploy);
     context.setText(context.elements.navObserve, copy.nav.observe);
     context.setText(context.elements.navTools, copy.nav.tools);
+    renderHubWorkspaceGroups(copy);
     context.setText("brand-hub-focus", copy.shell.focus);
     context.setText(context.elements.heroOpenWorkbench, copy.shell.openWorkbench);
     context.setText(context.elements.heroStartLocal, copy.shell.startLocal);

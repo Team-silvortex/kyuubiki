@@ -18,6 +18,7 @@ pub(super) fn electrostatic_peak_summary(
         "peak_electric_field_y": peak_element.electric_field_y,
         "peak_flux_density_x": peak_element.electric_flux_density_x,
         "peak_flux_density_y": peak_element.electric_flux_density_y,
+        "peak_stored_energy": peak_element.stored_energy,
         "peak_potential_gradient_x": peak_element.potential_gradient_x,
         "peak_potential_gradient_y": peak_element.potential_gradient_y,
         "peak_potential_gradient_magnitude": magnitude2(
@@ -39,11 +40,13 @@ pub(super) fn electrostatic_peak_summary(
         "electrostatic_peak_flux_density": peak_element.electric_flux_density_magnitude,
         "electrostatic_peak_flux_density_x": peak_element.electric_flux_density_x,
         "electrostatic_peak_flux_density_y": peak_element.electric_flux_density_y,
+        "electrostatic_peak_stored_energy": peak_element.stored_energy,
         "electrostatic_peak_field_id": peak_element.id,
         "electrostatic_potential_max": result.max_potential,
         "max_potential": result.max_potential,
         "max_electric_field": result.max_electric_field,
         "max_flux_density": result.max_flux_density,
+        "total_stored_energy": result.total_stored_energy,
     })
 }
 

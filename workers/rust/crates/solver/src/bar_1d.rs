@@ -387,6 +387,12 @@ pub fn solve_electrostatic_bar_1d(
                 (potentials[element.node_j] - potentials[element.node_i]) / length;
             let electric_field = -potential_gradient;
             let electric_flux_density = element.permittivity * electric_field;
+            let stored_energy = 0.5
+                * element.permittivity
+                * electric_field
+                * electric_field
+                * element.area
+                * length;
 
             ElectrostaticBar1dElementResult {
                 index,
@@ -398,6 +404,7 @@ pub fn solve_electrostatic_bar_1d(
                 potential_gradient,
                 electric_field,
                 electric_flux_density,
+                stored_energy,
             }
         })
         .collect::<Vec<_>>();
@@ -414,6 +421,7 @@ pub fn solve_electrostatic_bar_1d(
         .iter()
         .map(|element| element.electric_flux_density.abs())
         .fold(0.0_f64, f64::max);
+    let total_stored_energy = elements.iter().map(|element| element.stored_energy).sum();
 
     Ok(SolveElectrostaticBar1dResult {
         input: request.clone(),
@@ -422,6 +430,7 @@ pub fn solve_electrostatic_bar_1d(
         max_potential,
         max_electric_field,
         max_flux_density,
+        total_stored_energy,
     })
 }
 

@@ -1,6 +1,8 @@
 defmodule KyuubikiWeb.WorkflowCatalogSupport do
   @moduledoc false
 
+  alias KyuubikiWeb.WorkflowOperatorModules
+
   def workflow_dataset_contract(id, values, metadata \\ %{}) when is_list(values) do
     %{
       "id" => id,
@@ -23,9 +25,11 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
     }
   end
 
-  def enrich_operator_descriptor(%{"id" => operator_id} = descriptor) when is_binary(operator_id) do
-    Map.put_new(
-      descriptor,
+  def enrich_operator_descriptor(%{"id" => operator_id} = descriptor)
+      when is_binary(operator_id) do
+    descriptor
+    |> WorkflowOperatorModules.assign()
+    |> Map.put_new(
       "execution",
       %{
         "authority_mode" => "central_operator_library",
@@ -61,7 +65,10 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
     simple_fetch_plan = build_simple_operator_fetch_plan(graph)
 
     graph
-    |> update_in(["defaults"], &enrich_graph_defaults(&1, graph_placement_tags, graph_required_capabilities))
+    |> update_in(
+      ["defaults"],
+      &enrich_graph_defaults(&1, graph_placement_tags, graph_required_capabilities)
+    )
     |> Map.put_new("dispatch_policy", "central_fetch")
     |> Map.put_new("operator_fetch_plan", simple_fetch_plan)
     |> Map.put_new("placement_tags", graph_placement_tags)
@@ -335,7 +342,8 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
     }
   end
 
-  defp enrich_graph_defaults(defaults, placement_tags, required_capabilities) when is_map(defaults) do
+  defp enrich_graph_defaults(defaults, placement_tags, required_capabilities)
+       when is_map(defaults) do
     defaults
     |> Map.put_new("dispatch_policy", "central_fetch")
     |> Map.put_new("placement_tags", placement_tags)
@@ -349,7 +357,10 @@ defmodule KyuubikiWeb.WorkflowCatalogSupport do
       %{"operator_id" => operator_id} = node when is_binary(operator_id) ->
         node
         |> Map.put_new("placement_tags", derive_operator_placement_tags(operator_id))
-        |> Map.put_new("required_capabilities", derive_operator_required_capabilities(operator_id))
+        |> Map.put_new(
+          "required_capabilities",
+          derive_operator_required_capabilities(operator_id)
+        )
 
       node ->
         node

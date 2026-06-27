@@ -71,6 +71,27 @@ export function bindHubAppEvents({
     true,
   );
 
+  document.addEventListener("click", async (event) => {
+    const button = event.target?.closest?.("[data-mainline-action]");
+    if (!button) {
+      return;
+    }
+
+    const action = button.dataset.mainlineAction;
+    setEventMessage?.(`mainline step: ${action}`, "mainline:click");
+    if (action === "runtimes") {
+      setSection("runtimes");
+      return;
+    }
+    if (action === "library" || action === "bundles" || action === "guides") {
+      setProjectsPage(action);
+      return;
+    }
+    if (action === "open-workbench") {
+      await runAction("open-workbench");
+    }
+  });
+
   elements.navItems.forEach((item) => {
     item.addEventListener("click", () => setSection(item.dataset.target));
   });

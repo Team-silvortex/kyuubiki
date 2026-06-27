@@ -4,7 +4,13 @@ defmodule KyuubikiWeb.WorkflowOperatorCatalog do
   alias KyuubikiWeb.WorkflowCatalogSupport
   alias KyuubikiWeb.WorkflowBuiltinOperatorRegistry
   alias KyuubikiWeb.WorkflowCatalogQuery
+  alias KyuubikiWeb.WorkflowOperatorModules
   alias KyuubikiWeb.WorkflowSolverRegistry
+
+  def catalog(filters \\ %{}) do
+    operators = list(filters)
+    %{"operators" => operators, "modules" => WorkflowOperatorModules.summarize(operators)}
+  end
 
   def list(filters \\ %{}) do
     normalized_filters = WorkflowCatalogQuery.normalize_filters(filters)

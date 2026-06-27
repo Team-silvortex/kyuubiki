@@ -6,6 +6,12 @@ export const HUB_I18N_EN = {
       observe: "Observe",
       tools: "Tools",
     },
+    workspaceGroups: {
+      project: { label: "Project", copy: "Assets, bundles, catalogs, and the main user route." },
+      runtime: { label: "Runtime", copy: "Local loops, hot reload, agents, and execution state." },
+      release: { label: "Release", copy: "Installer handoff, deployment posture, and workstation checks." },
+      diagnostics: { label: "Diagnostics", copy: "Observe signals, logs, validation, and operator tools." },
+    },
     sections: {
       projects: {
         title: "Home",
@@ -54,6 +60,17 @@ export const HUB_I18N_EN = {
         library: "Library",
         bundles: "Bundle tools",
         guides: "Guides",
+      },
+      mainline: {
+        label: "Mainline workflow",
+        title: "Follow the next best step",
+        copy: "This is the primary Hub route: runtime first, intake second, bundle check third, analysis last.",
+        steps: [
+          { index: "01", title: "Prepare runtime", copy: "Start or inspect the local loop before work depends on it.", action: "runtimes" },
+          { index: "02", title: "Bring work in", copy: "Register a bundle or sync the local/remote workload shelf.", action: "library" },
+          { index: "03", title: "Check the bundle", copy: "Inspect and validate the active project bundle before deeper analysis.", action: "bundles" },
+          { index: "04", title: "Enter Workbench", copy: "Open the analysis surface only after the runway looks safe.", action: "open-workbench" },
+        ],
       },
       steps: {
         step1Label: "Step 1",

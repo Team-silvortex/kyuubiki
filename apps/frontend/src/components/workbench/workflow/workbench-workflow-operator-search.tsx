@@ -37,10 +37,10 @@ function groupWorkflowOperatorOptionPresets(
     const descriptor = preset.operatorId
       ? operatorDescriptorMap.get(preset.operatorId)
       : undefined;
-    const domain = descriptor?.domain ?? "other";
-    const current = groups.get(domain);
+    const groupLabel = descriptor?.module?.label ?? descriptor?.domain ?? "Other";
+    const current = groups.get(groupLabel);
     if (current) current.push(preset);
-    else groups.set(domain, [preset]);
+    else groups.set(groupLabel, [preset]);
   }
   return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right));
 }

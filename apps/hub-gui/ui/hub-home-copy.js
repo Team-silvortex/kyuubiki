@@ -1,5 +1,6 @@
 export function renderHubHomeCopy(params) {
   const { elements, copy, setText } = params;
+  ensureMainlineEntry();
 
   if (elements.projectsTabStart) {
     elements.projectsTabStart.textContent = copy.home.tabs.start;
@@ -47,4 +48,53 @@ export function renderHubHomeCopy(params) {
   setText(elements.homeActionStart, copy.home.actions.start);
   setText(elements.homeActionSync, copy.home.actions.sync);
   setText(elements.homeActionOpen, copy.home.actions.open);
+  renderMainlineEntry(copy, setText);
+}
+
+function ensureMainlineEntry() {
+  const startPane = document.querySelector('[data-projects-pane="start"]');
+  if (!startPane || document.getElementById("home-mainline-entry")) {
+    return;
+  }
+
+  const mainline = document.createElement("article");
+  mainline.className = "hub-card desktop-shell-surface-card hub-mainline-entry";
+  mainline.id = "home-mainline-entry";
+  mainline.innerHTML = `
+    <div class="hub-card__intro">
+      <div>
+        <div class="hub-card__eyebrow" id="home-mainline-label">Mainline workflow</div>
+        <h2 id="home-mainline-title">Follow the next best step</h2>
+      </div>
+      <p class="desktop-shell-note" id="home-mainline-copy">Use this as the primary route through Hub.</p>
+    </div>
+    <div class="hub-mainline-track" aria-label="Mainline workflow">
+      ${[1, 2, 3, 4].map((step) => `
+        <button class="hub-mainline-step" data-mainline-step="${step}" type="button">
+          <span class="hub-mainline-step__index" id="home-mainline-step${step}-index">${step}</span>
+          <strong id="home-mainline-step${step}-title"></strong>
+          <span class="desktop-shell-note" id="home-mainline-step${step}-copy"></span>
+        </button>
+      `).join("")}
+    </div>
+  `;
+  startPane.prepend(mainline);
+}
+
+function renderMainlineEntry(copy, setText) {
+  const mainline = copy.home.mainline;
+  if (!mainline) {
+    return;
+  }
+
+  setText("home-mainline-label", mainline.label);
+  setText("home-mainline-title", mainline.title);
+  setText("home-mainline-copy", mainline.copy);
+  mainline.steps.forEach((step, index) => {
+    const id = index + 1;
+    setText(`home-mainline-step${id}-index`, step.index);
+    setText(`home-mainline-step${id}-title`, step.title);
+    setText(`home-mainline-step${id}-copy`, step.copy);
+    document.querySelector(`[data-mainline-step="${id}"]`)?.setAttribute("data-mainline-action", step.action);
+  });
 }

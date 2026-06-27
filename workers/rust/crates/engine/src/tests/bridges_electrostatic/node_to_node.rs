@@ -38,6 +38,7 @@ fn bridges_electrostatic_quad_potential_node_to_node_into_heat_temperature() {
             max_potential: 10.0,
             max_electric_field: 0.0,
             max_flux_density: 0.0,
+            total_stored_energy: 0.0,
         },
         &SolveHeatPlaneQuad2dRequest {
             nodes: heat_quad_nodes(),
@@ -101,6 +102,7 @@ fn bridges_electrostatic_triangle_charge_density_node_to_node_into_heat_load() {
             max_potential: 9.0,
             max_electric_field: 0.0,
             max_flux_density: 0.0,
+            total_stored_energy: 0.0,
         },
         &SolveHeatPlaneTriangle2dRequest {
             nodes: heat_triangle_nodes(),
