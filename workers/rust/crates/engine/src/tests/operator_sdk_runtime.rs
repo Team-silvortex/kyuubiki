@@ -121,6 +121,85 @@ fn runs_electrostatic_peak_extract_operator_through_sdk_registry() {
 }
 
 #[test]
+fn runs_magnetostatic_peak_extract_operator_through_sdk_registry() {
+    let summary = run_extract_operator(
+        "extract.magnetostatic_peak_field",
+        serde_json::json!({
+            "input": {
+                "nodes": [],
+                "elements": []
+            },
+            "nodes": [],
+            "elements": [
+                {
+                    "index": 0,
+                    "id": "mq0",
+                    "node_i": 0,
+                    "node_j": 1,
+                    "node_k": 2,
+                    "node_l": 3,
+                    "area": 1.0,
+                    "average_vector_potential": 2.0,
+                    "vector_potential_gradient_x": 3.0,
+                    "vector_potential_gradient_y": 4.0,
+                    "magnetic_field_strength_x": 3.0,
+                    "magnetic_field_strength_y": 4.0,
+                    "magnetic_field_strength_magnitude": 5.0,
+                    "magnetic_flux_density_x": 6.0,
+                    "magnetic_flux_density_y": 8.0,
+                    "magnetic_flux_density_magnitude": 10.0,
+                    "stored_energy": 2.5
+                },
+                {
+                    "index": 1,
+                    "id": "mq1",
+                    "node_i": 0,
+                    "node_j": 1,
+                    "node_k": 2,
+                    "node_l": 3,
+                    "area": 1.0,
+                    "average_vector_potential": 4.0,
+                    "vector_potential_gradient_x": 5.0,
+                    "vector_potential_gradient_y": 12.0,
+                    "magnetic_field_strength_x": 5.0,
+                    "magnetic_field_strength_y": 12.0,
+                    "magnetic_field_strength_magnitude": 13.0,
+                    "magnetic_flux_density_x": 8.0,
+                    "magnetic_flux_density_y": 15.0,
+                    "magnetic_flux_density_magnitude": 17.0,
+                    "stored_energy": 7.0
+                }
+            ],
+            "max_vector_potential": 5.0,
+            "max_magnetic_field_strength": 13.0,
+            "max_flux_density": 17.0,
+            "total_stored_energy": 9.5
+        }),
+        serde_json::Value::Null,
+    )
+    .expect("extract.magnetostatic_peak_field should succeed");
+
+    assert_eq!(summary["peak_element_id"].as_str(), Some("mq1"));
+    assert_eq!(summary["peak_magnetic_field_strength"].as_f64(), Some(13.0));
+    assert_eq!(summary["peak_flux_density"].as_f64(), Some(17.0));
+    assert_eq!(summary["peak_average_vector_potential"].as_f64(), Some(4.0));
+    assert_eq!(
+        summary["magnetostatic_field_peak_element_id"].as_str(),
+        Some("mq1")
+    );
+    assert_eq!(
+        summary["magnetostatic_flux_peak_element_id"].as_str(),
+        Some("mq1")
+    );
+    assert_eq!(
+        summary["magnetostatic_peak_stored_energy"].as_f64(),
+        Some(7.0)
+    );
+    assert_eq!(summary["max_magnetic_field_strength"].as_f64(), Some(13.0));
+    assert_eq!(summary["total_stored_energy"].as_f64(), Some(9.5));
+}
+
+#[test]
 fn runs_heat_peak_flux_extract_operator_through_sdk_registry() {
     let summary = run_extract_operator(
         "extract.heat_peak_flux",
@@ -367,6 +446,60 @@ fn runs_transform_operator_through_sdk_registry() {
     assert_eq!(summary["baseline_max_stress"].as_f64(), Some(10.0));
     assert_eq!(summary["candidate_max_stress"].as_f64(), Some(15.0));
     assert_eq!(summary["delta_max_stress"].as_f64(), Some(5.0));
+}
+
+#[test]
+fn runs_magnetostatic_guard_and_benchmark_transforms_through_sdk_registry() {
+    let guard = run_transform_operator(
+        "transform.evaluate_magnetostatic_guard",
+        serde_json::json!({
+            "magnetostatic_field_peak_magnitude": 13.0,
+            "total_stored_energy": 9.5
+        }),
+        serde_json::json!({
+            "rules": [
+                {
+                    "field": "magnetostatic_field_peak_magnitude",
+                    "threshold": 12.0,
+                    "severity": "block",
+                    "label": "H peak"
+                },
+                { "field": "total_stored_energy", "threshold": 20.0, "severity": "warn" }
+            ]
+        }),
+    )
+    .expect("magnetostatic guard should succeed");
+
+    assert_eq!(guard["guard_status"].as_str(), Some("block"));
+    assert_eq!(guard["guard_block_count"].as_u64(), Some(1));
+    assert_eq!(guard["guard_trigger_count"].as_u64(), Some(1));
+
+    let benchmark = run_transform_operator(
+        "transform.benchmark_magnetostatic_pair",
+        serde_json::json!({
+            "left": {
+                "magnetostatic_field_peak_magnitude": 11.0,
+                "total_stored_energy": 7.0
+            },
+            "right": {
+                "magnetostatic_field_peak_magnitude": 13.0,
+                "total_stored_energy": 9.5
+            }
+        }),
+        serde_json::json!({
+            "left_label": "candidate_a",
+            "right_label": "candidate_b",
+            "criteria": [
+                { "field": "magnetostatic_field_peak_magnitude", "goal": "min", "weight": 2.0 },
+                { "field": "total_stored_energy", "goal": "min", "weight": 1.0 }
+            ]
+        }),
+    )
+    .expect("magnetostatic benchmark should succeed");
+
+    assert_eq!(benchmark["benchmark_winner"].as_str(), Some("candidate_a"));
+    assert_eq!(benchmark["candidate_a_score"].as_f64(), Some(3.0));
+    assert_eq!(benchmark["candidate_b_score"].as_f64(), Some(0.0));
 }
 
 #[test]

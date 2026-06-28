@@ -1,10 +1,12 @@
 use crate::{
     EngineSolveRequest, built_in_operator_descriptors, chunk_result, describe_built_in_operator,
     is_supported_workflow_operator, solve, supported_workflow_operator_ids,
+    workflow_solve_executor::run_solve_operator,
 };
 use kyuubiki_protocol::{
     AnalysisResult, OperatorKind, ResultChunkKind, ResultChunkRequest, SolveBarRequest,
-    SolveTruss2dRequest, TrussElementInput, TrussNodeInput,
+    SolveStokesFlowPlaneQuad2dRequest, SolveTruss2dRequest, StokesFlowPlaneNodeInput,
+    StokesFlowPlaneQuadElementInput, TrussElementInput, TrussNodeInput,
 };
 use std::collections::BTreeSet;
 use std::fs;
@@ -22,6 +24,36 @@ fn solves_through_engine_facade() {
     .expect("bar should solve");
 
     assert!(matches!(result, AnalysisResult::Bar1d(_)));
+}
+
+#[test]
+fn runs_stokes_flow_through_workflow_solve_executor() {
+    let payload = serde_json::to_value(SolveStokesFlowPlaneQuad2dRequest {
+        nodes: vec![
+            stokes_node("n0", 0.0, 0.0, true, true, 0.0, 0.0),
+            stokes_node("n1", 1.0, 0.0, false, true, 2.0, 0.0),
+            stokes_node("n2", 1.0, 1.0, false, false, 2.0, 0.5),
+            stokes_node("n3", 0.0, 1.0, true, true, 0.0, 0.0),
+        ],
+        elements: vec![StokesFlowPlaneQuadElementInput {
+            id: "sf0".to_string(),
+            node_i: 0,
+            node_j: 1,
+            node_k: 2,
+            node_l: 3,
+            thickness: 0.1,
+            viscosity: 2.0,
+            density: 1.0,
+        }],
+    })
+    .expect("payload should encode");
+
+    let result = run_solve_operator("solve.stokes_flow_quad_2d", payload)
+        .expect("stokes flow workflow solve should run");
+
+    assert_eq!(result["elements"][0]["id"], "sf0");
+    assert!(result["max_velocity"].as_f64().unwrap() > 0.0);
+    assert!(result["max_reynolds_number"].as_f64().unwrap() > 0.0);
 }
 
 #[test]
@@ -277,5 +309,29 @@ fn coupled_diagnostics_template_matches_rust_workflow_report_chain() {
             template_source.contains(required),
             "coupled diagnostics template drifted, missing required fragment: {required}"
         );
+    }
+}
+
+fn stokes_node(
+    id: &str,
+    x: f64,
+    y: f64,
+    fix_velocity_x: bool,
+    fix_velocity_y: bool,
+    body_force_x: f64,
+    body_force_y: f64,
+) -> StokesFlowPlaneNodeInput {
+    StokesFlowPlaneNodeInput {
+        id: id.to_string(),
+        x,
+        y,
+        fix_velocity_x,
+        velocity_x: 0.0,
+        fix_velocity_y,
+        velocity_y: 0.0,
+        fix_pressure: id == "n0",
+        pressure: if id == "n0" { 1.0 } else { 0.0 },
+        body_force_x,
+        body_force_y,
     }
 }

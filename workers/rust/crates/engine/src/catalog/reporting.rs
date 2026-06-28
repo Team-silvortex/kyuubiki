@@ -64,6 +64,19 @@ pub(super) fn reporting_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_extract_descriptor(
+            "extract.magnetostatic_peak_field",
+            "electromagnetic",
+            "magnetostatic_peak_field",
+            "Extract the peak magnetostatic H-field element and B-field extrema from a magnetostatic quad result.",
+            &[
+                "extract",
+                "magnetostatic",
+                "peak_field",
+                "postprocess",
+                "headless_safe",
+            ],
+        ),
+        built_in_extract_descriptor(
             "extract.thermal_result_diagnostics",
             "multi_domain",
             "thermal_result_diagnostics",

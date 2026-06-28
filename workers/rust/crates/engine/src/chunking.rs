@@ -68,6 +68,12 @@ pub fn chunk_result(
         (AnalysisResult::HeatPlaneQuad2d(result), ResultChunkKind::Elements) => {
             encode_slice(&result.elements)?
         }
+        (AnalysisResult::StokesFlowPlaneQuad2d(result), ResultChunkKind::Nodes) => {
+            encode_slice(&result.nodes)?
+        }
+        (AnalysisResult::StokesFlowPlaneQuad2d(result), ResultChunkKind::Elements) => {
+            encode_slice(&result.elements)?
+        }
         (AnalysisResult::ThermalTruss2d(result), ResultChunkKind::Nodes) => {
             encode_slice(&result.nodes)?
         }

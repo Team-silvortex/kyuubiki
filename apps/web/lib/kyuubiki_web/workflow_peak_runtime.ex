@@ -22,7 +22,8 @@ defmodule KyuubikiWeb.WorkflowPeakRuntime do
              numeric_value(peak_element, "potential_gradient_y")
            ),
          "electrostatic_peak_field" => numeric_value(peak_element, "electric_field_magnitude"),
-         "electrostatic_peak_average_potential" => numeric_value(peak_element, "average_potential"),
+         "electrostatic_peak_average_potential" =>
+           numeric_value(peak_element, "average_potential"),
          "electrostatic_peak_field_x" => numeric_value(peak_element, "electric_field_x"),
          "electrostatic_peak_field_y" => numeric_value(peak_element, "electric_field_y"),
          "electrostatic_peak_potential_gradient_magnitude" =>
@@ -55,6 +56,70 @@ defmodule KyuubikiWeb.WorkflowPeakRuntime do
   def extract_electrostatic_peak_field(_payload, _config),
     do: {:error, :invalid_electrostatic_peak_result}
 
+  def extract_magnetostatic_peak_field(payload, _config) when is_map(payload) do
+    with {:ok, elements} <- fetch_list(payload, "elements"),
+         {:ok, peak_element} <- peak_by_field(elements, "magnetic_field_strength_magnitude") do
+      {:ok,
+       %{
+         "peak_element_id" => Map.get(peak_element, "id"),
+         "peak_magnetic_field_strength" =>
+           numeric_value(peak_element, "magnetic_field_strength_magnitude"),
+         "peak_flux_density" => numeric_value(peak_element, "magnetic_flux_density_magnitude"),
+         "peak_average_vector_potential" =>
+           numeric_value(peak_element, "average_vector_potential"),
+         "peak_magnetic_field_strength_x" =>
+           numeric_value(peak_element, "magnetic_field_strength_x"),
+         "peak_magnetic_field_strength_y" =>
+           numeric_value(peak_element, "magnetic_field_strength_y"),
+         "peak_flux_density_x" => numeric_value(peak_element, "magnetic_flux_density_x"),
+         "peak_flux_density_y" => numeric_value(peak_element, "magnetic_flux_density_y"),
+         "peak_vector_potential_gradient_x" =>
+           numeric_value(peak_element, "vector_potential_gradient_x"),
+         "peak_vector_potential_gradient_y" =>
+           numeric_value(peak_element, "vector_potential_gradient_y"),
+         "peak_vector_potential_gradient_magnitude" =>
+           magnitude2(
+             numeric_value(peak_element, "vector_potential_gradient_x"),
+             numeric_value(peak_element, "vector_potential_gradient_y")
+           ),
+         "peak_stored_energy" => numeric_value(peak_element, "stored_energy"),
+         "magnetostatic_peak_field" =>
+           numeric_value(peak_element, "magnetic_field_strength_magnitude"),
+         "magnetostatic_peak_average_vector_potential" =>
+           numeric_value(peak_element, "average_vector_potential"),
+         "magnetostatic_peak_field_x" => numeric_value(peak_element, "magnetic_field_strength_x"),
+         "magnetostatic_peak_field_y" => numeric_value(peak_element, "magnetic_field_strength_y"),
+         "magnetostatic_field_peak_magnitude" =>
+           numeric_value(peak_element, "magnetic_field_strength_magnitude"),
+         "magnetostatic_field_peak_x" => numeric_value(peak_element, "magnetic_field_strength_x"),
+         "magnetostatic_field_peak_y" => numeric_value(peak_element, "magnetic_field_strength_y"),
+         "magnetostatic_field_peak_element_id" => Map.get(peak_element, "id"),
+         "magnetostatic_peak_flux_density" =>
+           numeric_value(peak_element, "magnetic_flux_density_magnitude"),
+         "magnetostatic_peak_flux_density_x" =>
+           numeric_value(peak_element, "magnetic_flux_density_x"),
+         "magnetostatic_peak_flux_density_y" =>
+           numeric_value(peak_element, "magnetic_flux_density_y"),
+         "magnetostatic_flux_peak_magnitude" =>
+           numeric_value(peak_element, "magnetic_flux_density_magnitude"),
+         "magnetostatic_flux_peak_x" => numeric_value(peak_element, "magnetic_flux_density_x"),
+         "magnetostatic_flux_peak_y" => numeric_value(peak_element, "magnetic_flux_density_y"),
+         "magnetostatic_flux_peak_element_id" => Map.get(peak_element, "id"),
+         "magnetostatic_peak_stored_energy" => numeric_value(peak_element, "stored_energy"),
+         "magnetostatic_peak_field_id" => Map.get(peak_element, "id"),
+         "max_vector_potential" => numeric_value(payload, "max_vector_potential"),
+         "max_magnetic_field_strength" => numeric_value(payload, "max_magnetic_field_strength"),
+         "max_flux_density" => numeric_value(payload, "max_flux_density"),
+         "total_stored_energy" => numeric_value(payload, "total_stored_energy")
+       }}
+    else
+      _ -> {:error, :invalid_magnetostatic_peak_result}
+    end
+  end
+
+  def extract_magnetostatic_peak_field(_payload, _config),
+    do: {:error, :invalid_magnetostatic_peak_result}
+
   def extract_heat_peak_flux(payload, _config) when is_map(payload) do
     with {:ok, elements} <- fetch_list(payload, "elements"),
          {:ok, peak_element} <- peak_by_field(elements, "heat_flux_magnitude") do
@@ -73,8 +138,7 @@ defmodule KyuubikiWeb.WorkflowPeakRuntime do
              numeric_value(peak_element, "temperature_gradient_y")
            ),
          "thermal_peak_flux" => numeric_value(peak_element, "heat_flux_magnitude"),
-         "thermal_peak_average_temperature" =>
-           numeric_value(peak_element, "average_temperature"),
+         "thermal_peak_average_temperature" => numeric_value(peak_element, "average_temperature"),
          "thermal_peak_flux_x" => numeric_value(peak_element, "heat_flux_x"),
          "thermal_peak_flux_y" => numeric_value(peak_element, "heat_flux_y"),
          "thermal_peak_temperature_gradient_magnitude" =>
@@ -140,19 +204,14 @@ defmodule KyuubikiWeb.WorkflowPeakRuntime do
          "thermo_peak_stress_id" => Map.get(peak_element, "id"),
          "thermo_stress_peak_element_id" => Map.get(peak_element, "id"),
          "thermo_peak_thermal_strain" => numeric_value(peak_element, "thermal_strain"),
-         "thermo_peak_mechanical_strain_x" =>
-           numeric_value(peak_element, "mechanical_strain_x"),
-         "thermo_peak_mechanical_strain_y" =>
-           numeric_value(peak_element, "mechanical_strain_y"),
+         "thermo_peak_mechanical_strain_x" => numeric_value(peak_element, "mechanical_strain_x"),
+         "thermo_peak_mechanical_strain_y" => numeric_value(peak_element, "mechanical_strain_y"),
          "thermo_peak_total_strain_x" => numeric_value(peak_element, "total_strain_x"),
          "thermo_peak_total_strain_y" => numeric_value(peak_element, "total_strain_y"),
          "thermo_peak_gamma_xy" => numeric_value(peak_element, "gamma_xy"),
-         "thermo_peak_principal_stress_1" =>
-           numeric_value(peak_element, "principal_stress_1"),
-         "thermo_peak_principal_stress_2" =>
-           numeric_value(peak_element, "principal_stress_2"),
-         "thermo_peak_max_in_plane_shear" =>
-           numeric_value(peak_element, "max_in_plane_shear"),
+         "thermo_peak_principal_stress_1" => numeric_value(peak_element, "principal_stress_1"),
+         "thermo_peak_principal_stress_2" => numeric_value(peak_element, "principal_stress_2"),
+         "thermo_peak_max_in_plane_shear" => numeric_value(peak_element, "max_in_plane_shear"),
          "thermo_temperature_delta_max" => numeric_value(payload, "max_temperature_delta"),
          "max_displacement" => numeric_value(payload, "max_displacement"),
          "max_stress" => numeric_value(payload, "max_stress"),
@@ -174,18 +233,18 @@ defmodule KyuubikiWeb.WorkflowPeakRuntime do
 
   defp peak_by_field(entries, field) do
     case Enum.reduce(entries, nil, fn entry, best ->
-        case fetch_numeric_field(entry, field) do
-          {:ok, value} ->
-            cond do
-              is_nil(best) -> {entry, value}
-              value > elem(best, 1) -> {entry, value}
-              true -> best
-            end
+           case fetch_numeric_field(entry, field) do
+             {:ok, value} ->
+               cond do
+                 is_nil(best) -> {entry, value}
+                 value > elem(best, 1) -> {entry, value}
+                 true -> best
+               end
 
-          :error ->
-            best
-        end
-      end) do
+             :error ->
+               best
+           end
+         end) do
       {entry, _value} -> {:ok, entry}
       nil -> {:error, :empty_peak_collection}
     end
@@ -215,5 +274,4 @@ defmodule KyuubikiWeb.WorkflowPeakRuntime do
     y_value = y || 0.0
     :math.sqrt(x_value * x_value + y_value * y_value)
   end
-
 end

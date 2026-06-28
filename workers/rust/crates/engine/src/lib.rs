@@ -55,10 +55,11 @@ use kyuubiki_protocol::{
     SolveMagnetostaticBar1dRequest, SolveMagnetostaticPlaneQuad2dRequest,
     SolveMagnetostaticPlaneTriangle2dRequest, SolveModalFrame2dRequest, SolveModalFrame3dRequest,
     SolveNonlinearSpring1dRequest, SolvePlaneQuad2dRequest, SolvePlaneTriangle2dRequest,
-    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest, SolveThermalBar1dRequest,
-    SolveThermalBeam1dRequest, SolveThermalFrame2dRequest, SolveThermalFrame3dRequest,
-    SolveThermalPlaneQuad2dRequest, SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest,
-    SolveThermalTruss3dRequest, SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
+    SolveSpring1dRequest, SolveSpring2dRequest, SolveSpring3dRequest,
+    SolveStokesFlowPlaneQuad2dRequest, SolveThermalBar1dRequest, SolveThermalBeam1dRequest,
+    SolveThermalFrame2dRequest, SolveThermalFrame3dRequest, SolveThermalPlaneQuad2dRequest,
+    SolveThermalPlaneTriangle2dRequest, SolveThermalTruss2dRequest, SolveThermalTruss3dRequest,
+    SolveTorsion1dRequest, SolveTruss2dRequest, SolveTruss3dRequest,
 };
 use kyuubiki_solver::{
     solve_bar_1d, solve_beam_1d, solve_contact_gap_1d, solve_electrostatic_bar_1d,
@@ -67,10 +68,10 @@ use kyuubiki_solver::{
     solve_magnetostatic_bar_1d, solve_magnetostatic_plane_quad_2d,
     solve_magnetostatic_plane_triangle_2d, solve_modal_frame_2d, solve_modal_frame_3d,
     solve_nonlinear_spring_1d, solve_plane_quad_2d, solve_plane_triangle_2d, solve_spring_1d,
-    solve_spring_2d, solve_spring_3d, solve_thermal_bar_1d, solve_thermal_beam_1d,
-    solve_thermal_frame_2d, solve_thermal_frame_3d, solve_thermal_plane_quad_2d,
-    solve_thermal_plane_triangle_2d, solve_thermal_truss_2d, solve_thermal_truss_3d,
-    solve_torsion_1d, solve_truss_2d, solve_truss_3d,
+    solve_spring_2d, solve_spring_3d, solve_stokes_flow_plane_quad_2d, solve_thermal_bar_1d,
+    solve_thermal_beam_1d, solve_thermal_frame_2d, solve_thermal_frame_3d,
+    solve_thermal_plane_quad_2d, solve_thermal_plane_triangle_2d, solve_thermal_truss_2d,
+    solve_thermal_truss_3d, solve_torsion_1d, solve_truss_2d, solve_truss_3d,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -86,6 +87,7 @@ pub enum EngineSolveRequest {
     ElectrostaticPlaneQuad2d(SolveElectrostaticPlaneQuad2dRequest),
     HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dRequest),
     HeatPlaneQuad2d(SolveHeatPlaneQuad2dRequest),
+    StokesFlowPlaneQuad2d(SolveStokesFlowPlaneQuad2dRequest),
     ThermalTruss2d(SolveThermalTruss2dRequest),
     ThermalTruss3d(SolveThermalTruss3dRequest),
     Spring1d(SolveSpring1dRequest),
@@ -146,6 +148,9 @@ pub fn solve(request: EngineSolveRequest) -> Result<AnalysisResult, String> {
         }
         EngineSolveRequest::HeatPlaneQuad2d(request) => {
             solve_heat_plane_quad_2d(&request).map(AnalysisResult::HeatPlaneQuad2d)
+        }
+        EngineSolveRequest::StokesFlowPlaneQuad2d(request) => {
+            solve_stokes_flow_plane_quad_2d(&request).map(AnalysisResult::StokesFlowPlaneQuad2d)
         }
         EngineSolveRequest::ThermalTruss2d(request) => {
             solve_thermal_truss_2d(&request).map(AnalysisResult::ThermalTruss2d)

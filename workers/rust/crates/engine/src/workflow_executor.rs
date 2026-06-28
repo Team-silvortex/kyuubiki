@@ -250,6 +250,8 @@ pub fn run_transform_operator(
         | "transform.select_best_summary"
         | "transform.evaluate_thermal_guard"
         | "transform.benchmark_coupled_heat_pair"
+        | "transform.evaluate_magnetostatic_guard"
+        | "transform.benchmark_magnetostatic_pair"
         | "transform.compose_diagnostics_bundle"
         | "transform.evaluate_diagnostics_bundle_guard"
         | "transform.select_focus_payload"

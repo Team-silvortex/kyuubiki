@@ -132,6 +132,13 @@ fn solver_descriptors() -> Vec<OperatorDescriptor> {
             &["verified", "thermal", "heat", "plane", "2d"],
         ),
         built_in_solver_descriptor(
+            "solve.stokes_flow_quad_2d",
+            "fluid",
+            "stokes_flow_quad_2d",
+            "Solve a low-Reynolds steady 2D Stokes flow quad model and expose velocity, pressure, divergence, and Reynolds diagnostics.",
+            &["verified", "fluid", "cfd", "stokes", "flow", "quad", "2d"],
+        ),
+        built_in_solver_descriptor(
             "solve.thermal_truss_2d",
             "thermo_mechanical",
             "thermal_truss_2d",

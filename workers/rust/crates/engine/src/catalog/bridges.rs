@@ -187,6 +187,32 @@ pub(crate) fn bridge_descriptors() -> Vec<OperatorDescriptor> {
             ],
         ),
         built_in_transform_descriptor(
+            "transform.evaluate_magnetostatic_guard",
+            "electromagnetic",
+            "evaluate_magnetostatic_guard",
+            "Evaluate a magnetostatic diagnostic payload against visible threshold rules and emit pass, warn, or block guard state.",
+            &[
+                "transform",
+                "magnetostatic",
+                "guard",
+                "threshold",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
+            "transform.benchmark_magnetostatic_pair",
+            "electromagnetic",
+            "benchmark_magnetostatic_pair",
+            "Benchmark paired magnetostatic summaries against weighted min/max criteria and emit a side-by-side winner breakdown.",
+            &[
+                "transform",
+                "magnetostatic",
+                "benchmark",
+                "compare",
+                "headless_safe",
+            ],
+        ),
+        built_in_transform_descriptor(
             "transform.compose_diagnostics_bundle",
             "multi_domain",
             "compose_diagnostics_bundle",

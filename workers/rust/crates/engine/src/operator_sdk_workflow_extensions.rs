@@ -1,12 +1,15 @@
 mod operator_sdk_focus_chain_operators;
+mod operator_sdk_magnetostatic_transforms;
 mod operator_sdk_peak_summaries;
 
 use crate::catalog::describe_built_in_operator;
 use crate::magnetostatic_diagnostics::extract_magnetostatic_result_diagnostics;
 use crate::operator_sdk_runtime::{WorkflowOperatorEnvelope, run_summary_only};
 use crate::operator_sdk_workflow_extensions::operator_sdk_focus_chain_operators::register_focus_chain_transform_extensions;
+use crate::operator_sdk_workflow_extensions::operator_sdk_magnetostatic_transforms::register_magnetostatic_transform_extensions;
 use crate::operator_sdk_workflow_extensions::operator_sdk_peak_summaries::{
-    electrostatic_peak_summary, thermal_peak_summary, thermo_peak_summary,
+    electrostatic_peak_summary, magnetostatic_peak_summary, thermal_peak_summary,
+    thermo_peak_summary,
 };
 use crate::workflow_bundle_exports::export_diagnostics_bundle_markdown;
 use crate::workflow_bundle_transforms::{
@@ -21,7 +24,7 @@ use crate::workflow_guard_transforms::{benchmark_coupled_heat_pair, evaluate_the
 use kyuubiki_operator_sdk::{JsonOperator, OperatorRegistry, OperatorSdkError};
 use kyuubiki_protocol::{
     OperatorDescriptor, OperatorRunContext, OperatorRunResult, SolveElectrostaticPlaneQuad2dResult,
-    SolveHeatPlaneQuad2dResult, SolveThermalPlaneQuad2dResult,
+    SolveHeatPlaneQuad2dResult, SolveMagnetostaticPlaneQuad2dResult, SolveThermalPlaneQuad2dResult,
 };
 use serde_json::{Map, Value};
 
@@ -32,6 +35,9 @@ struct ElectrostaticPeakFieldOperator {
     descriptor: OperatorDescriptor,
 }
 struct MagnetostaticResultDiagnosticsOperator {
+    descriptor: OperatorDescriptor,
+}
+struct MagnetostaticPeakFieldOperator {
     descriptor: OperatorDescriptor,
 }
 struct ThermalResultDiagnosticsOperator {
@@ -166,6 +172,60 @@ impl JsonOperator for MagnetostaticResultDiagnosticsOperator {
         run_summary_only(
             &self.descriptor.id,
             extract_magnetostatic_result_diagnostics(input.payload, input.config),
+        )
+    }
+}
+
+impl JsonOperator for MagnetostaticPeakFieldOperator {
+    type Input = WorkflowOperatorEnvelope;
+    fn descriptor(&self) -> &OperatorDescriptor {
+        &self.descriptor
+    }
+    fn run_typed(
+        &self,
+        input: Self::Input,
+        _context: &OperatorRunContext,
+    ) -> Result<OperatorRunResult, OperatorSdkError> {
+        let result: SolveMagnetostaticPlaneQuad2dResult = serde_json::from_value(input.payload)
+            .map_err(|error| OperatorSdkError::Handler {
+                operator_id: self.descriptor.id.clone(),
+                message: format!(
+                    "extract.magnetostatic_peak_field expects a magnetostatic quad result: {error}"
+                ),
+            })?;
+        let peak_element = result
+            .elements
+            .iter()
+            .max_by(|left, right| {
+                left.magnetic_field_strength_magnitude
+                    .partial_cmp(&right.magnetic_field_strength_magnitude)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .ok_or_else(|| OperatorSdkError::Handler {
+                operator_id: self.descriptor.id.clone(),
+                message: "extract.magnetostatic_peak_field expects at least one element"
+                    .to_string(),
+            })?;
+        let diagnostics = extract_magnetostatic_result_diagnostics(
+            serde_json::to_value(&result).map_err(|error| OperatorSdkError::Handler {
+                operator_id: self.descriptor.id.clone(),
+                message: format!(
+                    "extract.magnetostatic_peak_field could not serialize diagnostics payload: {error}"
+                ),
+            })?,
+            serde_json::Value::Null,
+        )
+        .map_err(|error| OperatorSdkError::Handler {
+            operator_id: self.descriptor.id.clone(),
+            message: format!("extract.magnetostatic_peak_field diagnostics failed: {error}"),
+        })?;
+
+        run_summary_only(
+            &self.descriptor.id,
+            Ok(merge_summary_objects(
+                diagnostics,
+                magnetostatic_peak_summary(&result, peak_element),
+            )),
         )
     }
 }
@@ -441,6 +501,11 @@ pub fn register_workflow_extract_extensions(registry: &mut OperatorRegistry) {
         })
         .expect("extract.magnetostatic_result_diagnostics should register");
     registry
+        .register_json(MagnetostaticPeakFieldOperator {
+            descriptor: descriptor("extract.magnetostatic_peak_field"),
+        })
+        .expect("extract.magnetostatic_peak_field should register");
+    registry
         .register_json(ThermalResultDiagnosticsOperator {
             descriptor: descriptor("extract.thermal_result_diagnostics"),
         })
@@ -473,6 +538,7 @@ pub fn register_workflow_transform_extensions(registry: &mut OperatorRegistry) {
             descriptor: descriptor("transform.benchmark_coupled_heat_pair"),
         })
         .expect("transform.benchmark_coupled_heat_pair should register");
+    register_magnetostatic_transform_extensions(registry);
     registry
         .register_json(ComposeDiagnosticsBundleOperator {
             descriptor: descriptor("transform.compose_diagnostics_bundle"),

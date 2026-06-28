@@ -247,3 +247,44 @@ pub struct SolveHeatPlaneQuad2dRequest {
     pub nodes: Vec<HeatPlaneNodeInput>,
     pub elements: Vec<HeatPlaneQuadElementInput>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StokesFlowPlaneNodeInput {
+    pub id: String,
+    pub x: f64,
+    pub y: f64,
+    #[serde(default)]
+    pub fix_velocity_x: bool,
+    #[serde(default)]
+    pub velocity_x: f64,
+    #[serde(default)]
+    pub fix_velocity_y: bool,
+    #[serde(default)]
+    pub velocity_y: f64,
+    #[serde(default)]
+    pub fix_pressure: bool,
+    #[serde(default)]
+    pub pressure: f64,
+    #[serde(default)]
+    pub body_force_x: f64,
+    #[serde(default)]
+    pub body_force_y: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StokesFlowPlaneQuadElementInput {
+    pub id: String,
+    pub node_i: usize,
+    pub node_j: usize,
+    pub node_k: usize,
+    pub node_l: usize,
+    pub thickness: f64,
+    pub viscosity: f64,
+    pub density: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SolveStokesFlowPlaneQuad2dRequest {
+    pub nodes: Vec<StokesFlowPlaneNodeInput>,
+    pub elements: Vec<StokesFlowPlaneQuadElementInput>,
+}

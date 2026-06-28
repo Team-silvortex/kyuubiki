@@ -1,15 +1,47 @@
 use serde_json::Value;
 
 pub fn evaluate_thermal_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_thermal_guard",
+        "thermal",
+    )
+}
+
+pub fn evaluate_magnetostatic_guard(payload: Value, config: Value) -> Result<Value, String> {
+    evaluate_threshold_guard(
+        payload,
+        config,
+        "transform.evaluate_magnetostatic_guard",
+        "magnetostatic",
+    )
+}
+
+pub fn benchmark_magnetostatic_pair(payload: Value, config: Value) -> Result<Value, String> {
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_magnetostatic_pair",
+        "magnetostatic",
+    )
+}
+
+fn evaluate_threshold_guard(
+    payload: Value,
+    config: Value,
+    operator_id: &str,
+    domain: &str,
+) -> Result<Value, String> {
     let object = payload
         .as_object()
-        .ok_or_else(|| "transform.evaluate_thermal_guard expects an object payload".to_string())?;
+        .ok_or_else(|| format!("{operator_id} expects an object payload"))?;
     let rules = config
         .get("rules")
         .and_then(Value::as_array)
-        .ok_or_else(|| "transform.evaluate_thermal_guard requires config.rules".to_string())?;
+        .ok_or_else(|| format!("{operator_id} requires config.rules"))?;
     if rules.is_empty() {
-        return Err("transform.evaluate_thermal_guard requires at least one rule".to_string());
+        return Err(format!("{operator_id} requires at least one rule"));
     }
 
     let triggers = rules
@@ -41,32 +73,42 @@ pub fn evaluate_thermal_guard(payload: Value, config: Value) -> Result<Value, St
         "guard_block_count": block_count,
         "guard_triggers": triggers,
         "guard_recommendation": guard_recommendation(status),
-        "guard_summary": guard_summary(status, &triggers),
+        "guard_summary": guard_summary(domain, status, &triggers),
     }))
 }
 
 pub fn benchmark_coupled_heat_pair(payload: Value, config: Value) -> Result<Value, String> {
-    let object = payload.as_object().ok_or_else(|| {
-        "transform.benchmark_coupled_heat_pair expects an object payload".to_string()
-    })?;
+    benchmark_pair(
+        payload,
+        config,
+        "transform.benchmark_coupled_heat_pair",
+        "thermal",
+    )
+}
+
+fn benchmark_pair(
+    payload: Value,
+    config: Value,
+    operator_id: &str,
+    _domain: &str,
+) -> Result<Value, String> {
+    let object = payload
+        .as_object()
+        .ok_or_else(|| format!("{operator_id} expects an object payload"))?;
     let left = object
         .get("left")
         .and_then(Value::as_object)
-        .ok_or_else(|| "transform.benchmark_coupled_heat_pair expects payload.left".to_string())?;
+        .ok_or_else(|| format!("{operator_id} expects payload.left"))?;
     let right = object
         .get("right")
         .and_then(Value::as_object)
-        .ok_or_else(|| "transform.benchmark_coupled_heat_pair expects payload.right".to_string())?;
+        .ok_or_else(|| format!("{operator_id} expects payload.right"))?;
     let criteria = config
         .get("criteria")
         .and_then(Value::as_array)
-        .ok_or_else(|| {
-            "transform.benchmark_coupled_heat_pair requires config.criteria".to_string()
-        })?;
+        .ok_or_else(|| format!("{operator_id} requires config.criteria"))?;
     if criteria.is_empty() {
-        return Err(
-            "transform.benchmark_coupled_heat_pair requires at least one criterion".to_string(),
-        );
+        return Err(format!("{operator_id} requires at least one criterion"));
     }
 
     let left_label = normalize_label(config.get("left_label").and_then(Value::as_str), "left");
@@ -78,10 +120,9 @@ pub fn benchmark_coupled_heat_pair(payload: Value, config: Value) -> Result<Valu
         })
         .collect::<Vec<_>>();
     if breakdown.is_empty() {
-        return Err(
-            "transform.benchmark_coupled_heat_pair did not find any comparable numeric fields"
-                .to_string(),
-        );
+        return Err(format!(
+            "{operator_id} did not find any comparable numeric fields"
+        ));
     }
 
     let left_score = breakdown
@@ -327,9 +368,9 @@ fn guard_recommendation(status: &str) -> &'static str {
     }
 }
 
-fn guard_summary(status: &str, triggers: &[Value]) -> String {
+fn guard_summary(domain: &str, status: &str, triggers: &[Value]) -> String {
     if status == "pass" {
-        return "All thermal guard rules passed.".to_string();
+        return format!("All {domain} guard rules passed.");
     }
 
     let lead = triggers

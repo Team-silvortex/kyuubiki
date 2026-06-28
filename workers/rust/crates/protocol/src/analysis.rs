@@ -9,10 +9,10 @@ use crate::{
     SolveMagnetostaticPlaneQuad2dResult, SolveMagnetostaticPlaneTriangle2dResult,
     SolveModalFrame2dResult, SolveModalFrame3dResult, SolveNonlinearSpring1dResult,
     SolvePlaneQuad2dResult, SolvePlaneTriangle2dResult, SolveSpring1dResult, SolveSpring2dResult,
-    SolveSpring3dResult, SolveThermalBar1dResult, SolveThermalBeam1dResult,
-    SolveThermalFrame2dResult, SolveThermalFrame3dResult, SolveThermalPlaneQuad2dResult,
-    SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dResult, SolveThermalTruss3dResult,
-    SolveTorsion1dResult, SolveTruss2dResult, SolveTruss3dResult,
+    SolveSpring3dResult, SolveStokesFlowPlaneQuad2dResult, SolveThermalBar1dResult,
+    SolveThermalBeam1dResult, SolveThermalFrame2dResult, SolveThermalFrame3dResult,
+    SolveThermalPlaneQuad2dResult, SolveThermalPlaneTriangle2dResult, SolveThermalTruss2dResult,
+    SolveThermalTruss3dResult, SolveTorsion1dResult, SolveTruss2dResult, SolveTruss3dResult,
 };
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -29,6 +29,7 @@ pub enum AnalysisResult {
     MagnetostaticPlaneQuad2d(SolveMagnetostaticPlaneQuad2dResult),
     HeatPlaneTriangle2d(SolveHeatPlaneTriangle2dResult),
     HeatPlaneQuad2d(SolveHeatPlaneQuad2dResult),
+    StokesFlowPlaneQuad2d(SolveStokesFlowPlaneQuad2dResult),
     ThermalTruss2d(SolveThermalTruss2dResult),
     ThermalTruss3d(SolveThermalTruss3dResult),
     Spring1d(SolveSpring1dResult),

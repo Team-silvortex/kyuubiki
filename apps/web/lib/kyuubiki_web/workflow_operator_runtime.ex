@@ -4,6 +4,7 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
   alias KyuubikiWeb.Playground.AgentClient
   alias KyuubikiWeb.WorkflowBridgeIntegrityRuntime
   alias KyuubikiWeb.WorkflowBundleRuntime
+  alias KyuubikiWeb.WorkflowCfdRuntime
   alias KyuubikiWeb.WorkflowElectrostaticRuntime
   alias KyuubikiWeb.WorkflowOperatorBridgeRuntime
   alias KyuubikiWeb.WorkflowOperatorHeatBridgeRuntime
@@ -184,6 +185,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
       "transform.evaluate_electrostatic_guard" when is_map(config) ->
         WorkflowElectrostaticRuntime.evaluate_electrostatic_guard(payload, config)
 
+      "transform.evaluate_magnetostatic_guard" when is_map(config) ->
+        KyuubikiWeb.WorkflowMagnetostaticRuntime.evaluate_magnetostatic_guard(payload, config)
+
       "transform.validate_electrostatic_heat_bridge" when is_map(config) ->
         WorkflowBridgeIntegrityRuntime.validate_electrostatic_heat_bridge(payload, config)
 
@@ -192,6 +196,9 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
 
       "transform.benchmark_electrostatic_pair" when is_map(config) ->
         WorkflowElectrostaticRuntime.benchmark_electrostatic_pair(payload, config)
+
+      "transform.benchmark_magnetostatic_pair" when is_map(config) ->
+        KyuubikiWeb.WorkflowMagnetostaticRuntime.benchmark_magnetostatic_pair(payload, config)
 
       "transform.validate_heat_thermo_bridge" when is_map(config) ->
         WorkflowBridgeIntegrityRuntime.validate_heat_thermo_bridge(payload, config)
@@ -253,6 +260,12 @@ defmodule KyuubikiWeb.WorkflowOperatorRuntime do
           payload,
           config || %{}
         )
+
+      "extract.magnetostatic_peak_field" ->
+        KyuubikiWeb.WorkflowPeakRuntime.extract_magnetostatic_peak_field(payload, config || %{})
+
+      "extract.stokes_flow_result_diagnostics" ->
+        WorkflowCfdRuntime.extract_stokes_flow_result_diagnostics(payload, config || %{})
 
       "extract.thermal_result_diagnostics" ->
         WorkflowReportingRuntime.extract_thermal_result_diagnostics(payload, config || %{})

@@ -238,6 +238,11 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
         operator["id"] == "extract.magnetostatic_result_diagnostics"
       end)
 
+    magnetostatic_peak_operator =
+      Enum.find(operators, fn operator ->
+        operator["id"] == "extract.magnetostatic_peak_field"
+      end)
+
     assert electrostatic_plane_operator["kind"] == "solver"
     assert electrostatic_plane_operator["family"] == "electrostatic_plane_triangle_2d"
     assert electrostatic_plane_operator["domain"] == "electromagnetic"
@@ -254,6 +259,8 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert magnetostatic_heat_bridge_operator["validation"]["baseline_status"] == "verified"
     assert magnetostatic_diagnostics_operator["kind"] == "extract"
     assert magnetostatic_diagnostics_operator["validation"]["baseline_status"] == "verified"
+    assert magnetostatic_peak_operator["kind"] == "extract"
+    assert magnetostatic_peak_operator["validation"]["baseline_status"] == "verified"
 
     fetch_conn =
       :get
@@ -307,6 +314,24 @@ defmodule KyuubikiWeb.Api.OperatorCatalogApiTest do
     assert thermal_module["operator_count"] == length(operators)
     assert thermal_module["verified_count"] == length(operators)
     assert "heat" in thermal_module["capability_tags"]
+  end
+
+  test "surfaces CFD operators as a fluid physics module" do
+    conn =
+      :get
+      |> conn("/api/v1/operators?q=stokes&domain=fluid&kind=solver")
+      |> Router.call(@opts)
+
+    assert conn.status == 200
+    payload = Jason.decode!(conn.resp_body)
+    operators = payload["operators"]
+    fluid_module = Enum.find(payload["modules"], &(&1["id"] == "fluid.solver"))
+
+    assert Enum.any?(operators, &(&1["id"] == "solve.stokes_flow_quad_2d"))
+    assert Enum.all?(operators, &(&1["domain"] == "fluid"))
+    assert fluid_module["lane"] == "physics"
+    assert fluid_module["label"] == "Fluid Solvers"
+    assert "cfd" in fluid_module["capability_tags"]
   end
 
   test "surfaces verified modal physics operators as mechanical module coverage" do

@@ -1,6 +1,7 @@
 use kyuubiki_protocol::{
     ElectrostaticPlaneQuadElementResult, HeatPlaneQuadElementResult,
-    SolveElectrostaticPlaneQuad2dResult, SolveHeatPlaneQuad2dResult, SolveThermalPlaneQuad2dResult,
+    MagnetostaticPlaneQuadElementResult, SolveElectrostaticPlaneQuad2dResult,
+    SolveHeatPlaneQuad2dResult, SolveMagnetostaticPlaneQuad2dResult, SolveThermalPlaneQuad2dResult,
     ThermalPlaneNodeResult, ThermalPlaneQuadElementResult,
 };
 use serde_json::Value;
@@ -45,6 +46,50 @@ pub(super) fn electrostatic_peak_summary(
         "electrostatic_potential_max": result.max_potential,
         "max_potential": result.max_potential,
         "max_electric_field": result.max_electric_field,
+        "max_flux_density": result.max_flux_density,
+        "total_stored_energy": result.total_stored_energy,
+    })
+}
+
+pub(super) fn magnetostatic_peak_summary(
+    result: &SolveMagnetostaticPlaneQuad2dResult,
+    peak_element: &MagnetostaticPlaneQuadElementResult,
+) -> Value {
+    serde_json::json!({
+        "peak_element_id": peak_element.id,
+        "peak_magnetic_field_strength": peak_element.magnetic_field_strength_magnitude,
+        "peak_flux_density": peak_element.magnetic_flux_density_magnitude,
+        "peak_average_vector_potential": peak_element.average_vector_potential,
+        "peak_magnetic_field_strength_x": peak_element.magnetic_field_strength_x,
+        "peak_magnetic_field_strength_y": peak_element.magnetic_field_strength_y,
+        "peak_flux_density_x": peak_element.magnetic_flux_density_x,
+        "peak_flux_density_y": peak_element.magnetic_flux_density_y,
+        "peak_vector_potential_gradient_x": peak_element.vector_potential_gradient_x,
+        "peak_vector_potential_gradient_y": peak_element.vector_potential_gradient_y,
+        "peak_vector_potential_gradient_magnitude": magnitude2(
+            peak_element.vector_potential_gradient_x,
+            peak_element.vector_potential_gradient_y,
+        ),
+        "peak_stored_energy": peak_element.stored_energy,
+        "magnetostatic_peak_field": peak_element.magnetic_field_strength_magnitude,
+        "magnetostatic_peak_average_vector_potential": peak_element.average_vector_potential,
+        "magnetostatic_peak_field_x": peak_element.magnetic_field_strength_x,
+        "magnetostatic_peak_field_y": peak_element.magnetic_field_strength_y,
+        "magnetostatic_field_peak_magnitude": peak_element.magnetic_field_strength_magnitude,
+        "magnetostatic_field_peak_x": peak_element.magnetic_field_strength_x,
+        "magnetostatic_field_peak_y": peak_element.magnetic_field_strength_y,
+        "magnetostatic_field_peak_element_id": peak_element.id,
+        "magnetostatic_peak_flux_density": peak_element.magnetic_flux_density_magnitude,
+        "magnetostatic_peak_flux_density_x": peak_element.magnetic_flux_density_x,
+        "magnetostatic_peak_flux_density_y": peak_element.magnetic_flux_density_y,
+        "magnetostatic_flux_peak_magnitude": peak_element.magnetic_flux_density_magnitude,
+        "magnetostatic_flux_peak_x": peak_element.magnetic_flux_density_x,
+        "magnetostatic_flux_peak_y": peak_element.magnetic_flux_density_y,
+        "magnetostatic_flux_peak_element_id": peak_element.id,
+        "magnetostatic_peak_stored_energy": peak_element.stored_energy,
+        "magnetostatic_peak_field_id": peak_element.id,
+        "max_vector_potential": result.max_vector_potential,
+        "max_magnetic_field_strength": result.max_magnetic_field_strength,
         "max_flux_density": result.max_flux_density,
         "total_stored_energy": result.total_stored_energy,
     })
